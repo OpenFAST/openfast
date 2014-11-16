@@ -192,7 +192,7 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
    DO n_t_global = 0, n_t_final
 
 WRITE(*,*) "Time Step: ", n_t_global
-!IF(n_t_global == 1) STOP 
+!IF(n_t_global == 2) STOP 
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 

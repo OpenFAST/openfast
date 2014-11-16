@@ -58,7 +58,9 @@
                                       &Stif0,Mass0,gravity,u,&
                                       &damp_flag,beta,&
                                       &elem_total,node_elem,dof_node,ngp,dt,RHS,MassM)
-
+!DO j=1,36
+!   WRITE(*,*) j,RHS(j)
+!ENDDO
        DO j=1,node_total
            temp_id = (j-1)*dof_node
            F_PointLoad(temp_id+1:temp_id+3) = u%PointLoad%Force(1:3,j)
@@ -81,9 +83,9 @@
        ENDDO
 
        temp = Norm(RHS_LU)
-!WRITE(*,*) i, temp
+WRITE(*,*) i, temp
 IF(temp .LT. TOLF1) THEN
-!IF(i .EQ. niter) THEN
+!IF(i .EQ. 3) THEN
    nr_counter = i
 !   WRITE(*,*) i
    RETURN
@@ -91,8 +93,8 @@ ENDIF
        CALL ludcmp(MassM_LU,dof_total*2-12,indx,d)
        CALL lubksb(MassM_LU,dof_total*2-12,indx,RHS_LU,sol_temp)
 
-temp = MAXVAL(ABS(sol_temp))
-WRITE(*,*) i,temp
+!temp = MAXVAL(ABS(sol_temp))
+!WRITE(*,*) i,temp
 !DO j=1,24
 !   WRITE(*,*) sol_temp(j)
 !ENDDO
@@ -102,7 +104,7 @@ WRITE(*,*) i,temp
            sol(j+6) = sol_temp(j)
            sol(j+dof_total+6) = sol_temp(j+dof_total-6)
        ENDDO
-!DO j=1,24
+!DO j=1,36
 !WRITE(*,*) "sol(j) = ",j,sol(j)
 !WRITE(*,*) "feqv(j) = ",j,feqv(j)
 !ENDDO

@@ -1,4 +1,4 @@
-   SUBROUTINE ElementMatrix_AM2(Nuu0,Nuuu,Nuuu0,Nrr0,Nrrr,Nvvv,Nvvv0,Nuud0,Nvvd0,&
+   SUBROUTINE ElementMatrix_AM2(Nuu0,Nuuu,Nuuu0,Nrr0,Nrrr,Nrrr0,Nvvv,Nvvv0,Nuud0,Nvvd0,&
                                &EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                                &ngp,dt,node_elem,dof_node,damp_flag,beta,&
                                &elf1,elf2,elm11,elm12,elm21,elm22)
@@ -12,6 +12,7 @@
    REAL(ReKi),INTENT(IN   )    :: Nuuu0(:) ! Nodal displacement of Mass 1 for each element
    REAL(ReKi),INTENT(IN   )    :: Nrr0(:) ! Nodal rotation parameters for initial position
    REAL(ReKi),INTENT(IN   )    :: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
+   REAL(ReKi),INTENT(IN   )    :: Nrrr0(:) ! Nodal rotation parameters for displacement of Mass 1
    REAL(ReKi),INTENT(IN   )    :: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
    REAL(ReKi),INTENT(IN   )    :: Nvvv0(:) ! Nodal velocity of Mass 1: m/s for each element
    REAL(ReKi),INTENT(IN   )    :: Nuud0(:) ! Nodal velocity of Mass 1: m/s for each element
@@ -42,10 +43,15 @@
    REAL(ReKi)                  :: uu0(6)
    REAL(ReKi)                  :: E10(3)
    REAL(ReKi)                  :: RR0(3,3)
+   REAL(ReKi)                  :: RR00(3,3)
    REAL(ReKi)                  :: kapa(3)
+   REAL(ReKi)                  :: kapa0(3)
    REAL(ReKi)                  :: E1(3)
+   REAL(ReKi)                  :: E100(3)
    REAL(ReKi)                  :: Stif(6,6)
+   REAL(ReKi)                  :: Stif0(6,6)
    REAL(ReKi)                  :: cet
+   REAL(ReKi)                  :: cet0
    REAL(ReKi)                  :: uuu(6)
    REAL(ReKi)                  :: uuu0(6)
    REAL(ReKi)                  :: uup(3)
@@ -113,8 +119,9 @@
        CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10)
        Stif(:,:) = 0.0D0
        Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
-       CALL BldGaussPointData(hhx,hpx,Nuuu0,Nrrr,uu0,E10,node_elem,dof_node,uuu0,uup,E1,RR0,kapa,Stif,cet)       
+       CALL BldGaussPointData(hhx,hpx,Nuuu0,Nrrr0,uu0,E10,node_elem,dof_node,uuu0,uup0,E100,RR00,kapa0,Stif0,cet0)       
        CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)       
+!WRITE(*,*) uuu0(1:6)
        mmm  = 0.0D0
        mEta = 0.0D0
        rho  = 0.0D0
@@ -143,15 +150,12 @@
 
        Fc(:) = 0.5D0*dt*Fc
 
-! STOP HERE, 14NOV14 21:39
-
        CALL CrvMatrixH(uuu(4:6),temp_H)
-       CALL CrvMatrixH(uuu0(4:6),temp_H0)
        F1(1:3) = uuu(1:3) - uuu0(1:3) - 0.5D0*dt*(vvv(1:3)+vvv0(1:3))
        F1(4:6) = MATMUL(temp_H,uuu(4:6)-uuu0(4:6)) - &
                 &0.5D0*dt*MATMUL(temp_H,uud0(4:6)) - &
                 &0.5D0*dt*vvv(4:6)
-
+!WRITE(*,*) F1(1:6)
        DO i=1,node_elem
            DO j=1,node_elem
                DO m=1,dof_node

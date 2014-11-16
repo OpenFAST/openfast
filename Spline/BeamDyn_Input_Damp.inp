@@ -14,7 +14,7 @@ kp_xb  kp_yb   kp_zb    initial_twist
 0.0    0.0     1.2     0.0
 0.0    0.0     2.4    0.0       - Key point coordinates and initial twist (-)
 ---------------------- MESH PARAMETER ------------------------------------------
-5  order_elem    - Order of interpolation (basis) function (-)
+2  order_elem    - Order of interpolation (basis) function (-)
 ---------------------- MATERIAL PARAMETER --------------------------------------
 "Damp_Test_1.inp"    BldFile - Name of file containing properties for blade 
 0.0E-04

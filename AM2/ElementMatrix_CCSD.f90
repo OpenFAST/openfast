@@ -91,6 +91,8 @@
 
        CALL BldComputeJacobianLSGL(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian)
        CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10)
+       Stif(:,:) = 0.0D0
+       Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
        CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)       
        mmm  = 0.0D0
        mEta = 0.0D0
@@ -101,16 +103,18 @@
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
        CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,vvp,mmm,mEta,rho)
        CALL MassMatrix(mmm,mEta,rho,Mi)
+!DO i=1,6
+!WRITE(*,*) i,Mi(i,i)
+!ENDDO
        CALL GyroForce(mEta,rho,uuu,vvv,Fb)
        CALL GravityLoads(mmm,mEta,gravity,Fg)
 
-       Stif(:,:) = 0.0D0
-       Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
        CALL BeamDyn_StaticElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
-
        IF(damp_flag .NE. 0) THEN
            CALL DissipativeForce(beta,Stif,vvv,vvp,E1,Fc,Fd,Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd)
        ENDIF
+
+       A1(:,:) = 0.0D0
        CALL CrvMatrixH(uuu(4:6),temp_H)
        DO i = 1,3
            A1(i,i) = 1.0D0
@@ -141,6 +145,9 @@
                elf2(temp_id1) = elf2(temp_id1) - hhx(i)*Fd(j)*Jacobian*gw(igp)
            ENDDO
        ENDDO
+DO i=1,18
+!WRITE(*,*) i,elf2(i)
+ENDDO
    ENDDO
 
 
