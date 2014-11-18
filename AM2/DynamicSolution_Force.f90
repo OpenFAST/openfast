@@ -1,4 +1,4 @@
-   SUBROUTINE DynamicSolution_Force(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,time,&
+   SUBROUTINE DynamicSolution_Force(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                    &node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
                                    &qddot,analysis_type,Force)
    !***************************************************************************************
@@ -13,7 +13,6 @@
    TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
    REAL(ReKi),INTENT(IN):: uuN(:) ! Displacement of Mass 1: m
    REAL(ReKi),INTENT(IN):: vvN(:) ! Velocity of Mass 1: m/s
-   REAL(DbKi),INTENT(IN):: time ! Current time
    INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per element
    INTEGER(IntKi),INTENT(IN):: elem_total ! Total number of elements

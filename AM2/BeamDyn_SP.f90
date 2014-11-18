@@ -755,6 +755,7 @@ ENDDO
    ENDDO
 
    IF(p%analysis_type .EQ. 2) THEN
+!       CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
        CALL BeamDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg) 
        DO i=1,p%elem_total
            DO j=1,p%node_elem
@@ -767,7 +768,7 @@ ENDDO
            ENDDO
        ENDDO
        CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
-                                 &t,p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+                                 &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
                                  &xdot%dqdt,p%analysis_type,temp_Force)
    ELSEIF(p%analysis_type .EQ. 1) THEN
        CALL StaticSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
