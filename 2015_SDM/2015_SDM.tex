@@ -660,30 +660,15 @@ Next, a convergence study of the tip displacements was completed for the CX-100 
 \label{CX100elem2}
 \end{figure}
 
-\subsection{Dynamics of the CX-100 Blade}
-
-The final test case illustrates that BeamDyn is capable of accurately analyzing dynamic movement. In this analysis, the CX-100 blade was given a constant rotational velocity. A boundary condition was specified such that the blade was allowed to rotate about the node located at its root. This test case was analyzed in both BeamDyn and Dymore, a finite-element-based multibody dynamics code based on the same beam theory. The beam was discretized by a eighth-order element in BeamDyn, and 40 third-order elements in Dymore. The angular velocity of the blade was $\frac{\pi}{3}$ rad/s. The time integrator for the dynamic case was a Runge-Kutta fourth-order method, and the time step size was $5 \times 10^{-5}$ s. The time integrator for Dymore was the generalized-alpha method, with a time step size of $1 \times 10^{-3}$ s. The total simulation time in both BeamDyn and Dymore was 6 s so that the blade rotated a whole circle.
-
-Figure~\ref{E3U} shows the time histories for the axial ($u_1$) and vertical displacements ($u_3$), and the rotation parameter $p_2$ about the rotating axis given by BeamDyn and Dymore. It can be observed that these quantities are in good agreements and BeamDyn properly handled the rescaling operation, which eliminates the singular point in the rotation parameterization. {\color{red} One explanation to the tiny differences between the two data sets is that in the generalized-alpha method used in Dymore, numerical damping was introduced and this effected on the accuracy of the results.} {\color{red} The root-mean-square error, which aggregates the magnitudes of the errors in predictions for various times into a single measure of predictive performance, for $u_3$ is 0.0335.} The error was calculated using
-\begin{equation}
-\varepsilon_{RMS}=\sqrt{\frac{\sum_{k=0}^{n_{max}}[u_3^k-u_b(t^k)]^2}{\sum_{k=0}^{n_{max}}[u_b(t^k)]^2}}
-\end{equation} 
-where $u_b(t)$ is the benchmark solution as given by Dymore.
-\begin{figure}
-    \centering
-    \begin{tabular}{c}
-    \subfloat[$u_1$]{\label{E3U:u1}\includegraphics[width=3.0 in]{\directory  E3Tipu1.eps}} \\
-\subfloat[$u_3$]{\label{E3U:u3}\includegraphics[width=3.0 in]{\directory  E3Tipu3.eps}} \\\subfloat[$p_2$]{\label{E3U:p2}\includegraphics[width=3.0 in]{\directory  E3Tipp2.eps}} \\\end{tabular}
-\caption{Tip displacement and rotation histories of a CX-100 blade rotating at a constant speed.}
-\label{E3U}
-\end{figure} 
-Figure~\ref{E3RootM2} shows the root forces in the no-gravity-load-applied and gravity-load-applied cases. As expected, the root forces were higher for the case where the gravity force was applied. {\color{red} The forces, along with the displacements and rotations, will be returned to FAST for further whole turbine analysis.}
+\subsection{Dynamics of a Cantilevered Beam}
+This example presents a dynamic analysis of a cantilevered beam under a impulsive excitation, which is shown in Figure~\ref{Impulsive}. The excitation was applied at the free tip along the $x_2$ and $x_3$ directions simultaneously. The simulation range was 0 to 1 second.
 \begin{figure}
 \centering
-\includegraphics[width=3.0in]{\directory E3RootM2.eps}
-\caption{Root forces on the CX-100 blade in a BeamDyn dynamic simulation with and without gravity load.} 
-\label{E3RootM2}
+\includegraphics[width=3.0in]{\directory AM2_Excitation.eps}
+\caption{ Impulsive excitation.} 
+\label{Impulsive}
 \end{figure}
+
 
  \section{Summary}
   This paper reported on the development of BeamDyn, a beam solver in the FAST modularization framework. Geometrically exact beam theory has been reformulated into the first-order state-space form so that first-order time integrators, as required by FAST framework for tight-coupling analysis, can be applied to discretize the problem in the time domain. Numerical examples are provided to validate the capability of BeamDyn in analyzing initially curved/twisted beams. A validation example is also presented where the numerical results are compared with experimental data. Finally, the dynamic behavior of the CX-100 wind turbine blade was studied by prescribing a rotation at its root. In all the cases, good agreement was observed.  The convergence rate for analysis of realistic wind turbine blade is discussed. {\color{red} The features of BeamDyn can be summarized as follows:
