@@ -1,4 +1,5 @@
    SUBROUTINE ElementMatrix_Force(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
+                                 &damp_flag,beta,&
                                  &ngp,node_elem,dof_node,elf,elm)
                            
    !-------------------------------------------------------------------------------
@@ -14,6 +15,8 @@
    REAL(ReKi),INTENT(IN):: EMass0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),INTENT(IN):: gravity(:) ! 
    REAL(ReKi),INTENT(IN):: DistrLoad_GL(:,:) ! Nodal material properties for each element
+   INTEGER(IntKi),INTENT(IN):: damp_flag ! Number of Gauss points
+   REAL(ReKi),INTENT(IN):: beta(:)
    INTEGER(IntKi),INTENT(IN):: ngp ! Number of Gauss points
    INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per node
@@ -39,6 +42,8 @@
    REAL(ReKi):: uup(3)
    REAL(ReKi):: Jacobian
    REAL(ReKi):: gpr
+   REAL(ReKi):: Fc(6)
+   REAL(ReKi):: Fd(6)
    REAL(ReKi):: Fg(6)
    REAL(ReKi):: vvv(6)
    REAL(ReKi):: vvp(6)
@@ -47,6 +52,14 @@
    REAL(ReKi):: rho(3,3)
    REAL(ReKi):: Fb(6)
    REAL(ReKi):: Mi(6,6)
+   REAL(ReKi):: Sd(6,6)
+   REAL(ReKi):: Od(6,6)
+   REAL(ReKi):: Pd(6,6)
+   REAL(ReKi):: Qd(6,6)
+   REAL(ReKi):: betaC(6,6)
+   REAL(ReKi):: Gd(6,6)
+   REAL(ReKi):: Xd(6,6)
+   REAL(ReKi):: Yd(6,6)
 
    INTEGER(IntKi)::igp
    INTEGER(IntKi)::i
@@ -105,9 +118,13 @@
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
        
        CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,vvp,mmm,mEta,rho)
+       CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd)
+       IF(damp_flag .EQ. 1) THEN
+           CALL DissipativeForce(beta,Stif,vvv,vvp,E1,Fc,Fd,Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd)
+       ENDIF
        CALL MassMatrix(mmm,mEta,rho,Mi)
+       CALL GyroForce(mEta,rho,uuu,vvv,Fb)
        CALL GravityLoads(mmm,mEta,gravity,Fg)
-       Fg(:) =  Fg(:) + DistrLoad_GL(:,igp)
 
        DO i=1,node_elem
            DO j=1,node_elem
@@ -124,7 +141,8 @@
        DO i=1,node_elem
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
-               elf(temp_id1) = elf(temp_id1) + hhx(i)*Fg(j)*Jacobian*gw(igp)
+               elf(temp_id1) = elf(temp_id1) + hhx(i)*Fd(j)*Jacobian*gw(igp)
+               elf(temp_id1) = elf(temp_id1) + hpx(i)*Fc(j)*Jacobian*gw(igp)
            ENDDO
        ENDDO
    ENDDO
@@ -136,6 +154,12 @@
    DEALLOCATE(GLL_temp)
    DEALLOCATE(w_temp)
 
+!   j=6
+!   DO i=1,18
+!       WRITE(*,*) elm(i,j+1), elm(i,j+2),elm(i,j+3),elm(i,j+4),elm(i,j+5),elm(i,j+6)
+!       WRITE(*,*) elf(i)
+!   ENDDO
+!   STOP
 
    9999 IF(allo_stat/=0) THEN
             IF(ALLOCATED(gp))  DEALLOCATE(gp)
