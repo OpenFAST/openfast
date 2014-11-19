@@ -74,7 +74,7 @@ Beam models are widely used to analyze structures in which one dimension is much
 structures such as  bridges, joists, and helicopter
 rotor blades may be modeled as beams.  Similarly, beam models are well suited for analyzing wind turbine blades, towers, and shafts.  Most wind turbine
 blades are constructed of composite materials, which are more complicated than isotropic beams to analyze because of elastic coupling
-effects.  The geometrically exact beam theory (GEBT), first proposed by
+effects and high flexibility.  The geometrically exact beam theory (GEBT), first proposed by
 Reissner\cite{Ressiner1973}, is a beam-deformation model useful in efficient analysis of highly flexible composite structures.
 For instance, GEBT has demonstrated efficacy in helicopter rotor analysis \cite{Hodges:2007}. 
 Simo\cite{Simo1985} and Simo and Vu-Quoc\cite{Simo1986} extended Reissner's
@@ -105,7 +105,7 @@ implementation of geometrically exact beam theory using Legendre
 spectral finite elements is presented. The theory is reformulated in a
 nonlinear state-space form for the purpose of integrating with the FAST
 framework, thereby introducing an optional high-fidelity beam model as an
-alternative to the current beam model. Several first-order time integrators, including the explicit fourth-order Runge-Kutta (RK4) and implicit second-order Adams-Moulton (AM2), are examined. This work builds on previous efforts
+alternative to the current beam model. Several first-order form time integrators, including the explicit fourth-order accuracy Runge-Kutta (RK4) and implicit second-order accuracy Adams-Moulton (AM2), are examined. This work builds on previous efforts
 that demonstrated the implementation of GEBT and spatial discretization using Legendre spectral finite elements
 (LSFEs)\cite{Wang:GEBT2013,Wang:SFE2013,Wang:GEBT2014,Sprague:FAST2014} in analyzing composite wind turbine blades. The paper is organized as
 follows.  First, the theoretical foundation of the geometrically exact beam
@@ -136,7 +136,7 @@ In this paper, matrix notation is used to denote vectorial or vectorial-like qua
 	\label{GovernGEBT-2}
 	\dot{\underline{g}} + \dot{\tilde{u}} \underline{h} - \underline{M}^\prime + (\tilde{x}_0^\prime + \tilde{u}^\prime)^T \underline{F} &= \underline{m}
 \end{align}
-where $\vec{h}$ and $\vec{g}$ are the linear and angular momenta resolved in the inertial coordinate system, respectively; $\vec{F}$ and $\vec{M}$ are the beam's sectional force and moment resultants, respectively; $\vec{u}$ is the one-dimensional (1D) displacement of a point on the reference line; $\vec{x}_0$ is the position vector of a point along the beam's reference line;  and $\vec{f}$ and $\vec{m}$ are the distributed force and moment applied to the beam structure.  The notation $(\bullet)^\prime$ indicates a derivative with respect to beam axis $x_1$ and $\dot{(\bullet)}$ indicates a derivative with respect to time. The tilde operator $(\skew{\bullet})$ defines a second-order, skew-symmetric tensor corresponding to the given vector. In the literature, it is also termed as ``cross-product matrix". For example,
+where $\vec{h}$ and $\vec{g}$ are the linear and angular momenta resolved in the inertial coordinate system, respectively; $\vec{F}$ and $\vec{M}$ are the beam's sectional force and moment resultants, respectively; $\vec{u}$ is the one-dimensional (1D) displacement of a point on the reference line; $\vec{x}_0$ is the position vector of a point along the beam's reference line;  and $\vec{f}$ and $\vec{m}$ are the distributed force and moment applied to the beam structure.  The notation $(\bullet)^\prime$ indicates a derivative with respect to beam axis $x_1$ and $\dot{(\bullet)}$ indicates a derivative with respect to time. The tilde operator $(\skew{\bullet})$ defines a skew-symmetric tensor corresponding to the given vector. In the literature, it is also termed as ``cross-product matrix". For example,
 \[
 	\skew{n} = 
 	     		\begin{bmatrix}
@@ -231,7 +231,7 @@ where $\tens{N}$ is the shape function matrix and $(\hat{\cdot})$ denotes a
 column matrix of nodal values.
 
 \section{State-Space Formulation}
-NREL has put considerable effort into improving the modularity of FAST.  The benefits of this modularization framework include, but are not limited to, improving numerical performance as well as robustness and enhancing the flexibility and expandability to enable further developments of functionality. The modules in the new framework are coupled in two ways in the time domain: loose and tight. In the loose coupling scheme, data are exchanged between the modules at each coupling step, but each module tracks its own states and integrates its own equations with its own solver. FAST  pre-v8.0 used this scheme. In a tightly coupled time-integration scheme, each module sets up its own equations, but the states are tracked and integrated by a solver common to all of the modules. FAST v8.0 modularization allows for both loose and tight coupling. More details on the FAST modularization framework and an initial assessment of the numerical stability, numerical accuracy, and computational performance of various coupling schemes can be found in \cite{Jonkman:2013,Sprague:2013,Sprague:FAST2014}. 
+NREL has put considerable effort into improving the modularity of FAST. The modules in the new framework can be coupled in one of two ways in the time domain: loose and tight. In the loose coupling scheme, data are exchanged between the modules at each coupling step, but each module tracks its own states and integrates its own equations with its own solver. In a tightly coupled time-integration scheme, each module sets up its own equations, but the states are tracked and integrated by a solver common to all of the modules. To enable the most flexibility, it is useful to create modules (such as BeamDyn) so that they can support both loose and tight coupling. More details on the FAST modularization framework and an initial assessment of the numerical stability, numerical accuracy, and computational performance of various coupling schemes can be found in \cite{Jonkman:2013,Sprague:2013,Sprague:FAST2014}. 
 
 To accommodate the tight coupling scheme in the FAST modular framework, the governing equations 
 \eqref{GovernGEBT-1} and \eqref{GovernGEBT-2} needed to be reformulated
@@ -340,7 +340,7 @@ where
     \vec{F}(\vec{q},\vec{v},t) &= \int_0^l \tens{N}^T (-\vec{\mathcal{F}}^F + \vec{\mathcal{F}}^{C\prime} - \vec{\mathcal{F}}^D + \vec{\mathcal{F}}^{ext}) d x_1
 \end{align}
 
-To derive the state-space form of the governing equations,  $\vec{x}(t)$ is introduced as
+To derive the state-space form of the governing equations, the state variable in first-order form $\vec{x}(t)$ is introduced as
 \begin{equation}
     \label{StateSpaceX}
     \vec{x}(t) \equiv \begin{Bmatrix}
@@ -348,7 +348,7 @@ To derive the state-space form of the governing equations,  $\vec{x}(t)$ is intr
     \vec{v}(t)
     \end{Bmatrix} 
 \end{equation}
-Note that the second component of $\vec{x}(t)$ is not $\vec{\dot{q}}$ but $\vec{v}$ because the angular velocity $\vec{\omega}$ cannot be calculated as the time derivative of the rotation parameter $\vec{p}$. The angular velocity is related to the rotation parameter by the tangent matrix as $\omega = \tens{H}(p) \dot{\vec{p}}$. Substituting the discretized quantities in Eqs.~\eqref{DiscretizedDisp} to \eqref{DiscretizedAcc} into Eq.~\eqref{StateSpaceX} and using the relation
+Note that the second component of $\vec{x}(t)$ is not $\vec{\dot{q}}$ but $\vec{v}$ because the angular velocity $\vec{\omega}$ cannot be calculated as the time derivative of the rotation parameter $\vec{p}$. The angular velocity is related to the rotation parameter by the tangent matrix as $\omega = \tens{H}(p) \dot{\vec{p}}$ \cite{Bauchau:2010}. Substituting the discretized quantities in Eqs.~\eqref{DiscretizedDisp} to \eqref{DiscretizedAcc} into Eq.~\eqref{StateSpaceX} and using the relation
 \begin{equation}
     \label{AccVel}
     \vec{a} = \vec{\dot{v}} = \begin{Bmatrix}
@@ -357,12 +357,15 @@ Note that the second component of $\vec{x}(t)$ is not $\vec{\dot{q}}$ but $\vec{
     \end{Bmatrix}
 \end{equation}
 The state-space form can be obtained as
-\begin{align}
+\begin{equation}
     \label{StateSpaceGov-1}
-    \tens{A} ~\dot{\hat{\vec{x}}}(t) &= \mathfrak{f}(\hat{\vec{x}}(t),t) \\
+    \tens{A} ~\dot{\hat{\vec{x}}}(t) = \mathfrak{f}(\hat{\vec{x}}(t),t)
+\end{equation}
+with initial condition
+\begin{equation}
     \label{StateSpaceGov-2}
-    \hat{\vec{x}}(0) &= \hat{\vec{x}}_0
-\end{align}
+    \hat{\vec{x}}(0) = \hat{\vec{x}}_0
+\end{equation}
 where
 \begin{align}
     \label{StateSpaceGov-3}
@@ -389,29 +392,48 @@ where
 \end{align}
 Note that the state-space form, in
 Eq.~\eqref{StateSpaceGov-1} and \eqref{StateSpaceGov-2}, can be solved with
-any number of first-order ordinary differential equations (ODE) integrators
-for first-order-in-time systems. 
+any number of ordinary differential equations (ODE) integrators
+for first-order-in-time systems. A viscous damping term is also implemented to account for the structural damping. The damping force was defined as
+\begin{equation}
+   \label{Damping}
+   \vec{f}_d = \tens{\mu}~ \tens{\mathcal{C}} \begin{Bmatrix}
+   \dot{\epsilon} \\
+   \dot{\kappa}
+   \end{Bmatrix}
+\end{equation}
+where $ \tens{\mu}$ is a user-provided damping coefficient matrix. The damping force can be recast in two separate part, like $\vec{\mathcal{F}}^C$ and $\vec{\mathcal{F}}^D$ in the elastic force, as
+\begin{align}
+   \label{DampingForce-1}
+   \vec{\mathcal{F}}^C_d &= \begin{Bmatrix}
+   \vec{F}_d \\
+   \vec{M}_d
+   \end{Bmatrix} \\
+   \label{DampingForce-2}
+   \vec{\mathcal{F}}^D_d &= \begin{Bmatrix}
+    \vec{0} \\
+    (\tilde{x}^\prime_0 + \tilde{u}^\prime)^T \underline{F}_d
+    \end{Bmatrix}   
+\end{align}
+Readers are refer to Ref.[16] for more details on the damping force and its linearization.
 
 \section{Implementation of BeamDyn}
-The state-space form of GEBT was numerically implemented into a beam solver, called BeamDyn. BeamDyn has two sources of input:  the users and FAST driver code. The inputs from the users are:
+The state-space form of GEBT was numerically implemented into a beam solver, called BeamDyn. BeamDyn has two sources of input:  the user-prescribed parameters and per time step data from the FAST driver code. The input parameters from the users are:
 \begin{enumerate}
-    \item Key points that defined the geometry of the beam
+    \item Key points that defined the geometry of the beam; these key points are interpolated by cubic splines
     \item Sectional constants for a 1D beam model
     \item Finite-element mesh information (order of element)
-    \item Selection of static or dynamic analysis
-    \item Time integrators: RK4, AM2, or Generalized-$\alpha$ (for loosing coupling only).
+    \item Selection of static \cite{Wang:GEBT2014} or dynamic analysis
+    \item Time integrators and associated parameters: RK4, AM2, or Generalized-$\alpha$ (for loosing coupling only).
 \end{enumerate}
-Information that comes from FAST driver code include the gravity vector, time step size, initial conditions, and the externally applied loads.  For whole turbine analysis, the BeamDyn module will return kinematical quantities, displacements and rotation tensors, as well as reaction force and moment resultants to FAST for aeroelastic and control analysis.
+Information that comes from FAST driver code include the gravity vector, time step size, initial conditions, and the externally applied loads. It is pointed out that for control application, FAST introduced the concept of ``output equation" to generate the information that returned to the system. In addition to the kinetic quantities, BeamDyn also returns the internal force distribution along the blade axis. The internal forces, including the damping, gyroscopic, and elastic forces, are calculated as subtracting the inertial force from the externally applied load. For coupled turbine analysis, the BeamDyn module will return kinematical quantities, displacements and rotation tensors, as well as reaction force and moment resultants to FAST for aeroelastic and control analysis.
 
 The implementation of GEBT with RK4 is straightforward; however, for the AM2 scheme, a linearization is required because of its implicit nature. By applying the trapezoidal rule, the state-space form in Eq.~\eqref{StateSpaceGov-1} can be recast as
-{\color{red}
 \begin{equation}
     \label{AM2-Govn}
 %    \tens{A}_{k+1} (\hat{\vec{x}}_{k+1}-\hat{\vec{x}}_{k})+\tens{A}_k \hat{\vec{x}}_{k+1} - \Delta t \mathfrak{f}(\hat{\vec{x}}_{k+1},t_{k+1}) = \tens{A}_k \hat{\vec{x}}_{k} + \Delta t \mathfrak{f}(\hat{\vec{x}}_{k},t_{k})
-    \tens{A}_{k+1} (\hat{\vec{x}}_{k+1}-\hat{\vec{x}}_{k} - \frac{\Delta t}{2} \vec{\dot{\hat{x}}}) =  \frac{\Delta t}{2} \mathfrak{f}(\hat{\vec{x}}_{k+1},t_{k+1})  
+    \tens{A}_{k+1} (\hat{\vec{x}}_{k+1}-\hat{\vec{x}}_{k} - \frac{\Delta t}{2} \vec{\dot{\hat{x}}}_k) =  \frac{\Delta t}{2} \mathfrak{f}(\hat{\vec{x}}_{k+1},t_{k+1})  
 \end{equation}
-}
-where the footnote denotes the discretized time step in which the value is evaluated, and $\Delta t$ is the time step size. A linearization is needed to solve this nonlinear equation. The linearized equation is as follows
+where the subscript denotes the discretized time step in which the value is evaluated, and $\Delta t$ is the time step size. A linearization is needed to solve this nonlinear equation. The linearized equation is as follows
 \begin{equation}
     \label{AM2-Linearized}
     \begin{bmatrix}
@@ -485,7 +507,7 @@ where the newly introduced matrices are
    \tens{0} & \tilde{\omega} (\tens{\rho} \tilde{\omega} - \widetilde{\tens{\rho} \vec{\omega}}
    \end{bmatrix} 
 \end{align}
-The $\tens{\mathcal{O}}$, $\tens{\mathcal{P}}$, $\tens{\mathcal{Q}}$, and $\tens{\mathcal{S}}$ can be found in previous work by Want et al \cite{Wang:GEBT2014}. It is also noted that the $\tens{B}$ matrix is a linearization of the tangent matrix $\tens{H}$ defined as
+The $\tens{\mathcal{O}}$, $\tens{\mathcal{P}}$, $\tens{\mathcal{Q}}$, and $\tens{\mathcal{S}}$ can be found in previous work by Wang et al \cite{Wang:GEBT2014}. It is also noted that the $\tens{B}$ matrix is a linearization of the tangent matrix $\tens{H}$ defined as
 \begin{equation}
     \label{Bmatrix}
     \tens{B}(\vec{p},\vec{a}) = \frac{\partial (\tens{H}(\vec{p})) \vec{a}}{\partial \vec{p}}
@@ -495,8 +517,8 @@ One major difficulty in implementing geometrically nonlinear theory is the descr
 
 In summary, the newly developed BeamDyn has the following features: 
 \begin{enumerate}
-    \item It is based on the state-space form of geometrically exact beam theory, thus, it can be easily integrated into FAST as a structural module for tight-coupling scheme using first-order time integrators
-    \item The spectral finite-element method is used to discretize the space domain; exponential convergence rate can be expected for smooth field
+    \item It is based on the state-space form of geometrically exact beam theory, thus, it can be easily integrated into FAST as a structural module with both loose coupling and tight-coupling scheme using time integrators for first-order form
+    \item The spectral finite-element method is used to discretize the space domain; exponential convergence rate can be expected for a smooth solution
     \item It is compatible with the FAST modularization network. Variables are categorized into input, output, states, and parameters.
 \end{enumerate}
 
@@ -512,7 +534,7 @@ An initially twisted beam was examined first. A straight beam ($k_2=k_3=0$) with
 \caption{Sketch of an initially twisted beam.} 
 \label{Twist1}
 \end{figure}
- Table~\ref{E1Property} shows the material properties for A36 steel, the beam geometry, and the force applied to the beam. The height and base values reported in the table are the height and base of the rectangular cross section. 
+ Table~\ref{E1Property} shows the material properties for A36 steel, the beam geometry, and the force applied at the free tip along $x_3$ direction. The height and base values reported in the table are the height and base of the rectangular cross section. 
  \begin{table}
 \caption{\label{E1Property} Properties of twisted beam}
 \begin{center}
@@ -568,7 +590,7 @@ It can be seen from these results that the simulations from BeamDyn for a initia
 \subsection{Static Analysis of CX-100 Blade}
 The primary intended use of BeamDyn is analyzing anisotropic wind turbine blades, therefore, the CX-100 was chosen as a validation case. The CX-100 is a 9-m blade designed by Sandia National Laboratories \cite{paquette2006modeling}. It was chosen for this analysis because it is well characterized, with a wealth of publicly available data regarding its construction and material properties.
 
-The cross-sectional properties for this beam were provided by D.J.\ Luscher of Los Alamos National Laboratory. These properties were provided at 40 points along the beam. A typical stiffness matrix is shown at 2.2 m along the span of the blade, and is given by
+The cross-sectional properties as derived from VABS for this beam were provided by D.J.\ Luscher of Los Alamos National Laboratory. These properties were provided at 40 points along the beam. A typical stiffness matrix is shown at 2.2 m along the span of the blade, and is given by
 \begin{align*}
 C =10^3 \times \begin{bmatrix}
 	193,000 & -75.4   & 12.2   & -75.2  & -1970    & -3500    \\
@@ -597,7 +619,7 @@ Figure~\ref{CX100Sketch} shows the various material layups and the geometry of t
 \label{normalized1}
 \end{figure}
 
-Figure~\ref{CX100Setup} shows the test configuration for the static test performed at the National Wind Technology Center (NWTC) in Boulder, Colorado. The whiffle-tree configurationof the test apparatus applied the load at 3.00 m, 5.81 m, and 7.26 m from the root of the blade to achieve a maximum root moment of 128.6 kN m. The loads and positions are given in Table~\ref{CX100Load} below.
+Figure~\ref{CX100Setup} shows the test configuration for the static test performed at the National Wind Technology Center (NWTC) in Boulder, Colorado. The whiffle-tree configuration of the test apparatus applied the load at 3.00 m, 5.81 m, and 7.26 m from the root of the blade to achieve a maximum root moment of 128.6 kN m. The loads and positions are given in Table~\ref{CX100Load} below.
 
 
 \begin{figure}
@@ -620,7 +642,7 @@ Figure~\ref{CX100Setup} shows the test configuration for the static test perform
 \end{center}
 \end{table}
 
-The displacements, $u_3$, at each of the load points were tracked for the experiment and are given in Table~\ref{CX100Results}. The BeamDyn simulation was completed using four seventh-order LSFEs and the results are given in Table~\ref{CX100Results}.
+The out-of-plane displacements, $u_3$, at each of the load points were tracked for the experiment and are given in Table~\ref{CX100Results}. The BeamDyn simulation was completed using four seventh-order LSFEs and the results are given in Table~\ref{CX100Results}.
 
 \begin{table}
 \caption{\label{CX100Results}Experimental and BeamDyn simulation results for the CX-100 static test  } 
@@ -643,7 +665,7 @@ The displacements are plotted in Figure~\ref{CX100Disp} and are overall in good 
 \label{CX100Disp}
 \end{figure}
 
-Next, a convergence study of the tip displacements was completed for the CX-100 blade in BeamDyn. Figure~\ref{CX100conv3} shows the error as a function of the number of nodes. The percentage error was calculated against the experimental data in Table~\ref{CX100Results}. It can be seen that the convergence rate is not exponential as desired. This is likely a function of the sharp gradients in the sectional constants. For the next simulation, the blade was meshed such that the element boundaries coincide with the locations where the sectional properties are defined. As previously mentioned, the cross-sectional properties for the CX-100 blade were given at 40 locations along the length of the blade. To have an element coincide with each sectional property, 39 LSFEs were needed. Figure~\ref{CX100elem2} shows the results of this simulation. Each circle on the plot indicates an additional order of the LSFE, with the maximum being six. These results demonstrated that  exponential convergence was achieved with this simulation, albeit with many elements. It can therefore be stated that for composite beams with sharp gradients in the cross-sectional stiffness matrix, the spectral convergence is compromised. It should be noted here that although the convergence rate suffers as a result of sharp gradients in the cross-sectional stiffness matrix, the simulations still return reasonable results in comparison to the experiment data, suggesting that a lack of exponential convergence does not compromise the utility of BeamDyn.
+Next, a convergence study of the tip displacements was completed for the CX-100 blade in BeamDyn. Figure~\ref{CX100conv3} shows the error as a function of the number of nodes. The percentage error was calculated against the experimental data in Table~\ref{CX100Results}. It can be seen that the convergence rate is not exponential as desired. This is likely a function of the sharp gradients in the sectional constants, not resulting in a smooth solution. For the next simulation, the blade was meshed such that the element boundaries coincide with the locations where the sectional properties are defined. As previously mentioned, the cross-sectional properties for the CX-100 blade were given at 40 locations along the length of the blade. To have an element coincide with each sectional property, 39 LSFEs were needed. Figure~\ref{CX100elem2} shows the results of this simulation. Each circle on the plot indicates an additional order of the LSFE, with the maximum being six. These results demonstrated that  exponential convergence was achieved with this simulation, albeit with many elements. It can therefore be stated that for composite beams with sharp gradients in the cross-sectional stiffness matrix, the spectral convergence is compromised, unless element boundaries coincident with the discontinuities. It should be noted here that although the convergence rate suffers as a result of sharp gradients in the cross-sectional stiffness matrix, the simulations still return reasonable results in comparison to the experiment data, suggesting that a lack of exponential convergence does not compromise the utility of BeamDyn.
   
 
 \begin{figure}
@@ -661,7 +683,12 @@ Next, a convergence study of the tip displacements was completed for the CX-100 
 \end{figure}
 
 \subsection{Dynamics of a Cantilevered Beam}
-This example presents a dynamic analysis of a cantilevered beam under a impulsive excitation, which is shown in Figure~\ref{Impulsive}. The excitation was applied at the free tip along the $x_2$ and $x_3$ directions simultaneously. The simulation range was 0 to 1 second.
+This example presented a dynamic analysis of a cantilevered beam under a impulsive excitation, which is shown in Figure~\ref{Impulsive}. The excitation was applied at the free tip along the $x_2$ and $x_3$ directions simultaneously. The simulation range was 0 to 1 second. The sectional stiffness constants can be found in Table~\ref{E3Stiffness} and the units were the same as those in the previous example. The inertia properties were: $1.61$ kg/m for the unit mass density, $8.60 \times 10^{-4}$ and $1.10 \times 10^{-4}$ kg m$^{2}$ for the mass moment of inertia along $x_2$ and $x_3$ direction, respectively.   Two cases were analyzed: one without damping effects and the other with damping coefficients of $8.0 \times  10^{-4}$ for all the six degrees of freedom. The time steps for these two cases were $1 \times 10^{-4}$ and $5 \times 10^{-4}$ seconds, respectively. The time histories of all the displacement and rotation components were plotted in Figure~\ref{E3U}. The damping effects can be clearly observed from these results. Furthermore, the accuracy of present results were examined by the root-mean-square (RMS) errors, which aggregates the magnitudes of the errors in predictions for various times into a single measure of predictive performance. The error was calculated using
+\begin{equation}
+\varepsilon_{RMS}=\sqrt{\frac{\sum_{k=0}^{n_{max}}[u_3^k-u_b(t^k)]^2}{\sum_{k=0}^{n_{max}}[u_b(t^k)]^2}}
+\end{equation} 
+where $u_b(t)$ is the benchmark solution given by Dymore using eight third-order elements and $5 \times 10^{-4}$s time increment. The RMS error for three displacement components were $0.167$, $0.101$, and $0.266$, respectively. 
+ 
 \begin{figure}
 \centering
 \includegraphics[width=3.0in]{\directory AM2_Excitation.eps}
@@ -669,17 +696,44 @@ This example presents a dynamic analysis of a cantilevered beam under a impulsiv
 \label{Impulsive}
 \end{figure}
 
+\begin{table}
+\caption{\label{E3Stiffness} Stiffness constants of the cantilevered beam in Example C } 
+\begin{center}
+    \begin{tabular}{| c | c | c | c | c | c |}
+    	\hline
+    	       $C_{11}$      & $C_{22}$  & $C_{33}$ & $C_{44} $& $C_{55}$ & $C_{66}$ \\ 
+	       \hline
+    	4.35E+07 & 1.40E+07    &2.81E+06  & 2.81E+04 &2.33E+04 & 2.99E+05 \\ 
+	\hline
+    \end{tabular}
+\end{center}
+\end{table} 
+
+\begin{figure}
+    \centering
+    \begin{tabular}{c}
+    \subfloat[$u_1$]{\label{E3U:u1}\includegraphics[width=3.0 in]{\directory  AM2_u1.eps}} \qquad
+\subfloat[$u_2$]{\label{E3U:u2}\includegraphics[width=3.0in]{\directory  AM2_u2.eps}} \\
+\subfloat[$u_3$]{\label{E3U:u3}\includegraphics[width=3.0 in]{\directory  AM2_u3.eps}} \qquad
+\subfloat[$p_1$]{\label{E3U:p1}\includegraphics[width=3.0 in]{\directory  AM2_p1.eps}} \\
+\subfloat[$p_2$]{\label{E3U:p2}\includegraphics[width=3.0 in]{\directory  AM2_p2.eps}} \qquad
+\subfloat[$p_3$]{\label{E3U:p3}\includegraphics[width=3.0 in]{\directory  AM2_p3.eps}} \\
+\end{tabular}
+\caption{Tip displacement and rotation histories of a cantilever beam under impulsive excitation.}
+\label{E3U}
+\end{figure}  
+
 
  \section{Summary}
-  This paper reported on the development of BeamDyn, a beam solver in the FAST modularization framework. Geometrically exact beam theory has been reformulated into the first-order state-space form so that first-order time integrators, as required by FAST framework for tight-coupling analysis, can be applied to discretize the problem in the time domain. Numerical examples are provided to validate the capability of BeamDyn in analyzing initially curved/twisted beams. A validation example is also presented where the numerical results are compared with experimental data. Finally, the dynamic behavior of the CX-100 wind turbine blade was studied by prescribing a rotation at its root. In all the cases, good agreement was observed.  The convergence rate for analysis of realistic wind turbine blade is discussed. {\color{red} The features of BeamDyn can be summarized as follows:
+  This paper reported on the development of BeamDyn, a beam solver in the FAST modularization framework. Geometrically exact beam theory has been reformulated into the first-order state-space form so that first-order time integrators, as required by FAST framework for tight-coupling analysis, can be applied to discretize the problem in the time domain. Numerical examples are provided to verify and validate the capability of BeamDyn in analyzing initially curved/twisted beams. A validation example is also presented where the numerical results are compared with experimental data. In all the cases, good agreement was observed.  The convergence rate for analysis of realistic wind turbine blade is discussed. The features of BeamDyn can be summarized as follows:
   \begin{enumerate}
-  \item Based on geometrically exact beam theory, BeamDyn is capable of dealing with geometric nonlinear beam problem with arbitrary magnitude of displacements and rotations
-  \item Along with a preprocessor like PreComp and VABS, BeamDyn takes all the elastic coupling effects into account
-  \item The governing equations are reformulated into state-space form, thus, it can be easily integrated into FAST for tight-coupling analysis
+  \item Based on geometrically exact beam theory, BeamDyn is capable of dealing with geometric nonlinear beam problems with arbitrary magnitude of displacements and rotations for both static and dynamic analyses
+  \item Along with a preprocessor like PreComp or VABS, BeamDyn takes full elastic coupling effects into account
+  \item The governing equations are reformulated into state-space form, thus, making it amendable into FAST for tight-coupling analysis
   \item The space is discretized by spectral finite elements, which is a p-version finite element, so that exponential convergence rate can be expected for smooth field
   \item Different time integrators have been implemented in BeamDyn; users will have options based on their needs.
-  \end{enumerate}}
-   Future work includes the proposal of a practical approach to smooth the geometry and sectional constraints to help achieve the expected exponential convergence rate. In addition, this module will be coupled to FAST and verification and validation will be conducted on the full wind turbine system. 
+  \end{enumerate}
+   Future work includes the proposal of a practical approach to smooth the geometry and sectional constants to help achieve the expected exponential convergence rate. In addition, this module will be coupled to FAST and verification and validation will be conducted on a full wind turbine system. 
   
 \section*{Acknowledgments} 
 

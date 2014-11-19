@@ -713,7 +713,7 @@ ENDDO
    REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
    TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
+   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t
    TYPE(BD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
    TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
    TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
@@ -755,7 +755,7 @@ ENDDO
    ENDDO
 
    IF(p%analysis_type .EQ. 2) THEN
-!       CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
+       CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
        CALL BeamDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg) 
        DO i=1,p%elem_total
            DO j=1,p%node_elem
@@ -768,8 +768,9 @@ ENDDO
            ENDDO
        ENDDO
        CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
+                                 &p%damp_flag,p%beta,&
                                  &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
-                                 &xdot%dqdt,p%analysis_type,temp_Force)
+                                 &p%analysis_type,temp_Force)
    ELSEIF(p%analysis_type .EQ. 1) THEN
        CALL StaticSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
                                  &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&

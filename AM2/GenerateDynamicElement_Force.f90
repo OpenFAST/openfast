@@ -1,4 +1,5 @@
    SUBROUTINE GenerateDynamicElement_Force(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
+                                          &damp_flag,beta,&
                                           &elem_total,node_elem,dof_node,ngp,RHS,MassM)
    !----------------------------------------------------------------------------------------
    ! This subroutine computes Global mass matrix and force vector for the beam.
@@ -16,6 +17,8 @@
    INTEGER(IntKi),INTENT(IN):: ngp ! Number of Gauss points
    REAL(ReKi),INTENT(OUT):: MassM(:,:) ! Mass matrix 
    REAL(ReKi),INTENT(OUT):: RHS(:) ! Right hand side of the equation Ax=B  
+   INTEGER(IntKi),INTENT(IN):: damp_flag ! Number of Gauss points
+   REAL(ReKi),INTENT(IN):: beta(:)
 
    REAL(ReKi),ALLOCATABLE:: Nuu0(:) ! Nodal initial position for each element
    REAL(ReKi),ALLOCATABLE:: Nuuu(:) ! Nodal displacement of Mass 1 for each element
@@ -100,6 +103,7 @@
 !       WRITE(*,*) 'EStif0_GL1'
 !       WRITE(*,*) EStif0_GL(:,:,1)
        CALL ElementMatrix_Force(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
+                               &damp_flag,beta,&
                                &ngp,node_elem,dof_node,elf,elm)
 
        CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elm,MassM)

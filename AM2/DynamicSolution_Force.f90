@@ -1,6 +1,7 @@
    SUBROUTINE DynamicSolution_Force(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
+                                   &damp_flag,beta,&
                                    &node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
-                                   &qddot,analysis_type,Force)
+                                   &analysis_type,Force)
    !***************************************************************************************
    ! This subroutine calls other subroutines to apply the force, build the beam element 
    ! stiffness and mass matrices, build nodal force vector.  The output of this subroutine
@@ -20,7 +21,9 @@
    INTEGER(IntKi),INTENT(IN):: node_total ! Total number of nodes
    INTEGER(IntKi),INTENT(IN):: ngp ! Number of Gauss points
    INTEGER(IntKi),INTENT(IN):: analysis_type ! Number of Gauss points
-   REAL(ReKi),INTENT(IN):: qddot(:) ! Second time derivative of state "q"
+!   REAL(ReKi),INTENT(IN):: qddot(:) ! Second time derivative of state "q"
+   INTEGER(IntKi),INTENT(IN):: damp_flag ! Number of Gauss points
+   REAL(ReKi),INTENT(IN):: beta(:)
    
    REAL(ReKi),INTENT(OUT):: Force(:)
 
@@ -39,19 +42,20 @@
    MassM = 0.0D0
 
    CALL GenerateDynamicElement_Force(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
+                                     damp_flag,beta,&
                                      elem_total,node_elem,dof_node,ngp,RHS,MassM)
-   DO j=1,node_total
-       temp_id = (j-1)*dof_node
-       F_PointLoad(temp_id+1:temp_id+3) = u%PointLoad%Force(1:3,j)
-       F_PointLoad(temp_id+4:temp_id+6) = u%PointLoad%Moment(1:3,j)
-   ENDDO
-   RHS(:) = RHS(:) + F_PointLoad(:)
+!   DO j=1,node_total
+!       temp_id = (j-1)*dof_node
+!       F_PointLoad(temp_id+1:temp_id+3) = u%PointLoad%Force(1:3,j)
+!       F_PointLoad(temp_id+4:temp_id+6) = u%PointLoad%Moment(1:3,j)
+!   ENDDO
+!   RHS(:) = RHS(:) + F_PointLoad(:)
    
    Force(:) = 0.0D0
    IF(analysis_type .EQ. 1) THEN
        Force(:) = RHS(:)
    ELSEIF (analysis_type .EQ. 2) THEN
-       Force(:) = RHS(:) - MATMUL(MassM,qddot)
+       Force(:) = RHS(:) !- MATMUL(MassM,qddot)
    ENDIF
    
    END SUBROUTINE DynamicSolution_Force
