@@ -3,6 +3,7 @@ Sample
 ---------------------- SIMULATION CONTROL --------------------------------------
 TRUE         Echo        - Echo input data to "<RootName>.ech" (flag)
 2         analysis_type  - 0: Rigid Body analysis; 1: Static analysis; 2: Dynamic analysis
+1
 ---------------------- GEOMETRY PARAMETER --------------------------------------
 1    member_total    - Total number of member (-)
 10    kp_total        - Total number of key point (-)
@@ -20,11 +21,13 @@ kp_xb kp_yb   kp_zb    initial_twist
 0.0   0.0    8.0   2.5 
 0.0   0.0    9.0   0.0      - Key point coordinates and initial twist (-)
 ---------------------- MESH PARAMETER ------------------------------------------
-10    order_elem    - Order of interpolation (basis) function (-)
+7    order_elem    - Order of interpolation (basis) function (-)
 ---------------------- MATERIAL PARAMETER --------------------------------------
+"CX100Blade_temp.inp"    BldFile - Name of file containing properties for blade 
+8.0E-04 8.0E-04 8.0E-04 8.0E-04 8.0E-04 8.0E-04
+
 "CX100Blade.inp"    BldFile - Name of file containing properties for blade 
 
-"CX100Blade_temp.inp"    BldFile - Name of file containing properties for blade 
 
 
 
