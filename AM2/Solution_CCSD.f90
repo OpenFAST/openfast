@@ -50,6 +50,7 @@
        F_PointLoad(temp_id+1:temp_id+3) = u%PointLoad%Force(1:3,j)
        F_PointLoad(temp_id+4:temp_id+6) = u%PointLoad%Moment(1:3,j)
    ENDDO
+!WRITE(*,*) F_PointLoad
    RHS(dof_total+1:dof_total*2) = RHS(dof_total+1:dof_total*2) + F_PointLoad(1:dof_total) 
    DO j=1,dof_total-6
        RHS_LU(j) = RHS(j+6)

@@ -680,8 +680,9 @@ INCLUDE 'ElementMatrix_CCSD.f90'
    ErrMsg  = "" 
 
    IF(p%analysis_type == 2) THEN
-!       CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-       CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+!WRITE(*,*) x%q(:)
+       CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+!       CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !       DO i=2,p%node_total
 !           temp_id = (i-1)*6
 !           temp_pp(:) = 0.0D0
@@ -697,9 +698,9 @@ INCLUDE 'ElementMatrix_CCSD.f90'
 !       ENDDO
    ELSEIF(p%analysis_type == 1) THEN
        CALL BeamDyn_Static( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-DO i=5,0,-1            
-WRITE(*,*) "Displacement: ",i,x%q(p%dof_total-i)
-ENDDO
+!DO i=5,0,-1            
+!WRITE(*,*) "Displacement: ",i,x%q(p%dof_total-i)
+!ENDDO
    ENDIF
 
    END SUBROUTINE BeamDyn_UpdateStates
@@ -748,7 +749,8 @@ ENDDO
            cc(1:3) = x%q(temp_id+4:temp_id+6)
            temp_id = (j-1)*p%dof_node
            cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
-           CALL CrvCompose(temp_cc,cc0,cc,0)
+!           CALL CrvCompose(temp_cc,cc0,cc,0)
+           CALL CrvCompose_temp(temp_cc,cc0,cc,0)
            CALL CrvMatrixR(temp_cc,temp_R)
            y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
        ENDDO

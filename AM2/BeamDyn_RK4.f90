@@ -60,13 +60,18 @@
                  , CtrlCode = MESH_NEWCOPY        &
                  , ErrStat  = ErrStat             &
                  , ErrMess  = ErrMsg               )
-
+   CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
+   CALL BD_CopyContState(x, x_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
 
    ! interpolate u to find u_interp = u(t)
    CALL BD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
    ! find xdot at t
-   CALL BeamDyn_ApplyBoundaryCondition(x,u_interp,ErrStat,ErrMsg)
+!   CALL BeamDyn_ApplyBoundaryCondition(x,u_interp,ErrStat,ErrMsg)
+   CALL BeamDyn_BoundaryAM2(x,u_interp,t,OtherState%Rescale_counter,ErrStat,ErrMsg)
+!write(*,*) "test"
+! write(*,*) x%q(:)
    CALL BeamDyn_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+
 
    k1%q    = p%dt * xdot%q
    k1%dqdt = p%dt * xdot%dqdt
@@ -78,7 +83,8 @@
    CALL BD_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%dt, ErrStat, ErrMsg)
 
    ! find xdot at t + dt/2
-   CALL BeamDyn_ApplyBoundaryCondition(x,u_interp,ErrStat,ErrMsg)
+!   CALL BeamDyn_ApplyBoundaryCondition(x,u_interp,ErrStat,ErrMsg)
+   CALL BeamDyn_BoundaryAM2(x,u_interp,t+0.5*p%dt,OtherState%Rescale_counter,ErrStat,ErrMsg)
    CALL BeamDyn_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
 
    k2%q    = p%dt * xdot%q
@@ -100,7 +106,8 @@
    CALL BD_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
 
    ! find xdot at t + dt
-   CALL BeamDyn_ApplyBoundaryCondition(x,u_interp,ErrStat,ErrMsg)
+!   CALL BeamDyn_ApplyBoundaryCondition(x,u_interp,ErrStat,ErrMsg)
+   CALL BeamDyn_BoundaryAM2(x,u_interp,t+p%dt,OtherState%Rescale_counter,ErrStat,ErrMsg)
 !   WRITE(*,*) "x%q(1:6): ", x%q(1:6)
    
    CALL BeamDyn_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
@@ -111,7 +118,8 @@
    x%q    = x%q    +  ( k1%q    + 2. * k2%q    + 2. * k3%q    + k4%q    ) / 6.      
    x%dqdt = x%dqdt +  ( k1%dqdt + 2. * k2%dqdt + 2. * k3%dqdt + k4%dqdt ) / 6.      
 
-   CALL BeamDyn_ApplyBoundaryCondition(x,u(1),ErrStat,ErrMsg)
+!   CALL BeamDyn_ApplyBoundaryCondition(x,u(1),ErrStat,ErrMsg)
+   CALL RescaleCheck(x,p%node_total,OtherState%Rescale_counter)
 
    CALL MeshDestroy ( u_interp%RootMotion       &
                     , ErrStat  = ErrStat         &
