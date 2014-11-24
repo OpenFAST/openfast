@@ -1,3 +1,6 @@
+v2.02.01a-gjh  (Nov 2014)
+•	Fixed bug where a WaveTp = 0 would cause a crash.  Fixed by adding a consistent error check on the WaveTp parameter to make sure it is greater than zero.
+
 v2.02 (September 2014)
 •	Added second order wave kinematics for strip theory calculations
 •	Added second order force calculations using potential flow (second order hydrodynamic coefficients must be supplied using WAMIT)
