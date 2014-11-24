@@ -2493,19 +2493,19 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
 
       ! WaveTp - Peak spectral period.
-
-   IF ( ( InitInp%Waves%WaveMod == 1 ) .OR. ( InitInp%Waves%WaveMod == 2 ) .OR. ( InitInp%Waves%WaveMod == 10 ) ) THEN   ! .TRUE. (when WaveMod = 1, 2, or 10) if we have plane progressive (regular), JONSWAP/Pierson-Moskowitz spectrum (irregular) waves.
+   ! We commented out the if else block due to a bug when WaveMod == 3, and then WaveTp is hence set to 0.0.  See line 1092 of Waves.f90 (as of 11/24/2014) GJH
+   !IF ( ( InitInp%Waves%WaveMod == 1 ) .OR. ( InitInp%Waves%WaveMod == 2 ) .OR. ( InitInp%Waves%WaveMod == 10 ) ) THEN   ! .TRUE. (when WaveMod = 1, 2, or 10) if we have plane progressive (regular), JONSWAP/Pierson-Moskowitz spectrum (irregular) waves.
 
       IF ( InitInp%Waves%WaveTp <= 0.0 )  THEN
          CALL SetErrStat( ErrID_Fatal,'WaveTp must be greater than zero.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
          RETURN
       END IF
 
-   ELSE
+  ! ELSE
 
-      InitInp%Waves%WaveTp = 0.0
+  !    InitInp%Waves%WaveTp = 0.0
 
-   END IF
+  ! END IF
 
 
        ! WavePkShp - Peak shape parameter.
