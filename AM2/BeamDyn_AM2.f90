@@ -63,6 +63,8 @@
    ! interpolate u to find u_interp = u(t)
    CALL BD_Input_ExtrapInterp( u, utimes, u_interp, t+p%dt, ErrStat, ErrMsg )
    CALL BD_Input_ExtrapInterp( u, utimes, u_interp0, t, ErrStat, ErrMsg )
+!WRITE(*,*) u_interp0%PointLoad%Force(:,p%node_total)
+!WRITE(*,*) u_interp%PointLoad%Force(:,p%node_total)
    ! find x at t+dt
    CALL BeamDyn_BoundaryAM2(x,u_interp,t+p%dt,OtherState%Rescale_counter,ErrStat,ErrMsg)
    CALL BeamDyn_CalcContStateDeriv(t,u_interp0,p,x_tmp,xd,z,OtherState,xdot,ErrStat,ErrMsg)
