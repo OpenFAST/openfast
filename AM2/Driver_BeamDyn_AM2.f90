@@ -86,6 +86,8 @@ PROGRAM MAIN
    REAL(ReKi):: temp_H(3,3)
    REAL(ReKi):: temp_cc(3)
    INTEGER(IntKi),PARAMETER:: QiHUnit = 30
+   INTEGER(IntKi),PARAMETER:: LoadUnit = 40
+   REAL(ReKi):: InputLoad(20002,2)
 
 
 
@@ -104,7 +106,7 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 5.0D-03
+   dt_global = 5.0D-04
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -133,6 +135,14 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
    !  defined coupling interval.
    ! -------------------------------------------------------------------------
     OPEN(unit = QiDisUnit, file = 'QiDisp_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
+
+    OPEN(unit = LoadUnit, file = 'Test19.out', status = 'OLD',ACTION = 'READ')
+    DO i=1,20002
+        READ(LoadUnit,*) InputLoad(i,1),InputLoad(i,2)
+        InputLoad(i,2) = InputLoad(i,2)*1.0D+02
+WRITE(*,*) InputLoad(i,:)
+    ENDDO
+    CLOSE (LoadUnit)
 
    BD_InitInput%InputFile = 'BeamDyn_Input_CX100.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
@@ -196,13 +206,39 @@ WRITE(*,*) "Time Step: ", n_t_global
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
-      CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), BD_Parameter, ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + dt_global, BD_Input(2), BD_InputTimes(2), BD_Parameter, ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + 2.*dt_global   , BD_Input(3), BD_InputTimes(3), BD_Parameter, ErrStat, ErrMsg)
-!      CALL BD_InputSolve( t_global + .5*dt_global, BD_Input(2), BD_InputTimes(2), ErrStat, ErrMsg)
-!      CALL BD_InputSolve( t_global + dt_global   , BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
-!      CALL BD_InputSolve( t_global + 2.*dt_global, BD_Input(3), BD_InputTimes(3), ErrStat, ErrMsg)
+!      CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), BD_Parameter, ErrStat, ErrMsg)
+!      CALL BD_InputSolve( t_global + dt_global, BD_Input(2), BD_InputTimes(2), BD_Parameter, ErrStat, ErrMsg)
+!      CALL BD_InputSolve( t_global + 2.*dt_global   , BD_Input(3), BD_InputTimes(3), BD_Parameter, ErrStat, ErrMsg)
+BD_InputTimes(1) = t_global
+BD_InputTimes(2) = t_global+dt_global
+BD_InputTimes(3) = t_global+2.0D0*dt_global
 
+BD_Input(1)%RootMotion%TranslationDisp(:,:) = 0.0D0
+BD_Input(1)%RootMotion%TranslationVel(:,:)   = 0.0D0
+BD_Input(1)%RootMotion%TranslationAcc(:,:)   = 0.0D0
+BD_Input(1)%RootMotion%RotationAcc(:,:) = 0.0D0
+BD_Input(1)%PointLoad%Moment(:,:) = 0.0D0
+BD_Input(1)%DistrLoad%Force(:,:)  = 0.0D0
+BD_Input(1)%DistrLoad%Moment(:,:) = 0.0D0
+BD_Input(1)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+1,2)
+
+BD_Input(2)%RootMotion%TranslationDisp(:,:) = 0.0D0
+BD_Input(2)%RootMotion%TranslationVel(:,:)   = 0.0D0
+BD_Input(2)%RootMotion%TranslationAcc(:,:)   = 0.0D0
+BD_Input(2)%RootMotion%RotationAcc(:,:) = 0.0D0
+BD_Input(2)%PointLoad%Moment(:,:) = 0.0D0
+BD_Input(2)%DistrLoad%Force(:,:)  = 0.0D0
+BD_Input(2)%DistrLoad%Moment(:,:) = 0.0D0
+BD_Input(2)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+2,2)
+
+BD_Input(3)%RootMotion%TranslationDisp(:,:) = 0.0D0
+BD_Input(3)%RootMotion%TranslationVel(:,:)   = 0.0D0
+BD_Input(3)%RootMotion%TranslationAcc(:,:)   = 0.0D0
+BD_Input(3)%RootMotion%RotationAcc(:,:) = 0.0D0
+BD_Input(3)%PointLoad%Moment(:,:) = 0.0D0
+BD_Input(3)%DistrLoad%Force(:,:)  = 0.0D0
+BD_Input(3)%DistrLoad%Moment(:,:) = 0.0D0
+BD_Input(3)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+3,2)
 
      CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &

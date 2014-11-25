@@ -681,8 +681,8 @@ INCLUDE 'ElementMatrix_CCSD.f90'
 
    IF(p%analysis_type == 2) THEN
 !WRITE(*,*) x%q(:)
-       CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!       CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+!       CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !       DO i=2,p%node_total
 !           temp_id = (i-1)*6
 !           temp_pp(:) = 0.0D0
