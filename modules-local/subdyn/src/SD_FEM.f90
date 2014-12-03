@@ -1075,6 +1075,8 @@ SUBROUTINE LumpForces(Area1,Area2,crat,L,rho, g, DirCos, F)
     !LOCALS
    REAL(ReKi)                         :: TempCoeff,a0,a1,a2  !coefficients of the gravity quadratically distributed force
 
+   A1 = -99999  !bjj initialized this to avoid getting warning by Intel Analyzers; needs to be set differently
+   A2 = -99999  !bjj initialized this to avoid getting warning by Intel Analyzers; needs to be set differently
    
    !Calculate quadratic polynomial coefficients
    a0=A1

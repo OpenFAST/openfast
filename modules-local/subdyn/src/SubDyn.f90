@@ -733,7 +733,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          OtherState%UL            = matmul( p%PhiM,  x%qm    )               + matmul( p%PhiRb_TI, OtherState%u_TP       )  ! UL             [ Y2(2) = C2(2,1)*x(1) + D2(2,1)*u(1) ] : IT MAY BE MODIFIED LATER IF STATIC IMPROVEMENT
          OtherState%UL_dot        = matmul( p%PhiM,  x%qmdot )               + matmul( p%PhiRb_TI, OtherState%udot_TP    )  ! UL_dot         [ Y2(4) = C2(2,2)*x(2) + D2(4,2)*u(2) ]      
          OtherState%UL_dotdot     = matmul( p%C2_61, x%qm    )               + matmul( p%C2_62   , x%qmdot )             &  ! UL_dotdot      [ Y2(6) = C2(6,1)*x(1) + C2(6,2)*x(2) ...
-                                  + matmul( p%D2_63, OtherState%udotdot_TP ) + matmul( p%D2_64,    OtherState%UFL      ) &  !                        + D2(6,3)*u(3) + D2(6,4)*u(4) ...
+                                  + matmul( p%D2_63, OtherState%udotdot_TP ) + matmul( p%D2_64,    OtherState%UFL      ) &  !                        + D2(6,3)*u(3) + D2(6,4)*u(4) ...  ! -> bjj: this line takes up a lot of time. are any matrices sparse?
                                   + p%F2_61                                                                                 !                        + F2(6) ]                  
       ELSE ! There are no states when p%qml=0 (i.e., no retained modes: p%Nmodes=0), so we omit those portions of the equations
          OtherState%UL            =                                            matmul( p%PhiRb_TI, OtherState%u_TP       )  ! UL             [ Y2(2) =       0*x(1) + D2(2,1)*u(1) ] : IT MAY BE MODIFIED LATER IF STATIC IMPROVEMENT
@@ -744,8 +744,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
                 
              !STATIC IMPROVEMENT METHOD  ( modify UL )
       IF (p%SttcSolve) THEN
-         FLt  = MATMUL(p%PhiL_T,                  OtherState%UFL + p%FGL)
-         ULS  = MATMUL(p%PhiLInvOmgL2,            FLt                   )
+         FLt  = MATMUL(p%PhiL_T,                  OtherState%UFL + p%FGL)  ! -> bjj: todo: this line takes up A LOT of time. is PhiL_T sparse????
+         ULS  = MATMUL(p%PhiLInvOmgL2,            FLt                   )  ! -> bjj: todo: this line takes up A LOT of time. is PhiL_T sparse????
          OtherState%UL  = OtherState%UL + ULS 
           
          IF ( p%qml > 0) THEN
