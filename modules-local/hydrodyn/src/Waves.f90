@@ -2098,7 +2098,7 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ErrStat = ErrID_None         
    ErrMsg  = "" 
    
-   
+   LastInd  = 1
    Reading  = .TRUE.
 
    ! Tell our nice users what is about to happen that may take a while:
@@ -3109,6 +3109,8 @@ FUNCTION WheelerStretching ( zOrzPrime, Zeta, h, ForwardOrBackward, ErrStat, Err
 
    CASE DEFAULT
 
+      WheelerStretching = 0.0_ReKi
+      
       ErrMsg = 'The last argument in routine WheelerStretching() must be ''F'' or ''B''.'
       ErrStat = ErrID_Fatal
       RETURN

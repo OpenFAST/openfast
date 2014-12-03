@@ -4593,9 +4593,9 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
             ! Distributed added mass loads
             
          qdotdot              = reshape((/u%DistribMesh%TranslationAcc(:,J),u%DistribMesh%RotationAcc(:,J)/),(/6/))   
-         OtherState%D_F_AM_MG(:,J) = -matmul( p%D_AM_MG(:,:,J), qdotdot )
-         OtherState%D_F_AM_M(:,J)  = -matmul( p%D_AM_M(:,:,J) , qdotdot )
-         OtherState%D_F_AM_F(:,J)  = -matmul( p%D_AM_F(:,:,J) , qdotdot )
+         OtherState%D_F_AM_MG(:,J) = -matmul( p%D_AM_MG(:,:,J), qdotdot )  !bjj: these lines take up a lot of time. are the matrices sparse?
+         OtherState%D_F_AM_M(:,J)  = -matmul( p%D_AM_M(:,:,J) , qdotdot )  !bjj: these lines take up a lot of time. are the matrices sparse?
+         OtherState%D_F_AM_F(:,J)  = -matmul( p%D_AM_F(:,:,J) , qdotdot )  !bjj: these lines take up a lot of time. are the matrices sparse?
          OtherState%D_F_AM(:,J)    = OtherState%D_F_AM_M(:,J) + OtherState%D_F_AM_MG(:,J) + OtherState%D_F_AM_F(:,J)    ! vector-based addition
          
         

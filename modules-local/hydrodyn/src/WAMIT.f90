@@ -341,7 +341,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
          READ (UnWh,*,IOSTAT=Sttus)  I, J, TmpData1   ! Read in the row index, column index, and nondimensional data from the WAMIT file
 
          IF ( Sttus == 0 )  THEN                ! .TRUE. when data is read in successfully
-
+!bjj: TODO verify that I and J are valid values
             p%HdroSttc (I,J) = TmpData1*SttcDim(I,J)    ! Redimensionalize the data and place it at the appropriate location within the array
 
          ELSE                                   ! We must have reached the end of the file, so stop reading in data
@@ -527,6 +527,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
                   CALL Cleanup()
                   RETURN
                END IF              
+!bjj: verify that I and J are valid indices for RdtnDim                  
                   
                   
                IF ( J >= I )  THEN  ! .TRUE. if we are on or above the diagonal
@@ -543,6 +544,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
                   CALL Cleanup()
                   RETURN
                END IF              
+!bjj: verify that I and J are valid indices for RdtnDim                  
 
                IF ( J >= I )  THEN  ! .TRUE. if we are on or above the diagonal
                   Indx = 6*( I - 1 ) + J - ( I*( I - 1 ) )/2                                       ! Convert from row/column indices to an index in the format used to save only the upper-triangular portion of the matrix.  NOTE: ( I*( I - 1 ) )/2 = SUM(I,START=1,END=I-1).

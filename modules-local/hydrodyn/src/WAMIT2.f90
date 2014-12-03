@@ -5050,7 +5050,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       LOGICAL,             INTENT(  OUT)           :: IsRealNum      !< Flag indicating if we successfully read a Real
       INTEGER(IntKi),      INTENT(  OUT)           :: ErrStat        !< ErrID level returned from ReadNum
       CHARACTER(*),        INTENT(  OUT)           :: ErrMsg         !< Error message including message from ReadNum
-      INTEGER(IntKi),      INTENT(  OUT), OPTIONAL :: IOErrStat      !< Error status from the internal read. Useful for diagnostics.
+      INTEGER(IntKi),      INTENT(  OUT)           :: IOErrStat      !< Error status from the internal read. Useful for diagnostics.
 
 
 
@@ -5108,7 +5108,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       LOGICAL,             INTENT(  OUT)           :: IsRealNum      !< Flag indicating if we successfully read a Real
       INTEGER(IntKi),      INTENT(  OUT)           :: ErrStat        !< ErrID level returned from ReadNum
       CHARACTER(*),        INTENT(  OUT)           :: ErrMsg         !< Error message including message from ReadNum
-      INTEGER(IntKi),      INTENT(  OUT), OPTIONAL :: IOErrStat      !< Error status from the internal read. Useful for diagnostics.
+      INTEGER(IntKi),      INTENT(  OUT)           :: IOErrStat      !< Error status from the internal read. Useful for diagnostics.
 
          ! Local vars
       INTEGER(IntKi)                      :: ErrStatTmp

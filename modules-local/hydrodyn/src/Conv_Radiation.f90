@@ -227,6 +227,7 @@ RdtnFrmAM = .FALSE.
          END DO
       END DO
 
+      LastInd = 1
       IF ( RdtnFrmAM )  THEN  ! .TRUE. if we will determine the wave radiation kernel from the frequency-dependent hydrodynamic added mass matrix
 
 
