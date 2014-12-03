@@ -1322,7 +1322,7 @@ CONTAINS
                ALLOCATE(DestMesh%ElemTable(i)%Elements(DestMesh%ElemTable(i)%maxelem),STAT=ErrStat2)
                IF (ErrStat2 /=0) THEN
                   ErrStat = ErrID_Fatal
-                  ErrMess=' MeshCopy: Error allocating ElemTable%Elements.'
+                  ErrMess='MeshCopy:Error allocating ElemTable%Elements.'
                   RETURN !Early return
                END IF
 
@@ -1331,7 +1331,7 @@ CONTAINS
                   ALLOCATE(DestMesh%ElemTable(i)%Elements(j)%ElemNodes(size(SrcMesh%ElemTable(i)%Elements(j)%ElemNodes)),STAT=ErrStat2)
                   IF (ErrStat2 /=0) THEN
                      ErrStat = ErrID_Fatal
-                     ErrMess=' MeshCopy: Error allocating ElemTable%ElemNodes.'
+                     ErrMess='MeshCopy:Error allocating ElemTable%ElemNodes.'
                      RETURN !Early return
                   END IF
                   DestMesh%ElemTable(i)%Elements(j)%ElemNodes = SrcMesh%ElemTable(i)%Elements(j)%ElemNodes

@@ -47,7 +47,7 @@ MODULE ModMesh_Mapping
    TYPE, PUBLIC :: MeshMapType
       TYPE(MapType),  ALLOCATABLE :: MapLoads(:)
       TYPE(MapType),  ALLOCATABLE :: MapMotions(:)
-      TYPE(MapType),  ALLOCATABLE :: MapSrcToAugmt(:)         ! for source line2 loads, we map between source and an augmented source mesh, then betwee augmented source and destination
+      TYPE(MapType),  ALLOCATABLE :: MapSrcToAugmt(:)         ! for source line2 loads, we map between source and an augmented source mesh, then betweeN augmented source and destination
       TYPE(MeshType)              :: Augmented_Ln2_Src
       TYPE(MeshType)              :: Lumped_Points_Src        ! Stored here for efficiency
 #ifdef MESH_DEBUG     
@@ -673,14 +673,24 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
 
+#ifdef __NN_ORIENTATIONS         
+         IF ( NINT( MeshMap%MapMotions(i)%shape_fn(2) ) == 0 ) THEN
+            n = n1
+         ELSE
+            n = n2
+         END IF
+         
+         Dest%Orientation(:,:,i) = MATMUL( MATMUL( Dest%RefOrientation(:,:,i), TRANSPOSE( Src%RefOrientation(:,:,n) ) )&
+                                          , Src%Orientation(:,:,n) )
+#else         
 #ifdef __ORIGINAL_LOGMAP    
             ! calculate Rotation matrix for FieldValueN1 and convert to tensor:
          RotationMatrix = MATMUL( MATMUL( Dest%RefOrientation(:,:,i), TRANSPOSE( Src%RefOrientation(:,:,n1) ) )&
                                  , Src%Orientation(:,:,n1) )
-         
+
          CALL DCM_logmap( RotationMatrix, FieldValue(:,1), ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev) RETURN
-         
+
             ! calculate Rotation matrix for FieldValueN2 and convert to tensor:
          RotationMatrix = MATMUL( MATMUL( Dest%RefOrientation(:,:,i), TRANSPOSE( Src%RefOrientation(:,:,n2) ) )&
                                  , Src%Orientation(:,:,n2) )
@@ -725,6 +735,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
          Dest%Orientation(:,:,i) = MATMUL( Dest%RefOrientation(:,:,i), DCM_exp( TmpVec )  )
          
 #endif         
+#endif
          
       end do
 
@@ -2189,10 +2200,11 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
    INTEGER(IntKi)                                 :: iElem, i            ! do-loop counter for nodes/elements on source
    INTEGER(IntKi)                                 :: jElem, jNode, j     ! do-loop counter for nodes/elements on destination
    
-   INTEGER(IntKi)                                 :: max_nodes, Aug_Nnodes
+   INTEGER(IntKi)                                 :: max_new_nodes, max_nodes, Aug_Nnodes
    INTEGER(IntKi)                                 :: Aug_NElem, curr_Aug_NElem
    INTEGER(IntKi)                                 :: n, n1, n2
    REAL(ReKi)                                     :: p_ED(3), p_ES(3), n1S_nD_vector(3), position(3)
+   REAL(ReKi)                                     :: TmpVec(3), RefOrientation(3,3), FieldValue(3,2)   ! values for interpolating direction cosine matrices
    REAL(ReKi)                                     :: denom, elem_position
    REAL(ReKi), PARAMETER                          :: TOL = sqrt(epsilon(elem_position))  ! we're not using EqualRealNos here because we don't want elements of zero length (EqualRealNos produces elements of zero length)
    REAL(ReKi)                                     :: L         ! length of newly created element(s)
@@ -2216,8 +2228,8 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
          
    ! first, we need to know how many (additional) nodes we might need:
    !   each node of each destination element could potentially split each element of the source mesh
-   max_nodes = (NumNodes( Dest_TYPE ) * dest%ElemTable(Dest_TYPE)%nelem) * src%ElemTable(ELEMENT_LINE2)%nelem     ! max number of new nodes
-   max_nodes  = max_nodes + Src%nnodes                                                                            ! max total number of nodes in new mesh
+   max_new_nodes = (NumNodes( Dest_TYPE ) * dest%ElemTable(Dest_TYPE)%nelem) * src%ElemTable(ELEMENT_LINE2)%nelem     ! max number of new nodes
+   max_nodes     = max_new_nodes + Src%nnodes                                                                         ! max total number of nodes in new mesh
       
    ! create a temporary mesh that we can work with (add nodes and split elements):
    ! note that we don't have any fields, and we will never commit this mesh, either.
@@ -2235,7 +2247,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
       END IF
    
    
-   CALL AllocAry( Original_Src_Element, max_nodes, 'Original_Src_Element', ErrStat2, ErrMsg2 )
+   CALL AllocAry( Original_Src_Element, src%ElemTable(ELEMENT_LINE2)%nelem+max_new_nodes, 'Original_Src_Element', ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Create_Augmented_Ln2_Src_Mesh')
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -2324,7 +2336,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                IF ( elem_position > TOL .AND. elem_position < (1.0_ReKi - TOL)  ) THEN
                   
                   
-                     ! Add a node:
+                     ! Add a node (and therefore an element):
                   Aug_Nnodes = Aug_Nnodes + 1
 
                      ! calculate the position and orientation relative to the *original* source element:
@@ -2356,6 +2368,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                      ! let's verify the other node (n2) of this element doesn't give zero-length:
                      p_eS = position - Temp_Ln2_Src%Position(:, Temp_Ln2_Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(2))                                    
                      L = SQRT(dot_product(p_eS,p_eS)) ! length of new element
+                     
                      IF ( L < TOL ) THEN ! this element is basically zero length
                         ! for numerical reasons, we really didn't want this node....
                         Aug_Nnodes = Aug_Nnodes - 1
@@ -2370,21 +2383,43 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                               RETURN      
                            END IF
                        
-                        Original_Src_Element( Aug_NElem ) = Original_Src_Element(iElem)  ! this node can now be mapped to original source mesh element               
+                           Original_Src_Element( Aug_NElem ) = Original_Src_Element( iElem )  ! this node can now be mapped to original source mesh element               
                        
                         
+                        ! get the Reference orientation for this new node                                                                                                                     
+#ifdef __NN_ORIENTATIONS                        
                         ! set the RefOrientation based on proximity to original element's nodes:
-                     
                         IF ( NINT( shape_fn2(Aug_Nnodes) ) .EQ. 0 ) THEN
                            n = n1
                         ELSE
                            n = n2                        
                         END IF
-                                                               
+                        RefOrientation = Src%RefOrientation(:, :, n) 
+#else
+                        
+                           ! convert DCMs to tensors: 
+                        CALL DCM_logmap( Src%RefOrientation(:, :, n1), FieldValue(:,1), ErrStat, ErrMsg )
+                        IF (ErrStat >= AbortErrLev) RETURN
+                  
+                        CALL DCM_logmap( Src%RefOrientation(:, :, n2), FieldValue(:,2), ErrStat, ErrMsg )                  
+                        IF (ErrStat >= AbortErrLev) RETURN
+         
+                        CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
+                  
+                           ! interpolate tensors: 
+                        TmpVec = (1.0_ReKi - shape_fn2(Aug_Nnodes)) * FieldValue(:, 1) &
+                                           + shape_fn2(Aug_Nnodes)  * FieldValue(:, 2) 
+                              
+                           ! convert back to DCM:
+                        RefOrientation = DCM_exp( TmpVec )
+
+#endif
+                        
+                        
                         CALL MeshPositionNode ( Mesh       = Temp_Ln2_Src                      &
                                                 ,INode     = Aug_Nnodes                        &
                                                 ,Pos       = position                          & 
-                                                ,Orient    = Src%RefOrientation(:, :, n)       &
+                                                ,Orient    = RefOrientation                    &
                                                 ,ErrStat   = ErrStat2                          &
                                                 ,ErrMess   = ErrMsg2                           )
                            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Create_Augmented_Ln2_Src_Mesh')
@@ -2486,13 +2521,13 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
       ! we're going to need the mapping data from source to augmented source:
    IF (Aug_Nnodes > Src%Nnodes) THEN
       IF (ALLOCATED(MeshMap%MapSrcToAugmt)) THEN
-         IF (SIZE(MeshMap%MapSrcToAugmt) < Aug_NNodes) THEN
+         IF (UBOUND(MeshMap%MapSrcToAugmt,1) < Aug_NNodes) THEN
             DEALLOCATE (MeshMap%MapSrcToAugmt)
          END IF
       END IF
       
       IF (.NOT. ALLOCATED(MeshMap%MapSrcToAugmt)) THEN
-         ALLOCATE( MeshMap%MapSrcToAugmt(Aug_NNodes), STAT=ErrStat2 ) 
+         ALLOCATE( MeshMap%MapSrcToAugmt((Src%Nnodes+1):Aug_NNodes), STAT=ErrStat2 ) 
          
          IF (ErrStat2 /= 0) THEN
             CALL SetErrStat( ErrID_Fatal, 'Could not allocate MeshMap%MapSrcToAugmt.', ErrStat, ErrMsg, 'Create_Augmented_Ln2_Src_Mesh')
@@ -2502,9 +2537,9 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
       END IF
    
       MeshMap%MapSrcToAugmt%OtherMesh_Element = -1
-      MeshMap%MapSrcToAugmt(Src%Nnodes:Aug_Nnodes)%OtherMesh_Element = Original_Src_Element(Src%ElemTable(ELEMENT_LINE2)%nelem:Aug_NElem) ! we added just as many nodes as elements...
-      MeshMap%MapSrcToAugmt(:)%shape_fn(2)     = shape_fn2(1:Aug_NNodes)
-      MeshMap%MapSrcToAugmt(:)%shape_fn(1)     = 1.0_ReKi - MeshMap%MapSrcToAugmt(:)%shape_fn(2)
+      MeshMap%MapSrcToAugmt(:)%OtherMesh_Element = Original_Src_Element( (Src%ElemTable(ELEMENT_LINE2)%nelem+1) : Aug_NElem ) ! we added just as many nodes as elements...
+      MeshMap%MapSrcToAugmt(:)%shape_fn(2)       = shape_fn2( (Src%nnodes+1) : Aug_Nnodes )
+      MeshMap%MapSrcToAugmt(:)%shape_fn(1)       = 1.0_ReKi - MeshMap%MapSrcToAugmt(:)%shape_fn(2)
       
             
       IF (ALLOCATED(MeshMap%DisplacedPosition)) THEN
