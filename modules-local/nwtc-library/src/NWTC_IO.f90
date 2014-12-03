@@ -2952,7 +2952,12 @@ CONTAINS
 
       IF ( PRESENT(ErrStat) ) THEN
          ErrStat = ErrID_Fatal
-         ErrMsg  = Msg
+         IF ( PRESENT(ErrMsg)  )  then
+            ErrMsg  = Msg
+         ELSE
+            CALL WrScr( ' OpenFOutFile:'//TRIM(Msg) )
+         END IF
+         
       ELSE
          CALL ProgAbort( ' '//Msg )
       END IF
@@ -4090,7 +4095,7 @@ CONTAINS
 
       CALL ChkParseData ( Words, ExpVarName, FileInfo%FileList(FileInfo%FileIndx(LineNum)) &
                         , FileInfo%FileLine(LineNum), NameIndx, ErrStatLcl, ErrMsg )
-      IF ( ErrStatLcl /= 0 )  THEN
+      IF ( ErrStatLcl /= ErrID_None )  THEN
          CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
          RETURN
       ENDIF
