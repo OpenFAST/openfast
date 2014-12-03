@@ -3920,6 +3920,9 @@ NTAB = P%AirFoil%NLIFT(I)
 
 IF ( ( ALPHA < O%AirFoil%AL(I,1) ) .OR. ( ALPHA > O%AirFoil%AL(I,NTAB) ) )   THEN
 !bjj: This error message isn't necessarially accurate:
+   CDA = 0.
+   CLA = 0.
+   CMA = 0.
   ErrMess = ' Angle of attack = '//TRIM(Num2LStr(ALPHA*R2D))// &
             ' deg is outside data table range. '// & !Blade #'//TRIM(Int2LStr(IBLADE))//&
             ' Airfoil '//TRIM(Int2LStr(I))//'.' 
