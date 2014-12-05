@@ -1002,8 +1002,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       IF ( nSeeds /= 2 ) THEN
          ErrMsgTmp   = ' The random number generator in use differs from the original code provided by NREL. This pRNG uses ' &
                                   //TRIM(Int2LStr(nSeeds))//' seeds instead of the 2 in the HydroDyn input file.'
-         ErrStatTmp  = ErrID_Warn
-         CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'VariousWaves_Init')
+         CALL SetErrStat(ErrID_Warn,ErrMsgTmp,ErrStat,ErrMsg,'VariousWaves_Init')
       END IF
 
       ALLOCATE ( TmpWaveSeeds ( nSeeds ), STAT=ErrStatTmp )

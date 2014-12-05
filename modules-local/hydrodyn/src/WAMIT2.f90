@@ -3129,8 +3129,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&
                   'second order force calculations of platform heave.'//NewLine// &
                   "           No second order heave forces will be calculated within the Newman's Approximation calculations.", ErrStat, ErrMsg, 'CheckInitInput')
-               ErrStat  =  MAX(ErrStat,ErrID_Warn)
-               ErrMsg   =  TRIM(ErrMsg)//""//NewLine
             ENDIF
             IF (InitInp%PtfmRF2) THEN
                CALL SetErrStat( ErrID_Warn, ' Warning: the .8 WAMIT output file does not contain information that can be used for '//&

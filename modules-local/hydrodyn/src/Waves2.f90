@@ -2255,7 +2255,7 @@ SUBROUTINE Waves2_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherStat
 
          ! Initialize ErrStat
 
-      ErrStat = ErrID_Warn
+      ErrStat = ErrID_None
       ErrMsg  = "Warning: No States to update in Waves2 module. *Waves2_UpdateStates was called*"
 
 
@@ -2349,7 +2349,7 @@ SUBROUTINE Waves2_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, Er
 
          ! Initialize ErrStat
 
-      ErrStat = ErrID_Warn
+      ErrStat = ErrID_None
       ErrMsg  = "Warning: No States to take derivative of in Waves2 module. *Waves2::CalcContStateDeriv was called.  It "// &
                   "is not necessary in the Waves2 module, so it does nothing.*"
 
@@ -2387,7 +2387,7 @@ SUBROUTINE Waves2_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, ErrStat,
 
          ! Initialize ErrStat
 
-      ErrStat = ErrID_Warn
+      ErrStat = ErrID_None
       ErrMsg  = "Warning: No Discrete States to update in Waves2 module. *Waves2::UpdateDiscState was called.  It is not "// &
                   "necessary in the Waves2 module, so it does nothing.*"
 
@@ -2422,7 +2422,7 @@ SUBROUTINE Waves2_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_r
 
          ! Initialize ErrStat
 
-      ErrStat = ErrID_Warn
+      ErrStat = ErrID_None
       ErrMsg  = "Warning: No States in Waves2 module. *Waves2::CalcConstrStateResidual was called.  It is not needed in "//&
                   "the Waves2 module, so it does nothing useful."
 

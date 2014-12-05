@@ -1490,7 +1490,7 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, WtrDpth, numNodes, nodes, numElemen
            
                ! Get the member index and node index for this output label.  If this is not a member output the indices will return 0 with no errcode.
            ! CALL MrsnOut_GetMemberOutputInfo(WriteOutputHdr(I), NMOutputs, MOutLst, mbrIndx, nodeIndx, ErrStat, ErrMsg )
-          !  IF (ErrStat > ErrID_Warn ) RETURN
+          !  IF (ErrStat >= AbortErrLev ) RETURN
            ! IF ( mbrIndx > 0 ) THEN
          tmpName =  OutParam(I)%Name
          IF (OutParam(I)%SignM == -1 ) tmpName = tmpName(2:10)
@@ -1535,7 +1535,7 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, WtrDpth, numNodes, nodes, numElemen
            
                ! Get the member index and node index for this output label.  If this is not a member output the indices will return 0 with no errcode.
            ! CALL MrsnOut_GetMemberOutputInfo(WriteOutputHdr(I), NMOutputs, MOutLst, mbrIndx, nodeIndx, ErrStat, ErrMsg )
-          !  IF (ErrStat > ErrID_Warn ) RETURN
+          !  IF (ErrStat >= AbortErrLev ) RETURN
            ! IF ( mbrIndx > 0 ) THEN
          tmpName =  OutParam(I)%Name
          IF (OutParam(I)%SignM == -1 ) tmpName = tmpName(2:10)

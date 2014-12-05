@@ -596,7 +596,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, OtherState, InitOut, E
       
       IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
          CALL HDOut_OpenOutput( HydroDyn_ProgDesc, InitInp%OutRootName, p, InitOut, ErrStat, ErrMsg )
-         IF (ErrStat > ErrID_Warn ) RETURN
+         IF (ErrStat >= AbortErrLev ) RETURN
       END IF
       
       IF ( p%OutSwtch == 1 ) THEN ! Only HD-level output writing
