@@ -933,15 +933,15 @@ void
 gen_mask_alloc( FILE *fp, int ndims, char *tmp )
 {
   if        ( ndims == 1 ) {
-    fprintf(fp,"  ALLOCATE(mask%d(SIZE(%s,1))); mask%d = .TRUE.\n",ndims,tmp,ndims) ;
+    fprintf(fp,"  ALLOCATE(mask%d(SIZE(%s,1)))\n  mask%d = .TRUE.\n",ndims,tmp,ndims) ;
   } else if ( ndims == 2 ) {
-    fprintf(fp,"  ALLOCATE(mask%d(SIZE(%s,1),SIZE(%s,2))); mask%d = .TRUE.\n",ndims,tmp,tmp,ndims) ;
+    fprintf(fp,"  ALLOCATE(mask%d(SIZE(%s,1),SIZE(%s,2)))\n  mask%d = .TRUE.\n",ndims,tmp,tmp,ndims) ;
   } else if ( ndims == 3 ) {
-    fprintf(fp,"  ALLOCATE(mask%d(SIZE(%s,1),SIZE(%s,2),SIZE(%s,3))); mask%d = .TRUE.\n",ndims,tmp,tmp,tmp,ndims) ;
+    fprintf(fp,"  ALLOCATE(mask%d(SIZE(%s,1),SIZE(%s,2),SIZE(%s,3)))\n  mask%d = .TRUE.\n",ndims,tmp,tmp,tmp,ndims) ;
   } else if ( ndims == 4 ) {
-    fprintf(fp,"  ALLOCATE(mask%d(SIZE(%s,1),SIZE(%s,2),SIZE(%s,3),SIZE(%s,4))); mask%d = .TRUE.\n",ndims,tmp,tmp,tmp,tmp,ndims) ;
+    fprintf(fp,"  ALLOCATE(mask%d(SIZE(%s,1),SIZE(%s,2),SIZE(%s,3),SIZE(%s,4)))\n  mask%d = .TRUE.\n",ndims,tmp,tmp,tmp,tmp,ndims) ;
   } else if ( ndims == 5 ) {
-    fprintf(fp,"  ALLOCATE(mask%d(SIZE(%s,1),SIZE(%s,2),SIZE(%s,3),SIZE(%s,4),SIZE(%s,5))); mask%d = .TRUE.\n",ndims,tmp,tmp,tmp,tmp,tmp,ndims) ;
+    fprintf(fp,"  ALLOCATE(mask%d(SIZE(%s,1),SIZE(%s,2),SIZE(%s,3),SIZE(%s,4),SIZE(%s,5)))\n  mask%d = .TRUE.\n",ndims,tmp,tmp,tmp,tmp,tmp,ndims) ;
   }
 }
 
