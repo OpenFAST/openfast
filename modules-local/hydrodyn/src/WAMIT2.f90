@@ -3613,13 +3613,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       ELSE
             ! add the two points for step-change before first entered frequency 
          Data3D%WvFreq1( 1 )                    = 0.0_ReKi
-         Data3D%WvFreq1( 2 )                    = MAX( TmpWvFreq1(1) - EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
+         Data3D%WvFreq1( 2 )                    = MAX( TmpWvFreq1(1) - 4.0_ReKi*EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
          
          Data3D%WvFreq1( 3:Data3D%NumWvFreq1-2) = TmpWvFreq1
       ENDIF
       
          ! add the two points for step-change after last entered frequency
-      Data3D%WvFreq1( Data3D%NumWvFreq1-1 )     = Data3D%WvFreq1(Data3D%NumWvFreq1-2) + EPSILON(0.0_ReKi)
+      Data3D%WvFreq1( Data3D%NumWvFreq1-1 )     = Data3D%WvFreq1(Data3D%NumWvFreq1-2) + 4.0_ReKi*EPSILON(0.0_ReKi)
       Data3D%WvFreq1( Data3D%NumWvFreq1   )     = HUGE(1.0_ReKi)
 
 
@@ -3848,7 +3848,6 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       Data3D%DataSet( Data3D%NumWvFreq1-1:Data3D%NumWvFreq1,:,:,:) = CMPLX(0.0_ReKi,0.0_ReKi)       ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
       Data3D%DataMask(Data3D%NumWvFreq1-1:Data3D%NumWvFreq1,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies 
             
-
 
       !----------------------------------------------------------------------------------
       !> Find out if the data is sparse or full.  Verification that the requested component
@@ -4332,13 +4331,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       ELSE
             ! add the two points for step-change before the first entered frequency 
          Data4D%WvFreq1( 1 )                    = 0.0_ReKi
-         Data4D%WvFreq1( 2 )                    = MAX( TmpWvFreq1(1) - EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
+         Data4D%WvFreq1( 2 )                    = MAX( TmpWvFreq1(1) - 4.0_ReKi*EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
          
          Data4D%WvFreq1( 3:Data4D%NumWvFreq1-2) = TmpWvFreq1
       ENDIF
       
          ! add the two points for step-change after last entered frequency
-      Data4D%WvFreq1( Data4D%NumWvFreq1-1 )     = Data4D%WvFreq1(Data4D%NumWvFreq1-2) + EPSILON(0.0_ReKi)
+      Data4D%WvFreq1( Data4D%NumWvFreq1-1 )     = Data4D%WvFreq1(Data4D%NumWvFreq1-2) + 4.0_ReKi*EPSILON(0.0_ReKi)
       Data4D%WvFreq1( Data4D%NumWvFreq1   )     = HUGE(1.0_ReKi)
                      
 
@@ -4348,13 +4347,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       ELSE
             ! add the two points for step-change before the first entered frequency 
          Data4D%WvFreq2( 1 )                    = 0.0_ReKi
-         Data4D%WvFreq2( 2 )                    = MAX( TmpWvFreq2(1) - EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
+         Data4D%WvFreq2( 2 )                    = MAX( TmpWvFreq2(1) - 4.0_ReKi*EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
          
          Data4D%WvFreq2( 3:Data4D%NumWvFreq2-2) = TmpWvFreq2
       ENDIF
       
          ! add the two points for step-change after last entered frequency
-      Data4D%WvFreq2( Data4D%NumWvFreq2-1 )     = Data4D%WvFreq2(Data4D%NumWvFreq2-2) + EPSILON(0.0_ReKi)
+      Data4D%WvFreq2( Data4D%NumWvFreq2-1 )     = Data4D%WvFreq2(Data4D%NumWvFreq2-2) + 4.0_ReKi*EPSILON(0.0_ReKi)
       Data4D%WvFreq2( Data4D%NumWvFreq2   )     = HUGE(1.0_ReKi)
       
 
