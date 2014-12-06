@@ -23,9 +23,10 @@
 ! (File) Revision #: $Rev$
 ! URL: $HeadURL$
 !**********************************************************************************************************************************
-MODULE FAST_Types
+MODULE FAST_ModTypes
 
    USE NWTC_Library
+   USE FAST_Types
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
                                 ProgDesc( 'FAST', 'v8.09.00a-bjj', '30-Sep-2014' ) ! The version number of this module
@@ -343,6 +344,6 @@ CONTAINS
    
    END SUBROUTINE Destroy_FAST_ModuleMapType
 !..................................................................................................................................  
-END MODULE FAST_Types
+END MODULE FAST_ModTypes
 !=======================================================================
 

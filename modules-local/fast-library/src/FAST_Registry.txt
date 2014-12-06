@@ -1,0 +1,168 @@
+###################################################################################################################################									
+# Registry for FAST v8 in the FAST Modularization Framework									
+# This Registry file is used to create FAST_Types which contains data used in the FAST glue code.									
+# It also contains copy, destroy, pack, and unpack routines associated with each defined data types.									
+# See the NWTC Programmer's Handbook for further information on the format/contents of this file.									
+#									
+# Entries are of the form									
+# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+#									
+# Use ^ as a shortcut for the value in the same column from the previous line.									
+###################################################################################################################################									
+# File last committed $Date$									
+# (File) Revision #: $Rev$									
+# URL: $HeadURL$									
+###################################################################################################################################									
+# ...... Include files (definitions from NWTC Library) ............................................................................									
+include	Registry_NWTC_Library.txt								
+usefrom	ElastoDyn_Registry.txt								
+usefrom	ServoDyn_Registry.txt								
+usefrom	Registry-AD.txt								
+usefrom	SubDyn_Registry.txt								
+usefrom	HydroDyn.txt								
+usefrom	IceFloe_FASTRegistry.inp								
+usefrom	Registry_IceDyn.txt								
+usefrom	FEAM_Registry.txt								
+usefrom	MAP_Registry.txt								
+									
+									
+									
+# ..... IceDyn data .......................................................................................................									
+# [ the last dimension of each allocatable array is for the instance of IceDyn being used ]									
+# note that I'm making the allocatable-for-instance-used part INSIDE the data type (as opposed to an array of IceDyn_Data types) because I want to pass arrays of x, xd, z, x_pred, etc)									
+typedef	FAST	IceDyn_Data	IceD_ContinuousStateType	x	{:}	-	-	"Continuous states"	
+typedef	^	^	IceD_DiscreteStateType	xd	{:}	-	-	"Discrete states"	
+typedef	^	^	IceD_ConstraintStateType	z	{:}	-	-	"Constraint states"	
+typedef	^	^	IceD_OtherStateType	OtherSt	{:}	-	-	"Other/optimization states"	
+typedef	^	^	IceD_ParameterType	p	{:}	-	-	"Parameters"	
+typedef	^	^	IceD_InputType	u	{:}	-	-	"System inputs"	
+typedef	^	^	IceD_OutputType	y	{:}	-	-	"System outputs"	
+typedef	^	^	IceD_ContinuousStateType	x_pred	{:}	-	-	"Predicted continuous states"	
+typedef	^	^	IceD_DiscreteStateType	xd_pred	{:}	-	-	"Predicted discrete states"	
+typedef	^	^	IceD_ConstraintStateType	z_pred	{:}	-	-	"Predicted constraint states"	
+typedef	^	^	IceD_OtherStateType	OtherSt_old	{:}	-	-	"Other/optimization states (copied for the case of subcycling)"	
+typedef	^	^	IceD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"	
+typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"	
+									
+# ..... ElastoDyn data .......................................................................................................									
+typedef	FAST	ElastoDyn_Data	ED_ContinuousStateType	x		-	-	"Continuous states"	
+typedef	^	^	ED_DiscreteStateType	xd		-	-	"Discrete states"	
+typedef	^	^	ED_ConstraintStateType	z		-	-	"Constraint states"	
+typedef	^	^	ED_OtherStateType	OtherSt		-	-	"Other/optimization states"	
+typedef	^	^	ED_ParameterType	p		-	-	"Parameters"	
+typedef	^	^	ED_InputType	u		-	-	"System inputs"	
+typedef	^	^	ED_OutputType	y		-	-	"System outputs"	
+typedef	^	^	ED_ContinuousStateType	x_pred		-	-	"Predicted continuous states"	
+typedef	^	^	ED_DiscreteStateType	xd_pred		-	-	"Predicted discrete states"	
+typedef	^	^	ED_ConstraintStateType	z_pred		-	-	"Predicted constraint states"	
+typedef	^	^	ED_OtherStateType	OtherSt_old		-	-	"Other/optimization states (copied for the case of subcycling)"	
+typedef	^	^	ED_OutputType	Output	{:}	-	-	"Array of outputs associated with InputTimes"	
+typedef	^	^	ED_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"	
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"	
+									
+									
+# ..... ServoDyn data .......................................................................................................									
+typedef	FAST	ServoDyn_Data	SrvD_ContinuousStateType	x		-	-	"Continuous states"	
+typedef	^	^	SrvD_DiscreteStateType	xd		-	-	"Discrete states"	
+typedef	^	^	SrvD_ConstraintStateType	z		-	-	"Constraint states"	
+typedef	^	^	SrvD_OtherStateType	OtherSt		-	-	"Other/optimization states"	
+typedef	^	^	SrvD_ParameterType	p		-	-	"Parameters"	
+typedef	^	^	SrvD_InputType	u		-	-	"System inputs"	
+typedef	^	^	SrvD_OutputType	y		-	-	"System outputs"	
+typedef	^	^	SrvD_ContinuousStateType	x_pred		-	-	"Predicted continuous states"	
+typedef	^	^	SrvD_DiscreteStateType	xd_pred		-	-	"Predicted discrete states"	
+typedef	^	^	SrvD_ConstraintStateType	z_pred		-	-	"Predicted constraint states"	
+typedef	^	^	SrvD_OtherStateType	OtherSt_old		-	-	"Other/optimization states (copied for the case of subcycling)"	
+typedef	^	^	SrvD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"	
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"	
+									
+									
+# ..... AeroDyn data .......................................................................................................									
+typedef	FAST	AeroDyn_Data	AD_ContinuousStateType	x		-	-	"Continuous states"	
+typedef	^	^	AD_DiscreteStateType	xd		-	-	"Discrete states"	
+typedef	^	^	AD_ConstraintStateType	z		-	-	"Constraint states"	
+typedef	^	^	AD_OtherStateType	OtherSt		-	-	"Other/optimization states"	
+typedef	^	^	AD_ParameterType	p		-	-	"Parameters"	
+typedef	^	^	AD_InputType	u		-	-	"System inputs"	
+typedef	^	^	AD_OutputType	y		-	-	"System outputs"	
+typedef	^	^	AD_ContinuousStateType	x_pred		-	-	"Predicted continuous states"	
+typedef	^	^	AD_DiscreteStateType	xd_pred		-	-	"Predicted discrete states"	
+typedef	^	^	AD_ConstraintStateType	z_pred		-	-	"Predicted constraint states"	
+typedef	^	^	AD_OtherStateType	OtherSt_old		-	-	"Other/optimization states (copied for the case of subcycling)"	
+typedef	^	^	AD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"	
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"	
+									
+# ..... SubDyn data .......................................................................................................									
+typedef	FAST	SubDyn_Data	SD_ContinuousStateType	x		-	-	"Continuous states"	
+typedef	^	^	SD_DiscreteStateType	xd		-	-	"Discrete states"	
+typedef	^	^	SD_ConstraintStateType	z		-	-	"Constraint states"	
+typedef	^	^	SD_OtherStateType	OtherSt		-	-	"Other/optimization states"	
+typedef	^	^	SD_ParameterType	p		-	-	"Parameters"	
+typedef	^	^	SD_InputType	u		-	-	"System inputs"	
+typedef	^	^	SD_OutputType	y		-	-	"System outputs"	
+typedef	^	^	SD_ContinuousStateType	x_pred		-	-	"Predicted continuous states"	
+typedef	^	^	SD_DiscreteStateType	xd_pred		-	-	"Predicted discrete states"	
+typedef	^	^	SD_ConstraintStateType	z_pred		-	-	"Predicted constraint states"	
+typedef	^	^	SD_OtherStateType	OtherSt_old		-	-	"Other/optimization states (copied for the case of subcycling)"	
+typedef	^	^	SD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"	
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"	
+									
+# ..... HydroDyn data .......................................................................................................									
+typedef	FAST	HydroDyn_Data	HydroDyn_ContinuousStateType	x		-	-	"Continuous states"	
+typedef	^	^	HydroDyn_DiscreteStateType	xd		-	-	"Discrete states"	
+typedef	^	^	HydroDyn_ConstraintStateType	z		-	-	"Constraint states"	
+typedef	^	^	HydroDyn_OtherStateType	OtherSt		-	-	"Other/optimization states"	
+typedef	^	^	HydroDyn_ParameterType	p		-	-	"Parameters"	
+typedef	^	^	HydroDyn_InputType	u		-	-	"System inputs"	
+typedef	^	^	HydroDyn_OutputType	y		-	-	"System outputs"	
+typedef	^	^	HydroDyn_ContinuousStateType	x_pred		-	-	"Predicted continuous states"	
+typedef	^	^	HydroDyn_DiscreteStateType	xd_pred		-	-	"Predicted discrete states"	
+typedef	^	^	HydroDyn_ConstraintStateType	z_pred		-	-	"Predicted constraint states"	
+typedef	^	^	HydroDyn_OtherStateType	OtherSt_old		-	-	"Other/optimization states (copied for the case of subcycling)"	
+typedef	^	^	HydroDyn_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"	
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"	
+									
+# ..... IceFloe data .......................................................................................................									
+typedef	FAST	IceFloe_Data	IceFloe_ContinuousStateType	x		-	-	"Continuous states"	
+typedef	^	^	IceFloe_DiscreteStateType	xd		-	-	"Discrete states"	
+typedef	^	^	IceFloe_ConstraintStateType	z		-	-	"Constraint states"	
+typedef	^	^	IceFloe_OtherStateType	OtherSt		-	-	"Other/optimization states"	
+typedef	^	^	IceFloe_ParameterType	p		-	-	"Parameters"	
+typedef	^	^	IceFloe_InputType	u		-	-	"System inputs"	
+typedef	^	^	IceFloe_OutputType	y		-	-	"System outputs"	
+typedef	^	^	IceFloe_ContinuousStateType	x_pred		-	-	"Predicted continuous states"	
+typedef	^	^	IceFloe_DiscreteStateType	xd_pred		-	-	"Predicted discrete states"	
+typedef	^	^	IceFloe_ConstraintStateType	z_pred		-	-	"Predicted constraint states"	
+typedef	^	^	IceFloe_OtherStateType	OtherSt_old		-	-	"Other/optimization states (copied for the case of subcycling)"	
+typedef	^	^	IceFloe_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"	
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"	
+									
+# ..... MAP data .......................................................................................................									
+typedef	FAST	MAP_Data	MAP_ContinuousStateType	x		-	-	"Continuous states"	
+typedef	^	^	MAP_DiscreteStateType	xd		-	-	"Discrete states"	
+typedef	^	^	MAP_ConstraintStateType	z		-	-	"Constraint states"	
+typedef	^	^	MAP_OtherStateType	OtherSt		-	-	"Other/optimization states"	
+typedef	^	^	MAP_ParameterType	p		-	-	"Parameters"	
+typedef	^	^	MAP_InputType	u		-	-	"System inputs"	
+typedef	^	^	MAP_OutputType	y		-	-	"System outputs"	
+typedef	^	^	MAP_ContinuousStateType	x_pred		-	-	"Predicted continuous states"	
+typedef	^	^	MAP_DiscreteStateType	xd_pred		-	-	"Predicted discrete states"	
+typedef	^	^	MAP_ConstraintStateType	z_pred		-	-	"Predicted constraint states"	
+typedef	^	^	MAP_OtherStateType	OtherSt_old		-	-	"Other/optimization states (copied for the case of subcycling)"	
+typedef	^	^	MAP_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"	
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"	
+									
+# ..... FEAMooring data .......................................................................................................									
+typedef	FAST	FEAMooring_Data	FEAM_ContinuousStateType	x		-	-	"Continuous states"	
+typedef	^	^	FEAM_DiscreteStateType	xd		-	-	"Discrete states"	
+typedef	^	^	FEAM_ConstraintStateType	z		-	-	"Constraint states"	
+typedef	^	^	FEAM_OtherStateType	OtherSt		-	-	"Other/optimization states"	
+typedef	^	^	FEAM_ParameterType	p		-	-	"Parameters"	
+typedef	^	^	FEAM_InputType	u		-	-	"System inputs"	
+typedef	^	^	FEAM_OutputType	y		-	-	"System outputs"	
+typedef	^	^	FEAM_ContinuousStateType	x_pred		-	-	"Predicted continuous states"	
+typedef	^	^	FEAM_DiscreteStateType	xd_pred		-	-	"Predicted discrete states"	
+typedef	^	^	FEAM_ConstraintStateType	z_pred		-	-	"Predicted constraint states"	
+typedef	^	^	FEAM_OtherStateType	OtherSt_old		-	-	"Other/optimization states (copied for the case of subcycling)"	
+typedef	^	^	FEAM_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"	
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"	

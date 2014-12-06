@@ -8,9 +8,11 @@ CALL .\Compiling\Set_FAST_Paths.bat
 
 ::=======================================================================================================
 
-set bin_dir=.\bin
-set depend_dir=.\Source\dependencies
+SET bin_dir=.\bin
+SET depend_dir=.\Source\dependencies
+SET SW_Module=-MODULE
 
+IF /I "%1"=="%SW_Module%" goto %2
 
 :BinDir
 ECHO Binaries
@@ -18,6 +20,7 @@ COPY "%REG_Loc%\registry.exe"        "%bin_dir%\Registry_win32.exe"
 COPY "%MAP_DLL%"                     "%bin_dir%"
 COPY "%CRUNCH%"                      "%bin_dir%"
 
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :dependencies
 
@@ -30,6 +33,7 @@ SET list_of_files=%src_folder%\SourceFiles.txt
 if exist "%dst_folder%\*" DEL  "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :NWTC_Library
 ECHO NWTC_Library
@@ -40,6 +44,8 @@ SET list_of_files=%src_folder%\SourceFiles.txt
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
+
 :NetLib
 ECHO NetLib
 SET src_folder=%NETLIB_Loc%\..
@@ -49,6 +55,7 @@ SET list_of_files=%src_folder%\SourceFiles.txt
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :ElastoDyn
 ECHO ElastoDyn
@@ -59,6 +66,8 @@ SET list_of_files=%src_folder%\FAST_SourceFiles_ED.txt
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
+
 :ServoDyn
 ECHO ServoDyn
 SET src_folder=%SrvD_Loc%\..
@@ -67,6 +76,8 @@ SET list_of_files=%src_folder%/FAST_SourceFiles_SrvD.txt
 
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
+
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :InflowWind
 ECHO InflowWind
@@ -77,6 +88,8 @@ SET list_of_files=%src_folder%/FAST_SourceFiles.txt
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
+
 :AeroDyn
 ECHO AeroDyn
 SET src_folder=%AD_Loc%\..
@@ -85,6 +98,8 @@ SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy  "%src_folder%\%%i" "%dst_folder%"
+
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :HydroDyn
 ECHO HydroDyn
@@ -95,6 +110,8 @@ SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
+
 :SubDyn
 ECHO SubDyn
 SET src_folder=%SD_Loc%\..
@@ -103,6 +120,8 @@ SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
+
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :IceFloe
 ECHO IceFloe
@@ -113,6 +132,8 @@ SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
+
 :IceDyn
 ECHO IceDyn
 SET src_folder=%IceD_Loc%\..
@@ -122,7 +143,7 @@ SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
-
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :MAP
 ECHO MAP
@@ -133,9 +154,12 @@ SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
+
 :FEAMooring
 ECHO Skipping FEAMooring
 
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :ClearVars
 SET bin_dir=
@@ -143,5 +167,7 @@ SET depend_dir=
 SET src_folder=
 SET dst_folder=
 SET list_of_files=
+SET SW_Module=
+
 
 :Done
