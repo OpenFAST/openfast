@@ -113,7 +113,7 @@ EXTERN char thiscom[8*NAMELEN] ;
 
 EXTERN int max_time_level  ;  /* Maximum number of time levels of any state variable */
 
-#define MAXINCLDIRS 10 
+#define MAXINCLDIRS 50 
 EXTERN int   nincldirs ;
 EXTERN char IncludeDirs[MAXINCLDIRS][NAMELEN] ;
 

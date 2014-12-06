@@ -53,7 +53,7 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
-   thisprog_ver = "FAST Registry (v2.03.02, 17-Sep-2014)";
+   thisprog_ver = "FAST Registry (v2.03.03, 5-Dec-2014)";
 
   fprintf(stderr,"\n") ;
   fprintf(stderr,"----- %s --------------\n", thisprog_ver) ;
@@ -64,7 +64,8 @@ main( int argc, char *argv[], char *env[] )
 
   sym_forget() ;
 //  thisprog = *argv ;
-  thisprog = "registry.exe" ;
+  strcpy(thisprog, thiscom);
+  //thisprog = "registry.exe";
   strcpy(fname_in,"") ;
   wrote_template = 0 ;
 
