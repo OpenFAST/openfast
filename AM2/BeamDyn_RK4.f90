@@ -45,21 +45,22 @@
    ErrStat = ErrID_None
    ErrMsg  = "" 
 
-   CALL MeshCopy ( SrcMesh  = u(1)%RootMotion      &
-                 , DestMesh = u_interp%RootMotion  &
-                 , CtrlCode = MESH_NEWCOPY        &
-                 , ErrStat  = ErrStat             &
-                 , ErrMess  = ErrMsg               )
-   CALL MeshCopy ( SrcMesh  = u(1)%PointLoad      &
-                 , DestMesh = u_interp%PointLoad  &
-                 , CtrlCode = MESH_NEWCOPY        &
-                 , ErrStat  = ErrStat             &
-                 , ErrMess  = ErrMsg               )
-   CALL MeshCopy ( SrcMesh  = u(1)%DistrLoad      &
-                 , DestMesh = u_interp%DistrLoad  &
-                 , CtrlCode = MESH_NEWCOPY        &
-                 , ErrStat  = ErrStat             &
-                 , ErrMess  = ErrMsg               )
+!   CALL MeshCopy ( SrcMesh  = u(1)%RootMotion      &
+!                 , DestMesh = u_interp%RootMotion  &
+!                 , CtrlCode = MESH_NEWCOPY        &
+!                 , ErrStat  = ErrStat             &
+!                 , ErrMess  = ErrMsg               )
+!   CALL MeshCopy ( SrcMesh  = u(1)%PointLoad      &
+!                 , DestMesh = u_interp%PointLoad  &
+!                 , CtrlCode = MESH_NEWCOPY        &
+!                 , ErrStat  = ErrStat             &
+!                 , ErrMess  = ErrMsg               )
+!   CALL MeshCopy ( SrcMesh  = u(1)%DistrLoad      &
+!                 , DestMesh = u_interp%DistrLoad  &
+!                 , CtrlCode = MESH_NEWCOPY        &
+!                 , ErrStat  = ErrStat             &
+!                 , ErrMess  = ErrMsg               )
+   CALL BD_CopyInput(u(1),u_interp , MESH_NEWCOPY, ErrStat, ErrMsg)
    CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
    CALL BD_CopyContState(x, x_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
 
@@ -121,8 +122,8 @@
 !   CALL BeamDyn_ApplyBoundaryCondition(x,u(1),ErrStat,ErrMsg)
    CALL RescaleCheck(x,p%node_total,OtherState%Rescale_counter)
 
-   CALL MeshDestroy ( u_interp%RootMotion       &
-                    , ErrStat  = ErrStat         &
-                    , ErrMess  = ErrMsg           )
+   CALL BD_DestroyInput(u_interp, ErrStat, ErrMsg)
+   CALL BD_DestroyContState(xdot, ErrStat, ErrMsg)
+   CALL BD_DestroyContState(x_tmp, ErrStat, ErrMsg)
 
    END SUBROUTINE BeamDyn_RK4

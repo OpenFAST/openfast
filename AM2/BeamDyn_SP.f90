@@ -769,6 +769,7 @@ INCLUDE 'ElementMatrix_CCSD.f90'
 
            ENDDO
        ENDDO
+       CALL BD_DestroyContState(xdot, ErrStat, ErrMsg)
        CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
                                  &p%damp_flag,p%beta,&
                                  &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&

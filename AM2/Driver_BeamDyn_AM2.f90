@@ -85,9 +85,12 @@ PROGRAM MAIN
 
    REAL(ReKi):: temp_H(3,3)
    REAL(ReKi):: temp_cc(3)
+   REAL(ReKi):: temp1,temp2
+   REAL(ReKi):: temp_a,temp_b,temp_force
+   Integer(IntKi)                     :: temp_count
    INTEGER(IntKi),PARAMETER:: QiHUnit = 30
    INTEGER(IntKi),PARAMETER:: LoadUnit = 40
-   REAL(ReKi):: InputLoad(20002,2)
+   REAL(ReKi):: InputLoad(20001,2)
 
 
 
@@ -98,7 +101,7 @@ PROGRAM MAIN
 OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE') 
 
    t_initial = 0.0D+00
-   t_final   = 1.0D+01
+   t_final   = 1.0D+02
 
    pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
                ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
@@ -106,7 +109,7 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 5.0D-04
+   dt_global = 5.0D-03
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -137,14 +140,20 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
     OPEN(unit = QiDisUnit, file = 'QiDisp_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
     OPEN(unit = LoadUnit, file = 'Test19.out', status = 'OLD',ACTION = 'READ')
-    DO i=1,20002
+    DO i=1,20001
         READ(LoadUnit,*) InputLoad(i,1),InputLoad(i,2)
-        InputLoad(i,2) = InputLoad(i,2)*1.0D+02
-WRITE(*,*) InputLoad(i,:)
+        InputLoad(i,2) = InputLoad(i,2)*15.0D+04
+        DO j=1,9
+            IF( i == 20001) EXIT
+            READ(LoadUnit,*) temp1,temp2
+        ENDDO
+!WRITE(*,*) InputLoad(i,:)
     ENDDO
     CLOSE (LoadUnit)
 
-   BD_InitInput%InputFile = 'BeamDyn_Input_CX100.inp'
+!   BD_InitInput%InputFile = 'BeamDyn_Input_CX100.inp'
+!   BD_InitInput%InputFile = 'BeamDyn_Input_5MW.inp'
+   BD_InitInput%InputFile = 'BeamDyn_Input_5MW_New.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Composite.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Damp.inp'
@@ -198,8 +207,8 @@ WRITE(*,*) InputLoad(i,:)
    ! write initial condition for q1
    !CALL WrScr  ( '  '//Num2LStr(t_global)//'  '//Num2LStr( Mod1_ContinuousState%q)//'  '//Num2LStr(Mod1_ContinuousState%q))   
 
-   
-   DO n_t_global = 0, n_t_final
+temp_count = 0   
+   DO n_t_global = 0, n_t_final-1
 
 WRITE(*,*) "Time Step: ", n_t_global
 !IF(n_t_global == 2) STOP 
@@ -220,7 +229,6 @@ BD_Input(1)%RootMotion%RotationAcc(:,:) = 0.0D0
 BD_Input(1)%PointLoad%Moment(:,:) = 0.0D0
 BD_Input(1)%DistrLoad%Force(:,:)  = 0.0D0
 BD_Input(1)%DistrLoad%Moment(:,:) = 0.0D0
-BD_Input(1)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+1,2)
 
 BD_Input(2)%RootMotion%TranslationDisp(:,:) = 0.0D0
 BD_Input(2)%RootMotion%TranslationVel(:,:)   = 0.0D0
@@ -229,7 +237,6 @@ BD_Input(2)%RootMotion%RotationAcc(:,:) = 0.0D0
 BD_Input(2)%PointLoad%Moment(:,:) = 0.0D0
 BD_Input(2)%DistrLoad%Force(:,:)  = 0.0D0
 BD_Input(2)%DistrLoad%Moment(:,:) = 0.0D0
-BD_Input(2)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+2,2)
 
 BD_Input(3)%RootMotion%TranslationDisp(:,:) = 0.0D0
 BD_Input(3)%RootMotion%TranslationVel(:,:)   = 0.0D0
@@ -238,7 +245,10 @@ BD_Input(3)%RootMotion%RotationAcc(:,:) = 0.0D0
 BD_Input(3)%PointLoad%Moment(:,:) = 0.0D0
 BD_Input(3)%DistrLoad%Force(:,:)  = 0.0D0
 BD_Input(3)%DistrLoad%Moment(:,:) = 0.0D0
-BD_Input(3)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+3,2)
+
+BD_Input(1)%PointLoad%Force(3,BD_Parameter%node_total) = InputLoad(n_t_global+1,2)
+BD_Input(2)%PointLoad%Force(3,BD_Parameter%node_total) = InputLoad(n_t_global+2,2)
+BD_Input(3)%PointLoad%Force(3,BD_Parameter%node_total) = InputLoad(n_t_global+3,2)
 
      CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
@@ -267,7 +277,7 @@ BD_Input(3)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+3,
 
       ENDDO
 
-   WRITE(QiHUnit,*) n_t_global+1,BD_OtherState%NR_counter
+!   WRITE(QiHUnit,*) n_t_global+1,BD_OtherState%NR_counter
 
 !IF(n_t_global .EQ. 301) STOP
 !      IF(n_t_global .GE. 149) THEN
