@@ -796,7 +796,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
       TYPE(W2_DiffData_Type),             INTENT(INOUT)  :: MnDriftData          !< Data storage for the MnDrift method.  Set to INOUT in case we need to convert 4D to 3D
       REAL(ReKi),                         INTENT(  OUT)  :: MnDriftForce(6)      !< Force data.  Index 1 is the force component.  Constant for all time.
-      CHARACTER(2048),                    INTENT(  OUT)  :: ErrMsg
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
 
          ! Local Variables
@@ -1253,7 +1253,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
       TYPE(W2_DiffData_Type),             INTENT(INOUT)  :: NewmanAppData        !< Data storage for the NewmanApp method.  Set to INOUT in case we need to convert 4D to 3D
       REAL(ReKi),  ALLOCATABLE,           INTENT(  OUT)  :: NewmanAppForce(:,:)  !< Force data.  Index 1 is the timestep, index 2 is the load component.
-      CHARACTER(2048),                    INTENT(  OUT)  :: ErrMsg
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
 
          ! Local Variables
@@ -1825,7 +1825,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
       TYPE(W2_DiffData_Type),             INTENT(INOUT)  :: DiffQTFData          !< Data storage for the DiffQTF method.  Set to INOUT in case we need to convert 4D to 3D
       REAL(ReKi),  ALLOCATABLE,           INTENT(  OUT)  :: DiffQTFForce(:,:)    !< Force data.  Index 1 is the timestep, index 2 is the load component.
-      CHARACTER(2048),                    INTENT(  OUT)  :: ErrMsg
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
 
          ! Local Variables
@@ -1971,7 +1971,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          !> 4. Now check to make sure we have data that will work.  For the 4D data, it must not be sparse.
          !!    To check this, we have to check the load components that we will use.  So, we will loop through them
          !!    and set the TmpFlag to true if there is a sparse matrix for one of them.
-         !! FIXME: remove this check and warning once the sparse matrix interpolation routines are implimented.
+         !! FIXME: remove this check and warning once the sparse matrix interpolation routines are implemented.
       TmpFlag = .FALSE.
       DO I=1,6
          IF ( DiffQTFData%Data4D%DataIsSparse(I) .AND. DiffQTFData%Data4D%LoadComponents(I) .AND. p%DiffQTFDims(I) )    TmpFlag = .TRUE.
@@ -1979,7 +1979,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF (TmpFlag) THEN
          CALL SetErrStat(ErrID_Fatal,' The second order WAMIT data in '//TRIM(DiffQTFData%Filename)//' is too sparse '// &
                'for the interpolation routine used in the full Difference QTF calculation.  At some later point, we will allow for '// &
-               'sparse data when a different interpolation routine is implimented.',ErrStat,ErrMsg,'DiffQTF_InitCalc')
+               'sparse data when a different interpolation routine is implemented.',ErrStat,ErrMsg,'DiffQTF_InitCalc')
          RETURN
       ENDIF
 
@@ -2263,7 +2263,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
       TYPE(W2_SumData_Type),              INTENT(INOUT)  :: SumQTFData           !< Data storage for the SumQTF method.  Set to INOUT in case we need to convert 4D to 3D
       REAL(ReKi),  ALLOCATABLE,           INTENT(  OUT)  :: SumQTFForce(:,:)     !< Force data.  Index 1 is the timestep, index 2 is the load component.
-      CHARACTER(2048),                    INTENT(  OUT)  :: ErrMsg
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
 
          ! Local Variables
@@ -5443,7 +5443,7 @@ SUBROUTINE Copy_InitData4Dto3D( Data4D, Data3D, ErrStat, ErrMsg )
    TYPE(W2_InitData4D_Type),  INTENT(IN   )  :: Data4D         !< 4D data source
    TYPE(W2_InitData3D_Type),  INTENT(INOUT)  :: Data3D         !< 3D data where it will be copied to
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat        !< Error status
-   CHARACTER(2048),           INTENT(  OUT)  :: ErrMsg         !< Error message
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg         !< Error message
 
       ! Local variables
    LOGICAL                                   :: TmpSparseFlag  !< Flag to indicate if the data is sparse

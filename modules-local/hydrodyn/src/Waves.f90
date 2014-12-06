@@ -1977,7 +1977,7 @@ CONTAINS
       REAL(ReKi),       INTENT(  OUT)                 :: WaveElevSeriesAtXY(0:InitOut%NStepWave)
       INTEGER(IntKi),   INTENT(  OUT)                 :: ErrStatLcl
       INTEGER(IntKi)                                  :: ErrStatLcl2
-      CHARACTER(1024),  INTENT(  OUT)                 :: ErrMsgLcl
+      CHARACTER(*),     INTENT(  OUT)                 :: ErrMsgLcl
 
       ! This is probably poor programming practice, but we will use I, Omega, WaveNmbr, and tmpComplexArr from the calling routine here.
 

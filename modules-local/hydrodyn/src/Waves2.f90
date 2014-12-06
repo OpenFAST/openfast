@@ -1437,7 +1437,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          REAL(ReKi),       INTENT(  OUT)              :: WaveElevSeriesAtXY(0:InitInp%NStepWave)
          INTEGER(IntKi),   INTENT(  OUT)              :: ErrStatLcl
          INTEGER(IntKi)                               :: ErrStatLcl2
-         CHARACTER(1024),  INTENT(  OUT)              :: ErrMsgLcl
+         CHARACTER(*),     INTENT(  OUT)              :: ErrMsgLcl
 
             ! Local variables
          INTEGER(IntKi)                               :: n              !< Index to the first  frequency we are dealing with
@@ -1564,7 +1564,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          REAL(ReKi),       INTENT(  OUT)              :: WaveElevSeriesAtXY(0:InitInp%NStepWave)
          INTEGER(IntKi),   INTENT(  OUT)              :: ErrStatLcl
          INTEGER(IntKi)                               :: ErrStatLcl2
-         CHARACTER(1024),  INTENT(  OUT)              :: ErrMsgLcl
+         CHARACTER(*),     INTENT(  OUT)              :: ErrMsgLcl
 
             ! Local variables
          INTEGER(IntKi)                               :: n              !< Index to the first  frequency we are dealing with

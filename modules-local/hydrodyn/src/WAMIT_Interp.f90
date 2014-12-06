@@ -73,7 +73,7 @@ SUBROUTINE WAMIT_Interp2D_Cplx( InCoord, DataSet2D, WvFreq1, WvDir1, LastIndex, 
    INTEGER(IntKi),   INTENT(INOUT)     :: LastIndex(2)                                 !< Index for the last (Omega1, WaveDir1) used
    COMPLEX(ReKi),    INTENT(  OUT)     :: OutForce                                     !< The interpolated resulting force from DataSet2D
    INTEGER(IntKi),   INTENT(  OUT)     :: ErrStat                                      !< Error status
-   CHARACTER(1024),  INTENT(  OUT)     :: ErrMsg                                       !< Error message if ErrStat /= ErrID_None
+   CHARACTER(*),     INTENT(  OUT)     :: ErrMsg                                       !< Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -185,7 +185,7 @@ SUBROUTINE WAMIT_Interp3D_Cplx( InCoord, DataSet3D, WvFreq1, WvDir1, WvDir2, Las
    INTEGER(IntKi),   INTENT(INOUT)     :: LastIndex(3)                                 !< Index for the last (Omega1, WaveDir1, WaveDir2) used
    COMPLEX(ReKi),    INTENT(  OUT)     :: OutForce                                     !< The interpolated resulting force from DataSet3D
    INTEGER(IntKi),   INTENT(  OUT)     :: ErrStat                                      !< Error status
-   CHARACTER(1024),  INTENT(  OUT)     :: ErrMsg                                       !< Error message if ErrStat /= ErrID_None
+   CHARACTER(*),     INTENT(  OUT)     :: ErrMsg                                       !< Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -312,7 +312,7 @@ SUBROUTINE WAMIT_Interp4D_Cplx( InCoord, DataSet4D, WvFreq1, WvFreq2, WvDir1, Wv
    INTEGER(IntKi),   INTENT(INOUT)     :: LastIndex(4)                                 !< Index for the last (Omega1, Omega2, WaveDir1) used
    COMPLEX(ReKi),    INTENT(  OUT)     :: OutForce                                     !< The interpolated resulting force from DataSet4D
    INTEGER(IntKi),   INTENT(  OUT)     :: ErrStat                                      !< Error status
-   CHARACTER(1024),  INTENT(  OUT)     :: ErrMsg                                       !< Error message if ErrStat /= ErrID_None
+   CHARACTER(*),     INTENT(  OUT)     :: ErrMsg                                       !< Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
