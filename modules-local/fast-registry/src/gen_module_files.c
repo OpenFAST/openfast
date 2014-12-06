@@ -1893,7 +1893,8 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
       if ( q->usefrom == 0 ) {
 
         char * ddtname, * ddtnamelong, nonick[NAMELEN] ;
-        ddtname = q->name ;
+        //ddtname = q->name ;
+		ddtname = q->mapsto;
 
         remove_nickname(ModName->nickname,ddtname,nonick) ;
 
@@ -1920,8 +1921,10 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
 //    gen_modname_pack( fp, ModName ) ;
 //    gen_modname_unpack( fp, ModName ) ;
 //    gen_rk4( fp, ModName ) ;
-    gen_ExtrapInterp( fp, ModName, "Input", "inputtype" ) ;
-    gen_ExtrapInterp( fp, ModName, "Output", "outputtype" ) ;
+    if (!sw_noextrap){
+        gen_ExtrapInterp( fp, ModName, "Input", "inputtype" ) ;
+        gen_ExtrapInterp( fp, ModName, "Output", "outputtype" ) ;
+    }
 
     fprintf(fp,"END MODULE %s_Types\n",ModName->name ) ;
   }
@@ -2022,11 +2025,13 @@ void
 remove_nickname( const char *nickname, char *src, char *dst )
 {
   char tmp[NAMELEN];
-  int n ;
+  char srclo[NAMELEN];
+  int n;
   strcpy(tmp,make_lower_temp(nickname)) ;
+  strcpy(srclo, make_lower_temp(src));
   strcat(tmp,"_") ;
   n = strlen(tmp) ;
-  if ( !strncmp(tmp,src,n) ) {
+  if (!strncmp(tmp, srclo, n)) {
     strcpy(dst,&(src[n])) ;
   } else {
     strcpy(dst,src) ;
