@@ -42,6 +42,7 @@ main( int argc, char *argv[], char *env[] )
   sw_output_template_force = 0 ;
   sw_norealloc_lsh   = 1 ;
   sw_ccode           = 0 ;
+  sw_noextrap        = 0 ;
   sw_embed_class_ptr = 0 ;
   sw_shownodes       = 0 ;
   strcpy( fname_in , "" ) ;
@@ -90,6 +91,10 @@ main( int argc, char *argv[], char *env[] )
       if (!strcmp(*argv,"-ccode")) {
         sw_ccode = 1 ;
       } else
+      if (!strcmp(*argv, "-noextrap")) {
+          sw_noextrap = 1;
+      } else
+
       if (!strncmp(*argv,"-shownodes",4)) {
         sw_shownodes = 1 ;
       } else

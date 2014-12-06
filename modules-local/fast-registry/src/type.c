@@ -270,7 +270,7 @@ get_entry ( char * name , node_t * node )
   if ( name == NULL ) return (NULL)  ;
   if ( node == NULL ) return (NULL)  ;
   strcpy( tmp, name ) ;
-  make_lower(tmp) ;
+  make_lower_temp(tmp) ;
   for ( p = node ; p != NULL ; p = p->next )
   {
     if ( !strncmp( name , "character", 9 ) )
