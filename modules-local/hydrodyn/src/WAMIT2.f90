@@ -3374,7 +3374,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Allocate the temporary array for reading in one line
       CALL AllocAry( TmpDataRow, NumDataColumns, ' Array for holding one line of 4D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D')
 
          ! Allocate an array to hold the entirety of the raw contents of the file
       CALL AllocAry( RawData3D, NumDataLines, NumDataColumns, ' Array for holding raw 3D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
@@ -3757,7 +3757,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                         InitInp%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,7)) .AND. &
                  .NOT. EqualRealNos(AIMAG(Data3D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) )), &
                         InitInp%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,8)))  THEN
-               CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//'of '//TRIM(Filename3D)// &
+               CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename3D)// &
                         ' contains different values for the real and imaginary part (columns 7 and 8) than was '// &
                         'given earlier in the file for the same values of wave frequency and wave direction.', &
                         ErrStat, ErrMsg, 'Read_DataFile3D' )
@@ -4511,7 +4511,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                         InitInp%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,8)) .AND. &
                  .NOT. EqualRealNos(AIMAG(Data4D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) )), &
                         InitInp%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,9)))  THEN
-               CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//'of '//TRIM(Filename4D)// &
+               CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename4D)// &
                         ' contains different values for the real and imaginary part (columns 8 and 9) than was '// &
                         'given earlier in the file for the same values of wave frequency and wave direction.', &
                         ErrStat, ErrMsg, 'Read_DataFile4D' )
