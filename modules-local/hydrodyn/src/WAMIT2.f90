@@ -5239,7 +5239,7 @@ SUBROUTINE WAMIT2_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherStat
 
          ! Initialize ErrStat
 
-      ErrStat = ErrID_Warn
+      ErrStat = ErrID_None
       ErrMsg  = "Warning: No States to update in WAMIT2 module. *WAMTIT2_UpdateStates was called*"
 
 
@@ -5348,7 +5348,7 @@ SUBROUTINE WAMIT2_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, Er
 
          ! Initialize ErrStat
 
-      ErrStat = ErrID_Warn
+      ErrStat = ErrID_None
       ErrMsg  = "Warning: No States to take derivative of in WAMIT2 module. *WAMIT2::CalcContStateDeriv was called.  It "// &
                   "is not necessary in the WAMIT2 module, so it does nothing.*"
 
@@ -5386,7 +5386,7 @@ SUBROUTINE WAMIT2_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, ErrStat,
 
          ! Initialize ErrStat
 
-      ErrStat = ErrID_Warn
+      ErrStat = ErrID_None
       ErrMsg  = "Warning: No Discrete States to update in WAMIT2 module. *WAMIT2::UpdateDiscState was called.  It is not "// &
                   "necessary in the WAMIT2 module, so it does nothing.*"
 
@@ -5421,7 +5421,7 @@ SUBROUTINE WAMIT2_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_r
 
          ! Initialize ErrStat
 
-      ErrStat = ErrID_Warn
+      ErrStat = ErrID_None
       ErrMsg  = "Warning: No States in WAMIT2 module. *WAMIT2::CalcConstrStateResidual was called.  It is not needed in "//&
                   "the WAMIT2 module, so it does nothing useful."
 
