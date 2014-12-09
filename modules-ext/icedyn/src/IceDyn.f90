@@ -42,7 +42,7 @@ MODULE IceDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', 'v1.00.01-by', '30-Jun-2014' )
+   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', 'v1.01.00-by', '9-Dec-2014' )
 
    ! ..... Public Subroutines ...................................................................................................
 
@@ -97,13 +97,13 @@ SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
    ErrStat = ErrID_None
    ErrMsg  = ""
-   
+
 
       ! Initialize the NWTC Subroutine Library
 
    CALL NWTC_Init( EchoLibVer=.FALSE. )
 
-   
+
       ! Display the module information
 
    IF (InitInp%LegNum == 1) CALL DispNVD( IceD_Ver )  ! We don't need to see the version info more than one time
@@ -127,8 +127,8 @@ SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
                         ' legs. The glue/driver code requested data for leg '//trim(num2lstr(InitInp%LegNum))//'.')
       RETURN
    END IF
-   
-   
+
+
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
@@ -136,7 +136,7 @@ SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
-      
+
 
       !............................................................................................
       ! Define initial system states here:
@@ -153,7 +153,7 @@ SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
     IF (p%ModNo /= 6) THEN
 
        x%q              = 0                                             ! we don't have continuous states for ice model 1-5
-       x%dqdt           = 0                                             
+       x%dqdt           = 0
 
     ELSE
 
@@ -166,21 +166,21 @@ SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    !CALL IceD_Init_DiscrtStates( xd, p, InputFileData, ErrStat2, ErrMsg2 )     ! initialize the continuous states
    !   CALL CheckError( ErrStat2, ErrMsg2 )
    !   IF (ErrStat >= AbortErrLev) RETURN
-   
+
    xd%DummyDiscState      = 0
 
       ! Initialize other states:
     CALL IceD_Init_OtherStates( OtherState, p, x, InputFileData, ErrStat2, ErrMsg2 )    ! initialize the other states
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
-      
+
 
       !............................................................................................
       ! Define initial guess for the system inputs and output (set up meshes) here:
       !............................................................................................
-      
-      ! set up meshes for inputs and outputs:      
-      
+
+      ! set up meshes for inputs and outputs:
+
       ! Define system output initializations (set up mesh) here:
        CALL MeshCreate( BlankMesh      = u%PointMesh            &
                       ,IOS             = COMPONENT_INPUT        &
@@ -198,8 +198,8 @@ SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
                                 , ErrMess  = ErrMsg             )
 
       ! place single node at water level; position affects mapping/coupling with other modules
-      TmpPos(1) = InputFileData%LegPosX( InitInp%LegNum )  
-      TmpPos(2) = InputFileData%LegPosY( InitInp%LegNum )  
+      TmpPos(1) = InputFileData%LegPosX( InitInp%LegNum )
+      TmpPos(2) = InputFileData%LegPosY( InitInp%LegNum )
       TmpPos(3) = InitInp%MSL2SWL
 
       CALL MeshPositionNode ( Mesh  = u%PointMesh   &
@@ -219,13 +219,13 @@ SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
                     , ErrStat  = ErrStat          &
                     , ErrMess  = ErrMsg           )
 
-      ! Define initial guess for the system inputs here:      
+      ! Define initial guess for the system inputs here:
       u%PointMesh%TranslationDisp = 0.0_ReKi    ! initialize all components of all (1) points
       u%PointMesh%TranslationVel  = 0.0_ReKi    ! initialize all components of all (1) points  [bjj: does not appear to be used...]
 
       y%PointMesh%Force = 0.0_ReKi              ! initialize all components of all (1) points
-      
-      
+
+
 
       ! set remap flags to true
       y%PointMesh%RemapFlag = .True.
@@ -393,7 +393,7 @@ SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
       !TYPE(IceD_ContinuousStateType)                   :: xdot          ! continuous state time derivative
       INTEGER(IntKi)                                    :: I             ! Loop count
       REAL(ReKi)                                        :: Del2          ! Deflection of the current ice tooth, for model 2,3
-!      REAL(ReKi)                                       :: Del(p%Zn)     ! Deflection of ice tooth in each zone, for model 4
+      REAL(ReKi)                                        :: Del(p%Zn)     ! Deflection of ice tooth in each zone, for model 4
       REAL(ReKi)                                        :: StrRt         ! Strain rate (s^-1)
       REAL(ReKi)                                        :: SigCrp        ! Creep stress (Pa)
       
@@ -432,7 +432,7 @@ SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
       
       nt = n+1   !bjj: was this: INT( t / p%dt ) + 1
 
-      ! Update Other states here
+      ! Update Other states here for ice model 2
       
       IF (p%ModNo == 2) THEN
 
@@ -447,7 +447,7 @@ SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
 
       ENDIF
       
-      ! Update Other states here
+      ! Update Other states here for ice model 3
      
       IF (p%ModNo == 3) THEN
          Nc = OtherState%Nc (nt)
@@ -473,8 +473,37 @@ SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
           
       ENDIF
       
+      ! Update Other States here for ice model 4
+      
+      IF (p%ModNo == 4) THEN
+      
+        DO I = 1, p%Zn
+            
+            Del (I) = p%Y0 (I) + p%v * t - p%ZonePitch * (OtherState%IceTthNo (I)-1) - u_interp%PointMesh%TranslationDisp(1,1)
+            
+            IF ( Del(I) >= (p%Delmax + p%tolerance) ) THEN 
+                
+                OtherState%IceTthNo (I) = OtherState%IceTthNo (I)+1
+                
+            ENDIF
+            
+        END DO
+      
+      END IF
+      
+      ! Update Other States here for ice model 5
+      
+      IF (p%ModNo == 5) THEN
+      
+            OtherState%Beta   = SolveBeta( p%alphaR, p%v, t - OtherState%Tinit, p%Lbr)
+            
+            IF (OtherState%Beta >= p%alphaR) THEN
+            OtherState%Tinit = t
+            END IF
+      
+      ENDIF
 
-      ! Update Continuous states here
+      ! Update Continuous states here for ice model 6
       
       IF (p%ModNo == 6) THEN
 
@@ -497,6 +526,15 @@ SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
                RETURN
 
             endif
+            
+            IF ((x%q - u_interp%PointMesh%TranslationDisp(1,1)) >= OtherState%dxc) THEN
+                 OtherState%dxc = x%q - u_interp%PointMesh%TranslationDisp(1,1)
+             ENDIF
+            
+            ! Determine whether the splitting failure happens
+            IF (OtherState%Splitf == 0) THEN
+                CALL Ice_Split (t, u_interp, p, x, OtherState, ErrStat, ErrMsg)
+            ENDIF
 
       END IF
            
@@ -510,6 +548,90 @@ CONTAINS
    CALL IceD_DestroyInput( u_interp, ErrStat2, ErrMsg2 )
 
    END SUBROUTINE Cleanup
+   
+   FUNCTION SolveBeta (alpha, vice, t, l) Result (beta1)
+         
+            !SOLVEBETA Solve for ice wedge uprising angle
+         
+            IMPLICIT NONE
+            
+            ! Input values
+            REAL(ReKi) :: alpha     ! Cone angle (rad)
+            REAL(ReKi) :: vice           ! Ice velocity (m/s)
+            REAL(DbKi) :: t         ! Ice thickness
+            REAL(ReKi) :: l         ! Ice breaking length
+            REAL(ReKi) :: beta       ! Initial Ice wedge uprising angle
+               REAL(ReKi) :: beta1         ! Ice wedge uprising angle
+            
+            REAL(ReKi) :: Equ    
+            REAL(ReKi) :: Derv
+            
+            beta = 0
+            DO i = 1,100
+            
+               Equ = sin(beta) - tan(alpha) * cos(beta) + tan(alpha) * (1-vice*t/l);
+                 Derv = cos(beta) + tan(alpha) * sin(beta); 
+                 
+                 IF ( abs(Equ) <= p%tolerance) EXIT   
+                 
+                 beta = beta - Equ / Derv
+                  
+               END DO
+         
+               beta1 = beta
+               
+    END FUNCTION SolveBeta
+    
+    SUBROUTINE Ice_Split (t, u, p, x, OtherState, ErrStat, ErrMsg)
+
+      REAL(DbKi),                       INTENT(IN   )  :: t           ! Current simulation time in seconds
+      TYPE(IceD_InputType),             INTENT(IN   )  :: u           ! Inputs at t
+      TYPE(IceD_ParameterType),         INTENT(IN   )  :: p           ! Parameters
+      TYPE(IceD_ContinuousStateType),   INTENT(IN   )  :: x           ! Continuous states at t
+      TYPE(IceD_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other states at t
+      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      
+      ! Local variable
+      REAL(ReKi)                                     :: IceForce 
+     REAL(ReKi)                            :: R
+      ! Initialize ErrStat
+
+      ErrStat = ErrID_None
+      ErrMsg  = "" 
+
+      ! Compute outputs here:
+      
+      R = p%StrWd/2
+      
+      IF ( OtherState%Splitf == 0 ) THEN
+          
+        IF ((x%q - u%PointMesh%TranslationDisp(1,1)) >= OtherState%dxc .AND. (x%q - u%PointMesh%TranslationDisp(1,1)) < OtherState%dxc+R ) THEN
+      
+             IceForce =  p%Cpa * ( 2 * p%h * ( R**2 - (R - x%q + u%PointMesh%TranslationDisp(1,1))**2 )**0.5 )**( p%dpa + 1 ) * 1.0e6 
+         
+        ELSE IF (  (x%q - u%PointMesh%TranslationDisp(1,1)) >= OtherState%dxc+R ) THEN
+          
+             IceForce = p%Cpa * ( 2 * R *  p%h )**( p%dpa + 1 ) * 1.0e6 
+          
+        ELSE
+          
+             IceForce = 0 
+           
+        ENDIF
+        
+      ELSE 
+          
+           IceForce = 0 
+        
+      ENDIF
+      
+      IF ( IceForce >= p%Fsp ) THEN
+          OtherState%Splitf = 1
+      ENDIF 
+
+    END SUBROUTINE Ice_Split
+
       
 END SUBROUTINE IceD_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -534,8 +656,8 @@ SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       INTEGER(IntKi)                    :: I                        ! Loop count
       INTEGER(IntKi)                    :: nt                       ! Current time step
       REAL(ReKi)                        :: Del2                     ! Deflection of the current ice tooth, for model 2
-!      REAL(ReKi)                        :: Del(p%Zn)                ! Deflection of each ice tooth, for model 4
-!      REAL(ReKi)                        :: ZoneF(p%Zn)              ! Ice force of each ice tooth, for model 4
+      REAL(ReKi)                        :: Del(p%Zn)                ! Deflection of each ice tooth, for model 4
+      REAL(ReKi)                        :: ZoneF(p%Zn)              ! Ice force of each ice tooth, for model 4
       REAL(ReKi)                        :: R                        ! Cone radius
       REAL(ReKi)                        :: Pn1                      ! Normal force from cone to ice piece 1, for model 5
       REAL(ReKi)                        :: Pn2                      ! Normal force from cone to ice piece 2, for model 5
@@ -546,6 +668,7 @@ SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       REAL(ReKi)                        :: Rh                       ! Horizontal force, for model5
       REAL(ReKi)                        :: Rv                       ! Vertical force, for model5
       REAL(ReKi)                        :: Wr                       ! Ride-up ice weight, for model5 
+      REAL(ReKi)                 :: gamma
       REAL(ReKi)                        :: CrntT0
 
       ! Initialize ErrStat
@@ -723,6 +846,108 @@ SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
           
       ENDIF
       
+      ! Ice Model 4 --------------------------------
+      
+      IF (p%ModNo == 4) THEN
+      
+        DO I = 1, p%Zn
+            
+            Del (I) = p%Y0 (I) + p%v * t - p%ZonePitch * (OtherState%IceTthNo (I)-1) - u%PointMesh%TranslationDisp(1,1)
+            
+            IF ( Del (I) <= 0) THEN 
+                
+                ZoneF (I) = 0.0
+                
+            ELSEIF (Del (I) < p%Delmax + p%tolerance) THEN
+                
+                ZoneF (I) = Del (I) * p%Kice
+                
+            ELSE 
+                
+                ErrStat = ErrID_Fatal
+                ErrMsg  = ' Error in IceDyn Model 4: ZoneDel > Delmax'
+                
+            ENDIF          
+            
+        END DO
+        
+        y%PointMesh%Force(1,1) = sum(ZoneF)
+      
+      END IF
+      
+      ! Ice Model 5 --------------------------------
+      
+      IF (p%ModNo == 5) THEN
+      
+           IF (t <= OtherState%Tinit) THEN
+           
+            y%PointMesh%Force(1,1) = 0
+           
+           ELSE IF (t == OtherState%Tinit) THEN  ! Ice load at breakage
+           
+            y%PointMesh%Force(1,1) = p%RHbr
+           
+           ELSE ! Ice load after breakage
+           
+            Wr = p%Wri * ( p%Zr - p%Lbr * sin(OtherState%Beta) ) / p%Zr * cos(p%alphaR)
+            Pn1 = Wr * cos(p%alphaR)
+            gamma = p%rhoi / p%rhow
+            
+            IF (OtherState%Beta < gamma * p%h / p%Lbr) THEN 
+        
+                Xb = p%Lbr /3.0 *( ( 3.0*gamma*p%h - p%Lbr*tan(OtherState%Beta) ) / ( 2.0 *gamma*p%h - p%Lbr*tan(OtherState%Beta) ) )
+                Fb = p%rhow * 9.81 * p%Dwl * (0.5 * p%Lbr**2 * tan(OtherState%Beta) + p%Lbr*(gamma*p%h - p%Lbr*tan(OtherState%Beta)) )
+        
+            ELSE
+        
+                Xb = 1.0/3.0 * gamma * p%h / sin(OtherState%Beta)
+                Fb = p%rhow * 9.81 * p%Dwl * (0.5 * (gamma*p%h)**2 / tan(OtherState%Beta) )
+        
+            END IF
+    
+            pbeta = sin(OtherState%Beta) * ( sin(p%alphaR) + p%mu*cos(p%alphaR) ) + cos(OtherState%Beta) * ( cos(p%alphaR) - p%mu*sin(p%alphaR) )
+            qbeta = ( sin(p%alphaR) + p%mu*cos(p%alphaR) ) * sin( p%alphaR - OtherState%Beta )
+    
+            Pn2 = ( p%WL * p%Lbr /2.0 * cos(OtherState%Beta) + Wr * p%Lbr * qbeta - Fb*Xb) / pbeta / p%Lbr
+    
+            Rh = ( Pn1 + Pn2 ) * ( sin(p%alphaR) + p%mu*cos(p%alphaR) )
+            Rv = ( Pn1 + Pn2 ) * ( cos(p%alphaR) - p%mu*sin(p%alphaR) )
+            
+            y%PointMesh%Force(1,1) = Rh
+           
+           ENDIF
+      
+      ENDIF
+      
+      ! Ice Model 6 --------------------------------
+      IF (p%ModNo == 6) THEN
+      
+           R = p%StrWd/2
+      
+         IF (OtherState%Splitf == 0 ) THEN
+             
+           IF ((x%q - u%PointMesh%TranslationDisp(1,1)) >= OtherState%dxc .AND. (x%q - u%PointMesh%TranslationDisp(1,1)) < OtherState%dxc+R ) THEN
+         
+                y%PointMesh%Force(1,1) =  p%Cpa * ( 2 * p%h * ( R**2 - (R - x%q + u%PointMesh%TranslationDisp(1,1))**2 )**0.5 )**( p%dpa + 1 ) * 1.0e6 
+            
+           ELSE IF (  (x%q - u%PointMesh%TranslationDisp(1,1)) >= OtherState%dxc+R ) THEN
+             
+               y%PointMesh%Force(1,1) = p%Cpa * ( 2 * R *  p%h )**( p%dpa + 1 ) * 1.0e6 
+             
+           ELSE
+             
+               y%PointMesh%Force(1,1) = 0 
+              
+           ENDIF
+           
+         ELSE 
+             
+              y%PointMesh%Force(1,1) = 0 
+           
+         ENDIF
+      
+      ENDIF
+      
       !y%PointMesh%Force(1,1) = y%fice
       !y%PointMesh%Force(2,1) = 0.
       !y%PointMesh%Force(3,1) = 0.
@@ -759,8 +984,42 @@ SUBROUTINE IceD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat
 
       ErrStat = ErrID_None
       ErrMsg  = ""
+      
+      IF (p%ModNo == 6) THEN
 
+      ! Compute the first time derivatives of the continuous states here:
 
+     ! When the ice and the structure is in contact, there is ice force.     
+
+        R = p%StrWd/2 
+        
+        IF ( OtherState%Splitf == 0 ) THEN
+   
+           IF ((x%q - u%PointMesh%TranslationDisp(1,1)) >= OtherState%dxc .AND. (x%q - u%PointMesh%TranslationDisp(1,1)) < OtherState%dxc+R ) THEN
+   
+                force = -p%Cpa * ( 2 * p%h * ( R**2 - (R - x%q + u%PointMesh%TranslationDisp(1,1))**2 )**0.5 )**( p%dpa + 1 ) * 1.0e6 + p%FdrN
+         
+           ELSE IF (  (x%q - u%PointMesh%TranslationDisp(1,1)) >= OtherState%dxc+R ) THEN
+             
+                force = -p%Cpa * ( 2 * R *  p%h )**( p%dpa + 1 ) * 1.0e6  + p%FdrN
+            
+           ELSE
+   
+               force = 0. + p%FdrN
+   
+           ENDIF
+           
+         ELSE
+             
+             force = 0
+             
+         ENDIF
+         
+         xdot%q = x%dqdt
+   
+         xdot%dqdt = force / p%Mice
+      
+      ENDIF
       
 
 END SUBROUTINE IceD_CalcContStateDeriv
@@ -845,6 +1104,7 @@ SUBROUTINE IceD_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
    
    INTEGER                                          :: UnEc                 ! Unit number for the echo file
    LOGICAL, PARAMETER                               :: Echo = .FALSE.       ! echo file for debugging
+!  LOGICAL, PARAMETER                               :: Echo = .TRUE.        ! echo file for debugging (bjj: would like to add this feature to the input file)
 
 
 
@@ -1430,6 +1690,275 @@ SUBROUTINE IceD_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
       RETURN
    END IF
 
+   !-------------------------------------------------------------------------------------------------
+   ! Ice properties - Ice Model 4
+   !-------------------------------------------------------------------------------------------------
+      
+      ! Header
+      
+   CALL ReadCom( UnIn, FileName, 'Ice properties - Ice Model 4', ErrStat, ErrMsg, UnEc)
+   
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+
+     ! PrflMean - Mean value of ice contact face position (m)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%PrflMean, 'PrflMean', 'Mean value of ice contact face position (m)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+      ! PrflSig - Standard deviation of ice contact face position (m)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%PrflSig, 'PrflSig', 'Standard deviation of ice contact face position (m)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+      ! ZoneNo1 - Number of failure zones along contact width 
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%Zn1, 'ZoneNo1', 'Number of failure zones along contact width', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+      
+     ! ZoneNo2 - Number of failure zones along contact height/thickness
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%Zn2, 'ZoneNo2', 'Number of failure zones along contact height/thickness', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+      ! ZonePitch - Distance between sequential ice teeth (m)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%ZonePitch, 'ZonePitch', 'Distance between sequential ice teeth (m)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+   
+      ! IceStr - Ice failure stress within each failure region (MPa)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%IceStr, 'IceStr', 'Ice failure stress within each failure region (MPa)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+
+   ! Delmax - Ice teeth maximum elastic deformation (m)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%Delmax, 'Delmax', 'Ice teeth maximum elastic deformation (m)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+   !-------------------------------------------------------------------------------------------------
+   ! Ice properties - Ice Model 5
+   !-------------------------------------------------------------------------------------------------
+   
+   ! Header
+      
+   CALL ReadCom( UnIn, FileName, 'Ice properties - Ice Model 5, Submodel 1,2', ErrStat, ErrMsg, UnEc)
+   
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+   
+     ! ConeAgl - Slope angle of the cone (degree)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%alpha, 'ConeAgl', 'Slope angle of the cone (degree)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+   
+     ! ConeDwl - Cone waterline diameter (m)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%Dwl, 'ConeDwl', 'Cone waterline diameter (m)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+   
+     ! ConeDtp - Cone top diameter (m)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%Dtp, 'ConeDtp', 'Cone top diameter (m)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+   
+     ! RdupThk - Ride-up ice thickness (m)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%hr, 'RdupThk', 'Ride-up ice thickness (m)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+   
+     ! mu - Friction coefficient between structure and ice (-)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%mu, 'mu', 'Friction coefficient between structure and ice (-)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+   
+     ! FlxStr - Flexural strength of ice (MPa)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%sigf, 'FlxStr', 'Flexural strength of ice (MPa)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+   ! StrLim - Limit strain for ice fracture failure (-)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%StrLim, 'StrLim', 'Limit strain for ice fracture failure (-)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+   ! StrRtLim - Limit strain rate for ice brittle behavior (s^-1)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%StrRtLim, 'StrRtLim', 'Limit strain rate for ice brittle behavior (s^-1)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+   !-------------------------------------------------------------------------------------------------
+   ! Ice properties - Ice Model 6
+   !-------------------------------------------------------------------------------------------------
+   
+   ! Header
+      
+   CALL ReadCom( UnIn, FileName, 'Ice properties - Ice Model 6', ErrStat, ErrMsg, UnEc)
+   
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+   
+     ! FloeLth - Ice floe length (m)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%Ll, 'FloeLth', 'Ice floe length (m)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+ 
+   ! FloeWth - Ice floe width (m)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%Lw, 'FloeWth', 'Ice floe width (m)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+ 
+   ! CPrAr - Ice crushing strength pressure-area relation constant
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%Cpa, 'CPrAr', 'Ice crushing strength pressure-area relation constant', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+ 
+   ! dPrAr - Ice crushing strength pressure-area relation order
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%dpa, 'dPrAr', 'Ice crushing strength pressure-area relation order', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+ 
+   ! Fdr - Constant external driving force (MN)
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%Fdr, 'Fdr', 'Constant external driving force (MN)', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+ 
+   ! Kic - Fracture toughness of ice (kNm^(-3/2))
+      
+   CALL ReadVar ( UnIn, FileName, InputFileData%Kic, 'Kic', 'Fracture toughness of ice (kNm^(-3/2))', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+ 
+   ! FspN - Non-dimensional splitting load
+         
+   CALL ReadVar ( UnIn, FileName, InputFileData%FspN, 'FspN', 'Non-dimensional splitting load', ErrStat, ErrMsg, UnEc )
+
+   IF ( ErrStat /= ErrID_None ) THEN
+      ErrStat = ErrID_Fatal
+      CLOSE( UnIn )
+      RETURN
+   END IF
+ 
 
    !-------------------------------------------------------------------------------------------------
    ! This is the end of the input file
@@ -1511,6 +2040,21 @@ SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat
    REAL(ReKi)                               :: Dm_dmmy                      ! Dummy random number for Dmax (m)
    REAL(ReKi)                               :: P_dmmy                       ! Dummy random number for P (m)
    REAL(ReKi)                               :: CrntT0
+   
+    ! Ice Model 4
+   REAL(ReKi)                               :: ZoneWd                       ! Width of a single failure zone
+   REAL(ReKi)                               :: ZoneHt                       ! Height of a single failuer zone
+ 
+    ! Ice Model 5
+   REAL(ReKi)                       :: flexStrPa               ! Ice flexural strength (Pa)  
+   REAL(ReKi)                       :: A(6)                    ! Coefficients when calculating ice breaking force using sub-model 1
+   REAL(ReKi)                       :: Pn1
+   REAL(ReKi)                       :: Pn2
+   REAL(ReKi)                       :: F1
+   REAL(ReKi)                       :: Lxlim1
+   REAL(ReKi)                       :: Lxlim2
+   REAL(ReKi)                               :: Pbr
+
 
     ! Initialize error data
    ErrStat = ErrID_None
@@ -1548,6 +2092,21 @@ SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat
        ErrMsg  = ' Error in IceDyn Model 2: Input Delmax2 should not be larger than 2*Pitch'
        
    ENDIF
+   
+     ! Ice Model 4
+   p%Delmax    = InputFileData%Delmax
+   p%ZonePitch = InputFileData%ZonePitch
+   
+   ! Ice Model 5
+   p%rhoi      = InputFileData%rhoi
+   p%rhow      = InputFileData%rhow
+   p%Dwl    = InputFileData%Dwl
+   p%mu        = InputFileData%mu
+      
+   ! Ice Model 6
+   p%Cpa    = InputFileData%Cpa
+   p%dpa    = InputFileData%dpa
+
       
    !...............................................................................................................................
    ! Calculate some indirect inputs:
@@ -1722,6 +2281,76 @@ SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat
         
     ENDIF
 
+    ! Ice Model 4
+   ZoneWd      = p%StrWd / REAL(InputFileData%Zn1)
+   ZoneHt      = InputFileData%h     / REAL(InputFileData%Zn2)
+   p%Kice      = InputFileData%IceStr *1e6 * ZoneWd * ZoneHt / InputFileData%Delmax
+   
+   p%Zn        = InputFileData%Zn1   * InputFileData%Zn2                           ! Total number of failure zones
+   
+   CALL AllocAry( p%ContPrfl, p%Zn, 'ContPrfl', ErrStat, ErrMsg )
+   IF ( ErrStat >= AbortErrLev ) RETURN
+   
+    CALL AllocAry( p%Y0, p%Zn, 'ContPrfl', ErrStat, ErrMsg )
+   IF ( ErrStat >= AbortErrLev ) RETURN
+   
+   p%Y0        = InputFileData%InitLoc + p%ContPrfl - MAXVAL(p%ContPrfl)
+   
+   ! Ice Model 5
+   flexStrPa   = InputFileData%sigf * 1e6
+   
+   p%alphaR    = InputFileData%alpha / 180.0 * 3.1415927
+   p%Zr        = (InputFileData%Dwl - InputFileData%Dtp) / 2 * tan(p%alphaR)
+   p%Wri       = p%rhoi * 9.81 * p%Dwl * p%h * p%Zr / sin(p%alphaR)
+   
+   IF (p%SubModNo == 1) THEN
+         
+         p%LovR = SolveLambda ( p%rhoi, p%h, p%Dwl, flexStrPa )
+         p%Lbr  = p%LovR * p%Dwl / 2
+         A     = BrkLdPar (p%alphaR, p%LovR, InputFileData%mu)
+         
+         p%RHbr = ( A(1) * flexStrPa * p%h**2 + A(2) * p%rhoi * 9.81 * p%h * p%Dwl**2 + A(3) * p%rhoi * 9.81 * p%h * (p%Dwl**2 - InputFileData%Dtp**2) ) * A(4)
+      p%RVbr = A(5) * p%RHbr + A(6) * p%rhoi * 9.81 * p%h * (p%Dwl**2 - InputFileData%Dtp**2)
+   
+        
+   ELSEIF (p%SubModNo == 2) THEN
+   
+         Pbr      = 8.0 * sqrt(2.0) * ( ( flexStrPa * p%h**2) / 4 )
+         Pn1      = p%Wri * cos(p%alphaR)
+         F1     = p%Wri * ( sin(p%alphaR) + p%mu * cos(p%alphaR) );
+        Pn2    = ( Pbr + F1*sin(p%alphaR) ) / ( cos(p%alphaR) - p%mu * sin(p%alphaR) )
+         
+         p%RHbr = (Pn1 + Pn2) * ( sin(p%alphaR) + p%mu * cos(p%alphaR) )
+         p%RVbr = (Pn1 + Pn2) * ( cos(p%alphaR) - p%mu * sin(p%alphaR) )
+         
+         Lxlim1 = ( 3.0 * sqrt(6.0) ) / 8.0 * ( p%v * tan(p%alphaR) ) / InputFileData%StrRtLim   !Limit strain rate criteria
+         Lxlim2 = sqrt(6.0) *  ( ( flexStrPa * p%h**2) / 4 / (p%rhow * 9.81) / InputFileData%StrLim )**(1.0/3.0)
+         
+         IF (Lxlim1 <= Lxlim2) THEN
+         
+            p%Lbr = ( 3.0 * sqrt(2.0) ) / 8.0 * ( p%v * tan(p%alphaR) ) / InputFileData%StrRtLim
+         
+         ELSE
+         
+            p%Lbr = 2.0 *  ( ( flexStrPa * p%h**2) / 4 / (p%rhow * 9.81) / InputFileData%StrLim )**(1.0/3.0)
+         
+         ENDIF
+   
+   ELSE
+         
+         ErrMsg   = 'Sub-model number for model 5 should be 1 or 2'
+         ErrStat = ErrID_Fatal
+   
+   ENDIF 
+   
+   p%WL        = p%rhoi * 9.81 * p%Dwl * p%h * p%Lbr
+   
+   ! Ice Model 6
+   p%FdrN      = InputFileData%Fdr * 1e6
+   p%Mice      = InputFileData%rhoi * p%h * InputFileData%Lw * InputFileData%Ll
+   p%Fsp       = InputFileData%FspN * p%h * InputFileData%Kic * 1e3 * sqrt(InputFileData%Ll) 
+    
+    
     ! Deallocate local variables 
    
    IF ( ALLOCATED(TmpIceSeeds) )THEN
@@ -1764,6 +2393,207 @@ SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat
       
       ! Test parameter assignments
       
+      CONTAINS
+      
+      FUNCTION random_normal() RESULT(fn_val)
+      
+         ! Adapted from the following Fortran 77 code
+         !      ALGORITHM 712, COLLECTED ALGORITHMS FROM ACM.
+         !      THIS WORK PUBLISHED IN TRANSACTIONS ON MATHEMATICAL SOFTWARE,
+         !      VOL. 18, NO. 4, DECEMBER, 1992, PP. 434-435.
+         
+         !  The function random_normal() returns a normally distributed pseudo-random
+         !  number with zero mean and unit variance.
+         
+         !  The algorithm uses the ratio of uniforms method of A.J. Kinderman
+         !  and J.F. Monahan augmented with quadratic bounding curves.
+         
+         REAL(ReKi) :: fn_val
+         
+         !     Local variables
+         REAL(ReKi)     :: s = 0.449871, t = -0.386595, a = 0.19600, b = 0.25472,           &
+                     r1 = 0.27597, r2 = 0.27846, u, v, x, y, q
+         
+         !     Generate P = (u,v) uniform in rectangle enclosing acceptance region
+         
+         DO
+           CALL RANDOM_NUMBER(u)
+           CALL RANDOM_NUMBER(v)
+           v = 1.7156 * (v - 0.5)
+         
+         !     Evaluate the quadratic form
+           x = u - s
+           y = ABS(v) - t
+           q = x**2 + y*(a*y - b*x)
+         
+         !     Accept P if inside inner ellipse
+           IF (q < r1) EXIT
+         !     Reject P if outside outer ellipse
+           IF (q > r2) CYCLE
+         !     Reject P if outside acceptance region
+           IF (v**2 < -4.0*LOG(u)*u**2) EXIT
+         END DO
+         
+         !     Return ratio of P's coordinates as the normal deviate
+         fn_val = v/u
+         RETURN
+         
+        END FUNCTION random_normal
+        
+          
+        FUNCTION  SolveLambda(rhoi, t, D, sigf) Result (rho)
+      
+      !  SOLVERHO Solve for rho according to Ralston model (Ralston 1978)
+      !   Rho = A/R, A is the first circumferential crack radius, R is the cone
+      !   structure waterline radius. According to first equation on Ralston 
+      !   paper (P301), calculate rho.
+         
+         IMPLICIT NONE
+      
+         ! Input values
+         REAL(ReKi) :: rhoi      ! Mass density of ice, (kg/m^3)
+         REAL(ReKi) :: t         ! Ice thickness (m)
+         REAL(ReKi) :: D         ! Cone waterline diameter (m)
+         REAL(ReKi) :: sigf      ! Ice flextural strength (Pa)
+         
+         REAL(ReKi) :: rho       ! Rho = A/R
+         REAL(ReKi) :: x = 1.01    ! Initial value of rho
+         REAL(ReKi) :: Equ    
+         REAL(ReKi) :: Derv
+         
+         DO i = 1,100
+         
+            Equ = x - log(x) + 0.0922 * rhoi * 9.81 * t * D**2 / sigf / t**2 * (2*x+1) * (x-1)**2 - 1.369
+            Derv = 1 - 1/x + 0.0922 * rhoi * 9.81 * t * D**2 / sigf / t**2 * (2*(x-1)**2 + (2*x+1)*2*(x-1))
+            
+            IF ( abs(Equ) <= 1e-6) THEN
+            
+               rho = x
+               EXIT
+            
+            END IF 
+            
+            x = x - Equ / Derv
+         
+         END DO
+                
+      END FUNCTION SolveLambda
+      
+      
+      FUNCTION BrkLdPar (alpha, lambda, mu) Result (A)
+      
+      !BRKLDPAR Calculates Ralston's horizontal force paramters A1, A2, A3, A4 and B1, B2.
+      !   Detailed explanation in Ralston's paper: Ice Force Desgin Consideration 
+      !  for Conical Offshore Structure and Ice Module Manual
+      
+         IMPLICIT NONE
+      
+         ! Input values
+         REAL(ReKi) :: alpha        ! Cone angle, (rad)
+         REAL(ReKi) :: lambda       ! Ratio of breaking length over cone waterline radius
+         REAL(ReKi) :: mu        ! Friction coefficient between structure and ice
+         
+         REAL(ReKi) :: A(6)         ! Coefficients when calculating ice breaking force
+         
+         ! Local variables
+         REAL(ReKi) :: f
+         REAL(ReKi) :: g
+         REAL(ReKi) :: h
+         REAL(ReKi) :: pi = 3.1415927
+         
+         A(1) = 1.0/3.0 * ( lambda/(lambda-1) + (1-lambda+lambda*log(lambda))/(lambda-1) + 2.422* (lambda*log(lambda))/(lambda-1) )
+
+         A(2) = ( lambda**2 + lambda -2.0 )/12.0
+
+         f = pi/2.0 + pi/8.0 * (sin(alpha))**2 / (1-(sin(alpha))**2) - pi/16.0 * (sin(alpha))**4 / (1-(sin(alpha))**4)
+         g = ( 1.0/2.0 + alpha/sin(2*alpha) ) / ( pi/4.0*sin(alpha) + mu*alpha*cos(alpha)/sin(alpha) )
+         A(3) = 1.0/4.0 * ( 1/cos(alpha) + mu*Esina(alpha,10)/sin(alpha) - mu*f*g/tan(alpha) )
+
+         A(4) = tan(alpha) / ( 1 - mu * g)
+
+         h = cos(alpha) - mu/sin(alpha) * ( Esina(alpha,10) - cos(alpha)**2 * Fsina(alpha) )
+
+         A(5) = h / ( pi/4.0 * sin(alpha) + mu * alpha / tan(alpha) )
+         A(6) = 1.0/4.0 * (pi/2.0*cos(alpha) - mu*alpha - f*h/ ( pi/4.0 * sin(alpha) + mu * alpha / tan(alpha) ))
+            
+            CALL WrScr(Num2LStr(Esina(alpha,10)))
+            CALL WrScr(Num2LStr(Fsina(alpha)))
+               
+      END FUNCTION BrkLdPar
+      
+      
+      FUNCTION Esina (alpha, n) Result (Esin)
+      !ESINA calculates E(sin(alpha)). Detailed explanation in Ice Module Manual, Model 5, Submodel 1
+      
+         IMPLICIT NONE
+         
+         !Input variable
+         REAL(ReKi)     :: alpha       ! Cone angle, (rad)
+         INTEGER(IntKi) :: n     
+         
+         !Output
+         REAL(ReKi)     :: Esin 
+            
+         
+         !Local variable 
+         INTEGER(IntKi) :: i  
+         REAL(ReKi)     :: E = 0
+            REAL(ReKi)     :: pi = 3.1415927
+         
+         DO i = 1,n
+         
+            E = E + pi/2.0*( factorial(2*(i-1)) / 2**(2*(i-1)) / (factorial(i-1))**2 )**2 * (sin(alpha))**(2*(i-1)) / (1-2*(i-1))
+         
+            END DO
+            
+            Esin = E
+          
+      END FUNCTION Esina
+      
+      
+      FUNCTION Fsina (alpha) Result (F)
+      !ESINA calculates F(sin(alpha)). Detailed explanation in Ice Module Manual, Model 5, Submodel 1
+      
+         IMPLICIT NONE
+         
+         !Input variable
+         REAL(ReKi)     :: alpha       ! Cone angle, (rad)
+         !Output
+         REAL(ReKi)     :: F
+         !Local variable 
+         REAL(ReKi)     :: pi = 3.1415927
+         
+         F = pi/2.0 + pi/8.0 * sin(alpha)**2 / (1-sin(alpha)**2) - pi/16.0 * sin(alpha)**4 / (1-sin(alpha)**4)
+      
+      END FUNCTION Fsina
+      
+
+        FUNCTION factorial (n) Result (fac)
+        ! FACTORIAL calculates the factorial of n 
+        
+         IMPLICIT NONE
+         
+         !Input variable
+         INTEGER(IntKi) :: n
+         
+         !Output
+         REAL(ReKi)     :: fac
+         
+         !Local variables
+         INTEGER(IntKi) :: i  
+         INTEGER(IntKi) :: M = 1
+         
+         DO i = 1,n
+         
+            M = M * i  
+         
+         ENDDO
+         
+         fac = REAL(M)
+        
+        
+        END FUNCTION factorial
+        
 END SUBROUTINE IceD_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE IceD_Init_OtherStates( OtherState, p, x, InputFileData, ErrStat, ErrMsg  )
@@ -1804,6 +2634,24 @@ SUBROUTINE IceD_Init_OtherStates( OtherState, p, x, InputFileData, ErrStat, ErrM
           OtherState%Psum (I)    = 0. ! Initialize sum of pitches of broken ice teeth 
        ENDDO
 
+   ELSEIF ( p%ModNo == 4 ) THEN
+       
+       CALL AllocAry( OtherState%IceTthNo, p%Zn,   'IceTthNo',   ErrStat, ErrMsg )
+       IF ( ErrStat /= ErrID_None ) RETURN ! Initialize first ice tooth number for each zone
+       DO I = 1,p%Zn
+          OtherState%IceTthNo (I) = 1
+       END DO
+    
+    ELSEIF ( p%ModNo == 5 ) THEN
+    
+       OtherState%beta = 0.    ! ice plate lifted angle
+       OtherState%Tinit = p%t0
+       
+    ELSEIF ( p%ModNo == 6 ) THEN
+    
+       OtherState%dxc = 0.    ! ice crushed depth
+       OtherState%Splitf = 0. ! flag to indicate if the ice floe has splitted (0 not splitted, 1 splitted)
+        
    ENDIF
 
    
@@ -2005,6 +2853,7 @@ SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrS
 
          k = wbpar (mean, var)
          lambda = mean / NWTC_gamma(1+1/k)
+       ! lambda = mean /      gamma(1+1/k)
 
          CALL RANDOM_NUMBER(u)
          fn_val = lambda * (-log(1-u)) ** (1/k)
@@ -2031,11 +2880,13 @@ SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrS
          DO i = 1,10000
 
             F1 = (NWTC_gamma(1+1/k))**2 / NWTC_gamma(1+2/k) - mean**2/(mean**2+var);
+           !F1 = (     gamma(1+1/k))**2 /      gamma(1+2/k) - mean**2/(mean**2+var)
 
             IF (abs(F1) < error) EXIT
 
             dFdk = 2* (NWTC_gamma(1+1/k))**2 * (-1/k**2) / NWTC_gamma(1+2/k) * (digamma(1+1/k) -digamma(1+2/k));
-            k = k - F1/dFdk;
+           !dFdk = 2* (     gamma(1+1/k))**2 * (-1/k**2) /      gamma(1+2/k) * (digamma(1+1/k) -digamma(1+2/k))
+            k = k - F1/dFdk
 
             END DO
 
@@ -2056,7 +2907,7 @@ SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrS
          REAL(ReKi), INTENT(IN) :: z
          REAL(ReKi)             :: phy
 
-         phy = log(z) - 1/2/z - 1/12/z**2 + 1/120/z**4 - 1/252/z**6 + 1/240/z**8 - 5/660/z**10;
+         phy = log(z) - 1./2./z - 1./12./z**2 + 1./120./z**4 - 1./252./z**6 + 1./240./z**8 - 5./660./z**10;
 
       END FUNCTION digamma
 
