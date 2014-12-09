@@ -54,7 +54,7 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
-   thisprog_ver = "FAST Registry (v2.03.03, 5-Dec-2014)";
+   thisprog_ver = "FAST Registry (v2.04.01, 8-Dec-2014)";
 
   fprintf(stderr,"\n") ;
   fprintf(stderr,"----- %s --------------\n", thisprog_ver) ;
@@ -64,15 +64,15 @@ main( int argc, char *argv[], char *env[] )
   fprintf(stderr,"----------------------------------------------------------\n") ;
 
   sym_forget() ;
-//  thisprog = *argv ;
-  strcpy(thisprog, thiscom);
-  //thisprog = "registry.exe";
+ //thisprog = *argv ;
+ // strcpy(thisprog, thiscom);
+  thisprog = "registry.exe";
   strcpy(fname_in,"") ;
   wrote_template = 0 ;
 
-
   while (*argv) {
-      if (!strncmp(*argv,"-D",2)) {
+
+     if (!strncmp(*argv,"-D",2)) {
         char * p ;
         p = *argv ;
         sym_add(p+2) ;
@@ -127,7 +127,8 @@ main( int argc, char *argv[], char *env[] )
       } else
       if (!strcmp(*argv,"-h") || !strcmp(*argv,"/h")) {
 usage:
-        fprintf(stderr,"Usage: %s [options] registryfile -or- \n",thisprog) ;
+//        fprintf(stderr,"Usage: %s [options] registryfile -or- \n",thisprog) ;
+        fprintf(stderr,"Usage: %s [options] registryfile -or- \n",thiscom) ;
         fprintf(stderr,"          [-force] [-template|-registry] ModuleName ModName \n") ;
         fprintf(stderr,"    -h        this summary\n") ;
         fprintf(stderr,"    -D<SYM>   define symbol for conditional evaluation inside registry file\n") ;
