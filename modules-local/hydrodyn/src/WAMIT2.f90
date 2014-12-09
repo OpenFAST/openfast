@@ -53,16 +53,6 @@ MODULE WAMIT2
          !!       It takes so long for WAMIT to perform the calculations for the QTF that it is unlikely that any data where this is
          !!       a problem will arise before time is found to fix it.  Right now, time is not available.
          !!
-         !! 2. _Problem:_
-         !!       The normalization constants for the summations in the MnDrift, DiffQTF, and SumQTF may not be correct.  They are
-         !!       potentially off by a constant.  These constants are a result of \f$ A_m * A^*_m \f$ terms being multiplied.  They
-         !!       contain a \f$ \sqrt{N/2} \f$ in them as a normalization.  This gets squared and we end up with an extra
-         !!       \f$ \sqrt{N/2} \f$ that must get cancelled out.
-         !!    _Effects:_
-         !!       Incorrect forces will be returned.
-         !!    _Solution:_
-         !!       Figure out what the normalization of the numerical summation/integral should be.
-         !!
 
 
 
@@ -3268,12 +3258,16 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       INTEGER(IntKi)                                     :: UnitDataFile      !< The unit number for the currently open file
 
       INTEGER(IntKi)                                     :: NumDataColumns    !< Number of data columns in the file
-      INTEGER(IntKi)                                     :: NumDataLines      !< Total number of lines in the file (including first text line if there is one)
+      INTEGER(IntKi)                                     :: NumDataLines      !< Total number of lines in the file (excluding first text line if there is one)
+      INTEGER(IntKi)                                     :: NumDataLinesKeep  !< Total number of lines in the file that are to be kept (positive force component index)
       INTEGER(IntKi)                                     :: NumHeaderLines    !< Flag to indicate if the first line of the file is text
 
          ! Raw file data storage
-      REAL(ReKi),       ALLOCATABLE                      :: RawData3D(:,:)    !< The raw data from the entirety of the input file
+      REAL(ReKi),       ALLOCATABLE                      :: RawData3D(:,:)    !< The raw data from the entirety of the input file -- after ignoring negative force components
+      REAL(ReKi),       ALLOCATABLE                      :: RawData3DTmp(:,:) !< The raw data from the entirety of the input file -- as read in.
       REAL(ReKi)                                         :: HighFreq1         !< The highest frequency found.  Needed for setting the infinite frequency data.
+      INTEGER(IntKi)                                     :: WvFreq1HiIdx      !< Index to the highest wave 1 frequency
+      INTEGER(IntKi)                                     :: WvFreq1LoIdx      !< Index to the  lowest wave 1 frequency
       LOGICAL                                            :: HaveZeroFreq1     !< Indicates we have a zer frequency value
 
 
@@ -3331,6 +3325,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
          CALL CleanUp
@@ -3344,6 +3339,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          CLOSE( UnitDataFile )
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
          CALL CleanUp
@@ -3360,6 +3356,22 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          CLOSE( UnitDataFile )
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
+         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
+         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
+         CALL CleanUp
+         RETURN
+      ENDIF
+
+
+         ! Make sure we have 8 columns of data in the data file.
+      IF ( NumDataColumns /= 8 ) THEN
+         CALL SetErrStat( ErrID_Fatal, ' The 2nd order WAMIT data file '//TRIM(Filename3D)//' has '//TRIM(Num2LStr(NumDataColumns))// &
+                        ' columns instead of the 8 columns expected.', ErrStat, ErrMsg, 'Read_DataFile3D')
+         CLOSE( UnitDataFile )
+         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
+         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
          CALL CleanUp
@@ -3377,12 +3389,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D')
 
          ! Allocate an array to hold the entirety of the raw contents of the file
-      CALL AllocAry( RawData3D, NumDataLines, NumDataColumns, ' Array for holding raw 3D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
+      CALL AllocAry( RawData3DTmp, NumDataLines, NumDataColumns, ' Array for holding raw 3D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D')
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
          CALL CleanUp
@@ -3404,29 +3417,65 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             CLOSE( UnitDataFile )
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
             CALL CleanUp
             RETURN
          ENDIF
-         RawData3D(I,:) = TmpDataRow
+         RawData3DTmp(I,:) = TmpDataRow
       ENDDO
 
       CLOSE( UnitDataFile )
 
 
-         ! Make sure we have 8 columns of data in the data file.
-      IF ( NumDataColumns /= 8 ) THEN
-         CALL SetErrStat( ErrID_Fatal, ' The 2nd order WAMIT data file '//TRIM(Filename3D)//' has '//TRIM(Num2LStr(NumDataColumns))// &
-                        ' columns instead of the 8 columns expected.', ErrStat, ErrMsg, 'Read_DataFile3D')
-         IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
-         IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
-         CALL CleanUp
-         RETURN
-      ENDIF
+         !> Before continuing, we need to figure out how many actual lines of data we will
+         !! be keeping (lines where the force component index is positive).  The force component
+         !! is in column 4 for 3D data read in.  First find out if there are negative force
+         !! components, then count the number of data rows we are keeping.  Then copy data over.
+      IF ( MINVAL(RawData3DTmp(:,4)) < 0_IntKi ) THEN             ! check the 4th element (force component)
+         CALL SetErrStat( ErrID_Warn,' Negative load components found (moving reference frame). Ignoring', &
+               ErrStat,ErrMsg,'Read_DataFile3D')
 
+            ! Count how many lines we are keeping.
+         NumDataLinesKeep = 0_IntKi
+         DO I=1,NumDataLines
+            IF ( RawData3DTmp(I,4) > 0 ) THEN
+               NumDataLinesKeep = NumDataLinesKeep + 1
+            ENDIF
+         ENDDO
+
+            ! Allocate an array to hold the data from the file that we are keeping
+         CALL AllocAry( RawData3D, NumDataLinesKeep, NumDataColumns, ' Array for holding raw 3D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D')
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CLOSE( UnitDataFile )
+            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
+            CALL CleanUp
+            RETURN
+         ENDIF
+
+            ! Now copy over the data that we are keeping. Ignore the rest
+         NumDataLinesKeep = 0_IntKi
+         DO I=1,NumDataLines
+            IF ( RawData3DTmp(I,4) > 0 ) THEN
+               NumDataLinesKeep = NumDataLinesKeep + 1
+               RawData3D( NumDataLinesKeep, : ) = RawData3DTmp(I,:)
+            ENDIF
+         ENDDO
+
+            ! We no longer need the raw data from the file.
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
+
+         ! no negative force components, so just move the array.
+      ELSE
+         CALL MOVE_ALLOC( RawData3DTmp, RawData3D )
+         NumDataLinesKeep = NumDataLines
+      ENDIF
 
 
          !> Before proceeding further, we are going to change the wave period from measured
@@ -3442,7 +3491,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          !! highest frequency given in the file and infinity.  This means that everything the
          !! the highest frequency is handled exactly the same.
 
-      DO I=1,NumDataLines
+      DO I=1,NumDataLinesKeep
          IF ( EqualRealNos(RawData3D(I,1), 0.0_ReKi) ) THEN
             ! Leave it alone.  We will have to fix it afterwards.
          ELSE IF ( RawData3D(I,1) < 0 ) THEN
@@ -3460,14 +3509,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! found an infinite frequency in this dimension.  We will later copy this value to the infinite
          ! frequency.  This results in having a flat response from the highest frequency found to the
          ! infinite frequency.
-      DO I=1,NumDataLines
+      DO I=1,NumDataLinesKeep
          IF ( EqualRealNos(RawData3D(I,1), 0.0_ReKi) ) THEN
             RawData3D(I,1) = HighFreq1 * OnePlusEps
          ENDIF
       ENDDO
 
          ! Now change the negative values to be 0.0 (zero frequency)
-      DO I=1,NumDataLines
+      DO I=1,NumDataLinesKeep
          IF ( RawData3D(I,1) < 0.0_ReKi ) THEN
             RawData3D(I,1) = 0.0_ReKi
             HaveZeroFreq1 = .TRUE.
@@ -3512,6 +3561,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
          CALL CleanUp
@@ -3524,6 +3574,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
          CALL CleanUp
@@ -3536,6 +3587,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
          CALL CleanUp
@@ -3553,6 +3605,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
          CALL CleanUp
@@ -3568,6 +3621,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                   ' must be between 1 and 6.', ErrStat,ErrMsg,'Read_DataFile3D')
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
             CALL CleanUp
@@ -3586,13 +3640,18 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! Now we need to figure out if the zero frequency was given in the file.  If so, we change NumWvFreq1 to
          ! NumWvFreq1+2.  If not, change to NumWvFreq1+4.  We will add on the inifinite frequency value and 
          ! zero out all values not in the input frequency range. The inifinite frequency value will be set to HUGE
-         ! and we'll add/subtract epsilon to the non-zero frequencies entered so that we can achieve a step 
+         ! and we'll add/subtract epsilon to the first non-zero frequency entered so that we can achieve a step 
          ! change for zeroing the values outside the input frequency range.
       IF (HaveZeroFreq1) THEN
          Data3D%NumWvFreq1 = Data3D%NumWvFreq1+2
+         WvFreq1LoIdx   = 1
       ELSE
          Data3D%NumWvFreq1 = Data3D%NumWvFreq1+4
+         WvFreq1LoIdx   = 3
       ENDIF
+
+         ! Set the index for the highest frequency stored before the cutoff
+      WvFreq1HiIdx   =  Data3D%NumWvFreq1-2
 
          ! Now allocate the array for holding the WvFreq1
       ALLOCATE( Data3D%WvFreq1( Data3D%NumWvFreq1), STAT=ErrStatTmp)
@@ -3601,6 +3660,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
          CALL CleanUp
@@ -3608,18 +3668,16 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       ENDIF
 
          ! Populate the wave frequencies with what we read in
-      IF (HaveZeroFreq1) THEN
-         Data3D%WvFreq1( 1:Data3D%NumWvFreq1-2) = TmpWvFreq1
-      ELSE
-            ! add the two points for step-change before first entered frequency 
-         Data3D%WvFreq1( 1 )                    = 0.0_ReKi
-         Data3D%WvFreq1( 2 )                    = MAX( TmpWvFreq1(1) - 4.0_ReKi*EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
-         
-         Data3D%WvFreq1( 3:Data3D%NumWvFreq1-2) = TmpWvFreq1
+      Data3D%WvFreq1( WvFreq1LoIdx:WvFreq1HiIdx ) = TmpWvFreq1
+
+         ! If no zero frequency was supplied, add the two points for step-change before first entered frequency 
+      IF ( .NOT. HaveZeroFreq1) THEN
+         Data3D%WvFreq1( 1 )                 = 0.0_ReKi
+         Data3D%WvFreq1( 2 )                 = MAX( TmpWvFreq1(1) - 10.0_ReKi*EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
       ENDIF
       
          ! add the two points for step-change after last entered frequency
-      Data3D%WvFreq1( Data3D%NumWvFreq1-1 )     = Data3D%WvFreq1(Data3D%NumWvFreq1-2) + 4.0_ReKi*EPSILON(0.0_ReKi)
+      Data3D%WvFreq1( Data3D%NumWvFreq1-1 )     = Data3D%WvFreq1(Data3D%NumWvFreq1-2) + 10.0_ReKi*EPSILON(0.0_ReKi)
       Data3D%WvFreq1( Data3D%NumWvFreq1   )     = HUGE(1.0_ReKi)
 
 
@@ -3632,6 +3690,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
          CALL CleanUp
@@ -3645,6 +3704,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
          CALL CleanUp
@@ -3677,7 +3737,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
       TmpCoord = 1         ! Initialize the search locations.
 
-      DO I=1,NumDataLines
+      DO I=1,NumDataLinesKeep
 
             ! Error checking: The LocateStp routine will return 0 if the requested value is less than the value
             !                 of the first element in the array.  It will return the index of the last element
@@ -3687,17 +3747,20 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             !                 something must have gone horribly wrong while creating it, or between then and now,
             !                 which is most likely a programming error.
 
-            ! Find the location in the WvFreq1 array that this point corresponds to.
-         CALL LocateStp( RawData3D(I,1), Data3D%WvFreq1, TmpCoord(1),   Data3D%NumWvFreq1 )
+            ! Find the location in the WvFreq1 array that this point corresponds to.  We will check only between the
+            ! cutoffs that were added to the frequency range.  This is contained within TmpWvFreq1 from reading in.
+         CALL LocateStp( RawData3D(I,1), TmpWvFreq1, TmpCoord(1),   WvFreq1HiIdx - (WvFreq1LoIdx - 1) )  ! inclusive limits
          IF ( TmpCoord(1) == 0 .OR. ( RawData3D(I,1) > Data3D%WvFreq1(Data3D%NumWvFreq1)) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data3D%WvFreq1 array.', ErrStat, ErrMsg, 'Read_DataFile3D')
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
             CALL CleanUp
             RETURN
          ENDIF
+         TmpCoord(1) =  TmpCoord(1) + ( WvFreq1LoIdx - 1 )     ! shift to the point in the Data3D%WvFreq1 array by adding the zero frequency step function
 
             ! Find the location in the WvDir1 array that this point corresponds to.
          CALL LocateStp( RawData3D(I,2), Data3D%WvDir1,  TmpCoord(2),   Data3D%NumWvDir1 )
@@ -3705,6 +3768,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data3D%WvDir1 array.', ErrStat, ErrMsg, 'Read_DataFile3D')
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
             CALL CleanUp
@@ -3717,6 +3781,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data3D%WvDir2 array.', ErrStat, ErrMsg, 'Read_DataFile3D')
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
             CALL CleanUp
@@ -3763,6 +3828,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                         ErrStat, ErrMsg, 'Read_DataFile3D' )
                IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
                IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+               IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
                IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
                IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
                CALL CleanUp
@@ -3886,6 +3952,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Clean up
       IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
+      IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
       IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
       IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
       IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -3926,15 +3993,21 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       INTEGER(IntKi)                                     :: UnitDataFile      !< The unit number for the currently open file
 
       INTEGER(IntKi)                                     :: NumDataColumns    !< Number of data columns in the file
-      INTEGER(IntKi)                                     :: NumDataLines      !< Total number of lines in the file (including first text line if there is one)
+      INTEGER(IntKi)                                     :: NumDataLines      !< Total number of lines in the file (excluding first text line if there is one)
+      INTEGER(IntKi)                                     :: NumDataLinesKeep  !< Total number of lines in the file that are to be kept (positive force component index)
       INTEGER(IntKi)                                     :: NumHeaderLines    !< Flag to indicate if the first line of the file is text
 
          ! Raw file data storage
-      REAL(ReKi),       ALLOCATABLE                      :: RawData4D(:,:)    !< The raw data from the entirety of the input file
+      REAL(ReKi),       ALLOCATABLE                      :: RawData4D(:,:)    !< The raw data from the entirety of the input file -- after removing negative force components
+      REAL(ReKi),       ALLOCATABLE                      :: RawData4DTmp(:,:) !< The raw data from the entirety of the input file -- as read in
       REAL(ReKi)                                         :: HighFreq1         !< The highest frequency found.  Needed for setting the infinite frequency data.
       REAL(ReKi)                                         :: HighFreq2         !< The highest frequency found.  Needed for setting the infinite frequency data.
-      LOGICAL                                            :: HaveZeroFreq1      !< Indicates we have a zer frequency value
-      LOGICAL                                            :: HaveZeroFreq2      !< Indicates we have a zer frequency value
+      INTEGER(IntKi)                                     :: WvFreq1HiIdx      !< Index to the highest wave 1 frequency
+      INTEGER(IntKi)                                     :: WvFreq1LoIdx      !< Index to the  lowest wave 1 frequency
+      INTEGER(IntKi)                                     :: WvFreq2HiIdx      !< Index to the highest wave 2 frequency
+      INTEGER(IntKi)                                     :: WvFreq2LoIdx      !< Index to the  lowest wave 2 frequency
+      LOGICAL                                            :: HaveZeroFreq1     !< Indicates we have a zer frequency value
+      LOGICAL                                            :: HaveZeroFreq2     !< Indicates we have a zer frequency value
 
 
          ! File reading variables
@@ -3983,10 +4056,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       !--------------------------------------------------------------------------------
 
          !------------------------------------------------------------------------------
-         !> 4D data files are only used for cases of { MnDrift || NewmanApp } = { 7 || 8 || 9}\n
-         !!     .7 files are available from WAMIT version 7 only --> Not checked at present\n
-         !!     .8 files only contain information for dimensions 1, 2, and 6 (x, y, yaw) -- set in CheckInitInput\n
-         !!     .9 files contain all dimensions
+         !> 4D data files are only used for cases of { SumQTF || DiffQTF } = { 10 || 11 || 12}\n
+         !!     .10 files can contain all dimensions \n
+         !!     .11 files can contain all dimensions \n
+         !!     .12 files can contain all dimensions
          !------------------------------------------------------------------------------
 
          ! Find a unit number to use
@@ -3994,6 +4067,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D')
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4008,6 +4082,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4022,6 +4097,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4040,6 +4116,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                         ' columns instead of the 9 columns expected.', ErrStat, ErrMsg, 'Read_DataFile4D')
          CLOSE( UnitDataFile )
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4060,11 +4137,12 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D')
 
          ! Allocate an array to hold the entirety of the raw contents of the file
-      CALL AllocAry( RawData4D, NumDataLines, NumDataColumns, ' Array for holding raw 4D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
+      CALL AllocAry( RawData4DTmp, NumDataLines, NumDataColumns, ' Array for holding raw 4D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D')
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4080,13 +4158,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Read in the data one line at a time and put it in RawData4D
       DO I=1,NumDataLines
-         CALL ReadAry( UnitDataFile, TRIM(Filename4D), TmpDataRow, NumDataColumns, 'RawData4D('//TRIM(Num2LStr(I))//',:)', &
+         CALL ReadAry( UnitDataFile, TRIM(Filename4D), TmpDataRow, NumDataColumns, 'RawData4DTmp('//TRIM(Num2LStr(I))//',:)', &
                      ' Line '//TRIM(Num2LStr(NumHeaderLines+I))//' of '//TRIM(Filename4D), &
                      ErrStatTmp, ErrMsgTmp )      ! Note, not echoing this to anything.
          CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D')
          IF ( ErrStat >= AbortErrLev ) THEN
             CLOSE( UnitDataFile )
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4094,10 +4173,59 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             CALL CleanUp
             RETURN
          ENDIF
-         RawData4D(I,:) = TmpDataRow
+         RawData4DTmp(I,:) = TmpDataRow
       ENDDO
 
       CLOSE( UnitDataFile )
+
+
+         !> Before continuing, we need to figure out how many actual lines of data we will
+         !! be keeping (lines where the force component index is positive).  The force component
+         !! is in column 5 for 4D data read in.  First find out if there are negative force
+         !! components, then count the number of data rows we are keeping.  Then copy data over.
+      IF ( MINVAL(RawData4DTmp(:,5)) < 0_IntKi ) THEN          ! check the 5th element (force component)
+         CALL SetErrStat( ErrID_Warn,' Negative load components found (moving reference frame). Ignoring', &
+               ErrStat,ErrMsg,'Read_DataFile4D')
+
+            ! Count how many lines we are keeping.
+         NumDataLinesKeep = 0_IntKi
+         DO I=1,NumDataLines
+            IF ( RawData4DTmp(I,5) > 0 ) THEN
+               NumDataLinesKeep = NumDataLinesKeep + 1
+            ENDIF
+         ENDDO
+
+            ! Allocate an array to hold the data from the file that we are keeping
+         CALL AllocAry( RawData4D, NumDataLinesKeep, NumDataColumns, ' Array for holding raw 4D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D')
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CLOSE( UnitDataFile )
+            IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
+            IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
+            CALL CleanUp
+            RETURN
+         ENDIF
+
+            ! Now copy over the data that we are keeping. Ignore the rest
+         NumDataLinesKeep = 0_IntKi
+         DO I=1,NumDataLines
+            IF ( RawData4DTmp(I,5) > 0 ) THEN
+               NumDataLinesKeep = NumDataLinesKeep + 1
+               RawData4D( NumDataLinesKeep, : ) = RawData4DTmp(I,:)
+            ENDIF
+         ENDDO
+
+            ! We no longer need the raw data from the file.
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
+
+         ! no negative force components, so just move the array.
+      ELSE
+         CALL MOVE_ALLOC( RawData4DTmp, RawData4D )
+         NumDataLinesKeep = NumDataLines
+      ENDIF
 
 
          !> Before proceeding further, we are going to change the wave period from measured
@@ -4108,7 +4236,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          !! wave periods with \f$ \tau=0 \f$ mean \f$ \omega=\infty \f$.  Normally these
          !! would not be calculated for sum and difference frequencies as there is little
          !! information of interest there.
-      DO I=1,NumDataLines
+      DO I=1,NumDataLinesKeep
          IF ( EqualRealNos(RawData4D(I,1), 0.0_ReKi) ) THEN
             ! Leave it alone.  We will have to fix it afterwards.
          ELSE IF ( RawData4D(I,1) < 0 ) THEN
@@ -4132,7 +4260,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! First change the values given as 0.0 to the infinite frequency and set a flag to indicate we
          ! found an infinite frequency in this dimension
-      DO I=1,NumDataLines
+      DO I=1,NumDataLinesKeep
          IF ( EqualRealNos(RawData4D(I,1), 0.0_ReKi) ) THEN
             RawData4D(I,1) = HighFreq1 * OnePlusEps
          ENDIF
@@ -4142,7 +4270,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       ENDDO
 
          ! Now change the negative values to be 0.0
-      DO I=1,NumDataLines
+      DO I=1,NumDataLinesKeep
          IF ( RawData4D(I,1) < 0.0_ReKi ) THEN
             RawData4D(I,1) = 0.0_ReKi
             HaveZeroFreq1 = .TRUE.
@@ -4191,6 +4319,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D' )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4204,6 +4333,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D' )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4217,6 +4347,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D' )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4230,6 +4361,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D' )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4248,6 +4380,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                      TRIM(Filename4D)//'.', ErrStat,ErrMsg,'Read_DataFile4D')
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4264,6 +4397,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             CALL SetErrStat( ErrID_Fatal, ' Load components listed in column 4 of '//TRIM(Filename4D)// &
                   ' must be between 1 and 6.', ErrStat,ErrMsg,'Read_DataFile4D')
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4282,20 +4416,32 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! Now we need to figure out if the zero frequency was given in the file.  If so, we change NumWvFreq1 to
          ! NumWvFreq1+2.  If not, change to NumWvFreq1+4.  We will add on the inifinite frequency value and 
          ! zero out all values not in the input frequency range. The inifinite frequency value will be set to HUGE
-         ! and we'll add/subtract epsilon to the non-zero frequencies entered so that we can achieve a step 
+         ! and we'll add/subtract epsilon to the first non-zero frequency entered so that we can achieve a step 
          ! change for zeroing the values outside the input frequency range.
       IF (HaveZeroFreq1) THEN
          Data4D%NumWvFreq1 = Data4D%NumWvFreq1+2
+         WvFreq1LoIdx   = 1
       ELSE
          Data4D%NumWvFreq1 = Data4D%NumWvFreq1+4
+         WvFreq1LoIdx   = 3
       ENDIF
-      
-         ! Do the same for NumWvFreq2 as we did for NumWvFreq1
+
+         ! Set the index for the highest frequency stored before the cutoff
+      WvFreq1HiIdx   =  Data4D%NumWvFreq1-2
+
+
+         ! Do the same for NumWvFreq2 as we did for NumWvFreq2
       IF (HaveZeroFreq2) THEN
          Data4D%NumWvFreq2 = Data4D%NumWvFreq2+2
+         WvFreq2LoIdx   = 1
       ELSE
          Data4D%NumWvFreq2 = Data4D%NumWvFreq2+4
+         WvFreq2LoIdx   = 3
       ENDIF
+
+         ! Set the index for the highest frequency stored before the cutoff
+      WvFreq2HiIdx   =  Data4D%NumWvFreq2-2
+
 
          ! Now allocate the array for holding the WvFreq1
       ALLOCATE( Data4D%WvFreq1( Data4D%NumWvFreq1), STAT=ErrStatTmp)
@@ -4304,12 +4450,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
          CALL CleanUp
          RETURN
       ENDIF
+
 
          ! Now allocate the array for holding the WvFreq2
       ALLOCATE( Data4D%WvFreq2( Data4D%NumWvFreq2), STAT=ErrStatTmp)
@@ -4318,6 +4466,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq2))       DEALLOCATE(TmpWvFreq2,STAT=ErrStatTmp)
@@ -4326,37 +4475,32 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       ENDIF
 
          ! Populate the wave frequencies with what we read in
-      IF (HaveZeroFreq1) THEN
-         Data4D%WvFreq1( 1:Data4D%NumWvFreq1-2) = TmpWvFreq1
-      ELSE
-            ! add the two points for step-change before the first entered frequency 
-         Data4D%WvFreq1( 1 )                    = 0.0_ReKi
-         Data4D%WvFreq1( 2 )                    = MAX( TmpWvFreq1(1) - 4.0_ReKi*EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
-         
-         Data4D%WvFreq1( 3:Data4D%NumWvFreq1-2) = TmpWvFreq1
+      Data4D%WvFreq1( WvFreq1LoIdx:WvFreq1HiIdx ) = TmpWvFreq1
+
+         ! If no zero frequency was supplied, add the two points for step-change before first entered frequency 
+      IF ( .NOT. HaveZeroFreq1) THEN
+         Data4D%WvFreq1( 1 )                 = 0.0_ReKi
+         Data4D%WvFreq1( 2 )                 = MAX( TmpWvFreq1(1) - 10.0_ReKi*EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
       ENDIF
       
          ! add the two points for step-change after last entered frequency
-      Data4D%WvFreq1( Data4D%NumWvFreq1-1 )     = Data4D%WvFreq1(Data4D%NumWvFreq1-2) + 4.0_ReKi*EPSILON(0.0_ReKi)
+      Data4D%WvFreq1( Data4D%NumWvFreq1-1 )     = Data4D%WvFreq1(Data4D%NumWvFreq1-2) + 10.0_ReKi*EPSILON(0.0_ReKi)
       Data4D%WvFreq1( Data4D%NumWvFreq1   )     = HUGE(1.0_ReKi)
-                     
 
-      
-      IF (HaveZeroFreq2) THEN
-         Data4D%WvFreq2( 1:Data4D%NumWvFreq2-2) = TmpWvFreq2
-      ELSE
-            ! add the two points for step-change before the first entered frequency 
-         Data4D%WvFreq2( 1 )                    = 0.0_ReKi
-         Data4D%WvFreq2( 2 )                    = MAX( TmpWvFreq2(1) - 4.0_ReKi*EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
-         
-         Data4D%WvFreq2( 3:Data4D%NumWvFreq2-2) = TmpWvFreq2
+
+
+         ! Populate the wave frequencies with what we read in
+      Data4D%WvFreq2( WvFreq2LoIdx:WvFreq2HiIdx ) = TmpWvFreq2
+
+         ! If no zero frequency was supplied, add the two points for step-change before first entered frequency 
+      IF ( .NOT. HaveZeroFreq2) THEN
+         Data4D%WvFreq2( 1 )                 = 0.0_ReKi
+         Data4D%WvFreq2( 2 )                 = MAX( TmpWvFreq2(1) - 10.0_ReKi*EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
       ENDIF
       
          ! add the two points for step-change after last entered frequency
-      Data4D%WvFreq2( Data4D%NumWvFreq2-1 )     = Data4D%WvFreq2(Data4D%NumWvFreq2-2) + 4.0_ReKi*EPSILON(0.0_ReKi)
+      Data4D%WvFreq2( Data4D%NumWvFreq2-1 )     = Data4D%WvFreq2(Data4D%NumWvFreq2-2) + 10.0_ReKi*EPSILON(0.0_ReKi)
       Data4D%WvFreq2( Data4D%NumWvFreq2   )     = HUGE(1.0_ReKi)
-      
-
 
 
          ! Now that we know how many frequencies and wave directions there are, we can allocate the array
@@ -4366,6 +4510,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                               'the sorted 4D 2nd order WAMIT data.',  ErrStat,ErrMsg,'Read_DataFile4D')
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4380,6 +4525,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                               'the sorted 4D 2nd order WAMIT data.',  ErrStat,ErrMsg,'Read_DataFile4D')
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+         IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
          IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4415,7 +4561,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
       TmpCoord = 1         ! Initialize the search locations.
 
-      DO I=1,NumDataLines
+      DO I=1,NumDataLinesKeep
 
             ! Error checking: The LocateStp routine will return 0 if the requested value is less than the value
             !                 of the first element in the array.  It will return the index of the last element
@@ -4425,11 +4571,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             !                 something must have gone horribly wrong while creating it, or between then and now,
             !                 which is most likely a programming error.
 
-            ! Find the location in the WvFreq1 array that this point corresponds to.
-         CALL LocateStp( RawData4D(I,1), Data4D%WvFreq1, TmpCoord(1),   Data4D%NumWvFreq1 )
+            ! Find the location in the WvFreq1 array that this point corresponds to.  We will check only between the
+            ! cutoffs that were added to the frequency range.  This is contained within TmpWvFreq1 from reading in.
+         CALL LocateStp( RawData4D(I,1), TmpWvFreq1, TmpCoord(1),   WvFreq1HiIdx - (WvFreq1LoIdx - 1) )  ! inclusive limits
          IF ( TmpCoord(1) == 0 .OR. ( RawData4D(I,1) > Data4D%WvFreq1(Data4D%NumWvFreq1)) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvFreq1 array.', ErrStat, ErrMsg, 'Read_DataFile4D')
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4437,12 +4585,15 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             CALL CleanUp
             RETURN
          ENDIF
+         TmpCoord(1) =  TmpCoord(1) + ( WvFreq1LoIdx - 1 )     ! shift to the point in the Data3D%WvFreq1 array by adding the zero frequency step function
 
-            ! Find the location in the WvFreq2 array that this point corresponds to.
-         CALL LocateStp( RawData4D(I,2), Data4D%WvFreq2, TmpCoord(2),   Data4D%NumWvFreq2 )
+            ! Find the location in the WvFreq2 array that this point corresponds to.  We will check only between the
+            ! cutoffs that were added to the frequency range.  This is contained within TmpWvFreq2 from reading in.
+         CALL LocateStp( RawData4D(I,2), TmpWvFreq2, TmpCoord(2),   WvFreq2HiIdx - (WvFreq2LoIdx - 1) )  ! inclusive limits
          IF ( TmpCoord(2) == 0 .OR. ( RawData4D(I,2) > Data4D%WvFreq2(Data4D%NumWvFreq2)) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvFreq2 array.', ErrStat, ErrMsg, 'Read_DataFile4D')
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4450,12 +4601,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             CALL CleanUp
             RETURN
          ENDIF
+         TmpCoord(2) =  TmpCoord(2) + ( WvFreq2LoIdx - 1 )     ! shift to the point in the Data3D%WvFreq2 array by adding the zero frequency step function
 
             ! Find the location in the WvDir1 array that this point corresponds to.
          CALL LocateStp( RawData4D(I,3), Data4D%WvDir1,  TmpCoord(3),   Data4D%NumWvDir1 )
          IF ( TmpCoord(3) == 0 .OR. ( RawData4D(I,3) > Data4D%WvDir1(Data4D%NumWvDir1)) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvDir1 array.', ErrStat, ErrMsg, 'Read_DataFile4D')
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4469,6 +4622,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          IF ( TmpCoord(4) == 0 .OR. ( RawData4D(I,4) > Data4D%WvDir2(Data4D%NumWvDir2)) ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvDir2 array.', ErrStat, ErrMsg, 'Read_DataFile4D')
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+            IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4516,6 +4670,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                         'given earlier in the file for the same values of wave frequency and wave direction.', &
                         ErrStat, ErrMsg, 'Read_DataFile4D' )
                IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+               IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
                IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
                IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
                IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
@@ -4731,6 +4886,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Clean up
       IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
+      IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
       IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
       IF (ALLOCATED(TmpDataRow))       DEALLOCATE(TmpDataRow,STAT=ErrStatTmp)
       IF (ALLOCATED(TmpWvFreq1))       DEALLOCATE(TmpWvFreq1,STAT=ErrStatTmp)
