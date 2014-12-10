@@ -217,3 +217,15 @@ typedef	^	FAST_ModuleMapType	MeshType	u_SD_LMesh_2	-	-	-	"copy of SD input mesh 
 typedef	^	FAST_ModuleMapType	MeshType	u_HD_M_LumpedMesh	-	-	-	"copy of HD input mesh"	
 typedef	^	FAST_ModuleMapType	MeshType	u_HD_M_DistribMesh	-	-	-	"copy of HD input mesh"	
 typedef	^	FAST_ModuleMapType	MeshType	u_HD_Mesh	-	-	-	"copy of HD input mesh"	
+									
+# ..... FAST_MiscVarType data .......................................................................................................									
+typedef	FAST	FAST_MiscVarType	DbKi	TiLstPrn	-	-	-	"The simulation time of the last print (to file)"	(s)
+typedef	^	FAST_MiscVarType	DbKi	t_global	-	-	-	"Current simulation time (for global/FAST simulation)"	(s)
+typedef	^	FAST_MiscVarType	DbKi	NextJacCalcTime	-	-	-	"Time between calculating Jacobians in the HD-ED and SD-ED simulations"	(s)
+typedef	^	FAST_MiscVarType	ReKi	PrevClockTime	-	-	-	"Clock time at start of simulation in seconds"	(s)
+typedef	^	FAST_MiscVarType	REAL	UsrTime1	-	-	-	"User CPU time for simulation initialization"	(s)
+typedef	^	FAST_MiscVarType	REAL	UsrTime2	-	-	-	"User CPU time for simulation (without intialization)"	(s)
+typedef	^	FAST_MiscVarType	INTEGER	StrtTime	{8}	-	-	"Start time of simulation (including intialization)"	
+typedef	^	FAST_MiscVarType	INTEGER	SimStrtTime	{8}	-	-	"Start time of simulation (after initialization)"	
+typedef	^	FAST_MiscVarType	INTEGER	n_TMax_m1	-	-	-	"The time step of TMax - dt (the end time of the simulation)"	(-)
+typedef	^	FAST_MiscVarType	Logical	calcJacobian	-	-	-	"Should we calculate Jacobians in Option 1?"	(flag)

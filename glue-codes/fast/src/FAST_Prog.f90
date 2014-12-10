@@ -35,18 +35,8 @@ PROGRAM FAST
 !.................................................................................................
 
 
-   USE FAST_IO_Subs   ! all of the ModuleName_types modules are inherited from FAST_IO_Subs
-   
-   USE AeroDyn
-   USE ElastoDyn
-   USE FEAMooring
-   USE HydroDyn
-   USE IceDyn
-   USE IceFloe
-   USE MAP
-   USE ServoDyn
-   USE SubDyn
-                    
+   USE FAST_IO_Subs   ! all of the ModuleName and ModuleName_types modules are inherited from FAST_IO_Subs
+                       
 IMPLICIT  NONE
    
    ! Local variables:
@@ -54,496 +44,44 @@ IMPLICIT  NONE
    ! Data for the glue code:
 TYPE(FAST_ParameterType)              :: p_FAST                                  ! Parameters for the glue code (bjj: made global for now)
 TYPE(FAST_OutputType)                 :: y_FAST                                  ! Output variables for the glue code
+TYPE(FAST_MiscVarType)                :: m_FAST                                  ! Miscellaneous variables
 
 TYPE(FAST_ModuleMapType)              :: MeshMapData                             ! Data for mapping between modules
-
-
-   ! Data for the ElastoDyn module:
-TYPE(ED_InitInputType)                :: InitInData_ED                           ! Initialization input data
-TYPE(ED_InitOutputType)               :: InitOutData_ED                          ! Initialization output data
-TYPE(ElastoDyn_Data)                  :: ED
-
-   ! Data for the ServoDyn module:
-TYPE(SrvD_InitInputType)              :: InitInData_SrvD                         ! Initialization input data
-TYPE(SrvD_InitOutputType)             :: InitOutData_SrvD                        ! Initialization output data
-TYPE(ServoDyn_Data)                   :: SrvD
-
-   ! Data for the AeroDyn module:
-TYPE(AD_InitInputType)                :: InitInData_AD                           ! Initialization input data
-TYPE(AD_InitOutputType)               :: InitOutData_AD                          ! Initialization output data
-TYPE(AeroDyn_Data)                    :: AD
    
-   ! Data for InflowWind module:
-TYPE(InflowWind_Data)                 :: IfW
-
-   ! Data for the HydroDyn module:
-TYPE(HydroDyn_InitInputType)          :: InitInData_HD                           ! Initialization input data
-TYPE(HydroDyn_InitOutputType)         :: InitOutData_HD                          ! Initialization output data
-TYPE(HydroDyn_Data)                   :: HD
-
-   ! Data for the SubDyn module:
-TYPE(SD_InitInputType)                :: InitInData_SD                           ! Initialization input data
-TYPE(SD_InitOutputType)               :: InitOutData_SD                          ! Initialization output data
-TYPE(SubDyn_Data)                     :: SD
-
-   ! Data for the MAP (Mooring Analysis Program) module:
-TYPE(MAP_InitInputType)               :: InitInData_MAP                          ! Initialization input data
-TYPE(MAP_InitOutputType)              :: InitOutData_MAP                         ! Initialization output data
-TYPE(MAP_Data)                        :: MAPp
-
-
-   ! Data for the FEAMooring module:
-TYPE(FEAM_InitInputType)              :: InitInData_FEAM                         ! Initialization input data
-TYPE(FEAM_InitOutputType)             :: InitOutData_FEAM                        ! Initialization output data
-TYPE(FEAMooring_Data)                 :: FEAM
-
-   ! Data for the IceFloe module:
-TYPE(IceFloe_InitInputType)           :: InitInData_IceF                         ! Initialization input data
-TYPE(IceFloe_InitOutputType)          :: InitOutData_IceF                        ! Initialization output data
-TYPE(IceFloe_Data)                    :: IceF
-
-   ! Data for the IceDyn module:
-INTEGER, PARAMETER                    :: IceD_MaxLegs = 4;                       ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number
-TYPE(IceD_InitInputType)              :: InitInData_IceD                         ! Initialization input data
-TYPE(IceD_InitOutputType)             :: InitOutData_IceD                        ! Initialization output data (each instance will have the same output channels)
-                                                                                  
-TYPE(IceDyn_Data)                     :: IceD                                    ! All the IceDyn data used in time-step loop
-REAL(DbKi)                            :: dt_IceD                                 ! tmp dt variable to ensure IceDyn doesn't specify different dt values for different legs (IceDyn instances)
+TYPE(ElastoDyn_Data)                  :: ED                                      ! Data for the ElastoDyn module
+TYPE(ServoDyn_Data)                   :: SrvD                                    ! Data for the ServoDyn module
+TYPE(AeroDyn_Data)                    :: AD                                      ! Data for the AeroDyn module
+TYPE(InflowWind_Data)                 :: IfW                                     ! Data for InflowWind module
+TYPE(HydroDyn_Data)                   :: HD                                      ! Data for the HydroDyn module
+TYPE(SubDyn_Data)                     :: SD                                      ! Data for the SubDyn module
+TYPE(MAP_Data)                        :: MAPp                                    ! Data for the MAP (Mooring Analysis Program) module
+TYPE(FEAMooring_Data)                 :: FEAM                                    ! Data for the FEAMooring module
+TYPE(IceFloe_Data)                    :: IceF                                    ! Data for the IceFloe module
+TYPE(IceDyn_Data)                     :: IceD                                    ! Data for the IceDyn module
 
    ! Other/Misc variables
-REAL(DbKi)                            :: TiLstPrn                                ! The simulation time of the last print
-REAL(DbKi)                            :: t_global                                ! Current simulation time (for global/FAST simulation)
-REAL(DbKi)                            :: t_global_next                           ! next simulation time (t_global + p_FAST%dt)
-REAL(DbKi)                            :: t_module                                ! Current simulation time for module 
-REAL(DbKi), PARAMETER                 :: t_initial = 0.0_DbKi                    ! Initial time
-REAL(DbKi)                            :: NextJacCalcTime                         ! Time between calculating Jacobians in the HD-ED and SD-ED simulations
 
-REAL(ReKi)                            :: PrevClockTime                           ! Clock time at start of simulation in seconds
-REAL                                  :: UsrTime1                                ! User CPU time for simulation initialization
-REAL                                  :: UsrTime2                                ! User CPU time for simulation (without intialization)
+REAL(DbKi)                            :: t_global_next                           ! next simulation time (m_FAST%t_global + p_FAST%dt)
+REAL(DbKi)                            :: t_module                                ! Current simulation time for module 
 REAL                                  :: UsrTimeDiff                             ! Difference in CPU time from start to finish of program execution
 
 
 INTEGER(IntKi)                        :: I,J                                     ! generic loop counter
-INTEGER(IntKi)                        :: IceDim                                  ! dimension we're pre-allocating for number of IceDyn legs/instances
-INTEGER                               :: StrtTime (8)                            ! Start time of simulation (including intialization)
-INTEGER                               :: SimStrtTime (8)                         ! Start time of simulation (after initialization)
-INTEGER(IntKi)                        :: n_TMax_m1                               ! The time step of TMax - dt (the end time of the simulation)
 INTEGER(IntKi)                        :: n_t_global                              ! simulation time step, loop counter for global (FAST) simulation
 INTEGER(IntKi)                        :: n_t_module                              ! simulation time step, loop counter for individual modules 
 INTEGER(IntKi)                        :: j_pc                                    ! predictor-corrector loop counter 
 INTEGER(IntKi)                        :: j_ss                                    ! substep loop counter 
-INTEGER(IntKi)                        :: Step                                    ! Current simulation time step
 INTEGER(IntKi)                        :: ErrStat                                 ! Error status
 CHARACTER(1024)                       :: ErrMsg                                  ! Error message
-
-LOGICAL                               :: calcJacobian                            ! Should we calculate Jacobians in Option 1?
-
-!#ifdef CHECK_SOLVE_OPTIONS
-!!integer,parameter:: debug_unit = 52    
-!integer,parameter:: input_unit = 53  
-!INTEGER::I_TMP
-!character(50) :: tmpstr
-!#endif
 
 
    !...............................................................................................................................
    ! initialization
    !...............................................................................................................................
 
-   y_FAST%UnSum = -1                                                    ! set the summary file unit to -1 to indicate it's not open
-   y_FAST%UnOu  = -1                                                    ! set the text output file unit to -1 to indicate it's not open
-   y_FAST%UnGra = -1                                                    ! set the binary graphics output file unit to -1 to indicate it's not open
-      
-   y_FAST%n_Out = 0                                                     ! set the number of ouptut channels to 0 to indicate there's nothing to write to the binary file
-   p_FAST%ModuleInitialized = .FALSE.                                   ! (array initialization) no modules are initialized 
-   
-      ! Get the current time
-   CALL DATE_AND_TIME ( Values=StrtTime )                               ! Let's time the whole simulation
-   CALL CPU_TIME ( UsrTime1 )                                           ! Initial time (this zeros the start time when used as a MATLAB function)
-   Step            = 0                                                  ! The first step counter
-
-   AbortErrLev     = ErrID_Fatal                                        ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
-   t_global        = t_initial - 20.                                    ! initialize this to a number < t_initial for error message in ProgAbort
-   calcJacobian    = .TRUE.                                             ! we need to calculate the Jacobian
-   NextJacCalcTime = t_global                                           ! We want to calculate the Jacobian on the first step
-   
-   
-      ! ... Initialize NWTC Library (open console, set pi constants) ...
-   CALL NWTC_Init( ProgNameIN=FAST_ver%Name, EchoLibVer=.FALSE. )       ! sets the pi constants, open console for output, etc...
-
-
-      ! ... Open and read input files, initialize global parameters. ...
-   CALL FAST_Init( p_FAST, y_FAST, ErrStat, ErrMsg )
-      CALL CheckError( ErrStat, 'Message from FAST_Init: '//NewLine//ErrMsg )
-         
-   p_FAST%dt_module = p_FAST%dt ! initialize time steps for each module
-                                 
-   ! ........................
-   ! initialize ElastoDyn (must be done first)
-   ! ........................
-   
-   ALLOCATE( ED%Input( p_FAST%InterpOrder+1 ), ED%InputTimes( p_FAST%InterpOrder+1 ), ED%Output( p_FAST%InterpOrder+1 ),STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating ED%Input, ED%Output, and ED%InputTimes.") 
-   
-   InitInData_ED%InputFile     = p_FAST%EDFile
-   InitInData_ED%ADInputFile   = p_FAST%AeroFile
-   InitInData_ED%RootName      = p_FAST%OutFileRoot
-   InitInData_ED%CompElast     = p_FAST%CompElast == Module_ED
-
-   CALL ED_Init( InitInData_ED, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt, &
-                  ED%Output(1), p_FAST%dt_module( MODULE_ED ), InitOutData_ED, ErrStat, ErrMsg )
-   p_FAST%ModuleInitialized(Module_ED) = .TRUE.
-      CALL CheckError( ErrStat, 'Message from ED_Init: '//NewLine//ErrMsg )
-
-   CALL SetModuleSubstepTime(Module_ED, p_FAST, y_FAST, ErrStat, ErrMsg)
-      CALL CheckError(ErrStat, ErrMsg)
-      
-      ! bjj: added this check per jmj; perhaps it would be better in ElastoDyn, but I'll leave it here for now:
-   IF ( p_FAST%TurbineType == Type_Offshore_Floating ) THEN
-      IF ( ED%p%TowerBsHt < 0.0_ReKi .AND. .NOT. EqualRealNos( ED%p%TowerBsHt, 0.0_ReKi ) ) THEN
-         CALL CheckError(ErrID_Fatal, "ElastoDyn TowerBsHt must not be negative for floating offshore systems.") 
-      END IF      
-   END IF
-   
-      
-   ! ........................
-   ! initialize ServoDyn 
-   ! ........................
-   ALLOCATE( SrvD%Input( p_FAST%InterpOrder+1 ), SrvD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating SrvD%Input and SrvD%InputTimes.") 
-   
-   IF ( p_FAST%CompServo == Module_SrvD ) THEN
-      InitInData_SrvD%InputFile     = p_FAST%ServoFile
-      InitInData_SrvD%RootName      = p_FAST%OutFileRoot
-      InitInData_SrvD%NumBl         = InitOutData_ED%NumBl
-      CALL AllocAry(InitInData_SrvD%BlPitchInit, InitOutData_ED%NumBl, 'BlPitchInit', ErrStat, ErrMsg)
-         CALL CheckError( ErrStat, ErrMsg )
-
-      InitInData_SrvD%BlPitchInit   = InitOutData_ED%BlPitch
-      CALL SrvD_Init( InitInData_SrvD, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
-                      SrvD%OtherSt, SrvD%y, p_FAST%dt_module( MODULE_SrvD ), InitOutData_SrvD, ErrStat, ErrMsg )
-      p_FAST%ModuleInitialized(Module_SrvD) = .TRUE.
-         CALL CheckError( ErrStat, 'Message from SrvD_Init: '//NewLine//ErrMsg )
-
-      !IF ( InitOutData_SrvD%CouplingScheme == ExplicitLoose ) THEN ...  bjj: abort if we're doing anything else!
-
-      CALL SetModuleSubstepTime(Module_SrvD, p_FAST, y_FAST, ErrStat, ErrMsg)
-         CALL CheckError(ErrStat, ErrMsg)
-
-      !! initialize y%ElecPwr and y%GenTq because they are one timestep different (used as input for the next step)
-      !!bjj: perhaps this will require some better thought so that these two fields of y_SrvD_prev don't get set here in the glue code
-      !CALL SrvD_CopyOutput( SrvD%y, SrvD%y_prev, MESH_NEWCOPY, ErrStat, ErrMsg)               
-      !   
-                      
-   END IF
-
-
-   ! ........................
-   ! initialize AeroDyn 
-   ! ........................
-   ALLOCATE( AD%Input( p_FAST%InterpOrder+1 ), AD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating AD%Input and AD%InputTimes.")    
-   
-   IF ( p_FAST%CompAero == Module_AD ) THEN
-      CALL AD_SetInitInput(InitInData_AD, InitOutData_ED, ED%Output(1), p_FAST, ErrStat, ErrMsg)            ! set the values in InitInData_AD
-         CALL CheckError( ErrStat, 'Message from AD_SetInitInput: '//NewLine//ErrMsg )
-            
-      CALL AD_Init( InitInData_AD, AD%Input(1), AD%p, AD%x(STATE_CURR), AD%xd(STATE_CURR), AD%z(STATE_CURR), AD%OtherSt, &
-                     AD%y, p_FAST%dt_module( MODULE_AD ), InitOutData_AD, ErrStat, ErrMsg )
-      p_FAST%ModuleInitialized(Module_AD) = .TRUE.
-         CALL CheckError( ErrStat, 'Message from AD_Init: '//NewLine//ErrMsg )
-            
-      CALL SetModuleSubstepTime(Module_AD, p_FAST, y_FAST, ErrStat, ErrMsg)
-         CALL CheckError(ErrStat, ErrMsg)
-      
-         ! bjj: this really shouldn't be in the FAST glue code, but I'm going to put this check here so people don't use an invalid model 
-         !    and send me emails to debug numerical issues in their results.
-      IF ( AD%p%TwrProps%PJM_Version .AND. p_FAST%TurbineType == Type_Offshore_Floating ) THEN
-         CALL CheckError( ErrID_Fatal, 'AeroDyn tower influence model "NEWTOWER" is invalid for models of floating offshore turbines.' )
-      END IF         
-
-      
-   ELSE
-   !   ED%p%AirDens = 0
-      IfW%WriteOutput = 0.0
-   END IF
-
-
-   ! ........................
-   ! initialize HydroDyn 
-   ! ........................
-   ALLOCATE( HD%Input( p_FAST%InterpOrder+1 ), HD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating HD%Input and HD%InputTimes.") 
-
-   IF ( p_FAST%CompHydro == Module_HD ) THEN
-
-      InitInData_HD%Gravity       = InitOutData_ED%Gravity
-      InitInData_HD%UseInputFile  = .TRUE.
-      InitInData_HD%InputFile     = p_FAST%HydroFile
-      InitInData_HD%OutRootName   = p_FAST%OutFileRoot
-      InitInData_HD%TMax          = p_FAST%TMax
-      InitInData_HD%hasIce        = p_FAST%CompIce /= Module_None
-      
-         ! if wave field needs an offset, modify these values (added at request of SOWFA developers):
-      InitInData_HD%PtfmLocationX = 0.0_ReKi  
-      InitInData_HD%PtfmLocationY = 0.0_ReKi
-      
-      CALL HydroDyn_Init( InitInData_HD, HD%Input(1), HD%p,  HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), HD%OtherSt, &
-                          HD%y, p_FAST%dt_module( MODULE_HD ), InitOutData_HD, ErrStat, ErrMsg )
-      p_FAST%ModuleInitialized(Module_HD) = .TRUE.
-         CALL CheckError( ErrStat, 'Message from HydroDyn_Init: '//NewLine//ErrMsg )
-
-      CALL SetModuleSubstepTime(Module_HD, p_FAST, y_FAST, ErrStat, ErrMsg)
-         CALL CheckError(ErrStat, ErrMsg)
-      
-!call wrscr1( 'FAST/Morison/LumpedMesh:')      
-!call meshprintinfo( CU, HD%Input(1)%morison%LumpedMesh )          
-      
-      
-   END IF   ! CompHydro
-
-   ! ........................
-   ! initialize SubDyn 
-   ! ........................
-   ALLOCATE( SD%Input( p_FAST%InterpOrder+1 ), SD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating SD%Input and SD%InputTimes.") 
-
-   IF ( p_FAST%CompSub == Module_SD ) THEN
-          
-      IF ( p_FAST%CompHydro == Module_HD ) THEN
-         InitInData_SD%WtrDpth = InitOutData_HD%WtrDpth
-      ELSE
-         InitInData_SD%WtrDpth = 0.0_ReKi
-      END IF
-            
-      InitInData_SD%g             = InitOutData_ED%Gravity     
-      !InitInData_SD%UseInputFile = .TRUE. 
-      InitInData_SD%SDInputFile   = p_FAST%SubFile
-      InitInData_SD%RootName      = p_FAST%OutFileRoot
-      InitInData_SD%TP_RefPoint   = ED%Output(1)%PlatformPtMesh%Position(:,1)  ! bjj: not sure what this is supposed to be 
-      InitInData_SD%SubRotateZ    = 0.0                                        ! bjj: not sure what this is supposed to be 
-      
-            
-      CALL SD_Init( InitInData_SD, SD%Input(1), SD%p,  SD%x(STATE_CURR), SD%xd(STATE_CURR), SD%z(STATE_CURR), SD%OtherSt, &
-                      SD%y, p_FAST%dt_module( MODULE_SD ), InitOutData_SD, ErrStat, ErrMsg )
-      p_FAST%ModuleInitialized(Module_SD) = .TRUE.
-         CALL CheckError( ErrStat, 'Message from SD_Init: '//NewLine//ErrMsg )
-
-      CALL SetModuleSubstepTime(Module_SD, p_FAST, y_FAST, ErrStat, ErrMsg)
-         CALL CheckError(ErrStat, ErrMsg)
-                        
-   END IF
-
-   ! ------------------------------
-   ! initialize CompMooring modules 
-   ! ------------------------------
-   ALLOCATE( MAPp%Input( p_FAST%InterpOrder+1 ), MAPp%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating MAPp%Input and MAPp%InputTimes.") 
-   ALLOCATE( FEAM%Input( p_FAST%InterpOrder+1 ), FEAM%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating FEAM%Input and FEAM%InputTimes.") 
-   
-   ! ........................
-   ! initialize MAP 
-   ! ........................
-   IF (p_FAST%CompMooring == Module_MAP) THEN
-      !bjj: until we modify this, MAP requires HydroDyn to be used. (perhaps we could send air density from AeroDyn or something...)
-      
-      CALL WrScr(NewLine) !bjj: I'm printing two blank lines here because MAP seems to be writing over the last line on the screen.
-      
-      InitInData_MAP%filename          =  p_FAST%MooringFile        ! This needs to be set according to what is in the FAST input file. 
-      InitInData_MAP%rootname          =  p_FAST%OutFileRoot        ! Output file name 
-      InitInData_MAP%gravity           =  InitOutData_ED%Gravity    ! This need to be according to g used in ElastoDyn
-      InitInData_MAP%sea_density       =  InitOutData_HD%WtrDens    ! This needs to be set according to seawater density in HydroDyn
-      InitInData_MAP%depth             =  InitOutData_HD%WtrDpth    ! This need to be set according to the water depth in HydroDyn
-      
-      InitInData_MAP%coupled_to_FAST   = .TRUE.      
-      
-      CALL MAP_Init( InitInData_MAP, MAPp%Input(1), MAPp%p,  MAPp%x(STATE_CURR), MAPp%xd(STATE_CURR), MAPp%z(STATE_CURR), MAPp%OtherSt, &
-                      MAPp%y, p_FAST%dt_module( MODULE_MAP ), InitOutData_MAP, ErrStat, ErrMsg )
-      p_FAST%ModuleInitialized(Module_MAP) = .TRUE.
-         CALL CheckError( ErrStat, 'Message from MAP_Init: '//NewLine//ErrMsg )
-
-      CALL SetModuleSubstepTime(Module_MAP, p_FAST, y_FAST, ErrStat, ErrMsg)
-         CALL CheckError(ErrStat, ErrMsg)
-                   
-   ! ........................
-   ! initialize FEAM 
-   ! ........................
-   ELSEIF (p_FAST%CompMooring == Module_FEAM) THEN
-            
-      InitInData_FEAM%InputFile   = p_FAST%MooringFile         ! This needs to be set according to what is in the FAST input file. 
-      InitInData_FEAM%RootName    = p_FAST%OutFileRoot
-      
-!BJJ: FIX THIS!!!!      
-      InitInData_FEAM%PtfmInit    = 0  ! initial position of the platform... hmmmm
-      
-! bjj: (Why isn't this using gravity? IT'S hardcoded in FEAM.f90)      
-!      InitInData_FEAM%gravity     =  InitOutData_ED%Gravity    ! This need to be according to g used in ElastoDyn 
-!      InitInData_FEAM%sea_density =  InitOutData_HD%WtrDens    ! This needs to be set according to seawater density in HydroDyn
-!      InitInData_FEAM%depth       =  InitOutData_HD%WtrDpth    ! This need to be set according to the water depth in HydroDyn
-            
-      CALL FEAM_Init( InitInData_FEAM, FEAM%Input(1), FEAM%p,  FEAM%x(STATE_CURR), FEAM%xd(STATE_CURR), FEAM%z(STATE_CURR), FEAM%OtherSt, &
-                      FEAM%y, p_FAST%dt_module( MODULE_FEAM ), InitOutData_FEAM, ErrStat, ErrMsg )
-      p_FAST%ModuleInitialized(Module_FEAM) = .TRUE.
-         CALL CheckError( ErrStat, 'Message from FEAM_Init: '//NewLine//ErrMsg )
-
-      CALL SetModuleSubstepTime(Module_FEAM, p_FAST, y_FAST, ErrStat, ErrMsg)
-         CALL CheckError(ErrStat, ErrMsg)
-      
-   END IF
-
-   ! ------------------------------
-   ! initialize CompIce modules 
-   ! ------------------------------
-   ALLOCATE( IceF%Input( p_FAST%InterpOrder+1 ), IceF%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat )
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceF%Input and IceF%InputTimes.") 
-
-      ! We need this to be allocated (else we have issues passing nonallocated arrays and using the first index of Input(),
-      !   but we don't need the space of IceD_MaxLegs if we're not using it. 
-   IF ( p_FAST%CompIce /= Module_IceD ) THEN   
-      IceDim = 1
-   ELSE
-      IceDim = IceD_MaxLegs
-   END IF
-      
-      ! because there may be multiple instances of IceDyn, we'll allocate arrays for that here
-      ! we could allocate these after 
-   ALLOCATE( IceD%Input( p_FAST%InterpOrder+1, IceDim ), IceD%InputTimes( p_FAST%InterpOrder+1, IceDim ), STAT = ErrStat )
-         IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceD%Input and IceD%InputTimes")
-        
-     ALLOCATE( IceD%x(           IceDim,2), &
-               IceD%xd(          IceDim,2), &
-               IceD%z(           IceDim,2), &
-               IceD%OtherSt(     IceDim  ), &
-               IceD%p(           IceDim  ), &
-               IceD%u(           IceDim  ), &
-               IceD%y(           IceDim  ), &
-               IceD%OtherSt_old( IceDim  ), &
-                                             STAT = ErrStat )                                                  
-      IF (ErrStat /= 0) CALL CheckError(ErrID_Fatal,"Error allocating IceD state, input, and output data.")
-      
-         
-         
-   ! ........................
-   ! initialize IceFloe 
-   ! ........................
-   IF ( p_FAST%CompIce == Module_IceF ) THEN
-                      
-      InitInData_IceF%InputFile     = p_FAST%IceFile
-      InitInData_IceF%RootName      = p_FAST%OutFileRoot     
-      InitInData_IceF%simLength     = p_FAST%TMax  !bjj: IceFloe stores this as single-precision (ReKi) TMax is DbKi
-      InitInData_IceF%MSL2SWL       = InitOutData_HD%MSL2SWL
-      InitInData_IceF%gravity       = InitOutData_ED%Gravity
-      
-      CALL IceFloe_Init( InitInData_IceF, IceF%Input(1), IceF%p,  IceF%x(STATE_CURR), IceF%xd(STATE_CURR), IceF%z(STATE_CURR), IceF%OtherSt, &
-                         IceF%y, p_FAST%dt_module( MODULE_IceF ), InitOutData_IceF, ErrStat, ErrMsg )
-      p_FAST%ModuleInitialized(Module_IceF) = .TRUE.
-         CALL CheckError( ErrStat, 'Message from IceF_Init: '//NewLine//ErrMsg )
-
-      CALL SetModuleSubstepTime(Module_IceF, p_FAST, y_FAST, ErrStat, ErrMsg)
-         CALL CheckError(ErrStat, ErrMsg)
-                        
-   ! ........................
-   ! initialize IceDyn 
-   ! ........................
-   ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN  
-      
-      InitInData_IceD%InputFile     = p_FAST%IceFile
-      InitInData_IceD%RootName      = p_FAST%OutFileRoot     
-      InitInData_IceD%MSL2SWL       = InitOutData_HD%MSL2SWL      
-      InitInData_IceD%WtrDens       = InitOutData_HD%WtrDens    
-      InitInData_IceD%gravity       = InitOutData_ED%Gravity
-      InitInData_IceD%TMax          = p_FAST%TMax
-      InitInData_IceD%LegNum        = 1
-      
-      CALL IceD_Init( InitInData_IceD, IceD%Input(1,1), IceD%p(1),  IceD%x(1,STATE_CURR), IceD%xd(1,STATE_CURR), IceD%z(1,STATE_CURR), &
-                      IceD%OtherSt(1), IceD%y(1), p_FAST%dt_module( MODULE_IceD ), InitOutData_IceD, ErrStat, ErrMsg )
-      p_FAST%ModuleInitialized(Module_IceD) = .TRUE.
-         CALL CheckError( ErrStat, 'Message from IceD_Init: '//NewLine//ErrMsg )
-
-         CALL SetModuleSubstepTime(Module_IceD, p_FAST, y_FAST, ErrStat, ErrMsg)
-            CALL CheckError(ErrStat, ErrMsg)         
-         
-         ! now initialize IceD for additional legs (if necessary)
-      dt_IceD           = p_FAST%dt_module( MODULE_IceD )
-      p_FAST%numIceLegs = InitOutData_IceD%numLegs     
-      
-      IF (p_FAST%numIceLegs > IceD_MaxLegs) THEN
-         CALL CheckError( ErrID_Fatal, 'IceDyn-FAST coupling is supported for up to '//TRIM(Num2LStr(IceD_MaxLegs))//' legs, but '//TRIM(Num2LStr(p_FAST%numIceLegs))//' legs were specified.' )
-      END IF
-                  
-
-      DO i=2,p_FAST%numIceLegs  ! basically, we just need IceDyn to set up its meshes for inputs/outputs and possibly initial values for states
-         InitInData_IceD%LegNum = i
-         
-         CALL IceD_Init( InitInData_IceD, IceD%Input(1,i), IceD%p(i),  IceD%x(i,STATE_CURR), IceD%xd(i,STATE_CURR), IceD%z(i,STATE_CURR), &
-                            IceD%OtherSt(i), IceD%y(i), dt_IceD, InitOutData_IceD, ErrStat, ErrMsg )
-         
-         !bjj: we're going to force this to have the same timestep because I don't want to have to deal with n IceD modules with n timesteps.
-         IF (.NOT. EqualRealNos( p_FAST%dt_module( MODULE_IceD ),dt_IceD )) THEN
-            CALL CheckError( ErrID_Fatal, "All instances of IceDyn (one per support-structure leg) must be the same" )
-         END IF
-      END DO
-            
-   END IF   
-   
-
-   ! ........................
-   ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
-   ! ........................
-
-   CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, InitOutData_AD, InitOutData_HD, &
-                         InitOutData_SD, InitOutData_MAP, InitOutData_FEAM, InitOutData_IceF, InitOutData_IceD, ErrStat, ErrMsg )
-      CALL CheckError( ErrStat, 'Message from FAST_InitOutput: '//NewLine//ErrMsg )
-
-
-   ! -------------------------------------------------------------------------
-   ! Initialize mesh-mapping data
-   ! -------------------------------------------------------------------------
-
-   CALL InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg)
-
-   ! -------------------------------------------------------------------------
-   ! Write initialization data to FAST summary file:
-   ! -------------------------------------------------------------------------
-   
-   CALL FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
-      CALL CheckError( ErrStat, 'Message from FAST_WrSum: '//NewLine//ErrMsg )
-   
-   
-   !...............................................................................................................................
-   ! Destroy initializion data
-   ! Note that we're ignoring any errors here (we'll print them when we try to destroy at program exit)
-   !...............................................................................................................................
-
-   CALL ED_DestroyInitInput(  InitInData_ED,  ErrStat, ErrMsg )
-   CALL ED_DestroyInitOutput( InitOutData_ED, ErrStat, ErrMsg )
-
-   CALL AD_DestroyInitInput(  InitInData_AD,  ErrStat, ErrMsg )
-   CALL AD_DestroyInitOutput( InitOutData_AD, ErrStat, ErrMsg )
-   
-   CALL SrvD_DestroyInitInput(  InitInData_SrvD,  ErrStat, ErrMsg )
-   CALL SrvD_DestroyInitOutput( InitOutData_SrvD, ErrStat, ErrMsg )
-
-   CALL HydroDyn_DestroyInitInput(  InitInData_HD,  ErrStat, ErrMsg )
-   CALL HydroDyn_DestroyInitOutput( InitOutData_HD, ErrStat, ErrMsg )
-
-   CALL SD_DestroyInitInput(  InitInData_SD,  ErrStat, ErrMsg )
-   CALL SD_DestroyInitOutput( InitOutData_SD, ErrStat, ErrMsg )
-      
-   CALL MAP_DestroyInitInput(  InitInData_MAP,  ErrStat, ErrMsg )
-   CALL MAP_DestroyInitOutput( InitOutData_MAP, ErrStat, ErrMsg )
-   
-   CALL FEAM_DestroyInitInput(  InitInData_FEAM,  ErrStat, ErrMsg )
-   CALL FEAM_DestroyInitOutput( InitOutData_FEAM, ErrStat, ErrMsg )
-
-   CALL IceFloe_DestroyInitInput(  InitInData_IceF,  ErrStat, ErrMsg )
-   CALL IceFloe_DestroyInitOutput( InitOutData_IceF, ErrStat, ErrMsg )
-   
-   CALL IceD_DestroyInitInput(  InitInData_IceD,  ErrStat, ErrMsg )
-   CALL IceD_DestroyInitOutput( InitOutData_IceD, ErrStat, ErrMsg )
-   
+   CALL FAST_InitializeAll( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
+      CALL CheckError( ErrStat, ErrMsg )
+                                                  
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    ! loose coupling
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -554,14 +92,13 @@ LOGICAL                               :: calcJacobian                           
    ! Initialization: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
    !...............................................................................................................................
    
-   t_global   = t_initial
+   m_FAST%t_global   = t_initial
    n_t_global = -1  ! initialize here because CalcOutputs_And_SolveForInputs uses it
    j_PC       = -1
-   Step       = 0
-   n_TMax_m1  = CEILING( ( (p_FAST%TMax - t_initial) / p_FAST%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
+   m_FAST%n_TMax_m1  = CEILING( ( (p_FAST%TMax - t_initial) / p_FAST%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
      
   
-   CALL SimStatus_FirstTime( TiLstPrn, PrevClockTime, SimStrtTime, UsrTime2, t_global, p_FAST%TMax )
+   CALL SimStatus_FirstTime( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global, p_FAST%TMax )
 
    ! Solve input-output relations; this section of code corresponds to Eq. (35) in Gasmi et al. (2013)
    ! This code will be specific to the underlying modules
@@ -573,7 +110,7 @@ LOGICAL                               :: calcJacobian                           
    ! Because SubDyn needs a better initial guess from ElastoDyn, we'll add an additional call to ED_CalcOutput to get them:
    ! (we'll do the same for HydroDyn, though I'm not sure it's as critical)
    
-      CALL ED_CalcOutput( t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt, &
+      CALL ED_CalcOutput( m_FAST%t_global, ED%Input(1), ED%p, ED%x(STATE_CURR), ED%xd(STATE_CURR), ED%z(STATE_CURR), ED%OtherSt, &
                           ED%Output(1), ErrStat, ErrMsg )
          CALL CheckError( ErrStat, 'Message from ED_CalcOutput: '//NewLine//ErrMsg  )    
       
@@ -583,7 +120,7 @@ LOGICAL                               :: calcJacobian                           
    END IF   
 #endif   
 
-   CALL CalcOutputs_And_SolveForInputs(  n_t_global, t_global,  STATE_CURR, calcJacobian, NextJacCalcTime, &
+   CALL CalcOutputs_And_SolveForInputs(  n_t_global, m_FAST%t_global,  STATE_CURR, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
                         p_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
          
    
@@ -599,7 +136,7 @@ LOGICAL                               :: calcJacobian                           
       ! Check to see if we should output data this time step:
       !----------------------------------------------------------------------------------------
 
-      CALL WriteOutputToFile(t_global, p_FAST, y_FAST, ED, AD, IfW, HD, SD, SrvD, MAPp, FEAM, IceF, IceD, ErrStat, ErrMsg)   
+      CALL WriteOutputToFile(m_FAST%t_global, p_FAST, y_FAST, ED, AD, IfW, HD, SD, SrvD, MAPp, FEAM, IceF, IceD, ErrStat, ErrMsg)   
    
    !...............
    ! Copy values of these initial guesses for interpolation/extrapolation and 
@@ -893,14 +430,14 @@ LOGICAL                               :: calcJacobian                           
    ! Time Stepping:
    !...............................................................................................................................         
    
-   DO n_t_global = 0, n_TMax_m1
+   DO n_t_global = 0, m_FAST%n_TMax_m1
       ! this takes data from n_t_global and gets values at n_t_global + 1
   
-      t_global_next = t_initial + (n_t_global+1)*p_FAST%DT  ! = t_global + p_FAST%dt
+      t_global_next = t_initial + (n_t_global+1)*p_FAST%DT  ! = m_FAST%t_global + p_FAST%dt
                        
          ! determine if the Jacobian should be calculated this time
-      IF ( calcJacobian ) THEN ! this was true (possibly at initialization), so we'll advance the time for the next calculation of the Jacobian
-         NextJacCalcTime = t_global + p_FAST%DT_UJac         
+      IF ( m_FAST%calcJacobian ) THEN ! this was true (possibly at initialization), so we'll advance the time for the next calculation of the Jacobian
+         m_FAST%NextJacCalcTime = m_FAST%t_global + p_FAST%DT_UJac         
       END IF
       
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1152,14 +689,14 @@ LOGICAL                               :: calcJacobian                           
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! Step 1.b: Advance states (yield state and constraint values at t_global_next)
       !
-      ! x, xd, and z contain val0ues at t_global;
+      ! x, xd, and z contain val0ues at m_FAST%t_global;
       ! values at t_global_next are stored in the *_pred variables.
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
          !----------------------------------------------------------------------------------------
-         ! copy the states at step t_global and get prediction for step t_global_next
+         ! copy the states at step m_FAST%t_global and get prediction for step t_global_next
          ! (note that we need to copy the states because UpdateStates updates the values
-         ! and we need to have the old values [at t_global] for the next j_pc step)
+         ! and we need to have the old values [at m_FAST%t_global] for the next j_pc step)
          !----------------------------------------------------------------------------------------
          ! ElastoDyn: get predicted states
          CALL ED_CopyContState   (ED%x( STATE_CURR), ED%x( STATE_PRED), MESH_UPDATECOPY, Errstat, ErrMsg)
@@ -1345,7 +882,7 @@ LOGICAL                               :: calcJacobian                           
       ! Step 1.c: Input-Output Solve      
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-            CALL CalcOutputs_And_SolveForInputs( n_t_global, t_global,  STATE_PRED, calcJacobian, NextJacCalcTime, &
+            CALL CalcOutputs_And_SolveForInputs( n_t_global, m_FAST%t_global,  STATE_PRED, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
                         p_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 
       !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -1468,14 +1005,14 @@ LOGICAL                               :: calcJacobian                           
       
       ! update the global time 
   
-      t_global = t_global_next 
+      m_FAST%t_global = t_global_next 
       
       
       !----------------------------------------------------------------------------------------
       ! Check to see if we should output data this time step:
       !----------------------------------------------------------------------------------------
 
-      CALL WriteOutputToFile(t_global, p_FAST, y_FAST, ED, AD, IfW, HD, SD, SrvD, MAPp, FEAM, IceF, IceD, ErrStat, ErrMsg)
+      CALL WriteOutputToFile(m_FAST%t_global, p_FAST, y_FAST, ED, AD, IfW, HD, SD, SrvD, MAPp, FEAM, IceF, IceD, ErrStat, ErrMsg)
       
       !----------------------------------------------------------------------------------------
       ! Display simulation status every SttsTime-seconds (i.e., n_SttsTime steps):
@@ -1483,18 +1020,18 @@ LOGICAL                               :: calcJacobian                           
       
       IF ( MOD( n_t_global + 1, p_FAST%n_SttsTime ) == 0 ) THEN
 
-         CALL SimStatus( TiLstPrn, PrevClockTime, t_global, p_FAST%TMax )
+         CALL SimStatus( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%t_global, p_FAST%TMax )
 
       ENDIF
       
             
-  END DO ! n_t_global
+   END DO ! n_t_global
   
   
    !...............................................................................................................................
    !  Write simulation times and stop
    !...............................................................................................................................
-   n_t_global =  n_TMax_m1 + 1               ! set this for the message in ProgAbort, if necessary
+   n_t_global =  m_FAST%n_TMax_m1 + 1               ! set this for the message in ProgAbort, if necessary
    CALL ExitThisProgram( Error=.FALSE. )
 
 
@@ -1594,40 +1131,7 @@ CONTAINS
          
       END IF
       
-      
-      ! -------------------------------------------------------------------------
-      ! Initialization input/output variables:
-      !     in case we didn't get them destroyed earlier....
-      ! -------------------------------------------------------------------------
-
-      CALL ED_DestroyInitInput(  InitInData_ED,        ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL ED_DestroyInitOutput( InitOutData_ED,       ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-
-      CALL AD_DestroyInitInput(  InitInData_AD,        ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL AD_DestroyInitOutput( InitOutData_AD,       ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-            
-      CALL SrvD_DestroyInitInput(  InitInData_SrvD,    ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL SrvD_DestroyInitOutput( InitOutData_SrvD,   ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-
-      CALL HydroDyn_DestroyInitInput(  InitInData_HD,  ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL HydroDyn_DestroyInitOutput( InitOutData_HD, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-
-      CALL SD_DestroyInitInput(  InitInData_SD,        ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL SD_DestroyInitOutput( InitOutData_SD,       ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-                                                       
-      CALL MAP_DestroyInitInput(  InitInData_MAP,      ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL MAP_DestroyInitOutput( InitOutData_MAP,     ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      
-      CALL FEAM_DestroyInitInput(  InitInData_FEAM,    ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL FEAM_DestroyInitOutput( InitOutData_FEAM,   ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      
-      CALL IceFloe_DestroyInitInput(  InitInData_IceF, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL IceFloe_DestroyInitOutput( InitOutData_IceF,ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-
-      CALL IceD_DestroyInitInput(     InitInData_IceD, ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      CALL IceD_DestroyInitOutput(    InitOutData_IceD,ErrStat2, ErrMsg2 ); IF ( ErrStat2 /= ErrID_None ) CALL WrScr(TRIM(ErrMsg2))
-      
-      
+                  
       ! -------------------------------------------------------------------------
       ! Deallocate/Destroy structures associated with mesh mapping
       ! -------------------------------------------------------------------------
@@ -1865,12 +1369,12 @@ CONTAINS
       ! Set exit error code if there was an error;
       !............................................................................................................................
       IF (Error) THEN !This assumes PRESENT(ErrID) is also .TRUE. :
-         IF ( t_global < t_initial ) THEN
+         IF ( m_FAST%t_global < t_initial ) THEN
             ErrMsg = 'at initialization'
-         ELSEIF ( n_t_global > n_TMax_m1 ) THEN
+         ELSEIF ( n_t_global > m_FAST%n_TMax_m1 ) THEN
             ErrMsg = 'after computing the solution'
          ELSE            
-            ErrMsg = 'at simulation time '//TRIM(Num2LStr(t_global))//' of '//TRIM(Num2LStr(p_FAST%TMax))//' seconds'
+            ErrMsg = 'at simulation time '//TRIM(Num2LStr(m_FAST%t_global))//' of '//TRIM(Num2LStr(p_FAST%TMax))//' seconds'
          END IF
                     
          
@@ -1882,7 +1386,7 @@ CONTAINS
       !  Write simulation times and stop
       !............................................................................................................................
 
-      CALL RunTimes( StrtTime, UsrTime1, SimStrtTime, UsrTime2, t_global, UsrTimeDiff )
+      CALL RunTimes( m_FAST%StrtTime, m_FAST%UsrTime1, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global, UsrTimeDiff )
 
       CALL NormStop( )
 

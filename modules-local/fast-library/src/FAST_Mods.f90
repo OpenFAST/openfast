@@ -30,6 +30,11 @@ MODULE FAST_ModTypes
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
                                 ProgDesc( 'FAST', 'v8.09.00a-bjj', '30-Sep-2014' ) ! The version number of this module
+   
+   REAL(DbKi), PARAMETER     :: t_initial = 0.0_DbKi                    ! Initial time
+   INTEGER,    PARAMETER     :: IceD_MaxLegs = 4;                       ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number
+   
+   
    !..................................................................
    ! NOTE WELL:
    ! the order of these modules is the order they get written to the output file; 
@@ -147,11 +152,7 @@ MODULE FAST_ModTypes
       CHARACTER(1024)           :: OutFileRoot                                      ! The rootname of the output files
 
       CHARACTER(1024)           :: FTitle                                           ! The description line from the FAST (glue-code) input file
-               
-      
-         ! other parameters we may/may not need
-      CHARACTER(1024)           :: DirRoot                                          ! The absolute name of the root file (including the full path)
-      
+                     
       
    END TYPE FAST_ParameterType
 
