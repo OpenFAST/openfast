@@ -90,7 +90,7 @@ PROGRAM MAIN
    Integer(IntKi)                     :: temp_count
    INTEGER(IntKi),PARAMETER:: QiHUnit = 30
    INTEGER(IntKi),PARAMETER:: LoadUnit = 40
-   REAL(ReKi):: InputLoad(20001,2)
+   REAL(ReKi):: InputLoad(200001,2)
 
 
 
@@ -109,7 +109,7 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 5.0D-03
+   dt_global = 5.0D-04
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -140,13 +140,13 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
     OPEN(unit = QiDisUnit, file = 'QiDisp_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
     OPEN(unit = LoadUnit, file = 'Test19.out', status = 'OLD',ACTION = 'READ')
-    DO i=1,20001
+    DO i=1,200001
         READ(LoadUnit,*) InputLoad(i,1),InputLoad(i,2)
-        InputLoad(i,2) = InputLoad(i,2)*15.0D+04
-        DO j=1,9
-            IF( i == 20001) EXIT
-            READ(LoadUnit,*) temp1,temp2
-        ENDDO
+        InputLoad(i,2) = InputLoad(i,2)*5.0D+04
+!        DO j=1,9
+!            IF( i == 20001) EXIT
+!            READ(LoadUnit,*) temp1,temp2
+!        ENDDO
 !WRITE(*,*) InputLoad(i,:)
     ENDDO
     CLOSE (LoadUnit)
@@ -246,9 +246,9 @@ BD_Input(3)%PointLoad%Moment(:,:) = 0.0D0
 BD_Input(3)%DistrLoad%Force(:,:)  = 0.0D0
 BD_Input(3)%DistrLoad%Moment(:,:) = 0.0D0
 
-BD_Input(1)%PointLoad%Force(3,BD_Parameter%node_total) = InputLoad(n_t_global+1,2)
-BD_Input(2)%PointLoad%Force(3,BD_Parameter%node_total) = InputLoad(n_t_global+2,2)
-BD_Input(3)%PointLoad%Force(3,BD_Parameter%node_total) = InputLoad(n_t_global+3,2)
+BD_Input(1)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+1,2)
+BD_Input(2)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+2,2)
+BD_Input(3)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+3,2)
 
      CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
