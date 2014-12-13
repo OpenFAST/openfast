@@ -45,12 +45,12 @@ MODNAME_DIR = .
 
 FC     = gfortran
 OPT    = 
-#FFLAGS = -O3 -m$(BITS) -fbacktrace -ffree-line-length-none -x f95-cpp-input -ffree-line-length-none
-#FFLAGS = -O3 -g -fbacktrace -ffree-line-length-none -x f95-cpp-input -fdefault-real-8 -fdefault-double-8
-#LDFLAGS = -O3 -g -fbacktrace
+#FFLAGS = -O2 -m$(BITS) -fbacktrace -ffree-line-length-none -x f95-cpp-input -ffree-line-length-none
+#FFLAGS = -O2 -g -fbacktrace -ffree-line-length-none -x f95-cpp-input -fdefault-real-8 -fdefault-double-8
+#LDFLAGS = -O2 -g -fbacktrace
 #FFLAGS = -g -O2 -m32 -fbacktrace -ffree-line-length-none -x f95-cpp-input -fdefault-real-8 -fdefault-double-8 #-fcheck=bounds
-FFLAGS = $(OPT) -m32 -fdefault-real-8 -fdefault-double-8 -fbacktrace -ffree-line-length-none -x f95-cpp-input -Wsurprising 
-LDFLAGS = $(OPT) -m32 -fbacktrace
+FFLAGS = $(OPT) -O2 -m32 -fdefault-real-8 -fdefault-double-8 -fbacktrace -ffree-line-length-none -x f95-cpp-input -Wsurprising 
+LDFLAGS = $(OPT) -O2 -m32 -fbacktrace
 
    # Precision.
 
