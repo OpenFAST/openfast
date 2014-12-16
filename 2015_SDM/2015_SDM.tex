@@ -725,12 +725,12 @@ where $u_b(t)$ is the benchmark solution given by Dymore using eight third-order
 \end{figure}  
 
 \subsection{Analysis of NREL 5-MW Blade}
-The last example is to examine different time integrators that have been implemented in BeamDyn. The NREL 5-MW blade was analyzed in a cantilever condition while a white noise force is applied at the free tip along the edge direction. White noise was used to mimic the magnitude and frequency content of applied aerodynamic loads under realistic turbulent conditions. The damping coefficient is set to $1.6 \times 10^{-2}$. Figure~\ref{E4Force} shows the time history of the applied force and its power spectral density (PSD). The edge direction responses are plotted in Figure~\ref{E4Displacement}. Four cases were conducted in BeamDyn: the first three cases were using AM2 time integrator with time step size: $5 \times 10^{-2}$ s, $5 \times 10^{-3}$ s, and $5 \times 10^{-4}$ s, respectively, while the fourth case was using RK4 time integrator with time step size $5 \times 10^{-6}$.  It can be observed that for an implicit AM2 time step beyond 0.005 s, the solution is nearly identical to the fully resolved explicit RK4 solution.  For an AM2 time step of 0.05 s, the solution remains stable and tracks the other solutions, but error grows at higher frequencies.  The spike at 1.1 Hz corresponds to the first blade edgewise natural frequency.
+The last example is to examine different time integrators that have been implemented in BeamDyn. The NREL 5-MW blade was analyzed in a cantilever condition while a white noise force is applied at the free tip along the flap direction. White noise was used to mimic the magnitude and frequency content of applied aerodynamic loads under realistic turbulent conditions. The damping coefficient is set to $1.0 \times 10^{-3}$ s. Figure~\ref{E4Force} shows the time history of the applied force and its power spectral density (PSD). The flap direction responses are plotted in Figure~\ref{E4Displacement}. Four cases were conducted in BeamDyn: the first three cases were using AM2 time integrator with time step size: $2.5 \times 10^{-2}$ s, $5 \times 10^{-3}$ s, and $5 \times 10^{-4}$ s, respectively, while the fourth case was using RK4 time integrator with time step size $5 \times 10^{-6}$.  It can be observed that for an implicit AM2 time step beyond 0.005 s, the solution is nearly identical to the fully resolved explicit RK4 solution.  For an AM2 time step of 0.025 s, the solution remains stable and tracks the other solutions, but error grows at higher frequencies.  {\color{red} The spike at 0.9 Hz corresponds to the first blade edgewise natural frequency.}
 \begin{figure}
     \centering
     \begin{tabular}{c}
-    \subfloat[Time history of applied force]{\label{E4Force:Force}\includegraphics[width=5.0 in]{\directory  E4Force.eps}} \\
-\subfloat[PSD of applied force]{\label{E4Force:PSD}\includegraphics[width=5.0in]{\directory  E4ForcePSD.eps}} \\
+    \subfloat[Time history of applied force]{\label{E4Force:Force}\includegraphics[width=5.0 in]{\directory  5MW_Flap_Force_Final.eps}} \\
+\subfloat[PSD of applied force]{\label{E4Force:PSD}\includegraphics[width=5.0in]{\directory  5MW_Flap_Force_PSD_Final.eps}} \\
 \end{tabular}
 \caption{Applied white noise force at the tip of a cantilevered NREL 5-MW blade.}
 \label{E4Force}
@@ -738,10 +738,10 @@ The last example is to examine different time integrators that have been impleme
 \begin{figure}
     \centering
     \begin{tabular}{c}
-    \subfloat[Time history of edge displacement]{\label{E4Displacement:Disp}\includegraphics[width=5.0 in]{\directory  E4Disp.eps}} \\
-\subfloat[PSD of edge displacement]{\label{E4Displacement:PSD}\includegraphics[width=5.0in]{\directory  E4DispPSD.eps}} \\
+    \subfloat[Time history of flap displacement]{\label{E4Displacement:Disp}\includegraphics[width=5.0 in]{\directory  u_5MW_flap_final.eps}} \\
+\subfloat[PSD of flap displacement]{\label{E4Displacement:PSD}\includegraphics[width=5.0in]{\directory  u_5MW_flap_psd_final.eps}} \\
 \end{tabular}
-\caption{Edge direction responses of a cantilevered NREL 5-MW blade under white noise excitation.}
+\caption{Flap direction responses of a cantilevered NREL 5-MW blade under white noise excitation.}
 \label{E4Displacement}
 \end{figure} 
 

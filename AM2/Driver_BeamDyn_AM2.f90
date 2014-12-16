@@ -90,7 +90,8 @@ PROGRAM MAIN
    Integer(IntKi)                     :: temp_count
    INTEGER(IntKi),PARAMETER:: QiHUnit = 30
    INTEGER(IntKi),PARAMETER:: LoadUnit = 40
-   REAL(ReKi):: InputLoad(200001,2)
+   INTEGER(IntKi),PARAMETER:: SIZ = 2501
+   REAL(ReKi):: InputLoad(SIZ,2)
 
 
 
@@ -98,7 +99,7 @@ PROGRAM MAIN
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
    ! -------------------------------------------------------------------------
-!OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE') 
+OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE') 
 
    t_initial = 0.0D+00
    t_final   = 1.0D+02
@@ -109,7 +110,7 @@ PROGRAM MAIN
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 5.0D-06
+   dt_global = 40.0D-03
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -140,17 +141,19 @@ PROGRAM MAIN
     OPEN(unit = QiDisUnit, file = 'QiDisp_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
     OPEN(unit = LoadUnit, file = 'Test19.out', status = 'OLD',ACTION = 'READ')
-    DO i=1,200001
+    DO i=1,SIZ
         READ(LoadUnit,*) InputLoad(i,1),InputLoad(i,2)
         InputLoad(i,2) = InputLoad(i,2)*5.0D+04
-!        DO j=1,9
-!            READ(LoadUnit,*) temp1,temp2
-!        ENDDO
+        DO j=1,79
+            IF( i == SIZ) EXIT
+            READ(LoadUnit,*) temp1,temp2
+        ENDDO
 !WRITE(*,*) InputLoad(i,:)
     ENDDO
     CLOSE (LoadUnit)
 
 !   BD_InitInput%InputFile = 'BeamDyn_Input_CX100.inp'
+!   BD_InitInput%InputFile = 'BeamDyn_Input_5MW.inp'
    BD_InitInput%InputFile = 'BeamDyn_Input_5MW_New.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Composite.inp'
@@ -244,15 +247,9 @@ BD_Input(3)%PointLoad%Moment(:,:) = 0.0D0
 BD_Input(3)%DistrLoad%Force(:,:)  = 0.0D0
 BD_Input(3)%DistrLoad%Moment(:,:) = 0.0D0
 
-IF(mod(n_t_global,100) .EQ. 0) temp_count = temp_count + 1
-temp_a = InputLoad(temp_count,2)
-temp_b = InputLoad(temp_count+1,2)
-temp_force = temp_a + 0.01*(temp_b - temp_a)*(n_t_global+1-((temp_count-1)*100+1))
-BD_Input(1)%PointLoad%Force(2,BD_Parameter%node_total) = temp_force
-temp_force = temp_a + 0.01*(temp_b - temp_a)*(n_t_global+2-((temp_count-1)*100+1))
-BD_Input(2)%PointLoad%Force(2,BD_Parameter%node_total) = temp_force
-temp_force = temp_a + 0.01*(temp_b - temp_a)*(n_t_global+3-((temp_count-1)*100+1))
-BD_Input(3)%PointLoad%Force(2,BD_Parameter%node_total) = temp_force
+BD_Input(1)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+1,2)
+BD_Input(2)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+2,2)
+BD_Input(3)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+3,2)
 
      CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
@@ -281,7 +278,8 @@ BD_Input(3)%PointLoad%Force(2,BD_Parameter%node_total) = temp_force
 
       ENDDO
 
-!   WRITE(QiHUnit,*) n_t_global+1,BD_OtherState%NR_counter
+   WRITE(QiHUnit,*) n_t_global+1,BD_OtherState%NR_counter
+   temp_count = temp_count + BD_OtherState%NR_counter
 
 !IF(n_t_global .EQ. 301) STOP
 !      IF(n_t_global .GE. 149) THEN
@@ -289,11 +287,9 @@ BD_Input(3)%PointLoad%Force(2,BD_Parameter%node_total) = temp_force
 !          WRITE(*,*) BD_ContinuousState%dqdt(i)  
 !      ENDDO
 !      ENDIF
-IF(mod(n_t_global,100) .EQ. 0) THEN
       WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
                            &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
                            &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
-ENDIF
 !CALL CrvMatrixB(BD_ContinuousState%q(4:6),BD_ContinuousState%q(4:6),temp_H)
 !CALL CrvMatrixH(BD_ContinuousState%q(4:6),temp_H)
 !WRITE(QiHUnit,7000) t_global,temp_H(1,1),temp_H(1,2),temp_H(1,3),temp_H(2,1),temp_H(2,2),temp_H(2,3),&
@@ -324,6 +320,7 @@ ENDIF
 
    ENDDO
 
+   WRITE(QiHUnit,*) "TOTAL",temp_count
 
    ! calculate final time normalized rms error
 
@@ -361,7 +358,7 @@ ENDIF
    CLOSE (QiDisUnit)
 
 7000 FORMAT (ES12.5,9ES21.12)
-!CLOSE (QiHUnit)
+CLOSE (QiHUnit)
 
 END PROGRAM MAIN
 
