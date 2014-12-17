@@ -29,7 +29,7 @@ MODULE FAST_ModTypes
    USE FAST_Types
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.09.00a-bjj', '30-Sep-2014' ) ! The version number of this module
+                                ProgDesc( 'FAST', 'v8.10.00a-bjj', '17-Dec-2014' ) ! The version number of this module
    
    REAL(DbKi), PARAMETER     :: t_initial = 0.0_DbKi                    ! Initial time
    INTEGER,    PARAMETER     :: IceD_MaxLegs = 4;                       ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number
