@@ -2070,7 +2070,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          IF (n == m ) THEN
             k_nm_minus = 0.0_ReKi            ! This is just to eliminate any numerical error
          ELSE
-            k_nm_minus = sqrt( k_n * k_n + k_m * k_m - 2 * k_n * k_m * cos( D2R*InitInp%WaveDirArr(n) - D2R*InitINp%WaveDirArr(m) )  )
+               !bjj: added abs() because we were getting very small negative numbers here (which should be 0). 
+            k_nm_minus = sqrt( abs( k_n * k_n + k_m * k_m - 2 * k_n * k_m * cos( D2R*InitInp%WaveDirArr(n) - D2R*InitINp%WaveDirArr(m) )  ) )
          ENDIF
 
       END FUNCTION k_nm_minus
