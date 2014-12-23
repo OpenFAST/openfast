@@ -25,7 +25,52 @@ usefrom	Registry_IceDyn.txt
 usefrom	FEAM_Registry.txt								
 usefrom	MAP_Registry.txt								
 									
+# ...... Constants ............................................................................									
 									
+# MODULE IDENTIFIERS:									
+# NOTE WELL: The order of these modules is the order they get written to the output file;									
+# Make sure the module identifiers start at 1 and that this order matches the orders in WrOutputLine and FAST_InitOutput!!!									
+param	FAST	-	INTEGER	Module_Unknown	-	-1	-	"Unknown"	-
+param	^	-	INTEGER	Module_None	-	0	-	"No module selected"	-
+param	^	-	INTEGER	Module_IfW	-	1	-	"InflowWind"	-
+param	^	-	INTEGER	Module_ED	-	2	-	ElastoDyn	-
+param	^	-	INTEGER	Module_BD	-	3	-	BeamDyn	-
+param	^	-	INTEGER	Module_AD	-	4	-	AeroDyn	-
+param	^	-	INTEGER	Module_SrvD	-	5	-	ServoDyn	-
+param	^	-	INTEGER	Module_HD	-	6	-	HydroDyn	-
+param	^	-	INTEGER	Module_SD	-	7	-	SubDyn	-
+param	^	-	INTEGER	Module_MAP	-	8	-	"MAP (Mooring Analysis Program)"	-
+param	^	-	INTEGER	Module_FEAM	-	9	-	FEAMooring	-
+param	^	-	INTEGER	Module_IceF	-	10	-	IceFloe	-
+param	^	-	INTEGER	Module_IceD	-	11	-	IceDyn	-
+param	^	-	INTEGER	NumModules	-	11	-	"The number of modules available in FAST"	-
+# Other Constants									
+									
+									
+									
+# ..... FAST_ParameterType data .......................................................................................................									
+#typedef	^	FAST_ParameterType	DbKi	DT					
+#typedef	^		DT_module						
+#typedef	^								
+#typedef	^								
+#typedef	^								
+#typedef	^								
+#typedef	^								
+#typedef	^								
+									
+# ..... FAST_OutputFileType data .......................................................................................................									
+typedef	FAST	FAST_OutputFileType	DbKi	TimeData	{:}	-	-	"Array to contain the time output data for the binary file (first output time and a time [fixed] increment)"	
+typedef	^	^	ReKi	AllOutData	{:}{:}	-	-	"Array to contain all the output data (time history of all outputs); Index 1 is NumOuts, Index 2 is Time step"	
+typedef	^	^	IntKi	n_Out	-	-	-	"Time index into the AllOutData array"	
+typedef	^	^	IntKi	NOutSteps	-	-	-	"Maximum number of output steps"	
+typedef	^	^	IntKi	numOuts	{NumModules}	-	-	"number of outputs to print from each module"	
+typedef	^	^	IntKi	UnOu	-	-1	-	"I/O unit number for the tabular output file"	
+typedef	^	^	IntKi	UnSum	-	-1	-	"I/O unit number for the summary file"	
+typedef	^	^	IntKi	UnGra	-	-1	-	"I/O unit number for mesh graphics"	
+typedef	^	^	CHARACTER(1024)	FileDescLines	{3}	-	-	"Description lines to include in output files (header, time run, plus module names/versions)"	
+typedef	^	^	CHARACTER(ChanLen)	ChannelNames	{:}	-	-	"Names of the output channels"	
+typedef	^	^	CHARACTER(ChanLen)	ChannelUnits	{:}	-	-	"Units for the output channels"	
+typedef	^	^	ProgDesc	Module_Ver	{NumModules}	-	-	"version information from all modules"	
 									
 # ..... IceDyn data .......................................................................................................									
 # [ the last dimension of each allocatable array is for the instance of IceDyn being used ]									
@@ -37,9 +82,9 @@ typedef	^	^	IceD_OtherStateType	OtherSt	{:}	-	-	"Other/optimization states"
 typedef	^	^	IceD_ParameterType	p	{:}	-	-	"Parameters"	
 typedef	^	^	IceD_InputType	u	{:}	-	-	"System inputs"	
 typedef	^	^	IceD_OutputType	y	{:}	-	-	"System outputs"	
-typedef	^	^	IceD_ContinuousStateType	x_pred	{:}	-	-	"Predicted continuous states"	
-typedef	^	^	IceD_DiscreteStateType	xd_pred	{:}	-	-	"Predicted discrete states"	
-typedef	^	^	IceD_ConstraintStateType	z_pred	{:}	-	-	"Predicted constraint states"	
+#typedef	^	^	IceD_ContinuousStateType	x_pred	{:}	-	-	"Predicted continuous states"	
+#typedef	^	^	IceD_DiscreteStateType	xd_pred	{:}	-	-	"Predicted discrete states"	
+#typedef	^	^	IceD_ConstraintStateType	z_pred	{:}	-	-	"Predicted constraint states"	
 typedef	^	^	IceD_OtherStateType	OtherSt_old	{:}	-	-	"Other/optimization states (copied for the case of subcycling)"	
 typedef	^	^	IceD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"	
 typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"	
@@ -227,5 +272,6 @@ typedef	^	FAST_MiscVarType	REAL	UsrTime1	-	-	-	"User CPU time for simulation ini
 typedef	^	FAST_MiscVarType	REAL	UsrTime2	-	-	-	"User CPU time for simulation (without intialization)"	(s)
 typedef	^	FAST_MiscVarType	INTEGER	StrtTime	{8}	-	-	"Start time of simulation (including intialization)"	
 typedef	^	FAST_MiscVarType	INTEGER	SimStrtTime	{8}	-	-	"Start time of simulation (after initialization)"	
+#typedef	^	FAST_MiscVarType	IntKi	n_t_global	-	-	-	"simulation time step, loop counter for global (FAST) simulation"	(s)
 typedef	^	FAST_MiscVarType	INTEGER	n_TMax_m1	-	-	-	"The time step of TMax - dt (the end time of the simulation)"	(-)
 typedef	^	FAST_MiscVarType	Logical	calcJacobian	-	-	-	"Should we calculate Jacobians in Option 1?"	(flag)

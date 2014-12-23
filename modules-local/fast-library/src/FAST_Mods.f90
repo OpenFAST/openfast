@@ -29,30 +29,11 @@ MODULE FAST_ModTypes
    USE FAST_Types
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.10.00a-bjj', '22-Dec-2014' ) ! The version number of this module
+                                ProgDesc( 'FAST', 'v8.10.00a-bjj', '23-Dec-2014' ) ! The version number of this module
    
-   REAL(DbKi), PARAMETER     :: t_initial = 0.0_DbKi                    ! Initial time
    INTEGER,    PARAMETER     :: IceD_MaxLegs = 4;                       ! because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number
-   
-   
-   !..................................................................
-   ! NOTE WELL:
-   ! the order of these modules is the order they get written to the output file; 
-   ! make sure the module identifiers start at 1 and that this order matches the orders in WrOutputLine and FAST_InitOutput!!!
-   INTEGER(IntKi), PARAMETER :: Module_Unknown = -1
-   INTEGER(IntKi), PARAMETER :: Module_None    =  0
-   INTEGER(IntKi), PARAMETER :: Module_IfW     =  1  ! InflowWind
-   INTEGER(IntKi), PARAMETER :: Module_ED      =  2  ! ElastoDyn
-   INTEGER(IntKi), PARAMETER :: Module_BD      =  3  ! BeamDyn
-   INTEGER(IntKi), PARAMETER :: Module_AD      =  4  ! AeroDyn
-   INTEGER(IntKi), PARAMETER :: Module_SrvD    =  5  ! ServoDyn
-   INTEGER(IntKi), PARAMETER :: Module_HD      =  6  ! HydroDyn
-   INTEGER(IntKi), PARAMETER :: Module_SD      =  7  ! SubDyn
-   INTEGER(IntKi), PARAMETER :: Module_MAP     =  8  ! MAP
-   INTEGER(IntKi), PARAMETER :: Module_FEAM    =  9  ! FEA Mooring
-   INTEGER(IntKi), PARAMETER :: Module_IceF    = 10  ! IceFloe
-   INTEGER(IntKi), PARAMETER :: Module_IceD    = 11  ! IceDyn 
-   INTEGER(IntKi), PARAMETER :: NumModules     = 11
+   INTEGER(IntKi), PARAMETER :: MaxNBlades     = 3
+      
    !..................................................................
    
    INTEGER(IntKi), PARAMETER :: Type_LandBased          = 1
@@ -64,7 +45,6 @@ MODULE FAST_ModTypes
    
          
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
-   INTEGER(IntKi), PARAMETER :: MaxNBlades     = 3
    
    INTEGER(B2Ki),  PARAMETER :: OutputFileFmtID = FileFmtID_WithoutTime            ! A format specifier for the binary output file format (1=include time channel as packed 32-bit binary; 2=don't include time channel)
 
