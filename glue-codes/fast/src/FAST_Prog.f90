@@ -34,12 +34,12 @@ PROGRAM FAST
 !.................................................................................................
 
 
-   USE FAST_IO_Subs   ! all of the ModuleName and ModuleName_types modules are inherited from FAST_IO_Subs
+USE FAST_IO_Subs   ! all of the ModuleName and ModuleName_types modules are inherited from FAST_IO_Subs
                        
 IMPLICIT  NONE
    
    ! Local variables:
-   REAL(DbKi), PARAMETER     :: t_initial = 0.0_DbKi                    ! Initial time
+REAL(DbKi), PARAMETER     :: t_initial = 0.0_DbKi                    ! Initial time
 
    
    ! Data for the glue code:
@@ -62,19 +62,16 @@ TYPE(IceDyn_Data)                     :: IceD                                   
 
    ! Other/Misc variables
 
-REAL(DbKi)                            :: t_global_next                           ! next simulation time (m_FAST%t_global + p_FAST%dt)
 
 
-INTEGER(IntKi)                        :: I,J                                     ! generic loop counter
 INTEGER(IntKi)                        :: n_t_global                              ! simulation time step, loop counter for global (FAST) simulation
-INTEGER(IntKi)                        :: j_pc                                    ! predictor-corrector loop counter 
 INTEGER(IntKi)                        :: ErrStat                                 ! Error status
 CHARACTER(1024)                       :: ErrMsg                                  ! Error message
 
 
-   !...............................................................................................................................
+   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    ! initialization
-   !...............................................................................................................................
+   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
    CALL FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
       CALL CheckError( ErrStat, ErrMsg, 'during module initialization' )
@@ -96,192 +93,15 @@ CHARACTER(1024)                       :: ErrMsg                                 
    DO n_t_global = 0, m_FAST%n_TMax_m1
       ! this takes data from n_t_global and gets values at n_t_global + 1
   
-      t_global_next = t_initial + (n_t_global+1)*p_FAST%DT  ! = m_FAST%t_global + p_FAST%dt
-                       
-         ! determine if the Jacobian should be calculated this time
-      IF ( m_FAST%calcJacobian ) THEN ! this was true (possibly at initialization), so we'll advance the time for the next calculation of the Jacobian
-         m_FAST%NextJacCalcTime = m_FAST%t_global + p_FAST%DT_UJac         
-      END IF
-      
-      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      ! Step 1.a: Extrapolate Inputs (gives predicted values at t+dt)
-      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      CALL FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, ErrStat, ErrMsg )
+      CALL FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )                  
          CALL CheckError( ErrStat, ErrMsg  )
-
-      
-      ! predictor-corrector loop:
-      DO j_pc = 0, p_FAST%NumCrctn
-      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      ! Step 1.b: Advance states (yield state and constraint values at t_global_next)
-      !
-      ! x, xd, and z contain values at m_FAST%t_global;
-      ! values at t_global_next are stored in the *_pred variables.
-      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-         !----------------------------------------------------------------------------------------
-         ! copy the states at step m_FAST%t_global and get prediction for step t_global_next
-         ! (note that we need to copy the states because UpdateStates updates the values
-         ! and we need to have the old values [at m_FAST%t_global] for the next j_pc step)
-         !----------------------------------------------------------------------------------------
-      
-         CALL FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, ErrStat, ErrMsg )               
-            CALL CheckError( ErrStat, ErrMsg )
-         
-      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      ! Step 1.c: Input-Output Solve      
-      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-            CALL CalcOutputs_And_SolveForInputs( n_t_global, m_FAST%t_global,  STATE_PRED, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
-                        p_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
-            
-               CALL CheckError( ErrStat, ErrMsg )
-      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      ! Step 2: Correct (continue in loop) 
-      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-         IF ( j_pc /= p_FAST%NumCrctn)  THEN          ! Don't copy these on the last loop iteration...
-                  
-            IF ( p_FAST%n_substeps( Module_ED ) > 1 ) THEN
-               CALL ED_CopyOtherState( ED%OtherSt_old, ED%OtherSt, MESH_UPDATECOPY, Errstat, ErrMsg)
-            END IF
-            
-            IF ( p_FAST%n_substeps( Module_AD ) > 1 ) THEN
-               CALL AD_CopyOtherState( AD%OtherSt_old, AD%OtherSt, MESH_UPDATECOPY, Errstat, ErrMsg)
-            END IF
-            
-            IF ( p_FAST%n_substeps( Module_SrvD ) > 1 ) THEN
-               CALL SrvD_CopyOtherState( SrvD%OtherSt_old, SrvD%OtherSt, MESH_UPDATECOPY, Errstat, ErrMsg)
-            END IF
-            
-            IF ( p_FAST%n_substeps( Module_HD ) > 1 ) THEN
-               CALL HydroDyn_CopyOtherState( HD%OtherSt_old, HD%OtherSt, MESH_UPDATECOPY, Errstat, ErrMsg)
-            END IF
-            
-            IF ( p_FAST%n_substeps( Module_SD ) > 1 ) THEN
-               CALL SD_CopyOtherState( SD%OtherSt_old, SD%OtherSt, MESH_UPDATECOPY, Errstat, ErrMsg)
-            END IF
-
-            IF ( p_FAST%n_substeps( Module_MAP ) > 1 ) THEN
-               CALL MAP_CopyOtherState( MAPp%OtherSt_old, MAPp%OtherSt, MESH_UPDATECOPY, Errstat, ErrMsg)
-            ELSEIF ( p_FAST%n_substeps( Module_FEAM ) > 1 ) THEN
-               CALL FEAM_CopyOtherState( FEAM%OtherSt_old, FEAM%OtherSt, MESH_UPDATECOPY, Errstat, ErrMsg)
-            END IF
-         
-            IF ( p_FAST%n_substeps( Module_IceF ) > 1 ) THEN
-               CALL IceFloe_CopyOtherState( IceF%OtherSt_old, IceF%OtherSt, MESH_UPDATECOPY, Errstat, ErrMsg)
-            ELSEIF ( p_FAST%n_substeps( Module_IceD ) > 1 ) THEN
-               DO i=1,p_FAST%numIceLegs
-                  CALL IceD_CopyOtherState( IceD%OtherSt_old(i), IceD%OtherSt(i), MESH_UPDATECOPY, Errstat, ErrMsg)
-               END DO
-            END IF
-            
-         END IF
-                              
-      enddo ! j_pc
-      
-      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      ! Step 3: Save all final variables (advance to next time)
-      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      
-      !----------------------------------------------------------------------------------------
-      ! copy the final predicted states from step t_global_next to actual states for that step
-      !----------------------------------------------------------------------------------------
-      
-      ! ElastoDyn: copy final predictions to actual states
-      CALL ED_CopyContState   (ED%x( STATE_PRED), ED%x( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-      CALL ED_CopyDiscState   (ED%xd(STATE_PRED), ED%xd(STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)  
-      CALL ED_CopyConstrState (ED%z( STATE_PRED), ED%z( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)      
-      
-      
-      ! AeroDyn: copy final predictions to actual states; copy current outputs to next 
-      IF ( p_FAST%CompAero == Module_AD ) THEN
-         CALL AD_CopyContState   (AD%x( STATE_PRED), AD%x( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-         CALL AD_CopyDiscState   (AD%xd(STATE_PRED), AD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)  
-         CALL AD_CopyConstrState (AD%z( STATE_PRED), AD%z( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)      
-      END IF
-            
-      
-      ! ServoDyn: copy final predictions to actual states; copy current outputs to next 
-      IF ( p_FAST%CompServo == Module_SrvD ) THEN
-         CALL SrvD_CopyContState   (SrvD%x( STATE_PRED), SrvD%x( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-         CALL SrvD_CopyDiscState   (SrvD%xd(STATE_PRED), SrvD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)  
-         CALL SrvD_CopyConstrState (SrvD%z( STATE_PRED), SrvD%z( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)      
-      END IF
-      
-      
-      ! HydroDyn: copy final predictions to actual states
-      IF ( p_FAST%CompHydro == Module_HD ) THEN         
-         CALL HydroDyn_CopyContState   (HD%x( STATE_PRED), HD%x( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-         CALL HydroDyn_CopyDiscState   (HD%xd(STATE_PRED), HD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)  
-         CALL HydroDyn_CopyConstrState (HD%z( STATE_PRED), HD%z( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-      END IF
-            
-            
-      ! SubDyn: copy final predictions to actual states
-      IF ( p_FAST%CompSub == Module_SD ) THEN
-         CALL SD_CopyContState   (SD%x( STATE_PRED), SD%x( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-         CALL SD_CopyDiscState   (SD%xd(STATE_PRED), SD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)  
-         CALL SD_CopyConstrState (SD%z( STATE_PRED), SD%z( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-      END IF
-         
-      
-      ! MAP: copy final predictions to actual states
-      IF (p_FAST%CompMooring == Module_MAP) THEN
-         CALL MAP_CopyContState   (MAPp%x( STATE_PRED), MAPp%x( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-         CALL MAP_CopyDiscState   (MAPp%xd(STATE_PRED), MAPp%xd(STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)  
-         CALL MAP_CopyConstrState (MAPp%z( STATE_PRED), MAPp%z( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-      ELSEIF (p_FAST%CompMooring == Module_FEAM) THEN
-         CALL FEAM_CopyContState   (FEAM%x( STATE_PRED), FEAM%x( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-         CALL FEAM_CopyDiscState   (FEAM%xd(STATE_PRED), FEAM%xd(STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)  
-         CALL FEAM_CopyConstrState (FEAM%z( STATE_PRED), FEAM%z( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-      END IF
-             
-            ! IceFloe: copy final predictions to actual states
-      IF ( p_FAST%CompIce == Module_IceF ) THEN
-         CALL IceFloe_CopyContState   (IceF%x( STATE_PRED), IceF%x( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-         CALL IceFloe_CopyDiscState   (IceF%xd(STATE_PRED), IceF%xd(STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)  
-         CALL IceFloe_CopyConstrState (IceF%z( STATE_PRED), IceF%z( STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-      ELSEIF ( p_FAST%CompIce == Module_IceD ) THEN
-         DO i=1,p_FAST%numIceLegs
-            CALL IceD_CopyContState   (IceD%x( i,STATE_PRED), IceD%x( i,STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-            CALL IceD_CopyDiscState   (IceD%xd(i,STATE_PRED), IceD%xd(i,STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)  
-            CALL IceD_CopyConstrState (IceD%z( i,STATE_PRED), IceD%z( i,STATE_CURR), MESH_UPDATECOPY, Errstat, ErrMsg)
-         END DO
-      END IF
-
-            
-      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      ! We've advanced everything to the next time step: 
-      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++                       
-      
-      ! update the global time 
-  
-      m_FAST%t_global = t_global_next 
-      
-      
-      !----------------------------------------------------------------------------------------
-      ! Check to see if we should output data this time step:
-      !----------------------------------------------------------------------------------------
-
-      CALL WriteOutputToFile(m_FAST%t_global, p_FAST, y_FAST, ED, AD, IfW, HD, SD, SrvD, MAPp, FEAM, IceF, IceD, ErrStat, ErrMsg)
-      
-      !----------------------------------------------------------------------------------------
-      ! Display simulation status every SttsTime-seconds (i.e., n_SttsTime steps):
-      !----------------------------------------------------------------------------------------   
-      
-      IF ( MOD( n_t_global + 1, p_FAST%n_SttsTime ) == 0 ) THEN
-
-         CALL SimStatus( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%t_global, p_FAST%TMax )
-
-      ENDIF
-      
             
    END DO ! n_t_global
   
   
-   !...............................................................................................................................
+   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    !  Write simulation times and stop
-   !...............................................................................................................................
+   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    
    CALL ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrID_None )
 
