@@ -1,0 +1,37 @@
+ For the nonlinear problem, Eq.~\eqref{AM2-Govn} can be written in the residual form
+\begin{equation}
+    \label{AM2-Residual}
+    \vec{\textbf{R}}(\hat{\vec{x}}_{k+1}) = \tens{A}_{k+1} (\hat{\vec{x}}_{k+1}-\hat{\vec{x}}_{k})+\tens{A}_k \hat{\vec{x}}_{k+1} - \Delta t \mathfrak{f}(\hat{\vec{x}}_{k+1},t_{k+1}) - \tens{A}_k \hat{\vec{x}}_{k} - \Delta t \mathfrak{f}(\hat{\vec{x}}_{k},t_{k}) =0
+\end{equation}
+
+The final test case illustrates that BeamDyn is capable of accurately analyzing dynamic movement. In this analysis, the CX-100 blade was given a constant rotational velocity. A boundary condition was specified such that the blade was allowed to rotate about the node located at its root. This test case was analyzed in both BeamDyn and Dymore, a finite-element-based multibody dynamics code based on the same beam theory. The beam was discretized by a eighth-order element in BeamDyn, and 40 third-order elements in Dymore. The angular velocity of the blade was $\frac{\pi}{3}$ rad/s. The time integrator for the dynamic case was a Runge-Kutta fourth-order method, and the time step size was $5 \times 10^{-5}$ s. The time integrator for Dymore was the generalized-alpha method, with a time step size of $1 \times 10^{-3}$ s. The total simulation time in both BeamDyn and Dymore was 6 s so that the blade rotated a whole circle.
+
+Figure~\ref{E3U} shows the time histories for the axial ($u_1$) and vertical displacements ($u_3$), and the rotation parameter $p_2$ about the rotating axis given by BeamDyn and Dymore. It can be observed that these quantities are in good agreements and BeamDyn properly handled the rescaling operation, which eliminates the singular point in the rotation parameterization. {\color{red} One explanation to the tiny differences between the two data sets is that in the generalized-alpha method used in Dymore, numerical damping was introduced and this effected on the accuracy of the results.} {\color{red} The root-mean-square error, which aggregates the magnitudes of the errors in predictions for various times into a single measure of predictive performance, for $u_3$ is 0.0335.} The error was calculated using
+\begin{equation}
+\varepsilon_{RMS}=\sqrt{\frac{\sum_{k=0}^{n_{max}}[u_3^k-u_b(t^k)]^2}{\sum_{k=0}^{n_{max}}[u_b(t^k)]^2}}
+\end{equation} 
+where $u_b(t)$ is the benchmark solution as given by Dymore.
+\begin{figure}
+    \centering
+    \begin{tabular}{c}
+    \subfloat[$u_1$]{\label{E3U:u1}\includegraphics[width=3.0 in]{\directory  E3Tipu1.eps}} \\
+\subfloat[$u_3$]{\label{E3U:u3}\includegraphics[width=3.0 in]{\directory  E3Tipu3.eps}} \\\subfloat[$p_2$]{\label{E3U:p2}\includegraphics[width=3.0 in]{\directory  E3Tipp2.eps}} \\\end{tabular}
+\caption{Tip displacement and rotation histories of a CX-100 blade rotating at a constant speed.}
+\label{E3U}
+\end{figure} 
+Figure~\ref{E3RootM2} shows the root forces in the no-gravity-load-applied and gravity-load-applied cases. As expected, the root forces were higher for the case where the gravity force was applied. {\color{red} The forces, along with the displacements and rotations, will be returned to FAST for further whole turbine analysis.}
+\begin{figure}
+\centering
+\includegraphics[width=3.0in]{\directory E3RootM2.eps}
+\caption{Root forces on the CX-100 blade in a BeamDyn dynamic simulation with and without gravity load.} 
+\label{E3RootM2}
+\end{figure}
+
+
+The maximum tip displacement in the experimental data was 1.03 m, whereas the maximum tip displacement in the BeamDyn simulation was 1.12 m. This discrepancy has previously been explained\cite{Luscher:2013} as a difference in the rigidity of the boundary conditions when calculating the two-dimensional (2D) sectional properties with VABS. Because this work uses the sectional properties of the previous publication, it was reasonable that this work has also found similar errors and effects. It should also be noted that the tip displacement was not directly measured in the experiment \cite{paquette2006modeling}, but was extrapolated based on the recoded data at 3.00 m, 5.81 m, and 7.26 m.
+
+
+Information that comes from FAST driver code include the gravity vector, time step size, initial conditions, and the externally applied loads. It is pointed out that for control application, FAST introduced the concept of ``output equation" to generate the information that returned to the system. In addition to the kinetic quantities, BeamDyn also returns the internal force distribution along the blade axis. The internal forces, including the damping, gyroscopic, and elastic forces, are calculated as subtracting the inertial force from the externally applied load. For coupled turbine analysis, the BeamDyn module will return kinematical quantities, displacements and rotation tensors, as well as reaction force and moment resultants to FAST for aeroelastic and control analysis.
+
+
+

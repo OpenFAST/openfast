@@ -90,7 +90,7 @@ PROGRAM MAIN
    Integer(IntKi)                     :: temp_count
    INTEGER(IntKi),PARAMETER:: QiHUnit = 30
    INTEGER(IntKi),PARAMETER:: LoadUnit = 40
-   INTEGER(IntKi),PARAMETER:: SIZ = 2501
+   INTEGER(IntKi),PARAMETER:: SIZ = 200001
    REAL(ReKi):: InputLoad(SIZ,2)
 
 
@@ -110,7 +110,7 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 40.0D-03
+   dt_global = 5.0D-04
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -144,10 +144,10 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
     DO i=1,SIZ
         READ(LoadUnit,*) InputLoad(i,1),InputLoad(i,2)
         InputLoad(i,2) = InputLoad(i,2)*5.0D+04
-        DO j=1,79
-            IF( i == SIZ) EXIT
-            READ(LoadUnit,*) temp1,temp2
-        ENDDO
+!        DO j=1,9
+!            IF( i == SIZ) EXIT
+!            READ(LoadUnit,*) temp1,temp2
+!        ENDDO
 !WRITE(*,*) InputLoad(i,:)
     ENDDO
     CLOSE (LoadUnit)
