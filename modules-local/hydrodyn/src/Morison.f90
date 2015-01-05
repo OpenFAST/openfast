@@ -3399,7 +3399,7 @@ SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWav
    
    ALLOCATE ( D_F_I( 0:NStepWave, 6, numDistribMarkers ), STAT = ErrStat )
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Error allocating space for the distributed intertial forces/moments array.'
+      ErrMsg  = ' Error allocating space for the distributed inertial forces/moments array.'
       ErrStat = ErrID_Fatal
       RETURN
    END IF
