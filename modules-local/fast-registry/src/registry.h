@@ -57,3 +57,7 @@ enum proc_orient     { ALL_Z_ON_PROC , ALL_X_ON_PROC , ALL_Y_ON_PROC } ;
 #define REGISTRY_H
 #endif
 
+#ifdef WIN32
+#define snprintf _snprintf
+#endif
+
