@@ -54,7 +54,7 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
-   thisprog_ver = "FAST Registry (v2.04.01, 8-Dec-2014)";
+   thisprog_ver = "FAST Registry (v2.05.00, 8-Jan-2015)";
 
   fprintf(stderr,"\n") ;
   fprintf(stderr,"----- %s --------------\n", thisprog_ver) ;
