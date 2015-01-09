@@ -12,6 +12,8 @@ typedef struct node_struct {
   struct node_struct  * params ;
   struct node_struct  * type ;
   struct node_struct  * module ;  /* type node pointer back to module node it is defined in */
+  int    max_ndims;    // max number of dimensions (so we don't have hundreds of unused variables that produce warnings)
+  int    containsPtr;  // if contains a pointer in type/subtype
   int           ndims ;
   struct node_struct  * dims[MAXDIMS] ;
   int     proc_orient ;    /* ALL_[ZXY]_ON_PROC which dimension is all on processor */
@@ -54,6 +56,9 @@ typedef struct node_struct {
   char assoc_nl_var_e[NAMELEN] ;  /* for NAMELIST */
   int  coord_start ;               /* for CONSTANT */
   int  coord_end ;                 /* for CONSTANT */
+  int  dim_param;                  /* for using PARAMETER dimension */
+  char dim_param_name[NAMELEN];    /* for using PARAMETER dimension */
+
   int  dim_order ;                 /* order that dimensions are specified
                                       in framework */
   int  subgrid ;                  /* 1=subgrid dimension */

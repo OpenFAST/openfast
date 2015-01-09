@@ -582,10 +582,17 @@ set_dim_len ( char * dimspec , node_t * dim_entry )
     }
     dim_entry->len_defined_how = NAMELIST ;
   }
-  else
+  else /* if (param_dim != NULL) */ {
+     dim_entry->coord_start = 1;
+     dim_entry->len_defined_how = CONSTANT;
+     strcpy(dim_entry->dim_param_name, dimspec);
+     dim_entry->dim_param = 1;
+  }
+/*    else
   {
     return(1) ;
   }
+*/
   return(0) ;
 }
 
