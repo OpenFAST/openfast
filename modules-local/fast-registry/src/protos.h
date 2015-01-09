@@ -93,6 +93,7 @@ void remove_nickname( const char *nickname, char *src, char *dst );
 void append_nickname( const char *nickname, char *src, char *dst );
 char * dimstr_c( int d );
 void checkOnlyReals( const char *q_mapsto, node_t * q);
+void checkContainsMesh(node_t * q);
 
 int gen_scalar_indices ( char * dirname ) ;
 int gen_scalar_indices1 ( FILE * fp, FILE ** fp2 ) ;

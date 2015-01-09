@@ -286,24 +286,27 @@ fprintf(stderr,"> %s\n",r->type->name,r->type->mapsto) ;
 }
 
 int
-gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
+gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, const node_t * q_in )
 {
   char tmp[NAMELEN], tmp2[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
   int d ;
+  int arySize;
 
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
   fprintf(fp," SUBROUTINE %s_Copy%s( Src%sData, Dst%sData, CtrlCode, ErrStat, ErrMsg )\n",ModName->nickname,nonick,nonick,nonick ) ;
-  fprintf(fp,"   TYPE(%s), INTENT(INOUT) :: Src%sData\n",addnick,nonick) ;
+  fprintf(fp, "   TYPE(%s), INTENT(%s) :: Src%sData\n", addnick, (q_in->containsPtr == 1) ? "INOUT" : "IN", nonick);
+//fprintf(fp, "   TYPE(%s), INTENT(INOUT) :: Src%sData\n", addnick, nonick);
   fprintf(fp,"   TYPE(%s), INTENT(INOUT) :: Dst%sData\n",addnick,nonick) ;
   fprintf(fp,"   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode\n") ;
   fprintf(fp,"   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp,"   CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp,"! Local \n") ;
-  fprintf(fp,"   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k\n") ;
-  fprintf(fp,"   INTEGER(IntKi)                 :: i1_l,i2_l,i3_l,i4_l,i5_l  ! lower bounds for an array dimension\n") ;
-  fprintf(fp,"   INTEGER(IntKi)                 :: i1_u,i2_u,i3_u,i4_u,i5_u  ! upper bounds for an array dimension\n") ;
+  fprintf(fp,"   INTEGER(IntKi)                 :: i,j,k\n") ;
+  for (d = 1; d <= ModName->module_ddt_list->max_ndims; d++){
+  fprintf(fp, "   INTEGER(IntKi)                 :: i%d, i%d_l, i%d_u  !  bounds (upper/lower) for an array dimension %d\n", d, d, d, d);
+  }
   fprintf(fp,"   INTEGER(IntKi)                 :: ErrStat2\n") ;
   fprintf(fp,"   CHARACTER(1024)                :: ErrMsg2\n") ;
   fprintf(fp,"! \n") ;
@@ -330,6 +333,7 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
            if ( sw_norealloc_lsh ) {
              char tmp2[14] ;
              strcpy(tmp,"") ;
+             arySize = 0;
              for ( d = 1 ; d <= r->ndims ; d++ ) {
   fprintf(fp,"   i%d_l = LBOUND(Src%sData%%%s,%d)\n",d,nonick,r->name,d) ;
   fprintf(fp,"   i%d_u = UBOUND(Src%sData%%%s,%d)\n",d,nonick,r->name,d) ;
@@ -343,6 +347,12 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"         CALL SetErrStat(ErrID_Fatal, 'Error allocating Dst%sData%%%s.', ErrStat, ErrMsg,'%s_Copy%s')\n",nonick,r->name,ModName->nickname,nonick);
   fprintf(fp,"         RETURN\n") ;
   fprintf(fp,"      END IF\n") ;
+
+        if ( sw_ccode && is_pointer(r) ) { // bjj: this needs to be updated if we've got multiple dimension arrays
+  fprintf(fp,"      Dst%sData%%c_obj%%%s_Len = SIZE(Dst%sData%%%s)\n",nonick,r->name,nonick,r->name) ; 
+//  fprintf(fp,"      CALL C_F_POINTER( Dst%sData%%c_obj%%%s, Dst%sData%%%s, (/ Dst%sData%%c_obj%%%s_Len /) ) \n",nonick,r->name, nonick,r->name, nonick,r->name ) ;
+  fprintf(fp,"      Dst%sData%%c_obj%%%s = C_LOC( Dst%sData%%%s ) \n",nonick,r->name, nonick,r->name ) ;           
+        }
   fprintf(fp,"   END IF\n") ;
            }
         }
@@ -1171,9 +1181,6 @@ fprintf(fp,"  DO i%d%d = LBOUND(u_out%s,%d),UBOUND(u_out%s,%d)\n",recurselevel,j
   fprintf(fp,"   ENDDO\n") ;
           }
 
-
-
-
        }
      } else if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
                  !strcmp( r->type->mapsto, "REAL(SiKi)") ||
@@ -1232,13 +1239,61 @@ fprintf(fp,"  DO i%d%d = LBOUND(u_out%s,%d),UBOUND(u_out%s,%d)\n",recurselevel,j
    }
 }
 
+void calc_extint_order(FILE *fp, const node_t *ModName, node_t *r, int recurselevel, int *max_ndims, int *max_nrecurs, int *max_alloc_ndims) {
+   node_t *q, *r1 ;
+   int j;
+// bjj: make sure this is consistent with logic of gen_extint_order
+
+   if ( r->type != NULL ) {
+   //   if(r->ndims > *max_ndims  )* max_ndims = r->ndims;
+
+      if (r->type->type_type == DERIVED) {
+         if ((q = get_entry(make_lower_temp(r->type->name), ModName->module_ddt_list)) != NULL) {
+            for (r1 = q->fields; r1; r1 = r1->next)
+            {
+               if (r->ndims > 0) {
+                  if (recurselevel > *max_nrecurs) *max_nrecurs = recurselevel;
+                  if (r->ndims     > *max_ndims  ) *max_ndims   = r->ndims;
+               }
+               calc_extint_order(fp, ModName, r1, recurselevel + 1, max_ndims, max_nrecurs, max_alloc_ndims);
+            }
+         } 
+         else if (!strcmp(r->type->mapsto, "MeshType")) {
+            if (r->ndims > 0) {
+               if (r->ndims > *max_ndims)* max_ndims = r->ndims;
+            }
+         }
+         else {
+            if (r->ndims >= 1) {
+               if (r->ndims > *max_ndims)* max_ndims = r->ndims;
+            }
+         }
+
+      }
+      else if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
+         !strcmp(r->type->mapsto, "REAL(SiKi)") ||
+         !strcmp(r->type->mapsto, "REAL(DbKi)")) {
+         if (/*order > 0 &&*/ r->ndims > *max_alloc_ndims) *max_alloc_ndims = r->ndims;
+      }
+
+
+   }
+
+   if ( recurselevel > MAXRECURSE ) {
+     fprintf(stderr,"REGISTRY ERROR: too many levels of array subtypes\n") ;
+     exit(9) ;
+   }
+
+}
+
+
 void
 gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnmlong )
 {
   char tmp[NAMELEN], addnick[NAMELEN],  nonick[NAMELEN] ;
   char *ddtname ;
   node_t *q, * r ;
-  int founddt, k, i, j ;
+  int founddt, k, i, j, max_ndims, max_nrecurs, max_alloc_ndims;
 
   fprintf(fp,"\n") ;
   fprintf(fp," SUBROUTINE %s_%s_ExtrapInterp(u, tin, u_out, tin_out, ErrStat, ErrMsg )\n",ModName->nickname,typnm) ;
@@ -1258,6 +1313,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp,"!..................................................................................................................................\n") ;
   fprintf(fp,"\n") ;
 
+  
   fprintf(fp," TYPE(%s_%s), INTENT(INOUT)  :: u(:)      ! Inputs at t1 > t2 > t3\n",ModName->nickname,typnmlong) ;
   fprintf(fp," REAL(DbKi),         INTENT(IN   )  :: tin(:)      ! Times associated with the inputs\n") ;
 //jm Modified from INTENT(  OUT) to INTENT(INOUT) to prevent ALLOCATABLE array arguments in the DDT
@@ -1271,22 +1327,54 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp," REAL(DbKi) :: t_out           ! Time to which to be extrap/interpd\n") ;
   fprintf(fp," INTEGER(IntKi)                 :: order    ! order of polynomial fit (max 2)\n") ;
 
+  max_ndims   = 0; // ModName->module_ddt_list->max_ndims; //bjj: this is max for module, not for typnmlong
+  max_nrecurs = 0; // MAXRECURSE;
+  max_alloc_ndims = 0;
+
+  for (q = ModName->module_ddt_list; q; q = q->next)
+  {
+     if (q->usefrom == 0) {
+        ddtname = q->name;
+        remove_nickname(ModName->nickname, ddtname, nonick);
+        if (!strcmp(nonick, typnmlong)) {
+           for (r = q->fields; r; r = r->next)
+           {
+              // recursive
+              calc_extint_order(fp, ModName, r, 0, &max_ndims, &max_nrecurs, &max_alloc_ndims);
+           }
+        }
+     }
+  }
+  //fprintf(stderr, "ndims=%d nrecurs=%d %d\n\n", max_ndims, max_nrecurs, max_alloc_ndims);
+
+  if (max_alloc_ndims >= 0){
   fprintf(fp," REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation\n") ;
+  if (max_alloc_ndims >= 1){
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation\n") ;
+  if (max_alloc_ndims >= 2){
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: b2       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: c2       ! temporary for extrapolation/interpolation\n") ;
+  if (max_alloc_ndims >= 3){
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: b3       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: c3       ! temporary for extrapolation/interpolation\n") ;
+  if (max_alloc_ndims >= 4){
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: b4       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: c4       ! temporary for extrapolation/interpolation\n") ;
+  if (max_alloc_ndims >= 5){
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: b5       ! temporary for extrapolation/interpolation\n") ;
   fprintf(fp," REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: c5       ! temporary for extrapolation/interpolation\n") ;
+   } // 5
+   } // 4
+   } // 3
+   } // 2
+   } // 1
+  } // 0
   fprintf(fp," INTEGER(IntKi)                             :: ErrStat2 ! local errors\n");
   fprintf(fp," CHARACTER(1024)                            :: ErrMsg2  ! local errors\n");
-  for ( j = 1 ; j <= 5 ; j++ ) {
-    for ( i = 0 ; i <= MAXRECURSE ; i++ ) {
+  for ( j = 1 ; j <= max_ndims ; j++ ) {
+    for ( i = 0 ; i <= max_nrecurs ; i++ ) {
   fprintf(fp," INTEGER                                    :: i%d%d    ! dim%d level %d counter variable for arrays of ddts\n",i,j,j,i) ;
     }
   }
@@ -1803,17 +1891,24 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
       fprintf(fp,"\n") ;
     }
 
-// generate each derived data type
+// generate each derived data type   
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
       if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , nonick ) ;
-      fprintf(fp,"! =========  %s%s  =======\n",q->mapsto,(ipass==0)?"_C":"") ;
+      fprintf(fp, "! =========  %s%s  =======\n", q->mapsto, (sw_ccode) ? "_C" : "");
     for ( ipass = (sw_ccode)?0:1 ; ipass < 2 ; ipass++ ) {   // 2 passes for C code, 1st pass generates bound ddt
       if ( q->usefrom == 0 ) {
         fprintf(fp,"  TYPE, %s :: %s%s\n",(ipass==0)?"BIND(C)":"PUBLIC",q->mapsto,(ipass==0)?"_C":"") ;
         if ( sw_ccode ) {
           if ( ipass == 0 ) {
+//            q->containsPtr = 1;
+//            if (strcmp(fast_interface_type_shortname(nonick), "OtherState" )==0 || 
+//                strcmp(fast_interface_type_shortname(nonick), "InitInput" )==0) {
+//              /* @mdm */
             fprintf(fp,"    TYPE( %s_%s_C ) :: object\n",ModName->nickname,fast_interface_type_shortname(nonick)) ;
+//          } else {
+//              fprintf(fp,"   TYPE(C_PTR) :: object\n") ;
+//            };
           } else {
             fprintf(fp,"    TYPE( c_ptr ) :: %s_UserData = C_NULL_ptr\n",ModName->nickname) ;
             fprintf(fp,"    TYPE( %s_C ) :: C_obj\n",q->mapsto) ;
@@ -1822,7 +1917,13 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
         for ( r = q->fields ; r ; r = r->next )
         {
           if ( r->type != NULL ) {
+              // check max number of dimmensions
+              // check if this type contains any pointers/meshes or types that have pointers/meshes
+              if (r->ndims > q->max_ndims) q->max_ndims = r->ndims;
+              if (r->ndims > ModName->module_ddt_list->max_ndims) ModName->module_ddt_list->max_ndims = r->ndims;
            if ( ipass == 0 ) {
+              //r->containsPtr = 1;
+              //q->containsPtr = 1;
               if        ( r->ndims == 0 && r->type->type_type != DERIVED ) {
                 fprintf(fp,"    %s :: %s \n",c_types_binding( r->type->mapsto), r->name) ;
               } else if ( r->ndims >  0 && r->type->type_type != DERIVED ) {
@@ -1843,15 +1944,18 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
             if ( r->type->type_type == DERIVED ) {
                fprintf(fp,"    TYPE(%s) ",r->type->mapsto ) ;
 
+               checkContainsMesh(r);
+               if (r->containsPtr) q->containsPtr = 1;
+
                // bjj: we need to make sure these types map to reals, too
                tmp[0] = '\0' ;
-               if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
+               if ( q->mapsto ) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
                if ( must_have_real_or_double(tmp) ) checkOnlyReals( q->mapsto, r );
 
 
             } else {
               tmp[0] = '\0' ;
-              if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
+              if ( q->mapsto ) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
               if ( must_have_real_or_double(tmp) ) {
                 if ( strncmp(r->type->mapsto,"REAL",4) ) {
                   fprintf(stderr,"Registry warning: %s contains a field (%s) whose type is not real or double: %s\n",
@@ -1886,7 +1990,15 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
                   fprintf(fp,", DIMENSION(") ;
                   for ( i = 0 ; i < r->ndims ; i++ )
                   {
-                    fprintf(fp,"%d:%d",r->dims[i]->coord_start,r->dims[i]->coord_end) ;
+                     if (r->dims[i]->dim_param == 0){
+                        fprintf(fp, "%d:%d", r->dims[i]->coord_start, r->dims[i]->coord_end) ;
+                     }
+                     else {
+                        //fprintf(stderr, "start, %s, %s, %s\n", dimspec, dim_entry->name, dim_entry->module);
+                       // if (r->module != NULL) { node_t *param_dim = get_entry(r->dims[i]->dim_param_name, r->module->params); }
+
+                        fprintf(fp, "%s", r->dims[i]->dim_param_name);
+                     }
                     if ( i < r->ndims-1 ) fprintf(fp,",") ;
                   }
                   fprintf(fp,") ") ;
@@ -1906,13 +2018,12 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
                fprintf(fp,"     ! %s [%s]", r->descrip, r->units) ;
             }
             fprintf(fp,"\n") ;
-           }
+           } // ipass /= 0
           }
         }
         fprintf(fp,"  END TYPE %s%s\n",q->mapsto,(ipass==0)?"_C":"") ;
-        if ( sw_ccode == 1 ) {
+        //fprintf(stderr, "module %d type %d\n", ModName->module_ddt_list->max_ndims, q->max_ndims);
 
-        }
       }
   }
       fprintf(fp,"! =======================\n") ;
@@ -1968,7 +2079,7 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver, FILE * fpIntf )
           gen_copy_f2c_c2f( fp, ModName, ddtname, ddtnamelong, 0 ) ;
           gen_copy_f2c_c2f( fp, ModName, ddtname, ddtnamelong, 1 ) ;
         }
-        gen_copy( fp, ModName, ddtname, ddtnamelong ) ;
+        gen_copy( fp, ModName, ddtname, ddtnamelong , q) ;
         gen_destroy( fp, ModName, ddtname, ddtnamelong ) ;
         gen_pack( fp, ModName, ddtname, ddtnamelong ) ;
         gen_unpack( fp, ModName, ddtname, ddtnamelong ) ;
@@ -2174,4 +2285,27 @@ checkOnlyReals( const char *q_mapsto, node_t * q) //, int recurselevel)
 
   }
   return;
+}
+
+void
+checkContainsMesh( node_t * q) //, int recurselevel)
+{
+   node_t * r;
+
+   if (q->type->type_type == DERIVED)
+   {
+      if (!strcmp(q->type->name, "meshtype")){ // is a mesh
+         q->containsPtr = 1;
+      } 
+      else {
+         for (r = q->type->fields; r; r = r->next)
+         {
+            checkContainsMesh(r);
+            if (r->containsPtr) q->containsPtr = 1;
+         }
+      } 
+
+   }
+
+   return;
 }
