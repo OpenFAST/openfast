@@ -81,7 +81,8 @@ typedef  ^                       ^                 CHARACTER(10)     OutList    
 
 typedef  ^                       InitInputType     CHARACTER(1024)   InputFileName     -     -     -     "Name of the InflowWind input file to use"                                    -
 typedef  ^                       ^                 DbKi              DT                -     -     -     "Time step.  Supplied by driver"                                              seconds
-typedef  ^                       ^                 ReKi              ReferenceHeight   -     -     -     "Hub height of the turbine"                                                   meters
+#Is ReferenceHeight needed?  Possibly as a check on the wind data.
+typedef  ^                       ^                 ReKi              TurbineHeight     -     -     -     "Hub height of the turbine"                                                   meters
 typedef  ^                       ^                 ReKi              Width             -     -     -     "Width of the wind field to use"                                              meters
 typedef  ^                       ^                 LOGICAL           UseInputFile      -  .TRUE.   -     "Should we read everthing from an input file, or do we get it some other way" -
 typedef  ^                       ^              InflowWind_InputFile PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -

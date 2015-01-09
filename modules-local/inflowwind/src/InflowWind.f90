@@ -166,8 +166,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          ! Set a few variables.
 
       ParamData%DT            = TimeInterval             ! InflowWind does not require a specific time interval, so this is never changed.
-      CALL NWTC_Init()                                   ! This might not be needed
-      CALL DispNVD( IfW_Ver )                            ! This might be changed later
+      CALL NWTC_Init()
+      CALL DispNVD( IfW_Ver )
 
 
 
@@ -233,6 +233,9 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          RETURN
       ENDIF
 
+
+!FIXME:
+!  Setup the data arrays for passing the wind point array in and the velocity array out.  Add a value to the InitInput_Type for NumPoints.  If already allocated, then skip this step.
 
 
       !-----------------------------------------------------------------
@@ -533,6 +536,10 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
       CHARACTER(LEN(ErrMsg))                                   :: TmpErrMsg            ! temporary error message
 
 !FIXME/TODO:  Need to add the wrapping layer for the Coordinate tranformations.  When this is added, the UniformWind will need to be modified so that a warning is given when the global PropogationDir and the wind-direction within the file are both non-zero.
+
+
+
+!FIXME: add a check that the size of the input points array and the output velocity arrays are the same.
 
          ! Initialize ErrStat
       ErrStat  = ErrID_None
@@ -1834,7 +1841,7 @@ SUBROUTINE InflowWind_ValidateInput( InputFileData, ErrStat, ErrMsg )
 
 CONTAINS
 
-   !> This subroutine checks that the values for the steady wind make sense.  There aren't many to check. 
+   !> This subroutine checks that the values for the steady wind make sense.  There aren't many to check.
    SUBROUTINE Steady_ValidateInput()
 
          ! Check that HWindSpeed is positive
@@ -1887,7 +1894,7 @@ CONTAINS
 
    !> There isn't much to check for the TurbSim full-field section of the input file.
    SUBROUTINE TSFF_ValidateInput()
- 
+
          ! Local variables
       LOGICAL                                         :: TmpFileExist
 
@@ -1906,7 +1913,7 @@ CONTAINS
 
    !> We will only check the main bladed input file here.  We will check the existance of the towerfile (if requested) in the SetParameters routine.
    SUBROUTINE BladedFF_ValidateInput()
- 
+
          ! Local variables
       LOGICAL                                         :: TmpFileExist
 
@@ -1950,7 +1957,7 @@ CONTAINS
       ENDIF
 
          ! Check that the CT Event path exists.
-      ! Unfortunately there is no good portable method to do this, so we won't try. 
+      ! Unfortunately there is no good portable method to do this, so we won't try.
 !FIXME: See if we have anything in the library.  -- Nothing I found...
 
       RETURN

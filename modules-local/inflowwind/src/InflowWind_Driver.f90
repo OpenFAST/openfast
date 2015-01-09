@@ -31,7 +31,6 @@ PROGRAM InflowWind_Driver
 
 !   USE NWTC_Library       !NOTE: Not sure why this doesn't need to be specified
    USE InflowWind
-!   USE InflowWind_Module_Types
    USE InflowWind_Types
    USE InflowWind_Driver_Types    ! Contains types and routines for handling the input arguments
    USE InflowWind_Driver_Subs     ! Contains subroutines for the driver program
@@ -39,7 +38,7 @@ PROGRAM InflowWind_Driver
    IMPLICIT NONE
 
       ! Info on this code
-   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("InflowWind_Driver","v1.00.00b-adp","03-Oct-2013")
+   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("InflowWind_Driver","v1.01.00a-adp","22-Dec-2014")
 
 
       ! Types needed here (from InflowWind module)
@@ -55,42 +54,42 @@ PROGRAM InflowWind_Driver
 
 
       ! Local variables for this code
-   TYPE( InflowWind_Driver_ArgFlags )                 :: SettingsFlags           ! Flags indicating which arguments were specified
-   TYPE( InflowWind_Driver_Args )                     :: Settings                ! Arguments passed in
-   REAL( DbKi )                                       :: TimeStepSize            ! Initial timestep (the glue code dictates this)
+   TYPE( IfWDriver_Flags )                            :: CLSettingsFlags         ! Flags indicating which command line arguments were specified
+   TYPE( IfWDriver_Settings )                         :: CLSettings              ! Command line arguments passed in
+   TYPE( IfWDriver_Flags )                            :: SettingsFlags           ! Flags indicating which settings were specified (includes CL and ipt file)
+   TYPE( IfWDriver_Settings )                         :: Settings                ! Driver settings
    REAL( DbKi )                                       :: Timer(1:2)              ! Keep track of how long this takes to run
    REAL( DbKi )                                       :: TimeNow                 ! The current time
-   INTEGER( IntKi )                                   :: InputArgs               ! Number of arguments passed in
+   REAL( DbKI )                                       :: DT                      ! Timestep
    INTEGER( IntKi )                                   :: NumTotalPoints          ! Number of points for this iteration
    LOGICAL                                            :: TempFileExist           ! Flag for inquiring file existence
 
 
-      ! Local steps required
-   INTEGER( IntKi )                                   :: NumXSteps               ! Number of dimension-X steps
-   INTEGER( IntKi )                                   :: NumYSteps               ! Number of dimension-Y steps
-   INTEGER( IntKi )                                   :: NumZSteps               ! Number of dimension-Z steps
-   INTEGER( IntKi )                                   :: NumTSteps               ! Number of time steps
+!      ! Local steps required
+!   INTEGER( IntKi )                                   :: NumXSteps               ! Number of dimension-X steps
+!   INTEGER( IntKi )                                   :: NumYSteps               ! Number of dimension-Y steps
+!   INTEGER( IntKi )                                   :: NumZSteps               ! Number of dimension-Z steps
+!   INTEGER( IntKi )                                   :: NumTSteps               ! Number of time steps
 
 
-      ! Local loop Counters
-   INTEGER( IntKi )                                   :: XStep                   ! Current dimension-X step
-   INTEGER( IntKi )                                   :: YStep                   ! Current dimension-Y step
-   INTEGER( IntKi )                                   :: ZStep                   ! Current dimension-Z step
-   INTEGER( IntKi )                                   :: TStep                   ! Current Time step
+!      ! Local loop Counters
+!   INTEGER( IntKi )                                   :: XStep                   ! Current dimension-X step
+!   INTEGER( IntKi )                                   :: YStep                   ! Current dimension-Y step
+!   INTEGER( IntKi )                                   :: ZStep                   ! Current dimension-Z step
+!   INTEGER( IntKi )                                   :: TStep                   ! Current Time step
 
 
       ! Local file unit numbers
    INTEGER( IntKi )                                   :: FiUnitPoints            ! File unit for points file
-   INTEGER( IntKi )                                   :: FiUnitParaview          ! FIle unit for output Paraview output
 
 
       ! Local variables for storing the arrays
    REAL(ReKi),ALLOCATABLE                             :: Position(:,:)           ! Array used to move position info to the module
    REAL(ReKi),ALLOCATABLE                             :: Velocity(:,:)           ! Array used to move velocity info from the module
-   REAL(ReKi),ALLOCATABLE                             :: PositionTimeStep(:,:,:,:)     ! 4D array for position info in a timestep  (xyz
-   REAL(ReKi),ALLOCATABLE                             :: VelocityTimeStep(:,:,:,:)     ! 4D array for velocity info in a timestep
-   REAL(ReKi),ALLOCATABLE                             :: PositionFullset(:,:,:,:,:)    ! 5D array for position info in all timesteps
-   REAL(ReKi),ALLOCATABLE                             :: VelocityFullset(:,:,:,:,:)    ! 5D array for velocity info in all timesteps
+!   REAL(ReKi),ALLOCATABLE                             :: PositionTimeStep(:,:,:,:)     ! 4D array for position info in a timestep  (xyzt)
+!   REAL(ReKi),ALLOCATABLE                             :: VelocityTimeStep(:,:,:,:)     ! 4D array for velocity info in a timestep
+!   REAL(ReKi),ALLOCATABLE                             :: PositionFullset(:,:,:,:,:)    ! 5D array for position info in all timesteps
+!   REAL(ReKi),ALLOCATABLE                             :: VelocityFullset(:,:,:,:,:)    ! 5D array for velocity info in all timesteps
 
 
       ! Temporary variables
@@ -108,26 +107,27 @@ PROGRAM InflowWind_Driver
    CALL NWTC_Init
    CALL DispNVD(ProgInfo)
 
-
 !FIXME
       ! Set the beep to false. This is a temporary workaround since the beepcode on linux may be incorrectly set. This may also be an artifact of my current development environment.
 !   Beep = .FALSE.
 
+
+
       ! Just in case we end up reading a wind file that has no ranges (steady wind for example)
-   NumXSteps = 0
-   NumYSteps = 0
-   NumZSteps = 0
-   NumTSteps = 0
+!   NumXSteps = 0
+!   NumYSteps = 0
+!   NumZSteps = 0
+!   NumTSteps = 0
 
-   Settings%XRes  = 0.0
-   Settings%YRes  = 0.0
-   Settings%ZRes  = 0.0
-   Settings%TRes  = 0.0
+!   Settings%XRes  = 0.0
+!   Settings%YRes  = 0.0
+!   Settings%ZRes  = 0.0
+!   Settings%TRes  = 0.0
 
-   Settings%XRange   = [0,0]
-   Settings%YRange   = [0,0]
-   Settings%ZRange   = [0,0]
-   Settings%TRange   = [0,0]
+!   Settings%XRange   = [0,0]
+!   Settings%YRange   = [0,0]
+!   Settings%ZRange   = [0,0]
+!   Settings%TRange   = [0,0]
 
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Setup the program -=-=-
@@ -137,58 +137,148 @@ PROGRAM InflowWind_Driver
    CALL CPU_TIME( Timer(1) )
 
 
+      ! Set some CLSettings to null/default values
+   CLSettings%DvrIptFileName           =  ""             ! No input name name until set
+   CLSettings%IfWIptFileName           =  ""             ! No IfW input file name until set
+   CLSettings%SummaryFileName          =  ""             ! No summary file name until set
+   CLSettings%NumTimeSteps             =  0_IntKi
+   CLSettings%DT                       =  0.0_DbKi
+   CLSettings%TStart                   =  0.0_ReKi
+   CLSettings%TurbineHeight            =  0.0_ReKi       ! TODO: check the flag later.  If not specified on command line arg and no input file, warn.
+   CLSettings%Width                    =  0.0_ReKi       ! Will allow a value of zero
+   CLSettings%FFTcoord                 =  0.0_ReKi       ! Set to origin
+   CLSettings%GridDelta                =  0.0_ReKi       ! No stepsize
+   CLSettings%GridN                    =  0_IntKi        ! No grid points to calculate
+   CLSettings%XRange                   =  0.0_ReKi       ! No xrange points
+   CLSettings%YRange                   =  0.0_ReKi       ! No Yrange points
+   CLSettings%ZRange                   =  0.0_ReKi       ! No Zrange points
+   CLSettings%PointsFileName           =  ""             ! No points file name until set
+
+      ! Set some CLSettingsFlags to null/default values
+   CLSettingsFlags%DvrIptFile          =  .FALSE.        ! Driver     input filename given as command line argument
+   CLSettingsFlags%IfWIptFile          =  .FALSE.        ! InflowWind input filename given as command line argument
+   CLSettingsFlags%Summary             =  .FALSE.        ! create a summary at command line? (data extents in the wind file)
+   CLSettingsFlags%SummaryFile         =  .FALSE.        ! create a summary file of the output?
+   CLSettingsFlags%TStart              =  .FALSE.        ! specified time to start at
+   CLSettingsFlags%NumTimeSteps        =  .FALSE.        ! specified a number of timesteps
+   CLSettingsFlags%NumTimeStepsDefault =  .FALSE.        ! specified 'DEFAULT' for number of timesteps
+   CLSettingsFlags%DT                  =  .FALSE.        ! specified a resolution in time
+   CLSettingsFlags%DTDefault           =  .FALSE.        ! specified 'DEFAULT' for resolution in time
+   CLSettingsFlags%TurbineHeight       =  .FALSE.        ! specified a turbine height
+   CLSettingsFlags%Width               =  .FALSE.        ! specified a width
+   CLSettingsFlags%FFTcalc             =  .FALSE.        ! do an FFT
+   CLSettingsFlags%WindGrid            =  .FALSE.        ! Requested output of wind data on a grid -- input file option only
+   CLSettingsFlags%XRange              =  .FALSE.        ! specified a range of x      -- command line option only -- stored as GridCtrCoord and GridDelta
+   CLSettingsFlags%YRange              =  .FALSE.        ! specified a range of y      -- command line option only -- stored as GridCtrCoord and GridDelta
+   CLSettingsFlags%ZRange              =  .FALSE.        ! specified a range of z      -- command line option only -- stored as GridCtrCoord and GridDelta
+   CLSettingsFlags%Dx                  =  .FALSE.        ! specified a resolution in x -- command line option only, 0.0 otherwise
+   CLSettingsFlags%Dy                  =  .FALSE.        ! speficied a resolution in y
+   CLSettingsFlags%Dz                  =  .FALSE.        ! specified a resolution in z
+   CLSettingsFlags%PointsFile          =  .FALSE.        ! points filename to read in  -- command line option only
+ 
+
+      ! Initialize the driver settings to their default values (same as the CL -- command line -- values)
+   Settings       =  CLSettings
+   SettingsFlags  =  CLSettingsFlags
+   
 
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Parse the command line inputs -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
-
-   CALL RetrieveArgs( Settings, SettingsFlags, ErrStat, ErrMsg )
+   CALL RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL ProgAbort( ErrMsg )
    ELSEIF ( ErrStat /= 0 ) THEN
-      CALL ProgWarn( ErrMsg )
+      CALL ProgWarn( NewLine//ErrMsg )
+      ErrStat  =  ErrID_None
    ENDIF
 
 
-      ! Set the input file name and verify it exists
+   print*,'--- Settings from the command line: ---'
+   CALL printSettings( CLSettingsFlags, CLSettings )
+   print*,NewLine
 
-   InflowWind_InitInputData%InputFileName      = Settings%InputFileName
-
-   INQUIRE( file=Settings%InputFileName, exist=TempFileExist )
-   IF ( TempFileExist .eqv. .FALSE. ) CALL ProgAbort( "Cannot find InflowWind input file "//TRIM(Settings%InputFileName))
-
-
-      ! In the event things are not specified on the input line, use the following
-
-   InflowWind_InitInputData%ReferenceHeight   = 80.                      ! meters  -- default
-   InflowWind_InitInputData%Width             = 100.                     ! meters
-   TimeStepSize                        = 10                       !seconds
+   print*,'--- Driver settings (before reading driver ipt file): ---'
+   CALL printSettings( SettingsFlags, Settings )
+   print*,NewLine
 
 
 
-      ! If they are specified by input arguments, use the following
 
-   IF ( SettingsFlags%Height )         InflowWind_InitInputData%ReferenceHeight = Settings%Height
-   IF ( SettingsFlags%Width )          InflowWind_InitInputData%Width           = Settings%Width
-   IF ( SettingsFlags%TRes )           TimeStepSize                      = Settings%Tres
+      ! Copy the input file information from the CLSettings to the Settings.
+      ! At this point only one input file type can be set.
+   IF ( CLSettingsFlags%DvrIptFile ) THEN
+      SettingsFlags%DvrIptFile   =  CLSettingsFlags%DvrIptFile
+      Settings%DvrIptFileName    =  CLSettings%DvrIptFileName
+   ELSE
+      SettingsFlags%IfWIptFile   =  CLSettingsFlags%IfWIptFile
+      Settings%IfWIptFileName    =  CLSettings%IfWIptFileName
+   ENDIF
+      
+   
+      ! If the filename given was not the IfW input file (-ifw option), then it is treated
+      ! as the driver input file (flag should be set correctly by RetrieveArgs).  So, we must
+      ! open this.
+   IF ( SettingsFlags%DvrIptFile ) THEN
 
-
-
-      ! Sanity check: if an input points file is specified, make sure it actually exists. Open it if specified
-
-   IF ( SettingsFlags%PointsFile ) THEN
-      INQUIRE( file=Settings%PointsFileName, exist=TempFileExist )
-      IF ( TempFileExist .eqv. .FALSE. ) CALL ProgAbort( "Cannot find the points file "//TRIM(Settings%PointsFileName))
-
-         ! Now open file
-      CALL GetNewUnit(    FiUnitPoints )
-      CALL OpenUInfile(   FiUnitPoints,  Settings%PointsFileName, ErrStat, ErrMsg )   ! Unformatted input file
+         ! Read the driver input file
+      CALL ReadDvrIptFile( CLSettings%DvrIptFileName, SettingsFlags, Settings, ProgInfo, ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL ProgAbort( ErrMsg )
       ELSEIF ( ErrStat /= 0 ) THEN
-         CALL ProgWarn( ErrMsg )
+         CALL ProgWarn( NewLine//ErrMsg )
+         ErrStat  =  ErrID_None
       ENDIF
-   ENDIF
+
+      print*,NewLine//'--- Driver settings after reading the driver ipt file: ---'
+      CALL printSettings( SettingsFlags, Settings )
+      print*,NewLine
+
+
+         ! Now that we have read in the driver input settings, we need to override these with any
+         ! values from the command line arguments
+      CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, .TRUE., ErrStat, ErrMsg )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL ProgAbort( ErrMsg )
+      ELSEIF ( ErrStat /= 0 ) THEN
+         CALL ProgWarn( NewLine//ErrMsg )
+         ErrStat  =  ErrID_None
+      ENDIF
+
+      print*,NewLine//'--- Driver settings after copying over CL settings: ---'
+      CALL printSettings( SettingsFlags, Settings )
+      print*,NewLine
+
+
+   ELSE
+         ! Since there were no settings picked up from the driver input file, we need to copy over all
+         ! the CLSettings into the regular Settings
+!FIXME:  Copy over the settings from CL to regular.  Make up the necessary bits as we need to.
+
+
+   ENDIF      
+
+
+!FIXME: add short summary output about what WindGrid data was requested.
+
+
+
+!FIXME: read in the points file information.  Will need to store this someplace.
+      ! Sanity check: if an input points file is specified, make sure it actually exists. Open it if specified
+
+!   IF ( SettingsFlags%PointsFile ) THEN
+!      INQUIRE( file=Settings%PointsFileName, exist=TempFileExist )
+!      IF ( TempFileExist .eqv. .FALSE. ) CALL ProgAbort( "Cannot find the points file "//TRIM(Settings%PointsFileName))
+!
+!         ! Now open file
+!      CALL GetNewUnit(    FiUnitPoints )
+!      CALL OpenUInfile(   FiUnitPoints,  Settings%PointsFileName, ErrStat, ErrMsg )   ! Unformatted input file
+!      IF ( ErrStat >= AbortErrLev ) THEN
+!         CALL ProgAbort( ErrMsg )
+!      ELSEIF ( ErrStat /= 0 ) THEN
+!         CALL ProgWarn( NewLine//ErrMsg )
+!      ENDIF
+!   ENDIF
 
 
       !check that the FFT file can be made, if requested as output
@@ -197,6 +287,8 @@ PROGRAM InflowWind_Driver
 !FIXME: this section is junk for testing:
 !InflowWind_InitInputData%UseInputFile=.FALSE.
 
+
+
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Initialize the Module -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
@@ -204,34 +296,24 @@ PROGRAM InflowWind_Driver
 
    CALL WrScr('Calling InflowWind_Init...')
 
-   CALL InflowWind_Init( InflowWind_InitInputData, InflowWind_InputData, InflowWind_ParamData, &
-                  InflowWind_ContStateData, InflowWind_DiscStateData, InflowWind_ConstrStateData, InflowWind_OtherStateData, &
-                  InflowWind_OutputData,    TimeStepSize,  InflowWind_InitOutData, ErrStat, ErrMsg )
+
+!FIXME: need to set the number of points and the points and velocity arrays for a single timestep.
+!   DT =  Settings%DT
+
+!   CALL InflowWind_Init( InflowWind_InitInputData, InflowWind_InputData, InflowWind_ParamData, &
+!                  InflowWind_ContStateData, InflowWind_DiscStateData, InflowWind_ConstrStateData, InflowWind_OtherStateData, &
+!                  InflowWind_OutputData,    DT,  InflowWind_InitOutData, ErrStat, ErrMsg )
 
 
       ! Make sure no errors occured that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL ProgAbort( ErrMsg )
    ELSEIF ( ErrStat /= 0 ) THEN
-   CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//'   ErrMsg: '//TRIM(ErrMsg)//NewLine)
+   CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//'   ErrMsg: '//NewLine//TRIM(ErrMsg)//NewLine)
    ENDIF
 
 
-      !FIXME: if not specified, should pick this info up from the initialization of the module -- the module does not provide this right now
-      ! Calculate the number of steps for each of the dimensions (including time) -- remains at 0 if not calculated or supplied
-      !     NOTE: subtract a micron or microsecond just in case the stepsize is exactly divisible.
-   IF ( SettingsFlags%XRange ) THEN
-      NumXSteps = floor( (Settings%XRange(2)-Settings%XRange(1) - 0.0000001) / Settings%XRes ) + 1
-   ENDIF
-   IF ( SettingsFlags%YRange ) THEN
-      NumYSteps = floor( (Settings%YRange(2)-Settings%YRange(1) - 0.0000001) / Settings%YRes ) + 1
-   ENDIF
-   IF ( SettingsFlags%ZRange ) THEN
-      NumZSteps = floor( (Settings%ZRange(2)-Settings%ZRange(1) - 0.0000001) / Settings%ZRes ) + 1
-   ENDIF
-   IF ( SettingsFlags%TRange ) THEN
-      NumTSteps = floor( (Settings%TRange(2)-Settings%TRange(1) - 0.0000001) / Settings%TRes ) + 1
-   ENDIF
+
 
 
    !--------------------------------------------------------------------------------------------------------------------------------
@@ -245,166 +327,16 @@ PROGRAM InflowWind_Driver
 !check the bounds that were read in against those from the file. Reset as appropriate
 
 
-      ! Allocate the arrays that hold the entire dataset
-   CALL AllocAry( PositionTimeStep, 3, NumXSteps+1, NumYSteps+1, NumZSteps+1, 'Position matrix at timestep', ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL ProgAbort( ErrMsg )
-   ELSEIF ( ErrStat /= 0 ) THEN
-      CALL ProgWarn( ErrMsg )
-   ENDIF
-
-   CALL AllocAry( VelocityTimeStep, 3, NumXSteps+1, NumYSteps+1, NumZSteps+1, 'Velocity matrix at timestep', ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL ProgAbort( ErrMsg )
-   ELSEIF ( ErrStat /= 0 ) THEN
-      CALL ProgWarn( ErrMsg )
-   ENDIF
-
-
-!FIXME: remove this and not store the entire thing. Only do each timestep at a time.
-      ! Allocate the arrays that hold the current timesteps data
-      ! Xindex, Yindex
-   CALL AllocAry( PositionFullset, 3, NumXSteps+1, NumYSteps+1, NumZSteps+1, NumTSteps+1, 'Position matrix (fullset)', &
-                  ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL ProgAbort( ErrMsg )
-   ELSEIF ( ErrStat /= 0 ) THEN
-      CALL ProgWarn( ErrMsg )
-   ENDIF
-
-   CALL AllocAry( VelocityFullset, 3, NumXSteps+1, NumYSteps+1, NumZSteps+1, NumTSteps+1, 'Velocity matrix (fullset)', &
-                  ErrStat, ErrMsg )
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL ProgAbort( ErrMsg )
-   ELSEIF ( ErrStat /= 0 ) THEN
-      CALL ProgWarn( ErrMsg )
-   ENDIF
-
-
-      ! Total number of points per timestep (for allocating the passed arrays)
-      !     An extra point is added to account for the point on the other end (math above doesn't count it).
-      !     This also takes care of the case where we don't have any steps (no points specified)
-   NumTotalPoints = (NumXSteps + 1) * (NumYSteps + 1) * (NumZSteps + 1)       ! Note that this has an upper limit of value before rolling over (IntKi)
-
-
-      ! Allocate the arrays that we use locally
-   CALL AllocAry( Position, 3, NumTotalPoints, 'Local Position martrix', ErrStat, ErrMsg)
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL ProgAbort( ErrMsg )
-   ELSEIF ( ErrStat /= 0 ) THEN
-      CALL ProgWarn( ErrMsg )
-   ENDIF
-
-   CALL AllocAry( Velocity, 3, NumTotalPoints, 'Local Velocity martrix', ErrStat, ErrMsg)
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL ProgAbort( ErrMsg )
-   ELSEIF ( ErrStat /= 0 ) THEN
-      CALL ProgWarn( ErrMsg )
-   ENDIF
-
-
-
-      ! Populate the large array with coordinates (Xindex, Yindex, Zindex, Tindex, (x,y,z) coordset)
-   DO TStep = 0, NumTSteps
-      DO ZStep = 0, NumZSteps
-         DO YStep = 0, NumYSteps
-            DO XStep=0, NumXSteps
-               PositionFullSet( 1, XStep+1, YStep+1, ZStep+1, TStep+1) = XStep*Settings%XRes+Settings%XRange(1)
-               PositionFullSet( 2, XStep+1, YStep+1, ZStep+1, TStep+1) = YStep*Settings%YRes+Settings%YRange(1)
-               PositionFullSet( 3, XStep+1, YStep+1, ZStep+1, TStep+1) = ZStep*Settings%ZRes+Settings%ZRange(1)
-            ENDDO    ! XStep
-         ENDDO    ! YStep
-      ENDDO     ! ZStep
-   ENDDO    ! TStep
-
-
-      ! If we never specified any points to check, either by not giving ranges or by not specifying an input file,
-      ! then reset to the hub height at t=0 and return only that point. Print a message to that effect.
-      ! FIXME: add in a flag to allow for specifying to print out all points.
-   IF ( (NumTotalPoints == 1 ) .AND. .NOT. (SettingsFlags%XRange .OR. SettingsFlags%YRange .OR. SettingsFlags%ZRange )) THEN
-      CALL WrScr(NewLine//'No points were specified to check. Returning only the hub height at t=0.')
-      PositionFullSet( 3, 1, 1, 1, :)  = InflowWind_InitInputData%ReferenceHeight
-   ENDIF
-
+!FIXME: is this still being done this way?
 
 
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Time stepping loop -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
-   !  Loop through the time
-   !     -- send matrix of coordinates at each timestep --> ask for certain points at time T
-   !     -- should get back a matrix of wind velocities at each coordinate
-   !     -- Assemble the large matrix with all the small pieces
-
-
-      ! Loop over the whole time of interest
-
-   DO TStep = 0, NumTSteps
-
-      TimeNow = TStep * TimeStepSize + Settings%TRange(1)
-
-         ! Flatten out the current step of the array  -- loop through to create array of elements
-               ! (X1, Y1, Z1), 1
-               ! (X2, Y1, Z1), 2
-               ! (X3, Y1, Z1), 3
-               !   ...
-               ! (Xn, Y1, Z1), n
-               ! (X1, Y2, Z1), n+1
-               !   ...
-               ! (X1, Ym, Z1), n*m+1
-               !   ...
-      DO ZStep = 0, NumZSteps
-         DO YStep = 0, NumYSteps
-            DO XStep = 0, NumXSteps
-               Position(1, (XStep+1 + YStep*(NumXSteps+1) + ZStep*(NumYSteps+1)*(NumXSteps+1) ) ) = &
-                  PositionFullset( 1, XStep+1, YStep+1, ZStep+1, TStep+1)
-               Position(2, (XStep+1 + YStep*(NumXSteps+1) + ZStep*(NumYSteps+1)*(NumXSteps+1) ) ) = &
-                  PositionFullset( 2, XStep+1, YStep+1, ZStep+1, TStep+1)
-               Position(3, (XStep+1 + YStep*(NumXSteps+1) + ZStep*(NumYSteps+1)*(NumXSteps+1) ) ) = &
-                  PositionFullset( 3, XStep+1, YStep+1, ZStep+1, TStep+1)
-            ENDDO    ! XStep
-         ENDDO    ! YStep
-      ENDDO    ! ZStep
-
-
-         ! Copy the data into the array to pass in (this allocates the array)
-      CALL AllocAry( InflowWind_InputData%Position, SIZE(Position, 1), SIZE(Position, 2), &
-                     'Position array in InflowWind_InputData', ErrStat, ErrMsg )
-      InflowWind_InputData%Position = Position
-
-         ! No need to allocate the InflowWind_OutputData%Velocity array.  That happens in CalcOutput
-
-         ! Call the Calculate routine and pass in the Position information
-      CALL InflowWind_CalcOutput( TimeNow, InflowWind_InputData, InflowWind_ParamData, &
-                           InflowWind_ContStateData, InflowWind_DiscStateData, InflowWind_ConstrStateData, & ! States -- not used
-                           InflowWind_OtherStateData, InflowWind_OutputData, ErrStat, ErrMsg)
-
-      Velocity = InflowWind_OutputData%Velocity
-         ! Check that things ran correctly
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL ProgAbort( ErrMsg )
-      ELSEIF ( ErrStat /= 0 ) THEN
-         CALL ProgWarn( ErrMsg )
-      ENDIF
-
-
-         ! Unflatten the Velocity information
-      DO ZStep = 0, NumZSteps
-         DO YStep = 0, NumYSteps
-            DO XStep = 0, NumXSteps
-               VelocityFullSet( 1, XStep+1, YStep+1, ZStep+1, TStep+1) = &
-                  Velocity(1, ( XStep+1 + YStep*(NumXSteps+1) + ZStep*(NumYSteps+1)*(NumXSteps+1) ))
-               VelocityFullSet( 2, XStep+1, YStep+1, ZStep+1, TStep+1) = &
-                  Velocity(2, ( XStep+1 + YStep*(NumXSteps+1) + ZStep*(NumYSteps+1)*(NumXSteps+1) ))
-               VelocityFullSet( 3, XStep+1, YStep+1, ZStep+1, TStep+1) = &
-                  Velocity(3, ( XStep+1 + YStep*(NumXSteps+1) + ZStep*(NumYSteps+1)*(NumXSteps+1) ))
-            ENDDO    ! XStep
-         ENDDO    ! YStep
-      ENDDO    ! ZStep
 
 
 
-   ENDDO    ! TStep
+
 
 
    !--------------------------------------------------------------------------------------------------------------------------------
@@ -419,29 +351,7 @@ PROGRAM InflowWind_Driver
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Output results -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
-   !  ParaPrint         -- will create a ParaView file that can be looked at  !FIXME: add this when I get to it.
-   !  Write to screen   -- if ParaPrint isn't used
 
-   CALL WrScr(NewLine//NewLine// &
-         '   Time           x           y           z               U               V               W'//NewLine// &
-         ' -------       -------     -------     -------         ---------       ---------       ---------')
-   DO TStep = 0, NumTSteps
-      DO ZStep = 0, NumZSteps
-         DO YStep = 0, NumYSteps
-            DO XStep = 0, NumXSteps
-               write (TmpChar, "( f8.3,'"//"  "//"', 3(f12.2),'"//"  "//"', 3(f16.4))")    &
-                           (TStep*Settings%TRes + Settings%TRange(1)),              &
-                           PositionFullSet( 1, XStep+1, YStep+1, ZStep+1, TStep+1), &
-                           PositionFullSet( 2, XStep+1, YStep+1, ZStep+1, TStep+1), &
-                           PositionFullSet( 3, XStep+1, YStep+1, ZStep+1, TStep+1), &
-                           VelocityFullSet( 1, XStep+1, YStep+1, ZStep+1, TStep+1), &
-                           VelocityFullSet( 2, XStep+1, YStep+1, ZStep+1, TStep+1), &
-                           VelocityFullSet( 3, XStep+1, YStep+1, ZStep+1, TStep+1)
-               CALL WrScr( TRIM(TmpChar))
-            ENDDO    ! XStep
-         ENDDO    ! YStep
-      ENDDO    ! ZStep
-   ENDDO    ! TStep
 
 
 
@@ -449,20 +359,10 @@ PROGRAM InflowWind_Driver
    !-=-=- We are done, so close everything down -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
 
-   CALL InflowWind_End(  InflowWind_InputData, InflowWind_ParamData, &
-                  InflowWind_ContStateData, InflowWind_DiscStateData, InflowWind_ConstrStateData, InflowWind_OtherStateData, &
-                  InflowWind_OutputData, ErrStat, ErrMsg )
 
 
-      ! Close the points file
-   IF ( SettingsFlags%PointsFile ) THEN
-      CLOSE( FiUnitPoints )
-   ENDIF
 
-      ! Close the paraview file
-   IF ( SettingsFlags%ParaPrint ) THEN
-      CLOSE( FiUnitParaview )
-   ENDIF
+
 
 
 

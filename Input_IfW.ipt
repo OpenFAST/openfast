@@ -23,7 +23,7 @@ False                Echo           - Echo input data to <RootName>.ech (flag)
 ================== Parameters for coherent turbulence [Only used with WindType = 3 or 4] ======================
  F                   CoherentTurb   - Use coherent turbulence
 ""                   CTTSFilename   - Name of coherent turbulence file
-""                   Path           - Path to coherent turbulence binary data files
+""                   CTTSPath       - Path to coherent turbulence binary data files
 ================== Parameters for HAWC-format binary files  [Only used with WindType = 5] =====================
 "D:\DATA\Collaborations_Meetings\RisoeExchange\MannModel\wasp\Output\basic_5u.bin"    FileName_u      - name of the file containing the u-component fluctuating wind
 "D:\DATA\Collaborations_Meetings\RisoeExchange\MannModel\wasp\Output\basic_5v.bin"    FileName_v      - name of the file containing the v-component fluctuating wind

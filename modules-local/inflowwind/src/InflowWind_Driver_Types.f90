@@ -31,43 +31,65 @@ MODULE InflowWind_Driver_Types
 
    IMPLICIT NONE
 
-      ! This contains flags to note if the settings were made.
-   TYPE     :: InflowWind_Driver_ArgFlags
-      LOGICAL                 :: WindFileType   = .FALSE.      ! specified a windfiletype
-      LOGICAL                 :: Height         = .FALSE.      ! specified a height
-      LOGICAL                 :: Width          = .FALSE.      ! specified a width
-      LOGICAL                 :: XRange         = .FALSE.      ! specified a range of x
-      LOGICAL                 :: YRange         = .FALSE.      ! specified a range of y
-      LOGICAL                 :: ZRange         = .FALSE.      ! specified a range of z
-      LOGICAL                 :: TRange         = .FALSE.      ! specified a range of time
-      LOGICAL                 :: XRes           = .FALSE.      ! specified a resolution in x
-      LOGICAL                 :: YRes           = .FALSE.      ! speficied a resolution in y
-      LOGICAL                 :: ZRes           = .FALSE.      ! specified a resolution in z
-      LOGICAL                 :: TRes           = .FALSE.      ! specified a resolution in time
-      LOGICAL                 :: ParaPrint      = .FALSE.      ! create a ParaView file?
-      LOGICAL                 :: Summary        = .FALSE.      ! create a summary file?
-      LOGICAL                 :: fft            = .FALSE.      ! do an FFT
-      LOGICAL                 :: PointsFile     = .FALSE.      ! points file specified
-   END TYPE    InflowWind_Driver_ArgFlags
+      !> This contains flags to note if the settings were made.  This same data structure is
+      !! used both during the driver input file and the command line options.
+      !!
+      !! NOTE: The WindFileType is only set if it is given as a command line option.  Otherwise
+      !!       it is handled internally by InflowWInd.
+      !!
+      !! NOTE: The wind direction is specified by the InflowWind input file.
+   TYPE     :: IfWDriver_Flags
+      LOGICAL                 :: DvrIptFile           = .FALSE.      !< Was an input file name given on the command line?
+      LOGICAL                 :: IfWIptFile           = .FALSE.      !< Was an InflowWind input file requested?
+      LOGICAL                 :: Summary              = .FALSE.      !< create a summary at command line? (data extents in the wind file)
+      LOGICAL                 :: SummaryFile          = .FALSE.      !< create a summary file of the output?
+      LOGICAL                 :: TStart               = .FALSE.      !< specified a start time
+      LOGICAL                 :: NumTimeSteps         = .FALSE.      !< specified a number of timesteps to process
+      LOGICAL                 :: NumTimeStepsDefault  = .FALSE.      !< specified a 'DEFAULT' for number of timesteps to process
+      LOGICAL                 :: DT                   = .FALSE.      !< specified a resolution in time
+      LOGICAL                 :: DTDefault            = .FALSE.      !< specified a 'DEFAULT' for the time resolution
+
+      LOGICAL                 :: TurbineHeight        = .FALSE.      !< specified a turbine height
+      LOGICAL                 :: Width                = .FALSE.      !< specified a width
+
+      LOGICAL                 :: FFTcalc              = .FALSE.      !< do an FFT
+
+      LOGICAL                 :: WindGrid             = .FALSE.      !< Requested output of wind data on a grid -- input file option only
+      LOGICAL                 :: XRange               = .FALSE.      !< specified a range of x      -- command line option only -- stored as GridCtrCoord and GridDelta
+      LOGICAL                 :: YRange               = .FALSE.      !< specified a range of y      -- command line option only -- stored as GridCtrCoord and GridDelta
+      LOGICAL                 :: ZRange               = .FALSE.      !< specified a range of z      -- command line option only -- stored as GridCtrCoord and GridDelta
+      LOGICAL                 :: Dx                   = .FALSE.      !< specified a resolution in x -- command line option only, 0.0 otherwise
+      LOGICAL                 :: Dy                   = .FALSE.      !< speficied a resolution in y
+      LOGICAL                 :: Dz                   = .FALSE.      !< specified a resolution in z
+
+      LOGICAL                 :: PointsFile           = .FALSE.      !< points filename to read in  -- command line option only
+   END TYPE    IfWDriver_Flags
 
 
       ! This contains all the settings (possible passed in arguments).
-   TYPE     :: InflowWind_Driver_Args
-      INTEGER                 :: WindFileType   = Undef_WINDNumber   ! the kind of windfile     -- set default to simplify things later
-      REAL( ReKi )            :: Height                        ! Reference height
-      REAL( ReKi )            :: Width                         ! Reference width
-      REAL( ReKi )            :: XRange(1:2)                   ! range of x
-      REAL( ReKi )            :: YRange(1:2)                   ! range of y
-      REAL( ReKi )            :: ZRange(1:2)                   ! range of z
-      REAL( DbKi )            :: TRange(1:2)                   ! range of time
-      REAL( ReKi )            :: XRes                          ! resolution of x
-      REAL( ReKi )            :: YRes                          ! resolution of y
-      REAL( ReKi )            :: ZRes                          ! resolution of z
-      REAL( DbKi )            :: TRes                          ! resolution of time
-      REAL( ReKi )            :: fft(1:3)                      ! Coords to do an FFT
-      CHARACTER(1024)         :: PointsFileName                ! Filename of points file
-      CHARACTER(1024)         :: InputFileName                  ! Filename of file to process
-   END TYPE    InflowWind_Driver_Args
+   TYPE     :: IfWDriver_Settings
+      CHARACTER(1024)         :: DvrIptFileName                !< Driver input file name
+      CHARACTER(1024)         :: IfWIptFileName                !< Filename of InflowWind input file to read (if no driver input file)
+      CHARACTER(1024)         :: SummaryFileName               !< Filename for the summary information output
+      INTEGER(IntKi)          :: NumTimeSteps                  !< Number of timesteps
+      REAL( DbKi )            :: DT                            !< resolution of time
+      REAL( DbKi )            :: TStart                        !< range of time -- end time converted from TRange (command line option only)
+
+      REAL( ReKi )            :: TurbineHeight                 !< Height of the turbine
+      REAL( ReKi )            :: Width                         !< Reference width
+
+      REAL( ReKi )            :: FFTcoord(1:3)                 !< (x,y,z) coordinate to do an FFT at
+
+!      REAL( ReKi )            :: GridCtrCoord(1:3)             !< (x,y,z) coordinate for center of the wind grid to output
+      REAL( ReKi )            :: GridDelta(1:3)                !< (GridDx,GridDy,GridDz) -- grid point spacing
+      INTEGER(IntKi)          :: GridN(1:3)                    !< (GridNx,GridNy,GridNz) -- number of grid points
+
+      REAL( ReKi )            :: XRange(1:2)                   !< Range in the x-direction for the gridded data
+      REAL( ReKi )            :: YRange(1:2)                   !< Range in the y-direction for the gridded data
+      REAL( ReKi )            :: ZRange(1:2)                   !< Range in the z-direction for the gridded data
+
+      CHARACTER(1024)         :: PointsFileName                !< Filename of points file to read in
+   END TYPE    IfWDriver_Settings
 
 
 END MODULE InflowWind_Driver_Types
