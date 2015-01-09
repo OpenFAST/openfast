@@ -1410,6 +1410,98 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
 
          ! ZRange / Dz  -- This is processed exactly the same as for YRange.
 
+      IF       ( CLFlags%ZRange .AND. ( .NOT. CLFlags%Dz ) )   THEN
+
+         IF ( .NOT. DvrFlags%Dz )         DvrFlags%Dz       =  .TRUE.
+         IF ( .NOT. DvrFlags%ZRange )     DvrFlags%ZRange   =  .TRUE.
+         IF ( .NOT. WindGridModify )      WindGridModify    =  .TRUE.
+
+            ! Calculate new Ny.
+         DvrSettings%ZRange(1)      =  minval(CLSettings%ZRange)     ! just in case the order is funky
+         DvrSettings%ZRange(2)      =  maxval(CLSettings%ZRange)
+         
+            ! Set number of points in Y direction
+         DvrSettings%GridN(3) =  CEILING( abs( ( DvrSettings%ZRange(2) - DvrSettings%ZRange(1) ) / DvrSettings%GridDelta(3) ) + 1_IntKi )
+
+            ! Now adjust the upper limit of the range slightly for the integer number of steps
+         DvrSettings%ZRange(2)=  DvrSettings%ZRange(1)   + ( DvrSettings%GridN(3) - 1_IntKi ) * DvrSettings%GridDelta(3)
+
+            ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
+         IF ( .NOT. EqualRealNos(DvrSettings%ZRange(2),maxval(CLSettings%ZRange)) )  THEN
+            CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of ZRange to '//TRIM(Num2LStr(DvrSettings%ZRange(2)))//   &
+               ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(3)))//' points with a requested spacing '//       &
+               TRIM(Num2LStr(DvrSettings%GridDelta(3)))//'.',                                                           &
+               ErrStat,ErrMsg,'UpdateSettingsWithCL')
+         ENDIF
+
+      ELSEIF   ( ( .NOT. CLFlags%ZRange ) .AND. CLFlags%Dz )   THEN
+
+            ! Make sure we have points to calculate
+         IF ( DvrSettings%GridN(3)  == 0 )   THEN
+               ! We only issue this warning.
+            CALL SetErrStat( ErrID_Warn,' No points specified in driver input file for Z direction.  Ignoring Dz input.',  &
+               ErrStat,ErrMsg,'UpdateSettingsWithCL')
+            DvrFlags%Dz       =  .FALSE.
+            DvrFlags%ZRange   =  .FALSE.
+         ELSE
+
+            IF ( .NOT. DvrFlags%Dz )         DvrFlags%Dz       =  .TRUE.
+            IF ( .NOT. DvrFlags%ZRange )     DvrFlags%ZRange   =  .TRUE.
+            IF ( .NOT. WindGridModify )      WindGridModify    =  .TRUE.
+
+               ! Save the Dz value
+            DvrSettings%GridDelta(3)   =  abs(CLSettings%GridDelta(3))  ! just in case there was a negative number
+
+               ! Calculate the new value of Ny
+            DvrSettings%GridN(3) =  CEILING( abs( ( DvrSettings%ZRange(2) - DvrSettings%ZRange(1) ) / DvrSettings%GridDelta(3) ) + 1_IntKi )
+
+               ! Now adjust the upper limit of the range slightly for the integer number of steps
+            DvrSettings%ZRange(2)=  DvrSettings%ZRange(1)   + ( DvrSettings%GridN(3) - 1_IntKi ) * DvrSettings%GridDelta(3)
+
+               ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
+            IF ( .NOT. EqualRealNos(DvrSettings%ZRange(2),maxval(CLSettings%ZRange)) )  THEN
+               CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of ZRange to '//TRIM(Num2LStr(DvrSettings%ZRange(2)))//   &
+                  ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(3)))//' points with a requested spacing '//       &
+                  TRIM(Num2LStr(DvrSettings%GridDelta(3)))//'.',                                                           &
+                  ErrStat,ErrMsg,'UpdateSettingsWithCL')
+            ENDIF
+
+         ENDIF
+
+
+      ELSEIF   ( CLFlags%ZRange .AND. CLFlags%Dz ) THEN
+
+            ! Set flags if not already set
+         IF ( .NOT. DvrFlags%Dz )         DvrFlags%Dz       =  .TRUE.
+         IF ( .NOT. DvrFlags%ZRange )     DvrFlags%ZRange   =  .TRUE.
+         IF ( .NOT. WindGridModify )      WindGridModify    =  .TRUE.
+
+            ! Copy over the range and stepsize
+         DvrSettings%ZRange(1)      =  minval(CLSettings%ZRange)     ! just in case the order is funky
+         DvrSettings%ZRange(2)      =  maxval(CLSettings%ZRange)
+         DvrSettings%GridDelta(3)   =  abs(CLSettings%GridDelta(3))  ! just in case there was a negative number
+
+            ! Set number of points in Y direction
+         DvrSettings%GridN(3) =  CEILING( abs( ( DvrSettings%ZRange(2) - DvrSettings%ZRange(1) ) / DvrSettings%GridDelta(3) ) + 1_IntKi )
+
+            ! Now adjust the upper limit of the range slightly for the integer number of steps
+         DvrSettings%ZRange(2)=  DvrSettings%ZRange(1)   + ( DvrSettings%GridN(3) - 1_IntKi ) * DvrSettings%GridDelta(3)
+
+            ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
+         IF ( .NOT. EqualRealNos(DvrSettings%ZRange(2),maxval(CLSettings%ZRange)) )  THEN
+            CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of ZRange to '//TRIM(Num2LStr(DvrSettings%ZRange(2)))//   &
+               ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(3)))//' points with a requested spacing '//       &
+               TRIM(Num2LStr(DvrSettings%GridDelta(3)))//'.',                                                           &
+               ErrStat,ErrMsg,'UpdateSettingsWithCL')
+         ENDIF
+
+      ELSE
+         ! Nothing was specified, so we don't do anything
+      ENDIF
+
+
+
+
 
 
 
