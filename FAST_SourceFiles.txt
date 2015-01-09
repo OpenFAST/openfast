@@ -1,11 +1,11 @@
 Source\IfW_FFWind_Types.f90
 Source\IfW_FFWind.f90
-Source\IfW_HHWind_Types.f90
-Source\IfW_HHWind.f90
+Source\IfW_UniformWind_Types.f90
+Source\IfW_UniformWind.f90
 Source\InflowWind.f90
-Source\InflowWind_Subs.f90
 Source\InflowWind_Types.f90
 Source\Registry\IfW_FFWind.txt
-Source\Registry\IfW_HHWind.txt
+Source\Registry\IfW_HAWCWind.txt
+Source\Registry\IfW_UniformWind.txt
 Source\Registry\InflowWind.txt
 
