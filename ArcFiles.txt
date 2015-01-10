@@ -9,6 +9,8 @@ README_FAST8.pdf
 
 Source\FAST_IO.f90
 Source\FAST_Mods.f90
+Source\FAST_Types.f90
+Source\FAST_Registry.txt
 Source\FAST_Prog.f90
 
 Source\dependencies\NWTC_Library\*

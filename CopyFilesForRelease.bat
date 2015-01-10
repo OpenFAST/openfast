@@ -16,8 +16,6 @@ IF /I "%1"=="%SW_Module%" goto %2
 
 :BinDir
 ECHO Binaries
-COPY "%REG_Loc%\registry.exe"        "%bin_dir%\Registry_win32.exe"
-COPY "%MAP_DLL%"                     "%bin_dir%"
 COPY "%CRUNCH%"                      "%bin_dir%"
 
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
@@ -26,6 +24,8 @@ IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :Registry
 ECHO FAST Registry
+COPY "%REG_Loc%\registry.exe"        "%bin_dir%\Registry_win32.exe"
+
 SET src_folder=%REG_Loc%
 SET dst_folder=%depend_dir%\Registry
 SET list_of_files=%src_folder%\SourceFiles.txt
@@ -147,6 +147,9 @@ IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :MAP
 ECHO MAP
+COPY "%MAP_DLL%"                     "%bin_dir%"
+COPY "%MAP_DLL64%"                   "%bin_dir%"
+
 SET src_folder=%MAP_Loc%\..
 SET dst_folder=%depend_dir%\MAP
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
