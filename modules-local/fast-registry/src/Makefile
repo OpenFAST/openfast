@@ -44,7 +44,7 @@ superclean : clean
 
 # DO NOT DELETE THIS LINE -- make depend depends on it.
 
-gen_module_files.o: protos.h registry.h data.h FAST_preamble.h
+gen_module_files.o: protos.h registry.h data.h FAST_preamble.h type.o
 
 data.o: registry.h protos.h data.h
 gen_allocs.o: protos.h registry.h data.h
@@ -59,9 +59,9 @@ gen_wrf_io.o: protos.h registry.h data.h
 misc.o: protos.h registry.h data.h
 my_strtok.o: registry.h protos.h data.h
 reg_parse.o: registry.h protos.h data.h
-registry.o: protos.h registry.h data.h Template_data.c Template_registry.c 
+registry.o: protos.h registry.h data.h Template_data.c Template_registry.c
 sym.o: sym.h
 type.o: registry.h protos.h data.h
 gen_interp.o: registry.h protos.h data.h
 gen_streams.o: registry.h protos.h data.h
-gen_c_types.o: Template_c_Types.c Template_c2f_helpers.c
+gen_c_types.o: registry.h protos.h data.h

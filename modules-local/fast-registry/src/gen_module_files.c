@@ -14,257 +14,62 @@
 void gen_mask_alloc( FILE *fp, int ndims, char *tmp );
 
 /**
- * ============  Generate ModName INTERFACE block in ModName_Types.f90 ==================
+ * ==============  Create the C2Farry Copy Subroutine in ModName_Types.f90 ======================
  *
- * This is a copy of C function gen_copy_f2c_c2f(..), but certain part are stripped out
- * and modified to make it generate only a part of the F2C interface between C and
- * Fortran.
+ * In the C2F routines, we associate the pointer created in C with the variables in the
+ * corresponding Fortran types.
  * ======================================================================================
  */
 int
-gen_f2c_interface( FILE         *fp        , // *.f90 file we are writting to
-                   const node_t *ModName   , // module name
-                   char         *inout     , // character string written out
-                   char         *inoutlong , // not sure what this is used for
-                   int          sw         ) // sw=0 f2c, sw=1 c2f
-{
-  char tmp[NAMELEN], tmp2[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
-  node_t *q, * r ;
-  int d ;
-
-  remove_nickname(ModName->nickname,inout,nonick) ;
-  append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
-  sprintf(tmp,"%s",addnick) ;
-  sprintf(tmp2,"%s",make_lower_temp(tmp)) ;
-
-  if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) != NULL ) {
-    for ( r = q->fields ; r ; r = r->next ){
-      if ( r->type != NULL ) {
-        if ( r->type->type_type == DERIVED && ! r->type->usefrom  ) {
-#if 0
-          // cannot pass derived data types through C interface
-          if ( strcmp(make_lower_temp(r->type->mapsto),"meshtype") ) { // if not meshtype
-            char nonick2[NAMELEN] ;
-            remove_nickname(ModName->nickname,r->type->name,nonick2) ;
-            ModName->nickname,(sw==0)?"F2C":"C2F",fast_interface_type_shortname(nonick2),
-              nonick,r->name,dimstr(r->ndims)) ;
-        }
-#endif
-        } else {
-          if ( sw_norealloc_lsh && r->ndims > 0 && has_deferred_dim(r,0) ) {
-            char tmp2[NAMELEN], tmp4[NAMELEN] ;
-            char modified_mod_name[100];
-            strcpy(tmp,"") ;
-            strcpy(tmp4,"") ;
-            strcpy(modified_mod_name,"") ;
-
-            if ( sw == 0 ) {
-
-              char var_type[36] ="";
-              char c_var_type[36] = "";
-
-              // Create the name of the BIND(C) type for fortran. This depends on we are comminucating a logical, integer, or real to C.
-              if      ( strcmp( r->type->mapsto, "REAL(DbKi)"    )==0 ) { strcat(var_type,"REAL"   ); strcat(c_var_type,"C_DOUBLE"); }
-              else if ( strcmp( r->type->mapsto, "REAL(ReKi)"    )==0 ) { strcat(var_type,"REAL"   ); strcat(c_var_type,"C_FLOAT"); }
-              else if ( strcmp( r->type->mapsto, "INTEGER(IntKi)")==0 ) { strcat(var_type,"INTEGER"); strcat(c_var_type,"C_INT"   ); }
-              else if ( strcmp( r->type->mapsto, "LOGICAL"       )==0 ) { strcat(var_type,"LOGICAL"); strcat(c_var_type,"C_BOOL"  ); }
-
-              if ( strncmp( r->type->mapsto,"CHARACTER",9   )!=0 ) { // DON'T CREATE AN INTERFACE BLOCK FOR C_CHARS!!!!
-
-                // Because the C derived types name does not match between what is defined in the MAP_C_Types.f90 file and
-                // what can be produced by this function, we have to modify the name...
-                //
-                // @see   :  Template_C_Types.c. c_type_alias should match the match the name of a BIND(C)
-                //           derived type.
-                // @tdod  :  This should be changed so that the c_type_alias name is now part of the
-                //           "node_t" struct
-                if ( strcmp( nonick, "OtherState" )==0 ) strcat( modified_mod_name, "OtherState"      ) ;
-                if ( strcmp( nonick, "ConstrState")==0 ) strcat( modified_mod_name, "ConstraintState" ) ;
-                if ( strcmp( nonick, "Param"      )==0 ) strcat( modified_mod_name, "Parameter"       ) ;
-                if ( strcmp( nonick, "Input"      )==0 ) strcat( modified_mod_name, "Input"           ) ;
-                if ( strcmp( nonick, "Output"     )==0 ) strcat( modified_mod_name, "Output"          ) ;
-
-                // Now create the interface block and write it to the file fp
-                fprintf(fp,"\n  INTERFACE\n");
-                fprintf(fp,"     SUBROUTINE %s_F2C_%s_%s( Object, arr, len) BIND(C,name='%s_F2C_%s_%s_C') \n",
-                        ModName->nickname ,
-                        nonick            ,
-                        r->name           ,
-                        ModName->nickname ,
-                        nonick            ,
-                        r->name           );
-                fprintf(fp,"       IMPORT\n");
-                fprintf(fp,"       IMPLICIT NONE\n");
-                fprintf(fp,"       TYPE( %s_%sType_C ) Object\n"       , ModName->nickname, modified_mod_name );
-                fprintf(fp,"       %s(KIND=%s), DIMENSION(*) :: arr\n" , var_type, c_var_type                 );
-                fprintf(fp,"       INTEGER(KIND=C_INT), VALUE :: len\n"                                       );
-                fprintf(fp,"     END SUBROUTINE %s_F2C_%s_%s\n"        , ModName->nickname, nonick,r->name    );
-                fprintf(fp,"  END INTERFACE\n"                                                                 );
-
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-  return(0) ;
-}
-
-
-/**
- * ============  Create the Copy F2C and C2F Subroutine in ModName_Types.f90 ============
- *
- * In the F2C routines, there are function that map to functon in C. These functions are
- * defined in the INTERFACE block in ModName_Types.f90. The corresponding C function
- * call can be foudn in ModName_Types.c
- * ======================================================================================
- */
-int
-gen_copy_f2c_c2f( FILE         *fp        , // *.f90 file we are writting to
-                  const node_t *ModName   , // module name
-                  char         *inout     , // character string written out
-                  char         *inoutlong , // not sure what this is used for
-                  int          sw         ) // sw=0 f2c, sw=1 c2f
+gen_copy_c2f( FILE         *fp        , // *.f90 file we are writting to
+              const node_t *ModName   , // module name
+              char         *inout     , // character string written out
+              char         *inoutlong ) // not sure what this is used for
 {
   node_t *q, *r ;
   char tmp[NAMELEN];
-  char tmp2[NAMELEN];
   char addnick[NAMELEN];
   char nonick[NAMELEN] ;
-  int d ;
 
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
-  fprintf(fp,"  SUBROUTINE %s_%s_Copy%s( %sData, ErrStat, ErrMsg )\n", ModName->nickname,(sw==0)?"F2C":"C2F", nonick,nonick );
+  fprintf(fp," SUBROUTINE %s_C2Fary_Copy%s( %sData, ErrStat, ErrMsg )\n", ModName->nickname, nonick,nonick );
   fprintf(fp,"    TYPE(%s), INTENT(INOUT) :: %sData\n"               , addnick, nonick                                      );
   fprintf(fp,"    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat\n"                                                              );
   fprintf(fp,"    CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n"                                                               );
-  fprintf(fp,"    ! Local \n"                                                                                               );
-  fprintf(fp,"    INTEGER(IntKi)                   :: i,i1,i2,i3,i4,i5,j,k\n"                                               );
-  fprintf(fp,"    REAL(KIND=C_DOUBLE) ,ALLOCATABLE :: c_dbl_value(:)\n"                                                     );
-  fprintf(fp,"    REAL(KIND=C_DOUBLE) ,POINTER     :: dbl_arr(:)\n"                                                         );
-  fprintf(fp,"    REAL(KIND=C_FLOAT)  ,ALLOCATABLE :: c_float_value(:)\n"                                                   );
-  fprintf(fp,"    REAL(KIND=C_FLOAT)  ,POINTER     :: float_arr(:)\n"                                                       );
-  fprintf(fp,"    INTEGER(KIND=C_INT) ,ALLOCATABLE :: c_int_value(:)\n"                                                     );
-  fprintf(fp,"    INTEGER(KIND=C_INT) ,POINTER     :: int_arr(:)\n"                                                         );
-  fprintf(fp,"    LOGICAL(KIND=C_BOOL),ALLOCATABLE :: c_bool_value(:)\n"                                                    );
-  fprintf(fp,"    LOGICAL(KIND=C_BOOL),POINTER     :: bool_arr(:)\n"                                                        );
   fprintf(fp,"    ! \n"                                                                                                     );
   fprintf(fp,"    ErrStat = ErrID_None\n"                                                                                   );
   fprintf(fp,"    ErrMsg  = \"\"\n"                                                                                         );
 
   sprintf(tmp,"%s",addnick) ;
 
-  sprintf(tmp2,"%s",make_lower_temp(tmp)) ;
-
   if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
   {
-    fprintf(stderr,"Registry warning: generating %s_Copy%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
+    fprintf(stderr,"Registry warning: generating %s_C2Fary_Copy%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
   } else {
     for ( r = q->fields ; r ; r = r->next )
     {
       if ( r->type != NULL ) {
         if ( r->type->type_type == DERIVED && ! r->type->usefrom  ) {
-#if 0
-// cannot pass derived data types through C interface
-          if ( strcmp(make_lower_temp(r->type->mapsto),"meshtype") ) { // if not meshtype
-            char nonick2[NAMELEN] ;
-            remove_nickname(ModName->nickname,r->type->name,nonick2) ;
-            for ( d = r->ndims ; d >= 1 ; d-- ) {
-  fprintf(fp,"DO i%d = LBOUND(%sData%%%s,%d), UBOUND(%sData%%%s,%d)\n",d,nonick,r->name,d,nonick,r->name,d  ) ;
-            }
-fprintf(stderr,"> %s\n",r->type->name,r->type->mapsto) ;
-  fprintf(fp,"  CALL %s_%s_Copy%s( %sData%%%s%s, ErrStat, ErrMsg )\n",
-            ModName->nickname,(sw==0)?"F2C":"C2F",fast_interface_type_shortname(nonick2),
-            nonick,r->name,dimstr(r->ndims)) ;
-            for ( d = r->ndims ; d >= 1 ; d-- ) {
-  fprintf(fp,"ENDDO\n") ;
-            }
-          }
-#else
-  fprintf(stderr,"Registry WARNING: derived data type %s of type %s is not passed through C interface\n",r->name,r->type->name) ;
-#endif
+          fprintf(stderr,"Registry WARNING: derived data type %s of type %s is not passed through C interface\n",r->name,r->type->name) ;
         } else {
-          if ( strncmp( r->type->mapsto,"CHARACTER",9   )!=0 ) { // DON'T CREATE AN C2F/F2C functions for CHARS!
-                                                                 // @todo : ask John if this is OK!!! Preferably, do
-                                                                 // this before he leaves for good to extract a detailed
-                                                                 // answer out of him.
-            if ( sw_norealloc_lsh && r->ndims > 0 && has_deferred_dim(r,0) ) {
-              char tmp2[NAMELEN];
-              char tmp4[NAMELEN] ;
-              strcpy(tmp,"") ;
-              strcpy(tmp4,"") ;
-              fprintf(fp,"\n    ! -- %s %s Data fields\n",r->name,nonick) ;
-              fprintf(fp,"    IF ( %s( %sData%%%s ) ) THEN\n",assoc_or_allocated(r),nonick,r->name) ;
-
-              if ( sw == 0 ) { // generate the code to perform the F-to-C conversion (i.e., let the C code know that data
-                // was modified by the Fortran dirver)
-                char var_type[10] ="";
-
-                if ( strcmp( r->type->mapsto, "REAL(DbKi)"    )==0 ) strcat( var_type, "dbl"  );
-                if ( strcmp( r->type->mapsto, "REAL(ReKi)"    )==0 ) strcat( var_type, "float");
-                if ( strcmp( r->type->mapsto, "INTEGER(IntKi)")==0 ) strcat( var_type, "int"  );
-                if ( strcmp( r->type->mapsto, "LOGICAL"       )==0 ) strcat( var_type, "bool" );
-
-                fprintf(fp,"       ALLOCATE( c_%s_value(%sData%%C_obj%%%s_Len) )\n"                        , var_type, nonick, r->name                                             ) ;
-                fprintf(fp,"       DO i = 1 , %sData%%C_obj%%%s_Len\n"                                     , nonick, r->name                                                       ) ;
-                fprintf(fp,"          c_%s_value(i) = %sData%%%s(i)\n"                                     , var_type, nonick, r->name                                             ) ;
-                fprintf(fp,"       END DO\n"                                                                                                                                       ) ;
-                fprintf(fp,"       CALL %s_F2C_%s_%s( %sData%%C_obj, c_%s_value, %sData%%C_obj%%%s_Len )\n", ModName->nickname, nonick, r->name, nonick , var_type, nonick,r->name ) ;
-                fprintf(fp,"       DEALLOCATE( c_%s_value )\n"                                             , var_type                                                              );
-// bjj: I think this would be sufficient:                fprintf(fp,"       CALL C_F_POINTER(  %sData%%C_obj%%%s, %sData%%%s, (/%sData%%C_obj%%%s_Len/) )\n", nonick, r->name, , nonick, r->name, , nonick, r->name );
-              } else {  //Now do the opposite, and create the source to let the Fortran driver know that variables were
-                //modified in the C portion.
-                char arrayname[NAMELEN];
-                char tmp2[NAMELEN];
-                char tmp3[NAMELEN] ;
-                char var_type[4] ="";
-
-                if ( strcmp( r->type->mapsto, "REAL(DbKi)"    )==0 ) strcat( var_type, "dbl"  );
-                if ( strcmp( r->type->mapsto, "REAL(ReKi)"    )==0 ) strcat( var_type, "float");
-                if ( strcmp( r->type->mapsto, "INTEGER(IntKi)")==0 ) strcat( var_type, "int"  );
-                if ( strcmp( r->type->mapsto, "LOGICAL"       )==0 ) strcat( var_type, "bool" );
-
-                fprintf(fp,"       CALL C_F_POINTER( %sData%%C_obj%%%s, %s_arr, (/%sData%%C_obj%%%s_Len/) )\n", nonick, r->name, var_type, nonick, r->name );
-                fprintf(fp,"       DO i = 1, %sData%%C_obj%%%s_Len\n"                                         , nonick, r->name                            );
-                fprintf(fp,"          %sData%%%s(i) = %s_arr(i)\n"                                            , nonick, r->name,var_type                   );
-                fprintf(fp,"       END DO\n"                                                                                                               );
-              }
-            } else {
-              if ( r->ndims > 0 ) {
-                strcpy(tmp,"") ;
-                for ( d = 1 ; d <= r->ndims ; d++ ) {
-                  fprintf(fp,"  i%d = SIZE(%sData%%%s,%d)\n",d,nonick,r->name,d) ;
-                  sprintf(tmp2,",i%d",d) ;
-                  strcat(tmp,tmp2) ;
-                }
-                if ( sw==0 ) {
-                  fprintf(fp,"  CALL %s_F2C_%s_%s(%sData%%%s,%sData%%C_obj %s)\n",
-                          ModName->nickname,nonick,r->name,nonick,r->name,nonick,tmp) ;
-                } else {
-                  fprintf(fp,"  CALL %s_C2F_%s_%s(%sData%%C_obj,%sData%%%s %s)\n",
-                          ModName->nickname,nonick,r->name,nonick,nonick,r->name,tmp) ;
-                }
-              } else {
-                if (strcmp( r->name, "Ver")!=0 ) { // ignore ProgVer because it does not exist in the C types header file
-                  fprintf(fp,"    %sData%s%%%s = %sData%s%%%s\n",
-                          nonick,(sw==0)?"%C_obj":"",r->name,nonick,(sw!=0)?"%C_obj":"",r->name) ;
-                }
-              }
-            }
-            if ( sw_norealloc_lsh && r->ndims > 0 && has_deferred_dim(r,0) ) {
-              fprintf(fp,"    ENDIF\n") ;
-            }
-          }
+            if ( is_pointer(r) ) {
+                 fprintf(fp,"\n    ! -- %s %s Data fields\n",r->name,nonick) ;
+                 fprintf(fp,"    IF ( .NOT. C_ASSOCIATED( %sData%%C_obj%%%s ) ) THEN\n",nonick,r->name) ;
+                 fprintf(fp,"       NULLIFY( %sData%%%s )\n",nonick,r->name) ;
+                 fprintf(fp,"    ELSE\n") ;
+                 fprintf(fp,"       CALL C_F_POINTER(%sData%%C_obj%%%s, %sData%%%s, (/%sData%%C_obj%%%s_Len/))\n",nonick,r->name,nonick,r->name,nonick,r->name) ;
+                 fprintf(fp,"    END IF\n") ;
+             }
         }
       }
     }
   }
 
-  fprintf(fp," END SUBROUTINE %s_%s_Copy%s\n\n", ModName->nickname,(sw==0)?"F2C":"C2F",nonick ) ;
+  fprintf(fp," END SUBROUTINE %s_C2Fary_Copy%s\n\n", ModName->nickname,nonick ) ;
   return(0) ;
 }
+
 
 int
 gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, const node_t * q_in )
@@ -709,7 +514,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
   char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], tmp4[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
-  int d, idim, frst ;
+  int d, frst ;
 
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
@@ -1078,7 +883,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 // HERE
 void gen_extint_order( FILE *fp, const node_t *ModName, char * typnm, const int order, node_t *r, char * deref, int recurselevel ) {
    node_t *q, *r1 ;
-   int i, j ;
+   int j ;
    int mesh = 0 ;
    char derefrecurse[NAMELEN],dex[NAMELEN],tmp[NAMELEN] ;
    if ( recurselevel > MAXRECURSE ) {
@@ -1222,7 +1027,6 @@ fprintf(fp,"  DO i%d%d = LBOUND(u_out%s,%d),UBOUND(u_out%s,%d)\n",recurselevel,j
 
 void calc_extint_order(FILE *fp, const node_t *ModName, node_t *r, int recurselevel, int *max_ndims, int *max_nrecurs, int *max_alloc_ndims) {
    node_t *q, *r1 ;
-   int j;
 // bjj: make sure this is consistent with logic of gen_extint_order
 
    if ( r->type != NULL ) {
@@ -1271,10 +1075,10 @@ void calc_extint_order(FILE *fp, const node_t *ModName, node_t *r, int recursele
 void
 gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnmlong )
 {
-  char tmp[NAMELEN], addnick[NAMELEN],  nonick[NAMELEN] ;
+  char nonick[NAMELEN] ;
   char *ddtname ;
   node_t *q, * r ;
-  int founddt, k, i, j, max_ndims, max_nrecurs, max_alloc_ndims;
+  int i, j, max_ndims, max_nrecurs, max_alloc_ndims;
 
   fprintf(fp,"\n") ;
   fprintf(fp," SUBROUTINE %s_%s_ExtrapInterp(u, tin, u_out, tin_out, ErrStat, ErrMsg )\n",ModName->nickname,typnm) ;
@@ -1462,7 +1266,7 @@ fprintf(fp,"  END IF\n") ;
 void
 gen_rk4( FILE *fp , const node_t * ModName )
 {
-  char tmp[NAMELEN], addnick[NAMELEN],  nonick[NAMELEN] ;
+  char nonick[NAMELEN] ;
   char *ddtname ;
   node_t *q, * r ;
   int founddt, k ;
@@ -1591,7 +1395,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
 
 static char *typenames[] = { "Input", "Param", "ContState", "DiscState", "ConstrState",
                              "OtherState", "Output", 0L } ;
-static char **typename ;
+static char **typename1 ;
 static char *argtypenames[] = { "InData", "ParamData", "ContStateData", "DiscStateData", "ConstrStateData",
                                 "OtherStateData", "OutData", 0L } ;
 static char **argtypename ;
@@ -1599,9 +1403,7 @@ static char **argtypename ;
 void
 gen_modname_pack( FILE *fp , const node_t * ModName )
 {
-  char tmp[NAMELEN] ;
 
-  node_t *q, * r ;
   fprintf(fp," SUBROUTINE %s_Pack( Re_RetAry, Db_RetAry, Int_RetAry, &\n",ModName->nickname) ;
   fprintf(fp,"                     InData, ParamData, ContStateData, DiscStateData, &\n") ;
   fprintf(fp,"                     ConstrStateData, OtherStateData, OutData, ErrStat, ErrMsg, &\n" ) ;
@@ -1647,12 +1449,12 @@ gen_modname_pack( FILE *fp , const node_t * ModName )
   fprintf(fp,"  Db_Xferred  = 1\n") ;
   fprintf(fp,"  Int_Xferred  = 1\n") ;
 
-  for ( typename = typenames, argtypename = argtypenames ; *typename ; typename++ , argtypename++ ) {
-  fprintf(fp,"    ! Pack %s\n",*typename) ;
+  for ( typename1 = typenames, argtypename = argtypenames ; *typename1 ; typename1++ , argtypename++ ) {
+  fprintf(fp,"    ! Pack %s\n",*typename1) ;
   fprintf(fp,"  IF ( ALLOCATED( Re_Ary ) )  DEALLOCATE(Re_Ary)\n" ) ;
   fprintf(fp,"  IF ( ALLOCATED( Db_Ary ) )  DEALLOCATE(Db_Ary)\n" ) ;
   fprintf(fp,"  IF ( ALLOCATED( Int_Ary ) )  DEALLOCATE(Int_Ary)\n" ) ;
-  fprintf(fp,"  CALL %s_Pack%s(Re_Ary,Db_Ary,Int_Ary,%s,ErrStat2,ErrMsg2,SizeOnly=.TRUE.)\n",ModName->nickname,*typename,*argtypename) ;
+  fprintf(fp,"  CALL %s_Pack%s(Re_Ary,Db_Ary,Int_Ary,%s,ErrStat2,ErrMsg2,SizeOnly=.TRUE.)\n",ModName->nickname,*typename1,*argtypename) ;
   fprintf(fp,"  IF ( ALLOCATED( Re_Ary ) ) THEN\n") ;
   fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE( Re_Ary )\n") ;
   fprintf(fp,"    DEALLOCATE(Re_Ary)\n" ) ;
@@ -1680,12 +1482,12 @@ gen_modname_pack( FILE *fp , const node_t * ModName )
   fprintf(fp,"  Db_Xferred  = 1\n") ;
   fprintf(fp,"  Int_Xferred  = 1\n") ;
 
-  for ( typename = typenames, argtypename = argtypenames ; *typename ; typename++ , argtypename++ ) {
-    fprintf(fp,"    ! Pack %s\n",*typename) ;
+  for ( typename1 = typenames, argtypename = argtypenames ; *typename1 ; typename1++ , argtypename++ ) {
+    fprintf(fp,"    ! Pack %s\n",*typename1) ;
     fprintf(fp,"  IF ( ALLOCATED( Re_Ary ) )  DEALLOCATE(Re_Ary)\n" ) ;
     fprintf(fp,"  IF ( ALLOCATED( Db_Ary ) )  DEALLOCATE(Db_Ary)\n" ) ;
     fprintf(fp,"  IF ( ALLOCATED( Int_Ary ) )  DEALLOCATE(Int_Ary)\n" ) ;
-    fprintf(fp,"  CALL %s_Pack%s(Re_Ary,Db_Ary,Int_Ary,%s,ErrStat2,ErrMsg2)\n",ModName->nickname,*typename,*argtypename) ;
+    fprintf(fp,"  CALL %s_Pack%s(Re_Ary,Db_Ary,Int_Ary,%s,ErrStat2,ErrMsg2)\n",ModName->nickname,*typename1,*argtypename) ;
     fprintf(fp,"  IF ( ALLOCATED( Re_Ary ) ) THEN\n") ;
     fprintf(fp,"    IF ( .NOT. OnlySize ) Re_RetAry(Re_Xferred:Re_Xferred+SIZE(Re_Ary)-1)=Re_Ary\n") ;
     fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE( Re_Ary )\n") ;
@@ -1712,9 +1514,7 @@ gen_modname_pack( FILE *fp , const node_t * ModName )
 void
 gen_modname_unpack( FILE *fp , const node_t * ModName )
 {
-  char tmp[NAMELEN] ;
 
-  node_t *q, * r ;
   fprintf(fp," SUBROUTINE %s_UnPack( Re_RetAry, Db_RetAry, Int_RetAry, &\n",ModName->nickname) ;
   fprintf(fp,"                     InData, ParamData, ContStateData, DiscStateData, &\n") ;
   fprintf(fp,"                     ConstrStateData, OtherStateData, OutData, ErrStat, ErrMsg )\n" ) ;
@@ -1753,12 +1553,12 @@ gen_modname_unpack( FILE *fp , const node_t * ModName )
   fprintf(fp,"  Re_Xferred  = 1\n") ;
   fprintf(fp,"  Db_Xferred  = 1\n") ;
   fprintf(fp,"  Int_Xferred  = 1\n") ;
-  for ( typename = typenames, argtypename = argtypenames ; *typename ; typename++ , argtypename++ ) {
-  fprintf(fp,"    ! UnPack %s\n",*typename) ;
+  for ( typename1 = typenames, argtypename = argtypenames ; *typename1 ; typename1++ , argtypename++ ) {
+  fprintf(fp,"    ! UnPack %s\n",*typename1) ;
   fprintf(fp,"  IF ( ALLOCATED( Re_Ary ) )  DEALLOCATE(Re_Ary)\n" ) ;
   fprintf(fp,"  IF ( ALLOCATED( Db_Ary ) )  DEALLOCATE(Db_Ary)\n" ) ;
   fprintf(fp,"  IF ( ALLOCATED( Int_Ary ) )  DEALLOCATE(Int_Ary)\n" ) ;
-  fprintf(fp,"  CALL %s_Pack%s(Re_Ary,Db_Ary,Int_Ary,%s,ErrStat2,ErrMsg2,SizeOnly=.TRUE.)\n",ModName->nickname,*typename,*argtypename) ;
+  fprintf(fp,"  CALL %s_Pack%s(Re_Ary,Db_Ary,Int_Ary,%s,ErrStat2,ErrMsg2,SizeOnly=.TRUE.)\n",ModName->nickname,*typename1,*argtypename) ;
   fprintf(fp,"  IF ( ALLOCATED( Re_Ary ) ) THEN\n") ;
   fprintf(fp,"    Re_Ary = Re_RetAry(Re_Xferred:Re_Xferred+SIZE(Re_Ary)-1)\n") ;
   fprintf(fp,"    Re_Xferred = Re_Xferred + SIZE( Re_Ary )\n") ;
@@ -1771,7 +1571,7 @@ gen_modname_unpack( FILE *fp , const node_t * ModName )
   fprintf(fp,"    Int_Ary = Int_RetAry(Int_Xferred:Int_Xferred+SIZE(Int_Ary)-1)\n") ;
   fprintf(fp,"    Int_Xferred = Int_Xferred + SIZE( Int_Ary )\n") ;
   fprintf(fp,"  ENDIF\n") ;
-  fprintf(fp,"  CALL %s_UnPack%s(Re_Ary,Db_Ary,Int_Ary,%s,ErrStat2,ErrMsg2)\n",ModName->nickname,*typename,*argtypename) ;
+  fprintf(fp,"  CALL %s_UnPack%s(Re_Ary,Db_Ary,Int_Ary,%s,ErrStat2,ErrMsg2)\n",ModName->nickname,*typename1,*argtypename) ;
   fprintf(fp,"  IF ( ALLOCATED( Re_Ary ) )  DEALLOCATE(Re_Ary)\n" ) ;
   fprintf(fp,"  IF ( ALLOCATED( Db_Ary ) )  DEALLOCATE(Db_Ary)\n" ) ;
   fprintf(fp,"  IF ( ALLOCATED( Int_Ary ) )  DEALLOCATE(Int_Ary)\n" ) ;
@@ -1792,14 +1592,14 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
   int ipass ;
   char nonick[NAMELEN] ;
   char tmp[NAMELEN] ;
+  char ** p1;
 
   if ( strlen(ModName->nickname) > 0 ) {
 // gen preamble
     {
       fprintf( fp, "! %s\n", prog_ver );
 
-      char ** p ;
-      for ( p = FAST_preamble ; *p ; p++ ) { fprintf( fp, *p, ModName->name ) ; }
+      for ( p1 = FAST_preamble ; *p1 ; p1++ ) { fprintf( fp, *p1, ModName->name ) ; }
     }
     for ( p = ModNames ; p ; p = p->next )
     {
@@ -1812,8 +1612,8 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
     }
     if ( sw_ccode ) {
 // Generate a container object for the Fortran code to carry around a pointer to the CPP object(s)
-      fprintf(fp,"USE %s_C_Types\n",ModName->nickname) ;
-      fprintf(fp,"!USE, INTRINSIC :: ISO_C_Binding\n") ; // this is inherited from NickName_C_Types.f90, and older versions of gfortran complain about ambiguous data when we use this (it thinks it's declared twicel; see http://gcc.gnu.org/ml/fortran/2013-04/msg00166.html )
+      //fprintf(fp,"USE %s_C_Types\n",ModName->nickname) ;
+      fprintf(fp,"!USE, INTRINSIC :: ISO_C_Binding\n") ; // this is inherited from NWTC_Library.f90, and older versions of gfortran complain about ambiguous data when we use this (it thinks it's declared twice; see http://gcc.gnu.org/ml/fortran/2013-04/msg00166.html )
     }
 
 // if this is the NWTC Library, we're not going to print "USE NWTC_Library"
@@ -1883,15 +1683,8 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
         if ( sw_ccode ) {
           if ( ipass == 0 ) {
 //            q->containsPtr = 1;
-//            if (strcmp(fast_interface_type_shortname(nonick), "OtherState" )==0 || 
-//                strcmp(fast_interface_type_shortname(nonick), "InitInput" )==0) {
-//              /* @mdm */
-            fprintf(fp,"    TYPE( %s_%s_C ) :: object\n",ModName->nickname,fast_interface_type_shortname(nonick)) ;
-//          } else {
-//              fprintf(fp,"   TYPE(C_PTR) :: object\n") ;
-//            };
+              fprintf(fp,"   TYPE(C_PTR) :: object = C_NULL_PTR\n") ;
           } else {
-            fprintf(fp,"    TYPE( c_ptr ) :: %s_UserData = C_NULL_ptr\n",ModName->nickname) ;
             fprintf(fp,"    TYPE( %s_C ) :: C_obj\n",q->mapsto) ;
           }
         }
@@ -2028,12 +1821,9 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
                ddtnamelong = ddtname ;
             }
 
-            gen_f2c_interface( fp, ModName, ddtname, ddtnamelong, 0 ) ;
          }
       }
     } // sw_ccode
-
-
 
 
     fprintf(fp,"CONTAINS\n") ;
@@ -2056,14 +1846,14 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
           ddtnamelong = ddtname ;
         }
 
-        if ( sw_ccode ) {
-          gen_copy_f2c_c2f( fp, ModName, ddtname, ddtnamelong, 0 ) ;
-          gen_copy_f2c_c2f( fp, ModName, ddtname, ddtnamelong, 1 ) ;
-        }
         gen_copy( fp, ModName, ddtname, ddtnamelong , q) ;
         gen_destroy( fp, ModName, ddtname, ddtnamelong ) ;
         gen_pack( fp, ModName, ddtname, ddtnamelong ) ;
         gen_unpack( fp, ModName, ddtname, ddtnamelong ) ;
+        if ( sw_ccode ) {
+            gen_copy_c2f( fp, ModName, ddtname, ddtnamelong ) ; 
+        }
+
       }
     }
 // bjj: removed gen_modname_pack and gen_modname_unpack because i don't see them being used any differently than the other pack/unpack routines 02/22/2014
@@ -2084,9 +1874,8 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
 int
 gen_module_files ( char * dirname, char * prog_ver )
 {
-  FILE * fp, *fpc, *fph ;
+  FILE * fp, *fph ;
   char  fname[NAMELEN], fname2[NAMELEN] ;
-  char * fn ;
 
   node_t * p ;
 
@@ -2094,7 +1883,7 @@ gen_module_files ( char * dirname, char * prog_ver )
   {
     if ( strlen( p->nickname ) > 0  && ! p->usefrom ) {
       fp = NULL ;
-      fpc = NULL ;
+
       if ( strlen(dirname) > 0 )
         { sprintf(fname,"%s/%s_Types.f90",dirname,p->name) ; }
       else
@@ -2106,13 +1895,7 @@ gen_module_files ( char * dirname, char * prog_ver )
 
       if ( sw_ccode == 1 ) {
 
-        if ( strlen(dirname) > 0 )
-          { sprintf(fname,"%s/%s_Types.c",dirname,p->name) ; }
-        else
-          { sprintf(fname,"%s_Types.c",p->name) ; }
-        if ((fpc = fopen( fname , "w" )) == NULL ) return(1) ;
 
-        print_warning(fpc,fname, "//") ;
         if ( strlen(dirname) > 0 )
           { sprintf(fname,"%s/%s_Types.h",dirname,p->name) ; }
         else
@@ -2120,23 +1903,11 @@ gen_module_files ( char * dirname, char * prog_ver )
         sprintf(fname2,"%s_Types.h",p->name) ;
         if ((fph = fopen( fname , "w" )) == NULL ) return(1) ;
 
-        fprintf(fpc,"#include <stdio.h>\n") ;
-        fprintf(fpc,"#include <stdlib.h>\n") ;
-        fprintf(fpc,"#include <string.h>\n") ;
-        fprintf(fpc,"#include \"%s\"\n\n",fname2) ;
-
-        fprintf(fpc,"\n#ifdef _WIN32 //define something for Windows (32-bit)\n");
-        fprintf(fpc,"#  include \"stdbool.h\"\n");
-        fprintf(fpc,"#  define CALL __declspec( dllexport )\n");
-        fprintf(fpc,"#elif _WIN64 //define something for Windows (64-bit)\n");
-        fprintf(fpc,"#  include \"stdbool.h\"\n");
-        fprintf(fpc,"#  define CALL __declspec( dllexport ) \n");
-        fprintf(fpc,"#else\n");
-        fprintf(fpc,"#  include <stdbool.h>\n");
-        fprintf(fpc,"#  define CALL \n");
-        fprintf(fpc,"#endif\n\n\n");
 
         print_warning(fph,fname, "//") ;
+
+        fprintf(fph,"\n#ifndef _%s_TYPES_H\n",p->name);
+        fprintf(fph,"#define _%s_TYPES_H\n\n",p->name);
         fprintf(fph,"\n#ifdef _WIN32 //define something for Windows (32-bit)\n");
         fprintf(fph,"#  include \"stdbool.h\"\n");
         fprintf(fph,"#  define CALL __declspec( dllexport )\n");
@@ -2151,9 +1922,9 @@ gen_module_files ( char * dirname, char * prog_ver )
       gen_module ( fp , p, prog_ver ) ;
       close_the_file( fp, "" ) ;
       if ( sw_ccode ) {
-        gen_c_module ( fpc , fph , p ) ;
+        gen_c_module ( fph , p ) ;
 
-        close_the_file( fpc,"//") ;
+        fprintf(fph,"\n#endif // _%s_TYPES_H\n\n\n",p->name);
         close_the_file( fph,"//") ;
 
       }

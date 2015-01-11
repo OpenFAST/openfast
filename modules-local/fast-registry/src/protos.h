@@ -32,7 +32,7 @@ void show_nodelist( node_t * p ) ;
 void show_nodelist1( node_t * p , int indent ) ;
 #endif
 
-void gen_c_module( FILE * fpc , FILE * fph, node_t * ModName );
+void gen_c_module( FILE * fph, node_t * ModName );
 
 int gen_state_struct ( char * fname ) ;
 int gen_decls ( FILE * fp ,  node_t * node , int sw_ranges, int sw_point , int mask , int layer ) ;
