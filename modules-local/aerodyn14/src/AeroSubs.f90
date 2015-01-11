@@ -99,9 +99,9 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       RETURN
    END IF
 
-!   IF (NWTC_VerboseComments) THEN
+   IF (NWTC_VerboseLevel == NWTC_Verbose) THEN
       CALL WrScr( ' Heading of the AeroDyn input file: '//NewLine//'   '//TRIM(InitInp%Title) )
-!   END IF
+   END IF
    p%TITLE = InitInp%TITLE
 
       ! Read in the units specifier  - REMOVE SOON!!!!!
