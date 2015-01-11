@@ -39,7 +39,7 @@ USE FAST_IO_Subs   ! all of the ModuleName and ModuleName_types modules are inhe
 IMPLICIT  NONE
    
    ! Local variables:
-REAL(DbKi), PARAMETER     :: t_initial = 0.0_DbKi                    ! Initial time
+REAL(DbKi),             PARAMETER     :: t_initial = 0.0_DbKi                    ! Initial time
 
    
    ! Data for the glue code:

@@ -150,7 +150,7 @@ ECHO MAP
 COPY "%MAP_DLL%"                     "%bin_dir%"
 COPY "%MAP_DLL64%"                   "%bin_dir%"
 
-SET src_folder=%MAP_Loc%\..
+SET src_folder=%MAP_Loc%
 SET dst_folder=%depend_dir%\MAP
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
