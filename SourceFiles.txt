@@ -1,7 +1,4 @@
 source\data.c
-source\fseek_test.c
-source\gen_allocs.c
-source\gen_config.c
 source\gen_c_types.c
 source\gen_module_files.c
 source\misc.c
@@ -10,8 +7,6 @@ source\registry.c
 source\reg_parse.c
 source\sym.c
 source\symtab_gen.c
-source\Template_c2f_helpers.c
-source\Template_C_Types.c
 source\Template_data.c
 source\Template_registry.c
 source\type.c
