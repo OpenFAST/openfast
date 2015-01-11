@@ -10,101 +10,7 @@
 #include "registry.h"
 #include "data.h"
 
-void
-gen_c_helpers( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
-{
-  char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], tmp4[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
-  node_t *q, * r ;
-  int d, idim, frst ;
 
-  remove_nickname(ModName->nickname,inout,nonick) ;
-  append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
-  sprintf(tmp,"%s",addnick) ;
-  if (( q = get_entry( make_lower_temp(tmp),ModName->module_ddt_list ) ) == NULL )
-  {
-    fprintf(stderr,"Registry warning: generating %s_Unpack%s: cannot find definition for %s\n",ModName->nickname,nonick,tmp) ;
-    return;//(1) ;
-  }
-
-  for ( r = q->fields ; r ; r = r->next )
-  {
-    if ( r->type == NULL ) {
-      fprintf(stderr,"Registry warning: no type defined for %s\n",r->name) ;
-      continue ;
-    }
-    if ( r->type->type_type == DERIVED && ! r->type->usefrom ) {
-    } else {
-      if ( r->ndims > 0 ) {
-        sprintf(tmp4,"%s_F2C_%s_%s_C", ModName->nickname,nonick,r->name ) ;
-        //printf("CALL void %s ( %s_t *type, %s *arr, int len )\n", tmp4,addnick,C_type(r->type->mapsto) );
-        //make_fortran_callable(tmp4) ;
-
-        //fprintf(fp,"void %s ( %s * src, %s_t * dst ", tmp4,C_type(r->type->mapsto),addnick ) ;
-        fprintf(fp,"\nCALL void %s ( %s_t *type, %s *arr, int len )\n", tmp4,addnick,C_type(r->type->mapsto) );
-        // @end masciola
-        //for ( d=1 ; d <= r->ndims ; d++ ) fprintf(fp,", int *n%d",d) ;
-        fprintf(fp,"{\n") ;
-        //fprintf(fp,"  int i1,i2,i3,i4,i5 ;\n") ;
-        fprintf(fp,"  int i = 0;\n") ;
-        fprintf(fp,"  for( i=0 ; i<=len-1 ; i++ ) type->%s[i] = arr[i];\n",r->name);
-        //fprintf(fp,"  %s *p ;\n",C_type(r->type->mapsto)) ;
-//        if ( has_deferred_dim( r, 0 ) ) {
-//          fprintf(fp,"  if ( dst->%s != NULL ) free( dst->%s ) ;\n",r->name,r->name) ;
-//          strcpy(tmp,"") ;
-//          for ( d=1 ; d <= r->ndims ; d++ ) {
-//            sprintf(tmp2," *n%d",d) ;
-//            strcat(tmp,tmp2) ;
-//            if ( d < r->ndims ) strcat(tmp,"*") ;
-//          }
-//          fprintf(fp,"  dst->%s = (%s *)malloc((%s)*sizeof(%s)) ;\n",
-//                  r->name,C_type(r->type->mapsto),tmp,C_type(r->type->mapsto)) ;
-//        }
-//        if ( r->ndims == 1 ) sprintf(tmp,"i1") ;
-//        if ( r->ndims == 2 ) sprintf(tmp,"i1+(i2**n1)") ;
-//        if ( r->ndims == 3 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)") ;
-//        if ( r->ndims == 4 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)") ;
-//        if ( r->ndims == 5 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)+(i5**n1**n2**n3**n4)") ;
-//        fprintf(fp,  "  p = (%s *)dst->%s ;\n",C_type(r->type->mapsto),r->name) ;
-//        for ( d=r->ndims ; d >= 1 ; d-- ) {
-//          fprintf(fp,"  for (i%d = 0 ; i%d < *n%d ; i%d++ )\n",d,d,d,d) ;
-//        }
-//        fprintf(fp,  "  {\n") ;
-//        fprintf(fp,  "    *p++ = src[%s] ;\n",tmp) ;
-//        fprintf(fp,  "  }\n") ;
-        fprintf(fp,"}\n") ;
-//      //
-//        sprintf(tmp4,"%s_C2F_%s_%s", ModName->nickname,nonick,r->name ) ;
-//        make_fortran_callable(tmp4) ;
-//        // @start masciola
-//        //fprintf(fp,"void %s ( %s_t * src, %s * dst ", tmp4,addnick,C_type(r->type->mapsto) ) ;
-//        fprintf(fp,"CALL void STDCLL %s ( %s_t * src, %s * dst ", tmp4,addnick,C_type(r->type->mapsto) ) ;
-//        // @end masciola
-//        for ( d=1 ; d <= r->ndims ; d++ ) fprintf(fp,", int *n%d",d) ;
-//        fprintf(fp,") {\n") ;
-//        fprintf(fp,"  int i1,i2,i3,i4,i5 ;\n") ;
-//        fprintf(fp,"  %s *p ;\n",C_type(r->type->mapsto)) ;
-//        if ( r->ndims == 1 ) sprintf(tmp,"i1") ;
-//        if ( r->ndims == 2 ) sprintf(tmp,"i1+(i2**n1)") ;
-//        if ( r->ndims == 3 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)") ;
-//        if ( r->ndims == 4 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)") ;
-//        if ( r->ndims == 5 ) sprintf(tmp,"i1+(i2**n1)+(i3**n1**n2)+(i4**n1**n2**n3)+(i5**n1**n2**n3**n4)") ;
-//        fprintf(fp,  "  p = (%s *)src->%s ;\n",C_type(r->type->mapsto),r->name) ;
-//        for ( d=r->ndims ; d >= 1 ; d-- ) {
-//          fprintf(fp,"  for (i%d = 0 ; i%d < *n%d ; i%d++ )\n",d,d,d,d) ;
-//        }
-//        fprintf(fp,  "  {\n") ;
-//        fprintf(fp,  "    dst[%s] = *p++ ;\n",tmp) ;
-//        fprintf(fp,  "  }\n") ;
-//        fprintf(fp,"}\n") ;
-
-
-      } else {
-      }
-    }
-  }
-
-
-}
 
 void
 gen_c_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
@@ -435,11 +341,9 @@ return;//(0) ;
 }
 
 
-#include "Template_C_Types.c"
-#include "Template_c2f_helpers.c"
 
 void
-gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
+gen_c_module( FILE * fph, node_t * ModName )
 {
   node_t * p, * q, * r ;
   int i ;
@@ -451,7 +355,7 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
     {
       if ( q->usefrom == 0 ) {
         fprintf(fph,  "  typedef struct %s {\n",q->mapsto) ;
-        fprintf(fph,  "    void * object ;\n") ;
+        fprintf(fph,  "    void * object ;\n") ; 
         if ( sw_embed_class_ptr ) {
           fprintf(fph,"    %s * class ; // user must define a class named %s in C++ code\n",q->mapsto,q->mapsto) ;
           fprintf(fph,"    int *index ;\n") ;
@@ -516,93 +420,5 @@ gen_c_module( FILE * fpc , FILE * fph, node_t * ModName )
     }
     fprintf(fph,"  } %s_t ;\n", ModName->nickname ) ;
 
-    fprintf(fpc,"//#define CALL __attribute__((dllexport) )\n") ;
-    for ( q = ModName->module_ddt_list ; q ; q = q->next )
-    {
-      if ( q->usefrom == 0 ) {
-
-        char * ddtname, * ddtnamelong, nonick[NAMELEN] ;
-        ddtname = q->name ;
-
-        remove_nickname(ModName->nickname,ddtname,nonick) ;
-
-        if ( is_a_fast_interface_type( nonick ) ) {
-          ddtnamelong = std_case( nonick ) ;
-          ddtname = fast_interface_type_shortname( nonick ) ;
-        } else {
-          ddtnamelong = ddtname ;
-        }
-//        fprintf(fpc,"extern \"C\" %s_%s_t* CALL %s_%s_Create() { return new %s_%s_t() ; } ;\n",
-        fprintf(fpc,"//%s_%s_t* CALL %s_%s_Create() { return ((%s_%s_t*) malloc( sizeof(%s_%s_t()))) ; } ;\n",
-                        ModName->nickname,
-                        ddtnamelong,
-                        ModName->nickname,
-                        ddtname,
-                        ModName->nickname,
-                        ddtnamelong,
-                        ModName->nickname,
-                        ddtnamelong ) ;
-        
-        fprintf(fpc,"//void CALL %s_%s_Delete(%s_%s_t *This) { free(This) ; } ;\n",
-                        ModName->nickname,
-                        ddtname,
-                        ModName->nickname,
-                        ddtnamelong ) ;
-
-      }
-    }
-
-    for ( q = ModName->module_ddt_list ; q ; q = q->next )
-    {
-      if ( q->usefrom == 0 ) {
-
-        char * ddtname, * ddtnamelong, nonick[NAMELEN] ;
-        ddtname = q->name ;
-
-        remove_nickname(ModName->nickname,ddtname,nonick) ;
-
-        if ( is_a_fast_interface_type( nonick ) ) {
-          ddtnamelong = std_case( nonick ) ;
-          ddtname = fast_interface_type_shortname( nonick ) ;
-        } else {
-          ddtnamelong = ddtname ;
-        }
-
-  //      gen_copy( fpc, ModName, ddtname, ddtnamelong ) ;
-  //      gen_destroy( fpc, ModName, ddtname, ddtnamelong ) ;
-        gen_c_pack( fpc, ModName, ddtname, ddtnamelong ) ;
-        gen_c_unpack( fpc, ModName, ddtname, ddtnamelong ) ;
-        gen_c_helpers( fpc, ModName, ddtname, ddtnamelong ) ;
-      }
-    }
-#if 0
-    if ( sw_ccode ) {
-      char ** p ;
-      char tmp1[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN] ;
-      for ( p = template_c2f_helpers ; *p ; p++ ) {
-        strcpy(tmp1,*p) ;
-        substitute(tmp1,"ModName",ModName->nickname,tmp2) ;
-        fprintf(fpc,"%s\n",tmp2) ;
-      }
-    }
-#endif
-
-    if ( sw_ccode ) {
-      FILE *fpt ;
-      char fname[NAMELEN], tmp1[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN] ;
-      char ** p ;
-    
-      sprintf(fname,"%s_C_Types.f90",ModName->name) ;
-  fprintf(stderr,"generating %s\n",fname) ;
-      if ((fpt = fopen( fname , "w" )) == NULL ) return;//(1) ;
-      print_warning(fpt,fname,"!") ;
-      for ( p = template_c_types ; *p ; p++ ) {
-        strcpy(tmp1,*p) ;
-        substitute(tmp1,"ModuleName",ModName->name,tmp2) ;
-        substitute(tmp2,"ModName",ModName->nickname,tmp3) ;
-        fprintf(fpt,"%s\n",tmp3) ;
-      }
-      fclose(fpt) ;
-    }
   }
 }
