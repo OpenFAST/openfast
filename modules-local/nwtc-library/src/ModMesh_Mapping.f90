@@ -3020,40 +3020,49 @@ END SUBROUTINE Lump_Line2_to_Point
 !==================================================================================================================================
 !bjj: these routines require the use of ModMesh.f90, thus they cannot be part of NWTC_Library_Types.f90:
 !STARTOFREGISTRYGENERATEDFILE './NWTC_Library_Types.f90'
- SUBROUTINE NWTC_Library_Copymaptype( SrcmaptypeData, DstmaptypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(maptype), INTENT(INOUT) :: SrcmaptypeData
-   TYPE(maptype), INTENT(INOUT) :: DstmaptypeData
+!
+! WARNING This file is generated automatically by the FAST registry
+! Do not edit.  Your changes to this file will be lost.
+!
+! FAST Registry (v2.05.00, 10-Jan-2015)
+!*********************************************************************************************************************************
+ SUBROUTINE NWTC_Library_CopyMapType( SrcMapTypeData, DstMapTypeData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(MapType), INTENT(IN) :: SrcMapTypeData
+   TYPE(MapType), INTENT(INOUT) :: DstMapTypeData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
-   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k
-   INTEGER(IntKi)                 :: i1_l,i2_l,i3_l,i4_l,i5_l  ! lower bounds for an array dimension
-   INTEGER(IntKi)                 :: i1_u,i2_u,i3_u,i4_u,i5_u  ! upper bounds for an array dimension
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(1024)                :: ErrMsg2
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-   DstmaptypeData%OtherMesh_Element = SrcmaptypeData%OtherMesh_Element
-   DstmaptypeData%distance = SrcmaptypeData%distance
-   DstmaptypeData%couple_arm = SrcmaptypeData%couple_arm
-   DstmaptypeData%shape_fn = SrcmaptypeData%shape_fn
- END SUBROUTINE NWTC_Library_Copymaptype
+   DstMapTypeData%OtherMesh_Element = SrcMapTypeData%OtherMesh_Element
+   DstMapTypeData%distance = SrcMapTypeData%distance
+   DstMapTypeData%couple_arm = SrcMapTypeData%couple_arm
+   DstMapTypeData%shape_fn = SrcMapTypeData%shape_fn
+ END SUBROUTINE NWTC_Library_CopyMapType
 
- SUBROUTINE NWTC_Library_Destroymaptype( maptypeData, ErrStat, ErrMsg )
-  TYPE(maptype), INTENT(INOUT) :: maptypeData
+ SUBROUTINE NWTC_Library_DestroyMapType( MapTypeData, ErrStat, ErrMsg )
+  TYPE(MapType), INTENT(INOUT) :: MapTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
- END SUBROUTINE NWTC_Library_Destroymaptype
+ END SUBROUTINE NWTC_Library_DestroyMapType
 
- SUBROUTINE NWTC_Library_Packmaptype( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE NWTC_Library_PackMapType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(maptype),  INTENT(INOUT) :: InData
+  TYPE(MapType),  INTENT(INOUT) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -3098,13 +3107,13 @@ END SUBROUTINE Lump_Line2_to_Point
   Re_Xferred   = Re_Xferred   + SIZE(InData%couple_arm)
   IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%shape_fn))-1 ) =  PACK(InData%shape_fn ,.TRUE.)
   Re_Xferred   = Re_Xferred   + SIZE(InData%shape_fn)
- END SUBROUTINE NWTC_Library_Packmaptype
+ END SUBROUTINE NWTC_Library_PackMapType
 
- SUBROUTINE NWTC_Library_UnPackmaptype( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE NWTC_Library_UnPackMapType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(maptype), INTENT(INOUT) :: OutData
+  TYPE(MapType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -3137,206 +3146,213 @@ END SUBROUTINE Lump_Line2_to_Point
   Int_Xferred   = Int_Xferred   + 1
   OutData%distance = ReKiBuf ( Re_Xferred )
   Re_Xferred   = Re_Xferred   + 1
-  ALLOCATE(mask1(SIZE(OutData%couple_arm,1))); mask1 = .TRUE.
+  ALLOCATE(mask1(SIZE(OutData%couple_arm,1)))
+  mask1 = .TRUE.
   OutData%couple_arm = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%couple_arm))-1 ),mask1,OutData%couple_arm)
   DEALLOCATE(mask1)
   Re_Xferred   = Re_Xferred   + SIZE(OutData%couple_arm)
-  ALLOCATE(mask1(SIZE(OutData%shape_fn,1))); mask1 = .TRUE.
+  ALLOCATE(mask1(SIZE(OutData%shape_fn,1)))
+  mask1 = .TRUE.
   OutData%shape_fn = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%shape_fn))-1 ),mask1,OutData%shape_fn)
   DEALLOCATE(mask1)
   Re_Xferred   = Re_Xferred   + SIZE(OutData%shape_fn)
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
- END SUBROUTINE NWTC_Library_UnPackmaptype
+ END SUBROUTINE NWTC_Library_UnPackMapType
 
- SUBROUTINE NWTC_Library_Copymeshmaptype( SrcmeshmaptypeData, DstmeshmaptypeData, CtrlCode, ErrStat, ErrMsg )
-   TYPE(meshmaptype), INTENT(INOUT) :: SrcmeshmaptypeData
-   TYPE(meshmaptype), INTENT(INOUT) :: DstmeshmaptypeData
+ SUBROUTINE NWTC_Library_CopyMeshMapType( SrcMeshMapTypeData, DstMeshMapTypeData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(MeshMapType), INTENT(INOUT) :: SrcMeshMapTypeData
+   TYPE(MeshMapType), INTENT(INOUT) :: DstMeshMapTypeData
    INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
    INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
-   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5,j,k
-   INTEGER(IntKi)                 :: i1_l,i2_l,i3_l,i4_l,i5_l  ! lower bounds for an array dimension
-   INTEGER(IntKi)                 :: i1_u,i2_u,i3_u,i4_u,i5_u  ! upper bounds for an array dimension
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(1024)                :: ErrMsg2
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-IF (ALLOCATED(SrcmeshmaptypeData%MapLoads)) THEN
-   i1_l = LBOUND(SrcmeshmaptypeData%MapLoads,1)
-   i1_u = UBOUND(SrcmeshmaptypeData%MapLoads,1)
-   IF (.NOT.ALLOCATED(DstmeshmaptypeData%MapLoads)) THEN 
-      ALLOCATE(DstmeshmaptypeData%MapLoads(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'NWTC_Library_Copymeshmaptype: Error allocating DstmeshmaptypeData%MapLoads.'
+IF (ALLOCATED(SrcMeshMapTypeData%MapLoads)) THEN
+   i1_l = LBOUND(SrcMeshMapTypeData%MapLoads,1)
+   i1_u = UBOUND(SrcMeshMapTypeData%MapLoads,1)
+   IF (.NOT. ALLOCATED(DstMeshMapTypeData%MapLoads)) THEN 
+      ALLOCATE(DstMeshMapTypeData%MapLoads(i1_l:i1_u),STAT=ErrStat2)
+      IF (ErrStat2 /= 0) THEN 
+         CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapTypeData%MapLoads.', ErrStat, ErrMsg,'NWTC_Library_CopyMeshMapType')
          RETURN
       END IF
    END IF
-   DO i1 = LBOUND(SrcmeshmaptypeData%MapLoads,1), UBOUND(SrcmeshmaptypeData%MapLoads,1)
-      CALL NWTC_Library_Copymaptype( SrcmeshmaptypeData%MapLoads(i1), DstmeshmaptypeData%MapLoads(i1), CtrlCode, ErrStat, ErrMsg )
+   DO i1 = LBOUND(SrcMeshMapTypeData%MapLoads,1), UBOUND(SrcMeshMapTypeData%MapLoads,1)
+      CALL NWTC_Library_Copymaptype( SrcMeshMapTypeData%MapLoads(i1), DstMeshMapTypeData%MapLoads(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,'NWTC_Library_CopyMeshMapType:MapLoads(i1)')
+         IF (ErrStat>=AbortErrLev) RETURN
    ENDDO
 ENDIF
-IF (ALLOCATED(SrcmeshmaptypeData%MapMotions)) THEN
-   i1_l = LBOUND(SrcmeshmaptypeData%MapMotions,1)
-   i1_u = UBOUND(SrcmeshmaptypeData%MapMotions,1)
-   IF (.NOT.ALLOCATED(DstmeshmaptypeData%MapMotions)) THEN 
-      ALLOCATE(DstmeshmaptypeData%MapMotions(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'NWTC_Library_Copymeshmaptype: Error allocating DstmeshmaptypeData%MapMotions.'
+IF (ALLOCATED(SrcMeshMapTypeData%MapMotions)) THEN
+   i1_l = LBOUND(SrcMeshMapTypeData%MapMotions,1)
+   i1_u = UBOUND(SrcMeshMapTypeData%MapMotions,1)
+   IF (.NOT. ALLOCATED(DstMeshMapTypeData%MapMotions)) THEN 
+      ALLOCATE(DstMeshMapTypeData%MapMotions(i1_l:i1_u),STAT=ErrStat2)
+      IF (ErrStat2 /= 0) THEN 
+         CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapTypeData%MapMotions.', ErrStat, ErrMsg,'NWTC_Library_CopyMeshMapType')
          RETURN
       END IF
    END IF
-   DO i1 = LBOUND(SrcmeshmaptypeData%MapMotions,1), UBOUND(SrcmeshmaptypeData%MapMotions,1)
-      CALL NWTC_Library_Copymaptype( SrcmeshmaptypeData%MapMotions(i1), DstmeshmaptypeData%MapMotions(i1), CtrlCode, ErrStat, ErrMsg )
+   DO i1 = LBOUND(SrcMeshMapTypeData%MapMotions,1), UBOUND(SrcMeshMapTypeData%MapMotions,1)
+      CALL NWTC_Library_Copymaptype( SrcMeshMapTypeData%MapMotions(i1), DstMeshMapTypeData%MapMotions(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,'NWTC_Library_CopyMeshMapType:MapMotions(i1)')
+         IF (ErrStat>=AbortErrLev) RETURN
    ENDDO
 ENDIF
-IF (ALLOCATED(SrcmeshmaptypeData%MapSrcToAugmt)) THEN
-   i1_l = LBOUND(SrcmeshmaptypeData%MapSrcToAugmt,1)
-   i1_u = UBOUND(SrcmeshmaptypeData%MapSrcToAugmt,1)
-   IF (.NOT.ALLOCATED(DstmeshmaptypeData%MapSrcToAugmt)) THEN 
-      ALLOCATE(DstmeshmaptypeData%MapSrcToAugmt(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'NWTC_Library_Copymeshmaptype: Error allocating DstmeshmaptypeData%MapSrcToAugmt.'
+IF (ALLOCATED(SrcMeshMapTypeData%MapSrcToAugmt)) THEN
+   i1_l = LBOUND(SrcMeshMapTypeData%MapSrcToAugmt,1)
+   i1_u = UBOUND(SrcMeshMapTypeData%MapSrcToAugmt,1)
+   IF (.NOT. ALLOCATED(DstMeshMapTypeData%MapSrcToAugmt)) THEN 
+      ALLOCATE(DstMeshMapTypeData%MapSrcToAugmt(i1_l:i1_u),STAT=ErrStat2)
+      IF (ErrStat2 /= 0) THEN 
+         CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapTypeData%MapSrcToAugmt.', ErrStat, ErrMsg,'NWTC_Library_CopyMeshMapType')
          RETURN
       END IF
    END IF
-   DO i1 = LBOUND(SrcmeshmaptypeData%MapSrcToAugmt,1), UBOUND(SrcmeshmaptypeData%MapSrcToAugmt,1)
-      CALL NWTC_Library_Copymaptype( SrcmeshmaptypeData%MapSrcToAugmt(i1), DstmeshmaptypeData%MapSrcToAugmt(i1), CtrlCode, ErrStat, ErrMsg )
+   DO i1 = LBOUND(SrcMeshMapTypeData%MapSrcToAugmt,1), UBOUND(SrcMeshMapTypeData%MapSrcToAugmt,1)
+      CALL NWTC_Library_Copymaptype( SrcMeshMapTypeData%MapSrcToAugmt(i1), DstMeshMapTypeData%MapSrcToAugmt(i1), CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,'NWTC_Library_CopyMeshMapType:MapSrcToAugmt(i1)')
+         IF (ErrStat>=AbortErrLev) RETURN
    ENDDO
 ENDIF
-     CALL MeshCopy( SrcmeshmaptypeData%Augmented_Ln2_Src, DstmeshmaptypeData%Augmented_Ln2_Src, CtrlCode, ErrStat, ErrMsg )
-     CALL MeshCopy( SrcmeshmaptypeData%Lumped_Points_Src, DstmeshmaptypeData%Lumped_Points_Src, CtrlCode, ErrStat, ErrMsg )
-IF (ALLOCATED(SrcmeshmaptypeData%LoadLn2_A_Mat_Piv)) THEN
-   i1_l = LBOUND(SrcmeshmaptypeData%LoadLn2_A_Mat_Piv,1)
-   i1_u = UBOUND(SrcmeshmaptypeData%LoadLn2_A_Mat_Piv,1)
-   IF (.NOT.ALLOCATED(DstmeshmaptypeData%LoadLn2_A_Mat_Piv)) THEN 
-      ALLOCATE(DstmeshmaptypeData%LoadLn2_A_Mat_Piv(i1_l:i1_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'NWTC_Library_Copymeshmaptype: Error allocating DstmeshmaptypeData%LoadLn2_A_Mat_Piv.'
+     CALL MeshCopy( SrcMeshMapTypeData%Augmented_Ln2_Src, DstMeshMapTypeData%Augmented_Ln2_Src, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,'NWTC_Library_CopyMeshMapType:Augmented_Ln2_Src')
+         IF (ErrStat>=AbortErrLev) RETURN
+     CALL MeshCopy( SrcMeshMapTypeData%Lumped_Points_Src, DstMeshMapTypeData%Lumped_Points_Src, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,'NWTC_Library_CopyMeshMapType:Lumped_Points_Src')
+         IF (ErrStat>=AbortErrLev) RETURN
+IF (ALLOCATED(SrcMeshMapTypeData%LoadLn2_A_Mat_Piv)) THEN
+   i1_l = LBOUND(SrcMeshMapTypeData%LoadLn2_A_Mat_Piv,1)
+   i1_u = UBOUND(SrcMeshMapTypeData%LoadLn2_A_Mat_Piv,1)
+   IF (.NOT. ALLOCATED(DstMeshMapTypeData%LoadLn2_A_Mat_Piv)) THEN 
+      ALLOCATE(DstMeshMapTypeData%LoadLn2_A_Mat_Piv(i1_l:i1_u),STAT=ErrStat2)
+      IF (ErrStat2 /= 0) THEN 
+         CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapTypeData%LoadLn2_A_Mat_Piv.', ErrStat, ErrMsg,'NWTC_Library_CopyMeshMapType')
          RETURN
       END IF
    END IF
-   DstmeshmaptypeData%LoadLn2_A_Mat_Piv = SrcmeshmaptypeData%LoadLn2_A_Mat_Piv
+   DstMeshMapTypeData%LoadLn2_A_Mat_Piv = SrcMeshMapTypeData%LoadLn2_A_Mat_Piv
 ENDIF
-IF (ALLOCATED(SrcmeshmaptypeData%DisplacedPosition)) THEN
-   i1_l = LBOUND(SrcmeshmaptypeData%DisplacedPosition,1)
-   i1_u = UBOUND(SrcmeshmaptypeData%DisplacedPosition,1)
-   i2_l = LBOUND(SrcmeshmaptypeData%DisplacedPosition,2)
-   i2_u = UBOUND(SrcmeshmaptypeData%DisplacedPosition,2)
-   i3_l = LBOUND(SrcmeshmaptypeData%DisplacedPosition,3)
-   i3_u = UBOUND(SrcmeshmaptypeData%DisplacedPosition,3)
-   IF (.NOT.ALLOCATED(DstmeshmaptypeData%DisplacedPosition)) THEN 
-      ALLOCATE(DstmeshmaptypeData%DisplacedPosition(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'NWTC_Library_Copymeshmaptype: Error allocating DstmeshmaptypeData%DisplacedPosition.'
+IF (ALLOCATED(SrcMeshMapTypeData%DisplacedPosition)) THEN
+   i1_l = LBOUND(SrcMeshMapTypeData%DisplacedPosition,1)
+   i1_u = UBOUND(SrcMeshMapTypeData%DisplacedPosition,1)
+   i2_l = LBOUND(SrcMeshMapTypeData%DisplacedPosition,2)
+   i2_u = UBOUND(SrcMeshMapTypeData%DisplacedPosition,2)
+   i3_l = LBOUND(SrcMeshMapTypeData%DisplacedPosition,3)
+   i3_u = UBOUND(SrcMeshMapTypeData%DisplacedPosition,3)
+   IF (.NOT. ALLOCATED(DstMeshMapTypeData%DisplacedPosition)) THEN 
+      ALLOCATE(DstMeshMapTypeData%DisplacedPosition(i1_l:i1_u,i2_l:i2_u,i3_l:i3_u),STAT=ErrStat2)
+      IF (ErrStat2 /= 0) THEN 
+         CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapTypeData%DisplacedPosition.', ErrStat, ErrMsg,'NWTC_Library_CopyMeshMapType')
          RETURN
       END IF
    END IF
-   DstmeshmaptypeData%DisplacedPosition = SrcmeshmaptypeData%DisplacedPosition
+   DstMeshMapTypeData%DisplacedPosition = SrcMeshMapTypeData%DisplacedPosition
 ENDIF
-IF (ALLOCATED(SrcmeshmaptypeData%LoadLn2_F)) THEN
-   i1_l = LBOUND(SrcmeshmaptypeData%LoadLn2_F,1)
-   i1_u = UBOUND(SrcmeshmaptypeData%LoadLn2_F,1)
-   i2_l = LBOUND(SrcmeshmaptypeData%LoadLn2_F,2)
-   i2_u = UBOUND(SrcmeshmaptypeData%LoadLn2_F,2)
-   IF (.NOT.ALLOCATED(DstmeshmaptypeData%LoadLn2_F)) THEN 
-      ALLOCATE(DstmeshmaptypeData%LoadLn2_F(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'NWTC_Library_Copymeshmaptype: Error allocating DstmeshmaptypeData%LoadLn2_F.'
+IF (ALLOCATED(SrcMeshMapTypeData%LoadLn2_F)) THEN
+   i1_l = LBOUND(SrcMeshMapTypeData%LoadLn2_F,1)
+   i1_u = UBOUND(SrcMeshMapTypeData%LoadLn2_F,1)
+   i2_l = LBOUND(SrcMeshMapTypeData%LoadLn2_F,2)
+   i2_u = UBOUND(SrcMeshMapTypeData%LoadLn2_F,2)
+   IF (.NOT. ALLOCATED(DstMeshMapTypeData%LoadLn2_F)) THEN 
+      ALLOCATE(DstMeshMapTypeData%LoadLn2_F(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+      IF (ErrStat2 /= 0) THEN 
+         CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapTypeData%LoadLn2_F.', ErrStat, ErrMsg,'NWTC_Library_CopyMeshMapType')
          RETURN
       END IF
    END IF
-   DstmeshmaptypeData%LoadLn2_F = SrcmeshmaptypeData%LoadLn2_F
+   DstMeshMapTypeData%LoadLn2_F = SrcMeshMapTypeData%LoadLn2_F
 ENDIF
-IF (ALLOCATED(SrcmeshmaptypeData%LoadLn2_A_Mat)) THEN
-   i1_l = LBOUND(SrcmeshmaptypeData%LoadLn2_A_Mat,1)
-   i1_u = UBOUND(SrcmeshmaptypeData%LoadLn2_A_Mat,1)
-   i2_l = LBOUND(SrcmeshmaptypeData%LoadLn2_A_Mat,2)
-   i2_u = UBOUND(SrcmeshmaptypeData%LoadLn2_A_Mat,2)
-   IF (.NOT.ALLOCATED(DstmeshmaptypeData%LoadLn2_A_Mat)) THEN 
-      ALLOCATE(DstmeshmaptypeData%LoadLn2_A_Mat(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'NWTC_Library_Copymeshmaptype: Error allocating DstmeshmaptypeData%LoadLn2_A_Mat.'
+IF (ALLOCATED(SrcMeshMapTypeData%LoadLn2_A_Mat)) THEN
+   i1_l = LBOUND(SrcMeshMapTypeData%LoadLn2_A_Mat,1)
+   i1_u = UBOUND(SrcMeshMapTypeData%LoadLn2_A_Mat,1)
+   i2_l = LBOUND(SrcMeshMapTypeData%LoadLn2_A_Mat,2)
+   i2_u = UBOUND(SrcMeshMapTypeData%LoadLn2_A_Mat,2)
+   IF (.NOT. ALLOCATED(DstMeshMapTypeData%LoadLn2_A_Mat)) THEN 
+      ALLOCATE(DstMeshMapTypeData%LoadLn2_A_Mat(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+      IF (ErrStat2 /= 0) THEN 
+         CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapTypeData%LoadLn2_A_Mat.', ErrStat, ErrMsg,'NWTC_Library_CopyMeshMapType')
          RETURN
       END IF
    END IF
-   DstmeshmaptypeData%LoadLn2_A_Mat = SrcmeshmaptypeData%LoadLn2_A_Mat
+   DstMeshMapTypeData%LoadLn2_A_Mat = SrcMeshMapTypeData%LoadLn2_A_Mat
 ENDIF
-IF (ALLOCATED(SrcmeshmaptypeData%LoadLn2_M)) THEN
-   i1_l = LBOUND(SrcmeshmaptypeData%LoadLn2_M,1)
-   i1_u = UBOUND(SrcmeshmaptypeData%LoadLn2_M,1)
-   i2_l = LBOUND(SrcmeshmaptypeData%LoadLn2_M,2)
-   i2_u = UBOUND(SrcmeshmaptypeData%LoadLn2_M,2)
-   IF (.NOT.ALLOCATED(DstmeshmaptypeData%LoadLn2_M)) THEN 
-      ALLOCATE(DstmeshmaptypeData%LoadLn2_M(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat)
-      IF (ErrStat /= 0) THEN 
-         ErrStat = ErrID_Fatal 
-         ErrMsg = 'NWTC_Library_Copymeshmaptype: Error allocating DstmeshmaptypeData%LoadLn2_M.'
+IF (ALLOCATED(SrcMeshMapTypeData%LoadLn2_M)) THEN
+   i1_l = LBOUND(SrcMeshMapTypeData%LoadLn2_M,1)
+   i1_u = UBOUND(SrcMeshMapTypeData%LoadLn2_M,1)
+   i2_l = LBOUND(SrcMeshMapTypeData%LoadLn2_M,2)
+   i2_u = UBOUND(SrcMeshMapTypeData%LoadLn2_M,2)
+   IF (.NOT. ALLOCATED(DstMeshMapTypeData%LoadLn2_M)) THEN 
+      ALLOCATE(DstMeshMapTypeData%LoadLn2_M(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+      IF (ErrStat2 /= 0) THEN 
+         CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapTypeData%LoadLn2_M.', ErrStat, ErrMsg,'NWTC_Library_CopyMeshMapType')
          RETURN
       END IF
    END IF
-   DstmeshmaptypeData%LoadLn2_M = SrcmeshmaptypeData%LoadLn2_M
+   DstMeshMapTypeData%LoadLn2_M = SrcMeshMapTypeData%LoadLn2_M
 ENDIF
- END SUBROUTINE NWTC_Library_Copymeshmaptype
+ END SUBROUTINE NWTC_Library_CopyMeshMapType
 
- SUBROUTINE NWTC_Library_Destroymeshmaptype( meshmaptypeData, ErrStat, ErrMsg )
-  TYPE(meshmaptype), INTENT(INOUT) :: meshmaptypeData
+ SUBROUTINE NWTC_Library_DestroyMeshMapType( MeshMapTypeData, ErrStat, ErrMsg )
+  TYPE(MeshMapType), INTENT(INOUT) :: MeshMapTypeData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
   INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
-IF (ALLOCATED(meshmaptypeData%MapLoads)) THEN
-DO i1 = LBOUND(meshmaptypeData%MapLoads,1), UBOUND(meshmaptypeData%MapLoads,1)
-  CALL NWTC_Library_Destroymaptype( meshmaptypeData%MapLoads(i1), ErrStat, ErrMsg )
+IF (ALLOCATED(MeshMapTypeData%MapLoads)) THEN
+DO i1 = LBOUND(MeshMapTypeData%MapLoads,1), UBOUND(MeshMapTypeData%MapLoads,1)
+  CALL NWTC_Library_Destroymaptype( MeshMapTypeData%MapLoads(i1), ErrStat, ErrMsg )
 ENDDO
-   DEALLOCATE(meshmaptypeData%MapLoads)
+   DEALLOCATE(MeshMapTypeData%MapLoads)
 ENDIF
-IF (ALLOCATED(meshmaptypeData%MapMotions)) THEN
-DO i1 = LBOUND(meshmaptypeData%MapMotions,1), UBOUND(meshmaptypeData%MapMotions,1)
-  CALL NWTC_Library_Destroymaptype( meshmaptypeData%MapMotions(i1), ErrStat, ErrMsg )
+IF (ALLOCATED(MeshMapTypeData%MapMotions)) THEN
+DO i1 = LBOUND(MeshMapTypeData%MapMotions,1), UBOUND(MeshMapTypeData%MapMotions,1)
+  CALL NWTC_Library_Destroymaptype( MeshMapTypeData%MapMotions(i1), ErrStat, ErrMsg )
 ENDDO
-   DEALLOCATE(meshmaptypeData%MapMotions)
+   DEALLOCATE(MeshMapTypeData%MapMotions)
 ENDIF
-IF (ALLOCATED(meshmaptypeData%MapSrcToAugmt)) THEN
-DO i1 = LBOUND(meshmaptypeData%MapSrcToAugmt,1), UBOUND(meshmaptypeData%MapSrcToAugmt,1)
-  CALL NWTC_Library_Destroymaptype( meshmaptypeData%MapSrcToAugmt(i1), ErrStat, ErrMsg )
+IF (ALLOCATED(MeshMapTypeData%MapSrcToAugmt)) THEN
+DO i1 = LBOUND(MeshMapTypeData%MapSrcToAugmt,1), UBOUND(MeshMapTypeData%MapSrcToAugmt,1)
+  CALL NWTC_Library_Destroymaptype( MeshMapTypeData%MapSrcToAugmt(i1), ErrStat, ErrMsg )
 ENDDO
-   DEALLOCATE(meshmaptypeData%MapSrcToAugmt)
+   DEALLOCATE(MeshMapTypeData%MapSrcToAugmt)
 ENDIF
-  CALL MeshDestroy( meshmaptypeData%Augmented_Ln2_Src, ErrStat, ErrMsg )
-  CALL MeshDestroy( meshmaptypeData%Lumped_Points_Src, ErrStat, ErrMsg )
-IF (ALLOCATED(meshmaptypeData%LoadLn2_A_Mat_Piv)) THEN
-   DEALLOCATE(meshmaptypeData%LoadLn2_A_Mat_Piv)
+  CALL MeshDestroy( MeshMapTypeData%Augmented_Ln2_Src, ErrStat, ErrMsg )
+  CALL MeshDestroy( MeshMapTypeData%Lumped_Points_Src, ErrStat, ErrMsg )
+IF (ALLOCATED(MeshMapTypeData%LoadLn2_A_Mat_Piv)) THEN
+   DEALLOCATE(MeshMapTypeData%LoadLn2_A_Mat_Piv)
 ENDIF
-IF (ALLOCATED(meshmaptypeData%DisplacedPosition)) THEN
-   DEALLOCATE(meshmaptypeData%DisplacedPosition)
+IF (ALLOCATED(MeshMapTypeData%DisplacedPosition)) THEN
+   DEALLOCATE(MeshMapTypeData%DisplacedPosition)
 ENDIF
-IF (ALLOCATED(meshmaptypeData%LoadLn2_F)) THEN
-   DEALLOCATE(meshmaptypeData%LoadLn2_F)
+IF (ALLOCATED(MeshMapTypeData%LoadLn2_F)) THEN
+   DEALLOCATE(MeshMapTypeData%LoadLn2_F)
 ENDIF
-IF (ALLOCATED(meshmaptypeData%LoadLn2_A_Mat)) THEN
-   DEALLOCATE(meshmaptypeData%LoadLn2_A_Mat)
+IF (ALLOCATED(MeshMapTypeData%LoadLn2_A_Mat)) THEN
+   DEALLOCATE(MeshMapTypeData%LoadLn2_A_Mat)
 ENDIF
-IF (ALLOCATED(meshmaptypeData%LoadLn2_M)) THEN
-   DEALLOCATE(meshmaptypeData%LoadLn2_M)
+IF (ALLOCATED(MeshMapTypeData%LoadLn2_M)) THEN
+   DEALLOCATE(MeshMapTypeData%LoadLn2_M)
 ENDIF
- END SUBROUTINE NWTC_Library_Destroymeshmaptype
+ END SUBROUTINE NWTC_Library_DestroyMeshMapType
 
- SUBROUTINE NWTC_Library_Packmeshmaptype( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+ SUBROUTINE NWTC_Library_PackMeshMapType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
   REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
   REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
   INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-  TYPE(meshmaptype),  INTENT(INOUT) :: InData
+  TYPE(MeshMapType),  INTENT(INOUT) :: InData
   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
   CHARACTER(*),     INTENT(  OUT) :: ErrMsg
   LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
@@ -3423,11 +3439,11 @@ ENDDO
   IF(ALLOCATED(Re_Lumped_Points_Src_Buf))  DEALLOCATE(Re_Lumped_Points_Src_Buf)
   IF(ALLOCATED(Db_Lumped_Points_Src_Buf))  DEALLOCATE(Db_Lumped_Points_Src_Buf)
   IF(ALLOCATED(Int_Lumped_Points_Src_Buf)) DEALLOCATE(Int_Lumped_Points_Src_Buf)
-  Int_BufSz   = Int_BufSz   + SIZE( InData%LoadLn2_A_Mat_Piv )  ! LoadLn2_A_Mat_Piv 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%DisplacedPosition )  ! DisplacedPosition 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%LoadLn2_F )  ! LoadLn2_F 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%LoadLn2_A_Mat )  ! LoadLn2_A_Mat 
-  Re_BufSz    = Re_BufSz    + SIZE( InData%LoadLn2_M )  ! LoadLn2_M 
+  IF ( ALLOCATED(InData%LoadLn2_A_Mat_Piv) )   Int_BufSz   = Int_BufSz   + SIZE( InData%LoadLn2_A_Mat_Piv )  ! LoadLn2_A_Mat_Piv 
+  IF ( ALLOCATED(InData%DisplacedPosition) )   Re_BufSz    = Re_BufSz    + SIZE( InData%DisplacedPosition )  ! DisplacedPosition 
+  IF ( ALLOCATED(InData%LoadLn2_F) )   Re_BufSz    = Re_BufSz    + SIZE( InData%LoadLn2_F )  ! LoadLn2_F 
+  IF ( ALLOCATED(InData%LoadLn2_A_Mat) )   Re_BufSz    = Re_BufSz    + SIZE( InData%LoadLn2_A_Mat )  ! LoadLn2_A_Mat 
+  IF ( ALLOCATED(InData%LoadLn2_M) )   Re_BufSz    = Re_BufSz    + SIZE( InData%LoadLn2_M )  ! LoadLn2_M 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -3537,13 +3553,13 @@ ENDDO
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%LoadLn2_M))-1 ) =  PACK(InData%LoadLn2_M ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%LoadLn2_M)
   ENDIF
- END SUBROUTINE NWTC_Library_Packmeshmaptype
+ END SUBROUTINE NWTC_Library_PackMeshMapType
 
- SUBROUTINE NWTC_Library_UnPackmeshmaptype( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE NWTC_Library_UnPackMeshMapType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(meshmaptype), INTENT(INOUT) :: OutData
+  TYPE(MeshMapType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -3674,31 +3690,36 @@ ENDDO
   IF( ALLOCATED(Db_Lumped_Points_Src_Buf) )  DEALLOCATE(Db_Lumped_Points_Src_Buf)
   IF( ALLOCATED(Int_Lumped_Points_Src_Buf) ) DEALLOCATE(Int_Lumped_Points_Src_Buf)
   IF ( ALLOCATED(OutData%LoadLn2_A_Mat_Piv) ) THEN
-  ALLOCATE(mask1(SIZE(OutData%LoadLn2_A_Mat_Piv,1))); mask1 = .TRUE.
+  ALLOCATE(mask1(SIZE(OutData%LoadLn2_A_Mat_Piv,1)))
+  mask1 = .TRUE.
     OutData%LoadLn2_A_Mat_Piv = UNPACK(IntKiBuf( Int_Xferred:Re_Xferred+(SIZE(OutData%LoadLn2_A_Mat_Piv))-1 ),mask1,OutData%LoadLn2_A_Mat_Piv)
   DEALLOCATE(mask1)
     Int_Xferred   = Int_Xferred   + SIZE(OutData%LoadLn2_A_Mat_Piv)
   ENDIF
   IF ( ALLOCATED(OutData%DisplacedPosition) ) THEN
-  ALLOCATE(mask3(SIZE(OutData%DisplacedPosition,1),SIZE(OutData%DisplacedPosition,2),SIZE(OutData%DisplacedPosition,3))); mask3 = .TRUE.
+  ALLOCATE(mask3(SIZE(OutData%DisplacedPosition,1),SIZE(OutData%DisplacedPosition,2),SIZE(OutData%DisplacedPosition,3)))
+  mask3 = .TRUE.
     OutData%DisplacedPosition = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%DisplacedPosition))-1 ),mask3,OutData%DisplacedPosition)
   DEALLOCATE(mask3)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%DisplacedPosition)
   ENDIF
   IF ( ALLOCATED(OutData%LoadLn2_F) ) THEN
-  ALLOCATE(mask2(SIZE(OutData%LoadLn2_F,1),SIZE(OutData%LoadLn2_F,2))); mask2 = .TRUE.
+  ALLOCATE(mask2(SIZE(OutData%LoadLn2_F,1),SIZE(OutData%LoadLn2_F,2)))
+  mask2 = .TRUE.
     OutData%LoadLn2_F = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%LoadLn2_F))-1 ),mask2,OutData%LoadLn2_F)
   DEALLOCATE(mask2)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%LoadLn2_F)
   ENDIF
   IF ( ALLOCATED(OutData%LoadLn2_A_Mat) ) THEN
-  ALLOCATE(mask2(SIZE(OutData%LoadLn2_A_Mat,1),SIZE(OutData%LoadLn2_A_Mat,2))); mask2 = .TRUE.
+  ALLOCATE(mask2(SIZE(OutData%LoadLn2_A_Mat,1),SIZE(OutData%LoadLn2_A_Mat,2)))
+  mask2 = .TRUE.
     OutData%LoadLn2_A_Mat = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%LoadLn2_A_Mat))-1 ),mask2,OutData%LoadLn2_A_Mat)
   DEALLOCATE(mask2)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%LoadLn2_A_Mat)
   ENDIF
   IF ( ALLOCATED(OutData%LoadLn2_M) ) THEN
-  ALLOCATE(mask2(SIZE(OutData%LoadLn2_M,1),SIZE(OutData%LoadLn2_M,2))); mask2 = .TRUE.
+  ALLOCATE(mask2(SIZE(OutData%LoadLn2_M,1),SIZE(OutData%LoadLn2_M,2)))
+  mask2 = .TRUE.
     OutData%LoadLn2_M = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%LoadLn2_M))-1 ),mask2,OutData%LoadLn2_M)
   DEALLOCATE(mask2)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%LoadLn2_M)
@@ -3706,8 +3727,9 @@ ENDDO
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
- END SUBROUTINE NWTC_Library_UnPackmeshmaptype
+ END SUBROUTINE NWTC_Library_UnPackMeshMapType
 !ENDOFREGISTRYGENERATEDFILE
+
 
 !----------------------------------------------------------------------------------------------------------------------------------
 END MODULE ModMesh_Mapping

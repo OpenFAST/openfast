@@ -38,7 +38,8 @@ MODULE NWTC_Base
 
    INTEGER(IntKi), PARAMETER     :: ChanLen   = 10                                ! The allowable length of channel names (i.e., width of output columns) in the FAST framework
 
-   LOGICAL,PARAMETER             :: NWTC_VerboseComments = .TRUE.
+   INTEGER(IntKi), PARAMETER     :: NWTC_Verbose = 10
+   INTEGER(IntKi), PARAMETER     :: NWTC_VerboseLevel = 5  ! 0 = no output; 10=verbose; 
 
       ! Global Error-level variables:
 

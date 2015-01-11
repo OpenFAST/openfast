@@ -2244,10 +2244,13 @@ END SUBROUTINE DCM_SetLogMapForInterp
    FUNCTION TwoNorm(v)
    
       ! this function returns the 2-norm of a vector v
+      ! fortran 2008 has Norm2() built in
+      
       REAL(ReKi), INTENT(IN)  :: v(:)      
       REAL(ReKi)              :: TwoNorm      
       
       TwoNorm = SQRT( DOT_PRODUCT(v, v) )
+      
       
    END FUNCTION
 !=======================================================================
