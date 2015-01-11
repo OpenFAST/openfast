@@ -2038,9 +2038,10 @@ checkContainsMesh( node_t * q) //, int recurselevel)
 
    if (q->type->type_type == DERIVED)
    {
-      if (!strcmp(q->type->name, "meshtype")){ // is a mesh
+      if (!strcmp(q->type->name, "meshtype") || !strcmp(q->type->name, "meshmaptype")){ // is a mesh or (a bad workaround for meshmaptype which contains meshtype in "usefrom" instead of "typedef")
          q->containsPtr = 1;
       } 
+
       else {
          for (r = q->type->fields; r; r = r->next)
          {
