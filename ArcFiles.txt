@@ -27,9 +27,6 @@ Source\dependencies\IceFloe\*
 Source\dependencies\IceDyn\*
 Source\dependencies\FAST_dependencies.xlsx
 
-Source\dependencies\Blank_MAP_DLL\makefile
-Source\dependencies\Blank_MAP_DLL\MAP_dll.f90
-Source\dependencies\Blank_MAP_DLL\MAP_Types_Intf.f90
 Source\dependencies\Registry\*
 
 OutListParameters.xlsx

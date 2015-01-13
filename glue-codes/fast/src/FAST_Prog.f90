@@ -44,7 +44,7 @@ REAL(DbKi),             PARAMETER     :: t_initial = 0.0_DbKi                   
    
    ! Data for the glue code:
 TYPE(FAST_ParameterType)              :: p_FAST                                  ! Parameters for the glue code (bjj: made global for now)
-TYPE(FAST_OutputType)                 :: y_FAST                                  ! Output variables for the glue code
+TYPE(FAST_OutputFileType)             :: y_FAST                                  ! Output variables for the glue code
 TYPE(FAST_MiscVarType)                :: m_FAST                                  ! Miscellaneous variables
 
 TYPE(FAST_ModuleMapType)              :: MeshMapData                             ! Data for mapping between modules
