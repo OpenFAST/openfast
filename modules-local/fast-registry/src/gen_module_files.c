@@ -90,7 +90,7 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, con
   fprintf(fp,"   CHARACTER(*),    INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp,"! Local \n") ;
   fprintf(fp,"   INTEGER(IntKi)                 :: i,j,k\n") ;
-  for (d = 1; d <= ModName->module_ddt_list->max_ndims; d++){
+  for (d = 1; d <= q_in->max_ndims; d++){
   fprintf(fp, "   INTEGER(IntKi)                 :: i%d, i%d_l, i%d_u  !  bounds (upper/lower) for an array dimension %d\n", d, d, d, d);
   }
   fprintf(fp,"   INTEGER(IntKi)                 :: ErrStat2\n") ;

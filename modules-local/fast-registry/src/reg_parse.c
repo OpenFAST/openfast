@@ -387,7 +387,7 @@ reg_parse( FILE * infile )
 
         add_node_to_end( param_struct , &(modname_struct->params) ) ;
 
-      } else {
+      } else { // not param
 
 // FAST registry, construct list of derived data types specified for the Module
 //  Only the FAST interface defined types should have the Module's nickname prepended
@@ -401,6 +401,11 @@ reg_parse( FILE * infile )
         }
         sprintf(tmpstr,"%s",make_lower_temp(ddtname)) ;
         type_struct = get_entry( tmpstr, modname_struct->module_ddt_list ) ;
+        if ( type_struct == NULL && modname_struct->usefrom)
+        {
+            type_struct = get_entry( tmpstr, Type ) ;
+        }
+
         if ( type_struct == NULL )
         {
           type_struct = new_node( TYPE ) ;
@@ -442,7 +447,7 @@ reg_parse( FILE * infile )
         field_struct->usefrom   = type_struct->usefrom ;
 
         add_node_to_end( field_struct , &(type_struct->fields) ) ;
-      }
+      } // not param
 
     }
 
