@@ -137,7 +137,7 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, con
         if ( sw_ccode && is_pointer(r) ) { // bjj: this needs to be updated if we've got multiple dimension arrays
   fprintf(fp,"      Dst%sData%%c_obj%%%s_Len = SIZE(Dst%sData%%%s)\n",nonick,r->name,nonick,r->name) ; 
 //  fprintf(fp,"      CALL C_F_POINTER( Dst%sData%%c_obj%%%s, Dst%sData%%%s, (/ Dst%sData%%c_obj%%%s_Len /) ) \n",nonick,r->name, nonick,r->name, nonick,r->name ) ;
-  fprintf(fp,"      Dst%sData%%c_obj%%%s = C_LOC( Dst%sData%%%s ) \n",nonick,r->name, nonick,r->name ) ;           
+  fprintf(fp,"      Dst%sData%%c_obj%%%s = C_LOC( Dst%sData%%%s(1) ) \n",nonick,r->name, nonick,r->name ) ;      
         }
   fprintf(fp,"   END IF\n") ;
            }
