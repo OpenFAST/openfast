@@ -756,6 +756,18 @@ INCLUDE 'ElementMatrix_CCSD.f90'
        ENDDO
    ENDDO
 
+!   IF(p%analysis_type .EQ. 0) THEN
+!       DO i=1,p%elem_total
+!           DO j=1,p%node_elem
+!               temp_id1 = ((i-1)*(p%node_elem-1)+j-1)*3
+!               temp_id2 = (j-1)*p%dof_node
+!               temp_id3 = temp_id1*2
+!               POS_temp(temp_id1+1:temp_id1+3) = p%uuN0(temp_id2+1:temp_id2+3,i) + &
+!                                                &x%q(temp_id3+1:temp_id3+3)
+!           ENDDO
+!       ENDDO       
+!   ENDIF
+
    IF(p%analysis_type .EQ. 2) THEN
        CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
        CALL BeamDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg) 
