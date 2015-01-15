@@ -647,7 +647,11 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       ALLOCATE ( InitOut%WaveAcc0   (0:InitOut%NStepWave,InitInp%NWaveKin0,3) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc0.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
-
+      
+      ALLOCATE ( InitOut%WaveDirArr( 0:InitOut%NStepWave2                  ), STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDirArr.',ErrStat,ErrMsg,'StillWaterWaves_Init')
+      
+      
       IF ( ErrStat >= AbortErrLev ) RETURN 
 
       InitOut%WaveDOmega = 0.0
@@ -658,6 +662,7 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       InitOut%WaveDynP0  = 0.0
       InitOut%WaveVel0   = 0.0
       InitOut%WaveAcc0   = 0.0
+      InitOut%WaveDirArr = 0.0
       
       ! Add the current velocities to the wave velocities:
 
@@ -2091,7 +2096,8 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    INTEGER(IntKi)                :: ErrStatTmp                    ! Temporarary error status for procesing
    CHARACTER(1024)               :: ErrMsgTmp                     ! Temporary error message for processing
    
-
+   CHARACTER(*), PARAMETER       :: RoutineName = 'GH_BladedWaves_Init'
+   
       ! Initialize ErrStat
          
    ErrStat = ErrID_None         
@@ -2115,26 +2121,30 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    InitOut%NStepWave2 = InitOut%NStepWave/2
 
    ALLOCATE ( InitOut%WaveTime   (0:InitOut%NStepWave                    ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,RoutineName)
 
    ALLOCATE ( InitOut%WaveElevC0 (2,0:InitOut%NStepWave2                 ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,RoutineName)
 
    ALLOCATE ( WaveElev0          (0:InitOut%NStepWave-1                  ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',         ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',         ErrStat,ErrMsg,RoutineName)
 
    ALLOCATE ( InitOut%WaveElev   (0:InitOut%NStepWave,InitInp%NWaveElev  ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,RoutineName)
 
    ALLOCATE ( InitOut%WaveDynP0  (0:InitOut%NStepWave,InitInp%NWaveKin0  ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP0.', ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP0.', ErrStat,ErrMsg,RoutineName)
 
    ALLOCATE ( InitOut%WaveVel0   (0:InitOut%NStepWave,InitInp%NWaveKin0,3) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel0.',  ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel0.',  ErrStat,ErrMsg,RoutineName)
 
    ALLOCATE ( InitOut%WaveAcc0   (0:InitOut%NStepWave,InitInp%NWaveKin0,3) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc0.',  ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc0.',  ErrStat,ErrMsg,RoutineName)
 
+   ALLOCATE ( InitOut%WaveDirArr( 0:InitOut%NStepWave2                  ), STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDirArr.',ErrStat,ErrMsg,RoutineName)
+   
+   
       ! Now check if all the allocations worked properly
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL CleanUp()
@@ -2144,7 +2154,7 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    InitOut%WaveDOmega = 0.0
    InitOut%WaveElevC0(1,0) = 0.0
    InitOut%WaveElevC0(2,0) = 0.0
-   
+   InitOut%WaveDirArr      = 0.0_ReKi
 
 
 
@@ -2153,7 +2163,7 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
    CALL  GetNewUnit( UnFA )
    CALL  OpenFInpFile ( UnFA, TRIM(InitInp%GHWvFile)//'_FAST.txt', ErrStatTmp, ErrMsgTmp ) ! Open file.
-   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL CleanUp()
       RETURN
@@ -2166,7 +2176,7 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    READ (UnFA,*)  GHNWvDpth
 
    IF ( GHNWvDpth <= 0 )  THEN
-      CALL  SetErrStat(ErrID_Fatal,'GHNWvDpth must be greater than zero.',ErrStat,ErrMsg,'GH_BladedWaves_Init')
+      CALL  SetErrStat(ErrID_Fatal,'GHNWvDpth must be greater than zero.',ErrStat,ErrMsg,RoutineName)
       CLOSE ( UnFA ) 
       RETURN
    END IF
@@ -2175,7 +2185,7 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
    ALLOCATE ( GHWvDpth(GHNWvDpth) , STAT=ErrStatTmp )
    IF (ErrStatTmp /= 0) THEN
-      CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWvDpth.',ErrStat,ErrMsg,'GH_BladedWaves_Init')
+      CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWvDpth.',ErrStat,ErrMsg,RoutineName)
       CALL CleanUp()
       CLOSE ( UnFA ) 
       RETURN
@@ -2186,7 +2196,7 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    END DO                ! J - All vertical locations in the GH Bladed wave data files
 
    IF ( GHWvDpth(1) /= -InitInp%WtrDpth )  THEN  !TODO: Verify this check is valid if MSL2SWL is /= 0  GJH 9/6/13
-      CALL SetErrStat(ErrID_Fatal,'GHWvDpth(1) must be set to -WtrDpth when WaveMod is set to 5.',ErrStat,ErrMsg,'GH_BladedWaves_Init')
+      CALL SetErrStat(ErrID_Fatal,'GHWvDpth(1) must be set to -WtrDpth when WaveMod is set to 5.',ErrStat,ErrMsg,RoutineName)
       CALL CleanUp()
       CLOSE ( UnFA ) 
       RETURN
@@ -2199,13 +2209,13 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    ! ALLOCATE arrays associated with the GH Bladed wave data:
 
    ALLOCATE ( GHWaveDynP(GHNWvDpth) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWaveDynP.',  ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWaveDynP.',  ErrStat,ErrMsg,RoutineName)
 
    ALLOCATE ( GHWaveVel(GHNWvDpth,3) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWaveVel.',   ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWaveVel.',   ErrStat,ErrMsg,RoutineName)
 
    ALLOCATE ( GHWaveAcc(GHNWvDpth,3) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWaveAcc.',   ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWaveAcc.',   ErrStat,ErrMsg,RoutineName)
 
       ! Now check if all the allocations worked properly
    IF ( ErrStat >= AbortErrLev ) THEN
@@ -2220,7 +2230,7 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
    CALL  GetNewUnit( UnKi )
    CALL  OpenFInpFile ( UnKi, TRIM(InitInp%GHWvFile)//'_kinematics.txt', ErrStatTmp, ErrMsgTmp )
-   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL CleanUp()
       RETURN
@@ -2228,7 +2238,7 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
    CALL  GetNewUnit( UnSu )
    CALL  OpenFInpFile ( UnSu, TRIM(InitInp%GHWvFile)//'_surface.txt',ErrStatTmp, ErrMsgTmp )
-   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'GH_BladedWaves_Init')
+   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL CleanUp()
       RETURN
@@ -2264,7 +2274,7 @@ SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             IF ( NINT( GHWaveTime/InitInp%WaveDT ) /= I )  THEN ! This is the same as: IF ( GHWaveTime /= WaveTime(I) ), but works better numerically
                ErrMsgTmp  = ' The input value of WaveDT is not consistent with the'// &
                               ' time step inherent in the GH Bladed wave data files.'
-               CALL  SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'GH_BladedWaves_Init')
+               CALL  SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
                RETURN
             END IF
 
@@ -2432,7 +2442,7 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
          CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
          IF ( ErrStat >= AbortErrLev ) RETURN
             
-      
+               
       !CASE ( 3 )                 ! White-noise
       !   
       !   CALL WhiteNoiseWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )

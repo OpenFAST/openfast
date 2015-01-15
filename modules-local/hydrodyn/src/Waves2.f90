@@ -533,7 +533,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       !--------------------------------------------------------------------------------
 
       CALL InitFFT ( InitInp%NStepWave, FFT_Data, .FALSE., ErrStatTmp )
-      CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,'VariousWaves_Init')
+      CALL SetErrStat(ErrStatTmp,'Error occured while initializing the FFT.',ErrStat,ErrMsg,'Waves2_Init')
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp()
          RETURN
@@ -645,7 +645,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             DO I = 1,SIZE(InitInp%WaveElevXY, DIM=2)
                   ! This subroutine call applies the FFT at the correct location.
                CALL WaveElevTimeSeriesAtXY_Diff( InitInp%WaveElevXY(1,I), InitInp%WaveElevXY(2,I), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
-               CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'VariousWaves_Init')
+               CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves2_Init')
                IF ( ErrStat >= AbortErrLev ) THEN
                   CALL CleanUp()
                   RETURN
@@ -1017,7 +1017,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             DO I = 1,SIZE(InitInp%WaveElevXY, DIM=2)
                   ! This subroutine call applies the FFT at the correct location.
                CALL WaveElevTimeSeriesAtXY_Sum( InitInp%WaveElevXY(1,I), InitInp%WaveElevXY(2,I), TmpTimeSeries, ErrStatTmp, ErrMsgTmp )
-               CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'VariousWaves_Init')
+               CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves2_Init')
                IF ( ErrStat >= AbortErrLev ) THEN
                   CALL CleanUp()
                   RETURN
@@ -1394,7 +1394,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          CALL  ExitFFT(FFT_Data, ErrStatTmp)
-         CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,'VariousWaves_Init')
+         CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,'Waves2_Init')
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
             RETURN
