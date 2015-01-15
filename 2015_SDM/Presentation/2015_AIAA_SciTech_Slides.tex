@@ -130,9 +130,9 @@
 \includegraphics[width=0.2\textwidth,clip]{nrel_logo_white.eps}}
 
 \rput[tl](3.4,2.1){\parbox{\textwidth}{
-\textbf{Nonlinear Legendre Spectral \\
-Finite Elements for Wind Turbine \\
-Blade Dynamics} } }
+\textbf{BeamDyn: \\
+A High-Fidelity Wind Turbine Blade \\
+Solver in the FAST Modular Framework} } }
 
 \rput[tl](-0.5,1.0){
 \includegraphics[width=1.1\textwidth,clip]{nrel_photo_bar.eps}
@@ -246,10 +246,10 @@ blade tests showing typical large, elastic deflections.}}
         Extended to composite beams \citep{HodgesBeamBook}
         \item
         \pause
-        Displacement-based implementation \citep{Dymore:2013}
+        Displacement-based implementation \citep{Bottasso:1998,Dymore:2013}
         \item
         \pause
-        Mixed implementation \citep{YuGEBT}
+        Mixed implementation \citep{YuGEBT,Wang:GEBT2013}
       \end{itemize}
       \item
       Legendre Spectral Finite Element (LSFE) \citep{Patera:1984}
@@ -348,7 +348,23 @@ blade tests showing typical large, elastic deflections.}}
 %------------------------------------------------------------------------------
 
 %------------------------------------------------------------------------------
-\begin{frame}[shrink=10]{State-space Formulation}
+\begin{frame}{FAST Modular Framework}
+\begin{itemize}
+    \item Data structure: inputs, outputs, states, and parameters
+    \item Interface: glue code
+    \item Loose and tight coupling
+    \begin{figure}
+    \centering
+    \includegraphics[width=3.0in]{EPSF/FAST_Modular.eps}
+    \caption{ Loose- (left) and tight- (right) coupling schemes.} 
+\label{FAST_Modular}
+    \end{figure}
+\end{itemize} 
+\end{frame}
+%------------------------------------------------------------------------------
+
+%------------------------------------------------------------------------------
+\begin{frame}[shrink=10]{State-Space Formulation}
 
 \begin{itemize}
     \item Governing Equation
@@ -468,6 +484,7 @@ smooth solutions
     \includegraphics[width=3.0in]{EPSF/twist_beam.eps}
     \end{center}
     \item Result
+    \scriptsize
     \begin{table}
     \caption{\label{E1u} Comparison of tip displacements of an initially twisted beam} 
     \begin{center} 
@@ -492,7 +509,7 @@ smooth solutions
     \includegraphics[width=1.5in]{EPSF/E1Curved.eps}
     \end{center}
     \item Result
-    \scriptsize
+    \tiny
     \begin{table}
 \caption{\label{E1CurvedDisp} Comparison of tip displacements of an initially curved beam } 
 \begin{center}
@@ -751,12 +768,14 @@ C =10^3 \times \begin{bmatrix}
     \begin{itemize}
         \item Conclusion
         \begin{itemize}
+        {\footnotesize
         \item Based on \alert{geometrically exact beam theory}, BeamDyn is capable of dealing with \alert{geometric nonlinear} beam problems with arbitrary magnitude of displacements and rotations for both static and dynamic analyses
         \item Along with a preprocessor like PreComp or VABS, BeamDyn takes \alert{full elastic coupling effects} into account
   \item The governing equations are reformulated into \alert{state-space form}, thus, making it amendable into FAST for tight-coupling analysis
   \item The space is discretized by \alert{spectral finite elements}, which is a p-version finite element, so that \alert{exponential convergence rate} can be expected for smooth solutions
   \item \alert{Different time integrators} have been implemented in BeamDyn; users will have options based on their needs
   \item BeamDyn is implemented following the programming requirements (data structures and interfaces) of the \alert{FAST modularization framework}
+  }
         \end{itemize}
     \end{itemize}
 \end{frame}

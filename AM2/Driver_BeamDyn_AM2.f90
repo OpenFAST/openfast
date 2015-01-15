@@ -61,7 +61,7 @@ PROGRAM MAIN
    REAL(DbKi),        ALLOCATABLE  :: BD_InputTimes(:)
 
    TYPE(BD_OutputType),ALLOCATABLE  :: BD_Output(:)
-   REAL(DbKi),ALLOCATABLE             :: BD_OutputTimes(:)
+   REAL(DbKi),ALLOCATABLE           :: BD_OutputTimes(:)
 
    TYPE(BD_InputType)   :: u1    ! local variable for extrapolated inputs
    TYPE(BD_OutputType)  :: y1    ! local variable for extrapolated outputs
@@ -76,11 +76,6 @@ PROGRAM MAIN
    Integer(IntKi)                     :: i               ! counter for various loops
    Integer(IntKi)                     :: j               ! counter for various loops
 
-   REAL(DbKi)                         :: exact           ! exact solution
-   REAL(DbKi)                         :: rms_error       ! rms error
-   REAL(DbKi)                         :: rms_error_norm  ! rms error normalization
-
-   Integer(IntKi)                     :: num_dof
    INTEGER(IntKi),PARAMETER:: QiDisUnit = 20
 
    REAL(ReKi):: temp_H(3,3)
