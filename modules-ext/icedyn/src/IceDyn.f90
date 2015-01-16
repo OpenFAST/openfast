@@ -481,7 +481,7 @@ SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
             
             Del (I) = p%Y0 (I) + p%v * t - p%ZonePitch * (OtherState%IceTthNo (I)-1) - u_interp%PointMesh%TranslationDisp(1,1)
             
-            IF ( Del(I) >= (p%Delmax + p%tolerance) ) THEN 
+            IF ( Del(I) >= (p%Delmax - p%tolerance) ) THEN 
                 
                 OtherState%IceTthNo (I) = OtherState%IceTthNo (I)+1
                 
@@ -668,8 +668,9 @@ SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       REAL(ReKi)                        :: Rh                       ! Horizontal force, for model5
       REAL(ReKi)                        :: Rv                       ! Vertical force, for model5
       REAL(ReKi)                        :: Wr                       ! Ride-up ice weight, for model5 
-      REAL(ReKi)                 :: gamma
+      REAL(ReKi)                        :: gamma
       REAL(ReKi)                        :: CrntT0
+      REAL(IntKi)                       :: dummyN
 
       ! Initialize ErrStat
 
@@ -677,6 +678,7 @@ SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       ErrMsg  = ""
 
       nt = INT( t / p%dt ) + 1
+      dummyN = 1
       
       ! Compute outputs here:
 
@@ -864,12 +866,19 @@ SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
                 
             ELSE 
                 
-                ErrStat = ErrID_Fatal
-                ErrMsg  = ' Error in IceDyn Model 4: ZoneDel > Delmax'
+                !ErrStat = ErrID_Fatal
+                ZoneF (I) = Del (I) * p%Kice
+                CALL WrScr (' Warning in IceDyn Model 4: ZoneDel > Delmax')
                 
             ENDIF          
             
         END DO
+        
+        IF (sum(ZoneF) <0) THEN
+        
+           dummyN = dummyN + 1
+           
+        ENDIF
         
         y%PointMesh%Force(1,1) = sum(ZoneF)
       
@@ -913,7 +922,11 @@ SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
             Rh = ( Pn1 + Pn2 ) * ( sin(p%alphaR) + p%mu*cos(p%alphaR) )
             Rv = ( Pn1 + Pn2 ) * ( cos(p%alphaR) - p%mu*sin(p%alphaR) )
             
-            y%PointMesh%Force(1,1) = Rh
+            IF (Rh < 0) THEN
+                y%PointMesh%Force(1,1) = 0                
+            ELSE                 
+                y%PointMesh%Force(1,1) = Rh
+            ENDIF 
            
            ENDIF
       
@@ -2294,6 +2307,11 @@ SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat
     CALL AllocAry( p%Y0, p%Zn, 'ContPrfl', ErrStat, ErrMsg )
    IF ( ErrStat >= AbortErrLev ) RETURN
    
+   DO I = 1,p%Zn
+      p%ContPrfl (I) = InputFileData%PrflMean + InputFileData%PrflSig * random_normal()
+      !CALL WrScr ( Num2LStr( p%ContPrfl (I) ) )
+   END DO
+   
    p%Y0        = InputFileData%InitLoc + p%ContPrfl - MAXVAL(p%ContPrfl)
    
    ! Ice Model 5
@@ -2310,7 +2328,7 @@ SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat
          A     = BrkLdPar (p%alphaR, p%LovR, InputFileData%mu)
          
          p%RHbr = ( A(1) * flexStrPa * p%h**2 + A(2) * p%rhoi * 9.81 * p%h * p%Dwl**2 + A(3) * p%rhoi * 9.81 * p%h * (p%Dwl**2 - InputFileData%Dtp**2) ) * A(4)
-      p%RVbr = A(5) * p%RHbr + A(6) * p%rhoi * 9.81 * p%h * (p%Dwl**2 - InputFileData%Dtp**2)
+         p%RVbr = A(5) * p%RHbr + A(6) * p%rhoi * 9.81 * p%h * (p%Dwl**2 - InputFileData%Dtp**2)
    
         
    ELSEIF (p%SubModNo == 2) THEN
@@ -2516,8 +2534,8 @@ SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat
          A(5) = h / ( pi/4.0 * sin(alpha) + mu * alpha / tan(alpha) )
          A(6) = 1.0/4.0 * (pi/2.0*cos(alpha) - mu*alpha - f*h/ ( pi/4.0 * sin(alpha) + mu * alpha / tan(alpha) ))
             
-            CALL WrScr(Num2LStr(Esina(alpha,10)))
-            CALL WrScr(Num2LStr(Fsina(alpha)))
+            !CALL WrScr(Num2LStr(Esina(alpha,10)))
+            !CALL WrScr(Num2LStr(Fsina(alpha)))
                
       END FUNCTION BrkLdPar
       

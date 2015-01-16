@@ -374,8 +374,14 @@ CONTAINS
 
    SUBROUTINE CheckError()
    
+      ! Local variables
+
+      REAL(ReKi)                           :: WaitTime           ! Time to wait before pausing the program (s)
+      
+      WaitTIme = 5.0
+      
       IF (ErrStat >= AbortErrLev) THEN
-         CALL ProgAbort( trim(ErrMsg), .FALSE., 5.0, ErrStat )
+         CALL ProgAbort( trim(ErrMsg), .FALSE., WaitTIme, ErrStat )
       ELSEIF ( ErrStat /= ErrID_None ) THEN
          CALL WrScr(trim(ErrMsg))
       END IF
