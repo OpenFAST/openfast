@@ -108,7 +108,7 @@ c_types_binding( char *s )
     }    
 
     
-    name_with_extension = malloc(strlen(str_to_return)+2); // memory leak, should take care of this ?
+    name_with_extension = malloc(strlen(str_to_return)+15); // memory leak, should take care of this ? //bjj: made it larger to account for size of buf
     strcpy(name_with_extension, str_to_return); 
     strcat(name_with_extension, buf); 
     strcat(name_with_extension, ")"); 
