@@ -1010,6 +1010,7 @@ SUBROUTINE IceD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat
    
            IF ((x%q - u%PointMesh%TranslationDisp(1,1)) >= OtherState%dxc .AND. (x%q - u%PointMesh%TranslationDisp(1,1)) < OtherState%dxc+R ) THEN
    
+!bjj: force is NaN sometimes because  R**2 - (R - x%q + u%PointMesh%TranslationDisp(1,1))**2 < 0             
                 force = -p%Cpa * ( 2 * p%h * ( R**2 - (R - x%q + u%PointMesh%TranslationDisp(1,1))**2 )**0.5 )**( p%dpa + 1 ) * 1.0e6 + p%FdrN
          
            ELSE IF (  (x%q - u%PointMesh%TranslationDisp(1,1)) >= OtherState%dxc+R ) THEN
@@ -2986,6 +2987,7 @@ SUBROUTINE IceD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       ErrStat = ErrID_None
       ErrMsg  = ""
 
+      CALL IceD_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg) ! bjj: need to allocate space for u_interp so that IceD_Input_ExtrapInterp works
 
       ! interpolate u to find u_interp = u(t)
       CALL IceD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
@@ -3031,7 +3033,21 @@ SUBROUTINE IceD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
       x%q    = x%q    +  ( k1%q    + 2. * k2%q    + 2. * k3%q    + k4%q    ) / 6.
       x%dqdt = x%dqdt +  ( k1%dqdt + 2. * k2%dqdt + 2. * k3%dqdt + k4%dqdt ) / 6.
+      
+      CALL Cleanup()
 
+CONTAINS
+SUBROUTINE Cleanup()
+   
+   CALL IceD_DestroyInput( u_interp, ErrStat, ErrMsg) 
+   CALL IceD_DestroyContState( xdot , ErrStat, ErrMsg) 
+   CALL IceD_DestroyContState( k1   , ErrStat, ErrMsg) 
+   CALL IceD_DestroyContState( k2   , ErrStat, ErrMsg) 
+   CALL IceD_DestroyContState( k3   , ErrStat, ErrMsg) 
+   CALL IceD_DestroyContState( k4   , ErrStat, ErrMsg) 
+   CALL IceD_DestroyContState( x_tmp, ErrStat, ErrMsg) 
+                               
+END SUBROUTINE Cleanup
 END SUBROUTINE IceD_RK4
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE IceD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
@@ -3075,6 +3091,9 @@ SUBROUTINE IceD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       ErrStat = ErrID_None
       ErrMsg  = ""
 
+      
+      CALL IceD_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg) ! bjj: need to allocate space for u_interp so that IceD_Input_ExtrapInterp works
+      
       ! need xdot at t
       CALL IceD_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat, ErrMsg)
       CALL IceD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
@@ -3114,6 +3133,17 @@ SUBROUTINE IceD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
       endif
 
+      CALL Cleanup()
+
+CONTAINS
+SUBROUTINE Cleanup()
+   
+   CALL IceD_DestroyInput( u_interp, ErrStat, ErrMsg) 
+   CALL IceD_DestroyContState( xdot , ErrStat, ErrMsg) 
+                               
+END SUBROUTINE Cleanup
+      
+      
 END SUBROUTINE IceD_AB4
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE IceD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
@@ -3161,12 +3191,13 @@ SUBROUTINE IceD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg 
       ErrStat = ErrID_None
       ErrMsg  = ""
 
-      CALL IceD_CopyContState(x, x_pred, 0, ErrStat, ErrMsg)
+      CALL IceD_CopyContState(x, x_pred, MESH_NEWCOPY, ErrStat, ErrMsg)
 
       CALL IceD_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, ErrStat, ErrMsg )
 
       if (n .gt. 2) then
 
+         CALL IceD_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg) ! bjj: need to allocate space for u_interp so that IceD_Input_ExtrapInterp works
          CALL IceD_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
 
          CALL IceD_CalcContStateDeriv(t + p%dt, u_interp, p, x_pred, xd, z, OtherState, xdot_pred, ErrStat, ErrMsg )
@@ -3182,8 +3213,19 @@ SUBROUTINE IceD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg 
          x%q    = x_pred%q
          x%dqdt = x_pred%dqdt
 
-       endif
+      endif
 
+      CALL Cleanup()
+
+CONTAINS
+SUBROUTINE Cleanup()
+   
+   CALL IceD_DestroyInput( u_interp, ErrStat, ErrMsg) 
+   CALL IceD_DestroyContState( x_pred , ErrStat, ErrMsg) 
+   CALL IceD_DestroyContState( xdot_pred, ErrStat, ErrMsg) 
+                               
+END SUBROUTINE Cleanup
+      
 END SUBROUTINE IceD_ABM4
 !----------------------------------------------------------------------------------------------------------------------------------
 !..................................................................................................................................
