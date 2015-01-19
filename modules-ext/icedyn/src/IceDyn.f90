@@ -892,13 +892,13 @@ SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
            
             y%PointMesh%Force(1,1) = 0
            
-           ELSE IF (t == OtherState%Tinit) THEN  ! Ice load at breakage
+           ELSE IF (t <= OtherState%Tinit + p%dt) THEN  ! Ice load at breakage
            
             y%PointMesh%Force(1,1) = p%RHbr
            
            ELSE ! Ice load after breakage
            
-            Wr = p%Wri * ( p%Zr - p%Lbr * sin(OtherState%Beta) ) / p%Zr * cos(p%alphaR)
+            Wr = p%Wri * ( p%Zr - p%Lbr * sin(OtherState%Beta) ) / p%Zr
             Pn1 = Wr * cos(p%alphaR)
             gamma = p%rhoi / p%rhow
             
@@ -2601,14 +2601,22 @@ SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat
          INTEGER(IntKi) :: i  
          INTEGER(IntKi) :: M = 1
          
-         DO i = 1,n
+         IF (n == 0) THEN
+             
+             fac = 1.0
+             
+         ELSE
          
-            M = M * i  
+             DO i = 1,n
          
-         ENDDO
+                M = M * i  
+         
+             ENDDO
+             
+         ENDIF
          
          fac = REAL(M)
-        
+         M = 1
         
         END FUNCTION factorial
         
