@@ -17,7 +17,7 @@ MODULE FAST_Data
    SAVE
    
       ! Local variables:
-   INTEGER,                PARAMETER     :: ErrStrLen = 1024
+   INTEGER,                PARAMETER     :: IntfStrLen  = 1024                     ! length of strings through the C interface
    REAL(DbKi),             PARAMETER     :: t_initial = 0.0_DbKi                    ! Initial time
    
    
@@ -43,26 +43,34 @@ MODULE FAST_Data
 
    INTEGER(IntKi)                        :: n_t_global                              ! simulation time step, loop counter for global (FAST) simulation
    INTEGER(IntKi)                        :: ErrStat                                 ! Error status
-   CHARACTER(ErrStrLen)                  :: ErrMsg                                  ! Error message
+   CHARACTER(IntfStrLen)                  :: ErrMsg                                  ! Error message
 
 END MODULE FAST_Data
 !==================================================================================================================================
-subroutine FAST_Start(AbortErrLev_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
+subroutine FAST_Start(InputFileName_c, AbortErrLev_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Start
    USE, INTRINSIC :: ISO_C_Binding
    USE FAST_Data
-   IMPLICIT NONE
+   IMPLICIT NONE 
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Start
+   CHARACTER(KIND=C_CHAR), INTENT(IN ) :: InputFileName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(OUT) :: AbortErrLev_c      
    INTEGER(C_INT),         INTENT(OUT) :: ErrStat_c      
-   CHARACTER(KIND=C_CHAR), INTENT(OUT) :: ErrMsg_c(ErrStrLen)      
+   CHARACTER(KIND=C_CHAR), INTENT(OUT) :: ErrMsg_c(IntfStrLen)      
    
-   ! BJJ: need to input name of FAST input file
-   !      need to return output channel names
+   ! local
+   CHARACTER(IntfStrLen)               :: InputFileName   
+   INTEGER                             :: i
    
+      ! transfer the character array from C to a Fortran string:   
+   InputFileName = TRANSFER( InputFileName_c, InputFileName )
+   I = INDEX(InputFileName,C_NULL_CHAR) - 1            ! if this has a c null character at the end...
+   IF ( I > 0 ) InputFileName = InputFileName(1:I)     ! remove it
+   
+      ! initialize variables:   
    n_t_global = 0
    
-   CALL FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
+   CALL FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg, InputFileName )
                              
    IF (ErrStat < AbortErrLev) THEN
       !...............................................................................................................................
@@ -79,15 +87,16 @@ subroutine FAST_Start(AbortErrLev_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_St
    
 end subroutine FAST_Start
 !==================================================================================================================================
-subroutine FAST_Update(InputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Update')
+subroutine FAST_Update(InputAry, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Update')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Update
    USE, INTRINSIC :: ISO_C_Binding
    USE FAST_Data
    IMPLICIT NONE
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Update
-   REAL(C_FLOAT),          INTENT(IN   ) :: InputAry
+   REAL(C_DOUBLE),         INTENT(IN   ) :: InputAry
+   REAL(C_DOUBLE),         INTENT(IN   ) :: OutputAry
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
-   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(ErrStrLen)      
+   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
 
    n_t_global = n_t_global + 1
    IF ( n_t_global > m_FAST%n_TMax_m1 ) THEN !finish 
