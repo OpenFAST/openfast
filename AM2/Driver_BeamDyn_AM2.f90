@@ -111,10 +111,6 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
    t_global = t_initial
 
-   ! initialize rms-error quantities
-   rms_error      = 0.
-   rms_error_norm = 0.
-
    ! define polynomial-order for ModName_Input_ExtrapInterp and ModName_Output_ExtrapInterp
    ! Must be 0, 1, or 2
    BD_interp_order = 2

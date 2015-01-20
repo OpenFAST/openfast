@@ -28,8 +28,8 @@
                      &xdot)
    CALL ComputeUDN(1,p%dof_node,x%dqdt(1:6),x%q(1:6),xdot%q(1:6))
    DO j=1,3
-       xdot%dqdt(1:3) = u%RootMotion%TranslationAcc(j,1)
-       xdot%dqdt(4:6) = u%RootMotion%RotationAcc(j,1)
+       xdot%dqdt(j) = u%RootMotion%TranslationAcc(j,1)
+       xdot%dqdt(j+3) = u%RootMotion%RotationAcc(j,1)
    ENDDO
 !DO j=1,18
 !WRITE(*,*) j,xdot%dqdt(j)
