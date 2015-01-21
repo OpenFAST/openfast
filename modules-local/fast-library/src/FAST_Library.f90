@@ -47,14 +47,16 @@ MODULE FAST_Data
 
 END MODULE FAST_Data
 !==================================================================================================================================
-subroutine FAST_Start(InputFileName_c, AbortErrLev_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
-!DEC$ ATTRIBUTES DLLEXPORT::FAST_Start
+subroutine FAST_Sizes(InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Sizes')
+!DEC$ ATTRIBUTES DLLEXPORT::FAST_Sizes
    USE, INTRINSIC :: ISO_C_Binding
    USE FAST_Data
    IMPLICIT NONE 
-!GCC$ ATTRIBUTES DLLEXPORT :: FAST_Start
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_Sizes
    CHARACTER(KIND=C_CHAR), INTENT(IN ) :: InputFileName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(OUT) :: AbortErrLev_c      
+   INTEGER(C_INT),         INTENT(OUT) :: NumOuts_c      
+   REAL(C_DOUBLE),         INTENT(OUT) :: dt_c      
    INTEGER(C_INT),         INTENT(OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(OUT) :: ErrMsg_c(IntfStrLen)      
    
@@ -71,15 +73,39 @@ subroutine FAST_Start(InputFileName_c, AbortErrLev_c, ErrStat_c, ErrMsg_c) BIND 
    n_t_global = 0
    
    CALL FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg, InputFileName )
-                             
-   IF (ErrStat < AbortErrLev) THEN
-      !...............................................................................................................................
-      ! Initialization of solver: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
-      !...............................................................................................................................     
-      CALL FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )      
-   END IF
-   
+                  
    AbortErrLev_c = AbortErrLev   
+   NumOuts_c     = 1 + SUM( y_FAST%numOuts )
+   dt_c          = p_FAST%dt
+
+   ErrStat_c     = ErrStat
+   ErrMsg_c      = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+   
+   ! return the number of outputs and the names of the output channels
+   
+end subroutine FAST_Sizes
+!==================================================================================================================================
+subroutine FAST_Start(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
+!DEC$ ATTRIBUTES DLLEXPORT::FAST_Start
+   USE, INTRINSIC :: ISO_C_Binding
+   USE FAST_Data
+   IMPLICIT NONE 
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_Start
+   INTEGER(C_INT),         INTENT(OUT) :: ErrStat_c      
+   CHARACTER(KIND=C_CHAR), INTENT(OUT) :: ErrMsg_c(IntfStrLen)      
+   
+   ! local
+   CHARACTER(IntfStrLen)               :: InputFileName   
+   INTEGER                             :: i
+     
+      ! initialize variables:   
+   n_t_global = 0
+   
+   !...............................................................................................................................
+   ! Initialization of solver: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
+   !...............................................................................................................................     
+   CALL FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )      
+   
    ErrStat_c     = ErrStat
    ErrMsg_c      = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
    
@@ -87,14 +113,16 @@ subroutine FAST_Start(InputFileName_c, AbortErrLev_c, ErrStat_c, ErrMsg_c) BIND 
    
 end subroutine FAST_Start
 !==================================================================================================================================
-subroutine FAST_Update(InputAry, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Update')
+subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Update')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Update
    USE, INTRINSIC :: ISO_C_Binding
    USE FAST_Data
    IMPLICIT NONE
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Update
-   REAL(C_DOUBLE),         INTENT(IN   ) :: InputAry
-   REAL(C_DOUBLE),         INTENT(IN   ) :: OutputAry
+   INTEGER(C_INT),         INTENT(IN   ) :: NumInputs_c      
+   INTEGER(C_INT),         INTENT(IN   ) :: NumOutputs_c      
+   REAL(C_DOUBLE),         INTENT(IN   ) :: InputAry(NumInputs_c)
+   REAL(C_DOUBLE),         INTENT(IN   ) :: OutputAry(NumOutputs_c)
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
 
@@ -126,9 +154,23 @@ subroutine FAST_End() BIND (C, NAME='FAST_End')
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_End
 
    CALL ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrID_None )
-      
+   
 end subroutine FAST_End
 !==================================================================================================================================
-   
+!subroutine FAST_End(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_End')
+!!DEC$ ATTRIBUTES DLLEXPORT::FAST_End
+!   USE, INTRINSIC :: ISO_C_Binding
+!   USE FAST_Data
+!   IMPLICIT NONE
+!!GCC$ ATTRIBUTES DLLEXPORT :: FAST_End
+!   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
+!   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
+!   
+!   CALL ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrID_None )
+!      
+!   ErrStat_c = ErrID_None
+!   ErrMsg_c  = TRANSFER( C_NULL_CHAR, ErrMsg_c )
+!   
+!end subroutine FAST_End
 
 
