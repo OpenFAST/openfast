@@ -81,6 +81,8 @@ subroutine FAST_Sizes(InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c
    ErrStat_c     = ErrStat
    ErrMsg_c      = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
    
+   if (ErrStat /= ErrID_None) call wrscr(trim(ErrMsg))
+   
    ! return the number of outputs and the names of the output channels
    
 end subroutine FAST_Sizes
@@ -109,6 +111,8 @@ subroutine FAST_Start(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
    ErrStat_c     = ErrStat
    ErrMsg_c      = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
    
+   if (ErrStat /= ErrID_None) call wrscr(trim(ErrMsg))
+   
    ! return the number of outputs and the names of the output channels
    
 end subroutine FAST_Start
@@ -125,7 +129,11 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
    REAL(C_DOUBLE),         INTENT(IN   ) :: OutputAry(NumOutputs_c)
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
-
+   
+   !call wrscr(num2lstr(NumInputs_c)//' '//num2lstr(NumOutputs_c))
+   !call wrmatrix(InputAry,CU,'ES15.5')
+   !call wrmatrix(OutputAry,CU,'ES15.5')
+   
    n_t_global = n_t_global + 1
    IF ( n_t_global > m_FAST%n_TMax_m1 ) THEN !finish 
       ! we can't continue because we might over-step some arrays that are allocated to the size of the simulation
@@ -143,6 +151,8 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       ErrStat_c = ErrStat
       ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
    END IF
+
+   if (ErrStat /= ErrID_None) call wrscr(num2lstr(ErrStat)//trim(ErrMsg))
 
 end subroutine FAST_Update 
 !==================================================================================================================================
