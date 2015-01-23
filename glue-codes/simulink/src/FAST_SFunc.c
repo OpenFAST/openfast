@@ -26,6 +26,8 @@
  * its associated macro definitions.
  */
 #include "simstruc.h"
+#include "mex.h"     // for mexPutVariable
+#include "matrix.h"  // for mxCreateCharMatrixFromStrings
 #include "FAST_Library.h"
 
 
@@ -68,13 +70,16 @@
  * 
  */
 
-static double *dt ;
-static int NumInputs = 1;
-static int NumOutputs = 0;
+static double dt = 0;
+static int NumInputs = 2 + 2 + MAXIMUM_BLADES;
+static int NumOutputs = 1;
 static int ErrStat = 0;
 static char ErrMsg[INTERFACE_STRING_LENGTH];        // make sure this is the same size as IntfStrLen in FAST_Library.f90
 static char InputFileName[INTERFACE_STRING_LENGTH]; // make sure this is the same size as IntfStrLen in FAST_Library.f90
 
+#define PAR_FILENAME 0
+
+static int checkError(SimStruct *S);
 
 /* Error handling
  * --------------
@@ -112,20 +117,68 @@ static char InputFileName[INTERFACE_STRING_LENGTH]; // make sure this is the sam
 static void mdlInitializeSizes(SimStruct *S)
 {
 
-   strcpy(InputFileName, "../../CertTest/Test01.fst");
-   FAST_Sizes(InputFileName, AbortErrLev, NumOutputs, dt, ErrStat, ErrMsg);
-   
+   int i = 0;
+   int j = 0;
+   int k = 0;
+   static char ChannelNames[CHANNEL_LENGTH*MAXIMUM_OUTPUTS + 1];
+   static char *OutList[MAXIMUM_OUTPUTS];
+   mxArray *pm;
+
+
+         /* Expected S-Function Input Parameter(s) */
     ssSetNumSFcnParams(S, 1);  /* Number of expected parameters */ // parameter 1 is the input file name from Matlab
     if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) {
         /* Return if number of expected != number of actual parameters */
         return;
     }
+
     ssSetSFcnParamTunable(S, 0, SS_PRM_NOT_TUNABLE); // the first parameter (0) is the input file name; should not be changed during simulation
+    mxGetString(ssGetSFcnParam(S, PAR_FILENAME), InputFileName, INTERFACE_STRING_LENGTH);
+
+    /*  ---------------------------------------------  */
+    //   strcpy(InputFileName, "../../CertTest/Test01.fst");
+    FAST_Sizes(InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
+
+    if (checkError(S)) return;
+    /*
+    // put the names of the output channels in a variable called "OutList" in the base matlab workspace
+    for (i = 0; i < NumOutputs; i++){
+       //strncpy(&OutList[i][0], &ChannelNames[i*CHANNEL_LENGTH], CHANNEL_LENGTH);
+       OutList[i][CHANNEL_LENGTH] = '\0'; // null terminator
+       for (j = CHANNEL_LENGTH - 1; j >= 0; j--){ // remove trailing spaces (not sure this is necessary)
+          if (ChannelNames[i*CHANNEL_LENGTH + j] == ' ') {
+             OutList[i][j] = '\0'; // null terminator
+          }
+          else{
+             for (k = j; k >= 0; k--){
+                OutList[i][k] = ChannelNames[i*CHANNEL_LENGTH + k];
+             }
+             break;
+          }
+       }
+    }
+    for (i = NumOutputs; i < MAXIMUM_OUTPUTS; i++){
+       OutList[i][0] = '\0'; // null terminator
+    }
+
+    
+    // Create a 2-Dimensional string mxArray with NULL padding. 
+    //pm = mxCreateCharMatrixFromStrings((mwSize)NumOutputs, (const char **)OutList);
+    //ErrStat = mexPutVariable("base", "OutList", pm);
+
+
+    if (ErrStat != 0){
+       strcpy(ErrMsg, "Error copying string array to 'OutList' variable in the base Matlab workspace.");
+       ssSetErrorStatus(S, ErrMsg);
+       return;
+    }
+    //  ---------------------------------------------  
+    */
 
     ssSetNumContStates(S, 0);  /* how many continuous states? */
-    ssSetNumDiscStates(S, 0);
+    ssSetNumDiscStates(S, 0);  /* how many discrete states?*/
 
-      // sets one input port
+      /* sets input port characteristics */
     if (!ssSetNumInputPorts(S, 1)) return; 
     ssSetInputPortWidth(S, 0, NumInputs); // width of first input port
 
@@ -171,6 +224,7 @@ static void mdlInitializeSizes(SimStruct *S)
 
 
 
+
 /* Function: mdlInitializeSampleTimes =========================================
  * Abstract:
  *    This function is used to specify the sample time(s) for your
@@ -186,8 +240,8 @@ static void mdlInitializeSampleTimes(SimStruct *S)
      * the code, you need to use a discrete (fixed
      * step) sample time, 1 second is chosen below.
      */
-   // bjj: time step from FAST Init
-    ssSetSampleTime(S, 0, (time_T)*dt); /* Choose the sample time here if discrete */ 
+
+    ssSetSampleTime(S, 0, dt); /* Choose the sample time here if discrete */ 
     ssSetOffsetTime(S, 0, 0.0);
    
     ssSetModelReferenceSampleTimeDefaultInheritance(S);
@@ -205,13 +259,12 @@ static void mdlInitializeSampleTimes(SimStruct *S)
    */
   static void mdlStart(SimStruct *S)
   {
+     double *OutputAry = (double *)ssGetDWork(S, 0);
 
-     FAST_Start(ErrStat, ErrMsg);
+     FAST_Start(&NumOutputs, OutputAry, &ErrStat, ErrMsg);
 
-     if (ErrStat >= AbortErrLev){
-        ssSetErrorStatus(S, ErrMsg);
-        return;
-     }
+     if (checkError(S)) return;
+
   }
 #endif /*  MDL_START */
 
@@ -298,13 +351,9 @@ static void mdlUpdate(SimStruct *S, int_T tid)
     /* ==== Call the Fortran routine (args are pass-by-reference) */
     
     /* nameofsub_(InputAry, sampleOutput ); */
-    FAST_Update(NumInputs, NumOutputs, InputAry, OutputAry, ErrStat, ErrMsg);
+    FAST_Update(&NumInputs, &NumOutputs, InputAry, OutputAry, &ErrStat, ErrMsg);
 
-    if (ErrStat >= AbortErrLev){
-       ssSetErrorStatus(S, ErrMsg);
-       return;
-    }
-
+    if (checkError(S)) return;
 
    
     /* 
@@ -332,6 +381,21 @@ static void mdlTerminate(SimStruct *S)
 {
 
    FAST_End();
+}
+
+static int
+checkError(SimStruct *S){
+   if (ErrStat >= AbortErrLev){
+      ssSetErrorStatus(S, ErrMsg);
+      return 1;
+   }
+   else if (ErrStat >= ErrID_Warn){
+      ssWarning(S, ErrMsg);
+   }else if (ErrStat != ErrID_None){
+      ssPrintf("%s\n",ErrMsg);
+   }
+   return 0;
+
 }
 
 

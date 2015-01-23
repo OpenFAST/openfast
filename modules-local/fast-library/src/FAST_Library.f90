@@ -17,7 +17,7 @@ MODULE FAST_Data
    SAVE
    
       ! Local variables:
-   INTEGER,                PARAMETER     :: IntfStrLen  = 1024                     ! length of strings through the C interface
+   INTEGER,                PARAMETER     :: IntfStrLen  = 1025                     ! length of strings through the C interface
    REAL(DbKi),             PARAMETER     :: t_initial = 0.0_DbKi                    ! Initial time
    
    
@@ -43,11 +43,13 @@ MODULE FAST_Data
 
    INTEGER(IntKi)                        :: n_t_global                              ! simulation time step, loop counter for global (FAST) simulation
    INTEGER(IntKi)                        :: ErrStat                                 ! Error status
-   CHARACTER(IntfStrLen)                  :: ErrMsg                                  ! Error message
+   CHARACTER(IntfStrLen-1)               :: ErrMsg                                  ! Error message
 
+   INTEGER(IntKi), PARAMETER             :: MAXOUTPUTS = 1000                       ! Maximum number of outputs
+   
 END MODULE FAST_Data
 !==================================================================================================================================
-subroutine FAST_Sizes(InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Sizes')
+subroutine FAST_Sizes(InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Sizes
    USE, INTRINSIC :: ISO_C_Binding
    USE FAST_Data
@@ -58,11 +60,12 @@ subroutine FAST_Sizes(InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c
    INTEGER(C_INT),         INTENT(OUT) :: NumOuts_c      
    REAL(C_DOUBLE),         INTENT(OUT) :: dt_c      
    INTEGER(C_INT),         INTENT(OUT) :: ErrStat_c      
-   CHARACTER(KIND=C_CHAR), INTENT(OUT) :: ErrMsg_c(IntfStrLen)      
+   CHARACTER(KIND=C_CHAR), INTENT(OUT) :: ErrMsg_c(IntfStrLen) 
+   CHARACTER(KIND=C_CHAR), INTENT(OUT) :: ChannelNames_c(ChanLen*MAXOUTPUTS+1)
    
    ! local
    CHARACTER(IntfStrLen)               :: InputFileName   
-   INTEGER                             :: i
+   INTEGER                             :: i, j, k
    
       ! transfer the character array from C to a Fortran string:   
    InputFileName = TRANSFER( InputFileName_c, InputFileName )
@@ -75,7 +78,7 @@ subroutine FAST_Sizes(InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c
    CALL FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg, InputFileName )
                   
    AbortErrLev_c = AbortErrLev   
-   NumOuts_c     = 1 + SUM( y_FAST%numOuts )
+   NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( y_FAST%numOuts )) ! includes time
    dt_c          = p_FAST%dt
 
    ErrStat_c     = ErrStat
@@ -83,22 +86,34 @@ subroutine FAST_Sizes(InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c
    
    if (ErrStat /= ErrID_None) call wrscr(trim(ErrMsg))
    
-   ! return the number of outputs and the names of the output channels
+   ! return the names of the output channels
+   k = 1;
+   DO i=1,NumOuts_c
+      DO j=1,ChanLen
+         ChannelNames_c(k)=y_FAST%ChannelNames(i)(j:j)
+         k = k+1
+      END DO
+   END DO
+   ChannelNames_c(k) = C_NULL_CHAR
    
 end subroutine FAST_Sizes
 !==================================================================================================================================
-subroutine FAST_Start(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
+subroutine FAST_Start(NumOutputs_c, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Start
    USE, INTRINSIC :: ISO_C_Binding
    USE FAST_Data
    IMPLICIT NONE 
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Start
-   INTEGER(C_INT),         INTENT(OUT) :: ErrStat_c      
-   CHARACTER(KIND=C_CHAR), INTENT(OUT) :: ErrMsg_c(IntfStrLen)      
+   INTEGER(C_INT),         INTENT(IN   ) :: NumOutputs_c      
+   REAL(C_DOUBLE),         INTENT(  OUT) :: OutputAry(NumOutputs_c)
+   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
+   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
+
    
    ! local
-   CHARACTER(IntfStrLen)               :: InputFileName   
-   INTEGER                             :: i
+   CHARACTER(IntfStrLen)                 :: InputFileName   
+   INTEGER                               :: i
+   REAL(ReKi)                            :: Outputs(NumOutputs_c-1)
      
       ! initialize variables:   
    n_t_global = 0
@@ -108,13 +123,25 @@ subroutine FAST_Start(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
    !...............................................................................................................................     
    CALL FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )      
    
+   
+      ! return outputs here, too
+   IF(NumOutputs_c /= SIZE(y_FAST%ChannelNames) ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = trim(ErrMsg)//NewLine//"FAST_Update:size of NumOutputs is invalid."
+   ELSE
+      
+      CALL FillOutputAry(p_FAST, y_FAST, IfW%WriteOutput, ED%Output(1)%WriteOutput, SrvD%y%WriteOutput, HD%y%WriteOutput, &
+                              SD%y%WriteOutput, MAPp%y%WriteOutput, FEAM%y%WriteOutput, IceF%y%WriteOutput, IceD%y, Outputs)   
+      OutputAry(1)              = m_FAST%t_global 
+      OutputAry(2:NumOutputs_c) = Outputs 
+      
+   END IF
+   
    ErrStat_c     = ErrStat
    ErrMsg_c      = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
    
    if (ErrStat /= ErrID_None) call wrscr(trim(ErrMsg))
-   
-   ! return the number of outputs and the names of the output channels
-   
+      
 end subroutine FAST_Start
 !==================================================================================================================================
 subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Update')
@@ -126,9 +153,11 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
    INTEGER(C_INT),         INTENT(IN   ) :: NumInputs_c      
    INTEGER(C_INT),         INTENT(IN   ) :: NumOutputs_c      
    REAL(C_DOUBLE),         INTENT(IN   ) :: InputAry(NumInputs_c)
-   REAL(C_DOUBLE),         INTENT(IN   ) :: OutputAry(NumOutputs_c)
+   REAL(C_DOUBLE),         INTENT(  OUT) :: OutputAry(NumOutputs_c)
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
+   
+   REAL(ReKi)                            :: Outputs(NumOutputs_c-1)
    
    !call wrscr(num2lstr(NumInputs_c)//' '//num2lstr(NumOutputs_c))
    !call wrmatrix(InputAry,CU,'ES15.5')
@@ -137,8 +166,11 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
    n_t_global = n_t_global + 1
    IF ( n_t_global > m_FAST%n_TMax_m1 ) THEN !finish 
       ! we can't continue because we might over-step some arrays that are allocated to the size of the simulation
-      ErrStat_c = -1
-      ErrMsg_c  = C_NULL_CHAR
+      ErrStat_c = ErrID_Info
+      ErrMsg_c  = TRANSFER( "Simulation Completed."//C_NULL_CHAR, ErrMsg_c )
+   ELSEIF(NumOutputs_c /= SIZE(y_FAST%ChannelNames) ) THEN
+      ErrStat_c = ErrID_Fatal
+      ErrMsg_c  = TRANSFER( "FAST_Update:size of NumOutputs is invalid."//C_NULL_CHAR, ErrMsg_c )
    ELSE   
       
       ! set the inputs from external code here...
@@ -146,13 +178,18 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       CALL FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )                  
       
       ! set the outputs for external code here...
-      
+      ! return y_FAST%ChannelNames
       
       ErrStat_c = ErrStat
       ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
    END IF
+   
+   CALL FillOutputAry(p_FAST, y_FAST, IfW%WriteOutput, ED%Output(1)%WriteOutput, SrvD%y%WriteOutput, HD%y%WriteOutput, &
+                           SD%y%WriteOutput, MAPp%y%WriteOutput, FEAM%y%WriteOutput, IceF%y%WriteOutput, IceD%y, Outputs)   
+   OutputAry(1)              = m_FAST%t_global 
+   OutputAry(2:NumOutputs_c) = Outputs 
 
-   if (ErrStat /= ErrID_None) call wrscr(num2lstr(ErrStat)//trim(ErrMsg))
+   if (ErrStat /= ErrID_None) call wrscr(trim(ErrMsg))
 
 end subroutine FAST_Update 
 !==================================================================================================================================
@@ -167,20 +204,5 @@ subroutine FAST_End() BIND (C, NAME='FAST_End')
    
 end subroutine FAST_End
 !==================================================================================================================================
-!subroutine FAST_End(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_End')
-!!DEC$ ATTRIBUTES DLLEXPORT::FAST_End
-!   USE, INTRINSIC :: ISO_C_Binding
-!   USE FAST_Data
-!   IMPLICIT NONE
-!!GCC$ ATTRIBUTES DLLEXPORT :: FAST_End
-!   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
-!   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
-!   
-!   CALL ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrID_None )
-!      
-!   ErrStat_c = ErrID_None
-!   ErrMsg_c  = TRANSFER( C_NULL_CHAR, ErrMsg_c )
-!   
-!end subroutine FAST_End
 
 
