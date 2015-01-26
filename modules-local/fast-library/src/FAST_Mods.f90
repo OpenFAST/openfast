@@ -1,5 +1,5 @@
 !**********************************************************************************************************************************
-! The FAST_Prog.f90, FAST_IO.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework.
+! FAST_Prog.f90, FAST_IO.f90, FAST_Types.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework.
 !..................................................................................................................................
 ! LICENSING
 ! Copyright (C) 2013-2014  National Renewable Energy Laboratory
@@ -29,7 +29,7 @@ MODULE FAST_ModTypes
    USE FAST_Types
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.10.00a-bjj', '19-Jan-2015' ) ! The version number of this module
+                                ProgDesc( 'FAST', 'v8.10.00a-bjj', '25-Jan-2015' ) ! The version number of this module
          
    !..................................................................
    
