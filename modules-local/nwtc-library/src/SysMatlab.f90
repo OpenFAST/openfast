@@ -28,10 +28,12 @@ MODULE SysSubs
    ! It also contains standard (but not system-specific) routines it uses.
 
 
+
    ! It contains the following routines:
 
    !     FUNCTION    FileSize( Unit )                                         ! Returns the size (in bytes) of an open file.
    !     SUBROUTINE  FlushOut ( Unit )
+   !     FUNCTION    NWTC_gamma( x )
    !     SUBROUTINE  GET_CWD( DirName, Status )
    !     FUNCTION    Is_NaN( DblNum )                                         ! Please use IEEE_IS_NAN() instead
    !     FUNCTION    NWTC_Gamma( x )                                          ! Returns the gamma value of its argument.   
@@ -58,6 +60,7 @@ MODULE SysSubs
       MODULE PROCEDURE NWTC_gammaR8
       MODULE PROCEDURE NWTC_gammaR16
    END INTERFACE
+   
 
 !=======================================================================
 
@@ -106,7 +109,7 @@ CONTAINS
 
 
 
-   Status = FSTAT( INT( Unit, 4 ), StatArray )
+   Status = FSTAT( INT( Unit, B4Ki ), StatArray )
 
    IF ( Status /= 0 ) THEN
       FileSize = -1
@@ -124,20 +127,18 @@ CONTAINS
       ! This subroutine flushes the buffer on the specified Unit.
       ! It is especially useful when printing "running..." type messages.
 
-
-   USE                             IFPORT
-
+#ifndef CONSOLE_OUTPUT
+   USE                             IFPORT, ONLY: FLUSH
+#endif
 
       ! Argument declarations:
 
    INTEGER, INTENT(IN)          :: Unit                                         ! The unit number of the file being flushed.
 
 
-
+#ifndef CONSOLE_OUTPUT
    CALL FLUSH ( INT(Unit, B4Ki) )
-!bjj: ADAMS does not compile well with this, so I'll put it back to the subroutine form:
-!   FLUSH ( Unit )
-
+#endif
 
    RETURN
    END SUBROUTINE FlushOut ! ( Unit )
@@ -148,7 +149,7 @@ CONTAINS
       ! This routine retrieves the path of the current working directory.
 
 
-   USE                             IFPORT
+   USE                             IFPORT, ONLY: GETCWD
 
    IMPLICIT                        NONE
 
@@ -172,8 +173,7 @@ CONTAINS
       ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
       ! backwards compatibility.
 
-   USE                             IFPORT !remove with use of next line (not implemented in all versions of the IVF compiler)
-!  USE, INTRINSIC :: ieee_arithmetic
+  USE, INTRINSIC :: ieee_arithmetic
 
 
       ! Argument declarations.
@@ -187,8 +187,7 @@ CONTAINS
 
 
 
-!   Is_NaN = IEEE_IS_NAN( DblNum )
-  Is_NaN = IsNaN( DblNum )
+   Is_NaN = IEEE_IS_NAN( DblNum )
 
 
    RETURN
@@ -237,9 +236,23 @@ CONTAINS
 
 
       ! This routine opens the console for standard output.
+#ifdef CONSOLE_OUTPUT
+      ! MODIFIED to write all text to an output file (see SUBROUTINE OpenFOutFile())
 
 
+      ! Local declarations.
 
+   INTEGER                      :: IOS                                          ! I/O status of OPEN.
+
+
+   OPEN ( CU , FILE='CONSOLE.TXT' , STATUS='UNKNOWN', FORM='FORMATTED', IOSTAT=IOS, ACTION="WRITE"   )
+
+   IF ( IOS /= 0 )  THEN
+!     CALL WrScr( ' Cannot open CONSOLE.TXT. Another program like MS Excel may have locked it for writing.' )
+      CALL ProgExit ( 1 )
+   END IF
+
+#endif
 
    RETURN
    END SUBROUTINE OpenCon
@@ -303,16 +316,9 @@ CONTAINS
 
    INTEGER, INTENT(IN)          :: StatCode                                      ! The status code to pass to the OS.
 
-   EXTERNAL                     :: mexErrMsgTxt                                  ! A MATLAB subroutine
-
-
-      ! Close the program
-   IF ( StatCode == 0 ) THEN        ! A normal stop
-      CALL mexErrMsgTxt( 'Normal stop.'//NewLine )    !I don't really want to call this error function.... Is there something else we could call?
-   ELSE                             ! an error occurred
-      CALL mexErrMsgTxt( 'Closing program.'//NewLine )
-   ENDIF
-
+#ifdef CONSOLE_OUTPUT
+   CLOSE ( CU )
+#endif
 
    END SUBROUTINE ProgExit ! ( StatCode )
 !=======================================================================
@@ -362,11 +368,17 @@ CONTAINS
 
    CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
 
+#ifdef CONSOLE_OUTPUT
+
+   WRITE (CU,'(1X,A)',ADVANCE='NO')  Str
+
+#else
    INTEGER                      :: Stat                                         ! Number of characters printed
    INTEGER, EXTERNAL            :: mexPrintF                                    ! Matlab function to print to the command window
 
    Stat = mexPrintF( ' '//TRIM(Str) )
 
+#endif
 
    RETURN
    END SUBROUTINE WrNR ! ( Str )
@@ -381,11 +393,8 @@ CONTAINS
 
    CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
 
-   INTEGER                      :: Stat
-   INTEGER, EXTERNAL            :: mexPrintF                                    ! Matlab function to print to the command window
-
-
    CALL WriteScr( Str, '(A)' )
+
 
 
    RETURN
@@ -405,6 +414,19 @@ CONTAINS
    CHARACTER(*), INTENT(IN)     :: Str                                         ! The input string to write to the screen.
    CHARACTER(*), INTENT(IN)     :: Frm                                         ! Format specifier for the output.
 
+#ifdef CONSOLE_OUTPUT
+
+   INTEGER                      :: ErrStat                                      ! Error status of write operation (so code doesn't crash)
+
+
+   IF ( LEN_TRIM(Str)  < 1 ) THEN
+      WRITE ( CU, '()', IOSTAT=ErrStat )
+   ELSE
+      WRITE ( CU, Frm, IOSTAT=ErrStat ) TRIM(Str)
+   END IF
+
+#else
+
       ! Local variables
    INTEGER, EXTERNAL            :: mexPrintF                                   ! Matlab function to print to the command window
    INTEGER                      :: Stat                                        ! Number of characters printed to the screen
@@ -421,9 +443,12 @@ CONTAINS
    Stat = mexPrintf( TRIM(Str2)//NewLine )
    !call mexEvalString("drawnow;");  ! !bjj: may have to call this to dump string to the screen immediately.
 
+#endif
 
    END SUBROUTINE WriteScr ! ( Str )
+
 !=======================================================================
+
 
 !==================================================================================================================================
 SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
@@ -432,7 +457,6 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
 
    USE               IFWINTY,  ONLY : HANDLE, LPVOID
    USE               kernel32, ONLY : LoadLibrary, GetProcAddress
-
 
       ! Passed Variables:
 
@@ -517,7 +541,6 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
    RETURN
 END SUBROUTINE FreeDynamicLib
 !==================================================================================================================================
-
 
 
 END MODULE SysSubs

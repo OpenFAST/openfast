@@ -152,7 +152,7 @@ CONTAINS
       ! This routine retrieves the path of the current working directory.
 
 
-   USE                             IFPORT
+   USE                             IFPORT, ONLY: GETCWD
 
    IMPLICIT                        NONE
 
@@ -176,8 +176,7 @@ CONTAINS
       ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
       ! backwards compatibility.
 
-   USE                             IFPORT !remove with use of next line (not implemented in all versions of the IVF compiler)
-!  USE, INTRINSIC :: ieee_arithmetic
+  USE, INTRINSIC :: ieee_arithmetic
 
 
       ! Argument declarations.
@@ -191,8 +190,7 @@ CONTAINS
 
 
 
-!   Is_NaN = IEEE_IS_NAN( DblNum )
-   Is_NaN = IsNaN( DblNum )
+   Is_NaN = IEEE_IS_NAN( DblNum )
 
 
    RETURN
@@ -345,8 +343,9 @@ CONTAINS
       ! however Gnu has not yet implemented it, so we've placed this
       ! routine in the system-specific code.
    
-      USE, INTRINSIC :: ieee_arithmetic  !use this for compilers that have implemented ieee_arithmetic from F03 standard (otherwise see logic in SysGnu*.f90)
-         
+   
+      USE, INTRINSIC :: ieee_arithmetic  ! use this for compilers that have implemented ieee_arithmetic from F03 standard (otherwise see logic in SysGnu*.f90)
+   
       REAL(DbKi), INTENT(inout)           :: Inf_D          ! IEEE value for NaN (not-a-number) in double precision
       REAL(DbKi), INTENT(inout)           :: NaN_D          ! IEEE value for Inf (infinity) in double precision
 
