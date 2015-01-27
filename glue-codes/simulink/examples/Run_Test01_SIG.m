@@ -1,11 +1,16 @@
+% make sure the FASTv8\bin directory is in the MATLAB path
+%    (relative path names are not recommended in addpath()):
+% addpath('C:\Users\bjonkman\Documents\CAETools\FASTv8\bin');
+
+
 
 % Simple Induction Generator Example ======================================
 % To model a simple induction generator in Simulink use model Test01_SIG.mdl.  
 % The following parameters duplicate those used in Certification Test #01.  
 
 % Change Test01.fst as follows:
-% VSContrl = 3
-% "LSSGagVxa" to ElastoDyn OutList
+% set VSContrl = 4 in ..\..\CertTest\AWT27\Test01_ServoDyn.dat
+% Add "LSSGagVxa" to ElastoDyn's OutList (..\..\CertTest\AWT27\Test01_ElastoDyn.dat)
 
 
 GenEff   =  100.0;          % - Generator efficiency [ignored by the Thevenin and user-defined generator models] (%)

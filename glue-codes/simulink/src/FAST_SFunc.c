@@ -58,34 +58,41 @@ static int NumOutputs = 1;
 static int ErrStat = 0;
 static char ErrMsg[INTERFACE_STRING_LENGTH];        // make sure this is the same size as IntfStrLen in FAST_Library.f90
 static char InputFileName[INTERFACE_STRING_LENGTH]; // make sure this is the same size as IntfStrLen in FAST_Library.f90
+static int n_t_global = 0;
 
 
-
+// function definitions
 static int checkError(SimStruct *S);
 
+
+
 /* Error handling
- * --------------
- *
- * You should use the following technique to report errors encountered within
- * an S-function:
- *
- *       ssSetErrorStatus(S,"Error encountered due to ...");
- *       return;
- *
- * Note that the 2nd argument to ssSetErrorStatus must be persistent memory.
- * It cannot be a local variable. For example the following will cause
- * unpredictable errors:
- *
- *      mdlOutputs()
- *      {
- *         char msg[256];    {ILLEGAL: to fix use "static char msg[256];"}
- *         sprintf(msg,"Error due to %s", string);
- *         ssSetErrorStatus(S,msg);
- *         return;
- *      }
- *
- * See matlabroot/simulink/src/sfunctmpl_doc.c for further details.
- */
+* --------------
+*
+* You should use the following technique to report errors encountered within
+* an S-function:
+*
+*       ssSetErrorStatus(S,"Error encountered due to ...");
+*       return;
+*
+* Note that the 2nd argument to ssSetErrorStatus must be persistent memory.
+* It cannot be a local variable. 
+*/
+static int
+checkError(SimStruct *S){
+   if (ErrStat >= AbortErrLev){
+      ssSetErrorStatus(S, ErrMsg);
+      return 1;
+   }
+   else if (ErrStat >= ErrID_Warn){
+      ssWarning(S, ErrMsg);
+   }
+   else if (ErrStat != ErrID_None){
+      ssPrintf("%s\n", ErrMsg);
+   }
+   return 0;
+
+}
 
 /*====================*
  * S-function methods *
@@ -267,7 +274,7 @@ static void mdlInitializeSampleTimes(SimStruct *S)
      double *OutputAry = (double *)ssGetDWork(S, 0);
 
      FAST_Start(&NumOutputs, OutputAry, &ErrStat, ErrMsg);
-
+     n_t_global = 0;
      if (checkError(S)) return;
 
   }
@@ -359,6 +366,7 @@ static void mdlUpdate(SimStruct *S, int_T tid)
     
     /* nameofsub_(InputAry, sampleOutput ); */
     FAST_Update(&NumInputs, &NumOutputs, InputAry, OutputAry, &ErrStat, ErrMsg);
+    n_t_global = n_t_global + 1;
 
     if (checkError(S)) return;
 
@@ -390,20 +398,7 @@ static void mdlTerminate(SimStruct *S)
    FAST_End();
 }
 
-static int
-checkError(SimStruct *S){
-   if (ErrStat >= AbortErrLev){
-      ssSetErrorStatus(S, ErrMsg);
-      return 1;
-   }
-   else if (ErrStat >= ErrID_Warn){
-      ssWarning(S, ErrMsg);
-   }else if (ErrStat != ErrID_None){
-      ssPrintf("%s\n",ErrMsg);
-   }
-   return 0;
 
-}
 
 
 /*=============================*
