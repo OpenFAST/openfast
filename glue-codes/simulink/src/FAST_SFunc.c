@@ -43,41 +43,23 @@
 
 #undef VARIABLE_STEP
 
-/* 
- * The interface (function prototype) for your  Fortran subroutine.  
- * Change the name to the name of the subroutine and the arguments 
- * to the actual argument list.
- *
- * Note that datatype REAL is 32 bits in Fortran and are passed
- * by reference, so the prototype arguments must be 'float *'.
- * INTEGER maps to int, so those arguments are 'int *'. Be
- * wary of IMPLICIT rules in Fortran when datatypes are not
- * explicit in your Fortran code.  To use the datatype double
- * the Fortran variables need to be declared DOUBLE PRECISION
- * either explicitly or via an IMPLICIT DOUBLE PRECISION
- * statement.
- *
- * Your Fortran compiler may decorate and/or change the 
- * capitalization of 'SUBROUTINE nameOfSub' differently 
- * than the prototype below.  Check your Fortran compiler's 
- * manual for options to learn about and possibly control 
- * external symbol decoration.  See also the text file named
- * sfuntmpl_fortran.txt in this file's directory.
- *
- * Additionally, you may want to use CFORTRAN, a tool for 
- * automating interface generation between C and Fortran.
- * Search the web for 'cfortran'.
- * 
- */
+
+#define PARAM_FILENAME 0
+#define PARAM_TMAX 1
+#define PARAM_ADDINPUTS 2
+#define NUM_PARAM 3
+
 
 static double dt = 0;
-static int NumInputs = 2 + 2 + MAXIMUM_BLADES;
+static double TMax = 0;
+static int NumInputs = NumFixedInputs;
+static int NumAddInputs = 0;  // number of additional inputs
 static int NumOutputs = 1;
 static int ErrStat = 0;
 static char ErrMsg[INTERFACE_STRING_LENGTH];        // make sure this is the same size as IntfStrLen in FAST_Library.f90
 static char InputFileName[INTERFACE_STRING_LENGTH]; // make sure this is the same size as IntfStrLen in FAST_Library.f90
 
-#define PAR_FILENAME 0
+
 
 static int checkError(SimStruct *S);
 
@@ -120,52 +102,75 @@ static void mdlInitializeSizes(SimStruct *S)
    int i = 0;
    int j = 0;
    int k = 0;
-   static char ChannelNames[CHANNEL_LENGTH*MAXIMUM_OUTPUTS + 1];
-   static char *OutList[MAXIMUM_OUTPUTS];
-   mxArray *pm;
+   static char ChannelNames[CHANNEL_LENGTH * MAXIMUM_OUTPUTS + 1];
+   //static char OutList[MAXIMUM_OUTPUTS][CHANNEL_LENGTH + 1];
+   static char OutList[CHANNEL_LENGTH + 1];
+   mxArray *pm, *chrAry;
 
 
          /* Expected S-Function Input Parameter(s) */
-    ssSetNumSFcnParams(S, 1);  /* Number of expected parameters */ // parameter 1 is the input file name from Matlab
-    if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) {
+   ssSetNumSFcnParams(S, NUM_PARAM);  /* Number of expected parameters */
+   if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) {
         /* Return if number of expected != number of actual parameters */
         return;
     }
+    
+      // The parameters should not be changed during the course of a simulation
+    ssSetSFcnParamTunable(S, PARAM_FILENAME, SS_PRM_NOT_TUNABLE); 
+    mxGetString(ssGetSFcnParam(S, PARAM_FILENAME), InputFileName, INTERFACE_STRING_LENGTH);
 
-    ssSetSFcnParamTunable(S, 0, SS_PRM_NOT_TUNABLE); // the first parameter (0) is the input file name; should not be changed during simulation
-    mxGetString(ssGetSFcnParam(S, PAR_FILENAME), InputFileName, INTERFACE_STRING_LENGTH);
+    ssSetSFcnParamTunable(S, PARAM_TMAX, SS_PRM_NOT_TUNABLE); 
+    TMax = mxGetScalar(ssGetSFcnParam(S, PARAM_TMAX));
+
+    ssSetSFcnParamTunable(S, PARAM_ADDINPUTS, SS_PRM_NOT_TUNABLE);
+    NumAddInputs = (int)( mxGetScalar(ssGetSFcnParam(S, PARAM_ADDINPUTS)) + 0.5 ); // add 0.5 for rounding 
+
+    if (NumAddInputs < 0){
+       ErrStat = ErrID_Fatal;
+       strcpy(ErrMsg, "Parameter specifying number of additional inputs to the FAST SFunc must not be negative.\n");
+       ssSetErrorStatus(S, ErrMsg);
+       return;
+    }
+    NumInputs = NumFixedInputs + NumAddInputs;
+
+
+    ssSetOptions(S,
+       SS_OPTION_CALL_TERMINATE_ON_EXIT);
+
 
     /*  ---------------------------------------------  */
     //   strcpy(InputFileName, "../../CertTest/Test01.fst");
-    FAST_Sizes(InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
+    FAST_Sizes(&TMax, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
 
     if (checkError(S)) return;
-    /*
-    // put the names of the output channels in a variable called "OutList" in the base matlab workspace
+
+    // set DT in the Matlab workspace (necessary for Simulink block solver options)
+    pm = mxCreateDoubleScalar(dt);
+    ErrStat = mexPutVariable("base", "DT", pm);
+    mxDestroyArray(pm);
+    if (ErrStat != 0){
+       strcpy(ErrMsg, "Error copying string array to 'DT' variable in the base Matlab workspace.");
+       ssSetErrorStatus(S, ErrMsg);
+       return;
+    }
+
+  
+    // put the names of the output channels in a cell-array variable called "OutList" in the base matlab workspace
+    pm = mxCreateCellMatrix(NumOutputs, 1);
     for (i = 0; i < NumOutputs; i++){
-       //strncpy(&OutList[i][0], &ChannelNames[i*CHANNEL_LENGTH], CHANNEL_LENGTH);
-       OutList[i][CHANNEL_LENGTH] = '\0'; // null terminator
-       for (j = CHANNEL_LENGTH - 1; j >= 0; j--){ // remove trailing spaces (not sure this is necessary)
-          if (ChannelNames[i*CHANNEL_LENGTH + j] == ' ') {
-             OutList[i][j] = '\0'; // null terminator
-          }
-          else{
-             for (k = j; k >= 0; k--){
-                OutList[i][k] = ChannelNames[i*CHANNEL_LENGTH + k];
-             }
-             break;
-          }
+       j = CHANNEL_LENGTH - 1;
+       while (ChannelNames[i*CHANNEL_LENGTH + j] == ' '){
+          j--;
        }
-    }
-    for (i = NumOutputs; i < MAXIMUM_OUTPUTS; i++){
-       OutList[i][0] = '\0'; // null terminator
-    }
+       strncpy(&OutList[0], &ChannelNames[i*CHANNEL_LENGTH], j+1);
+       OutList[j + 1] = '\0';
 
-    
-    // Create a 2-Dimensional string mxArray with NULL padding. 
-    //pm = mxCreateCharMatrixFromStrings((mwSize)NumOutputs, (const char **)OutList);
-    //ErrStat = mexPutVariable("base", "OutList", pm);
-
+       chrAry = mxCreateString(OutList);
+       mxSetCell(pm, i, chrAry);
+       //mxDestroyArray(chrAry);
+    }
+    ErrStat = mexPutVariable("base", "OutList", pm);
+    mxDestroyArray(pm);
 
     if (ErrStat != 0){
        strcpy(ErrMsg, "Error copying string array to 'OutList' variable in the base Matlab workspace.");
@@ -173,7 +178,7 @@ static void mdlInitializeSizes(SimStruct *S)
        return;
     }
     //  ---------------------------------------------  
-    */
+    
 
     ssSetNumContStates(S, 0);  /* how many continuous states? */
     ssSetNumDiscStates(S, 0);  /* how many discrete states?*/
@@ -219,7 +224,7 @@ static void mdlInitializeSizes(SimStruct *S)
     /* see sfun_simstate.c for example of other possible settings */
     ssSetSimStateCompliance(S, USE_DEFAULT_SIM_STATE);
 
-    ssSetOptions(S, 0);
+    // ssSetOptions(S, 0); // bjj: what does this do? (not sure what 0 means: no options?) set option to call Terminate earlier...
 }
 
 
@@ -336,6 +341,8 @@ static void mdlUpdate(SimStruct *S, int_T tid)
     double *OutputAry = (double *)ssGetDWork(S, 0);
     int k;
     
+    //time_T t = ssGetSampleTime(S, 0);
+
     /* 
      * If the datatype in the Fortran code is REAL
      * then you have to downcast the I/O and states from
@@ -379,7 +386,7 @@ static void mdlUpdate(SimStruct *S, int_T tid)
  */
 static void mdlTerminate(SimStruct *S)
 {
-
+   ssPrintf("%d in mdlTerminate\n",ErrStat);
    FAST_End();
 }
 
