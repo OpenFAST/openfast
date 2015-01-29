@@ -80,9 +80,12 @@ PROGRAM MAIN
 
    REAL(ReKi):: temp_H(3,3)
    REAL(ReKi):: temp_cc(3)
+   REAL(ReKi):: temp_R(3,3)
+   REAL(ReKi):: temp_vec(3)
    REAL(ReKi):: temp1,temp2
    REAL(ReKi):: temp_a,temp_b,temp_force
    Integer(IntKi)                     :: temp_count
+   REAL(ReKi),PARAMETER    :: PI = 3.1415926D0
    INTEGER(IntKi),PARAMETER:: QiHUnit = 30
    INTEGER(IntKi),PARAMETER:: LoadUnit = 40
    INTEGER(IntKi),PARAMETER:: SIZ = 200001
@@ -155,6 +158,19 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
    BD_InitInput%gravity(1) = 0.0D0 !-9.80665
    BD_InitInput%gravity(2) = 0.0D0 
    BD_InitInput%gravity(3) = 0.0D0 
+
+   ALLOCATE(BD_InitInput%GlbPos(3)) 
+   BD_InitInput%GlbPos(1) = 1.0D0
+   BD_InitInput%GlbPos(2) = 0.0D0
+   BD_InitInput%GlbPos(3) = 0.0D0
+
+   ALLOCATE(BD_InitInput%GlbRot(3,3)) 
+   BD_InitInput%GlbRot(:,:) = 0.0D0
+   temp_vec(1) = 0.0
+   temp_vec(2) = 0.0
+   temp_vec(3) = 4.0D0*TAN((PI/4.0D0)/4.0D0)
+   CALL CrvMatrixR(temp_vec,temp_R)
+   BD_InitInput%GlbRot(1:3,1:3) = temp_R(1:3,1:3)
 
    CALL BeamDyn_Init(BD_InitInput        &
                    , BD_Input(1)         &

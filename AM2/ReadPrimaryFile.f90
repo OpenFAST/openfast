@@ -49,7 +49,9 @@
    ENDIF
    IF ( UnEc > 0 )  WRITE(UnEc,*)  'test'
    CALL ReadVar(UnIn,InputFile,InputFileData%analysis_type,"analysis_type", "Analysis type",ErrStat2,ErrMsg2,UnEc)
-   CALL ReadVar(UnIn,InputFile,InputFileData%damp_flag,"damp_flag", "Damping flag",ErrStat2,ErrMsg2,UnEc)
+!   CALL ReadVar(UnIn,InputFile,InputFileData%damp_flag,"damp_flag", "Damping flag",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,InputFile,InputFileData%time_integrator,"time_integrator", "Time integrator type",ErrStat2,ErrMsg2,UnEc)
+
    !---------------------- GEOMETRY PARAMETER --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Geometry Parameter',ErrStat2,ErrMsg2,UnEc)
    CALL ReadVar(UnIn,InputFile,InputFileData%member_total,"member_total", "Total number of member",ErrStat2,ErrMsg2,UnEc)
@@ -85,9 +87,5 @@
    !---------------------- BLADE PARAMETER ----------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Blade Parameter',ErrStat2,ErrMsg2,UnEc)
    CALL ReadVar ( UnIn, InputFile, InputFileData%BldFile, 'BldFile', 'Name of the file containing properties for blade', ErrStat2, ErrMsg2, UnEc )
-   CALL AllocAry(InputFileData%beta,6,'Number of key point in each member',ErrStat2,ErrMsg2)
-   READ(UnIn,*) InputFileData%beta(1:6)
-!   CALL ReadVar ( UnIn, InputFile, InputFileData%beta, 'beta', 'Damping Coefficient', ErrStat2, ErrMsg2, UnEc )
-
 
    END SUBROUTINE ReadPrimaryFile

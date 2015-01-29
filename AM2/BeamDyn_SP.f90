@@ -158,6 +158,8 @@ INCLUDE 'ElementMatrix_CCSD.f90'
    REAL(ReKi)              :: temp_POS(3)
    REAL(ReKi)              :: temp_e1(3)
    REAL(ReKi)              :: temp_CRV(3)
+   REAL(ReKi)              :: temp_GLB(3)
+   REAL(ReKi)              :: temp_glbrot(3)
    REAL(ReKi),PARAMETER    :: EPS = 1.0D-10
    REAL(ReKi),ALLOCATABLE  :: temp_GLL(:)
    REAL(ReKi),ALLOCATABLE  :: temp_GL(:)
@@ -195,6 +197,8 @@ INCLUDE 'ElementMatrix_CCSD.f90'
    p%gravity(1) = InitInp%gravity(3)
    p%gravity(2) = InitInp%gravity(1)
    p%gravity(3) = InitInp%gravity(2)
+
+   CALL CrvExtractCrv(InitInp%GlbRot,temp_glbrot)
 
    CALL AllocAry(SP_Coef,InputFileData%kp_total-1,4,4,'Spline coefficient matrix',ErrStat2,ErrMsg2)
    SP_Coef(:,:,:) = 0.0D0
@@ -258,12 +262,14 @@ INCLUDE 'ElementMatrix_CCSD.f90'
                    CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
                    CALL ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV)
                    temp_id2 = (j-1)*p%dof_node 
-                   p%uuN0(temp_id2+1,i) = temp_POS(1)
-                   p%uuN0(temp_id2+2,i) = temp_POS(2)
-                   p%uuN0(temp_id2+3,i) = temp_POS(3)
-                   p%uuN0(temp_id2+4,i) = temp_CRV(1)
-                   p%uuN0(temp_id2+5,i) = temp_CRV(2)
-                   p%uuN0(temp_id2+6,i) = temp_CRV(3)
+                   p%uuN0(temp_id2+1,i) = temp_POS(1) + InitInp%GlbPos(1)
+                   p%uuN0(temp_id2+2,i) = temp_POS(2) + InitInp%GlbPos(2)
+                   p%uuN0(temp_id2+3,i) = temp_POS(3) + InitInp%GlbPos(3)
+                   temp_GLB(:) = 0.0D0
+                   CALL CrvCompose_temp(temp_GLB,temp_CRV,temp_glbrot,0)
+                   p%uuN0(temp_id2+4,i) = temp_GLB(1)
+                   p%uuN0(temp_id2+5,i) = temp_GLB(2)
+                   p%uuN0(temp_id2+6,i) = temp_GLB(3)
                    EXIT
                ENDIF
            ENDDO
@@ -279,7 +285,7 @@ INCLUDE 'ElementMatrix_CCSD.f90'
                    eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
                    CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
                    temp_id2 = (i-1)*p%ngp+j+1
-                   temp_L2(1:3,temp_id2) = temp_POS(1:3)
+                   temp_L2(1:3,temp_id2) = temp_POS(1:3) + InitInp%GlbPos(1:3)
                    EXIT
                ENDIF
            ENDDO
