@@ -204,9 +204,9 @@ WRITE(*,*) "Time Step: ", n_t_global
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
-      CALL BD_InputSolve( t_global,                   BD_Input(1), BD_InputTimes(1), BD_Parameter, BD_ContinuousState, ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + dt_global,       BD_Input(2), BD_InputTimes(2), BD_Parameter, BD_ContinuousState, ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + 2.0D0*dt_global, BD_Input(3), BD_InputTimes(3), BD_Parameter, BD_ContinuousState, ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global,                   BD_Input(1), BD_InputTimes(1), BD_Parameter, ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + dt_global,       BD_Input(2), BD_InputTimes(2), BD_Parameter, ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + 2.0D0*dt_global, BD_Input(3), BD_InputTimes(3), BD_Parameter, ErrStat, ErrMsg)
 !--------------------------------------------
 ! Compute initial condition given root motion
 !--------------------------------------------
@@ -329,7 +329,7 @@ END PROGRAM MAIN
 
 
 
-   SUBROUTINE BD_InputSolve( t, u, ut, p, x, ErrStat, ErrMsg)
+   SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
  
    USE BeamDyn_SP
    USE BeamDyn_Types
@@ -338,7 +338,6 @@ END PROGRAM MAIN
    TYPE(BD_InputType),             INTENT(INOUT):: u
    REAL(DbKi),                     INTENT(INOUT):: ut
    TYPE(BD_ParameterType),         INTENT(IN   ):: p
-   TYPE(BD_ContinuousStateType),   INTENT(IN   ):: x
    INTEGER(IntKi),                 INTENT(  OUT):: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
@@ -358,61 +357,41 @@ END PROGRAM MAIN
    temp_R(:,:)    = 0.0D0
    ! gather point forces and line forces
 
-   ! Point mesh: RootMotion 
-   u%RootMotion%TranslationDisp(:,:)  = 0.0D0
-   u%RootMotion%TranslationVel(:,:)   = 0.0D0
-   u%RootMotion%TranslationAcc(:,:)   = 0.0D0
-
-!------------------------
-!  Damping beam in Dymore
-!------------------------
-!   u%RootMotion%Orientation(:,:,:) = 0.0D0
-!   temp_pp(2) = 0.0D0
-!   CALL CrvCompose_temp(temp_rr,temp_pp,temp_qq,0)
-!   CALL CrvMatrixR(temp_rr,temp_R)
-!   u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
-!   u%RootMotion%RotationVel(:,:) = 0.0D0
-!----------------------------
-!  END Damping beam in Dymore
-!----------------------------
-   
 !------------------
 !  Rotating beam
 !------------------
+   ! Point mesh: RootMotion 
+   ! Calculate root displacements and rotations
+   u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%Orientation(:,:,:) = 0.0D0
    temp_pp(3) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
-   CALL CrvCompose_temp(temp_rr,temp_pp,temp_qq,0)
-   CALL CrvMatrixR(temp_rr,temp_R)
+!   CALL CrvCompose_temp(temp_rr,temp_pp,temp_qq,0)
+   CALL CrvMatrixR(temp_pp,temp_R)
    u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
+   temp_vec(:) = MATMUL(temp_R,p%uuN0(1:3,1))
+   u%RootMotion%TranslationDisp(1:3,1)  = temp_vec(1:3) - p%uuN0(1:3,1)
+   ! END Calculate root displacements and rotations
 
+   ! Calculate root translational and angular velocities
+   u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(2,1) = 3.1415926D+00*1.0D0/3.0D0
-   u%PointLoad%Force(:,:)  = 0.0D0
-   u%RootMotion%TranslationVel(1:3,1)   = MATMUL(Tilde(p%uuN0(1:3,1)+x%q(1:3)),u%RootMotion%RotationVel(1:3,1))
+   u%RootMotion%TranslationVel(1:3,1) = MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
+   ! END Calculate root translational and angular velocities
+
+
+   ! Calculate root translational and angular accelerations
+   u%RootMotion%TranslationAcc(:,:) = 0.0D0
+   u%RootMotion%RotationAcc(:,:) = 0.0D0
+   temp_vec(1:3) = MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),temp_vec)
+   u%RootMotion%TranslationAcc(1:3,1) = MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),temp_vec)
+   ! END Calculate root translational and angular accelerations
+
 !------------------
 ! End rotating beam
 !------------------
 
-   u%RootMotion%RotationAcc(:,:) = 0.0D0
-
-!------------------------
-!  Damping beam in Dymore
-!------------------------
-   ! Point mesh: PointLoad
-!   IF(t .LE. 2.5D-02) THEN
-!       u%PointLoad%Force(2,p%node_total) = 1.6D+05*t 
-!       u%PointLoad%Force(3,p%node_total) = 1.6D+05*t 
-!   ELSEIF(t .GT. 2.5D-02 .AND. t .LE. 5.0D-02) THEN
-!       u%PointLoad%Force(2,p%node_total) = -1.6D+05*t+8000 
-!       u%PointLoad%Force(3,p%node_total) = -1.6D+05*t+8000
-!   ELSE 
-!       u%PointLoad%Force(2,p%node_total) = 0.0D0
-!       u%PointLoad%Force(3,p%node_total) = 0.0D0
-!   ENDIF
-!----------------------------
-!  END Damping beam in Dymore
-!----------------------------
-
+   u%PointLoad%Force(:,:)  = 0.0D0
    u%PointLoad%Moment(:,:) = 0.0D0
 
    ! LINE2 mesh: DistrLoad
@@ -423,6 +402,7 @@ END PROGRAM MAIN
 
 
    END SUBROUTINE BD_InputSolve
+
 
    SUBROUTINE BD_InitialCondition(u,p,x,ErrStat,ErrMsg)
 
