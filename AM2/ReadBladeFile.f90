@@ -49,7 +49,7 @@
    CALL ReadCom(UnIn,BldFile,'mu1 to mu6',ErrStat2,ErrMsg2,UnEc)
    CALL ReadCom(UnIn,BldFile,'units',ErrStat2,ErrMsg2,UnEc)
    CALL AllocAry(BladeInputFileData%beta,6,'Number of damping coefficient',ErrStat2,ErrMsg2)
-   CALL ReadVar(UnIn,BldFile,BladeInputFileData%beta,'damping coefficient','damping coefficient',ErrStat2,ErrMsg2,UnEc)
+   CALL ReadAry(UnIn,BldFile,BladeInputFileData%beta(:),6,'damping coefficient','damping coefficient',ErrStat2,ErrMsg2,UnEc)
 !  -------------- DISTRIBUTED PROPERTIES--------------------------------------------
    CALL ReadCom(UnIn,BldFile,'Distributed properties',ErrStat2,ErrMsg2,UnEc)
    DO i=1,BladeInputFileData%station_total
