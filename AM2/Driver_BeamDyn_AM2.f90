@@ -85,19 +85,11 @@ PROGRAM MAIN
    REAL(ReKi):: temp1,temp2
    REAL(ReKi):: temp_a,temp_b,temp_force
    Integer(IntKi)                     :: temp_count
-   REAL(ReKi),PARAMETER    :: PI = 3.1415926D0
-   INTEGER(IntKi),PARAMETER:: QiHUnit = 30
-   INTEGER(IntKi),PARAMETER:: LoadUnit = 40
-   INTEGER(IntKi),PARAMETER:: SIZ = 200001
-   REAL(ReKi):: InputLoad(SIZ,2)
-
-
-
+!   REAL(ReKi),PARAMETER    :: PI = 3.1415926D0
 
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
    ! -------------------------------------------------------------------------
-OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE') 
 
    t_initial = 0.0D+00
    t_final   = 1.0D+02
@@ -108,7 +100,7 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 5.0D-04
+   dt_global = 5.0D-03
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -134,17 +126,6 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
    ! -------------------------------------------------------------------------
     OPEN(unit = QiDisUnit, file = 'QiDisp_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
-    OPEN(unit = LoadUnit, file = 'Test19.out', status = 'OLD',ACTION = 'READ')
-    DO i=1,SIZ
-        READ(LoadUnit,*) InputLoad(i,1),InputLoad(i,2)
-        InputLoad(i,2) = InputLoad(i,2)*5.0D+04
-!        DO j=1,9
-!            IF( i == SIZ) EXIT
-!            READ(LoadUnit,*) temp1,temp2
-!        ENDDO
-!WRITE(*,*) InputLoad(i,:)
-    ENDDO
-    CLOSE (LoadUnit)
 
 !   BD_InitInput%InputFile = 'BeamDyn_Input_CX100.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_5MW.inp'
@@ -168,7 +149,7 @@ OPEN(unit = QiHUnit, file = 'QiH_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
    BD_InitInput%GlbRot(:,:) = 0.0D0
    temp_vec(1) = 0.0
    temp_vec(2) = 0.0
-   temp_vec(3) = 4.0D0*TAN((PI/4.0D0)/4.0D0)
+   temp_vec(3) = 4.0D0*TAN((3.1415926D0/4.0D0)/4.0D0)
    CALL CrvMatrixR(temp_vec,temp_R)
    BD_InitInput%GlbRot(1:3,1:3) = temp_R(1:3,1:3)
 
@@ -223,41 +204,17 @@ WRITE(*,*) "Time Step: ", n_t_global
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
-!      CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), BD_Parameter, ErrStat, ErrMsg)
-!      CALL BD_InputSolve( t_global + dt_global, BD_Input(2), BD_InputTimes(2), BD_Parameter, ErrStat, ErrMsg)
-!      CALL BD_InputSolve( t_global + 2.*dt_global   , BD_Input(3), BD_InputTimes(3), BD_Parameter, ErrStat, ErrMsg)
-BD_InputTimes(1) = t_global
-BD_InputTimes(2) = t_global+dt_global
-BD_InputTimes(3) = t_global+2.0D0*dt_global
-
-BD_Input(1)%RootMotion%TranslationDisp(:,:) = 0.0D0
-BD_Input(1)%RootMotion%TranslationVel(:,:)   = 0.0D0
-BD_Input(1)%RootMotion%TranslationAcc(:,:)   = 0.0D0
-BD_Input(1)%RootMotion%RotationAcc(:,:) = 0.0D0
-BD_Input(1)%PointLoad%Moment(:,:) = 0.0D0
-BD_Input(1)%DistrLoad%Force(:,:)  = 0.0D0
-BD_Input(1)%DistrLoad%Moment(:,:) = 0.0D0
-
-BD_Input(2)%RootMotion%TranslationDisp(:,:) = 0.0D0
-BD_Input(2)%RootMotion%TranslationVel(:,:)   = 0.0D0
-BD_Input(2)%RootMotion%TranslationAcc(:,:)   = 0.0D0
-BD_Input(2)%RootMotion%RotationAcc(:,:) = 0.0D0
-BD_Input(2)%PointLoad%Moment(:,:) = 0.0D0
-BD_Input(2)%DistrLoad%Force(:,:)  = 0.0D0
-BD_Input(2)%DistrLoad%Moment(:,:) = 0.0D0
-
-BD_Input(3)%RootMotion%TranslationDisp(:,:) = 0.0D0
-BD_Input(3)%RootMotion%TranslationVel(:,:)   = 0.0D0
-BD_Input(3)%RootMotion%TranslationAcc(:,:)   = 0.0D0
-BD_Input(3)%RootMotion%RotationAcc(:,:) = 0.0D0
-BD_Input(3)%PointLoad%Moment(:,:) = 0.0D0
-BD_Input(3)%DistrLoad%Force(:,:)  = 0.0D0
-BD_Input(3)%DistrLoad%Moment(:,:) = 0.0D0
-
-BD_Input(1)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+1,2)
-BD_Input(2)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+2,2)
-BD_Input(3)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+3,2)
-
+      CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), BD_Parameter, ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + dt_global, BD_Input(2), BD_InputTimes(2), BD_Parameter, ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + 2.*dt_global   , BD_Input(3), BD_InputTimes(3), BD_Parameter, ErrStat, ErrMsg)
+!--------------------------------------------
+! Compute initial condition given root motion
+!--------------------------------------------
+      IF(n_t_global .EQ. 0) THEN
+      ENDIF
+!------------------------------------------------
+! END Compute initial condition given root motion
+!------------------------------------------------
      CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
                              BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
@@ -285,8 +242,8 @@ BD_Input(3)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+3,
 
       ENDDO
 
-   WRITE(QiHUnit,*) n_t_global+1,BD_OtherState%NR_counter
-   temp_count = temp_count + BD_OtherState%NR_counter
+!   WRITE(QiHUnit,*) n_t_global+1,BD_OtherState%NR_counter
+!   temp_count = temp_count + BD_OtherState%NR_counter
 
 !IF(n_t_global .EQ. 301) STOP
 !      IF(n_t_global .GE. 149) THEN
@@ -327,7 +284,7 @@ BD_Input(3)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+3,
 
    ENDDO
 
-   WRITE(QiHUnit,*) "TOTAL",temp_count
+!   WRITE(QiHUnit,*) "TOTAL",temp_count
 
    ! calculate final time normalized rms error
 
@@ -365,7 +322,7 @@ BD_Input(3)%PointLoad%Force(2,BD_Parameter%node_total) = InputLoad(n_t_global+3,
    CLOSE (QiDisUnit)
 
 7000 FORMAT (ES12.5,9ES21.12)
-CLOSE (QiHUnit)
+!CLOSE (QiHUnit)
 
 END PROGRAM MAIN
 
@@ -471,5 +428,22 @@ SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
 
 
 END SUBROUTINE BD_InputSolve
+
+   SUBROUTINE BD_InitialCondition(u,p,x,ErrStat,ErrMsg)
+
+   ! Initial displacements and rotations
+   x%q(:) = 0.0D0
+   ! Initial velocities and angular velocities
+   DO i=1,p%elem_total
+       DO j=1,p%node_elem
+           temp_id = (i-1)*p%dof_node*p%node_elem+(j-1)*p%dof_node
+           temp_id2= (j-1)*p%dof_node
+           x%dqdt(temp_id+1:temp_id+3) = u%RootMotion%TranslationVel(1:3,1) + &
+                 &MATMUL(Tilde(p%uuN0(temp_id2+1:temp_id2+3,i)),u%RootMotion%RotationVel(1:3,1))
+           x%dqdt(temp_id+4:temp_id+6) = u%RootMotion%RotationVel(1:3,1)
+       ENDDO
+   ENDDO
+
+   END SUBROUTINE BD_InitialCondition
 !----------------------------------------------------------------------------------------------------------------------------------
 !----------------------------------------------------------------------------------------------------------------------------------
