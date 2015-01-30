@@ -63,6 +63,7 @@ typedef      ^            ^       ^     dof_total  - - -  "Total number of dofs"
 typedef      ^            ^       ^     ngp  - - -  "Number of Gauss points" -
 typedef      ^            ^       ^     analysis_type  - - -  "analysis_type flag" -
 typedef      ^            ^       ^     damp_flag  - - -  "damping flag" -
+typedef      ^            ^       ^     time_flag  - - -  "time integrator flag: 1-AM2, 2-G-Alpha, 3-RK4" -
 typedef      ^            ^       ^     niter  - - -  "analysis_type flag" -
 typedef      ^            ^      DbKi   dt     - - -  "module dt" s
 typedef      ^            ^      ReKi   beta   {:} - -  "Damping Coefficient" -
