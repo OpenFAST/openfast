@@ -188,6 +188,7 @@ INCLUDE 'ElementMatrix_CCSD.f90'
 
    CALL BeamDyn_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat,ErrMsg)
    p%analysis_type  = InputFileData%analysis_type
+   p%time_flag  = InputFileData%time_integrator
    p%damp_flag  = InputFileData%InpBl%damp_flag
    CALL AllocAry(p%beta,6,'Damping coefficient',ErrStat2,ErrMsg2)
    p%beta(:)  = InputFileData%InpBl%beta(:)
@@ -687,8 +688,12 @@ INCLUDE 'ElementMatrix_CCSD.f90'
 
    IF(p%analysis_type == 2) THEN
 !WRITE(*,*) x%q(:)
-!       CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-       CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       IF(p%time_flag .EQ. 1 OR p%time_flag .EQ. 2) THEN
+           CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       ELSEIF(p%time_flag .EQ. 3) THEN
+           CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       ENDIF
+  
 !       DO i=2,p%node_total
 !           temp_id = (i-1)*6
 !           temp_pp(:) = 0.0D0

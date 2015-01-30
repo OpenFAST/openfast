@@ -204,17 +204,18 @@ WRITE(*,*) "Time Step: ", n_t_global
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
-      CALL BD_InputSolve( t_global               , BD_Input(1), BD_InputTimes(1), BD_Parameter, ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + dt_global, BD_Input(2), BD_InputTimes(2), BD_Parameter, ErrStat, ErrMsg)
-      CALL BD_InputSolve( t_global + 2.*dt_global   , BD_Input(3), BD_InputTimes(3), BD_Parameter, ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global,                   BD_Input(1), BD_InputTimes(1), BD_Parameter, BD_ContinuousState, ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + dt_global,       BD_Input(2), BD_InputTimes(2), BD_Parameter, BD_ContinuousState, ErrStat, ErrMsg)
+      CALL BD_InputSolve( t_global + 2.0D0*dt_global, BD_Input(3), BD_InputTimes(3), BD_Parameter, BD_ContinuousState, ErrStat, ErrMsg)
 !--------------------------------------------
 ! Compute initial condition given root motion
 !--------------------------------------------
       IF(n_t_global .EQ. 0) THEN
+          CALL BD_InitialCondition(BD_Input(1),BD_Parameter,BD_ContinuousState,ErrStat,ErrMsg)
       ENDIF
-!------------------------------------------------
-! END Compute initial condition given root motion
-!------------------------------------------------
+!------------------------------
+! END Compute initial condition
+!------------------------------
      CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
                              BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
@@ -328,27 +329,20 @@ END PROGRAM MAIN
 
 
 
-!SUBROUTINE BD_InputSolve( u, y, p, ErrStat, ErrMsg)
-SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
+   SUBROUTINE BD_InputSolve( t, u, ut, p, x, ErrStat, ErrMsg)
  
    USE BeamDyn_SP
    USE BeamDyn_Types
 
-   ! Module1 Derived-types variables; see Registry_Module1.txt for details
-
-   REAL(DbKi),                     INTENT(IN   ) :: t
-   TYPE(BD_InputType),           INTENT(INOUT) :: u
-   REAL(DbKi),                     INTENT(INOUT) :: ut
-   TYPE(BD_ParameterType),           INTENT(IN   ) :: p
-
-
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
+   REAL(DbKi),                     INTENT(IN   ):: t
+   TYPE(BD_InputType),             INTENT(INOUT):: u
+   REAL(DbKi),                     INTENT(INOUT):: ut
+   TYPE(BD_ParameterType),         INTENT(IN   ):: p
+   TYPE(BD_ContinuousStateType),   INTENT(IN   ):: x
+   INTEGER(IntKi),                 INTENT(  OUT):: ErrStat     ! Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
-
    INTEGER(IntKi)          :: i                ! do-loop counter
-
    REAL(ReKi)              :: temp_vector(3)
    REAL(ReKi)              :: temp_rr(3)
    REAL(ReKi)              :: temp_pp(3)
@@ -385,15 +379,16 @@ SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
 !------------------
 !  Rotating beam
 !------------------
-!   u%RootMotion%Orientation(:,:,:) = 0.0D0
-!   temp_pp(2) = -4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
-!   CALL CrvCompose_temp(temp_rr,temp_pp,temp_qq,0)
-!   CALL CrvMatrixR(temp_rr,temp_R)
-!   u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
-!
-!   u%RootMotion%RotationVel(:,:) = 0.0D0
-!   u%RootMotion%RotationVel(2,1) = -3.1415926D+00*1.0D0/3.0D0
-!   u%PointLoad%Force(:,:)  = 0.0D0
+   u%RootMotion%Orientation(:,:,:) = 0.0D0
+   temp_pp(3) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
+   CALL CrvCompose_temp(temp_rr,temp_pp,temp_qq,0)
+   CALL CrvMatrixR(temp_rr,temp_R)
+   u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
+
+   u%RootMotion%RotationVel(:,:) = 0.0D0
+   u%RootMotion%RotationVel(2,1) = 3.1415926D+00*1.0D0/3.0D0
+   u%PointLoad%Force(:,:)  = 0.0D0
+   u%RootMotion%TranslationVel(1:3,1)   = MATMUL(Tilde(p%uuN0(1:3,1)+x%q(1:3)),u%RootMotion%RotationVel(1:3,1))
 !------------------
 ! End rotating beam
 !------------------
@@ -404,16 +399,16 @@ SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
 !  Damping beam in Dymore
 !------------------------
    ! Point mesh: PointLoad
-   IF(t .LE. 2.5D-02) THEN
-       u%PointLoad%Force(2,p%node_total) = 1.6D+05*t 
-       u%PointLoad%Force(3,p%node_total) = 1.6D+05*t 
-   ELSEIF(t .GT. 2.5D-02 .AND. t .LE. 5.0D-02) THEN
-       u%PointLoad%Force(2,p%node_total) = -1.6D+05*t+8000 
-       u%PointLoad%Force(3,p%node_total) = -1.6D+05*t+8000
-   ELSE 
-       u%PointLoad%Force(2,p%node_total) = 0.0D0
-       u%PointLoad%Force(3,p%node_total) = 0.0D0
-   ENDIF
+!   IF(t .LE. 2.5D-02) THEN
+!       u%PointLoad%Force(2,p%node_total) = 1.6D+05*t 
+!       u%PointLoad%Force(3,p%node_total) = 1.6D+05*t 
+!   ELSEIF(t .GT. 2.5D-02 .AND. t .LE. 5.0D-02) THEN
+!       u%PointLoad%Force(2,p%node_total) = -1.6D+05*t+8000 
+!       u%PointLoad%Force(3,p%node_total) = -1.6D+05*t+8000
+!   ELSE 
+!       u%PointLoad%Force(2,p%node_total) = 0.0D0
+!       u%PointLoad%Force(3,p%node_total) = 0.0D0
+!   ENDIF
 !----------------------------
 !  END Damping beam in Dymore
 !----------------------------
@@ -427,10 +422,28 @@ SUBROUTINE BD_InputSolve( t, u, ut, p, ErrStat, ErrMsg)
    ut = t
 
 
-END SUBROUTINE BD_InputSolve
+   END SUBROUTINE BD_InputSolve
 
    SUBROUTINE BD_InitialCondition(u,p,x,ErrStat,ErrMsg)
 
+   USE BeamDyn_SP
+   USE BeamDyn_Types
+
+   ! Module1 Derived-types variables; see Registry_Module1.txt for details
+
+   TYPE(BD_InputType),                     INTENT(IN   ):: u
+   TYPE(BD_ParameterType),                 INTENT(IN   ):: p
+   TYPE(BD_ContinuousStateType),           INTENT(INOUT):: x
+   INTEGER(IntKi),                         INTENT(  OUT):: ErrStat     ! Error status of the operation
+   CHARACTER(*),                           INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   INTEGER(IntKi)                                       :: i
+   INTEGER(IntKi)                                       :: j
+   INTEGER(IntKi)                                       :: temp_id
+   INTEGER(IntKi)                                       :: temp_id2
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
    ! Initial displacements and rotations
    x%q(:) = 0.0D0
    ! Initial velocities and angular velocities
