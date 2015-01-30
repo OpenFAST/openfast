@@ -2634,7 +2634,7 @@ END SUBROUTINE GetTwrSectProp
 
 !====================================================================================================
 FUNCTION AD_WindVelocityWithDisturbance(  Time, u, p, x, xd, z, O, y, ErrStat, ErrMsg,      &
-                                          InputPosition )
+                                          InputPosition, InputVelocity )
 !                                          InputPosition, TShadC1, TShadC2, PJM_Version  )
 !FUNCTION AD_WindVelocityWithDisturbance( InputPosition, TShadC1, TShadC2, PJM_Version, LeStat  )
 !  This function computes the (dimensional) wind velocity components at the location InputPosition
@@ -2655,12 +2655,14 @@ FUNCTION AD_WindVelocityWithDisturbance(  Time, u, p, x, xd, z, O, y, ErrStat, E
       TYPE(AD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
       TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O !therState ! Other/optimization states
       TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at Time (Input only so that mesh con-
-                                                                       !   nectivity information does not have to be recalculated)
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+                                                                    !   nectivity information does not have to be recalculated)
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat  ! Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg   ! Error message if ErrStat /= ErrID_None
 
-   REAL(ReKi),INTENT(IN)            :: InputPosition(3)
-!   REAL(ReKi),INTENT(IN)            :: TShadC1
+      REAL(ReKi),INTENT(IN)            :: InputPosition(3)        ! 
+      REAL(ReKi),INTENT(IN)            :: InputVelocity(3)        ! undisturbed velocity
+
+   !   REAL(ReKi),INTENT(IN)            :: TShadC1
 !   REAL(ReKi),INTENT(IN)            :: TShadC2
 !   LOGICAL,INTENT(IN)               :: PJM_Version
 
@@ -2690,19 +2692,8 @@ FUNCTION AD_WindVelocityWithDisturbance(  Time, u, p, x, xd, z, O, y, ErrStat, E
    ErrMsg  = ""
 
       ! Get the undisturbed velocity
-!mlb: Although IfW is capable of getting velocities for a lot of points, we will do them one at a time in this temporary release.
 
-   o%IfW_Inputs%Position(:,1) = InputPosition(:)
-
-!   InflowVel = WindInf_GetVelocity( REAL(Time, ReKi), InputPosition, Sttus)
-   CALL IfW_CalcOutput( Time, o%IfW_Inputs, p%IfW_Params, &
-                              x%IfW_ContStates, xd%IfW_DiscStates, z%IfW_ConstrStates, O%IfW_OtherStates, &   ! States -- none in this case
-                              y%IfW_Outputs, TmpErrStat, TmpErrMsg )
-   call SetErrStat(TmpErrStat,TmpErrMsg,ErrStat, ErrMsg,'AD_WindVelocityWithDisturbance')
-   IF (ErrStat >= AbortErrLev) RETURN
-
-   AD_WindVelocityWithDisturbance(:) = y%IfW_Outputs%Velocity(:,1)
-
+   AD_WindVelocityWithDisturbance(:) = InputVelocity
 
          ! Add the tower influence to the undisturbed velocity.
 

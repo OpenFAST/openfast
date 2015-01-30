@@ -75,6 +75,7 @@ SUBROUTINE DWM_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, 
    CALL WrScr("  Reading the wind file for DWM simulation." )
    
    InitInp%IfW_InitInputs%WindFileType    = DEFAULT_WindNumber
+   InitInp%IfW_InitInputs%lidar%SensorType = SensorType_None
    
    
    CALL IfW_Init( InitInp%IfW_InitInputs,   u%IfW_Inputs,    p%IfW_Params,                          &
