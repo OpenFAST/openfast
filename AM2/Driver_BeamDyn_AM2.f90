@@ -92,7 +92,7 @@ PROGRAM MAIN
    ! -------------------------------------------------------------------------
 
    t_initial = 0.0D+00
-   t_final   = 1.0D+02
+   t_final   = 1.0D+01
 
    pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
                ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
@@ -342,7 +342,7 @@ END PROGRAM MAIN
    CHARACTER(*),                   INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
    INTEGER(IntKi)          :: i                ! do-loop counter
-   REAL(ReKi)              :: temp_vector(3)
+   REAL(ReKi)              :: temp_vec(3)
    REAL(ReKi)              :: temp_rr(3)
    REAL(ReKi)              :: temp_pp(3)
    REAL(ReKi)              :: temp_qq(3)

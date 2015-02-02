@@ -87,6 +87,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: ngp      ! Number of Gauss points [-]
     INTEGER(IntKi)  :: analysis_type      ! analysis_type flag [-]
     INTEGER(IntKi)  :: damp_flag      ! damping flag [-]
+    INTEGER(IntKi)  :: time_flag      ! time integrator flag: 1-AM2, 2-G-Alpha, 3-RK4 [-]
     INTEGER(IntKi)  :: niter      ! analysis_type flag [-]
     REAL(DbKi)  :: dt      ! module dt [s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: beta      ! Damping Coefficient [-]
@@ -1032,6 +1033,7 @@ ENDIF
    DstParamData%ngp = SrcParamData%ngp
    DstParamData%analysis_type = SrcParamData%analysis_type
    DstParamData%damp_flag = SrcParamData%damp_flag
+   DstParamData%time_flag = SrcParamData%time_flag
    DstParamData%niter = SrcParamData%niter
    DstParamData%dt = SrcParamData%dt
 IF (ALLOCATED(SrcParamData%beta)) THEN
@@ -1129,6 +1131,7 @@ ENDIF
   Int_BufSz  = Int_BufSz  + 1  ! ngp
   Int_BufSz  = Int_BufSz  + 1  ! analysis_type
   Int_BufSz  = Int_BufSz  + 1  ! damp_flag
+  Int_BufSz  = Int_BufSz  + 1  ! time_flag
   Int_BufSz  = Int_BufSz  + 1  ! niter
   Db_BufSz   = Db_BufSz   + 1  ! dt
   Re_BufSz    = Re_BufSz    + SIZE( InData%beta )  ! beta 
@@ -1176,6 +1179,8 @@ ENDIF
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%analysis_type )
   Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%damp_flag )
+  Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%time_flag )
   Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%niter )
   Int_Xferred   = Int_Xferred   + 1
@@ -1273,6 +1278,8 @@ ENDIF
   OutData%analysis_type = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
   OutData%damp_flag = IntKiBuf ( Int_Xferred )
+  Int_Xferred   = Int_Xferred   + 1
+  OutData%time_flag = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
   OutData%niter = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
