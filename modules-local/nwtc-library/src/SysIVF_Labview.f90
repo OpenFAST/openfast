@@ -161,7 +161,7 @@ CONTAINS
    INTEGER,      INTENT(OUT)    :: Status                                          ! Status returned by the call to a portability routine.
 
 
-   DirName = '.'//SwChar
+   DirName = '.'//PathSep
    Status  = 0
 
    RETURN
