@@ -113,6 +113,9 @@ static void mdlInitializeSizes(SimStruct *S)
    //static char OutList[MAXIMUM_OUTPUTS][CHANNEL_LENGTH + 1];
    static char OutList[CHANNEL_LENGTH + 1];
    mxArray *pm, *chrAry;
+   mwSize m, n;
+   mwIndex indx;
+
 
 
          /* Expected S-Function Input Parameter(s) */
@@ -163,7 +166,9 @@ static void mdlInitializeSizes(SimStruct *S)
 
   
     // put the names of the output channels in a cell-array variable called "OutList" in the base matlab workspace
-    pm = mxCreateCellMatrix(NumOutputs, 1);
+    m = NumOutputs;
+    n = 1;
+    pm = mxCreateCellMatrix(m, n);
     for (i = 0; i < NumOutputs; i++){
        j = CHANNEL_LENGTH - 1;
        while (ChannelNames[i*CHANNEL_LENGTH + j] == ' '){
@@ -173,7 +178,8 @@ static void mdlInitializeSizes(SimStruct *S)
        OutList[j + 1] = '\0';
 
        chrAry = mxCreateString(OutList);
-       mxSetCell(pm, i, chrAry);
+       indx = i;
+       mxSetCell(pm, indx, chrAry);
        //mxDestroyArray(chrAry);
     }
     ErrStat = mexPutVariable("base", "OutList", pm);
