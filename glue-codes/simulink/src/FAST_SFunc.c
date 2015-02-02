@@ -27,7 +27,7 @@
  */
 #include "simstruc.h"
 #include "mex.h"     // for mexPutVariable
-#include "matrix.h"  // for mxCreateCharMatrixFromStrings
+#include "matrix.h"  // for mxCreateDoubleScalar
 #include "FAST_Library.h"
 
 
