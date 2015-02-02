@@ -34,6 +34,8 @@ MODULE SysSubs
 
    !     FUNCTION    FileSize( Unit )                                         ! Returns the size (in bytes) of an open file.
    !     SUBROUTINE  FlushOut ( Unit )
+   !     FUNCTION    NWTC_ERF( x )
+   !     FUNCTION    NWTC_gamma( x )
    !     SUBROUTINE  GET_CWD( DirName, Status )
    !     FUNCTION    Is_NaN( DblNum )                                         ! Please use IEEE_IS_NAN() instead
    !     FUNCTION    NWTC_Gamma( x )                                          ! Returns the gamma value of its argument.   
@@ -60,6 +62,14 @@ MODULE SysSubs
       MODULE PROCEDURE NWTC_gammaR8
       MODULE PROCEDURE NWTC_gammaR16
    END INTERFACE
+   
+   INTERFACE NWTC_ERF ! Returns the ERF value of its argument
+      MODULE PROCEDURE NWTC_ERFR4
+      MODULE PROCEDURE NWTC_ERFR8
+      MODULE PROCEDURE NWTC_ERFR16
+   END INTERFACE
+   
+   
 
 !=======================================================================
 
@@ -148,7 +158,7 @@ CONTAINS
       ! This routine retrieves the path of the current working directory.
 
 
-   USE                             IFPORT
+   USE                             IFPORT, ONLY: GETCWD
 
    IMPLICIT                        NONE
 
@@ -172,8 +182,7 @@ CONTAINS
       ! It should be replaced with IEEE_IS_NAN in new code, but remains here for
       ! backwards compatibility.
 
-
-   USE                             IFPORT
+  USE, INTRINSIC :: ieee_arithmetic
 
 
       ! Argument declarations.
@@ -187,11 +196,50 @@ CONTAINS
 
 
 
-   Is_NaN = IsNaN( DblNum )
+   Is_NaN = IEEE_IS_NAN( DblNum )
 
 
    RETURN
    END FUNCTION Is_NaN ! ( DblNum )
+!=======================================================================
+   FUNCTION NWTC_ERFR4( x )
+   
+      ! Returns the ERF value of its argument. The result has a value equal  
+      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+
+      REAL(SiKi), INTENT(IN)     :: x           ! input 
+      REAL(SiKi)                 :: NWTC_ERFR4  ! result
+      
+      
+      NWTC_ERFR4 = ERF( x )
+   
+   END FUNCTION NWTC_ERFR4
+!=======================================================================
+   FUNCTION NWTC_ERFR8( x )
+   
+      ! Returns the ERF value of its argument. The result has a value equal  
+      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+
+      REAL(R8Ki), INTENT(IN)     :: x             ! input 
+      REAL(R8Ki)                 :: NWTC_ERFR8    ! result
+      
+      
+      NWTC_ERFR8 = ERF( x )
+   
+   END FUNCTION NWTC_ERFR8
+!=======================================================================
+   FUNCTION NWTC_ERFR16( x )
+   
+      ! Returns the ERF value of its argument. The result has a value equal  
+      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+
+      REAL(QuKi), INTENT(IN)     :: x             ! input 
+      REAL(QuKi)                 :: NWTC_ERFR16   ! result
+      
+      
+      NWTC_ERFR16 = ERF( x )
+   
+   END FUNCTION NWTC_ERFR16
 !=======================================================================
    FUNCTION NWTC_GammaR4( x )
    
@@ -245,7 +293,6 @@ CONTAINS
    OPEN ( CU , FILE='/dev/stdout' , STATUS='UNKNOWN' , CARRIAGECONTROL='FORTRAN', RECL=ConRecL )
 
    CALL FlushOut ( CU )
-
 
    RETURN
    END SUBROUTINE OpenCon
@@ -334,8 +381,9 @@ CONTAINS
       ! however Gnu has not yet implemented it, so we've placed this
       ! routine in the system-specific code.
    
-      USE, INTRINSIC :: ieee_arithmetic  !use this for compilers that have implemented ieee_arithmetic from F03 standard (otherwise see logic in SysGnu*.f90)
-         
+   
+      USE, INTRINSIC :: ieee_arithmetic  ! use this for compilers that have implemented ieee_arithmetic from F03 standard (otherwise see logic in SysGnu*.f90)
+   
       REAL(DbKi), INTENT(inout)           :: Inf_D          ! IEEE value for NaN (not-a-number) in double precision
       REAL(DbKi), INTENT(inout)           :: NaN_D          ! IEEE value for Inf (infinity) in double precision
 
@@ -396,6 +444,7 @@ CONTAINS
 
 
    WRITE (CU,'(''+'',A)')  Str
+
 
 
    RETURN

@@ -25,6 +25,7 @@ MODULE NWTC_Library
          ! Compiling Notes:
          ! -----------------------------------
          ! Your project must include the following files:
+         !     SingPrec.f90        - for single-precision arithmetic for floating-points variables. Use preprocessor definition DOUBLE_PRECISION to use double-precision arithemitic 
          !     NWTC_Base.f90
          !     NWTC_IO.f90
          !     NWTC_Library.f90
@@ -34,11 +35,7 @@ MODULE NWTC_Library
          !     ModMesh_Types.f90
          !
          ! If you are not compiling with -DNO_MESHMAPPING, your project must include this file:
-         !     ModMesh_Mapping.f90  (not necessary if compiling with -DNO_MESHMAPPING)
-         !
-         ! Your project must include one, but not both, of the following files:
-         !     DoubPrec.f90 - for double-precision arithmetic for floating-points variables.  You may have to set a compiler option to have constants use double precision.
-         !     SingPrec.f90 - for single-precision arithmetic for floating-points variables.
+         !     ModMesh_Mapping.f90  (do not use if compiling with -DNO_MESHMAPPING)
          !
          ! Your project must include one, and only one, of the following files:
          !     SysIVF.f90           - for Intel Visual Fortran for Windows compiler
@@ -50,7 +47,7 @@ MODULE NWTC_Library
          !
          !
          ! Compilation order for command-line compilation:
-         !     SingPrec.f90 or DoubPrec.f90
+         !     SingPrec.f90
          !     NWTC_Base.f90
          !     SysIVF.f90 (or other Sys*.f90 file)
          !     NWTC_Library_Types.f90
@@ -61,7 +58,8 @@ MODULE NWTC_Library
          !     ModMesh_Mapping.f90  (remove if compiling with -DNO_MESHMAPPING)
          !     NWTC_Library.f90
          !
-         ! This software uses preprocessor directives, and some lines exceed 132 characters, so you must compile with these options:
+         ! This software uses preprocessor directives, some lines exceed 132 characters, and ModMesh_Mapping.f90 depends on lapack routines.
+         !    so, you must compile with these options:
          !              Intel:   /fpp /Qmkl:sequential
          !              Gnu:     -x f95-cpp-input -ffree-line-length-none -llapack -lblas
          !  note that lapack and blas [binary] libraries must be installed for you to compile the ModMesh_Mapping.f90 file. 

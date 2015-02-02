@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2013-2014  National Renewable Energy Laboratory
+! Copyright (C) 2013-2015  National Renewable Energy Laboratory
 !
 !    This file is part of the NWTC Subroutine Library.
 !
@@ -26,9 +26,13 @@ MODULE Precision
 
    ! This module stores constants to specify the KIND of variables.
 
-IMPLICIT                           NONE
+   ! NOTE: When using preprocessor definition DOUBLE_PRECISION (ReKi = 8), you 
+   !    may need to use a compile option to convert default reals to 8 bytes:
+   !       Intel:   /real_size:64           /double_size:128
+   !       Gnu:     -fdefault-real-8        
 
-   ! These values should not vary from DoubPrec.f90:
+
+IMPLICIT                           NONE
 
 INTEGER, PARAMETER              :: B1Ki     = SELECTED_INT_KIND(  2 )           ! Kind for one-byte whole numbers
 INTEGER, PARAMETER              :: B2Ki     = SELECTED_INT_KIND(  4 )           ! Kind for two-byte whole numbers
@@ -45,18 +49,24 @@ INTEGER, PARAMETER              :: BYTES_IN_QuKi = 16                           
 
 
 
-      ! The default kinds for reals and integers:
+      ! The default kinds for reals and integers, and the number of bytes they contain:
 
-INTEGER, PARAMETER              :: IntKi    = B4Ki                              ! Default kind for integers
-INTEGER, PARAMETER              :: ReKi     = SiKi                              ! Default kind for floating-point numbers
-INTEGER, PARAMETER              :: DbKi     = R8Ki                              ! Default kind for double floating-point numbers
+INTEGER, PARAMETER              :: IntKi          = B4Ki                        ! Default kind for integers
+INTEGER, PARAMETER              :: BYTES_IN_INT   = 4                           ! Number of bytes per IntKi number    - use SIZEOF()
 
+#ifndef DOUBLE_PRECISION
+INTEGER, PARAMETER              :: ReKi           = SiKi                        ! Default kind for floating-point numbers
+INTEGER, PARAMETER              :: DbKi           = R8Ki                        ! Default kind for double floating-point numbers
+                                                  
+INTEGER, PARAMETER              :: BYTES_IN_REAL  = BYTES_IN_SiKi               ! Number of bytes per ReKi number     - use SIZEOF()
+INTEGER, PARAMETER              :: BYTES_IN_DBL   = BYTES_IN_R8Ki               ! Number of bytes per DbKi number     - use SIZEOF()
+#else
+INTEGER, PARAMETER              :: ReKi           = R8Ki                        ! Default kind for floating-point numbers
+INTEGER, PARAMETER              :: DbKi           = QuKi                        ! Default kind for double floating-point numbers
 
-      ! The number of bytes in the default variables
-
-INTEGER, PARAMETER              :: BYTES_IN_INT   = 4                            ! Number of bytes per IntKi number    - use SIZEOF()
-INTEGER, PARAMETER              :: BYTES_IN_REAL  = BYTES_IN_SiKi                ! Number of bytes per ReKi number     - use SIZEOF()
-INTEGER, PARAMETER              :: BYTES_IN_DBL   = BYTES_IN_R8Ki                ! Number of bytes per DbKi number     - use SIZEOF()
+INTEGER, PARAMETER              :: BYTES_IN_REAL  = BYTES_IN_R8Ki               ! Number of bytes per ReKi number     - use SIZEOF()
+INTEGER, PARAMETER              :: BYTES_IN_DBL   = BYTES_IN_QuKi               ! Number of bytes per DbKi number     - use SIZEOF()
+#endif
 
 
 END MODULE Precision

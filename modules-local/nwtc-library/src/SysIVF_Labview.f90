@@ -34,6 +34,8 @@ MODULE SysSubs
 
    !     FUNCTION    FileSize( Unit )                                         ! Returns the size (in bytes) of an open file.
    !     SUBROUTINE  FlushOut ( Unit )
+   !     FUNCTION    NWTC_ERF( x )
+   !     FUNCTION    NWTC_gamma( x )
    !     SUBROUTINE  GET_CWD( DirName, Status )
    !     FUNCTION    Is_NaN( DblNum )                                         ! Please use IEEE_IS_NAN() instead
    !     FUNCTION    NWTC_Gamma( x )                                          ! Returns the gamma value of its argument.   
@@ -51,7 +53,7 @@ MODULE SysSubs
 
 
 
-   USE                             Precision
+   USE                             NWTC_Base
 
    IMPLICIT                        NONE
 
@@ -60,6 +62,14 @@ MODULE SysSubs
       MODULE PROCEDURE NWTC_gammaR8
       MODULE PROCEDURE NWTC_gammaR16
    END INTERFACE
+   
+   INTERFACE NWTC_ERF ! Returns the ERF value of its argument
+      MODULE PROCEDURE NWTC_ERFR4
+      MODULE PROCEDURE NWTC_ERFR8
+      MODULE PROCEDURE NWTC_ERFR16
+   END INTERFACE
+   
+   
 
 !=======================================================================
 
@@ -108,7 +118,7 @@ CONTAINS
 
 
 
-   Status = FSTAT( INT( Unit, 4 ), StatArray )
+   Status = FSTAT( INT( Unit, B4Ki ), StatArray )
 
    IF ( Status /= 0 ) THEN
       FileSize = -1
@@ -151,7 +161,7 @@ CONTAINS
    INTEGER,      INTENT(OUT)    :: Status                                          ! Status returned by the call to a portability routine.
 
 
-   DirName = ''
+   DirName = '.'//SwChar
    Status  = 0
 
    RETURN
@@ -183,6 +193,45 @@ CONTAINS
 
    RETURN
    END FUNCTION Is_NaN ! ( DblNum )
+!=======================================================================
+   FUNCTION NWTC_ERFR4( x )
+   
+      ! Returns the ERF value of its argument. The result has a value equal  
+      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+
+      REAL(SiKi), INTENT(IN)     :: x           ! input 
+      REAL(SiKi)                 :: NWTC_ERFR4  ! result
+      
+      
+      NWTC_ERFR4 = ERF( x )
+   
+   END FUNCTION NWTC_ERFR4
+!=======================================================================
+   FUNCTION NWTC_ERFR8( x )
+   
+      ! Returns the ERF value of its argument. The result has a value equal  
+      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+
+      REAL(R8Ki), INTENT(IN)     :: x             ! input 
+      REAL(R8Ki)                 :: NWTC_ERFR8    ! result
+      
+      
+      NWTC_ERFR8 = ERF( x )
+   
+   END FUNCTION NWTC_ERFR8
+!=======================================================================
+   FUNCTION NWTC_ERFR16( x )
+   
+      ! Returns the ERF value of its argument. The result has a value equal  
+      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+
+      REAL(QuKi), INTENT(IN)     :: x             ! input 
+      REAL(QuKi)                 :: NWTC_ERFR16   ! result
+      
+      
+      NWTC_ERFR16 = ERF( x )
+   
+   END FUNCTION NWTC_ERFR16
 !=======================================================================
    FUNCTION NWTC_GammaR4( x )
    

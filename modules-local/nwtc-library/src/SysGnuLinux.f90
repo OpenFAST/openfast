@@ -59,8 +59,15 @@ MODULE SysSubs
          ! note: gamma is part of the F08 standard, but may not be implemented everywhere...
       MODULE PROCEDURE NWTC_gammaR4
       MODULE PROCEDURE NWTC_gammaR8
-      MODULE PROCEDURE NWTC_gammaR16 
+      MODULE PROCEDURE NWTC_gammaR16
    END INTERFACE
+   
+   INTERFACE NWTC_ERF ! Returns the ERF value of its argument
+      MODULE PROCEDURE NWTC_ERFR4
+      MODULE PROCEDURE NWTC_ERFR8
+      MODULE PROCEDURE NWTC_ERFR16
+   END INTERFACE
+   
    
 
 !=======================================================================
@@ -109,7 +116,7 @@ CONTAINS
 
 
 
-   Status = FSTAT( INT( Unit, 4 ), StatArray )
+   Status = FSTAT( INT( Unit, B4Ki ), StatArray )
 
    IF ( Status /= 0 ) THEN
       FileSize = -1
@@ -187,6 +194,45 @@ CONTAINS
 
    RETURN
    END FUNCTION Is_NaN ! ( DblNum )
+!=======================================================================
+   FUNCTION NWTC_ERFR4( x )
+   
+      ! Returns the ERF value of its argument. The result has a value equal  
+      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+
+      REAL(SiKi), INTENT(IN)     :: x           ! input 
+      REAL(SiKi)                 :: NWTC_ERFR4  ! result
+      
+      
+      NWTC_ERFR4 = ERF( x )
+   
+   END FUNCTION NWTC_ERFR4
+!=======================================================================
+   FUNCTION NWTC_ERFR8( x )
+   
+      ! Returns the ERF value of its argument. The result has a value equal  
+      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+
+      REAL(R8Ki), INTENT(IN)     :: x             ! input 
+      REAL(R8Ki)                 :: NWTC_ERFR8    ! result
+      
+      
+      NWTC_ERFR8 = ERF( x )
+   
+   END FUNCTION NWTC_ERFR8
+!=======================================================================
+   FUNCTION NWTC_ERFR16( x )
+   
+      ! Returns the ERF value of its argument. The result has a value equal  
+      ! to the error function: 2/pi * integral_from_0_to_x of e^(-t^2) dt. 
+
+      REAL(QuKi), INTENT(IN)     :: x             ! input 
+      REAL(QuKi)                 :: NWTC_ERFR16   ! result
+      
+      
+      NWTC_ERFR16 = ERF( x )
+   
+   END FUNCTION NWTC_ERFR16
 !=======================================================================
    FUNCTION NWTC_GammaR4( x )
    
@@ -327,6 +373,7 @@ CONTAINS
       ! the compiler checks for floating-point-error, hence the  
       ! compiler directive FPE_TRAP_ENABLED.
    
+   
       REAL(DbKi), INTENT(inout)           :: Inf_D          ! IEEE value for NaN (not-a-number) in double precision
       REAL(DbKi), INTENT(inout)           :: NaN_D          ! IEEE value for Inf (infinity) in double precision
 
@@ -358,6 +405,7 @@ CONTAINS
 #endif 
    
    END SUBROUTINE Set_IEEE_Constants  
+
 !=======================================================================
    SUBROUTINE UsrAlarm
 
