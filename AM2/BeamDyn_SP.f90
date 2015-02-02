@@ -27,6 +27,7 @@ MODULE BeamDyn_SP
    PUBLIC :: CrvMatrixH                ! Tight coupling routine for updating discrete states
    PUBLIC :: CrvMatrixB                ! Tight coupling routine for updating discrete states
    PUBLIC :: CrvExtractCrv                ! Tight coupling routine for updating discrete states
+   PUBLIC :: Tilde
 
 CONTAINS
 
@@ -263,6 +264,7 @@ INCLUDE 'ElementMatrix_CCSD.f90'
                    CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
                    CALL ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV)
                    temp_id2 = (j-1)*p%dof_node 
+                   temp_POS(:) = MATMUL(InitInp%GlbRot,temp_POS)
                    p%uuN0(temp_id2+1,i) = temp_POS(1) + InitInp%GlbPos(1)
                    p%uuN0(temp_id2+2,i) = temp_POS(2) + InitInp%GlbPos(2)
                    p%uuN0(temp_id2+3,i) = temp_POS(3) + InitInp%GlbPos(3)
@@ -285,6 +287,7 @@ INCLUDE 'ElementMatrix_CCSD.f90'
                    ENDDO
                    eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
                    CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
+                   temp_POS(:) = MATMUL(InitInp%GlbRot,temp_POS)
                    temp_id2 = (i-1)*p%ngp+j+1
                    temp_L2(1:3,temp_id2) = temp_POS(1:3) + InitInp%GlbPos(1:3)
                    EXIT
@@ -688,7 +691,7 @@ INCLUDE 'ElementMatrix_CCSD.f90'
 
    IF(p%analysis_type == 2) THEN
 !WRITE(*,*) x%q(:)
-       IF(p%time_flag .EQ. 1 OR p%time_flag .EQ. 2) THEN
+       IF(p%time_flag .EQ. 1 .OR. p%time_flag .EQ. 2) THEN
            CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
        ELSEIF(p%time_flag .EQ. 3) THEN
            CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
