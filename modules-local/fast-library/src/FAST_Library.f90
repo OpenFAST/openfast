@@ -165,12 +165,8 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
    !call wrscr(num2lstr(NumInputs_c)//' '//num2lstr(NumOutputs_c))
    !call wrmatrix(InputAry,CU,'ES15.5')
    !call wrmatrix(OutputAry,CU,'ES15.5')
+               
    
-   
-   
-   
-   
-   n_t_global = n_t_global + 1
    IF ( n_t_global > m_FAST%n_TMax_m1 ) THEN !finish 
       ! we can't continue because we might over-step some arrays that are allocated to the size of the simulation
       ErrStat_c = ErrID_Info
@@ -196,6 +192,8 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       
       
       CALL FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )                  
+      n_t_global = n_t_global + 1
+      
       
       ! set the outputs for external code here...
       ! return y_FAST%ChannelNames
