@@ -185,6 +185,7 @@ CONTAINS
        CASE ( ELEMENT_WEDGE15 )
          NumNodes = 15
        CASE DEFAULT
+          NumNodes = 0
          CALL ProgAbort(' NumNodes: invalid argument Xelement = '//TRIM(Num2LStr(Xelement)))
      END SELECT
    END FUNCTION NumNodes
