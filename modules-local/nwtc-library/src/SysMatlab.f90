@@ -135,7 +135,7 @@ CONTAINS
       ! This subroutine flushes the buffer on the specified Unit.
       ! It is especially useful when printing "running..." type messages.
 
-#ifndef CONSOLE_OUTPUT
+#ifndef CONSOLE_FILE
    USE                             IFPORT, ONLY: FLUSH
 #endif
 
@@ -144,7 +144,7 @@ CONTAINS
    INTEGER, INTENT(IN)          :: Unit                                         ! The unit number of the file being flushed.
 
 
-#ifndef CONSOLE_OUTPUT
+#ifndef CONSOLE_FILE
    CALL FLUSH ( INT(Unit, B4Ki) )
 #endif
 
@@ -283,7 +283,7 @@ CONTAINS
 
 
       ! This routine opens the console for standard output.
-#ifdef CONSOLE_OUTPUT
+#ifdef CONSOLE_FILE
       ! MODIFIED to write all text to an output file (see SUBROUTINE OpenFOutFile())
 
 
@@ -363,7 +363,7 @@ CONTAINS
 
    INTEGER, INTENT(IN)          :: StatCode                                      ! The status code to pass to the OS.
 
-#ifdef CONSOLE_OUTPUT
+#ifdef CONSOLE_FILE
    CLOSE ( CU )
 #endif
 
@@ -415,7 +415,7 @@ CONTAINS
 
    CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to write to the screen.
 
-#ifdef CONSOLE_OUTPUT
+#ifdef CONSOLE_FILE
 
    WRITE (CU,'(1X,A)',ADVANCE='NO')  Str
 
@@ -461,7 +461,7 @@ CONTAINS
    CHARACTER(*), INTENT(IN)     :: Str                                         ! The input string to write to the screen.
    CHARACTER(*), INTENT(IN)     :: Frm                                         ! Format specifier for the output.
 
-#ifdef CONSOLE_OUTPUT
+#ifdef CONSOLE_FILE
 
    INTEGER                      :: ErrStat                                      ! Error status of write operation (so code doesn't crash)
 
