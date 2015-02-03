@@ -86,16 +86,21 @@ subroutine FAST_Sizes(TMax, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, Err
    ErrMsg_c      = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
    
    if (ErrStat /= ErrID_None) call wrscr(trim(ErrMsg))
-   
-   ! return the names of the output channels
-   k = 1;
-   DO i=1,NumOuts_c
-      DO j=1,ChanLen
-         ChannelNames_c(k)=y_FAST%ChannelNames(i)(j:j)
-         k = k+1
+    
+      ! return the names of the output channels
+   IF ( ALLOCATED( y_FAST%ChannelNames ) )  then
+      k = 1;
+      DO i=1,NumOuts_c
+         DO j=1,ChanLen
+            ChannelNames_c(k)=y_FAST%ChannelNames(i)(j:j)
+            k = k+1
+         END DO
       END DO
-   END DO
-   ChannelNames_c(k) = C_NULL_CHAR
+      ChannelNames_c(k) = C_NULL_CHAR
+   ELSE
+      ChannelNames_c = C_NULL_CHAR
+   END IF
+   
    
 end subroutine FAST_Sizes
 !==================================================================================================================================
@@ -208,7 +213,8 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
    OutputAry(2:NumOutputs_c) = Outputs 
 
    if (ErrStat /= ErrID_None) call wrscr(trim(ErrMsg))
-
+   
+      
 end subroutine FAST_Update 
 !==================================================================================================================================
 subroutine FAST_End() BIND (C, NAME='FAST_End')
