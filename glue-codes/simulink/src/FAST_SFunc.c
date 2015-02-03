@@ -400,7 +400,6 @@ static void mdlUpdate(SimStruct *S, int_T tid)
  */
 static void mdlTerminate(SimStruct *S)
 {
-   ssPrintf("%d in mdlTerminate\n",ErrStat);
    FAST_End();
 }
 
