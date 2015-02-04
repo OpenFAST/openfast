@@ -5,7 +5,13 @@
 
 CertTest_Dir = '..\..\CertTest';
 
- for iTest = 4 % [1 3:13 15:17]
+CertTest_TMax=[20, 20, 20, 70, 30, ...
+               35, 70, 20, 40, 25, ...
+               20, 20, 40,  0, 20, ...
+               20, 70, 60, 60, 60, ...
+               60, 60, 60, 60, 60 ];
+
+ for iTest = [1 2 3:13 15:25]  %bjj: normally (in FAST v7) test 2 is omitted because of the features it models
     
         %------------------------------------------------------------------       
         % Set up and run the Simulink OpenLoop model
@@ -18,7 +24,7 @@ CertTest_Dir = '..\..\CertTest';
     disp('***********************************************');
     
     FAST_InputFileName = [CertTest_Dir filesep FileRoot '.fst'];
-    TMax               = 20;
+    TMax               = CertTest_TMax(iTest);
     
     sim('OpenLoop.mdl',[0,TMax]);
        
