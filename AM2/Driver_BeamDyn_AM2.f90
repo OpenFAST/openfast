@@ -100,7 +100,7 @@ PROGRAM MAIN
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 5.0D-03
+   dt_global = 5.0D-04
 
    n_t_final = ((t_final - t_initial) / dt_global )
 

@@ -373,6 +373,10 @@ INCLUDE 'ElementMatrix_CCSD.f90'
            WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
            WRITE(*,*) p%uuN0((j-1)*6+4,i),p%uuN0((j-1)*6+5,i),p%uuN0((j-1)*6+6,i)
        ENDDO
+       DO j=1,p%ngp+2
+           WRITE(*,*) "Gauss Point Position:",j
+           WRITE(*,*) temp_L2(1:3,j)
+       ENDDO
    ENDDO
    WRITE(*,*) "Blade Length: ", p%blade_length
    WRITE(*,*) "node_elem: ", p%node_elem
@@ -384,7 +388,7 @@ INCLUDE 'ElementMatrix_CCSD.f90'
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,2)
 !   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
 !   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
-   STOP
+!   STOP
    ! Define parameters here:
 
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
