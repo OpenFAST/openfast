@@ -100,7 +100,7 @@ PROGRAM MAIN
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 5.0D-04
+   dt_global = 5.0D-03
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -141,7 +141,7 @@ PROGRAM MAIN
    BD_InitInput%gravity(3) = 0.0D0 
 
    ALLOCATE(BD_InitInput%GlbPos(3)) 
-   BD_InitInput%GlbPos(1) = 1.0D0
+   BD_InitInput%GlbPos(1) = 0.0D0 !1.0D0
    BD_InitInput%GlbPos(2) = 0.0D0
    BD_InitInput%GlbPos(3) = 0.0D0
 
@@ -149,7 +149,7 @@ PROGRAM MAIN
    BD_InitInput%GlbRot(:,:) = 0.0D0
    temp_vec(1) = 0.0
    temp_vec(2) = 0.0
-   temp_vec(3) = 4.0D0*TAN((3.1415926D0/4.0D0)/4.0D0)
+   temp_vec(3) = 0.0 !4.0D0*TAN((3.1415926D0/4.0D0)/4.0D0)
    CALL CrvMatrixR(temp_vec,temp_R)
    BD_InitInput%GlbRot(1:3,1:3) = temp_R(1:3,1:3)
 
@@ -191,10 +191,7 @@ PROGRAM MAIN
    ! write headers for output columns:
        
    CALL WrScr1( '  Time (t)         Numerical q_1(t) Analytical q_1(t)' )
-   CALL WrScr(  '  ---------------  ---------------- -----------------' )
-
-   ! write initial condition for q1
-   !CALL WrScr  ( '  '//Num2LStr(t_global)//'  '//Num2LStr( Mod1_ContinuousState%q)//'  '//Num2LStr(Mod1_ContinuousState%q))   
+   CALL WrScr(  '  ---------------  ---------------- -----------------' ) ! write initial condition for q1 !CALL WrScr  ( '  '//Num2LStr(t_global)//'  '//Num2LStr( Mod1_ContinuousState%q)//'  '//Num2LStr(Mod1_ContinuousState%q))   
 
 temp_count = 0   
    DO n_t_global = 0, n_t_final-1
@@ -375,7 +372,7 @@ END PROGRAM MAIN
    ! Calculate root translational and angular velocities
    u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(:,:) = 0.0D0
-   u%RootMotion%RotationVel(2,1) = 3.1415926D+00*1.0D0/3.0D0
+   u%RootMotion%RotationVel(3,1) = 3.1415926D+00*1.0D0/3.0D0
    u%RootMotion%TranslationVel(1:3,1) = MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
    ! END Calculate root translational and angular velocities
 
@@ -386,7 +383,6 @@ END PROGRAM MAIN
    temp_vec(1:3) = MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),temp_vec)
    u%RootMotion%TranslationAcc(1:3,1) = MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),temp_vec)
    ! END Calculate root translational and angular accelerations
-
 !------------------
 ! End rotating beam
 !------------------
