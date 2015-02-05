@@ -8,6 +8,13 @@ bin\MAP_x64.dll
 bin\Registry_win32.exe
 bin\Crunch_win32.exe
 
+bin\FAST_Library_Win32.dll
+bin\FAST_Library_Win32.lib
+bin\FAST_Library_x64.dll
+bin\FAST_Library_x64.lib
+bin\FAST_SFunc.mexw32
+bin\FAST_SFunc.mexw64
+
 CertTest\DateTime.exe
 CertTest\Update.bat
 

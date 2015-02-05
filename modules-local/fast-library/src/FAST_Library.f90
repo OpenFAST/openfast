@@ -193,6 +193,16 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
             SrvD%Input(1)%ExternalBlPitchCom(i)   = InputAry(4+i)
          end do
       
+         
+         IF ( NumInputs_c > 7 ) THEN  ! 7 is the fixed number of inputs
+            
+            ! bjj: this is a total hack to get the lidar inputs into AeroDyn
+            
+            AD%OtherSt%IfW_Inputs%lidar%LidPosition = ED%Output(1)%RotorApexMotion%Position(:,1) + ED%Output(1)%RotorApexMotion%TranslationDisp(:,1)
+            AD%OtherSt%IfW_Inputs%lidar%MsrPosition = InputAry(8:10) +  AD%OtherSt%IfW_Inputs%lidar%LidPosition
+            
+         END IF
+
       END IF
       
       
