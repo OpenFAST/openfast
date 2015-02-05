@@ -46,16 +46,18 @@ MODULE FAST_Data
    CHARACTER(IntfStrLen-1)               :: ErrMsg                                  ! Error message
 
    INTEGER(IntKi), PARAMETER             :: MAXOUTPUTS = 1000                       ! Maximum number of outputs
+   INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 10                      ! Maximum number of initialization values from Simulink
    
 END MODULE FAST_Data
 !==================================================================================================================================
-subroutine FAST_Sizes(TMax, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
+subroutine FAST_Sizes(TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Sizes
    USE, INTRINSIC :: ISO_C_Binding
    USE FAST_Data
    IMPLICIT NONE 
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Sizes
    REAL(C_DOUBLE),         INTENT(IN   ) :: TMax      
+   REAL(C_DOUBLE),         INTENT(IN   ) :: InitInpAry(MAXInitINPUTS)      
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: InputFileName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
    INTEGER(C_INT),         INTENT(  OUT) :: NumOuts_c      
@@ -67,6 +69,7 @@ subroutine FAST_Sizes(TMax, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, Err
    ! local
    CHARACTER(IntfStrLen)               :: InputFileName   
    INTEGER                             :: i, j, k
+   TYPE(FAST_ExternInitType)           :: ExternInitData
    
       ! transfer the character array from C to a Fortran string:   
    InputFileName = TRANSFER( InputFileName_c, InputFileName )
@@ -76,7 +79,18 @@ subroutine FAST_Sizes(TMax, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, Err
       ! initialize variables:   
    n_t_global = 0
    
-   CALL FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg, InputFileName )
+   ExternInitData%TMax       = TMax
+   ExternInitData%SensorType = NINT(InitInpAry(1))   
+   
+   IF ( NINT(InitInpAry(2)) == 1 ) THEN
+      ExternInitDat%LidRadialVel = .true.
+   ELSE
+      ExternInitDat%LidRadialVel = .false.
+   END IF
+   
+   
+   
+   CALL FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg, InputFileName, ExternInitData )
                   
    AbortErrLev_c = AbortErrLev   
    NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( y_FAST%numOuts )) ! includes time
@@ -196,9 +210,10 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
          
          IF ( NumInputs_c > 7 ) THEN  ! 7 is the fixed number of inputs
             
-            ! bjj: this is a total hack to get the lidar inputs into AeroDyn
+            ! bjj: this is a total hack to get the lidar inputs into AeroDyn. We should use a mesh to take care of this messiness
             
-            AD%OtherSt%IfW_Inputs%lidar%LidPosition = ED%Output(1)%RotorApexMotion%Position(:,1) + ED%Output(1)%RotorApexMotion%TranslationDisp(:,1)
+            AD%OtherSt%IfW_Inputs%lidar%LidPosition = ED%Output(1)%RotorApexMotion%Position(:,1) + ED%Output(1)%RotorApexMotion%TranslationDisp(:,1) & ! rotor apex position
+                                                      + AD%p%IfW_Params%lidar%RotorApexOffsetPos
             AD%OtherSt%IfW_Inputs%lidar%MsrPosition = InputAry(8:10) +  AD%OtherSt%IfW_Inputs%lidar%LidPosition
             
          END IF
