@@ -178,7 +178,7 @@ typedef	^	^	AD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTim
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
 # ..... InflowWind data .......................................................................................................
-typedef	FAST	InflowWind_Data	ReKi	WriteOutput	3	-	-	"Temporary hack for getting wind-speed outputs from InflowWind"
+typedef	FAST	InflowWind_Data	ReKi	WriteOutput	{:}	-	-	"Temporary hack for getting wind-speed outputs from InflowWind"
 
 # ..... SubDyn data .......................................................................................................
 typedef	FAST	SubDyn_Data	SD_ContinuousStateType	x	{2}	-	-	"Continuous states"

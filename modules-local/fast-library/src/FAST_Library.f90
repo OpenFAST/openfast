@@ -83,9 +83,9 @@ subroutine FAST_Sizes(TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_
    ExternInitData%SensorType = NINT(InitInpAry(1))   
    
    IF ( NINT(InitInpAry(2)) == 1 ) THEN
-      ExternInitDat%LidRadialVel = .true.
+      ExternInitData%LidRadialVel = .true.
    ELSE
-      ExternInitDat%LidRadialVel = .false.
+      ExternInitData%LidRadialVel = .false.
    END IF
    
    
@@ -180,11 +180,7 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       ! local variables
    REAL(ReKi)                            :: Outputs(NumOutputs_c-1)
    INTEGER(IntKi)                        :: i
-   
-   !call wrscr(num2lstr(NumInputs_c)//' '//num2lstr(NumOutputs_c))
-   !call wrmatrix(InputAry,CU,'ES15.5')
-   !call wrmatrix(OutputAry,CU,'ES15.5')
-               
+                 
    
    IF ( n_t_global > m_FAST%n_TMax_m1 ) THEN !finish 
       ! we can't continue because we might over-step some arrays that are allocated to the size of the simulation
@@ -215,7 +211,7 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
             AD%OtherSt%IfW_Inputs%lidar%LidPosition = ED%Output(1)%RotorApexMotion%Position(:,1) + ED%Output(1)%RotorApexMotion%TranslationDisp(:,1) & ! rotor apex position
                                                       + AD%p%IfW_Params%lidar%RotorApexOffsetPos
             AD%OtherSt%IfW_Inputs%lidar%MsrPosition = InputAry(8:10) +  AD%OtherSt%IfW_Inputs%lidar%LidPosition
-            
+
          END IF
 
       END IF
