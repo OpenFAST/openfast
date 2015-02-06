@@ -110,6 +110,7 @@ static void mdlInitializeSizes(SimStruct *S)
    int j = 0;
    int k = 0;
    static char ChannelNames[CHANNEL_LENGTH * MAXIMUM_OUTPUTS + 1];
+   static double InitInputAry[MAXInitINPUTS];
    //static char OutList[MAXIMUM_OUTPUTS][CHANNEL_LENGTH + 1];
    static char OutList[CHANNEL_LENGTH + 1];
    mxArray *pm, *chrAry;
@@ -133,7 +134,8 @@ static void mdlInitializeSizes(SimStruct *S)
     TMax = mxGetScalar(ssGetSFcnParam(S, PARAM_TMAX));
 
     ssSetSFcnParamTunable(S, PARAM_ADDINPUTS, SS_PRM_NOT_TUNABLE);
-    NumAddInputs = (int)( mxGetScalar(ssGetSFcnParam(S, PARAM_ADDINPUTS)) + 0.5 ); // add 0.5 for rounding 
+    const mxArray *pinputs = ssGetSFcnParam(S, PARAM_ADDINPUTS);
+    NumAddInputs = (int)(mxGetScalar(pinputs) + 0.5); // add 0.5 for rounding from double
 
     if (NumAddInputs < 0){
        ErrStat = ErrID_Fatal;
@@ -143,6 +145,20 @@ static void mdlInitializeSizes(SimStruct *S)
     }
     NumInputs = NumFixedInputs + NumAddInputs;
 
+    // now see if there are other inputs that need to be processed...
+    if (NumAddInputs > 0){
+    
+       k = min((int)mxGetNumberOfElements(pinputs), MAXInitINPUTS);
+       double *AdditionalInitInputs = (double *)mxGetData(pinputs);
+       for (i = 0; i < k; i++){
+          InitInputAry[i] = AdditionalInitInputs[i + 1];
+       }
+    }
+    else{
+       InitInputAry[0] = SensorType_None; // tell it not to use lidar (shouldn't be necessary, but we'll cover our bases)
+    }
+
+    // set this before possibility of error in Fortran library:
 
     ssSetOptions(S,
        SS_OPTION_CALL_TERMINATE_ON_EXIT);
@@ -150,7 +166,7 @@ static void mdlInitializeSizes(SimStruct *S)
 
     /*  ---------------------------------------------  */
     //   strcpy(InputFileName, "../../CertTest/Test01.fst");
-    FAST_Sizes(&TMax, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
+    FAST_Sizes(&TMax, InitInputAry, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
 
     if (checkError(S)) return;
 
