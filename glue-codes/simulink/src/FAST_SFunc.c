@@ -113,6 +113,7 @@ static void mdlInitializeSizes(SimStruct *S)
    static double InitInputAry[MAXInitINPUTS];
    //static char OutList[MAXIMUM_OUTPUTS][CHANNEL_LENGTH + 1];
    static char OutList[CHANNEL_LENGTH + 1];
+   double *AdditionalInitInputs;
    mxArray *pm, *chrAry;
    mwSize m, n;
    mwIndex indx;
@@ -134,8 +135,7 @@ static void mdlInitializeSizes(SimStruct *S)
     TMax = mxGetScalar(ssGetSFcnParam(S, PARAM_TMAX));
 
     ssSetSFcnParamTunable(S, PARAM_ADDINPUTS, SS_PRM_NOT_TUNABLE);
-    const mxArray *pinputs = ssGetSFcnParam(S, PARAM_ADDINPUTS);
-    NumAddInputs = (int)(mxGetScalar(pinputs) + 0.5); // add 0.5 for rounding from double
+    NumAddInputs = (int)(mxGetScalar(ssGetSFcnParam(S, PARAM_ADDINPUTS)) + 0.5); // add 0.5 for rounding from double
 
     if (NumAddInputs < 0){
        ErrStat = ErrID_Fatal;
@@ -148,8 +148,10 @@ static void mdlInitializeSizes(SimStruct *S)
     // now see if there are other inputs that need to be processed...
     if (NumAddInputs > 0){
     
-       k = min((int)mxGetNumberOfElements(pinputs), MAXInitINPUTS);
-       double *AdditionalInitInputs = (double *)mxGetData(pinputs);
+       k = (int)mxGetNumberOfElements(ssGetSFcnParam(S, PARAM_ADDINPUTS));
+       k = min( k , MAXInitINPUTS );
+
+       AdditionalInitInputs = (double *)mxGetData(ssGetSFcnParam(S, PARAM_ADDINPUTS));
        for (i = 0; i < k; i++){
           InitInputAry[i] = AdditionalInitInputs[i + 1];
        }
