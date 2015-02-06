@@ -57,7 +57,7 @@
        CALL GenerateDynamicElement_AM2(uuN0,uuN,vvN,uuN00,vvN00,uud0,vvd0,&
                                       &Stif0,Mass0,gravity,u,&
                                       &damp_flag,beta,&
-                                      &elem_total,node_elem,dof_node,ngp,dt,RHS,MassM)
+                                      &elem_total,node_elem,dof_total,dof_node,ngp,dt,RHS,MassM)
 !DO j=1,36
 !   WRITE(*,*) j,RHS(j)
 !ENDDO

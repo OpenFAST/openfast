@@ -68,7 +68,6 @@
    ! find x at t+dt
    CALL BeamDyn_BoundaryAM2(x,u_interp,t+p%dt,OtherState%Rescale_counter,ErrStat,ErrMsg)
    CALL BeamDyn_CalcContStateDeriv(t,u_interp0,p,x_tmp,xd,z,OtherState,xdot,ErrStat,ErrMsg)
-
    CALL DynamicSolution_AM2( p%uuN0,x%q,x%dqdt,x_tmp%q,x_tmp%dqdt,xdot%q,xdot%dqdt,&
                              p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,             &
                              p%damp_flag,p%beta,                                   &
