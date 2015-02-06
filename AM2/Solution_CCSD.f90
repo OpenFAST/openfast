@@ -38,13 +38,12 @@
    INTEGER(IntKi):: k 
    INTEGER(IntKi):: temp_id
 
-
    RHS(:)     = 0.0D0
    MassM(:,:) = 0.0D0
 
    CALL GenerateDynamicElement_CCSD(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                    &damp_flag,beta,&
-                                   &elem_total,node_elem,dof_node,ngp,RHS,MassM)
+                                   &elem_total,node_elem,dof_total,dof_node,ngp,RHS,MassM)
    DO j=1,node_total
        temp_id = (j-1)*dof_node
        F_PointLoad(temp_id+1:temp_id+3) = u%PointLoad%Force(1:3,j)

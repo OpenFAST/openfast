@@ -1,4 +1,4 @@
-   SUBROUTINE AssembleStiffK_AM2(nelem,node_elem,dof_elem,dof_node,&
+   SUBROUTINE AssembleStiffK_AM2(nelem,node_elem,dof_elem,dof_total,dof_node,&
                                 &ElemK11,ElemK12,ElemK21,ElemK22,GlobalK)
    !-------------------------------------------------------------------------------
    ! This subroutine assembles total stiffness matrix.
@@ -10,6 +10,7 @@
    INTEGER(IntKi),INTENT(IN   ):: nelem ! Number of elements
    INTEGER(IntKi),INTENT(IN   ):: node_elem ! Nodes per element
    INTEGER(IntKi),INTENT(IN   ):: dof_elem ! Degrees of freedom per element
+   INTEGER(IntKi),INTENT(IN   ):: dof_total ! Degrees of freedom per element
    INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
    REAL(ReKi),    INTENT(INOUT):: GlobalK(:,:) ! Global stiffness matrix
 
@@ -29,13 +30,13 @@
    DO i=1,dof_elem
        temp_id1 = (nelem-1)*(node_elem-1)*dof_node+i
        DO j=1,dof_elem
-           temp_id2 = (nelem-1)*(node_elem-1)*dof_node+j+dof_elem
+           temp_id2 = (nelem-1)*(node_elem-1)*dof_node+j+dof_total
            GlobalK(temp_id1,temp_id2) = GlobalK(temp_id1,temp_id2) + ElemK12(i,j)
        ENDDO
    ENDDO
 
    DO i=1,dof_elem
-       temp_id1 = (nelem-1)*(node_elem-1)*dof_node+i+dof_elem
+       temp_id1 = (nelem-1)*(node_elem-1)*dof_node+i+dof_total
        DO j=1,dof_elem
            temp_id2 = (nelem-1)*(node_elem-1)*dof_node+j
            GlobalK(temp_id1,temp_id2) = GlobalK(temp_id1,temp_id2) + ElemK21(i,j)
@@ -43,9 +44,9 @@
    ENDDO
 
    DO i=1,dof_elem
-       temp_id1 = (nelem-1)*(node_elem-1)*dof_node+i+dof_elem
+       temp_id1 = (nelem-1)*(node_elem-1)*dof_node+i+dof_total
        DO j=1,dof_elem
-           temp_id2 = (nelem-1)*(node_elem-1)*dof_node+j+dof_elem
+           temp_id2 = (nelem-1)*(node_elem-1)*dof_node+j+dof_total
            GlobalK(temp_id1,temp_id2) = GlobalK(temp_id1,temp_id2) + ElemK22(i,j)
        ENDDO
    ENDDO

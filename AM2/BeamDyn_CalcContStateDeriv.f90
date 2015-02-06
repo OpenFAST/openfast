@@ -21,7 +21,6 @@
 
    ErrStat = ErrID_None
    ErrMsg  = ""
-
    CALL Solution_CCSD(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
                      &p%damp_flag,p%beta,&
                      &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&

@@ -24,7 +24,7 @@
 !   temp_R(1:3,1:3) = u%RootMotion%Orientation(1:3,1:3,1)
 !   CALL CrvExtractCrv(temp_R,temp_rot)
 !   x%q(4:6) = temp_rot(1:3)
-   x%q(6) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0+(2.0D0*pi*counter))/4.0D0)
+   x%q(6) = 4.0D0*TAN((3.1415926D0*t*1.0D0/6.0D0+(2.0D0*pi*counter))/4.0D0)
 
 !   temp_pp(:) = 0.0D0
 !   temp_pp(2) = 4.0D0*TAN((-pi*t*1.0D0/3.0D0+(2.0D0*pi*counter))/4.0D0)

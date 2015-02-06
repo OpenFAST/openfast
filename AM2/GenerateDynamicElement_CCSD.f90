@@ -1,6 +1,6 @@
    SUBROUTINE GenerateDynamicElement_CCSD(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                         &damp_flag,beta,&
-                                        &elem_total,node_elem,dof_node,ngp,RHS,MassM)
+                                        &elem_total,node_elem,dof_total,dof_node,ngp,RHS,MassM)
    !----------------------------------------------------------------------------------------
    ! This subroutine computes Global mass matrix and force vector for the beam.
    !----------------------------------------------------------------------------------------
@@ -15,6 +15,7 @@
    REAL(ReKi),        INTENT(IN   ):: beta(:)
    INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
+   INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Degrees of freedom per node
    INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
    INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
    REAL(ReKi),        INTENT(INOUT):: MassM(:,:) ! Mass matrix 
@@ -72,13 +73,16 @@
                               &ngp,node_elem,dof_node,damp_flag,beta,&
                               &elf1,elf2,elm11,elm22)
 !DO j=1,18
-!WRITE(*,*) j,elm11(1,j)
+!WRITE(*,*) j,elm22(j,j)
 !ENDDO
 
 
-       CALL AssembleStiffK_AM2(nelem,node_elem,dof_elem,dof_node,&
+       CALL AssembleStiffK_AM2(nelem,node_elem,dof_elem,dof_total,dof_node,&
                               &elm11,elm12,elm21,elm22,MassM)
-       CALL AssembleRHS_AM2(nelem,dof_elem,node_elem,dof_node,elf1,elf2,RHS)
+       CALL AssembleRHS_AM2(nelem,dof_elem,node_elem,dof_total,dof_node,elf1,elf2,RHS)
+!DO j=1,60
+!WRITE(*,*) j,MassM(j,j)
+!ENDDO
 
    ENDDO
 

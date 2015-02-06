@@ -141,7 +141,7 @@ PROGRAM MAIN
    BD_InitInput%gravity(3) = 0.0D0 
 
    ALLOCATE(BD_InitInput%GlbPos(3)) 
-   BD_InitInput%GlbPos(1) = 0.0D0 !1.0D0
+   BD_InitInput%GlbPos(1) = 1.0D0
    BD_InitInput%GlbPos(2) = 0.0D0
    BD_InitInput%GlbPos(3) = 0.0D0
 
@@ -213,10 +213,9 @@ WRITE(*,*) "Time Step: ", n_t_global
 !------------------------------
 ! END Compute initial condition
 !------------------------------
-     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
-                             BD_ConstraintState, &
-                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
-
+!     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
+!                             BD_ConstraintState, &
+!                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
 
 
       DO pc = 1, pc_max
@@ -240,6 +239,9 @@ WRITE(*,*) "Time Step: ", n_t_global
 
       ENDDO
 
+     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
+                             BD_ConstraintState, &
+                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
 !   WRITE(QiHUnit,*) n_t_global+1,BD_OtherState%NR_counter
 !   temp_count = temp_count + BD_OtherState%NR_counter
 
@@ -361,7 +363,7 @@ END PROGRAM MAIN
    ! Calculate root displacements and rotations
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%Orientation(:,:,:) = 0.0D0
-   temp_pp(3) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
+   temp_pp(3) = 4.0D0*TAN((3.1415926D0*t*1.0D0/6.0D0)/4.0D0)
 !   CALL CrvCompose_temp(temp_rr,temp_pp,temp_qq,0)
    CALL CrvMatrixR(temp_pp,temp_R)
    u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
@@ -372,7 +374,7 @@ END PROGRAM MAIN
    ! Calculate root translational and angular velocities
    u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(:,:) = 0.0D0
-   u%RootMotion%RotationVel(3,1) = 3.1415926D+00*1.0D0/3.0D0
+   u%RootMotion%RotationVel(3,1) = 3.1415926D+00*1.0D0/6.0D0
    u%RootMotion%TranslationVel(1:3,1) = MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
    ! END Calculate root translational and angular velocities
 

@@ -1,4 +1,4 @@
-   SUBROUTINE AssembleRHS_AM2(nelem,dof_elem,node_elem,dof_node,ElemRHS1,ElemRHS2,GlobalRHS)
+   SUBROUTINE AssembleRHS_AM2(nelem,dof_elem,node_elem,dof_total,dof_node,ElemRHS1,ElemRHS2,GlobalRHS)
    !-------------------------------------------------------------------------------
    ! This subroutine assembles global force vector.
    !-------------------------------------------------------------------------------
@@ -8,6 +8,7 @@
    INTEGER(IntKi),INTENT(IN   ):: nelem       ! Number of elements
    INTEGER(IntKi),INTENT(IN   ):: dof_elem ! Degrees of freedom per element
    INTEGER(IntKi),INTENT(IN   ):: node_elem ! Nodes per element
+   INTEGER(IntKi),INTENT(IN   ):: dof_total ! Degrees of freedom per node
    INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
    REAL(ReKi),    INTENT(  OUT):: GlobalRHS(:) ! Global force 
 
@@ -20,7 +21,7 @@
    ENDDO
 
    DO i=1,dof_elem
-       temp_id = (nelem-1)*(node_elem-1)*dof_node+i+dof_elem
+       temp_id = (nelem-1)*(node_elem-1)*dof_node+i+dof_total
        GlobalRHS(temp_id) = GlobalRHS(temp_id)+ElemRHS2(i)
    ENDDO
 
