@@ -251,9 +251,12 @@ WRITE(*,*) "Time Step: ", n_t_global
 !          WRITE(*,*) BD_ContinuousState%dqdt(i)  
 !      ENDDO
 !      ENDIF
-      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
-                           &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
-                           &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
+!      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
+!                           &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
+!                           &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
+      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%dqdt(1),BD_ContinuousState%dqdt(2),&
+                           &BD_ContinuousState%dqdt(3),BD_ContinuousState%dqdt(4),&
+                           &BD_ContinuousState%dqdt(5),BD_ContinuousState%dqdt(6)
 !CALL CrvMatrixB(BD_ContinuousState%q(4:6),BD_ContinuousState%q(4:6),temp_H)
 !CALL CrvMatrixH(BD_ContinuousState%q(4:6),temp_H)
 !WRITE(QiHUnit,7000) t_global,temp_H(1,1),temp_H(1,2),temp_H(1,3),temp_H(2,1),temp_H(2,2),temp_H(2,3),&
@@ -375,7 +378,7 @@ END PROGRAM MAIN
    u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(3,1) = 3.1415926D+00*1.0D0/6.0D0
-   u%RootMotion%TranslationVel(1:3,1) = MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
+   u%RootMotion%TranslationVel(1:3,1) = -1.0D0*MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
    ! END Calculate root translational and angular velocities
 
 
