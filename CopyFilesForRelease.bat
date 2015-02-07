@@ -30,9 +30,7 @@ SET src_folder=%REG_Loc%
 SET dst_folder=%depend_dir%\Registry
 SET list_of_files=%src_folder%\SourceFiles.txt
 
-if exist "%dst_folder%\*" DEL  "%dst_folder%\*"
-for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
-
+@CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :NWTC_Library
@@ -41,9 +39,7 @@ SET src_folder=%NWTC_Lib_Loc%\..
 SET dst_folder=%depend_dir%\NWTC_Library
 SET list_of_files=%src_folder%\SourceFiles.txt
 
-if exist "%dst_folder%\*" DEL "%dst_folder%\*"
-for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
-
+@CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :NetLib
@@ -52,9 +48,7 @@ SET src_folder=%NETLIB_Loc%\..
 SET dst_folder=%depend_dir%\NetLib
 SET list_of_files=%src_folder%\SourceFiles.txt
 
-if exist "%dst_folder%\*" DEL "%dst_folder%\*"
-for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
-
+@CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :ElastoDyn
@@ -63,21 +57,24 @@ SET src_folder=%ED_Loc%\..
 SET dst_folder=%depend_dir%\ElastoDyn
 SET list_of_files=%src_folder%\FAST_SourceFiles_ED.txt
 
-if exist "%dst_folder%\*" DEL "%dst_folder%\*"
-for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
-
+@CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :ServoDyn
-ECHO ServoDyn
+:TMD
+ECHO ServoDyn and TMD
 SET src_folder=%SrvD_Loc%\..
 SET dst_folder=%depend_dir%\ServoDyn
 SET list_of_files=%src_folder%/FAST_SourceFiles_SrvD.txt
 
-if exist "%dst_folder%\*" DEL "%dst_folder%\*"
+@CALL :CopyFileList
+
+SET src_folder=%TMD_Loc%\..
+SET list_of_files=%src_folder%/FAST_SourceFiles.txt
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
+
 
 :InflowWind
 ECHO InflowWind
@@ -85,9 +82,7 @@ SET src_folder=%IfW_Loc%\..
 SET dst_folder=%depend_dir%\InflowWind
 SET list_of_files=%src_folder%/FAST_SourceFiles.txt
 
-if exist "%dst_folder%\*" DEL "%dst_folder%\*"
-for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
-
+@CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :AeroDyn
@@ -96,9 +91,7 @@ SET src_folder=%AD_Loc%\..
 SET dst_folder=%depend_dir%\AeroDyn
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
-if exist "%dst_folder%\*" DEL "%dst_folder%\*"
-for /f %%i in (%list_of_files%) DO copy  "%src_folder%\%%i" "%dst_folder%"
-
+@CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :HydroDyn
@@ -107,9 +100,7 @@ SET src_folder=%HD_Loc%\..
 SET dst_folder=%depend_dir%\HydroDyn
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
-if exist "%dst_folder%\*" DEL "%dst_folder%\*"
-for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
-
+@CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :SubDyn
@@ -118,9 +109,7 @@ SET src_folder=%SD_Loc%\..
 SET dst_folder=%depend_dir%\SubDyn
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
-if exist "%dst_folder%\*" DEL "%dst_folder%\*"
-for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
-
+@CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :IceFloe
@@ -129,9 +118,7 @@ SET src_folder=%IceF_Loc%\..
 SET dst_folder=%depend_dir%\IceFloe
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
-if exist "%dst_folder%\*" DEL "%dst_folder%\*"
-for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
-
+@CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :IceDyn
@@ -140,9 +127,7 @@ SET src_folder=%IceD_Loc%\..
 SET dst_folder=%depend_dir%\IceDyn
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
-if exist "%dst_folder%\*" DEL "%dst_folder%\*"
-for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
-
+@CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :MAP
@@ -154,15 +139,24 @@ SET src_folder=%MAP_Loc%
 SET dst_folder=%depend_dir%\MAP
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
-if exist "%dst_folder%\*" DEL "%dst_folder%\*"
-for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
-
+@CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :FEAMooring
 ECHO Skipping FEAMooring
 
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
+
+goto ClearVars
+
+REM -------------------------------------
+:CopyFileList
+if exist "%dst_folder%\*" DEL "%dst_folder%\*"
+for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
+
+EXIT /B
+REM -------------------------------------
+
 
 :ClearVars
 SET bin_dir=
