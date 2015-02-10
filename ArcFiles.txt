@@ -12,6 +12,7 @@ Source\FAST_Mods.f90
 Source\FAST_Types.f90
 Source\FAST_Registry.txt
 Source\FAST_Prog.f90
+Source\FAST_Library.f90
 
 Source\dependencies\NWTC_Library\*
 Source\dependencies\NetLib\*
@@ -30,6 +31,17 @@ Source\dependencies\FAST_dependencies.xlsx
 Source\dependencies\Registry\*
 
 OutListParameters.xlsx
+
+Simulink\Source\FAST_Library.h
+Simulink\Source\FAST_SFunc.c
+Simulink\Source\create_FAST_SFunc.m
+
+Simulink\Samples\OpenLoop.mdl
+Simulink\Samples\Run_OpenLoop.m
+Simulink\Samples\Test01_SIG.mdl
+Simulink\Samples\Run_Test01_SIG.m
+
+Simulink\FAST_Gateway\FAST_Library.vfproj
 
 Compiling\CompilingInstructions_FASTv8.pdf
 Compiling\Compile_FAST.bat
@@ -127,6 +139,8 @@ CertTest\5MW_Baseline\Wind\90m_12mps_twr.bts
 CertTest\5MW_Baseline\Wind\08ms.wnd
 
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Blade.dat
+
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_ServoDyn_TMD.dat
 
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Onshore_ElastoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Onshore_ElastoDyn_Tower.dat
