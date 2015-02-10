@@ -77,6 +77,7 @@ PROGRAM MAIN
    Integer(IntKi)                     :: j               ! counter for various loops
 
    INTEGER(IntKi),PARAMETER:: QiDisUnit = 20
+   INTEGER(IntKi),PARAMETER:: QiRootUnit = 30
 
    REAL(ReKi):: temp_H(3,3)
    REAL(ReKi):: temp_cc(3)
@@ -100,7 +101,7 @@ PROGRAM MAIN
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 5.0D-03
+   dt_global = 5.0D-03*1.0
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -125,6 +126,7 @@ PROGRAM MAIN
    !  defined coupling interval.
    ! -------------------------------------------------------------------------
     OPEN(unit = QiDisUnit, file = 'QiDisp_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
+    OPEN(unit = QiRootUnit,file = 'QiRoot_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
 
 !   BD_InitInput%InputFile = 'BeamDyn_Input_CX100.inp'
@@ -141,7 +143,7 @@ PROGRAM MAIN
    BD_InitInput%gravity(3) = 0.0D0 
 
    ALLOCATE(BD_InitInput%GlbPos(3)) 
-   BD_InitInput%GlbPos(1) = 1.0D0
+   BD_InitInput%GlbPos(1) = 1.0D+01
    BD_InitInput%GlbPos(2) = 0.0D0
    BD_InitInput%GlbPos(3) = 0.0D0
 
@@ -213,9 +215,9 @@ WRITE(*,*) "Time Step: ", n_t_global
 !------------------------------
 ! END Compute initial condition
 !------------------------------
-!     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
-!                             BD_ConstraintState, &
-!                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
+     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
+                             BD_ConstraintState, &
+                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
 
 
       DO pc = 1, pc_max
@@ -239,9 +241,9 @@ WRITE(*,*) "Time Step: ", n_t_global
 
       ENDDO
 
-     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
-                             BD_ConstraintState, &
-                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
+!     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
+!                             BD_ConstraintState, &
+!                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
 !   WRITE(QiHUnit,*) n_t_global+1,BD_OtherState%NR_counter
 !   temp_count = temp_count + BD_OtherState%NR_counter
 
@@ -251,10 +253,10 @@ WRITE(*,*) "Time Step: ", n_t_global
 !          WRITE(*,*) BD_ContinuousState%dqdt(i)  
 !      ENDDO
 !      ENDIF
-!      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
-!                           &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
-!                           &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
-      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%dqdt(1),BD_ContinuousState%dqdt(2),&
+      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
+                           &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
+                           &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
+      WRITE(QiRootUnit,6000) t_global,BD_ContinuousState%dqdt(1),BD_ContinuousState%dqdt(2),&
                            &BD_ContinuousState%dqdt(3),BD_ContinuousState%dqdt(4),&
                            &BD_ContinuousState%dqdt(5),BD_ContinuousState%dqdt(6)
 !CALL CrvMatrixB(BD_ContinuousState%q(4:6),BD_ContinuousState%q(4:6),temp_H)
@@ -323,6 +325,7 @@ WRITE(*,*) "Time Step: ", n_t_global
 
    6000 FORMAT (ES12.5,6ES21.12)
    CLOSE (QiDisUnit)
+   CLOSE (QiRootUnit)
 
 7000 FORMAT (ES12.5,9ES21.12)
 !CLOSE (QiHUnit)
@@ -345,6 +348,7 @@ END PROGRAM MAIN
    ! local variables
    INTEGER(IntKi)          :: i                ! do-loop counter
    REAL(ReKi)              :: temp_vec(3)
+   REAL(ReKi)              :: temp_vec2(3)
    REAL(ReKi)              :: temp_rr(3)
    REAL(ReKi)              :: temp_pp(3)
    REAL(ReKi)              :: temp_qq(3)
@@ -366,7 +370,7 @@ END PROGRAM MAIN
    ! Calculate root displacements and rotations
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%Orientation(:,:,:) = 0.0D0
-   temp_pp(3) = 4.0D0*TAN((3.1415926D0*t*1.0D0/6.0D0)/4.0D0)
+   temp_pp(3) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
 !   CALL CrvCompose_temp(temp_rr,temp_pp,temp_qq,0)
    CALL CrvMatrixR(temp_pp,temp_R)
    u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
@@ -377,7 +381,7 @@ END PROGRAM MAIN
    ! Calculate root translational and angular velocities
    u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(:,:) = 0.0D0
-   u%RootMotion%RotationVel(3,1) = 3.1415926D+00*1.0D0/6.0D0
+   u%RootMotion%RotationVel(3,1) = 3.1415926D+00*1.0D0/3.0D0
    u%RootMotion%TranslationVel(1:3,1) = -1.0D0*MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
    ! END Calculate root translational and angular velocities
 
@@ -385,8 +389,9 @@ END PROGRAM MAIN
    ! Calculate root translational and angular accelerations
    u%RootMotion%TranslationAcc(:,:) = 0.0D0
    u%RootMotion%RotationAcc(:,:) = 0.0D0
-   temp_vec(1:3) = MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),temp_vec)
-   u%RootMotion%TranslationAcc(1:3,1) = MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),temp_vec)
+   temp_vec2(1:3) = MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),temp_vec)
+   u%RootMotion%TranslationAcc(1:3,1) = MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),temp_vec2) + &
+                                       &MATMUL(Tilde(u%RootMotion%RotationAcc(1:3,1)),temp_vec)
    ! END Calculate root translational and angular accelerations
 !------------------
 ! End rotating beam
@@ -428,12 +433,19 @@ END PROGRAM MAIN
    ! Initial displacements and rotations
    x%q(:) = 0.0D0
    ! Initial velocities and angular velocities
+!DO i=1,p%node_total
+!WRITE(*,*) 'Nodal Position:', i
+!WRITE(*,*) p%uuN0((i-1)*6+1:(i-1)*6+3,1)
+!WRITE(*,*) p%uuN0((i-1)*6+4:(i-1)*6+6,1)
+!ENDDO
+!STOP
    DO i=1,p%elem_total
        DO j=1,p%node_elem
            temp_id = (i-1)*p%dof_node*p%node_elem+(j-1)*p%dof_node
            temp_id2= (j-1)*p%dof_node
-           x%dqdt(temp_id+1:temp_id+3) = u%RootMotion%TranslationVel(1:3,1) + &
-                 &MATMUL(Tilde(p%uuN0(temp_id2+1:temp_id2+3,i)),u%RootMotion%RotationVel(1:3,1))
+!           x%dqdt(temp_id+1:temp_id+3) = u%RootMotion%TranslationVel(1:3,1) + &
+!                 &MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),p%uuN0(temp_id2+1:temp_id2+3,i))
+           x%dqdt(temp_id+1:temp_id+3) = MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),p%uuN0(temp_id2+1:temp_id2+3,i))
            x%dqdt(temp_id+4:temp_id+6) = u%RootMotion%RotationVel(1:3,1)
        ENDDO
    ENDDO
