@@ -100,10 +100,11 @@ inputs and outputs are neither set nor used.
 \State \Call{ED\_HD\_SD\_Mooring\_Ice\_InputOutputSolve}{\null}
 \State
 \textit{
-\State If $AeroDyn$ or $ServoDyn$ had states to update, we should do this:
-\State\hspace{\algorithmicindent} $\mathit{u\_AD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED}}$
-\State\hspace{\algorithmicindent} $\mathit{u\_SrvD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED},\mathit{y\_AD}}$
-\State However, they don't so we'll omit these steps for efficiency.
+%\State If $AeroDyn$ or $ServoDyn$ had states to update, we should do this:
+%\State\hspace{\algorithmicindent}
+\State $\mathit{u\_AD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED}}$
+\State $\mathit{u\_SrvD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED},\mathit{y\_AD}}$
+%\State However, they don't so we'll omit these steps for efficiency.
 }
 \EndProcedure
 \end{algorithmic}

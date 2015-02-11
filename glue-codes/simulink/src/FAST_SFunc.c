@@ -60,6 +60,7 @@ static char ErrMsg[INTERFACE_STRING_LENGTH];        // make sure this is the sam
 static char InputFileName[INTERFACE_STRING_LENGTH]; // make sure this is the same size as IntfStrLen in FAST_Library.f90
 static int n_t_global = 0;
 
+static int SFunc_init = 0;
 
 // function definitions
 static int checkError(SimStruct *S);
@@ -118,144 +119,149 @@ static void mdlInitializeSizes(SimStruct *S)
    mwSize m, n;
    mwIndex indx;
 
+   if (SFunc_init == 0) {
 
-
-         /* Expected S-Function Input Parameter(s) */
-   ssSetNumSFcnParams(S, NUM_PARAM);  /* Number of expected parameters */
-   if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) {
-        /* Return if number of expected != number of actual parameters */
-        return;
-    }
-    
-      // The parameters should not be changed during the course of a simulation
-    ssSetSFcnParamTunable(S, PARAM_FILENAME, SS_PRM_NOT_TUNABLE); 
-    mxGetString(ssGetSFcnParam(S, PARAM_FILENAME), InputFileName, INTERFACE_STRING_LENGTH);
-
-    ssSetSFcnParamTunable(S, PARAM_TMAX, SS_PRM_NOT_TUNABLE); 
-    TMax = mxGetScalar(ssGetSFcnParam(S, PARAM_TMAX));
-
-    ssSetSFcnParamTunable(S, PARAM_ADDINPUTS, SS_PRM_NOT_TUNABLE);
-    NumAddInputs = (int)(mxGetScalar(ssGetSFcnParam(S, PARAM_ADDINPUTS)) + 0.5); // add 0.5 for rounding from double
-
-    if (NumAddInputs < 0){
-       ErrStat = ErrID_Fatal;
-       strcpy(ErrMsg, "Parameter specifying number of additional inputs to the FAST SFunc must not be negative.\n");
-       ssSetErrorStatus(S, ErrMsg);
-       return;
-    }
-    NumInputs = NumFixedInputs + NumAddInputs;
-
-    // now see if there are other inputs that need to be processed...
-    if (NumAddInputs > 0){
-    
-       k = (int)mxGetNumberOfElements(ssGetSFcnParam(S, PARAM_ADDINPUTS));
-       k = min( k , MAXInitINPUTS );
-
-       AdditionalInitInputs = (double *)mxGetData(ssGetSFcnParam(S, PARAM_ADDINPUTS));
-       for (i = 0; i < k; i++){
-          InitInputAry[i] = AdditionalInitInputs[i + 1];
+            /* Expected S-Function Input Parameter(s) */
+      ssSetNumSFcnParams(S, NUM_PARAM);  /* Number of expected parameters */
+      if (ssGetNumSFcnParams(S) != ssGetSFcnParamsCount(S)) {
+           /* Return if number of expected != number of actual parameters */
+           return;
        }
-    }
-    else{
-       InitInputAry[0] = SensorType_None; // tell it not to use lidar (shouldn't be necessary, but we'll cover our bases)
-    }
+    
+         // The parameters should not be changed during the course of a simulation
+       ssSetSFcnParamTunable(S, PARAM_FILENAME, SS_PRM_NOT_TUNABLE); 
+       mxGetString(ssGetSFcnParam(S, PARAM_FILENAME), InputFileName, INTERFACE_STRING_LENGTH);
 
-    // set this before possibility of error in Fortran library:
+       ssSetSFcnParamTunable(S, PARAM_TMAX, SS_PRM_NOT_TUNABLE); 
+       TMax = mxGetScalar(ssGetSFcnParam(S, PARAM_TMAX));
 
-    ssSetOptions(S,
-       SS_OPTION_CALL_TERMINATE_ON_EXIT);
+       ssSetSFcnParamTunable(S, PARAM_ADDINPUTS, SS_PRM_NOT_TUNABLE);
+       NumAddInputs = (int)(mxGetScalar(ssGetSFcnParam(S, PARAM_ADDINPUTS)) + 0.5); // add 0.5 for rounding from double
+
+       if (NumAddInputs < 0){
+          ErrStat = ErrID_Fatal;
+          strcpy(ErrMsg, "Parameter specifying number of additional inputs to the FAST SFunc must not be negative.\n");
+          ssSetErrorStatus(S, ErrMsg);
+          return;
+       }
+       NumInputs = NumFixedInputs + NumAddInputs;
+
+       // now see if there are other inputs that need to be processed...
+       if (NumAddInputs > 0){
+    
+          k = (int)mxGetNumberOfElements(ssGetSFcnParam(S, PARAM_ADDINPUTS));
+          k = min( k , MAXInitINPUTS );
+
+          AdditionalInitInputs = (double *)mxGetData(ssGetSFcnParam(S, PARAM_ADDINPUTS));
+          for (i = 0; i < k; i++){
+             InitInputAry[i] = AdditionalInitInputs[i + 1];
+          }
+       }
+       else{
+          InitInputAry[0] = SensorType_None; // tell it not to use lidar (shouldn't be necessary, but we'll cover our bases)
+       }
+
+       // set this before possibility of error in Fortran library:
+
+       ssSetOptions(S,
+          SS_OPTION_CALL_TERMINATE_ON_EXIT);
 
 
     /*  ---------------------------------------------  */
     //   strcpy(InputFileName, "../../CertTest/Test01.fst");
-    FAST_Sizes(&TMax, InitInputAry, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
 
-    if (checkError(S)) return;
+       FAST_Sizes(&TMax, InitInputAry, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
 
-    // set DT in the Matlab workspace (necessary for Simulink block solver options)
-    pm = mxCreateDoubleScalar(dt);
-    ErrStat = mexPutVariable("base", "DT", pm);
-    mxDestroyArray(pm);
-    if (ErrStat != 0){
-       strcpy(ErrMsg, "Error copying string array to 'DT' variable in the base Matlab workspace.");
-       ssSetErrorStatus(S, ErrMsg);
-       return;
-    }
+       SFunc_init = 1;
+       if (checkError(S)) return;
+
+
+       // set DT in the Matlab workspace (necessary for Simulink block solver options)
+       pm = mxCreateDoubleScalar(dt);
+       ErrStat = mexPutVariable("base", "DT", pm);
+       mxDestroyArray(pm);
+       if (ErrStat != 0){
+          strcpy(ErrMsg, "Error copying string array to 'DT' variable in the base Matlab workspace.");
+          ssSetErrorStatus(S, ErrMsg);
+          return;
+       }
 
   
-    // put the names of the output channels in a cell-array variable called "OutList" in the base matlab workspace
-    m = NumOutputs;
-    n = 1;
-    pm = mxCreateCellMatrix(m, n);
-    for (i = 0; i < NumOutputs; i++){
-       j = CHANNEL_LENGTH - 1;
-       while (ChannelNames[i*CHANNEL_LENGTH + j] == ' '){
-          j--;
+       // put the names of the output channels in a cell-array variable called "OutList" in the base matlab workspace
+       m = NumOutputs;
+       n = 1;
+       pm = mxCreateCellMatrix(m, n);
+       for (i = 0; i < NumOutputs; i++){
+          j = CHANNEL_LENGTH - 1;
+          while (ChannelNames[i*CHANNEL_LENGTH + j] == ' '){
+             j--;
+          }
+          strncpy(&OutList[0], &ChannelNames[i*CHANNEL_LENGTH], j+1);
+          OutList[j + 1] = '\0';
+
+          chrAry = mxCreateString(OutList);
+          indx = i;
+          mxSetCell(pm, indx, chrAry);
+          //mxDestroyArray(chrAry);
        }
-       strncpy(&OutList[0], &ChannelNames[i*CHANNEL_LENGTH], j+1);
-       OutList[j + 1] = '\0';
+       ErrStat = mexPutVariable("base", "OutList", pm);
+       mxDestroyArray(pm);
 
-       chrAry = mxCreateString(OutList);
-       indx = i;
-       mxSetCell(pm, indx, chrAry);
-       //mxDestroyArray(chrAry);
-    }
-    ErrStat = mexPutVariable("base", "OutList", pm);
-    mxDestroyArray(pm);
-
-    if (ErrStat != 0){
-       strcpy(ErrMsg, "Error copying string array to 'OutList' variable in the base Matlab workspace.");
-       ssSetErrorStatus(S, ErrMsg);
-       return;
-    }
-    //  ---------------------------------------------  
+       if (ErrStat != 0){
+          strcpy(ErrMsg, "Error copying string array to 'OutList' variable in the base Matlab workspace.");
+          ssSetErrorStatus(S, ErrMsg);
+          return;
+       }
+       //  ---------------------------------------------  
     
 
-    ssSetNumContStates(S, 0);  /* how many continuous states? */
-    ssSetNumDiscStates(S, 0);  /* how many discrete states?*/
+       ssSetNumContStates(S, 0);  /* how many continuous states? */
+       ssSetNumDiscStates(S, 0);  /* how many discrete states?*/
 
-      /* sets input port characteristics */
-    if (!ssSetNumInputPorts(S, 1)) return; 
-    ssSetInputPortWidth(S, 0, NumInputs); // width of first input port
+         /* sets input port characteristics */
+       if (!ssSetNumInputPorts(S, 1)) return; 
+       ssSetInputPortWidth(S, 0, NumInputs); // width of first input port
 
-    /*
-     * Set direct feedthrough flag (1=yes, 0=no).
-     * A port has direct feedthrough if the input is used in either
-     * the mdlOutputs or mdlGetTimeOfNextVarHit functions.
-     */
-    ssSetInputPortDirectFeedThrough(S, 0, 0); // no direct feedthrough because we're just putting everything in one update routine (acting like a discrete system)
+       /*
+        * Set direct feedthrough flag (1=yes, 0=no).
+        * A port has direct feedthrough if the input is used in either
+        * the mdlOutputs or mdlGetTimeOfNextVarHit functions.
+        */
+       ssSetInputPortDirectFeedThrough(S, 0, 0); // no direct feedthrough because we're just putting everything in one update routine (acting like a discrete system)
 
-    if (!ssSetNumOutputPorts(S, 1)) return;
-    ssSetOutputPortWidth(S, 0, NumOutputs);
+       if (!ssSetNumOutputPorts(S, 1)) return;
+       ssSetOutputPortWidth(S, 0, NumOutputs);
 
-    ssSetNumSampleTimes(S, 1); // -> setting this > 0 calls mdlInitializeSampleTimes()
+       ssSetNumSampleTimes(S, 1); // -> setting this > 0 calls mdlInitializeSampleTimes()
 
-    /* 
-     * If your Fortran code uses REAL for the state, input, and/or output 
-     * datatypes, use these DWorks as work areas to downcast continuous 
-     * states from double to REAL before calling your code.  You could
-     * also put the work vectors in hard-coded local (stack) variables.
-     *
-     * For fixed step code, keep a copy of the variables  to be output 
-     * in a DWork vector so the mdlOutputs() function can provide output 
-     * data when needed. You can use as many DWork vectors as you like 
-     * for both input and output (or hard-code local variables).
-     */
-    if(!ssSetNumDWork(   S, 2)) return;
+       /* 
+        * If your Fortran code uses REAL for the state, input, and/or output 
+        * datatypes, use these DWorks as work areas to downcast continuous 
+        * states from double to REAL before calling your code.  You could
+        * also put the work vectors in hard-coded local (stack) variables.
+        *
+        * For fixed step code, keep a copy of the variables  to be output 
+        * in a DWork vector so the mdlOutputs() function can provide output 
+        * data when needed. You can use as many DWork vectors as you like 
+        * for both input and output (or hard-code local variables).
+        */
+       if(!ssSetNumDWork(   S, 2)) return;
 
-    ssSetDWorkWidth(     S, 0, ssGetOutputPortWidth(S,0));
-    ssSetDWorkDataType(  S, 0, SS_DOUBLE); /* use SS_DOUBLE if needed */
+       ssSetDWorkWidth(     S, 0, ssGetOutputPortWidth(S,0));
+       ssSetDWorkDataType(  S, 0, SS_DOUBLE); /* use SS_DOUBLE if needed */
 
-    ssSetDWorkWidth(     S, 1, ssGetInputPortWidth(S,0));
-    ssSetDWorkDataType(  S, 1, SS_DOUBLE);
+       ssSetDWorkWidth(     S, 1, ssGetInputPortWidth(S,0));
+       ssSetDWorkDataType(  S, 1, SS_DOUBLE);
 
-    ssSetNumNonsampledZCs(S, 0);
+       ssSetNumNonsampledZCs(S, 0);
 
-    /* Specify the sim state compliance to be same as a built-in block */
-    /* see sfun_simstate.c for example of other possible settings */
-    ssSetSimStateCompliance(S, USE_DEFAULT_SIM_STATE);
+       /* Specify the sim state compliance to be same as a built-in block */
+       /* see sfun_simstate.c for example of other possible settings */
+       ssSetSimStateCompliance(S, USE_DEFAULT_SIM_STATE);
 
-    // ssSetOptions(S, 0); // bjj: what does this do? (not sure what 0 means: no options?) set option to call Terminate earlier...
+       // ssSetOptions(S, 0); // bjj: what does this do? (not sure what 0 means: no options?) set option to call Terminate earlier...
+
+    }
 }
 
 
@@ -419,6 +425,8 @@ static void mdlUpdate(SimStruct *S, int_T tid)
 static void mdlTerminate(SimStruct *S)
 {
    FAST_End();
+   SFunc_init = 0;
+
 }
 
 
