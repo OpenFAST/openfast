@@ -72,6 +72,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  BD_ParameterType  =======
   TYPE, PUBLIC :: BD_ParameterType
+    REAL(DbKi)  :: alpha      ! Numerical Damping Coefficient [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: uuN0      ! Initial Postion Vector [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Stif0_GL      ! Sectional Stiffness Properties at each node [-]
     REAL(ReKi) , DIMENSION(:,:,:), ALLOCATABLE  :: Mass0_GL      ! Sectional Stiffness Properties at each node [-]
@@ -932,6 +933,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
+   DstParamData%alpha = SrcParamData%alpha
 IF (ALLOCATED(SrcParamData%uuN0)) THEN
    i1_l = LBOUND(SrcParamData%uuN0,1)
    i1_u = UBOUND(SrcParamData%uuN0,1)
@@ -1116,6 +1118,7 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+  Db_BufSz   = Db_BufSz   + 1  ! alpha
   Re_BufSz    = Re_BufSz    + SIZE( InData%uuN0 )  ! uuN0 
   Re_BufSz    = Re_BufSz    + SIZE( InData%Stif0_GL )  ! Stif0_GL 
   Re_BufSz    = Re_BufSz    + SIZE( InData%Mass0_GL )  ! Mass0_GL 
@@ -1138,6 +1141,8 @@ ENDIF
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
+  IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) =  (InData%alpha )
+  Db_Xferred   = Db_Xferred   + 1
   IF ( ALLOCATED(InData%uuN0) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%uuN0))-1 ) =  PACK(InData%uuN0 ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%uuN0)
@@ -1225,6 +1230,8 @@ ENDIF
   Re_BufSz  = 0
   Db_BufSz  = 0
   Int_BufSz  = 0
+  OutData%alpha = DbKiBuf ( Db_Xferred )
+  Db_Xferred   = Db_Xferred   + 1
   IF ( ALLOCATED(OutData%uuN0) ) THEN
   ALLOCATE(mask2(SIZE(OutData%uuN0,1),SIZE(OutData%uuN0,2))); mask2 = .TRUE.
     OutData%uuN0 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%uuN0))-1 ),mask2,OutData%uuN0)
