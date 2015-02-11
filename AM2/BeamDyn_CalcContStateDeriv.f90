@@ -21,15 +21,15 @@
 
    ErrStat = ErrID_None
    ErrMsg  = ""
-   CALL Solution_CCSD(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
-                     &p%damp_flag,p%beta,&
-                     &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
-                     &xdot)
    CALL ComputeUDN(1,p%dof_node,x%dqdt(1:6),x%q(1:6),xdot%q(1:6))
    DO j=1,3
        xdot%dqdt(j) = u%RootMotion%TranslationAcc(j,1)
        xdot%dqdt(j+3) = u%RootMotion%RotationAcc(j,1)
    ENDDO
+   CALL Solution_CCSD(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
+                     &p%damp_flag,p%beta,&
+                     &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+                     &xdot)
 !DO j=1,18
 !WRITE(*,*) j,xdot%dqdt(j)
 !ENDDO

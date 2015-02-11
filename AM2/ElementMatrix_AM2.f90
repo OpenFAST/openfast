@@ -1,6 +1,6 @@
    SUBROUTINE ElementMatrix_AM2(Nuu0,Nuuu,Nuuu0,Nrr0,Nrrr,Nrrr0,Nvvv,Nvvv0,Nuud0,Nvvd0,&
                                &EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
-                               &ngp,dt,node_elem,dof_node,damp_flag,beta,&
+                               &ngp,dt,alpha,node_elem,dof_node,damp_flag,beta,&
                                &elf1,elf2,elm11,elm12,elm21,elm22)
                            
    !-------------------------------------------------------------------------------
@@ -22,6 +22,7 @@
    REAL(ReKi),INTENT(IN   )    :: gravity(:) ! 
    REAL(ReKi),INTENT(IN   )    :: DistrLoad_GL(:,:) ! Nodal material properties for each element
    REAL(DbKi),INTENT(IN   )    :: dt ! Nodal material properties for each element
+   REAL(DbKi),INTENT(IN   )    :: alpha ! Nodal material properties for each element
    REAL(ReKi),INTENT(  OUT)    :: elf1(:)  ! Total element force (Fd, Fc, Fb)
    REAL(ReKi),INTENT(  OUT)    :: elf2(:)  ! Total element force (Fd, Fc, Fb)
    REAL(ReKi),INTENT(  OUT)    :: elm11(:,:) ! Total element mass matrix
@@ -141,20 +142,20 @@
        CALL MassMatrix(mmm,mEta,rho,Mi)
        CALL GyroForce(mEta,rho,uuu,vvv,Fb)
        CALL GravityLoads(mmm,mEta,gravity,Fg)
-       CALL AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,uud0,vvd0,mmm,mEta,rho,dt,A1,A2,A3,A4,A5,A6,A7)
+       CALL AM2LinearizationMatrix(uuu,vvv,uuu0,vvv0,uud0,vvd0,mmm,mEta,rho,dt,alpha,A1,A2,A3,A4,A5,A6,A7)
 
-       Fd(:) = MATMUL(Mi,vvv-vvv0-0.5D0*dt*vvd0) + &
-              &0.5D0*dt*Fb + &
-              &0.5D0*dt*Fd - &
-              &0.5D0*dt*DistrLoad_GL(:,igp)
+       Fd(:) = MATMUL(Mi,vvv-vvv0-dt*(1-alpha)*vvd0) + &
+              &dt*alpha*Fb + &
+              &dt*alpha*Fd - &
+              &dt*alpha*DistrLoad_GL(:,igp)
 
-       Fc(:) = 0.5D0*dt*Fc
+       Fc(:) = dt*alpha*Fc
 
        CALL CrvMatrixH(uuu(4:6),temp_H)
-       F1(1:3) = uuu(1:3) - uuu0(1:3) - 0.5D0*dt*(vvv(1:3)+vvv0(1:3))
+       F1(1:3) = uuu(1:3) - uuu0(1:3) - dt*(1-alpha)*vvv(1:3) - dt*alpha*vvv0(1:3)
        F1(4:6) = MATMUL(temp_H,uuu(4:6)-uuu0(4:6)) - &
-                &0.5D0*dt*MATMUL(temp_H,uud0(4:6)) - &
-                &0.5D0*dt*vvv(4:6)
+                &dt*(1-alpha)*MATMUL(temp_H,uud0(4:6)) - &
+                &dt*alpha*vvv(4:6)
 !WRITE(*,*) F1(1:6)
        DO i=1,node_elem
            DO j=1,node_elem
@@ -165,23 +166,24 @@
                        elm11(temp_id1,temp_id2) = elm11(temp_id1,temp_id2) + hhx(i)*A6(m,n)*hhx(j)*Jacobian*gw(igp)
                        elm12(temp_id1,temp_id2) = elm12(temp_id1,temp_id2) + hhx(i)*A7(m,n)*hhx(j)*Jacobian*gw(igp)
                        elm21(temp_id1,temp_id2) = elm21(temp_id1,temp_id2) + &
-                                                 &hhx(i)*(A2(m,n)-A3(m,n)+0.5D0*dt*(-A1(m,n)+A5(m,n)+Qe(m,n)))*hhx(j)*Jacobian*gw(igp) + &
-                                                 &hhx(i)*0.5D0*dt*Pe(m,n)*hpx(j)*Jacobian*gw(igp) + &
-                                                 &hpx(i)*0.5D0*dt*Stif(m,n)*hpx(j)*Jacobian*gw(igp) + &
-                                                 &hpx(i)*0.5D0*dt*Oe(m,n)*hhx(j)*Jacobian*gw(igp)
+                                                 &hhx(i)*(A2(m,n)-A3(m,n)-dt*(1-alpha)*A1(m,n))*hhx(j)*Jacobian*gw(igp) + &
+                                                 &hhx(i)*(dt*alpha*(A5(m,n)+Qe(m,n)))*hhx(j)*Jacobian*gw(igp) + &
+                                                 &hhx(i)*dt*alpha*Pe(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                 &hpx(i)*dt*alpha*Stif(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                 &hpx(i)*dt*alpha*Oe(m,n)*hhx(j)*Jacobian*gw(igp)
                        elm22(temp_id1,temp_id2) = elm22(temp_id1,temp_id2) + &
-                                                 &hhx(i)*(Mi(m,n)+0.5D0*dt*A4(m,n))*hhx(j)*Jacobian*gw(igp)
+                                                 &hhx(i)*(Mi(m,n)+dt*alpha*A4(m,n))*hhx(j)*Jacobian*gw(igp)
                        IF(damp_flag .NE. 0) THEN
                            elm21(temp_id1,temp_id2) = elm21(temp_id1,temp_id2) + &
-                                                     &hhx(i)*0.5D0*dt*Pd(m,n)*hpx(j)*Jacobian*gw(igp) + &
-                                                     &hhx(i)*0.5D0*dt*Qd(m,n)*hhx(j)*Jacobian*gw(igp) + &
-                                                     &hpx(i)*0.5D0*dt*Sd(m,n)*hpx(j)*Jacobian*gw(igp) + &
-                                                     &hpx(i)*0.5D0*dt*Od(m,n)*hhx(j)*Jacobian*gw(igp)  
+                                                     &hhx(i)*dt*alpha*Pd(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                     &hhx(i)*dt*alpha*Qd(m,n)*hhx(j)*Jacobian*gw(igp) + &
+                                                     &hpx(i)*dt*alpha*Sd(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                     &hpx(i)*dt*alpha*Od(m,n)*hhx(j)*Jacobian*gw(igp)  
                            elm22(temp_id1,temp_id2) = elm22(temp_id1,temp_id2) + &
-                                                     &hhx(i)*0.5D0*dt*Xd(m,n)*hhx(j)*Jacobian*gw(igp) + &
-                                                     &hhx(i)*0.5D0*dt*Yd(m,n)*hpx(j)*Jacobian*gw(igp) + &
-                                                     &hpx(i)*0.5D0*dt*Gd(m,n)*hhx(j)*Jacobian*gw(igp) + &
-                                                     &hpx(i)*0.5D0*dt*betaC(m,n)*hpx(j)*Jacobian*gw(igp) 
+                                                     &hhx(i)*dt*alpha*Xd(m,n)*hhx(j)*Jacobian*gw(igp) + &
+                                                     &hhx(i)*dt*alpha*Yd(m,n)*hpx(j)*Jacobian*gw(igp) + &
+                                                     &hpx(i)*dt*alpha*Gd(m,n)*hhx(j)*Jacobian*gw(igp) + &
+                                                     &hpx(i)*dt*alpha*betaC(m,n)*hpx(j)*Jacobian*gw(igp) 
                        ENDIF
                    ENDDO
                ENDDO

@@ -69,8 +69,8 @@
    CALL ludcmp(MassM_LU,dof_total*2-12,indx,d)
    CALL lubksb(MassM_LU,dof_total*2-12,indx,RHS_LU,sol_temp)
 
-   xdot%q(:) = 0.0D0
-   xdot%dqdt(:) = 0.0D0
+!   xdot%q(:) = 0.0D0
+!   xdot%dqdt(:) = 0.0D0
    DO j=1,dof_total-6
        xdot%q(j+6)    = sol_temp(j)
        xdot%dqdt(j+6) = sol_temp(dof_total-6+j)

@@ -72,7 +72,7 @@
                              p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,             &
                              p%damp_flag,p%beta,                                   &
                              p%node_elem,p%dof_node,p%elem_total,p%dof_total,      &
-                             p%node_total,p%ngp,p%niter,OtherState%NR_counter,p%dt)
+                             p%node_total,p%ngp,p%niter,OtherState%NR_counter,p%dt,p%alpha)
    CALL RescaleCheck(x,p%node_total,OtherState%Rescale_counter)
 
 !   CALL BeamDyn_ApplyBoundaryCondition(x,u(1),ErrStat,ErrMsg)

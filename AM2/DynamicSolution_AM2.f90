@@ -2,7 +2,7 @@
                                   Stif0,Mass0,gravity,u,&
                                   damp_flag,beta,&
                                   node_elem,dof_node,elem_total,dof_total,&
-                                  node_total,ngp,niter,nr_counter,dt)
+                                  node_total,ngp,niter,nr_counter,dt,alpha)
 
    REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),        INTENT(IN   ):: uuN00(:)
@@ -13,6 +13,7 @@
    REAL(ReKi),        INTENT(IN   ):: Mass0(:,:,:)
    REAL(ReKi),        INTENT(IN   ):: gravity(:)
    REAL(DbKi),        INTENT(IN   ):: dt
+   REAL(DbKi),        INTENT(IN   ):: alpha
    TYPE(BD_InputType),INTENT(IN   ):: u
    INTEGER(IntKi),    INTENT(IN   ):: node_elem
    INTEGER(IntKi),    INTENT(IN   ):: dof_node
@@ -57,7 +58,7 @@
        CALL GenerateDynamicElement_AM2(uuN0,uuN,vvN,uuN00,vvN00,uud0,vvd0,&
                                       &Stif0,Mass0,gravity,u,&
                                       &damp_flag,beta,&
-                                      &elem_total,node_elem,dof_total,dof_node,ngp,dt,RHS,MassM)
+                                      &elem_total,node_elem,dof_total,dof_node,ngp,dt,alpha,RHS,MassM)
 !DO j=1,36
 !   WRITE(*,*) j,RHS(j)
 !ENDDO

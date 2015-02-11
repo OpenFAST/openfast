@@ -201,6 +201,9 @@ INCLUDE 'ElementMatrix_CCSD.f90'
    p%gravity(3) = InitInp%gravity(2)
 
    CALL CrvExtractCrv(InitInp%GlbRot,temp_glbrot)
+   ! Hardwire value for initial position vector
+!   temp_glbrot(:) = 0.0D0
+!   temp_glbrot(3) = 4.0D0*TAN((3.1415926D0/2.0D0)/4.0D0)
 
    CALL AllocAry(SP_Coef,InputFileData%kp_total-1,4,4,'Spline coefficient matrix',ErrStat2,ErrMsg2)
    SP_Coef(:,:,:) = 0.0D0
@@ -269,7 +272,12 @@ INCLUDE 'ElementMatrix_CCSD.f90'
                    p%uuN0(temp_id2+2,i) = temp_POS(2) + InitInp%GlbPos(2)
                    p%uuN0(temp_id2+3,i) = temp_POS(3) + InitInp%GlbPos(3)
                    temp_GLB(:) = 0.0D0
-                   CALL CrvCompose_temp(temp_GLB,temp_CRV,temp_glbrot,0)
+WRITE(*,*) 'j = ', j
+WRITE(*,*) temp_CRV
+WRITE(*,*) temp_glbrot
+                   temp_GLB(:) = MATMUL(InitInp%GlbRot,temp_CRV)
+!                   CALL CrvCompose_temp(temp_GLB,temp_glbrot,temp_CRV,0)
+WRITE(*,*) temp_GLB
                    p%uuN0(temp_id2+4,i) = temp_GLB(1)
                    p%uuN0(temp_id2+5,i) = temp_GLB(2)
                    p%uuN0(temp_id2+6,i) = temp_GLB(3)
@@ -394,7 +402,7 @@ INCLUDE 'ElementMatrix_CCSD.f90'
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
    p%dof_total   = p%node_total*p%dof_node   ! total number of dof
    p%dt = Interval
-
+   p%alpha = 0.5D0
    ! Allocate OtherState if using multi-step method; initialize n
 
 
