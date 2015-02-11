@@ -101,7 +101,7 @@ PROGRAM MAIN
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 5.0D-03*0.01
+   dt_global = 5.0D-03*0.001
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -143,7 +143,7 @@ PROGRAM MAIN
    BD_InitInput%gravity(3) = 0.0D0 
 
    ALLOCATE(BD_InitInput%GlbPos(3)) 
-   BD_InitInput%GlbPos(1) = 0.0D+01
+   BD_InitInput%GlbPos(1) = 1.0D+01
    BD_InitInput%GlbPos(2) = 0.0D+01
    BD_InitInput%GlbPos(3) = 0.0D0
 
@@ -256,9 +256,16 @@ WRITE(*,*) "Time Step: ", n_t_global
       WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
                            &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
                            &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
-      WRITE(QiRootUnit,6000) t_global,BD_ContinuousState%dqdt(1),BD_ContinuousState%dqdt(2),&
-                           &BD_ContinuousState%dqdt(3),BD_ContinuousState%dqdt(4),&
-                           &BD_ContinuousState%dqdt(5),BD_ContinuousState%dqdt(6)
+!      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%dqdt(BD_Parameter%dof_total-5),BD_ContinuousState%dqdt(BD_Parameter%dof_total-4),&
+!                           &BD_ContinuousState%dqdt(BD_Parameter%dof_total-3),BD_ContinuousState%dqdt(BD_Parameter%dof_total-2),&
+!                           &BD_ContinuousState%dqdt(BD_Parameter%dof_total-1),BD_ContinuousState%dqdt(BD_Parameter%dof_total)
+!      WRITE(QiRootUnit,6000) t_global,BD_ContinuousState%dqdt(1),BD_ContinuousState%dqdt(2),&
+!                           &BD_ContinuousState%dqdt(3),BD_ContinuousState%dqdt(4),&
+!                           &BD_ContinuousState%dqdt(5),BD_ContinuousState%dqdt(6)
+!      WRITE(QiRootUnit,6000) t_global,BD_ContinuousState%q(1),BD_ContinuousState%q(2),&
+!                           &BD_ContinuousState%q(3),BD_ContinuousState%q(4),&
+!                           &BD_ContinuousState%q(5),BD_ContinuousState%q(6)
+!      WRITE(QiRootUnit,6000) t_global,BD_Input(1)%RootMotion%TranslationAcc(1:3,1)
 !CALL CrvMatrixB(BD_ContinuousState%q(4:6),BD_ContinuousState%q(4:6),temp_H)
 !CALL CrvMatrixH(BD_ContinuousState%q(4:6),temp_H)
 !WRITE(QiHUnit,7000) t_global,temp_H(1,1),temp_H(1,2),temp_H(1,3),temp_H(2,1),temp_H(2,2),temp_H(2,3),&

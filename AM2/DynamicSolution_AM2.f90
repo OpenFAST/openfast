@@ -68,7 +68,7 @@
            F_PointLoad(temp_id+4:temp_id+6) = u%PointLoad%Moment(1:3,j)
        ENDDO
        RHS(dof_total+1:dof_total*2) = RHS(dof_total+1:dof_total*2) + &
-                                     &0.5D0*dt*F_PointLoad(1:dof_total)
+                                     &dt*alpha*F_PointLoad(1:dof_total)
 
        feqv(:) = 0.0D0
        DO j=1,dof_total-6
