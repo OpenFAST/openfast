@@ -99,7 +99,9 @@ subroutine FAST_Sizes(TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_
    ErrStat_c     = ErrStat
    ErrMsg_c      = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
    
-   if (ErrStat /= ErrID_None) call wrscr(trim(ErrMsg))
+#ifdef CONSOLE_FILE   
+   if (ErrStat /= ErrID_None) call wrscr1(trim(ErrMsg))
+#endif   
     
       ! return the names of the output channels
    IF ( ALLOCATED( y_FAST%ChannelNames ) )  then
@@ -160,7 +162,9 @@ subroutine FAST_Start(NumOutputs_c, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAM
    ErrStat_c     = ErrStat
    ErrMsg_c      = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
    
-   if (ErrStat /= ErrID_None) call wrscr(trim(ErrMsg))
+#ifdef CONSOLE_FILE   
+   if (ErrStat /= ErrID_None) call wrscr1(trim(ErrMsg))
+#endif   
       
 end subroutine FAST_Start
 !==================================================================================================================================
@@ -193,29 +197,17 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       
          ! set the inputs from external code here...
          ! transfer inputs from Simulink to FAST
-      IF (p_FAST%CompServo == Module_SrvD ) THEN
    
-         SrvD%Input(1)%ExternalGenTrq       = InputAry(1)
-         SrvD%Input(1)%ExternalElecPwr      = InputAry(2)
-         SrvD%Input(1)%ExternalYawPosCom    = InputAry(3)
-         SrvD%Input(1)%ExternalYawRateCom   = InputAry(4)
-         do i=1,SIZE(SrvD%Input(1)%ExternalBlPitchCom)
-            SrvD%Input(1)%ExternalBlPitchCom(i)   = InputAry(4+i)
-         end do
-      
+      m_FAST%ExternInput%GenTrq     = InputAry(1)
+      m_FAST%ExternInput%ElecPwr    = InputAry(2)
+      m_FAST%ExternInput%YawPosCom  = InputAry(3)
+      m_FAST%ExternInput%YawRateCom = InputAry(4)
+      m_FAST%ExternInput%BlPitchCom = InputAry(5:7)
          
-         IF ( NumInputs_c > 7 ) THEN  ! 7 is the fixed number of inputs
-            
-            ! bjj: this is a total hack to get the lidar inputs into AeroDyn. We should use a mesh to take care of this messiness
-            
-            AD%OtherSt%IfW_Inputs%lidar%LidPosition = ED%Output(1)%RotorApexMotion%Position(:,1) + ED%Output(1)%RotorApexMotion%TranslationDisp(:,1) & ! rotor apex position
-                                                      + AD%p%IfW_Params%lidar%RotorApexOffsetPos
-            AD%OtherSt%IfW_Inputs%lidar%MsrPosition = InputAry(8:10) +  AD%OtherSt%IfW_Inputs%lidar%LidPosition
-
-         END IF
-
+      IF ( NumInputs_c > 7 ) THEN  ! 7 is the fixed number of inputs
+         m_FAST%ExternInput%LidarFocus = InputAry(8:10)
       END IF
-      
+               
       
       CALL FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )                  
       n_t_global = n_t_global + 1
@@ -233,8 +225,9 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
    OutputAry(1)              = m_FAST%t_global 
    OutputAry(2:NumOutputs_c) = Outputs 
 
-   if (ErrStat /= ErrID_None) call wrscr(trim(ErrMsg))
-   
+#ifdef CONSOLE_FILE   
+   if (ErrStat /= ErrID_None) call wrscr1(trim(ErrMsg))
+#endif   
       
 end subroutine FAST_Update 
 !==================================================================================================================================

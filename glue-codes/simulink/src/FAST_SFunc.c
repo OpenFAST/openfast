@@ -81,15 +81,18 @@ static int checkError(SimStruct *S);
 */
 static int
 checkError(SimStruct *S){
+
    if (ErrStat >= AbortErrLev){
+      ssPrintf("\n");
       ssSetErrorStatus(S, ErrMsg);
       return 1;
    }
    else if (ErrStat >= ErrID_Warn){
+      ssPrintf("\n");
       ssWarning(S, ErrMsg);
    }
    else if (ErrStat != ErrID_None){
-      ssPrintf("%s\n", ErrMsg);
+      ssPrintf("\n%s\n", ErrMsg);
    }
    return 0;
 
