@@ -27,7 +27,10 @@ MODULE SysSubs
    ! This module contains routines with system-specific logic and references, including all references to the console unit, CU.
    ! It also contains standard (but not system-specific) routines it uses.
 
-
+   ! bjj: if compiling this to write to the Matlab command window using mexPrintf, you  must link with 
+   !     libmex.lib in the matlab/extern/lib/{architecture}/{compiler} folder
+   !      otherwise, use preprocessor definition CONSOLE_FILE to output everything to a file named CONSOLE.TXT
+   
 
    ! It contains the following routines:
 
@@ -74,9 +77,8 @@ MODULE SysSubs
 
 
    INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
-   INTEGER, PARAMETER            :: CU          = 7                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
+   INTEGER, PARAMETER            :: CU          = 6                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
    INTEGER, PARAMETER            :: MaxWrScrLen = 98                                ! The maximum number of characters allowed to be written to a line in WrScr
-   INTEGER, PARAMETER            :: NL_Len      = 2                                 ! The number of characters used for a new line.
 
    LOGICAL, PARAMETER            :: KBInputOK   = .FALSE.                           ! A flag to tell the program that keyboard input is allowed in the environment.
 
@@ -422,9 +424,11 @@ CONTAINS
 #else
    INTEGER                      :: Stat                                         ! Number of characters printed
    INTEGER, EXTERNAL            :: mexPrintF                                    ! Matlab function to print to the command window
+   CHARACTER(1024),SAVE         :: Str2                                         ! bjj: need static variable to print to Matlab command window
 
-   Stat = mexPrintF( ' '//TRIM(Str) )
-
+   Str2 = ' '//Str//C_NULL_CHAR  !bjj: not sure C_NULL_CHAR is necessary
+   Stat = mexPrintF( Str2 )
+   
 #endif
 
    RETURN
@@ -477,7 +481,8 @@ CONTAINS
       ! Local variables
    INTEGER, EXTERNAL            :: mexPrintF                                   ! Matlab function to print to the command window
    INTEGER                      :: Stat                                        ! Number of characters printed to the screen
-   CHARACTER( LEN(Str) )        :: Str2                                        ! A temporary string (Str written with the Frm Format specification)
+
+   CHARACTER( 1024 ), SAVE      :: Str2   ! A temporary string (Str written with the Frm Format specification) (bjj: this apparently needs to be a static variable so it writes to the Matlab command window)
 
 
 
@@ -486,8 +491,9 @@ CONTAINS
    ELSE
       WRITE (Str2,Frm, IOSTAT=Stat)  ADJUSTL( Str )
    END IF
+   Str2 = trim(Str2)//NewLine//C_NULL_CHAR  !bjj: not sure C_NULL_CHAR is necessary
 
-   Stat = mexPrintf( TRIM(Str2)//NewLine )
+   Stat = mexPrintf( Str2 )
    !call mexEvalString("drawnow;");  ! !bjj: may have to call this to dump string to the screen immediately.
 
 #endif

@@ -77,7 +77,6 @@ MODULE SysSubs
    INTEGER, PARAMETER            :: CU          = 6                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
                                                                                     ! CU = 7 works on gfortran compiler version 4.6 and possibly 4.5. Fails on version 4.7 and 4.8 (see bugzilla bug report #445 for details)
    INTEGER, PARAMETER            :: MaxWrScrLen = 98                                ! The maximum number of characters allowed to be written to a line in WrScr
-   INTEGER, PARAMETER            :: NL_Len      = 2                                 ! The number of characters used for a new line.
 
    LOGICAL, PARAMETER            :: KBInputOK   = .TRUE.                            ! A flag to tell the program that keyboard input is allowed in the environment.
 
