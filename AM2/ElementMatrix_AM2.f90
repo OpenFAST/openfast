@@ -84,6 +84,7 @@
    REAL(ReKi)                  :: Oe(6,6)
    REAL(ReKi)                  :: Pe(6,6)
    REAL(ReKi)                  :: Qe(6,6)
+   REAL(ReKi)                  :: Se(6,6)
    REAL(ReKi)                  :: temp_H(3,3)
    REAL(ReKi)                  :: temp_H0(3,3)
    REAL(ReKi)                  :: Sd(6,6)
@@ -135,6 +136,7 @@
        CALL BldGaussPointDataXdot(hhx,Nvvd0,node_elem,dof_node,vvd0)
        CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,vvp,mmm,mEta,rho)
        CALL BeamDyn_StaticElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
+!       CALL BeamDyn_StaticElasticForce_New(E1,RR0,kapa,Stif,cet,uuu,Fc,Fd,Oe,Pe,Qe,Se)
        IF(damp_flag .NE. 0) THEN
            CALL DissipativeForce(beta,Stif,vvv,vvp,E1,Fc,Fd,Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd)
        ENDIF
@@ -152,7 +154,7 @@
        Fc(:) = dt*alpha*Fc
 
        CALL CrvMatrixH(uuu(4:6),temp_H)
-       F1(1:3) = uuu(1:3) - uuu0(1:3) - dt*(1-alpha)*vvv(1:3) - dt*alpha*vvv0(1:3)
+       F1(1:3) = uuu(1:3) - uuu0(1:3) - dt*alpha*vvv(1:3) - dt*(1.0D0-alpha)*vvv0(1:3)
        F1(4:6) = MATMUL(temp_H,uuu(4:6)-uuu0(4:6)) - &
                 &dt*(1-alpha)*MATMUL(temp_H,uud0(4:6)) - &
                 &dt*alpha*vvv(4:6)

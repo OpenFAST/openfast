@@ -2,7 +2,7 @@
 Test Format 1
 ---------------------- BLADE PARAMETERS --------------------------------------
 2   station_total    - Number of blade input stations (-)
-1   damp_flag        - Format index: 1-6 by 6 matrices; 2-sectional properties
+0   damp_flag        - Format index: 1-6 by 6 matrices; 2-sectional properties
 ---------------------- DAMPING COEFFICIENT------------------------------------
    mu1        mu2        mu3        mu4        mu5        mu6
    (-)        (-)        (-)        (-)        (-)        (-)
