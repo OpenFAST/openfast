@@ -85,6 +85,7 @@ PROGRAM MAIN
    REAL(ReKi):: temp_vec(3)
    REAL(ReKi):: temp1,temp2
    REAL(ReKi):: temp_a,temp_b,temp_force
+   REAL(DbKi):: start, finish
    Integer(IntKi)                     :: temp_count
 !   REAL(ReKi),PARAMETER    :: PI = 3.1415926D0
 
@@ -101,7 +102,7 @@ PROGRAM MAIN
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 5.0D-03*1.00
+   dt_global = 5.0D-03*0.002
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -143,7 +144,7 @@ PROGRAM MAIN
    BD_InitInput%gravity(3) = 0.0D0 
 
    ALLOCATE(BD_InitInput%GlbPos(3)) 
-   BD_InitInput%GlbPos(1) = 0.0D+01
+   BD_InitInput%GlbPos(1) = 1.0D+01
    BD_InitInput%GlbPos(2) = 0.0D+01
    BD_InitInput%GlbPos(3) = 0.0D0
 
@@ -196,6 +197,7 @@ PROGRAM MAIN
    CALL WrScr(  '  ---------------  ---------------- -----------------' ) ! write initial condition for q1 !CALL WrScr  ( '  '//Num2LStr(t_global)//'  '//Num2LStr( Mod1_ContinuousState%q)//'  '//Num2LStr(Mod1_ContinuousState%q))   
 
 temp_count = 0   
+CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final-1
 
 WRITE(*,*) "Time Step: ", n_t_global
@@ -295,6 +297,11 @@ WRITE(*,*) "Time Step: ", n_t_global
       t_global = REAL(n_t_global+1,DbKi) * dt_global + t_initial
 
    ENDDO
+CALL CPU_TIME(finish)
+!print '("Time = ",f6.3," seconds.")',finish-start
+WRITE(*,*) 'Start: ', start
+WRITE(*,*) 'Finish: ', finish
+WRITE(*,*) 'Time: ', finish-start
 
 !   WRITE(QiHUnit,*) "TOTAL",temp_count
 

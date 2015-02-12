@@ -2,7 +2,7 @@
  Test Format 1
  ---------------------- BLADE PARAMETERS --------------------------------------
 11   station_total    - Number of blade input stations (-)
- 0   damp_flag        - Damping flag: 0: no damping; 1: damped
+ 1   damp_flag        - Damping flag: 0: no damping; 1: damped
   ---------------------- DAMPING COEFFICIENT------------------------------------
    mu1        mu2        mu3        mu4        mu5        mu6
    (-)        (-)        (-)        (-)        (-)        (-)

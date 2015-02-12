@@ -60,6 +60,7 @@ INCLUDE 'AppliedNodalLoad.f90'
 INCLUDE 'PrescribedRootMotion.f90'
 INCLUDE 'DynamicSolution.f90'
 INCLUDE 'BeamDyn_RK4.f90'
+INCLUDE 'BeamDyn_RK2.f90'
 INCLUDE 'CrvMatrixHinv.f90'
 INCLUDE 'ComputeUDN.f90'
 INCLUDE 'BeamDyn_CalcContStateDeriv.f90'
@@ -710,6 +711,8 @@ WRITE(*,*) temp_GLB
            CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
        ELSEIF(p%time_flag .EQ. 3) THEN
            CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       ELSEIF(p%time_flag .EQ. 4) THEN
+           CALL BeamDyn_RK2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
        ENDIF
   
 !       DO i=2,p%node_total
