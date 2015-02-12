@@ -88,6 +88,9 @@ INCLUDE 'BeamDyn_StaticSolution.f90'
 INCLUDE 'BeamDyn_GenerateStaticElement.f90'
 INCLUDE 'BeamDyn_StaticElementMatrix.f90'
 INCLUDE 'BeamDyn_StaticElasticForce.f90'
+
+INCLUDE 'BeamDyn_StaticElasticForce_New.f90'
+
 INCLUDE 'UpdateConfiguration.f90'
 INCLUDE 'OuterProduct.f90'
 INCLUDE 'GenerateStaticElement_Force.f90'

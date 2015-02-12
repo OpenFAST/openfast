@@ -101,7 +101,7 @@ PROGRAM MAIN
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 5.0D-03*0.001
+   dt_global = 5.0D-03*1.00
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -143,7 +143,7 @@ PROGRAM MAIN
    BD_InitInput%gravity(3) = 0.0D0 
 
    ALLOCATE(BD_InitInput%GlbPos(3)) 
-   BD_InitInput%GlbPos(1) = 1.0D+01
+   BD_InitInput%GlbPos(1) = 0.0D+01
    BD_InitInput%GlbPos(2) = 0.0D+01
    BD_InitInput%GlbPos(3) = 0.0D0
 
