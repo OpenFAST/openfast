@@ -119,6 +119,8 @@ INCLUDE 'Solution_CCSD.f90'
 INCLUDE 'GenerateDynamicElement_CCSD.f90'
 INCLUDE 'ElementMatrix_CCSD.f90'
 
+INCLUDE 'TiSchmPredictorStep.f90'
+
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
 ! This routine is called at the start of the simulation to perform initialization steps.
@@ -707,8 +709,10 @@ WRITE(*,*) temp_GLB
 
    IF(p%analysis_type == 2) THEN
 !WRITE(*,*) x%q(:)
-       IF(p%time_flag .EQ. 1 .OR. p%time_flag .EQ. 2) THEN
+       IF(p%time_flag .EQ. 1) THEN
            CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       ELSEIF(p%time_flag .EQ. 2) THEN
+           CALL BeamDyn_GA2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
        ELSEIF(p%time_flag .EQ. 3) THEN
            CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
        ELSEIF(p%time_flag .EQ. 4) THEN
