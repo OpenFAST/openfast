@@ -58,20 +58,20 @@ SUBROUTINE DispHelpText( ErrStat, ErrMsg )
    CALL WrScr("  Syntax:  InlowWind_Driver <filename> [options]")
    CALL WrScr("")
    CALL WrScr("       where:     <filename>     -- Name of driver input file to use")
-   CALL WrScr("     options:     "//SWChar//"ifw           -- treat <filename> as name of InflowWind input file [N/A]")
+   CALL WrScr("     options:     "//SWChar//"ifw           -- treat <filename> as name of InflowWind input file")
    CALL WrScr("")
    CALL WrScr("              The following options will overwrite values in the driver input file:")
-   CALL WrScr("                  "//SwChar//"DT[#]         -- timestep                                        [N/A]")
-   CALL WrScr("                  "//SwChar//"TStart[#]     -- start time                                      [N/A]")
+   CALL WrScr("                  "//SwChar//"DT[#]         -- timestep                                        ")
+   CALL WrScr("                  "//SwChar//"TStart[#]     -- start time                                      ")
    CALL WrScr("                  "//SwChar//"TSteps[#]     -- number of timesteps                             [N/A]")
-   CALL WrScr("                  "//SwChar//"xrange[#:#]   -- range of x (#'s are reals)                      [N/A]")
-   CALL WrScr("                  "//SwChar//"yrange[#:#]   -- range of y                                      [N/A]")
-   CALL WrScr("                  "//SwChar//"zrange[#:#]   -- range in z (ground = 0.0)                       [N/A]")
-   CALL WrScr("                  "//SwChar//"Dx[#]         -- spacing in x                                    [N/A]")
-   CALL WrScr("                  "//SwChar//"Dy[#]         -- spacing in y                                    [N/A]")
-   CALL WrScr("                  "//SwChar//"Dz[#]         -- spacing in z                                    [N/A]")
+   CALL WrScr("                  "//SwChar//"xrange[#:#]   -- range of x (#'s are reals)        (command line only)")
+   CALL WrScr("                  "//SwChar//"yrange[#:#]   -- range of y                                      ")
+   CALL WrScr("                  "//SwChar//"zrange[#:#]   -- range in z (ground = 0.0)                       ")
+   CALL WrScr("                  "//SwChar//"Dx[#]         -- spacing in x                                    ")
+   CALL WrScr("                  "//SwChar//"Dy[#]         -- spacing in y                                    ")
+   CALL WrScr("                  "//SwChar//"Dz[#]         -- spacing in z                                    ")
    CALL WrScr("                  "//SwChar//"sum           -- summarize wind file info                        [N/A]")
-   CALL WrScr("                  "//SwChar//"FFT[X,Y,Z]    -- an fft over all t at X,Y,Z (outputs .fft file)  [N/A]")
+   CALL WrScr("                  "//SwChar//"FFT[X,Y,Z]    -- an fft over all t using specified DT at X,Y,Z   [N/A]")
    CALL WrScr("                  "//SwChar//"points[FILE]  -- calculates at x,y,z coordinates specified in a  [N/A]")
    CALL WrScr("                                    white space delimited FILE")
    CALL WrScr("                  "//SwChar//"help          -- print this help menu and exit")
@@ -89,8 +89,8 @@ END SUBROUTINE DispHelpText
 
 !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 !> This subroutine retrieves the command line arguments and passes them to the
-!! ::ParseArgs routine for processing.
-SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
+!! ::ParseArg routine for processing.
+SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
 
    USE NWTC_Library
    USE InflowWind_Driver_Types
@@ -98,14 +98,14 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
    IMPLICIT NONE
 
       ! Storing the arguments
-   TYPE( IfWDriver_Flags ),            INTENT(  OUT)  :: CLSettingsFlags      !< Flags indicating which command line arguments were specified
+   TYPE( IfWDriver_Flags ),            INTENT(  OUT)  :: CLFlags      !< Flags indicating which command line arguments were specified
    TYPE( IfWDriver_Settings ),         INTENT(  OUT)  :: CLSettings           !< Command line arguments passed in
 
       ! Error Handling
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
 
-      ! Local variables
+      ! Local variable     IF ( CLFlags%Summarys
    INTEGER(IntKi)                                     :: i                    !< Generic counter
    CHARACTER(1024)                                    :: Arg                  !< argument given
    CHARACTER(1024)                                    :: ArgUC                !< Upper case argument to check
@@ -119,14 +119,14 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
 
 
       ! initialize some things
-   CLSettingsFlags%DvrIptFile =  .FALSE.
+   CLFlags%DvrIptFile =  .FALSE.
    ErrStat                    =  ErrID_None
    ErrStatTmp                 =  ErrID_None
-   ErrMsg                     =  ""
-   ErrMsgTmp                  =  ""
+   ErrMsg                     =  ''
+   ErrMsgTmp                  =  ''
    ifwFlag                    =  .FALSE.
    FileNameGiven              =  .FALSE.
-   FileName                   =  ""
+   FileName                   =  ''
 
 
       ! Check how many arguments are passed in
@@ -162,7 +162,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
 
             ! Check the argument and put it where it belongs
             ! chop the SwChar off before passing the argument
-         CALL ParseArg( CLSettings, CLSettingsFlags, ArgUC(2:), Arg(2:), ifwFlag, ErrStatTmp, ErrMsgTmp )
+         CALL ParseArg( CLSettings, CLFlags, ArgUC(2:), Arg(2:), ifwFlag, ErrStatTmp, ErrMsgTmp )
          CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'RetrieveArgs')
          IF (ErrStat>AbortErrLev) RETURN
 
@@ -192,10 +192,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
       ! it is the driver input file.
    IF ( ifwFlag ) THEN
       CLSettings%IfWIptFileName  =  TRIM(FileName)
-      CLSettingsFlags%IfWIptFile =  .TRUE.
+      CLFlags%IfWIptFile =  .TRUE.
    ELSE
       CLSettings%DvrIptFileName  =  TRIM(FileName)
-      CLSettingsFlags%DvrIptFile =  .TRUE.
+      CLFlags%DvrIptFile =  .TRUE.
    ENDIF
 
 
@@ -235,7 +235,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
 
 
    !-------------------------------------------------------------------------------
-   SUBROUTINE ParseArg( CLSettings, CLSettingsFlags, ThisArgUC, ThisArg, ifwFlagSet, ErrStat, ErrMsg )
+   SUBROUTINE ParseArg( CLSettings, CLFlags, ThisArgUC, ThisArg, ifwFlagSet, ErrStat, ErrMsg )
          !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
          ! Parse and store the input argument  !
          !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-!
@@ -247,7 +247,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
       IMPLICIT NONE
 
          ! Storing the arguments
-      TYPE( IfWDriver_Flags ),            INTENT(INOUT)  :: CLSettingsFlags      ! Flags indicating which arguments were specified
+      TYPE( IfWDriver_Flags ),            INTENT(INOUT)  :: CLFlags      ! Flags indicating which arguments were specified
       TYPE( IfWDriver_Settings ),         INTENT(INOUT)  :: CLSettings           ! Arguments passed in
 
       CHARACTER(*),                       INTENT(IN   )  :: ThisArgUC            ! The current argument (upper case for testing)
@@ -274,7 +274,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
          ! Initialize some things
       ErrStat     = ErrID_None
       ErrStatTmp  =  ErrID_None
-      ErrMsg      = ""
+      ErrMsg      = ''
 
          ! Get the delimiters -- returns 0 if there isn't one
       Delim1   = INDEX(ThisArgUC,'[')
@@ -304,7 +304,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
             ifwFlagSet              = .TRUE.             ! More logic in the routine that calls this one to set things.
             RETURN
          ELSEIF   ( ThisArgUC(1:3) == "SUM" )   THEN
-            CLSettingsFlags%Summary = .TRUE.
+            CLFlags%Summary         = .TRUE.
             RETURN
          ELSE
             CALL SetErrStat( ErrID_Warn," Unrecognized option '"//SwChar//TRIM(ThisArg)//"'. Ignoring. Use option "//SwChar//"help for list of options.",  &
@@ -327,10 +327,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
             ! First Value
          TempReal = StringToReal( ThisArgUC(Delim1+1:DelimSep-1), ErrStatTmp )
          IF ( ErrStatTmp == ErrID_None ) THEN
-            CLSettingsFlags%FFTcalc    = .TRUE.
-            CLSettings%FFTcoord(1)      = TempReal
+            CLFlags%FFTcalc            = .TRUE.
+            CLSettings%FFTcoord(1)     = TempReal
          ELSE
-            CLSettingsFlags%FFTcalc    = .FALSE.
+            CLFlags%FFTcalc            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",  &
                   ErrStat, ErrMsg, 'ParseArg')
@@ -344,10 +344,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
             ! Second Value
          TempReal = StringToReal( ThisArgUC(DelimSep+1:DelimSep2-1), ErrStatTmp )
          IF ( ErrStatTmp == ErrID_None ) THEN
-            CLSettingsFlags%FFTcalc    = .TRUE.
-            CLSettings%FFTcoord(2)      = TempReal
+            CLFlags%FFTcalc            = .TRUE.
+            CLSettings%FFTcoord(2)     = TempReal
          ELSE
-            CLSettingsFlags%FFTcalc    = .FALSE.
+            CLFlags%FFTcalc            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",  &
                   ErrStat, ErrMsg, 'ParseArg')
@@ -361,10 +361,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
             ! Third Value
          TempReal = StringToReal( ThisArgUC(DelimSep2+1:Delim2-1), ErrStatTmp )
          IF ( ErrStatTmp == ErrID_None ) THEN
-            CLSettingsFlags%FFTcalc    = .TRUE.
-            CLSettings%FFTcoord(3)      = TempReal
+            CLFlags%FFTcalc            = .TRUE.
+            CLSettings%FFTcoord(3)     = TempReal
          ELSE
-            CLSettingsFlags%FFTcalc    = .FALSE.
+            CLFlags%FFTcalc            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat( ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.", &
                   ErrStat, ErrMsg, 'ParseArg')
@@ -375,16 +375,25 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
             RETURN
          ENDIF
 
+
+         IF ( CLSettings%FFTcoord(3) <= 0.0_ReKi ) THEN
+            CALL SetErrStat( ErrID_Warn,' FFT coordinate ['//TRIM(Num2LStr(CLSettings%FFTcoord(1)))//','//  &
+               TRIM(Num2LStr(CLSettings%FFTcoord(1)))//','//TRIM(Num2LStr(CLSettings%FFTcoord(1)))//        &
+               '] is at or below ground level where there is no wind.  Ingoring.',   &
+               ErrStat,ErrMsg,'UpdateSettingsWithCL' )
+            CLFlags%FFTcalc =  .FALSE.
+         ENDIF
+
           ! "XRANGE[#:#]"
       ELSEIF ( ThisArgUC(1:Delim1) == "XRANGE["         ) THEN
 
             ! First Value
          TempReal = StringToReal( ThisArgUC(Delim1+1:DelimSep-1), ErrStatTmp )
          IF     ( ErrStatTmp == ErrID_None ) THEN
-            CLSettingsFlags%XRange = .TRUE.
-            CLSettings%XRange(1)   = TempReal
+            CLFlags%XRange = .TRUE.
+            CLSettings%XRange(1)    = TempReal
          ELSE
-            CLSettingsFlags%XRange = .FALSE.
+            CLFlags%XRange          = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
                   ErrStat,ErrMsg,'ParseArgs')
@@ -398,10 +407,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
             ! Second Value
          TempReal = StringToReal( ThisArgUC(DelimSep+1:Delim2-1), ErrStatTmp )
          IF ( ErrStatTmp == ErrID_None ) THEN
-            CLSettingsFlags%XRange = .TRUE.
-            CLSettings%XRange(2)   = TempReal
+            CLFlags%XRange          = .TRUE.
+            CLSettings%XRange(2)    = TempReal
          ELSE
-            CLSettingsFlags%XRange = .FALSE.
+            CLFlags%XRange          = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
                   ErrStat,ErrMsg,'ParseArgs')
@@ -414,9 +423,9 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
 
             ! Check the order of values
          IF ( CLSettings%XRange(1) > CLSettings%Xrange(2) ) THEN
-            CLSettings%XRange(1)   = 0.0
-            CLSettings%XRange(2)   = 0.0
-            CLSettingsFlags%XRange = .FALSE.
+            CLSettings%XRange(1)    = 0.0
+            CLSettings%XRange(2)    = 0.0
+            CLFlags%XRange          = .FALSE.
             CALL SetErrStat(ErrID_Warn," Unexpected order of values in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
                ErrStat, ErrMsg, 'ParseArgs')
          ENDIF
@@ -429,10 +438,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
             ! First Value
          TempReal = StringToReal( ThisArgUC(Delim1+1:DelimSep-1), ErrStatTmp )
          IF     ( ErrStatTmp == ErrID_None ) THEN
-            CLSettingsFlags%YRange = .TRUE.
-            CLSettings%YRange(1)   = TempReal
+            CLFlags%YRange          = .TRUE.
+            CLSettings%YRange(1)    = TempReal
          ELSE
-            CLSettingsFlags%YRange = .FALSE.
+            CLFlags%YRange          = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
                   ErrStat,ErrMsg,'ParseArgs')
@@ -446,10 +455,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
             ! Second Value
          TempReal = StringToReal( ThisArgUC(DelimSep+1:Delim2-1), ErrStatTmp )
          IF ( ErrStatTmp == ErrID_None ) THEN
-            CLSettingsFlags%YRange = .TRUE.
-            CLSettings%YRange(2)   = TempReal
+            CLFlags%YRange          = .TRUE.
+            CLSettings%YRange(2)    = TempReal
          ELSE
-            CLSettingsFlags%YRange = .FALSE.
+            CLFlags%YRange          = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
                   ErrStat,ErrMsg,'ParseArgs')
@@ -462,9 +471,9 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
 
             ! Check the order of values
          IF ( CLSettings%YRange(1) > CLSettings%Yrange(2) ) THEN
-            CLSettings%YRange(1)   = 0.0
-            CLSettings%YRange(2)   = 0.0
-            CLSettingsFlags%YRange = .FALSE.
+            CLSettings%YRange(1)    = 0.0
+            CLSettings%YRange(2)    = 0.0
+            CLFlags%YRange          = .FALSE.
             CALL SetErrStat(ErrID_Warn," Unexpected order of values in option '"//SwChar//TRIM(ThisArg)//"'. Ingoring.",   &
                ErrStat, ErrMsg, 'ParseArgs')
          ENDIF
@@ -477,10 +486,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
             ! First Value
          TempReal = StringToReal( ThisArgUC(Delim1+1:DelimSep-1), ErrStatTmp )
          IF     ( ErrStatTmp == ErrID_None ) THEN
-            CLSettingsFlags%ZRange = .TRUE.
-            CLSettings%ZRange(1)   = TempReal
+            CLFlags%ZRange          = .TRUE.
+            CLSettings%ZRange(1)    = TempReal
          ELSE
-            CLSettingsFlags%ZRange = .FALSE.
+            CLFlags%ZRange          = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
                   ErrStat,ErrMsg,'ParseArgs')
@@ -494,10 +503,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
             ! Second Value
          TempReal = StringToReal( ThisArgUC(DelimSep+1:Delim2-1), ErrStatTmp )
          IF ( ErrStatTmp == ErrID_None ) THEN
-            CLSettingsFlags%ZRange = .TRUE.
-            CLSettings%ZRange(2)   = TempReal
+            CLFlags%ZRange          = .TRUE.
+            CLSettings%ZRange(2)    = TempReal
          ELSE
-            CLSettingsFlags%ZRange = .FALSE.
+            CLFlags%ZRange          = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
                   ErrStat,ErrMsg,'ParseArgs')
@@ -510,9 +519,9 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
 
             ! Check the order of values
          IF ( CLSettings%ZRange(1) > CLSettings%Zrange(2) ) THEN
-            CLSettings%ZRange(1)   = 0.0
-            CLSettings%ZRange(2)   = 0.0
-            CLSettingsFlags%ZRange = .FALSE.
+            CLSettings%ZRange(1)    = 0.0
+            CLSettings%ZRange(2)    = 0.0
+            CLFlags%ZRange          = .FALSE.
             CALL SetErrStat(ErrID_Warn," Unexpected order of values in option '"//SwChar//TRIM(ThisArg)//"'. Ingoring.",   &
                ErrStat, ErrMsg, 'ParseArgs')
          ENDIF
@@ -522,10 +531,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
       ELSEIF( ThisArgUC(1:Delim1) == "DX["      ) THEN
          TempReal = StringToReal( ThisArgUC(Delim1+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_None ) THEN
-            CLSettingsFlags%Dx      = .TRUE.
+            CLFlags%Dx           = .TRUE.
             CLSettings%GridDelta(1) = abs(TempReal)
          ELSE
-            CLSettingsFlags%Dx      = .FALSE.
+            CLFlags%Dx           = .FALSE.
             IF ( ErrStat == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
                   ErrStat,ErrMsg,'ParseArgs')
@@ -541,10 +550,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
       ELSEIF( ThisArgUC(1:Delim1) == "DY["      ) THEN
          TempReal = StringToReal( ThisArgUC(Delim1+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_None ) THEN
-            CLSettingsFlags%Dy      = .TRUE.
+            CLFlags%Dy           = .TRUE.
             CLSettings%GridDelta(2) = abs(TempReal)
          ELSE
-            CLSettingsFlags%Dy      = .FALSE.
+            CLFlags%Dy           = .FALSE.
             IF ( ErrStat == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
                   ErrStat,ErrMsg,'ParseArgs')
@@ -560,10 +569,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
       ELSEIF( ThisArgUC(1:Delim1) == "DZ["      ) THEN
          TempReal = StringToReal( ThisArgUC(Delim1+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_None ) THEN
-            CLSettingsFlags%Dz      = .TRUE.
+            CLFlags%Dz           = .TRUE.
             CLSettings%GridDelta(3) = abs(TempReal)
          ELSE
-            CLSettingsFlags%Dz      = .FALSE.
+            CLFlags%Dz           = .FALSE.
             IF ( ErrStat == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
                   ErrStat,ErrMsg,'ParseArgs')
@@ -579,10 +588,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
       ELSEIF( ThisArgUC(1:Delim1) == "DT["      ) THEN
          TempReal = StringToReal( ThisArgUC(Delim1+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_None ) THEN
-            CLSettingsFlags%Dt      = .TRUE.
-            CLSettings%DT           = abs(TempReal)
+            CLFlags%Dt           = .TRUE.
+            CLSettings%DT        = abs(TempReal)
          ELSE
-            CLSettingsFlags%Dt      = .FALSE.
+            CLFlags%Dt           = .FALSE.
             IF ( ErrStat == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
                   ErrStat,ErrMsg,'ParseArgs')
@@ -598,10 +607,11 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
       ELSEIF( ThisArgUC(1:Delim1) == "TSTEPS["      ) THEN
          TempReal = StringToReal( ThisArgUC(Delim1+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_None ) THEN
-            CLSettingsFlags%NumTimeSteps  = .TRUE.
-            CLSettings%NumTimeSteps       = nint(TempReal)
+            CLFlags%NumTimeSteps  = .TRUE.
+            CLSettings%NumTimeSteps       = nint(abs(TempReal))
          ELSE
-            CLSettingsFlags%NumTimeSteps  = .FALSE.
+            CLFlags%NumTimeSteps  = .FALSE.
+            CLSettings%NumTimeSteps = 1_IntKi
             IF ( ErrStat == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
                   ErrStat,ErrMsg,'ParseArgs')
@@ -618,10 +628,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
       ELSEIF( ThisArgUC(1:Delim1) == "TSTART["      ) THEN
          TempReal = StringToReal( ThisArgUC(Delim1+1:Delim2-1), ErrStat )
          IF ( ErrStat == ErrID_None ) THEN
-            CLSettingsFlags%TStart  = .TRUE.
+            CLFlags%TStart          = .TRUE.
             CLSettings%TStart       = abs(TempReal)
          ELSE
-            CLSettingsFlags%TStart  = .FALSE.
+            CLFlags%TStart          = .FALSE.
             IF ( ErrStat == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
                   ErrStat,ErrMsg,'ParseArgs')
@@ -635,9 +645,9 @@ SUBROUTINE RetrieveArgs( CLSettings, CLSettingsFlags, ErrStat, ErrMsg )
 
 
          ! "POINTS[FILE]"
-      ELSEIF( ThisArgUC(1:Delim1) == "POINTS["    ) THEN
-         CLSettingsFlags%PointsFile= .TRUE.
-         CLSettings%PointsFileName = ThisArgUC(Delim1+1:Delim2-1)
+      ELSEIF( ThisArgUC(1:Delim1)   == "POINTS["    ) THEN
+         CLFlags%PointsFile         = .TRUE.
+         CLSettings%PointsFileName  = ThisArg(Delim1+1:Delim2-1)
       ELSE
          ErrMsg  = " Unrecognized option: '"//SwChar//TRIM(ThisArg)//"'. Ignoring. Use option "//SwChar//"help for list of options."
          ErrStat = ErrID_Warn
@@ -679,8 +689,8 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    CHARACTER(1024)                                    :: DTChr                ! Character string for timesteps size (to handle DEFAULT value)
 
       ! Gridded data
-   INTEGER(IntKi)                                     :: TmpIntAr2(2)         ! Temporary array for reading in a pair of integer values from the input file
-   REAL(ReKi)                                         :: TmpRealAr2(2)        ! Temporary array for reading in a pair of real values from the input file
+   INTEGER(IntKi)                                     :: TmpIntAr3(3)         ! Temporary array for reading in a pair of integer values from the input file
+   REAL(ReKi)                                         :: TmpRealAr3(3)        ! Temporary array for reading in a pair of real values from the input file
    REAL(ReKi)                                         :: GridCtrCoord(3)      ! Center coordinate of the grid read in
 
 
@@ -835,7 +845,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
          !  make sure that it was appropriately interpretted.         
       READ (NumTimeStepsChr,*,IOSTAT=ErrStatTmp)   DvrSettings%NumTimeSteps
       IF ( ErrStatTmp /= ErrID_None )  THEN  ! problem in the read, so parse the error.
-         CALL CheckIOS ( ErrStatTmp, "", 'NumTimeSteps',NumType, .TRUE., ErrMsgTmp )
+         CALL CheckIOS ( ErrStatTmp, '', 'NumTimeSteps',NumType, .TRUE., ErrMsgTmp )
          RETURN
       ELSE     ! Was ok, so set the flags
          DvrFlags%NumTimeSteps         =  .TRUE.
@@ -865,8 +875,8 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
-   ELSE
-      DvrFlags%Summary  =  .TRUE.
+!   ELSE
+!      DvrFlags%Summary  =  .TRUE.
    ENDIF
 
 
@@ -878,8 +888,8 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
-   ELSE
-      DvrFlags%SummaryFile =  .TRUE.
+!   ELSE
+!      DvrFlags%SummaryFile =  .TRUE.
    ENDIF
 
 
@@ -917,7 +927,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
          !  make sure that it was appropriately interpretted.         
       READ (DTChr,*,IOSTAT=ErrStatTmp)   DvrSettings%DT
       IF ( ErrStatTmp /= ErrID_None )  THEN  ! problem in the read, so parse the error.
-         CALL CheckIOS ( ErrStatTmp, "", 'DT',NumType, .TRUE., ErrMsgTmp )
+         CALL CheckIOS ( ErrStatTmp, '', 'DT',NumType, .TRUE., ErrMsgTmp )
          RETURN
       ELSE     ! Was ok, so set the flags
          DvrFlags%DT         =  .TRUE.
@@ -925,32 +935,6 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ENDIF
    ENDIF
  
-
-      ! TurbineHeight    -- Height of the hub of the turbine.  Used for error checking (m).
-   CALL ReadVar( UnIn, FileName,DvrSettings%TurbineHeight,'TurbineHeight',' Height of the turbine hub (for checking only).',   &
-      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
-   IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
-      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   ELSE
-      DvrFlags%TurbineHeight   =  .TRUE.
-   ENDIF
-
-
-
-       ! Width    -- Width of the windfield needed.
-   CALL ReadVar( UnIn, FileName,DvrSettings%Width,'Width',' Width of windfield needed (estimate).',   &
-      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
-   IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
-      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   ELSE
-      DvrFlags%Width   =  .TRUE.
-   ENDIF
 
 
    !-------------------------------------------------------------------------------------------------
@@ -995,7 +979,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
          CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
-         RETURN
+        RETURN
       ENDIF
    ENDIF
  
@@ -1040,8 +1024,8 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ENDIF
 
          ! Read the DY and DZ stepsize
-      CALL ReadAry ( UnIn, FileName, TmpRealAr2, 2, 'GridDY, GridDZ', &
-         'GridDY, GridDZ', ErrStatTmp, ErrMsgTmp, UnEchoLocal)
+      CALL ReadAry ( UnIn, FileName, TmpRealAr3, 3, 'GridDX, GridDY, GridDZ', &
+         'GridDX, GridDY, GridDZ', ErrStatTmp, ErrMsgTmp, UnEchoLocal)
       IF ( ErrStat /= ErrID_None ) THEN
          CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
@@ -1050,16 +1034,17 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ENDIF
 
          ! Save the DY and DZ values
-      DvrSettings%GridDelta(2)   =  TmpRealAr2(1)     ! Y direction
-      DvrSettings%GridDelta(3)   =  TmpRealAr2(2)     ! Z direction
-      DvrFlags%Dx                =  .FALSE.           ! no x direction gridding
-      DvrFlags%Dy                =  .TRUE.            ! read in value for the Y direction gridding
-      DvrFlags%Dz                =  .TRUE.            ! read in value for the Z direction gridding
+      DvrSettings%GridDelta(1)   =  abs(TmpRealAr3(1))   ! X direction
+      DvrSettings%GridDelta(2)   =  abs(TmpRealAr3(2))   ! Y direction
+      DvrSettings%GridDelta(3)   =  abs(TmpRealAr3(3))   ! Z direction
+      DvrFlags%Dx                =  .TRUE.               ! read in value for the X direction gridding
+      DvrFlags%Dy                =  .TRUE.               ! read in value for the Y direction gridding
+      DvrFlags%Dz                =  .TRUE.               ! read in value for the Z direction gridding
 
 
          ! Read the number of points in the Y and Z directions
-      CALL ReadAry ( UnIn, FileName, TmpIntAr2, 2, 'GridNY, GridNZ', &
-         'GridNY, GridNZ', ErrStatTmp, ErrMsgTmp, UnEchoLocal)
+      CALL ReadAry ( UnIn, FileName, TmpIntAr3, 3, 'GridNx, GridNY, GridNZ', &
+         'GridNx, GridNY, GridNZ', ErrStatTmp, ErrMsgTmp, UnEchoLocal)
       IF ( ErrStat /= ErrID_None ) THEN
          CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
@@ -1068,8 +1053,12 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ENDIF
 
          ! Save the GridNY and GridNZ values
-      DvrSettings%GridN(2)   =  TmpIntAr2(1)          ! Y direction
-      DvrSettings%GridN(3)   =  TmpIntAr2(2)          ! Z direction
+      DvrSettings%GridN(1)   =  TmpIntAr3(1)          ! X direction
+      DvrSettings%GridN(2)   =  TmpIntAr3(2)          ! Y direction
+      DvrSettings%GridN(3)   =  TmpIntAr3(3)          ! Z direction
+      DvrFlags%XRange            =  .TRUE.               ! read in value for the X direction gridding
+      DvrFlags%YRange            =  .TRUE.               ! read in value for the Y direction gridding
+      DvrFlags%ZRange            =  .TRUE.               ! read in value for the Z direction gridding
 
    ELSE
          ! Skip the next three entries of the gridded data section.
@@ -1096,22 +1085,68 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ENDIF
    ENDIF
  
+      ! Check that valid values of Dx, Dy, and Dz were read in.
+      ! Check GridDx
+   IF ( EqualRealNos(DvrSettings%GridDelta(1), 0.0_ReKi) ) THEN
+      DvrFlags%Dx                =  .FALSE.
+      DvrFlags%XRange            =  .FALSE.
+      DvrSettings%GridDelta(1)   = 0.0_ReKi
+      CALL SetErrStat(ErrID_Warn,' Grid spacing in X direction is 0.  Ignoring.',ErrStat,ErrMsg,'ReadDvrIptFile')
+   ENDIF
+
+      ! Check GridDy
+   IF ( EqualRealNos(DvrSettings%GridDelta(2), 0.0_ReKi) ) THEN
+      DvrFlags%Dy                =  .FALSE.
+      DvrFlags%YRange            =  .FALSE.
+      DvrSettings%GridDelta(2)   = 0.0_ReKi
+      CALL SetErrStat(ErrID_Warn,' Grid spacing in Y direction is 0.  Ignoring.',ErrStat,ErrMsg,'ReadDvrIptFile')
+   ENDIF
+
+      ! Check GridDz
+   IF ( EqualRealNos(DvrSettings%GridDelta(3), 0.0_ReKi) ) THEN
+      DvrFlags%Dz                =  .FALSE.
+      DvrFlags%ZRange            =  .FALSE.
+      DvrSettings%GridDelta(3)   = 0.0_ReKi
+      CALL SetErrStat(ErrID_Warn,' Grid spacing in Z direction is 0.  Ignoring.',ErrStat,ErrMsg,'ReadDvrIptFile')
+   ENDIF
+
 
       ! Now need to set the XRange, YRange, and ZRange values based on what we read in
-      ! For the XRange, we don't have any depth (not allowed in the input file)
-   DvrSettings%XRange      =  GridCtrCoord(1)
+      ! For XRange, check that we have an actual value for the number of points
+   IF ( (DvrSettings%GridN(1) <= 0) .OR. (.NOT. DvrFlags%XRange) ) THEN
+      DvrSettings%XRange   =  GridCtrCoord(1)
+      DvrFlags%Dx          =  .FALSE.
+      DvrFlags%XRange      =  .FALSE.
+
+      IF ( DvrSettings%GridN(1) < 0 )  THEN
+         CALL SetErrStat(ErrID_Warn,' Negative number for number of grid points along X direction.  Ignoring.',ErrStat,ErrMsg, 'ReadDvrIptFile')
+      ELSE
+         CALL SetErrStat(ErrID_Warn,' No points along X direction.  Ignoring.',ErrStat,ErrMsg, 'ReadDvrIptFile')
+      ENDIF
+
+      DvrSettings%GridN(1) =  1_IntKi              ! Set to 1 for easier indexing.
+
+   ELSE
+         ! Set the XRange values
+      DvrSettings%XRange(1)   =  GridCtrCoord(1) - (REAL(DvrSettings%GridN(1) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(1)
+      DvrSettings%XRange(2)   =  GridCtrCoord(1) + (REAL(DvrSettings%GridN(1) - 1_IntKi ) / 2.0_ReKi ) * DvrSettings%GridDelta(1)
+      DvrFlags%XRange         =  .TRUE.
+   ENDIF
+
 
       ! For YRange, check that we have an actual value for the number of points
-   IF ( DvrSettings%GridN(2) <= 0 )  THEN
-      DvrSettings%YRange   =  abs(GridCtrCoord(2))       ! shouldn't have a negative value anyhow
+   IF ( (DvrSettings%GridN(2) <= 0) .OR. (.NOT. DvrFlags%YRange) ) THEN
+      DvrSettings%YRange   =  GridCtrCoord(2)
       DvrFlags%Dy          =  .FALSE.
-      DvrSettings%GridN(2) =  0_IntKi
+      DvrFlags%YRange      =  .FALSE.
 
       IF ( DvrSettings%GridN(2) < 0 )  THEN
          CALL SetErrStat(ErrID_Warn,' Negative number for number of grid points along Y direction.  Ignoring.',ErrStat,ErrMsg, 'ReadDvrIptFile')
       ELSE
          CALL SetErrStat(ErrID_Warn,' No points along Y direction.  Ignoring.',ErrStat,ErrMsg, 'ReadDvrIptFile')
       ENDIF
+
+      DvrSettings%GridN(2) =  1_IntKi              ! Set to 1 for easier indexing.
 
    ELSE
          ! Set the YRange values
@@ -1120,17 +1155,19 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       DvrFlags%YRange         =  .TRUE.
    ENDIF
 
-      ! For ZRange, check that we have an actual value for the number of points
-   IF ( DvrSettings%GridN(3) <= 0 )  THEN
+      ! For ZRange, check that we have an actual value for the number of points, set to ctr point if negative or zero.
+   IF ( (DvrSettings%GridN(3) <= 0) .OR. (.NOT. DvrFlags%ZRange) ) THEN
       DvrSettings%ZRange   =  abs(GridCtrCoord(3))       ! shouldn't have a negative value anyhow
       DvrFlags%Dz          =  .FALSE.
-      DvrSettings%GridN(3) =  0_IntKi
+      DvrFlags%ZRange      =  .FALSE.
 
       IF ( DvrSettings%GridN(3) < 0 )  THEN
          CALL SetErrStat(ErrID_Warn,' Negative number for number of grid points along Z direction.  Ignoring.',ErrStat,ErrMsg, 'ReadDvrIptFile')
       ELSE
          CALL SetErrStat(ErrID_Warn,' No points along Z direction.  Ignoring.',ErrStat,ErrMsg, 'ReadDvrIptFile')
       ENDIF
+
+      DvrSettings%GridN(3) =  1_IntKi              ! Set to 1 for easier indexing.
 
    ELSE
          ! Set the ZRange values
@@ -1189,205 +1226,207 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
 
       ! Initialize the error handling
    ErrStat     =  ErrID_None
-   ErrMsg      =  ""
+   ErrMsg      =  ''
    ErrStatTmp  =  ErrID_None
-   ErrMsgTmp   =  ""
+   ErrMsgTmp   =  ''
 
 
-      ! Due to the complexity, we are handling overwriting driver input file settings with
-      ! command line settings and the instance where no driver input file is read separately.
-   IF ( DVRIPT .AND. DvrFlags%WindGrid ) THEN
+!      ! Due to the complexity, we are handling overwriting driver input file settings with
+!      ! command line settings and the instance where no driver input file is read separately.
+!   IF ( DVRIPT .AND. DvrFlags%WindGrid ) THEN
 
-         !--------------------------------------------
-         !  Did we change any time information?
-         !--------------------------------------------
+      !--------------------------------------------
+      !  Did we change any time information?
+      !--------------------------------------------
 
-         !  Check TStart
-      IF ( CLFlags%TStart ) THEN
-         IF ( DvrFlags%TStart .AND. ( .NOT. EqualRealNos(DvrSettings%TStart, CLSettings%TStart) ) )   THEN
-            CALL SetErrStat( ErrID_Warn, ' Overriding driver input value for TStart with '//TRIM(Num2LStr(CLSettings%TStart))//'.', &
-               ErrStat,ErrMsg,'UpdateSettingsWithCL')
-         ELSE
-            DvrFlags%TStart   =  .TRUE.
-         ENDIF
-         DvrSettings%TStart   =  CLSettings%TStart
-      ENDIF
-
-         ! Check DT
-      IF ( CLFlags%DT ) THEN
-         IF ( DvrFlags%DT .AND. ( .NOT. EqualRealNos(DvrSettings%DT, CLSettings%DT) ) )   THEN
-            CALL SetErrStat( ErrID_Warn, ' Overriding driver input value for DT with '//TRIM(Num2LStr(CLSettings%DT))//'.',  &
-               ErrStat,ErrMsg,'UpdateSettingsWithCL')
-         ELSE
-            DvrFlags%DT   =  .TRUE.
-         ENDIF
-         DvrSettings%DT   =  CLSettings%DT
-      ENDIF
-
-         ! Check NumTimeSteps
-      IF ( CLFlags%NumTimeSteps ) THEN
-         IF ( DvrFlags%NumTimeSteps .AND. ( DvrSettings%NumTimeSteps /= CLSettings%NumTimeSteps ) )   THEN
-            CALL SetErrStat( ErrID_Warn, ' Overriding driver input value for NumTimeSteps with '//  &
-               TRIM(Num2LStr(CLSettings%NumTimeSteps))//'.',&
-               ErrStat,ErrMsg,'UpdateSettingsWithCL')
-         ELSE
-            DvrFlags%NumTimeSteps   =  .TRUE.
-         ENDIF
-         DvrSettings%NumTimeSteps   =  CLSettings%NumTimeSteps
-      ENDIF
-
-
-         !--------------------------------------------
-         ! Did we change the ranges for the WindGrid?
-         !--------------------------------------------
-
-         ! XRange -- The xrange calculations are a little different than the other two ranges.  The Xrange can only be specified
-         !           from the command line.  In order for it to work, we need both an XRange and Dx.  Otherwise we will ignore
-         !           this setting.
-         !
-         !     XRange      Dx       What to change
-         !        y        n        Nothing.  Cannot calculate since no Dx or Nx values from driver input
-         !        n        y        Nothing.  Cannot calculate since no XRange or Nx values from driver input
-         !        y        y        Calculate Nx from XRange and Dx, reset XRange(2) after calculating (extend
-         !                          a bit if necessary).  Also set WindGrid to true if it is false.
-         !        n        n        Nothing.
-         !
-
-      IF       ( CLFlags%XRange .AND. ( .NOT. CLFlags%Dx ) )   THEN
-
-            ! Only the XRange was specfied, so throw warning and don't change anything.
-         CALL SetErrStat( ErrID_Warn, ' XRange argument given, but no Dx.  Ignoring since no points to calculate.',  &
+      !  Check TStart
+   IF ( CLFlags%TStart ) THEN
+      IF ( DvrFlags%TStart .AND. ( .NOT. EqualRealNos(DvrSettings%TStart, CLSettings%TStart) ) )   THEN
+         CALL SetErrStat( ErrID_Warn, ' Overriding driver input value for TStart with '//TRIM(Num2LStr(CLSettings%TStart))//'.', &
             ErrStat,ErrMsg,'UpdateSettingsWithCL')
-         DvrFlags%XRange   =  .FALSE.     ! Should already be false, but just in case
-         DvrFlags%Dx       =  .FALSE.     ! Should already be false, but just in case
+      ELSE
+         DvrFlags%TStart   =  .TRUE.
+      ENDIF
+      DvrSettings%TStart   =  CLSettings%TStart
+   ENDIF
 
-      ELSEIF   ( ( .NOT. CLFlags%XRange ) .AND. CLFlags%Dx )   THEN
-
-            ! Only Dx was specfied, so throw warning and don't change anything.
-         CALL SetErrStat( ErrID_Warn, ' Dx argument given, but no XRange.  Ignoring since no points to calculate.',  &
+      ! Check DT
+   IF ( CLFlags%DT ) THEN
+      IF ( DvrFlags%DT .AND. ( .NOT. EqualRealNos(DvrSettings%DT, CLSettings%DT) ) )   THEN
+         CALL SetErrStat( ErrID_Warn, ' Overriding driver input value for DT with '//TRIM(Num2LStr(CLSettings%DT))//'.',  &
             ErrStat,ErrMsg,'UpdateSettingsWithCL')
-         DvrFlags%XRange   =  .FALSE.     ! Should already be false, but just in case
-         DvrFlags%Dx       =  .FALSE.     ! Should already be false, but just in case
+      ELSE
+         DvrFlags%DT   =  .TRUE.
+      ENDIF
+      DvrSettings%DT   =  CLSettings%DT
+   ENDIF
 
-      ELSEIF   ( CLFlags%XRange .AND. CLFlags%Dx ) THEN
+      ! Check NumTimeSteps
+   IF ( CLFlags%NumTimeSteps ) THEN
+      IF ( DvrFlags%NumTimeSteps .AND. ( DvrSettings%NumTimeSteps /= CLSettings%NumTimeSteps ) )   THEN
+         CALL SetErrStat( ErrID_Warn, ' Overriding driver input value for NumTimeSteps with '//  &
+            TRIM(Num2LStr(CLSettings%NumTimeSteps))//'.',&
+            ErrStat,ErrMsg,'UpdateSettingsWithCL')
+      ELSE
+         DvrFlags%NumTimeSteps   =  .TRUE.
+      ENDIF
+      DvrSettings%NumTimeSteps   =  CLSettings%NumTimeSteps
+   ENDIF
 
-         DvrFlags%Dx       =  .TRUE.
-         DvrFlags%XRange   =  .TRUE.
+      ! Make sure there is at least one timestep
+   DvrSettings%NumTimeSteps   =  MAX(DvrSettings%NumTimeSteps,1_IntKi)
+
+
+      !--------------------------------------------
+      ! Did we change the ranges for the WindGrid?
+      !--------------------------------------------
+
+      ! XRange -- There are three bits of information required for the full specification of the Y
+      !           data: Dx, XRange, and Ny (the number of steps).  In the driver input file, Dx and Ny are
+      !           given, and XRange is calculated using the specified center point.  From the command line,
+      !           Dx, and XRange are specified.
+      !           In order for the command line values to be used, we must know which were specified or not
+      !           as it will change the values we use for calculating.  
+      !
+      !  First, check if WindGrid is set.  If not, set it.
+      !
+      !     XRange      Dx       What to change
+      !        y        n        Assume Dx good.  Calculate new Ny.  Increase XRange(2) if necessary and warn.
+      !        n        y        Assume XRange good (if Ny == 0, issue warning about no points, set to none)
+      !        y        y        Calculate Nx from XRange and Dx, reset XRange(2) after calculating (extend
+      !                          a bit if necessary).  Also set WindGrid to true if it is false.
+      !        n        n        Nothing.
+      !
+
+   IF       ( CLFlags%XRange .AND. ( .NOT. CLFlags%Dx ) )   THEN
+
+      DvrFlags%Dx       =  .TRUE.
+      DvrFlags%XRange   =  .TRUE.
+      WindGridModify    =  .TRUE.
+
+         ! Calculate new Nx.
+      DvrSettings%XRange(1)      =  minval(CLSettings%XRange)     ! just in case the order is funky
+      DvrSettings%XRange(2)      =  maxval(CLSettings%XRange)
+      
+         ! Set number of points in X direction
+      DvrSettings%GridN(1) =  CEILING( abs( ( DvrSettings%XRange(2) - DvrSettings%XRange(1) ) / DvrSettings%GridDelta(1) ) + 1_IntKi )
+
+         ! Now adjust the upper limit of the range slightly for the integer number of steps
+      DvrSettings%XRange(2)=  DvrSettings%XRange(1)   + ( DvrSettings%GridN(1) - 1_IntKi ) * DvrSettings%GridDelta(2)
+
+         ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
+      IF ( .NOT. EqualRealNos(DvrSettings%XRange(2),maxval(CLSettings%XRange)) )  THEN
+         CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of XRange to '//TRIM(Num2LStr(DvrSettings%XRange(2)))//   &
+            ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(1)))//' points with a requested spacing '//       &
+            TRIM(Num2LStr(DvrSettings%GridDelta(1)))//'.',                                                           &
+            ErrStat,ErrMsg,'UpdateSettingsWithCL')
+      ENDIF
+
+
+!         ! Only the XRange was specfied, so throw warning and don't change anything.
+!      CALL SetErrStat( ErrID_Warn, ' XRange argument given, but no Dx.  Ignoring since no points to calculate.',  &
+!         ErrStat,ErrMsg,'UpdateSettingsWithCL')
+!      DvrFlags%XRange   =  .FALSE.     ! Should already be false, but just in case
+!      DvrFlags%Dx       =  .FALSE.     ! Should already be false, but just in case
+
+   ELSEIF   ( ( .NOT. CLFlags%XRange ) .AND. CLFlags%Dx )   THEN
+
+         ! Only Dx was specfied, so throw warning and don't change anything.
+      CALL SetErrStat( ErrID_Warn, ' Dx argument given, but no XRange.  Ignoring since no points to calculate.',  &
+         ErrStat,ErrMsg,'UpdateSettingsWithCL')
+      DvrFlags%XRange   =  .FALSE.     ! Should already be false, but just in case
+      DvrFlags%Dx       =  .FALSE.     ! Should already be false, but just in case
+
+   ELSEIF   ( CLFlags%XRange .AND. CLFlags%Dx ) THEN
+
+      DvrFlags%Dx       =  .TRUE.
+      DvrFlags%XRange   =  .TRUE.
+      WindGridModify    =  .TRUE.
+
+         ! Copy over the range and stepsize
+      DvrSettings%XRange(1)      =  minval(CLSettings%XRange)     ! just in case the order is funky
+      DvrSettings%XRange(2)      =  maxval(CLSettings%XRange)
+      DvrSettings%GridDelta(1)   =  abs(CLSettings%GridDelta(1))  ! just in case there was a negative number
+
+         ! Set number of points in X direction
+      DvrSettings%GridN(1) =  CEILING( abs( ( DvrSettings%XRange(2) - DvrSettings%XRange(1) ) / DvrSettings%GridDelta(1) ) + 1_IntKi )
+
+         ! Now adjust the upper limit of the range slightly for the integer number of steps
+      DvrSettings%XRange(2)=  DvrSettings%XRange(1)   + ( DvrSettings%GridN(1) - 1_IntKi ) * DvrSettings%GridDelta(1)
+
+         ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
+      IF ( .NOT. EqualRealNos(DvrSettings%XRange(2),maxval(CLSettings%XRange)) )  THEN
+         CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of XRange to '//TRIM(Num2LStr(DvrSettings%XRange(2)))//   &
+            ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(1)))//' points with a requested spacing '//       &
+            TRIM(Num2LStr(DvrSettings%GridDelta(1)))//'.',                                                           &
+            ErrStat,ErrMsg,'UpdateSettingsWithCL')
+      ENDIF
+
+   ELSE
+      ! Nothing was specified, so we don't do anything
+   ENDIF
+
+
+
+      ! YRange -- There are three bits of information required for the full specification of the Y
+      !           data: Dy, YRange, and Ny (the number of steps).  In the driver input file, Dy and Ny are
+      !           given, and YRange is calculated using the specified center point.  From the command line,
+      !           Dy, and YRange are specified.
+      !           In order for the command line values to be used, we must know which were specified or not
+      !           as it will change the values we use for calculating.  
+      !
+      !  First, check if WindGrid is set.  If not, set it.
+      !
+      !     YRange      Dy       What to change
+      !        y        n        Assume Dy good.  Calculate new Ny.  Increase YRange(2) if necessary and warn.
+      !        n        y        Assume YRange good (if Ny == 0, issue warning about no points, set to none)
+      !        y        y        Calculate new Ny.  Increase Yrange(2) if necessary and warn.
+      !        n        n        Nothing to do. leave alone.
+      !
+
+   IF       ( CLFlags%YRange .AND. ( .NOT. CLFlags%Dy ) )   THEN
+
+      DvrFlags%Dy       =  .TRUE.
+      DvrFlags%YRange   =  .TRUE.
+      WindGridModify    =  .TRUE.
+
+         ! Calculate new Ny.
+      DvrSettings%YRange(1)      =  minval(CLSettings%YRange)     ! just in case the order is funky
+      DvrSettings%YRange(2)      =  maxval(CLSettings%YRange)
+      
+         ! Set number of points in Y direction
+      DvrSettings%GridN(2) =  CEILING( abs( ( DvrSettings%YRange(2) - DvrSettings%YRange(1) ) / DvrSettings%GridDelta(2) ) + 1_IntKi )
+
+         ! Now adjust the upper limit of the range slightly for the integer number of steps
+      DvrSettings%YRange(2)=  DvrSettings%YRange(1)   + ( DvrSettings%GridN(2) - 1_IntKi ) * DvrSettings%GridDelta(2)
+
+         ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
+      IF ( .NOT. EqualRealNos(DvrSettings%YRange(2),maxval(CLSettings%YRange)) )  THEN
+         CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of YRange to '//TRIM(Num2LStr(DvrSettings%YRange(2)))//   &
+            ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(2)))//' points with a requested spacing '//       &
+            TRIM(Num2LStr(DvrSettings%GridDelta(2)))//'.',                                                           &
+            ErrStat,ErrMsg,'UpdateSettingsWithCL')
+      ENDIF
+
+   ELSEIF   ( ( .NOT. CLFlags%YRange ) .AND. CLFlags%Dy )   THEN
+
+         ! Make sure we have points to calculate
+      IF ( DvrSettings%GridN(2)  == 0 )   THEN
+            ! We only issue this warning.
+         CALL SetErrStat( ErrID_Warn,' No points specified in driver input file for Y direction.  Ignoring Dy input.',  &
+            ErrStat,ErrMsg,'UpdateSettingsWithCL')
+         DvrFlags%Dy       =  .FALSE.
+         DvrFlags%YRange   =  .FALSE.
+      ELSE
+
+         DvrFlags%Dy       =  .TRUE.
+         DvrFlags%YRange   =  .TRUE.
          WindGridModify    =  .TRUE.
 
-            ! Copy over the range and stepsize
-         DvrSettings%XRange(1)      =  minval(CLSettings%XRange)     ! just in case the order is funky
-         DvrSettings%XRange(2)      =  maxval(CLSettings%XRange)
-         DvrSettings%GridDelta(1)   =  abs(CLSettings%GridDelta(1))  ! just in case there was a negative number
-
-            ! Set number of points in X direction
-         DvrSettings%GridN(1) =  CEILING( abs( ( DvrSettings%XRange(2) - DvrSettings%XRange(1) ) / DvrSettings%GridDelta(1) ) + 1_IntKi )
-
-            ! Now adjust the upper limit of the range slightly for the integer number of steps
-         DvrSettings%XRange(2)=  DvrSettings%XRange(1)   + ( DvrSettings%GridN(1) - 1_IntKi ) * DvrSettings%GridDelta(1)
-
-            ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
-         IF ( .NOT. EqualRealNos(DvrSettings%XRange(2),maxval(CLSettings%XRange)) )  THEN
-            CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of XRange to '//TRIM(Num2LStr(DvrSettings%XRange(2)))//   &
-               ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(1)))//' points with a requested spacing '//       &
-               TRIM(Num2LStr(DvrSettings%GridDelta(1)))//'.',                                                           &
-               ErrStat,ErrMsg,'UpdateSettingsWithCL')
-         ENDIF
-
-      ELSE
-         ! Nothing was specified, so we don't do anything
-      ENDIF
-
-
-
-         ! YRange -- There are three bits of information required for the full specification of the Y
-         !           data: Dy, YRange, and Ny (the number of steps).  In the driver input file, Dy and Ny are
-         !           given, and YRange is calculated using the specified center point.  From the command line,
-         !           Dy, and YRange are specified.
-         !           In order for the command line values to be used, we must know which were specified or not
-         !           as it will change the values we use for calculating.  
-         !
-         !  First, check if WindGrid is set.  If not, set it.
-         !
-         !     YRange      Dy       What to change
-         !        y        n        Assume Dy good.  Calculate new Ny.  Increase YRange(2) if necessary and warn.
-         !        n        y        Assume YRange good (if Ny == 0, issue warning about no points, set to none)
-         !        y        y        Calculate new Ny.  Increase Yrange(2) if necessary and warn.
-         !        n        n        Nothing to do. leave alone.
-         !
-
-      IF       ( CLFlags%YRange .AND. ( .NOT. CLFlags%Dy ) )   THEN
-
-         IF ( .NOT. DvrFlags%Dy )         DvrFlags%Dy       =  .TRUE.
-         IF ( .NOT. DvrFlags%YRange )     DvrFlags%YRange   =  .TRUE.
-         IF ( .NOT. WindGridModify )      WindGridModify    =  .TRUE.
-
-            ! Calculate new Ny.
-         DvrSettings%YRange(1)      =  minval(CLSettings%YRange)     ! just in case the order is funky
-         DvrSettings%YRange(2)      =  maxval(CLSettings%YRange)
-         
-            ! Set number of points in Y direction
-         DvrSettings%GridN(2) =  CEILING( abs( ( DvrSettings%YRange(2) - DvrSettings%YRange(1) ) / DvrSettings%GridDelta(2) ) + 1_IntKi )
-
-            ! Now adjust the upper limit of the range slightly for the integer number of steps
-         DvrSettings%YRange(2)=  DvrSettings%YRange(1)   + ( DvrSettings%GridN(2) - 1_IntKi ) * DvrSettings%GridDelta(2)
-
-            ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
-         IF ( .NOT. EqualRealNos(DvrSettings%YRange(2),maxval(CLSettings%YRange)) )  THEN
-            CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of YRange to '//TRIM(Num2LStr(DvrSettings%YRange(2)))//   &
-               ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(2)))//' points with a requested spacing '//       &
-               TRIM(Num2LStr(DvrSettings%GridDelta(2)))//'.',                                                           &
-               ErrStat,ErrMsg,'UpdateSettingsWithCL')
-         ENDIF
-
-      ELSEIF   ( ( .NOT. CLFlags%YRange ) .AND. CLFlags%Dy )   THEN
-
-            ! Make sure we have points to calculate
-         IF ( DvrSettings%GridN(2)  == 0 )   THEN
-               ! We only issue this warning.
-            CALL SetErrStat( ErrID_Warn,' No points specified in driver input file for Y direction.  Ignoring Dy input.',  &
-               ErrStat,ErrMsg,'UpdateSettingsWithCL')
-            DvrFlags%Dy       =  .FALSE.
-            DvrFlags%YRange   =  .FALSE.
-         ELSE
-
-            IF ( .NOT. DvrFlags%Dy )         DvrFlags%Dy       =  .TRUE.
-            IF ( .NOT. DvrFlags%YRange )     DvrFlags%YRange   =  .TRUE.
-            IF ( .NOT. WindGridModify )      WindGridModify    =  .TRUE.
-
-               ! Save the Dy value
-            DvrSettings%GridDelta(2)   =  abs(CLSettings%GridDelta(2))  ! just in case there was a negative number
-
-               ! Calculate the new value of Ny
-            DvrSettings%GridN(2) =  CEILING( abs( ( DvrSettings%YRange(2) - DvrSettings%YRange(1) ) / DvrSettings%GridDelta(2) ) + 1_IntKi )
-
-               ! Now adjust the upper limit of the range slightly for the integer number of steps
-            DvrSettings%YRange(2)=  DvrSettings%YRange(1)   + ( DvrSettings%GridN(2) - 1_IntKi ) * DvrSettings%GridDelta(2)
-
-               ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
-            IF ( .NOT. EqualRealNos(DvrSettings%YRange(2),maxval(CLSettings%YRange)) )  THEN
-               CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of YRange to '//TRIM(Num2LStr(DvrSettings%YRange(2)))//   &
-                  ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(2)))//' points with a requested spacing '//       &
-                  TRIM(Num2LStr(DvrSettings%GridDelta(2)))//'.',                                                           &
-                  ErrStat,ErrMsg,'UpdateSettingsWithCL')
-            ENDIF
-
-         ENDIF
-
-
-      ELSEIF   ( CLFlags%YRange .AND. CLFlags%Dy ) THEN
-
-            ! Set flags if not already set
-         IF ( .NOT. DvrFlags%Dy )         DvrFlags%Dy       =  .TRUE.
-         IF ( .NOT. DvrFlags%YRange )     DvrFlags%YRange   =  .TRUE.
-         IF ( .NOT. WindGridModify )      WindGridModify    =  .TRUE.
-
-            ! Copy over the range and stepsize
-         DvrSettings%YRange(1)      =  minval(CLSettings%YRange)     ! just in case the order is funky
-         DvrSettings%YRange(2)      =  maxval(CLSettings%YRange)
+            ! Save the Dy value
          DvrSettings%GridDelta(2)   =  abs(CLSettings%GridDelta(2))  ! just in case there was a negative number
 
-            ! Set number of points in Y direction
+            ! Calculate the new value of Ny
          DvrSettings%GridN(2) =  CEILING( abs( ( DvrSettings%YRange(2) - DvrSettings%YRange(1) ) / DvrSettings%GridDelta(2) ) + 1_IntKi )
 
             ! Now adjust the upper limit of the range slightly for the integer number of steps
@@ -1401,87 +1440,87 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
                ErrStat,ErrMsg,'UpdateSettingsWithCL')
          ENDIF
 
-      ELSE
-         ! Nothing was specified, so we don't do anything
       ENDIF
 
 
+   ELSEIF   ( CLFlags%YRange .AND. CLFlags%Dy ) THEN
+
+         ! Set flags if not already set
+      DvrFlags%Dy       =  .TRUE.
+      DvrFlags%YRange   =  .TRUE.
+      WindGridModify    =  .TRUE.
+
+         ! Copy over the range and stepsize
+      DvrSettings%YRange(1)      =  minval(CLSettings%YRange)     ! just in case the order is funky
+      DvrSettings%YRange(2)      =  maxval(CLSettings%YRange)
+      DvrSettings%GridDelta(2)   =  abs(CLSettings%GridDelta(2))  ! just in case there was a negative number
+
+         ! Set number of points in Y direction
+      DvrSettings%GridN(2) =  CEILING( abs( ( DvrSettings%YRange(2) - DvrSettings%YRange(1) ) / DvrSettings%GridDelta(2) ) + 1_IntKi )
+
+         ! Now adjust the upper limit of the range slightly for the integer number of steps
+      DvrSettings%YRange(2)=  DvrSettings%YRange(1)   + ( DvrSettings%GridN(2) - 1_IntKi ) * DvrSettings%GridDelta(2)
+
+         ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
+      IF ( .NOT. EqualRealNos(DvrSettings%YRange(2),maxval(CLSettings%YRange)) )  THEN
+         CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of YRange to '//TRIM(Num2LStr(DvrSettings%YRange(2)))//   &
+            ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(2)))//' points with a requested spacing '//       &
+            TRIM(Num2LStr(DvrSettings%GridDelta(2)))//'.',                                                           &
+            ErrStat,ErrMsg,'UpdateSettingsWithCL')
+      ENDIF
+
+   ELSE
+      ! Nothing was specified, so we don't do anything
+   ENDIF
 
 
-         ! ZRange / Dz  -- This is processed exactly the same as for YRange.
-
-      IF       ( CLFlags%ZRange .AND. ( .NOT. CLFlags%Dz ) )   THEN
-
-         IF ( .NOT. DvrFlags%Dz )         DvrFlags%Dz       =  .TRUE.
-         IF ( .NOT. DvrFlags%ZRange )     DvrFlags%ZRange   =  .TRUE.
-         IF ( .NOT. WindGridModify )      WindGridModify    =  .TRUE.
-
-            ! Calculate new Ny.
-         DvrSettings%ZRange(1)      =  minval(CLSettings%ZRange)     ! just in case the order is funky
-         DvrSettings%ZRange(2)      =  maxval(CLSettings%ZRange)
-         
-            ! Set number of points in Y direction
-         DvrSettings%GridN(3) =  CEILING( abs( ( DvrSettings%ZRange(2) - DvrSettings%ZRange(1) ) / DvrSettings%GridDelta(3) ) + 1_IntKi )
-
-            ! Now adjust the upper limit of the range slightly for the integer number of steps
-         DvrSettings%ZRange(2)=  DvrSettings%ZRange(1)   + ( DvrSettings%GridN(3) - 1_IntKi ) * DvrSettings%GridDelta(3)
-
-            ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
-         IF ( .NOT. EqualRealNos(DvrSettings%ZRange(2),maxval(CLSettings%ZRange)) )  THEN
-            CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of ZRange to '//TRIM(Num2LStr(DvrSettings%ZRange(2)))//   &
-               ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(3)))//' points with a requested spacing '//       &
-               TRIM(Num2LStr(DvrSettings%GridDelta(3)))//'.',                                                           &
-               ErrStat,ErrMsg,'UpdateSettingsWithCL')
-         ENDIF
-
-      ELSEIF   ( ( .NOT. CLFlags%ZRange ) .AND. CLFlags%Dz )   THEN
-
-            ! Make sure we have points to calculate
-         IF ( DvrSettings%GridN(3)  == 0 )   THEN
-               ! We only issue this warning.
-            CALL SetErrStat( ErrID_Warn,' No points specified in driver input file for Z direction.  Ignoring Dz input.',  &
-               ErrStat,ErrMsg,'UpdateSettingsWithCL')
-            DvrFlags%Dz       =  .FALSE.
-            DvrFlags%ZRange   =  .FALSE.
-         ELSE
-
-            IF ( .NOT. DvrFlags%Dz )         DvrFlags%Dz       =  .TRUE.
-            IF ( .NOT. DvrFlags%ZRange )     DvrFlags%ZRange   =  .TRUE.
-            IF ( .NOT. WindGridModify )      WindGridModify    =  .TRUE.
-
-               ! Save the Dz value
-            DvrSettings%GridDelta(3)   =  abs(CLSettings%GridDelta(3))  ! just in case there was a negative number
-
-               ! Calculate the new value of Ny
-            DvrSettings%GridN(3) =  CEILING( abs( ( DvrSettings%ZRange(2) - DvrSettings%ZRange(1) ) / DvrSettings%GridDelta(3) ) + 1_IntKi )
-
-               ! Now adjust the upper limit of the range slightly for the integer number of steps
-            DvrSettings%ZRange(2)=  DvrSettings%ZRange(1)   + ( DvrSettings%GridN(3) - 1_IntKi ) * DvrSettings%GridDelta(3)
-
-               ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
-            IF ( .NOT. EqualRealNos(DvrSettings%ZRange(2),maxval(CLSettings%ZRange)) )  THEN
-               CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of ZRange to '//TRIM(Num2LStr(DvrSettings%ZRange(2)))//   &
-                  ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(3)))//' points with a requested spacing '//       &
-                  TRIM(Num2LStr(DvrSettings%GridDelta(3)))//'.',                                                           &
-                  ErrStat,ErrMsg,'UpdateSettingsWithCL')
-            ENDIF
-
-         ENDIF
 
 
-      ELSEIF   ( CLFlags%ZRange .AND. CLFlags%Dz ) THEN
+      ! ZRange / Dz  -- This is processed exactly the same as for YRange.
 
-            ! Set flags if not already set
-         IF ( .NOT. DvrFlags%Dz )         DvrFlags%Dz       =  .TRUE.
-         IF ( .NOT. DvrFlags%ZRange )     DvrFlags%ZRange   =  .TRUE.
-         IF ( .NOT. WindGridModify )      WindGridModify    =  .TRUE.
+   IF       ( CLFlags%ZRange .AND. ( .NOT. CLFlags%Dz ) )   THEN
 
-            ! Copy over the range and stepsize
-         DvrSettings%ZRange(1)      =  minval(CLSettings%ZRange)     ! just in case the order is funky
-         DvrSettings%ZRange(2)      =  maxval(CLSettings%ZRange)
+      DvrFlags%Dz       =  .TRUE.
+      DvrFlags%ZRange   =  .TRUE.
+      WindGridModify    =  .TRUE.
+
+         ! Calculate new Ny.
+      DvrSettings%ZRange(1)      =  minval(CLSettings%ZRange)     ! just in case the order is funky
+      DvrSettings%ZRange(2)      =  maxval(CLSettings%ZRange)
+      
+         ! Set number of points in Y direction
+      DvrSettings%GridN(3) =  CEILING( abs( ( DvrSettings%ZRange(2) - DvrSettings%ZRange(1) ) / DvrSettings%GridDelta(3) ) + 1_IntKi )
+
+         ! Now adjust the upper limit of the range slightly for the integer number of steps
+      DvrSettings%ZRange(2)=  DvrSettings%ZRange(1)   + ( DvrSettings%GridN(3) - 1_IntKi ) * DvrSettings%GridDelta(3)
+
+         ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
+      IF ( .NOT. EqualRealNos(DvrSettings%ZRange(2),maxval(CLSettings%ZRange)) )  THEN
+         CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of ZRange to '//TRIM(Num2LStr(DvrSettings%ZRange(2)))//   &
+            ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(3)))//' points with a requested spacing '//       &
+            TRIM(Num2LStr(DvrSettings%GridDelta(3)))//'.',                                                           &
+            ErrStat,ErrMsg,'UpdateSettingsWithCL')
+      ENDIF
+
+   ELSEIF   ( ( .NOT. CLFlags%ZRange ) .AND. CLFlags%Dz )   THEN
+
+         ! Make sure we have points to calculate
+      IF ( DvrSettings%GridN(3)  == 0 )   THEN
+            ! We only issue this warning.
+         CALL SetErrStat( ErrID_Warn,' No points specified in driver input file for Z direction.  Ignoring Dz input.',  &
+            ErrStat,ErrMsg,'UpdateSettingsWithCL')
+         DvrFlags%Dz       =  .FALSE.
+         DvrFlags%ZRange   =  .FALSE.
+      ELSE
+
+         DvrFlags%Dz       =  .TRUE.
+         DvrFlags%ZRange   =  .TRUE.
+         WindGridModify    =  .TRUE.
+
+            ! Save the Dz value
          DvrSettings%GridDelta(3)   =  abs(CLSettings%GridDelta(3))  ! just in case there was a negative number
 
-            ! Set number of points in Y direction
+            ! Calculate the new value of Ny
          DvrSettings%GridN(3) =  CEILING( abs( ( DvrSettings%ZRange(2) - DvrSettings%ZRange(1) ) / DvrSettings%GridDelta(3) ) + 1_IntKi )
 
             ! Now adjust the upper limit of the range slightly for the integer number of steps
@@ -1495,57 +1534,124 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
                ErrStat,ErrMsg,'UpdateSettingsWithCL')
          ENDIF
 
+      ENDIF
+
+
+   ELSEIF   ( CLFlags%ZRange .AND. CLFlags%Dz ) THEN
+
+         ! Set flags if not already set
+      DvrFlags%Dz       =  .TRUE.
+      DvrFlags%ZRange   =  .TRUE.
+      WindGridModify    =  .TRUE.
+
+         ! Copy over the range and stepsize
+      DvrSettings%ZRange(1)      =  minval(CLSettings%ZRange)     ! just in case the order is funky
+      DvrSettings%ZRange(2)      =  maxval(CLSettings%ZRange)
+      DvrSettings%GridDelta(3)   =  abs(CLSettings%GridDelta(3))  ! just in case there was a negative number
+
+         ! Set number of points in Y direction
+      DvrSettings%GridN(3) =  CEILING( abs( ( DvrSettings%ZRange(2) - DvrSettings%ZRange(1) ) / DvrSettings%GridDelta(3) ) + 1_IntKi )
+
+         ! Now adjust the upper limit of the range slightly for the integer number of steps
+      DvrSettings%ZRange(2)=  DvrSettings%ZRange(1)   + ( DvrSettings%GridN(3) - 1_IntKi ) * DvrSettings%GridDelta(3)
+
+         ! Now issue a warning if we had to change the upper limit, otherwise silently adopt it.
+      IF ( .NOT. EqualRealNos(DvrSettings%ZRange(2),maxval(CLSettings%ZRange)) )  THEN
+         CALL SetErrStat(ErrID_Warn,' Adjusted upper limit of ZRange to '//TRIM(Num2LStr(DvrSettings%ZRange(2)))//   &
+            ' so that there are '//TRIM(Num2LStr(DvrSettings%GridN(3)))//' points with a requested spacing '//       &
+            TRIM(Num2LStr(DvrSettings%GridDelta(3)))//'.',                                                           &
+            ErrStat,ErrMsg,'UpdateSettingsWithCL')
+      ENDIF
+
+   ELSE
+      ! Nothing was specified, so we don't do anything
+   ENDIF
+
+
+
+      !--------------------------------------------
+      ! Did we change the FFT info?
+      !--------------------------------------------
+      
+   IF ( CLFlags%FFTcalc ) THEN
+         !
+      IF ( CLSettings%FFTcoord(3) <= 0.0_ReKi ) THEN
+         CALL SetErrStat( ErrID_Warn,' FFT coordinate ['//TRIM(Num2LStr(CLSettings%FFTcoord(1)))//','//  &
+            TRIM(Num2LStr(CLSettings%FFTcoord(1)))//','//TRIM(Num2LStr(CLSettings%FFTcoord(1)))//        &
+            '] is at or below ground level where there is no wind.  Ingoring.',   &
+            ErrStat,ErrMsg,'UpdateSettingsWithCL' )
+         DvrFlags%FFTcalc     =  .FALSE.
       ELSE
-         ! Nothing was specified, so we don't do anything
+            ! If we are overriding driver input file settings, tell user
+         IF ( DvrFlags%FFTcalc ) THEN
+            CALL SetErrStat( ErrID_Warn,' Overriding driver input file settings for FFT calculation.',   &
+               ErrStat,ErrMsg,'UpdateSettingsWithCL' )
+         ENDIF
+         DvrSettings%FFTcoord =  CLSettings%FFTcoord
+         DvrFlags%FFTcalc     =  .TRUE.
+      ENDIF
+
+   ENDIF
+
+      !--------------------------------------------
+      ! Did we request a summary file?
+      !--------------------------------------------
+
+   IF ( CLFlags%Summary ) THEN
+      DvrFlags%Summary  =  .TRUE.
+   ENDIF
+
+      !--------------------------------------------
+      ! Did we request a different Points file?
+      !--------------------------------------------
+
+   IF ( CLFlags%PointsFile ) THEN
+         ! If a name was given in the driver input file, then warn the user.  At present
+         ! the driver input file does not support the points file option, but this test will
+         ! remain in case the feature is added later.
+      IF ( DvrFlags%PointsFile ) THEN
+         CALL SetErrStat( ErrID_Warn,' Overriding driver input file settings for Points file.',  &
+            ErrStat,ErrMsg,'UpdateSettingsWithCL' )
+      ENDIF
+      DvrFlags%PointsFile        =  .TRUE.
+      DvrSettings%PointsFileName =  CLSettings%PointsFileName
+   ENDIF
+
+
+
+      !--------------------------------------------
+      ! If there was no driver input file, we need to set a few things.
+      !--------------------------------------------
+
+   IF ( .NOT. DVRIPT ) THEN
+
+         ! Do we need to set the NumTimeStepsDefault flag?
+      IF ( .NOT. DvrFlags%NumTimeSteps )  THEN
+         DvrFlags%NumTimeStepsDefault  =  .TRUE.
+         CALL SetErrStat( ErrID_Info,' The number of timesteps is not specified.  Defaulting to what is in the wind file.', &
+            ErrStat,ErrMsg,'UpdateSettingsWithCL')
+      ENDIF
+
+         ! Do we need to set the DTDefault flag?
+      IF ( .NOT. DvrFlags%DT )  THEN
+         DvrFlags%DTDefault  =  .TRUE.
+         CALL SetErrStat( ErrID_Info,' The timestep size is not specified.  Defaulting to what is in the wind file.', &
+            ErrStat,ErrMsg,'UpdateSettingsWithCL')
       ENDIF
 
 
-
-
-
-
-
-         !--------------------------------------------
-         ! Did we change the FFT info?
-         !--------------------------------------------
-
-         !--------------------------------------------
-         ! Did we request a summary file?
-         !--------------------------------------------
-
-         !--------------------------------------------
-         ! Did we request a different Points file?
-         !--------------------------------------------
-
-
-
-
-         ! Did we modify any of the WindGrid information?
-      IF ( WindGridModify ) THEN
-         !FIXME: do something here
+!FIXME:  Anything else?
+      IF ( .NOT. DvrFlags%ZRange ) THEN
+         DvrSettings%ZRange   =  50.0
+         CALL SetErrStat( ErrID_Info,' ZRange not set.  Using value of 50.0.',   &
+            ErrStat,ErrMsg,'UpdateSettingsWithCL')
       ENDIF
+   ENDIF
 
 
-
-   ELSE  ! No driver input file was read, or WindGrid was not set, so we have to populate a few extra things.
-
-         ! Time settings
-
-
-!FIXME: impose these restrictions either here or at the driver level.
-         ! XRange -- if not specified on input, will need to assume only at x=0 (otherwise becomes too huge a dataset)
-
-         ! YRange
-
-         ! ZRange
-
-         ! FFT info
-
-         ! Sum file
-
-         ! Points file         
-
-
+      ! If no DT value has been set (DEFAULT requested), we need to set a default to pass into IfW
+   IF ( .NOT. DvrFlags%DT ) THEN
+      DvrSettings%DT =  0.025_DbKi     ! This value gets passed into the IfW_Init routine, so something must be set.
    ENDIF
 
 
@@ -1553,104 +1659,694 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
 END SUBROUTINE UpdateSettingsWithCL
 
 
-!SUBROUTINE WaveElevGrid_Output (drvrInitInp, HDynInitInp, HDynInitOut, HDyn_p, ErrStat, ErrMsg)
-!
-!   TYPE(HD_drvr_InitInput),       INTENT( IN    )   :: drvrInitInp
-!   TYPE(HydroDyn_InitInputType),  INTENT( IN    )   :: HDynInitInp
-!   TYPE(HydroDyn_InitOutputType), INTENT( IN    )   :: HDynInitOut          ! Output data from initialization
-!   TYPE(HydroDyn_ParameterType),  INTENT( IN    )   :: HDyn_p               ! Output data from initialization
-!   INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs
-!   CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-!
-!         ! Temporary local variables
-!   INTEGER(IntKi)                                   :: ErrStatTmp           !< Temporary variable for the status of error message
-!   CHARACTER(*)                                     :: ErrMsgTmp            !< Temporary variable for the error message
-!
-!   INTEGER(IntKi)                                   :: WaveElevFileUn       !< Number for the output file for the wave elevation series
-!   CHARACTER(1024)                                  :: WaveElevFileName     !< Name for the output file for the wave elevation series
-!   CHARACTER(128)                                   :: WaveElevFmt          !< Format specifier for the output file for wave elevation series
-!
-!
-!   WaveElevFmt = "(F14.7,3x,F14.7,3x,F14.7)"
-!
-!   ErrMsg      = ""
-!   ErrStat     = ErrID_None
-!   ErrMsgTmp   = ""
-!   ErrStatTmp  = ErrID_None
-!
-!
-!      ! If we calculated the wave elevation at a set of coordinates for use with making movies, put it into an output file
-!   WaveElevFileName  =  TRIM(drvrInitInp%OutRootName)//".WaveElev.out"
-!   CALL GetNewUnit( WaveElevFileUn )
-!
-!   CALL OpenFOutFile( WaveElevFileUn, WaveElevFileName, ErrStat, ErrMsg )
-!   IF ( ErrStat /= ErrID_None) THEN
-!      IF ( ErrStat >= AbortErrLev ) RETURN
-!   ENDIF
-!
-!      ! Write some useful header information
-!!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## This file was generated by '//TRIM(GetNVD(HDyn_Drv_ProgDesc))// &
-!!         ' on '//CurDate()//' at '//CurTime()//'.'
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## This file was generated on '//CurDate()//' at '//CurTime()//'.'
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## This file contains the wave elevations at a series of points '// &
-!         'through the entire timeseries.'
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## It is arranged as blocks of X,Y,Elevation at each timestep'
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '## Each block is separated by two blank lines for use in gnuplot'
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# '
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# WaveTMax    =  '//TRIM(Num2LStr(HDyn_p%WaveTime(HDyn_P%NStepWave)))
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# NStepWave   =  '//TRIM(Num2LStr(HDyn_p%NStepWave))
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridXPoints =  '//TRIM(Num2LStr(drvrInitInp%WaveElevNX))
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridYPoints =  '//TRIM(Num2LStr(drvrInitInp%WaveElevNY))
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridDX      =  '//TRIM(Num2LStr(drvrInitInp%WaveElevDX))
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# GridDY      =  '//TRIM(Num2LStr(drvrInitInp%WaveElevDY))
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# MaxWaveElev =  '//TRIM(Num2LStr(MAXVAL(HDynInitOut%WaveElevSeries)))
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# MinWaveElev =  '//TRIM(Num2LStr(MINVAL(HDynInitOut%WaveElevSeries)))
-!   WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp  )  '# '
-!
+SUBROUTINE ReadPointsFile( PointsFileName, CoordList, ErrStat, ErrMsg )
+
+   CHARACTER(1024),                    INTENT(IN   )  :: PointsFileName       !< Name of the points file to read
+   REAL(ReKi), ALLOCATABLE,            INTENT(  OUT)  :: CoordList(:,:)       !< The coordinates we read in
+   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< The error status
+   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< The message for the status
+
+      ! Local variables
+   CHARACTER(1024)                                    :: ErrMsgTmp            !< Temporary error message for calls
+   INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
+   INTEGER(IntKi)                                     :: FiUnitPoints         !< Unit number for points file to open
+
+   INTEGER(IntKi)                                     :: NumDataColumns       !< Number of data columns
+   INTEGER(IntKi)                                     :: NumDataPoints        !< Number of lines of data (one point per line)
+   INTEGER(IntKi)                                     :: NumHeaderLines       !< Number of header lines to ignore
+
+   INTEGER(IntKi)                                     :: I                    !< Generic counter
+
+      ! Initialization of subroutine
+   ErrMsg      =  ''
+   ErrMsgTmp   =  ''
+   ErrStat     =  ErrID_None
+   ErrStatTmp  =  ErrID_None
+
+
+      ! Now open file
+   CALL GetNewUnit(    FiUnitPoints )
+   CALL OpenFInpFile(   FiUnitPoints,  TRIM(PointsFileName), ErrStatTmp, ErrMsgTmp )   ! Unformatted input file
+   IF ( ErrStatTmp >= AbortErrLev ) THEN
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'ReadPointsFile')
+      CLOSE( FiUnitPoints )
+      RETURN
+   ENDIF
+
+      ! Find out how long the file is
+   CALL GetFileLength( FiUnitPoints, PointsFileName, NumDataColumns, NumDataPoints, NumHeaderLines, ErrMsgTmp, ErrStatTmp )
+   IF ( ErrStatTmp >= AbortErrLev ) THEN
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'ReadPointsFile')
+      CLOSE( FiUnitPoints )
+      RETURN
+   ENDIF
+   IF ( NumDataColumns /= 3 ) THEN
+      CALL SetErrStat( ErrID_Fatal,' Expecting three columns in '//TRIM(PointsFileName)//' corresponding to '//   &
+         'X, Y, and Z coordinates.  Instead found '//TRIM(Num2LStr(NumDataColumns))//'.', &
+         ErrStat, ErrMsg, 'ReadPointsFile')
+      CLOSE( FiUnitPoints )
+      RETURN
+   ENDIF
+
+
+      ! Allocate the storage for the data
+   CALL AllocAry( CoordList, 3, NumDataPoints, "Array of Points data", ErrStatTmp, ErrMsgTmp )
+   IF ( ErrStatTmp >= AbortErrLev ) THEN
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'ReadPointsFile')
+      CLOSE( FiUnitPoints )
+      RETURN
+   ENDIF
+
+
+      ! Read in the headers and throw them away
+   DO I=1,NumHeaderLines
+      CALL ReadCom( FiUnitPoints, PointsFileName,' Points file header line', ErrStatTmp, ErrMsgTmp )
+      IF ( ErrStatTmp /= ErrID_None ) THEN
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadPointsFile')
+         CLOSE( FiUnitPoints )
+         RETURN
+      ENDIF
+   ENDDO
+
+      ! Read in the datapoints
+   DO I=1,NumDataPoints
+      CALL ReadAry ( FiUnitPoints, PointsFileName, CoordList(:,I), 3, 'CoordList', &
+         'Coordinate point from Points file', ErrStatTmp, ErrMsgTmp)
+      IF ( ErrStat /= ErrID_None ) THEN
+         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadPointsFile')
+         CLOSE( FiUnitPoints )
+         RETURN
+      ENDIF
+   ENDDO
+
+   CLOSE( FiUnitPoints )
+
+CONTAINS
+
+  !-------------------------------------------------------------------------------------------------------------------------------
+   !>    This subroutine looks at a file that has been opened and finds out how many header lines there are, how many columns there
+   !!    are, and    how many lines of data there are in the file.
+   !!
+   !!    A few things are assumed about the file:
+   !!       1. Any header lines are the first thing in the file.
+   !!       2. No text appears anyplace other than in first part of the file
+   !!       3. The datalines only contain numbers that can be read in as reals.
+   !!
+   !!    Limitations:
+   !!       1. only handles up to 20 words (columns) on a line
+   !!       2. empty lines are considered text lines
+   !!       3. All data rows must contain the same number of columns
+   !!
+   !!
+   SUBROUTINE GetFileLength(UnitDataFile, DataFileName, NumDataColumns, NumDataLines, NumHeaderLines, ErrMsg, ErrStat)
+
+      IMPLICIT NONE
+
+         ! Passed variables
+      INTEGER(IntKi),                     INTENT(IN   )  :: UnitDataFile      !< Unit number of the file we are looking at.
+      CHARACTER(*),                       INTENT(IN   )  :: DataFileName      !< The name of the file we are looking at.
+      INTEGER(IntKi),                     INTENT(  OUT)  :: NumDataColumns    !< The number of columns in the data file.
+      INTEGER(IntKi),                     INTENT(  OUT)  :: NumDataLines      !< Number of lines containing data
+      INTEGER(IntKi),                     INTENT(  OUT)  :: NumHeaderLines    !< Number of header lines at the start of the file
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg            !< Error Message to return (empty if all good)
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat           !< Status flag if there were any problems (ErrID_None if all good)
+
+         ! Local Variables
+      CHARACTER(2048)                                    :: ErrMsgTmp         !< Temporary message variable.  Used in calls.
+      INTEGER(IntKi)                                     :: ErrStatTmp        !< Temporary error status.  Used in calls.
+      INTEGER(IntKi)                                     :: LclErrStat        !< Temporary error status.  Used locally to indicate when we have reached the end of the file.
+      INTEGER(IntKi)                                     :: TmpIOErrStat      !< Temporary error status for the internal read of the first word to a real number
+      LOGICAL                                            :: IsRealNum         !< Flag indicating if the first word on the line was a real number
+
+      CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
+      INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
+      CHARACTER(1024)                                    :: StrRead           !< String containing the first word read in
+      REAL(ReKi)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
+      CHARACTER(1024)                                    :: VarName           !< Name of the variable we are trying to read from the file
+      CHARACTER(24)                                      :: Words(20)         !< Array of words we extract from a line.  We shouldn't have more than 20.
+      INTEGER(IntKi)                                     :: i,j,k             !< simple integer counters
+      INTEGER(IntKi)                                     :: LineNumber        !< the line I am on
+      LOGICAL                                            :: LineHasText       !< Flag indicating if the line I just read has text.  If so, it is a header line.
+      LOGICAL                                            :: HaveReadData      !< Flag indicating if I have started reading data.
+      INTEGER(IntKi)                                     :: NumWords          !< Number of words on a line
+      INTEGER(IntKi)                                     :: FirstDataLineNum  !< Line number of the first row of data in the file
+
+
+         ! Initialize the error handling
+      ErrStat     = ErrID_None
+      ErrStatTmp  = ErrID_None
+      LclErrStat  = ErrID_None
+      ErrMsg      = ''
+      ErrMsgTmp   = ''
+
+
+         ! Set some of the flags and counters
+      HaveReadData   = .FALSE.
+      NumDataColumns = 0
+      NumHeaderLines = 0
+      NumDataLines   = 0
+      LineNumber     = 0
+
+
+         ! Just in case we were handed a file that we are part way through reading (should never be true), rewind to the start
+
+      REWIND( UnitDataFile )
+
+
+         !------------------------------------
+         !> The variable LclErrStat is used to indicate when we have reached the end of the file or had an error from
+         !! ReadLine.  Until that occurs, we read each line, and decide if it contained any non-numeric data.  The
+         !! first group of lines containing non-numeric data is considered the header.  The first line of all numeric
+         !! data is considered the start of the data section.  Any non-numeric containing found within the data section
+         !! will be considered as an invalid file format at which point we will return a fatal error from this routine.
+
+      DO WHILE ( LclErrStat == ErrID_None )
+
+            !> Reset the indicator flag for the non-numeric content
+         LineHasText = .FALSE.
+
+            !> Read in a single line from the file
+         CALL ReadLine( UnitDataFile, '', TextLine, LineLen, LclErrStat )
+
+            !> If there was an error in reading the file, then exit.
+            !!    Possible causes: reading beyond end of file in which case we are done so don't process it.
+         IF ( LclErrStat /= ErrID_None ) EXIT
+
+            !> Increment the line counter.
+         LineNumber  = LineNumber + 1
+
+            !> Read all the words on the line into the array called 'Words'.  Only the first words will be encountered
+            !! will be stored.  The others are empty (i.e. only three words on the line, so the remaining 17 are empty).
+         CALL GetWords( TextLine, Words, 20 )
+
+            !> Cycle through and count how many are not empty.  Once an empty value is encountered, all the rest should
+            !! be empty if GetWords worked correctly.  The index of the last non-empty value is stored.
+         DO i=1,20
+            IF (TRIM(Words(i)) .ne. '') NumWords=i
+         ENDDO
+
+
+            !> Now cycle through the first 'NumWords' of non-empty values stored in 'Words'.  Words should contain
+            !! everything that is one the line.  The subroutine ReadRealNumberFromString will set a flag 'IsRealNum'
+            !! when the value in Words(i) can be read as a real(ReKi).  'StrRead' will contain the string equivalent.
+         DO i=1,NumWords
+            CALL ReadRealNumberFromString( Words(i), RealRead, StrRead, IsRealNum, ErrStatTmp, ErrMsgTmp, TmpIOErrStat )
+            IF ( .NOT. IsRealNum) THEN
+               LineHasText = .TRUE.
+            ENDIF
+         ENDDO
+
+            !> If all the words on that line had no text in them, then it must have been a line of data.
+            !! If not, then we have either a header line, which is ok, or a line containing text in the middle of the
+            !! the data section, which is not good (the flag HaveReadData tells us which case this is).
+         IF ( LineHasText ) THEN
+            IF ( HaveReadData ) THEN      ! Uh oh, we have already read a line of data before now, so there is a problem
+               CALL SetErrStat( ErrID_Fatal, ' Found text on line '//TRIM(Num2LStr(LineNumber))//' of '//TRIM(DataFileName)// &
+                           ' when real numbers were expected.  There may be a problem with format of the file: '// &
+                           TRIM(DataFileName)//'.', ErrStat, ErrMsg, 'GetFileLength')
+               IF ( ErrStat >= AbortErrLev ) THEN
+                  RETURN
+               ENDIF
+            ELSE
+               NumHeaderLines = NumHeaderLines + 1
+            ENDIF
+         ELSE     ! No text, must be data line
+            NumDataLines = NumDataLines + 1
+               ! If this is the first row of data, then store the number of words that were on the line
+            IF ( .NOT. HaveReadData )  THEN
+                  ! If this is the first line of data, keep some relevant info about it and the number of columns in it
+               HaveReadData      = .TRUE.
+               FirstDataLineNum  = LineNumber         ! Keep the line number of the first row of data (for error reporting)
+               NumDataColumns    = NumWords
+            ELSE
+                  ! Make sure that the number columns on the row matches the number of columnns on the first row of data.
+               IF ( NumWords /= NumDataColumns ) THEN
+                  CALL SetErrStat( ErrID_Fatal, ' Error in file: '//TRIM(DataFileName)//'.'// &
+                           ' The number of data columns on line '//TRIM(Num2LStr(LineNumber))// &
+                           '('//TRIM(Num2LStr(NumWords))//' columns) is different than the number of columns on first row of data '// &
+                           ' (line: '//TRIM(Num2LStr(FirstDataLineNum))//', '//TRIM(Num2LStr(NumDataColumns))//' columns).', &
+                           ErrStat, ErrMsg, 'GetFileLength')
+                  IF ( ErrStat >= AbortErrLev ) THEN
+                     RETURN
+                  ENDIF
+               ENDIF
+            ENDIF
+         ENDIF
+
+      ENDDO
+
+
+      REWIND( UnitDataFile )
+
+   END SUBROUTINE GetFileLength
+
+   !-------------------------------------------------------------------------------
+   !> This subroutine takes a line of text that is passed in and reads the first
+   !! word to see if it is a number.  An internal read is used to do this.  If
+   !! it is a number, it is started in ValueRead and returned. The flag IsRealNum
+   !! is set to true.  Otherwise, ValueRead is set to NaN (value from the NWTC_Num)
+   !! and the flag is set to false.
+   !!
+   !! The IsRealNum flag is set to indicate if we actually have a real number or
+   !! not.  After calling this routine, a simple if statement can be used:
+   !!
+   !!       @code
+   !!    IF (IsRealNum) THEN
+   !!       ! do something
+   !!    ELSE
+   !!       ! do something else
+   !!    ENDIF
+   !!       @endcode
+   !!
+   !-------------------------------------------------------------------------------
+   SUBROUTINE ReadRealNumberFromString(StringToParse, ValueRead, StrRead, IsRealNum, ErrStat, ErrMsg, IOErrStat)
+
+      CHARACTER(*),        INTENT(IN   )           :: StringToParse  !< The string we were handed.
+      REAL(ReKi),          INTENT(  OUT)           :: ValueRead      !< The variable being read.  Returns as NaN (library defined) if not a Real.
+      CHARACTER(*),        INTENT(  OUT)           :: StrRead        !< A string containing what was read from the ReadNum routine.
+      LOGICAL,             INTENT(  OUT)           :: IsRealNum      !< Flag indicating if we successfully read a Real
+      INTEGER(IntKi),      INTENT(  OUT)           :: ErrStat        !< ErrID level returned from ReadNum
+      CHARACTER(*),        INTENT(  OUT)           :: ErrMsg         !< Error message including message from ReadNum
+      INTEGER(IntKi),      INTENT(  OUT)           :: IOErrStat      !< Error status from the internal read. Useful for diagnostics.
+
+
+
+         ! Initialize some things
+      ErrStat     = ErrID_None
+      ErrMsg      = ''
+
+
+         ! ReadNum returns a string contained in StrRead.  So, we now try to do an internal read to VarRead and then trap errors.
+      read(StringToParse,*,IOSTAT=IOErrStat)   StrRead
+      read(StringToParse,*,IOSTAT=IOErrStat)   ValueRead
+
+
+         ! If IOErrStat==0, then we have a real number, anything else is a problem.
+      if (IOErrStat==0) then
+         IsRealNum   = .TRUE.
+      else
+         IsRealNum   = .FALSE.
+         ValueRead   = NaN                ! This is NaN as defined in the NWTC_Num.
+         ErrMsg      = 'Not a real number. '//TRIM(ErrMsgTmp)//NewLine
+         ErrSTat     = ErrID_Severe
+      endif
+
+
+
+      RETURN
+   END SUBROUTINE ReadRealNumberFromString
+
+
+   !-------------------------------------------------------------------------------------------------------------------------------
+   !-------------------------------------------------------------------------------
+   !> This subroutine works with the ReadNum routine from the library.  ReadNum is
+   !! called to read a word from the input file.  An internal read is then done to
+   !! convert the string to a number that is stored in VarRead and returned.
+   !!
+   !! The IsRealNum flag is set to indicate if we actually have a real number or
+   !! not.  After calling this routine, a simple if statement can be used:
+   !!
+   !!       @code
+   !!    IF (ISRealNum) THEN
+   !!       ! do something
+   !!    ELSE
+   !!       ! do something else
+   !!    ENDIF
+   !!       @endcode
+   !!
+   !-------------------------------------------------------------------------------
+   SUBROUTINE ReadRealNumber(UnitNum, FileName, VarName, VarRead, StrRead, IsRealNum, ErrStat, ErrMsg, IOErrStat)
+
+      INTEGER(IntKi),      INTENT(IN   )           :: UnitNum        !< The unit number of the file being read
+      CHARACTER(*),        INTENT(IN   )           :: FileName       !< The name of the file being read.  Used in the ErrMsg from ReadNum (Library routine).
+      CHARACTER(*),        INTENT(IN   )           :: VarName        !< The variable we are reading.  Used in the ErrMsg from ReadNum (Library routine)'.
+      REAL(ReKi),          INTENT(  OUT)           :: VarRead        !< The variable being read.  Returns as NaN (library defined) if not a Real.
+      CHARACTER(*),        INTENT(  OUT)           :: StrRead        !< A string containing what was read from the ReadNum routine.
+      LOGICAL,             INTENT(  OUT)           :: IsRealNum      !< Flag indicating if we successfully read a Real
+      INTEGER(IntKi),      INTENT(  OUT)           :: ErrStat        !< ErrID level returned from ReadNum
+      CHARACTER(*),        INTENT(  OUT)           :: ErrMsg         !< Error message including message from ReadNum
+      INTEGER(IntKi),      INTENT(  OUT)           :: IOErrStat      !< Error status from the internal read. Useful for diagnostics.
+
+         ! Local vars
+      INTEGER(IntKi)                      :: ErrStatTmp
+      CHARACTER(2048)                     :: ErrMsgTmp
+
+
+
+         ! Initialize some things
+      ErrStat     = ErrID_None
+      ErrMsg      = ''
+
+
+         ! Now call the ReadNum routine to get the number
+         ! If it is a word that does not start with T or F, then ReadNum won't give any errors.
+      CALL ReadNum( UnitNum, FileName, StrRead, VarName, ErrStatTmp, ErrMsgTmp)
+
+
+         ! ReadNum returns a string contained in StrRead.  So, we now try to do an internal read to VarRead and then trap errors.
+      read(StrRead,*,IOSTAT=IOErrStat)   VarRead
+
+
+         ! If IOErrStat==0, then we have a real number, anything else is a problem.
+      if (IOErrStat==0) then
+         IsRealNum   = .TRUE.
+      else
+         IsRealNum   = .FALSE.
+         VarRead     = NaN                ! This is NaN as defined in the NWTC_Num.
+         ErrMsg      = 'Not a real number. '//TRIM(ErrMsgTmp)//NewLine
+         ErrStat     = ErrStatTmp         ! The ErrStatTmp returned by the ReadNum routine is an ErrID level.
+      endif
+
+
+
+      RETURN
+   END SUBROUTINE ReadRealNumber
+
+
+END SUBROUTINE ReadPointsFile
+
+
+
+SUBROUTINE WindGridMessage( Settings, ToFile, Msg, MsgLen )
+
+   TYPE(IfWDriver_Settings),           INTENT(IN   )  :: Settings
+   LOGICAL,                            INTENT(IN   )  :: ToFile         !< Prepend comment character
+   CHARACTER(2048),                    INTENT(  OUT)  :: Msg
+   INTEGER(IntKi),                     INTENT(  OUT)  :: MsgLen
+
+      ! Local Variables
+   CHARACTER(11)                                      :: TmpNumString
+   INTEGER(IntKi)                                     :: ErrStatTmp
+
+   Msg   =  ''
+
+   IF ( ToFile ) THEN
+      Msg='#  '
+   ELSE
+      Msg="Requested wind grid data will be written to "//TRIM(Settings%WindGridOutputName)//'.'
+   ENDIF
+   Msg   =  TRIM(Msg)//"  Requested data:"//NewLine
+
+   ! Header info:
+   Msg   =  TRIM(Msg)
+   IF ( ToFile ) Msg=TRIM(Msg)//'#'
+   Msg   =           TRIM(Msg)//"    Dimension             Range             Stepsize       Num. points"//NewLine
+   IF ( ToFile ) Msg=TRIM(Msg)//'#'
+   Msg   =           TRIM(Msg)//"   -------------------------------------------------------------------"//NewLine
+   ! X direction
+   WRITE(TmpNumString,'(f7.2)',IOSTAT=ErrStatTmp)           Settings%XRange(1)
+   IF ( ToFile ) THEN
+      Msg=  TRIM(Msg)//"#       X"
+   ELSE
+      Msg=  TRIM(Msg)//"        X"
+   ENDIF
+   MsgLen=  LEN_TRIM(Msg)
+   Msg   =  Msg(1:MsgLen)//"       "//TmpNumString(1:10)
+   MsgLen=  MsgLen+7+10
+
+   WRITE(TmpNumString,'(f7.2)',IOSTAT=ErrStatTmp)           Settings%XRange(2)
+   Msg   =  Msg(1:MsgLen)//" -> "//TmpNumString(1:10)
+   MsgLen=  MsgLen+4+10
+
+   WRITE(TmpNumString,'(f7.2)',IOSTAT=ErrStatTmp)           Settings%GridDelta(1)
+   Msg   =  Msg(1:MsgLen)//"    "//TmpNumString(1:10)
+   MsgLen=  MsgLen+4+10
+
+   WRITE(TmpNumString,'(i6)',IOSTAT=ErrStatTmp)             Settings%GridN(1)
+   Msg   =  Msg(1:MsgLen)//"      "//TmpNumString(1:6)//NewLine
+   MsgLen=  MsgLen+6+6
+
+
+   ! Y direction
+   WRITE(TmpNumString,'(f7.2)',IOSTAT=ErrStatTmp)           Settings%YRange(1)
+   IF ( ToFile ) THEN
+      Msg=  TRIM(Msg)//"#       Y"
+   ELSE
+      Msg=  TRIM(Msg)//"        Y"
+   ENDIF
+   MsgLen=  LEN_TRIM(Msg)
+   Msg   =  Msg(1:MsgLen)//"       "//TmpNumString(1:10)
+   MsgLen=  MsgLen+7+10
+
+   WRITE(TmpNumString,'(f7.2)',IOSTAT=ErrStatTmp)           Settings%YRange(2)
+   Msg   =  Msg(1:MsgLen)//" -> "//TmpNumString(1:10)
+   MsgLen=  MsgLen+4+10
+
+   WRITE(TmpNumString,'(f7.2)',IOSTAT=ErrStatTmp)           Settings%GridDelta(2)
+   Msg   =  Msg(1:MsgLen)//"    "//TmpNumString(1:10)
+   MsgLen=  MsgLen+4+10
+
+   WRITE(TmpNumString,'(i6)',IOSTAT=ErrStatTmp)             Settings%GridN(2)
+   Msg   =  Msg(1:MsgLen)//"      "//TmpNumString(1:6)//NewLine
+   MsgLen=  MsgLen+6+6
+
+
+   ! Z direction
+   WRITE(TmpNumString,'(f7.2)',IOSTAT=ErrStatTmp)           Settings%ZRange(1)
+   IF ( ToFile ) THEN
+      Msg=  TRIM(Msg)//"#       Z"
+   ELSE
+      Msg=  TRIM(Msg)//"        Z"
+   ENDIF
+   MsgLen=  LEN_TRIM(Msg)
+   Msg   =  Msg(1:MsgLen)//"       "//TmpNumString(1:10)
+   MsgLen=  MsgLen+7+10
+
+   WRITE(TmpNumString,'(f7.2)',IOSTAT=ErrStatTmp)           Settings%ZRange(2)
+   Msg   =  Msg(1:MsgLen)//" -> "//TmpNumString(1:10)
+   MsgLen=  MsgLen+4+10
+
+   WRITE(TmpNumString,'(f7.2)',IOSTAT=ErrStatTmp)           Settings%GridDelta(3)
+   Msg   =  Msg(1:MsgLen)//"    "//TmpNumString(1:10)
+   MsgLen=  MsgLen+4+10
+
+   WRITE(TmpNumString,'(i6)',IOSTAT=ErrStatTmp)             Settings%GridN(3)
+   Msg   =  Msg(1:MsgLen)//"      "//TmpNumString(1:6)//NewLine
+   MsgLen=  MsgLen+6+6
+
+
+   ! T direction
+   WRITE(TmpNumString,'(f10.4)',IOSTAT=ErrStatTmp)           Settings%TStart
+   IF ( ToFile ) THEN
+      Msg=  TRIM(Msg)//"#       T"
+   ELSE
+      Msg=  TRIM(Msg)//"        T"
+   ENDIF
+   MsgLen=  LEN_TRIM(Msg)
+   Msg   =  Msg(1:MsgLen)//"      "//TmpNumString(1:11)
+   MsgLen=  MsgLen+7+11
+
+   WRITE(TmpNumString,'(f10.4)',IOSTAT=ErrStatTmp)           Settings%TStart+Settings%DT*Settings%NumTimeSteps
+   Msg   =  Msg(1:MsgLen)//"->"//TmpNumString(1:11)
+   MsgLen=  MsgLen+4+11
+
+   WRITE(TmpNumString,'(f10.4)',IOSTAT=ErrStatTmp)           Settings%DT
+   Msg   =  Msg(1:MsgLen)//" "//TmpNumString(1:11)
+   MsgLen=  MsgLen+4+11
+
+   WRITE(TmpNumString,'(i8)',IOSTAT=ErrStatTmp)             Settings%NumTimeSteps
+   Msg   =  Msg(1:MsgLen)//" "//TmpNumString(1:8)  !//NewLine
+   MsgLen=  MsgLen+6+8
+
+END SUBROUTINE
+
+
+!> This subroutine outputs the results of the WindGrid calculations information at each timestep.
+SUBROUTINE WindGridVel_OutputWrite (FileUnit, FileName, Initialized, Settings, GridXYZ, GridVel, TIME, ErrStat, ErrMsg)
+
+   INTEGER(IntKi),                     INTENT(INOUT)  :: FileUnit             !< Unit number for the output file
+   CHARACTER(*),                       INTENT(IN   )  :: FileName             !< Name of the current unit number
+   LOGICAL,                            INTENT(INOUT)  :: Initialized          !< Was this file started before?
+   TYPE(IfWDriver_Settings),           INTENT(IN   )  :: Settings             !< Settings for IfW driver
+   REAL(ReKi),          ALLOCATABLE,   INTENT(IN   )  :: GridXYZ(:,:)         !< The position grid passed in
+   REAL(ReKi),          ALLOCATABLE,   INTENT(IN   )  :: GridVel(:,:)         !< The velocity grid passed in
+   REAL(DbKi),                         INTENT(IN   )  :: TIME                 !< The current time
+   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< returns a non-zero value when an error occurs
+   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
+
+         ! Temporary local variables
+   INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary variable for the status of error message
+   CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary variable for the error message
+   INTEGER(IntKi)                                     :: LenErrMsgTmp         !< Length of ErrMsgTmp (for getting WindGrid info)
+
+   CHARACTER(52)                                      :: WindVelFmt           !< Format specifier for the output file for wave elevation series
+
+
+   WindVelFmt = "(F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7)"
+
+   ErrMsg      = ''
+   ErrStat     = ErrID_None
+   ErrMsgTmp   = ''
+   ErrStatTmp  = ErrID_None
+
+
+      ! If it hasn't been initially written to, do this then exit. Otherwise set a few things and continue.
+   IF ( .NOT. Initialized ) THEN
+
+      CALL GetNewUnit( FileUnit )
+      CALL OpenFOutFile( FileUnit, TRIM(FileName), ErrStatTmp, ErrMsgTmp )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'WindGridVel_OutputWrite' )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+      Initialized =  .TRUE.
+
+         ! Write header section
+      WRITE( FileUnit,'(A)', IOSTAT=ErrStatTmp )   '## This file was generated by '//TRIM(GetNVD(Settings%ProgInfo))//  &
+            ' on '//CurDate()//' at '//CurTime()//'.'
+      WRITE( FileUnit,'(A)', IOSTAT=ErrStatTmp )   '## This file contains the wind velocity at a grid of points at each '// &
+                                                   'requested timestep'
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '## It is arranged as blocks of X,Y,Z,U,V,W at each timestep'
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '## Each block is separated by two blank lines for use in gnuplot'
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      CALL WindGridMessage( Settings, .TRUE., ErrMsgTmp, LenErrMsgTmp )
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  ErrMsgTmp(1:LenErrMsgTmp)
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '#           X              Y              Z  '//  &
+                                                   '            U              V              W'
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '#          (m)            (m)            (m) '//  &
+                                                   '          (m/s)          (m/s)          (m/s)'
+     
+   ELSE
+
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  'FIXME:  THE FILEWRITING FOR WINDGRID HAS NOT BEEN IMPLIMENTED'
+!FIXME: Impliment this part
 !      ! Timestep looping
 !   DO I = 0,HDyn_p%NStepWave
-!      WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp ) NewLine
-!      WRITE (WaveElevFileUn,'(A)', IOSTAT=ErrStatTmp ) '# Time: '//TRIM(Num2LStr(HDyn_p%WaveTime(I)))
+!      WRITE (WindVelFileUn,'(A)', IOSTAT=ErrStatTmp ) NewLine
+!      WRITE (WindVelFileUn,'(A)', IOSTAT=ErrStatTmp ) '# Time: '//TRIM(Num2LStr(HDyn_p%WaveTime(I)))
 !         ! Now output the X,Y, Elev info for this timestep
-!      DO J=1,SIZE(HDynInitInp%WaveElevXY,DIM=2)
-!         WRITE (WaveElevFileUn,WaveElevFmt, IOSTAT=ErrStatTmp ) HDynInitInp%WaveElevXY(1,J),&
-!                  HDynInitInp%WaveElevXY(2,J),HDynInitOut%WaveElevSeries(I,J)
+!      DO J=1,SIZE(HDynInitInp%WindVelXY,DIM=2)
+!         WRITE (WindVelFileUn,WindVelFmt, IOSTAT=ErrStatTmp ) HDynInitInp%WindVelXY(1,J),&
+!                  HDynInitInp%WindVelXY(2,J),HDynInitOut%WindVelSeries(I,J)
 !      ENDDO
 !
 !   ENDDO
+
+   ENDIF
+
+END SUBROUTINE WindGridVel_OutputWrite
+
+
+SUBROUTINE PointsVel_OutputWrite (FileUnit, FileName, Initialized, Settings, GridXYZ, GridVel, TIME, ErrStat, ErrMsg)
+
+   INTEGER(IntKi),                     INTENT(INOUT)  :: FileUnit             !< Unit number for the output file
+   CHARACTER(*),                       INTENT(IN   )  :: FileName             !< Name of the current unit number
+   LOGICAL,                            INTENT(INOUT)  :: Initialized          !< Was this file started before?
+   TYPE(IfWDriver_Settings),           INTENT(IN   )  :: Settings             !< Settings for IfW driver
+   REAL(ReKi),          ALLOCATABLE,   INTENT(IN   )  :: GridXYZ(:,:)         !< The position grid passed in
+   REAL(ReKi),          ALLOCATABLE,   INTENT(IN   )  :: GridVel(:,:)         !< The velocity grid passed in
+   REAL(DbKi),                         INTENT(IN   )  :: TIME                 !< The current time
+   INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< returns a non-zero value when an error occurs
+   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
+
+         ! Temporary local variables
+   INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary variable for the status of error message
+   CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary variable for the error message
+   INTEGER(IntKi)                                     :: LenErrMsgTmp         !< Length of ErrMsgTmp (for getting WindGrid info)
+
+   CHARACTER(61)                                      :: PointsVelFmt           !< Format specifier for the output file for wave elevation series
+
+
+   PointsVelFmt = "(F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7)"
+
+   ErrMsg      = ''
+   ErrStat     = ErrID_None
+   ErrMsgTmp   = ''
+   ErrStatTmp  = ErrID_None
+
+
+      ! If it hasn't been initially written to, do this then exit. Otherwise set a few things and continue.
+   IF ( .NOT. Initialized ) THEN
+
+      CALL GetNewUnit( FileUnit )
+      CALL OpenFOutFile( FileUnit, TRIM(FileName), ErrStatTmp, ErrMsgTmp )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'PointsVel_OutputWrite' )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+      Initialized =  .TRUE.
+
+         ! Write header section
+      WRITE( FileUnit,'(A)', IOSTAT=ErrStatTmp )   '## This file was generated by '//TRIM(GetNVD(Settings%ProgInfo))//  &
+            ' on '//CurDate()//' at '//CurTime()//'.'
+      WRITE( FileUnit,'(A)', IOSTAT=ErrStatTmp )   '## This file contains the wind velocity at the '//   &
+                                                   TRIM(Num2LStr(SIZE(GridXYZ,DIM=2)))//' points specified in the '// &
+                                                   'file '//TRIM(Settings%PointsFileName)//'.'
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '#           T              X              Y              Z  '//  &
+                                                   '            U              V              W'
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '#          (s)            (m)            (m)            (m) '//  &
+                                                   '          (m/s)          (m/s)          (m/s)'
+   ELSE
+
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  'FIXME:  THE FILEWRITING FOR POINTS HAS NOT BEEN IMPLIMENTED'
+!FIXME: Impliment this part
+!      ! Timestep looping
+!   DO I = 0,HDyn_p%NStepWave
+!      WRITE (PointsVelFileUn,'(A)', IOSTAT=ErrStatTmp ) NewLine
+!      WRITE (PointsVelFileUn,'(A)', IOSTAT=ErrStatTmp ) '# Time: '//TRIM(Num2LStr(HDyn_p%WaveTime(I)))
+!         ! Now output the X,Y, Elev info for this timestep
+!      DO J=1,SIZE(HDynInitInp%PointsVelXY,DIM=2)
+!         WRITE (PointsVelFileUn,PointsVelFmt, IOSTAT=ErrStatTmp ) HDynInitInp%PointsVelXY(1,J),&
+!                  HDynInitInp%PointsVelXY(2,J),HDynInitOut%PointsVelSeries(I,J)
+!      ENDDO
 !
-!      ! Done.  Close the file
-!   CLOSE (WaveElevFileUn)
-!
-!END SUBROUTINE WaveElevGrid_Output
+!   ENDDO
+
+   ENDIF
+
+END SUBROUTINE PointsVel_OutputWrite
 
 
 
 
-!> This routine exists only to support the development of the module.  It will not be kept after the module is complete.
+!> This routine exists only to support the development of the module.  It will not be needed after the module is complete.
 SUBROUTINE  printSettings( DvrFlags, DvrSettings )
       ! The arguments
    TYPE( IfWDriver_Flags ),            INTENT(IN   )  :: DvrFlags           !< Flags indicating which settings were set
    TYPE( IfWDriver_Settings ),         INTENT(IN   )  :: DvrSettings        !< Stored settings
-   print*,' DvrIptFile:          ',FLAG(DvrFlags%DvrIptFile),        '      ',TRIM(DvrSettings%DvrIptFileName)
-   print*,' IfWIptFile:          ',FLAG(DvrFlags%IfWIptFile),        '      ',TRIM(DvrSettings%IfwIptFileName)
-   print*,' Summary:             ',FLAG(DvrFlags%Summary)
-   print*,' SummaryFile:         ',FLAG(DvrFlags%SummaryFile),       '      ',TRIM(DvrSettings%SummaryFileName)
-   print*,' TStart:              ',FLAG(DvrFlags%TStart),            '      ',DvrSettings%TStart
-   print*,' DT:                  ',FLAG(DvrFlags%DT),                '      ',DvrSettings%DT
-   print*,' NumTimeSteps:        ',FLAG(DvrFlags%NumTimeSteps),      '      ',DvrSettings%NumTimeSteps
-   print*,' NumTimeStepsDefault: ',FLAG(DvrFlags%NumTimeStepsDefault)
-   print*,' XRange:              ',FLAG(DvrFlags%XRange),            '      ',DvrSettings%XRange
-   print*,' YRange:              ',FLAG(DvrFlags%YRange),            '      ',DvrSettings%YRange
-   print*,' ZRange:              ',FLAG(DvrFlags%ZRange),            '      ',DvrSettings%ZRange
-   print*,' Dx:                  ',FLAG(DvrFlags%Dx),                '      ',DvrSettings%GridDelta(1)
-   print*,' Dy:                  ',FLAG(DvrFlags%Dy),                '      ',DvrSettings%GridDelta(2)
-   print*,' Dz:                  ',FLAG(DvrFlags%Dz),                '      ',DvrSettings%GridDelta(3)
-   print*,' FFTcalc:             ',FLAG(DvrFlags%FFTcalc),           '     [',DvrSettings%FFTcoord(1),',',DvrSettings%FFTcoord(2),',',DvrSettings%FFTcoord(3),']'
-   print*,' WindGrid:            ',FLAG(DvrFlags%WindGrid)
-   print*,' GridN:               ',DvrSettings%GridN
+
+   CALL WrsCr(TRIM(GetNVD(DvrSettings%ProgInfo)))
+   CALL WrScr(' DvrIptFile:          '//FLAG(DvrFlags%DvrIptFile)//        '      '//TRIM(DvrSettings%DvrIptFileName))
+   CALL WrScr(' IfWIptFile:          '//FLAG(DvrFlags%IfWIptFile)//        '      '//TRIM(DvrSettings%IfWIptFileName))
+   CALL WrScr(' PointsFile:          '//FLAG(DvrFlags%PointsFile)//        '      '//TRIM(DvrSettings%PointsFileName))
+   CALL WrScr(' FFTOutputName:       '//FLAG(DvrFlags%FFTcalc)//           '      '//TRIM(DvrSettings%FFTOutputName))
+   CALL WrScr(' WindGridOutName:     '//FLAG(DvrFlags%WindGrid)//          '      '//TRIM(DvrSettings%WindGridOutputName))
+   CALL WrScr(' Summary:             '//FLAG(DvrFlags%Summary))
+   CALL WrScr(' SummaryFile:         '//FLAG(DvrFlags%SummaryFile)//       '      '//TRIM(DvrSettings%SummaryFileName))
+   CALL WrScr(' TStart:              '//FLAG(DvrFlags%TStart)//            '      '//TRIM(Num2LStr(DvrSettings%TStart)))
+   IF ( DvrFlags%DTDefault) THEN
+      CALL WrScr(' DT:                  '//FLAG(DvrFlags%DT)//                '      DEFAULT')
+   ELSE
+      CALL WrScr(' DT:                  '//FLAG(DvrFlags%DT)//                '      '//TRIM(Num2LStr(DvrSettings%DT)))
+   ENDIF
+   IF ( DvrFlags%NumTimeStepsDefault) THEN
+      CALL WrScr(' NumTimeSteps:        '//FLAG(DvrFlags%NumTimeSteps)//      '      DEFAULT')
+   ELSE
+      CALL WrScr(' NumTimeSteps:        '//FLAG(DvrFlags%NumTimeSteps)//      '      '//TRIM(Num2LStr(DvrSettings%NumTimeSteps)))
+   ENDIF
+   CALL WrScr(' XRange:              '//FLAG(DvrFlags%XRange)//            '      '//TRIM(Num2LStr(DvrSettings%XRange(1)))//' -- ' &
+                                                                                   //TRIM(Num2LStr(DvrSettings%XRange(2))))
+   CALL WrScr(' YRange:              '//FLAG(DvrFlags%YRange)//            '      '//TRIM(Num2LStr(DvrSettings%YRange(1)))//' -- ' &
+                                                                                   //TRIM(Num2LStr(DvrSettings%YRange(2))))
+   CALL WrScr(' ZRange:              '//FLAG(DvrFlags%ZRange)//            '      '//TRIM(Num2LStr(DvrSettings%ZRange(1)))//' -- ' &
+                                                                                   //TRIM(Num2LStr(DvrSettings%ZRange(2))))
+   CALL WrScr(' Dx:                  '//FLAG(DvrFlags%Dx)//                '      '//TRIM(Num2LStr(DvrSettings%GridDelta(1))))
+   CALL WrScr(' Dy:                  '//FLAG(DvrFlags%Dy)//                '      '//TRIM(Num2LStr(DvrSettings%GridDelta(2))))
+   CALL WrScr(' Dz:                  '//FLAG(DvrFlags%Dz)//                '      '//TRIM(Num2LStr(DvrSettings%GridDelta(3))))
+   CALL WrScr(' FFTcalc:             '//FLAG(DvrFlags%FFTcalc)//           '     ['//TRIM(Num2LStr(DvrSettings%FFTcoord(1)))//', '&
+                                                                                   //TRIM(Num2LStr(DvrSettings%FFTcoord(2)))//', '&
+                                                                                   //TRIM(Num2LStr(DvrSettings%FFTcoord(3)))//']')
+   CALL WrScr(' WindGrid:            '//FLAG(DvrFlags%WindGrid))
+   CALL WrScr(' GridN:                      '                                      //TRIM(Num2LStr(DvrSettings%GridN(1)))//' x '   &
+                                                                                   //TRIM(Num2LStr(DvrSettings%GridN(2)))//' x '   &
+                                                                                   //TRIM(Num2LStr(DvrSettings%GridN(3))))
+   CALL WrScr(' WindGridOutputInit:  '//FLAG(DvrFlags%WindGridOutputInit)//'      Unit #:  '//TRIM(Num2LStr(DvrSettings%WindGridOutputUnit)))
+   CALL WrScr(' FFTOutputInit:       '//FLAG(DvrFlags%FFTOutputInit)//     '      Unit #:  '//TRIM(Num2LStr(DvrSettings%FFTOutputUnit)))
+   CALL WrScr(' PointsOutputInit:    '//FLAG(DvrFlags%PointsOutputInit)//  '      Unit #:  '//TRIM(Num2LStr(DvrSettings%PointsOutputUnit)))
    RETURN
 END SUBROUTINE printSettings
+
 
 !> This routine exists only to support the development of the module.  It will not be kept after the module is complete.
 !! This routine takes a flag setting (LOGICAL) and exports either 'T' or '-' for T/F (respectively)

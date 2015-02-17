@@ -23,6 +23,10 @@
 !    If not, see <http://www.gnu.org/licenses/>.
 !
 !**********************************************************************************************************************************
+! File last committed: $Date: 2014-07-29 13:30:04 -0600 (Tue, 29 Jul 2014) $
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
+!**********************************************************************************************************************************
 
 MODULE InflowWind_Driver_Types
 
@@ -49,9 +53,6 @@ MODULE InflowWind_Driver_Types
       LOGICAL                 :: DT                   = .FALSE.      !< specified a resolution in time
       LOGICAL                 :: DTDefault            = .FALSE.      !< specified a 'DEFAULT' for the time resolution
 
-      LOGICAL                 :: TurbineHeight        = .FALSE.      !< specified a turbine height
-      LOGICAL                 :: Width                = .FALSE.      !< specified a width
-
       LOGICAL                 :: FFTcalc              = .FALSE.      !< do an FFT
 
       LOGICAL                 :: WindGrid             = .FALSE.      !< Requested output of wind data on a grid -- input file option only
@@ -63,6 +64,10 @@ MODULE InflowWind_Driver_Types
       LOGICAL                 :: Dz                   = .FALSE.      !< specified a resolution in z
 
       LOGICAL                 :: PointsFile           = .FALSE.      !< points filename to read in  -- command line option only
+
+      LOGICAL                 :: WindGridOutputInit   = .FALSE.      !< Is the WindGridOut file initialized
+      LOGICAL                 :: PointsOutputInit     = .FALSE.      !< Is the Points output file initialized
+      LOGICAL                 :: FFTOutputInit        = .FALSE.      !< Is the FFT output file initialized
    END TYPE    IfWDriver_Flags
 
 
@@ -71,24 +76,33 @@ MODULE InflowWind_Driver_Types
       CHARACTER(1024)         :: DvrIptFileName                !< Driver input file name
       CHARACTER(1024)         :: IfWIptFileName                !< Filename of InflowWind input file to read (if no driver input file)
       CHARACTER(1024)         :: SummaryFileName               !< Filename for the summary information output
-      INTEGER(IntKi)          :: NumTimeSteps                  !< Number of timesteps
-      REAL( DbKi )            :: DT                            !< resolution of time
-      REAL( DbKi )            :: TStart                        !< range of time -- end time converted from TRange (command line option only)
-
-      REAL( ReKi )            :: TurbineHeight                 !< Height of the turbine
-      REAL( ReKi )            :: Width                         !< Reference width
-
-      REAL( ReKi )            :: FFTcoord(1:3)                 !< (x,y,z) coordinate to do an FFT at
-
-!      REAL( ReKi )            :: GridCtrCoord(1:3)             !< (x,y,z) coordinate for center of the wind grid to output
-      REAL( ReKi )            :: GridDelta(1:3)                !< (GridDx,GridDy,GridDz) -- grid point spacing
-      INTEGER(IntKi)          :: GridN(1:3)                    !< (GridNx,GridNy,GridNz) -- number of grid points
-
-      REAL( ReKi )            :: XRange(1:2)                   !< Range in the x-direction for the gridded data
-      REAL( ReKi )            :: YRange(1:2)                   !< Range in the y-direction for the gridded data
-      REAL( ReKi )            :: ZRange(1:2)                   !< Range in the z-direction for the gridded data
 
       CHARACTER(1024)         :: PointsFileName                !< Filename of points file to read in
+      CHARACTER(1024)         :: PointsOutputName              !< Filename for output from points read in from points file
+      CHARACTER(1024)         :: FFTOutputName                 !< Filename for output from points read in from points file
+      CHARACTER(1024)         :: WindGridOutputName            !< Filename for output from points read in from points file
+
+      INTEGER(IntKi)          :: WindGridOutputUnit            !< Unit number for the output file for the wind grid data
+      INTEGER(IntKi)          :: PointsOutputUnit              !< Unit number for the output file for the Points file output
+      INTEGER(IntKi)          :: FFTOutputUnit                 !< Unit number for the output file for the FFT results
+
+      INTEGER(IntKi)          :: NumTimeSteps                  !< Number of timesteps
+      REAL(DbKi)              :: DT                            !< resolution of time
+      REAL(DbKi)              :: TStart                        !< range of time -- end time converted from TRange (command line option only)
+
+
+      REAL(ReKi)              :: FFTcoord(1:3)                 !< (x,y,z) coordinate to do an FFT at
+
+      REAL(ReKi)              :: GridDelta(1:3)                !< (GridDx,GridDy,GridDz) -- grid point spacing
+      INTEGER(IntKi)          :: GridN(1:3)                    !< (GridNx,GridNy,GridNz) -- number of grid points
+
+      REAL(ReKi)              :: XRange(1:2)                   !< Range in the x-direction for the gridded data
+      REAL(ReKi)              :: YRange(1:2)                   !< Range in the y-direction for the gridded data
+      REAL(ReKi)              :: ZRange(1:2)                   !< Range in the z-direction for the gridded data
+
+      TYPE(ProgDesc)          :: ProgInfo                      !< Program info
+      TYPE(ProgDesc)          :: IfWProgInfo                   !< Program info for InflowWind
+
    END TYPE    IfWDriver_Settings
 
 
