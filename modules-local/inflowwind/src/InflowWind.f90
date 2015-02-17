@@ -99,7 +99,7 @@ CONTAINS
 !! Since this module acts as an interface to other modules, on some things are set before initiating
 !! calls to the lower modules.
 !----------------------------------------------------------------------------------------------------
-SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,                   &
+SUBROUTINE InflowWind_Init( InitData,   u,    ParamData,                   &
                      ContStates, DiscStates,    ConstrStateGuess,    OtherStates,   &
                      OutData,    TimeInterval,  InitOutData,                        &
                      ErrStat,    ErrMsg )
@@ -109,7 +109,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          ! Initialization data and guesses
 
       TYPE(InflowWind_InitInputType),        INTENT(IN   )  :: InitData          !< Input data for initialization
-      TYPE(InflowWind_InputType),            INTENT(  OUT)  :: InputGuess        !< An initial guess for the input; the input mesh must be defined
+      TYPE(InflowWind_InputType),            INTENT(  OUT)  :: u                 !< An initial guess for the input; the input mesh must be defined
       TYPE(InflowWind_ParameterType),        INTENT(  OUT)  :: ParamData         !< Parameters
       TYPE(InflowWind_ContinuousStateType),  INTENT(  OUT)  :: ContStates        !< Initial continuous states
       TYPE(InflowWind_DiscreteStateType),    INTENT(  OUT)  :: DiscStates        !< Initial discrete states
@@ -234,10 +234,29 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       ENDIF
 
 
-!FIXME:
-!  Setup the data arrays for passing the wind point array in and the velocity array out.  Add a value to the InitInput_Type for NumPoints.  If already allocated, then skip this step.
+
+         ! Allocate the arrays for passing points in and velocities out
+      IF ( .NOT. ALLOCATED(u%PositionXYZ) ) THEN
+         CALL AllocAry( u%PositionXYZ, 3, InitData%NumWindPoints, &
+                     "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg )
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+         IF ( ErrStat>= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         ENDIF
+      ENDIF
+      IF ( .NOT. ALLOCATED(OutData%VelocityXYZ) ) THEN
+         CALL AllocAry( OutData%VelocityXYZ, 3, InitData%NumWindPoints, &
+                     "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg )
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+         IF ( ErrStat>= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         ENDIF
+      ENDIF
 
 
+RETURN
       !-----------------------------------------------------------------
       ! Initialize the submodules based on the WindType
       !-----------------------------------------------------------------
@@ -457,6 +476,11 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !FIXME: remove this when done with writing InflowWind_Init
 CALL SetErrStat(ErrID_Fatal,' Routine not complete yet.',ErrStat,ErrMsg,'InflowWind_Init')
 
+
+!FIXME: Set value for InitOutput_WindFileDT
+!FIXME: Set values for InitOutput_WindFileTRange
+!FIXME: Set values for InitOutput_WindFileNumTSteps
+
       RETURN
 
 
@@ -486,10 +510,11 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
                               OutputData, ErrStat, ErrMsg )
    ! This routine takes an input dataset of type InputType which contains a position array of dimensions 3*n. It then calculates
    ! and returns the output dataset of type OutputType which contains a corresponding velocity array of dimensions 3*n. The input
-
    ! array contains XYZ triplets for each position of interest (first index is X/Y/Z for values 1/2/3, second index is the point
    ! number to evaluate). The returned values in the OutputData are similar with U/V/W for the first index of 1/2/3.
    !----------------------------------------------------------------------------------------------------
+
+!FIXME: add ability to use the ASyncronous flag to prevent output of WindVi info.
 
          ! Inputs / Outputs
 
@@ -500,7 +525,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
       TYPE(InflowWind_DiscreteStateType),       INTENT(IN   )  :: DiscStates        !< Discrete states at Time
       TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: ConstrStates      !< Constraint states at Time
       TYPE(InflowWind_OtherStateType),          INTENT(INOUT)  :: OtherStates       !< Other/optimization states at Time
-      TYPE(InflowWind_OutputType),              INTENT(  OUT)  :: OutputData        !< Outputs computed at Time (IN for mesh reasons -- not used here)
+      TYPE(InflowWind_OutputType),              INTENT(INOUT)  :: OutputData        !< Outputs computed at Time (IN for mesh reasons and data allocation)
 
       INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
       CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
@@ -547,10 +572,15 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
 
          ! Allocate the velocity array to get out
-      CALL AllocAry( OutputData%Velocity, 3, SIZE(InputData%Position,2), &
+      IF ( .NOT. ALLOCATED(OutputData%VelocityXYZ) ) THEN
+         CALL AllocAry( OutputData%VelocityXYZ, 3, SIZE(InputData%PositionXYZ,DIM=2), &
                      "Velocity array returned from IfW_CalcOutput", TmpErrStat, TmpErrMsg )
          CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
          IF ( ErrStat >= AbortErrLev ) RETURN
+      ELSEIF ( SIZE(InputData%PositionXYZ,DIM=2) /= SIZE(OutputData%VelocityXYZ,DIM=2) ) THEN
+         CALL SetErrStat( ErrID_Fatal," Programming error: Position and Velocity arrays are not sized the same.",  &
+               ErrStat, ErrMsg, ' IfW_CalcOutput')
+      ENDIF
 
          ! Compute the wind velocities by stepping through all the data points and calling the appropriate GetWindSpeed routine
       SELECT CASE ( ParamData%WindType )
@@ -625,7 +655,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
             CALL SetErrStat( ErrID_Fatal, ' Error: Undefined wind type in IfW_CalcOutput. ' &
                       //'Call WindInflow_Init() before calling this function.', ErrStat, ErrMsg, ' IfW_CalcOutput' )
 
-            OutputData%Velocity(:,:) = 0.0
+            OutputData%VelocityXYZ(:,:) = 0.0
             RETURN
 
       END SELECT
@@ -1366,6 +1396,15 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       RETURN
    ENDIF
 
+      ! Read RefLength
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%Uniform_RefLength, 'RefLength', &
+                  'Reference length for uniform wind file', TmpErrStat, TmpErrMsg, UnitEcho )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
+   IF (ErrStat >= AbortErrLev) THEN
+      CALL CleanUp()
+      RETURN
+   ENDIF
+
 
    !-------------------------------------------------------------------------------------------------
    !> Read the _Parameters for Binary TurbSim Full-Field files [used only for WindType = 3]_ section
@@ -1886,6 +1925,7 @@ CONTAINS
                ErrStat,ErrMsg,'Uniform_ValidateInput')
       ENDIF
 
+!FIXME: Do I need to check the RefLength?
       RETURN
 
    END SUBROUTINE Uniform_ValidateInput
