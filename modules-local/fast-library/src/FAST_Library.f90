@@ -187,9 +187,18 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
                  
    
    IF ( n_t_global > m_FAST%n_TMax_m1 ) THEN !finish 
+      
       ! we can't continue because we might over-step some arrays that are allocated to the size of the simulation
-      ErrStat_c = ErrID_Info
-      ErrMsg_c  = TRANSFER( "Simulation Completed."//C_NULL_CHAR, ErrMsg_c )
+
+      IF (n_t_global == m_FAST%n_TMax_m1 + 1) THEN  ! we call update an extra time in Simulink, which we can ignore until the time shift with outputs is solved
+         n_t_global = n_t_global + 1
+         ErrStat_c = ErrID_None
+         ErrMsg_c = TRANSFER( C_NULL_CHAR, ErrMsg_c )
+      ELSE     
+         ErrStat_c = ErrID_Info
+         ErrMsg_c  = TRANSFER( "Simulation completed."//C_NULL_CHAR, ErrMsg_c )
+      END IF
+      
    ELSEIF(NumOutputs_c /= SIZE(y_FAST%ChannelNames) ) THEN
       ErrStat_c = ErrID_Fatal
       ErrMsg_c  = TRANSFER( "FAST_Update:size of NumOutputs is invalid or FAST has too many outputs."//C_NULL_CHAR, ErrMsg_c )
