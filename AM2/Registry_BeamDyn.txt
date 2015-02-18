@@ -50,9 +50,6 @@ typedef BeamDyn/BD ParameterType ReKi   uuN0      {:}{:} - -  "Initial Postion V
 typedef      ^            ^       ^     Stif0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
 typedef      ^            ^       ^     Mass0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
 typedef BeamDyn/BD ParameterType ReKi   gravity   {:} - -  "Gravitational acceleration" m/s^2 
-#typedef      ^            ^       ^     m00       {:} - -  "Sectional Mass density per unit span at each node" -
-#typedef      ^            ^       ^     mEta0     {:}{:} - -  "Sectional m\Eta_0 at each node" -
-#typedef      ^            ^       ^     rho0      {:}{:}{:}  - -  "Sectional tensor of inertia per unit span" -
 typedef      ^            ^       ^     segment_length   {:}{:} - -  "Array stored length of each segment" -
 typedef      ^            ^       ^     member_length   {:}{:} - -  "Array stored length of each member" -
 typedef      ^            ^       ^     blade_length     - - -  "Blade Length" -
@@ -68,6 +65,7 @@ typedef      ^            ^       ^     time_flag  - - -  "time integrator flag:
 typedef      ^            ^       ^     niter  - - -  "analysis_type flag" -
 typedef      ^            ^      DbKi   dt     - - -  "module dt" s
 typedef      ^            ^      ReKi   beta   {:} - -  "Damping Coefficient" -
+typedef      ^            ^      DbKi   coef   {:} - -  "GA2 Coefficient" -
 # ..... Inputs
 # ....................................................................................................................
 # Define inputs that are not on this mesh here:
@@ -97,6 +95,7 @@ typedef BeamDyn/BD    BD_InputFile    IntKi    kp_total         - - - "Total num
 typedef BeamDyn/BD    BD_InputFile    IntKi    kp_member       {:} - - "Total number of key point" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    order_elem       - - - "Order of interpolation (basis) function" -
 typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate   {:}{:} - - "Key point coordinates array" -
+typedef BeamDyn/BD    BD_InputFile    DbKi     rhoinf          - - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    BladeInputData    InpBl   - - - "Input data for individual blades"   "see BladeInputData Type" 
 typedef BeamDyn/BD    BD_InputFile    CHARACTER(1024) BldFile   - - -  "Name of blade input file"
 typedef BeamDyn/BD    BD_InputFile    Logical  Echo             - - -  "Echo"
