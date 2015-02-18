@@ -3136,8 +3136,11 @@ SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, DOFM, Init, &
    CHARACTER(*),           INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! LOCAL VARIABLES
-   REAL(ReKi)                             :: Mu(p%DOFL, p%DOFL)  !matrices for normalization
-   REAL(ReKi)                             :: PhiR_T_MLL(p%DOFR,p%DOFL)   ! transpose of PhiR * MLL (temporary storage)
+   REAL(ReKi) , allocatable               :: Mu(:, :)          ! matrix for normalization Mu(p%DOFL, p%DOFL) [bjj: made allocatable to try to avoid stack issues]
+   REAL(ReKi) , allocatable               :: Temp(:, :)        ! temp matrix for intermediate steps [bjj: made allocatable to try to avoid stack issues]
+   REAL(ReKi) , allocatable               :: PhiR_T_MLL(:,:)   ! PhiR_T_MLL(p%DOFR,p%DOFL) = transpose of PhiR * MLL (temporary storage)
+   
+   
    
    INTEGER                                :: I !, lwork !counter, and varibales for inversion routines
    INTEGER                                :: DOFvar !placeholder used to get both PhiL or PhiM into 1 process
@@ -3147,6 +3150,7 @@ SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, DOFM, Init, &
                                                        
    INTEGER(IntKi)                         :: ErrStat2                                                                    
    CHARACTER(LEN(ErrMsg))                 :: ErrMsg2
+   CHARACTER(*), PARAMETER                :: RoutineName = 'CBMatrix'
                                                        
    ErrStat = ErrID_None 
    ErrMsg  = ''
@@ -3165,13 +3169,25 @@ SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, DOFM, Init, &
    !....................................................
    IF ( DOFvar > 0 ) THEN ! Only time this wouldn't happen is if no modes retained and no static improvement...
       CALL EigenSolve(KLL, MLL, p%DOFL, DOFvar, .False.,Init,p, PhiL(:,1:DOFvar), OmegaL(1:DOFvar),  ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CBMatrix')
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) RETURN
          
+      CALL AllocAry( Temp,  p%DOFL, p%DOFL, 'Temp', ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
+      CALL AllocAry( MU,  p%DOFL, p%DOFL, 'Mu', ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+         
       ! normalize PhiL
-      MU = MATMUL ( MATMUL( TRANSPOSE(PhiL), MLL ), PhiL )
+      ! bjj: break up this equation to avoid as many tenporary variables on the stack
+      !MU = MATMUL ( MATMUL( TRANSPOSE(PhiL), MLL ), PhiL )
+      MU   = TRANSPOSE(PhiL)
+      Temp = MATMUL( MU, MLL )
+      MU   = MATMUL( Temp, PhiL )
    
-   
+      DEALLOCATE(Temp)
+      
       ! PhiL = MATMUL( PhiL, MU2 )  !this is the nondimensionalization (MU2 is diagonal)   
       DO I = 1, DOFvar
          PhiL(:,I) = PhiL(:,I) / SQRT( MU(I, I) )
@@ -3181,6 +3197,8 @@ SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, DOFM, Init, &
          OmegaL(I) = 0.0_ReKi
       END DO     
    
+      DEALLOCATE(MU)
+      
       !....................................................
       ! Set p%PhiL_T and p%PhiLInvOmgL2 for static improvement
       !....................................................
@@ -3202,17 +3220,21 @@ SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, DOFM, Init, &
    ! now factor KLL to compute PhiR: KLL*PhiR=-TRANSPOSE(KRL)
    ! ** note this must be done after EigenSolve() because it modifies KLL **
    CALL LAPACK_getrf( p%DOFL, p%DOFL, KLL, ipiv, ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CBMatrix')
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    
    PhiR = -1.0_ReKi * TRANSPOSE(KRL) !set "b" in Ax=b  (solve KLL * PhiR = - TRANSPOSE( KRL ) for PhiR)
    CALL LAPACK_getrs( TRANS='N',N=p%DOFL,A=KLL,IPIV=ipiv, B=PhiR, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CBMatrix')
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    
    !....................................................
    ! Set MBB, MBM, and KBB from Eq. 4:
    !....................................................
+   CALL AllocAry( PhiR_T_MLL,  p%DOFR, p%DOFL, 'PhiR_T_MLL', ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      IF (ErrStat >= AbortErrLev) RETURN
+      
    PhiR_T_MLL = TRANSPOSE(PhiR)
    PhiR_T_MLL = MATMUL(PhiR_T_MLL, MLL)
    MBB = MATMUL(MRL, PhiR)
@@ -3225,6 +3247,7 @@ SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, DOFM, Init, &
       MBM = MATMUL( PhiR_T_MLL, PhiL(:,1:DOFM))  ! last half of operation
       MBM = MATMUL( MRL, PhiL(:,1:DOFM) ) + MBM    !This had PhiM      
    ENDIF
+   DEALLOCATE( PhiR_T_MLL )
    
    KBB = MATMUL(KRL, PhiR)   
    KBB = KBB + KRR
@@ -3723,6 +3746,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, FGRb, PhiRb, OmegaL, FGL, Ph
    INTEGER(IntKi)                            :: ErrStat2
    CHARACTER(LEN(ErrMsg))                    :: ErrMsg2
 
+   CHARACTER(*), PARAMETER                   :: RoutineName = 'SetParameters'
    
    ErrStat = ErrID_None 
    ErrMsg  = ''
@@ -3794,9 +3818,13 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, FGRb, PhiRb, OmegaL, FGL, Ph
             
       
       ! D2_53, D2_63, D2_64 
-      p%D2_63 = p%PhiRb_TI - MATMUL( p%PhiM, p%MMB )
-      p%D2_64 = MATMUL( p%PhiM, p%PhiM_T )
-      
+      p%D2_63 = MATMUL( p%PhiM, p%MMB )
+      p%D2_63 = p%PhiRb_TI - p%D2_63
+
+      !p%D2_64 = MATMUL( p%PhiM, p%PhiM_T )  !bjj: why does this use stack space?
+      CALL LAPACK_GEMM( 'N', 'N', 1.0_ReKi, p%PhiM, p%PhiM_T, 0.0_ReKi, p%D2_64, ErrStat2, ErrMsg2 ) !bjj: replaced MATMUL with this routine to avoid issues with stack size
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            
       ! F2_61
       p%F2_61 = MATMUL( p%D2_64, FGL )       
                               
@@ -3805,9 +3833,9 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, FGRb, PhiRb, OmegaL, FGL, Ph
       IF (p%IntMethod .EQ. 4) THEN       ! Allocate Jacobian if AM2 is requested & if there are states (p%qmL > 0)
          n=2*p%qmL
          CALL AllocAry( p%AM2Jac, n, n, 'p%AM2InvJac', ErrStat2, ErrMsg2 ) ! This will be the Jacobian
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SetParameters')
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          CALL AllocAry( p%AM2JacPiv, n, 'p%AM2JacPiv', ErrStat2, ErrMsg2 )                         
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SetParameters')         
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)         
             IF ( ErrStat >= AbortErrLev ) RETURN 
          
                ! First we calculate the Jacobian:
@@ -3826,7 +3854,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, FGRb, PhiRb, OmegaL, FGL, Ph
                ! Now need to factor it:        
          !I think it could be improved and made more efficient if we can say the matrix is positive definite
          CALL LAPACK_getrf( n, n, p%AM2Jac, p%AM2JacPiv, ErrStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SetParameters')
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
                 
       END IF     
