@@ -30,10 +30,10 @@
 x%q(1:6) = 0.0D0
 x%dqdt(1:6) = 0.0D0
 OtherState%acc(1:6) = 0.0D0
-x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0)/4.0D0)
-IF(ABS(x%q(5)) .GT. 4.0D0) THEN
-    x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0+2.0D0*3.1415926D0)/4.0D0)
-ENDIF
-x%dqdt(5) = -3.1415926D0/3.0D0
+!x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0)/4.0D0)
+!IF(ABS(x%q(5)) .GT. 4.0D0) THEN
+!    x%q(5) = -4.0D0*TAN((3.1415926D0*t/3.0D0+2.0D0*3.1415926D0)/4.0D0)
+!ENDIF
+!x%dqdt(5) = -3.1415926D0/3.0D0
 !-------END DEBUG-----
    END SUBROUTINE BeamDyn_BoundaryGA2

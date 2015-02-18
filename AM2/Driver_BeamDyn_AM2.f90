@@ -203,7 +203,7 @@ CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final-1
 
 WRITE(*,*) "Time Step: ", n_t_global
-!IF(n_t_global == 2) STOP 
+!IF(n_t_global == 1) STOP 
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
@@ -386,8 +386,7 @@ END PROGRAM MAIN
    ! Calculate root displacements and rotations
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%Orientation(:,:,:) = 0.0D0
-   temp_pp(3) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
-!   CALL CrvCompose_temp(temp_rr,temp_pp,temp_qq,0)
+!   temp_pp(3) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
    CALL CrvMatrixR(temp_pp,temp_R)
    u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
    temp_vec(:) = MATMUL(temp_R,p%uuN0(1:3,1))
@@ -417,6 +416,7 @@ END PROGRAM MAIN
 
    u%PointLoad%Force(:,:)  = 0.0D0
    u%PointLoad%Moment(:,:) = 0.0D0
+   u%PointLoad%Force(3,p%node_total)  = 1.0D+05*SIN(20.0D0*t)
 
    ! LINE2 mesh: DistrLoad
    u%DistrLoad%Force(:,:)  = 0.0D0
