@@ -3,7 +3,7 @@
                                         elem_total,node_elem,dof_node,ngp,   &
                                         StifK,RHS,MassM,DampG)
 
-   REAL(ReKi),        INTENT(IN   ):: uuN0(:)
+   REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),        INTENT(IN   ):: uuNf(:)
    REAL(ReKi),        INTENT(IN   ):: vvNf(:)
    REAL(ReKi),        INTENT(IN   ):: aaNf(:)

@@ -12,10 +12,6 @@
 
    REAL(ReKi):: pp0,pp1,pp2,pp3,qq0,qq1,qq2,qq3,tr1,tr2,dd1,dd2
 
-   integer irescale
-
-   irescale = 0
-
    IF(flag==1 .OR. flag==3) THEN
        pp1 = -pp(1)
        pp2 = -pp(2)
@@ -33,8 +29,8 @@
        qq3 = -qq(3)
    ELSE
        qq1 = qq(1)
-       qq2 = qq(2)
-       qq3 = qq(3)
+       qq2 = qq(2) 
+       qq3 = qq(3) 
    ENDIF
    qq0 = 2.0D0 - (qq1 * qq1 + qq2 * qq2 + qq3 * qq3)/8.0D0
 
@@ -46,7 +42,6 @@
    IF(dd1>dd2) THEN
        tr1 = 4.0D0 / dd1
    ELSE
-       irescale = 1       
        tr1 = -4.0D0 / dd2
    ENDIF
 
@@ -54,9 +49,5 @@
    rr(2) = tr1 * (pp2 * qq0 + pp3 * qq1 + pp0 * qq2 - pp1 * qq3)
    rr(3) = tr1 * (pp3 * qq0 - pp2 * qq1 + pp1 * qq2 + pp0 * qq3)
 
-   if (irescale.eq.1) then
-      write(*,*) 'RESCALING'
-      write(*,*) rr
-   endif
 
    END SUBROUTINE CrvCompose 
