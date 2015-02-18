@@ -21,11 +21,13 @@
    REAL(ReKi),         INTENT(INOUT):: uuNf(:)
    REAL(ReKi),         INTENT(INOUT):: vvNf(:)
    REAL(ReKi),         INTENT(INOUT):: aaNf(:)
-   REAL(ReKi),         INTENT(INOUT):: xxNf
+   REAL(ReKi),         INTENT(INOUT):: xxNf(:)
  
    REAL(ReKi):: errf,temp1,temp2,errx
    REAL(ReKi):: StifK(dof_total,dof_total), RHS(dof_total)
    REAL(ReKi):: MassM(dof_total,dof_total), DampG(dof_total,dof_total)
+   
+   REAL(ReKi)                      :: F_PointLoad(dof_total)
 
    REAL(ReKi):: StifK_LU(dof_total-6,dof_total-6),RHS_LU(dof_total-6)
 
@@ -43,9 +45,6 @@
    
    Fedge = 0.0D0
 
-   CALL TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,uuNf,vvNf,aaNf,xxNf,node_total,dof_node)
-   CALL PrescribedMotion(uuNf,vvNf,aaNf,time)
-   CALL AppliedNodalLoad(F_ext,time,dof_total)
    ai = 0.0D0
    Eref = 0.0D0
 
@@ -57,20 +56,17 @@
        MassM = 0.0D0
        DampG = 0.0D0
 
-       CALL BldGenerateDynamicElement(uuN0,uuNf,vvNf,aaNf,Fedge,Stif0,m00,mEta0,rho0,&
-                      &elem_total,node_elem,dof_node,ngp,&
-                      &StifK,RHS,MassM,DampG)
-!       k=0
-       DO j=1,dof_total
-           WRITE(*,*) "j=",j
-           WRITE(*,*) "RHS(j)=",RHS(j)
-!           WRITE(*,*) StifK(j,1+k),StifK(j,2+k),StifK(j,3+k),StifK(j,4+k),StifK(j,5+k),StifK(j,6+k)
-!           WRITE(*,*) MassM(j,1+k),MassM(j,2+k),MassM(j,3+k),MassM(j,4+k),MassM(j,5+k),MassM(j,6+k)
-!           WRITE(*,*) DampG(j,1+k),DampG(j,2+k),DampG(j,3+k),DampG(j,4+k),DampG(j,5+k),DampG(j,6+k)
-       ENDDO
-!       STOP
+       CALL BldGenerateDynamicElement(uuN0,uuNf,vvNf,aaNf,                 &
+                                      Stif0,Mass0,gravity,u,damp_flag,beta,&
+                                      elem_total,node_elem,dof_node,ngp,   &
+                                      StifK,RHS,MassM,DampG)
        StifK = MassM + coef(7) * DampG + coef(8) * StifK
-       RHS = RHS + F_ext
+       DO j=1,node_total
+           temp_id = (j-1)*dof_node
+           F_PointLoad(temp_id+1:temp_id+3) = u%PointLoad%Force(1:3,j)
+           F_PointLoad(temp_id+4:temp_id+6) = u%PointLoad%Moment(1:3,j)
+       ENDDO
+       RHS(:) = RHS(:) + F_PointLoad(:)
 !       k=0
 !       DO j=1,dof_total
 !           WRITE(*,*) "j=",j

@@ -409,6 +409,11 @@ WRITE(*,*) temp_GLB
    p%dof_total   = p%node_total*p%dof_node   ! total number of dof
    p%dt = Interval
    p%alpha = 0.5D0
+   
+   CALL AllocAry(p%coef,9,'GA2 coefficient',ErrStat2,ErrMsg2)
+   p%coef(:)  = 0.0D0
+   p%rhoinf = InputFileData%rhoinf
+   IF(p%time_flag .EQ. 2) CALL TiSchmComputeCoefficients(p%rhoinf,p%dt,p%coef)
    ! Allocate OtherState if using multi-step method; initialize n
 
 
@@ -712,7 +717,7 @@ WRITE(*,*) temp_GLB
        IF(p%time_flag .EQ. 1) THEN
            CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
        ELSEIF(p%time_flag .EQ. 2) THEN
-           CALL BeamDyn_GA2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+!           CALL BeamDyn_GA2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
        ELSEIF(p%time_flag .EQ. 3) THEN
            CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
        ELSEIF(p%time_flag .EQ. 4) THEN

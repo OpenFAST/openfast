@@ -58,7 +58,7 @@
                  , ErrMess  = ErrMsg               )
 
    CALL BD_CopyContState(x, x_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
-   CALL BD_CopyContState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
+   CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
    ! interpolate u to find u_interp = u(t)
    CALL BD_Input_ExtrapInterp( u, utimes, u_interp, t+p%dt, ErrStat, ErrMsg )
    CALL TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
@@ -66,13 +66,12 @@
                              p%node_total,p%dof_node )
    ! find x at t+dt
    CALL BeamDyn_BoundaryGA2(x,u_interp,t+p%dt,OtherState,ErrStat,ErrMsg)
-   CALL DynamicSolution_GA2( p%uuN0,x%q,x%dqdt,x_tmp%q,x_tmp%dqdt,xdot%q,xdot%dqdt,&
-                             p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,             &
-                             p%damp_flag,p%beta,                                   &
-                             p%node_elem,p%dof_node,p%elem_total,p%dof_total,      &
-                             p%node_total,p%ngp,p%niter,OtherState%NR_counter,p%dt,p%alpha)
-   CALL RescaleCheck(x,p%node_total,OtherState%Rescale_counter)
-
+   CALL DynamicSolution_GA2( p%uuN0,x%q,x%dqdt,OtherState%acc,OtherState%xcc,&
+                             p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,       &
+                             p%damp_flag,p%beta,                             &
+                             p%node_elem,p%dof_node,p%elem_total,p%dof_total,&
+                             p%node_total,p%niter,p%ngp,p%coef)
+!   CALL RescaleCheck(x,p%node_total,OtherState%Rescale_counter)
 !   CALL BeamDyn_ApplyBoundaryCondition(x,u(1),ErrStat,ErrMsg)
 
    CALL MeshDestroy ( u_interp%RootMotion        &
@@ -82,16 +81,6 @@
                     , ErrStat  = ErrStat         &
                     , ErrMess  = ErrMsg           )
    CALL MeshDestroy ( u_interp%DistrLoad         &
-                    , ErrStat  = ErrStat         &
-                    , ErrMess  = ErrMsg           )
-
-   CALL MeshDestroy ( u_interp0%RootMotion        &
-                    , ErrStat  = ErrStat         &
-                    , ErrMess  = ErrMsg           )
-   CALL MeshDestroy ( u_interp0%PointLoad        &
-                    , ErrStat  = ErrStat         &
-                    , ErrMess  = ErrMsg           )
-   CALL MeshDestroy ( u_interp0%DistrLoad         &
                     , ErrStat  = ErrStat         &
                     , ErrMess  = ErrMsg           )
    
