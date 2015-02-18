@@ -52,7 +52,7 @@
 
    DO i=1,niter
        WRITE(*,*) "N-R Iteration #", i
-!       IF(i==10) STOP
+       IF(i==3) STOP
        StifK = 0.0D0
        RHS = 0.0D0
        MassM = 0.0D0
@@ -104,12 +104,16 @@
            WRITE(*,*) "Eref = ", Eref
            IF(Enorm .LE. Eref) RETURN
        ENDIF    
+       DO j=1,dof_total
+           WRITE(*,*) "Inc(j)=",j,ai(j)
+       ENDDO
+!       STOP
        CALL UpdateDynamic(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
            
-!       DO j=dof_total-5,dof_total
-!           WRITE(*,*) "j=",j
-!           WRITE(*,*) "uuNf(j)=",uuNf(j)
-!       ENDDO
+       DO j=1,dof_total
+           WRITE(*,*) "j=",j
+           WRITE(*,*) "uuNf(j)=",uuNf(j)
+       ENDDO
 !       STOP
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"

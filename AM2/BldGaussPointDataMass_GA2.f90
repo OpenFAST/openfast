@@ -22,10 +22,6 @@
    INTEGER(IntKi)               :: i
    INTEGER(IntKi)               :: j
 
-   mmm      = 0.0D0
-   mEta(:)  = 0.0D0
-   rho(:,:) = 0.0D0
-
    vvv(:) = 0.0D0
    vvp(:) = 0.0D0
    aaa(:) = 0.0D0
