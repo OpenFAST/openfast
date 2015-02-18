@@ -68,6 +68,8 @@ IMPLICIT NONE
     REAL(ReKi)  :: DummyOtherState      ! A variable, replace if you have Other States [-]
     INTEGER(IntKi)  :: Rescale_counter      ! A variable, replace if you have Other States [-]
     INTEGER(IntKi)  :: NR_counter      ! A variable, replace if you have Other States [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: acc      ! Accerleration in GA2 [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xcc      ! Algorithm accerleration in GA2 [-]
   END TYPE BD_OtherStateType
 ! =======================
 ! =========  BD_ParameterType  =======
@@ -92,6 +94,8 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: niter      ! analysis_type flag [-]
     REAL(DbKi)  :: dt      ! module dt [s]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: beta      ! Damping Coefficient [-]
+    REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: coef      ! GA2 Coefficient [-]
+    REAL(DbKi)  :: rhoinf      ! Numerical Damping Coefficient for GA2 [-]
   END TYPE BD_ParameterType
 ! =======================
 ! =========  BD_InputType  =======
@@ -127,6 +131,7 @@ IMPLICIT NONE
     INTEGER(IntKi) , DIMENSION(:), ALLOCATABLE  :: kp_member      ! Total number of key point [-]
     INTEGER(IntKi)  :: order_elem      ! Order of interpolation (basis) function [-]
     REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: kp_coordinate      ! Key point coordinates array [-]
+    REAL(DbKi)  :: rhoinf      ! Key point coordinates array [-]
     TYPE(BladeInputData)  :: InpBl      ! Input data for individual blades [see BladeInputData Type]
     CHARACTER(1024)  :: BldFile      ! Name of blade input file [-]
     LOGICAL  :: Echo      ! Echo [-]
@@ -816,6 +821,32 @@ ENDIF
    DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
    DstOtherStateData%Rescale_counter = SrcOtherStateData%Rescale_counter
    DstOtherStateData%NR_counter = SrcOtherStateData%NR_counter
+IF (ALLOCATED(SrcOtherStateData%acc)) THEN
+   i1_l = LBOUND(SrcOtherStateData%acc,1)
+   i1_u = UBOUND(SrcOtherStateData%acc,1)
+   IF (.NOT. ALLOCATED(DstOtherStateData%acc)) THEN 
+      ALLOCATE(DstOtherStateData%acc(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_CopyOtherState: Error allocating DstOtherStateData%acc.'
+         RETURN
+      END IF
+   END IF
+   DstOtherStateData%acc = SrcOtherStateData%acc
+ENDIF
+IF (ALLOCATED(SrcOtherStateData%xcc)) THEN
+   i1_l = LBOUND(SrcOtherStateData%xcc,1)
+   i1_u = UBOUND(SrcOtherStateData%xcc,1)
+   IF (.NOT. ALLOCATED(DstOtherStateData%xcc)) THEN 
+      ALLOCATE(DstOtherStateData%xcc(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_CopyOtherState: Error allocating DstOtherStateData%xcc.'
+         RETURN
+      END IF
+   END IF
+   DstOtherStateData%xcc = SrcOtherStateData%xcc
+ENDIF
  END SUBROUTINE BD_CopyOtherState
 
  SUBROUTINE BD_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
@@ -826,6 +857,12 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+IF (ALLOCATED(OtherStateData%acc)) THEN
+   DEALLOCATE(OtherStateData%acc)
+ENDIF
+IF (ALLOCATED(OtherStateData%xcc)) THEN
+   DEALLOCATE(OtherStateData%xcc)
+ENDIF
  END SUBROUTINE BD_DestroyOtherState
 
  SUBROUTINE BD_PackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -865,6 +902,8 @@ ENDIF
   Re_BufSz   = Re_BufSz   + 1  ! DummyOtherState
   Int_BufSz  = Int_BufSz  + 1  ! Rescale_counter
   Int_BufSz  = Int_BufSz  + 1  ! NR_counter
+  Re_BufSz    = Re_BufSz    + SIZE( InData%acc )  ! acc 
+  Re_BufSz    = Re_BufSz    + SIZE( InData%xcc )  ! xcc 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -874,6 +913,14 @@ ENDIF
   Int_Xferred   = Int_Xferred   + 1
   IF ( .NOT. OnlySize ) IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = (InData%NR_counter )
   Int_Xferred   = Int_Xferred   + 1
+  IF ( ALLOCATED(InData%acc) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%acc))-1 ) =  PACK(InData%acc ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%acc)
+  ENDIF
+  IF ( ALLOCATED(InData%xcc) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%xcc))-1 ) =  PACK(InData%xcc ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%xcc)
+  ENDIF
  END SUBROUTINE BD_PackOtherState
 
  SUBROUTINE BD_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -915,6 +962,18 @@ ENDIF
   Int_Xferred   = Int_Xferred   + 1
   OutData%NR_counter = IntKiBuf ( Int_Xferred )
   Int_Xferred   = Int_Xferred   + 1
+  IF ( ALLOCATED(OutData%acc) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%acc,1))); mask1 = .TRUE.
+    OutData%acc = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%acc))-1 ),mask1,OutData%acc)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%acc)
+  ENDIF
+  IF ( ALLOCATED(OutData%xcc) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%xcc,1))); mask1 = .TRUE.
+    OutData%xcc = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%xcc))-1 ),mask1,OutData%xcc)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%xcc)
+  ENDIF
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -1051,6 +1110,20 @@ IF (ALLOCATED(SrcParamData%beta)) THEN
    END IF
    DstParamData%beta = SrcParamData%beta
 ENDIF
+IF (ALLOCATED(SrcParamData%coef)) THEN
+   i1_l = LBOUND(SrcParamData%coef,1)
+   i1_u = UBOUND(SrcParamData%coef,1)
+   IF (.NOT. ALLOCATED(DstParamData%coef)) THEN 
+      ALLOCATE(DstParamData%coef(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_CopyParam: Error allocating DstParamData%coef.'
+         RETURN
+      END IF
+   END IF
+   DstParamData%coef = SrcParamData%coef
+ENDIF
+   DstParamData%rhoinf = SrcParamData%rhoinf
  END SUBROUTINE BD_CopyParam
 
  SUBROUTINE BD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1081,6 +1154,9 @@ IF (ALLOCATED(ParamData%member_length)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%beta)) THEN
    DEALLOCATE(ParamData%beta)
+ENDIF
+IF (ALLOCATED(ParamData%coef)) THEN
+   DEALLOCATE(ParamData%coef)
 ENDIF
  END SUBROUTINE BD_DestroyParam
 
@@ -1138,6 +1214,8 @@ ENDIF
   Int_BufSz  = Int_BufSz  + 1  ! niter
   Db_BufSz   = Db_BufSz   + 1  ! dt
   Re_BufSz    = Re_BufSz    + SIZE( InData%beta )  ! beta 
+  Db_BufSz    = Db_BufSz    + SIZE( InData%coef )  ! coef 
+  Db_BufSz   = Db_BufSz   + 1  ! rhoinf
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -1195,6 +1273,12 @@ ENDIF
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%beta))-1 ) =  PACK(InData%beta ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%beta)
   ENDIF
+  IF ( ALLOCATED(InData%coef) ) THEN
+    IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(SIZE(InData%coef))-1 ) =  PACK(InData%coef ,.TRUE.)
+    Db_Xferred   = Db_Xferred   + SIZE(InData%coef)
+  ENDIF
+  IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) =  (InData%rhoinf )
+  Db_Xferred   = Db_Xferred   + 1
  END SUBROUTINE BD_PackParam
 
  SUBROUTINE BD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1298,6 +1382,14 @@ ENDIF
   DEALLOCATE(mask1)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%beta)
   ENDIF
+  IF ( ALLOCATED(OutData%coef) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%coef,1))); mask1 = .TRUE.
+    OutData%coef = UNPACK(DbKiBuf( Db_Xferred:Re_Xferred+(SIZE(OutData%coef))-1 ),mask1,OutData%coef)
+  DEALLOCATE(mask1)
+    Db_Xferred   = Db_Xferred   + SIZE(OutData%coef)
+  ENDIF
+  OutData%rhoinf = DbKiBuf ( Db_Xferred )
+  Db_Xferred   = Db_Xferred   + 1
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1
@@ -2033,6 +2125,7 @@ IF (ALLOCATED(SrcinputfileData%kp_coordinate)) THEN
    END IF
    DstinputfileData%kp_coordinate = SrcinputfileData%kp_coordinate
 ENDIF
+   DstinputfileData%rhoinf = SrcinputfileData%rhoinf
       CALL BD_Copybladeinputdata( SrcinputfileData%InpBl, DstinputfileData%InpBl, CtrlCode, ErrStat, ErrMsg )
    DstinputfileData%BldFile = SrcinputfileData%BldFile
    DstinputfileData%Echo = SrcinputfileData%Echo
@@ -2099,6 +2192,7 @@ ENDIF
   Int_BufSz   = Int_BufSz   + SIZE( InData%kp_member )  ! kp_member 
   Int_BufSz  = Int_BufSz  + 1  ! order_elem
   Re_BufSz    = Re_BufSz    + SIZE( InData%kp_coordinate )  ! kp_coordinate 
+  Db_BufSz   = Db_BufSz   + 1  ! rhoinf
   CALL BD_Packbladeinputdata( Re_InpBl_Buf, Db_InpBl_Buf, Int_InpBl_Buf, InData%InpBl, ErrStat, ErrMsg, .TRUE. ) ! InpBl 
   IF(ALLOCATED(Re_InpBl_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_InpBl_Buf  ) ! InpBl
   IF(ALLOCATED(Db_InpBl_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_InpBl_Buf  ) ! InpBl
@@ -2127,6 +2221,8 @@ ENDIF
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%kp_coordinate))-1 ) =  PACK(InData%kp_coordinate ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%kp_coordinate)
   ENDIF
+  IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) =  (InData%rhoinf )
+  Db_Xferred   = Db_Xferred   + 1
   CALL BD_Packbladeinputdata( Re_InpBl_Buf, Db_InpBl_Buf, Int_InpBl_Buf, InData%InpBl, ErrStat, ErrMsg, OnlySize ) ! InpBl 
   IF(ALLOCATED(Re_InpBl_Buf)) THEN
     IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_InpBl_Buf)-1 ) = Re_InpBl_Buf
@@ -2203,6 +2299,8 @@ ENDIF
   DEALLOCATE(mask2)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%kp_coordinate)
   ENDIF
+  OutData%rhoinf = DbKiBuf ( Db_Xferred )
+  Db_Xferred   = Db_Xferred   + 1
  ! first call BD_Packbladeinputdata to get correctly sized buffers for unpacking
   CALL BD_Packbladeinputdata( Re_InpBl_Buf, Db_InpBl_Buf, Int_InpBl_Buf, OutData%InpBl, ErrStat, ErrMsg, .TRUE. ) ! InpBl 
   IF(ALLOCATED(Re_InpBl_Buf)) THEN

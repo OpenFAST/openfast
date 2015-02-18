@@ -102,7 +102,7 @@ PROGRAM MAIN
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 5.0D-03*0.001
+   dt_global = 1.0D-03*1.0D0
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -133,7 +133,8 @@ PROGRAM MAIN
 !   BD_InitInput%InputFile = 'BeamDyn_Input_CX100.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_5MW.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_5MW_New.inp'
-   BD_InitInput%InputFile = 'Siemens_53_Input.inp'
+!   BD_InitInput%InputFile = 'Siemens_53_Input.inp'
+   BD_InitInput%InputFile = 'GA2_Debug.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Composite.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Damp.inp'
@@ -145,7 +146,7 @@ PROGRAM MAIN
    BD_InitInput%gravity(3) = 0.0D0 
 
    ALLOCATE(BD_InitInput%GlbPos(3)) 
-   BD_InitInput%GlbPos(1) = 1.0D+00
+   BD_InitInput%GlbPos(1) = 0.0D+00
    BD_InitInput%GlbPos(2) = 0.0D+01
    BD_InitInput%GlbPos(3) = 0.0D0
 
@@ -396,8 +397,10 @@ END PROGRAM MAIN
    ! Calculate root translational and angular velocities
    u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(:,:) = 0.0D0
-   u%RootMotion%RotationVel(3,1) = 3.1415926D+00*1.0D0/3.0D0
-   u%RootMotion%TranslationVel(1:3,1) = -1.0D0*MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
+!   u%RootMotion%RotationVel(3,1) = 3.1415926D+00*1.0D0/3.0D0
+!   u%RootMotion%TranslationVel(1:3,1) = -1.0D0*MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
+!   u%RootMotion%RotationVel(2,1) = -3.1415926D+00*1.0D0/3.0D0
+!   u%RootMotion%TranslationVel(1:3,1) = -1.0D0*MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
    ! END Calculate root translational and angular velocities
 
 

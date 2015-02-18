@@ -119,7 +119,17 @@ INCLUDE 'Solution_CCSD.f90'
 INCLUDE 'GenerateDynamicElement_CCSD.f90'
 INCLUDE 'ElementMatrix_CCSD.f90'
 
+INCLUDE 'BeamDyn_GA2.f90'
 INCLUDE 'TiSchmPredictorStep.f90'
+INCLUDE 'TiSchmComputeCoefficients.f90'
+INCLUDE 'BeamDyn_BoundaryGA2.f90'
+INCLUDE 'DynamicSolution_GA2.f90'
+INCLUDE 'BldGenerateDynamicElement.f90'
+INCLUDE 'UpdateDynamic.f90'
+INCLUDE 'ElementMatrix_GA2.f90'
+INCLUDE 'BldGaussPointDataMass_GA2.f90'
+INCLUDE 'InertialForce.f90'
+INCLUDE 'ElasticForce_GA2.f90'
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
@@ -278,12 +288,12 @@ INCLUDE 'TiSchmPredictorStep.f90'
                    p%uuN0(temp_id2+2,i) = temp_POS(2) + InitInp%GlbPos(2)
                    p%uuN0(temp_id2+3,i) = temp_POS(3) + InitInp%GlbPos(3)
                    temp_GLB(:) = 0.0D0
-WRITE(*,*) 'j = ', j
-WRITE(*,*) temp_CRV
-WRITE(*,*) temp_glbrot
+!WRITE(*,*) 'j = ', j
+!WRITE(*,*) temp_CRV
+!WRITE(*,*) temp_glbrot
                    temp_GLB(:) = MATMUL(InitInp%GlbRot,temp_CRV)
 !                   CALL CrvCompose_temp(temp_GLB,temp_glbrot,temp_CRV,0)
-WRITE(*,*) temp_GLB
+!WRITE(*,*) temp_GLB
                    p%uuN0(temp_id2+4,i) = temp_GLB(1)
                    p%uuN0(temp_id2+5,i) = temp_GLB(2)
                    p%uuN0(temp_id2+6,i) = temp_GLB(3)
@@ -423,6 +433,11 @@ WRITE(*,*) temp_GLB
    x%q = 0.0D0
    CALL AllocAry(x%dqdt,p%dof_total,'x%dqdt',ErrStat2,ErrMsg2)
    x%dqdt = 0.0D0
+
+   CALL AllocAry(OtherState%acc,p%dof_total,'OtherState%acc',ErrStat2,ErrMsg2)
+   OtherState%acc(:) = 0.0D0
+   CALL AllocAry(OtherState%xcc,p%dof_total,'OtherState%xcc',ErrStat2,ErrMsg2)
+   OtherState%xcc(:) = 0.0D0
 
    p%niter = 20
 
@@ -717,7 +732,7 @@ WRITE(*,*) temp_GLB
        IF(p%time_flag .EQ. 1) THEN
            CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
        ELSEIF(p%time_flag .EQ. 2) THEN
-!           CALL BeamDyn_GA2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+           CALL BeamDyn_GA2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
        ELSEIF(p%time_flag .EQ. 3) THEN
            CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
        ELSEIF(p%time_flag .EQ. 4) THEN

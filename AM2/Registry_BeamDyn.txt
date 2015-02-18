@@ -36,9 +36,11 @@ typedef BeamDyn/BD ConstraintStateType ReKi DummyConstrState - - - "A variable, 
 # Define any data that are not considered actual states here:
 # e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 # at a given time, etc.)
-typedef BeamDyn/BD OtherStateType ReKi DummyOtherState  - - - "A variable, replace if you have Other States"
+typedef BeamDyn/BD OtherStateType ReKi  DummyOtherState  - - - "A variable, replace if you have Other States"
 typedef BeamDyn/BD OtherStateType IntKi Rescale_counter  - - - "A variable, replace if you have Other States"
 typedef BeamDyn/BD OtherStateType IntKi NR_counter  - - - "A variable, replace if you have Other States"
+typedef BeamDyn/BD OtherStateType ReKi  acc        {:} - - "Accerleration in GA2"
+typedef BeamDyn/BD OtherStateType ReKi  xcc        {:} - - "Algorithm accerleration in GA2" 
 
 # ..... Parameters
 # ................................................................................................................
@@ -66,6 +68,7 @@ typedef      ^            ^       ^     niter  - - -  "analysis_type flag" -
 typedef      ^            ^      DbKi   dt     - - -  "module dt" s
 typedef      ^            ^      ReKi   beta   {:} - -  "Damping Coefficient" -
 typedef      ^            ^      DbKi   coef   {:} - -  "GA2 Coefficient" -
+typedef BeamDyn/BD ParameterType DbKi   rhoinf   - - -  "Numerical Damping Coefficient for GA2"  
 # ..... Inputs
 # ....................................................................................................................
 # Define inputs that are not on this mesh here:

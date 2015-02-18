@@ -103,7 +103,7 @@
    elg(:,:) = 0.0D0
    elm(:,:) = 0.0D0
    
-   CALL BeamDyn_gen_gll_LSGL(node_elem-1,GLL_temp,w_temp)
+   CALL BD_gen_gll_LSGL(node_elem-1,GLL_temp,w_temp)
    CALL BldGaussPointWeight(ngp,gp,gw)
    DO igp=1,ngp
        gpr = gp(igp)
@@ -112,7 +112,7 @@
        Stif(:,:) = 0.0D0
        Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
        CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)
-       CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
+       CALL ElasticForce_GA2(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
        
        mmm  = 0.0D0
        mEta = 0.0D0

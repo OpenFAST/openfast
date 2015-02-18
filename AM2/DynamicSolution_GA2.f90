@@ -3,7 +3,7 @@
                                    node_elem,dof_node,elem_total,dof_total,&
                                    node_total,niter,ngp,coef)
 
-   REAL(ReKi),         INTENT(IN   ):: uuN0(:)
+   REAL(ReKi),         INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),         INTENT(IN   ):: Stif0(:,:,:)
    REAL(ReKi),         INTENT(IN   ):: Mass0(:,:,:)
    REAL(ReKi),         INTENT(IN   ):: gravity(:)
@@ -23,33 +23,35 @@
    REAL(ReKi),         INTENT(INOUT):: aaNf(:)
    REAL(ReKi),         INTENT(INOUT):: xxNf(:)
  
-   REAL(ReKi):: errf,temp1,temp2,errx
-   REAL(ReKi):: StifK(dof_total,dof_total), RHS(dof_total)
-   REAL(ReKi):: MassM(dof_total,dof_total), DampG(dof_total,dof_total)
+   REAL(ReKi)                       :: errf
+   REAL(ReKi)                       :: temp1
+   REAL(ReKi)                       :: temp2
+   REAL(ReKi)                       :: errx
+   REAL(ReKi)                       :: StifK(dof_total,dof_total)
+   REAL(ReKi)                       :: RHS(dof_total)
+   REAL(ReKi)                       :: MassM(dof_total,dof_total)
+   REAL(ReKi)                       :: DampG(dof_total,dof_total)
+   REAL(ReKi)                       :: F_PointLoad(dof_total)
+   REAL(ReKi)                       :: StifK_LU(dof_total-6,dof_total-6)
+   REAL(ReKi)                       :: RHS_LU(dof_total-6)
+   REAL(ReKi)                       :: ai(dof_total)
+   REAL(ReKi)                       :: ai_temp(dof_total-6)
+   REAL(ReKi)                       :: feqv(dof_total-6)
+   REAL(ReKi)                       :: Eref
+   REAL(ReKi)                       :: Enorm
+   REAL(ReKi),PARAMETER             :: TOLF = 1.0D-10   
+   REAL(ReKi)                       :: d
+   INTEGER(IntKi)                   :: indx(dof_total-6)
+   INTEGER(IntKi)                   :: i
+   INTEGER(IntKi)                   :: j
+   INTEGER(IntKi)                   :: k
+   INTEGER(IntKi)                   :: temp_id
    
-   REAL(ReKi)                      :: F_PointLoad(dof_total)
-
-   REAL(ReKi):: StifK_LU(dof_total-6,dof_total-6),RHS_LU(dof_total-6)
-
-   REAL(ReKi):: F_ext(dof_total)
-   REAL(ReKi):: Fedge(dof_total)
-
-   REAL(ReKi)::ai(dof_total),ai_temp(dof_total-6)
-   REAL(ReKi)::feqv(dof_total-6),Eref,Enorm
-   REAL(ReKi),PARAMETER:: TOLF = 1.0D-10   
-   
-   REAL(ReKi)::d
-   INTEGER(IntKi):: indx(dof_total-6)
-
-   INTEGER(IntKi)::i,j,k
-   
-   Fedge = 0.0D0
-
    ai = 0.0D0
    Eref = 0.0D0
 
    DO i=1,niter
-!       WRITE(*,*) "N-R Iteration #", i
+       WRITE(*,*) "N-R Iteration #", i
 !       IF(i==10) STOP
        StifK = 0.0D0
        RHS = 0.0D0
@@ -98,8 +100,8 @@
        IF(i .GT. 1) THEN
            Enorm = 0.0D0
            Enorm = SQRT(DOT_PRODUCT(ai_temp,feqv))
-!           WRITE(*,*) "Enorm = ", Enorm
-!           WRITE(*,*) "Eref = ", Eref
+           WRITE(*,*) "Enorm = ", Enorm
+           WRITE(*,*) "Eref = ", Eref
            IF(Enorm .LE. Eref) RETURN
        ENDIF    
        CALL UpdateDynamic(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)

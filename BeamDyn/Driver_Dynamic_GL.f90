@@ -157,7 +157,7 @@ PROGRAM MAIN
    DO n_t_global = 0,n_t_final
        WRITE(*,2000) n_t_global+1,(n_t_global)*dt_global 
 !       WRITE(*,*) "***INITIAL TIME = ", (n_t_global)*dt_global
-!       IF(n_t_global==4) STOP
+!       IF(n_t_global==2) STOP
        StepEndTime =  (n_t_global + 1) * dt_global
 !       WRITE(*,*) "StepEndTime = ", StepEndTime
        CALL DynamicSolutionGL(BDyn_Parameter%uuN0,BDyn_OtherState%uuNi,BDyn_OtherState%vvNi,BDyn_OtherState%aaNi,&

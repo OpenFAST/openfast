@@ -41,8 +41,10 @@
    ai = 0.0D0
    Eref = 0.0D0
 
+   WRITE(*,*) uuNf(:)
+
    DO i=1,niter
-!       WRITE(*,*) "N-R Iteration #", i
+       WRITE(*,*) "N-R Iteration #", i
 !       IF(i==10) STOP
        StifK = 0.0D0
        RHS = 0.0D0
@@ -54,8 +56,8 @@
                       &StifK,RHS,MassM,DampG)
 !       k=0
        DO j=1,dof_total
-           WRITE(*,*) "j=",j
-           WRITE(*,*) "RHS(j)=",RHS(j)
+!           WRITE(*,*) "j=",j
+!           WRITE(*,*) "RHS(j)=",RHS(j)
 !           WRITE(*,*) StifK(j,1+k),StifK(j,2+k),StifK(j,3+k),StifK(j,4+k),StifK(j,5+k),StifK(j,6+k)
 !           WRITE(*,*) MassM(j,1+k),MassM(j,2+k),MassM(j,3+k),MassM(j,4+k),MassM(j,5+k),MassM(j,6+k)
 !           WRITE(*,*) DampG(j,1+k),DampG(j,2+k),DampG(j,3+k),DampG(j,4+k),DampG(j,5+k),DampG(j,6+k)
@@ -94,8 +96,8 @@
        IF(i .GT. 1) THEN
            Enorm = 0.0D0
            Enorm = SQRT(DOT_PRODUCT(ai_temp,feqv))
-!           WRITE(*,*) "Enorm = ", Enorm
-!           WRITE(*,*) "Eref = ", Eref
+           WRITE(*,*) "Enorm = ", Enorm
+           WRITE(*,*) "Eref = ", Eref
            IF(Enorm .LE. Eref) RETURN
        ENDIF    
        CALL UpdateDynamic(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
