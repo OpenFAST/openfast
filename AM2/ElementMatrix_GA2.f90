@@ -128,14 +128,6 @@
        ENDIF
        CALL GravityLoads(mmm,mEta,gravity,Fg)
        Fd(:) = Fd(:) - Fg(:)
-!DO i=1,3
-!DO j=1,3
-!WRITE(*,*) Mi(j+3,i+3)
-!ENDDO
-!ENDDO
-!DO i=1,6
-!WRITE(*,*) i,Fd(i)
-!ENDDO
 
        DO i=1,node_elem
            DO j=1,node_elem
@@ -165,10 +157,6 @@
            ENDDO
        ENDDO 
 
-DO i=1,6
-WRITE(*,*) i,Fi(i)
-ENDDO
-
        DO i=1,node_elem
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
@@ -177,9 +165,6 @@ ENDDO
                elf(temp_id1) = elf(temp_id1) - hhx(i)*Fi(j)*Jacobian*gw(igp)
            ENDDO
        ENDDO
-DO i=1,18
-!WRITE(*,*) i,elf(i)
-ENDDO
 
    ENDDO
 

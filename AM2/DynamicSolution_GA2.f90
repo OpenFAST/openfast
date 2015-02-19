@@ -51,8 +51,8 @@
    Eref = 0.0D0
 
    DO i=1,niter
-       WRITE(*,*) "N-R Iteration #", i
-       IF(i==3) STOP
+!       WRITE(*,*) "N-R Iteration #", i
+!       IF(i==3) STOP
        StifK = 0.0D0
        RHS = 0.0D0
        MassM = 0.0D0
@@ -88,7 +88,6 @@
 !       CALL Norm(dof_total-6,feqv,errf)
 !       WRITE(*,*) "NORM(feqv) = ", errf
        
-!       CALL CGSolver(RHS,StifK,ai,bc,dof_total)
        CALL ludcmp(StifK_LU,dof_total-6,indx,d)
        CALL lubksb(StifK_LU,dof_total-6,indx,RHS_LU,ai_temp)
 
@@ -100,21 +99,15 @@
        IF(i .GT. 1) THEN
            Enorm = 0.0D0
            Enorm = SQRT(DOT_PRODUCT(ai_temp,feqv))
-           WRITE(*,*) "Enorm = ", Enorm
-           WRITE(*,*) "Eref = ", Eref
+!           WRITE(*,*) "Enorm = ", Enorm
+!           WRITE(*,*) "Eref = ", Eref
            IF(Enorm .LE. Eref) RETURN
        ENDIF    
-       DO j=1,dof_total
-           WRITE(*,*) "Inc(j)=",j,ai(j)
-       ENDDO
-!       STOP
+!       DO j=1,dof_total
+!           WRITE(*,*) "Inc(j)=",j,ai(j)
+!       ENDDO
        CALL UpdateDynamic(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
            
-       DO j=1,dof_total
-           WRITE(*,*) "j=",j
-           WRITE(*,*) "uuNf(j)=",uuNf(j)
-       ENDDO
-!       STOP
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"
            STOP

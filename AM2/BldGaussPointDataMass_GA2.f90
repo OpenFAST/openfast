@@ -1,5 +1,5 @@
    SUBROUTINE BldGaussPointDataMass_GA2(hhx,hpx,Nvvv,Naaa,RR0,node_elem,dof_node,&
-                                        vvv,vvp,aaa,mmm,mEta,rho)
+                                        vvv,aaa,vvp,mmm,mEta,rho)
 
    REAL(ReKi),     INTENT(IN   ):: hhx(:)
    REAL(ReKi),     INTENT(IN   ):: hpx(:)
@@ -25,7 +25,7 @@
    vvv(:) = 0.0D0
    vvp(:) = 0.0D0
    aaa(:) = 0.0D0
-   
+
    DO inode=1,node_elem
        hhi = hhx(inode)
        hpi = hpx(inode)
