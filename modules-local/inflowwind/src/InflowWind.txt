@@ -144,7 +144,7 @@ typedef  ^                       ^                 ReKi              WindVziList
 #typedef  ^                       ^        IfW_TSFFWind_ParameterType TSFFWind          -     -     -     "Parameters from TSFFWind -- TurbSim full-field format"  -
 #typedef  ^                       ^    IfW_BladedFFWind_ParameterType BladedFFWind      -     -     -     "Parameters from BladedFFWind -- Bladed-style full-field format"  -
 typedef  ^                       ^     IfW_UniformWind_ParameterType UniformWind       -     -     -     "Parameters from UniformWind"                            -
-typedef  ^                       ^        IfW_HAWCWind_ParameterType HAWCWind          -     -     -     "Parameters from HAWCWind"                               -
+#typedef  ^                       ^        IfW_HAWCWind_ParameterType HAWCWind          -     -     -     "Parameters from HAWCWind"                               -
 #typedef  ^                       ^        IfW_UserWind_ParameterType UserWind          -     -     -     "Parameters from UserWind"                               -
 #typedef  ^                       ^          IfW_CTWind_ParameterType CTWind            -     -     -     "Parameters from CTWind"                                 -
 
