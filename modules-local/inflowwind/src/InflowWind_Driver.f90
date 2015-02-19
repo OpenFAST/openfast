@@ -386,7 +386,7 @@ PROGRAM InflowWind_Driver
    ENDIF
 
 
-!Should be able to either allocate it here, or in IfW
+!      ! Should be able to either allocate InflowWind_u1%PositionXYZ here, or in IfW
 !   CALL AllocAry( InflowWind_u1%PositionXYZ, 3, InflowWind_InitInp%NumWindPoints, &
 !         "Array of positions at which to find wind velocities for the WindGrid", ErrStat, ErrMsg )
 
@@ -406,14 +406,13 @@ PROGRAM InflowWind_Driver
                   InflowWind_y1,    DT,  InflowWind_InitOut, ErrStat, ErrMsg )
 
 
-!FIXME: include this again
       ! Make sure no errors occured that give us reason to terminate now.
-!   IF ( ErrStat >= AbortErrLev ) THEN
-!      CALL DriverCleanup()
-!      CALL ProgAbort( ErrMsg )
-!   ELSEIF ( ErrStat /= 0 ) THEN
-!      CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//'   ErrMsg: '//NewLine//TRIM(ErrMsg)//NewLine)
-!   ENDIF
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL DriverCleanup()
+      CALL ProgAbort( ErrMsg )
+   ELSEIF ( ErrStat /= 0 ) THEN
+      CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//'   ErrMsg: '//NewLine//TRIM(ErrMsg)//NewLine)
+   ENDIF
 
 
 
@@ -466,7 +465,7 @@ PROGRAM InflowWind_Driver
          ! Move the points list
       CALL MOVE_ALLOC( PointsXYZ, InflowWind_u2%PositionXYZ )
 
-         ! Allocate the array for the velocity results
+         ! Allocate the array for the velocity results -- 3 x Npoints
       CALL AllocAry( InflowWind_y2%VelocityXYZ, 3, SIZE(InflowWind_u2%PositionXYZ, DIM=2 ),    &
          "Array of velocities corresponding to Points file", ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN
@@ -500,7 +499,7 @@ PROGRAM InflowWind_Driver
       ! FFT setup
    IF ( SettingsFlags%FFTcalc ) THEN
 
-         ! Allocate arrays for passing data into and out of IfW
+         ! Allocate arrays for passing data into and out of IfW -- 3 x 1 size
       CALL AllocAry( InflowWind_u3%PositionXYZ, 3, 1,    &
          "Array for FFT position information", ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN
@@ -527,7 +526,7 @@ PROGRAM InflowWind_Driver
 
 
 
-
+         ! Allocate storage for the FFT information
 !TODO: allocate space for the FFT data storage at driver level
 !        FFTDataSetVel(TSteps,3)             (TimeIdx,DimIdx)     Where DimIdx:= 1=U (velocity in X), 2=V (velocity in Y), 3=W (velocity in Z)
 !        FFTDataSetFrq(Freqs,3)              (FreqIdx,DimIdx)     Where DimIdx:= 1=X, 2=Y, 3=Z
@@ -535,8 +534,6 @@ PROGRAM InflowWind_Driver
 !        FreqArray(NumFreqs)                 (FreqIdx)            Array of values for the frequency
 !TODO: Use the WindFileTRange and WindFileNumTSteps for the FFT.
    ENDIF
-!TODO: Check that the array size is indeed 3x1 and didn't get changed.
-
 
 
 
@@ -552,13 +549,6 @@ PROGRAM InflowWind_Driver
 !TODO: output file with data from IfW (on time steps)
 !TODO: Summary info
 
-
-!TODO:   For the data management:
-!        -- On each timestep, will do a MOVE_ALLOC to move either the Points file points, or the WindGrid data into the Parameters for
-!           IfW.  This is for demonstration for how to do the LIDAR data moving in FAST glue code.
-!        -- This will result in a bit of extra coding here to handle the logic of which one is in use.  Might just MOVE_ALLOC before
-!           and after calls within IF statements, so that nothing is actually stored between CalcOutput calls..
-!TODO: create pair of allocatable arrays for this.
 
    DO ITime =  1, MAX( Settings%NumTimeSteps, 1_IntKi )
 
@@ -631,10 +621,17 @@ PROGRAM InflowWind_Driver
    !-=-=- We are done, so close everything down -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
 
+   CALL InflowWind_End( InflowWind_u1, InflowWind_p, &
+                  InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
+                  InflowWind_y1,    ErrStat, ErrMsg )
 
+   CALL InflowWind_End( InflowWind_u2, InflowWind_p, &
+                  InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
+                  InflowWind_y2,    ErrStat, ErrMsg )
 
-
-
+   CALL InflowWind_End( InflowWind_u3, InflowWind_p, &
+                  InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
+                  InflowWind_y3,    ErrStat, ErrMsg )
 
 
 CONTAINS
