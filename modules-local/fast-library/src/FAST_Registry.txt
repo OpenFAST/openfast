@@ -24,6 +24,7 @@ usefrom	IceFloe_FASTRegistry.inp
 usefrom	Registry_IceDyn.txt
 usefrom	FEAM_Registry.txt
 usefrom	MAP_Registry.txt
+usefrom	MoorDyn_Registry.txt
 
 # ...... Constants ............................................................................
 
@@ -41,9 +42,10 @@ param	^	-	INTEGER	Module_HD	-	6	-	"HydroDyn"	-
 param	^	-	INTEGER	Module_SD	-	7	-	"SubDyn"	-
 param	^	-	INTEGER	Module_MAP	-	8	-	"MAP (Mooring Analysis Program)"	-
 param	^	-	INTEGER	Module_FEAM	-	9	-	"FEAMooring"	-
-param	^	-	INTEGER	Module_IceF	-	10	-	"IceFloe"	-
-param	^	-	INTEGER	Module_IceD	-	11	-	"IceDyn"	-
-param	^	-	INTEGER	NumModules	-	11	-	"The number of modules available in FAST"	-
+param	^	-	INTEGER	Module_MD	-	10	-	"MoorDyn"	-
+param	^	-	INTEGER	Module_IceF	-	11	-	"IceFloe"	-
+param	^	-	INTEGER	Module_IceD	-	12	-	"IceDyn"	-
+param	^	-	INTEGER	NumModules	-	12	-	"The number of modules available in FAST"	-
 # Other Constants
 param	^	-	INTEGER	MaxNBlades	-	3	-	"Maximum number of blades allowed on a turbine"	-
 param	^	-	INTEGER	IceD_MaxLegs	-	4	-	"because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number"	-
@@ -255,6 +257,21 @@ typedef	^	^	FEAM_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (co
 typedef	^	^	FEAM_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
+# ..... MoorDyn data .......................................................................................................
+typedef	FAST	MoorDyn_Data	MD_ContinuousStateType	x	{2}	-	-	"Continuous states"
+typedef	^	^	MD_DiscreteStateType	xd	{2}	-	-	"Discrete states"
+typedef	^	^	MD_ConstraintStateType	z	{2}	-	-	"Constraint states"
+typedef	^	^	MD_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
+typedef	^	^	MD_ParameterType	p	-	-	-	"Parameters"
+typedef	^	^	MD_InputType	u	-	-	-	"System inputs"
+typedef	^	^	MD_OutputType	y	-	-	-	"System outputs"
+#typedef	^	^	MD_ContinuousStateType	x_pred	-	-	-	"Predicted continuous states"
+#typedef	^	^	MD_DiscreteStateType	xd_pred	-	-	-	"Predicted discrete states"
+#typedef	^	^	MD_ConstraintStateType	z_pred	-	-	-	"Predicted constraint states"
+typedef	^	^	MD_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (copied for the case of subcycling)"
+typedef	^	^	MD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
+
 # ..... FAST_ModuleMapType data .......................................................................................................
 # ! Data structures for mapping and coupling the various modules together
 # ED <-> HD
@@ -264,12 +281,9 @@ typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_HD_M_P	-	-	-	"Map ElastoDyn Plat
 typedef	^	FAST_ModuleMapType	MeshMapType	HD_M_P_2_ED_P	-	-	-	"Map HydroDyn Morison Point to ElastoDyn PlatformPtMesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_HD_M_L	-	-	-	"Map ElastoDyn PlatformPtMesh to HydroDyn Morison Line2"
 typedef	^	FAST_ModuleMapType	MeshMapType	HD_M_L_2_ED_P	-	-	-	"Map HydroDyn Morison Line2 to ElastoDyn PlatformPtMesh"
-# ED <-> MAP
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_MAP_P	-	-	-	"Map ElastoDyn PlatformPtMesh to MAP point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	MAP_P_2_ED_P	-	-	-	"Map MAP point mesh to ElastoDyn PlatformPtMesh"
-# ED <-> FEAM
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_FEAM_P	-	-	-	"Map ElastoDyn PlatformPtMesh to FEAM point mesh"
-typedef	^	FAST_ModuleMapType	MeshMapType	FEAM_P_2_ED_P	-	-	-	"Map FEAM point mesh to ElastoDyn PlatformPtMesh"
+# ED <-> Mooring (MAP, FEAM, MoorDyn)
+typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_Mooring_P	-	-	-	"Map ElastoDyn PlatformPtMesh to MAP/FEAM/MoorDyn point mesh"
+typedef	^	FAST_ModuleMapType	MeshMapType	Mooring_P_2_ED_P	-	-	-	"Map FEAM/MAP/MoorDyn point mesh to ElastoDyn PlatformPtMesh"
 # ED <-> SD
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SD_TP	-	-	-	"Map ElastoDyn PlatformPtMesh to SubDyn transition-piece point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	SD_TP_2_ED_P	-	-	-	"Map SubDyn transition-piece point mesh to ElastoDyn PlatformPtMesh"
@@ -312,7 +326,7 @@ typedef	FAST	FAST_ExternInputType	ReKi	GenTrq	-	-	-	"generator torque input from
 typedef	^	FAST_ExternInputType	ReKi	ElecPwr	-	-	-	"electric poser input from Simulink/Labview"
 typedef	^	FAST_ExternInputType	ReKi	YawPosCom	-	-	-	"yaw position command from Simulink/Labview"
 typedef	^	FAST_ExternInputType	ReKi	YawRateCom	-	-	-	"yaw rate command from Simulink/Labview"
-typedef	^	FAST_ExternInputType	ReKi	BlPitchCom	3	-	-	"blade pitch commands from Simulink/Labview"
+typedef	^	FAST_ExternInputType	ReKi	BlPitchCom	3	-	-	"blade pitch commands from Simulink/Labview"	"rad/s"
 typedef	^	FAST_ExternInputType	ReKi	LidarFocus	3	-	-	"lidar focus (relative to lidar location)"	m
 
 # ..... FAST_MiscVarType data .......................................................................................................

@@ -24,6 +24,7 @@ Source\dependencies\HydroDyn\*
 Source\dependencies\SubDyn\*
 Source\dependencies\MAP\*
 Source\dependencies\FEAMooring\*
+Source\dependencies\MoorDyn\*
 Source\dependencies\IceFloe\*
 Source\dependencies\IceDyn\*
 Source\dependencies\FAST_dependencies.xlsx

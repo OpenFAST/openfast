@@ -36,6 +36,7 @@ MODULE FAST_Data
    TYPE(SubDyn_Data)                     :: SD                                      ! Data for the SubDyn module
    TYPE(MAP_Data)                        :: MAPp                                    ! Data for the MAP (Mooring Analysis Program) module
    TYPE(FEAMooring_Data)                 :: FEAM                                    ! Data for the FEAMooring module
+   TYPE(MoorDyn_Data)                    :: MD                                      ! Data for the MoorDyn module
    TYPE(IceFloe_Data)                    :: IceF                                    ! Data for the IceFloe module
    TYPE(IceDyn_Data)                     :: IceD                                    ! Data for the IceDyn module
 
@@ -90,7 +91,7 @@ subroutine FAST_Sizes(TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_
    
    
    
-   CALL FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg, InputFileName, ExternInitData )
+   CALL FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg, InputFileName, ExternInitData )
                   
    AbortErrLev_c = AbortErrLev   
    NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( y_FAST%numOuts )) ! includes time
@@ -143,7 +144,7 @@ subroutine FAST_Start(NumOutputs_c, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAM
    !...............................................................................................................................
    ! Initialization of solver: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
    !...............................................................................................................................     
-   CALL FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )      
+   CALL FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )      
    
    
       ! return outputs here, too
@@ -153,7 +154,7 @@ subroutine FAST_Start(NumOutputs_c, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAM
    ELSE
       
       CALL FillOutputAry(p_FAST, y_FAST, IfW%WriteOutput, ED%Output(1)%WriteOutput, SrvD%y%WriteOutput, HD%y%WriteOutput, &
-                              SD%y%WriteOutput, MAPp%y%WriteOutput, FEAM%y%WriteOutput, IceF%y%WriteOutput, IceD%y, Outputs)   
+                              SD%y%WriteOutput, MAPp%y%WriteOutput, FEAM%y%WriteOutput, MD%y%WriteOutput, IceF%y%WriteOutput, IceD%y, Outputs)   
       OutputAry(1)              = m_FAST%t_global 
       OutputAry(2:NumOutputs_c) = Outputs 
       
@@ -218,7 +219,7 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       END IF
                
       
-      CALL FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )                  
+      CALL FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )                  
       n_t_global = n_t_global + 1
       
       
@@ -230,7 +231,7 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
    END IF
    
    CALL FillOutputAry(p_FAST, y_FAST, IfW%WriteOutput, ED%Output(1)%WriteOutput, SrvD%y%WriteOutput, HD%y%WriteOutput, &
-                           SD%y%WriteOutput, MAPp%y%WriteOutput, FEAM%y%WriteOutput, IceF%y%WriteOutput, IceD%y, Outputs)   
+                           SD%y%WriteOutput, MAPp%y%WriteOutput, FEAM%y%WriteOutput, MD%y%WriteOutput, IceF%y%WriteOutput, IceD%y, Outputs)   
    OutputAry(1)              = m_FAST%t_global 
    OutputAry(2:NumOutputs_c) = Outputs 
 
@@ -247,7 +248,7 @@ subroutine FAST_End() BIND (C, NAME='FAST_End')
    IMPLICIT NONE
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_End
 
-   CALL ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrID_None )
+   CALL ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrID_None )
    
 end subroutine FAST_End
 !==================================================================================================================================

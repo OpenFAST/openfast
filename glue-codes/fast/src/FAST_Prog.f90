@@ -57,6 +57,7 @@ TYPE(HydroDyn_Data)                   :: HD                                     
 TYPE(SubDyn_Data)                     :: SD                                      ! Data for the SubDyn module
 TYPE(MAP_Data)                        :: MAPp                                    ! Data for the MAP (Mooring Analysis Program) module
 TYPE(FEAMooring_Data)                 :: FEAM                                    ! Data for the FEAMooring module
+TYPE(MoorDyn_Data)                    :: MD                                      ! Data for the MoorDyn module
 TYPE(IceFloe_Data)                    :: IceF                                    ! Data for the IceFloe module
 TYPE(IceDyn_Data)                     :: IceD                                    ! Data for the IceDyn module
 
@@ -73,7 +74,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
    ! initialization
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-   CALL FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
+   CALL FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
       CALL CheckError( ErrStat, ErrMsg, 'during module initialization' )
                                                   
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -83,7 +84,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
    !...............................................................................................................................
    ! Initialization: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
    !...............................................................................................................................     
-   CALL FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
+   CALL FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
       CALL CheckError( ErrStat, ErrMsg, 'during simulation initialization'  )
               
    !...............................................................................................................................
@@ -93,7 +94,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
    DO n_t_global = 0, m_FAST%n_TMax_m1
       ! this takes data from n_t_global and gets values at n_t_global + 1
   
-      CALL FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrStat, ErrMsg )                  
+      CALL FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )                  
          CALL CheckError( ErrStat, ErrMsg  )
             
    END DO ! n_t_global
@@ -103,7 +104,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
    !  Write simulation times and stop
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    
-   CALL ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrID_None )
+   CALL ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrID_None )
 
 
 CONTAINS
@@ -129,7 +130,7 @@ CONTAINS
                SimMsg = 'at simulation time '//TRIM(Num2LStr(m_FAST%t_global))//' of '//TRIM(Num2LStr(p_FAST%TMax))//' seconds'
             END IF
             
-            CALL ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, IceF, IceD, MeshMapData, ErrID, SimMsg )
+            CALL ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrID, SimMsg )
             
          END IF
          

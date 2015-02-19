@@ -142,6 +142,16 @@ SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 @CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
+:MoorDyn
+ECHO MoorDyn
+SET src_folder=%MD_Loc%\..
+SET dst_folder=%depend_dir%\MoorDyn
+SET list_of_files=%src_folder%\FAST_SourceFiles.txt
+
+@CALL :CopyFileList
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
+
+
 :FEAMooring
 ECHO Skipping FEAMooring
 
