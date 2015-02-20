@@ -8,7 +8,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v0.9.01-mth', '10-Dec-2014' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v0.9.01-mth', '19-Feb-2015' )
 
 
    PUBLIC :: MD_Init
@@ -18,9 +18,11 @@ MODULE MoorDyn
 
 CONTAINS
 
-   !==========   MD_Init   ======     <----------------------------------------------------------------------+
+   !=========================================   MD_Init   ===================================
    SUBROUTINE MD_Init(InitInp, u, p, x, xd, z, other, y, DTcoupling, InitOut, ErrStat, ErrMsg)
+
       IMPLICIT NONE
+
       TYPE(MD_InitInputType),       INTENT(INOUT)  :: InitInp     ! INTENT(INOUT) : Input data for initialization routine
       TYPE(MD_InputType),           INTENT(  OUT)  :: u           ! INTENT( OUT) : An initial guess for the input; input mesh must be defined
       TYPE(MD_ParameterType),       INTENT(  OUT)  :: p           ! INTENT( OUT) : Parameters
@@ -43,9 +45,11 @@ CONTAINS
       REAL(ReKi)                                   :: Pos(3)      ! temporary array for setting absolute fairlead positions in mesh
       REAL(ReKi), ALLOCATABLE                      :: FairTensIC(:,:)      ! array of size Nfairs, 3 to store three latest fairlead tensions of each line
       CHARACTER(20)                     :: TempString       ! temporary string for incidental use
-      !    INTEGER(IntKi)                               :: NumNodes = 0
+      !  INTEGER(IntKi)                               :: NumNodes = 0
       INTEGER(IntKi)                               :: ErrStat2      ! Error status of the operation
-      CHARACTER(LEN(ErrMsg))                       :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
+      CHARACTER(LEN(ErrMsg))                       :: ErrMsg2       ! Error message if ErrStat2 /= ErrID_None
+
+
 
       ErrStat = ErrID_None
       ErrMsg  = ""
@@ -59,33 +63,23 @@ CONTAINS
 
 
 
-      ! -------------------------------------------------------------------------------------------
-
       ! call function that reads input file and creates cross-referenced Connect and Line objects
-
-      ! -------------------------------------------------------------------------------------------
       CALL MDIO_ReadInput(InitInp, p, other, ErrStat2, ErrMsg2)
-
-      CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MD_Init' )         ! should I use this with all calls???
-      IF ( ErrStat >= AbortErrLev ) THEN
-         !CALL CleanUp()
-         RETURN
-      END IF
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
 
 
       ! process the OutList array and set up the index arrays for the requested output quantities
-      CALL MDIO_SetOutParam(InitInp%OutList, p, other, y, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         RETURN
-      END IF
-
-      print *, 'SetOutParam is done.  Size of y%WriteOutput is ', size(y%WriteOutput)
+      CALL MDIO_ProcessOutList(InitInp%OutList, p, other, y, ErrStat2, ErrMsg2 )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
 
 
-      CALL WrScr( 'moving on to the next step in MD_Init' )
+
+      CALL WrScr( '  MD_Init: Done reading input file and processing output list' )
 
       !-------------------------------------------------------------------------------------------------
-      !  Connect mooring system together and make necessary allocations
+      !          Connect mooring system together and make necessary allocations
       !-------------------------------------------------------------------------------------------------
 
       ! cycle through Connects and identify Vessel types
@@ -127,11 +121,15 @@ CONTAINS
 
       ! go through lines and allocate variables
       DO I = 1, p%NLines
-        CALL SetupLine( other%LineList(I), other%LineTypeList(other%LineList(I)%PropsIdNum), p%rhoW ,  ErrStat, ErrMsg)
+         CALL SetupLine( other%LineList(I), other%LineTypeList(other%LineList(I)%PropsIdNum), p%rhoW ,  ErrStat2, ErrMsg2)
+            CALL CheckError( ErrStat2, ErrMsg2 )
+            IF (ErrStat >= AbortErrLev) RETURN
+
       END DO
 
-
-      ! now prepare state vectors
+      !------------------------------------------------------------------------------------
+      !                               prepare state vectors
+      !------------------------------------------------------------------------------------
 
       ! allocate list of starting state vector indices for each line  - does this belong elsewhere?
       ALLOCATE ( other%LineStateIndList(p%NLines), STAT = ErrStat )
@@ -158,420 +156,496 @@ CONTAINS
         RETURN
       END IF
 
-      CALL WrScr( 'Done allocating variables' )
+      CALL WrScr( '  MD_Init: Done allocating variables' )
 
 
-    ! create meshes for fairlead positions and forces
+      ! get header information for the FAST output file   <<< what does this mean?
 
-   ! below is for fairlead i/o
-    !==========   MD Mesh initialization   ======      <--------------------------+
-    ! get header information for the FAST output file <-- matt: what does this mean?
-    ! Create the input mesh                                            !          |
-                                                                       !          |
-    CALL MeshCreate(BlankMesh=u%PtFairleadDisplacement , &             !          |
-                    IOS= COMPONENT_INPUT           , &                 !          |
-                    NNodes=p%NFairs                , &                 !          |
-                    TranslationDisp=.TRUE.         , &                 !          |
-                    TranslationVel=.TRUE.          , &                 !          |
-                    ErrStat=ErrStat                , &                 !          |
-                    ErrMess=ErrMsg)                                    !          |
-    IF(ErrStat/=ErrID_None) CALL WrScr(TRIM(ErrMsg))                   !          |
-                                                                       !          |
-    DO i = 1,p%NFairs
 
-       ! set position of each node (this way rather than manually... for error checking?  seems more tedious)
-       Pos(1) = other%ConnectList(other%FairIdList(i))%conX ! set initial position of each fairlead i (IFP)
-       Pos(2) = other%ConnectList(other%FairIdList(i))%conY                                                 !          |
-       Pos(3) = other%ConnectList(other%FairIdList(i))%conZ                                                !          |
-                                                                       !          |
-       CALL MeshPositionNode(u%PtFairleadDisplacement,i,Pos,ErrStat,ErrMsg)! "assign the coordinates of each node in the global coordinate space"
-       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))             !           |
+      !--------------------------------------------------------------------------
+      !             create i/o meshes for fairlead positions and forces
+      !--------------------------------------------------------------------------
+      ! <<< need to update error handling in this section
 
-       ! also set velocity of each node to zero (manually)
-       u%PtFairleadDisplacement%TranslationVel(1,i) = 0.0_ReKi
-       u%PtFairleadDisplacement%TranslationVel(2,i) = 0.0_ReKi
-       u%PtFairleadDisplacement%TranslationVel(3,i) = 0.0_ReKi
+      print *, ' making meshes with ', p%NFairs, ' nodes'
 
-       ! set each node as a point element
-       CALL MeshConstructElement(u%PtFairleadDisplacement , &              !          |
-                                 ELEMENT_POINT        , &              !          |
-                                 ErrStat              , &              !          |
-                                 ErrMsg               , &              !          |
-                                 i)                                    !          |
-       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))             !          |
-    END DO    ! I                                                      !          |
-                                                                       !          |
-    CALL MeshCommit ( u%PtFairleadDisplacement, ErrStat, ErrMsg )      !          |
-    IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                !          |
-                                                                       !          |
-    ! now, copy the input PtFairleadDisplacement to output    PtFairleadLoad
-    CALL MeshCopy ( SrcMesh  = u%PtFairleadDisplacement , &                !          |
-                    DestMesh = y%PtFairleadLoad     , &                !          |
-                    CtrlCode = MESH_SIBLING         , &                !          |
-                    Force    = .TRUE.               , &                !          |
-                    ErrStat  = ErrStat              , &                !          |
-                    ErrMess  = ErrMsg                 )                !          |
-    IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                !          |
-                                                                       !          |
-    y%PtFairleadLoad%IOS = COMPONENT_OUTPUT                            !          |
-    ! End mesh initialization                                          !   -------+
-    !==============================================================================
+      ! create input mesh for fairlead kinematics
+      CALL MeshCreate(BlankMesh=u%PtFairleadDisplacement , &
+                    IOS= COMPONENT_INPUT           , &
+                    Nnodes=p%NFairs                , &
+                    TranslationDisp=.TRUE.         , & !      TranslationVel=.TRUE.          , &
+                    ErrStat=ErrStat                , &
+                    ErrMess=ErrMsg)
+
+      IF(ErrStat/=ErrID_None) CALL WrScr(TRIM(ErrMsg))           ! temporary
+
+      DO i = 1,p%NFairs
+
+         ! set position of each node
+         Pos(1) = other%ConnectList(other%FairIdList(i))%conX ! set initial position of each fairlead i (IFP)
+         Pos(2) = other%ConnectList(other%FairIdList(i))%conY
+         Pos(3) = other%ConnectList(other%FairIdList(i))%conZ
+
+         CALL MeshPositionNode(u%PtFairleadDisplacement,i,Pos,ErrStat,ErrMsg)! "assign the coordinates of each node in the global coordinate space"
+            IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))               ! temporary
+
+         ! also set velocity of each node to zero (manually)
+!         u%PtFairleadDisplacement%TranslationVel(1,i) = 0.0_ReKi
+!         u%PtFairleadDisplacement%TranslationVel(2,i) = 0.0_ReKi
+!         u%PtFairleadDisplacement%TranslationVel(3,i) = 0.0_ReKi
+
+         ! set each node as a point element
+         CALL MeshConstructElement(u%PtFairleadDisplacement, ELEMENT_POINT, ErrStat, ErrMsg, i)
+            IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))             ! temporary
+
+      END DO    ! I
+
+      CALL MeshCommit ( u%PtFairleadDisplacement, ErrStat, ErrMsg )
+         IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                       ! temporary
+
+
+      ! copy the input fairlead kinematics mesh to make the output mesh for fairlead loads, PtFairleadLoad
+      CALL MeshCopy ( SrcMesh  = u%PtFairleadDisplacement,   DestMesh = y%PtFairleadLoad, &
+                      CtrlCode = MESH_SIBLING,               IOS      = COMPONENT_OUTPUT, &
+         Force    = .TRUE.,                     ErrStat=ErrStat, ErrMess=ErrMsg )
+         IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))             ! temporary
+
+      y%PtFairleadLoad%IOS = COMPONENT_OUTPUT  ! duplicate?
 
 
 
-    ! go through all Connects and set position based on input file
+      ! --------------------------------------------------------------------
+      !   go through all Connects and set position based on input file
+      ! --------------------------------------------------------------------
 
-    DO I = 1, p%NConnects
+      DO I = 1, p%NConnects
 
-      IF ( other%ConnectList(I)%TypeNum == 0 ) THEN !fixed
-        other%ConnectList(I)%r(1) = other%ConnectList(I)%conX
-        other%ConnectList(I)%r(2) = other%ConnectList(I)%conY
-        other%ConnectList(I)%r(3) = other%ConnectList(I)%conZ
-        other%ConnectList(I)%rd(1) = 0.0_ReKi
-        other%ConnectList(I)%rd(2) = 0.0_ReKi
-        other%ConnectList(I)%rd(3) = 0.0_ReKi
-      ELSE IF ( other%ConnectList(I)%TypeNum == 1 ) THEN !vessel
-        other%ConnectList(I)%r(1) = other%ConnectList(I)%conX  ! this is temporary - doesn't account for platform initial position
-        other%ConnectList(I)%r(2) = other%ConnectList(I)%conY
-        other%ConnectList(I)%r(3) = other%ConnectList(I)%conZ
-        other%ConnectList(I)%rd(1) = 0.0_ReKi
-        other%ConnectList(I)%rd(2) = 0.0_ReKi
-        other%ConnectList(I)%rd(3) = 0.0_ReKi
+         IF ( other%ConnectList(I)%TypeNum == 0 ) THEN  ! fixed type
+            other%ConnectList(I)%r(1) = other%ConnectList(I)%conX
+            other%ConnectList(I)%r(2) = other%ConnectList(I)%conY
+            other%ConnectList(I)%r(3) = other%ConnectList(I)%conZ
+            other%ConnectList(I)%rd(1) = 0.0_ReKi
+            other%ConnectList(I)%rd(2) = 0.0_ReKi
+            other%ConnectList(I)%rd(3) = 0.0_ReKi
+         ELSE IF ( other%ConnectList(I)%TypeNum == 1 ) THEN ! vessel type (fairlead)
 
-!        r[0] = TransMat[0]*conX + TransMat[1]*conY + TransMat[2]*conZ + pX[0];  // x
-!        r[1] = TransMat[3]*conX + TransMat[4]*conY + TransMat[5]*conZ + pX[1];  // y
-!        r[2] = TransMat[6]*conX + TransMat[7]*conY + TransMat[8]*conZ + pX[2];  // z
-!
-!        for (int I=0; I<3; I++) rd(I) = 0.0;
-      ELSE IF ( other%ConnectList(I)%TypeNum == 2 ) THEN !connect
-        other%ConnectList(I)%r(1) = other%ConnectList(I)%conX        ! put node at initial guess!!!
-        other%ConnectList(I)%r(2) = other%ConnectList(I)%conY
-        other%ConnectList(I)%r(3) = other%ConnectList(I)%conZ
-        other%ConnectList(I)%rd(1) = 0.0_ReKi
-        other%ConnectList(I)%rd(2) = 0.0_ReKi
-        other%ConnectList(I)%rd(3) = 0.0_ReKi
+            ! <<< need to update to account for platform initial position!
+
+            other%ConnectList(I)%r(1) = other%ConnectList(I)%conX  ! this is temporary - doesn't account for platform initial position
+            other%ConnectList(I)%r(2) = other%ConnectList(I)%conY
+            other%ConnectList(I)%r(3) = other%ConnectList(I)%conZ
+            other%ConnectList(I)%rd(1) = 0.0_ReKi
+            other%ConnectList(I)%rd(2) = 0.0_ReKi
+            other%ConnectList(I)%rd(3) = 0.0_ReKi
+
+         !        r[0] = TransMat[0]*conX + TransMat[1]*conY + TransMat[2]*conZ + pX[0];   // x
+         !        r[1] = TransMat[3]*conX + TransMat[4]*conY + TransMat[5]*conZ + pX[1];   // y
+         !        r[2] = TransMat[6]*conX + TransMat[7]*conY + TransMat[8]*conZ + pX[2];   // z
+
+         ELSE IF ( other%ConnectList(I)%TypeNum == 2 ) THEN !connect
+            other%ConnectList(I)%r(1) = other%ConnectList(I)%conX  ! put node at initial guess value supplied in input file
+            other%ConnectList(I)%r(2) = other%ConnectList(I)%conY
+            other%ConnectList(I)%r(3) = other%ConnectList(I)%conZ
+            other%ConnectList(I)%rd(1) = 0.0_ReKi
+            other%ConnectList(I)%rd(2) = 0.0_ReKi
+            other%ConnectList(I)%rd(3) = 0.0_ReKi
+         END IF
+
+         ! write the coordinates to the state vector  (for ALL types! - should fix this so only connection types have states) <<<
+
+         x%states(6*I-5:6*I-3) = other%ConnectList(I)%r
+         x%states(6*I-2:6*I) = other%ConnectList(I)%rd
+
+      END DO  !I = 1, p%NConnects
+
+
+      ! --------------------------------------------------------------------
+      !          open output file(s) and write header lines
+      CALL MDIO_OpenOutput( InitInp%FileName,  p, other, InitOut, ErrStat2, ErrMsg2 )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+      ! --------------------------------------------------------------------
+
+
+
+      ! --------------------------------------------------------------------
+      ! go through lines and initialize internal node positions using Catenary()
+      ! --------------------------------------------------------------------
+      DO I = 1, p%NLines
+
+         N = other%LineList(I)%N ! for convenience
+
+         ! set end node positions and velocities from connect objects
+         other%LineList(I)%r(:,N) = other%ConnectList(other%LineList(I)%FairConnect)%r
+         other%LineList(I)%r(:,0) = other%ConnectList(other%LineList(I)%AnchConnect)%r
+         other%LineList(I)%rd(:,N) = (/ 0.0, 0.0, 0.0 /)  ! set anchor end velocities to zero
+         other%LineList(I)%rd(:,0) = (/ 0.0, 0.0, 0.0 /)  ! set fairlead end velocities to zero
+
+         ! set initial line internal node positions using quasi-static model or straight-line interpolation from anchor to fairlead
+         CALL InitializeLine( other%LineList(I), other%LineTypeList(other%LineList(I)%PropsIdNum), p%rhoW ,  ErrStat2, ErrMsg2)
+            CALL CheckError( ErrStat2, ErrMsg2 )
+            IF (ErrStat >= AbortErrLev) RETURN
+
+         ! assign the resulting internal node positions to the integrator initial state vector! (velocities leave at 0)
+         DO J = 1, N-1
+           DO K = 1, 3
+             x%states(other%LineStateIndList(I) + 3*N-3 + 3*J-3 + K-1 ) = other%LineList(I)%r(K,J) ! assign position
+             x%states(other%LineStateIndList(I)         + 3*J-3 + K-1 ) = 0.0_ReKi ! assign velocities (of zero)
+           END DO
+         END DO
+
+      END DO    !I = 1, p%NLines
+
+
+      ! try writing output for troubleshooting purposes (TEMPORARY)
+      !CALL MDIO_WriteOutputs(-1.0_DbKi, p, other, y, ErrStat, ErrMsg)
+
+
+      ! --------------------------------------------------------------------
+      !           do dynamic relaxation to get ICs
+      ! --------------------------------------------------------------------
+
+      CALL WrScr("  MD_Init: Finalizing ICs using dynamic relaxation.")
+
+      ! boost drag coefficient of each line type
+      DO I = 1, p%NTypes
+         other%LineTypeList(I)%Cdn = other%LineTypeList(I)%Cdn * InitInp%CdScaleIC
+         other%LineTypeList(I)%Cdt = other%LineTypeList(I)%Cdt * InitInp%CdScaleIC
+      END DO
+
+      ! allocate array holding three latest fairlead tensions
+      ALLOCATE ( FairTensIC(p%NFairs,3), STAT = ErrStat )
+      IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = ' Error allocating FairTensIC array.'
+         RETURN
       END IF
 
-      ! assign to state vector
-      !DO J = 1, 3
-      x%states(6*I-5:6*I-3) = other%ConnectList(I)%r !X[3 + I] = r(I);
-      x%states(6*I-2:6*I) = other%ConnectList(I)%rd  !X[    I] = rd(I);
-
-    END DO  !I = 1, p%NConnects
-
-
-    ! ------------------------------- open output file(s) and write header lines ---------------------------
-    CALL MDIO_OpenOutput( InitInp%FileName,  p, other, InitOut, ErrStat, ErrMsg )
-
-
-
-    ! go through lines and initialize internal node positions using Catenary()
-    DO I = 1, p%NLines
-
-      !get ICs for line using quasi-static approach
-
-      N = other%LineList(I)%N ! for convenience
-
-      ! set end node positions and velocities from connect objects
-      other%LineList(I)%r(:,N) = other%ConnectList(other%LineList(I)%FairConnect)%r
-      other%LineList(I)%r(:,0) = other%ConnectList(other%LineList(I)%AnchConnect)%r
-      other%LineList(I)%rd(:,N) = (/ 0.0, 0.0, 0.0 /)  ! set anchor end velocities to zero
-      other%LineList(I)%rd(:,0) = (/ 0.0, 0.0, 0.0 /)  ! set fairlead end velocities to zero
-
-      print *, 'Line', other%LineList(I)%IdNum, ' PropsIdNum is ', other%LineList(I)%PropsIdNum, ' ... ', other%LineTypeList(other%LineList(I)%PropsIdNum)%IdNum
-
-      ! set initial line internal node positions using quasi-static model or straight-line interpolation from anchor to fairlead
-      CALL InitializeLine( other%LineList(I), other%LineTypeList(other%LineList(I)%PropsIdNum), p%rhoW ,  ErrStat, ErrMsg)
-
-
-      ! assign the resulting internal node positions to the integrator initial state vector! (velocities leave at 0)
-      DO J = 1, N-1
-        DO K = 1, 3
-          x%states(other%LineStateIndList(I) + 3*N-3 + 3*J-3 + K-1 ) = other%LineList(I)%r(K,J) ! assign position
-          x%states(other%LineStateIndList(I) +         3*J-3 + K-1 ) = 0.0_ReKi ! assign velocities (of zero)
-        END DO
+      ! initialize fairlead tension memory at zero
+      DO J = 1,p%NFairs
+         DO I = 1, 3
+            FairTensIC(J,I) = 0.0_ReKi
+         END DO
       END DO
 
-    END DO    !I = 1, p%NLines
+      t = 0.0_ReKi     ! start time at zero
+      p%Ndt = ceiling(InitInp%DTIC/InitInp%DTmooring)  ! get number of mooring time steps per IC convergence analysis time step
+      p%dt = InitInp%DTIC/p%Ndt                        ! adjusted mooring time step size for IC generation
+
+ !     print *, InitInp%DTIC
+ !     print *, InitInp%DTmooring
+ !     print *, p%Ndt
 
 
-    ! try writing output for troubleshooting purposes (TEMPORARY)
-    !CALL MDIO_WriteOutputs(-1.0_DbKi, p, other, y, ErrStat, ErrMsg)
+ !     print *, InitInp%TMaxIC
+ !     print *, p%dt
+ !     print *, ceiling(InitInp%TMaxIC/InitInp%DTIC)
+
+      DO I = 1, ceiling(InitInp%TMaxIC/InitInp%DTIC)   ! loop through IC gen time steps, up to maximum
+
+         !  print *, 'Time step ', I, ', t = ', t
+         !double t = iic*ICdt;         // IC gen time (s).
+
+         CALL TimeStep ( t, InitInp%DTIC, u, p, x, xd, z, other, ErrStat, ErrMsg )
+
+         ! try writing output for troubleshooting purposes (TEMPORARY)
+         !    CALL MDIO_WriteOutputs(REAL(t,DbKi) , p, other, ErrStat, ErrMsg)
+
+         ! store previous fairlead tensions for comparison
+         DO J = 1, p%NFairs
+            FairTensIC(J,3) = FairTensIC(J,2)
+            FairTensIC(J,2) = FairTensIC(J,1)
+            FairTensIC(J,1) = TwoNorm(other%ConnectList(other%FairIdList(J))%Ftot(:))
+         END DO
+
+         ! check for convergence (compare current tension at each fairlead with previous two values)
+         IF (I > 2) THEN
+            DO J = 1, p%NFairs
+               IF (( abs( FairTensIC(J,1)/FairTensIC(J,2) - 1.0 ) > InitInp%threshIC ) .OR. ( abs( FairTensIC(J,1)/FairTensIC(J,3) - 1.0 ) > InitInp%threshIC ) ) THEN
+                  EXIT
+               END IF
+            END DO
+
+            IF (J == p%NFairs) THEN   ! if we made it with all cases satisfying the threshold
+               print *, ' MD_Init: Fairlead tensions converged to ', 100.0*InitInp%threshIC, ' after ', t , ' seconds.'
+               EXIT  ! break out of the time stepping loop
+            END IF
+         END IF
+
+         IF (I == ceiling(InitInp%TMaxIC/InitInp%DTIC) ) THEN
+            CALL WrScr('  MD_Init: ran dynamic convergence to TMaxIC without convergence')
+            !ErrStat = ErrID_Warn
+            !ErrMsg = '  MD_Init: ran dynamic convergence to TMaxIC without convergence'
+         END IF
+
+      END DO ! I ... looping through time steps
 
 
-    ! ----------------- do dynamic relaxation to get ICs ------------------------
-
-    CALL WrScr("   Finalizing ICs using dynamic relaxation.")
-
-    ! boost drag coefficient of each line type
-    DO I = 1, p%NTypes
-      other%LineTypeList(I)%Cdn = other%LineTypeList(I)%Cdn * InitInp%CdScaleIC
-      other%LineTypeList(I)%Cdt = other%LineTypeList(I)%Cdt * InitInp%CdScaleIC
-    END DO
-
-    ! allocate array holding three latest fairlead tensions
-    ALLOCATE ( FairTensIC(p%NFairs,3), STAT = ErrStat )
-    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Error allocating FairTensIC array.'
-      ! handle how?
-    END IF
-
-    ! initialize fairlead tension memory at zero
-    DO J = 1,p%NFairs
-      DO I = 1, 3
-        FairTensIC(J,I) = 0.0_ReKi
-      END DO
-    END DO
-
-    t = 0.0_ReKi     ! start time at zero
-    p%Ndt = ceiling(InitInp%DTIC/InitInp%DTmooring)  ! get number of mooring time steps per IC convergence analysis time step
-    p%dt = InitInp%DTIC/p%Ndt                       ! adjusted mooring time step size for IC generation
-
-    print *, InitInp%DTIC
-    print *, InitInp%DTmooring
-    print *, p%Ndt
-
-    print *, 'about to start IC time stepping'
-
-    print *, InitInp%TMaxIC
-    print *, p%dt
-    print *, ceiling(InitInp%TMaxIC/InitInp%DTIC)
-
-    DO I = 1, ceiling(InitInp%TMaxIC/InitInp%DTIC)   ! loop through IC gen time steps, up to maximum
-
-    !  print *, 'Time step ', I, ', t = ', t
-
-      !double t = iic*ICdt;         // IC gen time (s).
-
-      !// loop through line integration time steps
-      !for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
-      !  rk2 (states, ts, dts )
-
-      CALL TimeStep ( t, InitInp%DTIC, u, p, x, xd, z, other, ErrStat, ErrMsg )
-
-    ! try writing output for troubleshooting purposes (TEMPORARY)
-!    CALL MDIO_WriteOutputs(REAL(t,DbKi) , p, other, ErrStat, ErrMsg)
-
-
-      ! store previous fairlead tensions for comparison
-      DO J = 1, p%NFairs
-        FairTensIC(J,3) = FairTensIC(J,2)
-        FairTensIC(J,2) = FairTensIC(J,1)
-        FairTensIC(J,1) = TwoNorm(other%ConnectList(other%FairIdList(J))%Ftot(:))
-
-    !    print *, "   t = ", t , " s, tension at Node " , other%FairIdList(J), " is ", FairTensIC(J,1)
-
+      ! UNboost drag coefficient of each line type
+      DO I = 1, p%NTypes
+         other%LineTypeList(I)%Cdn = other%LineTypeList(I)%Cdn / InitInp%CdScaleIC
+         other%LineTypeList(I)%Cdt = other%LineTypeList(I)%Cdt / InitInp%CdScaleIC
       END DO
 
-      ! check for convergence (compare current tension at each fairlead with previous two values)
-      IF (I > 2) THEN
-        DO J = 1, p%NFairs
-          IF (( abs( FairTensIC(J,1)/FairTensIC(J,2) - 1.0 ) > InitInp%threshIC ) .OR. ( abs( FairTensIC(J,1)/FairTensIC(J,3) - 1.0 ) > InitInp%threshIC ) ) THEN
-            EXIT
-          END IF
-        END DO
 
-        IF (J == p%NFairs) THEN   ! if we made it with all cases satisfying the threshold
+      ! trying writing an actual output line - temporary
+      !CALL MDIO_WriteOutputs( 0.0_DbKi, p, other, y, ErrStat, ErrMsg )
 
-          print *,"   Fairlead tensions converged to ", 100.0*InitInp%threshIC, " after ", t , " seconds."
-          EXIT  ! break out of the time stepping loop
-        END IF
+
+      ! set time step stuff for actual simulation <<< may want to change this to round the dt as needed every time UpdateStates is called
+      p%Ndt = ceiling(DTcoupling/InitInp%DTmooring)  ! get number of mooring time steps per IC convergence analysis time step
+      p%dt = DTcoupling/p%Ndt                       ! adjusted mooring time step size for IC generation
+
+      p%dtCoupling = DTcoupling  ! not sure if this is "proper"  store coupling time step for use in updatestates
+
+
+      ! Give the program description (name, version number, date)
+      !InitOut%Ver = ProgDesc('MoorDyn',TRIM(InitOut%version),TRIM(InitOut%compilingData)) ! rhis is a duplicate of above
+
+
+      print *, ' MD_Init: Done.  MoorDyn set up with dt=', p%dt, ' and dtcoupling=', p%dtCoupling
+
+
+   CONTAINS
+
+      SUBROUTINE CheckError(ErrID,Msg)
+         ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
+
+            ! Passed arguments
+         INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
+         CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
+
+         INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
+         CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
+
+         ! Set error status/message;
+         IF ( ErrID /= ErrID_None ) THEN
+
+            IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
+            ErrMsg = TRIM(ErrMsg)//' MD_Init:'//TRIM(Msg)
+            ErrStat = MAX(ErrStat, ErrID)
+
+            ! Clean up if we're going to return on error: close files, deallocate local arrays
+            ! <<< still need to do this!
+
+     !      IF ( ErrStat >= AbortErrLev ) THEN
+      !         CALL SrvD_DestroyInputFile(InputFileData, ErrStat3, ErrMsg3 )
+      !      END IF
+
+         END IF
+
+      END SUBROUTINE CheckError
+
+   END SUBROUTINE MD_Init
+   !==============================================================================================
+
+
+
+
+   !==============================================================================================
+   SUBROUTINE MD_UpdateStates( t, n, u, utimes, p, x, xd, z, other, ErrStat, ErrMsg)
+
+      REAL(DbKi)                      , INTENT(IN   ) :: t
+      INTEGER(IntKi)                  , INTENT(IN   ) :: n
+      REAL(DbKi)                      , INTENT(IN   ) :: utimes(:)
+      TYPE(MD_InputType)              , INTENT(INOUT) :: u(:)       ! INTENT(INOUT) ! had to change this to INOUT
+      TYPE(MD_ParameterType)          , INTENT(IN   ) :: p          ! INTENT(IN   )
+      TYPE(MD_ContinuousStateType)    , INTENT(INOUT) :: x          ! INTENT(INOUT)
+      TYPE(MD_DiscreteStateType)      , INTENT(INOUT) :: xd         ! INTENT(INOUT)
+      TYPE(MD_ConstraintStateType)    , INTENT(INOUT) :: z          ! INTENT(INOUT)
+      TYPE(MD_OtherStateType)         , INTENT(INOUT) :: other      ! INTENT(INOUT)
+      INTEGER(IntKi)                  , INTENT(  OUT) :: ErrStat    ! Error status of the operation
+      CHARACTER(*)                    , INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
+
+      INTEGER(IntKi)                               :: I ! counter
+      INTEGER(IntKi)                               :: J ! counter
+      INTEGER(IntKi)                               :: K ! counter
+
+      INTEGER(IntKi)                               :: ErrStat2      ! Error status of the operation
+      CHARACTER(LEN(ErrMsg))                       :: ErrMsg2       ! Error message if ErrStat2 /= ErrID_None
+
+      TYPE(MD_InputType)                           :: u_interp  !
+      INTEGER(IntKi)                               :: nTime
+
+      REAL(ReKi)                                   :: t2  ! should work out a consistent data type for time...
+
+
+      nTime = size(u) ! the number of times of input data provided?
+
+      t2 = real(t, ReKi)
+
+
+      ! create space for arrays/meshes in u_interp
+      CALL MD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+
+      ! interpolate input mesh to correct time
+      CALL MD_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+
+
+      ! go through fairleads and apply motions from driver
+      DO I = 1, p%NFairs
+         DO J = 1,3
+            other%ConnectList(other%FairIdList(I))%r(J)  = u_interp%PtFairleadDisplacement%Position(J,I) + u_interp%PtFairleadDisplacement%TranslationDisp(J,I)
+            other%ConnectList(other%FairIdList(I))%rd(J) = 0.0_ReKi !u_interp%PtFairleadDisplacement%TranslationVel(J,I)  ! is this right? <<<
+         END DO
+      END DO
+
+
+      ! call function that loops through mooring model time steps
+      CALL TimeStep ( t2, p%dtCoupling, u_interp, p, x, xd, z, other, ErrStat2, ErrMsg2 )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+
+
+      ! clean up input interpolation stuff
+      CALL MD_DestroyInput(u_interp, ErrStat, ErrMsg)
+
+
+   CONTAINS
+
+      SUBROUTINE CheckError(ErrId, Msg)
+        ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
+
+         INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
+         CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
+
+
+         IF ( ErrID /= ErrID_None ) THEN
+
+            IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine  ! keep existing error message if there is one
+            ErrMsg = TRIM(ErrMsg)//' MD_UpdateStates:'//TRIM(Msg)      ! add current error message
+            ErrStat = MAX(ErrStat, ErrID)
+
+            CALL WrScr( ErrMsg )  ! do this always or only if warning level?
+
+            IF( ErrStat > ErrID_Warn ) THEN
+                CALL MD_DestroyInput( u_interp, ErrStat, ErrMsg )
+                RETURN
+            END IF
+         END IF
+
+      END SUBROUTINE CheckError
+
+   END SUBROUTINE MD_UpdateStates
+   !========================================================================================
+
+
+
+   !========================================================================================
+   SUBROUTINE MD_CalcOutput( t, u, p, x, xd, z, other, y, ErrStat, ErrMsg )
+
+      REAL(DbKi)                     , INTENT(IN   ) :: t
+      TYPE( MD_InputType )           , INTENT(IN   ) :: u       ! INTENT(IN   )
+      TYPE( MD_ParameterType )       , INTENT(IN   ) :: p       ! INTENT(IN   )
+      TYPE( MD_ContinuousStateType ) , INTENT(IN   ) :: x       ! INTENT(IN   )
+      TYPE( MD_DiscreteStateType )   , INTENT(IN   ) :: xd      ! INTENT(IN   )
+      TYPE( MD_ConstraintStateType ) , INTENT(IN   ) :: z       ! INTENT(IN   )
+      TYPE( MD_OtherStateType )      , INTENT(INOUT) :: other   ! INTENT(INOUT)
+      TYPE( MD_OutputType )          , INTENT(INOUT) :: y       ! INTENT(INOUT)
+      INTEGER(IntKi)                 , INTENT(INOUT) :: ErrStat
+      CHARACTER(*)                   , INTENT(INOUT) :: ErrMsg
+
+      INTEGER(IntKi)             :: I  ! counter
+      INTEGER(IntKi)             :: J  ! counter
+
+
+      ! assign net force on fairlead Connects to the outputs
+      DO i = 1, p%NFairs
+         DO J=1,3
+            y%PtFairleadLoad%Force(J,I) = other%ConnectList(other%FairIdList(I))%Ftot(J)
+         END DO
+      END DO
+
+
+      ! calculate outputs (y%WriteOutput) for glue code and write any other outputs to MoorDyn output files
+      CALL MDIO_WriteOutputs(REAL(t,DbKi) , p, other, y, ErrStat, ErrMsg)
+
+      ! is any error handling really needed here yet?
+
+   END SUBROUTINE MD_CalcOutput
+   !=============================================================================================
+
+
+
+   !===============================================================================================
+   SUBROUTINE MD_End(u, p, x, xd, z, other, y, ErrStat , ErrMsg)
+      TYPE(MD_InputType) ,            INTENT(INOUT) :: u
+      TYPE(MD_ParameterType) ,        INTENT(INOUT) :: p
+      TYPE(MD_ContinuousStateType) ,  INTENT(INOUT) :: x
+      TYPE(MD_DiscreteStateType) ,    INTENT(INOUT) :: xd
+      TYPE(MD_ConstraintStateType) ,  INTENT(INOUT) :: z
+      TYPE(MD_OtherStateType) ,       INTENT(INOUT) :: other
+      TYPE(MD_OutputType) ,           INTENT(INOUT) :: y
+      INTEGER(IntKi),                 INTENT(  OUT) :: ErrStat
+      CHARACTER(*),                   INTENT(  OUT) :: ErrMsg
+
+      INTEGER(IntKi)                                :: i=0
+
+      INTEGER(IntKi)                               :: ErrStat2      ! Error status of the operation
+      CHARACTER(LEN(ErrMsg))                       :: ErrMsg2       ! Error message if ErrStat2 /= ErrID_None
+
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+
+
+
+      ! deallocate data associated with file output
+      CALL MDIO_CloseOutput ( p, ErrStat2, ErrMsg2 )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         !IF (ErrStat >= AbortErrLev) RETURN
+
+
+      ! deallocate FAST data structures
+      CALL MD_DestroyInput(u, ErrStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+      CALL MD_DestroyParam(p, ErrStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+      CALL MD_DestroyContState(x, ErrStat2, ErrMsg2)  ! <--- getting access violation
+         CALL CheckError( ErrStat2, ErrMsg2 )
+      CALL MD_DestroyDiscState(xd, ErrStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+      CALL MD_DestroyConstrState(z, ErrStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+      CALL MD_DestroyOtherState(other,ErrStat2,ErrMsg2) ! <--- getting access violation
+         CALL CheckError( ErrStat2, ErrMsg2 )
+      CALL MD_DestroyOutput(y, ErrStat2, ErrMsg2)
+         CALL CheckError( ErrStat2, ErrMsg2 )
+
+
+      IF ( ErrStat==ErrID_None) THEN
+         CALL WrScr('MoorDyn closed without errors')
+      ELSE
+         CALL WrScr('MoorDyn closed with errors')
       END IF
 
-      ! should have a 'timed out without convergence' message also
 
-    END DO ! I ... looping through time steps
+   CONTAINS
 
+      SUBROUTINE CheckError(ErrId, Msg)
+        ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
 
-     ! UNboost drag coefficient of each line type
-    DO I = 1, p%NTypes
-      other%LineTypeList(I)%Cdn = other%LineTypeList(I)%Cdn / InitInp%CdScaleIC
-      other%LineTypeList(I)%Cdt = other%LineTypeList(I)%Cdt / InitInp%CdScaleIC
-    END DO
+         INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
+         CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
 
 
+         IF ( ErrID /= ErrID_None ) THEN
 
-    ! trying writing an actual output line - temporary
-    !CALL MDIO_WriteOutputs( 0.0_DbKi, p, other, y, ErrStat, ErrMsg )
+            IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine  ! keep existing error message if there is one
+            ErrMsg = TRIM(ErrMsg)//' MD_End:'//TRIM(Msg)      ! add current error message
+            ErrStat = MAX(ErrStat, ErrID)
 
+            CALL WrScr( ErrMsg )  ! do this always or only if warning level?
 
-    ! set time step stuff for actual simulation
-    p%Ndt = ceiling(DTcoupling/InitInp%DTmooring)  ! get number of mooring time steps per IC convergence analysis time step
-    p%dt = DTcoupling/p%Ndt                       ! adjusted mooring time step size for IC generation
+         END IF
 
-    p%dtCoupling = DTcoupling  ! not sure if this is "proper"  store coupling time step for use in updatestates
-
-    ! Give the program description (name, version number, date)
-    !InitOut%Ver = ProgDesc('MoorDyn',TRIM(InitOut%version),TRIM(InitOut%compilingData)) ! rhis is a duplicate of above
+      END SUBROUTINE CheckError
 
 
-    CALL WrScr( 'Done MD_Init' )
-
-
-  END SUBROUTINE MD_Init                                                                        !   -------+
-  !==========================================================================================================
-
-
-
-
-  !==========   MD_UpdateStates   ======     <-------------------------------------------------------------+
-  SUBROUTINE MD_UpdateStates( t, n, u, utimes, p, x, xd, z, other, ErrStat, ErrMsg)
-    REAL(DbKi)                      , INTENT(IN   ) :: t
-    INTEGER(IntKi)                  , INTENT(IN   ) :: n
-    REAL(DbKi)                      , INTENT(IN   ) :: utimes(:)
-    TYPE(MD_InputType)              , INTENT(INOUT) :: u(:)       ! INTENT(INOUT) ! had to change this to INOUT
-    TYPE(MD_ParameterType)          , INTENT(IN   ) :: p          ! INTENT(IN   )
-    TYPE(MD_ContinuousStateType)    , INTENT(INOUT) :: x          ! INTENT(INOUT)
-    TYPE(MD_DiscreteStateType)      , INTENT(INOUT) :: xd         ! INTENT(INOUT)
-    TYPE(MD_ConstraintStateType)    , INTENT(INOUT) :: z          ! INTENT(INOUT)
-    TYPE(MD_OtherStateType)         , INTENT(INOUT) :: other      ! INTENT(INOUT)
-    INTEGER(IntKi)                  , INTENT(  OUT) :: ErrStat    ! Error status of the operation
-    CHARACTER(*)                    , INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-
-    INTEGER(IntKi)  :: I ! counter
-    INTEGER(IntKi)  :: J ! counter
-    INTEGER(IntKi)  :: K ! counter
-
-    TYPE(MD_InputType)         :: u_interp  !
-
-    REAL(ReKi) :: t2  ! why did I do this?
-
-
-    t2 = real(t, ReKi)
-
-    ! create space for arrays/meshes in u_interp
-    CALL MD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg)
-    CALL MD_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat, ErrMsg)
-    !mth: I don't know what this is but it seems cool!
-
-
-    !-------------------------------------------------------------------------------
-    ! go through fairleads and apply motions from driver
-    DO I = 1, p%NFairs
-      DO J = 1,3
-
-        other%ConnectList(other%FairIdList(I))%r(J) =  u_interp%PtFairleadDisplacement%Position(J,I) ! assign fairlead position
-       !other%ConnectList(other%FairIdList(I))%r(J) =  u_interp%PtFairleadDisplacement%TranslationDisp(J,I) ! is this the same as above?
-
-        other%ConnectList(other%FairIdList(I))%rd(J) =  u_interp%PtFairleadDisplacement%TranslationVel(J,I) ! assign fairlead velocity
-
-      END DO
-    END DO  ! I
-
-
-
-    !-------------------------------------------------------------------------------
-    ! loop through mooring model time steps
-    ! DO I = 1, p%Ndt  <<< the looping through mooring time steps is done within TimeStep()!
-      CALL TimeStep ( t2, p%dtCoupling, u_interp, p, x, xd, z, other, ErrStat, ErrMsg )
-    ! END DO ! I
-
-
-
-    !-------------------------------------------------------------------------------
-    ! check for errors (return) or warnings (print)  - this seems redundant
-    IF( ErrStat /= ErrID_None ) THEN
-       IF( ErrStat > ErrID_Warn ) THEN
-          CALL MD_DestroyInput( u_interp, ErrStat, ErrMsg )
-          RETURN
-       ELSE
-          CALL WrScr( ErrMsg )
-       END IF
-    END IF
-
-    CALL MD_DestroyInput(u_interp, ErrStat, ErrMsg)
-
-
-  END SUBROUTINE MD_UpdateStates                                                                !   -------+
-  !==========================================================================================================
-
-
-  !==========   MD_CalcOutput   ======     <---------------------------------------------------------------+
-  SUBROUTINE MD_CalcOutput( t, u, p, x, xd, z, other, y, ErrStat, ErrMsg )
-    REAL(DbKi)                     , INTENT(IN   ) :: t
-    TYPE( MD_InputType )           , INTENT(IN   ) :: u       ! INTENT(IN   )
-    TYPE( MD_ParameterType )       , INTENT(IN   ) :: p       ! INTENT(IN   )
-    TYPE( MD_ContinuousStateType ) , INTENT(IN   ) :: x       ! INTENT(IN   )
-    TYPE( MD_DiscreteStateType )   , INTENT(IN   ) :: xd      ! INTENT(IN   )
-    TYPE( MD_ConstraintStateType ) , INTENT(IN   ) :: z       ! INTENT(IN   )
-    TYPE( MD_OtherStateType )      , INTENT(INOUT) :: other   ! INTENT(INOUT)
-    TYPE( MD_OutputType )          , INTENT(INOUT) :: y       ! INTENT(INOUT)
-    INTEGER(IntKi)                 , INTENT(  OUT) :: ErrStat
-    CHARACTER(*)                   , INTENT(  OUT) :: ErrMsg
-
-    INTEGER(IntKi)             :: I  ! counter
-    INTEGER(IntKi)             :: J  ! counter
-
-
-    ! assign net force on fairlead Connects to the outputs
-    DO i = 1, p%NFairs
-      DO J=1,3
-        y%PtFairleadLoad%Force(J,I) = other%ConnectList(other%FairIdList(I))%Ftot(J)
-      END DO
-    END DO
-
-
-    ! calculate outputs (y%WriteOutput) for glue code and write any other outputs to MoorDyn output files
-     CALL MDIO_WriteOutputs(REAL(t,DbKi) , p, other, y, ErrStat, ErrMsg)
-
-
-    ! check for errors (return) or warnings (print)  <<< ?
-    IF( ErrStat /= ErrID_None ) THEN
-       IF( ErrStat > ErrID_Warn ) THEN
-          RETURN
-       ELSE
-          CALL WrScr( ErrMsg )
-       END IF
-    END IF
-
-  END SUBROUTINE MD_CalcOutput                                                                  !   -------+
-  !==========================================================================================================
-
-
-  !==========   MD_End   ======     <----------------------------------------------------------------------+
-  SUBROUTINE MD_End(u, p, x, xd, z, other, y, ErrStat , ErrMsg)
-    TYPE(MD_InputType) ,            INTENT(INOUT) :: u
-    TYPE(MD_ParameterType) ,        INTENT(INOUT) :: p
-    TYPE(MD_ContinuousStateType) ,  INTENT(INOUT) :: x
-    TYPE(MD_DiscreteStateType) ,    INTENT(INOUT) :: xd
-    TYPE(MD_ConstraintStateType) ,  INTENT(INOUT) :: z
-    TYPE(MD_OtherStateType) ,       INTENT(INOUT) :: other
-    TYPE(MD_OutputType) ,           INTENT(INOUT) :: y
-    INTEGER(IntKi),                 INTENT(  OUT) :: ErrStat
-    CHARACTER(*),                   INTENT(  OUT) :: ErrMsg
-    INTEGER(IntKi)                                :: i=0
-
-    ErrStat = ErrID_None
-    ErrMsg  = ""
-
-
-
-    ! FOR YOU MATT
-    !
-    ! do deallocations here
-    ! ....
-    ! Done
-
-
-    ! close output, for now
-    CALL MDIO_CloseOutput ( p, ErrStat, ErrMsg )
-
-
-    ! check for errors (return) or warnings (print)  - this seems redundant
-    IF( ErrStat /= ErrID_None ) THEN
-       IF( ErrStat > ErrID_Warn ) THEN
-          RETURN
-       ELSE
-          CALL WrScr( ErrMsg )
-       END IF
-    END IF
-
-
-
-
-
-  END SUBROUTINE MD_End                                                                         !   -------+
-  !==========================================================================================================
+   END SUBROUTINE MD_End                                                                         !   -------+
+   !==========================================================================================================
 
 
 !!==========   MD_CheckError   =======     <---------------------------------------------------------------+
@@ -586,8 +660,6 @@ CONTAINS
  !==========================================================================================================
 
 
-! DO I NEED SUBROUTINES FOR COPYING AND DESTROYIG THE DERIVED DATA TYPES, AS STATED IN P13 OF THE PROGRAMMING HANDBOOK?
-! I.E. COPY AND DELETE FUNCTIONS FOR CONNECTS LINES AND PROPTYPES?
 
 
   !========================================================================================================
@@ -774,7 +846,7 @@ CONTAINS
  !     print *, ' r(1,...) are ', Line%r(1,:)
 
       ! calculate instantaneous (stretched) segment lengths and rates << should add catch here for if lstr is ever zero
-      DO I = 0, N-1
+      DO I = 0, N-1 !bjj: another loop indexing issue Line%lstr starts at 1
         Sum1 = 0.0_ReKi
         DO J = 1, 3
           Sum1 = Sum1 + (Line%r(J,I+1) - Line%r(J,I))*(Line%r(J,I+1) - Line%r(J,I))
@@ -1105,7 +1177,7 @@ CONTAINS
         END IF
 
         ! assign values for l and V
-        DO J=0,N
+        DO J=1,N  !bjj: was 0,N
           Line%l(J) = Line%UnstrLen/REAL(N, DbKi)
           Line%V(J) = Line%l(J)*0.25*Pi*LineProp%d*LineProp%d
         END DO
@@ -1217,27 +1289,30 @@ CONTAINS
       ALLOCATE ( LSNodes(N+1), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
         ErrMsg  = ' Error allocating LSNodes array.'
-     !   CALL CleanUp()     << should handle deallocating arrays in all cases
+        CALL CleanUp()
         RETURN
       END IF
 
       ALLOCATE ( LNodesX(N+1), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
         ErrMsg  = ' Error allocating LNodesX array.'
-     !   CALL CleanUp()     << should handle deallocating arrays in all cases
+        CALL CleanUp()
         RETURN
       END IF
 
       ALLOCATE ( LNodesZ(N+1), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
         ErrMsg  = ' Error allocating LNodesZ array.'
-     !   CALL CleanUp()     << should handle deallocating arrays in all cases
+        CALL CleanUp()
         RETURN
       END IF
 
       ! Assign node arc length locations
       LSNodes(1) = 0.0_ReKi
-      DO I=2,N
+      LSNodes(2) = 0.0_ReKi  !bjj: no idea if this is correct, but just trying to get it to run without seg faults
+!      DO I=2,N
+      DO I=3,N
+!bjj: when I=2,Line%l(I-2)     is undefined
         LSNodes(I) = LSNodes(I-1) + Line%l(I-2)  ! note: l index is because line and segment indices start at 0
       END DO
       LSNodes(N+1) = Line%UnstrLen  ! ensure the last node length isn't longer than the line due to numerical error
@@ -1295,17 +1370,18 @@ CONTAINS
 
     CONTAINS
 
-      SUBROUTINE CleanUp()
 
-      ! add things to deallocate temporary arrays here
+      SUBROUTINE CleanUp()
+         ! deallocate temporary arrays
+
+         IF (ALLOCATED(LSNodes))  DEALLOCATE(LSNodes)
+         IF (ALLOCATED(LNodesX))  DEALLOCATE(LNodesX)
+         IF (ALLOCATED(LNodesZ))  DEALLOCATE(LNodesZ)
 
       END SUBROUTINE CleanUp
 
 
-
-
     !=======================================================================
-    !JASON: SHOULD THIS ROUTINE (Catenary) BE PLACED IN NWTC_Subs OR IN ITS OWN DLL?
     SUBROUTINE Catenary ( XF_In, ZF_In, L_In  , EA_In, &
                           W_In , CB_In, Tol_In, N    , &
                           s_In , X_In , Z_In , ErrStat, ErrMsg    )
@@ -1828,7 +1904,7 @@ CONTAINS
     X_In (:) = REAL( X (:), ReKi )
     Z_In (:) = REAL( Z (:), ReKi )
 
-    print *, 'done Catenary.  N is ', N, ', first three x positions are ', X_In(1), X_In(2), X_In(3)
+    !print *, 'done Catenary.  N is ', N, ', first three x positions are ', X_In(1), X_In(2), X_In(3)
 
 
     END SUBROUTINE Catenary
@@ -1850,13 +1926,13 @@ CONTAINS
 
     REAL(ReKi)               :: Length
 
-    u = r2 - r1    
-    Length = TwoNorm(u) 
+    u = r2 - r1
+    Length = TwoNorm(u)
 
     if ( .NOT. EqualRealNos(length, 0.0_ReKi ) ) THEN
       u = u / Length
     END IF
-    
+
 
    END SUBROUTINE UnitVector
 
