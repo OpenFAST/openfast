@@ -102,7 +102,7 @@ PROGRAM MAIN
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
 !   dt_global = 1.0D-03
-   dt_global = 1.0D-03*1.0D0
+   dt_global = 1.0D-03*5.0D0
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -132,9 +132,9 @@ PROGRAM MAIN
 
 !   BD_InitInput%InputFile = 'BeamDyn_Input_CX100.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_5MW.inp'
-!   BD_InitInput%InputFile = 'BeamDyn_Input_5MW_New.inp'
+   BD_InitInput%InputFile = 'BeamDyn_Input_5MW_New.inp'
 !   BD_InitInput%InputFile = 'Siemens_53_Input.inp'
-   BD_InitInput%InputFile = 'GA2_Debug.inp'
+!   BD_InitInput%InputFile = 'GA2_Debug.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Composite.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Damp.inp'
@@ -154,7 +154,7 @@ PROGRAM MAIN
    BD_InitInput%GlbRot(:,:) = 0.0D0
    temp_vec(1) = 0.0
    temp_vec(2) = 0.0
-   temp_vec(3) = 0.0 !4.0D0*TAN((3.1415926D0/4.0D0)/4.0D0)
+   temp_vec(3) = 4.0D0*TAN((-3.1415926D0/2.0D0)/4.0D0)
    CALL CrvMatrixR(temp_vec,temp_R)
    BD_InitInput%GlbRot(1:3,1:3) = temp_R(1:3,1:3)
 
@@ -386,7 +386,7 @@ END PROGRAM MAIN
    ! Calculate root displacements and rotations
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%Orientation(:,:,:) = 0.0D0
-!   temp_pp(3) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
+   temp_pp(3) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
    CALL CrvMatrixR(temp_pp,temp_R)
    u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
    temp_vec(:) = MATMUL(temp_R,p%uuN0(1:3,1))
@@ -396,8 +396,9 @@ END PROGRAM MAIN
    ! Calculate root translational and angular velocities
    u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(:,:) = 0.0D0
-!   u%RootMotion%RotationVel(3,1) = 3.1415926D+00*1.0D0/3.0D0
-!   u%RootMotion%TranslationVel(1:3,1) = -1.0D0*MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
+
+   u%RootMotion%RotationVel(3,1) = 3.1415926D+00*1.0D0/3.0D0
+   u%RootMotion%TranslationVel(1:3,1) = -1.0D0*MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
 !   u%RootMotion%RotationVel(2,1) = -3.1415926D+00*1.0D0/3.0D0
 !   u%RootMotion%TranslationVel(1:3,1) = -1.0D0*MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
    ! END Calculate root translational and angular velocities
@@ -416,7 +417,6 @@ END PROGRAM MAIN
 
    u%PointLoad%Force(:,:)  = 0.0D0
    u%PointLoad%Moment(:,:) = 0.0D0
-   u%PointLoad%Force(3,p%node_total)  = 1.0D+05*SIN(20.0D0*t)
 
    ! LINE2 mesh: DistrLoad
    u%DistrLoad%Force(:,:)  = 0.0D0

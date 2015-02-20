@@ -283,7 +283,7 @@ INCLUDE 'ElasticForce_GA2.f90'
                    CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
                    CALL ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV)
                    temp_id2 = (j-1)*p%dof_node 
-                   temp_POS(:) = MATMUL(InitInp%GlbRot,temp_POS)
+                   temp_POS(:) = MATMUL(TRANSPOSE(InitInp%GlbRot),temp_POS)
                    p%uuN0(temp_id2+1,i) = temp_POS(1) + InitInp%GlbPos(1)
                    p%uuN0(temp_id2+2,i) = temp_POS(2) + InitInp%GlbPos(2)
                    p%uuN0(temp_id2+3,i) = temp_POS(3) + InitInp%GlbPos(3)
@@ -291,7 +291,7 @@ INCLUDE 'ElasticForce_GA2.f90'
 !WRITE(*,*) 'j = ', j
 !WRITE(*,*) temp_CRV
 !WRITE(*,*) temp_glbrot
-                   temp_GLB(:) = MATMUL(InitInp%GlbRot,temp_CRV)
+                   temp_GLB(:) = MATMUL(TRANSPOSE(InitInp%GlbRot),temp_CRV)
 !                   CALL CrvCompose_temp(temp_GLB,temp_glbrot,temp_CRV,0)
 !WRITE(*,*) temp_GLB
                    p%uuN0(temp_id2+4,i) = temp_GLB(1)
@@ -377,6 +377,13 @@ INCLUDE 'ElasticForce_GA2.f90'
            ENDDO
        ENDDO
    ENDDO
+   temp66(:,:) = 0.0D0
+   temp66(1:3,1:3) = InitInp%GlbRot(1:3,1:3)
+   temp66(4:6,4:6) = InitInp%GlbRot(1:3,1:3)
+   DO i=1,p%ngp*p%elem_total
+       p%Stif0_GL(:,:,i) = MATMUL(TRANSPOSE(temp66),MATMUL(p%Stif0_GL(:,:,i),temp66))
+       p%Mass0_GL(:,:,i) = MATMUL(TRANSPOSE(temp66),MATMUL(p%Mass0_GL(:,:,i),temp66))
+   ENDDO
 
    DEALLOCATE(temp_GL)
    DEALLOCATE(temp_ratio)
@@ -408,8 +415,12 @@ INCLUDE 'ElasticForce_GA2.f90'
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
 
-!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,1)
-!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,2)
+   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,1)
+   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(2,:,1)
+   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(3,:,1)
+   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,1)
+   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(5,:,1)
+   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(6,:,1)
 !   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
 !   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
 !   STOP
