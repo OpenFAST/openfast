@@ -65,6 +65,7 @@
                              p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
                              p%node_total,p%dof_node )
    ! find x at t+dt
+   CALL InputGlobalLocal(p,u_interp,0)
    CALL BeamDyn_BoundaryGA2(x,u_interp,t+p%dt,OtherState,ErrStat,ErrMsg)
    CALL DynamicSolution_GA2( p%uuN0,x%q,x%dqdt,OtherState%acc,OtherState%xcc,&
                              p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,       &

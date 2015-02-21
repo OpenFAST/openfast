@@ -147,14 +147,14 @@ PROGRAM MAIN
 
    ALLOCATE(BD_InitInput%GlbPos(3)) 
    BD_InitInput%GlbPos(1) = 0.0D+00
-   BD_InitInput%GlbPos(2) = 0.0D+01
+   BD_InitInput%GlbPos(2) = 1.0D+01
    BD_InitInput%GlbPos(3) = 0.0D0
 
    ALLOCATE(BD_InitInput%GlbRot(3,3)) 
    BD_InitInput%GlbRot(:,:) = 0.0D0
    temp_vec(1) = 0.0
    temp_vec(2) = 0.0
-   temp_vec(3) = 4.0D0*TAN((-3.1415926D0/2.0D0)/4.0D0)
+   temp_vec(3) = 4.0D0*TAN((3.1415926D0/2.0D0)/4.0D0)
    CALL CrvMatrixR(temp_vec,temp_R)
    BD_InitInput%GlbRot(1:3,1:3) = temp_R(1:3,1:3)
 
@@ -203,13 +203,17 @@ CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final-1
 
 WRITE(*,*) "Time Step: ", n_t_global
-!IF(n_t_global == 1) STOP 
+IF(n_t_global == 1) STOP 
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
       CALL BD_InputSolve( t_global,                   BD_Input(1), BD_InputTimes(1), BD_Parameter, ErrStat, ErrMsg)
       CALL BD_InputSolve( t_global + dt_global,       BD_Input(2), BD_InputTimes(2), BD_Parameter, ErrStat, ErrMsg)
       CALL BD_InputSolve( t_global + 2.0D0*dt_global, BD_Input(3), BD_InputTimes(3), BD_Parameter, ErrStat, ErrMsg)
+WRITE(*,*) 'Global Input'
+DO i=1,3
+WRITE(*,*) BD_Input(2)%RootMotion%TranslationDisp(i,1)
+ENDDO
 !--------------------------------------------
 ! Compute initial condition given root motion
 !--------------------------------------------
@@ -219,9 +223,9 @@ WRITE(*,*) "Time Step: ", n_t_global
 !------------------------------
 ! END Compute initial condition
 !------------------------------
-     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
-                             BD_ConstraintState, &
-                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
+!     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
+!                             BD_ConstraintState, &
+!                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
 
 
       DO pc = 1, pc_max
@@ -245,9 +249,6 @@ WRITE(*,*) "Time Step: ", n_t_global
 
       ENDDO
 
-!     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
-!                             BD_ConstraintState, &
-!                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
 !   WRITE(QiHUnit,*) n_t_global+1,BD_OtherState%NR_counter
 !   temp_count = temp_count + BD_OtherState%NR_counter
 
@@ -369,10 +370,12 @@ END PROGRAM MAIN
    REAL(ReKi)              :: temp_pp(3)
    REAL(ReKi)              :: temp_qq(3)
    REAL(ReKi)              :: temp_R(3,3)
+   REAL(ReKi)              :: pai
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
+   pai = ACOS(-1.0D0)
    temp_rr(:)     = 0.0D0
    temp_pp(:)     = 0.0D0
    temp_qq(:)     = 0.0D0
@@ -386,18 +389,20 @@ END PROGRAM MAIN
    ! Calculate root displacements and rotations
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%Orientation(:,:,:) = 0.0D0
-   temp_pp(3) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
+   temp_pp(3) = 4.0D0*TAN(((pai*t*1.0D0/3.0D0))/4.0D0)
    CALL CrvMatrixR(temp_pp,temp_R)
-   u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
-   temp_vec(:) = MATMUL(temp_R,p%uuN0(1:3,1))
-   u%RootMotion%TranslationDisp(1:3,1)  = temp_vec(1:3) - p%uuN0(1:3,1)
+   u%RootMotion%Orientation(1:3,1:3,1) = MATMUL(temp_R(1:3,1:3),p%GlbRot)
+   temp_vec(:) = MATMUL(temp_R,p%GlbPos(1:3)+MATMUL(p%GlbRot,p%uuN0(1:3,1)))
+WRITE(*,*) p%GlbPos
+WRITE(*,*) temp_vec
+   u%RootMotion%TranslationDisp(1:3,1)  = temp_vec(1:3) - (p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1)))
    ! END Calculate root displacements and rotations
 
    ! Calculate root translational and angular velocities
    u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(:,:) = 0.0D0
 
-   u%RootMotion%RotationVel(3,1) = 3.1415926D+00*1.0D0/3.0D0
+   u%RootMotion%RotationVel(3,1) = pai*1.0D0/3.0D0
    u%RootMotion%TranslationVel(1:3,1) = -1.0D0*MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
 !   u%RootMotion%RotationVel(2,1) = -3.1415926D+00*1.0D0/3.0D0
 !   u%RootMotion%TranslationVel(1:3,1) = -1.0D0*MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
@@ -445,18 +450,13 @@ END PROGRAM MAIN
    INTEGER(IntKi)                                       :: j
    INTEGER(IntKi)                                       :: temp_id
    INTEGER(IntKi)                                       :: temp_id2
+   REAL(ReKi)                                           :: temp66(6,6)
 
    ErrStat = ErrID_None
    ErrMsg  = ''
    ! Initial displacements and rotations
    x%q(:) = 0.0D0
    ! Initial velocities and angular velocities
-!DO i=1,p%node_total
-!WRITE(*,*) 'Nodal Position:', i
-!WRITE(*,*) p%uuN0((i-1)*6+1:(i-1)*6+3,1)
-!WRITE(*,*) p%uuN0((i-1)*6+4:(i-1)*6+6,1)
-!ENDDO
-!STOP
    DO i=1,p%elem_total
        DO j=1,p%node_elem
            temp_id = (i-1)*p%dof_node*p%node_elem+(j-1)*p%dof_node
@@ -465,6 +465,8 @@ END PROGRAM MAIN
 !                 &MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),p%uuN0(temp_id2+1:temp_id2+3,i))
            x%dqdt(temp_id+1:temp_id+3) = MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),p%uuN0(temp_id2+1:temp_id2+3,i))
            x%dqdt(temp_id+4:temp_id+6) = u%RootMotion%RotationVel(1:3,1)
+           CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
+           x%dqdt(temp_id+1:temp_id+6) = MATMUL(temp66,x%dqdt(temp_id+1:temp_id+6))
        ENDDO
    ENDDO
 
