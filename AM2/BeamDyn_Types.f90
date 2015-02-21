@@ -96,6 +96,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: beta      ! Damping Coefficient [-]
     REAL(DbKi) , DIMENSION(:), ALLOCATABLE  :: coef      ! GA2 Coefficient [-]
     REAL(DbKi)  :: rhoinf      ! Numerical Damping Coefficient for GA2 [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: GlbPos      ! Initial Position Vector between origins of Global and blade frames [-]
+    REAL(ReKi) , DIMENSION(:,:), ALLOCATABLE  :: GlbRot      ! Initial Rotation Tensor between Global and Blade frames [-]
   END TYPE BD_ParameterType
 ! =======================
 ! =========  BD_InputType  =======
@@ -1124,6 +1126,34 @@ IF (ALLOCATED(SrcParamData%coef)) THEN
    DstParamData%coef = SrcParamData%coef
 ENDIF
    DstParamData%rhoinf = SrcParamData%rhoinf
+IF (ALLOCATED(SrcParamData%GlbPos)) THEN
+   i1_l = LBOUND(SrcParamData%GlbPos,1)
+   i1_u = UBOUND(SrcParamData%GlbPos,1)
+   IF (.NOT. ALLOCATED(DstParamData%GlbPos)) THEN 
+      ALLOCATE(DstParamData%GlbPos(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_CopyParam: Error allocating DstParamData%GlbPos.'
+         RETURN
+      END IF
+   END IF
+   DstParamData%GlbPos = SrcParamData%GlbPos
+ENDIF
+IF (ALLOCATED(SrcParamData%GlbRot)) THEN
+   i1_l = LBOUND(SrcParamData%GlbRot,1)
+   i1_u = UBOUND(SrcParamData%GlbRot,1)
+   i2_l = LBOUND(SrcParamData%GlbRot,2)
+   i2_u = UBOUND(SrcParamData%GlbRot,2)
+   IF (.NOT. ALLOCATED(DstParamData%GlbRot)) THEN 
+      ALLOCATE(DstParamData%GlbRot(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_CopyParam: Error allocating DstParamData%GlbRot.'
+         RETURN
+      END IF
+   END IF
+   DstParamData%GlbRot = SrcParamData%GlbRot
+ENDIF
  END SUBROUTINE BD_CopyParam
 
  SUBROUTINE BD_DestroyParam( ParamData, ErrStat, ErrMsg )
@@ -1157,6 +1187,12 @@ IF (ALLOCATED(ParamData%beta)) THEN
 ENDIF
 IF (ALLOCATED(ParamData%coef)) THEN
    DEALLOCATE(ParamData%coef)
+ENDIF
+IF (ALLOCATED(ParamData%GlbPos)) THEN
+   DEALLOCATE(ParamData%GlbPos)
+ENDIF
+IF (ALLOCATED(ParamData%GlbRot)) THEN
+   DEALLOCATE(ParamData%GlbRot)
 ENDIF
  END SUBROUTINE BD_DestroyParam
 
@@ -1216,6 +1252,8 @@ ENDIF
   Re_BufSz    = Re_BufSz    + SIZE( InData%beta )  ! beta 
   Db_BufSz    = Db_BufSz    + SIZE( InData%coef )  ! coef 
   Db_BufSz   = Db_BufSz   + 1  ! rhoinf
+  Re_BufSz    = Re_BufSz    + SIZE( InData%GlbPos )  ! GlbPos 
+  Re_BufSz    = Re_BufSz    + SIZE( InData%GlbRot )  ! GlbRot 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -1279,6 +1317,14 @@ ENDIF
   ENDIF
   IF ( .NOT. OnlySize ) DbKiBuf ( Db_Xferred:Db_Xferred+(1)-1 ) =  (InData%rhoinf )
   Db_Xferred   = Db_Xferred   + 1
+  IF ( ALLOCATED(InData%GlbPos) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%GlbPos))-1 ) =  PACK(InData%GlbPos ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%GlbPos)
+  ENDIF
+  IF ( ALLOCATED(InData%GlbRot) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%GlbRot))-1 ) =  PACK(InData%GlbRot ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%GlbRot)
+  ENDIF
  END SUBROUTINE BD_PackParam
 
  SUBROUTINE BD_UnPackParam( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1390,6 +1436,18 @@ ENDIF
   ENDIF
   OutData%rhoinf = DbKiBuf ( Db_Xferred )
   Db_Xferred   = Db_Xferred   + 1
+  IF ( ALLOCATED(OutData%GlbPos) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%GlbPos,1))); mask1 = .TRUE.
+    OutData%GlbPos = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%GlbPos))-1 ),mask1,OutData%GlbPos)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%GlbPos)
+  ENDIF
+  IF ( ALLOCATED(OutData%GlbRot) ) THEN
+  ALLOCATE(mask2(SIZE(OutData%GlbRot,1),SIZE(OutData%GlbRot,2))); mask2 = .TRUE.
+    OutData%GlbRot = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%GlbRot))-1 ),mask2,OutData%GlbRot)
+  DEALLOCATE(mask2)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%GlbRot)
+  ENDIF
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1
   Int_Xferred  = Int_Xferred-1

@@ -28,6 +28,7 @@ MODULE BeamDyn_SP
    PUBLIC :: CrvMatrixB                ! Tight coupling routine for updating discrete states
    PUBLIC :: CrvExtractCrv                ! Tight coupling routine for updating discrete states
    PUBLIC :: Tilde
+   PUBLIC :: MotionTensor
 
 CONTAINS
 
@@ -131,6 +132,9 @@ INCLUDE 'BldGaussPointDataMass_GA2.f90'
 INCLUDE 'InertialForce.f90'
 INCLUDE 'ElasticForce_GA2.f90'
 
+INCLUDE 'MotionTensor.f90'
+INCLUDE 'InputGlobalLocal.f90'
+
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
 ! This routine is called at the start of the simulation to perform initialization steps.
@@ -217,6 +221,12 @@ INCLUDE 'ElasticForce_GA2.f90'
    p%gravity(3) = InitInp%gravity(2)
 
    CALL CrvExtractCrv(InitInp%GlbRot,temp_glbrot)
+   CALL AllocAry(p%GlbPos,3,'Global position vector',ErrStat2,ErrMsg2)
+   CALL AllocAry(p%GlbRot,3,3,'Global rotation tensor',ErrStat2,ErrMsg2)
+   p%GlbPos(:) = 0.0D0
+   p%GlbRot(:,:) = 0.0D0
+   p%GlbPos(1:3) = InitInp%GlbPos(1:3)
+   p%GlbRot(1:3,1:3) = InitInp%GlbRot(1:3,1:3)
    ! Hardwire value for initial position vector
 !   temp_glbrot(:) = 0.0D0
 !   temp_glbrot(3) = 4.0D0*TAN((3.1415926D0/2.0D0)/4.0D0)
@@ -283,17 +293,9 @@ INCLUDE 'ElasticForce_GA2.f90'
                    CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
                    CALL ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV)
                    temp_id2 = (j-1)*p%dof_node 
-                   temp_POS(:) = MATMUL(TRANSPOSE(InitInp%GlbRot),temp_POS)
-                   p%uuN0(temp_id2+1,i) = temp_POS(1) + InitInp%GlbPos(1)
-                   p%uuN0(temp_id2+2,i) = temp_POS(2) + InitInp%GlbPos(2)
-                   p%uuN0(temp_id2+3,i) = temp_POS(3) + InitInp%GlbPos(3)
-                   temp_GLB(:) = 0.0D0
-!WRITE(*,*) 'j = ', j
-!WRITE(*,*) temp_CRV
-!WRITE(*,*) temp_glbrot
-                   temp_GLB(:) = MATMUL(TRANSPOSE(InitInp%GlbRot),temp_CRV)
-!                   CALL CrvCompose_temp(temp_GLB,temp_glbrot,temp_CRV,0)
-!WRITE(*,*) temp_GLB
+                   p%uuN0(temp_id2+1,i) = temp_POS(1)
+                   p%uuN0(temp_id2+2,i) = temp_POS(2)
+                   p%uuN0(temp_id2+3,i) = temp_POS(3)
                    p%uuN0(temp_id2+4,i) = temp_GLB(1)
                    p%uuN0(temp_id2+5,i) = temp_GLB(2)
                    p%uuN0(temp_id2+6,i) = temp_GLB(3)
@@ -311,9 +313,8 @@ INCLUDE 'ElasticForce_GA2.f90'
                    ENDDO
                    eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
                    CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
-                   temp_POS(:) = MATMUL(InitInp%GlbRot,temp_POS)
                    temp_id2 = (i-1)*p%ngp+j+1
-                   temp_L2(1:3,temp_id2) = temp_POS(1:3) + InitInp%GlbPos(1:3)
+                   temp_L2(1:3,temp_id2) = temp_POS(1:3)
                    EXIT
                ENDIF
            ENDDO
@@ -377,13 +378,13 @@ INCLUDE 'ElasticForce_GA2.f90'
            ENDDO
        ENDDO
    ENDDO
-   temp66(:,:) = 0.0D0
-   temp66(1:3,1:3) = InitInp%GlbRot(1:3,1:3)
-   temp66(4:6,4:6) = InitInp%GlbRot(1:3,1:3)
-   DO i=1,p%ngp*p%elem_total
-       p%Stif0_GL(:,:,i) = MATMUL(TRANSPOSE(temp66),MATMUL(p%Stif0_GL(:,:,i),temp66))
-       p%Mass0_GL(:,:,i) = MATMUL(TRANSPOSE(temp66),MATMUL(p%Mass0_GL(:,:,i),temp66))
-   ENDDO
+!   temp66(:,:) = 0.0D0
+!   temp66(1:3,1:3) = InitInp%GlbRot(1:3,1:3)
+!   temp66(4:6,4:6) = InitInp%GlbRot(1:3,1:3)
+!   DO i=1,p%ngp*p%elem_total
+!       p%Stif0_GL(:,:,i) = MATMUL(TRANSPOSE(temp66),MATMUL(p%Stif0_GL(:,:,i),temp66))
+!       p%Mass0_GL(:,:,i) = MATMUL(TRANSPOSE(temp66),MATMUL(p%Mass0_GL(:,:,i),temp66))
+!   ENDDO
 
    DEALLOCATE(temp_GL)
    DEALLOCATE(temp_ratio)
@@ -415,12 +416,12 @@ INCLUDE 'ElasticForce_GA2.f90'
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
 !   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
 
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,1)
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(2,:,1)
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(3,:,1)
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,1)
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(5,:,1)
-   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(6,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(2,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(3,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(5,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(6,:,1)
 !   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
 !   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
 !   STOP
@@ -441,9 +442,9 @@ INCLUDE 'ElasticForce_GA2.f90'
    ! Allocate continuous states and define initial system states here:
 
    CALL AllocAry(x%q,p%dof_total,'x%q',ErrStat2,ErrMsg2)
-   x%q = 0.0D0
+   x%q(:) = 0.0D0
    CALL AllocAry(x%dqdt,p%dof_total,'x%dqdt',ErrStat2,ErrMsg2)
-   x%dqdt = 0.0D0
+   x%dqdt(:) = 0.0D0
 
    CALL AllocAry(OtherState%acc,p%dof_total,'OtherState%acc',ErrStat2,ErrMsg2)
    OtherState%acc(:) = 0.0D0
@@ -451,17 +452,6 @@ INCLUDE 'ElasticForce_GA2.f90'
    OtherState%xcc(:) = 0.0D0
 
    p%niter = 20
-
-! For AM2, initial Condition
-!   DO i=1,p%elem_total
-!       DO j=1,p%node_elem
-!           temp_id = (i-1)*p%dof_node*p%node_elem+(j-1)*p%dof_node
-!           temp_id2= (j-1)*p%dof_node
-!           x%dqdt(temp_id+3) = p%uuN0(temp_id2+1,i)*(3.1415926D+00/3.0D0)
-!           x%dqdt(temp_id+5) = -3.1415926D+00/3.0D0
-!       ENDDO
-!   ENDDO
-!END initial condition
 
    ! Define system output initializations (set up mesh) here:
    CALL MeshCreate( BlankMesh        = u%RootMotion            &
@@ -544,10 +534,8 @@ INCLUDE 'ElasticForce_GA2.f90'
                                  ,ErrMess  = ErrMsg           )
    ENDDO
    ! place single node at origin; position affects mapping/coupling with other modules
-   TmpPos(1) = 0.
-   TmpPos(2) = 0.
-   TmpPos(3) = 0.
-
+   TmpPos(:) = 0.0D0
+   TmpPos(:) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1))
    CALL MeshPositionNode ( Mesh = u%RootMotion          &
                          , INode = 1                &
                          , Pos = TmpPos             &
@@ -557,7 +545,7 @@ INCLUDE 'ElasticForce_GA2.f90'
    DO i=1,p%elem_total
        DO j=1,p%node_elem
            temp_id = (j-1) * p%dof_node
-           TmpPos(1:3) = p%uuN0(temp_id+1:temp_id+3,i)
+           TmpPos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
            temp_id = (i-1)*(p%node_elem-1)+j
            CALL MeshPositionNode ( Mesh    = u%PointLoad  &
                                   ,INode   = temp_id      &
@@ -569,7 +557,8 @@ INCLUDE 'ElasticForce_GA2.f90'
    DO i=1,p%elem_total
        DO j=1,p%node_elem
            temp_id = (j-1)*p%dof_node
-           TmpPos(1:3) = p%uuN0(temp_id+1:temp_id+3,i)
+!           TmpPos(1:3) = p%uuN0(temp_id+1:temp_id+3,i)
+           TmpPos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
            temp_id = (i-1)*p%node_elem+j
            CALL MeshPositionNode ( Mesh    = y%BldMotion  &
                                   ,INode   = temp_id      &
@@ -580,9 +569,10 @@ INCLUDE 'ElasticForce_GA2.f90'
    ENDDO
 
    DO i=1,p%ngp*p%elem_total+2
+       TmpPos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
        CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
                               ,INode   = i            &
-                              ,Pos     = temp_L2(:,i) &
+                              ,Pos     = TmpPos       &
                               ,ErrStat = ErrStat      &
                               ,ErrMess = ErrMsg       )
    ENDDO
