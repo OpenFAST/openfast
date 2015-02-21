@@ -210,10 +210,6 @@ IF(n_t_global == 1) STOP
       CALL BD_InputSolve( t_global,                   BD_Input(1), BD_InputTimes(1), BD_Parameter, ErrStat, ErrMsg)
       CALL BD_InputSolve( t_global + dt_global,       BD_Input(2), BD_InputTimes(2), BD_Parameter, ErrStat, ErrMsg)
       CALL BD_InputSolve( t_global + 2.0D0*dt_global, BD_Input(3), BD_InputTimes(3), BD_Parameter, ErrStat, ErrMsg)
-WRITE(*,*) 'Global Input'
-DO i=1,3
-WRITE(*,*) BD_Input(2)%RootMotion%TranslationDisp(i,1)
-ENDDO
 !--------------------------------------------
 ! Compute initial condition given root motion
 !--------------------------------------------
@@ -393,8 +389,6 @@ END PROGRAM MAIN
    CALL CrvMatrixR(temp_pp,temp_R)
    u%RootMotion%Orientation(1:3,1:3,1) = MATMUL(temp_R(1:3,1:3),p%GlbRot)
    temp_vec(:) = MATMUL(temp_R,p%GlbPos(1:3)+MATMUL(p%GlbRot,p%uuN0(1:3,1)))
-WRITE(*,*) p%GlbPos
-WRITE(*,*) temp_vec
    u%RootMotion%TranslationDisp(1:3,1)  = temp_vec(1:3) - (p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1)))
    ! END Calculate root displacements and rotations
 
@@ -463,7 +457,9 @@ WRITE(*,*) temp_vec
            temp_id2= (j-1)*p%dof_node
 !           x%dqdt(temp_id+1:temp_id+3) = u%RootMotion%TranslationVel(1:3,1) + &
 !                 &MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),p%uuN0(temp_id2+1:temp_id2+3,i))
-           x%dqdt(temp_id+1:temp_id+3) = MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),p%uuN0(temp_id2+1:temp_id2+3,i))
+           x%dqdt(temp_id+1:temp_id+3) = &
+           MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),p%GlbPos(1:3)+MATMUL(p%GlbRot,p%uuN0(temp_id2+1:temp_id2+3,i)))
+WRITE(*,*) x%dqdt(temp_id+1:temp_id+3)
            x%dqdt(temp_id+4:temp_id+6) = u%RootMotion%RotationVel(1:3,1)
            CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
            x%dqdt(temp_id+1:temp_id+6) = MATMUL(temp66,x%dqdt(temp_id+1:temp_id+6))
