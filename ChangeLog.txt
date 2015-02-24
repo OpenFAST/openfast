@@ -1,0 +1,788 @@
+AeroDyn Change Log
+------------------
+
+AeroDyn v3.30
+ Added capability to read turbulence files in AeroDyn.
+
+AeroDyn v3.50
+ For AeroDyn, separate the YawDyn and ADAMS inputs.
+
+v7.70
+ AeroDyn version numbering changed so that VFOSUB version matches the
+ Aerosubs & YawDyn version number.
+
+v8.10
+ Added live twist capability to AeroDyn and brought up to date with
+ YawDyn.
+
+v8.20
+ For AeroDyn, added dynamic inflow and eliminated FEQUIL option.
+
+v8.30
+ For AeroDyn, added parameters to set many array dimensions, no-wake
+ option.
+
+v8.3? 02-15-1994  A. Elliott
+
+ Modified AeroDyn for compatibility with ADAMS 7.0  by converting all
+ calls to INFO to calls to SYSFNC and SYSARY as appropriate.  Also added
+ code to allow calls to these subroutines without calling them during
+ the IFLAG pass.  This greatly improves the speed of the code, since
+ ADAMS is unable to use the Jacobian information produced by this
+ discrete-time implementation of the aerodynamics.
+
+v8.37  30-Jun-1994
+ Updated AeroDyn for compatibility with YawDyn 8.37 (no functional
+ changes, but minor output and format mods).
+
+v8.38  30-Jun-1994
+ Added DTAERO to AeroDyn, the ability to perform aero calculations only
+ after time interval DTAERO has passed (instead of every ADAMS time
+ step).
+
+v8.41  20-Aug-1994
+ Added use of USRMES, the ADAMS utility to write messages to the .msg
+ file and screen.
+
+v9.00  10/4/94
+ Updated comments and formatting for final release under NREL
+ subcontract XF-1-11009-2
+
+v9.01  12/2/94
+ Modified to use IEC definitions of wind inputs.  This changes the
+ definition of the shear coeffs. and eliminates the old linear vertical
+ shear option.
+
+v9.10  12/30/94
+ Incorporated Marshall's linear interpolation turbulence routines.  Also
+ include several other changes Marshall had made to the code.
+
+v9.20  1/4/95
+ Added multiple cl-cd airfoil data tables.
+
+v9.2?  02-Mar-1995
+ Changes to AeroDyn to allow passing of variable for interpolation in
+ airfoil table with multiple cl and cd values.
+
+v9.3  6/14/95
+ Allow printing of selected blade element data.
+ Made READFL and STRNGL more robust.
+ Added two inputs to .ipt file for aileron power control.
+ Renamed POWRLAW to NOIECEWS to emphasize change in definition for IEC
+   wind shear.
+ Added induced tangential (swirl) velocity calc.
+ Added output of hub-height wind speeds to element.plt file.
+ Added variable YAWRAT to eliminate singularity problem with Q(4) in
+   AeroDyn.
+ Modified by Andy Elliott to use INFFNC and INFARY in place of SYSFNC
+   and SYSARY.  This avoids functional dependency calc. and the
+   Feb 15, 94 workaround of this problem.
+ REQSUB changes:
+   Include files have been added so that the preconing, pitch, etc. are
+     now available from AeroDyn.
+   Alpha and Coeff. of Lift added.
+   Can give azimuth for both cw & ccw rotation.
+   Modified for use of VFORCE in ADAMS v6.0 for REQSUB.
+   Modified Debug to print the 'aelement.plt' file instead.  This
+     eliminates use of the debug parameter from earlier versions.
+   Scaled back to work only with the CER hinge model.  Convert all INFO
+     calls to SYSFNC or SYSARY.
+
+v9.31  11/8/95
+ Corrected error in output power adjustment for inertial effects in
+ AERO sub.  Value Q(1) changed to TEE.
+
+v9.32  11/16/95
+ Added CTILT terms to yaw moment calculation to improve accuracy for
+ very large tilt angles.
+
+v9.33  11/28/95
+ Added yaw rate terms to teeter rotor inertial torque.
+
+v9.34  1/09/96
+ Added yaw moment due to FT * flap combination.
+
+v9.35  1/10/96
+ Change file unit numbers to get all in range 90-99 for compatibility
+ with recent changes in ADAMS.
+ Updated AeroDyn to include dynamic stall effects from pitch rate.
+
+v9.50  3/20/96
+ Updated to include pitch rate terms in dynamic stall, changed sign on
+ inertial power for teetering rotors, improved inertial terms in teeter
+ yaw moment.
+ Converted RECSUB to INFFNC and SYSARY to INFARY in SENSUB.  Added
+ teetering rotor template.  Changed file unit numbers.
+
+v9.51  4/8/96
+ Improved expression for teeter rotor yaw moment by adding other two
+ inertias and removing many small angle approximations.
+
+v9.52  4/9/96
+ Improved teeter equation of motion with more accurate mass moments of
+ inertia, removed extra space from RB in variable E5 in YFLAP (no effect
+ on results).
+
+v9.53  5/17/96
+ Minor modification to teeter rotor torque term to use the more accurate
+ inertias and to yaw moment equation for teetering rotor to improve
+ accuracy for low teeter angle excursions.
+
+v9.60  6/10/96
+ Added error traps for blade element dimension data.
+
+v9.70  6/13/96
+ Added pitching moment calculation option.
+
+v9.80  10/29/96
+ Implemented new input file format and compatibility with YawDyn Windows
+ Interface 'YawWin' (Visual Basic program).
+ Converted VFOSUB to GFOSUB to add pitching moment calcs.
+
+v9.81  10/30/96
+ Removed Gormont dynamic stall option.
+
+v9.83  11/05/96
+ Improved interpolation for F in Beddoes model and added edge aero
+ moment to output.
+
+v9.84  11/06/96
+ Changed output method to show only those columns of data that are
+ pertinent.
+
+v9.85  11/08/96
+ Improved tip loss model for large deflections by using DR values
+   instead of R - RLOCAL.
+ Added pitching moment outputs to REQSUB.
+
+v9.86  11/13/96
+ Use double precision azimuth sum (AZIMUTHD).  Better accuracy for very
+ long simulations.
+
+v9.88  11/26/96
+ Allow longer filenames for airfoil data files.
+
+v9.89  12/5/96
+ Modified time-tracking for ADAMS.  No functional change for YawDyn, but
+ .inc files and YAWIN and YAWOUT argument lists were changed.
+ Found AeroDyn bug that has been present in version 9.5 and later.  DT
+ value was not calculated correctly (TEMPTME value updated in wrong
+ place).  Effect felt primarily in dynamic inflow calculations, which
+ are seldom used.  Also some effect on dynamic stall calculations,
+ though generally the effects are small because a default value of
+ DT=0.01 sec was used.  Also deleted UPDATE and TEMPTME variables
+ because they are no longer used.  DT and OLDTIME updates moved to
+ SENSUB.  Added check to verify SENSOR is included in dataset.
+
+v10.00  12/16/96
+ Removed 'WRITE(92,...' lines from USRMES and final checks for release.
+
+v10.01  1/15/97
+ Fixed 'NOCNTRL' typo and zero CN slope check.
+
+v10.02  2/05/97
+ Allow tip loss calc. for station at r/R=1.0.
+
+v10.03  2/28/97
+ Fixed FOILNM size.
+ Modified blade element location checking to accommodate use of Gaussian
+   integration points (from ADAMS WT).
+ Added SAVEs to PRTBLD for Unix systems.
+ Fixed FOILNM length in all files.
+ Added FIRSTP array to REQSUB to make insensitive to order that ADAMS
+   routines are called.
+
+v10.04  6/13/97
+ Added check for zero horizontal wind (bypass twr shad) and fixed
+ initialization of VLINSHR.
+
+v10.04  8/19/97
+ Set value of YAWRAT in AERO subroutine.
+ Changed NINT to IDNINT(OLDTIME) near line 340 and initialize OLDAERO in
+   PRTBLD.
+
+v10.05
+ Replaced PCCHK with PC in PRTBLD radius test.
+
+v10.10  9/29/97  M. Buhl
+ Removed ability to read formatted FF wind files.
+ Added ability to read binary FF wind files.
+ Created a new source file called AeroMods.for.  It contains the FF
+   variables that used to be in common.
+ Added simulation timing to screen output.
+ Added YawDyn version number plus run date and time to top of output
+   files.
+ Changed some variable names to emphasize the concept of FF vs HH
+   instead of the misleading turbulent and not turbulent terms.
+ Created a new module for global FF variables.
+ Replaced the PAUSE statement with a call to a PAUSE routine.
+ Redid or eliminated the string functions to use F90 intrinsics like
+   TRIM and ADJUSTL.
+ Miscellaneous cleanup and F90izing.
+
+v10.20  10/02/97  M. Buhl
+ Added input variable PsiInit to initialize the azimuth.
+ Added calculation of hub wind speed and direction.  Added them to .plt
+   file.
+ Modified the FORMAT statements for the .plt files.
+ Removed unnecessary pauses before STOPs.
+ Wind file names were moved to a new common block /Strings/.
+ New input parameter "PsiInit" was added.  Blade azimuth is initialized
+   to that value.
+ Eliminated the use of BACKSPACE in YAWIN.
+ Miscellaneous cleanup and F90izing.
+
+v10.30  10/03/97  M. Buhl
+ Created a new scheme to choose output variables.
+
+v10.34  01/21/98  K. Pierce and M. Buhl
+ Added "USE FF_Wind" into GFOSUB.
+ Changed AVERWIND to MeanFFWS in GFOSUB.
+ Updated INITIAL routine to fix minor bugs.
+
+v10.35  28-Jan-1988  K. Pierce and M. Buhl
+ Added UNITCHK subroutine to determine ADAMS system units. CONVFAC is
+   used to scale forces returned by AeroDyn.
+ Modified GFOSUB to work with v10.3x  AeroDyn.
+ Added version and date stamps to all output files.
+ Changed all dates to DD-Mon-CCYY format.
+
+v10.36  12-Feb-1988  K. Pierce and M. Buhl
+ Fixed output of teeter rate.
+ Added output of blade deflections, flap rates and moments for blades 2
+   thru MIN(NB,3).
+ Reordered output table and added comments.
+ Eliminated comments on how to turn code back into being F77 compatible.
+   F90 stuff is now ubiquitous; there's no turning back.
+ Changed dimension parameter for OutData from MaxParam to MaxCol.  How
+   it worked before, we'll never know.
+ Minor cleanup to eliminate warning messages.
+Change.log created for better version tracking.
+
+v10.37  13-Feb-1998  M. Buhl
+ Had to add RECL= parameters to the OPEN statements for yawdyn.plt and
+ element.plt so YawDyn would work on the Sun.  Seems to be ignored by
+ the DEC compiler on the PC.  We fixed a newly introduced error in
+ calculating the out-of-plane load for blades other than one.
+
+v10.38  14-Feb-1998  K. Pierce
+ Fixed a newly introduced error in calculating the out-of-plane load for
+ blades other than one.
+
+v10.39  09-Apr-1998  M. Buhl
+ Changed the record length for the open on UNIT 94 (element.plt) to 2000.
+ Also changed format 4000 in the main program to allow 160 labels after the
+ first 7.  Also changed format 4100 in main to allow 20*8+6=166 numbers after
+ Time.
+
+v11.01 12-Oct-1998  K. Pierce
+ Updated the Initial subroutines in gfosub.f and yawdyn.f.  These had
+ not been updated since I modified the calculation of parameters for the
+ Beddoes-Leishman dynamic stall model.
+Assigned a value to skew in gfosub.f subroutine newtime.  Previously
+ skew was not assigned a value during an ADAMS run.
+Moved call to vnmod in subroutine elemfrc so that vnmod is called only
+ if we are not using dynamic inflow.  This should eliminate the
+ possibility of applying a skewed wake correction twice.
+
+v11.02 13-Oct-1998 D. Laino
+ Created edge, flap, and pitching moment arrays in AeroDyn.inc, and code
+ them in YawDyn.f so output requests for blades 2 and 3 will actually
+ provide output.  Code taken from work done by M. Buhl at NREL at an
+ earlier date.
+16-Oct-1998 D. Laino
+ Converted "\" edit descriptors in aerosubs to "$" edit descriptors for
+ compatibility with the Sun compiler as per M. Buhl's request.
+
+v11.03 04-Nov-1998 D. Laino
+ Corrected improper calculation of induction factor in subroutine VIND,
+ so only the wind speed is reduced, not the blade velocity.  This correction
+ is likely significant only for configurations with relatively large
+ out-of-plane blade velocities such as teetering rotors in severely
+ asymmetric inflow conditions.
+
+v11.04 21-Dec-1998 K. Pierce and M. Buhl
+ We changed the induction factor calculations to mimic that of WT_Perf.  We
+ also added the effects of precone in the VNB and VNW calculations.  We fixed
+ the processing of the input data so it initialized the effects of precone for
+ teetering and rigid, nonflapping rotors.  We changed the OPEN statements
+ in aerosubs.f so that input files are opened with "ACTION='READ'" so that
+ both ADAMS and YawDyn could share the same input files at the same time.
+
+v11.05 18-Jan-1999 M. Buhl
+ I eliminated the sin(pc)=pc, cos(pc)=1 assumption in the calculation of the
+ flap moment for the case of the completely rigid rotor, but commented them out,
+ as the equations may not be valid for all cases.  I changed the output format
+ for the Element.plt and YawDyn.plt files to use ES12.5 format.
+
+v11.06 24-Feb-1999 M. Buhl
+ I modified output of flap angles for hinged blades so that the values no
+ longer includes the precone.  Both screen and file output changed.  I
+ still have not modified the input of flap angle for the initial values.
+ One must still include the precone in the initial flap angles.
+
+v11.07 17-Mar-1999 D. Laino
+ Dave made unspecified changes.  He also removed all flap-angle mods
+ done in v11.06.
+
+v11.08 24-Mar-1999 M. Buhl
+ I put my 11.06 mods back in.  I also changed the flap output to YawDyn.opt
+ and the input values to eliminate precone from all flap I/O values.  I also
+ increased the precision of the trim flap angle and rate values.
+
+v11.09 25-Mar-1999 D. Laino
+ Corrected Marshall's corrections in equation for FMYM to eliminate small angle
+ approximations.
+ Added calculation of EMYM - the gravity contribution to the edge moment - and
+ added its contribution to the yaw moment equation and edge moment output.
+ (Still need to add coriolis terms to the edge moment equation.)
+ Revisited yaw moment equation and discovered confusing decomposition of
+ contributing forces and subsequent missing terms.  Rewrote all these terms in
+ a more logical fashion.  Added EMYM and aero pitching moment contributions.
+ Changed edge moment output to be the entire aero edge moment (previously it
+ was just the component parallel to the main shaft) plus the gravity component.
+ Added argument EMOM for edge moment in call to BLDFM.
+
+v11.10 01-Apr-1999  D. Laino
+ Changed the sign on the VXY term in the equation for VROTORZ in subroutine VELD.
+ The previous positive sign was incorrect and led to serious errors for large
+ tilt angles.
+
+v11.11 01-Apr-1999  D. Laino
+ Added error checks for zero chord length and excessive Mach number.  Both these
+ conditions cause the angle argument in MPI2PI to be NaN, causing an infinite
+ loop.  Tried to add error check in MPI2PI using the ISNAN function, but it
+ caused YawDyn to crash for an unknown reason that we had no luck tracking.  This
+ check is currently commented out in MPI2PI.
+
+v11.12 02-Apr-1999  D. Laino, C. Hansen, A. Suzuki
+ Found the DEC compiler OPEN statement commented out in the previous release.  The
+ DEC option has been reset to default in this release.  Also found that the version
+ output was not updated in GFOSUB statement since v11.02!  Added a Prog argument,
+ but still need better means of tracking versions throughout YawDyn/AeroDyn.  Undid
+ Marshall's comments in subroutine VIND for better induction factor convergence.
+
+v11.13 08-Apr-1999  D. Laino, A.D. Wright
+ After independent verification by Alan Wright, the Coriolis term due to blade flap
+ was added to the edge moment equation, and its contribution to yaw moment.
+ Note: this Coriolis term neglects effects due to yaw motion.
+ Added Module identify to maintain the program names and version numbers.
+
+v11.14 09-Apr-1999  D. Laino, M. Buhl
+ Corrected a minor typo in an error message output to the screen.  Also added
+ program identifiers to the headings of files output by sample REQSUB.
+
+v11.15 03-Jun-1999 D.Laino
+ Added index to PITSAV in subroutine elemfrc, which corrects the output of the
+ local pitch angle in file element.plt.  Added check to see if array FFData was
+ already allocated before attempting to allocate again in subroutine ReadFF.
+
+v11.16 07-Jun-1999 D.Laino
+ Eliminated all version number comments in all distributable files.  The version
+ number can be found in Module Identify, in the filename of the distributble
+ archive, and here in the change.log file only.
+
+ Corrected logical statements in YAWIN regarding FLAPDOF and TEETER.  These are
+ not mutually exclusive, which is what they would have to be for the statements
+ to work as they were written.
+
+ Corrected equation for the number of turbulence steps (NFFSteps) in ReadFF to
+ include the precone angle.  Added a check between rotor diameter and grid
+ dimension in ReadFF. If the grid is larger than twice its minimum required
+ size, the turbulence file runs out prematurely.
+
+ Fixed a major bug in the gravity calculation for the edge moment.  The gravity
+ term was incorrectly added to subroutine AERO, and was already present in the
+ main routine, though it was lacking the tilt term.  The AERO equation was
+ corrected and the main routine equation commented out.
+
+v11.17 08-Jun-1999 D.Laino
+ Fixed inconsistencies in the reference coordinate system for blade moments.  All
+ are now in the blade coordinate system, as a strain gauge would be.  Corrected
+ errors with the edge moment contribution to yaw moment.
+
+v11.18 17-Jun-1999 D.Laino
+ Corrected sign on coriolis edge moment term in AERO.  Changed back to original,
+ more stable equations for induction factor in AXIND.  Changed input and output
+ back to including the precone in the value for flap angle.
+
+v11.20 31-Aug-1999 M. Buhl, K. Pierce, D. Laino
+ We added the tangential induction factor to the element.plt files.
+ We modified ELEMFRC so that we would not get singularities when the blade
+ marker is at the center of rotation; FAST_AD can have aero markers there.
+ We modified VIND in aerosubs.f to use the old values of a and a' instead of zero
+ when we can't converge.  This necessitated saving the old a'.  It also gives a
+ better starting guess for the tangential velocity in AXIND.  We added the array
+ OLDAP to aerodyn.inc.  In gfosub.f, we modified INITIAL and NEWTIME.
+ We modified VIND and AXIND to add VNA, VTA, and PHI to the AXIND argument list
+ so we could modify VIND to print them when we don't converge.
+ We modified VIND to initialize a with the old a that had not been corrected
+ for skewed wake.  We created a new variable (OLD_A_NS) to save the values.
+ This sped up a highly yawed case by a factor of 2.5.  Not too shabby.
+ We replaced calls to IFIX to NINT because IFIX is not a standard intrinsic.
+ Added search for "Grid width" in subroutine ReadFF to handle new SNLWind
+ summary file.
+ Added check between the number of blades in the ADAMS dataset and yawdyn.ipt
+ in GFOSUB.F; created variable IBLDMAX for this purpose.  Prior to this fix,
+ if NB was greater than the number of blades in the ADAMS dataset, ADAMS
+ would run without ever calling NEWTIME and updating the wind input, yaw
+ angle, rpm, yaw rate or beddoes or dynamic inflow parameters.
+ Changed Mach number > 1.0 error in ATTACH to warning to avoid aborting during
+ ADAMS startup; sets Mach number to 0.7 to continue simulation.
+
+v11.21 03-Sep-1999  M. Buhl, D. Laino
+ Removed a DO loop in YAWIN that set QP(I)=QP(I).
+ Added variables SINPC and COSPC to aerodyn.inc and calculated them in YAWIN.
+ Created SQ1 and CQ1 in AERO.  Rid equations for HFORCEZ and HFORCEY of small
+ angle approximations, and added FN term to HFORCEZ equation.  Also got rid of
+ small angle approximation for TILT and TEE in equation for YAERO, as well as
+ several other equations in AERO.  Added variables CTEE and STEE for this.
+ Added normal aero force (FN) term to equation for HFORCEZ.  Why was it missing?
+ Changed the error tolerance for the difference in mean wind speeds from the
+ full-field summary and binary files from 0.01 to 0.1.
+ Removed the term ZMYAW from equations in AERO subroutine.  This term made no
+ physical sense and appeared to be redundant with ZMTOT.
+ Changed the TEMP variable in BLDFM of yawdyn.f so that it used the SIN(Q(1))
+ instead of Q(1).
+ Put in calls to MPI2PI for wind direction (probably unnecessary) and yaw angle
+ into WrData in yawdyn.f.
+
+v11.22 01-NOV-1999 D. Laino
+ Corrected equations for ZGRND in subroutines INITIAL and BLDFM.  It was missing
+ the SL term.  Added cosine of flap angle (CQ1) in equation for THRUST in AERO.
+ Replaced set of terms with already calculated VNA variable in SWRLARG equation
+ in AXIND.  Also returned to original single equation for A2 in AXIND after
+ correcting it by moving TIPLOSS variable inside parentheses.  In subroutine AERO,
+ added a general equation for the edge moment for both rigid and teetering rotors.
+ Also rewrote all terms to the rigid and teetering flap moment equations.
+ These equations have been checked using Autolev and ADAMS.  Fixed output to
+ always have yaw rate available, since FIXED really means fixed yaw rate (not
+ angle). Deleted no longer used subroutine SETWRIT.  Changed the test input
+ files' headings and selected output columns.
+
+v11.30  19-Jan-2000  M. Buhl
+ I modified READFF so that it looks for the string "snwind" at the top of the
+ FF summary file.  If it finds it, it uses a different logic for reading the summary
+ file than is used for the old SNLWIND-3D summary files.  AeroDyn now supports
+ both types of files.
+
+v11.31 24-jan-2000 A. Suzuki
+ Added subroutine VG2ROTOR to convert wind velocity components from ground to
+ hub coordinates for use with dynamic inflow and full-field turbulence.
+ Previously, large errors in induction factor distribution would result during
+ large yaw error conditions.
+ Implemented post-stall routines based on UIUC semi-empirical post stall model.
+ The current version is not activated in the release version but is present in
+ the code for testing and development.  The Post Stall corrections are not proven,
+ and are known to not be active when dynamic stall is used.
+
+v11.35 18-Feb-2000 C. Hansen ( search for string CH-- )
+ Made numerous small changes in subroutine MPI2PI to avoid infinite loops if
+ ANGLE is NaN and avoid round-off errors when PI is defined by DATA statement.
+ Changed convergence test for axial induction factor when EQUIL wake option is
+ selected.  Now two tolerances are used.  If the error has many zero crossings,
+ indicating we are close to a solution, a relaxed criterion is used.  Otherwise
+ the original criterion still applies.  This seems to help in cases with
+ convergence problems, but may still need further refinement.
+ Also added output of Post Stall parameters when this undocumented option is used.
+ Finally, edited source files to remove obsolete comments and improve readability.
+
+v11.36 23-Mar-2000 D. Laino
+ Corrected error messages for simulation mode and stall model options in YAWIN.
+
+v12.00 (unreleased) D. Laino
+ Extensive rewrite of the code to convert to Fortran90.  Included elimination of
+the INCLUDE files, and the introduction of new MODULES to replace them.  Nearly
+all arrays have been converted to allocatable based on model parameters.
+AeroDyn Subroutines have been separated into 3 files now: AeroSubs.f90, and
+GenSubs.f90 hold the code, and AeroMods.f90, contains the modules.
+
+v12.10 (unreleased) D. Laino
+ The Pitt & Peters dynamic inflow model has been replaced with a Generalized
+Dynamic Wake model.
+
+v12.20 (unreleased) D. Laino
+ Features added:
+ An error.log file is now generated to record any serious warnings or errors
+during a simulation.  This file is cumulative, meaning it will add errors from
+subsequent simulations until it is manually deleted.  This should prove useful
+in running large batches of simulations.
+ Other bugs addressed:
+ A call to VIND in INITIAL even when WAKE is false has been fixed.  VIND is now
+only called if WAKE is true.
+ READFL now cycles through all airfoil data files to determine the longest in
+order to set NumCL (Which replaces MAXCL) before reading the files.
+ Set HH wind file parameters to last values in wind file when simulation is
+longer than the wind file.  Previously, the last interpolated values were used,
+which may have been slightly different.
+ Added rotor torque as an output in YawDyn.  Created variable Torque to replace
+POWER in torque calculations which already existed in YawDyn.
+ Reduced outputs to screen for program.  Reduced write statements in code.
+ Improved error outputs to be more precise.  Added error and warning tally.
+
+v12.30 16-May-2001 D. Laino
+ Separated yawdyn.ipt into two files: yawdyn.ipt and aerodyn.ipt.  Created
+new variable T_Shad_Refpt for the tower shadow defecit, separating it from
+the geometric hub sling variable (SL).
+ Created new module AeroTime for the aerodynamic time variables.
+ Extensive changes to GFOSUB.F90.  In PRTBLD, PC is eliminated.  Tip-loss
+constants are now estimated without it.
+ Replaced YAWRAT with YAWVEL (= YAWRAT * SL * CTILT)
+ Put ElemOpen and ElemOut in Aerosubs for all AeroDyn programs to use.  The filename
+(e.g. element.plt) is now passed in the argument to ElemOpen.
+ Changed VINDERR (and call to it) to provide more specific error message.
+ Eliminated subroutines PAUSE and WAIT from program.
+ Created subroutine BEDINIT to initialize dynamic stall parameters that were previously
+initialized in INITIAL (in both YawDyn and GFOSUB).
+ Replaced Q array with variable names FlapAng, FlapRate, YawAng and YawRate.
+ Created Subroutine SetProgName to write the program ID string.  Created subroutine
+OpenOutFile to open each output file and write the program ID string to the
+first line.  Added variable Prog to the Identify module to hold the string.
+ Removed SL and PC from FF subroutines since these are not defined in ADAMS.  Uses
+1.1 * R instead.
+ Added check to FF routines to see if HH and Zhub differ by more than 10%.
+ Created gateways to the AeroDyn code for dynamics codes to use.  AeroDyn now
+requires several subroutines in the dynamics code to provide status of the
+dynamics model.  See the User's Guide.
+
+v12.31 14-Sep-2001 D. Laino
+ Added Conv2UC routine to GenSubs to make text inputs to AeroDyn case-insensitive.
+
+v12.32 20-Sep-2001 D. Laino
+ Eliminated GRAV constant from AeroDyn.  Made NB and TILT output in ADOUT a ADAMSRUN
+only event.
+
+v12.33 21-Sep-2001 D. Laino
+ Eliminated ADAMSRUN logical from AeroDyn.  AeroDyn now uses the character variable
+DynProg (set to 'ADAMS', 'YawDyn' or 'SymDyn') to determine the dynamics routine it
+is mated to during a simulation.  A default is set in case other programs are used,
+but it does not guarantee errors will not be encountered.
+
+v12.34 03-Oct-2001 D. Laino
+ Eliminated rElement and CoverR arrays as they were no longer needed residuals that
+were part of the deleted post-stall routines.
+
+v12.35 10-Oct-2001 D. Laino and M. Buhl
+ Applied fixes proposed by M. Buhl to GetHHWind for one-line wind files, replacing
+IERR with IOSTAT in READ statements.  Added trap for numeric errors after line two
+of the wind file.  Other fix implemented to avoid use of data from an incomplete
+line in the wind file.
+
+v12.36 10-Jan-2002 D. Laino
+ Added check of turbulence UBar (average wind speed) to turn off dynamic inflow
+if UBar is <= 8 m/s to avoid rotor brake state errors in the DYNIN routines.
+This is a temporary fix for this DYNIN problem.
+
+v12.40 01-Mar-2002 D. Laino
+ Added flag to control tip loss model in input file.  Added Geogria Tech
+correction to Prandtl model.  Moved tip loss correction calculations to new
+subroutine GetTipLoss.  Bypassed read of ATOLER if WAKE option is NONE.
+
+v12.41 12-Apr-2002 D. Laino
+ Added 'FAST' to list of recognized program names in AeroDyn.  Updated Int2LStr
+and Flt2LStr with version from FAST.  Reversed logic for NEWTIME and
+GetBladeParams in GetVel for calls from FAST since it works backwards.
+ Renamed subroutine Alloc to AllocArrays to avoid conflict in FAST.
+ Added routine GetHubWind to supply the wind vector at the hub.
+ Added variable DynProgRoot to module Identify.
+
+v12.41b 17-Apr-2002 D. Laino
+ Phasing in new AD_InputGate with aerodyn input file name argument.
+ Added viscosity to the input file.
+ Updated PremEOF argument to reflect new routine for eventual use of library of
+general routines (someday, somehow).
+ Now requiring quoted strings for filenames.  This will permit comments in the
+input file.
+
+v12.42 22-Apr-2002 D. Laino
+ Fixed bug in area weighting calculation of AVGINFL.  It was lost in the
+translation to the new interface.  Introduced variable SumInfl to replace
+array VIN.  Deleted OLDVIN array as it was unnecessary and was causing AeroDyn
+to use AVGINFL from 2 time steps prior to the current (rather than only 1).
+ Added "FORM='FORMATTED'" to the OPEN statements in OpenInputFile and
+OpenOutFile.
+ Fixed ADOut to write HHWindFile name when constant wind is used.  Added
+quotes around airfoil file names written to the opt file.  Added air viscosity
+line to the opt file.
+
+v12.43 26-Apr-2002 D. Laino
+ Added Reynold's number calculation to AeroDyn, and output to the element file.
+Added option to move between multiple airfoil tables based on Reynold's number.
+Set the initial MulTabLoc to default = 0.0 in modules.  It should be set at the
+start of a simulation to an initial value by the dynamics code, unless RENUM
+option is used.
+ Changed dimensions of arrays for element output to reflect number of output
+elements rather than total number of elements.
+ Changed OpenInputFile routine to open all files read by AeroDyn.
+ Set default file unit numbers in module AD_IOParams.
+ Put NumFoil in module Airfoil, and changed dimensions on arrays to use NumFoil
+instead of NELM.  This effects two things:  It allows the use of more airfoil
+files than elements, and it reduces memory allocation when fewer airfoil files
+than elements are used.
+ Changed MulTabMet dimensions from (NELM, MAXTABLE) to (NumFoil, MAXTABLE).
+Changed argument NELM to NumFoil in calls to LOCATE to reflect these new array
+dimensions.
+ Allocate RMS_SAVE and RMS_SAVE only when needed for DYNIN.
+ Changed DYNINIT so it is set based on value of DYNINFL.
+ Limited allocation of element output arrays to occur only if element output is
+requested.
+
+v12.44 26-Apr-2002 D. Laino
+ Added flag WrOptFile to control creation and writing of opt file.  Set default
+to true, which can be changed by the dynamics program.
+
+v12.45 30-Apr-2002 D. Laino
+ Added more robust check for the wind file type in subroutine CheckWindType.
+
+v12.46 23-May-2002 D. Laino
+ Made various changes to the full-field code to handle new Bladed file format.
+This has no effect on how AeroDyn operates.  Call BedUpdate only when DSTALL is
+on.  Set TipSpeed to MAX(r * revs, 1.0e-6) to avoid division by zero in infinit
+and infdist.  Fixed call to NEWTIME for FAST to occur at blade 1, element 1 as
+FAST now loops forward instead of back.
+
+v12.47 19-July-2002 D. Laino
+ Fixed problems with the new Bladed turbulence format rectangular grid offset.
+Fixed bug in Reynolds Number calculation (density is not needed when using
+kinematic viscosity).  Applied James Shawlers corrections to the GDW model
+so the wind in the rotor plane is relative to a wind coordinate system, not a
+rotor coordinate system.
+
+v12.48 17-September-2002 D. Laino
+ Fixed bug that called GDW routines when Dynin was on even though WAKE was off.
+
+v12.49a-mlb  30-Aug-2002  M. Buhl
+ I added the ability to read in 4D wind inflow files in the format used by
+  NCAR's Large Eddy Simulation of a K-H wave.
+
+v12.49b-mlb  17-Oct-2002  M. Buhl
+ When compiling on a Sun, I found that many literal strings spanned multiple
+  lines, which is not normally allowed.  I fixed the strings that I found
+  in many routines.
+ I also found that in subroutine phis(), hfunc() was declared an integer
+  instead of REAL, as it was everywhere else.
+ The Sun compiler also complained about raising negative REALs to non-integer
+  powers.  I changed the -1.0 real base in aerosubs.f90\fgamma() to a -1
+  integer base.
+
+v12.49c-mlb  29-Oct-2002  M. Buhl
+ When compiling on Linux with the NAG compiler, the compiler complained that the
+  VIX argument string was explicitly declared in aerosubs.f90\VIndErr() instead
+  of using the size of the passed argument.  I change it from CHAR(3) to CHAR(*).
+ I had to change all the CHAR(5) declarations in GenSubs.f90 to CHAR(8) because
+  that was how function CurTime was declared.
+
+v12.49 24-December-2002 D. Laino
+ Reviewed and accepted all Marshall's changes to date.  The comments remain at
+ this stage for the benefit of Marhsall who has further changes to make.
+
+v12.50 24-December-2002 D. Laino
+ Added hub loss model based on the one in WT_Perf.  Set default tip loss and
+hub loss constants to 99.0 to avoid inadvertant application of incorrect losses
+in simulations.  Changed error codes in Marshall's LES routines to use different
+values for different calls to ERRLOG. To avoid math instability in wake
+calculations, added if block in ELEMFRC to turn wake off for very low tip speeds
+(only after time>20 to get rotor started).
+
+v12.51a-djl 31-December-2002 D. Laino
+ Corrected size of character variable Frmt in subroutine VIND.  It was far too
+small at only 5, so I increased it to 100.
+
+v12.51b-djl 02-January-2003 D. Laino
+ Fixed bug in GetPrandtlLoss to calculate the proper loss.  It was using only
+the hub loss constants to calculate the loss, so I added the proper constant
+as an argument in the call.
+
+v12.51 13-January-2003 D. Laino
+ Tested new code in YawDyn, Fast and ADAMS, and it checked out OK, allowing
+for release of the beta code.  Comments are still in the source, and will be
+purged before next release, following expected further coding by M. Buhl.
+
+v12.52 20-March-2003 D. Laino and M. Buhl
+ D. Laino made changes in ELEMFRC to handle two problems.  First, set A and
+AP to zero when RLOCAL < 0.01.  Previously, only A2 and A2P were set, and this
+may not have been was sufficient.  Second, set A, AP, A2 and A2P to zero for
+GDW for low tip speed cases.  GDW normalizes by tip speed, and results were
+suspicious.  Also, set DYNINIT to true when this happens to allow smooth
+transition back into GDW when tip speed increases.
+ M. Buhl made numerous changes that only affect developers of the code.  These
+are spelled out in DevelopLog.txt for future tracking.  Removed all alpha
+comments from the code. Changed all occurances of TIPLOSS to LOSS after the
+LOSS calculation in AXIND(); Prior to this, the hub loss model did nothing.
+
+v12.53 15-Jul-2003 J. Jonkman and D. Laino
+ Jason made a number of changes to the internal workings of the code that effect
+developers.  See the DevelopLog.txt file for details.
+ Jason added another block to CheckWindType() so that we can read HH files that
+don't end in .WND.
+ Jason changed a little code in SUBROUTINE AD_InputGate() since newer ADAMS2AD
+versions will call this routine instead of the old ADInputGate().
+ David rid the code of all WRITE(*,*) type statements since these are not
+allowed by Matlab (in which SymDyn runs).  There is one such statement now
+in a new SUBROUTINE GenSubs.f90/WriteScreen.  If AeroDyn detects SymDyn,
+an alternate WRITE(0, statement is used (though it does not actually write to
+anything, as far as I can tell).
+ David cleaned up numerous other things in the code, including ridding the
+code of size declarations on variables used in system calls (i.e., IOS,
+Exists, Sttus).  Fixed format statements in FF_Interp to write errors for
+grids that are too small.
+
+v12.54 22-Jul-2003 J. Jonkman
+ I changed the declaration of the Exists variables in source file GenSubs.f90
+   from LOGICAL(1) to LOGICAL so that the variable works with any compiler.
+
+v12.55 25-Aug-2003  J. Jonkman
+ Variables ALPHA and W2 in ELEMFRC were moved to the new MODULE ElemInflow().
+Array TI was moved from ReadFF and Read_Bladed_FF to Module FF_Wind, and it
+was eliminated from the Read_Bladed_FF argument list.  This was done to allow
+access to all three of these variables in FAST.
+
+v12.56 24-Sep-2003  J. Jonkman
+ I moved variable ATOLER from MODULE AeroMods.f90/Constant() to MODULE
+   InducedVel() to avoid variable name conflicts with FAST.  This required me
+   to add USEs of MODULE InducedVel() to routines AeroSubs.f90/ADOut() and
+   VIND().  This change does not affect the operation of AeroDyn.
+
+v12.57 29-Sep-2004  J. and B. Jonkman
+ We rolled up all the alpha changes into this new version.  We eliminated all
+   alpha comments.
+
+v12.58  28-Jun-2005  M. Hand
+ We replaced Read_Bladed_FF() with a version that is compatible with the double precision
+  used in Simulink.
+
+-------------------------------------------------------------------------------
+--------------------------- AeroDyn v13. --------------------------------------
+----- PLEASE NOTE THAT THIS VERSION (13.00.00) IS NOT BACKWARD COMPATIBLE! ----
+-------------------------------------------------------------------------------
+
+v13.00.00a-bjj 31-Mar-2010  B. and J. Jonkman
+ We added Disclaimer.txt to the archive and added two new files to the 
+   SAMPLES folder (for new tower influence features).  
+ We renumbered the archive with the new numbering scheme: X.XX.XX
+
+
+v13.00.00a-bjj was added to the NWTC Subversion (SVN) server.
+ SVN Revision 2 removed all change comments and was renamed v13.00.00.
+ 
+v13.00.01a-bjj 16-Feb-2012 B. Jonkman 
+ See DevelopLog.txt
+ 
+v13.00.01b-bjj, 28-Aug-2012 B. Jonkman   
+ Modifications for NWTC Library v1.05.00.
+ I removed InflowWind from the AeroDyn archive. InflowWind is now a module
+   on its own.
+
+v13.00.01c-bjj, 7-Dec-2012 B. Jonkman   
+ Modifications for NWTC Library v1.06.00
+
+v13.00.02a-bjj, 20-Feb-2013, B. Jonkman
+  Cleaned up for release; added user's guide addendum to the archive.
+
+-------------------------------------------------------------------------------
+To do:
+
+ Add INTENT to all passed parameters.
+ Describe all variables on declaration statements.
+
+=================== END ====================

@@ -1,0 +1,265 @@
+v12.52a-mlb  17-Jan-2003  M. Buhl
+ I added the ability to decimate the 4D wind grids.  I had to add three lines
+ to the 4d paramater file, which necessitated adding logic to the ReadFDP()
+ to read the new lines.  In that routine, I also modified the error messages
+ to refer to the generic 4D wind instead of the specific LE wind.  I also
+ renamed the parameter file to use the FDP extension instead of LEP, which
+ required me to change CheckWindType().  I modified GetFDWind() and Read4DData()
+ to use the number of decimated grid points.  I modified FD_Interp() to use
+ the decimated arrays.  I added a bunch of new variables to FD_Wind() in
+ AeroMods.f90.  After regenerating the binary 4D wind files, we now have to use
+ different scales and offsets for each component.  This added six line to the
+ parameter input file.  I added the variables to the FD_Wind() module, made
+ ScalFact an array, and moved Offset from local storage to an array in the
+ FD_Wind module.
+
+v12.52a-mlb  24-Feb-2003  M. Buhl
+ After much debugging and changing the way things work, I seem to have the 4D
+ wind files working now.  I eliminated the Lbot input parameter because it was
+ redundant with Lz.
+
+v12.52b-mlb  24-Feb-2003  M. Buhl
+ I added a header line and a time-values file name to the 4D wind parameter input file.
+ I print the header line to the screen using a INFO call to the error log.
+ I renumbered all the error numbers in ReadFDP().
+ I added a time-file parameter to the 4D wind parameter input file.  It points to
+  a file with the times for each wind file.  This allowed wind data with non-constant
+  time steps.
+
+v12.52c-mlb  03-Mar-2003  M. Buhl
+ I added the logic to shift the elevation of the w-component data for 4D wind files.
+  The input flag to allow it was added in an earlier version.
+ I moved the norm variables from the module to FD_Interp(), where they are used exclusively.
+
+v12.52c-mlb  05-Mar-2003  M. Buhl
+ Neil wanted to specify the scaling velocity (ScaleVel) instead of the Nyquist frequency,
+ so I had to change the input files, ReadFDP(), and GetFDWind().
+ Because we are using just a portion of the original dataset in the z direction, we need
+ to base the x and y scaling on the original Zm_max instead of the one that applies to
+ the subset of the dataset.  This requires an extra input parameter.
+
+v12.52c-mlb  06-Mar-2003  M. Buhl
+ Neil decided that we should specify U0 instead of the Nyquist frequency, so I modified
+ GetFDWind() and the FD_Wind module to deal with it.
+
+v12.52d-mlb  07-Mar-2003  M. Buhl
+ Maureen wants to be able to write her own wind routines, so I modified CheckWindType()
+ to set the new UsrWndFlag flag when the input wind file name is "UserWind".  I put in
+ calls to UserWind() in ADIN() and VWrel2G() when UsrWndFlag is true.
+ I added appropriate WRITE statements to ADOut() fot the 4D and user-written winds.
+
+v12.52f-mlb  21-Mar-2003  M. Buhl
+ In aerosubs.f90\FD_Interp(), I have to put a MAX( value, 1 ) around the calculation
+ of the lower indices for X and Y to prevent a possible value of zero.  This was already
+ done for Z.
+
+v12.52g-mlb  24-Mar-2003  M. Buhl
+ I added to option to include the drag term in the equilibrium induction equations.
+ One can now enter EQUILDA, EQUILDB, or EQUILDT for the inflow model.  For tangential
+ induction, I could not firgure out how to modify the PROPX equations used, so I
+ switched to the PROP-PC style equations when the drag term is included, but left
+ the equation unchanged (using PROPX) when drag is not to be included.
+
+v12.52h-mlb  26-Mar-2003  M. Buhl
+ I decided I didn't like the idea of using a LOGICAL in a numerical expression, so
+ I added a new variable (EqAIDmult) to the InducedVel module, which I then use in
+ ADIN() and AXIND().  I set the value to 1 if we are to add the drag term to the axial-
+ induction equation.  In AXIND(), I now use EqAIDmult instead of EquilDA in the equation.
+
+  IMPORTANT NOTE: When using the Visual Fortran complier, one *must* add the
+  following switch to the Project Options in the Project, Settings, Fortran tab
+  if you want to use the 4D wind files:
+     /assume:byterecl
+
+v12.52a-djl 20-March-2003 D. Laino
+ Added DynDebug subroutine in GDW routines.  It is commented out in the release
+version.
+
+v12.53a-jmj  28-Apr-2003  J. Jonkman
+ I added a new module to AeroMods called Precision() that stores parameters to
+   specify the KIND for variables.  I created the parameter ReKi and set it to
+   4 to specify single precision for REAL variables.  I modified all REAL
+   statements in all files to specify REAL(ReKi) so it would be easy to switch
+   from single (4) to double (8) precision.  I also added the parameter DbKi
+   for use instead of DOUBLE PRECISION statements, which are no longer allowed.
+ I added the REAL() function around several lines of code and converted all
+   SNGL() functions to REAL() functions so that the code does not crash when
+   converting between single and double precision.
+ To compile in double precision, change variable "ReKi", which is stored in
+   MODULE AeroMods.f90/Precision(), to "8" and add the compile option
+   "/real_size:64" (or "/4R8") to the project settings.  To revert back to
+   single precision, change ReKi to 4 and remove the "/real_size:64" (or
+   "/4R8") compile option.  As of yet, the double precision version only works
+   with FAST and ADAMS.  I don't believe this will work with SymDyn or YawDyn.
+
+v12.53b-jmj 06-Jun-2003  J. Jonkman
+ I updated all CHARACTER*len variable declaration statements with modern
+   CHARACTER(len) declarations.
+
+v12.53 15-Jul-2003  D. Laino
+ I commented out code being tested to handle GDW in low inflow conditions.  It
+   will continue to be tested before possible release.
+
+v12.57a-bjj 1-Jan-2004  B.Jonkman
+ I added a new (C)oherent (T)urbulence module, CT_wind, based on the FD_wind module, and
+   I added the LOGICAL variable CTWindFlag to the Switch module.  I modified  various
+   subroutines and added a few more of them so that we can read this new format of TurbSim
+   output. AeroDyn essentially adds two wind fields together when CTWindFlag is set (which
+   occurs when it reads a coherent turbulence parameter ".ctp" input file).  It reads
+   non-dimensional data, scales it, interpolates it, and then adds it to the interpolated
+   background FF turbulence.
+ In order for AeroDyn to correctly read these coherent turbulence files (which were generated
+   on a Unix system), this code needs to be compiled with the "/assume:byterecl" option on the
+   Compaq compiler.  This is also true for anyone wanting to use 4D wind files.
+ There was a bug in subroutine ReadFF() that allowed binary SNWind files that were
+   defined with clockwise rotation to be read in backwards. I modified the subroutine
+   to fix that problem by being more general when reading input files, and I updated (most of)
+   the older-style programming in this subroutine in the process. I also modified the
+   subroutine to look for rectangular grids that do not have hub height in the center.
+   These modifications allow AeroDyn to read grids produced by the new program, TurbSim.
+ I fixed a minor bug that would allow some non-square BLADED full-field wind files to use
+   grids that are potentially too small (where the distance from the hub to the top of the
+   wind field is less than 110% of the rotor radius) without producing a warning.  The
+   variable ZGOffset wasn't initialized before the subroutine READ_Bladed_FF() used it to
+   make this check.
+
+v12.57b-bjj 1-Jan-2004 B. Jonkman
+ I added a little feature that will output wind velocities at each blade element. Typing
+   "WIND" at the end of the line in the AD input file that defines each element will result
+   in that element's wind speeds being printed to a file named "*.wind" (It basically works
+   like the PRINT/NOPRINT option.)  This change is not documented in the AeroDyn User's Guide.
+
+v12.57c-bjj 19-Apr-2004  B.Jonkman
+ I made the following modifications to AeroSubs.f90 and GenSubs.f90 to fix most of the
+   non-standard code: I replaced the tabs in the code with spaces. I shortened the lines
+   that exceeded the standard right hand column by splitting them into two or more lines.
+   I made the arguments to intrinsic functions MAX() and MIN() the same data type with
+   the same KIND parameters.
+
+v12.57d-bjj 21-Jun-2004 B. Jonkman
+ I modified subroutine ReadFF in AeroSubs.f90 to read TurbSim output in the "New" BLADED
+   format (using the TurbSim summary file instead of a Bladed summary file).
+
+v12.57e-bjj 28-Jun-2004 B. Jonkman
+ We found a bug in the scaling of the height, width, and time scales in the 4D wind files.
+   I modified the subroutine GetFDWind() to fix the problem.  The ".fdp" input files also
+   need to have variables Xm_max, Ym_max, and Zm_max modified.  We no longer use Zm_maxo to
+   scale anything, but I left it in the input file since there are several other un-used
+   variables in there already.
+
+v12.57f-bjj 13-July-2004 B. Jonkman
+ I made slight changes to the coherent turbulence parameter file (*.ctp file).
+
+v12.57g-bjj 9-Aug-2004 B. Jonkman
+ I added some parameters to the 4D wind files so that we can accommodate DNS data files
+   which we shift in x to perform a change in time. The 4d input files now need an extra
+   couple of parameters in order to perform the advection correctly.  I had to modify
+   subroutines GetFDWind(), Read4DData(), ReadFDP(), and FD_Interp() to achieve this
+   change.
+
+v12.57h-bjj 9-Sept-2004 B. Jonkman
+ I added some logic in the CTWind subroutines to enable TurbSim to use DNS event files.
+   I also fixed a bug in the calculation of the time shift for CTWind files.
+
+v12.70a  Aug 2009 B. Jonkman
+ I removed the subroutines that deal with getting the wind speed at a particular
+   point in time and space from AeroSubs.f90 and placed them in a file called
+   AeroWindSubs.f90.
+ I added INTENT() attributes to all the passed parameters in AeroSubs.f90
+ I put the AeroDyn subroutines in a module and the AeroWindSubs in another module.
+   I had to update the CheckWindType() subroutine in because IN/OUT character arguments
+   need to be TRIMmed inside the subroutine, not in the function argument.
+ I replaced variable DtoR with D2R and variable RtoD with R2D (for NWTC_Library later).
+ I added a AeroDyn_Terminate() function to clean up variables and close files,
+   which is important when linking with other codes, particularly Matlab/Simulink.
+ I added INTENT() to the passed parameters to help determine the data flow.
+
+v12.70b  Sep 2009 B. Jonkman
+ I started adding the NWTC Library v1.01.09: I replaced all calls to Abort()
+   with ProgAbort(). I replaced all calls to WriteScreen() with WrScr(). I
+   replaced all calls to OpenInFile() with OpenFInpFile(). I replaced all the
+   LOGICAL(1) declarations with LOGICAL.
+ I added "IF (.not. allocated(xxx))" to allocation statements throughout AeroDyn.
+ I replaced all of the ErrLog calls with calls to ProgAbort(), ProgWarn(), or
+   WrScr() as appropriate. I removed the warnings if the FF grid is "too large"
+   because I think that's just silly.
+ I'm removing the GridHeight and GridWidth (and consequently RDiam) from the
+   Read of the FF summary file.  These values can be retreived from the binary
+   file (and are only used for checking vs rotor size anyway).
+ I replaced the wind inflow routines with a new module:
+   I changed the HH files to be read in at the beginning of the simulation. I
+     thought about changing the definition of the direction to be ccw looking from
+     above, which is the opposite of the previous direction. However, there is
+     some concern that the met people will get confused and people will also have
+     to change existing files. We talked about adding another wind type that works
+     like HH but has actual basis functions. In it, we can define direction like math people. ;-)
+   When compiling A2AD--compiled as a dll using CVF--with the new inflow routines,
+     using the NWTC_Library's AllocAry() subroutine to allocate global arrays caused
+     some issues.  For instance when I did this:
+                           A = B
+                           print *, A, B
+     A and B were 2 different numbers! I replaced the call to AllocAry() with the
+     ALLOCATE statement and corresponding checks and all worked fine.
+   I added a check in the FD wind files so that if we move backward in time, the
+     wind speeds are calculated correctly.  Before, the wind would remain
+     constant until you'd passed the previous time step.
+   Heights are now relative to the ground, NOT the hub height. (though the HH
+     files do still have a reference height).
+   The TurbSim .bts and .twr files can now be read. The .twr files will always
+     be read if they correspond to the binary FF file you are reading.
+   UserWind is now a self-contained module, not just a subroutine.
+   I fixed some minor issues with the FF grids. The last time step will be read
+     if there are an odd number of time steps in the file (previously it was
+     skipped). I also added some space for numerical rounding issues so that it
+     doesn't produce an error at the outer grid points.
+   The UNITS flag has been removed--all wind speeds must be returned in m/s.
+   The module does not abort, but returns an error flag. The calling program
+     must decide how to handle that.
+   The wind inflow summary information is not contained in AeroDyn's .opt file
+     any more.
+ I removed the LOCATE function from AeroDyn and added a subroutine with similar
+   functionality in NWTC library.
+ I added a check so that if AeroDyn tries to use English units, it stops.
+ I removed references to XGrnd, YGrnd, and ZGrnd.  As far as I can tell, the
+   position is only used to get wind speeds at the correct location.  That
+   position is now an input array for the desired subroutine.
+ I replaced message refering to "aerodyn.ipt" because that is not necessarially
+   the name of the AeroDyn input file.
+ I added the tower influce model that Pat Moriarty added in another version of
+   AeroDyn. We don't want to change the input file until later, when we've decided
+   the new format, so I left it as a hidden feature. Note that the tower influence
+   (both Pat's version and the old one) does not currently move with the tower.
+   It assumes the tower is in the undeflected initial position!
+   To use the hidden feature,
+
+-------------------------------------------------------------------------------
+--------------------------- AeroDyn v13. --------------------------------------
+----- PLEASE NOTE THAT THIS VERSION (13.00.00) IS NOT BACKWARD COMPATIBLE! ----
+-------------------------------------------------------------------------------
+
+v13.00.00a-bjj 31-Mar-2010 B. and J. Jonkman
+ We implemented a new AeroDyn-structural codes interface by adding the AeroDyn.f90
+   source file. Ideally, the public subroutines contained in it will be the only
+   way structural codes will access any part of AeroDyn... for now, we still have
+   some work to do before that happens. The AD_init() subroutine replaces
+   calls to SetProgName() and AD_InputGate(). The AD_CalculateLoads() function
+   replaces AeroFrcIntrface(), GetRotorParams(), GetBladeParams(), GetElemParams(),
+   and GetVNVT(). It is called once per time step, with the positions,
+   orientations, and velocities for all elements passed at one time.
+
+v13.00.01a-bjj 25-Jan-2012 B. Jonkman
+ When file names in the input file are relative (not absolute), they are now relative
+   to the directory containing the input file (not the current working directory).
+ I fixed some instances where the lines in the code exceeded 132 characters.
+ I modified some error messages to indicate where the error occurred.
+ I modified AeroMods.f90 and AeroSubs.f90 to use default INTEGER kinds instead of INTEGER(4).
+ I updated the AP(J,I) array in SUBROUTINE VindInf(). Previously, a local A2P variable was set,
+   but the output was not. Thus, AP was always zero when SWIRL and DYNIN were used. (this bug
+   was reported on the forums by Qiang Liu). I also initialize the A() and AP() arrays because I
+   do not believe they were always properly set. (some of the IF statements didn't change the
+   values of these arrays before saving them in the output array).  If the /Qzero option was
+   enabled during compilation, this change does not effect any results except that the
+   tangential induction is now properly output in the element output file.
+
+v13.00.01b-bjj, 28-Aug-2012 B. Jonkman
+ I removed the ProgDesc type from SharedTypes.f90 and placed it in the NWTC Library.
