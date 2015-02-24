@@ -1,0 +1,125 @@
+###################################################################################################################################
+# Registry for UnsteadyAero in the FAST Modularization Framework
+# This Registry file is used to create MODULE UnsteadyAero  which contains all of the user-defined types needed in UnsteadyAero.
+# It also contains copy, destroy, pack,  and unpack routines associated with each defined data types.
+# See NWTC Programmer's Handbook for further information on the format/contents of this file.
+#
+# Entries are of the form
+# <keyword>         <ModuleName/ModName>          <TypeName>          <FieldType>         <FieldName>         <Dims>    <IO>      <DNAME>   <DESCRIP> <UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# File last committed: $Date: 2014-05-27 09:53:59 -0600 (Tue, 27 May 2014) $
+# (File) Revision #: $Rev: 395 $
+# URL: $HeadURL: https://windsvn.nrel.gov/HydroDyn/branches/HydroDyn_Modularization/Source/RegistryFiles/UnsteadyAero.txt $
+###################################################################################################################################
+
+# ...... Include files (definitions from NWTC Library) ............................................................................
+# make sure that the file name does not have any trailing white spaces!
+include   Registry_NWTC_Library.txt
+usefrom   AirfoilInfo_Registry.txt
+#
+#
+# ..... Initialization data .......................................................................................................
+# Define inputs that the initialization routine may need here:
+#   e.g.,  the name of the input file,  the file root name,etc.
+#
+typedef   UnsteadyAero/UnsteadyAero    InitInputType                 DbKi                     dt                              -             -         -        "time step" s
+typedef   ^                            ^                             CHARACTER(1024)          OutRootName                     -             -         -        "Supplied by Driver:  The name of the root file (without extension) including the full path"    -
+typedef   ^                            ^                             ReKi                     c                               {:}{:}        -         -        "Chord length at node" m
+typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number nodes of all blades"    -
+typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes of all blades"    -
+typedef   ^                            ^                             INTEGER                  DSMod                           -             -         -        "Model for the dynamic stall equations"    -
+typedef   ^                            ^                             ReKi                     a_s                             -             -         -        "speed of sound"        m/s
+typedef    ^                            ^                            INTEGER                  AFIndx                          {:}{:}        -         -        "" -
+typedef   ^                            ^                             AFI_ParameterType        AFI_Params                      -             -         -        "" -
+typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -             -         -        "Output format for numerical results"    -
+typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -             -         -        "Output format for header strings"    -
+typedef   ^                            ^                             INTEGER                  NumOuts                         -             -         -        "The number of outputs for this module as requested in the input file"    -
+typedef   ^                            ^                             CHARACTER(10)            OutList                         {199}         -         -        "The user-requested output channel labels for this modules. This should really be dimensioned with MaxOutPts"    -
+#                                                                                                                                         
+#                                                                                                                                         
+# Define outputs from the initialization routine here:                                                                                    
+#                                                                                                                                         
+typedef   ^                            InitOutputType                ProgDesc                 Version                         -             -         -        ""    -
+typedef   ^                            InitOutputType                CHARACTER(10)            WriteOutputHdr                  {:}           -         -        "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
+typedef   ^                            ^                             CHARACTER(10)            WriteOutputUnt                  {:}           -         -        "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
+#
+#
+# ..... States ....................................................................................................................
+# Define continuous (differentiable) states here:
+#
+typedef   ^                            ContinuousStateType           ReKi                     DummyContState                  -             -         -        "Remove this variable if you have continuous states"        -
+#
+#
+# Define discrete (non-differentiable) states here:
+#
+typedef   ^                            DiscreteStateType             ReKi                     alpha_minus1                    {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     alpha_minus2                    {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     q_minus1                        {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     q_minus2                        {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     X1_minus1                       {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     X2_minus1                       {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     Kprime_alpha_minus1             {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     Kprime_q_minus1                 {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     Dp_minus1                       {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     Cn_pot_minus1                   {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     T_f                             {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     fprimeprime_minus1              {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     Df_minus1                       {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     fprime_minus1                   {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     tau_V                           {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     Cn_v_minus1                     {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     C_V_minus1                      {:}{:}        -         -        ""        -
+#
+#
+# Define constraint states here:
+#
+typedef   ^                            ConstraintStateType           ReKi                     DummyConstraintState            -             -         -        "" -
+#
+# Define any data that are not considered actual states here:
+#   e.g. data used only for efficiency purposes (indices for searching in an array,  copies of previous calculations of output at a given time, etc.)
+#
+typedef   ^                            OtherStateType                ReKi                     sigma1                          {:}{:}        -         -        ""   -
+typedef   ^                            OtherStateType                ReKi                     sigma3                          {:}{:}        -         -        ""   -
+typedef   ^                            OtherStateType                LOGICAL                  TESF                            {:}{:}        -         -        ""   -
+typedef   ^                            OtherStateType                LOGICAL                  LESF                            {:}{:}        -         -        ""   -
+typedef   ^                            OtherStateType                LOGICAL                  VRTX                            {:}{:}        -         -        ""   -
+typedef   ^                            OtherStateType                LOGICAL                  FirstPass                       -             -         -        ""   -
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+#
+typedef   ^                            ParameterType                 DbKi                     dt                              -             -         -        "time step" s
+typedef   ^                            ^                             ReKi                     c                               {:}{:}        -         -        "Chord length at node" m
+typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number nodes of all blades"    -
+typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes of all blades"    -
+typedef   ^                            ^                             INTEGER                  DSMod                           -             -         -        ""    -
+typedef   ^                            ^                             ReKi                     a_s                             -             -         -        "speed of sound"        m/s
+typedef   ^                            ^                             INTEGER                  AFIndx                          {:}{:}        -         -        "" -
+typedef   ^                            ^                             AFI_ParameterType        AFI_Params                      -             -         -        "Parameters for the airfoils"
+typedef   ^                            ^                             INTEGER                  NumOuts                         -             -         -        "Number of HydroDyn module-level outputs (not the total number including sub-modules"        -
+typedef   ^                            ^                             INTEGER                  OutSwtch                        -             -         -        "Output requested channels to: [1=Hydrodyn.out 2=GlueCode.out  3=both files]"    -
+typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -             -         -        "Output format for numerical results"    -
+typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -             -         -        "Output format for header strings"    -
+typedef   ^                            ^                             CHARACTER(10)            Delim                           -             -         -        "Delimiter string for outputs, defaults to tab-delimiters"        -
+typedef   ^                            ^                             INTEGER                  UnOutFile                       -             -         -        "File unit for the HydroDyn outputs"        -
+#
+
+#
+# ..... Inputs ....................................................................................................................
+# Define inputs that are contained on the mesh here:
+#
+typedef   ^                            InputType                     ReKi                     U                               {:}{:}    -         -            "" m/s
+typedef   ^                            ^                             ReKi                     Re                              {:}{:}    -         -            "" -
+typedef   ^                            ^                             ReKi                     alpha                           {:}{:}    -         -            "" rad
+#                                                                                                                                                             
+# ..... Outputs ...................................................................................................................                           
+# Define outputs that are contained on the mesh here:                                                                                                         
+typedef   ^                            OutputType                    ReKi                     Cn                              {:}{:}    -         -            "" -
+typedef   ^                            OutputType                    ReKi                     Cc                              {:}{:}    -         -            "" -
+typedef   ^                            OutputType                    ReKi                     Cm                              {:}{:}    -         -            "" -
+typedef   ^                            OutputType                    ReKi                     Cl                              {:}{:}    -         -            "" -
+typedef   ^                            OutputType                    ReKi                     Cd                              {:}{:}    -         -            "" -
+typedef   ^                            ^                             ReKi                     WriteOutput                     {:}       -         -            ""  -
+

@@ -1,0 +1,17 @@
+AlphaChangeLog.txt
+Disclaimer.txt
+
+Samples/AeroDyn_Tower.dat
+Samples/SampleAirfoil.dat
+Samples/SampleInput_wo_TwrInfluence.ad
+Samples/SampleInput_w_TwrInfluence.ad
+Samples/Steady.wnd
+Samples/Turb.sum
+Samples/Turb.wnd
+Samples/TurbSim_AD.ctp
+
+Documentation/AD_Theory.pdf
+Documentation/AeroDyn.pdf
+Documentation/Damiani_AeroDynAlgorithms.pdf
+Documentation/Damiani_AeroDynAlgorithms_Appendices.pdf
+Documentation/NewTower.pdf
