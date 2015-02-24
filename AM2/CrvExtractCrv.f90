@@ -30,8 +30,8 @@
        ipivot = 2
    ENDIF
    IF(Rr(3,3) .GT. pivot) THEN
-       pivot = Rr(2,2)
-       ipivot = 2
+       pivot = Rr(3,3)
+       ipivot = 3
    ENDIF
 
    IF(ipivot .EQ. 0) THEN

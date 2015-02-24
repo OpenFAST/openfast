@@ -132,8 +132,8 @@ PROGRAM MAIN
 
 !   BD_InitInput%InputFile = 'BeamDyn_Input_CX100.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_5MW.inp'
-   BD_InitInput%InputFile = 'BeamDyn_Input_5MW_New.inp'
-!   BD_InitInput%InputFile = 'Siemens_53_Input.inp'
+!   BD_InitInput%InputFile = 'BeamDyn_Input_5MW_New.inp'
+   BD_InitInput%InputFile = 'Siemens_53_Input.inp'
 !   BD_InitInput%InputFile = 'GA2_Debug.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Composite.inp'
@@ -203,7 +203,7 @@ CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final-1
 
 WRITE(*,*) "Time Step: ", n_t_global
-IF(n_t_global == 1) STOP 
+!IF(n_t_global == 1) STOP 
 !  This way, when RK4 is called using ExtrapInterp, it will grab the EXACT answers that you defined at the time
 !  step endpionts and midpoint.
 
@@ -219,9 +219,9 @@ IF(n_t_global == 1) STOP
 !------------------------------
 ! END Compute initial condition
 !------------------------------
-!     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
-!                             BD_ConstraintState, &
-!                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
+     CALL BeamDyn_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
+                             BD_ConstraintState, &
+                             BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
 
 
       DO pc = 1, pc_max
@@ -254,9 +254,11 @@ IF(n_t_global == 1) STOP
 !          WRITE(*,*) BD_ContinuousState%dqdt(i)  
 !      ENDDO
 !      ENDIF
-      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
-                           &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
-                           &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
+
+!      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(BD_Parameter%dof_total-5),BD_ContinuousState%q(BD_Parameter%dof_total-4),&
+!                           &BD_ContinuousState%q(BD_Parameter%dof_total-3),BD_ContinuousState%q(BD_Parameter%dof_total-2),&
+!                           &BD_ContinuousState%q(BD_Parameter%dof_total-1),BD_ContinuousState%q(BD_Parameter%dof_total)
+
 !      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%dqdt(BD_Parameter%dof_total-5),BD_ContinuousState%dqdt(BD_Parameter%dof_total-4),&
 !                           &BD_ContinuousState%dqdt(BD_Parameter%dof_total-3),BD_ContinuousState%dqdt(BD_Parameter%dof_total-2),&
 !                           &BD_ContinuousState%dqdt(BD_Parameter%dof_total-1),BD_ContinuousState%dqdt(BD_Parameter%dof_total)
@@ -272,12 +274,12 @@ IF(n_t_global == 1) STOP
 !WRITE(QiHUnit,7000) t_global,temp_H(1,1),temp_H(1,2),temp_H(1,3),temp_H(2,1),temp_H(2,2),temp_H(2,3),&
 !                    temp_H(3,1),temp_H(3,2),temp_H(3,3)      
 !CALL CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_total),temp_cc)
-!      WRITE(QiDisUnit,6000) t_global,&
-!                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
+      WRITE(QiDisUnit,6000) t_global,&
+                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
 !                           &temp_cc(1:3)
 !                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
-!                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total),&
+                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldForce%Force(1:3,1),&
 !                           &BD_OutPut(1)%BldForce%Moment(1:3,1)
 !                           &BD_OutPut(1)%BldMotion%RotationAcc(1:3,BD_Parameter%node_total)
@@ -442,6 +444,7 @@ END PROGRAM MAIN
 
    INTEGER(IntKi)                                       :: i
    INTEGER(IntKi)                                       :: j
+   INTEGER(IntKi)                                       :: k
    INTEGER(IntKi)                                       :: temp_id
    INTEGER(IntKi)                                       :: temp_id2
    REAL(ReKi)                                           :: temp66(6,6)
@@ -459,7 +462,6 @@ END PROGRAM MAIN
 !                 &MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),p%uuN0(temp_id2+1:temp_id2+3,i))
            x%dqdt(temp_id+1:temp_id+3) = &
            MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),p%GlbPos(1:3)+MATMUL(p%GlbRot,p%uuN0(temp_id2+1:temp_id2+3,i)))
-WRITE(*,*) x%dqdt(temp_id+1:temp_id+3)
            x%dqdt(temp_id+4:temp_id+6) = u%RootMotion%RotationVel(1:3,1)
            CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
            x%dqdt(temp_id+1:temp_id+6) = MATMUL(temp66,x%dqdt(temp_id+1:temp_id+6))
