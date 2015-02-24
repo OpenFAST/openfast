@@ -296,9 +296,9 @@ INCLUDE 'InputGlobalLocal.f90'
                    p%uuN0(temp_id2+1,i) = temp_POS(1)
                    p%uuN0(temp_id2+2,i) = temp_POS(2)
                    p%uuN0(temp_id2+3,i) = temp_POS(3)
-                   p%uuN0(temp_id2+4,i) = temp_GLB(1)
-                   p%uuN0(temp_id2+5,i) = temp_GLB(2)
-                   p%uuN0(temp_id2+6,i) = temp_GLB(3)
+                   p%uuN0(temp_id2+4,i) = temp_CRV(1)
+                   p%uuN0(temp_id2+5,i) = temp_CRV(2)
+                   p%uuN0(temp_id2+6,i) = temp_CRV(3)
                    EXIT
                ENDIF
            ENDDO
@@ -789,27 +789,34 @@ INCLUDE 'InputGlobalLocal.f90'
    REAL(ReKi):: cc0(3)
    REAL(ReKi):: temp_cc(3)
    REAL(ReKi):: temp_R(3,3)
+   REAL(ReKi):: temp66(6,6)
+   REAL(ReKi):: temp6(6)
    REAL(ReKi):: temp_Force(p%dof_total)
    ! Initialize ErrStat
 
    ErrStat = ErrID_None
    ErrMsg  = "" 
 
+   CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,0)
    DO i=1,p%elem_total
        DO j=1,p%node_elem
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
            temp_id2= (i-1)*p%node_elem+j
-           y%BldMotion%TranslationDisp(1:3,temp_id2) = x%q(temp_id+1:temp_id+3)
-           y%BldMotion%TranslationVel(1:3,temp_id2) = x%dqdt(temp_id+1:temp_id+3)
-           y%BldMotion%RotationVel(1:3,temp_id2) = x%dqdt(temp_id+4:temp_id+6)
-
+           y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,x%q(temp_id+1:temp_id+3))
            cc(1:3) = x%q(temp_id+4:temp_id+6)
            temp_id = (j-1)*p%dof_node
            cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
-!           CALL CrvCompose(temp_cc,cc0,cc,0)
            CALL CrvCompose_temp(temp_cc,cc0,cc,0)
+           temp_cc = MATMUL(p%GlbRot,temp_cc)
            CALL CrvMatrixR(temp_cc,temp_R)
            y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
+
+           temp6(:) = 0.0D0
+           temp6(1:3) = x%dqdt(temp_id+1:temp_id+3)
+           temp6(4:6) = x%dqdt(temp_id+4:temp_id+6)
+           temp6(:) = MATMUL(temp66,temp6)
+           y%BldMotion%TranslationVel(1:3,temp_id2) = temp6(1:3)
+           y%BldMotion%RotationVel(1:3,temp_id2) = temp6(4:6)
        ENDDO
    ENDDO
 
@@ -833,8 +840,12 @@ INCLUDE 'InputGlobalLocal.f90'
                temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
                temp_id2= (i-1)*p%node_elem+j
 
-               y%BldMotion%TranslationAcc(1:3,temp_id2) = xdot%dqdt(temp_id+1:temp_id+3)
-               y%BldMotion%RotationAcc(1:3,temp_id2) = xdot%dqdt(temp_id+4:temp_id+6)
+               temp6(:) = 0.0D0
+               temp6(1:3) = xdot%dqdt(temp_id+1:temp_id+3)
+               temp6(4:6) = xdot%dqdt(temp_id+4:temp_id+6)
+               temp6(:) = MATMUL(temp66,temp6)
+               y%BldMotion%TranslationAcc(1:3,temp_id2) = temp6(1:3)
+               y%BldMotion%RotationAcc(1:3,temp_id2) = temp6(4:6)
 
            ENDDO
        ENDDO

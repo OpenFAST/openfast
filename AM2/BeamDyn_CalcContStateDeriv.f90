@@ -30,8 +30,5 @@
                      &p%damp_flag,p%beta,&
                      &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
                      &xdot)
-!DO j=1,18
-!WRITE(*,*) j,xdot%dqdt(j)
-!ENDDO
 
    END SUBROUTINE BeamDyn_CalcContStateDeriv
