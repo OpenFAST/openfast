@@ -147,7 +147,7 @@ PROGRAM MAIN
 
    ALLOCATE(BD_InitInput%GlbPos(3)) 
    BD_InitInput%GlbPos(1) = 0.0D+00
-   BD_InitInput%GlbPos(2) = 1.0D+01
+   BD_InitInput%GlbPos(2) = 0.0D+01
    BD_InitInput%GlbPos(3) = 0.0D0
 
    ALLOCATE(BD_InitInput%GlbRot(3,3)) 
@@ -273,17 +273,17 @@ WRITE(*,*) "Time Step: ", n_t_global
 !CALL CrvMatrixH(BD_ContinuousState%q(4:6),temp_H)
 !WRITE(QiHUnit,7000) t_global,temp_H(1,1),temp_H(1,2),temp_H(1,3),temp_H(2,1),temp_H(2,2),temp_H(2,3),&
 !                    temp_H(3,1),temp_H(3,2),temp_H(3,3)      
-CALL CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_total),temp_cc)
+!CALL CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_total),temp_cc)
       WRITE(QiDisUnit,6000) t_global,&
 !                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
 !                           &temp_cc(1:3)
 !                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total)
-!                           &BD_OutPut(1)%BldForce%Force(1:3,1),&
-!                           &BD_OutPut(1)%BldForce%Moment(1:3,1)
-                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total),&
-                           &BD_OtherState%fAcc(BD_Parameter%dof_total-5:BD_Parameter%dof_total-3)
+                           &BD_OutPut(1)%BldForce%Force(1:3,1),&
+                           &BD_OutPut(1)%BldForce%Moment(1:3,1)
+!                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total),&
+!                           &BD_OtherState%fAcc(BD_Parameter%dof_total-5:BD_Parameter%dof_total-3)
 !                           &BD_OutPut(1)%BldMotion%RotationAcc(1:3,BD_Parameter%node_total)
 !      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(1),BD_ContinuousState%q(2),&
 !                           &BD_ContinuousState%q(3),BD_ContinuousState%q(4),&
