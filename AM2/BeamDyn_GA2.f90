@@ -72,8 +72,7 @@
                              p%damp_flag,p%beta,                             &
                              p%node_elem,p%dof_node,p%elem_total,p%dof_total,&
                              p%node_total,p%niter,p%ngp,p%coef)
-   CALL RescaleCheck(x,p%node_total,OtherState%Rescale_counter)
-!   CALL BeamDyn_ApplyBoundaryCondition(x,u(1),ErrStat,ErrMsg)
+!   CALL RescaleCheck(x,p%node_total,OtherState%Rescale_counter)
 
    CALL MeshDestroy ( u_interp%RootMotion        &
                     , ErrStat  = ErrStat         &
