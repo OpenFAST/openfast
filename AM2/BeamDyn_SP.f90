@@ -134,6 +134,8 @@ INCLUDE 'ElasticForce_GA2.f90'
 
 INCLUDE 'MotionTensor.f90'
 INCLUDE 'InputGlobalLocal.f90'
+INCLUDE 'ElementMatrix_Force_New.f90'
+INCLUDE 'ComputeReactionForce.f90'
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
@@ -844,13 +846,6 @@ INCLUDE 'InputGlobalLocal.f90'
                temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
                temp_id2= (i-1)*p%node_elem+j
 
-!               temp6(:) = 0.0D0
-!               temp6(1:3) = xdot%dqdt(temp_id+1:temp_id+3)
-!               temp6(4:6) = xdot%dqdt(temp_id+4:temp_id+6)
-!               temp6(:) = MATMUL(temp66,temp6)
-!               y%BldMotion%TranslationAcc(1:3,temp_id2) = temp6(1:3)
-!               y%BldMotion%RotationAcc(1:3,temp_id2) = temp6(4:6)
-
                temp6(:) = 0.0D0
                temp6(1:3) = OtherState%acc(temp_id+1:temp_id+3)
                temp6(4:6) = OtherState%acc(temp_id+4:temp_id+6)
@@ -860,19 +855,25 @@ INCLUDE 'InputGlobalLocal.f90'
            ENDDO
        ENDDO
 !       CALL BD_DestroyContState(xdot, ErrStat, ErrMsg)
-!       CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
-!                                 &p%damp_flag,p%beta,&
-!                                 &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
-!                                 &p%analysis_type,temp_Force)
+       CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,OtherState%Acc,                                  &
+                                  p%Stif0_GL,p%Mass0_GL,p%gravity,u,                                 &
+                                  p%damp_flag,p%beta,                                                &
+                                  p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+                                  p%analysis_type,temp_Force)
    ELSEIF(p%analysis_type .EQ. 1) THEN
        CALL StaticSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
                                  &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
                                  &p%analysis_type,temp_Force)
    ENDIF
+
+   CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
    DO i=1,p%node_total
        temp_id = (i-1)*p%dof_node
-       y%BldForce%Force(1:3,i) = temp_Force(temp_id+1:temp_id+3)
-       y%BldForce%Moment(1:3,i) = temp_Force(temp_id+4:temp_id+6)
+       temp6(:) = 0.0D0
+       temp6(:) = temp_Force(temp_id+1:temp_id+6)
+       temp6(:) = MATMUL(TRANSPOSE(temp66),temp6)
+       y%BldForce%Force(1:3,i) = temp6(1:3)
+       y%BldForce%Moment(1:3,i) = temp6(4:6)
    ENDDO
 
    END SUBROUTINE BeamDyn_CalcOutput
