@@ -273,15 +273,17 @@ WRITE(*,*) "Time Step: ", n_t_global
 !CALL CrvMatrixH(BD_ContinuousState%q(4:6),temp_H)
 !WRITE(QiHUnit,7000) t_global,temp_H(1,1),temp_H(1,2),temp_H(1,3),temp_H(2,1),temp_H(2,2),temp_H(2,3),&
 !                    temp_H(3,1),temp_H(3,2),temp_H(3,3)      
-!CALL CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_total),temp_cc)
+CALL CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_total),temp_cc)
       WRITE(QiDisUnit,6000) t_global,&
-                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
+!                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
 !                           &temp_cc(1:3)
 !                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
-                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total)
+!                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldForce%Force(1:3,1),&
 !                           &BD_OutPut(1)%BldForce%Moment(1:3,1)
+                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total),&
+                           &BD_OtherState%fAcc(BD_Parameter%dof_total-5:BD_Parameter%dof_total-3)
 !                           &BD_OutPut(1)%BldMotion%RotationAcc(1:3,BD_Parameter%node_total)
 !      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(1),BD_ContinuousState%q(2),&
 !                           &BD_ContinuousState%q(3),BD_ContinuousState%q(4),&
@@ -390,6 +392,7 @@ END PROGRAM MAIN
    temp_pp(3) = 4.0D0*TAN(((pai*t*1.0D0/3.0D0))/4.0D0)
    CALL CrvMatrixR(temp_pp,temp_R)
    u%RootMotion%Orientation(1:3,1:3,1) = MATMUL(temp_R(1:3,1:3),p%GlbRot)
+!   u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
    temp_vec(:) = MATMUL(temp_R,p%GlbPos(1:3)+MATMUL(p%GlbRot,p%uuN0(1:3,1)))
    u%RootMotion%TranslationDisp(1:3,1)  = temp_vec(1:3) - (p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1)))
    ! END Calculate root displacements and rotations

@@ -41,6 +41,7 @@ typedef BeamDyn/BD OtherStateType IntKi Rescale_counter  - - - "A variable, repl
 typedef BeamDyn/BD OtherStateType IntKi NR_counter  - - - "A variable, replace if you have Other States"
 typedef BeamDyn/BD OtherStateType ReKi  acc        {:} - - "Accerleration in GA2"
 typedef BeamDyn/BD OtherStateType ReKi  xcc        {:} - - "Algorithm accerleration in GA2" 
+typedef BeamDyn/BD OtherStateType ReKi  facc        {:} - - "Global Accerleration in GA2 by rotating acc directly"
 
 # ..... Parameters
 # ................................................................................................................

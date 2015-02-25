@@ -70,6 +70,7 @@ IMPLICIT NONE
     INTEGER(IntKi)  :: NR_counter      ! A variable, replace if you have Other States [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: acc      ! Accerleration in GA2 [-]
     REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: xcc      ! Algorithm accerleration in GA2 [-]
+    REAL(ReKi) , DIMENSION(:), ALLOCATABLE  :: facc      ! Global Accerleration in GA2 by rotating acc directly [-]
   END TYPE BD_OtherStateType
 ! =======================
 ! =========  BD_ParameterType  =======
@@ -849,6 +850,19 @@ IF (ALLOCATED(SrcOtherStateData%xcc)) THEN
    END IF
    DstOtherStateData%xcc = SrcOtherStateData%xcc
 ENDIF
+IF (ALLOCATED(SrcOtherStateData%facc)) THEN
+   i1_l = LBOUND(SrcOtherStateData%facc,1)
+   i1_u = UBOUND(SrcOtherStateData%facc,1)
+   IF (.NOT. ALLOCATED(DstOtherStateData%facc)) THEN 
+      ALLOCATE(DstOtherStateData%facc(i1_l:i1_u),STAT=ErrStat)
+      IF (ErrStat /= 0) THEN 
+         ErrStat = ErrID_Fatal 
+         ErrMsg = 'BD_CopyOtherState: Error allocating DstOtherStateData%facc.'
+         RETURN
+      END IF
+   END IF
+   DstOtherStateData%facc = SrcOtherStateData%facc
+ENDIF
  END SUBROUTINE BD_CopyOtherState
 
  SUBROUTINE BD_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
@@ -864,6 +878,9 @@ IF (ALLOCATED(OtherStateData%acc)) THEN
 ENDIF
 IF (ALLOCATED(OtherStateData%xcc)) THEN
    DEALLOCATE(OtherStateData%xcc)
+ENDIF
+IF (ALLOCATED(OtherStateData%facc)) THEN
+   DEALLOCATE(OtherStateData%facc)
 ENDIF
  END SUBROUTINE BD_DestroyOtherState
 
@@ -906,6 +923,7 @@ ENDIF
   Int_BufSz  = Int_BufSz  + 1  ! NR_counter
   Re_BufSz    = Re_BufSz    + SIZE( InData%acc )  ! acc 
   Re_BufSz    = Re_BufSz    + SIZE( InData%xcc )  ! xcc 
+  Re_BufSz    = Re_BufSz    + SIZE( InData%facc )  ! facc 
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
@@ -922,6 +940,10 @@ ENDIF
   IF ( ALLOCATED(InData%xcc) ) THEN
     IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%xcc))-1 ) =  PACK(InData%xcc ,.TRUE.)
     Re_Xferred   = Re_Xferred   + SIZE(InData%xcc)
+  ENDIF
+  IF ( ALLOCATED(InData%facc) ) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%facc))-1 ) =  PACK(InData%facc ,.TRUE.)
+    Re_Xferred   = Re_Xferred   + SIZE(InData%facc)
   ENDIF
  END SUBROUTINE BD_PackOtherState
 
@@ -975,6 +997,12 @@ ENDIF
     OutData%xcc = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%xcc))-1 ),mask1,OutData%xcc)
   DEALLOCATE(mask1)
     Re_Xferred   = Re_Xferred   + SIZE(OutData%xcc)
+  ENDIF
+  IF ( ALLOCATED(OutData%facc) ) THEN
+  ALLOCATE(mask1(SIZE(OutData%facc,1))); mask1 = .TRUE.
+    OutData%facc = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%facc))-1 ),mask1,OutData%facc)
+  DEALLOCATE(mask1)
+    Re_Xferred   = Re_Xferred   + SIZE(OutData%facc)
   ENDIF
   Re_Xferred   = Re_Xferred-1
   Db_Xferred   = Db_Xferred-1

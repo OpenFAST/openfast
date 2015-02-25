@@ -15,6 +15,7 @@
    IF (flag .EQ. 0) THEN
        ! Transform Root Motion from Global to Local (Blade) frame
        u%RootMotion%TranslationDisp(:,1) = MATMUL(TRANSPOSE(RotTen),u%RootMotion%TranslationDisp(:,1))
+       u%RootMotion%Orientation(:,:,1) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(RotTen))
        u%RootMotion%Orientation(:,:,1) = MATMUL(u%RootMotion%Orientation(:,:,1),RotTen)
        u%RootMotion%Orientation(:,:,1) = MATMUL(TRANSPOSE(RotTen),u%RootMotion%Orientation(:,:,1))
        CALL MotionTensor(RotTen,Pos,temp66,1)

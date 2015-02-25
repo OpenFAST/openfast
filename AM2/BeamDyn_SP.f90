@@ -451,6 +451,9 @@ INCLUDE 'InputGlobalLocal.f90'
    CALL AllocAry(OtherState%xcc,p%dof_total,'OtherState%xcc',ErrStat2,ErrMsg2)
    OtherState%xcc(:) = 0.0D0
 
+   CALL AllocAry(OtherState%facc,p%dof_total,'OtherState%facc',ErrStat2,ErrMsg2)
+   OtherState%facc(:) = 0.0D0
+
    p%niter = 20
 
    ! Define system output initializations (set up mesh) here:
@@ -806,7 +809,8 @@ INCLUDE 'InputGlobalLocal.f90'
            cc(1:3) = x%q(temp_id+4:temp_id+6)
            temp_id = (j-1)*p%dof_node
            cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
-           CALL CrvCompose_temp(temp_cc,cc0,cc,0)
+!           CALL CrvCompose_temp(temp_cc,cc0,cc,0)
+           CALL CrvCompose(temp_cc,cc0,cc,0)
            temp_cc = MATMUL(p%GlbRot,temp_cc)
            CALL CrvMatrixR(temp_cc,temp_R)
            y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
@@ -833,27 +837,33 @@ INCLUDE 'InputGlobalLocal.f90'
 !   ENDIF
 
    IF(p%analysis_type .EQ. 2) THEN
-       CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
-       CALL BeamDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg) 
+!       CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
+!       CALL BeamDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg) 
        DO i=1,p%elem_total
            DO j=1,p%node_elem
                temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
                temp_id2= (i-1)*p%node_elem+j
 
+!               temp6(:) = 0.0D0
+!               temp6(1:3) = xdot%dqdt(temp_id+1:temp_id+3)
+!               temp6(4:6) = xdot%dqdt(temp_id+4:temp_id+6)
+!               temp6(:) = MATMUL(temp66,temp6)
+!               y%BldMotion%TranslationAcc(1:3,temp_id2) = temp6(1:3)
+!               y%BldMotion%RotationAcc(1:3,temp_id2) = temp6(4:6)
+
                temp6(:) = 0.0D0
-               temp6(1:3) = xdot%dqdt(temp_id+1:temp_id+3)
-               temp6(4:6) = xdot%dqdt(temp_id+4:temp_id+6)
+               temp6(1:3) = OtherState%acc(temp_id+1:temp_id+3)
+               temp6(4:6) = OtherState%acc(temp_id+4:temp_id+6)
                temp6(:) = MATMUL(temp66,temp6)
                y%BldMotion%TranslationAcc(1:3,temp_id2) = temp6(1:3)
                y%BldMotion%RotationAcc(1:3,temp_id2) = temp6(4:6)
-
            ENDDO
        ENDDO
-       CALL BD_DestroyContState(xdot, ErrStat, ErrMsg)
-       CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
-                                 &p%damp_flag,p%beta,&
-                                 &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
-                                 &p%analysis_type,temp_Force)
+!       CALL BD_DestroyContState(xdot, ErrStat, ErrMsg)
+!       CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
+!                                 &p%damp_flag,p%beta,&
+!                                 &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+!                                 &p%analysis_type,temp_Force)
    ELSEIF(p%analysis_type .EQ. 1) THEN
        CALL StaticSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
                                  &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&

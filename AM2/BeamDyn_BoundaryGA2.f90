@@ -11,7 +11,8 @@
 
    pi = ACOS(-1.0D0)
    x%q(1:3) = u%RootMotion%TranslationDisp(1:3,1)
-   x%q(6) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0+(2.0D0*pi*OtherState%Rescale_Counter))/4.0D0)
+!   x%q(6) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0+(2.0D0*pi*OtherState%Rescale_Counter))/4.0D0)
+   CALL CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),x%q(4:6))
 !   x%q(6) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0)/4.0D0)
 !   IF(ABS(x%q(6)) .GT. 4.0D0) THEN
 !       x%q(6) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0+(2.0D0*pi))/4.0D0)
