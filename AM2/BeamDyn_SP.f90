@@ -426,13 +426,14 @@ INCLUDE 'ComputeReactionForce.f90'
 !   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(6,:,1)
 !   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
 !   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
-!   STOP
    ! Define parameters here:
 
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
    p%dof_total   = p%node_total*p%dof_node   ! total number of dof
    p%dt = Interval
    p%alpha = 0.5D0
+   WRITE(*,*) "node_total: ", p%node_total
+!   STOP
    
    CALL AllocAry(p%coef,9,'GA2 coefficient',ErrStat2,ErrMsg2)
    p%coef(:)  = 0.0D0
@@ -817,9 +818,12 @@ INCLUDE 'ComputeReactionForce.f90'
            CALL CrvMatrixR(temp_cc,temp_R)
            y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
 
+           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+WRITE(*,*) 'temp_id:',temp_id
            temp6(:) = 0.0D0
            temp6(1:3) = x%dqdt(temp_id+1:temp_id+3)
            temp6(4:6) = x%dqdt(temp_id+4:temp_id+6)
+WRITE(*,*) temp6
            temp6(:) = MATMUL(temp66,temp6)
            y%BldMotion%TranslationVel(1:3,temp_id2) = temp6(1:3)
            y%BldMotion%RotationVel(1:3,temp_id2) = temp6(4:6)

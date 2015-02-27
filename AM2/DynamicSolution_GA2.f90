@@ -39,7 +39,7 @@
    REAL(ReKi)                       :: feqv(dof_total-6)
    REAL(ReKi)                       :: Eref
    REAL(ReKi)                       :: Enorm
-   REAL(ReKi),PARAMETER             :: TOLF = 1.0D-10   
+   REAL(ReKi),PARAMETER             :: TOLF = 1.0D-10
    REAL(ReKi)                       :: d
    INTEGER(IntKi)                   :: indx(dof_total-6)
    INTEGER(IntKi)                   :: i
