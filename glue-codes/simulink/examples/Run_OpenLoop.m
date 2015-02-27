@@ -11,8 +11,8 @@ CertTest_TMax=[20, 20, 20, 70, 30, ...
                20, 70, 60, 60, 60, ...
                60, 60, 60, 60, 60 ];
 
- for iTest = [1 2 3:13 15:25]  %bjj: normally (in FAST v7) test 2 is omitted because of the features it models
-    
+ for iTest = [1:13 15:25]  
+     
         %------------------------------------------------------------------       
         % Set up and run the Simulink OpenLoop model
         %------------------------------------------------------------------       

@@ -1,7 +1,9 @@
 % make sure the FASTv8\bin directory is in the MATLAB path
 %    (relative path names are not recommended in addpath()):
-% addpath('C:\Users\bjonkman\Documents\CAETools\FASTv8\bin');
-
+% cd ..\..\
+% FASTv8_root_directory = pwd;
+% cd Simulink\Samples
+% addpath([ FASTv8_root_directory '\bin']);
 
 
 % Simple Induction Generator Example ======================================
@@ -10,7 +12,6 @@
 
 % Change Test01.fst as follows:
 % set VSContrl = 4 in ..\..\CertTest\AWT27\Test01_ServoDyn.dat
-% Add "LSSGagVxa" to ElastoDyn's OutList (..\..\CertTest\AWT27\Test01_ElastoDyn.dat)
 
 
 GenEff   =  100.0;          % - Generator efficiency [ignored by the Thevenin and user-defined generator models] (%)
@@ -32,3 +33,6 @@ TMax = 20;
 
 % run the model
 sim('Test01_SIG.mdl',[0,TMax]);
+
+% look at results:
+% PlotFASToutput({'../../CertTest/Test01.SFunc.out','../../CertTest/Test01.out'},{'SFunc','exe'});

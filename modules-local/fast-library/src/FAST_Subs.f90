@@ -1353,7 +1353,7 @@ SUBROUTINE RunTimes( StrtTime, UsrTime1, SimStrtTime, UsrTime2, ZTime, UsrTime_o
    UsrTimeSim = MAX( 0.0, UsrTime - UsrTime2 )
 
 
-   IF ( .NOT. EqualRealNos( UsrTimeSim, 0.0 ) )  THEN
+   IF ( .NOT. EqualRealNos( UsrTimeSim, 0.0 ) .AND. ZTime > 0.0_DbKi )  THEN
 
       TRatio = REAL(ZTime) / UsrTimeSim
 
@@ -1920,17 +1920,37 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, MeshMapData, Er
             
    END IF
    
+#ifdef SIMULINK_TIMESHIFT   
+      ! we're going to use the extrapolated values instead of the old values (Simulink inputs are from t, not t+dt)
+   CALL SrvD_SetExternalInputs( p_FAST, m_FAST, u_SrvD )
+#endif
+      
+                        
+END SUBROUTINE SrvD_InputSolve
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE SrvD_SetExternalInputs( p_FAST, m_FAST, u_SrvD )
+! This routine sets the inputs required for ServoDyn from an external source (Simulink)
+!..................................................................................................................................
+
+   TYPE(FAST_ParameterType),         INTENT(IN)     :: p_FAST       ! Glue-code simulation parameters
+   TYPE(FAST_MiscVarType),           INTENT(IN)     :: m_FAST       ! Glue-code misc variables (including inputs from external sources like Simulink)
+   TYPE(SrvD_InputType),             INTENT(INOUT)  :: u_SrvD       ! ServoDyn Inputs at t
+
+      ! local variables
+   INTEGER(IntKi)                                   :: i            ! loop counter
+   
+      ! we are going to use extrapolated values because these external values from Simulink are at n instead of n+1
    u_SrvD%ExternalGenTrq       =  m_FAST%ExternInput%GenTrq     
    u_SrvD%ExternalElecPwr      =  m_FAST%ExternInput%ElecPwr    
    u_SrvD%ExternalYawPosCom    =  m_FAST%ExternInput%YawPosCom  
    u_SrvD%ExternalYawRateCom   =  m_FAST%ExternInput%YawRateCom 
+   u_SrvD%ExternalHSSBrFrac    =  m_FAST%ExternInput%HSSBrFrac 
 
    do i=1,SIZE(u_SrvD%ExternalBlPitchCom)
       u_SrvD%ExternalBlPitchCom(i)   = m_FAST%ExternInput%BlPitchCom(i)
    end do
-      
-                        
-END SUBROUTINE SrvD_InputSolve
+
+END SUBROUTINE SrvD_SetExternalInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Transfer_SD_to_HD( y_SD, u_HD_M_LumpedMesh, u_HD_M_DistribMesh, MeshMapData, ErrStat, ErrMsg )
 ! This routine transfers the SD outputs into inputs required for HD
@@ -3514,7 +3534,7 @@ SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat                   ! Error status of the operation
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    
-   
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'Init_ED_SD_HD_Jacobian'
    
       ! local variables:
    INTEGER(IntKi)                :: i, j, index
@@ -4612,6 +4632,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
    INTEGER                                 :: NumBl   ! number of blades
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(LEN(ErrMSg))                  :: ErrMSg2
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'InitModuleMappings'
    !............................................................................................................................
    
    ErrStat = ErrID_None
@@ -4627,9 +4648,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
    IF ( SrvD%Input(1)%NTMD%Mesh%Committed ) THEN ! ED-SrvD
          
       CALL MeshMapCreate( ED%Output(1)%NacelleMotion, SrvD%Input(1)%NTMD%Mesh, MeshMapData%ED_P_2_SrvD_P_N, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:ED_P_2_SrvD_P_N' )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_SrvD_P_N' )
       CALL MeshMapCreate( SrvD%y%NTMD%Mesh, ED%Input(1)%NacelleLoads,  MeshMapData%SrvD_P_2_ED_P_N, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:SrvD_P_2_ED_P_N' )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SrvD_P_2_ED_P_N' )
    
    END IF   
    
@@ -4644,23 +4665,23 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
       ALLOCATE( MeshMapData%ED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_ED_L_B(NumBl), STAT=ErrStat2 )
          IF ( ErrStat2 /= 0 ) THEN
             CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%ED_L_2_AD_L_B and MeshMapData%AD_L_2_ED_L_B.', &
-                            ErrStat, ErrMsg, 'InitModuleMappings' )
+                            ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
          
       DO K=1,NumBl         
          CALL MeshMapCreate( ED%Output(1)%BladeLn2Mesh(K), AD%Input(1)%InputMarkers(K), MeshMapData%ED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:ED_L_2_AD_L_('//TRIM(Num2LStr(K))//')' )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_L_2_AD_L_('//TRIM(Num2LStr(K))//')' )
          CALL MeshMapCreate( AD%y%OutputLoads(K), ED%Input(1)%BladeLn2Mesh(K),  MeshMapData%AD_L_2_ED_L_B(K), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:AD_L_2_ED_L_('//TRIM(Num2LStr(K))//')' )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_ED_L_('//TRIM(Num2LStr(K))//')' )
       END DO
          
       ! Tower mesh:
       IF ( AD%Input(1)%Twr_InputMarkers%Committed ) THEN
          CALL MeshMapCreate( ED%Output(1)%TowerLn2Mesh, AD%Input(1)%Twr_InputMarkers, MeshMapData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:ED_L_2_AD_L_T' )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_L_2_AD_L_T' )
          CALL MeshMapCreate( AD%y%Twr_OutputLoads, ED%Input(1)%TowerLn2Mesh,  MeshMapData%AD_L_2_ED_L_T, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:AD_L_2_ED_L_T' )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_ED_L_T' )
       END IF
                
       IF (ErrStat >= AbortErrLev ) RETURN
@@ -4682,21 +4703,21 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
          IF ( HD%y%AllHdroOrigin%Committed  ) THEN ! meshes for floating
                ! HydroDyn WAMIT point mesh to/from ElastoDyn point mesh
             CALL MeshMapCreate( HD%y%AllHdroOrigin, ED%Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:HD_W_P_2_ED_P' )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':HD_W_P_2_ED_P' )
             CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh, HD%Input(1)%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:ED_P_2_HD_W_P' )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_HD_W_P' )
          END IF            
             
             ! ElastoDyn point mesh HydroDyn Morison point mesh (ED sets inputs, but gets outputs from HD%y%AllHdroOrigin in floating case)
          IF ( HD%Input(1)%Morison%LumpedMesh%Committed  ) THEN            
             CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh,  HD%Input(1)%Morison%LumpedMesh, MeshMapData%ED_P_2_HD_M_P, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:ED_P_2_HD_M_P' )                  
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_HD_M_P' )                  
          END IF
             
             ! ElastoDyn point mesh to HydroDyn Morison line mesh (ED sets inputs, but gets outputs from  HD%y%AllHdroOriginin floating case)
          IF ( HD%Input(1)%Morison%DistribMesh%Committed ) THEN
             CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh,  HD%Input(1)%Morison%DistribMesh, MeshMapData%ED_P_2_HD_M_L, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:ED_P_2_HD_M_L' )                  
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_HD_M_L' )                  
          END IF
 
                         
@@ -4707,9 +4728,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
 
                ! HydroDyn WAMIT point mesh to ElastoDyn point mesh ! meshes for fixed-bottom
             CALL MeshMapCreate( HD%y%Mesh, ED%Input(1)%PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:HD_W_P_2_ED_P' )                  
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':HD_W_P_2_ED_P' )                  
             CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh, HD%Input(1)%Mesh, MeshMapData%ED_P_2_HD_W_P, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:ED_P_2_HD_W_P' )                  
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_HD_W_P' )                  
          END IF             
             
 !-------------------------
@@ -4720,9 +4741,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
          IF ( HD%y%Morison%LumpedMesh%Committed ) THEN
             
             CALL MeshMapCreate( HD%y%Morison%LumpedMesh, SD%Input(1)%LMesh,  MeshMapData%HD_M_P_2_SD_P, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:HD_M_P_2_SD_P' )                  
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':HD_M_P_2_SD_P' )                  
             CALL MeshMapCreate( SD%y%y2Mesh,  HD%Input(1)%Morison%LumpedMesh, MeshMapData%SD_P_2_HD_M_P, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:SD_P_2_HD_M_P' )                  
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SD_P_2_HD_M_P' )                  
                               
          END IF
             
@@ -4730,9 +4751,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
          IF ( HD%y%Morison%DistribMesh%Committed ) THEN
                
             CALL MeshMapCreate( HD%y%Morison%DistribMesh, SD%Input(1)%LMesh,  MeshMapData%HD_M_L_2_SD_P, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:HD_M_L_2_SD_P' )                  
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':HD_M_L_2_SD_P' )                  
             CALL MeshMapCreate( SD%y%y2Mesh,  HD%Input(1)%Morison%DistribMesh, MeshMapData%SD_P_2_HD_M_L, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:SD_P_2_HD_M_L' )                  
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SD_P_2_HD_M_L' )                  
                   
          END IF
 
@@ -4753,9 +4774,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
       
          ! SubDyn transition piece point mesh to/from ElastoDyn point mesh
       CALL MeshMapCreate( SD%y%Y1mesh, ED%Input(1)%PlatformPtMesh,  MeshMapData%SD_TP_2_ED_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:SD_TP_2_ED_P' )                  
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SD_TP_2_ED_P' )                  
       CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh, SD%Input(1)%TPMesh,  MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:ED_P_2_SD_TP' )                  
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_SD_TP' )                  
    
    END IF ! SubDyn-ElastoDyn      
       
@@ -4767,9 +4788,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
       
          ! MAP point mesh to/from ElastoDyn point mesh
       CALL MeshMapCreate( MAPp%y%PtFairleadLoad, ED%Input(1)%PlatformPtMesh,  MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:Mooring_P_2_ED_P' )                  
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':Mooring_P_2_ED_P' )                  
       CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh, MAPp%Input(1)%PtFairDisplacement,  MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:ED_P_2_Mooring_P' )                  
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_Mooring_P' )                  
 
    ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
 !-------------------------
@@ -4778,9 +4799,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
       
          ! MAP point mesh to/from ElastoDyn point mesh
       CALL MeshMapCreate( MD%y%PtFairleadLoad, ED%Input(1)%PlatformPtMesh,  MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:Mooring_P_2_ED_P' )                  
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':Mooring_P_2_ED_P' )                  
       CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh, MD%Input(1)%PtFairleadDisplacement,  MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:ED_P_2_Mooring_P' )                  
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_Mooring_P' )                  
                    
    ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
 !-------------------------
@@ -4789,9 +4810,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
       
          ! MAP point mesh to/from ElastoDyn point mesh
       CALL MeshMapCreate( FEAM%y%PtFairleadLoad, ED%Input(1)%PlatformPtMesh,  MeshMapData%Mooring_P_2_ED_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:Mooring_P_2_ED_P' )                  
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':Mooring_P_2_ED_P' )                  
       CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh, FEAM%Input(1)%PtFairleadDisplacement,  MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:ED_P_2_Mooring_P' )                           
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_Mooring_P' )                           
          
    END IF   ! MAP-ElastoDyn ; FEAM-ElastoDyn
             
@@ -4804,10 +4825,10 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
    
          ! IceFloe iceMesh point mesh to SubDyn LMesh point mesh              
       CALL MeshMapCreate( IceF%y%iceMesh, SD%Input(1)%LMesh,  MeshMapData%IceF_P_2_SD_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:IceF_P_2_SD_P' )                  
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':IceF_P_2_SD_P' )                  
          ! SubDyn y2Mesh point mesh to IceFloe iceMesh point mesh 
       CALL MeshMapCreate( SD%y%y2Mesh, IceF%Input(1)%iceMesh,  MeshMapData%SD_P_2_IceF_P, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:SD_P_2_IceF_P' )                  
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SD_P_2_IceF_P' )                  
                               
 !-------------------------
 !  SubDyn <-> IceDyn
@@ -4818,7 +4839,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
       ALLOCATE( MeshMapData%IceD_P_2_SD_P( p_FAST%numIceLegs )  , & 
                 MeshMapData%SD_P_2_IceD_P( p_FAST%numIceLegs )  , Stat=ErrStat2 )
       IF (ErrStat2 /= 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Unable to allocate IceD_P_2_SD_P and SD_P_2_IceD_P', ErrStat, ErrMsg, 'InitModuleMappings' )                  
+         CALL SetErrStat( ErrID_Fatal, 'Unable to allocate IceD_P_2_SD_P and SD_P_2_IceD_P', ErrStat, ErrMsg, RoutineName )                  
          RETURN
       END IF
          
@@ -4826,10 +4847,10 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
             
             ! IceDyn PointMesh point mesh to SubDyn LMesh point mesh              
          CALL MeshMapCreate( IceD%y(i)%PointMesh, SD%Input(1)%LMesh,  MeshMapData%IceD_P_2_SD_P(i), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:IceD_P_2_SD_P('//TRIM(num2LStr(i))//')' )                  
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':IceD_P_2_SD_P('//TRIM(num2LStr(i))//')' )                  
             ! SubDyn y2Mesh point mesh to IceDyn PointMesh point mesh 
          CALL MeshMapCreate( SD%y%y2Mesh, IceD%Input(1,i)%PointMesh,  MeshMapData%SD_P_2_IceD_P(i), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:SD_P_2_IceD_P('//TRIM(num2LStr(i))//')' )                  
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SD_P_2_IceD_P('//TRIM(num2LStr(i))//')' )                  
                
       END DO
                         
@@ -4844,15 +4865,15 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
    IF ( p_FAST%CompSub == Module_SD ) THEN  !.OR. p_FAST%CompHydro == Module_HD ) THEN         
       CALL Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED%Input(1)%PlatformPtMesh, SD%Input(1)%TPMesh, SD%Input(1)%LMesh, &
                                     HD%Input(1)%Morison%LumpedMesh, HD%Input(1)%Morison%DistribMesh, HD%Input(1)%Mesh, ErrStat2, ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings' )                 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                 
    ELSEIF ( p_FAST%CompHydro == Module_HD ) THEN
          CALL AllocAry( MeshMapData%Jacobian_ED_SD_HD, SizeJac_ED_HD, SizeJac_ED_HD, 'Jacobian for ED-HD coupling', ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings' )                 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                 
    END IF
    
    IF ( ALLOCATED( MeshMapData%Jacobian_ED_SD_HD ) ) THEN   
       CALL AllocAry( MeshMapData%Jacobian_pivot, SIZE(MeshMapData%Jacobian_ED_SD_HD), 'Pivot array for Jacobian LU decomposition', ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings' )                 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                 
    END IF
    
    IF (ErrStat >= AbortErrLev ) RETURN   
@@ -4870,23 +4891,23 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
                   
          ! Temporary meshes for transfering inputs to ED, HD, and SD
       CALL MeshCopy ( ED%Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:u_ED_PlatformPtMesh' )                 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh' )                 
 
       CALL MeshCopy ( ED%Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh_2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:u_ED_PlatformPtMesh_2' )                 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh_2' )                 
                         
       IF ( p_FAST%CompSub == Module_SD ) THEN
          
          CALL MeshCopy ( SD%Input(1)%TPMesh, MeshMapData%u_SD_TPMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:u_SD_TPMesh' )                 
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_TPMesh' )                 
                
          IF ( p_FAST%CompHydro == Module_HD ) THEN
                
             CALL MeshCopy ( SD%Input(1)%LMesh, MeshMapData%u_SD_LMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:u_SD_LMesh' )                 
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_LMesh' )                 
                   
             CALL MeshCopy ( SD%Input(1)%LMesh, MeshMapData%u_SD_LMesh_2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:u_SD_LMesh_2' )                 
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_SD_LMesh_2' )                 
                               
          END IF
                
@@ -4895,13 +4916,13 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
       IF ( p_FAST%CompHydro == Module_HD ) THEN
             
          CALL MeshCopy ( HD%Input(1)%Mesh, MeshMapData%u_HD_Mesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:u_HD_Mesh' )                 
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_HD_Mesh' )                 
                   
          CALL MeshCopy ( HD%Input(1)%Morison%LumpedMesh, MeshMapData%u_HD_M_LumpedMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:u_HD_M_LumpedMesh' )                 
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_HD_M_LumpedMesh' )                 
 
          CALL MeshCopy ( HD%Input(1)%Morison%DistribMesh, MeshMapData%u_HD_M_DistribMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitModuleMappings:u_HD_M_DistribMesh' )                 
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_HD_M_DistribMesh' )                 
                                     
       END IF
                               
@@ -5485,19 +5506,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
       RETURN
    END IF
       
-   
-   !...............................................................................................................................
-   ! Initialize external inputs in case they aren't being used 
-   !...............................................................................................................................
-   
-      m_FAST%ExternInput%GenTrq     = 0.0_ReKi
-      m_FAST%ExternInput%ElecPwr    = 0.0_ReKi
-      m_FAST%ExternInput%YawPosCom  = 0.0_ReKi
-      m_FAST%ExternInput%YawRateCom = 0.0_ReKi
-      m_FAST%ExternInput%BlPitchCom = 0.0_ReKi
-      m_FAST%ExternInput%LidarFocus = 1.0_ReKi  ! make this non-zero (until we add the initial position in the InflowWind input file)
-   
-   
+      
    !...............................................................................................................................  
       
    p_FAST%dt_module = p_FAST%dt ! initialize time steps for each module   
@@ -5556,6 +5565,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
       InitInData_SrvD%NumBl         = InitOutData_ED%NumBl
       InitInData_SrvD%gravity       = InitOutData_ED%gravity
       InitInData_SrvD%r_N_O_G       = ED%Input(1)%NacelleLoads%Position(:,1) !bjj: check this!
+      InitInData_SrvD%TMax          = p_FAST%TMax
       
       CALL AllocAry(InitInData_SrvD%BlPitchInit, InitOutData_ED%NumBl, 'BlPitchInit', ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -5988,6 +5998,21 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
    m_FAST%n_TMax_m1  = CEILING( ( (p_FAST%TMax - t_initial) / p_FAST%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
    m_FAST%t_global   = t_initial
          
+   ! Initialize external inputs for first step  
+   if ( p_FAST%CompServo == MODULE_SrvD ) then      
+      m_FAST%ExternInput%GenTrq     = SrvD%Input(1)%ExternalGenTrq !0.0_ReKi
+      m_FAST%ExternInput%ElecPwr    = SrvD%Input(1)%ExternalElecPwr
+      m_FAST%ExternInput%YawPosCom  = SrvD%Input(1)%ExternalYawPosCom
+      m_FAST%ExternInput%YawRateCom = SrvD%Input(1)%ExternalYawRateCom
+      m_FAST%ExternInput%HSSBrFrac  = SrvD%Input(1)%ExternalHSSBrFrac
+      
+      do i=1,SIZE(SrvD%Input(1)%ExternalBlPitchCom)
+         m_FAST%ExternInput%BlPitchCom(i) = SrvD%Input(1)%ExternalBlPitchCom(i)
+      end do   
+   end if
+   
+   m_FAST%ExternInput%LidarFocus = 1.0_ReKi  ! make this non-zero (until we add the initial position in the InflowWind input file)
+         
    
    !...............................................................................................................................
    ! Destroy initializion data
@@ -6155,7 +6180,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, Srv
          
          CALL SrvD_Input_ExtrapInterp(SrvD%Input, SrvD%InputTimes, SrvD%u, t_global_next, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-            
+                  
          !CALL SrvD_Output_ExtrapInterp(SrvD_Output, SrvD_OutputTimes, SrvD%y, t_global_next, ErrStat2, ErrMsg2)
          !   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
             
@@ -7289,7 +7314,12 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, M
 
    CALL RunTimes( m_FAST%StrtTime, m_FAST%UsrTime1, m_FAST%SimStrtTime, m_FAST%UsrTime2, m_FAST%t_global )
 
+#if (defined COMPILE_SIMULINK || defined COMPILE_LABVIEW)
+   ! for Simulink, this may not be a normal stop. It might call this after an error in the model.
+   CALL WrScr( NewLine//' '//TRIM(FAST_Ver%Name)//' completed.'//NewLine )
+#else   
    CALL NormStop( )
+#endif   
 
 
 END SUBROUTINE ExitThisProgram
@@ -7437,6 +7467,10 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD
       m_FAST%NextJacCalcTime = m_FAST%t_global + p_FAST%DT_UJac         
    END IF
       
+      ! the ServoDyn inputs from Simulink are for t, not t+dt, so we're going to overwrite the inputs from
+      ! the previous step before we extrapolate these inputs:
+   IF ( p_FAST%CompServo == Module_SrvD ) CALL SrvD_SetExternalInputs( p_FAST, m_FAST, SrvD%Input(1) )   
+   
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    ! Step 1.a: Extrapolate Inputs (gives predicted values at t+dt)
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -7452,12 +7486,6 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD
    ! x, xd, and z contain values at m_FAST%t_global;
    ! values at t_global_next are stored in the *_pred variables.
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-      !----------------------------------------------------------------------------------------
-      ! copy the states at step m_FAST%t_global and get prediction for step t_global_next
-      ! (note that we need to copy the states because UpdateStates updates the values
-      ! and we need to have the old values [at m_FAST%t_global] for the next j_pc step)
-      !----------------------------------------------------------------------------------------
       
       CALL FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, ErrStat2, ErrMsg2 )               
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )

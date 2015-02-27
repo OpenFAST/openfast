@@ -13,8 +13,7 @@
  * (i.e. replace sfungate with the name of your S-function, which has
  * to match the name of the final mex file, e.g., if the S_FUNCTION_NAME
  * is my_sfuntmpl_gate_fortran, the mex filename will have to be 
- * my_sfuntmpl_gate_fortran.dll on Windows and 
- * my_sfuntmpl_gate_fortran.mexXXX on unix where XXX is the 3 letter 
+ * my_sfuntmpl_gate_fortran.mexXXX where XXX is the 3 letter 
  * mex extension code for your platform).
  */
 
@@ -31,19 +30,6 @@
 #include "FAST_Library.h"
 
 
-/* 
- * As a convenience, this template has options for both variable 
- * step and fixed step algorithm support.  If you want fixed step
- * operation, change the #define below to #undef.
- *
- * If you want to, you can delete all references to VARIABLE_STEP 
- * and set up the C-MEX as described in the "Writing S-functions" 
- * manual.
- */
-
-#undef VARIABLE_STEP
-
-
 #define PARAM_FILENAME 0
 #define PARAM_TMAX 1
 #define PARAM_ADDINPUTS 2
@@ -58,13 +44,13 @@ static int NumOutputs = 1;
 static int ErrStat = 0;
 static char ErrMsg[INTERFACE_STRING_LENGTH];        // make sure this is the same size as IntfStrLen in FAST_Library.f90
 static char InputFileName[INTERFACE_STRING_LENGTH]; // make sure this is the same size as IntfStrLen in FAST_Library.f90
-static int n_t_global = 0;
+static int n_t_global = -1;  // counter to determine which fixed-step simulation time we are at currently
 
 static int SFunc_init = 0;
 
 // function definitions
 static int checkError(SimStruct *S);
-
+static void mdlTerminate(SimStruct *S); // defined here so I can call it from checkError
 
 
 /* Error handling
@@ -85,6 +71,7 @@ checkError(SimStruct *S){
    if (ErrStat >= AbortErrLev){
       ssPrintf("\n");
       ssSetErrorStatus(S, ErrMsg);
+      mdlTerminate(S);  // terminate on error (in case Simulink doesn't do so itself)
       return 1;
    }
    else if (ErrStat >= ErrID_Warn){
@@ -144,7 +131,7 @@ static void mdlInitializeSizes(SimStruct *S)
        if (NumAddInputs < 0){
           ErrStat = ErrID_Fatal;
           strcpy(ErrMsg, "Parameter specifying number of additional inputs to the FAST SFunc must not be negative.\n");
-          ssSetErrorStatus(S, ErrMsg);
+          checkError(S);
           return;
        }
        NumInputs = NumFixedInputs + NumAddInputs;
@@ -184,8 +171,9 @@ static void mdlInitializeSizes(SimStruct *S)
        ErrStat = mexPutVariable("base", "DT", pm);
        mxDestroyArray(pm);
        if (ErrStat != 0){
+          ErrStat = ErrID_Fatal;
           strcpy(ErrMsg, "Error copying string array to 'DT' variable in the base Matlab workspace.");
-          ssSetErrorStatus(S, ErrMsg);
+          checkError(S);
           return;
        }
 
@@ -211,8 +199,9 @@ static void mdlInitializeSizes(SimStruct *S)
        mxDestroyArray(pm);
 
        if (ErrStat != 0){
+          ErrStat = ErrID_Fatal;
           strcpy(ErrMsg, "Error copying string array to 'OutList' variable in the base Matlab workspace.");
-          ssSetErrorStatus(S, ErrMsg);
+          checkError(S);
           return;
        }
        //  ---------------------------------------------  
@@ -304,8 +293,12 @@ static void mdlInitializeSampleTimes(SimStruct *S)
    */
   static void mdlStart(SimStruct *S)
   {
-     double *OutputAry = (double *)ssGetDWork(S, 0);
 
+     /* bjj: this is really the initial output; I'd really like to have the inputs from Simulink here.... maybe if we put it in mdlOutputs? 
+        but then do we need to say we have direct feed-through?
+     */ 
+     double *OutputAry = (double *)ssGetDWork(S, 0);
+     //n_t_global is -1 here; maybe use this fact in mdlOutputs
      FAST_Start(&NumOutputs, OutputAry, &ErrStat, ErrMsg);
      n_t_global = 0;
      if (checkError(S)) return;
@@ -395,9 +388,9 @@ static void mdlUpdate(SimStruct *S, int_T tid)
     }
 
 
+
     /* ==== Call the Fortran routine (args are pass-by-reference) */
     
-    /* nameofsub_(InputAry, sampleOutput ); */
     FAST_Update(&NumInputs, &NumOutputs, InputAry, OutputAry, &ErrStat, ErrMsg);
     n_t_global = n_t_global + 1;
 
@@ -428,8 +421,8 @@ static void mdlUpdate(SimStruct *S, int_T tid)
 static void mdlTerminate(SimStruct *S)
 {
    FAST_End();
-   SFunc_init = 0;
-
+   SFunc_init =  0;
+   n_t_global = -1;
 }
 
 

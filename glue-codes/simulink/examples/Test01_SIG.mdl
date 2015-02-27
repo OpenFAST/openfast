@@ -6,7 +6,7 @@ Model {
     NumRootInports	    0
     NumRootOutports	    0
     ParameterArgumentNames  ""
-    ComputedModelVersion    "1.79"
+    ComputedModelVersion    "1.81"
     NumModelReferences	    0
     NumTestPointedSignals   0
   }
@@ -27,9 +27,9 @@ Model {
   ModifiedByFormat	  "%<Auto>"
   LastModifiedBy	  "bjonkman"
   ModifiedDateFormat	  "%<Auto>"
-  LastModifiedDate	  "Tue Feb 03 14:55:47 2015"
-  RTWModifiedTimeStamp	  344876132
-  ModelVersionFormat	  "1.%<AutoIncrement:79>"
+  LastModifiedDate	  "Thu Feb 26 12:32:59 2015"
+  RTWModifiedTimeStamp	  346854631
+  ModelVersionFormat	  "1.%<AutoIncrement:81>"
   ConfigurationManager	  "None"
   SampleTimeColors	  off
   SampleTimeAnnotations	  off
@@ -755,7 +755,7 @@ Model {
   }
   System {
     Name		    "Test01_SIG"
-    Location		    [2, 82, 1918, 1147]
+    Location		    [2, 93, 1900, 1047]
     Open		    on
     ModelBrowserVisibility  off
     ModelBrowserWidth	    200
@@ -769,7 +769,7 @@ Model {
     ShowPageBoundaries	    off
     ZoomFactor		    "156"
     ReportName		    "simulink-default.rpt"
-    SIDHighWatermark	    "44"
+    SIDHighWatermark	    "57"
     Block {
       BlockType		      Clock
       Name		      "Clock"
@@ -780,8 +780,8 @@ Model {
       BlockType		      SubSystem
       Name		      "FAST Nonlinear Wind Turbine"
       SID		      "2"
-      Ports		      [3, 1]
-      Position		      [460, 88, 680, 282]
+      Ports		      [4, 1]
+      Position		      [460, 77, 680, 313]
       BackgroundColor	      "darkGreen"
       MinAlgLoopOccurrences   off
       PropExecContextOutsideSubsystem off
@@ -800,7 +800,7 @@ Model {
       MaskIconUnits	      "autoscale"
       System {
 	Name			"FAST Nonlinear Wind Turbine"
-	Location		[2, 82, 1918, 1147]
+	Location		[2, 93, 1900, 1047]
 	Open			off
 	ModelBrowserVisibility	off
 	ModelBrowserWidth	200
@@ -824,7 +824,7 @@ Model {
 	  BlockType		  Inport
 	  Name			  "Yaw Position (rad) and Rate (rad/s)"
 	  SID			  "4"
-	  Position		  [80, 113, 110, 127]
+	  Position		  [80, 108, 110, 122]
 	  Port			  "2"
 	  IconDisplay		  "Port number"
 	}
@@ -832,18 +832,25 @@ Model {
 	  BlockType		  Inport
 	  Name			  "Blade Pitch Angles (rad)"
 	  SID			  "5"
-	  Position		  [80, 178, 110, 192]
+	  Position		  [80, 168, 110, 182]
 	  Port			  "3"
+	  IconDisplay		  "Port number"
+	}
+	Block {
+	  BlockType		  Inport
+	  Name			  "High-Speed Shaft Braking Fraction (-)"
+	  SID			  "54"
+	  Position		  [80, 228, 110, 242]
+	  Port			  "4"
 	  IconDisplay		  "Port number"
 	}
 	Block {
 	  BlockType		  Mux
 	  Name			  "Mux1"
 	  SID			  "9"
-	  Ports			  [3, 1]
-	  Position		  [335, 23, 340, 217]
+	  Ports			  [4, 1]
+	  Position		  [340, 20, 345, 270]
 	  ShowName		  off
-	  Inputs		  "3"
 	  DisplayOption		  "bar"
 	}
 	Block {
@@ -851,7 +858,7 @@ Model {
 	  Name			  "S-Function"
 	  SID			  "10"
 	  Ports			  [1, 1]
-	  Position		  [375, 81, 445, 159]
+	  Position		  [390, 106, 460, 184]
 	  BackgroundColor	  "magenta"
 	  FunctionName		  "FAST_SFunc"
 	  Parameters		  "FAST_InputFileName, TMax, 0"
@@ -870,7 +877,7 @@ Model {
 	  BlockType		  SignalSpecification
 	  Name			  "Signal Specification2"
 	  SID			  "12"
-	  Position		  [200, 108, 300, 132]
+	  Position		  [200, 103, 300, 127]
 	  OutDataTypeStr	  "double"
 	  Dimensions		  "2"
 	  SignalType		  "real"
@@ -879,7 +886,7 @@ Model {
 	  BlockType		  Outport
 	  Name			  "OutData"
 	  SID			  "13"
-	  Position		  [500, 112, 530, 128]
+	  Position		  [500, 137, 530, 153]
 	  BackgroundColor	  "yellow"
 	  IconDisplay		  "Port number"
 	}
@@ -925,23 +932,79 @@ Model {
 	  DstBlock		  "Mux1"
 	  DstPort		  2
 	}
+	Line {
+	  SrcBlock		  "High-Speed Shaft Braking Fraction (-)"
+	  SrcPort		  1
+	  DstBlock		  "Mux1"
+	  DstPort		  4
+	}
       }
     }
     Block {
       BlockType		      Fcn
       Name		      "Fcn"
       SID		      "16"
-      Position		      [450, 340, 510, 370]
+      Position		      [405, 340, 465, 370]
       BlockMirror	      on
       NamePlacement	      "alternate"
       Expr		      "u(strmatch('LSSGagVxa',OutList))"
     }
     Block {
       BlockType		      SubSystem
+      Name		      "High-Speed Shaft Brake"
+      SID		      "55"
+      Ports		      [0, 1]
+      Position		      [295, 264, 395, 306]
+      MinAlgLoopOccurrences   off
+      PropExecContextOutsideSubsystem off
+      RTWSystemCode	      "Auto"
+      FunctionWithSeparateData off
+      Opaque		      off
+      RequestExecContextInheritance off
+      MaskHideContents	      off
+      System {
+	Name			"High-Speed Shaft Brake"
+	Location		[433, 403, 916, 674]
+	Open			off
+	ModelBrowserVisibility	off
+	ModelBrowserWidth	200
+	ScreenColor		"white"
+	PaperOrientation	"landscape"
+	PaperPositionMode	"auto"
+	PaperType		"usletter"
+	PaperUnits		"inches"
+	TiledPaperMargins	[0.500000, 0.500000, 0.500000, 0.500000]
+	TiledPageScale		1
+	ShowPageBoundaries	off
+	ZoomFactor		"100"
+	Block {
+	  BlockType		  Constant
+	  Name			  "High-Speed Shaft Braking Fraction"
+	  SID			  "56"
+	  Position		  [55, 35, 85, 65]
+	  Value			  "0"
+	}
+	Block {
+	  BlockType		  Outport
+	  Name			  "Out1"
+	  SID			  "57"
+	  Position		  [140, 43, 170, 57]
+	  IconDisplay		  "Port number"
+	}
+	Line {
+	  SrcBlock		  "High-Speed Shaft Braking Fraction"
+	  SrcPort		  1
+	  DstBlock		  "Out1"
+	  DstPort		  1
+	}
+      }
+    }
+    Block {
+      BlockType		      SubSystem
       Name		      "Pitch Controller"
       SID		      "17"
       Ports		      [0, 1]
-      Position		      [295, 229, 395, 271]
+      Position		      [295, 204, 395, 246]
       MinAlgLoopOccurrences   off
       PropExecContextOutsideSubsystem off
       RTWSystemCode	      "Auto"
@@ -991,7 +1054,7 @@ Model {
       Name		      "Simple Induction Generator"
       SID		      "20"
       Ports		      [1, 1]
-      Position		      [75, 94, 285, 146]
+      Position		      [80, 79, 290, 131]
       MinAlgLoopOccurrences   off
       PropExecContextOutsideSubsystem off
       RTWSystemCode	      "Auto"
@@ -1287,7 +1350,7 @@ Model {
       Name		      "Yaw Controller"
       SID		      "38"
       Ports		      [0, 1]
-      Position		      [295, 164, 395, 206]
+      Position		      [295, 144, 395, 186]
       MinAlgLoopOccurrences   off
       PropExecContextOutsideSubsystem off
       RTWSystemCode	      "Auto"
@@ -1368,7 +1431,7 @@ Model {
       Name		      "qdotdot_out"
       SID		      "43"
       Ports		      [1]
-      Position		      [750, 173, 820, 197]
+      Position		      [750, 183, 820, 207]
       BackgroundColor	      "yellow"
       ShowName		      off
       VariableName	      "OutData"
@@ -1390,7 +1453,7 @@ Model {
 	DstPort			1
       }
       Branch {
-	Points			[0, 170]
+	Points			[0, 160]
 	DstBlock		"Fcn"
 	DstPort			1
       }
@@ -1416,14 +1479,20 @@ Model {
     Line {
       SrcBlock		      "Fcn"
       SrcPort		      1
-      Points		      [-405, 0; 0, -235]
+      Points		      [-360, 0; 0, -250]
       DstBlock		      "Simple Induction Generator"
       DstPort		      1
+    }
+    Line {
+      SrcBlock		      "High-Speed Shaft Brake"
+      SrcPort		      1
+      DstBlock		      "FAST Nonlinear Wind Turbine"
+      DstPort		      4
     }
     Annotation {
       SID		      "44"
       Name		      "Select LSS speed at entrance to gearbox (rpm)"
-      Position		      [481, 383]
+      Position		      [451, 383]
     }
   }
 }

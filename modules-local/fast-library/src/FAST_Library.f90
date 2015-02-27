@@ -48,6 +48,8 @@ MODULE FAST_Data
 
    INTEGER(IntKi), PARAMETER             :: MAXOUTPUTS = 1000                       ! Maximum number of outputs
    INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 10                      ! Maximum number of initialization values from Simulink
+   INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 8
+   
    
 END MODULE FAST_Data
 !==================================================================================================================================
@@ -202,20 +204,25 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       
    ELSEIF(NumOutputs_c /= SIZE(y_FAST%ChannelNames) ) THEN
       ErrStat_c = ErrID_Fatal
-      ErrMsg_c  = TRANSFER( "FAST_Update:size of NumOutputs is invalid or FAST has too many outputs."//C_NULL_CHAR, ErrMsg_c )
-   ELSE   
+      ErrMsg_c  = TRANSFER( "FAST_Update:size of OutputAry is invalid or FAST has too many outputs."//C_NULL_CHAR, ErrMsg_c )
+   ELSEIF(  NumInputs_c /= NumFixedInputs .AND. NumInputs_c /= NumFixedInputs+3 ) THEN
+      ErrStat_c = ErrID_Fatal
+      ErrMsg_c  = TRANSFER( "FAST_Update:size of InputAry is invalid."//C_NULL_CHAR, ErrMsg_c )
+   ELSE
       
          ! set the inputs from external code here...
          ! transfer inputs from Simulink to FAST
    
-      m_FAST%ExternInput%GenTrq     = InputAry(1)
-      m_FAST%ExternInput%ElecPwr    = InputAry(2)
-      m_FAST%ExternInput%YawPosCom  = InputAry(3)
-      m_FAST%ExternInput%YawRateCom = InputAry(4)
-      m_FAST%ExternInput%BlPitchCom = InputAry(5:7)
-         
+      m_FAST%ExternInput%GenTrq      = InputAry(1)
+      m_FAST%ExternInput%ElecPwr     = InputAry(2)
+      m_FAST%ExternInput%YawPosCom   = InputAry(3)
+      m_FAST%ExternInput%YawRateCom  = InputAry(4)
+      m_FAST%ExternInput%BlPitchCom  = InputAry(5:7)
+      m_FAST%ExternInput%HSSBrFrac   = InputAry(8)         
+      
+      
       IF ( NumInputs_c > 7 ) THEN  ! 7 is the fixed number of inputs
-         m_FAST%ExternInput%LidarFocus = InputAry(8:10)
+         m_FAST%ExternInput%LidarFocus = InputAry(9:11)
       END IF
                
       
