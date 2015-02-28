@@ -819,11 +819,11 @@ INCLUDE 'ComputeReactionForce.f90'
            y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
 
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-WRITE(*,*) 'temp_id:',temp_id
+!WRITE(*,*) 'temp_id:',temp_id
            temp6(:) = 0.0D0
            temp6(1:3) = x%dqdt(temp_id+1:temp_id+3)
            temp6(4:6) = x%dqdt(temp_id+4:temp_id+6)
-WRITE(*,*) temp6
+!WRITE(*,*) temp6
            temp6(:) = MATMUL(temp66,temp6)
            y%BldMotion%TranslationVel(1:3,temp_id2) = temp6(1:3)
            y%BldMotion%RotationVel(1:3,temp_id2) = temp6(4:6)
