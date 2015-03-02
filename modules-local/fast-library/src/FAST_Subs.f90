@@ -4792,7 +4792,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
       CALL MeshMapCreate( ED%Output(1)%PlatformPtMesh, MAPp%Input(1)%PtFairDisplacement,  MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_Mooring_P' )                  
 
-   ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
+   ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
 !-------------------------
 !  ElastoDyn <-> MoorDyn
 !-------------------------      

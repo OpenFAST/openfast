@@ -11,6 +11,11 @@ MODULE MoorDyn_IO
   USE                              MoorDyn_Types
   IMPLICIT                         NONE
 
+  !-------------------
+  !bjj: FIXME: these global variables need to be removed before release
+  !-------------------
+  
+  
   INTEGER(IntKi)                 :: UnOutFile      ! unit number of main output file
 
   !REAL(ReKi),      ALLOCATABLE   :: MDWrOutput(:)  ! one line of output data (duplicate of y%WriteOutput, should fix)
@@ -101,7 +106,7 @@ CONTAINS
     ! Passed variables
 
     TYPE(MD_InitInputType), INTENT( INOUT )   :: InitInp              ! the MoorDyn data
-    TYPE(MD_ParameterType),       INTENT(  OUT)     :: p           ! INTENT( OUT) : Parameters
+    TYPE(MD_ParameterType),       INTENT(INOUT)     :: p           ! Parameters
     TYPE(MD_OtherStateType),      INTENT(  OUT)     :: other       ! INTENT( OUT) : Initial other/optimization states
     INTEGER,                      INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs
     CHARACTER(*),                 INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -182,7 +187,7 @@ CONTAINS
 
     IF ( InitInp%Echo ) THEN
 
-        EchoFile = TRIM(FileName)//'.ech'                      ! open an echo file for writing
+        EchoFile = TRIM(p%RootName)//'.ech'                      ! open an echo file for writing
         CALL GetNewUnit( UnEc )
         CALL OpenEcho ( UnEc, EchoFile, ErrStat, ErrMsg )
         IF ( ErrStat /= ErrID_None ) THEN
@@ -500,7 +505,7 @@ CONTAINS
 
        ! check all possible options types and see if OptString is one of them, in which case set the variable.
        if ( OptString == 'DT') THEN
-         read (OptValue,*) InitInp%DTmooring   
+         read (OptValue,*) p%dtM0   ! InitInp%DTmooring
        else if ( OptString == 'G') then
          read (OptValue,*) p%G
        else if ( OptString == 'RHOW') then
@@ -559,7 +564,7 @@ CONTAINS
     END IF
 
   !print *, 'NumOuts is ', p%NumOuts
-  print *, '  OutList is ', InitInp%OutList(1:p%NumOuts)
+  !print *, '  OutList is ', InitInp%OutList(1:p%NumOuts)
 
 
      !-------------------------------------------------------------------------------------------------
@@ -586,7 +591,7 @@ CONTAINS
 
 
   ! ====================================================================================================
-  SUBROUTINE MDIO_ProcessOutList(OutList, p, other, y, ErrStat, ErrMsg )
+  SUBROUTINE MDIO_ProcessOutList(OutList, p, other, y, InitOut, ErrStat, ErrMsg )
 
   ! This routine processes the output channels requested by OutList, checking for validity and setting
   ! the p%OutParam structures (of type MD_OutParmType) for each valid output.
@@ -600,6 +605,7 @@ CONTAINS
     TYPE(MD_ParameterType),    INTENT(INOUT)  :: p                           ! The module parameters
     TYPE(MD_OtherStateType),   INTENT(IN)     :: other
     TYPE(MD_OutputType),       INTENT(INOUT)  :: y                           ! Initial system outputs (outputs are not calculated; only the output mesh is initialized)
+    TYPE(MD_InitOutputType),   INTENT(INOUT)  :: InitOut                     ! Output for initialization routine
     INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                     ! The error status code
     CHARACTER(*),              INTENT(OUT)    :: ErrMsg                      ! The error message, if an error occurred
 
@@ -805,13 +811,16 @@ CONTAINS
     END IF
 
     !Allocate WriteOuput
-    ALLOCATE( y%WriteOutput( p%NumOuts),  STAT = ErrStat )
+    ALLOCATE(        y%WriteOutput(  p%NumOuts), &
+              InitOut%WriteOutputHdr(p%NumOuts), &
+              InitOut%WriteOutputUnt(p%NumOuts),  STAT = ErrStat )
     IF ( ErrStat /= ErrID_None ) THEN
       ErrMsg  = ' Error allocating space for y%WriteOutput array.'
       ErrStat = ErrID_Fatal
       RETURN
     END IF
-
+    
+    
     !print *, "y%WriteOutput allocated to size ", size(y%WriteOutput)
 
    ! These variables are to help follow the framework template, but the data in them is simply a copy of data
@@ -819,10 +828,10 @@ CONTAINS
   !  ALLOCATE ( InitOut%WriteOutputHdr(p%NumOuts+p%OutAllint*p%OutAllDims), STAT = ErrStat )
   !  ALLOCATE ( InitOut%WriteOutputUnt(p%NumOuts+p%OutAllint*p%OutAllDims), STAT = ErrStat )
 
-  !   DO I = 1,p%NumOuts+p%OutAllint*p%OutAllDims
-  !    InitOut%WriteOutputHdr(I) = TRIM( p%OutParam(I)%Name  )
-  !    InitOut%WriteOutputUnt(I) = TRIM( p%OutParam(I)%Units )
-  !   END DO
+   DO I = 1,p%NumOuts
+      InitOut%WriteOutputHdr(I) = p%OutParam(I)%Name
+      InitOut%WriteOutputUnt(I) = p%OutParam(I)%Units
+   END DO
 
 
   CONTAINS
@@ -846,86 +855,86 @@ CONTAINS
    !====================================================================================================
    SUBROUTINE MDIO_OpenOutput( OutRootName,  p, other, InitOut, ErrStat, ErrMsg )
    !----------------------------------------------------------------------------------------------------
-   
+
       CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! Root name for the output file
       TYPE(MD_ParameterType),        INTENT( INOUT ) :: p
       TYPE(MD_OtherStateType),       INTENT (IN)     :: other
       TYPE(MD_InitOutPutType ),      INTENT( IN    ) :: InitOut              !
       INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred
       CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-   
+
       INTEGER                                        :: I                    ! Generic loop counter
       INTEGER                                        :: J                    ! Generic loop counter
       CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
       CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
       INTEGER                                        :: ErrStat2
-   
-     
+
+
       ErrStat = ErrID_None
       ErrMsg  = ""
-   
+
        p%Delim = ' '  ! for now
-   
+
       !-------------------------------------------------------------------------------------------------
       ! Open the output file, if necessary, and write the header
       !-------------------------------------------------------------------------------------------------
-   
+
       IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file
-   
+
             ! Open the file for output
-         OutFileName = 'MoorDyn.out'
+         OutFileName = TRIM(p%RootName)//'.out'
          CALL GetNewUnit( UnOutFile )
-   
+
          CALL OpenFOutFile ( UnOutFile, OutFileName, ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) THEN
             ErrMsg = ' Error opening MoorDyn-level output file: '//TRIM(ErrMsg)
             RETURN
          END IF
-   
-   
+
+
          !Write the names of the output parameters:
-   
+
          Frmt = '(A10,'//TRIM(Int2LStr(p%NumOuts))//'(A1,A10))'
-   
+
          WRITE(UnOutFile,Frmt, IOSTAT=ErrStat2)  TRIM( 'Time' ), ( p%Delim, TRIM( p%OutParam(I)%Name), I=1,p%NumOuts )
-   
+
          WRITE(UnOutFile,Frmt)  TRIM( '(s)' ), ( p%Delim, TRIM( p%OutParam(I)%Units ), I=1,p%NumOuts )
-   
+
       ELSE  ! if no outputs requested
-   
+
          print *, 'note, MDIO_OpenOutput thinks that no outputs have been requested.'
-   
+
       END IF
-   
+
       !--------------------------------------------------------------------------
       ! -------------- now do the same for line output files --------------------
-   
+
       ! allocate UnLineOuts
       ALLOCATE(UnLineOuts(p%NLines))  ! should add error checking
-   
+
       DO I = 1,p%NLines
-   
+
          ! Open the file for output
-         OutFileName = 'Line'//TRIM(Int2LStr(I))//'.out'
+         OutFileName = TRIM(p%RootName)//'.Line'//TRIM(Int2LStr(I))//'.out'
          CALL GetNewUnit( UnLineOuts(I) )
-   
+
          CALL OpenFOutFile ( UnLineOuts(I), OutFileName, ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) THEN
             ErrMsg = ' Error opening Line output file '//TRIM(ErrMsg)
             RETURN
-         END IF   
-   
+         END IF
+
          !Write the names of the output parameters:
-   
+
          Frmt = '(A10,'//TRIM(Int2LStr(3+3*other%LineList(I)%N))//'(A1,A10))'
-      
+
          WRITE(UnLineOuts(I),Frmt, IOSTAT=ErrStat2)  TRIM( 'Time' ), ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'px', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'py', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'pz', J=0,(other%LineList(I)%N) )
-   
+
       END DO ! I
-   
-   
+
+
    END SUBROUTINE MDIO_OpenOutput
-   
+
    !====================================================================================================
 
 
@@ -979,20 +988,20 @@ CONTAINS
    SUBROUTINE MDIO_WriteOutputs( Time, p, other, y, ErrStat, ErrMsg )
       ! This subroutine gathers the output data defined by the OutParams list and
       ! writes it to the output file opened in MDIO_OutInit()
-   
+
       REAL(DbKi),                   INTENT( IN    ) :: Time                 ! Time for this output
       TYPE(MD_ParameterType),       INTENT( IN    ) :: p                    ! MoorDyn module's parameter data
       TYPE(MD_OutputType),          INTENT(INOUT)  :: y           ! INTENT( OUT) : Initial system outputs (outputs are not calculated; only the output mesh is initialized)
       TYPE(MD_OtherStateType),      INTENT( IN    ) :: other                ! MoorDyn module's other data
       INTEGER,                      INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs
       CHARACTER(*),                 INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-    
+
       INTEGER                                :: I                           ! Generic loop counter
       INTEGER                                :: J                           ! Generic loop counter
       INTEGER                                :: K                           ! Generic loop counter
       CHARACTER(200)                         :: Frmt                        ! a string to hold a format statement
-    
-    
+
+
       IF ( .NOT. ALLOCATED( p%OutParam ) .OR. UnOutFile < 0 )  THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = ' To write outputs for MoorDyn there must be a valid file ID and OutParam must be allocated.'
@@ -1000,10 +1009,10 @@ CONTAINS
       ELSE
          ErrStat = ErrID_None
       END IF
-    
+
       ! gather the required output quantities (INCOMPLETE!)
       DO I = 1,p%NumOuts
-    
+
         IF (p%OutParam(I)%OType == 2) THEN  ! if dealing with a Connect output
           SELECT CASE (p%OutParam(I)%QType)
             CASE (PosX)
@@ -1023,9 +1032,9 @@ CONTAINS
               ErrStat = ErrID_Warn
               ErrMsg = ' Unsupported output quantity from Connect object requested.'
           END SELECT
-    
+
         ELSE IF (p%OutParam(I)%OType == 1) THEN  ! if dealing with a Line output
-    
+
           SELECT CASE (p%OutParam(I)%QType)
             CASE (PosX)
               y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%r(1,p%OutParam(I)%NodeID)  ! x position
@@ -1046,41 +1055,41 @@ CONTAINS
               ErrStat = ErrID_Warn
               ErrMsg = ' Unsupported output quantity from Line object requested.'
           END SELECT
-    
+
         ELSE  ! it must be an invalid output, so write zero
           y%WriteOutput(I) = 0.0_ReKi
-    
+
         END IF
-    
+
       END DO ! I, loop through OutParam
-  
-  
+
+
       ! Write the output parameters to the file
-  
+
       Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts))//'(A1,e10.4))'   ! should evenutally use user specified format?
-    
+
       WRITE(UnOutFile,Frmt)  Time, ( p%Delim, y%WriteOutput(I), I=1,p%NumOuts )
-  
-  
-  
-  
-  
+
+
+
+
+
       !------------------------------------------------------------------------
       ! now do the outputs for each line!  <<< so far this is just writing node positions without any user options
-   
+
       DO I=1,p%NLines
         Frmt = '(F10.4,'//TRIM(Int2LStr(3+3*other%LineList(I)%N))//'(A1,e10.4))'   ! should evenutally use user specified format?
-   
+
         DO J = 0,other%LineList(I)%N  ! note index starts at zero because these are nodes
           DO K = 1,3
             LineWriteOutputs(3*J+K) = other%LineList(I)%r(K,J)
           END DO
         END DO
-   
+
         WRITE(UnLineOuts(I),Frmt)  Time, ( p%Delim, LineWriteOutputs(J), J=1,(3+3*other%LineList(I)%N) )
-   
+
       END DO ! I
-  
+
    END SUBROUTINE MDIO_WriteOutputs
    !====================================================================================================
 
