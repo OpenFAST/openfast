@@ -110,7 +110,7 @@
                                     damp_flag,beta,          &
                                     ngp,node_elem,dof_node,elf)
        IF(nelem .EQ. 1) THEN
-           elf(1:6) = elf(1:6) - ReactionForce(1:6)
+           elf(1:6) = ReactionForce(1:6) !elf(1:6) - ReactionForce(1:6)
        ENDIF
 
        CALL AssembleRHSGL(nelem,dof_elem,node_elem,dof_node,elf,RHS)
