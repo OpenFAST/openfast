@@ -1225,7 +1225,7 @@ CONTAINS
 !      Uniform_InitData%ReferenceHeight =  InputFileData%Uniform_RefHt
 !      Uniform_InitData%Width           =  InputFileData%Uniform_RefLength 
 !      Uniform_InitData%WindFileName    =  InputFileData%Uniform_FileName
-      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'Steady_SetParameters')
+!      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'Steady_SetParameters')
    END SUBROUTINE Steady_SetParameters
 
    SUBROUTINE Uniform_SetParameters()

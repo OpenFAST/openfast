@@ -27,6 +27,10 @@ typedef  ^                       InitOutputType  CHARACTER(10)    WriteOutputHdr
 typedef  ^                       ^               CHARACTER(10)    WriteOutputUnt    :     -     -     "Units of output-to-file channels"                             -
 typedef  ^                       ^                    ProgDesc    Ver               -     -     -     "Version information off HHWind submodule"                     -
 typedef  ^                       ^                       ReKi     HubHeight         -     -     -     "Height of the hub"                                            meters
+typedef  ^                       ^                       DbKi     WindFileDT        -     -     -     "TimeStep of the wind file -- zero value for none"       -
+typedef  ^                       ^                       ReKi     WindFileTRange    {2}   -     -     "Time range of the wind file"                            -
+typedef  ^                       ^                       IntKi    WindFileNumTSteps -     -     -     "Number of timesteps in the time range of wind file"     -
+typedef  ^                       ^                       LOGICAL  WindFileConstantDT -     -     -     "Timesteps are the same throughout file"                 -
 
 
 # Define any data that are not considered actual states here:
@@ -41,9 +45,8 @@ typedef  ^                       ^                       ReKi     HSHR          
 typedef  ^                       ^                       ReKi     VSHR              :     -     -     "HH vertical shear exponent"                                   -
 typedef  ^                       ^                       ReKi     VLINSHR           :     -     -     "HH vertical linear shear"                                     -
 typedef  ^                       ^                       ReKi     VGUST             :     -     -     "HH wind gust"                                                 -
-typedef  ^                       ^                       ReKi     LinearizeDels     7     -     -     "The delta values for linearization -- perhaps at some point, this could be T/F and we determine the deltas by sqrt(eps) or something similar"  -
 typedef  ^                       ^                       ReKi     RefHt             -     -     -     "reference height; was HH (hub height); used to center the wind"  -
-typedef  ^                       ^                       ReKi     RefWid            -     -     -     "reference width; was 2*R (=rotor diameter); used to scale the linear shear"  -
+typedef  ^                       ^                       ReKi     RefLength         -     -     -     "reference length used to scale the linear shear"  -
 typedef  ^                       ^                       IntKi    NumDataLines      -     -     -     ""                                                             -
 typedef  ^                       ^                       IntKi    UnitWind          -     -     -     "Unit number for the wind file opened"                         -
 
@@ -53,16 +56,14 @@ typedef  ^                       ^                       IntKi    UnitWind      
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef  ^                    ParameterType       CHARACTER(1024) WindFileName      -     -     -     "Name of the wind file to use"                                 -
 typedef  ^                       ^                       Logical  Initialized       -  .FALSE.  -     "Flag to indicate if the module was initialized"               -
-typedef  ^                       ^                       Logical  Linearize         -  .FALSE.  -     "If this is true, we are linearizing"                          -
 typedef  ^                       ^                       ReKi     ReferenceHeight   -     -     -     "Height of the hub"                                            meters
 typedef  ^                       ^                       ReKi     RefLength             -     -     -     "RefLength of the wind field"                                      meters
-typedef  ^                       ^                       DbKi     DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
+#typedef  ^                       ^                       DbKi     DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
 
 
 
 # ..... Inputs ....................................................................................................................
-# Define inputs that are not on this mesh here:
-#typedef  ^                    InputType                  ReKi     Position          ::    -     -     "Array holding the input positions at a given timestep"        meters
+#  Does not follow the Framework specification.
 typedef  ^                    InputType                  ReKi     DummyInput        -     -     -     "Dummy placeholder to fullfill the framework requirements"      meters
 
 
@@ -71,8 +72,3 @@ typedef  ^                    InputType                  ReKi     DummyInput    
 typedef  ^                    OutputType                 ReKi     Velocity          ::    -     -     "Array holding the U,V,W velocity for a given timestep"        meters/sec
 
 
-
-# ..... States not used by this module ...................................................................................................................
-#typedef  ^                       ContinuousStateType     ReKi     DummyContState    -     -     -     "Remove this variable if you have continuous states"           -
-#typedef  ^                       DiscreteStateType       ReKi     DummyDiscState    -     -     -     "Remove this variable if you have discrete states"             -
-#typedef  ^                       ConstraintStateType     ReKi     DummyConstrState  -     -     -     "Remove this variable if you have constraint states"           -

@@ -66,10 +66,6 @@ MODULE IfW_UniformWind
    PUBLIC                                    :: IfW_UniformWind_End
    PUBLIC                                    :: IfW_UniformWind_CalcOutput
 
-
-      !The following were removed during conversion to the framework:
-   !PUBLIC                                   :: IfW_UniformWind_SetLinearizeDels                ! If necessary, move this into the UpdateStates routine.
-
 CONTAINS
 
 !====================================================================================================
@@ -91,9 +87,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    TYPE(IfW_UniformWind_InitInputType),         INTENT(IN   )  :: InitData          ! Input data for initialization
    REAL(ReKi),       ALLOCATABLE,               INTENT(INOUT)  :: PositionXYZ(:,:)  ! Array of positions to find wind speed at
    TYPE(IfW_UniformWind_ParameterType),         INTENT(  OUT)  :: ParamData         ! Parameters
-!   TYPE(IfW_UniformWind_ContinuousStateType),   INTENT(  OUT)  :: ContStates        ! Continuous States  (unused)
-!   TYPE(IfW_UniformWind_DiscreteStateType),     INTENT(  OUT)  :: DiscStates        ! Discrete States    (unused)
-!   TYPE(IfW_UniformWind_ConstraintStateType),   INTENT(  OUT)  :: ConstrStates      ! Constraint States  (unused)
    TYPE(IfW_UniformWind_OtherStateType),        INTENT(  OUT)  :: OtherStates       ! Other State data   (storage for the main data)
    TYPE(IfW_UniformWind_OutputType),            INTENT(  OUT)  :: OutData           ! Initial output
    TYPE(IfW_UniformWind_InitOutputType),        INTENT(  OUT)  :: InitOutData       ! Initial output
@@ -157,9 +150,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    ENDIF
    OutData%Velocity(:,1)         = 0.0
 
-!   ContStates%DummyContState     = 0.0
-!   DiscStates%DummyDiscState     = 0.0
-!   ConstrStates%DummyConstrState = 0.0
 
 
       !-------------------------------------------------------------------------------------------------
@@ -169,9 +159,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    IF ( OtherStates%TimeIndex /= 0 ) THEN
       CALL SetErrStat(ErrID_Warn,' UniformWind has already been initialized.',ErrStat,ErrMsg,'IfW_UniformWind_Init')
       RETURN
-   ELSE
-      OtherStates%LinearizeDels(:)  = 0.0
-      ParamData%Linearize           = .FALSE.
    END IF
 
 
@@ -190,7 +177,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       !-------------------------------------------------------------------------------------------------
 
    ParamData%ReferenceHeight  =  InitData%ReferenceHeight
-   ParamData%RefLength            =  InitData%RefLength
+   ParamData%RefLength        =  InitData%RefLength
    ParamData%WindFileName     =  InitData%WindFileName
 
 
@@ -210,7 +197,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    LINE = '!'                          ! Initialize the line for the DO WHILE LOOP
    NumComments = -1
 
-   DO WHILE (INDEX( LINE, '!' ) > 0 ) ! Lines containing "!" are treated as comment lines
+   DO WHILE ( (INDEX( LINE, '!' ) > 0) .OR. (INDEX( LINE, '#' ) > 0) .OR. (INDEX( LINE, '%' ) > 0) ) ! Lines containing "!" are treated as comment lines
       NumComments = NumComments + 1
 
       READ(OtherStates%UnitWind,'( A )',IOSTAT=TmpErrStat) LINE
@@ -242,7 +229,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
 
    IF (OtherStates%NumDataLines < 1) THEN
       TmpErrMsg=  ' Error reading data from Uniform wind file on line '// &
-                  TRIM(Num2LStr(OtherStates%NumDataLines+NumComments))//'.'
+                  TRIM(Num2LStr(1+NumComments))//'.'
       CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
       RETURN
    END IF
@@ -374,6 +361,44 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    END DO !I
 
 
+
+      !-------------------------------------------------------------------------------------------------
+      ! Find out information on the timesteps and range
+      !-------------------------------------------------------------------------------------------------
+
+      ! Uniform timesteps
+   IF ( OtherStates%NumDataLines > 3 ) THEN
+
+      InitOutData%WindFileConstantDT =  .TRUE.
+      InitOutData%WindFileDT        = OtherStates%Tdata(2) - OtherStates%Tdata(1)
+
+      DO I=3,OtherStates%NumDataLines
+
+         IF ( .NOT. EqualRealNos( (OtherStates%Tdata(I  ) - OtherStates%Tdata(I-1) ), REAL(InitOutData%WindFileDT )) ) THEN
+            InitOutData%WindFileConstantDT  =  .FALSE.
+            EXIT
+         END IF
+
+      END DO !I
+
+   ELSE
+
+         ! There aren't enough points to check, so report that the timesteps are not uniform
+      InitOutData%WindFileConstantDT =  .FALSE.
+      InitOutData%WindFileDT        =  0.0_ReKi
+
+   END IF
+
+
+      ! Time range
+   InitOutData%WindFileTRange(1)    =  OtherStates%Tdata(1)
+   InitOutData%WindFileTRange(2)    =  OtherStates%Tdata(OtherStates%NumDataLines)
+
+      ! Number of timesteps
+   InitOutData%WindFileNumTSteps    =  OtherStates%NumDataLines
+
+
+
       !-------------------------------------------------------------------------------------------------
       ! Close the file
       !-------------------------------------------------------------------------------------------------
@@ -408,7 +433,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    OtherStates%TimeIndex = 1
 
    OtherStates%RefHt       = ParamData%ReferenceHeight
-   OtherStates%RefWid      = ParamData%RefLength
+   OtherStates%RefLength   = ParamData%RefLength
 
 
       !-------------------------------------------------------------------------------------------------
@@ -463,9 +488,6 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,
    REAL(DbKi),                                  INTENT(IN   )  :: Time              ! time from the start of the simulation
    REAL(ReKi), ALLOCATABLE,                     INTENT(IN   )  :: PositionXYZ(:,:)  ! Array of XYZ coordinates, 3xN
    TYPE(IfW_UniformWind_ParameterType),         INTENT(IN   )  :: ParamData         ! Parameters
-!  TYPE(IfW_UniformWind_ContinuousStateType),   INTENT(IN   )  :: ContStates        ! Continuous States  (unused)
-!  TYPE(IfW_UniformWind_DiscreteStateType),     INTENT(IN   )  :: DiscStates        ! Discrete States    (unused)
-!  TYPE(IfW_UniformWind_ConstraintStateType),   INTENT(IN   )  :: ConstrStates      ! Constraint States  (unused)
    TYPE(IfW_UniformWind_OtherStateType),        INTENT(INOUT)  :: OtherStates       ! Other State data   (storage for the main data)
    TYPE(IfW_UniformWind_OutputType),            INTENT(INOUT)  :: OutData           ! Initial output     (Set to INOUT so that array does not get deallocated)
 
@@ -490,6 +512,8 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,
       ! Initialize some things
       !-------------------------------------------------------------------------------------------------
 
+   ErrStat     = ErrID_None
+   ErrMsg      = ""
    TmpErrStat  = ErrID_None
    TmpErrMsg   = ""
 
@@ -570,16 +594,16 @@ CONTAINS
       REAL(ReKi)                                            :: V1                ! temporary storage for horizontal velocity
 
 
+      ErrStat  =  ErrID_None
+      ErrMsg   =  ""
+
       !-------------------------------------------------------------------------------------------------
       ! verify the module was initialized first
       !-------------------------------------------------------------------------------------------------
 
       IF ( OtherStates%TimeIndex == 0 ) THEN
-         ErrMsg   = ' Error: Call UniformWind_Init() before getting wind speed.'
-         ErrStat  = MAX(ErrStat, ErrID_Fatal)         ! Fatal since no data returned
+         CALL SetErrStat(ErrID_Fatal,' Error: Call UniformWind_Init() before getting wind speed.',ErrStat,ErrMsg,'')
          RETURN
-      ELSE
-         ErrStat = ErrID_None
       END IF
 
       !-------------------------------------------------------------------------------------------------
@@ -587,19 +611,8 @@ CONTAINS
       ! (compare with NWTC_Num.f90\InterpStpReal)
       !-------------------------------------------------------------------------------------------------
 
-       IF ( ParamData%Linearize ) THEN  !get the perturbed wind speed
-
-         OtherStates%TimeIndex      = 1
-         V_tmp         = OtherStates%V      (1) + OtherStates%LinearizeDels(1)
-         Delta_tmp     = OtherStates%Delta  (1) + OtherStates%LinearizeDels(2)
-         VZ_tmp        = OtherStates%VZ     (1) + OtherStates%LinearizeDels(3)
-         HShr_tmp      = OtherStates%HShr   (1) + OtherStates%LinearizeDels(4)
-         VShr_tmp      = OtherStates%VShr   (1) + OtherStates%LinearizeDels(5)
-         VLinShr_tmp   = OtherStates%VLinShr(1) + OtherStates%LinearizeDels(6)
-         VGust_tmp     = OtherStates%VGust  (1) + OtherStates%LinearizeDels(7)
-
          ! Let's check the limits.
-      ELSE IF ( Time <= OtherStates%Tdata(1) .OR. OtherStates%NumDataLines == 1 )  THEN
+      IF ( Time <= OtherStates%Tdata(1) .OR. OtherStates%NumDataLines == 1 )  THEN
 
          OtherStates%TimeIndex      = 1
          V_tmp         = OtherStates%V      (1)
@@ -609,6 +622,7 @@ CONTAINS
          VShr_tmp      = OtherStates%VShr   (1)
          VLinShr_tmp   = OtherStates%VLinShr(1)
          VGust_tmp     = OtherStates%VGust  (1)
+
 
       ELSE IF ( Time >= OtherStates%Tdata(OtherStates%NumDataLines) )  THEN
 
@@ -624,7 +638,6 @@ CONTAINS
       ELSE
 
             ! Let's interpolate!  Linear interpolation.
-
          OtherStates%TimeIndex = MAX( MIN( OtherStates%TimeIndex, OtherStates%NumDataLines-1 ), 1 )
 
          DO
@@ -670,12 +683,14 @@ CONTAINS
       CosDelta = COS( Delta_tmp )
       SinDelta = SIN( Delta_tmp )
       V1 = V_tmp * ( ( InputPosition(3)/OtherStates%RefHt ) ** VShr_tmp &                                  ! power-law wind shear
-           + ( HShr_tmp   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &    ! horizontal linear shear
-           +  VLinShr_tmp * ( InputPosition(3)-OtherStates%RefHt ) )/OtherStates%RefWid  ) &                           ! vertical linear shear
-           + VGust_tmp                                                                         ! gust speed
+           + ( HShr_tmp   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &                ! horizontal linear shear
+           +  VLinShr_tmp * ( InputPosition(3)-OtherStates%RefHt ) )/OtherStates%RefLength  ) &            ! vertical linear shear
+           + VGust_tmp                                                                                     ! gust speed
       GetWindSpeed(1) =  V1 * CosDelta
       GetWindSpeed(2) = -V1 * SinDelta
       GetWindSpeed(3) =  VZ_tmp
+
+
 
       RETURN
 
@@ -698,9 +713,6 @@ SUBROUTINE IfW_UniformWind_End( PositionXYZ, ParamData, OtherStates, OutData, Er
       ! Passed Variables
    REAL(ReKi),    ALLOCATABLE,                  INTENT(INOUT)  :: PositionXYZ(:,:)  ! Array of XYZ positions to find wind speeds at
    TYPE(IfW_UniformWind_ParameterType),         INTENT(INOUT)  :: ParamData         ! Parameters
-!   TYPE(IfW_UniformWind_ContinuousStateType),   INTENT(INOUT)  :: ContStates        ! Continuous States  (unused)
-!   TYPE(IfW_UniformWind_DiscreteStateType),     INTENT(INOUT)  :: DiscStates        ! Discrete States    (unused)
-!   TYPE(IfW_UniformWind_ConstraintStateType),   INTENT(INOUT)  :: ConstrStates      ! Constraint States  (unused)
    TYPE(IfW_UniformWind_OtherStateType),        INTENT(INOUT)  :: OtherStates       ! Other State data   (storage for the main data)
    TYPE(IfW_UniformWind_OutputType),            INTENT(INOUT)  :: OutData           ! Initial output
 
@@ -734,15 +746,6 @@ SUBROUTINE IfW_UniformWind_End( PositionXYZ, ParamData, OtherStates, OutData, Er
 
       ! Destroy the state data
 
-!   CALL IfW_UniformWind_DestroyContState(   ContStates,    TmpErrStat, TmpErrMsg )
-!   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_UniformWind_End' )
-!
-!   CALL IfW_UniformWind_DestroyDiscState(   DiscStates,    TmpErrStat, TmpErrMsg )
-!   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_UniformWind_End' )
-!
-!   CALL IfW_UniformWind_DestroyConstrState( ConstrStates,  TmpErrStat, TmpErrMsg )
-!   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_UniformWind_End' )
-
    CALL IfW_UniformWind_DestroyOtherState(  OtherStates,   TmpErrStat, TmpErrMsg )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_UniformWind_End' )
 
@@ -765,37 +768,3 @@ END SUBROUTINE IfW_UniformWind_End
 !====================================================================================================
 !====================================================================================================
 END MODULE IfW_UniformWind
-
-
-
-!====================================================================================================
-!  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-!!MOVED FROM ABOVE:  This was removed during the conversion to the modular framework. It may be necessary
-!!                   to put this into OtherStates if it is needed later.
-!!----------------------------------------------------------------------------------------------------
-!SUBROUTINE IfW_UniformWind_SetLinearizeDels( Perturbations, ErrStat, ErrMsg )
-!! This subroutine sets the perturbation values for the linearization scheme.
-!
-!   REAL(ReKi),                        INTENT(IN   )  :: Perturbations(7)     ! purturbations for each of the 7 input parameters
-!   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat              ! time from the start of the simulation
-!   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg               ! Error Message
-!
-!   !-------------------------------------------------------------------------------------------------
-!   ! verify the module was initialized first
-!   !-------------------------------------------------------------------------------------------------
-!
-!   IF ( TimeIndex == 0 ) THEN
-!      ErrMsg   = ' Error: Call UniformWind_Init() before getting wind speed.'
-!      ErrStat  = ErrID_Fatal        ! Fatal since no data returned
-!      RETURN
-!   ELSE
-!      ErrStat = 0
-!   END IF
-!
-!   ParamData%Linearize = .TRUE.
-!   OtherStates%LinearizeDels(:) = Perturbations(:)
-!
-!   RETURN
-!
-!END SUBROUTINE IfW_UniformWind_SetLinearizeDels
-!!====================================================================================================

@@ -82,8 +82,8 @@ typedef  ^                       ^                 CHARACTER(10)     OutList    
 
 typedef  ^                       InitInputType     CHARACTER(1024)   InputFileName     -     -     -     "Name of the InflowWind input file to use"                                    -
 typedef  ^                       ^                 DbKi              DT                -     -     -     "Time step.  Supplied by driver"                                              seconds
-#Is ReferenceHeight needed?  Possibly as a check on the wind data.
-typedef  ^                       ^                 ReKi              TurbineHeight     -     -     -     "Hub height of the turbine"                                                   meters
+#Is TurbineHeight needed?  Possibly as a check on the wind data.
+#typedef  ^                       ^                 ReKi              TurbineHeight     -     -     -     "Hub height of the turbine"                                                   meters
 typedef  ^                       ^                 ReKi              Width             -     -     -     "Width of the wind field to use"                                              meters
 typedef  ^                       ^                 IntKi             NumWindPoints     -     -     -     "Number of wind velocity points expected"                                     -
 typedef  ^                       ^                 LOGICAL           UseInputFile      -  .TRUE.   -     "Should we read everthing from an input file, or do we get it some other way" -
@@ -95,22 +95,21 @@ typedef  ^                       ^              InflowWind_InputFile PassedFileD
 typedef  ^                       InitOutputType    CHARACTER(10)     WriteOutputHdr    :     -     -     "Names of output-to-file channels"                       -
 typedef  ^                       ^                 CHARACTER(10)     WriteOutputUnt    :     -     -     "Units of output-to-file channels"                       -
 typedef  ^                       ^                 ProgDesc          Ver               -     -     -     "Version information of InflowWind module"               -
-#FIXME: add info on the file info (extents etc)
-#is HubHeight still needed?
-#typedef  ^                       ^                 ReKi              HubHeight         -     -     -     "Height of the hub"                                      meters
-#typedef  ^                       ^        IfW_FFWind_InitOutputType FFWind            -     -     -     "FFWind InitOutput info"                                 -
+typedef  ^                       ^                 ReKi              HubHeight         -     -     -     "Height of the hub in the file"                          meters
 typedef  ^                       ^    IfW_UniformWind_InitOutputType UniformWind       -     -     -     "UniformWind InitOutput info"                            -
+#typedef  ^                       ^        IfW_FFWind_InitOutputType FFWind            -     -     -     "FFWind InitOutput info"                                 -
 typedef  ^                       ^                 DbKi              WindFileDT        -     -     -     "TimeStep of the wind file -- zero value for none"       -
 typedef  ^                       ^                 ReKi              WindFileTRange    {2}   -     -     "Time range of the wind file"                            -
 typedef  ^                       ^                 IntKi             WindFileNumTSteps -     -     -     "Number of timesteps in the time range of wind file"     -
+typedef  ^                       ^                 LOGICAL           WindFileConstantDT -     -     -     "Timesteps are the same throughout file"                 -
 
 
 # Define any data that are not considered actual states here:
 #   e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 #   at a given time, etc.)
 typedef  ^                       OtherStateType    IntKi             TimeIndex         -     0     -     "An Index into the TData array"                          -
-#typedef  ^                       ^      IfW_FFWind_OtherStateType    FFWind            -     -     -     "OtherStates from FFWind"                                -
 typedef  ^                       ^      IfW_UniformWind_OtherStateType    UniformWind            -     -     -     "OtherStates from UniformWind"                 -
+#typedef  ^                       ^      IfW_FFWind_OtherStateType    FFWind            -     -     -     "OtherStates from FFWind"                                -
 
 
 
@@ -141,9 +140,9 @@ typedef  ^                       ^                 ReKi              WindVziList
 #typedef  ^                       ^                 ReKi              HWindSpeed        -     -     -     "Horizontal windspeed for steady wind conditions"        -
 #typedef  ^                       ^                 ReKi              RefHt             -     -     -     "Reference height for horizontal wind speed for steady wind"   -
 #typedef  ^                       ^                 ReKi              PLexp             -     -     -     "Power law exponent"                                     -
+typedef  ^                       ^     IfW_UniformWind_ParameterType UniformWind       -     -     -     "Parameters from UniformWind"                            -
 #typedef  ^                       ^        IfW_TSFFWind_ParameterType TSFFWind          -     -     -     "Parameters from TSFFWind -- TurbSim full-field format"  -
 #typedef  ^                       ^    IfW_BladedFFWind_ParameterType BladedFFWind      -     -     -     "Parameters from BladedFFWind -- Bladed-style full-field format"  -
-typedef  ^                       ^     IfW_UniformWind_ParameterType UniformWind       -     -     -     "Parameters from UniformWind"                            -
 #typedef  ^                       ^        IfW_HAWCWind_ParameterType HAWCWind          -     -     -     "Parameters from HAWCWind"                               -
 #typedef  ^                       ^        IfW_UserWind_ParameterType UserWind          -     -     -     "Parameters from UserWind"                               -
 #typedef  ^                       ^          IfW_CTWind_ParameterType CTWind            -     -     -     "Parameters from CTWind"                                 -
@@ -155,7 +154,7 @@ typedef  ^                    InputType            ReKi              PositionXYZ
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef  ^                    OutputType           ReKi              VelocityXYZ       ::    -     -     "Array holding the U,V,W velocity for a given timestep"  meters/sec
+typedef  ^                    OutputType           ReKi              VelocityUVW       ::    -     -     "Array holding the U,V,W velocity for a given timestep"  meters/sec
 typedef  ^                    OutputType           ReKi              WriteOutput       :     -     -     "Array with values to output to file"                    -
 
 
