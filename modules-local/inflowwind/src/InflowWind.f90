@@ -17,7 +17,7 @@
 !
 !..................................................................................................................................
 ! Files with this module:
-!!!!!  InflowWind_Subs.f90
+!  InflowWind_Subs.f90
 !  InflowWind.txt       -- InflowWind_Types will be auto-generated based on the descriptions found in this file.
 !**********************************************************************************************************************************
 ! LICENSING
@@ -81,10 +81,10 @@ MODULE InflowWind
    PUBLIC :: WindInf_ADhack_diskVel
 
       ! These routines satisfy the framework, but do nothing at present.
-   PUBLIC :: InflowWind_UpdateStates                           !< Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
-   PUBLIC :: InflowWind_CalcConstrStateResidual                !< Tight coupling routine for returning the constraint state residual
-   PUBLIC :: InflowWind_CalcContStateDeriv                     !< Tight coupling routine for computing derivatives of continuous states
-   PUBLIC :: InflowWind_UpdateDiscState                        !< Tight coupling routine for updating discrete states
+   PUBLIC :: InflowWind_UpdateStates               !< Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
+   PUBLIC :: InflowWind_CalcConstrStateResidual    !< Tight coupling routine for returning the constraint state residual
+   PUBLIC :: InflowWind_CalcContStateDeriv         !< Tight coupling routine for computing derivatives of continuous states
+   PUBLIC :: InflowWind_UpdateDiscState            !< Tight coupling routine for updating discrete states
 
 
       ! Not coded
@@ -243,8 +243,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             RETURN
          ENDIF
       ENDIF
-      IF ( .NOT. ALLOCATED(OutData%VelocityXYZ) ) THEN
-         CALL AllocAry( OutData%VelocityXYZ, 3, InitData%NumWindPoints, &
+      IF ( .NOT. ALLOCATED(OutData%VelocityUVW) ) THEN
+         CALL AllocAry( OutData%VelocityUVW, 3, InitData%NumWindPoints, &
                      "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg )
          CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
          IF ( ErrStat>= AbortErrLev ) THEN
@@ -253,7 +253,12 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          ENDIF
       ENDIF
 
-!FIXME: add check that the arrays are the same size.
+
+         ! Check that the arrays for the points and velocities are the same size
+      IF ( SIZE( InputGuess%PositionXYZ, DIM = 2 ) /= SIZE( OutData%VelocityUVW, DIM = 2 ) ) THEN
+         CALL SetErrStat(ErrID_Fatal,' Programming error: Different number of XYZ coordinates and expected output velocities.', &
+                     ErrStat,ErrMsg,'InflowWind_Init')
+      ENDIF
 
 
       !-----------------------------------------------------------------
@@ -265,8 +270,94 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
 
          CASE ( Steady_WindNumber )
-               ! This is a special case of the Uniform wind, so we call UniformWind_Init
-            CALL SetErrStat( ErrID_Fatal,' Steady winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init')
+
+               !  This is a simplified case of the Uniform wind.  For this, we set the OtherStates data manually and don't
+               !  call UniformWind_Init.  We do however call it for the calculations.
+
+
+               ! Set InitData information -- It isn't necessary to do this since that information is only used in the Uniform_Init routine, which is not called.
+
+               ! Set the Otherstates information
+            OtherStates%UniformWind%NumDataLines   =  1_IntKi
+            OtherStates%UniformWind%RefHt          =  InputFileData%Steady_RefHt
+            OtherStates%UniformWind%RefLength      =  1.0_ReKi    ! This is not used since no shear gusts are used.  Set to 1.0 so calculations don't bomb. 
+            OtherStates%UniformWind%TimeIndex      =  1           ! Used in UniformWind as a check if initialization was done.
+
+
+            IF (.NOT. ALLOCATED(OtherStates%UniformWind%Tdata) ) THEN
+               CALL AllocAry( OtherStates%UniformWind%Tdata, OtherStates%UniformWind%NumDataLines, 'Uniform wind time', TmpErrStat, TmpErrMsg )
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               IF ( ErrStat >= AbortErrLev ) RETURN
+            END IF
+         
+            IF (.NOT. ALLOCATED(OtherStates%UniformWind%V) ) THEN
+               CALL AllocAry( OtherStates%UniformWind%V, OtherStates%UniformWind%NumDataLines, 'Uniform wind horizontal wind speed', TmpErrStat, TmpErrMsg )
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               IF ( ErrStat >= AbortErrLev ) RETURN
+            END IF
+         
+            IF (.NOT. ALLOCATED(OtherStates%UniformWind%Delta) ) THEN
+               CALL AllocAry( OtherStates%UniformWind%Delta, OtherStates%UniformWind%NumDataLines, 'Uniform wind direction', TmpErrStat, TmpErrMsg )
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               IF ( ErrStat >= AbortErrLev ) RETURN
+            END IF
+         
+            IF (.NOT. ALLOCATED(OtherStates%UniformWind%VZ) ) THEN
+               CALL AllocAry( OtherStates%UniformWind%VZ, OtherStates%UniformWind%NumDataLines, 'Uniform vertical wind speed', TmpErrStat, TmpErrMsg )
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               IF ( ErrStat >= AbortErrLev ) RETURN
+            END IF
+         
+            IF (.NOT. ALLOCATED(OtherStates%UniformWind%HShr) ) THEN
+               CALL AllocAry( OtherStates%UniformWind%HShr, OtherStates%UniformWind%NumDataLines, 'Uniform horizontal linear shear', TmpErrStat, TmpErrMsg )
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               IF ( ErrStat >= AbortErrLev ) RETURN
+            END IF
+         
+            IF (.NOT. ALLOCATED(OtherStates%UniformWind%VShr) ) THEN
+               CALL AllocAry( OtherStates%UniformWind%VShr, OtherStates%UniformWind%NumDataLines, 'Uniform vertical power-law shear exponent', TmpErrStat, TmpErrMsg )
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               IF ( ErrStat >= AbortErrLev ) RETURN
+            END IF
+         
+            IF (.NOT. ALLOCATED(OtherStates%UniformWind%VLinShr) ) THEN
+               CALL AllocAry( OtherStates%UniformWind%VLinShr, OtherStates%UniformWind%NumDataLines, 'Uniform vertical linear shear', TmpErrStat, TmpErrMsg )
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               IF ( ErrStat >= AbortErrLev ) RETURN
+            END IF
+         
+            IF (.NOT. ALLOCATED(OtherStates%UniformWind%VGust) ) THEN
+               CALL AllocAry( OtherStates%UniformWind%VGust, OtherStates%UniformWind%NumDataLines, 'Uniform gust velocity', TmpErrStat, TmpErrMsg )
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               IF ( ErrStat >= AbortErrLev ) RETURN
+            END IF
+
+               ! Set the array information
+            
+            OtherStates%UniformWind%Tdata(  :) = 0.0_ReKi
+            OtherStates%UniformWind%V(      :) = InputFileData%Steady_HWindSpeed
+            OtherStates%UniformWind%Delta(  :) = 0.0_ReKi
+            OtherStates%UniformWind%VZ(     :) = 0.0_ReKi
+            OtherStates%UniformWind%HShr(   :) = 0.0_ReKi
+            OtherStates%UniformWind%VShr(   :) = InputFileData%Steady_PLexp
+            OtherStates%UniformWind%VLinShr(:) = 0.0_ReKi
+            OtherStates%UniformWind%VGust(  :) = 0.0_ReKi
+
+
+
+               ! Now we have in effect initialized the IfW_UniformWind module, so set the parameters
+            ParamData%UniformWind%ReferenceHeight  =  Uniform_InitData%RefLength
+            ParamData%UniformWind%RefLength        =  InputFileData%Steady_RefHt
+            ParamData%UniformWind%Initialized      =  .TRUE.
+
+               ! Output reporting data
+            InitOutData%HubHeight                  =  InputFileData%Steady_RefHt
+            InitOutData%WindFileConstantDT         =  .FALSE.
+            InitOutData%WindFileDT                 =  0.0_ReKi
+            InitOutData%WindFileTRange             =  (/ 0.0_ReKi, 0.0_ReKi /)
+            InitOutData%WindFileNumTSteps          =  1_IntKi
+       
+
 
 
          CASE ( Uniform_WindNumber )
@@ -282,48 +373,65 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
             IF ( ErrStat >= AbortErrLev ) RETURN
-CALL WrScr(NewLine//' IfW_UniformWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//'   ErrMsg: '//NewLine//TRIM(ErrMsg)//NewLine)
 
 
-              ! Copy Relevant info over to InitOutData
+               ! Copy Relevant info over to InitOutData
 
-!!!                  ! Allocate and copy over the WriteOutputHdr info
-!!!               CALL AllocAry( InitOutData%WriteOutputHdr, SIZE(InitOutData%UniformWind%WriteOutputHdr,1), &
-!!!                              'Empty array for names of outputable information.', TmpErrStat, TmpErrMsg )
-!!!                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
-!!!                  IF ( ErrStat >= AbortErrLev ) RETURN
-!!!               InitOutData%WriteOutputHdr    =  InitOutData%UniformWind%WriteOutputHdr
-!!!
-!!!                  ! Allocate and copy over the WriteOutputUnt info
-!!!               CALL AllocAry( InitOutData%WriteOutputUnt, SIZE(InitOutData%UniformWind%WriteOutputUnt,1), &
-!!!                              'Empty array for units of outputable information.', TmpErrStat, TmpErrMsg )
-!!!                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
-!!!                  IF ( ErrStat >= AbortErrLev ) RETURN
-!!!
-!!!               InitOutData%WriteOutputUnt    =  InitOutData%UniformWind%WriteOutputUnt
-!!!
-!!!                  ! Copy the hub height info over
-!!!               InitOutData%HubHeight         =  InitOutData%UniformWind%HubHeight
+               ! Allocate and copy over the WriteOutputHdr info
+            CALL AllocAry( InitOutData%WriteOutputHdr, SIZE(InitOutData%UniformWind%WriteOutputHdr,1), &
+                              'Empty array for names of outputable information.', TmpErrStat, TmpErrMsg )
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
+            IF ( ErrStat >= AbortErrLev ) RETURN
+            InitOutData%WriteOutputHdr    =  InitOutData%UniformWind%WriteOutputHdr
+
+               ! Allocate and copy over the WriteOutputUnt info
+            CALL AllocAry( InitOutData%WriteOutputUnt, SIZE(InitOutData%UniformWind%WriteOutputUnt,1), &
+                           'Empty array for units of outputable information.', TmpErrStat, TmpErrMsg )
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
+            IF ( ErrStat >= AbortErrLev ) RETURN
+
+            InitOutData%WriteOutputUnt    =  InitOutData%UniformWind%WriteOutputUnt
+
+               ! Copy the hub height info over
+            InitOutData%HubHeight         =  InitOutData%UniformWind%HubHeight
+
+               ! Timestep information
+            InitOutData%WindFileConstantDT=  InitOutData%UniformWind%WindFileConstantDT
+            InitOutData%WindFileDT        =  InitOutData%UniformWind%WindFileDT
+            InitOutData%WindFileTRange    =  InitOutData%UniformWind%WindFileTRange
+            InitOutData%WindFileNumTSteps =  InitOutData%UniformWind%WindFileNumTSteps
+
+!FIXME: add warning if the first data point in the windfile has an angle and we are using a coordinate transform (rotation of windfield).
 
 
          CASE ( TSFF_WindNumber )
                ! Initialize the TSFFWind module
             CALL SetErrStat( ErrID_Fatal,' TSFF winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init')
 
+
+
          CASE ( BladedFF_WindNumber )
                ! Initialize the BladedFFWind module
             CALL SetErrStat( ErrID_Fatal,' BladedFF winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init')
+
+
 
          CASE ( HAWC_WindNumber )
                ! Initialize the HAWCWind module
             CALL SetErrStat( ErrID_Fatal,' HAWC winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init')
 
+
+
          CASE ( User_WindNumber )
                ! Initialize the User_Wind module
             CALL SetErrStat( ErrID_Fatal,' User winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init')
 
+
+
          CASE DEFAULT  ! keep this check to make sure that all new wind types have been accounted for
             CALL SetErrStat(ErrID_Fatal,' Undefined wind type.',ErrStat,ErrMsg,'InflowWind_Init()')
+
+
 
 
       END SELECT
@@ -464,6 +572,11 @@ CALL WrScr(NewLine//' IfW_UniformWind_Init returned: ErrStat: '//TRIM(Num2LStr(E
 !!!
 !!!         CASE (User_WindNumber)
 !!!
+!               ! Timestep information
+!            InitOutData%WindFileConstantDT=  InitOutData%UniformWind%WindFileConstantDT
+!            InitOutData%WindFileDT        =  InitOutData%UniformWind%WindFileDT
+!            InitOutData%WindFileTRange    =  InitOutData%UniformWind%WindFileTRange
+!            InitOutData%WindFileNumTSteps =  InitOutData%UniformWind%WindFileNumTSteps
 !!!               !FIXME: remove this error message when we add UD_Wind in
 !!!            CALL SetErrStat( ErrID_Fatal, ' InflowWind cannot currently handle the UD_Wind type.', ErrStat, ErrMsg, ' IfW_Init' )
 !!!            RETURN
@@ -479,6 +592,11 @@ CALL WrScr(NewLine//' IfW_UniformWind_Init returned: ErrStat: '//TRIM(Num2LStr(E
 !!!
 !!!!           CALL IfW_FDWind_Init(UnWind, ParamData%WindFileName, InitData%ReferenceHeight, ErrStat)
 !!!
+!               ! Timestep information
+!            InitOutData%WindFileConstantDT=  InitOutData%UniformWind%WindFileConstantDT
+!            InitOutData%WindFileDT        =  InitOutData%UniformWind%WindFileDT
+!            InitOutData%WindFileTRange    =  InitOutData%UniformWind%WindFileTRange
+!            InitOutData%WindFileNumTSteps =  InitOutData%UniformWind%WindFileNumTSteps
 !!!
 !!!         CASE (HAWC_WindNumber)
 !!!
@@ -487,6 +605,11 @@ CALL WrScr(NewLine//' IfW_UniformWind_Init returned: ErrStat: '//TRIM(Num2LStr(E
 !!!            RETURN
 !!!
 !!!!           CALL HW_Init( UnWind, ParamData%WindFileName, ErrStat )
+!               ! Timestep information
+!            InitOutData%WindFileConstantDT=  InitOutData%UniformWind%WindFileConstantDT
+!            InitOutData%WindFileDT        =  InitOutData%UniformWind%WindFileDT
+!            InitOutData%WindFileTRange    =  InitOutData%UniformWind%WindFileTRange
+!            InitOutData%WindFileNumTSteps =  InitOutData%UniformWind%WindFileNumTSteps
 !!!
 !!!
 !!!         CASE DEFAULT
@@ -495,24 +618,16 @@ CALL WrScr(NewLine//' IfW_UniformWind_Init returned: ErrStat: '//TRIM(Num2LStr(E
 !!!            RETURN
 !!!
 !!!      END SELECT
-!!!
-!!!
-!!!         ! If we've arrived here, we haven't reached an AbortErrLev:
-!!!      ParamData%Initialized = .TRUE.
-!!!
-!!!
-!!!         ! Set the version information in InitOutData
-!!!      InitOutData%Ver   = IfW_Ver
 
 
 
-!FIXME: remove this when done with writing InflowWind_Init
-CALL SetErrStat(ErrID_Fatal,' Routine not complete yet.',ErrStat,ErrMsg,'InflowWind_Init')
+         ! If we've arrived here, we haven't reached an AbortErrLev:
+      ParamData%Initialized = .TRUE.
+
+         ! Set the version information in InitOutData
+      InitOutData%Ver   = IfW_Ver
 
 
-!FIXME: Set value for InitOutput_WindFileDT
-!FIXME: Set values for InitOutput_WindFileTRange
-!FIXME: Set values for InitOutput_WindFileNumTSteps
 
       RETURN
 
@@ -526,7 +641,7 @@ CONTAINS
       CALL InflowWind_DestroyInputFile( InputFileData, TmpErrsTat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
 
-!!!      CALL InflowWind_DestroyInitInput( InitLocal,  TmpErrStat, TmpErrMsg );  CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+      CALL InflowWind_DestroyInputFile( InputFileData,  TmpErrStat, TmpErrMsg );  CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
 
 
    END SUBROUTINE CleanUp
@@ -538,16 +653,24 @@ END SUBROUTINE InflowWind_Init
 
 
 !====================================================================================================
+!> This routine takes an input dataset of type InputType which contains a position array of dimensions 3*n. It then calculates
+!! and returns the output dataset of type OutputType which contains a corresponding velocity array of dimensions 3*n. The input
+!! array contains XYZ triplets for each position of interest (first index is X/Y/Z for values 1/2/3, second index is the point
+!! number to evaluate). The returned values in the OutputData are similar with U/V/W for the first index of 1/2/3.
+!!
+!! _Coordinate transformation:_
+!! The coordinates passed in are copied to the PositionXYZPrime array, then rotated by -(ParamData%PropogationDir) (radians) so
+!! that the wind direction lies along the X-axis (all wind files are given this way).  The submodules are then called with
+!! these PositionXYZPrime coordinates.
+!!
+!! After the calculation by the submodule, the PositionXYZPrime coordinate array is deallocated.  The returned VelocityUVW
+!! array is then rotated by ParamData%PropogationDir so that it now corresponds the the global coordinate UVW values for wind
+!! with that direction.
+!----------------------------------------------------------------------------------------------------
 SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
-                              ContStates, DiscStates, ConstrStates, OtherStates, &   ! States -- none in this case
-                              OutputData, ErrStat, ErrMsg )
-   ! This routine takes an input dataset of type InputType which contains a position array of dimensions 3*n. It then calculates
-   ! and returns the output dataset of type OutputType which contains a corresponding velocity array of dimensions 3*n. The input
-   ! array contains XYZ triplets for each position of interest (first index is X/Y/Z for values 1/2/3, second index is the point
-   ! number to evaluate). The returned values in the OutputData are similar with U/V/W for the first index of 1/2/3.
-   !----------------------------------------------------------------------------------------------------
+                              ContStates, DiscStates, ConstrStates, &   ! Framework required states -- empty in this case.
+                              OtherStates, OutputData, ErrStat, ErrMsg )
 
-!FIXME: add ability to use the ASyncronous flag to prevent output of WindVi info.
 
          ! Inputs / Outputs
 
@@ -566,9 +689,9 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
          ! Local variables
 
-      TYPE(IfW_UniformWind_InitInputType)                           :: Uniform_InitData       !< initialization info
-      TYPE(IfW_UniformWind_InputType)                               :: Uniform_InData         !< input positions.
-      TYPE(IfW_UniformWind_OutputType)                              :: Uniform_OutData        !< output velocities
+      TYPE(IfW_UniformWind_InitInputType)                      :: Uniform_InitData       !< initialization info
+      TYPE(IfW_UniformWind_InputType)                          :: Uniform_InData         !< input positions.
+      TYPE(IfW_UniformWind_OutputType)                         :: Uniform_OutData        !< output velocities
 
 !!!      TYPE(IfW_FFWind_InitInputType)                           :: FF_InitData       !< initialization info
 !!!      TYPE(IfW_FFWind_InputType)                               :: FF_InData         !< input positions.
@@ -577,20 +700,19 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 !!!      TYPE(IfW_FFWind_ConstraintStateType)                     :: FF_ConstrStates   !< Unused
 !!!      TYPE(IfW_FFWind_OutputType)                              :: FF_OutData        !< output velocities
 
+      REAL(ReKi)                                               :: RotToWind(3,3)       !< Rotation matrix for rotating from global XYZ to windfile X'Y'Z'
+      REAL(ReKi)                                               :: RotFromWind(3,3)     !< Rotation matrix for rotating from windfile X'Y'Z' to global XYZ
+      REAL(ReKi), ALLOCATABLE                                  :: PositionXYZprime(:,:)   !< PositionXYZ array in the prime (wind) coordinates
 
+      INTEGER(IntKi)                                           :: I                    !< Generic counters
 
-
-!NOTE: It isn't entirely clear what the purpose of Height is. Does it sometimes occur that Height  /= ParamData%ReferenceHeight???
-      REAL(ReKi)                                               :: Height            ! Retrieved from FF
-      REAL(ReKi)                                               :: HalfWidth         ! Retrieved from FF
-
-
+      INTEGER(IntKi)                                           :: J                    !FIXME: remove after testing
+      LOGICAL                                                  :: samecheck            !FIXME: remove after testing
+      REAL(ReKi), ALLOCATABLE       :: TmpPositionXYZcheck(:,:)   !< PositionXYZ array returned from prime (wind) coordinates FIXME: remove after testing
 
          ! Temporary variables for error handling
       INTEGER(IntKi)                                           :: TmpErrStat
       CHARACTER(LEN(ErrMsg))                                   :: TmpErrMsg            ! temporary error message
-
-!FIXME/TODO:  Need to add the wrapping layer for the Coordinate tranformations.  When this is added, the UniformWind will need to be modified so that a warning is given when the global PropogationDir and the wind-direction within the file are both non-zero.
 
 
 
@@ -600,34 +722,92 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
 
          ! Allocate the velocity array to get out
-      IF ( .NOT. ALLOCATED(OutputData%VelocityXYZ) ) THEN
-         CALL AllocAry( OutputData%VelocityXYZ, 3, SIZE(InputData%PositionXYZ,DIM=2), &
+      IF ( .NOT. ALLOCATED(OutputData%VelocityUVW) ) THEN
+         CALL AllocAry( OutputData%VelocityUVW, 3, SIZE(InputData%PositionXYZ,DIM=2), &
                      "Velocity array returned from IfW_CalcOutput", TmpErrStat, TmpErrMsg )
          CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
          IF ( ErrStat >= AbortErrLev ) RETURN
-      ELSEIF ( SIZE(InputData%PositionXYZ,DIM=2) /= SIZE(OutputData%VelocityXYZ,DIM=2) ) THEN
+      ELSEIF ( SIZE(InputData%PositionXYZ,DIM=2) /= SIZE(OutputData%VelocityUVW,DIM=2) ) THEN
          CALL SetErrStat( ErrID_Fatal," Programming error: Position and Velocity arrays are not sized the same.",  &
                ErrStat, ErrMsg, ' IfW_CalcOutput')
       ENDIF
 
+
+         !> Perform coordinate transformation using the PropogationDir value read in from the input file (the value stored in parameters
+         !! was converted from degrees to radians already).
+         !! @note    The PropogationDir is given in Meteorological \f$\Delta\phi\f$, so this is the negative of the \f$\Delta\phi\f$
+         !!          for polar coordinates
+
+         ! Create the rotation matrices -- rotate from XYZ to X'Y'Z' (wind aligned along X) coordinates
+      RotToWind(1,:) = (/    COS(-ParamData%PropogationDir),   SIN(-ParamData%PropogationDir),     0.0_ReKi  /)  
+      RotToWind(2,:) = (/   -SIN(-ParamData%PropogationDir),   COS(-ParamData%PropogationDir),     0.0_ReKi  /)  
+      RotToWind(3,:) = (/                          0.0_ReKi,                         0.0_ReKi,     1.0_ReKi  /)  
+
+         ! Create the rotation matrices -- rotate from X'Y'Z' (wind aligned along X) to global XYZ coordinates
+      RotFromWind =  TRANSPOSE(RotToWind)
+
+
+         !> Make a copy of the InputData%PositionXYZ coordinates with the applied rotation matrix...
+         !! This copy is made because if we translate it to the prime coordinates, then back again, we
+         !! may shift the points by some small amount of machine error, and we don't want to do that.
+      CALL AllocAry( PositionXYZprime, 3, SIZE(InputData%PositionXYZ,DIM=2), &
+                  "Array for holding the XYZprime position data", TmpErrStat, TmpErrMsg )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+         ! Apply the coordinate transformation to the PositionXYZ coordinates to get the PositionXYZprime coordinate list
+         ! If the PropogationDir is zero, we don't need to apply this and will simply copy the data.
+      IF ( EqualRealNos (ParamData%PropogationDir, 0.0_ReKi) ) THEN
+         PositionXYZprime  =  InputData%PositionXYZ
+      ELSE
+         DO I  = 1,SIZE(InputData%PositionXYZ,DIM=2)
+            PositionXYZprime(:,I)   =  MATMUL( RotToWind, InputData%PositionXYZ(:,I) )
+         ENDDO
+      ENDIF
+
+
+
+
          ! Compute the wind velocities by stepping through all the data points and calling the appropriate GetWindSpeed routine
       SELECT CASE ( ParamData%WindType )
+
+
+         CASE (Steady_WindNumber)
+
+               ! Move the arrays for the Position and Velocity information
+            CALL MOVE_ALLOC( OutputData%VelocityUVW,  Uniform_OutData%Velocity )
+
+               ! InputData only contains the Position array, so we can pass that directly.
+            CALL  IfW_UniformWind_CalcOutput(  Time, InputData%PositionXYZ, ParamData%UniformWind, OtherStates%UniformWind, &
+                                          Uniform_OutData, TmpErrStat, TmpErrMsg)
+
+               ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
+            CALL MOVE_ALLOC( Uniform_OutData%Velocity,   OutputData%VelocityUVW )
+
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+            IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+
          CASE (Uniform_WindNumber)
 
 
                ! Move the arrays for the Position and Velocity information
-            CALL MOVE_ALLOC( OutputData%VelocityXYZ,  Uniform_OutData%Velocity )
+            CALL MOVE_ALLOC( OutputData%VelocityUVW,  Uniform_OutData%Velocity )
 
 
                ! InputData only contains the Position array, so we can pass that directly.
             CALL  IfW_UniformWind_CalcOutput(  Time, InputData%PositionXYZ, ParamData%UniformWind, OtherStates%UniformWind, &
                                           Uniform_OutData, TmpErrStat, TmpErrMsg)
 
-               ! Move the arrays back
-            CALL MOVE_ALLOC( Uniform_OutData%Velocity,   OutputData%VelocityXYZ )
+               ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
+            CALL MOVE_ALLOC( Uniform_OutData%Velocity,   OutputData%VelocityUVW )
 
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
             IF ( ErrStat >= AbortErrLev ) RETURN
+
+
 
 
 !!!         CASE (FF_WindNumber)
@@ -679,7 +859,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
             CALL SetErrStat( ErrID_Fatal, ' Error: Undefined wind type in IfW_CalcOutput. ' &
                       //'Call WindInflow_Init() before calling this function.', ErrStat, ErrMsg, ' IfW_CalcOutput' )
 
-            OutputData%VelocityXYZ(:,:) = 0.0
+            OutputData%VelocityUVW(:,:) = 0.0
             RETURN
 
       END SELECT
@@ -710,6 +890,55 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 !!!
       !ENDIF
 
+
+         ! The VelocityUVW array data that has been returned from the sub-modules is in the wind file (X'Y'Z') coordinates at
+         ! this point.  These must be rotated to the global XYZ coordinates.  So now we apply the coordinate transformation
+         ! to the VelocityUVW(prime) coordinates (in wind X'Y'Z' coordinate frame) returned from the submodules to the XYZ
+         ! coordinate frame, but only if PropogationDir is not zero.  This is only a rotation of the returned wind field, so
+         ! UVW contains the direction components of the wind at XYZ after translation from the U'V'W' wind velocity components
+         ! in the X'Y'Z' (wind file) coordinate frame.
+      IF ( .NOT. EqualRealNos (ParamData%PropogationDir, 0.0_ReKi) ) THEN
+         DO I  = 1,SIZE(OutputData%VelocityUVW,DIM=2)
+            OutputData%VelocityUVW(:,I)   =  MATMUL( RotFromWind, OutputData%VelocityUVW(:,I) )
+         ENDDO
+      ENDIF
+
+
+!!!!!!!!!!!!!!!!!!!!!
+!!FIXME: temp testing
+!      CALL AllocAry( TmpPositionXYZcheck, 3, SIZE(InputData%PositionXYZ,DIM=2), &
+!                  "Temporary array for holding the XYZprime position data", TmpErrStat, TmpErrMsg )
+!      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+!      IF ( ErrStat >= AbortErrLev ) RETURN
+!
+!      DO I  = 1,SIZE(InputData%PositionXYZ,DIM=2)
+!         TmpPositionXYZcheck(:,I)  =  MATMUL( RotFromWind, PositionXYZprime(:,I) )
+!      ENDDO
+!
+!      samecheck   = .TRUE.
+!      DO I  =  1,SIZE(InputData%PositionXYZ,DIM=2)
+!         DO J  =  1,SIZE(InputData%PositionXYZ,DIM=1)
+!            IF ( .NOT. EqualRealNos(TmpPositionXYZcheck(J,I), InputData%PositionXYZ(J,I)) )    samecheck = .FALSE.
+!         ENDDO
+!      ENDDO
+!
+!      print*,'  Matmul test: '
+!      print*,'       PropogationDir = ',ParamData%PropogationDir
+!      print*,'       RotToWind        ',RotToWind(1,:)
+!      print*,'                        ',RotToWind(2,:)
+!      print*,'                        ',RotToWind(3,:)
+!      print*,''
+!      DO I  = 1,SIZE(InputData%PositionXYZ,DIM=2)
+!         print*,''
+!         print*,'       PositionXYZ     (I) ',InputData%PositionXYZ(:,I)
+!         print*,'       PositionXYZprime(I) ',PositionXYZprime(:,I)
+!         print*,'    TmpPositionXYZcheck(I) ',TmpPositionXYZcheck(:,I),'     same: ',samecheck
+!         print*,'       VelocityUVW     (I) ',OutputData%VelocityUVW(:,I)
+!      ENDDO
+!!!!!!!!!!!!!!!!!!!!!
+
+      ! Done with the prime coordinates for the XYZ position information that was passed in.
+   IF (ALLOCATED(PositionXYZprime)) DEALLOCATE(PositionXYZprime)
 
 
 END SUBROUTINE InflowWind_CalcOutput
@@ -755,14 +984,18 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
 
 
 !NOTE: It isn't entirely clear what the purpose of Height is. Does it sometimes occur that Height  /= ParamData%ReferenceHeight???
-      REAL(ReKi)                                         :: Height      ! Retrieved from FF
-      REAL(ReKi)                                         :: HalfWidth   ! Retrieved from FF
+!      REAL(ReKi)                                         :: Height      ! Retrieved from FF
+!      REAL(ReKi)                                         :: HalfWidth   ! Retrieved from FF
 
 
 
          ! End the sub-modules (deallocates their arrays and closes their files):
 
       SELECT CASE ( ParamData%WindType )
+
+         CASE (Steady_WindNumber)         ! The Steady wind is a simple wrapper for the UniformWind module.
+            CALL IfW_UniformWind_End( InputData%PositionXYZ,   ParamData%UniformWind,                                        &
+                                 OtherStates%UniformWind, Uniform_OutData, ErrStat, ErrMsg )
 
          CASE (Uniform_WindNumber)
             CALL IfW_UniformWind_End( InputData%PositionXYZ,   ParamData%UniformWind,                                        &

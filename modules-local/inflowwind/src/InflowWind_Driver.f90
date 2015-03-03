@@ -39,7 +39,7 @@ PROGRAM InflowWind_Driver
 
       ! Info on this code
    TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("InflowWind_Driver","v1.01.00a-adp","22-Dec-2014")
-
+   INTEGER(IntKi)                                     :: IfWDriver_Verbose =  5  ! Verbose level.  0 = none, 5 = some, 10 = lots
 
       ! Types needed here (from InflowWind module)
    TYPE(InflowWind_InitInputType)                     :: InflowWind_InitInp      ! Data for initialization -- this is where the input info goes
@@ -64,7 +64,7 @@ PROGRAM InflowWind_Driver
    TYPE(IfWDriver_Settings)                           :: Settings                ! Driver settings
    REAL(DbKi)                                         :: Timer(1:2)              ! Keep track of how long this takes to run
    REAL(DbKi)                                         :: TimeNow                 ! The current time
-   REAL(DbKI)                                         :: DT                      ! Timestep
+!   REAL(DbKI)                                         :: DT                      ! Timestep
    INTEGER(IntKi)                                     :: NumTotalPoints          ! Number of points for this iteration
    LOGICAL                                            :: TempFileExist           ! Flag for inquiring file existence
    CHARACTER(11)                                      :: TmpNumString            ! Temporary string for holding a number
@@ -84,8 +84,7 @@ PROGRAM InflowWind_Driver
 
       ! Local variables for storing the arrays
    REAL(ReKi),ALLOCATABLE                             :: PointsXYZ(:,:)          !< (X,Y,Z) coordinates read from Points input file.  Velocity results stored in y2
-!   REAL(ReKi),ALLOCATABLE                             :: WindGridXYZ(:,:)        !< (X,Y,Z) coordinates of the WindGrid data set
-!   INTEGER(IntKi)                                     :: I                       !< Generic counter/index
+   INTEGER(IntKi)                                     :: I,J,K,Counter           !< Generic counters/indices
 
       ! Temporary variables
    CHARACTER(1024)                                    :: TmpChar                 ! Temporary character variable
@@ -161,6 +160,8 @@ PROGRAM InflowWind_Driver
    CLSettingsFlags%WindGridOutputInit  =  .FALSE.        ! Wind Grid output file not started
    CLSettingsFlags%FFTOutputInit       =  .FALSE.        ! FFT output file not started
    CLSettingsFlags%PointsOutputInit    =  .FALSE.        ! Points output file not started
+   CLSettingsFlags%Verbose             =  .FALSE.        ! Turn on verbose error reporting?
+   CLSettingsFlags%VVerbose            =  .FALSE.        ! Turn on very verbose error reporting?
 
 
       ! Initialize the driver settings to their default values (same as the CL -- command line -- values)
@@ -180,13 +181,30 @@ PROGRAM InflowWind_Driver
    ENDIF
 
 
-!   print*,'--- Settings from the command line: ---'
-!   CALL printSettings( CLSettingsFlags, CLSettings )
-!   print*,NewLine
+      ! Check if we are doing verbose error reporting
+   IF ( CLSettingsFlags%VVerbose ) THEN
+      IfWDriver_Verbose =  10_IntKi
+   ENDIF
+   IF ( CLSettingsFlags%Verbose ) THEN
+      IfWDriver_Verbose =  7_IntKi
+   ENDIF
 
-!   print*,'--- Driver settings (before reading driver ipt file): ---'
-!   CALL printSettings( SettingsFlags, Settings )
-!   print*,NewLine
+
+
+      ! Verbose error reporting
+   IF ( IfWDriver_Verbose >= 10_IntKi ) THEN
+      CALL WrScr('--- Settings from the command line: ---')
+      CALL printSettings( CLSettingsFlags, CLSettings )
+      CALL WrSCr(NewLine)
+   ENDIF
+
+
+      ! Verbose error reporting
+   IF ( IfWDriver_Verbose >= 10_IntKi ) THEN
+      CALL WrScr('--- Driver settings (before reading driver ipt file): ---')
+      CALL printSettings( SettingsFlags, Settings )
+      CALL WrScr(NewLine)
+   ENDIF
 
 
 
@@ -216,9 +234,17 @@ PROGRAM InflowWind_Driver
          ErrStat  =  ErrID_None
       ENDIF
 
-!      print*,NewLine//'--- Driver settings after reading the driver ipt file: ---'
-!      CALL printSettings( SettingsFlags, Settings )
-!      print*,NewLine
+
+         ! VVerbose error reporting
+      IF ( IfWDriver_Verbose >= 10_IntKi ) THEN
+         CALL WrScr(NewLine//'--- Driver settings after reading the driver ipt file: ---')
+         CALL printSettings( SettingsFlags, Settings )
+         CALL WrScr(NewLine)
+      ENDIF
+
+
+         ! VVerbose error reporting
+      IF ( IfWDriver_Verbose >= 10_IntKi ) CALL WrScr('Updating driver settings with command line arguments')
 
 
          ! Now that we have read in the driver input settings, we need to override these with any
@@ -227,17 +253,25 @@ PROGRAM InflowWind_Driver
       CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, .TRUE., ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL ProgAbort( ErrMsg )
-      ELSEIF ( ErrStat /= 0 ) THEN
+      ELSEIF ( ErrStat /= ErrID_None ) THEN
          CALL WrScr( NewLine//ErrMsg )
          ErrStat  =  ErrID_None
       ENDIF
 
-!      print*,NewLine//'--- Driver settings after copying over CL settings: ---'
-!      CALL printSettings( SettingsFlags, Settings )
-!      print*,NewLine
+         ! Verbose error reporting
+      IF ( IfWDriver_Verbose >= 10_IntKi ) THEN
+         CALL WrSCr(NewLine//'--- Driver settings after copying over CL settings: ---')
+         CALL printSettings( SettingsFlags, Settings )
+         CALL WrScr(NewLine)
+      ENDIF
 
 
    ELSE
+
+
+         ! VVerbose error reporting
+      IF ( IfWDriver_Verbose >= 10_IntKi ) CALL WrScr('No driver input file used. Updating driver settings with command line arguments')
+
 
          ! Since there were no settings picked up from the driver input file, we need to copy over all
          ! the CLSettings into the regular Settings.  The .FALSE. is a flag indicating that the driver
@@ -245,14 +279,17 @@ PROGRAM InflowWind_Driver
       CALL UpdateSettingsWithCL( SettingsFlags, Settings, CLSettingsFlags, CLSettings, .FALSE., ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL ProgAbort( ErrMsg )
-      ELSEIF ( ErrStat /= 0 ) THEN
+      ELSEIF ( ErrStat /= ErrID_None ) THEN
          CALL WrScr( NewLine//ErrMsg )
          ErrStat  =  ErrID_None
       ENDIF
 
-!      print*,NewLine//'--- Driver settings after copying over CL settings: ---'
-!      CALL printSettings( SettingsFlags, Settings )
-!      print*,NewLine
+         ! Verbose error reporting
+      IF ( IfWDriver_Verbose >= 10_IntKi ) THEN
+         CALL WrScr(NewLine//'--- Driver settings after copying over CL settings: ---')
+         CALL printSettings( SettingsFlags, Settings )
+         CALL WrScr(NewLine)
+      ENDIF
 
    ENDIF
 
@@ -326,9 +363,12 @@ PROGRAM InflowWind_Driver
 
       Settings%WindGridOutputName   =  TRIM(Settings%WindGridOutputName)//'.WindGrid.out'
 
-      CALL WindGridMessage( Settings, .FALSE., ErrMsgTmp, LenErrMsgTmp )         ! .FALSE. for no comment characters
+         ! Output message if some verbosity.
+      IF ( IfWDriver_Verbose >= 5_IntKi ) THEN
+         CALL WindGridMessage( Settings, .FALSE., ErrMsgTmp, LenErrMsgTmp )         ! .FALSE. for no comment characters.  ErrMsgTmp holds the message.
 
-      CALL WrScr(NewLine//TRIM(ErrMsgTmp)//NewLine)
+         CALL WrScr(NewLine//TRIM(ErrMsgTmp)//NewLine)
+      ENDIF
 
    ENDIF
 
@@ -345,12 +385,17 @@ PROGRAM InflowWind_Driver
 
       Settings%SummaryFileName   =  TRIM(Settings%SummaryFileName)//'.sum'
 
+      IF ( IfWDriver_Verbose >= 10_IntKi ) CALL WrScr('Driver summary output file: '//TRIM(Settings%SummaryFileName))
+
    ENDIF
 
-   print*,NewLine//'--- Driver settings after finalizing: ---'
-   CALL printSettings( SettingsFlags, Settings )
-   print*,NewLine
 
+      ! Give status update of the driver flags, if verbose
+   IF ( IfWDriver_Verbose >= 7_IntKi ) THEN
+      CALL WrScr(NewLine//'--- Driver settings after finalizing: ---')
+      CALL printSettings( SettingsFlags, Settings )
+      CALL WrScr(NewLine)
+   ENDIF
 
 
    !--------------------------------------------------------------------------------------------------------------------------------
@@ -398,21 +443,27 @@ PROGRAM InflowWind_Driver
    InflowWind_InitInp%UseInputFile     =  .TRUE.
 
 
-   CALL WrScr('Calling InflowWind_Init...')
+   IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr('Calling InflowWind_Init...')
 
 
    CALL InflowWind_Init( InflowWind_InitInp, InflowWind_u1, InflowWind_p, &
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
-                  InflowWind_y1,    DT,  InflowWind_InitOut, ErrStat, ErrMsg )
+                  InflowWind_y1,    Settings%DT,  InflowWind_InitOut, ErrStat, ErrMsg )
 
 
       ! Make sure no errors occured that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL DriverCleanup()
       CALL ProgAbort( ErrMsg )
-   ELSEIF ( ErrStat /= 0 ) THEN
-      CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//'   ErrMsg: '//NewLine//TRIM(ErrMsg)//NewLine)
+   ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose >= 7_IntKi ) ) THEN
+      CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
+                 NewLine//'                           ErrMsg:  '//TRIM(ErrMsg)//NewLine)
    ENDIF
+
+
+
+      ! Let user know we returned from the InflowWind code if verbose
+   IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr(NewLine//'InflowWind_Init CALL returned without errors.'//NewLine)
 
 
 
@@ -425,36 +476,88 @@ PROGRAM InflowWind_Driver
       ! Timestep -- The timestep for the calling InflowWind_CalcOutput may need to be changed to what is in the file if the
       !  DT = DEFAULT option was used in the driver input file.  This does not need to be changed in the InflowWind_Parameters
       !  since IfW doesn't care what the timestep is.
+
    IF ( SettingsFlags%DTDefault ) THEN
-      DT =  InflowWind_InitOut%WindFileDT
+      IF ( InflowWind_InitOut%WindFileConstantDT ) THEN
+         Settings%DT =  InflowWind_InitOut%WindFileDT
+
+         IF ( IfWDriver_Verbose >= 5 ) CALL WrScr(' DEFAULT requested for DT. Setting to '//TRIM(Num2LStr(Settings%DT))//' as given in the wind file.')
+
+      ELSE IF ( InflowWind_InitOut%WindFileNumTSteps <= 1 ) THEN
+
+         Settings%DT =  0.0_ReKi
+
+         IF ( IfWDriver_Verbose >= 5 ) CALL WrScr(' DEFAULT requested for DT. Setting to 0.0 since only one timestep given in the wind file.')
+
+      ELSE
+         CALL DriverCleanup()
+         CALL ProgAbort(NewLine//" Cannot use setting of 'DT = DEFAULT'.  The timesteps are not uniform within the data file,"// &
+                                 " or there are less than 3 timesteps in the file.")
+      ENDIF
    ENDIF
 
 
-!TODO:
-      ! If no timerange was specified, setup the timerange to step through
-!   IF ( SettingsFlags%NumTimeStepsDefault ) THEN
-!      Settings%NumTimeSteps   =  ????
-!   ENDIF
+      ! If the number of timesteps was set to default, set it to the minimum of either number of timesteps in the file,
+      ! or the largest number of complete timesteps for the given DT and time range of the file.
+   IF ( SettingsFlags%NumTimeStepsDefault ) THEN
+
+         ! Set the value to the number of timesteps given in the file
+      Settings%NumTimeSteps   =  InflowWind_InitOut%WindFileNumTSteps
+
+         ! Tell user what we set the number of timesteps to
+      IF ( IfWDriver_Verbose >= 7 ) CALL WrScr(' DEFAULT requested for NumTSteps. Setting to '//TRIM(Num2LStr(Settings%NumTimeSteps))//' as given in the wind file.')
+
+         ! Reduce to an integer number of timesteps for the given DT and time range in the file
+      IF ( (Settings%NumTimeSteps * Settings%DT) > (InflowWind_InitOut%WindFileTRange(2) - InflowWind_InitOut%WindFileTRange(1)) ) THEN
+
+            ! Set the value.  Add 1 to get the first data point
+         IF ( Settings%DT > 0.0_DbKi ) THEN
+            Settings%NumTimeSteps = FLOOR( (InflowWind_InitOut%WindFileTRange(2) - InflowWind_InitOut%WindFileTRange(1))/Settings%DT) + 1_IntKi
+         ELSE
+            Settings%NumTimeSteps   =  1_IntKi
+         ENDIF
+
+            ! Tell the user that we reset things again
+         IF ( IfWDriver_Verbose >= 7 ) CALL WrScr(' Resetting NumTSteps to '//TRIM(Num2LStr(Settings%NumTimeSteps))//   &
+                                                  ' to stay within the time range given in the file (with rounding errors).')
+      ENDIF
+
+            ! Simple message if not extra verbose.
+         IF ( IfWDriver_Verbose == 5 ) CALL WrScr(' DEFAULT requested for NumTSteps. Setting to '//TRIM(Num2LStr(Settings%NumTimeSteps))//'.')
+
+   ENDIF
 
 
 
-
-!TODO:  Setup GridData points
-!        Will not readjust the ranges of the grid data.  Out of bounds will be a good test for IfW.  Only store single timestep at a time.
-!  Loop over X
-!   Loop over Y
-!    Loop over Z
-!     I++
-!     InflowWind_u1%PositionXYZ(:,I)   =  XYZ coord
-!
-!If no grid points are set, need to set to Z=50.0
-!TODO: If this was set since no parameters were selected for it, should I recenter?
-
-      ! WindGrid output file
+      ! WindGrid output file and points array
    IF ( SettingsFlags%WindGrid ) THEN
+
+         ! Write the header for the WindGrid output file
       CALL WindGridVel_OutputWrite( Settings%WindGridOutputUnit, Settings%WindGridOutputName, SettingsFlags%WindGridOutputInit, &
-               Settings, InflowWind_u1%PositionXYZ, InflowWind_y1%VelocityXYZ,    &
+               Settings, InflowWind_u1%PositionXYZ, InflowWind_y1%VelocityUVW,    &
                TimeNow, ErrStat, ErrMsg )
+
+
+         ! Setup the actual grid points -- scan order, Y,Z,X
+      Counter  =  1_IntKi
+      DO I = 1,Settings%GridN(1)          ! Slowest scan over X
+         DO K = 1,Settings%GridN(2)       ! Single Z row
+            DO J = 1,Settings%GridN(3)    ! Step through Y fastest
+               InflowWind_u1%PositionXYZ(1,Counter)   =  Settings%XRange(1) + Settings%GridDelta(1)*( I - 1 )
+               InflowWind_u1%PositionXYZ(2,Counter)   =  Settings%YRange(1) + Settings%GridDelta(2)*( J - 1 )
+               InflowWind_u1%PositionXYZ(3,Counter)   =  Settings%ZRange(1) + Settings%GridDelta(3)*( K - 1 )
+               Counter = Counter+1
+            ENDDO
+         ENDDO
+      ENDDO
+
+   ELSE
+
+         ! We are going to set the WindGrid with only a single point so that we can calculate something
+      InflowWind_u1%PositionXYZ(1,1)  =  0.0_ReKi     ! X
+      InflowWind_u1%PositionXYZ(2,1)  =  0.0_ReKi     ! Y
+      InflowWind_u1%PositionXYZ(3,1)  = 50.0_ReKi     ! Z
+
    ENDIF
 
 
@@ -466,7 +569,7 @@ PROGRAM InflowWind_Driver
       CALL MOVE_ALLOC( PointsXYZ, InflowWind_u2%PositionXYZ )
 
          ! Allocate the array for the velocity results -- 3 x Npoints
-      CALL AllocAry( InflowWind_y2%VelocityXYZ, 3, SIZE(InflowWind_u2%PositionXYZ, DIM=2 ),    &
+      CALL AllocAry( InflowWind_y2%VelocityUVW, 3, SIZE(InflowWind_u2%PositionXYZ, DIM=2 ),    &
          "Array of velocities corresponding to Points file", ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN
          CALL DriverCleanup()
@@ -485,7 +588,7 @@ PROGRAM InflowWind_Driver
 
          ! Now create the output file.  Write header information
       CALL PointsVel_OutputWrite( Settings%PointsOutputUnit, Settings%PointsOutputName, SettingsFlags%PointsOutputInit, &
-               Settings, InflowWind_u2%PositionXYZ, InflowWind_y2%VelocityXYZ,    &
+               Settings, InflowWind_u2%PositionXYZ, InflowWind_y2%VelocityUVW,    &
                TimeNow, ErrStat, ErrMsg )
 
    ENDIF
@@ -507,7 +610,7 @@ PROGRAM InflowWind_Driver
          CALL ProgAbort( ErrMsg )
       ENDIF
 
-      CALL AllocAry( InflowWind_y3%VelocityXYZ, 3, 1,    &
+      CALL AllocAry( InflowWind_y3%VelocityUVW, 3, 1,    &
          "Array for FFT position information", ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN
          CALL DriverCleanup()
@@ -542,47 +645,64 @@ PROGRAM InflowWind_Driver
    !-=-=- Time stepping loop -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
 
-   TimeNow  =  Settings%TStart
-!TODO: output windgrid info
 !TODO: save FFT info
 !TODO: print out the points info to file.
 !TODO: output file with data from IfW (on time steps)
 !TODO: Summary info
 
+   IF ( IfWDriver_Verbose >= 5_IntKi )    CALL WrScr(Newline//'Calling InflowWind_CalcOutput...'//Newline)
 
-   DO ITime =  1, MAX( Settings%NumTimeSteps, 1_IntKi )
 
-         ! Retrieve results for the WindGrid and export them for this timestep
+   DO ITime =  0, MAX( Settings%NumTimeSteps, 1_IntKi )
+
+      TimeNow  =  Settings%TStart + Settings%DT*(ITime)
+
+         ! Get results for WindGrid data from IfW -- WindGrid may contain only a single point at the hub if the WindGrid flag isn't set.
+      CALL InflowWind_CalcOutput( TimeNow,  InflowWind_u1, InflowWind_p, &
+                  InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
+                  InflowWind_y1, ErrStat, ErrMsg)
+
+         ! Make sure no errors occured that give us reason to terminate now.
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL DriverCleanup()
+         CALL ProgAbort( ErrMsg )
+      ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose >= 10_IntKi ) ) THEN
+         CALL WrScr(NewLine//' Timestep '//TRIM(Num2LStr(ITime))//   &
+                    ' InflowWind_Calc returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//        &
+                    NewLine//'                           ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+      ENDIF
+
+
+
+         ! Write the WindGrid results to a file for this timestep
       IF ( SettingsFlags%WindGrid ) THEN
 
-            ! Get results for WindGrid data from IfW
-   !      CALL InflowWind_CalcOutput()
-
-            ! Output the WindGrid results for this timestep
          CALL WindGridVel_OutputWrite( Settings%WindGridOutputUnit, Settings%WindGridOutputName, SettingsFlags%WindGridOutputInit, &
-                  Settings, InflowWind_u1%PositionXYZ, InflowWind_y1%VelocityXYZ,    &
+                  Settings, InflowWind_u1%PositionXYZ, InflowWind_y1%VelocityUVW,    &
                   TimeNow, ErrStat, ErrMsg )
 
       ENDIF
 
 
 
-         ! Retieve results for the Points and export them for this timestep
+         ! Calculate results for the Points and export them for this timestep
       IF ( SettingsFlags%PointsFile ) THEN
 
             ! Get results for Points data from IfW
-   !      CALL InflowWind_CalcOutput()
+      CALL InflowWind_CalcOutput( TimeNow,  InflowWind_u2, InflowWind_p, &
+                  InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
+                  InflowWind_y2, ErrStat, ErrMsg)
 
             ! Output the Points results for this timestep
          CALL PointsVel_OutputWrite( Settings%PointsOutputUnit, Settings%PointsOutputName, SettingsFlags%PointsOutputInit, &
-                  Settings, InflowWind_u2%PositionXYZ, InflowWind_y2%VelocityXYZ,    &
+                  Settings, InflowWind_u2%PositionXYZ, InflowWind_y2%VelocityUVW,    &
                   TimeNow, ErrStat, ErrMsg )
 
       ENDIF
 
 
 
-         ! Retrive results for FFT if we are performing one
+         ! Calculate results for FFT if we are performing one
       IF ( SettingsFlags%FFTcalc ) THEN
 
             ! Get the results from IfW

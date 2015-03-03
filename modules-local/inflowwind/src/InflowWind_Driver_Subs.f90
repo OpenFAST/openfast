@@ -74,6 +74,8 @@ SUBROUTINE DispHelpText( ErrStat, ErrMsg )
    CALL WrScr("                  "//SwChar//"FFT[X,Y,Z]    -- an fft over all t using specified DT at X,Y,Z   [N/A]")
    CALL WrScr("                  "//SwChar//"points[FILE]  -- calculates at x,y,z coordinates specified in a  [N/A]")
    CALL WrScr("                                    white space delimited FILE")
+   CALL WrScr("                  "//SwChar//"v             -- increase verbose level to 7 ")
+   CALL WrScr("                  "//SwChar//"vv            -- increase verbose level to 10 ")
    CALL WrScr("                  "//SwChar//"help          -- print this help menu and exit")
    CALL WrScr("")
    CALL WrScr("   Notes:")
@@ -305,6 +307,12 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             RETURN
          ELSEIF   ( ThisArgUC(1:3) == "SUM" )   THEN
             CLFlags%Summary         = .TRUE.
+            RETURN
+         ELSEIF   ( ThisArgUC(1:2) == "VV"  )   THEN
+            CLFlags%VVerbose        = .TRUE.
+            RETURN
+         ELSEIF   ( ThisArgUC(1:1) == "V"   )   THEN
+            CLFlags%Verbose         = .TRUE.
             RETURN
          ELSE
             CALL SetErrStat( ErrID_Warn," Unrecognized option '"//SwChar//TRIM(ThisArg)//"'. Ignoring. Use option "//SwChar//"help for list of options.",  &
@@ -842,7 +850,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       DvrFlags%NumTimeStepsDefault  =  .TRUE.         ! This flag tells us to use the inflow wind file values
    ELSE
          !  We probably have a number if it isn't 'DEFAULT', so do an internal read and check to
-         !  make sure that it was appropriately interpretted.         
+         !  make sure that it was appropriately interpretted.
       READ (NumTimeStepsChr,*,IOSTAT=ErrStatTmp)   DvrSettings%NumTimeSteps
       IF ( ErrStatTmp /= ErrID_None )  THEN  ! problem in the read, so parse the error.
          CALL CheckIOS ( ErrStatTmp, '', 'NumTimeSteps',NumType, .TRUE., ErrMsgTmp )
@@ -852,7 +860,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
          DvrFlags%NumTimeStepsDefault  =  .FALSE.
       ENDIF
    ENDIF
-   
+
 
       ! TStart    -- start time
    CALL ReadVar( UnIn, FileName,DvrSettings%TStart,'TStart',' Time in wind file to start parsing.',   &
@@ -924,7 +932,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       DvrFlags%DTDefault  =  .TRUE.         ! This flag tells us to use the inflow wind file values
    ELSE
          !  We probably have a number if it isn't 'DEFAULT', so do an internal read and check to
-         !  make sure that it was appropriately interpretted.         
+         !  make sure that it was appropriately interpretted.
       READ (DTChr,*,IOSTAT=ErrStatTmp)   DvrSettings%DT
       IF ( ErrStatTmp /= ErrID_None )  THEN  ! problem in the read, so parse the error.
          CALL CheckIOS ( ErrStatTmp, '', 'DT',NumType, .TRUE., ErrMsgTmp )
@@ -934,7 +942,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
          DvrFlags%DTDefault  =  .FALSE.
       ENDIF
    ENDIF
- 
+
 
 
    !-------------------------------------------------------------------------------------------------
@@ -982,8 +990,56 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
         RETURN
       ENDIF
    ENDIF
- 
-      
+
+
+
+   !-------------------------------------------------------------------------------------------------
+   !  points file input
+   !-------------------------------------------------------------------------------------------------
+
+      ! Header line
+   CALL ReadCom( UnIn, FileName,' Points file input, comment line', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
+   IF ( ErrStatTmp /= ErrID_None ) THEN
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   ENDIF
+
+
+      ! PointsFile    -- Read a points file
+   CALL ReadVar( UnIn, FileName,DvrFlags%PointsFile,'PointsFile',' Read a points file?',   &
+      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+   IF ( ErrStatTmp /= ErrID_None ) THEN
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   ENDIF
+
+
+   IF ( DvrFlags%PointsFile ) THEN
+         ! Points input file
+      CALL ReadVar( UnIn, FileName,DvrSettings%PointsFileName,'PointsFileName',' Points file input filename',   &
+         ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+      IF ( ErrStatTmp /= ErrID_None ) THEN
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+         CLOSE( UnIn )
+         RETURN
+      ENDIF
+   ELSE
+         ! Skip the next entry points file section.
+      CALL ReadCom( UnIn, FileName,' Skipping the points filename since not using it.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
+      IF ( ErrStatTmp /= ErrID_None ) THEN
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+         CLOSE( UnIn )
+         RETURN
+      ENDIF
+   ENDIF
+
+
 
    !-------------------------------------------------------------------------------------------------
    !  gridded data output
@@ -1084,7 +1140,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
          RETURN
       ENDIF
    ENDIF
- 
+
       ! Check that valid values of Dx, Dy, and Dz were read in.
       ! Check GridDx
    IF ( EqualRealNos(DvrSettings%GridDelta(1), 0.0_ReKi) ) THEN
@@ -1286,7 +1342,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
       !           given, and XRange is calculated using the specified center point.  From the command line,
       !           Dx, and XRange are specified.
       !           In order for the command line values to be used, we must know which were specified or not
-      !           as it will change the values we use for calculating.  
+      !           as it will change the values we use for calculating.
       !
       !  First, check if WindGrid is set.  If not, set it.
       !
@@ -1307,7 +1363,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
          ! Calculate new Nx.
       DvrSettings%XRange(1)      =  minval(CLSettings%XRange)     ! just in case the order is funky
       DvrSettings%XRange(2)      =  maxval(CLSettings%XRange)
-      
+
          ! Set number of points in X direction
       DvrSettings%GridN(1) =  CEILING( abs( ( DvrSettings%XRange(2) - DvrSettings%XRange(1) ) / DvrSettings%GridDelta(1) ) + 1_IntKi )
 
@@ -1373,7 +1429,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
       !           given, and YRange is calculated using the specified center point.  From the command line,
       !           Dy, and YRange are specified.
       !           In order for the command line values to be used, we must know which were specified or not
-      !           as it will change the values we use for calculating.  
+      !           as it will change the values we use for calculating.
       !
       !  First, check if WindGrid is set.  If not, set it.
       !
@@ -1393,7 +1449,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
          ! Calculate new Ny.
       DvrSettings%YRange(1)      =  minval(CLSettings%YRange)     ! just in case the order is funky
       DvrSettings%YRange(2)      =  maxval(CLSettings%YRange)
-      
+
          ! Set number of points in Y direction
       DvrSettings%GridN(2) =  CEILING( abs( ( DvrSettings%YRange(2) - DvrSettings%YRange(1) ) / DvrSettings%GridDelta(2) ) + 1_IntKi )
 
@@ -1487,7 +1543,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
          ! Calculate new Ny.
       DvrSettings%ZRange(1)      =  minval(CLSettings%ZRange)     ! just in case the order is funky
       DvrSettings%ZRange(2)      =  maxval(CLSettings%ZRange)
-      
+
          ! Set number of points in Y direction
       DvrSettings%GridN(3) =  CEILING( abs( ( DvrSettings%ZRange(2) - DvrSettings%ZRange(1) ) / DvrSettings%GridDelta(3) ) + 1_IntKi )
 
@@ -1572,7 +1628,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
       !--------------------------------------------
       ! Did we change the FFT info?
       !--------------------------------------------
-      
+
    IF ( CLFlags%FFTcalc ) THEN
          !
       IF ( CLSettings%FFTcoord(3) <= 0.0_ReKi ) THEN
@@ -1606,9 +1662,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
       !--------------------------------------------
 
    IF ( CLFlags%PointsFile ) THEN
-         ! If a name was given in the driver input file, then warn the user.  At present
-         ! the driver input file does not support the points file option, but this test will
-         ! remain in case the feature is added later.
+         ! If a name was given in the driver input file, then warn the user.
       IF ( DvrFlags%PointsFile ) THEN
          CALL SetErrStat( ErrID_Warn,' Overriding driver input file settings for Points file.',  &
             ErrStat,ErrMsg,'UpdateSettingsWithCL' )
@@ -2170,6 +2224,7 @@ SUBROUTINE WindGridVel_OutputWrite (FileUnit, FileName, Initialized, Settings, G
    INTEGER(IntKi)                                     :: LenErrMsgTmp         !< Length of ErrMsgTmp (for getting WindGrid info)
 
    CHARACTER(52)                                      :: WindVelFmt           !< Format specifier for the output file for wave elevation series
+   INTEGER(IntKi)                                     :: I                    !< generic counter
 
 
    WindVelFmt = "(F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7)"
@@ -2206,22 +2261,16 @@ SUBROUTINE WindGridVel_OutputWrite (FileUnit, FileName, Initialized, Settings, G
                                                    '            U              V              W'
       WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '#          (m)            (m)            (m) '//  &
                                                    '          (m/s)          (m/s)          (m/s)'
-     
    ELSE
 
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  'FIXME:  THE FILEWRITING FOR WINDGRID HAS NOT BEEN IMPLIMENTED'
-!FIXME: Impliment this part
-!      ! Timestep looping
-!   DO I = 0,HDyn_p%NStepWave
-!      WRITE (WindVelFileUn,'(A)', IOSTAT=ErrStatTmp ) NewLine
-!      WRITE (WindVelFileUn,'(A)', IOSTAT=ErrStatTmp ) '# Time: '//TRIM(Num2LStr(HDyn_p%WaveTime(I)))
-!         ! Now output the X,Y, Elev info for this timestep
-!      DO J=1,SIZE(HDynInitInp%WindVelXY,DIM=2)
-!         WRITE (WindVelFileUn,WindVelFmt, IOSTAT=ErrStatTmp ) HDynInitInp%WindVelXY(1,J),&
-!                  HDynInitInp%WindVelXY(2,J),HDynInitOut%WindVelSeries(I,J)
-!      ENDDO
-!
-!   ENDDO
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp ) NewLine//NewLine
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp ) '# Time: '//TRIM(Num2LStr(TIME))
+
+      DO I = 1,SIZE(GridXYZ,DIM=2)
+
+         WRITE (FileUnit,WindVelFmt, IOSTAT=ErrStatTmp )    GridXYZ(1,I),GridXYZ(2,I),GridXYZ(3,I),GridVel(1,I),GridVel(2,I),GridVel(3,I)
+
+      ENDDO
 
    ENDIF
 
@@ -2244,8 +2293,9 @@ SUBROUTINE PointsVel_OutputWrite (FileUnit, FileName, Initialized, Settings, Gri
    INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary variable for the status of error message
    CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary variable for the error message
    INTEGER(IntKi)                                     :: LenErrMsgTmp         !< Length of ErrMsgTmp (for getting WindGrid info)
+   INTEGER(IntKi)                                     :: I                    !< Generic counter
 
-   CHARACTER(61)                                      :: PointsVelFmt           !< Format specifier for the output file for wave elevation series
+   CHARACTER(61)                                      :: PointsVelFmt         !< Format specifier for the output file for wave elevation series
 
 
    PointsVelFmt = "(F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7)"
@@ -2273,25 +2323,17 @@ SUBROUTINE PointsVel_OutputWrite (FileUnit, FileName, Initialized, Settings, Gri
                                                    TRIM(Num2LStr(SIZE(GridXYZ,DIM=2)))//' points specified in the '// &
                                                    'file '//TRIM(Settings%PointsFileName)//'.'
       WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '#           T              X              Y              Z  '//  &
-                                                   '            U              V              W'
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '#          (s)            (m)            (m)            (m) '//  &
-                                                   '          (m/s)          (m/s)          (m/s)'
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '#        T                X                Y                Z       '//  &
+                                                   '         U                V                W'
+      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  '#       (s)              (m)              (m)              (m)      '//  &
+                                                   '       (m/s)            (m/s)            (m/s)'
    ELSE
 
-      WRITE (FileUnit,'(A)', IOSTAT=ErrStatTmp  )  'FIXME:  THE FILEWRITING FOR POINTS HAS NOT BEEN IMPLIMENTED'
-!FIXME: Impliment this part
-!      ! Timestep looping
-!   DO I = 0,HDyn_p%NStepWave
-!      WRITE (PointsVelFileUn,'(A)', IOSTAT=ErrStatTmp ) NewLine
-!      WRITE (PointsVelFileUn,'(A)', IOSTAT=ErrStatTmp ) '# Time: '//TRIM(Num2LStr(HDyn_p%WaveTime(I)))
-!         ! Now output the X,Y, Elev info for this timestep
-!      DO J=1,SIZE(HDynInitInp%PointsVelXY,DIM=2)
-!         WRITE (PointsVelFileUn,PointsVelFmt, IOSTAT=ErrStatTmp ) HDynInitInp%PointsVelXY(1,J),&
-!                  HDynInitInp%PointsVelXY(2,J),HDynInitOut%PointsVelSeries(I,J)
-!      ENDDO
-!
-!   ENDDO
+      DO I = 1,SIZE(GridXYZ,DIM=2)
+
+         WRITE (FileUnit,PointsVelFmt, IOSTAT=ErrStatTmp )    TIME,GridXYZ(1,I),GridXYZ(2,I),GridXYZ(3,I),GridVel(1,I),GridVel(2,I),GridVel(3,I)
+
+      ENDDO
 
    ENDIF
 

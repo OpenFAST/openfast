@@ -68,6 +68,8 @@ MODULE InflowWind_Driver_Types
       LOGICAL                 :: WindGridOutputInit   = .FALSE.      !< Is the WindGridOut file initialized
       LOGICAL                 :: PointsOutputInit     = .FALSE.      !< Is the Points output file initialized
       LOGICAL                 :: FFTOutputInit        = .FALSE.      !< Is the FFT output file initialized
+      LOGICAL                 :: Verbose              = .FALSE.      !< Verbose error reporting
+      LOGICAL                 :: VVerbose             = .FALSE.      !< Very Verbose error reporting
    END TYPE    IfWDriver_Flags
 
 
