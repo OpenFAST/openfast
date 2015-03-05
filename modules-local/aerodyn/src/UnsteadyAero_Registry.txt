@@ -24,24 +24,24 @@ usefrom   AirfoilInfo_Registry.txt
 # Define inputs that the initialization routine may need here:
 #   e.g.,  the name of the input file,  the file root name,etc.
 #
-typedef   UnsteadyAero/UnsteadyAero    InitInputType                 DbKi                     dt                              -             -         -        "time step" s
+typedef   UnsteadyAero/UA              InitInputType                 DbKi                     dt                              -             -         -        "time step" s
 typedef   ^                            ^                             CHARACTER(1024)          OutRootName                     -             -         -        "Supplied by Driver:  The name of the root file (without extension) including the full path"    -
 typedef   ^                            ^                             ReKi                     c                               {:}{:}        -         -        "Chord length at node" m
 typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number nodes of all blades"    -
-typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes of all blades"    -
-typedef   ^                            ^                             INTEGER                  DSMod                           -             -         -        "Model for the dynamic stall equations"    -
+typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes per blades"    -
+typedef   ^                            ^                             INTEGER                  DSMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
 typedef   ^                            ^                             ReKi                     a_s                             -             -         -        "speed of sound"        m/s
-typedef    ^                            ^                            INTEGER                  AFIndx                          {:}{:}        -         -        "" -
-typedef   ^                            ^                             AFI_ParameterType        AFI_Params                      -             -         -        "" -
+typedef   ^                            ^                             INTEGER                  AFIndx                          {:}{:}        -         -        "Airfoil index for given blade node" -
+typedef   ^                            ^                             AFI_ParameterType        AFI_Params                      -             -         -        "Airfoil Info parameter data structure" -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -             -         -        "Output format for numerical results"    -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -             -         -        "Output format for header strings"    -
 typedef   ^                            ^                             INTEGER                  NumOuts                         -             -         -        "The number of outputs for this module as requested in the input file"    -
-typedef   ^                            ^                             CHARACTER(10)            OutList                         {199}         -         -        "The user-requested output channel labels for this modules. This should really be dimensioned with MaxOutPts"    -
+typedef   ^                            ^                             CHARACTER(10)            OutList                         {199}         -         -        "The user-requested output channel labels for this module. This should really be dimensioned with MaxOutPts"    -
 #                                                                                                                                         
 #                                                                                                                                         
 # Define outputs from the initialization routine here:                                                                                    
 #                                                                                                                                         
-typedef   ^                            InitOutputType                ProgDesc                 Version                         -             -         -        ""    -
+typedef   ^                            InitOutputType                ProgDesc                 Version                         -             -         -        "Version structure" -
 typedef   ^                            InitOutputType                CHARACTER(10)            WriteOutputHdr                  {:}           -         -        "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
 typedef   ^                            ^                             CHARACTER(10)            WriteOutputUnt                  {:}           -         -        "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
 #
@@ -54,23 +54,25 @@ typedef   ^                            ContinuousStateType           ReKi       
 #
 # Define discrete (non-differentiable) states here:
 #
-typedef   ^                            DiscreteStateType             ReKi                     alpha_minus1                    {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     alpha_minus2                    {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     q_minus1                        {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     q_minus2                        {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     X1_minus1                       {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     X2_minus1                       {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     Kprime_alpha_minus1             {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     Kprime_q_minus1                 {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     Dp_minus1                       {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     Cn_pot_minus1                   {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     T_f                             {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     fprimeprime_minus1              {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     Df_minus1                       {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     fprime_minus1                   {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     tau_V                           {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     Cn_v_minus1                     {:}{:}        -         -        ""        -
-typedef   ^                            DiscreteStateType             ReKi                     C_V_minus1                      {:}{:}        -         -        ""        -
+typedef   ^                            DiscreteStateType             ReKi                     alpha_minus1                    {:}{:}        -         -        "angle of attack, previous time step"      rad
+typedef   ^                            DiscreteStateType             ReKi                     alpha_minus2                    {:}{:}        -         -        "angle of attack, two time steps ago"      rad
+typedef   ^                            DiscreteStateType             ReKi                     q_minus1                        {:}{:}        -         -        "non-dimensional pitching rate, previous time step"        -
+typedef   ^                            DiscreteStateType             ReKi                     q_minus2                        {:}{:}        -         -        "non-dimensional pitching rate, two time steps ago"        -
+typedef   ^                            DiscreteStateType             ReKi                     X1_minus1                       {:}{:}        -         -        "deficiency function used in the development of Cn_alpha_q__circ, previous time step" rad       
+typedef   ^                            DiscreteStateType             ReKi                     X2_minus1                       {:}{:}        -         -        "deficiency function used in the development of Cn_alpha_q__circ, previous time step" rad
+typedef   ^                            DiscreteStateType             ReKi                     Kprime_alpha_minus1             {:}{:}        -         -        "deficiency function used in the development of Cn_alpha_nc, previous time step"    rad/s
+typedef   ^                            DiscreteStateType             ReKi                     Kprime_q_minus1                 {:}{:}        -         -        "deficiency function used in the development of Cn_q_nc, previous time step"  rad/s^2   
+typedef   ^                            DiscreteStateType             ReKi                     Kprimeprime_q_minus1            {:}{:}        -         -        "deficiency function used in the development of Cm_q_nc, previous time step"       rad/s^2
+typedef   ^                            DiscreteStateType             ReKi                     K3prime_q_minus1                {:}{:}        -         -        "deficiency function used in the development of Cm_q_circ, previous time step"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     Dp_minus1                       {:}{:}        -         -        "deficiency function used in the development of Cm_q_circ, previous time step"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     Cn_pot_minus1                   {:}{:}        -         -        "deficiency function used in the development of Cn_prime"        -                                  
+typedef   ^                            DiscreteStateType             ReKi                     fprimeprime_minus1              {:}{:}        -         -        "lagged version of fprime, accounting for unsteady boundary layer response, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     Df_minus1                       {:}{:}        -         -        "deficiency function used in the development of fprime, previous time step"       rad/s
+typedef   ^                            DiscreteStateType             ReKi                     fprime_minus1                   {:}{:}        -         -        "separation point distance from leading edge, expressed in cord fraction, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     tau_V                           {:}{:}        -         -        "time variable, tracking the travel of the LE vortex over the airfoil suction surface"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     Cn_v_minus1                     {:}{:}        -         -        "normal force coefficient due to the presence of LE vortex, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     C_V_minus1                      {:}{:}        -         -        "contribution to the normal force coefficient due to accumulated vorticity in the LE vortex, previous time step"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     Dfalpha_minus1                  {:}{:}        -         -        "deficiency function used in the development of alpha_f_prime, previous time step"       rad
 #
 #
 # Define constraint states here:
@@ -80,12 +82,12 @@ typedef   ^                            ConstraintStateType           ReKi       
 # Define any data that are not considered actual states here:
 #   e.g. data used only for efficiency purposes (indices for searching in an array,  copies of previous calculations of output at a given time, etc.)
 #
-typedef   ^                            OtherStateType                ReKi                     sigma1                          {:}{:}        -         -        ""   -
-typedef   ^                            OtherStateType                ReKi                     sigma3                          {:}{:}        -         -        ""   -
-typedef   ^                            OtherStateType                LOGICAL                  TESF                            {:}{:}        -         -        ""   -
-typedef   ^                            OtherStateType                LOGICAL                  LESF                            {:}{:}        -         -        ""   -
-typedef   ^                            OtherStateType                LOGICAL                  VRTX                            {:}{:}        -         -        ""   -
-typedef   ^                            OtherStateType                LOGICAL                  FirstPass                       -             -         -        ""   -
+typedef   ^                            OtherStateType                ReKi                     sigma1                          {:}{:}        -         -        "multiplier for T_f"   -
+typedef   ^                            OtherStateType                ReKi                     sigma3                          {:}{:}        -         -        "multiplier for T_V"   -
+typedef   ^                            OtherStateType                LOGICAL                  TESF                            {:}{:}        -         -        "logical flag indicating if trailing edge separation is possible"   -
+typedef   ^                            OtherStateType                LOGICAL                  LESF                            {:}{:}        -         -        "logical flag indicating if leading edge separation is possible"   -
+typedef   ^                            OtherStateType                LOGICAL                  VRTX                            {:}{:}        -         -        "logical flag indicating if a vortex is being processed"   -
+typedef   ^                            OtherStateType                LOGICAL                  FirstPass                       -             -         -        "logical flag indicating if this is the first time step"   -
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
@@ -93,33 +95,33 @@ typedef   ^                            OtherStateType                LOGICAL    
 typedef   ^                            ParameterType                 DbKi                     dt                              -             -         -        "time step" s
 typedef   ^                            ^                             ReKi                     c                               {:}{:}        -         -        "Chord length at node" m
 typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number nodes of all blades"    -
-typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes of all blades"    -
-typedef   ^                            ^                             INTEGER                  DSMod                           -             -         -        ""    -
+typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes per blades"    -
+typedef   ^                            ^                             INTEGER                  DSMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
 typedef   ^                            ^                             ReKi                     a_s                             -             -         -        "speed of sound"        m/s
-typedef   ^                            ^                             INTEGER                  AFIndx                          {:}{:}        -         -        "" -
-typedef   ^                            ^                             AFI_ParameterType        AFI_Params                      -             -         -        "Parameters for the airfoils"
-typedef   ^                            ^                             INTEGER                  NumOuts                         -             -         -        "Number of HydroDyn module-level outputs (not the total number including sub-modules"        -
-typedef   ^                            ^                             INTEGER                  OutSwtch                        -             -         -        "Output requested channels to: [1=Hydrodyn.out 2=GlueCode.out  3=both files]"    -
+typedef   ^                            ^                             INTEGER                  AFIndx                          {:}{:}        -         -        "Airfoil index for given blade node" -
+typedef   ^                            ^                             AFI_ParameterType        AFI_Params                      -             -         -        "Airfoil Info parameter data structure" -
+typedef   ^                            ^                             INTEGER                  NumOuts                         -             -         -        "Number of outputs"        -
+typedef   ^                            ^                             INTEGER                  OutSwtch                        -             -         -        "Output requested channels to: [1=Unsteady.out 2=GlueCode.out  3=both files]"    -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -             -         -        "Output format for numerical results"    -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -             -         -        "Output format for header strings"    -
 typedef   ^                            ^                             CHARACTER(10)            Delim                           -             -         -        "Delimiter string for outputs, defaults to tab-delimiters"        -
-typedef   ^                            ^                             INTEGER                  UnOutFile                       -             -         -        "File unit for the HydroDyn outputs"        -
+typedef   ^                            ^                             INTEGER                  UnOutFile                       -             -         -        "File unit for the UnsteadyAero outputs"        -
 #
 
 #
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 #
-typedef   ^                            InputType                     ReKi                     U                               {:}{:}    -         -            "" m/s
-typedef   ^                            ^                             ReKi                     Re                              {:}{:}    -         -            "" -
-typedef   ^                            ^                             ReKi                     alpha                           {:}{:}    -         -            "" rad
+typedef   ^                            InputType                     ReKi                     U                               -         -         -            "air velocity magnitude relative to the airfoil" m/s
+typedef   ^                            ^                             ReKi                     Re                              -         -         -            "Reynolds number" -
+typedef   ^                            ^                             ReKi                     alpha                           -         -         -            "angle of attack" rad
 #                                                                                                                                                             
 # ..... Outputs ...................................................................................................................                           
 # Define outputs that are contained on the mesh here:                                                                                                         
-typedef   ^                            OutputType                    ReKi                     Cn                              {:}{:}    -         -            "" -
-typedef   ^                            OutputType                    ReKi                     Cc                              {:}{:}    -         -            "" -
-typedef   ^                            OutputType                    ReKi                     Cm                              {:}{:}    -         -            "" -
-typedef   ^                            OutputType                    ReKi                     Cl                              {:}{:}    -         -            "" -
-typedef   ^                            OutputType                    ReKi                     Cd                              {:}{:}    -         -            "" -
-typedef   ^                            ^                             ReKi                     WriteOutput                     {:}       -         -            ""  -
+typedef   ^                            OutputType                    ReKi                     Cn                              -         -         -            "2D, normal to chord, force coefficient" -
+typedef   ^                            OutputType                    ReKi                     Cc                              -         -         -            "2D, tangent to chord, force coefficient" 
+typedef   ^                            OutputType                    ReKi                     Cm                              -         -         -            "2D pitching moment coefficient about the 1/4 chord, positive when nose is up"
+typedef   ^                            OutputType                    ReKi                     Cl                              -         -         -            "2D lift coefficient" -
+typedef   ^                            OutputType                    ReKi                     Cd                              -         -         -            "2D drag coefficient" -
+typedef   ^                            ^                             ReKi                     WriteOutput                     {:}       -         -            "outputs to be written to a file"  -
 

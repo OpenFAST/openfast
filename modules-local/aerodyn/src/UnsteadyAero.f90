@@ -1,40 +1,41 @@
 module UnsteadyAero
-use NWTC_Library   
-use UnsteadyAero_Types
-use AirfoilInfo
-implicit none 
+   
+   use NWTC_Library   
+   use UnsteadyAero_Types
+   use AirfoilInfo
+   
+   implicit none 
 
 private
 
-!INTEGER, PARAMETER              :: R8Ki     = SELECTED_REAL_KIND( 14, 300 )     ! Kind for eight-byte floating-point numbers
-!INTEGER, PARAMETER              :: SiKi     = SELECTED_REAL_KIND(  6,  30 )     ! Kind for four-byte, floating-point numbers
-!INTEGER, PARAMETER              :: ReKi     = SiKi                              ! Default kind for floating-point numbers
-!INTEGER, PARAMETER              :: DbKi     = R8Ki                              ! Default kind for double floating-point numbers
+
+   public :: UnsteadyAero_Init
+   public :: UnsteadyAero_UpdateDiscState
+   public :: UnsteadyAero_UpdateStates
+   public :: UnsteadyAero_CalcOutput
 
 
-public :: UnsteadyAero_Init
-public :: UnsteadyAero_UpdateDiscState
-public :: UnsteadyAero_UpdateStates
-public :: UnsteadyAero_CalcOutput
+contains
 
-
-   contains
-
+!==============================================================================   
+subroutine GetSteadyOutputs(AFInfo, AOA, Re, Cl, Cd, Cm, ErrStat, ErrMsg)
+! Called by : UnsteadyAero_CalcOutput
+! Calls  to : CubicSplineInterpM   
+!..............................................................................
+   type(AFInfoType), intent(in   ) :: AFInfo                ! Airfoil info structure 
+   real(ReKi),       intent(in   ) :: AOA                   ! Angle of attack (rad)
+   real(ReKi),       intent(in   ) :: Re                    ! Reynolds number in millions
+   real(ReKi),       intent(  out) :: Cl                    ! Coefficient of lift (-)
+   real(ReKi),       intent(  out) :: Cd                    ! Coefficient of drag (-)
+   real(ReKi),       intent(  out) :: Cm                    ! Pitch moment coefficient (-)
+   integer(IntKi),   intent(  out) :: ErrStat               ! Error status of the operation
+   character(*),     intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
    
-subroutine GetSteadyOutputs(AFInfo, AOA, Re, Cl, Cd, ErrStat, ErrMsg)
-   
-      type(AFInfoType), intent(in   ) :: AFInfo
-      real(ReKi),       intent(in   ) :: AOA
-      real(ReKi),       intent(in   ) :: Re
-      real(ReKi),       intent(  out) :: Cl
-      real(ReKi),       intent(  out) :: Cd
-      integer(IntKi),   intent(  out) :: ErrStat     ! Error status of the operation
-      character(*),     intent(  out) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   
-      real                            :: IntAFCoefs(4)                ! The interpolated airfoil coefficients.
-      integer                         :: s1
-      ErrStat = ErrID_None
-      ErrMsg  = ''
+   real                            :: IntAFCoefs(4)         ! The interpolated airfoil coefficients.
+   integer                         :: s1                    ! Number of columns in the AFInfo structure
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+      ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
    
       ! TODO: Extend this to use the UnsteadyAero module to determine the Cl, Cd, Cm info, as needed.  We may need to be tracking whether this call is
       ! part of an UpdateStates action or a CalcOutput action, because the calculation chain differs for the two.
@@ -43,141 +44,126 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Re, Cl, Cd, ErrStat, ErrMsg)
       ! NOTE: we use Table(1) because the right now we can only interpolate with AOA and not Re or other variables.  If we had multiple tables stored
       ! for changes in other variables (Re, Mach #, etc) then then we would need to interpolate across tables.
       !
-      s1 = size(AFInfo%Table(1)%Coefs,2)
+   s1 = size(AFInfo%Table(1)%Coefs,2)
+   if (s1 < 3) then
+      ErrMsg  = 'The Airfoil info table must contains columns for lift, drag, and pitching moment'
+      ErrStat = ErrID_Fatal
+      return
+   end if
+      
+   IntAFCoefs(1:s1) = CubicSplineInterpM( 1.0*real( AOA ) &
+                                             , AFInfo%Table(1)%Alpha &
+                                             , AFInfo%Table(1)%Coefs &
+                                             , AFInfo%Table(1)%SplineCoefs &
+                                             , ErrStat, ErrMsg )
+   if (ErrStat > ErrID_None) return
+      
+   Cl = IntAFCoefs(1)
+   Cd = IntAFCoefs(2)
+   Cm = IntAFCoefs(3)
    
-      IntAFCoefs(1:s1) = CubicSplineInterpM( 1.0*real( AOA ) &
-                                              , AFInfo%Table(1)%Alpha &
-                                              , AFInfo%Table(1)%Coefs &
-                                              , AFInfo%Table(1)%SplineCoefs &
-                                              , ErrStat, ErrMsg )
-   
-      Cl = IntAFCoefs(1)
-      Cd = IntAFCoefs(2)
-   
-   end subroutine GetSteadyOutputs
-real(ReKi) function Get_ds( U, c, dt )
-   ! Called by : Get_Alpha_e, UnsteadyAero_UpdateStates
-   ! Calls  to : NONE
-   real(ReKi), intent(in   ) :: U
-   real(ReKi), intent(in   ) :: c
-   real(DbKi), intent(in   ) :: dt
-   Get_ds = 2.0_ReKi*U*dt/c
-end function Get_ds
+end subroutine GetSteadyOutputs
+!==============================================================================
 
-real(ReKi) function Get_Kupper( dt, x, x_minus1 )
-   real(DbKi), intent(in   ) :: dt
-   real(ReKi), intent(in   ) :: x
-   real(ReKi), intent(in   ) :: x_minus1
+!==============================================================================
+real(ReKi) function Get_ds( U, c, dt )
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
+   real(ReKi), intent(in   ) :: U       ! air velocity magnitude relative to the airfoil (m/s)
+   real(ReKi), intent(in   ) :: c       ! cord length (m)
+   real(DbKi), intent(in   ) :: dt      ! time step length (s)
    
+   Get_ds = 2.0_ReKi*U*dt/c
+   
+end function Get_ds
+!==============================================================================   
+
+!==============================================================================
+real(ReKi) function Get_Kupper( dt, x, x_minus1 )
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
+   real(DbKi), intent(in   ) :: dt          ! time step length (s)
+   real(ReKi), intent(in   ) :: x           ! quantity at current timestep
+   real(ReKi), intent(in   ) :: x_minus1    ! quantity at previous timestep
+   
+      ! Implements eqn 1.18b or 1.19b
    Get_Kupper = (x - x_minus1) / dt
    
 end function Get_Kupper
+!==============================================================================   
 
-real(ReKi) function Get_X(ds, betaSqrd, b, A, alpha, alpha_minus1, X_minus1 )
-   real(ReKi), intent(in   ) :: ds
-   real(ReKi), intent(in   ) :: betaSqrd
-   real(ReKi), intent(in   ) :: b
-   real(ReKi), intent(in   ) :: A
-   real(ReKi), intent(in   ) :: alpha
-   real(ReKi), intent(in   ) :: alpha_minus1
-   real(ReKi), intent(in   ) :: X_minus1
-   
-   Get_X = X_minus1 * exp(-b*betaSqrd*ds) + A*exp(-0.5_ReKi*b*betaSqrd*ds)*(alpha - alpha_minus1)
-
-end function Get_X
-
+!==============================================================================
 real(ReKi) function Get_Beta_M( M ) 
-   ! Called by : NONE
-   ! Calls  to : NONE
-   real(ReKi), intent(in   ) :: M
-   Get_Beta_M = sqrt(1 - M**2)
-end function Get_Beta_M
-
-real(ReKi) function Get_Beta_M_Sqrd( M ) 
-   ! Called by :  UnsteadyAero_UpdateStates
-   ! Calls  to : NONE
-   real(ReKi), intent(in   ) :: M
-   Get_Beta_M_Sqrd = 1 - M**2
-end function Get_Beta_M_Sqrd
-
-real(ReKi) function Get_k_( M, beta, C_nalpha          )
-   ! Called by : UnsteadyAero_UpdateStates
-   ! Calls  to : NONE
-   real(ReKi), intent(in   ) :: M                               ! Mach number
-   real(ReKi), intent(in   ) :: beta
-   real(ReKi), intent(in   ) :: C_nalpha                        !  
+! Compute the Prandlt-Glauert compressibility correction factor
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
+   real(ReKi), intent(in   ) :: M   ! Mach number (-)
    
-   ! Implements equation 1.11
-   Get_k_   = 1.0_ReKi / ( (1.0_ReKi - M) + C_nalpha * M**2 * beta *  0.413_ReKi  )
+   Get_Beta_M = sqrt(1 - M**2)
+   
+end function Get_Beta_M
+!==============================================================================   
+
+!==============================================================================
+real(ReKi) function Get_Beta_M_Sqrd( M ) 
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
+
+   real(ReKi), intent(in   ) :: M   ! Mach number (-)
+   
+   Get_Beta_M_Sqrd = 1 - M**2
+   
+end function Get_Beta_M_Sqrd
+!==============================================================================   
+
+!==============================================================================
+real(ReKi) function Get_k_( M, beta_M, C_nalpha          )
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
+
+   real(ReKi), intent(in   ) :: M               ! Mach number
+   real(ReKi), intent(in   ) :: beta_M          ! Prandtl-Glauert compressibility correction factor,  sqrt(1-M**2)
+   real(ReKi), intent(in   ) :: C_nalpha        ! slope of the 2D pitching moment curve 
+   
+      ! Implements equation 1.11a/b
+   Get_k_   = 1.0_ReKi / ( (1.0_ReKi - M) + C_nalpha * M**2 * beta_M *  0.413_ReKi  )
    
 end function Get_k_
+!==============================================================================   
 
+!==============================================================================
 real(ReKi) function Get_ExpEqn( dt, T, Y_minus1, x, x_minus1 )
-   real(ReKi), intent(in   ) :: dt
-   real(ReKi), intent(in   ) :: T
-   real(ReKi), intent(in   ) :: Y_minus1
-   real(ReKi), intent(in   ) :: x
-   real(ReKi), intent(in   ) :: x_minus1
+! Compute the deficiency function
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
+
+   real(ReKi), intent(in   ) :: dt                              ! numerator of the exponent
+   real(ReKi), intent(in   ) :: T                               ! denominator of the exponent
+   real(ReKi), intent(in   ) :: Y_minus1                        ! previous value of the computed decay function
+   real(ReKi), intent(in   ) :: x                               ! current value of x
+   real(ReKi), intent(in   ) :: x_minus1                        ! previous value of x
    
    Get_ExpEqn = Y_minus1*exp(-dt/T) + (x - x_minus1)*exp(-0.5_ReKi*dt/T)
 
 end function Get_ExpEqn
+!==============================================================================   
 
-
-real(ReKi) function Get_T_Alpha( M, a_s, c, C_nalpha, k_alpha ) 
-   ! Called by : UnsteadyAero_UpdateStates
-   ! Calls  to : NONE
-
-   real(ReKi), intent(in   ) :: M                               ! Mach number
-   real(ReKi), intent(in   ) :: a_s                             ! speed of sound (m/s)
-   real(ReKi), intent(in   ) :: c                               ! chord length (m)
-   real(ReKi), intent(in   ) :: C_nalpha                        ! 
-   real(ReKi), intent(in   ) :: k_alpha
-   
-
-   real(ReKi)                :: T_I
-   
-   ! Implements equation 1.10a
-   
-   T_I           = c / a_s
-   Get_T_Alpha   = 0.75*k_alpha * T_I
-   
-end function Get_T_Alpha   
-
-
-real(ReKi) function Get_T_q(M, beta_M_sqrd, T_I, a_s, c, C_nalpha) 
-   ! Called by : UnsteadyAero_UpdateStates
-   ! Calls  to : NONE
-
-   real(ReKi), intent(in   ) :: M                               ! Mach number
-   real(ReKi), intent(in   ) :: beta_M_sqrd
-   real(ReKi), intent(in   ) :: a_s                             ! speed of sound (m/s)
-   real(ReKi), intent(in   ) :: c                               ! chord length (m)
-   real(ReKi), intent(in   ) :: C_nalpha                        ! 
-   
-   
-   real(ReKi)                :: k_q
-   real(ReKi)                :: T_I
-   
-   ! Implements equation 1.10b
-   
-   
-   k_q           = 1.0_ReKi / ( (1.0_ReKi - M) + C_nalpha * M**2 * beta_M_sqrd *  0.413_ReKi  )
-   T_I           = c / a_s
-   Get_T_q       = k_q * T_I
-   
-end function Get_T_q   
-
-
-   
+!==============================================================================  
 real(ReKi) function Get_Pitchrate( dt, alpha_cur, alpha_minus1, U, c )
-   ! this is the non-dimensional pitching rate, given as q in the documentation: equation 1.8
-   !
-   ! Called by : UnsteadyAero_UpdateStates
-   ! Calls  to : NONE
-   real(DbKi), intent(in   ) :: dt
-   real(ReKi), intent(in   ) :: alpha_cur                         ! angle of attack, current timestep  (radians)
-   real(ReKi), intent(in   ) :: alpha_minus1                        ! angle of attack, previous timestep  (radians)
+! This is the non-dimensional pitching rate, given as q in the documentation: equation 1.8  
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
+
+   real(DbKi), intent(in   ) :: dt                              ! time step length (s)
+   real(ReKi), intent(in   ) :: alpha_cur                       ! angle of attack, current timestep  (radians)
+   real(ReKi), intent(in   ) :: alpha_minus1                    ! angle of attack, previous timestep  (radians)
    real(ReKi), intent(in   ) :: U                               ! air velocity magnitude relative to the airfoil (m/s)
    real(ReKi), intent(in   ) :: c                               ! chord length (m)
 
@@ -185,158 +171,103 @@ real(ReKi) function Get_Pitchrate( dt, alpha_cur, alpha_minus1, U, c )
    Get_Pitchrate = ( alpha_cur - alpha_minus1 ) * c / (U*dt)  
    
 end function Get_Pitchrate
+!==============================================================================   
 
+!==============================================================================
 real(ReKi) function Get_Cn_nc( M, T, K, Kprime )
+!  Compute either Cn_alpha_nc or Cn_q_nc
+!  Eqn 1.18a or 1.19a
+!  Called by : ComputeKelvinChain
+!  Calls  to : NONE
+!..............................................................................
 
-   ! Called by : UnsteadyAero_UpdateStates
-   ! Calls  to : NONE
-   real(ReKi)                :: M
-   real(ReKi), intent(in   ) :: T                               ! mach-dependent time constant related to alpha and non-circulatory terms (???)
-   real(ReKi)                :: K
-   real(ReKi)                :: Kprime
+   real(ReKi)                :: M              ! mach number
+   real(ReKi), intent(in   ) :: T              ! mach-dependent time constant related to alpha and non-circulatory terms (???)
+   real(ReKi)                :: K              ! Either K_alpha or K_q, backward finite difference of either alpha or q
+   real(ReKi)                :: Kprime         ! Either Kprime_alpha or Kprime_q, deficiency functions
    
-   ! Implements equation 1.xx
-   
+      ! Implements equation 1.18a or 1.19a  
    Get_Cn_nc =  T * ( K - Kprime ) / M
    
 end function Get_Cn_nc 
+!==============================================================================   
 
-real(ReKi) function Get_Cn_q_nc( T_q, q_cur, q_minus1, q_minus2, Kprima_q_minus1, dt )
-   ! Called by : Get_Cn_Alpha_q_nc
-   ! Calls  to : NONE
-   real(ReKi), intent(in   ) :: T_q                             ! mach-dependent time constant related to alpha and non-circulatory terms (???)
-   real(ReKi), intent(in   ) :: q_cur                           ! non-dimensional pitching rate, current timestep   (radians)
-   real(ReKi), intent(in   ) :: q_minus1                          ! non-dimensional pitching rate, previous timestep  (radians)
-   real(ReKi), intent(in   ) :: q_minus2                        ! non-dimensional pitching rate, two timesteps ago  (radians)
-   real(ReKi), intent(in   ) :: Kprima_q_minus1
-   real(DbKi), intent(in   ) :: dt                              ! time between simulation steps [note, the same dt is assumed between all q values] (sec)
+!==============================================================================
+real(ReKi) function Get_Cm_q_circ( C_nalpha, beta_M, q_cur, K3prime_q, c, U )
+! Implements eqn 1.21
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
+
+   real(ReKi), intent(in   ) :: C_nalpha                       ! slope of the 2D pitching moment curve     
+   real(ReKi), intent(in   ) :: beta_M                         ! Prandtl-Glauert compressibility correction factor,  sqrt(1-M**2) 
+   real(ReKi), intent(in   ) :: q_cur                          ! non-dimensional pitching rate, current timestep   
+   real(ReKi), intent(in   ) :: K3prime_q                      ! deficiency function
+   real(ReKi), intent(in   ) :: c                              ! chord length (m)   
+   real(ReKi), intent(in   ) :: U                              ! air velocity magnitude relative to the airfoil (m/s)
+
+   Get_Cm_q_circ = -C_nalpha*(q_cur -K3prime_q)*c/(16.0*beta_M*U)  ! TODO: Check units
    
-   real(ReKi)                :: K_q
-   real(ReKi)                :: K_q_minus1
-   real(ReKi)                :: Kprime_q
+end function Get_Cm_q_circ
+!==============================================================================   
+
+!==============================================================================
+real(ReKi) function Get_Cm_q_nc( M, k_mq, T_I, Kq, Kprimeprime_q )
+! Called by : ComputeKelvinChain
+! Calls  to : NONE   
+!..............................................................................
+
+   real(ReKi), intent(in   ) :: M                     ! Mach number
+   real(ReKi), intent(in   ) :: k_mq                  ! airfoil parameter                     
+   real(ReKi), intent(in   ) :: T_I                   ! time constant        
+   real(ReKi), intent(in   ) :: Kq                    ! backward finite difference of q    
+   real(ReKi), intent(in   ) :: Kprimeprime_q         ! deficiency function             
+    
+   ! Implements eqn 1.25a
+   Get_Cm_q_nc = -7*(k_mq**2)*T_I*(Kq-Kprimeprime_q)/(12.0*M)
    
-   ! Implements equation 1.19
-   K_q         = ( q_cur  - q_minus1   ) / dt
-   K_q_minus1    = ( q_minus1 - q_minus2 ) / dt
-   Kprime_q    = Kprima_q_minus1 * exp( -dt/T_q ) + ( K_q - K_q_minus1 ) *  exp( -dt / ( 2.0_ReKi*T_q ) )
-   Get_Cn_q_nc = 4 * T_q * ( K_q - Kprime_q )
-   
-end function Get_Cn_q_nc 
+end function Get_Cm_q_nc
+!==============================================================================   
 
-!real(ReKi) function Get_Cn_Alpha_q_nc( T_alpha, alpha_cur, alpha_minus1, alpha_minus2, Kprime_alpha_minus1, Kprime_q_minus1, T_q, q_cur, q_minus1, q_minus2, dt )
-!   ! Called by : Get_Cn_pot, Get_Cn
-!   ! Calls  to : Get_Cn_Alpha_nc, Get_Cn_q_nc
-!   real(ReKi), intent(in   ) :: T_alpha                         ! mach-dependent time constant related to alpha and non-circulatory terms (???)
-!   real(ReKi), intent(in   ) :: alpha_cur                         ! angle of attack, current timestep   (radians)
-!   real(ReKi), intent(in   ) :: alpha_minus1                        ! angle of attack, previous timestep  (radians)
-!   real(ReKi), intent(in   ) :: alpha_minus2                      ! angle of attack, two timesteps ago  (radians)
-!   real(ReKi), intent(in   ) :: Kprime_alpha_minus1
-!   real(ReKi), intent(in   ) :: Kprime_q_minus1
-!   real(ReKi), intent(in   ) :: T_q                             ! mach-dependent time constant related to alpha and non-circulatory terms (???)
-!   real(ReKi), intent(in   ) :: q_cur                           ! non-dimensional pitching rate, current timestep   (radians)
-!   real(ReKi), intent(in   ) :: q_minus1                          ! non-dimensional pitching rate, previous timestep  (radians)
-!   real(ReKi), intent(in   ) :: q_minus2                        ! non-dimensional pitching rate, two timesteps ago  (radians)
-!   real(DbKi), intent(in   ) :: dt                              ! time between simulation steps [note, the same dt is assumed between all q values] (sec)
-!   
-!   ! Implements equation 1.17
-!   Get_Cn_Alpha_q_nc = Get_Cn_Alpha_nc( T_alpha, alpha_cur, alpha_minus1, alpha_minus2, Kprime_alpha_minus1, dt ) + Get_Cn_q_nc( T_q, q_cur, q_minus1, q_minus2, Kprime_q_minus1, dt )
-!
-!end function Get_Cn_Alpha_q_nc
-
-
-
+!==============================================================================
 real(ReKi) function Get_alpha_e( alpha, alpha0, X1, X2 )
-   ! Called by : Get_Cn_alpha_q_circ
-   ! Calls  to : NONE
-   ! Implements equation 1.14
-   real(ReKi), intent(in   ) :: alpha
-   real(ReKi), intent(in   ) :: alpha0
-   real(ReKi), intent(in   ) :: X1
-   real(ReKi), intent(in   ) :: X2
+! Called by : ComputeKelvinChain
+! Calls  to : NONE   
+!..............................................................................
    
+   real(ReKi), intent(in   ) :: alpha          ! angle of attack (radians)
+   real(ReKi), intent(in   ) :: alpha0         ! zero lift angle of attack (radians)
+   real(ReKi), intent(in   ) :: X1             ! deficiency function 
+   real(ReKi), intent(in   ) :: X2             ! deficiency function 
+   
+   ! Implements equation 1.14
    Get_Alpha_e   = (alpha - alpha0) - X1 - X2
    
 end function Get_Alpha_e
-   
-!real(ReKi) function Get_Cn_alpha_q_circ( dt, ds, U, M, beta_M_sqrd, c, C_nalpha_circ, alpha_cur, alpha_minus1, alpha0, X_1_minus1, X_2_minus1, b1, b2, A1, A2 )
-!   ! Called by : Get_Cn_pot
-!   ! Calls  to : Get_Alpha_e
-!   ! Implements equation 1.13
-!   real(DbKi), intent(in   ) :: dt
-!   real(ReKi), intent(in   ) :: ds
-!   real(ReKi), intent(in   ) :: U
-!   real(ReKi), intent(in   ) :: M
-!   real(ReKi), intent(in   ) :: beta_M_sqrd
-!   real(ReKi), intent(in   ) :: c
-!   real(ReKi), intent(in   ) :: C_nalpha_circ
-!   real(ReKi), intent(in   ) :: alpha_cur
-!   real(ReKi), intent(in   ) :: alpha_minus1
-!   real(ReKi), intent(in   ) :: alpha0
-!   real(ReKi), intent(in   ) :: X_1_minus1
-!   real(ReKi), intent(in   ) :: X_2_minus1
-!   real(ReKi), intent(in   ) :: b1
-!   real(ReKi), intent(in   ) :: b2
-!   real(ReKi), intent(in   ) :: A1
-!   real(ReKi), intent(in   ) :: A2
-!   
-!   Get_Cn_alpha_q_circ = C_nalpha_circ * Get_Alpha_e( dt, ds, U, M, beta_M_sqrd, c, alpha_cur, alpha_minus1, alpha0, X_1_minus1, X_2_minus1, b1, b2, A1, A2 )
-!                                                    
-!end function Get_Cn_alpha_q_circ
+!==============================================================================   
 
-
-!real(ReKi) function Get_Cn_pot( dt, ds, U, M, beta_M_sqrd, c, C_nalpha_circ, alpha_cur, alpha_minus1, alpha_minus2, alpha0, &
-!                               q_cur, q_minus1, q_minus2, T_alpha, T_q, X_1_minus1, X_2_minus1, Cn_alpha_q_nc, Kprime_alpha_minus1, Kprime_q_minus1, b1, b2, A1, A2 )
-!   ! Called by : Get_Cn_prime
-!   ! Calls  to : Get_Cn_alpha_q_circ
-!   ! Implements equation 1.20
-!   real(DbKi), intent(in   ) :: dt
-!   real(ReKi), intent(in   ) :: ds
-!   real(ReKi), intent(in   ) :: U
-!   real(ReKi), intent(in   ) :: M
-!   real(ReKi), intent(in   ) :: beta_M_sqrd
-!   real(ReKi), intent(in   ) :: c
-!   real(ReKi), intent(in   ) :: C_nalpha_circ
-!   real(ReKi), intent(in   ) :: alpha_cur
-!   real(ReKi), intent(in   ) :: alpha_minus1
-!   real(ReKi), intent(in   ) :: alpha_minus2
-!   real(ReKi), intent(in   ) :: alpha0
-!   real(ReKi), intent(in   ) :: q_cur
-!   real(ReKi), intent(in   ) :: q_minus1
-!   real(ReKi), intent(in   ) :: q_minus2
-!   real(ReKi), intent(in   ) :: T_alpha
-!   real(ReKi), intent(in   ) :: T_q
-!   real(ReKi), intent(in   ) :: X_1_minus1
-!   real(ReKi), intent(in   ) :: X_2_minus1
-!   real(ReKi), intent(in   ) :: Cn_alpha_q_nc
-!   real(ReKi), intent(in   ) :: Kprime_alpha_minus1
-!   real(ReKi), intent(in   ) :: Kprime_q_minus1
-!   real(ReKi), intent(in   ) :: b1
-!   real(ReKi), intent(in   ) :: b2
-!   real(ReKi), intent(in   ) :: A1
-!   real(ReKi), intent(in   ) :: A2
-!   !          = Eqn 1.13 + Eqn 1.17
-!   Get_Cn_pot = Get_Cn_alpha_q_circ(dt, ds, U, M, beta_M_sqrd, c, C_nalpha_circ, alpha_cur, alpha_minus1, alpha0, X_1_minus1, X_2_minus1, b1, b2, A1, A2) + &
-!                Cn_alpha_q_nc
-!   
-!end function Get_Cn_pot
    
 !==============================================================================
 ! TE Flow Separation Equations                                                !
 !==============================================================================
 
+!==============================================================================
 real(ReKi) function Get_f(alpha, alpha1, S1, S2)
-   ! Called by : Get_f_prime
-   ! Calls  to : NONE
-   ! Implements Equation 1.30
-   real(ReKi), intent(in   ) :: alpha
-   real(ReKi), intent(in   ) :: alpha1
-   real(ReKi), intent(in   ) :: S1
-   real(ReKi), intent(in   ) :: S2
+! Compute either fprime or fprimeprime
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
+
+   real(ReKi), intent(in   ) :: alpha         ! angle of attack (radians)
+   real(ReKi), intent(in   ) :: alpha1        ! angle of attack at f = 0.7, approximately the stall angle (radians)
+   real(ReKi), intent(in   ) :: S1            ! constant in the f-curve best-fit  
+   real(ReKi), intent(in   ) :: S2            ! constant in the f-curve best-fit
 
    real(ReKi)                :: dalpha
    
    dalpha = abs(alpha) - alpha1
    
+      ! Implements Equation 1.30
    if (dalpha < 0.0_ReKi) then
       Get_f = 1 - 0.3_ReKi*exp(dalpha/S1)
    else
@@ -344,207 +275,20 @@ real(ReKi) function Get_f(alpha, alpha1, S1, S2)
    end if
    
 end function Get_f
+!==============================================================================   
 
-real(ReKi) function Get_Dp(ds, T_p, Dp_minus1, Cn_pot, Cn_pot_minus1)
-   ! Called by : Get_Cn_prime
-   ! Calls  to : NONE
-   real(ReKi), intent(in   ) :: ds
-   real(ReKi), intent(in   ) :: T_p
-   real(ReKi), intent(in   ) :: Dp_minus1
-   real(ReKi), intent(in   ) :: Cn_pot
-   real(ReKi), intent(in   ) :: Cn_pot_minus1
-   
-   ! Implements Equation 1.32b
-   Get_Dp = Dp_minus1 * exp(-ds/T_p) + (Cn_pot - Cn_pot_minus1) * exp(-0.5_ReKi*ds*T_p)
-
-end function Get_Dp
-
-
-
-!real(ReKi) function Get_Cn_prime( dt, ds, U, M, beta_M_sqrd, c, C_nalpha_circ, alpha_cur, alpha_minus1, alpha_minus2, alpha0, q_cur, &
-!                                 q_minus1, q_minus2, T_alpha, T_q, T_p, X_1_minus1, X_2_minus1, Cn_alpha_q_nc, Kprime_alpha_minus1, Kprime_q_minus1,Dp_minus1, Cn_pot_minus1, b1, &
-!                                 b2, A1, A2 )
-!   ! Called by : Get_Cn, UnsteadyAero_UpdateStates
-!   ! Calls  to : Get_Cn_pot, Get_Dp
-!   ! Implements Equation 1.32a
-!   real(DbKi), intent(in   ) :: dt
-!   real(ReKi), intent(in   ) :: ds
-!   real(ReKi), intent(in   ) :: U
-!   real(ReKi), intent(in   ) :: M
-!   real(ReKi), intent(in   ) :: beta_M_sqrd
-!   real(ReKi), intent(in   ) :: c
-!   real(ReKi), intent(in   ) :: C_nalpha_circ
-!   real(ReKi), intent(in   ) :: alpha_cur
-!   real(ReKi), intent(in   ) :: alpha_minus1
-!   real(ReKi), intent(in   ) :: alpha_minus2
-!   real(ReKi), intent(in   ) :: alpha0
-!   real(ReKi), intent(in   ) :: q_cur
-!   real(ReKi), intent(in   ) :: q_minus1
-!   real(ReKi), intent(in   ) :: q_minus2
-!   real(ReKi), intent(in   ) :: T_alpha
-!   real(ReKi), intent(in   ) :: T_q
-!   real(ReKi), intent(in   ) :: T_p
-!   real(ReKi), intent(in   ) :: X_1_minus1
-!   real(ReKi), intent(in   ) :: X_2_minus1
-!   real(ReKi), intent(in   ) :: Cn_alpha_q_nc
-!   real(ReKi), intent(in   ) :: Kprime_alpha_minus1
-!   real(ReKi), intent(in   ) :: Kprime_q_minus1
-!   real(ReKi), intent(in   ) :: Dp_minus1
-!   real(ReKi), intent(in   ) :: Cn_pot_minus1
-!   real(ReKi), intent(in   ) :: b1
-!   real(ReKi), intent(in   ) :: b2
-!   real(ReKi), intent(in   ) :: A1
-!   real(ReKi), intent(in   ) :: A2
-!   
-!   real(ReKi)                :: Cn_pot
-!   real(ReKi)                :: Dp
-!   
-!   
-!   ! Implements equation 1.32a
-!   Cn_pot = Get_Cn_pot( dt, ds,U, M, beta_M_sqrd, c, C_nalpha_circ, alpha_cur, alpha_minus1, alpha_minus2, alpha0, q_cur, &
-!                        q_minus1, q_minus2, T_alpha, T_q, X_1_minus1, X_2_minus1, Cn_alpha_q_nc, Kprime_alpha_minus1, Kprime_q_minus1, b1, b2, A1, A2 ) 
-!   Dp     = Get_Dp    ( ds, T_p, Dp_minus1, Cn_pot, Cn_pot_minus1 )
-!   Get_Cn_prime = Cn_pot -  Dp
-!
-!end function Get_Cn_prime
-
-real(ReKi) function Get_alpha_f( Cn_prime, C_nalpha, alpha0 )
-   ! Called by : Get_f_prime
-   ! Calls  to : NONE
-   ! Implements Equation 1.31
-   real(ReKi), intent(in   ) :: Cn_prime
-   real(ReKi), intent(in   ) :: C_nalpha
-   real(ReKi), intent(in   ) :: alpha0
-   
-   Get_alpha_f = Cn_prime / C_nalpha + alpha0
-   
-end function Get_alpha_f
-
-real(ReKi) function Get_f_prime( dt, ds, U, M, c, C_nalpha_circ, alpha_cur, alpha_minus1, alpha_minus2, alpha0, &
-                                q_cur, q_minus1, q_minus2, T_alpha, T_q, T_p, X_1_minus1, X_2_minus1, Cn_prime, Kprime_alpha_minus1, Kprime_q_minus1, Dp_minus1, Cn_pot_minus1, b1, b2, A1, &
-                                A2, C_nalpha, alpha1, S1, S2 )
-   ! Called by : Get_f_primeprime
-   ! Calls  to : Get_Cn_prime, Get_alpha_f, Get_f
-   real(DbKi), intent(in   ) :: dt
-   real(ReKi), intent(in   ) :: ds
-   real(ReKi), intent(in   ) :: U
-   real(ReKi), intent(in   ) :: M
-   real(ReKi), intent(in   ) :: c
-   real(ReKi), intent(in   ) :: C_nalpha_circ
-   real(ReKi), intent(in   ) :: alpha_cur
-   real(ReKi), intent(in   ) :: alpha_minus1
-   real(ReKi), intent(in   ) :: alpha_minus2
-   real(ReKi), intent(in   ) :: alpha0
-   real(ReKi), intent(in   ) :: q_cur
-   real(ReKi), intent(in   ) :: q_minus1
-   real(ReKi), intent(in   ) :: q_minus2
-   real(ReKi), intent(in   ) :: T_alpha
-   real(ReKi), intent(in   ) :: T_q
-   real(ReKi), intent(in   ) :: T_p
-   real(ReKi), intent(in   ) :: X_1_minus1
-   real(ReKi), intent(in   ) :: X_2_minus1
-   real(ReKi), intent(in   ) :: Cn_prime
-   real(ReKi), intent(in   ) :: Kprime_alpha_minus1
-   real(ReKi), intent(in   ) :: Kprime_q_minus1
-   real(ReKi), intent(in   ) :: Dp_minus1
-   real(ReKi), intent(in   ) :: Cn_pot_minus1
-   real(ReKi), intent(in   ) :: b1
-   real(ReKi), intent(in   ) :: b2
-   real(ReKi), intent(in   ) :: A1
-   real(ReKi), intent(in   ) :: A2
-   real(ReKi), intent(in   ) :: C_nalpha
-   real(ReKi), intent(in   ) :: alpha1
-   real(ReKi), intent(in   ) :: S1
-   real(ReKi), intent(in   ) :: S2
-      
-   real(ReKi)                :: alpha_f
-   
-   
-   alpha_f  = Get_alpha_f( Cn_prime, C_nalpha, alpha0 )
-
-   ! Use equation 1.30 to obtain f_prime, substituting alpha_f for alpha in the call to Get_f()
-   Get_f_prime = Get_f(alpha_f, alpha1, S1, S2)
-
-end function Get_f_prime
-
-
-real(ReKi) function Get_Df(ds, T_f, Df_minus1, fprime, fprime_minus1)
-   ! Called by : Get_f_primeprime
-   ! Calls  to : NONE
-   real(ReKi), intent(in   ) :: ds
-   real(ReKi), intent(in   ) :: T_f
-   real(ReKi), intent(in   ) :: Df_minus1
-   real(ReKi), intent(in   ) :: fprime
-   real(ReKi), intent(in   ) :: fprime_minus1
-   ! Implements Equation 1.33b
-
-   real(ReKi)                :: factor
-   factor = -ds/T_f
-   Get_Df = Df_minus1 * exp(factor) + (fprime - fprime_minus1)*exp(0.5_ReKi*factor)
-   
-end function Get_Df
-
-real(ReKi) function Get_f_primeprime( dt, ds, U, M, c, C_nalpha_circ, alpha_cur, alpha_minus1, alpha_minus2, alpha0, q_cur, &
-                        q_minus1, q_minus2, T_alpha, T_q, T_p, T_f, X_1_minus1, X_2_minus1, Cn_prime, Kprime_alpha_minus1, Kprime_q_minus1, Dp_minus1, Cn_pot_minus1, Df_minus1, fprime_minus1, b1, b2, A1, A2, C_nalpha, &
-                        alpha1, S1, S2 )
-   ! Called by : Get_Cv, UnsteadyAero_UpdateStates
-   ! Calls  to : Get_f_prime, Get_Df
-   ! Implements Equation 1.33a
-
-   real(DbKi), intent(in   ) :: dt
-   real(ReKi), intent(in   ) :: ds
-   real(ReKi), intent(in   ) :: U
-   real(ReKi), intent(in   ) :: M
-   real(ReKi), intent(in   ) :: c
-   real(ReKi), intent(in   ) :: C_nalpha_circ
-   real(ReKi), intent(in   ) :: alpha_cur
-   real(ReKi), intent(in   ) :: alpha_minus1
-   real(ReKi), intent(in   ) :: alpha_minus2
-   real(ReKi), intent(in   ) :: alpha0
-   real(ReKi), intent(in   ) :: q_cur
-   real(ReKi), intent(in   ) :: q_minus1
-   real(ReKi), intent(in   ) :: q_minus2
-   real(ReKi), intent(in   ) :: T_alpha
-   real(ReKi), intent(in   ) :: T_q
-   real(ReKi), intent(in   ) :: T_p
-   real(ReKi), intent(in   ) :: T_f
-   real(ReKi), intent(in   ) :: X_1_minus1
-   real(ReKi), intent(in   ) :: X_2_minus1
-   real(ReKi), intent(in   ) :: Cn_prime
-   real(ReKi), intent(in   ) :: Kprime_alpha_minus1
-   real(ReKi), intent(in   ) :: Kprime_q_minus1
-   real(ReKi), intent(in   ) :: Dp_minus1
-   real(ReKi), intent(in   ) :: Cn_pot_minus1
-   real(ReKi), intent(in   ) :: Df_minus1
-   real(ReKi), intent(in   ) :: fprime_minus1
-   real(ReKi), intent(in   ) :: b1
-   real(ReKi), intent(in   ) :: b2
-   real(ReKi), intent(in   ) :: A1
-   real(ReKi), intent(in   ) :: A2
-   real(ReKi), intent(in   ) :: C_nalpha
-   real(ReKi), intent(in   ) :: alpha1
-   real(ReKi), intent(in   ) :: S1
-   real(ReKi), intent(in   ) :: S2
-   
-   real(ReKi)                :: fprime
-   fprime = Get_f_prime(dt, ds, U, M, c, C_nalpha_circ, alpha_cur, alpha_minus1, alpha_minus2, alpha0, q_cur, &
-                        q_minus1, q_minus2, T_alpha, T_q, T_p, X_1_minus1, X_2_minus1, Cn_prime, Kprime_alpha_minus1, Kprime_q_minus1, Dp_minus1, Cn_pot_minus1, b1, b2, A1, A2, C_nalpha, &
-                        alpha1, S1, S2)
-   Get_f_primeprime =  fprime - Get_Df(ds, T_f, Df_minus1, fprime, fprime_minus1)
-
-end function Get_f_primeprime
-
+!==============================================================================   
 real(ReKi) function Get_Cn_FS( Cn_alpha_q_nc, Cn_alpha_q_circ, fprimeprime, DSMod )
+!  
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
 
-
-   ! Called by : 
-   ! Calls  to : 
-
-   
-   real(ReKi), intent(in   ) :: Cn_alpha_q_nc
-   real(ReKi), intent(in   ) :: Cn_alpha_q_circ
-   real(ReKi), intent(in   ) :: fprimeprime
-   integer   , intent(in   ) :: DSMod
+    
+   real(ReKi), intent(in   ) :: Cn_alpha_q_nc       ! non-circulatory component of normal force coefficient response to step change in alpha and q
+   real(ReKi), intent(in   ) :: Cn_alpha_q_circ     ! circulatory component of normal force coefficient response to step change in alpha and q
+   real(ReKi), intent(in   ) :: fprimeprime         ! lagged version of fprime accounting for unsteady boundary layer response
+   integer   , intent(in   ) :: DSMod               ! model for the dynamic stall equations.  [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]
    
    if ( DSMod == 1 ) then
       ! use equation 1.35
@@ -558,20 +302,21 @@ real(ReKi) function Get_Cn_FS( Cn_alpha_q_nc, Cn_alpha_q_circ, fprimeprime, DSMo
 
 
 end function Get_Cn_FS
+!==============================================================================   
 
+!==============================================================================
 real(ReKi) function Get_Cc_FS( eta_e, alpha_e, alpha0, Cn_alpha_q_circ, fprimeprime, DSMod )
-
-
-   ! Called by : 
-   ! Calls  to : 
-
+!  
+! Called by : NONE
+! Calls  to : NONE
+!..............................................................................
    
    real(ReKi), intent(in   ) :: eta_e
-   real(ReKi), intent(in   ) :: alpha_e
-   real(ReKi), intent(in   ) :: alpha0
-   real(ReKi), intent(in   ) :: Cn_alpha_q_circ
-   real(ReKi), intent(in   ) :: fprimeprime
-   integer   , intent(in   ) :: DSMod
+   real(ReKi), intent(in   ) :: alpha_e                    ! effective angle of attack at 3/4 chord  TODO: verify 3/4 and not 1/4
+   real(ReKi), intent(in   ) :: alpha0                     ! zero lift angle of attack (radians)
+   real(ReKi), intent(in   ) :: Cn_alpha_q_circ            ! circulatory component of normal force coefficient response to step change in alpha and q
+   real(ReKi), intent(in   ) :: fprimeprime                ! lagged version of fprime accounting for unsteady boundary layer response
+   integer   , intent(in   ) :: DSMod                      ! model for the dynamic stall equations.  [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]
    
    if ( DSMod == 1 ) then
       ! use equation 1.37
@@ -583,20 +328,24 @@ real(ReKi) function Get_Cc_FS( eta_e, alpha_e, alpha0, Cn_alpha_q_circ, fprimepr
       ! implementation error!  Cannot have DSMod other than 0,1,2
    end if
 
-
 end function Get_Cc_FS
+!==============================================================================   
+
 
 !==============================================================================
 ! Dynamic Stall Equations                                                     !
 !==============================================================================
 
+!==============================================================================
 real(ReKi) function Get_C_V( Cn_alpha_q_circ, fprimeprime, DSMod )
-   ! Called by : Get_Cn
-   ! Calls  to : Get_f_primeprime
+! 
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
 
-   real(ReKi), intent(in   ) :: Cn_alpha_q_circ
-   real(ReKi), intent(in   ) :: fprimeprime
-   integer   , intent(in   ) :: DSMod
+   real(ReKi), intent(in   ) :: Cn_alpha_q_circ               ! circulatory component of normal force coefficient response to step change in alpha and q
+   real(ReKi), intent(in   ) :: fprimeprime                   ! lagged version of fprime accounting for unsteady boundary layer response
+   integer   , intent(in   ) :: DSMod                         ! model for the dynamic stall equations.  [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]
    
     if ( DSMod == 1 ) then
       ! use equation 1.47
@@ -610,24 +359,26 @@ real(ReKi) function Get_C_V( Cn_alpha_q_circ, fprimeprime, DSMod )
    
 
 end function Get_C_V
+!==============================================================================   
 
-!real(ReKi) function Get_Cn_v(Cv, Cv_minus1, Cn_v_minus1, ds, T_V, doAccel)
+!==============================================================================
 real(ReKi) function Get_Cn_v ( ds, T_V, Cn_v_minus1, C_V, C_V_minus1, tau_V, T_VL, Kalpha, alpha, alpha0 ) ! do I pass VRTX flag or tau_V?
-   ! Called by : Get_Cn
-   ! Calls  to : NONE
-   ! Implements Equation 1.45 or 1.49
-   real(ReKi), intent(in   ) :: ds
-   real(ReKi), intent(in   ) :: T_V
-   real(ReKi), intent(in   ) :: Cn_v_minus1
-   real(ReKi), intent(in   ) :: C_V
-   real(ReKi), intent(in   ) :: C_V_minus1
-   real(ReKi), intent(in   ) :: tau_V
-   real(ReKi), intent(in   ) :: T_VL
-   real(ReKi), intent(in   ) :: Kalpha
-   real(ReKi), intent(in   ) :: alpha
-   real(ReKi), intent(in   ) :: alpha0
-
+! Implements Equation 1.45 or 1.49 
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
    
+   real(ReKi), intent(in   ) :: ds                     ! non-dimensionalized distance parameter
+   real(ReKi), intent(in   ) :: T_V                    ! backwards finite difference of the non-dimensionalized distance parameter
+   real(ReKi), intent(in   ) :: Cn_v_minus1            ! normal force coefficient due to the presence of LE vortex, previous time step (-)
+   real(ReKi), intent(in   ) :: C_V                    ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex
+   real(ReKi), intent(in   ) :: C_V_minus1             ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex, previous time step (-)
+   real(ReKi), intent(in   ) :: tau_V                  ! time variable, tracking the travel of the LE vortex over the airfoil suction surface (-)
+   real(ReKi), intent(in   ) :: T_VL                   ! time variable associated with the vortex advection process; it represents the non-dimensional time in semi-chords needed for a vortex to travel from leading edge to trailing edge
+   real(ReKi), intent(in   ) :: Kalpha                 ! backwards finite difference of alpha
+   real(ReKi), intent(in   ) :: alpha                  ! angle of attack (rad)
+   real(ReKi), intent(in   ) :: alpha0                 ! zero lift angle of attack (rad)
+  
    real(ReKi)                :: factor
    
    factor = (alpha - alpha0) * Kalpha
@@ -639,83 +390,58 @@ real(ReKi) function Get_Cn_v ( ds, T_V, Cn_v_minus1, C_V, C_V_minus1, tau_V, T_V
    end if
    
 end function Get_Cn_v
+!==============================================================================   
 
-
+!==============================================================================
+real(ReKi) function Get_Cm( Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, tau_v )
+! Leishman's pitching moment coefficient about the 1/4 chord
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
+   real(ReKi), intent(in   ) :: Cm0                           ! 2D pitching moment coefficient at zero lift, positive if nose is up
+   real(ReKi), intent(in   ) :: k0                            ! airfoil parameter in the x_cp_hat curve best-fit
+   real(ReKi), intent(in   ) :: k1                            ! airfoil parameter in the x_cp_hat curve best-fit
+   real(ReKi), intent(in   ) :: k2                            ! airfoil parameter in the x_cp_hat curve best-fit
+   real(ReKi), intent(in   ) :: k3                            ! airfoil parameter in the x_cp_hat curve best-fit
+   real(ReKi), intent(in   ) :: T_VL                          ! time variable associated with the vortex advection process; it represents the non-dimensional time in semi-chords needed for a vortex to travel from leading edge to trailing edge
+   real(ReKi), intent(in   ) :: x_cp_bar                      ! airfoil parameter for calulating x_cp_v
+   real(ReKi), intent(in   ) :: Cn_alpha_q_circ               ! circulatory component of normal force coefficient response to step change in alpha and q
+   real(ReKi), intent(in   ) :: fprimeprime                   ! lagged version of fprime accounting for unsteady boundary layer response
+   real(ReKi), intent(in   ) :: Cm_q_circ                     ! circulatory component of the pitching moment coefficient response to a step change in q
+   real(ReKi), intent(in   ) :: Cn_alpha_nc                   ! non-circulatory component of the normal force coefficient response to step change in alpha
+   real(ReKi), intent(in   ) :: Cm_q_nc                       ! non-circulatory component of the moment coefficient response to step change in q
+   real(ReKi), intent(in   ) :: Cn_v                          ! normal force coefficient due to the presence of LE vortex
+   real(ReKi), intent(in   ) :: tau_v                         ! time variable, tracking the travel of the LE vortex over the airfoil suction surface (-)
    
-!real(ReKi) function Get_Cn( dt, ds, U, M, beta_M_sqrd, c, C_nalpha_circ, alpha_cur, alpha_minus1, alpha_minus2, alpha0, q_cur, &
-!                             q_minus1, q_minus2, T_alpha, T_q, T_p, T_f, T_V, X_1_minus1, X_2_minus1, Kprime_alpha_minus1, Kprime_q_minus1, Dp_minus1, Cn_pot_minus1, Df_minus1, fprime_minus1, Cv_minus1, Cn_v_minus1, b1, b2, A1, A2, C_nalpha, &
-!                             alpha1, S1, S2, DSMod, doAccel )
-!   ! Called by : NONE
-!   ! Calls  to : Get_Cv, Get_Cn_Alpha_q_nc, Get_Cn_v
-!
-!   real(DbKi), intent(in   ) :: dt
-!   real(ReKi), intent(in   ) :: ds
-!   real(ReKi), intent(in   ) :: U
-!   real(ReKi), intent(in   ) :: M
-!   real(ReKi), intent(in   ) :: beta_M_sqrd
-!   real(ReKi), intent(in   ) :: c
-!   real(ReKi), intent(in   ) :: C_nalpha_circ
-!   real(ReKi), intent(in   ) :: alpha_cur
-!   real(ReKi), intent(in   ) :: alpha_minus1
-!   real(ReKi), intent(in   ) :: alpha_minus2
-!   real(ReKi), intent(in   ) :: alpha0
-!   real(ReKi), intent(in   ) :: q_cur
-!   real(ReKi), intent(in   ) :: q_minus1
-!   real(ReKi), intent(in   ) :: q_minus2
-!   real(ReKi), intent(in   ) :: T_alpha
-!   real(ReKi), intent(in   ) :: T_q
-!   real(ReKi), intent(in   ) :: T_p
-!   real(ReKi), intent(in   ) :: T_f
-!   real(ReKi), intent(in   ) :: T_V
-!   real(ReKi), intent(in   ) :: X_1_minus1
-!   real(ReKi), intent(in   ) :: X_2_minus1
-!   real(ReKi), intent(in   ) :: Kprime_alpha_minus1
-!   real(ReKi), intent(in   ) :: Kprime_q_minus1
-!   real(ReKi), intent(in   ) :: Dp_minus1
-!   real(ReKi), intent(in   ) :: Cn_pot_minus1
-!   real(ReKi), intent(in   ) :: Df_minus1
-!   real(ReKi), intent(in   ) :: fprime_minus1
-!   real(ReKi), intent(in   ) :: Cv_minus1
-!   real(ReKi), intent(in   ) :: Cn_v_minus1
-!
-!   real(ReKi), intent(in   ) :: b1
-!   real(ReKi), intent(in   ) :: b2
-!   real(ReKi), intent(in   ) :: A1
-!   real(ReKi), intent(in   ) :: A2
-!   real(ReKi), intent(in   ) :: C_nalpha
-!   real(ReKi), intent(in   ) :: alpha1
-!   real(ReKi), intent(in   ) :: S1
-!   real(ReKi), intent(in   ) :: S2
-!   integer   , intent(in   ) :: DSMod
-!   logical   , intent(in   ) :: doAccel
-!   
-!   
-!   real(ReKi)                :: Cv
-!   real(ReKi)                :: Cn_alpha_q_nc
-!   real(ReKi)                :: Cn_prime
-!   
-!   ! Implements equation 1.50
-!   Cn_alpha_q_nc = Get_Cn_Alpha_q_nc( T_alpha, alpha_cur, alpha_minus1, alpha_minus2, Kprime_alpha_minus1, Kprime_q_minus1, T_q, q_cur, q_minus1, q_minus2, dt ) 
-!   Cn_prime      = Get_Cn_prime( dt, ds, U, M, beta_M_sqrd, c, C_nalpha_circ, alpha_cur, alpha_minus1, alpha_minus2, alpha0, q_cur, &
-!                                 q_minus1, q_minus2, T_alpha, T_q, T_p, X_1_minus1, X_2_minus1, Cn_alpha_q_nc, Kprime_alpha_minus1, Kprime_q_minus1,Dp_minus1, Cn_pot_minus1, b1, &
-!                                 b2, A1, A2 )
-!   Cv            = Get_Cv( dt, ds, U, M, c, C_nalpha_circ, alpha_cur, alpha_minus1, alpha_minus2, alpha0, q_cur, &
-!                             q_minus1, q_minus2, T_alpha, T_q, T_p, T_f, X_1_minus1, X_2_minus1, Cn_prime, Cn_alpha_q_nc, Kprime_alpha_minus1, Kprime_q_minus1, Dp_minus1, &
-!                             Cn_pot_minus1, Df_minus1, fprime_minus1, b1, b2, A1, A2, C_nalpha, &
-!                             alpha1, S1, S2, DSMod  ) 
-!   Get_Cn        = C_n_FS + Get_Cn_v( Cv, Cv_minus1, Cn_v_minus1, ds, T_V, doAccel )
-!   Get_Cn        = Cv + Cn_alpha_q_nc +  Get_Cn_v( Cv, Cv_minus1, Cn_v_minus1, ds, T_V, doAccel )
-!   
-!   
-!end function Get_Cn
+      ! local variables
+   real(ReKi)                :: x_cp_hat                      ! center-of-pressure distance from LE in chord fraction
+   real(ReKi)                :: Cm_v                          ! pitching moment coefficient due to the presence of LE vortex
+   
+      ! Eqn 1.40
+   x_cp_hat = k0 + k1*(1-fprimeprime) + k2*sin(pi*fprimeprime**k3)
+   
+      ! Eqn 1.154
+   Cm_v     = -x_cp_bar*( 1-cos( pi*tau_v/T_VL ) )*Cn_v
+   
+      ! Eqn 1.55 = Cm0 - 1.13 + 1.21 - 1.18a/4 + 1.25a + 1.54  
+   Get_Cm   = Cm0 - Cn_alpha_q_circ*(x_cp_hat - 0.25_ReKi) + Cm_q_circ - Cn_alpha_nc / 4.0_ReKi + Cm_q_nc + Cm_v
+   
+   
+end function Get_Cm
+!==============================================================================   
 
-
+!==============================================================================
 subroutine UnsteadyAero_SetParameters( dt, InitInp, p, errStat, errMsg )
-   real(DbKi),                             intent(inout)  :: dt
-   type(UnsteadyAero_InitInputType),       intent(inout)  :: InitInp     ! Input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in BEMT_SetParameters()
-   type(UnsteadyAero_ParameterType),       intent(inout)  :: p           ! Parameters
-   integer(IntKi),                         intent(  out)  :: errStat     ! Error status of the operation
-   character(*),                           intent(  out)  :: errMsg      ! Error message if ErrStat /= ErrID_None
+! Leishman's pitching moment coefficient about the 1/4 chord
+! Called by : ComputeKelvinChain
+! Calls  to : NONE
+!..............................................................................
+   
+   real(DbKi),                             intent(inout)  :: dt          ! time step length (s)
+   type(UnsteadyAero_InitInputType),       intent(inout)  :: InitInp     ! input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in BEMT_SetParameters()
+   type(UnsteadyAero_ParameterType),       intent(inout)  :: p           ! parameters
+   integer(IntKi),                         intent(  out)  :: errStat     ! error status of the operation
+   character(*),                           intent(  out)  :: errMsg      ! error message if ErrStat /= ErrID_None
 
    p%dt         = dt
    allocate(p%c(InitInp%nNodesPerBlade,InitInp%numBlades), stat = errStat)
@@ -739,36 +465,46 @@ subroutine UnsteadyAero_SetParameters( dt, InitInp, p, errStat, errMsg )
    p%AFIndx     = InitInp%AFIndx
    
 end subroutine UnsteadyAero_SetParameters
+!==============================================================================   
 
-
-
-subroutine UnsteadyAero_InitStates( p, xd, OtherState, errStat, errMsg )
+!==============================================================================
+subroutine UnsteadyAero_InitStates( p, xd, OtherState, errStat, errMsg )      !
    type(UnsteadyAero_ParameterType),       intent(in   )  :: p           ! Parameters
    type(UnsteadyAero_DiscreteStateType),   intent(inout)  :: xd          ! Initial discrete states
    type(UnsteadyAero_OtherStateType),      intent(inout)  :: OtherState  ! Initial other/optimization states
    integer(IntKi),                         intent(  out)  :: errStat     ! Error status of the operation
    character(*),                           intent(  out)  :: errMsg      ! Error message if ErrStat /= ErrID_None
-
-   integer                   :: i, j
-   real(ReKi)                :: C_nalpha_circ
-   real(ReKi)                :: alpha0       
-   real(ReKi)                :: alpha_e
-   real(ReKi)                :: T_f0         
-   real(ReKi)                :: T_V0  
-   real(ReKi)                :: T_VL
-   real(ReKi)                :: T_p                   
-   real(ReKi)                :: b1           
-   real(ReKi)                :: b2           
-   real(ReKi)                :: A1           
-   real(ReKi)                :: A2           
-   real(ReKi)                :: C_nalpha              
-   real(ReKi)                :: alpha1 
-   real(ReKi)                :: eta_e
-   real(ReKi)                :: S1           
-   real(ReKi)                :: S2  
-   real(ReKi)                :: Cn1
-   real(ReKi)                :: Cn2
-   real(ReKi)                :: St_sh
+                                                                         
+   integer                   :: i, j                                     ! 
+   real(ReKi)                :: C_nalpha_circ                            ! slope of the circulatory normal force coefficient vs alpha curve
+   real(ReKi)                :: alpha0                                   ! zero lift angle of attack (radians)
+   real(ReKi)                :: alpha_e                                  ! effective angle of attack at 3/4 chord  TODO: verify 3/4 and not 1/4
+   real(ReKi)                :: T_f0                                     ! initial value of T_f, airfoil specific, used to compute D_f and fprimeprime
+   real(ReKi)                :: T_V0                                     ! initial value of T_V, airfoil specific, time parameter associated with the vortex lift decay process, used in Cn_v
+   real(ReKi)                :: T_VL                                     ! time variable associated with the vortex advection process; it represents the non-dimensional time in semi-chords needed for a vortex to travel from leading edge to trailing edge
+   real(ReKi)                :: T_p                                      ! boundary-layer, leading edge pressure gradient time parameter; used in D_p; airfoil specific
+   real(ReKi)                :: b1                                       ! airfoil constant derived from experimental results, usually 0.14
+   real(ReKi)                :: b2                                       ! airfoil constant derived from experimental results, usually 0.53
+   real(ReKi)                :: b5                                       ! airfoil constant derived from experimental results, usually 5.0
+   real(ReKi)                :: A1                                       ! airfoil constant derived from experimental results, usually 0.3 
+   real(ReKi)                :: A2                                       ! airfoil constant derived from experimental results, usually 0.7
+   real(ReKi)                :: A5                                       ! airfoil constant derived from experimental results, usually 1.0
+   real(ReKi)                :: C_nalpha                                 !
+   real(ReKi)                :: alpha1                                   !
+   real(ReKi)                :: eta_e                                    !
+   real(ReKi)                :: S1                                       !
+   real(ReKi)                :: S2                                       !
+   real(ReKi)                :: Cn1                                      !
+   real(ReKi)                :: Cn2                                      !
+   real(ReKi)                :: Cd0                                      !
+   real(ReKi)                :: Cm0                                      ! 2D pitching moment coefficient at zero lift, positive if nose is up
+   real(ReKi)                :: k0                                       ! airfoil parameter in the x_cp_hat curve best-fit
+   real(ReKi)                :: k1                                       ! airfoil parameter in the x_cp_hat curve best-fit
+   real(ReKi)                :: k2                                       ! airfoil parameter in the x_cp_hat curve best-fit
+   real(ReKi)                :: k3                                       ! airfoil parameter in the x_cp_hat curve best-fit
+   real(ReKi)                :: k1_hat                                   !
+   real(ReKi)                :: x_cp_bar                                 ! airfoil parameter for calulating x_cp_v
+   real(ReKi)                :: St_sh                                    !
    
    ! allocate all the state arrays
    allocate(xd%alpha_minus1(p%nNodesPerBlade,p%numBlades), stat = errStat)
@@ -779,9 +515,10 @@ subroutine UnsteadyAero_InitStates( p, xd, OtherState, errStat, errMsg )
    allocate(xd%X2_minus1(p%nNodesPerBlade,p%numBlades), stat = errStat)
    allocate(xd%Kprime_alpha_minus1(p%nNodesPerBlade,p%numBlades), stat = errStat)
    allocate(xd%Kprime_q_minus1(p%nNodesPerBlade,p%numBlades), stat = errStat)
+   allocate(xd%Kprimeprime_q_minus1(p%nNodesPerBlade,p%numBlades), stat = errStat)
+   allocate(xd%K3prime_q_minus1(p%nNodesPerBlade,p%numBlades), stat = errStat)
    allocate(xd%Dp_minus1(p%nNodesPerBlade,p%numBlades), stat = errStat)
    allocate(xd%Cn_pot_minus1(p%nNodesPerBlade,p%numBlades), stat = errStat)
-   allocate(xd%T_f(p%nNodesPerBlade,p%numBlades), stat = errStat)
    allocate(xd%fprimeprime_minus1(p%nNodesPerBlade,p%numBlades), stat = errStat)
    allocate(xd%Df_minus1(p%nNodesPerBlade,p%numBlades), stat = errStat)
    allocate(xd%fprime_minus1(p%nNodesPerBlade,p%numBlades), stat = errStat)
@@ -802,29 +539,17 @@ subroutine UnsteadyAero_InitStates( p, xd, OtherState, errStat, errMsg )
    OtherState%FirstPass = .true.
    
    xd%alpha_minus1         = 0.0_ReKi
-   xd%alpha_minus2       = 0.0_ReKi
+   xd%alpha_minus2         = 0.0_ReKi
    xd%q_minus1             = 0.0_ReKi
-   xd%q_minus2           = 0.0_ReKi
+   xd%q_minus2             = 0.0_ReKi
    xd%X1_minus1            = 0.0_ReKi
    xd%X2_minus1            = 0.0_ReKi
    xd%Kprime_alpha_minus1  = 0.0_ReKi
    xd%Kprime_q_minus1      = 0.0_ReKi
    xd%Dp_minus1            = 0.0_ReKi
    xd%Cn_pot_minus1        = 0.0_ReKi
-   
-
-
-   
-
-   do j = 1,p%numBlades
-      do i = 1,p%nNodesPerBlade
-            ! Lookup values using Airfoil Info module
-            ! Use reference values for M = 0.75 (million), Re = 1.0, and alpha = 0.0
-         call AFI_GetAirfoilParams( p%AFI_Params%AFInfo(p%AFIndx(i,j)), 0.75, 1.0, 0.0, alpha0, alpha1, eta_e, C_nalpha, &
-                                 C_nalpha_circ, T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, A1, A2, S1, S2, Cn1, Cn2, errMsg, errStat )           
-         xd%T_f(i,j)          = T_f0
-      end do
-   end do       
+   xd%K3prime_q_minus1     = 0.0_ReKi
+   xd%Kprimeprime_q_minus1 = 0.0_ReKi  
    xd%fprimeprime_minus1   = 0.0_ReKi
    xd%Df_minus1            = 0.0_ReKi
    xd%fprime_minus1        = 0.0_ReKi
@@ -832,15 +557,16 @@ subroutine UnsteadyAero_InitStates( p, xd, OtherState, errStat, errMsg )
    xd%Cn_v_minus1          = 0.0_ReKi
    xd%C_V_minus1           = 0.0_ReKi
 
-end subroutine UnsteadyAero_InitStates
+end subroutine UnsteadyAero_InitStates 
+!==============================================================================   
 
-
-!----------------------------------------------------------------------------------------------------------------------------------
-subroutine UnsteadyAero_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
+!==============================================================================
+subroutine UnsteadyAero_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, &
+                              InitOut, ErrStat, ErrMsg )
 ! This routine is called at the start of the simulation to perform initialization steps.
 ! The parameters are set here and not changed during the simulation.
 ! The initial states and initial guess for the input are defined.
-!..................................................................................................................................
+!..............................................................................
 
    type(UnsteadyAero_InitInputType),       intent(inout)  :: InitInp     ! Input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in BEMT_SetParameters()
    type(UnsteadyAero_InputType),           intent(in   )  :: u           ! An initial guess for the input; input mesh must be defined
@@ -926,87 +652,105 @@ subroutine UnsteadyAero_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, 
    allocate(y%WriteOutput(p%NumOuts))
    
 end subroutine UnsteadyAero_Init
-   
-subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, T_VL, St_sh, Kalpha, alpha_e, alpha0, dalpha0, eta_e, Kq, q_cur, X1, X2, &
-                                 Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, fprime, Cn_v, C_V, Cn_FS, errStat, errMsg )
-                              
+!==============================================================================     
+
+!==============================================================================                              
+subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
+                               St_sh, Kalpha, alpha_e, alpha0, dalpha0, eta_e, Kq, q_cur, X1, X2, &
+                               Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, fprime, &
+                               Cn_alpha_q_circ, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, errStat, errMsg )
 ! 
 !
 ! 
-!..................................................................................................................................
+!...............................................................................
 
       
-   integer(IntKi),                         intent(in   ) :: i,j          ! Blade node index
-   type(UnsteadyAero_InputType),           intent(in   ) :: u          ! Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
-   type(UnsteadyAero_ParameterType),       intent(in   ) :: p          ! Parameters   TODO: this should only be in, but is needed because of a copy of AFInfo in a called subroutine. GJH 1/5/2015
-   type(UnsteadyAero_DiscreteStateType),   intent(in   ) :: xd         ! Input: Discrete states at t;
-   type(UnsteadyAero_OtherStateType),      intent(in   ) :: OtherState ! Other/optimization states
-   real(ReKi),                             intent(  out) :: Cn_prime
-   real(ReKi),                             intent(  out) :: Cn1
-   real(ReKi),                             intent(  out) :: Cn2
-   real(ReKi),                             intent(  out) :: T_VL
-   real(ReKi),                             intent(  out) :: St_sh
-   real(ReKi),                             intent(  out) :: Kalpha
-   real(ReKi),                             intent(  out) :: alpha_e
-   real(ReKi),                             intent(  out) :: alpha0
-   real(ReKi),                             intent(  out) :: dalpha0
-   real(ReKi),                             intent(  out) :: eta_e
-   real(ReKi),                             intent(  out) :: Kq
-   real(ReKi),                             intent(  out) :: q_cur
-   real(ReKi),                             intent(  out) :: X1
-   real(ReKi),                             intent(  out) :: X2
-   real(ReKi),                             intent(  out) :: Kprime_alpha
-   real(ReKi),                             intent(  out) :: Kprime_q
-   real(ReKi),                             intent(  out) :: Dp
-   real(ReKi),                             intent(  out) :: Cn_pot
-   real(ReKi),                             intent(  out) :: Cc_pot
-   real(ReKi),                             intent(  out) :: fprimeprime
-   real(ReKi),                             intent(  out) :: Df
-   real(ReKi),                             intent(  out) :: fprime
-   real(ReKi),                             intent(  out) :: Cn_v
-   real(ReKi),                             intent(  out) :: C_V
-   real(ReKi),                             intent(  out) :: Cn_FS
-      
-   integer(IntKi),                         intent(  out) :: errStat    ! Error status of the operation
-   character(*),                           intent(  out) :: errMsg     ! Error message if ErrStat /= ErrID_None
+   integer(IntKi),                         intent(in   ) :: i,j               ! Blade node indices
+   type(UnsteadyAero_InputType),           intent(in   ) :: u                 ! Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
+   type(UnsteadyAero_ParameterType),       intent(in   ) :: p                 ! Parameters   TODO: this should only be in, but is needed because of a copy of AFInfo in a called subroutine. GJH 1/5/2015
+   type(UnsteadyAero_DiscreteStateType),   intent(in   ) :: xd                ! Input: Discrete states at t;
+   type(UnsteadyAero_OtherStateType),      intent(in   ) :: OtherState        ! Other/optimization states
+   real(ReKi),                             intent(  out) :: Cn_prime          !
+   real(ReKi),                             intent(  out) :: Cn1               !
+   real(ReKi),                             intent(  out) :: Cn2               !
+   real(ReKi),                             intent(  out) :: Cd0               !
+   real(ReKi),                             intent(  out) :: Cm0               ! 2D pitching moment coefficient at zero lift, positive if nose is up
+   real(ReKi),                             intent(  out) :: k0                ! airfoil parameter in the x_cp_hat curve best-fit
+   real(ReKi),                             intent(  out) :: k1                ! airfoil parameter in the x_cp_hat curve best-fit
+   real(ReKi),                             intent(  out) :: k2                ! airfoil parameter in the x_cp_hat curve best-fit
+   real(ReKi),                             intent(  out) :: k3                ! airfoil parameter in the x_cp_hat curve best-fit
+   real(ReKi),                             intent(  out) :: T_VL              ! time variable associated with the vortex advection process; it represents the non-dimensional time in semi-chords needed for a vortex to travel from leading edge to trailing edge
+   real(ReKi),                             intent(  out) :: x_cp_bar          ! airfoil parameter for calulating x_cp_v
+   real(ReKi),                             intent(  out) :: St_sh             !
+   real(ReKi),                             intent(  out) :: Kalpha            ! backwards finite difference of alpha
+   real(ReKi),                             intent(  out) :: alpha_e           ! effective angle of attack at 3/4 chord  TODO: verify 3/4 and not 1/4                          
+   real(ReKi),                             intent(  out) :: alpha0            ! zero lift angle of attack (radians)
+   real(ReKi),                             intent(  out) :: dalpha0           !
+   real(ReKi),                             intent(  out) :: eta_e             !
+   real(ReKi),                             intent(  out) :: Kq                !
+   real(ReKi),                             intent(  out) :: q_cur             !
+   real(ReKi),                             intent(  out) :: X1                !
+   real(ReKi),                             intent(  out) :: X2                !
+   real(ReKi),                             intent(  out) :: Kprime_alpha      !
+   real(ReKi),                             intent(  out) :: Kprime_q          !
+   real(ReKi),                             intent(  out) :: Dp                !
+   real(ReKi),                             intent(  out) :: Cn_pot            !
+   real(ReKi),                             intent(  out) :: Cc_pot            !
+   real(ReKi),                             intent(  out) :: Cn_alpha_q_circ   !
+   real(ReKi),                             intent(  out) :: Cm_q_circ         !
+   real(ReKi),                             intent(  out) :: Cn_alpha_nc       ! non-circulatory component of the normal force coefficient response to step change in alpha
+   real(ReKi),                             intent(  out) :: Cm_q_nc           ! non-circulatory component of the moment coefficient response to step change in q
+   real(ReKi),                             intent(  out) :: fprimeprime       !
+   real(ReKi),                             intent(  out) :: Df                !
+   real(ReKi),                             intent(  out) :: fprime            !
+   real(ReKi),                             intent(  out) :: Cn_v              ! normal force coefficient due to the presence of LE vortex
+   real(ReKi),                             intent(  out) :: C_V               ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex
+   real(ReKi),                             intent(  out) :: Cn_FS             !
+                                                                              !
+   integer(IntKi),                         intent(  out) :: errStat           ! Error status of the operation
+   character(*),                           intent(  out) :: errMsg            ! Error message if ErrStat /= ErrID_None
 
 
-   real(ReKi)                :: ds
-   real(ReKi)                :: M
-   real(ReKi)                :: beta
-   real(ReKi)                :: betaSqrd
-   real(ReKi)                :: Cn_alpha_q_nc
-   real(ReKi)                :: k_alpha
-   real(ReKi)                :: T_alpha
-   real(ReKi)                :: T_q
-   real(ReKi)                :: T_f
-   real(ReKi)                :: T_V
-   real(ReKi)                :: T_I 
-   real(ReKi)                :: C_nalpha_circ
-   real(ReKi)                :: T_f0         
-   real(ReKi)                :: T_V0         
-   real(ReKi)                :: T_p                   
-   real(ReKi)                :: b1           
-   real(ReKi)                :: b2           
-   real(ReKi)                :: A1           
-   real(ReKi)                :: A2           
-   real(ReKi)                :: C_nalpha              
-   real(ReKi)                :: alpha1          
-   real(ReKi)                :: S1           
-   real(ReKi)                :: S2   
-   real(ReKi)                :: Cn_alpha_nc
-   real(ReKi)                :: Cn_alpha_q_circ
-   real(ReKi)                :: Cn_q_nc
-   real(ReKi)                :: alpha_f
-   real(ReKi)                :: k_q
-   real(ReKi)                :: Kalpha_minus1
-   real(ReKi)                :: Kq_minus1
-   real(ReKi)                :: alpha_minus1
-   real(ReKi)                :: alpha_minus2
-   real(ReKi)                :: q_minus1
-   real(ReKi)                :: q_minus2
-   real(ReKi)                :: fprime_minus1
-   real(ReKi)                :: Cn_pot_minus1
+   real(ReKi)                :: ds                                            ! non-dimensionalized distance parameter
+   real(ReKi)                :: M                                             !
+   real(ReKi)                :: beta_M                                        !
+   real(ReKi)                :: beta_M_Sqrd                                   !
+   real(ReKi)                :: Cn_alpha_q_nc                                 !
+   real(ReKi)                :: k_alpha                                       !
+   real(ReKi)                :: T_alpha                                       !
+   real(ReKi)                :: T_q                                           !
+   real(ReKi)                :: T_f                                           !
+   real(ReKi)                :: T_V                                           ! backwards finite difference of the non-dimensionalized distance parameter
+   real(ReKi)                :: T_I                                           !
+   real(ReKi)                :: C_nalpha_circ                                 ! slope of the circulatory normal force coefficient vs alpha curve
+   real(ReKi)                :: T_f0                                          ! initial value of T_f, airfoil specific, used to compute D_f and fprimeprime
+   real(ReKi)                :: T_V0                                          ! initial value of T_V, airfoil specific, time parameter associated with the vortex lift decay process, used in Cn_v
+   real(ReKi)                :: T_p                                           ! boundary-layer, leading edge pressure gradient time parameter; used in D_p; airfoil specific
+   real(ReKi)                :: b1                                            ! airfoil constant derived from experimental results, usually 0.14
+   real(ReKi)                :: b2                                            ! airfoil constant derived from experimental results, usually 0.53
+   real(ReKi)                :: b5                                            ! airfoil constant derived from experimental results, usually 5.0
+   real(ReKi)                :: A1                                            ! airfoil constant derived from experimental results, usually 0.3
+   real(ReKi)                :: A2                                            ! airfoil constant derived from experimental results, usually 0.7
+   real(ReKi)                :: A5                                            ! airfoil constant derived from experimental results, usually 1.0
+   real(ReKi)                :: C_nalpha                                      !
+   real(ReKi)                :: alpha1                                        !
+   real(ReKi)                :: S1                                            !
+   real(ReKi)                :: S2                                            !
+   real(ReKi)                :: Cn_q_nc                                       !
+   real(ReKi)                :: alpha_f                                       !
+   real(ReKi)                :: k_q                                           !
+   real(ReKi)                :: Kalpha_minus1                                 !
+   real(ReKi)                :: Kq_minus1                                     !
+   real(ReKi)                :: alpha_minus1                                  !
+   real(ReKi)                :: alpha_minus2                                  !
+   real(ReKi)                :: q_minus1                                      !
+   real(ReKi)                :: q_minus2                                      !
+   real(ReKi)                :: fprime_minus1                                 !
+   real(ReKi)                :: Cn_pot_minus1                                 !
+   real(ReKi)                :: k1_hat                                        !
+   real(ReKi)                :: K3prime_q                                     !
+   real(ReKi)                :: k_mq                                          !
+   real(ReKi)                :: Kprimeprime_q                                 !
    
    ! Called by : DRIVER
    ! Calls  to : Get_Beta_M_Sqrd, AFI_GetAirfoilParams, Get_ds, Get_Pitchrate, Get_T_Alpha, Get_T_q, Get_Cn_prime, Get_f_primeprime, Get_k_Alpha
@@ -1014,13 +758,14 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, T
 
 
    M        = u%U(i,j) / p%a_s
-   betaSqrd = Get_Beta_M_Sqrd(M)
-   beta     = Get_Beta_M(M)
+   beta_M_Sqrd = Get_Beta_M_Sqrd(M)
+   beta_M     = Get_Beta_M(M)
    T_I      = p%c(i,j) / p%a_s                                                  ! Eqn 1.11c
    ds       = Get_ds       ( u%U(i,j), p%c(i,j), p%dt )
    
    ! Lookup values using Airfoil Info module
-   call AFI_GetAirfoilParams( p%AFI_Params%AFInfo(p%AFIndx(i,j)), M, u%Re(i,j), u%alpha(i,j), alpha0, alpha1, eta_e, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, A1, A2, S1, S2, Cn1, Cn2, errMsg, errStat )           
+   call AFI_GetAirfoilParams( p%AFI_Params%AFInfo(p%AFIndx(i,j)), M, u%Re(i,j), u%alpha(i,j), alpha0, alpha1, eta_e, C_nalpha, C_nalpha_circ, &
+                              T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, errMsg, errStat )           
    
    if (OtherState%FirstPass) then
       alpha_minus1 = u%alpha(i,j) 
@@ -1041,8 +786,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, T
       q_minus2 = xd%q_minus2(i,j) 
    end if
    
-   k_alpha  = Get_k_       ( M, beta, C_nalpha/2.0_ReKi )                 ! Eqn 1.11a
-   k_q      = Get_k_       ( M, beta, C_nalpha          )                 ! Eqn 1.11b
+   k_alpha  = Get_k_       ( M, beta_M, C_nalpha/2.0_ReKi )                 ! Eqn 1.11a
+   k_q      = Get_k_       ( M, beta_M, C_nalpha          )                 ! Eqn 1.11b
    T_alpha  = T_I * k_alpha                                                   ! Eqn 1.10a
    T_q      = T_I * k_q                                                       ! Eqn 1.10b
       
@@ -1086,13 +831,15 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, T
    !if (OtherState%FirstPass) then
    !   X1  = 0.0_ReKi
    !else    
-      X1           = Get_X(ds, betaSqrd, b1, A1, u%alpha(i,j), alpha_minus1, xd%X1_minus1(i,j) )
+      X1           = Get_ExpEqn( ds*beta_M_Sqrd*b1, 1.0_ReKi, xd%X1_minus1(i,j), A1*(u%alpha(i,j) - alpha_minus1), 0.0_ReKi )
+      !Get_X(ds, beta_M_Sqrd, b1, A1, u%alpha(i,j), alpha_minus1, xd%X1_minus1(i,j) )
    !end if
    ! Compute X2 using Eqn 1.15b
    !if (OtherState%FirstPass) then
    !   X2  = 0.0_ReKi
    !else
-      X2           = Get_X(ds, betaSqrd, b2, A2, u%alpha(i,j), alpha_minus1, xd%X2_minus1(i,j) )
+      X2           = Get_ExpEqn( ds*beta_M_Sqrd*b2, 1.0_ReKi, xd%X2_minus1(i,j), A2*(u%alpha(i,j) - alpha_minus1), 0.0_ReKi )
+      !Get_X(ds, beta_M_Sqrd, b2, A2, u%alpha(i,j), alpha_minus1, xd%X2_minus1(i,j) )
    !end if
    
    ! Compute alpha_e using Eqn 1.14
@@ -1101,10 +848,25 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, T
    ! Compute Cn_alpha_q_circ using Eqn 1.13
    Cn_alpha_q_circ = C_nalpha_circ * alpha_e
    
+   ! Compute K3prime_q using Eqn 1.22
+   K3prime_q       = Get_ExpEqn( b5*beta_M_Sqrd*ds, 1.0_ReKi, xd%K3prime_q_minus1(i,j),  A5*Kq*real(p%dt), A5*Kq_minus1*real(p%dt) )
+   
+   ! Compute Cm_q_circ using Eqn 1.21
+   Cm_q_circ       = Get_Cm_q_circ( C_nalpha, beta_M, q_cur, K3prime_q, p%c(i,j), u%U(i,j) )
    
    ! Compute Cn_pot using eqn 1.20
    ! Depends on Cn_alpha_q_circ (1.13) , Cn_alpha_q_nc (1.17)
    Cn_pot          = Cn_alpha_q_circ + Cn_alpha_q_nc
+   
+   ! Eqn 1.25b
+   k_mq            = 7.0/(15.0*(1.0-M)+1.5*C_nalpha*A5*b5*beta_M*M**2)
+   
+   ! Eqn 1.25c
+   Kprimeprime_q   = Get_ExpEqn( real(p%dt), k_mq**2*T_I   , xd%Kprimeprime_q_minus1(i,j)    ,  Kq   , Kq_minus1     )
+   
+   ! Compute Cm_q_nc using eqn 1.25a
+   Cm_q_nc         = Get_Cm_q_nc( M, k_mq, T_I, Kq, Kprimeprime_q )
+   
    
    ! Compute Cc_pot using eqn 1.28
    Cc_pot          = Cn_pot*tan(alpha_e+alpha0)
@@ -1165,13 +927,18 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, T
    ! Finally, compute Cn using Eqn 1.50
    !Cn            = Cn_FS + Cn_v
 
-
 end subroutine ComputeKelvinChain
-   
-!----------------------------------------------------------------------------------------------------------------------------------
+!==============================================================================   
+                          
+
+!==============================================================================
+! Framework Routines                                                          !
+!==============================================================================                               
+                               
+!============================================================================== 
 subroutine UnsteadyAero_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )   
 ! Tight coupling routine for updating discrete states
-!..................................................................................................................................
+!..............................................................................
    
    real(DbKi),                             intent(in   )  :: Time        ! Current simulation time in seconds 
    integer(IntKi),                         intent(in   )  :: n           ! Current step of the simulation: t = n*Interval
@@ -1190,8 +957,8 @@ subroutine UnsteadyAero_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, Er
    real(ReKi)                                             :: Cn_prime
    real(ReKi)                                             :: Cn1
    real(ReKi)                                             :: Cn2
-   real(ReKi)                                             :: T_VL   
-   real(ReKi)                                             :: Kalpha
+   real(ReKi)                                             :: Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar  
+   real(ReKi)                                             :: Kalpha           ! backwards finite difference of alpha
    real(ReKi)                                             :: Kq
    real(ReKi)                                             :: q_cur
    real(ReKi)                                             :: X1
@@ -1200,15 +967,15 @@ subroutine UnsteadyAero_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, Er
    real(ReKi)                                             :: Kprime_q
    real(ReKi)                                             :: Dp
    real(ReKi)                                             :: Cn_pot
-   real(ReKi)                                             :: Cc_pot
+   real(ReKi)                                             :: Cc_pot, Cn_alpha_q_circ, Cm_q_circ, Cn_alpha_nc, Cm_q_nc
    real(ReKi)                                             :: fprimeprime
    real(ReKi)                                             :: Df
    real(ReKi)                                             :: fprime
-   real(ReKi)                                             :: Cn_v
-   real(ReKi)                                             :: C_V 
+   real(ReKi)                                             :: Cn_v              ! normal force coefficient due to the presence of LE vortex
+   real(ReKi)                                             :: C_V               ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex
    real(ReKi)                                             :: Cn_FS
    real(ReKi)                                             :: alpha_e
-   real(ReKi)                                             :: alpha0
+   real(ReKi)                                             :: alpha0            ! zero lift angle of attack (radians)
    real(ReKi)                                             :: dalpha0
    real(ReKi)                                             :: eta_e
    real(ReKi)                                             :: Kafactor
@@ -1223,8 +990,10 @@ subroutine UnsteadyAero_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, Er
       ! We need to loop over all blade stations and update the states for each station
 do j = 1,p%numBlades
    do i = 1,p%nNodesPerBlade
-      call ComputeKelvinChain(i, j,  u, p, xd, OtherState, Cn_prime, Cn1, Cn2, T_VL, St_sh, Kalpha, alpha_e, alpha0, dalpha0, eta_e, Kq, q_cur, X1, X2, &
-                                 Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, fprime, Cn_v, C_V, Cn_FS, errStat, errMsg )
+      call ComputeKelvinChain(i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
+                                     St_sh, Kalpha, alpha_e, alpha0, dalpha0, eta_e, Kq, q_cur, X1, X2, &
+                                     Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, fprime, &
+                                     Cn_alpha_q_circ, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, errStat, errMsg )
       
       
       T_sh = 2.0_ReKi*(1.0_ReKi-fprimeprime) / St_sh
@@ -1465,13 +1234,13 @@ do j = 1,p%numBlades
 end do
 
 end subroutine UnsteadyAero_UpdateDiscState
+!==============================================================================   
 
-
-!----------------------------------------------------------------------------------------------------------------------------------
+!============================================================================== 
 subroutine UnsteadyAero_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, errStat, errMsg )
 ! Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
 ! Continuous, constraint, and discrete states are updated to values at t + Interval.
-!..................................................................................................................................
+!..............................................................................
 
    real(DbKi),                              intent(in   ) :: t               ! Current simulation time in seconds
    integer(IntKi),                          intent(in   ) :: n               ! Current step of the simulation: t = n*Interval
@@ -1527,10 +1296,12 @@ subroutine UnsteadyAero_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, Oth
    call UnsteadyAero_DestroyDiscState(   xd_t,       ErrStat2, ErrMsg2) 
       
 end subroutine UnsteadyAero_UpdateStates
+!==============================================================================   
 
+!============================================================================== 
 subroutine UnsteadyAero_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )   
 ! Routine for computing outputs, used in both loose and tight coupling.
-!..................................................................................................................................
+!..............................................................................
    
    real(DbKi),                             intent(in   )  :: Time        ! Current simulation time in seconds
    type(UnsteadyAero_InputType),           intent(inout)  :: u           ! Inputs at Time
@@ -1550,8 +1321,8 @@ subroutine UnsteadyAero_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat
    real(ReKi)                                             :: Cn_prime
    real(ReKi)                                             :: Cn1
    real(ReKi)                                             :: Cn2
-   real(ReKi)                                             :: T_VL   
-   real(ReKi)                                             :: Kalpha
+   real(ReKi)                                             :: Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar   
+   real(ReKi)                                             :: Kalpha             ! backwards finite difference of alpha
    real(ReKi)                                             :: Kq
    real(ReKi)                                             :: q_cur
    real(ReKi)                                             :: X1
@@ -1560,19 +1331,19 @@ subroutine UnsteadyAero_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat
    real(ReKi)                                             :: Kprime_q
    real(ReKi)                                             :: Dp
    real(ReKi)                                             :: Cn_pot
-   real(ReKi)                                             :: Cc_pot
+   real(ReKi)                                             :: Cc_pot, Cn_alpha_q_circ, Cm_q_circ, Cn_alpha_nc, Cm_q_nc
    real(ReKi)                                             :: fprimeprime
    real(ReKi)                                             :: Df
    real(ReKi)                                             :: fprime
-   real(ReKi)                                             :: Cn_v
-   real(ReKi)                                             :: C_V 
+   real(ReKi)                                             :: Cn_v                ! normal force coefficient due to the presence of LE vortex
+   real(ReKi)                                             :: C_V                 ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex
    real(ReKi)                                             :: Cn_FS  
    real(ReKi)                                             :: alpha_e
-   real(ReKi)                                             :: alpha0
+   real(ReKi)                                             :: alpha0              ! zero lift angle of attack (radians)
    real(ReKi)                                             :: dalpha0
    real(ReKi)                                             :: eta_e
    real(ReKi)                                             :: St_sh
-   real(ReKi)                                             :: Cl, Cd, Cd0
+   real(ReKi)                                             :: Cl, Cd
    integer                                                :: iNode
    
    iNode = 0
@@ -1582,8 +1353,8 @@ subroutine UnsteadyAero_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat
       do j = 1,p%numBlades
          do i = 1,p%nNodesPerBlade
             iNode = iNode + 1
-            call GetSteadyOutputs(p%AFI_Params%AFInfo(p%AFIndx(i,j)), u%alpha(i,j), u%Re(i,j), y%Cl(i,j), y%Cd(i,j), errStat, errMsg)
-            Cd0 = 0.0
+            call GetSteadyOutputs(p%AFI_Params%AFInfo(p%AFIndx(i,j)), u%alpha(i,j), u%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), errStat, errMsg)
+            Cd0 = 0.012
             y%Cn(i,j) = y%Cl(i,j)*cos(u%alpha(i,j)) + (y%Cd(i,j)-Cd0)*sin(u%alpha(i,j))
             y%Cc(i,j) = y%Cl(i,j)*sin(u%alpha(i,j)) - (y%Cd(i,j)-Cd0)*cos(u%alpha(i,j))
             y%WriteOutput(iNode) = u%alpha(i,j)*180.0/pi
@@ -1601,10 +1372,12 @@ subroutine UnsteadyAero_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat
          do i = 1,p%nNodesPerBlade
             
             iNode = iNode + 1
-            Cd0 = 0.0
+            Cd0 = 0.012
             
-            call ComputeKelvinChain(i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, T_VL, St_sh, Kalpha, alpha_e, alpha0, dalpha0, eta_e, Kq, q_cur, X1, X2, &
-                                    Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, fprime, Cn_v, C_V, Cn_FS, errStat, errMsg )
+            call ComputeKelvinChain( i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
+                                     St_sh, Kalpha, alpha_e, alpha0, dalpha0, eta_e, Kq, q_cur, X1, X2, &
+                                     Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, fprime, &
+                                     Cn_alpha_q_circ, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, errStat, errMsg )
             
             y%Cn(i,j) = Cn_FS + Cn_v
             
@@ -1612,6 +1385,8 @@ subroutine UnsteadyAero_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat
             
             y%Cl(i,j) = y%Cn(i,j)*cos(u%alpha(i,j)) + y%Cc(i,j)*sin(u%alpha(i,j))
             y%Cd(i,j) = y%Cn(i,j)*sin(u%alpha(i,j)) - y%Cc(i,j)*cos(u%alpha(i,j)) + Cd0
+            
+            y%Cm(i,j) = Get_Cm( Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, xd%tau_v(i,j) )
             
             y%WriteOutput(iNode) = u%alpha(i,j)*180.0/pi
             y%WriteOutput(iNode+1) = y%Cn(i,j)
@@ -1628,7 +1403,7 @@ subroutine UnsteadyAero_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat
    end if
    
 end subroutine UnsteadyAero_CalcOutput
-
+!==============================================================================   
 
  !integer function Test_Cn()
  !
