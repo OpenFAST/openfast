@@ -458,6 +458,8 @@ PROGRAM InflowWind_Driver
    ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose >= 7_IntKi ) ) THEN
       CALL WrScr(NewLine//' InflowWind_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
                  NewLine//'                           ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+   ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose < 7_IntKi ) ) THEN
+      CALL ProgWarn( ErrMsg )
    ENDIF
 
 
@@ -662,6 +664,15 @@ PROGRAM InflowWind_Driver
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
                   InflowWind_y1, ErrStat, ErrMsg)
 
+DO I = 1, InflowWind_p%NWindVel
+print*,''
+print*,'I:  ',I
+print*,'    InflowWind_p%WindViXYZ(I):          ',InflowWind_p%WindViXYZ(:,I)
+print*,'    InflowWind_OtherState%WindViUVW(I): ',InflowWind_OtherState%WindViUVW(:,I)
+print*,'    WriteOutput:                        ',InflowWind_y1%WriteOutput(3*(I-1)+1:3*I)
+print*,'    AllOuts:                            ',InflowWind_OtherState%AllOuts(3*(I-1)+1:3*I)
+ENDDO
+
          ! Make sure no errors occured that give us reason to terminate now.
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL DriverCleanup()
@@ -671,7 +682,6 @@ PROGRAM InflowWind_Driver
                     ' InflowWind_Calc returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//        &
                     NewLine//'                           ErrMsg:  '//TRIM(ErrMsg)//NewLine)
       ENDIF
-
 
 
          ! Write the WindGrid results to a file for this timestep
