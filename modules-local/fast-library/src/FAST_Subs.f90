@@ -1757,7 +1757,7 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD, y_SrvD, u_SrvD, MeshMapData,
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
 
       u_ED%GenTrq     = y_SrvD%GenTrq
-      u_ED%HSSBrTrq   = y_SrvD%HSSBrTrq
+      u_ED%HSSBrTrqC  = y_SrvD%HSSBrTrqC
       u_ED%BlPitchCom = y_SrvD%BlPitchCom
       u_ED%YawMom     = y_SrvD%YawMom
    !   u_ED%TBDrCon    = y_SrvD%TBDrCon !array
@@ -5634,7 +5634,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
       IF ( AD%p%TwrProps%PJM_Version .AND. p_FAST%TurbineType == Type_Offshore_Floating ) THEN
          CALL SetErrStat(ErrID_Fatal,'AeroDyn tower influence model "NEWTOWER" is invalid for models of floating offshore turbines.',ErrStat,ErrMsg,RoutineName)
       END IF         
-
+            
+      
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -5642,6 +5643,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
       
    END IF
    
+   ! ........................
+   ! initialize InflowWind (was already initialized in AeroDyn)
+   ! ........................   
    IF (ALLOCATED(InitOutData_AD%IfW_InitOutput%WriteOutputHdr)) THEN
       CALL AllocAry(IfW%WriteOutput, SIZE(InitOutData_AD%IfW_InitOutput%WriteOutputHdr), 'Ifw%WriteOutput',ErrStat2,ErrMsg2)
    ELSE
@@ -5655,6 +5659,27 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
    IfW%WriteOutput = 0.0
 
 
+   ! ........................
+   ! some checks for the high-speed shaft brake hack in ElastoDyn:
+   ! (DO NOT COPY THIS CODE!)
+   ! ........................   
+   IF ( p_FAST%CompServo == Module_SrvD ) THEN
+      
+         ! bjj: this is a hack to get high-speed shaft braking in FAST v8
+      
+      IF ( InitOutData_SrvD%UseHSSBrake ) THEN
+         IF ( AD%p%DYNINFL ) THEN
+            CALL SetErrStat(ErrID_Fatal,'AeroDyn "DYNINFL" InfModel is invalid for models with high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
+         END IF
+         
+         IF ( ED%p%method /= 3 ) THEN ! bjj: should be using ElastoDyn's Method_ABM4 parameter
+            CALL SetErrStat(ErrID_Fatal,'ElastoDyn must use the ABM4 integration method to implement high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
+         END IF               
+      END IF
+      
+   END IF
+   
+   
    ! ........................
    ! initialize HydroDyn 
    ! ........................
