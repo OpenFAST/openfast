@@ -113,8 +113,8 @@ typedef   ^                            ^                             INTEGER    
 # Define inputs that are contained on the mesh here:
 #
 typedef   ^                            InputType                     ReKi                     U                               -         -         -            "air velocity magnitude relative to the airfoil" m/s
-typedef   ^                            ^                             ReKi                     Re                              -         -         -            "Reynolds number" -
 typedef   ^                            ^                             ReKi                     alpha                           -         -         -            "angle of attack" rad
+typedef   ^                            ^                             ReKi                     Re                              -         -         -            "Reynold's number" -
 #                                                                                                                                                             
 # ..... Outputs ...................................................................................................................                           
 # Define outputs that are contained on the mesh here:                                                                                                         
