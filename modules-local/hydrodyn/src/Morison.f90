@@ -1063,7 +1063,7 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, WtrDpth, numNodes, nodes, numElemen
          
          node1   = nodes(elements(I)%Node1Indx)
          node2   = nodes(elements(I)%Node2Indx)
-         IF ( ( (node1%tMG > 0 ) .AND. EqualRealNos(node2%tMG,0.0_ReKi) ) .OR. ( (node2%tMG > 0 ) .AND. EqualRealNos(node1%tMG,0.0_ReKi) ) ) THEN
+         IF ( ( (node1%tMG > 0.0_ReKi ) .AND. EqualRealNos(node2%tMG,0.0_ReKi) ) .OR. ( (node2%tMG > 0.0_ReKi ) .AND. EqualRealNos(node1%tMG,0.0_ReKi) ) ) THEN
             ErrStat = ErrID_Fatal
             ErrMsg  = 'If one node of an element has MG, then both must.  This is an internal code problem within HydroDyn.'
             RETURN
@@ -1396,7 +1396,7 @@ SUBROUTINE WriteSummaryFile( UnSum, MSL2SWL, WtrDpth, numNodes, nodes, numElemen
          
          node1   = nodes(elements(I)%Node1Indx)
          node2   = nodes(elements(I)%Node2Indx)
-         IF ( ( (node1%tMG > 0 ) .AND. EqualRealNos(node2%tMG,0.0_ReKi) ) .OR. ( (node2%tMG > 0 ) .AND. EqualRealNos(node1%tMG,0.0_ReKi) ) ) THEN
+         IF ( ( (node1%tMG > 0.0_ReKi ) .AND. EqualRealNos(node2%tMG,0.0_ReKi) ) .OR. ( (node2%tMG > 0.0_ReKi ) .AND. EqualRealNos(node1%tMG,0.0_ReKi) ) ) THEN
             ErrStat = ErrID_Fatal
             ErrMsg  = 'If one node of an element has MG, then both must.  This is an internal code problem within HydroDyn.'
             RETURN

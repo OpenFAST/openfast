@@ -606,10 +606,7 @@ SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherS
       CHARACTER(*),                       INTENT(  OUT) :: ErrMsg          ! Error message if ErrStat /= ErrID_None
 
          ! Local variables
-
-      TYPE(Conv_Rdtn_ContinuousStateType)                 :: dxdt            ! Continuous state derivatives at t
-      TYPE(Conv_Rdtn_DiscreteStateType)                   :: xd_t            ! Discrete states at t (copy)
-      TYPE(Conv_Rdtn_ConstraintStateType)                 :: z_Residual      ! Residual of the constraint state functions (Z)
+    
       TYPE(Conv_Rdtn_InputType)                           :: u               ! Instantaneous inputs
       INTEGER(IntKi)                                    :: ErrStat2        ! Error status of the operation (secondary error)
       CHARACTER(LEN(ErrMsg))                            :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
@@ -627,29 +624,16 @@ SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherS
       
          ! Get the inputs at time t, based on the array of values sent by the glue code:
          
-      CALL Conv_Rdtn_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat, ErrMsg )  
-      IF ( ErrStat >= AbortErrLev ) RETURN
-       
+    
       
          ! Update discrete states:
          !   Note that xd [discrete state] is changed in Conv_Rdtn_UpdateDiscState() so xd will now contain values at t+Interval
          !   We'll first make a copy that contains xd at time t, which will be used in computing the constraint states
-      CALL Conv_Rdtn_CopyDiscState( xd, xd_t, MESH_NEWCOPY, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) RETURN
+ 
 
       CALL Conv_Rdtn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Conv_Rdtn_DestroyConstrState( Z_Residual, ErrStat2, ErrMsg2)
-         CALL Conv_Rdtn_DestroyContState(   dxdt,       ErrStat2, ErrMsg2)
-         CALL Conv_Rdtn_DestroyDiscState(   xd_t,       ErrStat2, ErrMsg2) 
-         RETURN
-      END IF
-
-
-       
-  
-            
-      
+     
+ 
          ! Integrate (update) continuous states (x) here:
 
       !x = function of dxdt and x
@@ -658,7 +642,6 @@ SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherS
          ! Destroy local variables before returning
          
       
-      CALL Conv_Rdtn_DestroyDiscState(   xd_t,       ErrStat2, ErrMsg2) 
       
       
 END SUBROUTINE Conv_Rdtn_UpdateStates
