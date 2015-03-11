@@ -1,3 +1,16 @@
+v2.02.01c-gjh  (Mar 2015)
+•	Modified the character string declarations for intent(out) variables to be character(*)
+•	Updated error handling
+•	Fixed various typos in error messages
+•	There was an issue in the 3D and 4D data reading routines for WAMIT2.  If a pair of points has to be added at the end to create a step function cutoff, 
+   a new frequency is inserted with a value o the highest frequency + EPSILON.  However, the highest frequency and the new frequency would get evaluated 
+   incorrectly in a comparison, and the second point would get flagged as not having anything associated with it, as a sparse point.
+   To fix this, I simply changed EPSILON to 4*EPSILON for the offset for the new point.  This prevents a EqualRealNos comparison from mixing up the two 
+   points when creating the mask for points that are populated.
+•	now allows 2nd order wave force flags to be used even though the 1st order flags must always be set to TRUE
+•	updated error handling
+•	added initialization values to some variables which were never initialized
+
 v2.02.01a-gjh  (Nov 2014)
 •	Fixed bug where a WaveTp = 0 would cause a crash.  Fixed by adding a consistent error check on the WaveTp parameter to make sure it is greater than zero.
 
