@@ -23,9 +23,7 @@ typedef  ^                       ^                       ReKi     RefLength     
 
 
 # Init Output
-typedef  ^                       InitOutputType  CHARACTER(10)    WriteOutputHdr    :     -     -     "Names of output-to-file channels"                             -
-typedef  ^                       ^               CHARACTER(10)    WriteOutputUnt    :     -     -     "Units of output-to-file channels"                             -
-typedef  ^                       ^                    ProgDesc    Ver               -     -     -     "Version information off HHWind submodule"                     -
+typedef  ^                       InitOutputType       ProgDesc    Ver               -     -     -     "Version information off HHWind submodule"                     -
 typedef  ^                       ^                       ReKi     HubHeight         -     -     -     "Height of the hub"                                            meters
 typedef  ^                       ^                       DbKi     WindFileDT        -     -     -     "TimeStep of the wind file -- zero value for none"       -
 typedef  ^                       ^                       ReKi     WindFileTRange    {2}   -     -     "Time range of the wind file"                            -

@@ -64,7 +64,6 @@ PROGRAM InflowWind_Driver
    TYPE(IfWDriver_Settings)                           :: Settings                ! Driver settings
    REAL(DbKi)                                         :: Timer(1:2)              ! Keep track of how long this takes to run
    REAL(DbKi)                                         :: TimeNow                 ! The current time
-!   REAL(DbKI)                                         :: DT                      ! Timestep
    INTEGER(IntKi)                                     :: NumTotalPoints          ! Number of points for this iteration
    LOGICAL                                            :: TempFileExist           ! Flag for inquiring file existence
    CHARACTER(11)                                      :: TmpNumString            ! Temporary string for holding a number
@@ -96,6 +95,15 @@ PROGRAM InflowWind_Driver
    CHARACTER(2048)                                    :: ErrMsgTmp
    INTEGER(IntKi)                                     :: LenErrMsgTmp            ! Length of ErrMsgTmp
 
+
+
+      ! Temporary array for testing -- This is contained within a the InflowWind_Subs module. It appears here only for testing purposes
+   CHARACTER(9), PARAMETER  :: ValidParamAry(27) =  (/ &
+                               "WIND1VELX","WIND1VELY","WIND1VELZ","WIND2VELX","WIND2VELY","WIND2VELZ","WIND3VELX", &
+                               "WIND3VELY","WIND3VELZ","WIND4VELX","WIND4VELY","WIND4VELZ","WIND5VELX","WIND5VELY", &
+                               "WIND5VELZ","WIND6VELX","WIND6VELY","WIND6VELZ","WIND7VELX","WIND7VELY","WIND7VELZ", &
+                               "WIND8VELX","WIND8VELY","WIND8VELZ","WIND9VELX","WIND9VELY","WIND9VELZ"/)
+ 
 
    !--------------------------------------------------------------------------
    !-=-=- Initialize the Library -=-=-
@@ -637,10 +645,30 @@ PROGRAM InflowWind_Driver
 !        FFTDataSetFrq(Freqs,3)              (FreqIdx,DimIdx)     Where DimIdx:= 1=X, 2=Y, 3=Z
 !        TimeArray(TSteps)                   (TimeIdx)            Array of values for the time -- IS THIS NECESSARY? NOT FOR FFT.
 !        FreqArray(NumFreqs)                 (FreqIdx)            Array of values for the frequency
-!TODO: Use the WindFileTRange and WindFileNumTSteps for the FFT.
+!TODO: Use the WindFileTRange and WindFileNumTSteps for the FFT
    ENDIF
 
 
+      ! Report the rotation of the coordinates.
+   IF ( IfWDriver_Verbose >= 10_IntKi .AND. InflowWind_p%NWindVel > 0_IntKi )   THEN
+      CALL WrScr(NewLine//NewLine//'  Rotation of coordinates to prime (wind file) coordinates by rotating '//   &
+                  TRIM(Num2LStr(R2D*InflowWind_p%PropogationDir))// &
+                  ' degrees (meteorological wind direction change) ...'//NewLine)
+      CALL WrScr('          ------ WindViXYZ ---------    ----- WindViXYZprime -----')
+
+      DO I = 1,InflowWind_p%NWindVel
+         ErrMsgTmp   =  ''
+         ErrMsgTmp   =  '   '//TRIM(Num2LStr(I))//'  '
+         ErrMsgTmp   =  TRIM(ErrMsgTmp)//'      ('//TRIM(Num2LStr(InflowWind_p%WindViXYZ(1,I)))//      &
+                        ', '//TRIM(Num2LStr(InflowWind_p%WindViXYZ(2,I)))//', '//                      &
+                        TRIM(Num2LStr(InflowWind_p%WindViXYZ(3,I)))//')'
+         ErrMsgTmp   =  ErrMsgTmp(1:40)//'('//TRIM(Num2LStr(InflowWind_p%WindViXYZprime(1,I)))//   &
+                        ', '//TRIM(Num2LStr(InflowWind_p%WindViXYZprime(2,I)))//', '//             &
+                        TRIM(Num2LStr(InflowWind_p%WindViXYZprime(3,I)))//')'
+         CALL WrScr(TRIM(ErrMsgTmp))
+      ENDDO
+      CALL WrScr(NewLine)
+   ENDIF
 
 
    !--------------------------------------------------------------------------------------------------------------------------------
@@ -652,7 +680,7 @@ PROGRAM InflowWind_Driver
 !TODO: output file with data from IfW (on time steps)
 !TODO: Summary info
 
-   IF ( IfWDriver_Verbose >= 5_IntKi )    CALL WrScr(Newline//'Calling InflowWind_CalcOutput...'//Newline)
+   IF ( IfWDriver_Verbose >= 5_IntKi )    CALL WrScr(NewLine//'Calling InflowWind_CalcOutput...'//NewLine)
 
 
    DO ITime =  0, MAX( Settings%NumTimeSteps, 1_IntKi )
@@ -664,14 +692,7 @@ PROGRAM InflowWind_Driver
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
                   InflowWind_y1, ErrStat, ErrMsg)
 
-DO I = 1, InflowWind_p%NWindVel
-print*,''
-print*,'I:  ',I
-print*,'    InflowWind_p%WindViXYZ(I):          ',InflowWind_p%WindViXYZ(:,I)
-print*,'    InflowWind_OtherState%WindViUVW(I): ',InflowWind_OtherState%WindViUVW(:,I)
-print*,'    WriteOutput:                        ',InflowWind_y1%WriteOutput(3*(I-1)+1:3*I)
-print*,'    AllOuts:                            ',InflowWind_OtherState%AllOuts(3*(I-1)+1:3*I)
-ENDDO
+
 
          ! Make sure no errors occured that give us reason to terminate now.
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -727,6 +748,42 @@ ENDDO
 
    ENDDO    ! ITime loop
 
+
+
+      !  output table of results for the outlist comparison and check if very verbose -- print statements are
+      !  used because we don't want linewrapping.
+   IF ( IfWDriver_Verbose >= 10_IntKi ) THEN
+      print*,NewLine//NewLine//'   Requested wind points and writeoutput results at last timestep (t='//      &
+                  TRIM(Num2LStr(TimeNow))//'):'//NewLine
+      print*,'          ------ WindViXYZ ---------    ----- WindViUVW ---------     -- AllOuts --     '//     &
+                  '------------- WriteOutput -------------'
+      print*,' Index,      coord,        name             Vector value              Value             '//     &
+                  'Name        Unit   OutIndex     Value'
+      DO I = 1,27
+         ErrMsgTmp   =  ''
+         ErrMsgTmp   =  '   '//TRIM(Num2LStr(I))//'  '
+         IF ( InflowWind_p%NWindVel >= (I-1)/3+1 ) THEN
+            ErrMsgTmp   =  TRIM(ErrMsgTmp)//'      ('//TRIM(Num2LStr(InflowWind_p%WindViXYZ(1,(I-1)/3+1)))//      &
+                           ', '//TRIM(Num2LStr(InflowWind_p%WindViXYZ(2,(I-1)/3+1)))//', '//                      &
+                           TRIM(Num2LStr(InflowWind_p%WindViXYZ(3,(I-1)/3+1)))//')'
+            ErrMsgTmp   =  ErrMsgTmp(1:25)//ValidParamAry(I)
+            ErrMsgTmp   =  ErrMsgTmp(1:40)//'('//TRIM(Num2LStr(InflowWind_OtherState%WindViUVW(1,(I-1)/3+1)))//   &
+                           ', '//TRIM(Num2LStr(InflowWind_OtherState%WindViUVW(2,(I-1)/3+1)))//', '//             &
+                           TRIM(Num2LStr(InflowWind_OtherState%WindViUVW(3,(I-1)/3+1)))//')'
+
+         ENDIF
+         ErrMsgTmp   =  ErrMsgTmp(1:68)//TRIM(Num2LStr(InflowWind_OtherState%AllOuts(I)))
+         DO J  = 1, InflowWind_p%NumOuts
+            IF ( InflowWind_p%OutParam(J)%Indx == I ) THEN
+               ErrMsgTmp   =  ErrMsgTmp(1:88)//InflowWind_InitOut%WriteOutputHdr(J)//'  '//     &
+                              InflowWind_InitOut%WriteOutputUnt(J)//TRIM(Num2LStr(J))
+               ErrMsgTmp   =  ErrMsgTmp(1:120)//TRIM(Num2LStr(InflowWind_y1%WriteOutput(J)))
+            ENDIF 
+         ENDDO
+         print*,TRIM(ErrMsgTmp)
+      ENDDO
+   ENDIF
+   
 
 
 

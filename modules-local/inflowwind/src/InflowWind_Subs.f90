@@ -1301,15 +1301,14 @@ SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrS
 
       ! Copy over the list of wind coordinates.  Move the arrays to the new one.
    ParamData%NWindVel   =  InputFileData%NWindVel
-   CALL AllocAry( ParamData%WindViXYZ, 3, InputFileData%NWindVel,   &
+   CALL AllocAry( ParamData%WindViXYZ, 3, ParamData%NWindVel,   &
          "XYZ coordinates of the requested wind points.", TmpErrStat, TmpErrMsg )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_SetParameters')
    IF (ErrStat >= AbortErrLev) RETURN
 
-   ParamData%WindViXYZ(1,:)   =  InputFileData%WindVxiList
-   ParamData%WindViXYZ(2,:)   =  InputFileData%WindVyiList
-   ParamData%WindViXYZ(3,:)   =  InputFileData%WindVziList
-   
+   ParamData%WindViXYZ(1,1:ParamData%NWindVel)  =  InputFileData%WindVxiList(1:ParamData%NWindVel)
+   ParamData%WindViXYZ(2,1:ParamData%NWindVel)  =  InputFileData%WindVyiList(1:ParamData%NWindVel)
+   ParamData%WindViXYZ(3,1:ParamData%NWindVel)  =  InputFileData%WindVziList(1:ParamData%NWindVel)
 
 
       ! Set the number of OutList names read in from the file
@@ -1359,7 +1358,7 @@ SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrS
 
 
       ! Create the array used for holding the rotated list of WindViXYZ coordinates in the wind reference frame, and populate it
-   CALL AllocAry( ParamData%WindViXYZprime, 3, 9, 'Array for WindViXYZ coordinates in the wind reference frame', &
+   CALL AllocAry( ParamData%WindViXYZprime, 3, ParamData%NWindVel, 'Array for WindViXYZ coordinates in the wind reference frame', &
                TmpErrStat, TmpErrMsg )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_Init')
    IF ( ErrStat>= AbortErrLev ) RETURN 

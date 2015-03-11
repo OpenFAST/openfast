@@ -444,26 +444,26 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    InitOutdata%Ver         = IfW_UniformWind_Ver
 
 
-      ! Allocate and populate the OutputHdr array (contains names of outputable values)
-
-   CALL AllocAry( InitOutData%WriteOutputHdr, 3, 'Empty array for names of outputable information.', TmpErrStat, TmpErrMsg )
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-   InitOutData%WriteOutputHdr(1) = 'WindVxi'
-   InitOutData%WriteOutputHdr(2) = 'WindVyi'
-   InitOutData%WriteOutputHdr(3) = 'WindVzi'
-
-
-      ! Allocate and populate the OutputUnt array (contains units of outputable values)
-
-   CALL AllocAry( InitOutData%WriteOutputUnt, 3, 'Empty array for units of outputable information.', TmpErrStat, TmpErrMsg )
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-   InitOutData%WriteOutputUnt(1) = '(m/s)'
-   InitOutData%WriteOutputUnt(2) = '(m/s)'
-   InitOutData%WriteOutputUnt(3) = '(m/s)'
+!      ! Allocate and populate the OutputHdr array (contains names of outputable values)
+!
+!   CALL AllocAry( InitOutData%WriteOutputHdr, 3, 'Empty array for names of outputable information.', TmpErrStat, TmpErrMsg )
+!   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+!   IF ( ErrStat >= AbortErrLev ) RETURN
+!
+!   InitOutData%WriteOutputHdr(1) = 'WindVxi'
+!   InitOutData%WriteOutputHdr(2) = 'WindVyi'
+!   InitOutData%WriteOutputHdr(3) = 'WindVzi'
+!
+!
+!      ! Allocate and populate the OutputUnt array (contains units of outputable values)
+!
+!   CALL AllocAry( InitOutData%WriteOutputUnt, 3, 'Empty array for units of outputable information.', TmpErrStat, TmpErrMsg )
+!   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+!   IF ( ErrStat >= AbortErrLev ) RETURN
+!
+!   InitOutData%WriteOutputUnt(1) = '(m/s)'
+!   InitOutData%WriteOutputUnt(2) = '(m/s)'
+!   InitOutData%WriteOutputUnt(3) = '(m/s)'
 
 
    RETURN
@@ -521,7 +521,6 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,
       ! This is just in case we only have a single point, the SIZE command returns the correct number of points.
    NumPoints   =  SIZE(PositionXYZ,DIM=2)
 
-
       ! Allocate Velocity output array
    IF ( .NOT. ALLOCATED(OutData%Velocity)) THEN
       CALL AllocAry( OutData%Velocity, 3, NumPoints, "Velocity matrix at timestep", TmpErrStat, TmpErrMsg )
@@ -531,6 +530,7 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,
    ELSEIF ( SIZE(OutData%Velocity,DIM=2) /= NumPoints ) THEN
       CALL SetErrStat( ErrID_Fatal," Programming error: Position and Velocity arrays are not sized the same.",  &
          ErrStat, ErrMsg, ' IfW_UniformWind_CalcOutput')
+      RETURN
    ENDIF
 
 
