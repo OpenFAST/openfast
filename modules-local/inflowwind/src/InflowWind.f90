@@ -408,23 +408,6 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             IF ( ErrStat >= AbortErrLev ) RETURN
 
 
-               ! Copy Relevant info over to InitOutData
-
-               ! Allocate and copy over the WriteOutputHdr info
-            CALL AllocAry( InitOutData%WriteOutputHdr, SIZE(InitOutData%UniformWind%WriteOutputHdr,1), &
-                              'Empty array for names of outputable information.', TmpErrStat, TmpErrMsg )
-            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
-            IF ( ErrStat >= AbortErrLev ) RETURN
-            InitOutData%WriteOutputHdr    =  InitOutData%UniformWind%WriteOutputHdr
-
-               ! Allocate and copy over the WriteOutputUnt info
-            CALL AllocAry( InitOutData%WriteOutputUnt, SIZE(InitOutData%UniformWind%WriteOutputUnt,1), &
-                           'Empty array for units of outputable information.', TmpErrStat, TmpErrMsg )
-            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
-            IF ( ErrStat >= AbortErrLev ) RETURN
-
-            InitOutData%WriteOutputUnt    =  InitOutData%UniformWind%WriteOutputUnt
-
                ! Copy the hub height info over
             InitOutData%HubHeight         =  InitOutData%UniformWind%HubHeight
 
@@ -517,39 +500,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !!!      SELECT CASE ( ParamData%WindType )
 !!!
 !!!         CASE (Uniform_WindNumber)
-!!!
-!!!            Uniform_InitData%ReferenceHeight = InitData%ReferenceHeight
-!!!            Uniform_InitData%Width           = InitData%Width
-!!!            Uniform_InitData%WindFileName    = ParamData%WindFileName
-!!!
-!!!            CALL IfW_UniformWind_Init(Uniform_InitData,   Uniform_InitGuess,  ParamData%UniformWind,                         &
-!!!                                 Uniform_ContStates, Uniform_DiscStates, Uniform_ConstrStates,     OtherStates%UniformWind,  &
-!!!                                 Uniform_OutData,    TimeInterval,  InitOutData%UniformWind,  TmpErrStat,          TmpErrMsg)
-!!!
-!!!               CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
-!!!               IF ( ErrStat >= AbortErrLev ) RETURN
-!!!
-!!!
-!!!              ! Copy Relevant info over to InitOutData
-!!!
-!!!                  ! Allocate and copy over the WriteOutputHdr info
-!!!               CALL AllocAry( InitOutData%WriteOutputHdr, SIZE(InitOutData%UniformWind%WriteOutputHdr,1), &
-!!!                              'Empty array for names of outputable information.', TmpErrStat, TmpErrMsg )
-!!!                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
-!!!                  IF ( ErrStat >= AbortErrLev ) RETURN
-!!!               InitOutData%WriteOutputHdr    =  InitOutData%UniformWind%WriteOutputHdr
-!!!
-!!!                  ! Allocate and copy over the WriteOutputUnt info
-!!!               CALL AllocAry( InitOutData%WriteOutputUnt, SIZE(InitOutData%UniformWind%WriteOutputUnt,1), &
-!!!                              'Empty array for units of outputable information.', TmpErrStat, TmpErrMsg )
-!!!                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
-!!!                  IF ( ErrStat >= AbortErrLev ) RETURN
-!!!
-!!!               InitOutData%WriteOutputUnt    =  InitOutData%UniformWind%WriteOutputUnt
-!!!
-!!!                  ! Copy the hub height info over
-!!!               InitOutData%HubHeight         =  InitOutData%UniformWind%HubHeight
-!!!
+!!!NOTE: is the CTTS used on uniform wind?
 !!!!           IF (CTTS_Flag) CALL CTTS_SetRefVal(FileInfo%ReferenceHeight, 0.5*FileInfo%Width, ErrStat)  !FIXME: check if this was originally used
 !!!!           IF (ErrStat == ErrID_None .AND. ParamData%CTTS_Flag) &
 !!!!              CALL CTTS_SetRefVal(InitData%ReferenceHeight, REAL(0.0, ReKi), ErrStat, ErrMsg)      !FIXME: will need to put this routine in the Init of CT
@@ -569,6 +520,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !!!               IF ( ErrStat >= AbortErrLev ) RETURN
 !!!
 !!!
+!NOTE: remove the WriteOutputHdr from the full field modules.  This is handled in the CalcOutput module of InflowWind
 !!!              ! Copy Relevant info over to InitOutData
 !!!
 !!!                  ! Allocate and copy over the WriteOutputHdr info
@@ -586,6 +538,9 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !!!                  IF ( ErrStat >= AbortErrLev ) RETURN
 !!!
 !!!               InitOutData%WriteOutputUnt    =  InitOutData%FFWind%WriteOutputUnt
+!!!
+!!!
+!!!
 !!!
 !!!                  ! Copy the hub height info over
 !!!               InitOutData%HubHeight         =  InitOutData%FFWind%HubHeight
@@ -617,20 +572,6 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !!!!            CALL UsrWnd_Init(ErrStat)
 !!!
 !!!
-!!!         CASE (FD_WindNumber)
-!!!
-!!!               !FIXME: remove this error message when we add FD_Wind in
-!!!            CALL SetErrStat( ErrID_Fatal, ' InflowWind cannot currently handle the FD_Wind type.', ErrStat, ErrMsg, ' IfW_Init' )
-!!!            RETURN
-!!!
-!!!!           CALL IfW_FDWind_Init(UnWind, ParamData%WindFileName, InitData%ReferenceHeight, ErrStat)
-!!!
-!               ! Timestep information
-!            InitOutData%WindFileConstantDT=  InitOutData%UniformWind%WindFileConstantDT
-!            InitOutData%WindFileDT        =  InitOutData%UniformWind%WindFileDT
-!            InitOutData%WindFileTRange    =  InitOutData%UniformWind%WindFileTRange
-!            InitOutData%WindFileNumTSteps =  InitOutData%UniformWind%WindFileNumTSteps
-!!!
 !!!         CASE (HAWC_WindNumber)
 !!!
 !!!               !FIXME: remove this error message when we add HAWC_Wind in
@@ -644,13 +585,6 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !            InitOutData%WindFileTRange    =  InitOutData%UniformWind%WindFileTRange
 !            InitOutData%WindFileNumTSteps =  InitOutData%UniformWind%WindFileNumTSteps
 !!!
-!!!
-!!!         CASE DEFAULT
-!!!
-!!!            CALL SetErrStat( ErrID_Fatal, ' Error: Undefined wind type in WindInflow_Init()', ErrStat, ErrMsg, ' IfW_Init' )
-!!!            RETURN
-!!!
-!!!      END SELECT
 
 
 
@@ -660,6 +594,9 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          ! Set the version information in InitOutData
       InitOutData%Ver   = IfW_Ver
 
+
+
+!FIXME: add summary file writing here
 
 
       RETURN
@@ -733,15 +670,15 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 !!!      TYPE(IfW_FFWind_ConstraintStateType)                     :: FF_ConstrStates   !< Unused
 !!!      TYPE(IfW_FFWind_OutputType)                              :: FF_OutData        !< output velocities
 
-!      REAL(ReKi)                                               :: RotToWind(3,3)       !< Rotation matrix for rotating from global XYZ to windfile X'Y'Z'
-!      REAL(ReKi)                                               :: RotFromWind(3,3)     !< Rotation matrix for rotating from windfile X'Y'Z' to global XYZ
       REAL(ReKi), ALLOCATABLE                                  :: PositionXYZprime(:,:)   !< PositionXYZ array in the prime (wind) coordinates
 
       INTEGER(IntKi)                                           :: I                    !< Generic counters
 
-      INTEGER(IntKi)                                           :: J                    !FIXME: remove after testing
-      LOGICAL                                                  :: samecheck            !FIXME: remove after testing
-      REAL(ReKi), ALLOCATABLE       :: TmpPositionXYZcheck(:,:)   !< PositionXYZ array returned from prime (wind) coordinates FIXME: remove after testing
+!      INTEGER(IntKi)                                           :: J                    !FIXME: remove after testing
+!      LOGICAL                                                  :: samecheck            !FIXME: remove after testing
+!      REAL(ReKi), ALLOCATABLE       :: TmpPositionXYZcheck(:,:)   !< PositionXYZ array returned from prime (wind) coordinates FIXME: remove after testing
+!      REAL(ReKi)                                               :: RotToWind(3,3)       !< Rotation matrix for rotating from global XYZ to windfile X'Y'Z'   !FIXME: remove when done
+!      REAL(ReKi)                                               :: RotFromWind(3,3)     !< Rotation matrix for rotating from windfile X'Y'Z' to global XYZ   !FIXME: remove when done
 
          ! Temporary variables for error handling
       INTEGER(IntKi)                                           :: TmpErrStat
@@ -765,19 +702,6 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
                ErrStat, ErrMsg, ' IfW_CalcOutput')
       ENDIF
 
-
-!         !> Perform coordinate transformation using the PropogationDir value read in from the input file (the value stored in parameters
-!         !! was converted from degrees to radians already).
-!         !! @note    The PropogationDir is given in Meteorological \f$\Delta\phi\f$, so this is the negative of the \f$\Delta\phi\f$
-!         !!          for polar coordinates
-!
-!         ! Create the rotation matrices -- rotate from XYZ to X'Y'Z' (wind aligned along X) coordinates
-!      RotToWind(1,:) = (/    COS(-ParamData%PropogationDir),   SIN(-ParamData%PropogationDir),     0.0_ReKi  /)  
-!      RotToWind(2,:) = (/   -SIN(-ParamData%PropogationDir),   COS(-ParamData%PropogationDir),     0.0_ReKi  /)  
-!      RotToWind(3,:) = (/                          0.0_ReKi,                         0.0_ReKi,     1.0_ReKi  /)  
-!
-!         ! Create the rotation matrices -- rotate from X'Y'Z' (wind aligned along X) to global XYZ coordinates
-!      RotFromWind =  TRANSPOSE(RotToWind)
 
 
          !> Make a copy of the InputData%PositionXYZ coordinates with the applied rotation matrix...
@@ -830,7 +754,6 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
             IF ( ParamData%NWindVel >= 1_IntKi ) THEN
                   ! Move the arrays for the Velocity information
                CALL MOVE_ALLOC( OtherStates%WindViUVW,  Uniform_OutData%Velocity )
-
                CALL  IfW_UniformWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%UniformWind, &
                                              OtherStates%UniformWind, &
                                              Uniform_OutData, TmpErrStat, TmpErrMsg)
@@ -862,7 +785,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
             IF ( ErrStat >= AbortErrLev ) RETURN
 
 
-               ! Call IfW_UniforWind_CalcOutput again in order to get the values needed for the OutList -- note that we do not report errors from this
+               ! Call IfW_UniforWind_CalcOutput again in order to get the values needed for the OutList
             IF ( ParamData%NWindVel >= 1_IntKi ) THEN
                   ! Move the arrays for the Velocity information
                CALL MOVE_ALLOC( OtherStates%WindViUVW,  Uniform_OutData%Velocity )
@@ -870,8 +793,15 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
                CALL  IfW_UniformWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%UniformWind, &
                                              OtherStates%UniformWind, &
                                              Uniform_OutData, TmpErrStat, TmpErrMsg)
-               TmpErrStat  = ErrID_None
-               TmpErrMsg   = ''
+
+                  ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
+               IF ( TmpErrStat >= ErrID_Fatal ) THEN
+                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+                  RETURN
+               ELSE
+                  TmpErrStat  =  ErrID_None
+                  TmpErrMsg   =  ''
+               ENDIF
 
                   ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
                CALL MOVE_ALLOC( Uniform_OutData%Velocity, OtherStates%WindViUVW )
@@ -982,38 +912,6 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
       ENDIF
 
 
-!!!!!!!!!!!!!!!!!!!!!
-!!FIXME: temp testing
-!      CALL AllocAry( TmpPositionXYZcheck, 3, SIZE(InputData%PositionXYZ,DIM=2), &
-!                  "Temporary array for holding the XYZprime position data", TmpErrStat, TmpErrMsg )
-!      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
-!      IF ( ErrStat >= AbortErrLev ) RETURN
-!
-!      DO I  = 1,SIZE(InputData%PositionXYZ,DIM=2)
-!         TmpPositionXYZcheck(:,I)  =  MATMUL( ParamData%RotFromWind, PositionXYZprime(:,I) )
-!      ENDDO
-!
-!      samecheck   = .TRUE.
-!      DO I  =  1,SIZE(InputData%PositionXYZ,DIM=2)
-!         DO J  =  1,SIZE(InputData%PositionXYZ,DIM=1)
-!            IF ( .NOT. EqualRealNos(TmpPositionXYZcheck(J,I), InputData%PositionXYZ(J,I)) )    samecheck = .FALSE.
-!         ENDDO
-!      ENDDO
-!
-!      print*,'  Matmul test: '
-!      print*,'       PropogationDir = ',ParamData%PropogationDir
-!      print*,'       RotToWind        ',RotToWind(1,:)
-!      print*,'                        ',RotToWind(2,:)
-!      print*,'                        ',RotToWind(3,:)
-!      print*,''
-!      DO I  = 1,SIZE(InputData%PositionXYZ,DIM=2)
-!         print*,''
-!         print*,'       PositionXYZ     (I) ',InputData%PositionXYZ(:,I)
-!         print*,'       PositionXYZprime(I) ',PositionXYZprime(:,I)
-!         print*,'    TmpPositionXYZcheck(I) ',TmpPositionXYZcheck(:,I),'     same: ',samecheck
-!         print*,'       VelocityUVW     (I) ',OutputData%VelocityUVW(:,I)
-!      ENDDO
-!!!!!!!!!!!!!!!!!!!!!
 
       ! Done with the prime coordinates for the XYZ position information that was passed in.
    IF (ALLOCATED(PositionXYZprime)) DEALLOCATE(PositionXYZprime)
