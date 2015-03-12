@@ -134,19 +134,20 @@ PROGRAM MAIN
 !   BD_InitInput%InputFile = 'BeamDyn_Input_5MW.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_5MW_New.inp'
 !   BD_InitInput%InputFile = 'Siemens_53_Input.inp'
-   BD_InitInput%InputFile = 'GA2_Debug.inp'
+!   BD_InitInput%InputFile = 'GA2_Debug.inp'
+   BD_InitInput%InputFile = 'BeamDyn_Input_DTU10MW.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Composite.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Damp.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Curved.inp'
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
    ALLOCATE(BD_InitInput%gravity(3)) 
-   BD_InitInput%gravity(1) = 0.0D0 !-9.80665
+   BD_InitInput%gravity(1) = -9.80665
    BD_InitInput%gravity(2) = 0.0D0 
    BD_InitInput%gravity(3) = 0.0D0 
 
    ALLOCATE(BD_InitInput%GlbPos(3)) 
-   BD_InitInput%GlbPos(1) = 0.0D+00
+   BD_InitInput%GlbPos(1) = 2.8D+00
    BD_InitInput%GlbPos(2) = 0.0D+01
    BD_InitInput%GlbPos(3) = 0.0D0
 
@@ -273,15 +274,17 @@ WRITE(*,*) "Time Step: ", n_t_global
 !CALL CrvMatrixH(BD_ContinuousState%q(4:6),temp_H)
 !WRITE(QiHUnit,7000) t_global,temp_H(1,1),temp_H(1,2),temp_H(1,3),temp_H(2,1),temp_H(2,2),temp_H(2,3),&
 !                    temp_H(3,1),temp_H(3,2),temp_H(3,3)      
-!CALL CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_total),temp_cc)
+CALL CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_total),temp_cc)
       WRITE(QiDisUnit,6000) t_global,&
 !                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
 !                           &temp_cc(1:3)
 !                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total),&
 !                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total)
-                           &BD_OutPut(1)%BldForce%Force(1:3,1),&
-                           &BD_OutPut(1)%BldForce%Moment(1:3,1)
+!                           &BD_OutPut(1)%BldForce%Force(1:3,1),&
+!                           &BD_OutPut(1)%BldForce%Moment(1:3,1)
+                           &BD_OutPut(1)%ReactionForce%Force(1:3,1),&
+                           &BD_OutPut(1)%ReactionForce%Moment(1:3,1)
 !                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total),&
 !                           &BD_OtherState%fAcc(BD_Parameter%dof_total-5:BD_Parameter%dof_total-3)
 !                           &BD_OutPut(1)%BldMotion%RotationAcc(1:3,BD_Parameter%node_total)

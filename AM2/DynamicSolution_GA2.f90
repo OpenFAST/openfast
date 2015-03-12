@@ -51,7 +51,7 @@
    Eref = 0.0D0
 
    DO i=1,niter
-       WRITE(*,*) "N-R Iteration #", i
+!       WRITE(*,*) "N-R Iteration #", i
 !       IF(i==3) STOP
        StifK = 0.0D0
        RHS = 0.0D0

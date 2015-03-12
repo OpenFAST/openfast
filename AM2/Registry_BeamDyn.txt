@@ -81,6 +81,7 @@ typedef BeamDyn/BD   InputType  MeshType  DistrLoad - - - "Applied distributed f
 # ..... Outputs
 # ...................................................................................................................
 # Define outputs that are contained on the mesh here:
+typedef BeamDyn/BD   OutputType  MeshType  ReactionForce - - - "contains force and moments" -
 typedef BeamDyn/BD   OutputType  MeshType  BldForce - - - "contains force and moments" -
 typedef BeamDyn/BD   OutputType  MeshType  BldMotion - - - "Motion (disp,rot,vel) along beam axis" -
 # ..... Blade Input file data........................................................................
