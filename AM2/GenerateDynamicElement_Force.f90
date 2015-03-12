@@ -1,7 +1,7 @@
    SUBROUTINE GenerateDynamicElement_Force(uuN0,uuN,vvN,aaN,     &
                                            Stif0,Mass0,gravity,u,&
                                            damp_flag,beta,       &
-                                           elem_total,node_elem,dof_node,ngp,RHS)
+                                           elem_total,node_elem,dof_node,ngp,RHS,Reaction)
    !----------------------------------------------------------------------------------------
    ! This subroutine computes Global mass matrix and force vector for the beam.
    !----------------------------------------------------------------------------------------
@@ -20,6 +20,7 @@
    INTEGER(IntKi),     INTENT(IN   ):: dof_node ! Degrees of freedom per node
    INTEGER(IntKi),     INTENT(IN   ):: ngp ! Number of Gauss points
    REAL(ReKi),         INTENT(  OUT):: RHS(:) ! Right hand side of the equation Ax=B  
+   REAL(ReKi),         INTENT(  OUT):: Reaction(:) ! Right hand side of the equation Ax=B  
 
    REAL(ReKi),           ALLOCATABLE:: Nuu0(:) ! Nodal initial position for each element
    REAL(ReKi),           ALLOCATABLE:: Nuuu(:) ! Nodal displacement of Mass 1 for each element
@@ -104,14 +105,15 @@
                                      ngp,node_elem,dof_node,elf,ReactionForce)
            ReactionForce(1:3) = ReactionForce(1:3) - u%PointLoad%Force(1:3,1) 
            ReactionForce(4:6) = ReactionForce(4:6) - u%PointLoad%Moment(1:3,1) 
+           Reaction(1:6) = ReactionForce(1:6)
        ENDIF
        CALL ElementMatrix_Force_New(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                                     EStif0_GL,EMass0_GL,     &
                                     damp_flag,beta,          &
                                     ngp,node_elem,dof_node,elf)
-       IF(nelem .EQ. 1) THEN
-           elf(1:6) = ReactionForce(1:6) !elf(1:6) - ReactionForce(1:6)
-       ENDIF
+!       IF(nelem .EQ. 1) THEN
+!           elf(1:6) = elf(1:6) - ReactionForce(1:6)
+!       ENDIF
 
        CALL AssembleRHSGL(nelem,dof_elem,node_elem,dof_node,elf,RHS)
 

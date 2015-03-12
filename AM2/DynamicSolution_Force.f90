@@ -2,7 +2,7 @@
                                     Stif0,Mass0,gravity,u,                                 &
                                     damp_flag,beta,                                        &
                                     node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
-                                    analysis_type,Force)
+                                    analysis_type,Force,ReactionForce)
    !***************************************************************************************
    ! This subroutine calls other subroutines to apply the force, build the beam element 
    ! stiffness and mass matrices, build nodal force vector.  The output of this subroutine
@@ -26,24 +26,29 @@
    INTEGER(IntKi),     INTENT(IN   ):: ngp ! Number of Gauss points
    INTEGER(IntKi),     INTENT(IN   ):: analysis_type ! Number of Gauss points
    REAL(ReKi),         INTENT(  OUT):: Force(:)
+   REAL(ReKi),         INTENT(  OUT):: ReactionForce(:)
 
    ! Local variables
    
    REAL(ReKi):: RHS(dof_total) 
+   REAL(ReKi):: Reaction(6) 
    REAL(ReKi):: d 
    INTEGER(IntKi):: j 
    INTEGER(IntKi):: k 
    INTEGER(IntKi):: temp_id
 
 
-   RHS = 0.0D0
+   RHS(:) = 0.0D0
+   Reaction(:) = 0.0D0
 
    CALL GenerateDynamicElement_Force(uuN0,uuN,vvN,aaN,     &
                                      Stif0,Mass0,gravity,u,&
                                      damp_flag,beta,&
-                                     elem_total,node_elem,dof_node,ngp,RHS)
+                                     elem_total,node_elem,dof_node,ngp,RHS,Reaction)
    
    Force(:) = 0.0D0
    Force(:) = RHS(:)
+   ReactionForce(:) = 0.0D0
+   ReactionForce(:) = Reaction(:)
    
    END SUBROUTINE DynamicSolution_Force

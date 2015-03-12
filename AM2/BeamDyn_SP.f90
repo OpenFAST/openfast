@@ -506,6 +506,15 @@ INCLUDE 'ComputeReactionForce.f90'
                    ,ErrStat          = ErrStat            &
                    ,ErrMess          = ErrMsg             )
 
+   CALL MeshCreate( BlankMesh        = y%ReactionForce  &
+                   ,IOS              = COMPONENT_OUTPUT &
+                   ,NNodes           = 1                &
+                   ,Force            = .TRUE.           &
+                   ,Moment           = .TRUE.           &
+                   ,nScalars        = 0                 &
+                   ,ErrStat         = ErrStat           &
+                   ,ErrMess         = ErrMsg            )
+
    CALL MeshConstructElement ( Mesh = u%RootMotion            &
                              , Xelement = ELEMENT_POINT      &
                              , P1       = 1                  &
@@ -542,7 +551,13 @@ INCLUDE 'ComputeReactionForce.f90'
    ! place single node at origin; position affects mapping/coupling with other modules
    TmpPos(:) = 0.0D0
    TmpPos(:) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1))
-   CALL MeshPositionNode ( Mesh = u%RootMotion          &
+   CALL MeshPositionNode ( Mesh = u%RootMotion      &
+                         , INode = 1                &
+                         , Pos = TmpPos             &
+                         , ErrStat   = ErrStat      &
+                         , ErrMess   = ErrMsg       )
+
+   CALL MeshPositionNode ( Mesh = y%ReactionForce   &
                          , INode = 1                &
                          , Pos = TmpPos             &
                          , ErrStat   = ErrStat      &
@@ -600,6 +615,9 @@ INCLUDE 'ComputeReactionForce.f90'
                  , Moment          = .TRUE.    &
                  , ErrStat  = ErrStat          &
                  , ErrMess  = ErrMsg           )
+   CALL MeshCommit ( Mesh    = y%ReactionForce &
+                    ,ErrStat = ErrStat         &
+                    ,ErrMess = ErrMsg          )
    CALL MeshCommit ( Mesh    = y%BldMotion     &
                     ,ErrStat = ErrStat         &
                     ,ErrMess = ErrMsg          )
@@ -636,6 +654,9 @@ INCLUDE 'ComputeReactionForce.f90'
    y%BldForce%Force(:,:)    = 0.0D0
    y%BldForce%Moment(:,:)   = 0.0D0
 
+   y%ReactionForce%Force(:,:)    = 0.0D0
+   y%ReactionForce%Moment(:,:)   = 0.0D0
+
    y%BldMotion%TranslationDisp(:,:) = 0.0D0
    y%BldMotion%Orientation(:,:,:)   = 0.0D0
    y%BldMotion%TranslationVel(:,:)  = 0.0D0
@@ -644,6 +665,7 @@ INCLUDE 'ComputeReactionForce.f90'
    y%BldMotion%RotationAcc(:,:)     = 0.0D0
 
    ! set remap flags to true
+   y%ReactionForce%RemapFlag = .True.
    y%BldForce%RemapFlag = .True.
    y%BldMotion%RemapFlag = .True.
    u%RootMotion%RemapFlag = .True.
@@ -798,6 +820,7 @@ INCLUDE 'ComputeReactionForce.f90'
    REAL(ReKi):: temp66(6,6)
    REAL(ReKi):: temp6(6)
    REAL(ReKi):: temp_Force(p%dof_total)
+   REAL(ReKi):: temp_ReactionForce(6)
    ! Initialize ErrStat
 
    ErrStat = ErrID_None
@@ -819,11 +842,9 @@ INCLUDE 'ComputeReactionForce.f90'
            y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
 
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-!WRITE(*,*) 'temp_id:',temp_id
            temp6(:) = 0.0D0
            temp6(1:3) = x%dqdt(temp_id+1:temp_id+3)
            temp6(4:6) = x%dqdt(temp_id+4:temp_id+6)
-!WRITE(*,*) temp6
            temp6(:) = MATMUL(temp66,temp6)
            y%BldMotion%TranslationVel(1:3,temp_id2) = temp6(1:3)
            y%BldMotion%RotationVel(1:3,temp_id2) = temp6(4:6)
@@ -863,7 +884,7 @@ INCLUDE 'ComputeReactionForce.f90'
                                   p%Stif0_GL,p%Mass0_GL,p%gravity,u,                                 &
                                   p%damp_flag,p%beta,                                                &
                                   p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
-                                  p%analysis_type,temp_Force)
+                                  p%analysis_type,temp_Force,temp_ReactionForce)
    ELSEIF(p%analysis_type .EQ. 1) THEN
        CALL StaticSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
                                  &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
@@ -871,6 +892,11 @@ INCLUDE 'ComputeReactionForce.f90'
    ENDIF
 
    CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
+   temp6(:) = 0.0D0
+   temp6(:) = temp_ReactionForce(1:6)
+   temp6(:) = MATMUL(TRANSPOSE(temp66),temp6)
+   y%ReactionForce%Force(1:3,1) = temp6(1:3)
+   y%ReactionForce%Moment(1:3,1) = temp6(4:6)
    DO i=1,p%node_total
        temp_id = (i-1)*p%dof_node
        temp6(:) = 0.0D0

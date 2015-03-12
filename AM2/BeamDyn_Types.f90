@@ -110,6 +110,7 @@ IMPLICIT NONE
 ! =======================
 ! =========  BD_OutputType  =======
   TYPE, PUBLIC :: BD_OutputType
+    TYPE(MeshType)  :: ReactionForce      ! contains force and moments [-]
     TYPE(MeshType)  :: BldForce      ! contains force and moments [-]
     TYPE(MeshType)  :: BldMotion      ! Motion (disp,rot,vel) along beam axis [-]
   END TYPE BD_OutputType
@@ -1742,6 +1743,7 @@ ENDIF
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
+     CALL MeshCopy( SrcOutputData%ReactionForce, DstOutputData%ReactionForce, CtrlCode, ErrStat, ErrMsg )
      CALL MeshCopy( SrcOutputData%BldForce, DstOutputData%BldForce, CtrlCode, ErrStat, ErrMsg )
      CALL MeshCopy( SrcOutputData%BldMotion, DstOutputData%BldMotion, CtrlCode, ErrStat, ErrMsg )
  END SUBROUTINE BD_CopyOutput
@@ -1754,6 +1756,7 @@ ENDIF
 ! 
   ErrStat = ErrID_None
   ErrMsg  = ""
+  CALL MeshDestroy( OutputData%ReactionForce, ErrStat, ErrMsg )
   CALL MeshDestroy( OutputData%BldForce, ErrStat, ErrMsg )
   CALL MeshDestroy( OutputData%BldMotion, ErrStat, ErrMsg )
  END SUBROUTINE BD_DestroyOutput
@@ -1779,6 +1782,9 @@ ENDIF
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5     
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
  ! buffers to store meshes, if any
+  REAL(ReKi),     ALLOCATABLE :: Re_ReactionForce_Buf(:)
+  REAL(DbKi),     ALLOCATABLE :: Db_ReactionForce_Buf(:)
+  INTEGER(IntKi), ALLOCATABLE :: Int_ReactionForce_Buf(:)
   REAL(ReKi),     ALLOCATABLE :: Re_BldForce_Buf(:)
   REAL(DbKi),     ALLOCATABLE :: Db_BldForce_Buf(:)
   INTEGER(IntKi), ALLOCATABLE :: Int_BldForce_Buf(:)
@@ -1799,6 +1805,13 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
  ! Allocate mesh buffers, if any (we'll also get sizes from these) 
+  CALL MeshPack( InData%ReactionForce, Re_ReactionForce_Buf, Db_ReactionForce_Buf, Int_ReactionForce_Buf, ErrStat, ErrMsg, .TRUE. ) ! ReactionForce 
+  IF(ALLOCATED(Re_ReactionForce_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_ReactionForce_Buf  ) ! ReactionForce
+  IF(ALLOCATED(Db_ReactionForce_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_ReactionForce_Buf  ) ! ReactionForce
+  IF(ALLOCATED(Int_ReactionForce_Buf))Int_BufSz = Int_BufSz + SIZE( Int_ReactionForce_Buf ) ! ReactionForce
+  IF(ALLOCATED(Re_ReactionForce_Buf))  DEALLOCATE(Re_ReactionForce_Buf)
+  IF(ALLOCATED(Db_ReactionForce_Buf))  DEALLOCATE(Db_ReactionForce_Buf)
+  IF(ALLOCATED(Int_ReactionForce_Buf)) DEALLOCATE(Int_ReactionForce_Buf)
   CALL MeshPack( InData%BldForce, Re_BldForce_Buf, Db_BldForce_Buf, Int_BldForce_Buf, ErrStat, ErrMsg, .TRUE. ) ! BldForce 
   IF(ALLOCATED(Re_BldForce_Buf)) Re_BufSz  = Re_BufSz  + SIZE( Re_BldForce_Buf  ) ! BldForce
   IF(ALLOCATED(Db_BldForce_Buf)) Db_BufSz  = Db_BufSz  + SIZE( Db_BldForce_Buf  ) ! BldForce
@@ -1816,6 +1829,22 @@ ENDIF
   IF ( Re_BufSz  .GT. 0 ) ALLOCATE( ReKiBuf(  Re_BufSz  ) )
   IF ( Db_BufSz  .GT. 0 ) ALLOCATE( DbKiBuf(  Db_BufSz  ) )
   IF ( Int_BufSz .GT. 0 ) ALLOCATE( IntKiBuf( Int_BufSz ) )
+  CALL MeshPack( InData%ReactionForce, Re_ReactionForce_Buf, Db_ReactionForce_Buf, Int_ReactionForce_Buf, ErrStat, ErrMsg, OnlySize ) ! ReactionForce 
+  IF(ALLOCATED(Re_ReactionForce_Buf)) THEN
+    IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_ReactionForce_Buf)-1 ) = Re_ReactionForce_Buf
+    Re_Xferred = Re_Xferred + SIZE(Re_ReactionForce_Buf)
+  ENDIF
+  IF(ALLOCATED(Db_ReactionForce_Buf)) THEN
+    IF ( .NOT. OnlySize ) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_ReactionForce_Buf)-1 ) = Db_ReactionForce_Buf
+    Db_Xferred = Db_Xferred + SIZE(Db_ReactionForce_Buf)
+  ENDIF
+  IF(ALLOCATED(Int_ReactionForce_Buf)) THEN
+    IF ( .NOT. OnlySize ) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_ReactionForce_Buf)-1 ) = Int_ReactionForce_Buf
+    Int_Xferred = Int_Xferred + SIZE(Int_ReactionForce_Buf)
+  ENDIF
+  IF( ALLOCATED(Re_ReactionForce_Buf) )  DEALLOCATE(Re_ReactionForce_Buf)
+  IF( ALLOCATED(Db_ReactionForce_Buf) )  DEALLOCATE(Db_ReactionForce_Buf)
+  IF( ALLOCATED(Int_ReactionForce_Buf) ) DEALLOCATE(Int_ReactionForce_Buf)
   CALL MeshPack( InData%BldForce, Re_BldForce_Buf, Db_BldForce_Buf, Int_BldForce_Buf, ErrStat, ErrMsg, OnlySize ) ! BldForce 
   IF(ALLOCATED(Re_BldForce_Buf)) THEN
     IF ( .NOT. OnlySize ) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_BldForce_Buf)-1 ) = Re_BldForce_Buf
@@ -1874,6 +1903,9 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
  ! buffers to store meshes, if any
+  REAL(ReKi),    ALLOCATABLE :: Re_ReactionForce_Buf(:)
+  REAL(DbKi),    ALLOCATABLE :: Db_ReactionForce_Buf(:)
+  INTEGER(IntKi),    ALLOCATABLE :: Int_ReactionForce_Buf(:)
   REAL(ReKi),    ALLOCATABLE :: Re_BldForce_Buf(:)
   REAL(DbKi),    ALLOCATABLE :: Db_BldForce_Buf(:)
   INTEGER(IntKi),    ALLOCATABLE :: Int_BldForce_Buf(:)
@@ -1890,6 +1922,23 @@ ENDIF
   Db_BufSz  = 0
   Int_BufSz  = 0
  ! first call MeshPack to get correctly sized buffers for unpacking
+  CALL MeshPack( OutData%ReactionForce, Re_ReactionForce_Buf, Db_ReactionForce_Buf, Int_ReactionForce_Buf, ErrStat, ErrMsg , .TRUE. ) ! ReactionForce 
+  IF(ALLOCATED(Re_ReactionForce_Buf)) THEN
+    Re_ReactionForce_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_ReactionForce_Buf)-1 )
+    Re_Xferred = Re_Xferred + SIZE(Re_ReactionForce_Buf)
+  ENDIF
+  IF(ALLOCATED(Db_ReactionForce_Buf)) THEN
+    Db_ReactionForce_Buf = DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_ReactionForce_Buf)-1 )
+    Db_Xferred = Db_Xferred + SIZE(Db_ReactionForce_Buf)
+  ENDIF
+  IF(ALLOCATED(Int_ReactionForce_Buf)) THEN
+    Int_ReactionForce_Buf = IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_ReactionForce_Buf)-1 )
+    Int_Xferred = Int_Xferred + SIZE(Int_ReactionForce_Buf)
+  ENDIF
+  CALL MeshUnPack( OutData%ReactionForce, Re_ReactionForce_Buf, Db_ReactionForce_Buf, Int_ReactionForce_Buf, ErrStat, ErrMsg ) ! ReactionForce 
+  IF( ALLOCATED(Re_ReactionForce_Buf) )  DEALLOCATE(Re_ReactionForce_Buf)
+  IF( ALLOCATED(Db_ReactionForce_Buf) )  DEALLOCATE(Db_ReactionForce_Buf)
+  IF( ALLOCATED(Int_ReactionForce_Buf) ) DEALLOCATE(Int_ReactionForce_Buf)
   CALL MeshPack( OutData%BldForce, Re_BldForce_Buf, Db_BldForce_Buf, Int_BldForce_Buf, ErrStat, ErrMsg , .TRUE. ) ! BldForce 
   IF(ALLOCATED(Re_BldForce_Buf)) THEN
     Re_BldForce_Buf = ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_BldForce_Buf)-1 )
@@ -2663,6 +2712,7 @@ ENDIF
  endif
  order = SIZE(u) - 1
  IF ( order .eq. 0 ) THEN
+  CALL MeshCopy(u(1)%ReactionForce, u_out%ReactionForce, MESH_UPDATECOPY, ErrStat, ErrMsg )
   CALL MeshCopy(u(1)%BldForce, u_out%BldForce, MESH_UPDATECOPY, ErrStat, ErrMsg )
   CALL MeshCopy(u(1)%BldMotion, u_out%BldMotion, MESH_UPDATECOPY, ErrStat, ErrMsg )
  ELSE IF ( order .eq. 1 ) THEN
@@ -2671,6 +2721,7 @@ ENDIF
     ErrMsg  = ' Error in BD_Output_ExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
     RETURN
   END IF
+  CALL MeshExtrapInterp1(u(1)%ReactionForce, u(2)%ReactionForce, tin, u_out%ReactionForce, tin_out, ErrStat, ErrMsg )
   CALL MeshExtrapInterp1(u(1)%BldForce, u(2)%BldForce, tin, u_out%BldForce, tin_out, ErrStat, ErrMsg )
   CALL MeshExtrapInterp1(u(1)%BldMotion, u(2)%BldMotion, tin, u_out%BldMotion, tin_out, ErrStat, ErrMsg )
  ELSE IF ( order .eq. 2 ) THEN
@@ -2689,6 +2740,7 @@ ENDIF
     ErrMsg  = ' Error in BD_Output_ExtrapInterp: t(1) must not equal t(3) to avoid a division-by-zero error.'
     RETURN
   END IF
+  CALL MeshExtrapInterp2(u(1)%ReactionForce, u(2)%ReactionForce, u(3)%ReactionForce, tin, u_out%ReactionForce, tin_out, ErrStat, ErrMsg )
   CALL MeshExtrapInterp2(u(1)%BldForce, u(2)%BldForce, u(3)%BldForce, tin, u_out%BldForce, tin_out, ErrStat, ErrMsg )
   CALL MeshExtrapInterp2(u(1)%BldMotion, u(2)%BldMotion, u(3)%BldMotion, tin, u_out%BldMotion, tin_out, ErrStat, ErrMsg )
  ELSE 
