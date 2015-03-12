@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2013-2014  National Renewable Energy Laboratory
+! Copyright (C) 2013-2015  National Renewable Energy Laboratory
 !
 !    This file is part of the NWTC Subroutine Library.
 !
@@ -38,6 +38,9 @@ MODULE NWTC_Num
    !  FUNCTION   CubicSplineInterpM    ( X, XAry, YAry, Coef, ErrStat, ErrMsg )                       ! Interpolate using cubic splines for multiple tables of irregularly space data.
    !  FUNCTION   EqualRealNos          ( ReNum1, ReNum2 )
    !  SUBROUTINE Eye                   ( A, ErrStat, ErrMsg )                                         ! sets A equal to the identity matrix (A can have 2 or 3 dimensions)
+   !  FUNCTION   DCM_exp               ( lambda )                         
+   !  SUBROUTINE DCM_logMap            ( DCM, logMap, ErrStat, ErrMsg )
+   !  SUBROUTINE DCM_SetLogMapForInterp( tensor )
    !  SUBROUTINE GaussElim             ( AugMat, NumEq, x, ErrStat, ErrMsg )                          ! Performs Gauss-Jordan elimination to solve Ax=b for x; AugMat = [A b]
    !  SUBROUTINE GetOffsetReg          ( Ary, NumPts, Val, Ind, Fract, ErrStat, ErrMsg )              ! Determine index of the point in Ary just below Val and the fractional distance to the next point in the array.
    !  FUNCTION   GetSmllRotAngs        ( DCMat, ErrStat, ErrMsg )
@@ -51,21 +54,33 @@ MODULE NWTC_Num
    !     FUNCTION   InterpStpReal      ( XVal, XAry, YAry, Ind, AryLen )
    !  SUBROUTINE InterpStpReal2D       ( InCoord, Dataset, x, y, z, LastIndex, InterpData )
    !  SUBROUTINE InterpStpReal3D       ( InCoord, Dataset, x, y,    LastIndex, InterpData )   
+   !  FUNCTION   InterpWrappedStpReal  ( XValIn, XAry, YAry, Ind, AryLen )
+   !  SUBROUTINE IsoparametricCoords   ( InCoord, posLo, posHi, isopc )
    !  FUNCTION   IsSymmetric           ( A )                                                          ! Function to determine if A(:,:) is symmetric
    !  SUBROUTINE LocateBin             ( XVal, XAry, Ind, AryLen )
    !  SUBROUTINE LocateStp             ( XVal, XAry, Ind, AryLen )
    !  FUNCTION   Mean                  ( Ary, AryLen )                                                ! Function to calculate the mean value of a vector array.
    !  SUBROUTINE MPi2Pi                ( Angle )
    !  FUNCTION   PSF                   ( N, NumPrimes )                                               ! This routine factors the number N into its primes.  
+   !  FUNCTION   Quaternion_Conjugate( q )
+   !  FUNCTION   Quaternion_Norm( q )
+   !  FUNCTION   Quaternion_Power( q, alpha )
+   !  FUNCTION   Quaternion_Product( p, q )
+   !  FUNCTION   Quaternion_to_DCM( q )
+   !  FUNCTION   DCM_to_Quaternion( DCM )
+   !  FUNCTION   Quaternion_Interp( q1, q2, s )
    !  SUBROUTINE RegCubicSplineInit    ( AryLen, XAry, YAry, DelX, Coef )                             ! Calculate coefficients for regularly spaced array to use cubic splines.
    !  SUBROUTINE RegCubicSplineInitM   ( XAry, YAry, DelX, Coef, ErrStat, ErrMsg )                    ! Interpolate using cubic splines for multiple tables of regularly space data.
    !  FUNCTION   RegCubicSplineInterp  ( X, AryLen, XAry, YAry, DelX, Coef )                          ! Interpolate a regularly spaced array using cubic splines.
    !  FUNCTION   RegCubicSplineInterpM ( X, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )                 ! Initialize cubic splines for multiple tables of regularly space data.
    !  SUBROUTINE RombergInt            ( f, a, b, R, err, eps, ErrStat )
+   !  SUBROUTINE SetAnglesForInterp    ( angles )                                                     ! uses 2pi periodicity of angles to set angles for interpolation (makes sure no two adjacent entries are more than pi apart)
    !  SUBROUTINE SetConstants
    !  SUBROUTINE SmllRotTrans          ( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt )
    !  SUBROUTINE SortUnion             ( Ary1, N1, Ary2, N2, Ary, N )
    !  FUNCTION   StdDevFn              ( Ary, AryLen, Mean )                                          ! Function to calculate the standard deviation of a vector array.
+   !  FUNCTION   trace                 ( A )                                                          ! computes the trace (sum of diagonal elements) of a matrix  (2-dimension array)
+   !  FUNCTION   TwoNorm               ( v )                                                          ! computes the l2 norm of a vector (1-dimension array) 
    !  SUBROUTINE Zero2TwoPi            ( Angle )
    
    USE                                          NWTC_IO
@@ -1940,51 +1955,7 @@ END SUBROUTINE DCM_SetLogMapForInterp
 
    RETURN
    END FUNCTION InterpStpReal ! ( XVal, XAry, YAry, Ind, AryLen )
-!=======================================================================
-   FUNCTION InterpWrappedStpReal( XValIn, XAry, YAry, Ind, AryLen )
 
-
-      ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
-      ! into the range [0-XAry(AryLen) by interpolating into the arrays.  
-      ! It is assumed that XAry is sorted in ascending order.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, InterpBin() may be a better choice.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is REAL.
-
-
-      ! Function declaration.
-
-   REAL(ReKi)                   :: InterpWrappedStpReal                                   ! This function.
-
-
-      ! Argument declarations.
-
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
-
-   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: XValIn                                           ! X value to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
-
-   REAL(ReKi)                   :: XVal                                           ! X value to be interpolated.
-   
-   
-   
-      ! Wrap XValIn into the range XAry(1) to XAry(AryLen)
-   XVal = MOD(XValIn, XAry(AryLen))
-
-      ! Set the Ind to the first index if we are at the beginning of XAry
-   IF ( XVal <= XAry(2) )  THEN  
-      Ind           = 1
-   END IF
-   
-   InterpWrappedStpReal = InterpStpReal( XVal, XAry, YAry, Ind, AryLen )
-   
-   
-   END FUNCTION InterpWrappedStpReal ! ( XVal, XAry, YAry, Ind, AryLen )
 !=======================================================================
 !< This routine linearly interpolates Dataset. It is
 !! set for a 2-d interpolation on x and y of the input point.
@@ -2085,7 +2056,11 @@ END SUBROUTINE InterpStpReal2D
 !! The method is described in this paper: 
 !!   http://www.colorado.edu/engineering/CAS/courses.d/AFEM.d/AFEM.Ch11.d/AFEM.Ch11.pdf
 SUBROUTINE InterpStpReal3D( InCoord, Dataset, x, y, z, LastIndex, InterpData )
-
+! This routine linearly interpolates Dataset. It is set for a 3-d 
+! interpolation on x and y of the input point. x, y, and z must be 
+! in increasing order. Each dimension may contain only 1 value.
+! The method is described in this paper: 
+!   http://www.colorado.edu/engineering/CAS/courses.d/AFEM.d/AFEM.Ch11.d/AFEM.Ch11.pdf
 
    INTEGER, PARAMETER :: NumDimensions = 3
 
@@ -2182,11 +2157,61 @@ SUBROUTINE InterpStpReal3D( InCoord, Dataset, x, y, z, LastIndex, InterpData )
 
 END SUBROUTINE InterpStpReal3D   
 !=======================================================================
+   FUNCTION InterpWrappedStpReal( XValIn, XAry, YAry, Ind, AryLen )
+
+
+      ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
+      ! into the range [0-XAry(AryLen) by interpolating into the arrays.  
+      ! It is assumed that XAry is sorted in ascending order.
+      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
+      ! especially useful when the calling routines save the value from the last time this routine was called
+      ! for a given case where XVal does not change much from call to call.  When there is no correlation
+      ! from one interpolation to another, InterpBin() may be a better choice.
+      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
+      ! This routine assumes YAry is REAL.
+
+
+      ! Function declaration.
+
+   REAL(ReKi)                   :: InterpWrappedStpReal                                   ! This function.
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+
+   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: XValIn                                           ! X value to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+
+   REAL(ReKi)                   :: XVal                                           ! X value to be interpolated.
+   
+   
+   
+      ! Wrap XValIn into the range XAry(1) to XAry(AryLen)
+   XVal = MOD(XValIn, XAry(AryLen))
+
+      ! Set the Ind to the first index if we are at the beginning of XAry
+   IF ( XVal <= XAry(2) )  THEN  
+      Ind           = 1
+   END IF
+   
+   InterpWrappedStpReal = InterpStpReal( XVal, XAry, YAry, Ind, AryLen )
+   
+   
+   END FUNCTION InterpWrappedStpReal ! ( XVal, XAry, YAry, Ind, AryLen )
+!=======================================================================
 !> This subroutine calculates the iosparametric coordinates, isopc, which is a value between -1 and 1 
 !! (for each dimension of a dataset), indicating where InCoord falls between posLo and posHi.
 !! It is used in InterpStpReal2D and InterpStpReal3D.
    SUBROUTINE IsoparametricCoords( InCoord, posLo, posHi, isopc )
 
+! This subroutine calculates the iosparametric coordinates, isopc, which is a value between -1 and 1 
+! (for each dimension of a dataset), indicating where InCoord falls between posLo and posHi.
+! It is used in InterpStpReal2D and InterpStpReal3D.
+   
+   
       REAL(ReKi),     INTENT(IN   )          :: InCoord(:)                             !< Coordinate values we're interpolating to; (size = number of interpolation dimensions)
       REAL(ReKi),     INTENT(IN   )          :: posLo(:)                               !< coordinate values associated with Indx_Lo; (size = number of interpolation dimensions)
       REAL(ReKi),     INTENT(IN   )          :: posHi(:)                               !< coordinate values associated with Indx_Hi; (size = number of interpolation dimensions)
@@ -2438,19 +2463,6 @@ END SUBROUTINE InterpStpReal3D
 
    RETURN
    END SUBROUTINE MPi2Pi
-!=======================================================================
-   FUNCTION TwoNorm(v)
-   
-      ! this function returns the 2-norm of a vector v
-      ! fortran 2008 has Norm2() built in
-      
-      REAL(ReKi), INTENT(IN)  :: v(:)      
-      REAL(ReKi)              :: TwoNorm      
-      
-      TwoNorm = SQRT( DOT_PRODUCT(v, v) )
-      
-      
-   END FUNCTION
 !=======================================================================
    FUNCTION PSF ( Npsf, NumPrimes, subtract )
 
@@ -3645,6 +3657,19 @@ END SUBROUTINE InterpStpReal3D
    end do
    
    END FUNCTION trace
+!=======================================================================
+   FUNCTION TwoNorm(v)
+   
+      ! this function returns the 2-norm of a vector v
+      ! fortran 2008 has Norm2() built in
+      
+      REAL(ReKi), INTENT(IN)  :: v(:)      
+      REAL(ReKi)              :: TwoNorm      
+      
+      TwoNorm = SQRT( DOT_PRODUCT(v, v) )
+      
+      
+   END FUNCTION
 !=======================================================================  
    SUBROUTINE Zero2TwoPi ( Angle )
 

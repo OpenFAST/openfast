@@ -597,7 +597,15 @@ v2.04.00a-bjj, 30-Sep-2014. B. Jonkman
   searching for next closest number that is a product of small primes.
 + modified GetArgs so that the InputFile name must be the first non-switch argument. Also allows for return of last non-stwitch argument.
 
-
+v2.05.02a-bjj, 25-Feb-2015. B. Jonkman
++ added rotational interpolation routines and call them in mesh-mapping routines
++ added routines for linearly interpolating real values in 2 and 3 dimensions.
++ other new routines: InterpWrappedStpReal() [from HydroDyn]; TwoNorm(); Trace();
++ updated SysMatlab with options to print to a file called CONSOLE.TXT instead of using MATLAB's mexprintf API.
++ added ERF routines, which are in the Fortran 2008 standard, to the Sys* files
++ added NWTC_Verbose, which is a level indicating how much text should be written to the screen
++ removed DoubPrec.f90 file; if you wish to use double precision, use SingPrec.f90 with the DOUBLE_PRECISION compiler directive.
++ updated registry-generated parts of the code; moved SetErrStat into NWTC_Library_Types.f90
 
 
 ==========================================================
