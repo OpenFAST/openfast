@@ -1,0 +1,5 @@
+bin\MAP_Win32.dll
+bin\MAP_x64.dll
+bin\MAP_Win32.lib
+bin\MAP_x64.lib
+

@@ -1,0 +1,78 @@
+Outputs were generated using MAP++ 08cf-dirty.
+
+    Sunday December 07-2014 at 22:28:35 PM
+
+    Gravity constant          [m/s^2]  : 9.81
+    Sea density               [kg/m^3] : 1025.00
+    Water depth               [m]      : 100.00
+    Vessel reference position [m]      : 0.00 , 0.00 , 0.00
+
+    Cable Type          : chainup
+    Diameter     [m]    : 0.0649
+    Mass Density [kg/m] : 138.73
+    EA           [N]    : 545000000.00
+    omega        [N/m]  : 1327.65
+    CB                  : 1.00
+
+    Cable Type          : chainup2
+    Diameter     [m]    : 0.0649
+    Mass Density [kg/m] : 138.73
+    EA           [N]    : 545000000.00
+    omega        [N/m]  : 1327.65
+    CB                  : 1.00
+
+          | Node 1 Data            Node 2 Data
+          | -------------------------------------------------------------------------------------------
+Type      |  FIX                    VESSEL
+X  [m]    |  -50.000                 0.000
+Y  [m]    |  0.000                   0.000
+Z  [m]    |  -100.000                0.000
+M  [kg]   |  0.000                   0.000
+B  [m^3]  |  0.000                   0.000
+FX [N]    | (-670.624)             ( 17449.668)
+FY [N]    | ( 0.000)               ( 0.000)
+FZ [N]    | ( 0.000)               ( 149176.924)
+
+
+                | Line 1
+                | ---------------------------------------
+Material        |  chainup
+Lu        [m]   |  125.000
+Lb        [m]   |  12.638
+H         [N]   |  17449.668
+V         [N]   |  149176.924
+T         [N]   |  150194.026
+Alpha     [deg] |  83.328
+HAnch     [N]   |  670.624
+VAnch     [N]   | 0.000
+TAnch     [N]   |  670.624
+AlphaAnch [deg] | 0.000
+L^2-Norm        |  6.29449e-11
+Function Evals  |  4
+Jacobian Evals  |  3
+Term. criteria  |  2 : ||x_i - x_{i-1}||  <= INNER_XTOL.
+
+
+---------------------- LINE DICTIONARY ---------------------------------------
+LineType  Diam      MassDenInAir   EA            CB
+[-]       [m]       [kg/m]         [N]           [-]
+chainup   0.064929    138.73 545000000 1.0 1.0E8 0.6 -1.0 0.05
+chainup2  0.064929    138.73 545000000 1.0 1.0E8 0.6 -1.0 0.05
+---------------------- NODE PROPERTIES ---------------------------------------
+Node  Type       X       Y       Z      M     B     FX    FY    FZ
+[-]   [-]       [m]     [m]     [m]    [kg]  [mˆ3]  [N]   [N]   [N]
+1  fix    -50    0  -100  0 0 # # #
+2  Vessel  0     0   0    0 0 # # #
+---------------------- LINE PROPERTIES ---------------------------------------
+Line  LineType  UnstrLen  NodeAnch  NodeFair  Flags
+[-]      [-]       [m]       [-]       [-]       [-]
+1 chainup  125 1 2 gy_pos h_fair
+---------------------- SOLVER OPTIONS-----------------------------------------
+Option 
+[-] 
+inner_ftol 1e-6
+inner_gtol 1e-12
+inner_xtol 1e-6
+outer_tol 1e-4
+inner_max_its 400
+outer_max_its 400
