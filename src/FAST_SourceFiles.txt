@@ -1,6 +1,0 @@
-fortran\MAP.f90
-fortran\MAP_C_Types.f90
-fortran\MAP_Types.f90
-
-..\executable\MAP_win32.lib
-..\executable\MAP_x64.lib
