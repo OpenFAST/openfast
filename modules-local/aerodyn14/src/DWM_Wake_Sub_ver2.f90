@@ -296,7 +296,7 @@ SUBROUTINE filter_average_induction_factor( OS, p, y, thrust_force, num_of_eleme
        END DO
        
        DO I = 1,num_of_element
-           y%turbine_thrust_force (I) = y%turbine_thrust_force(I) * dr_blade(I)           ! integrate dFn through blade
+           y%turbine_thrust_force (I) = y%turbine_thrust_force(I)   !* dr_blade(I)           ! integrate dFn through blade
        END DO
        
        CALL calculate_element_area ( p%RotorR, p%ElementNum, p%ElementRad(:), OS%TAVD%swept_area )
@@ -314,7 +314,7 @@ SUBROUTINE filter_average_induction_factor( OS, p, y, thrust_force, num_of_eleme
        END DO
        
        DO I = 1,num_of_element
-           y%turbine_thrust_force (I) = y%turbine_thrust_force(I) * dr_blade(I)           ! integrate dFn through blade
+           y%turbine_thrust_force (I) = y%turbine_thrust_force(I)    !* dr_blade(I)           ! integrate dFn through blade
        END DO
        
        CALL calculate_induction_factor ( p, y%turbine_thrust_force , OS%TAVD%swept_area , num_of_element, OS%TAVD%average_velocity_array_temp, induction_factor_local_temp )
@@ -605,7 +605,8 @@ SUBROUTINE get_initial_condition( OS, p, u, y, induc_array, r_t, element_num, r_
        y%avg_ct = y%avg_ct + OS%weighting_method%sweptarea (i) / OS%weighting_method%weighting_denominator * ( 4*induc_array(i)*(1-induc_array(i)) )       
     END DO
     
-    OS%ct_tilde  = 0.5*COS(OS%NacYaw)**2*SIN(OS%NacYaw)*y%avg_ct 
+    !OS%ct_tilde  = 0.5*COS(OS%NacYaw)**2*SIN(OS%NacYaw)*y%avg_ct 
+    OS%ct_tilde = y%avg_ct
            
 END SUBROUTINE get_initial_condition
 
@@ -1460,10 +1461,11 @@ FUNCTION filter_velocity (OS,p,u,x,xd,z,y,timestep,y_0,z_0,wake_radius)
     END IF
 
     DO y_axis = NINT(y_0-radius_length),NINT(y_0+radius_length),1
-      IF (y_axis > p%WFLowerBd) THEN                                 ! add 9/25/2014
+       !IF (y_axis > p%WFLowerBd) THEN                                 ! add 9/25/2014
         DO z_axis = NINT(z_0-radius_length),NINT(z_0+radius_length),1
-          IF ( ((y_axis-y_0)**2+(z_axis-z_0)**2)**0.5 <= radius_length )  THEN
-            IF ( z_axis >= 10 )  THEN              !(make sure the circle does not exceed wind field)
+          IF ( z_axis > p%WFLowerBd )  THEN              !(make sure the circle does not exceed wind field)
+            IF ( ((y_axis-y_0)**2+(z_axis-z_0)**2)**0.5 <= radius_length )  THEN
+            
           
                  
             u%IfW_Inputs%Position(1,1) = 0.0
@@ -1487,7 +1489,7 @@ FUNCTION filter_velocity (OS,p,u,x,xd,z,y,timestep,y_0,z_0,wake_radius)
             END IF
           END IF
         END DO
-      END IF
+      !END IF
     END DO
 
     filter_velocity (1) = temp_filter_velocity(1) / number_counter
