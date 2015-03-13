@@ -1,6 +1,11 @@
 SubDyn Change Log
 ===============================================================================
 -------------------------------------------------------------------------------
+v1.01.02a          27-Feb-2015
+   Official FAST 8.10 public release
+-modified matmul to use LAPACK version, which eliminated some stack-space issues for 32-bit compiles
+-modified some order-of-operations of matrix multiplications to minimize temporary storage, and enable more simulations to run under 32-bit compilation 
+-------------------------------------------------------------------------------
 v1.01.01a         30-Sep-2014
 	Official FAST 8.09 public release
 -changed the shear area correction factor in the Timoshenko treatment, now aligned with Steinboeck et al. (2013)
