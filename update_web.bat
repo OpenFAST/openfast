@@ -3,7 +3,7 @@
 set LOC=Y:\Wind\WindWeb\nwtc\docs
 
 :CopyFiles
-copy ChangeLog.txt             %LOC%\AeroDyn-ChangeLog.txt
+copy ChangeLog.txt             %LOC%\AeroDyn_ChangeLog.txt
 
 :Done
 set LOC=

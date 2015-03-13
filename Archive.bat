@@ -41,8 +41,8 @@ GOTO CheckSyntax
 :DeleteOld
 @IF EXIST ARCHTMP.zip DEL ARCHTMP.zip
 @IF EXIST ARCHTMP.exe DEL ARCHTMP.exe
-@IF EXIST ARCHTMP.tar DEL ARCHTMP.tar
-@IF EXIST ARCHTMP.tar.gz DEL ARCHTMP.tar.gz
+@IF EXIST %PROGNAME%.tar DEL %PROGNAME%.tar
+@IF EXIST %PROGNAME%.tar.gz DEL %PROGNAME%.tar.gz
 
 
 :DoIt
@@ -72,10 +72,10 @@ GOTO CheckSyntax
 @ECHO -------------------------------------------------------------------------
 @ECHO.
 @rem first create a tar file, then compress it (gzip allows only one file)
-@%SEVENZIP% a -ttar ARCHTMP @ArcFiles.txt @FAST_SourceFiles.txt
-@%SEVENZIP% a -tgzip ARCHTMP.tar.gz ARCHTMP.tar
-@COPY ARCHTMP.tar.gz Archive\%ARCHROOT%_v%1.tar.gz
-@DEL ARCHTMP.tar, ARCHTMP.tar.gz
+@%SEVENZIP% a -ttar %PROGNAME% @ArcFiles.txt @FAST_SourceFiles.txt
+@%SEVENZIP% a -tgzip %PROGNAME%.tar.gz %PROGNAME%.tar
+@COPY %PROGNAME%.tar.gz Archive\%ARCHROOT%_v%1.tar.gz
+@DEL %PROGNAME%.tar, %PROGNAME%.tar.gz
 
 
 
