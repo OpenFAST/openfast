@@ -800,5 +800,10 @@ v14.03.00a-bjj 30-Sep-2014  B. Jonkman
 + fixed some constants so compiling in double precision is easier
 + fixed potentially uninitialized variable for tower aerodynamics
 
+v14.03.01a-bjj 15-Mar-2015  B. Jonkman
++ updated DWM code
++ added lidar module inputs to InflowWind
++ modified code so it calls InflowWind one time at beginning of CalcOutput instead of one time for each element
++ added check on AD hub-height being different than values used in ED.
 
 =================== END ====================
