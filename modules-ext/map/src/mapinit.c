@@ -1,6 +1,6 @@
 /****************************************************************
  *   Copyright (C) 2014 mdm                                     *
- *   marco[dot]masciola[at]gmail                                *
+ *   map[dot]plus[dot]plus[dot]help[at]gmail                    *
  *                                                              *
  * Licensed to the Apache Software Foundation (ASF) under one   *
  * or more contributor license agreements.  See the NOTICE file *

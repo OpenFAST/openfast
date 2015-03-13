@@ -1,10 +1,10 @@
-MAP (Mooring Analysis Program)
+MAP++ (Mooring Analysis Program ++)
 Copyright (c) 2014-2015  Marco D. Masciola
-marco[dot]masciola[at]gmail
+map[dot]plus[dot]plus[dot]help[at]gmail
 
 
 Third Party Content
 SimCList - BSD: http://mij.oltrelinux.com/devel/simclist/
-CMINPACK – BSD: http://devernay.free.fr/hacks/cminpack/
-BString Library – BSD https://github.com/msteinert/bstring
+CMINPACK - BSD: http://devernay.free.fr/hacks/cminpack/
+BString Library - BSD https://github.com/msteinert/bstring
 
