@@ -4,7 +4,7 @@ Sample
 TRUE         Echo        - Echo input data to "<RootName>.ech" (flag)
 2         analysis_type  - 0: Rigid Body analysis; 1: Static analysis; 2: Dynamic analysis
 2         time_integrator   - 1: AM2; 2: Generalized-alpha; 3: RK4
-0.1       rhoinf            - Parameter for GA2
+0.3       rhoinf            - Parameter for GA2
 ---------------------- GEOMETRY PARAMETER --------------------------------------
 1     member_total    - Total number of member (-)
 27    kp_total        - Total number of key point (-)
