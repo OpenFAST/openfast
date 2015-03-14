@@ -1,12 +1,12 @@
 @ECHO ON
 
-@SET ARCHROOT=HD
-@SET PROGNAME=HydroDyn
+@SET ARCHPATH=Archive
+@SET PROGNAME=FEAMooring
+@SET ARCHNAME=FEAMooring_v%1
 
 
 IF "%COMPUTERNAME%"=="APLATT-21846S" GOTO APLATT-21846S
 IF "%COMPUTERNAME%"=="BJONKMAN-23080S" GOTO BJONKMAN-23080S
-IF "%COMPUTERNAME%"=="MBUHL-20665S" GOTO MBUHL-20665S
 IF "%COMPUTERNAME%"=="GHAYMAN-17919S" GOTO GHAYMAN-17919S
 IF "%COMPUTERNAME%"=="GHAYMAN-26326S" GOTO GHAYMAN-17919S
 
@@ -21,12 +21,6 @@ GOTO CheckSyntax
 @SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
 @SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\WZIPSE22\wzipse32.exe"
 @SET SEVENZIP="C:\Program Files\7-Zip\7z.exe"
-GOTO CheckSyntax
-
-:MBUHL-20665S
-@SET WINZIP="C:\Program Files (x86)\WinZip\WZZip"
-@SET WINZIPSE="C:\Program Files (x86)\WinZip Self-Extractor\wzipse32.exe"
-@SET SEVENZIP="C:\Program Files (x86)\7-Zip\7z.exe"
 GOTO CheckSyntax
 
 :GHAYMAN-17919S
@@ -50,8 +44,8 @@ GOTO CheckSyntax
 :DeleteOld
 @IF EXIST ARCHTMP.zip DEL ARCHTMP.zip
 @IF EXIST ARCHTMP.exe DEL ARCHTMP.exe
-@IF EXIST ARCHTMP.tar DEL ARCHTMP.tar
-@IF EXIST ARCHTMP.tar.gz DEL ARCHTMP.tar.gz
+@IF EXIST %PROGRAM%.tar DEL %PROGRAM%.tar
+@IF EXIST %PROGRAM%.tar.gz DEL %PROGRAM%.tar.gz
 
 
 :DoIt
@@ -60,11 +54,12 @@ GOTO CheckSyntax
 @ECHO Archiving %PROGNAME% for general Windows distribution.
 @ECHO -------------------------------------------------------------------------
 @ECHO.
-@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @FAST_SourceFiles.txt @ArcWin.txt
-@%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
-@COPY ARCHTMP.exe Archive\%ARCHROOT%_v%1.exe
-@DEL ARCHTMP.zip, ARCHTMP.exe
 
+@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @FAST_SourceFiles.txt
+@%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%"
+
+@COPY ARCHTMP.exe %ARCHPATH%\%ARCHNAME%.exe
+@DEL ARCHTMP.zip, ARCHTMP.exe
 
 
 @ECHO.
@@ -73,15 +68,16 @@ GOTO CheckSyntax
 @ECHO -------------------------------------------------------------------------
 @ECHO.
 @rem first create a tar file, then compress it (gzip allows only one file)
-@%SEVENZIP% a -ttar ARCHTMP @ArcFiles.txt @FAST_SourceFiles.txt
-@%SEVENZIP% a -tgzip ARCHTMP.tar.gz ARCHTMP.tar
-@COPY ARCHTMP.tar.gz Archive\%ARCHROOT%_v%1.tar.gz
-@DEL ARCHTMP.tar, ARCHTMP.tar.gz
+@%SEVENZIP% a -ttar %PROGNAME% @ArcFiles.txt @FAST_SourceFiles.txt
+@%SEVENZIP% a -tgzip %PROGNAME%.tar.gz %PROGNAME%.tar
+@COPY %PROGNAME%.tar.gz %ARCHPATH%\%ARCHNAME%.tar.gz
+@DEL %PROGNAME%.tar, %PROGNAME%.tar.gz
 
 
 
 :Done
-@SET ARCHROOT=
+@SET ARCHPATH=
+@SET ARCHNAME=
 @SET PROGNAME=
 @SET WINZIP=
 @SET WINZIPSE=
