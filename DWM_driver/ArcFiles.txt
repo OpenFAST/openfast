@@ -1,0 +1,14 @@
+ArcFiles.txt
+
+bin\DWM_driver_wind_farm.exe
+
+source\*.f90
+source\dependencies\NWTC_Library\*.f90
+
+docs\*.pdf
+
+compiling\VisualStudio\DWM_driver_wind_farm.vfproj
+
+test\wind_farm.txt
+test\DWM-driver
+test\DWM-results

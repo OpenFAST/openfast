@@ -1,0 +1,25 @@
+---------------------------------------------------------------------------------
+------- DWM WIND FARM INPUT FILE ------------------------------------------------
+DWM wind farm specification.
+Implemented in the FAST8 with DWM module
+---------------------- Wind Farm Parameters -------------------------------------
+70    HubHt                              - The hub height (m)
+40    RotorR                             - The Rotor radius (m)
+4     NumWT                              - The total number of wind turbines (-)
+8     Uambient                           - The ambient wind velocity (m/s)
+6     TI                                 - Ambient turbulence intensity (%)
+50    ppR                                - The number of points per radius  (-)
+5.0   Domain_R                           - Radial domain size (R) (should be larger than spacing*sin(theta) where theta is the turbine alignment angle) 
+36    Domain_X                           - Longitudinal domian size  (R) (should be larger than turbine spacing)
+300   Meandering_simulation_time_length  - The total simulation time steps in the meandering wake model for a fixed cross plane (-)
+60    Meandering_Moving_time             - The total simulation time steps in the meandering wake model for a moving cross plane(-)
+5     WFLowerBd                       - The height of the lower bound of the wind file (m)
+180   Winddir                            - The ambient wind direction (degree)
+"FAST_win32"   DWM.exe name           - The file rootname of the DWM-FAST program
+XCoordinate     YCoordinate
+0               10
+0               20
+0               30
+0               40
+	
+      
