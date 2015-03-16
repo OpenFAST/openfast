@@ -527,9 +527,9 @@ SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
 
             endif
             
-            IF ((x%q - u_interp%PointMesh%TranslationDisp(1,1)) >= OtherState%dxc) THEN
-                 OtherState%dxc = x%q - u_interp%PointMesh%TranslationDisp(1,1)
-             ENDIF
+            !IF ((x%q - u_interp%PointMesh%TranslationDisp(1,1)) >= OtherState%dxc) THEN
+            !     OtherState%dxc = x%q - u_interp%PointMesh%TranslationDisp(1,1)
+            ! ENDIF
             
             ! Determine whether the splitting failure happens
             IF (OtherState%Splitf == 0) THEN
