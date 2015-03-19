@@ -13,15 +13,8 @@ MODULE MoorDyn_IO
 
   !-------------------
   !bjj: FIXME: these global variables need to be removed before release
+  !mth:  done.  The parameters are okay, right?
   !-------------------
-  
-  
-  INTEGER(IntKi)                 :: UnOutFile      ! unit number of main output file
-
-  !REAL(ReKi),      ALLOCATABLE   :: MDWrOutput(:)  ! one line of output data (duplicate of y%WriteOutput, should fix)
-
-  INTEGER(IntKi),  ALLOCATABLE   :: UnLineOuts(:)  ! Unit numbers of line output files
-  REAL(ReKi),      ALLOCATABLE   :: LineWriteOutputs(:) ! one line of output data for Lines
 
 
   PRIVATE
@@ -94,13 +87,13 @@ CONTAINS
 
 
 
-  !====================================================================================================
-  SUBROUTINE MDIO_ReadInput( InitInp, p, other, ErrStat, ErrMsg )
+   !====================================================================================================
+   SUBROUTINE MDIO_ReadInput( InitInp, p, other, ErrStat, ErrMsg )
 
-  ! This subroutine reads the input required for MoorDyn from the file whose name is an
-  ! input parameter.  It sets the size of p%NTypes, NConnects, and NLines,
-  ! allocates LineTypeList, ConnectList, and LineList, and puts all the read contents of
-  ! the input file into the respective slots in those lists of types.
+   ! This subroutine reads the input required for MoorDyn from the file whose name is an
+   ! input parameter.  It sets the size of p%NTypes, NConnects, and NLines,
+   ! allocates LineTypeList, ConnectList, and LineList, and puts all the read contents of
+   ! the input file into the respective slots in those lists of types.
 
 
     ! Passed variables
@@ -140,13 +133,13 @@ CONTAINS
     CALL OpenFInpFile( UnIn, FileName, ErrStat )
 
     IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Failed to open MoorDyn input file: '//FileName
+       CALL SetErrStat(ErrID_Fatal, ' Failed to open MoorDyn input file: '//FileName, ErrStat,ErrMsg,'MDIO_ReadInput')
        CALL CleanUp()
        RETURN
     END IF
 
 
-    CALL WrScr( '  MD_Init: Opening MoorDyn input file:  '//FileName )
+    !CALL WrScr( '  MD_Init: Opening MoorDyn input file:  '//FileName )
 
 
     !-------------------------------------------------------------------------------------------------
@@ -156,8 +149,8 @@ CONTAINS
     CALL ReadCom( UnIn, FileName, 'MoorDyn input file header line 1', ErrStat )
 
     IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Failed to read MoorDyn input file header line 1.'
-       !CALL SetErrStat(ErrID_Fatal, 'Failed to read MoorDyn input file header line 1.',ErrStat,ErrMsg,'MDIO_ReadInput')
+!       ErrMsg  = ' Failed to read MoorDyn input file header line 1.'
+       CALL SetErrStat(ErrID_Fatal, 'Failed to read MoorDyn input file header line 1.',ErrStat,ErrMsg,'MDIO_ReadInput')
        CALL CleanUp()
        RETURN
     END IF
@@ -185,18 +178,28 @@ CONTAINS
     ! using the NWTC_Library routines.  The echoing is done inside those routines via a global variable
     ! which we must store, set, and then replace on error or completion.
 
-    IF ( InitInp%Echo ) THEN
+      IF ( InitInp%Echo ) THEN
 
-        EchoFile = TRIM(p%RootName)//'.ech'                      ! open an echo file for writing
-        CALL GetNewUnit( UnEc )
-        CALL OpenEcho ( UnEc, EchoFile, ErrStat, ErrMsg )
-        IF ( ErrStat /= ErrID_None ) THEN
-           ErrMsg  = ' Failed to open Echo file.'
-           CALL CleanUp()
-           RETURN
-        END IF
+         !print *, 'gonna try to open echo file'
 
-        REWIND(UnIn)      ! rewind to start of input file to re-read the first few lines
+         EchoFile = TRIM(p%RootName)//'.ech'                      ! open an echo file for writing
+
+         !print *, 'name is ', EchoFile
+
+         CALL GetNewUnit( UnEc )
+         CALL OpenEcho ( UnEc, EchoFile, ErrStat, ErrMsg )
+         IF ( ErrStat /= ErrID_None ) THEN
+   !           ErrMsg  = ' Failed to open Echo file.'
+            print *, 'got an error in opening it'
+            CALL SetErrStat(ErrID_Fatal, ' Failed to open Echo file', ErrStat,ErrMsg,'MDIO_ReadInput')
+            CALL CleanUp()
+            RETURN
+         END IF
+
+         REWIND(UnIn)      ! rewind to start of input file to re-read the first few lines
+
+
+
 
        CALL ReadCom( UnIn, FileName, 'MoorDyn input file header line 1', ErrStat, ErrMsg, UnEc )
 
@@ -225,7 +228,11 @@ CONTAINS
           RETURN
        END IF
 
+      !print *, 'at end of echo if statement'
+
     END IF
+
+   !print *, 'past echo bit'
 
 
     !-------------------------------------------------------------------------------------------------
@@ -526,7 +533,7 @@ CONTAINS
          read (OptValue,*) InitInp%threshIC
        else
          ErrStat = ErrID_Warn
- print *, 'unable to interpret input ', OptString
+   print *, 'unable to interpret input ', OptString
        end if
 
        IF ( ErrStat > ErrID_Warn ) THEN
@@ -545,8 +552,8 @@ CONTAINS
      !-------------------------------------------------------------------------------------------------
      ! Read the FAST-style outputs list in the final section, if there is one
      !-------------------------------------------------------------------------------------------------
-!     we don't read in the outputs header line because it's already been read in for detecting the end of the variable-length options section
-!     CALL ReadCom( UnIn, FileName, 'Outputs header', ErrStat, ErrMsg, UnEc )
+   !     we don't read in the outputs header line because it's already been read in for detecting the end of the variable-length options section
+   !     CALL ReadCom( UnIn, FileName, 'Outputs header', ErrStat, ErrMsg, UnEc )
 
     ! allocate InitInp%Outliest (to a really big number for now...)
     CALL AllocAry( InitInp%OutList, 1000, "MoorDyn Input File's Outlist", ErrStat, ErrMsg )
@@ -563,8 +570,8 @@ CONTAINS
        RETURN
     END IF
 
-  !print *, 'NumOuts is ', p%NumOuts
-  !print *, '  OutList is ', InitInp%OutList(1:p%NumOuts)
+   !print *, 'NumOuts is ', p%NumOuts
+   !print *, '  OutList is ', InitInp%OutList(1:p%NumOuts)
 
 
      !-------------------------------------------------------------------------------------------------
@@ -575,7 +582,7 @@ CONTAINS
         IF (InitInp%Echo) CLOSE( UnEc )
 
 
-  CONTAINS
+   CONTAINS
      ! subroutine to set ErrState and close the files if an error occurs
      SUBROUTINE CleanUp()
 
@@ -585,8 +592,8 @@ CONTAINS
 
      END SUBROUTINE
 
-  END SUBROUTINE MDIO_ReadInput
-  ! ====================================================================================================
+   END SUBROUTINE MDIO_ReadInput
+   ! ====================================================================================================
 
 
 
@@ -601,9 +608,9 @@ CONTAINS
     IMPLICIT                        NONE
 
     ! Passed variables
-    CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                  ! The list out user-requested outputs
+    CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                  ! The list of user-requested outputs
     TYPE(MD_ParameterType),    INTENT(INOUT)  :: p                           ! The module parameters
-    TYPE(MD_OtherStateType),   INTENT(IN)     :: other
+    TYPE(MD_OtherStateType),   INTENT(INout)     :: other
     TYPE(MD_OutputType),       INTENT(INOUT)  :: y                           ! Initial system outputs (outputs are not calculated; only the output mesh is initialized)
     TYPE(MD_InitOutputType),   INTENT(INOUT)  :: InitOut                     ! Output for initialization routine
     INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                     ! The error status code
@@ -802,51 +809,61 @@ CONTAINS
 !    END IF
 
 
-    ! Allocate MDWrOuput2 which is used to store a time step's worth of output data for each line, just making it really big for now <<<<<<<<<<<<<<
-    ALLOCATE( LineWriteOutputs( 200),  STAT = ErrStat )
-    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Error allocating space for LineWriteOutputs array.'
-      ErrStat = ErrID_Fatal
-      RETURN
-    END IF
+      ! Allocate MDWrOuput2 which is used to store a time step's worth of output data for each line, just making it really big for now <<<<<<<<<<<<<<
+      ! <<<<<<<<<<< should do this for each line instead.
+   !   ALLOCATE( LineWriteOutputs( 200),  STAT = ErrStat )
+   !   IF ( ErrStat /= ErrID_None ) THEN
+   !      ErrMsg  = ' Error allocating space for LineWriteOutputs array.'
+   !      ErrStat = ErrID_Fatal
+   !      RETURN
+   !   END IF
 
-    !Allocate WriteOuput
-    ALLOCATE(        y%WriteOutput(  p%NumOuts), &
+      !Allocate WriteOuput
+      ALLOCATE(        y%WriteOutput(  p%NumOuts), &
               InitOut%WriteOutputHdr(p%NumOuts), &
               InitOut%WriteOutputUnt(p%NumOuts),  STAT = ErrStat )
-    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Error allocating space for y%WriteOutput array.'
-      ErrStat = ErrID_Fatal
-      RETURN
-    END IF
-    
-    
-    !print *, "y%WriteOutput allocated to size ", size(y%WriteOutput)
+      IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = ' Error allocating space for y%WriteOutput array.'
+         ErrStat = ErrID_Fatal
+         RETURN
+      END IF
 
-   ! These variables are to help follow the framework template, but the data in them is simply a copy of data
-   ! already available in the OutParam data structure
-  !  ALLOCATE ( InitOut%WriteOutputHdr(p%NumOuts+p%OutAllint*p%OutAllDims), STAT = ErrStat )
-  !  ALLOCATE ( InitOut%WriteOutputUnt(p%NumOuts+p%OutAllint*p%OutAllDims), STAT = ErrStat )
+      ! allocate output array in each Line
+      DO I=1,p%NLines
+         ALLOCATE(other%LineList(I)%LineWrOutput(other%LineList(I)%N*3+3), STAT = ErrStat)  ! just allocating space for node positions so far
+         IF ( ErrStat /= ErrID_None ) THEN
+            ErrMsg  = ' Error allocating space for a LineWrOutput array'
+            ErrStat = ErrID_Fatal
+            RETURN
+         END IF
+      END DO  ! I
 
-   DO I = 1,p%NumOuts
+      !print *, "y%WriteOutput allocated to size ", size(y%WriteOutput)
+
+      ! These variables are to help follow the framework template, but the data in them is simply a copy of data
+      ! already available in the OutParam data structure
+      !  ALLOCATE ( InitOut%WriteOutputHdr(p%NumOuts+p%OutAllint*p%OutAllDims), STAT = ErrStat )
+      !  ALLOCATE ( InitOut%WriteOutputUnt(p%NumOuts+p%OutAllint*p%OutAllDims), STAT = ErrStat )
+
+      DO I = 1,p%NumOuts
       InitOut%WriteOutputHdr(I) = p%OutParam(I)%Name
       InitOut%WriteOutputUnt(I) = p%OutParam(I)%Units
-   END DO
+      END DO
 
 
-  CONTAINS
+   CONTAINS
 
-    SUBROUTINE DenoteInvalidOutput( OutParm )
-      TYPE(MD_OutParmType), INTENT (INOUT)  :: OutParm
+      SUBROUTINE DenoteInvalidOutput( OutParm )
+         TYPE(MD_OutParmType), INTENT (INOUT)  :: OutParm
 
-      OutParm%OType = 0  ! flag as invalid
-      OutParm%Name = 'Invalid'
-      OutParm%Units = ' - '
+         OutParm%OType = 0  ! flag as invalid
+         OutParm%Name = 'Invalid'
+         OutParm%Units = ' - '
 
-    END SUBROUTINE DenoteInvalidOutput
+      END SUBROUTINE DenoteInvalidOutput
 
-  END SUBROUTINE MDIO_ProcessOutList
-  !---------------------------------------------------------------------------------------------------
+   END SUBROUTINE MDIO_ProcessOutList
+   !====================================================================================================
 
 
 
@@ -858,7 +875,7 @@ CONTAINS
 
       CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! Root name for the output file
       TYPE(MD_ParameterType),        INTENT( INOUT ) :: p
-      TYPE(MD_OtherStateType),       INTENT (IN)     :: other
+      TYPE(MD_OtherStateType),       INTENT( INOUT ) :: other
       TYPE(MD_InitOutPutType ),      INTENT( IN    ) :: InitOut              !
       INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred
       CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -881,13 +898,14 @@ CONTAINS
 
       IF ( ALLOCATED( p%OutParam ) .AND. p%NumOuts > 0 ) THEN           ! Output has been requested so let's open an output file
 
-            ! Open the file for output
+         ! Open the file for output
          OutFileName = TRIM(p%RootName)//'.out'
-         CALL GetNewUnit( UnOutFile )
+         CALL GetNewUnit( p%MDUnOut )
 
-         CALL OpenFOutFile ( UnOutFile, OutFileName, ErrStat, ErrMsg )
-         IF ( ErrStat >= AbortErrLev ) THEN
+         CALL OpenFOutFile ( p%MDUnOut, OutFileName, ErrStat, ErrMsg )
+         IF ( ErrStat > ErrID_None ) THEN
             ErrMsg = ' Error opening MoorDyn-level output file: '//TRIM(ErrMsg)
+            ErrStat = ErrID_Fatal
             RETURN
          END IF
 
@@ -896,9 +914,9 @@ CONTAINS
 
          Frmt = '(A10,'//TRIM(Int2LStr(p%NumOuts))//'(A1,A10))'
 
-         WRITE(UnOutFile,Frmt, IOSTAT=ErrStat2)  TRIM( 'Time' ), ( p%Delim, TRIM( p%OutParam(I)%Name), I=1,p%NumOuts )
+         WRITE(p%MDUnOut,Frmt, IOSTAT=ErrStat2)  TRIM( 'Time' ), ( p%Delim, TRIM( p%OutParam(I)%Name), I=1,p%NumOuts )
 
-         WRITE(UnOutFile,Frmt)  TRIM( '(s)' ), ( p%Delim, TRIM( p%OutParam(I)%Units ), I=1,p%NumOuts )
+         WRITE(p%MDUnOut,Frmt)  TRIM( '(s)' ), ( p%Delim, TRIM( p%OutParam(I)%Units ), I=1,p%NumOuts )
 
       ELSE  ! if no outputs requested
 
@@ -907,20 +925,22 @@ CONTAINS
       END IF
 
       !--------------------------------------------------------------------------
-      ! -------------- now do the same for line output files --------------------
+      !                    now do the same for line output files
+      !--------------------------------------------------------------------------
 
-      ! allocate UnLineOuts
-      ALLOCATE(UnLineOuts(p%NLines))  ! should add error checking
+      !! allocate UnLineOuts
+      !ALLOCATE(UnLineOuts(p%NLines))  ! should add error checking
 
       DO I = 1,p%NLines
 
          ! Open the file for output
          OutFileName = TRIM(p%RootName)//'.Line'//TRIM(Int2LStr(I))//'.out'
-         CALL GetNewUnit( UnLineOuts(I) )
+         CALL GetNewUnit( other%LineList(I)%LineUnOut )
 
-         CALL OpenFOutFile ( UnLineOuts(I), OutFileName, ErrStat, ErrMsg )
-         IF ( ErrStat >= AbortErrLev ) THEN
+         CALL OpenFOutFile ( other%LineList(I)%LineUnOut, OutFileName, ErrStat, ErrMsg )
+         IF ( ErrStat > ErrID_None ) THEN
             ErrMsg = ' Error opening Line output file '//TRIM(ErrMsg)
+            ErrStat = ErrID_Fatal
             RETURN
          END IF
 
@@ -928,25 +948,26 @@ CONTAINS
 
          Frmt = '(A10,'//TRIM(Int2LStr(3+3*other%LineList(I)%N))//'(A1,A10))'
 
-         WRITE(UnLineOuts(I),Frmt, IOSTAT=ErrStat2)  TRIM( 'Time' ), ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'px', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'py', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'pz', J=0,(other%LineList(I)%N) )
+         WRITE(other%LineList(I)%LineUnOut,Frmt, IOSTAT=ErrStat2)  TRIM( 'Time' ), ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'px', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'py', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'pz', J=0,(other%LineList(I)%N) )
 
       END DO ! I
 
 
+      ! need to fix error handling in this sub
+
    END SUBROUTINE MDIO_OpenOutput
-
    !====================================================================================================
 
 
    !====================================================================================================
-   SUBROUTINE MDIO_CloseOutput ( p, ErrStat, ErrMsg )
+   SUBROUTINE MDIO_CloseOutput ( p, other, ErrStat, ErrMsg )
       ! This function cleans up after running the MoorDyn output module.
-      ! It closes the output file and releases memory.
+      ! It closes the output files and releases memory.
 
-      TYPE(MD_ParameterType),  INTENT( INOUT )  :: p                    ! data for this instance of the floating platform module
-      INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred
-      CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
-
+      TYPE(MD_ParameterType),       INTENT( INOUT )  :: p                    ! data for this instance of the floating platform module
+      TYPE(MD_OtherStateType),      INTENT( INOUT )  :: other                ! data for this instance of the floating platform module
+      INTEGER,                      INTENT(   OUT )  :: ErrStat              ! a non-zero value indicates an error occurred
+      CHARACTER(*),                 INTENT(   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
       INTEGER(IntKi)       :: I  ! generic counter
 
@@ -956,29 +977,28 @@ CONTAINS
 
 
       ! close main MoorDyn output file
-      CLOSE( UnOutFile, IOSTAT = ErrStat )
+      CLOSE( p%MDUnOut, IOSTAT = ErrStat )
          IF ( ErrStat /= 0 ) THEN
             ErrMsg = 'Error closing output file'
-            CALL WrScr(ErrMsg)
          END IF
 
       ! close individual line output files
       DO I=1,p%NLines
-         CLOSE( UnLineOuts(I), IOSTAT = ErrStat )
+         CLOSE( other%LineList(I)%LineUnOut, IOSTAT = ErrStat )
             IF ( ErrStat /= 0 ) THEN
                ErrMsg = 'Error closing line output file'
-               CALL WrScr(ErrMsg)
             END IF
       END DO
 
       ! deallocate output arrays
-      IF (ALLOCATED(UnLineOuts)) THEN
-         DEALLOCATE(UnLineOuts)
+      IF (ALLOCATED(other%MDWrOutput)) THEN
+         DEALLOCATE(other%MDWrOutput)
       ENDIF
-      IF (ALLOCATED(LineWriteOutputs)) THEN
-         DEALLOCATE(LineWriteOutputs)
-      ENDIF
-
+      DO I=1,p%NLines
+         IF (ALLOCATED(other%LineList(I)%LineWrOutput)) THEN
+            DEALLOCATE(other%LineList(I)%LineWrOutput)       ! this may be unnecessary and handled by Line destructor
+         ENDIF
+      END DO
 
    END SUBROUTINE MDIO_CloseOutput
    !====================================================================================================
@@ -991,8 +1011,8 @@ CONTAINS
 
       REAL(DbKi),                   INTENT( IN    ) :: Time                 ! Time for this output
       TYPE(MD_ParameterType),       INTENT( IN    ) :: p                    ! MoorDyn module's parameter data
-      TYPE(MD_OutputType),          INTENT(INOUT)  :: y           ! INTENT( OUT) : Initial system outputs (outputs are not calculated; only the output mesh is initialized)
-      TYPE(MD_OtherStateType),      INTENT( IN    ) :: other                ! MoorDyn module's other data
+      TYPE(MD_OutputType),          INTENT(INOUT )  :: y                    ! INTENT( OUT) : Initial system outputs (outputs are not calculated; only the output mesh is initialized)
+      TYPE(MD_OtherStateType),      INTENT( INOUT ) :: other                ! MoorDyn module's other data
       INTEGER,                      INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs
       CHARACTER(*),                 INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -1002,7 +1022,7 @@ CONTAINS
       CHARACTER(200)                         :: Frmt                        ! a string to hold a format statement
 
 
-      IF ( .NOT. ALLOCATED( p%OutParam ) .OR. UnOutFile < 0 )  THEN
+      IF ( .NOT. ALLOCATED( p%OutParam ) .OR. p%MDUnOut < 0 )  THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = ' To write outputs for MoorDyn there must be a valid file ID and OutParam must be allocated.'
          RETURN
@@ -1068,7 +1088,7 @@ CONTAINS
 
       Frmt = '(F10.4,'//TRIM(Int2LStr(p%NumOuts))//'(A1,e10.4))'   ! should evenutally use user specified format?
 
-      WRITE(UnOutFile,Frmt)  Time, ( p%Delim, y%WriteOutput(I), I=1,p%NumOuts )
+      WRITE(p%MDUnOut,Frmt)  Time, ( p%Delim, y%WriteOutput(I), I=1,p%NumOuts )
 
 
 
@@ -1082,11 +1102,11 @@ CONTAINS
 
         DO J = 0,other%LineList(I)%N  ! note index starts at zero because these are nodes
           DO K = 1,3
-            LineWriteOutputs(3*J+K) = other%LineList(I)%r(K,J)
+            other%LineList(I)%LineWrOutput(3*J+K) = other%LineList(I)%r(K,J)
           END DO
         END DO
 
-        WRITE(UnLineOuts(I),Frmt)  Time, ( p%Delim, LineWriteOutputs(J), J=1,(3+3*other%LineList(I)%N) )
+        WRITE(other%LineList(I)%LineUnOut,Frmt)  Time, ( p%Delim, other%LineList(I)%LineWrOutput(J), J=1,(3+3*other%LineList(I)%N) )
 
       END DO ! I
 

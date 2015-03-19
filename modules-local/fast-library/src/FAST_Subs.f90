@@ -67,7 +67,7 @@ FUNCTION GetVersion()
       GetVersion = TRIM(GetVersion)//' as a DLL for LabVIEW'
    ENDIF   
    
-   GetVersion = TRIM(GetVersion)//' using '//TRIM(Num2LStr(BITS_IN_ADDR))//'-bit addresses and'
+   GetVersion = TRIM(GetVersion)//' as a '//TRIM(Num2LStr(BITS_IN_ADDR))//'-bit application using'
    
    ! determine precision
 
@@ -7407,6 +7407,10 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAP
                
    END IF   
 #endif   
+
+      ! the initial ServoDyn and IfW/Lidar inputs from Simulink:
+   IF ( p_FAST%CompServo == Module_SrvD ) CALL SrvD_SetExternalInputs( p_FAST, m_FAST, SrvD%Input(1) )   
+   IF ( p_FAST%CompAero  == Module_AD   ) CALL IfW_InputSolve( AD%OtherSt%IfW_Inputs, AD%p%IfW_Params, m_FAST, ED%Output(1), MeshMapData, ErrStat2, ErrMsg2 )         
 
 
    CALL CalcOutputs_And_SolveForInputs(  n_t_global, m_FAST%t_global,  STATE_CURR, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &

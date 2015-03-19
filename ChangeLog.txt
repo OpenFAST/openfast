@@ -4092,4 +4092,15 @@ FAST v8.09.00a-bjj 30-September-2014 B. Jonkman
 + updated SubDyn and HydroDyn models (WAMIT2 and Waves2 modules)
 + added DWM source code for compilation
 
+====================================================================================================================================
+FAST v8.10.00a-bjj 31-March-2014 B. Jonkman
++ fixed Test25 mooring file to match line numbering for OC4 project
++ reconfigured main program so it can easily be made a DLL
++ replaced MAP with MAP++ module
++ added Simulink interface with sample models
++ modified ServoDyn control mode switches
++ added "none" option for high-speed shaft brake mode in ServoDyn
++ added TMD module to ServoDyn
++ added MoorDyn module as 3rd mooring module
++ added high-speed shaft brake to ElastoDyn
 

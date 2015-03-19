@@ -35,6 +35,10 @@
 #define PARAM_ADDINPUTS 2
 #define NUM_PARAM 3
 
+// two DWork arrays:
+#define WORKARY_OUTPUT 0
+#define WORKARY_INPUT 1
+
 
 static double dt = 0;
 static double TMax = 0;
@@ -44,13 +48,13 @@ static int NumOutputs = 1;
 static int ErrStat = 0;
 static char ErrMsg[INTERFACE_STRING_LENGTH];        // make sure this is the same size as IntfStrLen in FAST_Library.f90
 static char InputFileName[INTERFACE_STRING_LENGTH]; // make sure this is the same size as IntfStrLen in FAST_Library.f90
-static int n_t_global = -1;  // counter to determine which fixed-step simulation time we are at currently
-
-static int SFunc_init = 0;
+static int n_t_global = -2;  // counter to determine which fixed-step simulation time we are at currently (start at -2 for initialization)
 
 // function definitions
 static int checkError(SimStruct *S);
 static void mdlTerminate(SimStruct *S); // defined here so I can call it from checkError
+static void getInputs(SimStruct *S, double *InputAry);
+static void setOutputs(SimStruct *S, double *OutputAry);
 
 
 /* Error handling
@@ -85,6 +89,32 @@ checkError(SimStruct *S){
 
 }
 
+static void
+getInputs(SimStruct *S, double *InputAry){
+
+   int     k;
+   InputRealPtrsType uPtrs = ssGetInputPortRealSignalPtrs(S, 0);
+
+   for (k = 0; k < ssGetDWorkWidth(S, WORKARY_INPUT); k++) {
+      InputAry[k] = (double)(*uPtrs[k]);
+   }
+   
+}
+
+static void
+setOutputs(SimStruct *S, double *OutputAry){
+
+   int     k;
+   double *y = ssGetOutputPortRealSignal(S, 0);
+
+   for (k = 0; k < ssGetOutputPortWidth(S, WORKARY_OUTPUT); k++) {
+      y[k] = OutputAry[k];
+   }
+
+}
+
+
+
 /*====================*
  * S-function methods *
  *====================*/
@@ -109,7 +139,7 @@ static void mdlInitializeSizes(SimStruct *S)
    mwSize m, n;
    mwIndex indx;
 
-   if (SFunc_init == 0) {
+   if (n_t_global == -2) {
 
             /* Expected S-Function Input Parameter(s) */
       ssSetNumSFcnParams(S, NUM_PARAM);  /* Number of expected parameters */
@@ -162,7 +192,7 @@ static void mdlInitializeSizes(SimStruct *S)
 
        FAST_Sizes(&TMax, InitInputAry, InputFileName, &AbortErrLev, &NumOutputs, &dt, &ErrStat, ErrMsg, ChannelNames);
 
-       SFunc_init = 1;
+       n_t_global = -1;
        if (checkError(S)) return;
 
 
@@ -239,11 +269,11 @@ static void mdlInitializeSizes(SimStruct *S)
         */
        if(!ssSetNumDWork(   S, 2)) return;
 
-       ssSetDWorkWidth(     S, 0, ssGetOutputPortWidth(S,0));
-       ssSetDWorkDataType(  S, 0, SS_DOUBLE); /* use SS_DOUBLE if needed */
+       ssSetDWorkWidth(   S, WORKARY_OUTPUT, ssGetOutputPortWidth(S, 0));
+       ssSetDWorkDataType(S, WORKARY_OUTPUT, SS_DOUBLE); /* use SS_DOUBLE if needed */
 
-       ssSetDWorkWidth(     S, 1, ssGetInputPortWidth(S,0));
-       ssSetDWorkDataType(  S, 1, SS_DOUBLE);
+       ssSetDWorkWidth(   S, WORKARY_INPUT, ssGetInputPortWidth(S, 0));
+       ssSetDWorkDataType(S, WORKARY_INPUT, SS_DOUBLE);
 
        ssSetNumNonsampledZCs(S, 0);
 
@@ -255,9 +285,6 @@ static void mdlInitializeSizes(SimStruct *S)
 
     }
 }
-
-
-
 
 /* Function: mdlInitializeSampleTimes =========================================
  * Abstract:
@@ -296,17 +323,22 @@ static void mdlInitializeSampleTimes(SimStruct *S)
 
      /* bjj: this is really the initial output; I'd really like to have the inputs from Simulink here.... maybe if we put it in mdlOutputs? 
         but then do we need to say we have direct feed-through?
-     */ 
-     double *OutputAry = (double *)ssGetDWork(S, 0);
-     //n_t_global is -1 here; maybe use this fact in mdlOutputs
-     FAST_Start(&NumOutputs, OutputAry, &ErrStat, ErrMsg);
-     n_t_global = 0;
-     if (checkError(S)) return;
+     */
+     double *InputAry = (double *)ssGetDWork(S, WORKARY_INPUT); //malloc(NumInputs*sizeof(double));   
+     double *OutputAry = (double *)ssGetDWork(S, WORKARY_OUTPUT);
 
+     //n_t_global is -1 here; maybe use this fact in mdlOutputs
+     if (n_t_global == -1){ // first time to compute outputs:
+
+//        getInputs(S, InputAry);
+
+        FAST_Start(&NumInputs, &NumOutputs, InputAry, OutputAry, &ErrStat, ErrMsg);
+        n_t_global = 0;
+        if (checkError(S)) return;
+
+     }
   }
 #endif /*  MDL_START */
-
-
 
 /* Function: mdlOutputs =======================================================
  * Abstract:
@@ -335,17 +367,22 @@ static void mdlOutputs(SimStruct *S, int_T tid)
      * this code is active.
      */
     
-    double *copyOfOutputs = (double *) ssGetDWork(S, 0);
-    double *y             = ssGetOutputPortRealSignal(S,0);
-    int     k;
-    
-    for (k = 0; k < ssGetOutputPortWidth(S, 0); k++) {
-        y[k] = copyOfOutputs[k];
+    double *InputAry  = (double *)ssGetDWork(S, WORKARY_INPUT);
+    double *OutputAry = (double *)ssGetDWork(S, WORKARY_OUTPUT);
+
+    if (n_t_global == -1){ // first time to compute outputs:
+
+       getInputs(S, InputAry);
+
+       FAST_Start(&NumInputs, &NumOutputs, InputAry, OutputAry, &ErrStat, ErrMsg);
+       n_t_global = 0;
+       if (checkError(S)) return;
+
     }
 
+    setOutputs(S, OutputAry);
 
 }
-
 
 
 #define MDL_UPDATE  /* Change to #undef to remove function */
@@ -368,26 +405,12 @@ static void mdlUpdate(SimStruct *S, int_T tid)
      * in mdlOutputs().  The states in the Fortran code need not be
      * continuous if you call your code from here.
      */
-    InputRealPtrsType uPtrs = ssGetInputPortRealSignalPtrs(S,0);
-    double *InputAry  = (double *)ssGetDWork(S, 1);
-    double *y         = ssGetOutputPortRealSignal(S,0);
-    double *OutputAry = (double *)ssGetDWork(S, 0);
-    int k;
-    
+    double *InputAry  = (double *)ssGetDWork(S, WORKARY_INPUT);
+    double *OutputAry = (double *)ssGetDWork(S, WORKARY_OUTPUT);
+
     //time_T t = ssGetSampleTime(S, 0);
 
-    /* 
-     * If the datatype in the Fortran code is REAL
-     * then you have to downcast the I/O and states from
-     * double to float as copies before sending them 
-     * to your code (or change the Fortran code).
-     */
-
-    for (k=0; k < ssGetDWorkWidth(S,1); k++) {
-       InputAry[k] = (double)(*uPtrs[k]);
-    }
-
-
+    getInputs(S, InputAry);
 
     /* ==== Call the Fortran routine (args are pass-by-reference) */
     
@@ -396,15 +419,7 @@ static void mdlUpdate(SimStruct *S, int_T tid)
 
     if (checkError(S)) return;
 
-   
-    /* 
-     * If needed, convert the float outputs to the 
-     * double (y) output array 
-     */
-    for (k=0; k < ssGetOutputPortWidth(S,0); k++) {
-       y[k] = (double)OutputAry[k];
-    }
-
+    setOutputs(S, OutputAry);
 
 }
 #endif /* MDL_UPDATE */
@@ -420,9 +435,11 @@ static void mdlUpdate(SimStruct *S, int_T tid)
  */
 static void mdlTerminate(SimStruct *S)
 {
-   FAST_End();
-   SFunc_init =  0;
-   n_t_global = -1;
+   if (n_t_global > -2){ // just in case we've never initialized, check this time step
+      FAST_End();
+      n_t_global = -2;
+   }  
+
 }
 
 

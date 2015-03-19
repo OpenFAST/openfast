@@ -1,9 +1,6 @@
-ArcWin.txt
-
-Archive.bat
 bin\FAST_Win32.exe
 bin\FAST_x64.exe
-bin\MAP_win32.dll
+bin\MAP_Win32.dll
 bin\MAP_x64.dll
 bin\Registry_win32.exe
 bin\Crunch_win32.exe
@@ -18,7 +15,9 @@ bin\FAST_SFunc.mexw64
 CertTest\DateTime.exe
 CertTest\Update.bat
 
-CertTest\5MW_Baseline\ServoData\DISCON_win32.dll
-CertTest\5MW_Baseline\ServoData\DISCON_win64.dll
-CertTest\5MW_Baseline\ServoData\DISCON_ITIBarge_win32.dll
-CertTest\5MW_Baseline\ServoData\DISCON_OC3Hywind_win32.dll
+CertTest\5MW_Baseline\ServoData\DISCON_Win32.dll
+CertTest\5MW_Baseline\ServoData\DISCON_x64.dll
+CertTest\5MW_Baseline\ServoData\DISCON_ITIBarge_Win32.dll
+CertTest\5MW_Baseline\ServoData\DISCON_ITIBarge_x64.dll
+CertTest\5MW_Baseline\ServoData\DISCON_OC3Hywind_Win32.dll
+CertTest\5MW_Baseline\ServoData\DISCON_OC3Hywind_x64.dll

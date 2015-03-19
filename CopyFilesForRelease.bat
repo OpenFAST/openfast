@@ -140,6 +140,8 @@ SET dst_folder=%depend_dir%\MAP
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
 @CALL :CopyFileList
+rem Change the case of this source file, if necessary:
+MOVE "%dst_folder%\map.f90"   "%dst_folder%\MAP.f90"
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :MoorDyn
@@ -153,8 +155,12 @@ IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 
 :FEAMooring
-ECHO Skipping FEAMooring
+ECHO FEAMooring
+SET src_folder=%FEAM_Loc%\..
+SET dst_folder=%depend_dir%\FEAMooring
+SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
+@CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 goto ClearVars

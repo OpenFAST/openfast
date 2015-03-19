@@ -11,6 +11,7 @@
 !==================================================================================================================================  
 MODULE FAST_Data
 
+   USE, INTRINSIC :: ISO_C_Binding
    USE FAST_IO_Subs   ! all of the ModuleName and ModuleName_types modules are inherited from FAST_IO_Subs
                        
    IMPLICIT  NONE
@@ -55,7 +56,6 @@ END MODULE FAST_Data
 !==================================================================================================================================
 subroutine FAST_Sizes(TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Sizes
-   USE, INTRINSIC :: ISO_C_Binding
    USE FAST_Data
    IMPLICIT NONE 
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Sizes
@@ -123,13 +123,14 @@ subroutine FAST_Sizes(TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_
    
 end subroutine FAST_Sizes
 !==================================================================================================================================
-subroutine FAST_Start(NumOutputs_c, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
+subroutine FAST_Start(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Start
-   USE, INTRINSIC :: ISO_C_Binding
    USE FAST_Data
    IMPLICIT NONE 
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Start
+   INTEGER(C_INT),         INTENT(IN   ) :: NumInputs_c      
    INTEGER(C_INT),         INTENT(IN   ) :: NumOutputs_c      
+   REAL(C_DOUBLE),         INTENT(IN   ) :: InputAry(NumInputs_c)
    REAL(C_DOUBLE),         INTENT(  OUT) :: OutputAry(NumOutputs_c)
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
@@ -142,17 +143,27 @@ subroutine FAST_Start(NumOutputs_c, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAM
      
       ! initialize variables:   
    n_t_global = 0
-   
+
+#ifdef SIMULINK_DirectFeedThrough   
+   IF(  NumInputs_c /= NumFixedInputs .AND. NumInputs_c /= NumFixedInputs+3 ) THEN
+      ErrStat_c = ErrID_Fatal
+      ErrMsg_c  = TRANSFER( "FAST_Start:size of InputAry is invalid."//C_NULL_CHAR, ErrMsg_c )
+      RETURN
+   END IF
+
+   CALL FAST_SetExternalInputs(NumInputs_c, InputAry, m_FAST)
+
+#endif      
    !...............................................................................................................................
    ! Initialization of solver: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
-   !...............................................................................................................................     
+   !...............................................................................................................................  
    CALL FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )      
-   
    
       ! return outputs here, too
    IF(NumOutputs_c /= SIZE(y_FAST%ChannelNames) ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg  = trim(ErrMsg)//NewLine//"FAST_Update:size of NumOutputs is invalid."
+      ErrMsg  = trim(ErrMsg)//NewLine//"FAST_Start:size of NumOutputs is invalid."
+      RETURN
    ELSE
       
       CALL FillOutputAry(p_FAST, y_FAST, IfW%WriteOutput, ED%Output(1)%WriteOutput, SrvD%y%WriteOutput, HD%y%WriteOutput, &
@@ -173,7 +184,6 @@ end subroutine FAST_Start
 !==================================================================================================================================
 subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Update')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Update
-   USE, INTRINSIC :: ISO_C_Binding
    USE FAST_Data
    IMPLICIT NONE
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Update
@@ -205,30 +215,18 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
    ELSEIF(NumOutputs_c /= SIZE(y_FAST%ChannelNames) ) THEN
       ErrStat_c = ErrID_Fatal
       ErrMsg_c  = TRANSFER( "FAST_Update:size of OutputAry is invalid or FAST has too many outputs."//C_NULL_CHAR, ErrMsg_c )
+      RETURN
    ELSEIF(  NumInputs_c /= NumFixedInputs .AND. NumInputs_c /= NumFixedInputs+3 ) THEN
       ErrStat_c = ErrID_Fatal
       ErrMsg_c  = TRANSFER( "FAST_Update:size of InputAry is invalid."//C_NULL_CHAR, ErrMsg_c )
+      RETURN
    ELSE
-      
-         ! set the inputs from external code here...
-         ! transfer inputs from Simulink to FAST
-   
-      m_FAST%ExternInput%GenTrq      = InputAry(1)
-      m_FAST%ExternInput%ElecPwr     = InputAry(2)
-      m_FAST%ExternInput%YawPosCom   = InputAry(3)
-      m_FAST%ExternInput%YawRateCom  = InputAry(4)
-      m_FAST%ExternInput%BlPitchCom  = InputAry(5:7)
-      m_FAST%ExternInput%HSSBrFrac   = InputAry(8)         
-      
-      
-      IF ( NumInputs_c > 7 ) THEN  ! 7 is the fixed number of inputs
-         m_FAST%ExternInput%LidarFocus = InputAry(9:11)
-      END IF
-               
-      
+
+      CALL FAST_SetExternalInputs(NumInputs_c, InputAry, m_FAST)
+
       CALL FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )                  
       n_t_global = n_t_global + 1
-      
+
       
       ! set the outputs for external code here...
       ! return y_FAST%ChannelNames
@@ -248,9 +246,38 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       
 end subroutine FAST_Update 
 !==================================================================================================================================
+subroutine FAST_SetExternalInputs(NumInputs_c, InputAry, m_FAST)
+
+   USE, INTRINSIC :: ISO_C_Binding
+   USE FAST_Types
+   USE FAST_Data, only: NumFixedInputs
+   
+   IMPLICIT  NONE
+
+   INTEGER(C_INT),         INTENT(IN   ) :: NumInputs_c      
+   REAL(C_DOUBLE),         INTENT(IN   ) :: InputAry(NumInputs_c)                   ! Inputs from Simulink
+   TYPE(FAST_MiscVarType), INTENT(INOUT) :: m_FAST                                  ! Miscellaneous variables
+   
+         ! set the inputs from external code here...
+         ! transfer inputs from Simulink to FAST
+      IF ( NumInputs_c < NumFixedInputs ) RETURN ! This is an error
+      
+      m_FAST%ExternInput%GenTrq      = InputAry(1)
+      m_FAST%ExternInput%ElecPwr     = InputAry(2)
+      m_FAST%ExternInput%YawPosCom   = InputAry(3)
+      m_FAST%ExternInput%YawRateCom  = InputAry(4)
+      m_FAST%ExternInput%BlPitchCom  = InputAry(5:7)
+      m_FAST%ExternInput%HSSBrFrac   = InputAry(8)         
+            
+      IF ( NumInputs_c > NumFixedInputs ) THEN  ! NumFixedInputs is the fixed number of inputs
+         IF ( NumInputs_c == NumFixedInputs + 3 ) &
+         m_FAST%ExternInput%LidarFocus = InputAry(9:11)
+      END IF   
+      
+end subroutine FAST_SetExternalInputs
+!==================================================================================================================================
 subroutine FAST_End() BIND (C, NAME='FAST_End')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_End
-   USE, INTRINSIC :: ISO_C_Binding
    USE FAST_Data
    IMPLICIT NONE
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_End

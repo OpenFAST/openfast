@@ -1,6 +1,8 @@
 
 ArcFiles.txt
+ArcWin.txt
 Archive.bat
+
 ChangeLog.txt
 Disclaimer.txt
 license.txt
@@ -51,6 +53,7 @@ Compiling\Compile_DISCON_DLL.bat
 Compiling\makefile_DISCON_DLL
 Compiling\VisualStudio\FAST_Project.vfproj
 Compiling\VisualStudio\RunRegistry.bat
+Compiling\DISCON_DLLs\DISCON.vfproj
 
 Utilities\ModeShapePolyFitting.xls
 Utilities\DISCON_DLL_template.f90
