@@ -5672,8 +5672,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
             CALL SetErrStat(ErrID_Fatal,'AeroDyn "DYNINFL" InfModel is invalid for models with high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
          END IF
          
-         IF ( ED%p%method /= 3 ) THEN ! bjj: should be using ElastoDyn's Method_ABM4 parameter
-            CALL SetErrStat(ErrID_Fatal,'ElastoDyn must use the ABM4 integration method to implement high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
+         IF ( ED%p%method == 1 ) THEN ! bjj: should be using ElastoDyn's Method_ABM4 Method_AB4 parameters
+            CALL SetErrStat(ErrID_Fatal,'ElastoDyn must use the AB4 or ABM4 integration method to implement high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
          END IF               
       END IF
       
