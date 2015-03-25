@@ -43,7 +43,7 @@ MODULE HydroDyn
    PRIVATE
 
   
-   TYPE(ProgDesc), PARAMETER            :: HydroDyn_ProgDesc = ProgDesc( 'HydroDyn', 'v2.02.01c-gjh', '09-Mar-2015' )
+   TYPE(ProgDesc), PARAMETER            :: HydroDyn_ProgDesc = ProgDesc( 'HydroDyn', 'v2.02.02a-gjh', '25-Mar-2015' )
 
     
    
