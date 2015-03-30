@@ -42,7 +42,7 @@ MODULE IceDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', 'v1.01.00-by', '9-Dec-2014' )
+   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', 'v1.01.00-by', '30-Mar-2015' )
 
    ! ..... Public Subroutines ...................................................................................................
 
@@ -50,7 +50,7 @@ MODULE IceDyn
    PUBLIC :: IceD_End                            ! Ending routine (includes clean up)
 
    PUBLIC :: IceD_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
-                                               !   continuous states, and updating discrete states
+                                                 !   continuous states, and updating discrete states
    PUBLIC :: IceD_CalcOutput                     ! Routine for computing outputs
 
    PUBLIC :: IceD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
