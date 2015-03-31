@@ -1,4 +1,4 @@
-    !**********************************************************************************************************************************
+!**********************************************************************************************************************************
 ! This file is part of FEAMooring.
 !
 ! Copyright (C) 2014 NREL/TAMU
@@ -6,9 +6,9 @@
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
 ! You may obtain a copy of the License at
-    !
+!
 !     http://www.apache.org/licenses/LICENSE-2.0
-    !
+!
 ! Unless required by applicable law or agreed to in writing, software
 ! distributed under the License is distributed on an "AS IS" BASIS,
 ! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -763,11 +763,11 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
         IF(ERR1.GT.p%Eps.OR.ERR2.GT.p%Eps.OR.ERR3.GT.p%Eps.OR.OtherState%INCR.EQ.0) THEN
             OtherState%INCR=OtherState%INCR+1
             IF(OtherState%INCR.GT.p%MaxIter) THEN
-                WRITE(*,*) 'No Convergence'
+                call wrscr('No Convergence')
                 STOP
             END IF
         ELSE IF(.NOT.OtherState%BottomTouch) THEN
-            PRINT*, 'Number of iterations without Seabed :',OtherState%INCR
+            call wrscr('Number of iterations without Seabed :'//trim(num2lstr(OtherState%INCR)))
             OtherState%BottomTouch = .TRUE.
             OtherState%INCR  = 0
             OtherState%Iteration1 = .TRUE.
