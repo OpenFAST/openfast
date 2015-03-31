@@ -1,3 +1,22 @@
+!**********************************************************************************************************************************
+! LICENSING
+! Copyright (C) 2015  Matthew Hall
+!
+!    This file is part of MoorDyn.
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
+!
+!**********************************************************************************************************************************
 MODULE MoorDyn
 
    USE MoorDyn_Types
@@ -8,7 +27,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v0.9.01-mth', '19-Feb-2015' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v0.9.01-mth', '30-Mar-2015' )
 
 
    PUBLIC :: MD_Init
@@ -42,6 +61,7 @@ CONTAINS
       INTEGER(IntKi)                               :: I              ! index
       INTEGER(IntKi)                               :: J              ! index
       INTEGER(IntKi)                               :: K              ! index
+      INTEGER(IntKi)                               :: Converged      ! flag indicating whether the dynamic relaxation has converged
       INTEGER(IntKi)                               :: N              ! convenience integer for readability: number of segments in the line
       REAL(ReKi)                                   :: Pos(3)         ! array for setting absolute fairlead positions in mesh
       REAL(ReKi)                                   :: TransMat(3,3)  ! rotation matrix for setting fairlead positions correctly if there is initial platform rotation
@@ -94,7 +114,7 @@ CONTAINS
       !          Connect mooring system together and make necessary allocations
       !-------------------------------------------------------------------------------------------------
 
-      CALL WrNR( '  Creating mooring system.  ' )
+      CALL WrNR( '   Creating mooring system.  ' )
 
       p%NFairs = 0   ! this is the number of "vessel" type Connections.  being consistent with MAP terminology
       p%NConns = 0   ! this is the number of "connect" type Connections.  not to be confused with NConnects, the number of Connections
@@ -228,9 +248,10 @@ CONTAINS
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
 
-         u%PtFairleadDisplacement%TranslationDisp(1,i) = InitInp%PtfmInit(1) + Transmat(1,1)*Pos(1) + Transmat(1,2)*Pos(2) + TransMat(1,3)*Pos(3)
-         u%PtFairleadDisplacement%TranslationDisp(2,i) = InitInp%PtfmInit(2) + Transmat(2,1)*Pos(1) + Transmat(2,2)*Pos(2) + TransMat(2,3)*Pos(3)
-         u%PtFairleadDisplacement%TranslationDisp(3,i) = InitInp%PtfmInit(3) + Transmat(3,1)*Pos(1) + Transmat(3,2)*Pos(2) + TransMat(3,3)*Pos(3)
+         ! modified below to subtract Pos
+         u%PtFairleadDisplacement%TranslationDisp(1,i) = InitInp%PtfmInit(1) + Transmat(1,1)*Pos(1) + Transmat(1,2)*Pos(2) + TransMat(1,3)*Pos(3) - Pos(1)
+         u%PtFairleadDisplacement%TranslationDisp(2,i) = InitInp%PtfmInit(2) + Transmat(2,1)*Pos(1) + Transmat(2,2)*Pos(2) + TransMat(2,3)*Pos(3) - Pos(2)
+         u%PtFairleadDisplacement%TranslationDisp(3,i) = InitInp%PtfmInit(3) + Transmat(3,1)*Pos(1) + Transmat(3,2)*Pos(2) + TransMat(3,3)*Pos(3) - Pos(3)
          ! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
          !mth:      Bonnie, is the above correct?
          ! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -319,6 +340,7 @@ CONTAINS
          CALL InitializeLine( other%LineList(I), other%LineTypeList(other%LineList(I)%PropsIdNum), p%rhoW ,  ErrStat2, ErrMsg2)
             CALL CheckError( ErrStat2, ErrMsg2 )
             IF (ErrStat >= AbortErrLev) RETURN
+            IF (ErrStat >= ErrId_Warn) CALL WrScr("   Catenary solver failed for one or more lines.  Using linear node spacing.")  ! make this statement more accurate
 
          ! assign the resulting internal node positions to the integrator initial state vector! (velocities leave at 0)
          DO J = 1, N-1
@@ -331,19 +353,19 @@ CONTAINS
       END DO    !I = 1, p%NLines
 
 
-      ! try writing output for troubleshooting purposes (TEMPORARY)
-      CALL MDIO_WriteOutputs(-1.0_DbKi, p, other, y, ErrStat, ErrMsg)
-      IF ( ErrStat >= AbortErrLev ) THEN
-         ErrMsg = ' Error in MDIO_WriteOutputs: '//TRIM(ErrMsg)
-         RETURN
-      END IF
+!      ! try writing output for troubleshooting purposes (TEMPORARY)
+!      CALL MDIO_WriteOutputs(-1.0_DbKi, p, other, y, ErrStat, ErrMsg)
+!      IF ( ErrStat >= AbortErrLev ) THEN
+!         ErrMsg = ' Error in MDIO_WriteOutputs: '//TRIM(ErrMsg)
+!         RETURN
+!      END IF
 
 
       ! --------------------------------------------------------------------
       !           do dynamic relaxation to get ICs
       ! --------------------------------------------------------------------
 
-      CALL WrScr("  MD_Init: Finalizing ICs using dynamic relaxation."//NewLine)
+      CALL WrScr("   Finalizing ICs using dynamic relaxation."//NewLine)  ! newline because next line writes over itself
 
       ! boost drag coefficient of each line type
       DO I = 1, p%NTypes
@@ -383,25 +405,27 @@ CONTAINS
          END DO
 
          ! provide status message
-         CALL WrOver('  t='//trim(Num2LStr(t))//'  FairTen 1: '//trim(Num2LStr(FairTensIC(1,1)))// &
+         CALL WrOver('   t='//trim(Num2LStr(t))//'  FairTen 1: '//trim(Num2LStr(FairTensIC(1,1)))// &
                         ', '//trim(Num2LStr(FairTensIC(1,2)))//', '//trim(Num2LStr(FairTensIC(1,3))))
 
          ! check for convergence (compare current tension at each fairlead with previous two values)
          IF (I > 2) THEN
-            DO J = 1, p%NFairs
+            Converged = 1
+            DO J = 1, p%NFairs   ! check for non-convergence
                IF (( abs( FairTensIC(J,1)/FairTensIC(J,2) - 1.0 ) > InitInp%threshIC ) .OR. ( abs( FairTensIC(J,1)/FairTensIC(J,3) - 1.0 ) > InitInp%threshIC ) ) THEN
+                  Converged = 0
                   EXIT
                END IF
             END DO
 
-            IF (J == p%NFairs) THEN   ! if we made it with all cases satisfying the threshold
-               CALL WrScr('  Fairlead tensions converged to '//trim(Num2LStr(100.0*InitInp%threshIC))//'% after '//trim(Num2LStr(t))//' seconds.')
+            IF (Converged == 1)  THEN  ! (J == p%NFairs) THEN   ! if we made it with all cases satisfying the threshold
+               CALL WrScr('   Fairlead tensions converged to '//trim(Num2LStr(100.0*InitInp%threshIC))//'% after '//trim(Num2LStr(t))//' seconds.')
                EXIT  ! break out of the time stepping loop
             END IF
          END IF
 
          IF (I == ceiling(InitInp%TMaxIC/InitInp%DTIC) ) THEN
-            CALL WrScr('  Fairlead tensions did not converge within TMaxIC='//trim(Num2LStr(InitInp%TMaxIC))//' seconds.')
+            CALL WrScr('   Fairlead tensions did not converge within TMaxIC='//trim(Num2LStr(InitInp%TMaxIC))//' seconds.')
             !ErrStat = ErrID_Warn
             !ErrMsg = '  MD_Init: ran dynamic convergence to TMaxIC without convergence'
          END IF
@@ -417,13 +441,6 @@ CONTAINS
 
 
       p%dtCoupling = DTcoupling  ! store coupling time step for use in updatestates
-
-
-      ! Give the program description (name, version number, date)
-      !InitOut%Ver = ProgDesc('MoorDyn',TRIM(InitOut%version),TRIM(InitOut%compilingData)) ! rhis is a duplicate of above
-
-
-    !  print *, ' MD_Init: Done.  MoorDyn set up with desired dt=', p%dtM0, ' and dtcoupling=', p%dtCoupling
 
 
    CONTAINS
@@ -1338,6 +1355,8 @@ CONTAINS
       INTEGER(4)                             :: J           ! Generic index
 
 
+      INTEGER(IntKi)                         :: ErrStat2      ! Error status of the operation
+      CHARACTER(LEN(ErrMsg))                 :: ErrMsg2       ! Error message if ErrStat2 /= ErrID_None
       REAL(ReKi)                             :: WetWeight
       REAL(ReKi)                             :: SeabedCD = 0.0_ReKi
       REAL(ReKi)                             :: TenTol = 0.0001_ReKi
@@ -1415,34 +1434,30 @@ CONTAINS
 
              CALL Catenary ( XF           , ZF          , Line%UnstrLen, LineProp%EA  , &
                              WetWeight    , SeabedCD,    TenTol,     (N+1)     , &
-                             LSNodes, LNodesX, LNodesZ , ErrStat, ErrMsg)
+                             LSNodes, LNodesX, LNodesZ , ErrStat2, ErrMsg2)
 
 
-      IF (ErrStat == ErrID_None) THEN ! if it worked, use it
+      IF (ErrStat2 == ErrID_None) THEN ! if it worked, use it
           ! Transform the positions of each node on the current line from the local
           !   coordinate system of the current line to the inertial frame coordinate
           !   system:
 
-             DO J = 0,Line%N ! Loop through all nodes per line where the line position and tension can be output
-                Line%r(1,J) = Line%r(1,0) + LNodesX(J+1)*COSPhi
-                Line%r(2,J) = Line%r(2,0) + LNodesX(J+1)*SINPhi
-                Line%r(3,J) = Line%r(3,0) + LNodesZ(J+1)
-             ENDDO              ! J - All nodes per line where the line position and tension can be output
+          DO J = 0,Line%N ! Loop through all nodes per line where the line position and tension can be output
+             Line%r(1,J) = Line%r(1,0) + LNodesX(J+1)*COSPhi
+             Line%r(2,J) = Line%r(2,0) + LNodesX(J+1)*SINPhi
+             Line%r(3,J) = Line%r(3,0) + LNodesZ(J+1)
+          ENDDO              ! J - All nodes per line where the line position and tension can be output
 
 
       ELSE ! if there is a problem with the catenary approach, just stretch the nodes linearly between fairlead and anchor
 
-  !        }
-  !        else
-  !        {  ! otherwise just stretch the nodes between the endpoints linearly and hope for the best
-            print *, 'Catenary IC generation failed so using straight-line approach instead.'
+          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'InitializeLine')
 
-             DO J = 0,Line%N ! Loop through all nodes per line where the line position and tension can be output
-                Line%r(1,J) = Line%r(1,0) + (Line%r(1,N) - Line%r(1,0))*REAL(J, ReKi)/REAL(N, ReKi)
-                Line%r(2,J) = Line%r(2,0) + (Line%r(2,N) - Line%r(2,0))*REAL(J, ReKi)/REAL(N, ReKi)
-                Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, ReKi)/REAL(N, ReKi)
-                print *, Line%r(1,J)
-             ENDDO              ! J - All nodes per line where the line position and tension can be output
+          DO J = 0,Line%N ! Loop through all nodes per line where the line position and tension can be output
+             Line%r(1,J) = Line%r(1,0) + (Line%r(1,N) - Line%r(1,0))*REAL(J, ReKi)/REAL(N, ReKi)
+             Line%r(2,J) = Line%r(2,0) + (Line%r(2,N) - Line%r(2,0))*REAL(J, ReKi)/REAL(N, ReKi)
+             Line%r(3,J) = Line%r(3,0) + (Line%r(3,N) - Line%r(3,0))*REAL(J, ReKi)/REAL(N, ReKi)
+          ENDDO
       ENDIF
 
 
@@ -1471,6 +1486,7 @@ CONTAINS
                             W_In , CB_In, Tol_In, N    , &
                             s_In , X_In , Z_In , ErrStat, ErrMsg    )
 
+         ! This subroutine is copied from FAST v7 with minor modifications
 
          ! This routine solves the analytical, static equilibrium equations
          ! for a catenary (or taut) mooring line with seabed interaction.
@@ -1632,11 +1648,6 @@ CONTAINS
                             ' Routine Catenary() cannot solve quasi-static mooring line solution.'
 
 
-         ENDIF
-
-         IF (ErrStat > ErrID_None) then
-           print *, ErrMsg
-           RETURN
          ENDIF
 
 
@@ -1988,9 +1999,6 @@ CONTAINS
          !VF_In    = REAL( VF   , ReKi )
          X_In (:) = REAL( X (:), ReKi )
          Z_In (:) = REAL( Z (:), ReKi )
-
-         !print *, 'done Catenary.  N is ', N, ', first three x positions are ', X_In(1), X_In(2), X_In(3)
-
 
       END SUBROUTINE Catenary
       !=======================================================================

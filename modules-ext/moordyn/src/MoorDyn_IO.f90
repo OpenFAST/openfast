@@ -1,8 +1,22 @@
-!..................................................................................................................................
-
+!**********************************************************************************************************************************
+! LICENSING
+! Copyright (C) 2015  Matthew Hall
+!
 !    This file is part of MoorDyn.
 !
-
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
+!
+!**********************************************************************************************************************************
 MODULE MoorDyn_IO
 
   ! This MODULE stores variables used for input and output and provides i/o subs
@@ -190,7 +204,7 @@ CONTAINS
          CALL OpenEcho ( UnEc, EchoFile, ErrStat, ErrMsg )
          IF ( ErrStat /= ErrID_None ) THEN
    !           ErrMsg  = ' Failed to open Echo file.'
-            print *, 'got an error in opening it'
+            !print *, 'got an error in opening it'
             CALL SetErrStat(ErrID_Fatal, ' Failed to open Echo file', ErrStat,ErrMsg,'MDIO_ReadInput')
             CALL CleanUp()
             RETURN
@@ -533,7 +547,7 @@ CONTAINS
          read (OptValue,*) InitInp%threshIC
        else
          ErrStat = ErrID_Warn
-   print *, 'unable to interpret input ', OptString
+         CALL WrScr('unable to interpret input '//trim(OptString))
        end if
 
        IF ( ErrStat > ErrID_Warn ) THEN
@@ -610,7 +624,7 @@ CONTAINS
     ! Passed variables
     CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                  ! The list of user-requested outputs
     TYPE(MD_ParameterType),    INTENT(INOUT)  :: p                           ! The module parameters
-    TYPE(MD_OtherStateType),   INTENT(INout)     :: other
+    TYPE(MD_OtherStateType),   INTENT(INOUT)  :: other
     TYPE(MD_OutputType),       INTENT(INOUT)  :: y                           ! Initial system outputs (outputs are not calculated; only the output mesh is initialized)
     TYPE(MD_InitOutputType),   INTENT(INOUT)  :: InitOut                     ! Output for initialization routine
     INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                     ! The error status code
@@ -666,11 +680,11 @@ CONTAINS
       CALL Conv2UC(OutListTmp)       ! convert to all uppercase for string matching purposes
 
       ! find indicies of changes in number-vs-letter in characters of OutListTmp
-      i1 = scan( OutListTmp , '1234567890' )        ! first number in the string
-      i2 = i1+verify( OutListTmp(i1+1:) , '1234567890' ) ! second letter start (assuming first character is a letter, i.e. i1>1)
-      i3 = i2+scan( OutListTmp(i2+1:) , '1234567890' )   ! second number start
-      i4 = i3+verify( OutListTmp(i3+1:) , '1234567890' ) ! third letter start
-      !i5 = scan( OutListTmp(i1:) , '1234567890' )   ! find first letter after first number
+      i1 = scan( OutListTmp , '1234567890' )              ! first number in the string
+      i2 = i1+verify( OutListTmp(i1+1:) , '1234567890' )  ! second letter start (assuming first character is a letter, i.e. i1>1)
+      i3 = i2+scan( OutListTmp(i2+1:) , '1234567890' )    ! second number start
+      i4 = i3+verify( OutListTmp(i3+1:) , '1234567890' )  ! third letter start
+      !i5 = scan( OutListTmp(i1:) , '1234567890' )        ! find first letter after first number
 
       ! error check
       IF (i1 <= 1) THEN
@@ -680,20 +694,27 @@ CONTAINS
       END IF
 
         p%OutParam(I)%Name = OutListTmp  ! label channel with whatever name was inputted, for now
-!    print *, 'processing output channel request ', OutListTmp
 
-!    print *, 'indices are ', i1, i2, i3, i4
 
       ! figure out what type of output it is and process accordingly
 
-      ! fairlead tension case
+      ! fairlead tension case (updated)
       IF (OutListTmp(1:i1-1) == 'FAIRTEN') THEN
-        p%OutParam(I)%OType = 1                ! line object type
-        p%OutParam(I)%QType = Ten              ! tension quantity type
-        p%OutParam(I)%Units = UnitList(Ten)    ! set units according to QType
-        READ (OutListTmp(i1:),*) oID
-        p%OutParam(I)%ObjID =  oID
-        p%OutParam(I)%NodeID =  other%LineList(oID)%N  ! line type
+        p%OutParam(I)%OType = 2                                     ! connection object type
+        p%OutParam(I)%QType = Ten                                   ! tension quantity type
+        p%OutParam(I)%Units = UnitList(Ten)                         ! set units according to QType
+        READ (OutListTmp(i1:),*) oID                                ! this is the line number
+        p%OutParam(I)%ObjID = other%LineList(oID)%FairConnect       ! get the connection ID of the fairlead
+        p%OutParam(I)%NodeID = -1                                   ! not used.    other%LineList(oID)%N  ! specify node N (fairlead)
+
+      ! achor tension case
+      ELSE IF (OutListTmp(1:i1-1) == 'ANCHTEN') THEN
+        p%OutParam(I)%OType = 2                                     ! connectoin object type
+        p%OutParam(I)%QType = Ten                                   ! tension quantity type
+        p%OutParam(I)%Units = UnitList(Ten)                         ! set units according to QType
+        READ (OutListTmp(i1:),*) oID                                ! this is the line number
+        p%OutParam(I)%ObjID = other%LineList(oID)%AnchConnect       ! get the connection ID of the fairlead
+        p%OutParam(I)%NodeID = -1                                   ! not used.    other%LineList(oID)%0  ! specify node 0 (anchor)
 
       ! more general case
       ELSE
@@ -705,11 +726,11 @@ CONTAINS
           ! for now we'll just assume the next character(s) are "n" to represent node number:
           READ (OutListTmp(i3:i4-1),*) nID
           p%OutParam%NodeID = nID
-          qVal = OutListTmp(i4:)  ! isolate quantity type string
+          qVal = OutListTmp(i4:)                 ! isolate quantity type string
         ! Connect case                                     ... C?xxx or Con?xxx
         ELSE IF (OutListTmp(1:1) == 'C') THEN
           p%OutParam(I)%OType = 2                ! Connect object type
-          qVal = OutListTmp(i2:)  ! isolate quantity type string
+          qVal = OutListTmp(i2:)                 ! isolate quantity type string
 
         ! should do fairlead option also!
 
@@ -775,19 +796,19 @@ CONTAINS
       ! also check whether each object index and node index (if applicable) is in range
       IF (p%OutParam(I)%OType==2) THEN
         IF (p%OutParam(I)%ObjID > p%NConnects) THEN
-          print *, 'warning, output Connect index excedes number of Connects'
+          call wrscr('warning, output Connect index excedes number of Connects')
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
         END IF
       ELSE IF (p%OutParam(I)%OType==1) THEN
         IF (p%OutParam(I)%ObjID > p%NLines) THEN
-          print *, 'warning, output Line index excedes number of Line'
+          call wrscr('warning, output Line index excedes number of Line')
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
         END IF
         IF (p%OutParam(I)%NodeID > other%LineList(p%OutParam(I)%ObjID)%N) THEN
-          print *, 'warning, output node index excedes number of nodes'
+          call wrscr('warning, output node index excedes number of nodes')
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
         ELSE IF (p%OutParam(I)%NodeID < 0) THEN
-          print *, 'warning, output node index is less than zero'
+          call wrscr('warning, output node index is less than zero')
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
         END IF
 
@@ -920,7 +941,7 @@ CONTAINS
 
       ELSE  ! if no outputs requested
 
-         print *, 'note, MDIO_OpenOutput thinks that no outputs have been requested.'
+         call wrscr('note, MDIO_OpenOutput thinks that no outputs have been requested.')
 
       END IF
 
@@ -1033,53 +1054,55 @@ CONTAINS
       ! gather the required output quantities (INCOMPLETE!)
       DO I = 1,p%NumOuts
 
-        IF (p%OutParam(I)%OType == 2) THEN  ! if dealing with a Connect output
-          SELECT CASE (p%OutParam(I)%QType)
-            CASE (PosX)
-              y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%r(1)  ! x position
-            CASE (PosY)
-              y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%r(2) ! y position
-            CASE (PosZ)
-              y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%r(3) ! z position
-            CASE (VelX)
-              y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%rd(1) ! x velocity
-            CASE (VelY)
-              y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%rd(2) ! y velocity
-            CASE (VelZ)
-              y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%rd(3) ! z velocity
-            CASE DEFAULT
-              y%WriteOutput(I) = 0.0_ReKi
-              ErrStat = ErrID_Warn
-              ErrMsg = ' Unsupported output quantity from Connect object requested.'
-          END SELECT
+         IF (p%OutParam(I)%OType == 2) THEN  ! if dealing with a Connect output
+            SELECT CASE (p%OutParam(I)%QType)
+               CASE (PosX)
+                  y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%r(1)  ! x position
+               CASE (PosY)
+                  y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%r(2) ! y position
+               CASE (PosZ)
+                  y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%r(3) ! z position
+               CASE (VelX)
+                  y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%rd(1) ! x velocity
+               CASE (VelY)
+                  y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%rd(2) ! y velocity
+               CASE (VelZ)
+                  y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%rd(3) ! z velocity
+               CASE (Ten)
+                  y%WriteOutput(I) = TwoNorm(other%ConnectList(p%OutParam(I)%ObjID)%Ftot)  ! total force magnitude on a connect (used eg. for fairlead and anchor tensions)
+               CASE DEFAULT
+                  y%WriteOutput(I) = 0.0_ReKi
+                  ErrStat = ErrID_Warn
+                  ErrMsg = ' Unsupported output quantity from Connect object requested.'
+            END SELECT
 
-        ELSE IF (p%OutParam(I)%OType == 1) THEN  ! if dealing with a Line output
+         ELSE IF (p%OutParam(I)%OType == 1) THEN  ! if dealing with a Line output
 
-          SELECT CASE (p%OutParam(I)%QType)
-            CASE (PosX)
-              y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%r(1,p%OutParam(I)%NodeID)  ! x position
-            CASE (PosY)
-              y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%r(2,p%OutParam(I)%NodeID) ! y position
-            CASE (PosZ)
-              y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%r(3,p%OutParam(I)%NodeID) ! z position
-            CASE (VelX)
-              y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%rd(1,p%OutParam(I)%NodeID) ! x velocity
-            CASE (VelY)
-              y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%rd(2,p%OutParam(I)%NodeID) ! y velocity
-            CASE (VelZ)
-              y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%rd(3,p%OutParam(I)%NodeID) ! z velocity
-            CASE (Ten)
-              y%WriteOutput(I) = TwoNorm(other%LineList(p%OutParam(I)%ObjID)%T(:,p%OutParam(I)%NodeID))  ! tension this isn't quite right, since it's segment tension...
-            CASE DEFAULT
-              y%WriteOutput(I) = 0.0_ReKi
-              ErrStat = ErrID_Warn
-              ErrMsg = ' Unsupported output quantity from Line object requested.'
-          END SELECT
+            SELECT CASE (p%OutParam(I)%QType)
+               CASE (PosX)
+                 y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%r(1,p%OutParam(I)%NodeID)  ! x position
+               CASE (PosY)
+                 y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%r(2,p%OutParam(I)%NodeID) ! y position
+               CASE (PosZ)
+                 y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%r(3,p%OutParam(I)%NodeID) ! z position
+               CASE (VelX)
+                 y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%rd(1,p%OutParam(I)%NodeID) ! x velocity
+               CASE (VelY)
+                 y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%rd(2,p%OutParam(I)%NodeID) ! y velocity
+               CASE (VelZ)
+                 y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%rd(3,p%OutParam(I)%NodeID) ! z velocity
+               CASE (Ten)
+                 y%WriteOutput(I) = TwoNorm(other%LineList(p%OutParam(I)%ObjID)%T(:,p%OutParam(I)%NodeID))  ! this is actually the segment tension ( 1 < NodeID < N )  Should deal with properly!
+               CASE DEFAULT
+                 y%WriteOutput(I) = 0.0_ReKi
+                 ErrStat = ErrID_Warn
+                 ErrMsg = ' Unsupported output quantity from Line object requested.'
+            END SELECT
 
-        ELSE  ! it must be an invalid output, so write zero
-          y%WriteOutput(I) = 0.0_ReKi
+         ELSE  ! it must be an invalid output, so write zero
+            y%WriteOutput(I) = 0.0_ReKi
 
-        END IF
+         END IF
 
       END DO ! I, loop through OutParam
 

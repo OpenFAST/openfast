@@ -10,6 +10,12 @@ National Renewable Energy Laboratory (http://www.nrel.gov, wind.nrel.gov)
 Third Party Content
 FAST includes content from several 3rd party sources:
 
+MoorDyn by Matthew Hall
+MAP++ by Marco Masciola
+FEAMooring by Texas A&M University
+IceDyn by University of Michigan
+IceFloe by DNV-KEMA
+
 Linear Algebra PACKage (LAPACK) (http://www.netlib.org/lapack/index.html)
 The authors of LAPACK are E. Anderson, Z. Bai, C. Bischof, S. Blackford, J. Demmel, J. Dongarra, J. Du Croz, A. Greenbaum, S. Hammarling, A. McKenney, and D. Sorensen.
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
