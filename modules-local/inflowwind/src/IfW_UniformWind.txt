@@ -35,6 +35,14 @@ typedef  ^                       ^                       LOGICAL  WindFileConsta
 #   e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 #   at a given time, etc.)
 typedef  ^                       OtherStateType          IntKi    TimeIndex         -     0     -     "An Index into the TData array"                                -
+typedef  ^                       ^                       IntKi    UnitWind          -     -     -     "Unit number for the wind file opened"                         -
+
+
+# ..... Parameters ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+typedef  ^                    ParameterType       CHARACTER(1024) WindFileName      -     -     -     "Name of the wind file to use"                                 -
+#typedef  ^                       ^                       ReKi     ReferenceHeight   -     -     -     "Height of the hub"                                            meters
 typedef  ^                       ^                       ReKi     TData             :     -     -     "Time array from the HH file"                                  seconds
 typedef  ^                       ^                       ReKi     DELTA             :     -     -     "HH Wind direction (angle)"                                    degrees
 typedef  ^                       ^                       ReKi     V                 :     -     -     "HH horizontal wind speed"                                     meters/sec
@@ -43,20 +51,9 @@ typedef  ^                       ^                       ReKi     HSHR          
 typedef  ^                       ^                       ReKi     VSHR              :     -     -     "HH vertical shear exponent"                                   -
 typedef  ^                       ^                       ReKi     VLINSHR           :     -     -     "HH vertical linear shear"                                     -
 typedef  ^                       ^                       ReKi     VGUST             :     -     -     "HH wind gust"                                                 -
-typedef  ^                       ^                       ReKi     RefHt             -     -     -     "reference height; was HH (hub height); used to center the wind"  -
-typedef  ^                       ^                       ReKi     RefLength         -     -     -     "reference length used to scale the linear shear"  -
+typedef  ^                       ^                       ReKi     RefHt             -     -     -     "reference height; was HH (hub height); used to center the wind"  meters
+typedef  ^                       ^                       ReKi     RefLength         -     -     -     "reference length used to scale the linear shear"              meters
 typedef  ^                       ^                       IntKi    NumDataLines      -     -     -     ""                                                             -
-typedef  ^                       ^                       IntKi    UnitWind          -     -     -     "Unit number for the wind file opened"                         -
-
-
-# ..... Parameters ................................................................................................................
-# Define parameters here:
-# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-typedef  ^                    ParameterType       CHARACTER(1024) WindFileName      -     -     -     "Name of the wind file to use"                                 -
-typedef  ^                       ^                       Logical  Initialized       -  .FALSE.  -     "Flag to indicate if the module was initialized"               -
-typedef  ^                       ^                       ReKi     ReferenceHeight   -     -     -     "Height of the hub"                                            meters
-typedef  ^                       ^                       ReKi     RefLength             -     -     -     "RefLength of the wind field"                                      meters
-#typedef  ^                       ^                       DbKi     DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
 
 
 
