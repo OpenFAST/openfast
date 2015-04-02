@@ -417,30 +417,39 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             InitOutData%WindFileTRange    =  InitOutData%UniformWind%WindFileTRange
             InitOutData%WindFileNumTSteps =  InitOutData%UniformWind%WindFileNumTSteps
 
-!FIXME: add warning if the first data point in the windfile has an angle and we are using a coordinate transform (rotation of windfield).
+               ! Check if the fist data point from the file is not along the X-axis while applying the windfield rotation
+            IF ( ( .NOT. EqualRealNos (ParamData%UniformWind%Delta(1), 0.0_ReKi) ) .AND.  &
+                 ( .NOT. EqualRealNos (ParamData%PropogationDir, 0.0_ReKi)       ) ) THEN
+               CALL SetErrStat( ErrID_Warn,' Uniform wind file starts with a wind direction of '// &
+                        TRIM(Num2LStr(ParamData%UniformWind%Delta(1)*R2D))//                       &
+                        ' degrees and the InflowWind input file specifies a PropogationDir of '//  &
+                        TRIM(Num2LStr(ParamData%PropogationDir*R2D))//' degrees.',                 &
+                        ErrStat,ErrMsg,'InflowWind_Init' )
+            ENDIF
+
 
 
          CASE ( TSFF_WindNumber )
                ! Initialize the TSFFWind module
-            CALL SetErrStat( ErrID_Fatal,' TSFF winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init')
+            CALL SetErrStat( ErrID_Fatal,' TSFF winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init' )
 
 
 
          CASE ( BladedFF_WindNumber )
                ! Initialize the BladedFFWind module
-            CALL SetErrStat( ErrID_Fatal,' BladedFF winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init')
+            CALL SetErrStat( ErrID_Fatal,' BladedFF winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init' )
 
 
 
          CASE ( HAWC_WindNumber )
                ! Initialize the HAWCWind module
-            CALL SetErrStat( ErrID_Fatal,' HAWC winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init')
+            CALL SetErrStat( ErrID_Fatal,' HAWC winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init' )
 
 
 
          CASE ( User_WindNumber )
                ! Initialize the User_Wind module
-            CALL SetErrStat( ErrID_Fatal,' User winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init')
+            CALL SetErrStat( ErrID_Fatal,' User winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init' )
 
 
 
@@ -674,11 +683,6 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
       INTEGER(IntKi)                                           :: I                    !< Generic counters
 
-!      INTEGER(IntKi)                                           :: J                    !FIXME: remove after testing
-!      LOGICAL                                                  :: samecheck            !FIXME: remove after testing
-!      REAL(ReKi), ALLOCATABLE       :: TmpPositionXYZcheck(:,:)   !< PositionXYZ array returned from prime (wind) coordinates FIXME: remove after testing
-!      REAL(ReKi)                                               :: RotToWind(3,3)       !< Rotation matrix for rotating from global XYZ to windfile X'Y'Z'   !FIXME: remove when done
-!      REAL(ReKi)                                               :: RotFromWind(3,3)     !< Rotation matrix for rotating from windfile X'Y'Z' to global XYZ   !FIXME: remove when done
 
          ! Temporary variables for error handling
       INTEGER(IntKi)                                           :: TmpErrStat
@@ -740,7 +744,6 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
                ! Move the arrays for the Velocity information
             CALL MOVE_ALLOC( OutputData%VelocityUVW,  Uniform_OutData%Velocity )
 
-!FIXME: input data -- prime coords?
                ! InputData only contains the Position array, so we can pass that directly.
             CALL  IfW_UniformWind_CalcOutput(  Time, PositionXYZprime, ParamData%UniformWind, OtherStates%UniformWind, &
                                           Uniform_OutData, TmpErrStat, TmpErrMsg)
@@ -755,7 +758,6 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
             IF ( ParamData%NWindVel >= 1_IntKi ) THEN
                   ! Move the arrays for the Velocity information
                CALL MOVE_ALLOC( OtherStates%WindViUVW,  Uniform_OutData%Velocity )
-!FIXME: input data -- prime coords?
                CALL  IfW_UniformWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%UniformWind, &
                                              OtherStates%UniformWind, &
                                              Uniform_OutData, TmpErrStat, TmpErrMsg)
@@ -776,7 +778,6 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
             CALL MOVE_ALLOC( OutputData%VelocityUVW,  Uniform_OutData%Velocity )
 
 
-!FIXME: input data -- prime coords??
                ! InputData only contains the Position array, so we can pass that directly.
             CALL  IfW_UniformWind_CalcOutput(  Time, PositionXYZprime, ParamData%UniformWind, OtherStates%UniformWind, &
                                           Uniform_OutData, TmpErrStat, TmpErrMsg)
@@ -792,7 +793,6 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
             IF ( ParamData%NWindVel >= 1_IntKi ) THEN
                   ! Move the arrays for the Velocity information
                CALL MOVE_ALLOC( OtherStates%WindViUVW,  Uniform_OutData%Velocity )
-
                CALL  IfW_UniformWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%UniformWind, &
                                              OtherStates%UniformWind, &
                                              Uniform_OutData, TmpErrStat, TmpErrMsg)
