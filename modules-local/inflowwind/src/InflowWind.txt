@@ -163,6 +163,7 @@ typedef  ^                    InputType            ReKi              PositionXYZ
 # Define outputs that are contained on the mesh here:
 typedef  ^                    OutputType           ReKi              VelocityUVW       ::    -     -     "Array holding the U,V,W velocity for a given timestep"  meters/sec
 typedef  ^                    OutputType           ReKi              WriteOutput       :     -     -     "Array with values to output to file"                    -
+typedef  ^                       ^                 ReKi              DiskVel           {3}   -     -     "Vector holding the U,V,W average velocity of the disk"  meters/sec
 
 
 # ..... States not used by this module ...................................................................................................................

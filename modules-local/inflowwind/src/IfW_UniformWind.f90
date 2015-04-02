@@ -530,6 +530,11 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,
    ENDDO
 
 
+
+      ! DiskVel term -- this represents the average across the disk -- sort of.  This changes for AeroDyn 15
+   OutData%DiskVel   =  WindInf_ADhack_diskVel(Time, ParamData, OtherStates, TmpErrStat, TmpErrMsg)
+print*,'   OutData%DiskVel:  ',OutData%DiskVel
+
    RETURN
 
 CONTAINS
@@ -667,10 +672,115 @@ CONTAINS
       GetWindSpeed(3) =  VZ_tmp
 
 
-
       RETURN
 
    END FUNCTION GetWindSpeed
+
+
+   FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
+   ! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
+   ! when a consensus on the definition of "average velocity" is determined, this function will be
+   ! removed.
+   !----------------------------------------------------------------------------------------------------
+   
+         ! Passed variables
+   
+      REAL(DbKi),                            INTENT(IN   )  :: Time              !< Time
+      TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: ParamData         ! Parameters
+      TYPE(IfW_UniformWind_OtherStateType),  INTENT(INOUT)  :: OtherStates       ! Other State data   (storage for the main data)
+   
+      INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat
+      CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg
+   
+         ! Function definition
+      REAL(ReKi)                    :: WindInf_ADhack_diskVel(3)
+   
+         ! Local variables
+      REAL(ReKi)                    :: Delta_tmp            ! interpolated Delta   at input TIME
+      REAL(ReKi)                    :: P                    ! temporary storage for slope (in time) used in linear interpolation
+      REAL(ReKi)                    :: V_tmp                ! interpolated V       at input TIME
+      REAL(ReKi)                    :: VZ_tmp               ! interpolated VZ      at input TIME
+   
+   
+      
+      ErrStat = ErrID_None
+   
+   
+         !-------------------------------------------------------------------------------------------------
+         ! Linearly interpolate in time (or use nearest-neighbor to extrapolate)
+         ! (compare with NWTC_Num.f90\InterpStpReal)
+         !-------------------------------------------------------------------------------------------------
+
+
+            ! Let's check the limits.
+         IF ( Time <= ParamData%Tdata(1) .OR. ParamData%NumDataLines == 1 )  THEN
+
+            OtherStates%TimeIndex      = 1
+            V_tmp         = ParamData%V      (1)
+            Delta_tmp     = ParamData%Delta  (1)
+            VZ_tmp        = ParamData%VZ     (1)
+
+         ELSE IF ( Time >= ParamData%Tdata(ParamData%NumDataLines) )  THEN
+
+            OtherStates%TimeIndex = ParamData%NumDataLines - 1
+            V_tmp                 = ParamData%V      (ParamData%NumDataLines)
+            Delta_tmp             = ParamData%Delta  (ParamData%NumDataLines)
+            VZ_tmp                = ParamData%VZ     (ParamData%NumDataLines)
+
+         ELSE
+
+              ! Let's interpolate!
+
+            OtherStates%TimeIndex = MAX( MIN( OtherStates%TimeIndex, ParamData%NumDataLines-1 ), 1 )
+
+            DO
+
+               IF ( Time < ParamData%Tdata(OtherStates%TimeIndex) )  THEN
+
+                  OtherStates%TimeIndex = OtherStates%TimeIndex - 1
+
+               ELSE IF ( Time >= ParamData%Tdata(OtherStates%TimeIndex+1) )  THEN
+
+                  OtherStates%TimeIndex = OtherStates%TimeIndex + 1
+
+               ELSE
+                  P           =  ( Time - ParamData%Tdata(OtherStates%TimeIndex) )/     &
+                                 ( ParamData%Tdata(OtherStates%TimeIndex+1)             &
+                                 - ParamData%Tdata(OtherStates%TimeIndex) )
+                  V_tmp       =  ( ParamData%V(      OtherStates%TimeIndex+1)           &
+                                 - ParamData%V(      OtherStates%TimeIndex) )*P         &
+                                 + ParamData%V(      OtherStates%TimeIndex)
+                  Delta_tmp   =  ( ParamData%Delta(  OtherStates%TimeIndex+1)           &
+                                 - ParamData%Delta(  OtherStates%TimeIndex) )*P         &
+                                 + ParamData%Delta(  OtherStates%TimeIndex)
+                  VZ_tmp      =  ( ParamData%VZ(     OtherStates%TimeIndex+1)           &
+                                 - ParamData%VZ(     OtherStates%TimeIndex) )*P  &
+                                 + ParamData%VZ(     OtherStates%TimeIndex)
+                  EXIT
+
+               END IF
+
+            END DO
+
+         END IF
+
+      !-------------------------------------------------------------------------------------------------
+      ! calculate the wind speed at this time
+      !-------------------------------------------------------------------------------------------------
+   
+         WindInf_ADhack_diskVel(1) =  V_tmp * COS( Delta_tmp )
+         WindInf_ADhack_diskVel(2) = -V_tmp * SIN( Delta_tmp )
+         WindInf_ADhack_diskVel(3) =  VZ_tmp
+   
+   
+   
+      RETURN
+
+   END FUNCTION WindInf_ADhack_diskVel
+
+
+
+
 
 END SUBROUTINE IfW_UniformWind_CalcOutput
 

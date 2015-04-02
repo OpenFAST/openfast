@@ -420,7 +420,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
                ! Check if the fist data point from the file is not along the X-axis while applying the windfield rotation
             IF ( ( .NOT. EqualRealNos (ParamData%UniformWind%Delta(1), 0.0_ReKi) ) .AND.  &
                  ( .NOT. EqualRealNos (ParamData%PropogationDir, 0.0_ReKi)       ) ) THEN
-               CALL SetErrStat( ErrID_Warn,' Uniform wind file starts with a wind direction of '// &
+               CALL SetErrStat( ErrID_Warn,' Possible double rotation of wind field! Uniform wind file starts with a wind direction of '// &
                         TRIM(Num2LStr(ParamData%UniformWind%Delta(1)*R2D))//                       &
                         ' degrees and the InflowWind input file specifies a PropogationDir of '//  &
                         TRIM(Num2LStr(ParamData%PropogationDir*R2D))//' degrees.',                 &
@@ -707,6 +707,10 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
       ENDIF
 
 
+      !-----------------------------------------------------------------------
+      !  Points coordinate transforms from to global to wind file coordinates
+      !-----------------------------------------------------------------------
+
 
          !> Make a copy of the InputData%PositionXYZ coordinates with the applied rotation matrix...
          !! This copy is made because if we translate it to the prime coordinates, then back again, we
@@ -733,6 +737,8 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
       ENDIF
 
 
+      !---------------------------------
+      !  
 
 
          ! Compute the wind velocities by stepping through all the data points and calling the appropriate GetWindSpeed routine
@@ -895,6 +901,13 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
       !ENDIF
 
 
+
+
+
+      !-----------------------------------------------------------------------
+      !  Windspeed coordinate transforms from Wind file coordinates to global
+      !-----------------------------------------------------------------------
+
          ! The VelocityUVW array data that has been returned from the sub-modules is in the wind file (X'Y'Z') coordinates at
          ! this point.  These must be rotated to the global XYZ coordinates.  So now we apply the coordinate transformation
          ! to the VelocityUVW(prime) coordinates (in wind X'Y'Z' coordinate frame) returned from the submodules to the XYZ
@@ -913,6 +926,26 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
             OtherStates%WindViUVW(:,I)   =  MATMUL( ParamData%RotFromWind, OtherStates%WindViUVW(:,I) )
          ENDDO
       ENDIF
+
+
+
+
+         ! DiskVel values over to the output and apply the coordinate transformation
+      SELECT CASE ( ParamData%WindType )
+         CASE (Steady_WindNumber)
+               OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, Uniform_OutData%DiskVel )
+
+         CASE (Uniform_WindNumber)
+               OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, Uniform_OutData%DiskVel )
+
+!!!         CASE (FF_WindNumber)
+
+         CASE DEFAULT
+            CALL SetErrStat( ErrID_Fatal, ' Error: Undefined wind type in IfW_CalcOutput. ' &
+                      //'Call WindInflow_Init() before calling this function.', ErrStat, ErrMsg, ' IfW_CalcOutput' )
+            RETURN
+
+      END SELECT
 
 
 
@@ -1256,87 +1289,10 @@ FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
       ! Function definition
    REAL(ReKi)                    :: WindInf_ADhack_diskVel(3)
 
-      ! Local variables
-   REAL(ReKi)                    :: Delta_tmp            ! interpolated Delta   at input TIME
-   REAL(ReKi)                    :: P                    ! temporary storage for slope (in time) used in linear interpolation
-   REAL(ReKi)                    :: V_tmp                ! interpolated V       at input TIME
-   REAL(ReKi)                    :: VZ_tmp               ! interpolated VZ      at input TIME
-
-
 
    ErrStat = ErrID_None
 
    SELECT CASE ( ParamData%WindType )
-!!!      CASE (Uniform_WindNumber)
-!!!
-!!!         !-------------------------------------------------------------------------------------------------
-!!!         ! Linearly interpolate in time (or use nearest-neighbor to extrapolate)
-!!!         ! (compare with NWTC_Num.f90\InterpStpReal)
-!!!         !-------------------------------------------------------------------------------------------------
-!!!
-!!!
-!!!            ! Let's check the limits.
-!!!         IF ( Time <= ParamData%UniformWind%Tdata(1) .OR. ParamData%UniformWind%NumDataLines == 1 )  THEN
-!!!
-!!!            ParamData%UniformWind%TimeIndex      = 1
-!!!            V_tmp         = ParamData%UniformWind%V      (1)
-!!!            Delta_tmp     = ParamData%UniformWind%Delta  (1)
-!!!            VZ_tmp        = ParamData%UniformWind%VZ     (1)
-!!!
-!!!         ELSE IF ( Time >= ParamData%UniformWind%Tdata(ParamData%UniformWind%NumDataLines) )  THEN
-!!!
-!!!            ParamData%UniformWind%TimeIndex = ParamData%UniformWind%NumDataLines - 1
-!!!            V_tmp                 = ParamData%UniformWind%V      (ParamData%UniformWind%NumDataLines)
-!!!            Delta_tmp             = ParamData%UniformWind%Delta  (ParamData%UniformWind%NumDataLines)
-!!!            VZ_tmp                = ParamData%UniformWind%VZ     (ParamData%UniformWind%NumDataLines)
-!!!
-!!!         ELSE
-!!!
-!!!              ! Let's interpolate!
-!!!
-!!!            ParamData%UniformWind%TimeIndex = MAX( MIN( ParamData%UniformWind%TimeIndex, ParamData%UniformWind%NumDataLines-1 ), 1 )
-!!!
-!!!            DO
-!!!
-!!!               IF ( Time < ParamData%UniformWind%Tdata(ParamData%UniformWind%TimeIndex) )  THEN
-!!!
-!!!                  ParamData%UniformWind%TimeIndex = ParamData%UniformWind%TimeIndex - 1
-!!!
-!!!               ELSE IF ( Time >= ParamData%UniformWind%Tdata(ParamData%UniformWind%TimeIndex+1) )  THEN
-!!!
-!!!                  ParamData%UniformWind%TimeIndex = ParamData%UniformWind%TimeIndex + 1
-!!!
-!!!               ELSE
-!!!                  P           =  ( Time - ParamData%UniformWind%Tdata(ParamData%UniformWind%TimeIndex) )/     &
-!!!                                 ( ParamData%UniformWind%Tdata(ParamData%UniformWind%TimeIndex+1)             &
-!!!                                 - ParamData%UniformWind%Tdata(ParamData%UniformWind%TimeIndex) )
-!!!                  V_tmp       =  ( ParamData%UniformWind%V(      ParamData%UniformWind%TimeIndex+1)           &
-!!!                                 - ParamData%UniformWind%V(      ParamData%UniformWind%TimeIndex) )*P         &
-!!!                                 + ParamData%UniformWind%V(      ParamData%UniformWind%TimeIndex)
-!!!                  Delta_tmp   =  ( ParamData%UniformWind%Delta(  ParamData%UniformWind%TimeIndex+1)           &
-!!!                                 - ParamData%UniformWind%Delta(  ParamData%UniformWind%TimeIndex) )*P         &
-!!!                                 + ParamData%UniformWind%Delta(  ParamData%UniformWind%TimeIndex)
-!!!                  VZ_tmp      =  ( ParamData%UniformWind%VZ(     ParamData%UniformWind%TimeIndex+1)           &
-!!!                                 - ParamData%UniformWind%VZ(     ParamData%UniformWind%TimeIndex) )*P  &
-!!!                                 + ParamData%UniformWind%VZ(     ParamData%UniformWind%TimeIndex)
-!!!                  EXIT
-!!!
-!!!               END IF
-!!!
-!!!            END DO
-!!!
-!!!         END IF
-!!!
-!!!      !-------------------------------------------------------------------------------------------------
-!!!      ! calculate the wind speed at this time
-!!!      !-------------------------------------------------------------------------------------------------
-!!!
-!!!         WindInf_ADhack_diskVel(1) =  V_tmp * COS( Delta_tmp )
-!!!         WindInf_ADhack_diskVel(2) = -V_tmp * SIN( Delta_tmp )
-!!!         WindInf_ADhack_diskVel(3) =  VZ_tmp
-!!!
-!!!
-!!!
 !!!      CASE (FF_WindNumber)
 !!!
 !!!         WindInf_ADhack_diskVel(1)   = OtherStates%FFWind%MeanFFWS
@@ -1345,6 +1301,7 @@ FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
       CASE DEFAULT
          ErrStat = ErrID_Fatal
          ErrMsg = ' WindInf_ADhack_diskVel: Undefined wind type.'
+         WindInf_ADhack_diskVel  =  0.0_ReKi
 
    END SELECT
 
