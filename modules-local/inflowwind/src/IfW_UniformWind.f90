@@ -176,7 +176,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       ! Copy things from the InitData to the ParamData
       !-------------------------------------------------------------------------------------------------
 
-   ParamData%ReferenceHeight  =  InitData%ReferenceHeight
+   ParamData%RefHt            =  InitData%ReferenceHeight
    ParamData%RefLength        =  InitData%RefLength
    ParamData%WindFileName     =  InitData%WindFileName
 
@@ -215,19 +215,19 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       ! Find the number of data lines
       !-------------------------------------------------------------------------------------------------
 
-   OtherStates%NumDataLines = 0
+   ParamData%NumDataLines = 0
 
    READ(LINE,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols )
 
    DO WHILE (TmpErrStat == ErrID_None)  ! read the rest of the file (until an error occurs)
-      OtherStates%NumDataLines = OtherStates%NumDataLines + 1
+      ParamData%NumDataLines = ParamData%NumDataLines + 1
 
       READ(OtherStates%UnitWind,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols )
 
    END DO !WHILE
 
 
-   IF (OtherStates%NumDataLines < 1) THEN
+   IF (ParamData%NumDataLines < 1) THEN
       TmpErrMsg=  ' Error reading data from Uniform wind file on line '// &
                   TRIM(Num2LStr(1+NumComments))//'.'
       CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
@@ -243,50 +243,50 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       ! ADP note: the above note may or may not apply after conversion to the modular framework in 2013
       !-------------------------------------------------------------------------------------------------
 
-   IF (.NOT. ALLOCATED(OtherStates%Tdata) ) THEN
-      CALL AllocAry( OtherStates%Tdata, OtherStates%NumDataLines, 'Uniform wind time', TmpErrStat, TmpErrMsg )
+   IF (.NOT. ALLOCATED(ParamData%Tdata) ) THEN
+      CALL AllocAry( ParamData%Tdata, ParamData%NumDataLines, 'Uniform wind time', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
-   IF (.NOT. ALLOCATED(OtherStates%V) ) THEN
-      CALL AllocAry( OtherStates%V, OtherStates%NumDataLines, 'Uniform wind horizontal wind speed', TmpErrStat, TmpErrMsg )
+   IF (.NOT. ALLOCATED(ParamData%V) ) THEN
+      CALL AllocAry( ParamData%V, ParamData%NumDataLines, 'Uniform wind horizontal wind speed', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
-   IF (.NOT. ALLOCATED(OtherStates%Delta) ) THEN
-      CALL AllocAry( OtherStates%Delta, OtherStates%NumDataLines, 'Uniform wind direction', TmpErrStat, TmpErrMsg )
+   IF (.NOT. ALLOCATED(ParamData%Delta) ) THEN
+      CALL AllocAry( ParamData%Delta, ParamData%NumDataLines, 'Uniform wind direction', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
-   IF (.NOT. ALLOCATED(OtherStates%VZ) ) THEN
-      CALL AllocAry( OtherStates%VZ, OtherStates%NumDataLines, 'Uniform vertical wind speed', TmpErrStat, TmpErrMsg )
+   IF (.NOT. ALLOCATED(ParamData%VZ) ) THEN
+      CALL AllocAry( ParamData%VZ, ParamData%NumDataLines, 'Uniform vertical wind speed', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
-   IF (.NOT. ALLOCATED(OtherStates%HShr) ) THEN
-      CALL AllocAry( OtherStates%HShr, OtherStates%NumDataLines, 'Uniform horizontal linear shear', TmpErrStat, TmpErrMsg )
+   IF (.NOT. ALLOCATED(ParamData%HShr) ) THEN
+      CALL AllocAry( ParamData%HShr, ParamData%NumDataLines, 'Uniform horizontal linear shear', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
-   IF (.NOT. ALLOCATED(OtherStates%VShr) ) THEN
-      CALL AllocAry( OtherStates%VShr, OtherStates%NumDataLines, 'Uniform vertical power-law shear exponent', TmpErrStat, TmpErrMsg )
+   IF (.NOT. ALLOCATED(ParamData%VShr) ) THEN
+      CALL AllocAry( ParamData%VShr, ParamData%NumDataLines, 'Uniform vertical power-law shear exponent', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
-   IF (.NOT. ALLOCATED(OtherStates%VLinShr) ) THEN
-      CALL AllocAry( OtherStates%VLinShr, OtherStates%NumDataLines, 'Uniform vertical linear shear', TmpErrStat, TmpErrMsg )
+   IF (.NOT. ALLOCATED(ParamData%VLinShr) ) THEN
+      CALL AllocAry( ParamData%VLinShr, ParamData%NumDataLines, 'Uniform vertical linear shear', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
-   IF (.NOT. ALLOCATED(OtherStates%VGust) ) THEN
-      CALL AllocAry( OtherStates%VGust, OtherStates%NumDataLines, 'Uniform gust velocity', TmpErrStat, TmpErrMsg )
+   IF (.NOT. ALLOCATED(ParamData%VGust) ) THEN
+      CALL AllocAry( ParamData%VGust, ParamData%NumDataLines, 'Uniform gust velocity', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
@@ -309,7 +309,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       ! Read the data arrays
       !-------------------------------------------------------------------------------------------------
 
-   DO I=1,OtherStates%NumDataLines
+   DO I=1,ParamData%NumDataLines
 
       CALL ReadAry( OtherStates%UnitWind, TRIM(InitData%WindFileName), TmpData(1:NumCols), NumCols, 'TmpData', &
                 'Data from uniform wind file line '//TRIM(Num2LStr(NumComments+I)), TmpErrStat, TmpErrMsg)
@@ -317,14 +317,14 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
             ErrStat,ErrMsg,'IfW_UniformWind_Init')
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-      OtherStates%Tdata(  I) = TmpData(1)
-      OtherStates%V(      I) = TmpData(2)
-      OtherStates%Delta(  I) = TmpData(3)*D2R
-      OtherStates%VZ(     I) = TmpData(4)
-      OtherStates%HShr(   I) = TmpData(5)
-      OtherStates%VShr(   I) = TmpData(6)
-      OtherStates%VLinShr(I) = TmpData(7)
-      OtherStates%VGust(  I) = TmpData(8)
+      ParamData%Tdata(  I) = TmpData(1)
+      ParamData%V(      I) = TmpData(2)
+      ParamData%Delta(  I) = TmpData(3)*D2R
+      ParamData%VZ(     I) = TmpData(4)
+      ParamData%HShr(   I) = TmpData(5)
+      ParamData%VShr(   I) = TmpData(6)
+      ParamData%VLinShr(I) = TmpData(7)
+      ParamData%VGust(  I) = TmpData(8)
 
    END DO !I
 
@@ -334,26 +334,26 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       ! input times.  (Avoids interpolation errors with modular arithemetic.)
       !-------------------------------------------------------------------------------------------------
 
-   DO I=2,OtherStates%NumDataLines
+   DO I=2,ParamData%NumDataLines
 
       ILine = 1
 
       DO WHILE ( ILine < MaxTries )
 
-         DelDiff = ( OtherStates%Delta(I) - OtherStates%Delta(I-1) )
+         DelDiff = ( ParamData%Delta(I) - ParamData%Delta(I-1) )
 
          IF ( ABS( DelDiff ) < Pi ) EXIT  ! exit inner loop
 
-         OtherStates%Delta(I) = OtherStates%Delta(I) - SIGN( TwoPi, DelDiff )
+         ParamData%Delta(I) = ParamData%Delta(I) - SIGN( TwoPi, DelDiff )
 
          ILine = ILine + 1
 
       END DO
 
       IF ( ILine >= MaxTries ) THEN
-         TmpErrMsg= ' Error calculating wind direction from uniform wind file. OtherStates%Delta(' &
-               // TRIM(Num2LStr(I  )) // ') = ' // TRIM(Num2LStr(OtherStates%Delta(I))) // '; OtherStates%Delta(' &
-               // TRIM(Num2LStr(I+1)) // ') = ' // TRIM(Num2LStr(OtherStates%Delta(I+1)))
+         TmpErrMsg= ' Error calculating wind direction from uniform wind file. ParamData%Delta(' &
+               // TRIM(Num2LStr(I  )) // ') = ' // TRIM(Num2LStr(ParamData%Delta(I))) // '; ParamData%Delta(' &
+               // TRIM(Num2LStr(I+1)) // ') = ' // TRIM(Num2LStr(ParamData%Delta(I+1)))
          CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
       END IF
 
@@ -367,14 +367,14 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       !-------------------------------------------------------------------------------------------------
 
       ! Uniform timesteps
-   IF ( OtherStates%NumDataLines > 3 ) THEN
+   IF ( ParamData%NumDataLines > 3 ) THEN
 
       InitOutData%WindFileConstantDT =  .TRUE.
-      InitOutData%WindFileDT        = OtherStates%Tdata(2) - OtherStates%Tdata(1)
+      InitOutData%WindFileDT        = ParamData%Tdata(2) - ParamData%Tdata(1)
 
-      DO I=3,OtherStates%NumDataLines
+      DO I=3,ParamData%NumDataLines
 
-         IF ( .NOT. EqualRealNos( (OtherStates%Tdata(I  ) - OtherStates%Tdata(I-1) ), REAL(InitOutData%WindFileDT )) ) THEN
+         IF ( .NOT. EqualRealNos( (ParamData%Tdata(I  ) - ParamData%Tdata(I-1) ), REAL(InitOutData%WindFileDT )) ) THEN
             InitOutData%WindFileConstantDT  =  .FALSE.
             EXIT
          END IF
@@ -391,11 +391,11 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
 
 
       ! Time range
-   InitOutData%WindFileTRange(1)    =  OtherStates%Tdata(1)
-   InitOutData%WindFileTRange(2)    =  OtherStates%Tdata(OtherStates%NumDataLines)
+   InitOutData%WindFileTRange(1)    =  ParamData%Tdata(1)
+   InitOutData%WindFileTRange(2)    =  ParamData%Tdata(ParamData%NumDataLines)
 
       ! Number of timesteps
-   InitOutData%WindFileNumTSteps    =  OtherStates%NumDataLines
+   InitOutData%WindFileNumTSteps    =  ParamData%NumDataLines
 
 
 
@@ -409,19 +409,19 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       !-------------------------------------------------------------------------------------------------
       ! Print warnings and messages
       !-------------------------------------------------------------------------------------------------
-   CALL WrScr( '   Processed '//TRIM( Num2LStr( OtherStates%NumDataLines ) )//' records of uniform wind data from '''// &
+   CALL WrScr( '   Processed '//TRIM( Num2LStr( ParamData%NumDataLines ) )//' records of uniform wind data from '''// &
                TRIM(ADJUSTL(InitData%WindFileName))//'''')
 
 
-   IF ( OtherStates%Tdata(1) > 0.0 ) THEN
+   IF ( ParamData%Tdata(1) > 0.0 ) THEN
       TmpErrMsg=  'The uniform wind file : "'//TRIM(ADJUSTL(InitData%WindFileName))// &
                   '" starts at a time '//'greater than zero. Interpolation errors may result.'
       CALL SetErrStat(ErrID_Warn,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
    ENDIF
 
-   IF ( OtherStates%NumDataLines == 1 ) THEN
+   IF ( ParamData%NumDataLines == 1 ) THEN
       TmpErrMsg=  ' Only 1 line in uniform wind file. Steady, horizontal wind speed at the hub height is '// &
-                  TRIM(Num2LStr(OtherStates%V(1)))//' m/s.'
+                  TRIM(Num2LStr(ParamData%V(1)))//' m/s.'
       CALL SetErrStat(ErrID_Info,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
    END IF
 
@@ -430,40 +430,16 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       ! Set the initial index into the time array (it indicates that we've initialized the module, too)
       ! and initialize the spatial scaling for the wind calculations
       !-------------------------------------------------------------------------------------------------
-   OtherStates%TimeIndex = 1
 
-   OtherStates%RefHt       = ParamData%ReferenceHeight
-   OtherStates%RefLength   = ParamData%RefLength
+   OtherStates%TimeIndex   = 1
 
 
       !-------------------------------------------------------------------------------------------------
       ! Set the InitOutput information
       !-------------------------------------------------------------------------------------------------
 
-   InitOutData%HubHeight   = ParamData%ReferenceHeight
+   InitOutData%HubHeight   = ParamData%RefHt           
    InitOutdata%Ver         = IfW_UniformWind_Ver
-
-
-!      ! Allocate and populate the OutputHdr array (contains names of outputable values)
-!
-!   CALL AllocAry( InitOutData%WriteOutputHdr, 3, 'Empty array for names of outputable information.', TmpErrStat, TmpErrMsg )
-!   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
-!   IF ( ErrStat >= AbortErrLev ) RETURN
-!
-!   InitOutData%WriteOutputHdr(1) = 'WindVxi'
-!   InitOutData%WriteOutputHdr(2) = 'WindVyi'
-!   InitOutData%WriteOutputHdr(3) = 'WindVzi'
-!
-!
-!      ! Allocate and populate the OutputUnt array (contains units of outputable values)
-!
-!   CALL AllocAry( InitOutData%WriteOutputUnt, 3, 'Empty array for units of outputable information.', TmpErrStat, TmpErrMsg )
-!   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
-!   IF ( ErrStat >= AbortErrLev ) RETURN
-!
-!   InitOutData%WriteOutputUnt(1) = '(m/s)'
-!   InitOutData%WriteOutputUnt(2) = '(m/s)'
-!   InitOutData%WriteOutputUnt(3) = '(m/s)'
 
 
    RETURN
@@ -612,61 +588,61 @@ CONTAINS
       !-------------------------------------------------------------------------------------------------
 
          ! Let's check the limits.
-      IF ( Time <= OtherStates%Tdata(1) .OR. OtherStates%NumDataLines == 1 )  THEN
+      IF ( Time <= ParamData%Tdata(1) .OR. ParamData%NumDataLines == 1 )  THEN
 
          OtherStates%TimeIndex      = 1
-         V_tmp         = OtherStates%V      (1)
-         Delta_tmp     = OtherStates%Delta  (1)
-         VZ_tmp        = OtherStates%VZ     (1)
-         HShr_tmp      = OtherStates%HShr   (1)
-         VShr_tmp      = OtherStates%VShr   (1)
-         VLinShr_tmp   = OtherStates%VLinShr(1)
-         VGust_tmp     = OtherStates%VGust  (1)
+         V_tmp         = ParamData%V      (1)
+         Delta_tmp     = ParamData%Delta  (1)
+         VZ_tmp        = ParamData%VZ     (1)
+         HShr_tmp      = ParamData%HShr   (1)
+         VShr_tmp      = ParamData%VShr   (1)
+         VLinShr_tmp   = ParamData%VLinShr(1)
+         VGust_tmp     = ParamData%VGust  (1)
 
 
-      ELSE IF ( Time >= OtherStates%Tdata(OtherStates%NumDataLines) )  THEN
+      ELSE IF ( Time >= ParamData%Tdata(ParamData%NumDataLines) )  THEN
 
-         OtherStates%TimeIndex      = OtherStates%NumDataLines - 1
-         V_tmp         = OtherStates%V      (OtherStates%NumDataLines)
-         Delta_tmp     = OtherStates%Delta  (OtherStates%NumDataLines)
-         VZ_tmp        = OtherStates%VZ     (OtherStates%NumDataLines)
-         HShr_tmp      = OtherStates%HShr   (OtherStates%NumDataLines)
-         VShr_tmp      = OtherStates%VShr   (OtherStates%NumDataLines)
-         VLinShr_tmp   = OtherStates%VLinShr(OtherStates%NumDataLines)
-         VGust_tmp     = OtherStates%VGust  (OtherStates%NumDataLines)
+         OtherStates%TimeIndex      = ParamData%NumDataLines - 1
+         V_tmp         = ParamData%V      (ParamData%NumDataLines)
+         Delta_tmp     = ParamData%Delta  (ParamData%NumDataLines)
+         VZ_tmp        = ParamData%VZ     (ParamData%NumDataLines)
+         HShr_tmp      = ParamData%HShr   (ParamData%NumDataLines)
+         VShr_tmp      = ParamData%VShr   (ParamData%NumDataLines)
+         VLinShr_tmp   = ParamData%VLinShr(ParamData%NumDataLines)
+         VGust_tmp     = ParamData%VGust  (ParamData%NumDataLines)
 
       ELSE
 
             ! Let's interpolate!  Linear interpolation.
-         OtherStates%TimeIndex = MAX( MIN( OtherStates%TimeIndex, OtherStates%NumDataLines-1 ), 1 )
+         OtherStates%TimeIndex = MAX( MIN( OtherStates%TimeIndex, ParamData%NumDataLines-1 ), 1 )
 
          DO
 
-            IF ( Time < OtherStates%Tdata(OtherStates%TimeIndex) )  THEN
+            IF ( Time < ParamData%Tdata(OtherStates%TimeIndex) )  THEN
 
                OtherStates%TimeIndex = OtherStates%TimeIndex - 1
 
-            ELSE IF ( Time >= OtherStates%Tdata(OtherStates%TimeIndex+1) )  THEN
+            ELSE IF ( Time >= ParamData%Tdata(OtherStates%TimeIndex+1) )  THEN
 
                OtherStates%TimeIndex = OtherStates%TimeIndex + 1
 
             ELSE
-               P           = ( Time - OtherStates%Tdata(OtherStates%TimeIndex) )/( OtherStates%Tdata(OtherStates%TimeIndex+1) &
-                              - OtherStates%Tdata(OtherStates%TimeIndex) )
-               V_tmp       = ( OtherStates%V(      OtherStates%TimeIndex+1) - OtherStates%V(      OtherStates%TimeIndex) )*P  &
-                              + OtherStates%V(      OtherStates%TimeIndex)
-               Delta_tmp   = ( OtherStates%Delta(  OtherStates%TimeIndex+1) - OtherStates%Delta(  OtherStates%TimeIndex) )*P  &
-                              + OtherStates%Delta(  OtherStates%TimeIndex)
-               VZ_tmp      = ( OtherStates%VZ(     OtherStates%TimeIndex+1) - OtherStates%VZ(     OtherStates%TimeIndex) )*P  &
-                              + OtherStates%VZ(     OtherStates%TimeIndex)
-               HShr_tmp    = ( OtherStates%HShr(   OtherStates%TimeIndex+1) - OtherStates%HShr(   OtherStates%TimeIndex) )*P  &
-                              + OtherStates%HShr(   OtherStates%TimeIndex)
-               VShr_tmp    = ( OtherStates%VShr(   OtherStates%TimeIndex+1) - OtherStates%VShr(   OtherStates%TimeIndex) )*P  &
-                              + OtherStates%VShr(   OtherStates%TimeIndex)
-               VLinShr_tmp = ( OtherStates%VLinShr(OtherStates%TimeIndex+1) - OtherStates%VLinShr(OtherStates%TimeIndex) )*P  &
-                              + OtherStates%VLinShr(OtherStates%TimeIndex)
-               VGust_tmp   = ( OtherStates%VGust(  OtherStates%TimeIndex+1) - OtherStates%VGust(  OtherStates%TimeIndex) )*P  &
-                              + OtherStates%VGust(  OtherStates%TimeIndex)
+               P           = ( Time - ParamData%Tdata(OtherStates%TimeIndex) )/( ParamData%Tdata(OtherStates%TimeIndex+1) &
+                              - ParamData%Tdata(OtherStates%TimeIndex) )
+               V_tmp       = ( ParamData%V(      OtherStates%TimeIndex+1) - ParamData%V(      OtherStates%TimeIndex) )*P  &
+                              + ParamData%V(      OtherStates%TimeIndex)
+               Delta_tmp   = ( ParamData%Delta(  OtherStates%TimeIndex+1) - ParamData%Delta(  OtherStates%TimeIndex) )*P  &
+                              + ParamData%Delta(  OtherStates%TimeIndex)
+               VZ_tmp      = ( ParamData%VZ(     OtherStates%TimeIndex+1) - ParamData%VZ(     OtherStates%TimeIndex) )*P  &
+                              + ParamData%VZ(     OtherStates%TimeIndex)
+               HShr_tmp    = ( ParamData%HShr(   OtherStates%TimeIndex+1) - ParamData%HShr(   OtherStates%TimeIndex) )*P  &
+                              + ParamData%HShr(   OtherStates%TimeIndex)
+               VShr_tmp    = ( ParamData%VShr(   OtherStates%TimeIndex+1) - ParamData%VShr(   OtherStates%TimeIndex) )*P  &
+                              + ParamData%VShr(   OtherStates%TimeIndex)
+               VLinShr_tmp = ( ParamData%VLinShr(OtherStates%TimeIndex+1) - ParamData%VLinShr(OtherStates%TimeIndex) )*P  &
+                              + ParamData%VLinShr(OtherStates%TimeIndex)
+               VGust_tmp   = ( ParamData%VGust(  OtherStates%TimeIndex+1) - ParamData%VGust(  OtherStates%TimeIndex) )*P  &
+                              + ParamData%VGust(  OtherStates%TimeIndex)
                EXIT
 
             END IF
@@ -682,9 +658,9 @@ CONTAINS
 
       CosDelta = COS( Delta_tmp )
       SinDelta = SIN( Delta_tmp )
-      V1 = V_tmp * ( ( InputPosition(3)/OtherStates%RefHt ) ** VShr_tmp &                                  ! power-law wind shear
+      V1 = V_tmp * ( ( InputPosition(3)/ParamData%RefHt ) ** VShr_tmp &                                  ! power-law wind shear
            + ( HShr_tmp   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &                ! horizontal linear shear
-           +  VLinShr_tmp * ( InputPosition(3)-OtherStates%RefHt ) )/OtherStates%RefLength  ) &            ! vertical linear shear
+           +  VLinShr_tmp * ( InputPosition(3)-ParamData%RefHt ) )/ParamData%RefLength  ) &            ! vertical linear shear
            + VGust_tmp                                                                                     ! gust speed
       GetWindSpeed(1) =  V1 * CosDelta
       GetWindSpeed(2) = -V1 * SinDelta
@@ -759,7 +735,6 @@ SUBROUTINE IfW_UniformWind_End( PositionXYZ, ParamData, OtherStates, OutData, Er
       ! reset time index so we know the module is no longer initialized
 
    OtherStates%TimeIndex   = 0
-   ParamData%Initialized   = .FALSE.
 
 END SUBROUTINE IfW_UniformWind_End
 
