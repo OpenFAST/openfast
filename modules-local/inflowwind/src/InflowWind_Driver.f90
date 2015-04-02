@@ -720,7 +720,7 @@ PROGRAM InflowWind_Driver
       IF ( SettingsFlags%PointsFile ) THEN
 
             ! Get results for Points data from IfW
-      CALL InflowWind_CalcOutput( TimeNow,  InflowWind_u2, InflowWind_p, &
+         CALL InflowWind_CalcOutput( TimeNow,  InflowWind_u2, InflowWind_p, &
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
                   InflowWind_y2, ErrStat, ErrMsg)
 
@@ -753,11 +753,14 @@ PROGRAM InflowWind_Driver
       !  output table of results for the outlist comparison and check if very verbose -- print statements are
       !  used because we don't want linewrapping.
    IF ( IfWDriver_Verbose >= 10_IntKi ) THEN
-      print*,NewLine//NewLine//'   Requested wind points and writeoutput results at last timestep (t='//      &
+
+      print*,NewLine//NewLine//'   DiskVel:  ( '//TRIM(num2lstr(inflowwind_y1%diskvel(1)))//', '//             &
+                  TRIM(num2lstr(inflowwind_y1%diskvel(2)))//', '//TRIM(num2lstr(inflowwind_y1%diskvel(3)))//' )'
+      print*,NewLine//NewLine//'   Requested wind points and writeoutput results at last timestep (t='//       &
                   TRIM(Num2LStr(TimeNow))//'):'//NewLine
-      print*,'          ------ WindViXYZ ---------    ----- WindViUVW ---------     -- AllOuts --     '//     &
+      print*,'          ------ WindViXYZ ---------    ----- WindViUVW ---------     -- AllOuts --     '//      &
                   '------------- WriteOutput -------------'
-      print*,' Index,      coord,        name             Vector value              Value             '//     &
+      print*,' Index,      coord,        name             Vector value              Value             '//      &
                   'Name        Unit   OutIndex     Value'
       DO I = 1,27
          ErrMsgTmp   =  ''

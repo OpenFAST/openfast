@@ -18,7 +18,7 @@ include Registry_NWTC_Library.txt
 
 typedef IfW_UniformWind/IfW_UniformWind InitInputType CHARACTER(1024) WindFileName  -     -     -     "Name of the wind file to use"                                 -
 typedef  ^                       ^                       ReKi     ReferenceHeight   -     -     -     "Hub height of the turbine"                                    meters
-typedef  ^                       ^                       ReKi     RefLength             -     -     -     "RefLength of the wind field to use"                               meters
+typedef  ^                       ^                       ReKi     RefLength         -     -     -     "RefLength of the wind field to use"                               meters
 
 
 
@@ -34,7 +34,7 @@ typedef  ^                       ^                       LOGICAL  WindFileConsta
 # Define any data that are not considered actual states here:
 #   e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 #   at a given time, etc.)
-typedef  ^                       OtherStateType          IntKi    TimeIndex         -     0     -     "An Index into the TData array"                                -
+typedef  ^                       OtherStateType          IntKi    TimeIndex         -     -     -     "An Index into the TData array"                                -
 typedef  ^                       ^                       IntKi    UnitWind          -     -     -     "Unit number for the wind file opened"                         -
 
 
@@ -42,7 +42,6 @@ typedef  ^                       ^                       IntKi    UnitWind      
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef  ^                    ParameterType       CHARACTER(1024) WindFileName      -     -     -     "Name of the wind file to use"                                 -
-#typedef  ^                       ^                       ReKi     ReferenceHeight   -     -     -     "Height of the hub"                                            meters
 typedef  ^                       ^                       ReKi     TData             :     -     -     "Time array from the HH file"                                  seconds
 typedef  ^                       ^                       ReKi     DELTA             :     -     -     "HH Wind direction (angle)"                                    degrees
 typedef  ^                       ^                       ReKi     V                 :     -     -     "HH horizontal wind speed"                                     meters/sec
@@ -65,5 +64,6 @@ typedef  ^                    InputType                  ReKi     DummyInput    
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef  ^                    OutputType                 ReKi     Velocity          ::    -     -     "Array holding the U,V,W velocity for a given timestep"        meters/sec
+typedef  ^                       ^                       ReKi     DiskVel           {3}   -     -     "Vector holding the U,V,W average velocity of the disk"        meters/sec
 
 
