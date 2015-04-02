@@ -25,10 +25,10 @@ typedef  ^                       ^                       ReKi     RefLength     
 # Init Output
 typedef  ^                       InitOutputType       ProgDesc    Ver               -     -     -     "Version information off HHWind submodule"                     -
 typedef  ^                       ^                       ReKi     HubHeight         -     -     -     "Height of the hub"                                            meters
-typedef  ^                       ^                       DbKi     WindFileDT        -     -     -     "TimeStep of the wind file -- zero value for none"       -
-typedef  ^                       ^                       ReKi     WindFileTRange    {2}   -     -     "Time range of the wind file"                            -
-typedef  ^                       ^                       IntKi    WindFileNumTSteps -     -     -     "Number of timesteps in the time range of wind file"     -
-typedef  ^                       ^                       LOGICAL  WindFileConstantDT -     -     -     "Timesteps are the same throughout file"                 -
+typedef  ^                       ^                       DbKi     WindFileDT        -     -     -     "TimeStep of the wind file -- zero value for none"             seconds
+typedef  ^                       ^                       ReKi     WindFileTRange    {2}   -     -     "Time range of the wind file"                                  seconds
+typedef  ^                       ^                       IntKi    WindFileNumTSteps -     -     -     "Number of timesteps in the time range of wind file"           -
+typedef  ^                       ^                       LOGICAL  WindFileConstantDT -    -     -     "Timesteps are the same throughout file"                       -
 
 
 # Define any data that are not considered actual states here:
