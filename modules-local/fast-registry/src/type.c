@@ -43,7 +43,7 @@ init_type_table()
                                                 strcpy( p->mapsto, "LOGICAL")         ;
                                                 add_node_to_end ( p , &Type )         ;
 
-#if 0
+#if 0 // bjj: would like to add this back to see if we can use this for pack/unpack
 // these have to be handled individually because people can and will put lengths after them
 // so can't make a generic type node here
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "character" )       ;

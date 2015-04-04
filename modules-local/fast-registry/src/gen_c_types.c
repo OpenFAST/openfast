@@ -11,7 +11,7 @@
 #include "data.h"
 
 
-
+#if 0
 void
 gen_c_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
@@ -339,13 +339,13 @@ fprintf(fp,"  return(ErrStat) ;\n") ;
 fprintf(fp,"}\n") ;
 return;//(0) ;
 }
-
+#endif
 
 
 void
 gen_c_module( FILE * fph, node_t * ModName )
 {
-  node_t * p, * q, * r ;
+  node_t * q, * r ;
   int i ;
   char nonick[NAMELEN], star ;
 
