@@ -593,13 +593,13 @@ PROGRAM MAIN
 
       ! the following is exact solution for q_1(t) for baseline parameters in Gasmi et al. (2013)
 
-      !exact = Cos((SQRT(399.d0)*t_global)/20.d0)*(0.5d0*exp(-t_global/20.d0)) +  &
-      !        Cos((SQRT(7491.d0)*t_global)/50.d0)*(0.5d0*exp(-(3.d0*t_global)/50.d0)) +  &
-      !        Sin((SQRT(399.d0)*t_global)/20.d0)*exp(-t_global/20.d0)/(2.d0*SQRT(399.d0))+ &
-      !        (SQRT(0.0012014417300760913d0)*Sin((SQRT(7491.d0)*t_global)/50.d0)) &
-      !        *(0.5d0*exp(-(3.d0*t_global)/50.d0))
+      exact = Cos((SQRT(399.d0)*t_global)/20.d0)*(0.5d0*exp(-t_global/20.d0)) +  &
+              Cos((SQRT(7491.d0)*t_global)/50.d0)*(0.5d0*exp(-(3.d0*t_global)/50.d0)) +  &
+              Sin((SQRT(399.d0)*t_global)/20.d0)*exp(-t_global/20.d0)/(2.d0*SQRT(399.d0))+ &
+              (SQRT(0.0012014417300760913d0)*Sin((SQRT(7491.d0)*t_global)/50.d0)) &
+              *(0.5d0*exp(-(3.d0*t_global)/50.d0))
 
-      exact = 1. - Cos(3. * t_global)
+      !exact = 1. - Cos(3. * t_global)
 
       ! build rms_error calculation components; see Eq. (56) in Gasmi et al. (2013)
 

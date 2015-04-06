@@ -78,6 +78,7 @@ PROGRAM MAIN
 
    INTEGER(IntKi),PARAMETER:: QiDisUnit = 20
    INTEGER(IntKi),PARAMETER:: QiRootUnit = 30
+   INTEGER(IntKi),PARAMETER:: QiReacUnit = 40
 
    REAL(ReKi):: temp_H(3,3)
    REAL(ReKi):: temp_cc(3)
@@ -94,7 +95,7 @@ PROGRAM MAIN
    ! -------------------------------------------------------------------------
 
    t_initial = 0.0D+00
-   t_final   = 1.0D+01
+   t_final   = 1.0D+02
 
    pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
                ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
@@ -128,14 +129,15 @@ PROGRAM MAIN
    ! -------------------------------------------------------------------------
     OPEN(unit = QiDisUnit, file = 'QiDisp_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
     OPEN(unit = QiRootUnit,file = 'QiRoot_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
+    OPEN(unit = QiReacUnit,file = 'QiReac_AM2.out', status = 'REPLACE',ACTION = 'WRITE')
 
 
 !   BD_InitInput%InputFile = 'BeamDyn_Input_CX100.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_5MW.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_5MW_New.inp'
-!   BD_InitInput%InputFile = 'Siemens_53_Input.inp'
+   BD_InitInput%InputFile = 'Siemens_53_Input.inp'
 !   BD_InitInput%InputFile = 'GA2_Debug.inp'
-   BD_InitInput%InputFile = 'BeamDyn_Input_DTU10MW.inp'
+!   BD_InitInput%InputFile = 'BeamDyn_Input_DTU10MW.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Composite.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Damp.inp'
@@ -147,7 +149,7 @@ PROGRAM MAIN
    BD_InitInput%gravity(3) = 0.0D0 
 
    ALLOCATE(BD_InitInput%GlbPos(3)) 
-   BD_InitInput%GlbPos(1) = 2.8D+00
+   BD_InitInput%GlbPos(1) = 1.0D+00
    BD_InitInput%GlbPos(2) = 0.0D+01
    BD_InitInput%GlbPos(3) = 0.0D0
 
@@ -276,22 +278,30 @@ WRITE(*,*) "Time Step: ", n_t_global
 !                    temp_H(3,1),temp_H(3,2),temp_H(3,3)      
 CALL CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_total),temp_cc)
       WRITE(QiDisUnit,6000) t_global,&
-!                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
-!                           &temp_cc(1:3)
+                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
+                           &temp_cc(1:3)
 !                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total),&
 !                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldForce%Force(1:3,1),&
 !                           &BD_OutPut(1)%BldForce%Moment(1:3,1)
-                           &BD_OutPut(1)%ReactionForce%Force(1:3,1),&
-                           &BD_OutPut(1)%ReactionForce%Moment(1:3,1)
+!                           &BD_OutPut(1)%ReactionForce%Force(1:3,1),&
+!                           &BD_OutPut(1)%ReactionForce%Moment(1:3,1)
 !                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total),&
 !                           &BD_OtherState%fAcc(BD_Parameter%dof_total-5:BD_Parameter%dof_total-3)
 !                           &BD_OutPut(1)%BldMotion%RotationAcc(1:3,BD_Parameter%node_total)
 !      WRITE(QiDisUnit,6000) t_global,BD_ContinuousState%q(1),BD_ContinuousState%q(2),&
 !                           &BD_ContinuousState%q(3),BD_ContinuousState%q(4),&
 !                           &BD_ContinuousState%q(5),BD_ContinuousState%q(6)
+      WRITE(QiRootUnit,6000) t_global,&
+!                           &BD_OutPut(1)%ReactionForce%Force(1:3,1),&
+!                           &BD_OutPut(1)%ReactionForce%Moment(1:3,1)
+                           &BD_OutPut(1)%BldForce%Force(1:3,1),&
+                           &BD_OutPut(1)%BldForce%Moment(1:3,1)
 
+      WRITE(QiReacUnit,6000) t_global,&
+                           &BD_OutPut(1)%ReactionForce%Force(1:3,1),&
+                           &BD_OutPut(1)%ReactionForce%Moment(1:3,1)
       ! Save all final variables 
 
       CALL BD_CopyContState   (BD_ContinuousState_pred,  BD_ContinuousState, 0, Errstat, ErrMsg)
@@ -346,6 +356,7 @@ WRITE(*,*) 'Time: ', finish-start
    6000 FORMAT (ES12.5,6ES21.12)
    CLOSE (QiDisUnit)
    CLOSE (QiRootUnit)
+   CLOSE (QiReacUnit)
 
 7000 FORMAT (ES12.5,9ES21.12)
 !CLOSE (QiHUnit)

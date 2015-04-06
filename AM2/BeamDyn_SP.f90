@@ -895,8 +895,8 @@ INCLUDE 'ComputeReactionForce.f90'
    temp6(:) = 0.0D0
    temp6(:) = temp_ReactionForce(1:6)
    temp6(:) = MATMUL(TRANSPOSE(temp66),temp6)
-   y%ReactionForce%Force(1:3,1) = temp6(1:3)
-   y%ReactionForce%Moment(1:3,1) = temp6(4:6)
+   y%ReactionForce%Force(1:3,1) = -temp6(1:3)
+   y%ReactionForce%Moment(1:3,1) = -temp6(4:6)
    DO i=1,p%node_total
        temp_id = (i-1)*p%dof_node
        temp6(:) = 0.0D0
