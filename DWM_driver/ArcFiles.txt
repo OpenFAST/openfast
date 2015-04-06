@@ -1,14 +1,17 @@
 ArcFiles.txt
 
-bin\DWM_driver_wind_farm.exe
+bin\DWM_driver.exe
 
 source\*.f90
 source\dependencies\NWTC_Library\*.f90
 
 docs\*.pdf
 
-compiling\VisualStudio\DWM_driver_wind_farm.vfproj
+compiling\VisualStudio\DWM_driver.vfproj
 
 test\wind_farm.txt
 test\DWM-driver
 test\DWM-results
+
+utilities\read_meandering.m
+utilities\read_wake_deficit.m
