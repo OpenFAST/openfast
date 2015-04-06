@@ -42,7 +42,7 @@ MODULE IceDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', 'v1.01.00-by', '30-Mar-2015' )
+   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', 'v1.01.01-by', '6-Apr-2015' )
 
    ! ..... Public Subroutines ...................................................................................................
 
@@ -759,8 +759,9 @@ SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
                 ELSE
 
-                    ErrStat = ErrID_Fatal
-                    ErrMsg  = ' Error in IceDyn Model 2: Ice tooth does not break when Del>Delmax'
+                    !ErrStat = ErrID_Fatal
+                    y%PointMesh%Force(1,1) = Del2 * p%Kice2
+                    CALL WrScr ( ' Warning in IceDyn Model 2: Ice tooth does not break when Del>Delmax')
 
                 ENDIF
                 
@@ -780,11 +781,15 @@ SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
                 
                 ELSE
 
-                    ErrStat = ErrID_Fatal
-                    ErrMsg  = ' Error in IceDyn Model 2: Ice tooth does not break when Del>Delmax'
+                    !ErrStat = ErrID_Fatal
+                    y%PointMesh%Force(1,1) = Del2 * p%Kice2 + (Del2 - p%Pitch) * p%Kice2
+                    CALL WrScr ( ' Warning in IceDyn Model 2: Ice tooth does not break when Del>Delmax' )
 
                 ENDIF
             
+            ELSE
+                ErrStat = ErrID_Fatal
+                ErrMsg  = ' Error in IceDyn Model 2.2: input delmax > 2*pitch'
             ENDIF
 
       END IF
