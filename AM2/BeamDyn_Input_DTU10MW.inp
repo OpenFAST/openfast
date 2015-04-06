@@ -4,11 +4,23 @@ Sample
 TRUE         Echo        - Echo input data to "<RootName>.ech" (flag)
 2         analysis_type  - 0: Rigid Body analysis; 1: Static analysis; 2: Dynamic analysis
 2         time_integrator   - 1: AM2; 2: Generalized-alpha; 3: RK4
-0.3       rhoinf            - Parameter for GA2
+0.5       rhoinf            - Parameter for GA2
 ---------------------- GEOMETRY PARAMETER --------------------------------------
-1     member_total    - Total number of member (-)
+13     member_total    - Total number of member (-)
 27    kp_total        - Total number of key point (-)
-1    27               - Member number; Number of key points in this member
+1    3               - Member number; Number of key points in this member
+2    3               - Member number; Number of key points in this member
+3    3               - Member number; Number of key points in this member
+4    3               - Member number; Number of key points in this member
+5    3               - Member number; Number of key points in this member
+6    3               - Member number; Number of key points in this member
+7    3               - Member number; Number of key points in this member
+8    3               - Member number; Number of key points in this member
+9    3               - Member number; Number of key points in this member
+10    3               - Member number; Number of key points in this member
+11    3               - Member number; Number of key points in this member
+12    3               - Member number; Number of key points in this member
+13    3               - Member number; Number of key points in this member
        kp_xb           kp_yb          kp_zb  initial_twist
         (m)              (m)            (m)          (deg)
  0.00000E+00	 7.00600E-05	4.44089E-16	  -1.45000E+01	  - Key point coordinates and initial twist (-)
@@ -39,6 +51,6 @@ TRUE         Echo        - Echo input data to "<RootName>.ech" (flag)
  0.00000E+00	-3.20952E+00	8.50277E+01	  3.28847E+00	  - Key point coordinates and initial twist (-)
  0.00000E+00	-3.33685E+00	8.63655E+01	  3.42796E+00	  - Key point coordinates and initial twist (-)
 ---------------------- MESH PARAMETER ------------------------------------------
-8    order_elem    - Order of interpolation (basis) function (-)
+2    order_elem    - Order of interpolation (basis) function (-)
 ---------------------- MATERIAL PARAMETER --------------------------------------
 "DTU10MW_Blade.inp"    BldFile - Name of file containing properties for blade

@@ -104,7 +104,7 @@ SUBROUTINE Mod2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       p%m      = 1.         ! mass of mass 2 (kg)
       p%c      = 0.1d0      ! damping of dashpot 2 (N/(m/s))
-      p%k      = 5.0        ! stiffness of spring 2 (N/m)
+      p%k      = 5.0E+08        ! stiffness of spring 2 (N/m)
       p%f      = 0.         ! applied force (constant) (N)  
 
       p%mc  = .0    ! coupler-spring mass (kg)
