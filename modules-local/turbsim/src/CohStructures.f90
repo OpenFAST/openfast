@@ -509,7 +509,7 @@ SUBROUTINE CohStr_WriteCTS(p, WSig, OtherSt_RandNum, ErrStat, ErrMsg)
    y_CohStr%ScaleWid = p%grid%RotorDiameter * p%CohStr%DistScl           !  This is the scaled height of the coherent event data set
    y_CohStr%Zbottom  = p%grid%HubHt - p%CohStr%CTLz*y_CohStr%ScaleWid    !  This is the height of the bottom of the wave in the scaled/shifted coherent event data set
    
-   CALL getVelocity(p, p%UHub,p%grid%HubHt,y_CohStr%Zbottom + 0.5*y_CohStr%ScaleWid, y_CohStr%Uwave, ErrStat2, ErrMsg2)                 ! y_CohStr%Uwave =WindSpeed at center of wave
+   CALL getVelocity(p, p%UHub,p%grid%HubHt,y_CohStr%Zbottom + 0.5_ReKi*y_CohStr%ScaleWid, y_CohStr%Uwave, ErrStat2, ErrMsg2)                 ! y_CohStr%Uwave =WindSpeed at center of wave
       CALL SetErrStat(  ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_WriteCTS')
    
    !-------------------------
@@ -587,7 +587,7 @@ SUBROUTINE CohStr_WriteCTS(p, WSig, OtherSt_RandNum, ErrStat, ErrMsg)
                
       CASE ( SpecModel_GP_LLJ, SpecModel_SMOOTH, SpecModel_TIDAL, SpecModel_RIVER )          
 
-         y_CohStr%CTKE = pkCTKE_LLJ( p, OtherSt_RandNum, y_CohStr%Zbottom+0.5*y_CohStr%ScaleWid, p%met%ZL, p%met%UStar )
+         y_CohStr%CTKE = pkCTKE_LLJ( p, OtherSt_RandNum, y_CohStr%Zbottom+0.5_ReKi*y_CohStr%ScaleWid, p%met%ZL, p%met%UStar )
                
       CASE ( SpecModel_WF_UPW )
          y_CohStr%CTKE = -2.964523*p%met%Rich_No - 0.207382*y_CohStr%Uwave + 25.640037*y_CohStr%WSig - 10.832925
@@ -622,7 +622,7 @@ SUBROUTINE CohStr_WriteCTS(p, WSig, OtherSt_RandNum, ErrStat, ErrMsg)
          RETURN
       END IF
    
-   CALL CohStr_CalcEvents( p, e_CohStr, y_CohStr%Zbottom+0.5*y_CohStr%ScaleWid, OtherSt_RandNum, y_cohStr, ErrStat2, ErrMsg2) 
+   CALL CohStr_CalcEvents( p, e_CohStr, y_CohStr%Zbottom+0.5_ReKi*y_CohStr%ScaleWid, OtherSt_RandNum, y_cohStr, ErrStat2, ErrMsg2) 
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CohStr_WriteCTS')
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
