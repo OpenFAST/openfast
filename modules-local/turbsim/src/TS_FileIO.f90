@@ -4146,27 +4146,27 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
       SELECT CASE (  TurbModel_ID )
 
          CASE ( SpecModel_GP_LLJ )
-            HT1 = MAX( 60.0, MIN( Ht, 100.0 ) )
+            HT1 = MAX( 60.0_ReKi, MIN( Ht, 100.0_ReKi ) )
             IF ( WS <= 14.0 ) THEN
                IF ( WS <= 8.0 ) THEN
                   IF     ( WS <= 6.0 ) THEN
                      coeffs(:,3) = (/  3.1322E+00,  2.2819E-03,  2.9214E+00, -5.2203E-04,  1.1877E+00, &
                                       -5.7605E-02,  3.7233E-06, -3.5021E-01, -1.7555E-03,  3.9712E-04 /)    !W  5
                      IF  ( WS <= 4.0 ) THEN !      WS <=  4
-                        RI1 = MAX( 0.0, MIN(  RICH_NO, 1.0 ) )
+                        RI1 = MAX( 0.0_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                         coeffs(:,1) = (/  4.8350E+00, -4.0113E-02,  7.8134E+00, -2.0069E-05, -1.9518E-01, &
                                          -1.4009E-01,  2.3195E-06,  8.2029E-02, -7.4979E-04,  6.1186E-04 /) !U  3
                         coeffs(:,2) = (/  3.2587E+00, -5.9086E-02,  9.7426E+00,  5.7360E-04,  2.1274E-01, &
                                          -1.6398E-01, -8.3786E-07,  6.6896E-02, -3.5254E-03,  6.4833E-04 /) !V  3
                      ELSE                   !  4 < WS <=  6
-                        RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                        RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                         coeffs(:,1) = (/  9.2474E+00, -4.9849E-02,  6.0887E+00, -5.9124E-04,  4.4312E-02, &
                                          -1.1966E-01,  5.2652E-06, -1.0373E-01,  4.0480E-03,  5.5761E-04 /) !U  5
                         coeffs(:,2) = (/  3.6355E+00,  1.7701E-02,  4.2165E+00, -5.8828E-04,  9.5592E-02, &
                                          -6.5313E-02,  3.3875E-06, -1.7981E-02, -1.6375E-03,  3.0423E-04 /) !V  5
                      ENDIF
                   ELSE                      ! 6  < WS <=  8
-                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                      coeffs(:,1) = (/  1.1795E+01, -7.5393E-02,  9.5279E+00, -3.4922E-04, -5.8973E-01, &
                                       -1.6753E-01,  4.4267E-06,  2.1797E-01,  7.7887E-04,  7.4912E-04 /)    !U  7
                      coeffs(:,2) = (/  1.7730E+00,  9.6577E-02,  8.1310E+00, -1.2028E-03,  3.0145E-02, &
@@ -4176,7 +4176,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                   ENDIF
                ELSE ! 8.0 < WS <= 14.0
                   IF     (WS <= 10.0) THEN  !  8 < WS <= 10
-                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                      coeffs(:,1) = (/  8.4674E+00,  1.2922E-01,  8.6170E+00, -3.3048E-03, -3.1928E-02, &
                                       -1.2515E-01,  1.8209E-05,  2.9087E-01, -9.3031E-03,  5.0706E-04 /)    !U  9
                      coeffs(:,2) = (/  2.8145E+00,  1.0257E-01,  4.2987E+00, -1.4901E-03,  4.9698E-02, &
@@ -4184,7 +4184,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                      coeffs(:,3) = (/  2.4952E+00,  5.8000E-02,  1.9851E+00, -9.4027E-04, -4.0135E-02, &
                                       -1.8377E-02,  4.3320E-06, -1.0441E-01,  3.6831E-03,  8.6637E-05 /)    !W  9
                   ELSEIF (WS <= 12.0) THEN  ! 10 < WS <= 12
-                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                      coeffs(:,1) = (/  1.2473E+01,  3.2270E-02,  1.4508E+01, -2.2856E-03, -1.4652E+00, &
                                       -2.4114E-01,  1.4919E-05,  5.5578E-01, -8.5528E-04,  1.0273E-03 /)    !U  11
                      coeffs(:,2) = (/  1.0882E+00,  1.9425E-01,  8.1533E+00, -2.5574E-03,  4.3113E-01, &
@@ -4192,7 +4192,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                      coeffs(:,3) = (/  5.0280E-01,  1.1637E-01,  4.0130E+00, -1.2034E-03, -2.7592E-01, &
                                       -3.8744E-02,  3.4213E-06, -1.5144E-02,  2.4042E-03,  4.7818E-05 /)    !W  11
                   ELSE                      ! 12 < WS <= 14.0
-                     RI1 = MAX( -1.0, MIN(  RICH_NO, 1.0 ) )
+                     RI1 = MAX( -1.0_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                      coeffs(:,1) = (/  8.6311E+00,  2.5614E-01,  1.1165E+01, -5.1685E-03,  3.0895E+00, &
                                       -1.9190E-01,  2.7162E-05, -2.6513E-01, -3.6479E-02,  8.8431E-04 /)    !U  13
                      coeffs(:,2) = (/  1.2842E+00,  2.4007E-01,  5.3653E+00, -3.2589E-03,  3.4715E+00, &
@@ -4204,7 +4204,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
             ELSE ! WS > 14
                IF (WS <= 20.0 ) THEN
                   IF     (WS <= 16.0) THEN  ! 14 < WS <= 16
-                     RI1 = MAX( -1.0, MIN(  RICH_NO, 1.0 ) )
+                     RI1 = MAX( -1.0_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                      coeffs(:,1) = (/  1.3972E-01,  6.3486E-01,  1.7576E+01, -1.0017E-02,  2.8458E+00, &
                                       -2.5233E-01,  4.6539E-05, -1.8899E-01, -2.6717E-02,  9.5173E-04 /)    !U  15
                      coeffs(:,2) = (/ -7.1243E+00,  5.6768E-01,  1.2886E+01, -7.3277E-03,  3.7880E+00, &
@@ -4212,7 +4212,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                      coeffs(:,3) = (/ -1.1004E+01,  5.3470E-01,  5.3118E+00, -5.8999E-03,  1.9009E+00, &
                                       -2.4063E-02,  2.1755E-05, -4.5798E-01,  1.6885E-02, -3.9974E-04 /)    !W  15
                   ELSEIF (WS <= 18.0) THEN  ! 16 < WS <= 18
-                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                      coeffs(:,1) = (/ -6.9650E+00,  8.8636E-01,  2.3467E+01, -1.1973E-02, -4.3750E+00, &
                                       -3.5519E-01,  5.0414E-05,  9.1789E-01,  9.8340E-03,  1.5885E-03 /)    !U  17
                      coeffs(:,2) = (/  5.5495E-03,  3.2906E-01,  1.4609E+01, -4.1635E-03, -2.1246E+00, &
@@ -4220,7 +4220,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                      coeffs(:,3) = (/ -1.3195E+00,  2.0022E-01,  2.3490E+00, -2.1308E-03,  3.5582E+00, &
                                        1.4379E-02,  7.6830E-06, -7.6155E-01, -2.4660E-02, -2.0199E-04 /)    !W  17
                   ELSE                      ! 18 < WS <= 20
-                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                      coeffs(:,1) = (/ -1.3985E+01,  1.3161E+00,  3.4773E+01, -1.9237E-02, -1.9845E+00, &
                                       -5.5817E-01,  8.8310E-05,  1.7142E+00, -4.2907E-02,  2.3932E-03 /)    !U  19
                      coeffs(:,2) = (/ -1.2400E+01,  8.6854E-01,  1.9923E+01, -1.1557E-02, -1.0441E+00, &
@@ -4230,7 +4230,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                   ENDIF
                ELSE ! WS > 20
                   IF     (WS <= 22.0) THEN  ! 20 < WS <= 22
-                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                      coeffs(:,1) = (/ -2.4317E+01,  1.8176E+00,  5.3359E+01, -2.5973E-02,  6.0349E+00, &
                                       -7.9927E-01,  1.1558E-04,  1.5926E+00, -1.5005E-01,  3.1688E-03 /)    !U  21
                      coeffs(:,2) = (/  8.0459E+00,  1.8058E-01,  1.9426E+01, -3.6730E-03, -9.9717E-01, &
@@ -4238,7 +4238,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                      coeffs(:,3) = (/ -2.3544E+01,  1.1403E+00,  8.3526E+00, -1.4511E-02,  7.2014E+00, &
                                        5.0216E-02,  5.9947E-05, -1.0659E+00, -7.4769E-02, -9.8390E-04 /)    !W  21
                   ELSEIF (WS <= 24.0) THEN  ! 22 < WS <= 24
-                     RI1 = MAX( 0.0, MIN(  RICH_NO, 1.0 ) )
+                     RI1 = MAX( 0.0_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                      coeffs(:,1) = (/ -3.5790E+01,  1.5374E+00,  1.1322E+02, -1.6884E-02, -1.7767E+01, &
                                       -1.8122E+00,  6.8247E-05,  7.2101E+00,  3.5536E-02,  7.9269E-03 /)    !U  23
                      coeffs(:,2) = (/ -7.2883E+01,  2.8210E+00,  8.6392E+01, -3.1084E-02, -2.4938E+01, &
@@ -4246,7 +4246,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                      coeffs(:,3) = (/ -3.2844E+01,  1.2683E+00,  3.2032E+01, -1.3197E-02, -1.1129E+01, &
                                       -3.6741E-01,  4.2852E-05,  4.1336E+00,  2.4775E-02,  1.8431E-03 /)    !W  23
                   ELSE                      ! 24 < WS
-                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                      coeffs(:,1) = (/  2.2906E+01,  9.3209E-02,  1.5448E+01, -5.7421E-03, -8.9114E+00, &
                                       -3.1547E-02,  4.0144E-05,  5.4544E-01,  5.3557E-02, -3.1299E-04 /)    !U  25
                      coeffs(:,2) = (/ -1.1903E+01,  1.1104E+00,  1.7962E+01, -1.6045E-02, -9.2458E+00, &
@@ -4270,7 +4270,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                                                                             + coeffs(10,I)*Ht2*RI1
             ENDDO
 
-            WS1 = MAX(  2.0, WS )
+            WS1 = MAX(  2.0_ReKi, WS )
             SELECT CASE ( Ri_Cat )
                CASE ( 1, 2)
 !                 InCDec   = (/            1.744591004*WS1**0.593219225, &
@@ -4361,7 +4361,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
             ELSE ! WS > 14
                IF (WS <= 20.0 ) THEN
                   IF     (WS <= 16.0) THEN  ! 14 < WS <= 16
-                     RI1 = MAX( -1.0, MIN(  RICH_NO, 1.0 ) )
+                     RI1 = MAX( -1.0_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                      coeffs(:,1) = (/  2.9459E+01, -7.3181E-01,  9.4613E+00,  9.2172E-03,  6.1086E+00, &
                                       -4.9990E-01, -2.9994E-05, -6.9606E-01, -8.5076E-03,  8.1330E-03 /)   !U  15
                      coeffs(:,2) = (/  1.7540E+01, -2.6071E-01,  9.3639E+00,  1.3341E-03,  9.4294E+00, &
@@ -4369,7 +4369,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                      coeffs(:,3) = (/  1.2792E+01, -4.6469E-01,  4.6350E+00,  1.0633E-02,  1.8523E+00, &
                                       -3.2417E-01, -8.5038E-05, -2.2253E-01, -7.3351E-04,  5.4781E-03 /)   !W  15
                   ELSEIF (WS <= 18.0) THEN  ! 16 < WS <= 18
-                     RI1 = MAX( -1.0, MIN(  RICH_NO, 1.0 ) )
+                     RI1 = MAX( -1.0_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                      coeffs(:,1) = (/  1.7775E+01,  4.5287E-01,  1.6417E+01, -2.3724E-02,  5.8998E+00, &
                                       -5.3502E-01,  2.6202E-04, -9.9466E-02,  4.1386E-02,  4.5663E-03 /)   !U  17
                      coeffs(:,2) = (/  1.2022E+01,  2.4246E-01,  1.3875E+01, -1.1725E-02,  5.1917E+00, &
@@ -4377,7 +4377,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                      coeffs(:,3) = (/  1.2680E+01, -1.4768E-01,  7.1498E+00, -3.0341E-03,  1.9747E+00, &
                                       -3.8374E-01,  7.0412E-05,  2.2297E-01,  5.9943E-02,  5.3514E-03 /)   !W  17
                   ELSE                      ! 18 < WS <= 20
-                     RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                     RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                      coeffs(:,1) = (/  3.1187E+01, -6.8540E-01,  7.1288E+00,  1.1923E-02,  8.8547E+00, &
                                        6.3133E-02, -9.4673E-05, -2.5710E+00, -5.4077E-02, -1.2797E-04 /)   !U  19
                      coeffs(:,2) = (/  1.2664E+01,  9.1858E-02,  1.9050E+01, -2.8868E-03,  7.2969E+00, &
@@ -4386,7 +4386,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                                       -4.3958E-01, -2.5936E-05, -3.0848E-01, -6.3381E-02,  5.1204E-03 /)   !W  19
                   ENDIF
                ELSE ! WS > 20
-                  RI1 = MAX( -0.5, MIN(  RICH_NO, 1.0 ) )
+                  RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 1.0_ReKi ) )
                   IF     (WS <= 22.0) THEN  ! 20 < WS <= 22
                      coeffs(:,1) = (/  2.5165E+01, -7.7660E-02,  1.9692E+01, -1.1794E-02,  9.8635E+00, &
                                       -2.5520E-01,  2.0573E-04, -4.9850E+00,  1.1272E-01,  1.3267E-03 /)   !U  21
@@ -4424,7 +4424,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                                                                             + coeffs(10,I)*Ht2*RI1
             ENDDO
 
-            WS1 = MAX(  2.0, WS )
+            WS1 = MAX(  2.0_ReKi, WS )
             SELECT CASE ( Ri_Cat )
                CASE ( 1 )
 !                 InCDec   = (/            1.623224368*WS1**1.015099356, &
@@ -4484,7 +4484,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                                        2.1810E-01,  1.1718E-04,  7.7287E+01, -1.3828E-01, -9.6568E-03 /) !Upw_V 9
                   ENDIF
                ELSE
-                  RI1 = MAX( -0.5, MIN(  RICH_NO, 0.05 ) )
+                  RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 0.05_ReKi ) )
                   IF  ( WS <= 12.0 ) THEN   ! 10 < WS <= 12
                      coeffs(:,1) = (/  1.3539E+01, -8.4892E-02, -1.9237E+00, -1.1485E-03, -4.0840E-01, &
                                        3.0956E-01,  2.4048E-05, -1.1523E+00,  9.6877E-03, -4.0606E-03 /) !Upw_U 11
@@ -4498,7 +4498,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                   ENDIF
                ENDIF
             ELSE
-               RI1 = MAX( -0.5, MIN(  RICH_NO, 0.05 ) )
+               RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 0.05_ReKi ) )
                IF  ( WS  <= 18.0 ) THEN
                   IF ( WS <= 16.0 ) THEN   ! 14 < WS <= 16
                      coeffs(:,1) = (/  1.4646E+01, -1.5023E-01, -9.7543E-01, -3.5607E-03,  4.8663E+00, &
@@ -4538,7 +4538,7 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
                                                                             + coeffs(10,I)*Ht2*RI1
             ENDDO
 
-            WS1 = MAX(  3.0, WS )
+            WS1 = MAX(  3.0_ReKi, WS )
 !           InCDec(1:2)   = (/             5.640176786*WS1**0.269850341, &
 !                              6.059554513+18.44124731/WS1**1.5 /)
             InCohB(1:2)   = (/ 0.000448295+0.002502915/WS1, &
@@ -4552,26 +4552,26 @@ SUBROUTINE GetDefaultCoh(TurbModel_ID, RICH_NO, WS, Ht, InCDec, InCohB )
             HT1 = MAX( 5.0_ReKi, MIN( Ht, 35.0_ReKi ) )
             IF ( WS <= 12.0 ) THEN
                IF     ( WS <=  8.0 ) THEN  !      WS <= 8
-                  RI1 = MAX( -0.5, MIN(  RICH_NO, 0.15 ) )
+                  RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 0.15_ReKi ) )
                   coeffs(:,1) = (/  1.0310E+01, -6.4824E-03, -1.3258E+00, -2.7238E-03, -6.8515E+00, &
                                     3.1602E-02,  5.5982E-05, -8.4777E+00,  2.1506E-02,  4.9745E-04 /) !Dwn_U 7
                   coeffs(:,2) = (/  6.9491E+00, -1.3378E-01,  1.7961E-01, -4.9439E-04, -1.8140E+00, &
                                    -4.2321E-02,  4.4962E-05, -3.6939E+00, -8.9465E-03,  4.7867E-04 /) !Dwn_V 7
                ELSEIF ( WS <= 10.0 ) THEN  !  8 < WS <= 10
-                  RI1 = MAX( -0.5, MIN(  RICH_NO, 0.05 ) )
+                  RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 0.05_ReKi ) )
                   coeffs(:,1) = (/  9.7420E+00,  6.1610E-02,  5.6636E-02, -5.5949E-03, -1.3014E+00, &
                                     2.0655E-01,  8.9989E-05, -1.9837E+00,  5.4957E-03, -3.5496E-03 /) !Dwn_U 9
                   coeffs(:,2) = (/  7.1063E+00, -1.7021E-01,  1.2560E+00, -4.2616E-04,  9.0937E-01, &
                                    -1.3022E-01,  4.7976E-05,  2.1302E-01, -4.3159E-04,  1.5443E-03 /) !Dwn_V 9
                ELSE                        ! 10 < WS <= 12
-                  RI1 = MAX( -0.5, MIN(  RICH_NO, 0.05 ) )
+                  RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 0.05_ReKi ) )
                   coeffs(:,1) = (/  1.0869E+01, -9.1393E-03, -1.1695E+00, -3.3725E-03,  3.2199E-01, &
                                     7.2692E-02,  7.0565E-05,  6.9573E-01,  2.5360E-02,  1.0187E-03 /) !Dwn_U 11
                   coeffs(:,2) = (/  6.9882E+00, -1.3517E-01, -3.0492E-01, -4.6775E-04,  4.6897E-01, &
                                    -2.0102E-03,  3.3908E-05,  1.4604E-02,  1.1729E-02, -6.2775E-05 /) !Dwn_V 11
                ENDIF
             ELSE
-               RI1 = MAX( -0.5, MIN(  RICH_NO, 0.05 ) )
+               RI1 = MAX( -0.5_ReKi, MIN(  RICH_NO, 0.05_ReKi ) )
                IF     ( WS <= 14.0 ) THEN  ! 12 < WS <= 14
                   coeffs(:,1) = (/  1.1105E+01,  5.3789E-02, -9.4253E-02, -5.4203E-03, -1.0114E+00, &
                                     1.1421E-01,  7.6110E-05, -1.2654E+00,  1.5121E-02, -2.9055E-03 /) !Dwn_U 13
@@ -4706,7 +4706,7 @@ SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
             ELSE                           ! 54 m
                p%met%PC_UW = -0.0373 + 0.00675*p%UHub  - 0.00277*ZLtmp + 0.851*Ustar2                !magnitude
             ENDIF
-            p%met%PC_UW = MAX(p%met%PC_UW,0.0)
+            p%met%PC_UW = MAX(p%met%PC_UW,0.0_ReKi)
 
          ENDIF
 
@@ -4724,7 +4724,7 @@ SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
          ELSE                          ! 15m data
             p%met%PC_UW = -0.1310 + 0.0239*p%UHub + 0.556*Ustar2
          ENDIF
-         p%met%PC_UW = MAX(p%met%PC_UW,0.0)
+         p%met%PC_UW = MAX(p%met%PC_UW,0.0_ReKi)
 
          IF (p%met%PC_UW > 0) THEN !i.e. not equal to zero
             SignProb = 0.765 + 0.57/PI * ATAN( 0.88356*LOG(p%met%PC_UW)+2.47668)
@@ -4766,19 +4766,19 @@ SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
 
          IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
             p%met%PC_UV = 0.199 - 0.0167*p%UHub + 0.0115*ZLtmp + 1.143*Ustar2
-            p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+            p%met%PC_UV = MAX(p%met%PC_UV,0.0_ReKi)
             IF ( rndSgn < 0.6527 ) p%met%PC_UV = -p%met%PC_UV
          ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
             p%met%PC_UV = 0.190 - 0.0156*p%UHub + 0.00931*ZLtmp + 1.101*Ustar2
-            p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+            p%met%PC_UV = MAX(p%met%PC_UV,0.0_ReKi)
             IF ( rndSgn < 0.6394 ) p%met%PC_UV = -p%met%PC_UV
          ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
             p%met%PC_UV = 0.178 - 0.0141*p%UHub + 0.00709*ZLtmp + 1.072*Ustar2
-            p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+            p%met%PC_UV = MAX(p%met%PC_UV,0.0_ReKi)
             IF ( rndSgn < 0.6326 ) p%met%PC_UV = -p%met%PC_UV
          ELSE                           ! 54 m
             p%met%PC_UV = 0.162 - 0.0123*p%UHub + 0.00784*p%met%RICH_NO + 1.024*Ustar2
-            p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+            p%met%PC_UV = MAX(p%met%PC_UV,0.0_ReKi)
             IF ( rndSgn < 0.6191 ) p%met%PC_UV = -p%met%PC_UV
          ENDIF
 
@@ -4792,7 +4792,7 @@ SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
          ELSE                          ! 15m data
             p%met%PC_UV = 0.462 - 0.01400*p%UHub + 1.277*Ustar2
          ENDIF
-         p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+         p%met%PC_UV = MAX(p%met%PC_UV,0.0_ReKi)
          IF (p%met%PC_UV > 0) THEN !i.e. not equal to zero
             SignProb = 0.33 + 0.64/PI * ATAN( -0.374775*LOG(p%met%PC_UV)-0.205681)
             IF (rndSgn <= SignProb) p%met%PC_UV = -p%met%PC_UV
@@ -4801,19 +4801,19 @@ SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
       CASE ( SpecModel_WF_UPW )
 
          p%met%PC_UV = 0.0202 + 0.890*Ustar2 - 2.461*Shr
-         p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+         p%met%PC_UV = MAX(p%met%PC_UV,0.0_ReKi)
          IF ( rndSgn < 0.7315 ) p%met%PC_UV = -p%met%PC_UV
 
       CASE ( SpecModel_WF_07D )
 
          p%met%PC_UV = 0.5040 + 0.177*Ustar2
-         p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+         p%met%PC_UV = MAX(p%met%PC_UV,0.0_ReKi)
          IF ( rndSgn < 0.7355 ) p%met%PC_UV = -p%met%PC_UV
 
       CASE ( SpecModel_WF_14D )
 
          p%met%PC_UV = 0.0430 + 0.258*Ustar2
-         p%met%PC_UV = MAX(p%met%PC_UV,0.0)
+         p%met%PC_UV = MAX(p%met%PC_UV,0.0_ReKi)
          IF ( rndSgn < 0.4423 ) p%met%PC_UV = -p%met%PC_UV
 
       CASE DEFAULT
@@ -4836,19 +4836,19 @@ SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
 
          IF ( p%grid%HubHt >= 100.5 ) THEN     ! 116m
             p%met%PC_VW =  0.0528  - 0.00210*p%UHub - 0.00531*p%met%RICH_NO - 0.519*Shr + 0.283*Ustar2
-            p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+            p%met%PC_VW = MAX(p%met%PC_VW,0.0_ReKi)
             IF ( rndSgn < 0.2999 ) p%met%PC_VW = -p%met%PC_VW
          ELSEIF ( p%grid%HubHt >= 76.0 ) THEN  ! 85 m
             p%met%PC_VW =  0.0482  - 0.00264*p%UHub - 0.00391*p%met%RICH_NO - 0.240*Shr + 0.265*Ustar2
-            p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+            p%met%PC_VW = MAX(p%met%PC_VW,0.0_ReKi)
             IF ( rndSgn < 0.3061 ) p%met%PC_VW = -p%met%PC_VW
          ELSEIF ( p%grid%HubHt >= 60.5 ) THEN  ! 67 m
             p%met%PC_VW =  0.0444  - 0.00249*p%UHub - 0.00403*p%met%RICH_NO - 0.141*Shr + 0.250*Ustar2
-            p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+            p%met%PC_VW = MAX(p%met%PC_VW,0.0_ReKi)
             IF ( rndSgn < 0.3041 ) p%met%PC_VW = -p%met%PC_VW
          ELSE                           ! 54 m
             p%met%PC_VW =  0.0443  - 0.00261*p%UHub - 0.00371*p%met%RICH_NO - 0.107*Shr + 0.226*Ustar2
-            p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+            p%met%PC_VW = MAX(p%met%PC_VW,0.0_ReKi)
             IF ( rndSgn < 0.3111 ) p%met%PC_VW = -p%met%PC_VW
          ENDIF
 
@@ -4861,29 +4861,29 @@ SUBROUTINE GetDefaultRS( p, OtherSt_RandNum, TmpUstarHub, ErrStat, ErrMsg )
          ELSE                          ! 15m data
             p%met%PC_VW = 0.0165 + 0.00833*p%UHub                 + 0.224*Ustar2
          ENDIF
-         p%met%PC_VW = MAX(p%met%PC_VW,0.0)
+         p%met%PC_VW = MAX(p%met%PC_VW,0.0_ReKi)
          IF (p%met%PC_VW > 0) THEN !i.e. not equal to zero
-            SignProb = 0.725 + 0.65/PI * ATAN( 0.654886*LOG(p%met%PC_VW)+1.777198)
+            SignProb = 0.725 + 0.65/PI * ATAN( 0.654886_ReKi*LOG(p%met%PC_VW)+1.777198_ReKi)
             IF (rndSgn <= SignProb) p%met%PC_VW = -p%met%PC_VW
          ENDIF
 
       CASE ( SpecModel_WF_UPW )
 
          p%met%PC_VW = 0.0263 + 0.273*Ustar2 - 0.684*Shr
-         p%met%PC_VW = MAX(p%met%PC_VW,0.0)
-         IF ( rndSgn < 0.3139 ) p%met%PC_VW = -p%met%PC_VW
+         p%met%PC_VW = MAX(p%met%PC_VW,0.0_ReKi)
+         IF ( rndSgn < 0.3139_ReKi ) p%met%PC_VW = -p%met%PC_VW
 
       CASE ( SpecModel_WF_07D )
 
          p%met%PC_VW = 0.241 + 0.118*Ustar2
-         p%met%PC_VW = MAX(p%met%PC_VW,0.0)
-         IF ( rndSgn < 0.0982 ) p%met%PC_VW = -p%met%PC_VW
+         p%met%PC_VW = MAX(p%met%PC_VW,0.0_ReKi)
+         IF ( rndSgn < 0.0982_ReKi ) p%met%PC_VW = -p%met%PC_VW
 
       CASE ( SpecModel_WF_14D )
 
          p%met%PC_VW =-0.0224 + 0.159*Ustar2
-         p%met%PC_VW = MAX(p%met%PC_VW,0.0)
-         IF ( rndSgn < 0.8436 ) p%met%PC_VW = -p%met%PC_VW
+         p%met%PC_VW = MAX(p%met%PC_VW,0.0_ReKi)
+         IF ( rndSgn < 0.8436_ReKi ) p%met%PC_VW = -p%met%PC_VW
 
       CASE DEFAULT
 
@@ -5161,27 +5161,27 @@ SUBROUTINE CalcIECScalingParams( p_IEC, HubHt, UHub, InCDec, InCohB, TurbModel_I
    IF ( p_IEC%IECedition == 2 ) THEN  
       
          ! section 6.3.1.3 Eq. 9
-      IF ( HubHt < 30.0 )  THEN
+      IF ( HubHt < 30.0_ReKi )  THEN
          p_IEC%Lambda(1) = 0.7*HubHt
       ELSE
          p_IEC%Lambda(1) = 21.0
       ENDIF
 
       p_IEC%LC = 3.5*p_IEC%Lambda(1)
-      InCDec = (/  8.80, HUGE(p_IEC%LC), HUGE(p_IEC%LC) /)   ! u-, v-, and w-component coherence decrement
+      InCDec = (/  8.80_ReKi, HUGE(p_IEC%LC), HUGE(p_IEC%LC) /)   ! u-, v-, and w-component coherence decrement
 
    ELSE !IF (p_IEC%IECedition == 3 ) THEN
       
          ! section 6.3.1.3 Eq. 9      
          
-      IF ( HubHt < 60.0 )  THEN
+      IF ( HubHt < 60.0_ReKi )  THEN
          p_IEC%Lambda(1) = 0.7*HubHt
       ELSE
          p_IEC%Lambda(1) = 42.0
       ENDIF
 
       p_IEC%LC = 8.1*p_IEC%Lambda(1)
-      InCDec = (/ 12.00, HUGE(p_IEC%LC), HUGE(p_IEC%LC) /)   ! u-, v-, and w-component coherence decrement for IEC Ed. 3
+      InCDec = (/ 12.00_ReKi, HUGE(p_IEC%LC), HUGE(p_IEC%LC) /)   ! u-, v-, and w-component coherence decrement for IEC Ed. 3
 
    ENDIF
    

@@ -540,7 +540,7 @@ SUBROUTINE CohStr_WriteCTS(p, WSig, OtherSt_RandNum, ErrStat, ErrMsg)
 
          !Apply a scaling factor to account for short inter-arrival times getting wiped out due to long events
 
-      y_CohStr%ScaleVel =  y_CohStr%ScaleVel*( 1.0 + 323.1429 * EXP( -MAX(y_CohStr%Uwave,10.0) / 2.16617 ) )
+      y_CohStr%ScaleVel =  y_CohStr%ScaleVel*( 1.0 + 323.1429 * EXP( -MAX(y_CohStr%Uwave,10.0_ReKi) / 2.16617 ) )
             
    ENDIF
 
@@ -571,7 +571,7 @@ SUBROUTINE CohStr_WriteCTS(p, WSig, OtherSt_RandNum, ErrStat, ErrMsg)
             
                ! Add up to +/- 10% or +/- 6 m^2/s^2 (uniform distribution)
             CALL RndUnif( p%RNG, OtherSt_RandNum, TmpRndNum )
-            y_CohStr%CTKE = MAX( y_CohStr%CTKE + (2.0 * TmpRndNum - 1.0) * 6.0, 0.0 )
+            y_CohStr%CTKE = MAX( y_CohStr%CTKE + (2.0_ReKi * TmpRndNum - 1.0_ReKi) * 6.0_ReKi, 0.0_ReKi )
 
             IF ( y_CohStr%CTKE > 0.0 ) THEN
                IF ( y_CohStr%CTKE > 20.0)  THEN    ! Correct with residual
@@ -610,7 +610,7 @@ SUBROUTINE CohStr_WriteCTS(p, WSig, OtherSt_RandNum, ErrStat, ErrMsg)
          RETURN               
    END SELECT                    
 
-   y_CohStr%CTKE   = MAX( y_CohStr%CTKE, 1.0 )     ! make sure CTKE is not negative and, so that we don't divide by zero in ReadEventFile, set it to some arbitrary low number   
+   y_CohStr%CTKE   = MAX( y_CohStr%CTKE, 1.0_ReKi )     ! make sure CTKE is not negative and, so that we don't divide by zero in ReadEventFile, set it to some arbitrary low number   
    
    !-------------------------
    ! Read and allocate coherent event start times and lengths, calculate TSclFact:
@@ -726,7 +726,7 @@ FUNCTION pkCTKE_LLJ(p, OtherSt_RandNum, Ht, ZL, UStar)
 
    CALL RndPearsonIV( p%RNG, OtherSt_RandNum, rndCTKE, RndParms, (/ -10.0_ReKi, 17.5_ReKi /) )
 
-   pkCTKE_LLJ = MAX(0.0, A + A_uSt*UStar + A_zL*ZL + rndCTKE)
+   pkCTKE_LLJ = MAX(0.0_ReKi, A + A_uSt*UStar + A_zL*ZL + rndCTKE)
 
 END FUNCTION pkCTKE_LLJ
 !=======================================================================

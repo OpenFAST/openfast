@@ -1385,7 +1385,7 @@ FUNCTION getZLProfile(WS, Ht, RichNo, ZL, L, ZLOffset, WindProfileType)
                   getZLProfile( IZ) =  0.003010*Ht(Zindx) + 0.942617*RichNo                      - 0.221886
                ENDIF 
             ENDIF
-            getZLProfile( IZ) = MIN( getZLProfile( IZ), 1.0 )
+            getZLProfile( IZ) = MIN( getZLProfile( IZ), 1.0_ReKi )
             getZLProfile( IZ) = getZLProfile(IZ) * tmpZ
 
          ENDDO
