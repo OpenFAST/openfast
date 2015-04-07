@@ -60,7 +60,7 @@ MODULE IfW_UniformWind
    IMPLICIT                                  NONE
    PRIVATE
 
-   TYPE(ProgDesc),   PARAMETER               :: IfW_UniformWind_Ver = ProgDesc( 'IfW_UniformWind', 'v2.01.00', '19-Feb-2015' )
+   TYPE(ProgDesc),   PARAMETER               :: IfW_UniformWind_Ver = ProgDesc( 'IfW_UniformWind', 'v2.02.00', '02-Apr-2015' )
 
    PUBLIC                                    :: IfW_UniformWind_Init
    PUBLIC                                    :: IfW_UniformWind_End
@@ -165,11 +165,8 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       ! Get a unit number to use
 
    CALL GetNewUnit(OtherStates%UnitWind, TmpErrStat, TmpErrMsg)
-   IF ( TmpErrStat /= 0 ) THEN
-         ! GetNewUnit returns ErrID_Severe if it can't find a unit.  This may or may not be above the abort level, and we can't proceed.
-      CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
-      RETURN
-   ENDIF
+   CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+   IF (ErrStat >= AbortErrLev) RETURN
 
 
       !-------------------------------------------------------------------------------------------------
@@ -533,7 +530,6 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,
 
       ! DiskVel term -- this represents the average across the disk -- sort of.  This changes for AeroDyn 15
    OutData%DiskVel   =  WindInf_ADhack_diskVel(Time, ParamData, OtherStates, TmpErrStat, TmpErrMsg)
-print*,'   OutData%DiskVel:  ',OutData%DiskVel
 
    RETURN
 

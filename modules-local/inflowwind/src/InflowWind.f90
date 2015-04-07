@@ -55,8 +55,10 @@ MODULE InflowWind
 
    USE                              IfW_UniformWind_Types      ! Types for IfW_UniformWind
    USE                              IfW_UniformWind            ! uniform wind files (text files)
-!!!   USE                              IfW_FFWind_Types           ! Types for IfW_FFWind
-!!!   USE                              IfW_FFWind                 ! full-field binary wind files
+   USE                              IfW_TSFFWind_Types         ! Types for IfW_TSFFWind
+   USE                              IfW_TSFFWind               ! TurbSim style full-field binary wind files
+   USE                              IfW_BladedFFWind_Types     ! Types for IfW_BladedFFWind
+   USE                              IfW_BladedFFWind           ! Bladed style full-field binary wind files
 !!!   USE                              HAWCWind                   ! full-field binary wind files in HAWC format
 !!!   USE                              FDWind                     ! 4-D binary wind files
 !!!   USE                              CTWind                     ! coherent turbulence from KH billow - binary file superimposed on another wind type
@@ -131,19 +133,24 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
       TYPE(InflowWind_InputFile)                            :: InputFileData     !< Data from input file
 
-      TYPE(IfW_UniformWind_InitInputType)                   :: Uniform_InitData       !< initialization info
-      TYPE(IfW_UniformWind_InputType)                       :: Uniform_InitGuess      !< input positions.
-      TYPE(IfW_UniformWind_OutputType)                      :: Uniform_OutData        !< output velocities
+      TYPE(IfW_UniformWind_InitInputType)                   :: Uniform_InitData  !< initialization info
+      TYPE(IfW_UniformWind_InputType)                       :: Uniform_InitGuess !< input positions.
+      TYPE(IfW_UniformWind_OutputType)                      :: Uniform_OutData   !< output velocities
 
-!!!      TYPE(IfW_FFWind_InitInputType)                        :: FF_InitData       !< initialization info
-!!!      TYPE(IfW_FFWind_InputType)                            :: FF_InitGuess      !< input positions.
-!!!      TYPE(IfW_FFWind_ContinuousStateType)                  :: FF_ContStates     !< Unused
-!!!      TYPE(IfW_FFWind_DiscreteStateType)                    :: FF_DiscStates     !< Unused
-!!!      TYPE(IfW_FFWind_ConstraintStateType)                  :: FF_ConstrStates   !< Unused
-!!!      TYPE(IfW_FFWind_OutputType)                           :: FF_OutData        !< output velocities
+      TYPE(IfW_TSFFWind_InitInputType)                      :: TSFF_InitData     !< initialization info
+      TYPE(IfW_TSFFWind_InputType)                          :: TSFF_InitGuess    !< input positions.
+      TYPE(IfW_TSFFWind_ContinuousStateType)                :: TSFF_ContStates   !< Unused
+      TYPE(IfW_TSFFWind_DiscreteStateType)                  :: TSFF_DiscStates   !< Unused
+      TYPE(IfW_TSFFWind_ConstraintStateType)                :: TSFF_ConstrStates !< Unused
+      TYPE(IfW_TSFFWind_OutputType)                         :: TSFF_OutData      !< output velocities
 
 
-!!!     TYPE(CTTS_Backgr)                                        :: BackGrndValues
+      TYPE(IfW_BladedFFWind_InitInputType)                  :: BladedFF_InitData       !< initialization info
+      TYPE(IfW_BladedFFWind_InputType)                      :: BladedFF_InitGuess      !< input positions.
+      TYPE(IfW_BladedFFWind_OutputType)                     :: BladedFF_OutData        !< output velocities
+
+
+!!!     TYPE(CTBladed_Backgr)                                        :: BackGrndValues
 
 
          ! Temporary variables for error handling
@@ -383,6 +390,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             ParamData%UniformWind%RefHt            =  InputFileData%Steady_RefHt
             OtherStates%UniformWind%TimeIndex      =  1_IntKi
 
+!FIXME: store the wind file metadata
                ! Output reporting data
             InitOutData%HubHeight                  =  InputFileData%Steady_RefHt
             InitOutData%WindFileConstantDT         =  .FALSE.
@@ -408,9 +416,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             IF ( ErrStat >= AbortErrLev ) RETURN
 
 
-               ! Copy the hub height info over
-            InitOutData%HubHeight         =  InitOutData%UniformWind%HubHeight
 
+!FIXME: store the wind file metadata
                ! Timestep information
             InitOutData%WindFileConstantDT=  InitOutData%UniformWind%WindFileConstantDT
             InitOutData%WindFileDT        =  InitOutData%UniformWind%WindFileDT
@@ -436,8 +443,39 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
 
          CASE ( BladedFF_WindNumber )
+
+               ! Set InitData information
+            BladedFF_InitData%WindFileName      =  InputFileData%BladedFF_FileName
+            BladedFF_InitData%TowerFileExist    =  InputFileData%BladedFF_TowerFile
+
                ! Initialize the BladedFFWind module
-            CALL SetErrStat( ErrID_Fatal,' BladedFF winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init' )
+            CALL IfW_BladedFFWind_Init(BladedFF_InitData, InputGuess%PositionXYZ, ParamData%BladedFFWind, OtherStates%BladedFFWind, &
+                        BladedFF_OutData,    TimeInterval,  InitOutData%BladedFFWind,  TmpErrStat,          TmpErrMsg)
+            CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_Init')
+            IF ( ErrStat >= AbortErrLev ) RETURN
+
+               ! Store wind file metadata
+            InitOutData%WindFileInfo%FileName         =  InputFileData%BladedFF_FileName
+            InitOutData%WindFileInfo%WindType         =  BladedFF_WindNumber
+            InitOutData%WindFileInfo%RefHt            =  ParamData%BladedFFWind%RefHt
+            InitOutData%WindFileInfo%RefHt_Set        =  .TRUE.
+            InitOutData%WindFileInfo%DT               =  ParamData%BladedFFWind%FFDTime
+            InitOutData%WindFileInfo%NumTSteps        =  ParamData%BladedFFWind%NFFSteps
+            InitOutData%WindFileInfo%ConstantDT       =  .TRUE.
+            InitOutData%WindFileInfo%TRange           =  (/ 0.0_ReKi, ParamData%BladedFFWind%TotalTime /)
+            InitOutData%WindFileInfo%TRange_Limited   =  .NOT. ParamData%BladedFFWind%Periodic                    ! If periodic, no hard time limit
+            InitOutData%WindFileInfo%YRange           =  (/ -ParamData%BladedFFWind%FFYHWid, ParamData%BladedFFWind%FFYHWid /)
+            InitOutData%WindFileInfo%YRange_Limited   =  .TRUE.      ! Hard boundaries enforced in y-direction
+            IF ( ParamData%BladedFFWind%TowerDataExist ) THEN        ! have tower data
+               InitOutData%WindFileInfo%ZRange        =  (/ 0.0_Reki,                                                         & 
+                                                            ParamData%BladedFFWind%RefHt + ParamData%BladedFFWind%FFZHWid /)
+            ELSE
+               InitOutData%WindFileInfo%ZRange        =  (/ ParamData%BladedFFWind%RefHt - ParamData%BladedFFWind%FFZHWid,    &
+                                                            ParamData%BladedFFWind%RefHt + ParamData%BladedFFWind%FFZHWid /)
+            ENDIF
+            InitOutData%WindFileInfo%ZRange_Limited   =  .TRUE.
+            InitOutData%WindFileInfo%BinaryFormat     =  ParamData%BladedFFWind%WindFileFormat
+            InitOutData%WindFileInfo%IsBinary         =  .TRUE.
 
 
 
@@ -569,11 +607,6 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !!!
 !!!         CASE (User_WindNumber)
 !!!
-!               ! Timestep information
-!            InitOutData%WindFileConstantDT=  InitOutData%UniformWind%WindFileConstantDT
-!            InitOutData%WindFileDT        =  InitOutData%UniformWind%WindFileDT
-!            InitOutData%WindFileTRange    =  InitOutData%UniformWind%WindFileTRange
-!            InitOutData%WindFileNumTSteps =  InitOutData%UniformWind%WindFileNumTSteps
 !!!               !FIXME: remove this error message when we add UD_Wind in
 !!!            CALL SetErrStat( ErrID_Fatal, ' InflowWind cannot currently handle the UD_Wind type.', ErrStat, ErrMsg, ' IfW_Init' )
 !!!            RETURN
@@ -588,11 +621,6 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !!!            RETURN
 !!!
 !!!!           CALL HW_Init( UnWind, ParamData%WindFileName, ErrStat )
-!               ! Timestep information
-!            InitOutData%WindFileConstantDT=  InitOutData%UniformWind%WindFileConstantDT
-!            InitOutData%WindFileDT        =  InitOutData%UniformWind%WindFileDT
-!            InitOutData%WindFileTRange    =  InitOutData%UniformWind%WindFileTRange
-!            InitOutData%WindFileNumTSteps =  InitOutData%UniformWind%WindFileNumTSteps
 !!!
 
 
@@ -672,12 +700,13 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
       TYPE(IfW_UniformWind_InputType)                          :: Uniform_InData         !< input positions.
       TYPE(IfW_UniformWind_OutputType)                         :: Uniform_OutData        !< output velocities
 
-!!!      TYPE(IfW_FFWind_InitInputType)                           :: FF_InitData       !< initialization info
-!!!      TYPE(IfW_FFWind_InputType)                               :: FF_InData         !< input positions.
-!!!      TYPE(IfW_FFWind_ContinuousStateType)                     :: FF_ContStates     !< Unused
-!!!      TYPE(IfW_FFWind_DiscreteStateType)                       :: FF_DiscStates     !< Unused
-!!!      TYPE(IfW_FFWind_ConstraintStateType)                     :: FF_ConstrStates   !< Unused
-!!!      TYPE(IfW_FFWind_OutputType)                              :: FF_OutData        !< output velocities
+      TYPE(IfW_TSFFWind_InitInputType)                         :: TSFF_InitData       !< initialization info
+      TYPE(IfW_TSFFWind_InputType)                             :: TSFF_InData         !< input positions.
+      TYPE(IfW_TSFFWind_OutputType)                            :: TSFF_OutData        !< output velocities
+
+      TYPE(IfW_BladedFFWind_InitInputType)                     :: BladedFF_InitData       !< initialization info
+      TYPE(IfW_BladedFFWind_InputType)                         :: BladedFF_InData         !< input positions.
+      TYPE(IfW_BladedFFWind_OutputType)                        :: BladedFF_OutData        !< output velocities
 
       REAL(ReKi), ALLOCATABLE                                  :: PositionXYZprime(:,:)   !< PositionXYZ array in the prime (wind) coordinates
 
@@ -820,7 +849,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
 
 
-!!!         CASE (FF_WindNumber)
+!!!         CASE (TSFF_WindNumber)
 !!!
 !!!               ! Allocate the position array to pass in
 !!!            CALL AllocAry( FF_InData%Position, 3, SIZE(InputData%Position,2), &
@@ -843,6 +872,50 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
 
 !!!               OutputData%Velocity(:,PointCounter) = FF_GetWindSpeed(     Time, InputData%Position(:,PointCounter), ErrStat, ErrMsg)
+
+
+
+
+
+         CASE (BladedFF_WindNumber)
+
+               ! Move the arrays for the Position and Velocity information
+            CALL MOVE_ALLOC( OutputData%VelocityUVW,  BladedFF_OutData%Velocity )
+
+
+               ! InputData only contains the Position array, so we can pass that directly.
+            CALL  IfW_BladedFFWind_CalcOutput(  Time, PositionXYZprime, ParamData%BladedFFWind, OtherStates%BladedFFWind, &
+                                          BladedFF_OutData, TmpErrStat, TmpErrMsg)
+
+               ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
+            CALL MOVE_ALLOC( BladedFF_OutData%Velocity,   OutputData%VelocityUVW )
+
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+            IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+               ! Call IfW_UniforWind_CalcOutput again in order to get the values needed for the OutList
+            IF ( ParamData%NWindVel >= 1_IntKi ) THEN
+                  ! Move the arrays for the Velocity information
+               CALL MOVE_ALLOC( OtherStates%WindViUVW,  BladedFF_OutData%Velocity )
+               CALL  IfW_BladedFFWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%BladedFFWind, &
+                                             OtherStates%BladedFFWind, &
+                                             BladedFF_OutData, TmpErrStat, TmpErrMsg)
+
+                  ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
+               IF ( TmpErrStat >= ErrID_Fatal ) THEN
+                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+                  RETURN
+               ELSE
+                  TmpErrStat  =  ErrID_None
+                  TmpErrMsg   =  ''
+               ENDIF
+
+                  ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
+               CALL MOVE_ALLOC( BladedFF_OutData%Velocity, OtherStates%WindViUVW )
+            ENDIF
+
+
 
 
 !!!         CASE (User_WindNumber)
@@ -938,7 +1011,11 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
          CASE (Uniform_WindNumber)
                OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, Uniform_OutData%DiskVel )
 
-!!!         CASE (FF_WindNumber)
+!!!         CASE (TSFF_WindNumber)
+!!!               OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, TSFF_OutData%DiskVel )
+
+         CASE (BladedFF_WindNumber)
+               OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, BladedFF_OutData%DiskVel )
 
          CASE DEFAULT
             CALL SetErrStat( ErrID_Fatal, ' Error: Undefined wind type in IfW_CalcOutput. ' &
@@ -998,12 +1075,11 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
       TYPE(IfW_UniformWind_InputType)                               :: Uniform_InputData      !< input positions.
       TYPE(IfW_UniformWind_OutputType)                              :: Uniform_OutData        !< output velocities
 
-!!!      TYPE(IfW_FFWind_InputType)                               :: FF_InputData      !< input positions.
-!!!      TYPE(IfW_FFWind_ContinuousStateType)                     :: FF_ContStates     !< Unused
-!!!      TYPE(IfW_FFWind_DiscreteStateType)                       :: FF_DiscStates     !< Unused
-!!!      TYPE(IfW_FFWind_ConstraintStateType)                     :: FF_ConstrStates   !< Unused
-!!!      TYPE(IfW_FFWind_OutputType)                              :: FF_OutData        !< output velocities
+!!!      TYPE(IfW_TSFFWind_InputType)                               :: TSFF_InputData      !< input positions.
+!!!      TYPE(IfW_TSFFWind_OutputType)                              :: TSFF_OutData        !< output velocities
 
+      TYPE(IfW_BladedFFWind_InputType)                              :: BladedFF_InputData      !< input positions.
+      TYPE(IfW_BladedFFWind_OutputType)                             :: BladedFF_OutData        !< output velocities
 
 !!!     TYPE(CTTS_Backgr)                                           :: BackGrndValues
 
@@ -1019,18 +1095,22 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
       SELECT CASE ( ParamData%WindType )
 
          CASE (Steady_WindNumber)         ! The Steady wind is a simple wrapper for the UniformWind module.
-            CALL IfW_UniformWind_End( InputData%PositionXYZ,   ParamData%UniformWind,                                        &
+            CALL IfW_UniformWind_End( InputData%PositionXYZ, ParamData%UniformWind, &
                                  OtherStates%UniformWind, Uniform_OutData, ErrStat, ErrMsg )
 
          CASE (Uniform_WindNumber)
-            CALL IfW_UniformWind_End( InputData%PositionXYZ,   ParamData%UniformWind,                                        &
+            CALL IfW_UniformWind_End( InputData%PositionXYZ, ParamData%UniformWind, &
                                  OtherStates%UniformWind, Uniform_OutData, ErrStat, ErrMsg )
 
-!!!         CASE (FF_WindNumber)
-!!!            CALL IfW_FFWind_End( FF_InitData,   ParamData%FFWind,                                        &
-!!!                                 FF_ContStates, FF_DiscStates,    FF_ConstrStates,  OtherStates%FFWind,  &
-!!!                                 FF_OutData,    ErrStat,          ErrMsg )
-!!!
+!!!         CASE (TSFF_WindNumber)
+!!!            CALL IfW_TSFFWind_End( TSFF_InitData,   ParamData%TSFFWind,                                        &
+!!!                                 TSFF_ContStates, TSFF_DiscStates,    TSFF_ConstrStates,  OtherStates%TSFFWind,  &
+!!!                                 TSFF_OutData,    ErrStat,          ErrMsg )
+
+         CASE (BladedFF_WindNumber)
+            CALL IfW_BladedFFWind_End( InputData%PositionXYZ, ParamData%BladedFFWind, &
+                                 OtherStates%BladedFFWind, BladedFF_OutData, ErrStat, ErrMsg )
+
 !!!         CASE (User_WindNumber)
 !!!            CALL UsrWnd_Terminate( ErrStat )
 !!!

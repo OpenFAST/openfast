@@ -566,7 +566,7 @@ PROGRAM InflowWind_Driver
          ! We are going to set the WindGrid with only a single point so that we can calculate something
       InflowWind_u1%PositionXYZ(1,1)  =  0.0_ReKi     ! X
       InflowWind_u1%PositionXYZ(2,1)  =  0.0_ReKi     ! Y
-      InflowWind_u1%PositionXYZ(3,1)  = 50.0_ReKi     ! Z
+      InflowWind_u1%PositionXYZ(3,1)  = 20.0_ReKi     ! Z
 
    ENDIF
 
@@ -671,6 +671,13 @@ PROGRAM InflowWind_Driver
    ENDIF
 
 
+
+
+
+
+
+
+
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- Time stepping loop -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
@@ -758,9 +765,9 @@ PROGRAM InflowWind_Driver
                   TRIM(num2lstr(inflowwind_y1%diskvel(2)))//', '//TRIM(num2lstr(inflowwind_y1%diskvel(3)))//' )'
       print*,NewLine//NewLine//'   Requested wind points and writeoutput results at last timestep (t='//       &
                   TRIM(Num2LStr(TimeNow))//'):'//NewLine
-      print*,'          ------ WindViXYZ ---------    ----- WindViUVW ---------     -- AllOuts --     '//      &
+      print*,'          ------ WindViXYZ ---------    ----- WindViUVW ---------       -- AllOuts --     '//      &
                   '------------- WriteOutput -------------'
-      print*,' Index,      coord,        name             Vector value              Value             '//      &
+      print*,' Index,      coord,        name             Vector value                Value             '//      &
                   'Name        Unit   OutIndex     Value'
       DO I = 1,27
          ErrMsgTmp   =  ''
@@ -775,12 +782,12 @@ PROGRAM InflowWind_Driver
                            TRIM(Num2LStr(InflowWind_OtherState%WindViUVW(3,(I-1)/3+1)))//')'
 
          ENDIF
-         ErrMsgTmp   =  ErrMsgTmp(1:68)//TRIM(Num2LStr(InflowWind_OtherState%AllOuts(I)))
+         ErrMsgTmp   =  ErrMsgTmp(1:70)//TRIM(Num2LStr(InflowWind_OtherState%AllOuts(I)))
          DO J  = 1, InflowWind_p%NumOuts
             IF ( InflowWind_p%OutParam(J)%Indx == I ) THEN
-               ErrMsgTmp   =  ErrMsgTmp(1:88)//InflowWind_InitOut%WriteOutputHdr(J)//'  '//     &
+               ErrMsgTmp   =  ErrMsgTmp(1:90)//InflowWind_InitOut%WriteOutputHdr(J)//'  '//     &
                               InflowWind_InitOut%WriteOutputUnt(J)//TRIM(Num2LStr(J))
-               ErrMsgTmp   =  ErrMsgTmp(1:120)//TRIM(Num2LStr(InflowWind_y1%WriteOutput(J)))
+               ErrMsgTmp   =  ErrMsgTmp(1:122)//TRIM(Num2LStr(InflowWind_y1%WriteOutput(J)))
             ENDIF 
          ENDDO
          print*,TRIM(ErrMsgTmp)
