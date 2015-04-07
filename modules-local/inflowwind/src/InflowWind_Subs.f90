@@ -479,7 +479,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    END IF
 
       ! Read BladedStyle%WindFileName
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%Bladed_FileName, 'FileName', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%BladedFF_FileName, 'FileName', &
                'Name of the TurbSim full field wind file to use (.bts)', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
    IF (ErrStat >= AbortErrLev) THEN
@@ -488,7 +488,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    ENDIF
 
       ! Read TowerFileFlag
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%Bladed_TowerFile, 'TowerFileFlag', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%BladedFF_TowerFile, 'TowerFileFlag', &
                'Have tower file (.twr) [flag]', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_ReadInput')
    IF (ErrStat >= AbortErrLev) THEN
@@ -1047,9 +1047,9 @@ CONTAINS
       LOGICAL                                         :: TmpFileExist
 
          ! Check that the filename requested actually exists
-      INQUIRE( file=InputFileData%Bladed_FileName, exist=TmpFileExist )
+      INQUIRE( file=InputFileData%BladedFF_FileName, exist=TmpFileExist )
       IF ( .NOT. TmpFileExist ) THEN
-         CALL SetErrStat( ErrID_Fatal," Cannot find Bladed-style full-field wind input file: '"//TRIM(InputFileData%Bladed_FileName)//"'", &
+         CALL SetErrStat( ErrID_Fatal," Cannot find Bladed-style full-field wind input file: '"//TRIM(InputFileData%BladedFF_FileName)//"'", &
                ErrStat,ErrMsg,'BladedFF_ValidateInput')
       ENDIF
 
@@ -1370,16 +1370,16 @@ SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrS
 
 
 
-
-
+!FIXME: This entire section may get tossed out since nothing happens here.  Or should some of the magic in the Init routine move here?
+      ! Set and check some additional things
    SELECT CASE ( ParamData%WindType )
 
 
       CASE ( Steady_WindNumber )
-         CALL Steady_SetParameters()
+         ! Nothing to check here.  That gets handled in the Init routine
 
       CASE ( Uniform_WindNumber )
-         CALL Uniform_SetParameters()
+         ! Nothing to check here.  That gets handled in the Init routine
 
       CASE ( TSFF_WindNumber )
          CALL TSFF_SetParameters()
@@ -1406,21 +1406,15 @@ SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrS
 
 
 CONTAINS
-   SUBROUTINE Steady_SetParameters()
-      ! No parameters to set here.  This is done in the Uniform_Init routine.
-   END SUBROUTINE Steady_SetParameters
-
-   SUBROUTINE Uniform_SetParameters()
-      ! No parameters to set here.  This is done in the Uniform_Init routine.
-   END SUBROUTINE Uniform_SetParameters
 
    SUBROUTINE TSFF_SetParameters()
       CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'TSFF_SetParameters')
    END SUBROUTINE TSFF_SetParameters
 
    SUBROUTINE BladedFF_SetParameters()
+!FIXME:
 !Check the tower file status here.
-      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'BladedFF_SetParameters')
+!      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'BladedFF_SetParameters')
    END SUBROUTINE BladedFF_SetParameters
 
    SUBROUTINE HAWC_SetParameters()

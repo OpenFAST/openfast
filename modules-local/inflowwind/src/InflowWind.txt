@@ -11,9 +11,10 @@
 # keyword <InflowWind[/ModuleAbvr]> <TypeName>   <FieldType>    <FieldName>  <Dims>  <Ctrl> <DNAME> <DESCRIP> <UNITS>
 ###################################################################################################################################
 
-#usefrom IfW_FFWind.txt
 usefrom IfW_UniformWind.txt
-usefrom IfW_HAWCWind.txt
+usefrom IfW_TSFFWind.txt
+usefrom IfW_BladedFFWind.txt
+#usefrom IfW_HAWCWind.txt
 include Registry_NWTC_Library.txt
 
 
@@ -25,6 +26,28 @@ param    ^                       -                 IntKi             BladedFF_Wi
 param    ^                       -                 IntKi             HAWC_WindNumber      -     5     -     "HAWC wind file."                                                          -
 param    ^                       -                 IntKi             User_WindNumber      -     6     -     "User defined wind."                                                       -
 param    ^                       -                 IntKi             Highest_WindNumber   -     6     -     "Highest wind number supported."                                           -
+
+
+#########################
+# ..... WindFile metadata ........................................................................................................
+# This is metadata about the windfile that is retrieved when InflowWind is initialized
+# ................................................................................................................................
+typedef  InflowWind/InflowWind   WindFileMetaData  CHARACTER(1024)   FileName          -     -     -     "Name of the windfile retrieved"                         -
+typedef  ^                       ^                 IntKi             WindType          -     0     -     "Type of the windfile"                                   -
+typedef  ^                       ^                 ReKi              RefHt             -     -     -     "Reference height given in file"                         meters
+typedef  ^                       ^                 Logical           RefHt_Set         -     -     -     "Reference height was given in file"                     -
+typedef  ^                       ^                 DbKi              DT                -     -     -     "TimeStep of the wind file -- zero value for none"       seconds
+typedef  ^                       ^                 IntKi             NumTSteps         -     -     -     "Number of timesteps in the time range of wind file"     -
+typedef  ^                       ^                 Logical           ConstantDT        -     -     -     "Timesteps are the same throughout file"                 -
+typedef  ^                       ^                 ReKi              TRange            {2}   -     -     "Time range of the wind file"                            seconds
+typedef  ^                       ^                 Logical           TRange_Limited    -     -     -     "TRange limits strictly enforced"                        -
+typedef  ^                       ^                 ReKi              YRange            {2}   -     -     "Range in y direction"                                   meters
+typedef  ^                       ^                 Logical           YRange_Limited    -     -     -     "YRange limits strictly enforced"                        -
+typedef  ^                       ^                 ReKi              ZRange            {2}   -     -     "Range in z direction"                                   meters
+typedef  ^                       ^                 Logical           ZRange_Limited    -     -     -     "ZRange limits strictly enforced"                        -
+typedef  ^                       ^                 IntKi             BinaryFormat      -     -     -     "Binary format identifier"                               -
+typedef  ^                       ^                 Logical           IsBinary          -     -     -     "Windfile is a binary file"                              -
+
 
 
 #########################
@@ -45,8 +68,8 @@ typedef  ^                       ^                 CHARACTER(1024)   Uniform_Fil
 typedef  ^                       ^                 ReKi              Uniform_RefHt     -     -     -     "Uniform wind -- reference height"                       meters
 typedef  ^                       ^                 ReKi              Uniform_RefLength -     -     -     "Uniform wind -- reference length"                       meters
 typedef  ^                       ^                 CHARACTER(1024)   TSFF_FileName     -     -     -     "TurbSim Full-Field -- filename"                         -
-typedef  ^                       ^                 CHARACTER(1024)   Bladed_FileName   -     -     -     "Bladed-style Full-Field -- filename"                    -
-typedef  ^                       ^                 LOGICAL           Bladed_TowerFile  -     -     -     "Bladed-style Full-Field -- tower file exists"           -
+typedef  ^                       ^                 CHARACTER(1024)   BladedFF_FileName -     -     -     "Bladed-style Full-Field -- filename"                    -
+typedef  ^                       ^                 LOGICAL           BladedFF_TowerFile -    -     -     "Bladed-style Full-Field -- tower file exists"           -
 typedef  ^                       ^                 LOGICAL           CTTS_CoherentTurb -     -     -     "Coherent turbulence data exists"                        -
 typedef  ^                       ^                 CHARACTER(1024)   CTTS_FileName     -     -     -     "Name of coherent turbulence file"                       -
 typedef  ^                       ^                 CHARACTER(1024)   CTTS_Path         -     -     -     "Path to coherent turbulence binary data files"          -
@@ -97,19 +120,23 @@ typedef  ^                       ^                 CHARACTER(10)     WriteOutput
 typedef  ^                       ^                 ProgDesc          Ver               -     -     -     "Version information of InflowWind module"               -
 typedef  ^                       ^                 ReKi              HubHeight         -     -     -     "Height of the hub in the file"                          meters
 typedef  ^                       ^    IfW_UniformWind_InitOutputType UniformWind       -     -     -     "UniformWind InitOutput info"                            -
-#typedef  ^                       ^        IfW_FFWind_InitOutputType FFWind            -     -     -     "FFWind InitOutput info"                                 -
+typedef  ^                       ^       IfW_TSFFWind_InitOutputType TSFFWind          -     -     -     "TSFFWind InitOutput info"                               -
+typedef  ^                       ^   IfW_BladedFFWind_InitOutputType BladedFFWind      -     -     -     "BladedFFWind InitOutput info"                           -
+typedef  ^                       ^                 WindFileMetaData  WindFileInfo      -     -     -     "Meta data from the wind file"                           -
+
 typedef  ^                       ^                 DbKi              WindFileDT        -     -     -     "TimeStep of the wind file -- zero value for none"       -
 typedef  ^                       ^                 ReKi              WindFileTRange    {2}   -     -     "Time range of the wind file"                            -
 typedef  ^                       ^                 IntKi             WindFileNumTSteps -     -     -     "Number of timesteps in the time range of wind file"     -
-typedef  ^                       ^                 LOGICAL           WindFileConstantDT -     -     -     "Timesteps are the same throughout file"                 -
+typedef  ^                       ^                 LOGICAL           WindFileConstantDT -     -     -     "Timesteps are the same throughout file"                -
 
 
 # Define any data that are not considered actual states here:
 #   e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 #   at a given time, etc.)
 typedef  ^                       OtherStateType    IntKi             TimeIndex         -     0     -     "An Index into the TData array"                          -
-typedef  ^                       ^      IfW_UniformWind_OtherStateType    UniformWind            -     -     -     "OtherStates from UniformWind"                 -
-#typedef  ^                       ^      IfW_FFWind_OtherStateType    FFWind            -     -     -     "OtherStates from FFWind"                                -
+typedef  ^                       ^   IfW_UniformWind_OtherStateType  UniformWind            -     -     -     "OtherStates from UniformWind"                 -
+typedef  ^                       ^      IfW_TSFFWind_OtherStateType  TSFFWind          -     -     -     "OtherStates from TSFFWind"                              -
+typedef  ^                       ^  IfW_BladedFFWind_OtherStateType  BladedFFWind      -     -     -     "OtherStates from BladedFFWind"                          -
 typedef  ^                       ^                 ReKi              AllOuts           :     -     -     "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
 typedef  ^                       ^                 ReKi              WindViUVW         ::    -     -     "List of UVW velocities for wind velocity measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ"  meters/second
 
@@ -142,8 +169,8 @@ typedef  ^                       ^                 ReKi              HalfWidth  
 typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points in the wind velocity list"             -
 typedef  ^                       ^                 ReKi              WindViXYZ         ::    -     -     "List of XYZ coordinates for wind velocity measurements, 3xNWindVel" meters
 typedef  ^                       ^     IfW_UniformWind_ParameterType UniformWind       -     -     -     "Parameters from UniformWind"                            -
-#typedef  ^                       ^        IfW_TSFFWind_ParameterType TSFFWind          -     -     -     "Parameters from TSFFWind -- TurbSim full-field format"  -
-#typedef  ^                       ^    IfW_BladedFFWind_ParameterType BladedFFWind      -     -     -     "Parameters from BladedFFWind -- Bladed-style full-field format"  -
+typedef  ^                       ^        IfW_TSFFWind_ParameterType TSFFWind          -     -     -     "Parameters from TSFFWind -- TurbSim full-field format"  -
+typedef  ^                       ^    IfW_BladedFFWind_ParameterType BladedFFWind      -     -     -     "Parameters from BladedFFWind -- Bladed-style full-field format"  -
 #typedef  ^                       ^        IfW_HAWCWind_ParameterType HAWCWind          -     -     -     "Parameters from HAWCWind"                               -
 #typedef  ^                       ^        IfW_UserWind_ParameterType UserWind          -     -     -     "Parameters from UserWind"                               -
 #typedef  ^                       ^          IfW_CTWind_ParameterType CTWind            -     -     -     "Parameters from CTWind"                                 -
