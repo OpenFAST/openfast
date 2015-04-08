@@ -246,11 +246,15 @@ gotit:
       if ( tokens[i][0] == '"' ) tokens[i]++ ;
       if ((pp=rindex( tokens[i], '"' )) != NULL ) *pp = '\0' ;
     }
-    for ( p = parseline_save ; ( *p == ' ' || *p == '\t') && *p != '\0' ; p++ ) ;
-    strcpy(parseline_save,p) ;  // get rid of leading spaces
+
+
+    i = 0;
+    for (p = parseline_save; (*p == ' ' || *p == '\t') && *p != '\0'; p++) i++; 
+    if (i>0) strcpy(parseline_save,p) ;  // get rid of leading spaces
+
     if      ( !strncmp( parseline_save , "typedef", 7 ) )
     {
-        char tmp[NAMELEN], *x ;
+       char tmp[PARSELINE_SIZE], *x;
         strcpy( tmp, parseline_save ) ;
         x = strpbrk(tmp," \t"); // find the first space or tab
         if (usefrom_sw && x ) {
