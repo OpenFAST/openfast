@@ -12,3 +12,4 @@ docs\FEAM_Guide.pdf
 
 compiling\VisualStudio\FEAM_Driver.vfproj
 
+CertTest\*.dat
