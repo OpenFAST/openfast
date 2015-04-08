@@ -228,9 +228,23 @@ gotit:
     for ( i = 0 ; i < MAXTOKENS ; i++ ) tokens[i] = NULL ;
     i = 0 ;
 
-    strcpy( parseline_save, parseline ) ;
-//fprintf(stderr,"parseline_save |%s|\n",parseline_save) ;
+    // get parsline_save, the value written to the output file...
+    //fprintf(stderr,"parseline_save |%s|\n",parseline_save) ;
+    //strcpy(parseline_save, parseline);
+    for (p = parseline; (*p == ' ' || *p == '\t') && *p != '\0'; p++);
+    strcpy(parseline_save, p);  // get rid of leading spaces
 
+    if (!strncmp(parseline_save, "typedef", 7))
+    {
+       char tmp[PARSELINE_SIZE], *x;
+       strcpy(tmp, parseline_save);
+       x = strpbrk(tmp, " \t"); // find the first space or tab
+       if (usefrom_sw && x) {
+          sprintf(parseline_save, "usefrom %s", x);
+       }
+    }
+
+    // parse tokens from parseline
     if ((tokens[i] = my_strtok(parseline)) != NULL ) i++ ;
     while (( tokens[i] = my_strtok(NULL) ) != NULL && i < MAXTOKENS ) i++ ;
     if ( i <= 0 ) continue ;
@@ -239,6 +253,7 @@ gotit:
     {
       if ( tokens[i] == NULL ) tokens[i] = "-" ;
     }
+
 /* remove quotes from quoted entries */
     for ( i = 0 ; i < MAXTOKENS ; i++ )
     {
@@ -248,19 +263,7 @@ gotit:
     }
 
 
-    i = 0;
-    for (p = parseline_save; (*p == ' ' || *p == '\t') && *p != '\0'; p++) i++; 
-    if (i>0) strcpy(parseline_save,p) ;  // get rid of leading spaces
 
-    if      ( !strncmp( parseline_save , "typedef", 7 ) )
-    {
-       char tmp[PARSELINE_SIZE], *x;
-        strcpy( tmp, parseline_save ) ;
-        x = strpbrk(tmp," \t"); // find the first space or tab
-        if (usefrom_sw && x ) {
-          sprintf( parseline_save, "usefrom %s", x ) ;
-        }
-    }
 normal:
     /* otherwise output the line as is */
     fprintf(outfile,"%s\n",parseline_save) ;
