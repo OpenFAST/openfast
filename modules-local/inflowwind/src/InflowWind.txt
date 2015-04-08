@@ -124,11 +124,6 @@ typedef  ^                       ^       IfW_TSFFWind_InitOutputType TSFFWind   
 typedef  ^                       ^   IfW_BladedFFWind_InitOutputType BladedFFWind      -     -     -     "BladedFFWind InitOutput info"                           -
 typedef  ^                       ^                 WindFileMetaData  WindFileInfo      -     -     -     "Meta data from the wind file"                           -
 
-typedef  ^                       ^                 DbKi              WindFileDT        -     -     -     "TimeStep of the wind file -- zero value for none"       -
-typedef  ^                       ^                 ReKi              WindFileTRange    {2}   -     -     "Time range of the wind file"                            -
-typedef  ^                       ^                 IntKi             WindFileNumTSteps -     -     -     "Number of timesteps in the time range of wind file"     -
-typedef  ^                       ^                 LOGICAL           WindFileConstantDT -     -     -     "Timesteps are the same throughout file"                -
-
 
 # Define any data that are not considered actual states here:
 #   e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
