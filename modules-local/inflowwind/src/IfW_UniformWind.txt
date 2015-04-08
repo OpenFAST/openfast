@@ -56,11 +56,6 @@ typedef  ^                       ^                       IntKi    NumDataLines  
 
 
 
-# ..... Inputs ....................................................................................................................
-#  Does not follow the Framework specification.
-typedef  ^                    InputType                  ReKi     DummyInput        -     -     -     "Dummy placeholder to fullfill the framework requirements"      meters
-
-
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef  ^                    OutputType                 ReKi     Velocity          ::    -     -     "Array holding the U,V,W velocity for a given timestep"        meters/sec

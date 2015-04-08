@@ -14,7 +14,7 @@
 usefrom IfW_UniformWind.txt
 usefrom IfW_TSFFWind.txt
 usefrom IfW_BladedFFWind.txt
-#usefrom IfW_HAWCWind.txt
+usefrom IfW_HAWCWind.txt
 include Registry_NWTC_Library.txt
 
 
@@ -122,6 +122,7 @@ typedef  ^                       ^                 ReKi              HubHeight  
 typedef  ^                       ^    IfW_UniformWind_InitOutputType UniformWind       -     -     -     "UniformWind InitOutput info"                            -
 typedef  ^                       ^       IfW_TSFFWind_InitOutputType TSFFWind          -     -     -     "TSFFWind InitOutput info"                               -
 typedef  ^                       ^   IfW_BladedFFWind_InitOutputType BladedFFWind      -     -     -     "BladedFFWind InitOutput info"                           -
+typedef  ^                       ^   IfW_HAWCWind_InitOutputType HAWCWind      -     -     -     "HAWCWind InitOutput info"                           -
 typedef  ^                       ^                 WindFileMetaData  WindFileInfo      -     -     -     "Meta data from the wind file"                           -
 
 

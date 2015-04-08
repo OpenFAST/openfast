@@ -17,14 +17,10 @@ include Registry_NWTC_Library.txt
 #########################
 
 typedef  IfW_TSFFWind/IfW_TSFFWind   InitInputType   CHARACTER(1024)  WindFileName      -     -     -     "Name of the wind file to use"                                 -
-typedef  ^                       ^                       ReKi     ReferenceHeight   -     -     -     "Hub height of the turbine"                                    meters
-typedef  ^                       ^                       ReKi     Width             -     -     -     "Width of the wind field to use"                               meters
 
 
 # Init Output
-typedef  ^                       InitOutputType  CHARACTER(10)    WriteOutputHdr    :     -     -     "Names of output-to-file channels"                             -
-typedef  ^                       ^               CHARACTER(10)    WriteOutputUnt    :     -     -     "Units of output-to-file channels"                             -
-typedef  ^                       ^                    ProgDesc    Ver               -     -     -     "Version information off FFWind submodule"                     -
+typedef  ^                       InitOutputType       ProgDesc    Ver               -     -     -     "Version information off FFWind submodule"                     -
 typedef  ^                       ^                       ReKi     HubHeight         -     -     -     "Height of the hub"                                            meters
 
 
@@ -32,15 +28,15 @@ typedef  ^                       ^                       ReKi     HubHeight     
 #   e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 #   at a given time, etc.)
 typedef  ^                       OtherStateType          IntKi    TimeIndex         -     0     -     "An Index into the TData array"                                -
+typedef  ^                       ^                       Logical  Initialized       -  .FALSE.  -     "Flag to indicate if the module was initialized"               -
 typedef  ^                       ^                       IntKi    UnitWind          -     -     -     "Unit number for the wind file opened"                         -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef  ^                    ParameterType       CHARACTER(1024) WindFileName      -     -     -     "Name of the wind file to use"                                 -
-typedef  ^                       ^                       Logical  Initialized       -  .FALSE.  -     "Flag to indicate if the module was initialized"               -
-typedef  ^                       ^                       ReKi     ReferenceHeight   -     -     -     "Height of the hub"                                            meters
-typedef  ^                       ^                       ReKi     Width             -     -     -     "Width of the wind field"                                      meters
+#typedef  ^                       ^                       ReKi     ReferenceHeight   -     -     -     "Height of the hub"                                            meters
+#typedef  ^                       ^                       ReKi     Width             -     -     -     "Width of the wind field"                                      meters
 typedef  ^                       ^                       DbKi     DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
 
 typedef  ^                       ^                       Logical  Periodic          -  .FALSE.  -     "Flag to indicate if the wind file is periodic"                -
@@ -64,20 +60,12 @@ typedef  ^                       ^                       IntKi    NFFSteps      
 typedef  ^                       ^                       IntKi    NYGrids           -     0     -     "Number of points in the lateral (y) direction of the grids"   -
 typedef  ^                       ^                       IntKi    NZGrids           -     0     -     "Number of points in the vertical (z) direction of the grids"  -
 typedef  ^                       ^                       IntKi    NTGrids           -     0     -     "Number of points in the vertical (z) direction on the tower (below the grids)"  -
+typedef  ^                       ^                       IntKi    WindFileFormat    -     -     -     "Binary file format description number"                        -
 
-
-# ..... Inputs ....................................................................................................................
-# Define inputs that are not on this mesh here:
-typedef  ^                    InputType                  ReKi     Position          ::    -     -     "Array holding the input positions at a given timestep"        meters
 
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef  ^                    OutputType                 ReKi     Velocity          ::    -     -     "Array holding the U,V,W velocity for a given timestep"        meters/sec
+typedef  ^                    ^                          ReKi     DiskVel           {3}   -     -     "Vector holding the U,V,W average velocity of the disk"        meters/sec
 
-
-
-# ..... States not used by this module ...................................................................................................................
-typedef  ^                    ContinuousStateType        ReKi     DummyContState    -     -     -     "Remove this variable if you have continuous states"           -
-typedef  ^                    DiscreteStateType          ReKi     DummyDiscState    -     -     -     "Remove this variable if you have discrete states"             -
-typedef  ^                    ConstraintStateType        ReKi     DummyConstrState  -     -     -     "Remove this variable if you have constraint states"           -

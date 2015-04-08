@@ -83,6 +83,11 @@ CONTAINS
 SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, OutData, Interval, InitOutData, ErrStat, ErrMsg)
 
 
+   IMPLICIT                                                       NONE
+
+   CHARACTER(*),           PARAMETER                           :: RoutineName="IfW_UniformWind_Init"
+
+
       ! Passed Variables
    TYPE(IfW_UniformWind_InitInputType),         INTENT(IN   )  :: InitData          ! Input data for initialization
    REAL(ReKi),       ALLOCATABLE,               INTENT(INOUT)  :: PositionXYZ(:,:)  ! Array of positions to find wind speed at
@@ -136,7 +141,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    IF ( .NOT. ALLOCATED(PositionXYZ) ) THEN
       CALL AllocAry( PositionXYZ, 3, 1, &
                   'Empty position array in initialization.', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    ENDIF
    PositionXYZ(:,1)      = 0.0
@@ -145,7 +150,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    IF ( .NOT. ALLOCATED(OutData%Velocity) ) THEN
       CALL AllocAry( OutData%Velocity, 3, 1, &
                   'Empty velocity array in initialization.', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    ENDIF
    OutData%Velocity(:,1)         = 0.0
@@ -157,7 +162,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       !-------------------------------------------------------------------------------------------------
 
    IF ( OtherStates%TimeIndex /= 0 ) THEN
-      CALL SetErrStat(ErrID_Warn,' UniformWind has already been initialized.',ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(ErrID_Warn,' UniformWind has already been initialized.',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
 
@@ -165,7 +170,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       ! Get a unit number to use
 
    CALL GetNewUnit(OtherStates%UnitWind, TmpErrStat, TmpErrMsg)
-   CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+   CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    IF (ErrStat >= AbortErrLev) RETURN
 
 
@@ -183,7 +188,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       !-------------------------------------------------------------------------------------------------
 
    CALL OpenFInpFile (OtherStates%UnitWind, TRIM(InitData%WindFileName), TmpErrStat, TmpErrMsg)
-   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    IF ( ErrStat >= AbortErrLev ) RETURN
 
 
@@ -201,7 +206,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
 
       IF ( TmpErrStat /=0 ) THEN
          CALL SetErrStat(ErrID_Fatal,' Error reading from uniform wind file on line '//TRIM(Num2LStr(NumComments))//'.',   &
-               ErrStat, ErrMsg, 'IfW_UniformWind_Init')
+               ErrStat, ErrMsg, RoutineName)
          RETURN
       END IF
 
@@ -227,7 +232,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    IF (ParamData%NumDataLines < 1) THEN
       TmpErrMsg=  ' Error reading data from Uniform wind file on line '// &
                   TRIM(Num2LStr(1+NumComments))//'.'
-      CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
 
@@ -242,49 +247,49 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
 
    IF (.NOT. ALLOCATED(ParamData%Tdata) ) THEN
       CALL AllocAry( ParamData%Tdata, ParamData%NumDataLines, 'Uniform wind time', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%V) ) THEN
       CALL AllocAry( ParamData%V, ParamData%NumDataLines, 'Uniform wind horizontal wind speed', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%Delta) ) THEN
       CALL AllocAry( ParamData%Delta, ParamData%NumDataLines, 'Uniform wind direction', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%VZ) ) THEN
       CALL AllocAry( ParamData%VZ, ParamData%NumDataLines, 'Uniform vertical wind speed', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%HShr) ) THEN
       CALL AllocAry( ParamData%HShr, ParamData%NumDataLines, 'Uniform horizontal linear shear', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%VShr) ) THEN
       CALL AllocAry( ParamData%VShr, ParamData%NumDataLines, 'Uniform vertical power-law shear exponent', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%VLinShr) ) THEN
       CALL AllocAry( ParamData%VLinShr, ParamData%NumDataLines, 'Uniform vertical linear shear', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%VGust) ) THEN
       CALL AllocAry( ParamData%VGust, ParamData%NumDataLines, 'Uniform gust velocity', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    END IF
 
@@ -297,7 +302,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
 
    DO I=1,NumComments
       CALL ReadCom( OtherStates%UnitWind, TRIM(InitData%WindFileName), 'Header line #'//TRIM(Num2LStr(I)), TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    END DO !I
 
@@ -311,7 +316,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       CALL ReadAry( OtherStates%UnitWind, TRIM(InitData%WindFileName), TmpData(1:NumCols), NumCols, 'TmpData', &
                 'Data from uniform wind file line '//TRIM(Num2LStr(NumComments+I)), TmpErrStat, TmpErrMsg)
       CALL SetErrStat(TmpErrStat,'Error retrieving data from the uniform wind file line'//TRIM(Num2LStr(NumComments+I)),   &
-            ErrStat,ErrMsg,'IfW_UniformWind_Init')
+            ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ParamData%Tdata(  I) = TmpData(1)
@@ -351,7 +356,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
          TmpErrMsg= ' Error calculating wind direction from uniform wind file. ParamData%Delta(' &
                // TRIM(Num2LStr(I  )) // ') = ' // TRIM(Num2LStr(ParamData%Delta(I))) // '; ParamData%Delta(' &
                // TRIM(Num2LStr(I+1)) // ') = ' // TRIM(Num2LStr(ParamData%Delta(I+1)))
-         CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+         CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       END IF
 
 
@@ -413,13 +418,13 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    IF ( ParamData%Tdata(1) > 0.0 ) THEN
       TmpErrMsg=  'The uniform wind file : "'//TRIM(ADJUSTL(InitData%WindFileName))// &
                   '" starts at a time '//'greater than zero. Interpolation errors may result.'
-      CALL SetErrStat(ErrID_Warn,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(ErrID_Warn,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    ENDIF
 
    IF ( ParamData%NumDataLines == 1 ) THEN
       TmpErrMsg=  ' Only 1 line in uniform wind file. Steady, horizontal wind speed at the hub height is '// &
                   TRIM(Num2LStr(ParamData%V(1)))//' m/s.'
-      CALL SetErrStat(ErrID_Info,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_Init')
+      CALL SetErrStat(ErrID_Info,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    END IF
 
 
@@ -455,7 +460,10 @@ END SUBROUTINE IfW_UniformWind_Init
 !-------------------------------------------------------------------------------------------------
 SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates, OutData, ErrStat, ErrMsg)
 
-   IMPLICIT                                                 NONE
+   IMPLICIT                                                       NONE
+
+   CHARACTER(*),           PARAMETER                           :: RoutineName="IfW_UniformWind_CalcOutput"
+
 
       ! Passed Variables
    REAL(DbKi),                                  INTENT(IN   )  :: Time              ! time from the start of the simulation
@@ -497,12 +505,12 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,
       ! Allocate Velocity output array
    IF ( .NOT. ALLOCATED(OutData%Velocity)) THEN
       CALL AllocAry( OutData%Velocity, 3, NumPoints, "Velocity matrix at timestep", TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,"IfW_UniformWind:CalcOutput -- Could not allocate the output velocity array.",   &
-         ErrStat,ErrMsg,'IfW_UniformWind_CalcOutput')
+      CALL SetErrStat(TmpErrStat," Could not allocate the output velocity array.",   &
+         ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    ELSEIF ( SIZE(OutData%Velocity,DIM=2) /= NumPoints ) THEN
       CALL SetErrStat( ErrID_Fatal," Programming error: Position and Velocity arrays are not sized the same.",  &
-         ErrStat, ErrMsg, ' IfW_UniformWind_CalcOutput')
+         ErrStat, ErrMsg, RoutineName)
       RETURN
    ENDIF
 
@@ -514,13 +522,13 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,
       OutData%Velocity(:,PointNum) = GetWindSpeed(Time, PositionXYZ(:,PointNum), ParamData, OtherStates, TmpErrStat, TmpErrMsg)
 
          ! Error handling
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_CalcOutput')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
-         TmpErrMsg=  "IfW_UniformWind:CalcOutput -- Error calculating the wind speed at position ("//   &
+         TmpErrMsg=  " Error calculating the wind speed at position ("//   &
                      TRIM(Num2LStr(PositionXYZ(1,PointNum)))//", "// &
                      TRIM(Num2LStr(PositionXYZ(2,PointNum)))//", "// &
-                     TRIM(Num2LStr(PositionXYZ(3,PointNum)))//")"
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_UniformWind_CalcOutput')
+                     TRIM(Num2LStr(PositionXYZ(3,PointNum)))//") in the wind-file coordinates"
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          RETURN
       ENDIF
 
@@ -792,6 +800,11 @@ END SUBROUTINE IfW_UniformWind_CalcOutput
 SUBROUTINE IfW_UniformWind_End( PositionXYZ, ParamData, OtherStates, OutData, ErrStat, ErrMsg)
 
 
+   IMPLICIT                                                       NONE
+
+   CHARACTER(*),           PARAMETER                           :: RoutineName="IfW_UniformWind_End"
+
+
       ! Passed Variables
    REAL(ReKi),    ALLOCATABLE,                  INTENT(INOUT)  :: PositionXYZ(:,:)  ! Array of XYZ positions to find wind speeds at
    TYPE(IfW_UniformWind_ParameterType),         INTENT(INOUT)  :: ParamData         ! Parameters
@@ -823,19 +836,19 @@ SUBROUTINE IfW_UniformWind_End( PositionXYZ, ParamData, OtherStates, OutData, Er
       ! Destroy parameter data
 
    CALL IfW_UniformWind_DestroyParam(       ParamData,     TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_UniformWind_End' )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 
 
       ! Destroy the state data
 
    CALL IfW_UniformWind_DestroyOtherState(  OtherStates,   TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_UniformWind_End' )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 
 
       ! Destroy the output data
 
    CALL IfW_UniformWind_DestroyOutput(      OutData,       TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_UniformWind_End' )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 
 
       ! reset time index so we know the module is no longer initialized
