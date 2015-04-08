@@ -488,12 +488,12 @@ PROGRAM InflowWind_Driver
       !  since IfW doesn't care what the timestep is.
 
    IF ( SettingsFlags%DTDefault ) THEN
-      IF ( InflowWind_InitOut%WindFileConstantDT ) THEN
-         Settings%DT =  InflowWind_InitOut%WindFileDT
+      IF ( InflowWind_InitOut%WindFileInfo%ConstantDT ) THEN
+         Settings%DT =  InflowWind_InitOut%WindFileInfo%DT
 
          IF ( IfWDriver_Verbose >= 5 ) CALL WrScr(' DEFAULT requested for DT. Setting to '//TRIM(Num2LStr(Settings%DT))//' as given in the wind file.')
 
-      ELSE IF ( InflowWind_InitOut%WindFileNumTSteps <= 1 ) THEN
+      ELSE IF ( InflowWind_InitOut%WindFileInfo%NumTSteps <= 1 ) THEN
 
          Settings%DT =  0.0_ReKi
 
@@ -512,17 +512,17 @@ PROGRAM InflowWind_Driver
    IF ( SettingsFlags%NumTimeStepsDefault ) THEN
 
          ! Set the value to the number of timesteps given in the file
-      Settings%NumTimeSteps   =  InflowWind_InitOut%WindFileNumTSteps
+      Settings%NumTimeSteps   =  InflowWind_InitOut%WindFileInfo%NumTSteps
 
          ! Tell user what we set the number of timesteps to
       IF ( IfWDriver_Verbose >= 7 ) CALL WrScr(' DEFAULT requested for NumTSteps. Setting to '//TRIM(Num2LStr(Settings%NumTimeSteps))//' as given in the wind file.')
 
-         ! Reduce to an integer number of timesteps for the given DT and time range in the file
-      IF ( (Settings%NumTimeSteps * Settings%DT) > (InflowWind_InitOut%WindFileTRange(2) - InflowWind_InitOut%WindFileTRange(1)) ) THEN
+         ! Reduce to an integer number of timesteps for the given DT and time we are giving results for
+      IF ( (Settings%NumTimeSteps * Settings%DT) > (InflowWind_InitOut%WindFileInfo%TRange(2) - Settings%TStart) ) THEN
 
             ! Set the value.  Add 1 to get the first data point
          IF ( Settings%DT > 0.0_DbKi ) THEN
-            Settings%NumTimeSteps = FLOOR( (InflowWind_InitOut%WindFileTRange(2) - InflowWind_InitOut%WindFileTRange(1))/Settings%DT) + 1_IntKi
+            Settings%NumTimeSteps = FLOOR( (InflowWind_InitOut%WindFileInfo%TRange(2) - Settings%TStart)/Settings%DT) + 1_IntKi
          ELSE
             Settings%NumTimeSteps   =  1_IntKi
          ENDIF
@@ -563,10 +563,10 @@ PROGRAM InflowWind_Driver
 
    ELSE
 
-         ! We are going to set the WindGrid with only a single point so that we can calculate something
-      InflowWind_u1%PositionXYZ(1,1)  =  0.0_ReKi     ! X
-      InflowWind_u1%PositionXYZ(2,1)  =  0.0_ReKi     ! Y
-      InflowWind_u1%PositionXYZ(3,1)  = 20.0_ReKi     ! Z
+         ! We are going to set the WindGrid with only a single point at the RefHt so that we can calculate something
+      InflowWind_u1%PositionXYZ(1,1)  =  0.0_ReKi                                ! X
+      InflowWind_u1%PositionXYZ(2,1)  =  0.0_ReKi                                ! Y
+      InflowWind_u1%PositionXYZ(3,1)  =  InflowWind_InitOut%WindFileInfo%RefHt   ! Z
 
    ENDIF
 

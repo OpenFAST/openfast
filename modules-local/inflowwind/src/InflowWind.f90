@@ -390,14 +390,25 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             ParamData%UniformWind%RefHt            =  InputFileData%Steady_RefHt
             OtherStates%UniformWind%TimeIndex      =  1_IntKi
 
-!FIXME: store the wind file metadata
-               ! Output reporting data
-            InitOutData%HubHeight                  =  InputFileData%Steady_RefHt
-            InitOutData%WindFileConstantDT         =  .FALSE.
-            InitOutData%WindFileDT                 =  0.0_ReKi
-            InitOutData%WindFileTRange             =  (/ 0.0_ReKi, 0.0_ReKi /)
-            InitOutData%WindFileNumTSteps          =  1_IntKi
-       
+
+               ! Store wind file metadata
+            InitOutData%WindFileInfo%FileName         =  ""
+            InitOutData%WindFileInfo%WindType         =  Steady_WindNumber
+            InitOutData%WindFileInfo%RefHt            =  InputFileData%Steady_RefHt
+            InitOutData%WindFileInfo%RefHt_Set        =  .FALSE.                             ! The wind file does not set this
+            InitOutData%WindFileInfo%DT               =  0.0_ReKi
+            InitOutData%WindFileInfo%NumTSteps        =  1_IntKi
+            InitOutData%WindFileInfo%ConstantDT       =  .FALSE.
+            InitOutData%WindFileInfo%TRange           =  (/ 0.0_ReKi, 0.0_ReKi /)
+            InitOutData%WindFileInfo%TRange_Limited   =  .FALSE.                             ! This is constant
+            InitOutData%WindFileInfo%YRange           =  (/ 0.0_ReKi, 0.0_ReKi /)
+            InitOutData%WindFileInfo%YRange_Limited   =  .FALSE.                             ! Hard boundaries not enforced in y-direction
+            InitOutData%WindFileInfo%ZRange           =  (/ 0.0_ReKi, 0.0_ReKi /)
+            InitOutData%WindFileInfo%ZRange_Limited   =  .FALSE.                             ! Hard boundaries not enforced in z-direction
+            InitOutData%WindFileInfo%BinaryFormat     =  0_IntKi
+            InitOutData%WindFileInfo%IsBinary         =  .FALSE.
+
+      
 
 
 
@@ -416,13 +427,23 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             IF ( ErrStat >= AbortErrLev ) RETURN
 
 
+               ! Store wind file metadata
+            InitOutData%WindFileInfo%FileName         =  InputFileData%Uniform_FileName
+            InitOutData%WindFileInfo%WindType         =  Uniform_WindNumber
+            InitOutData%WindFileInfo%RefHt            =  ParamData%UniformWind%RefHt
+            InitOutData%WindFileInfo%RefHt_Set        =  .FALSE.                             ! The wind file does not set this
+            InitOutData%WindFileInfo%DT               =  InitOutData%UniformWind%WindFileDT
+            InitOutData%WindFileInfo%NumTSteps        =  InitOutData%UniformWind%WindFileNumTSteps
+            InitOutData%WindFileInfo%ConstantDT       =  InitOutData%UniformWind%WindFileConstantDT
+            InitOutData%WindFileInfo%TRange           =  InitOutData%UniformWind%WindFileTRange
+            InitOutData%WindFileInfo%TRange_Limited   = .FALSE.                              ! UniformWind sets to limit of file if outside time bounds
+            InitOutData%WindFileInfo%YRange           =  (/ 0.0_ReKi, 0.0_ReKi /)
+            InitOutData%WindFileInfo%YRange_Limited   =  .FALSE.                             ! Hard boundaries not enforced in y-direction
+            InitOutData%WindFileInfo%ZRange           =  (/ 0.0_ReKi, 0.0_ReKi /)
+            InitOutData%WindFileInfo%ZRange_Limited   =  .FALSE.                             ! Hard boundaries not enforced in z-direction
+            InitOutData%WindFileInfo%BinaryFormat     =  0_IntKi
+            InitOutData%WindFileInfo%IsBinary         =  .FALSE.
 
-!FIXME: store the wind file metadata
-               ! Timestep information
-            InitOutData%WindFileConstantDT=  InitOutData%UniformWind%WindFileConstantDT
-            InitOutData%WindFileDT        =  InitOutData%UniformWind%WindFileDT
-            InitOutData%WindFileTRange    =  InitOutData%UniformWind%WindFileTRange
-            InitOutData%WindFileNumTSteps =  InitOutData%UniformWind%WindFileNumTSteps
 
                ! Check if the fist data point from the file is not along the X-axis while applying the windfield rotation
             IF ( ( .NOT. EqualRealNos (ParamData%UniformWind%Delta(1), 0.0_ReKi) ) .AND.  &
@@ -462,8 +483,14 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             InitOutData%WindFileInfo%DT               =  ParamData%BladedFFWind%FFDTime
             InitOutData%WindFileInfo%NumTSteps        =  ParamData%BladedFFWind%NFFSteps
             InitOutData%WindFileInfo%ConstantDT       =  .TRUE.
-            InitOutData%WindFileInfo%TRange           =  (/ 0.0_ReKi, ParamData%BladedFFWind%TotalTime /)
-            InitOutData%WindFileInfo%TRange_Limited   =  .NOT. ParamData%BladedFFWind%Periodic                    ! If periodic, no hard time limit
+            IF ( ParamData%BladedFFWind%Periodic ) THEN
+               InitOutData%WindFileInfo%TRange           =  (/ 0.0_ReKi, ParamData%BladedFFWind%TotalTime /)
+               InitOutData%WindFileInfo%TRange_Limited   =  .FALSE.
+            ELSE  ! Shift the time range to compensate for the shifting of the wind grid
+               InitOutData%WindFileInfo%TRange           =  (/ 0.0_ReKi, ParamData%BladedFFWind%TotalTime /)  &
+                  -  ParamData%BladedFFWind%InitXPosition*ParamData%BladedFFWind%InvMFFWS
+               InitOutData%WindFileInfo%TRange_Limited   =  .TRUE.
+            ENDIF
             InitOutData%WindFileInfo%YRange           =  (/ -ParamData%BladedFFWind%FFYHWid, ParamData%BladedFFWind%FFYHWid /)
             InitOutData%WindFileInfo%YRange_Limited   =  .TRUE.      ! Hard boundaries enforced in y-direction
             IF ( ParamData%BladedFFWind%TowerDataExist ) THEN        ! have tower data

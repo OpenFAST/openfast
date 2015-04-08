@@ -1368,67 +1368,6 @@ SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrS
       ParamData%WindViXYZprime(:,I) =  MATMUL( ParamData%RotToWind, ParamData%WindViXYZ(:,I) )
    ENDDO
 
-
-
-!FIXME: This entire section may get tossed out since nothing happens here.  Or should some of the magic in the Init routine move here?
-      ! Set and check some additional things
-   SELECT CASE ( ParamData%WindType )
-
-
-      CASE ( Steady_WindNumber )
-         ! Nothing to check here.  That gets handled in the Init routine
-
-      CASE ( Uniform_WindNumber )
-         ! Nothing to check here.  That gets handled in the Init routine
-
-      CASE ( TSFF_WindNumber )
-         CALL TSFF_SetParameters()
-
-      CASE ( BladedFF_WindNumber )
-         CALL BladedFF_SetParameters()
-
-      CASE ( HAWC_WindNumber )
-         CALL HAWC_SetParameters()
-
-      CASE ( User_WindNumber )
-         CALL User_SetParameters()
-
-      CASE DEFAULT  ! keep this check to make sure that all new wind types have been accounted for
-         CALL SetErrStat(ErrID_Fatal,' Undefined wind type.',ErrStat,ErrMsg,'InflowWind_SetParameters')
-
-   END SELECT
-
-
-   IF ( InputFileData%CTTS_CoherentTurb ) THEN
-      CALL CTTS_SetParameters()
-   ENDIF
-
-
-
-CONTAINS
-
-   SUBROUTINE TSFF_SetParameters()
-      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'TSFF_SetParameters')
-   END SUBROUTINE TSFF_SetParameters
-
-   SUBROUTINE BladedFF_SetParameters()
-!FIXME:
-!Check the tower file status here.
-!      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'BladedFF_SetParameters')
-   END SUBROUTINE BladedFF_SetParameters
-
-   SUBROUTINE HAWC_SetParameters()
-      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'HAWC_SetParameters')
-   END SUBROUTINE HAWC_SetParameters
-
-   SUBROUTINE User_SetParameters()
-      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'User_SetParameters')
-   END SUBROUTINE User_SetParameters
-
-   SUBROUTINE CTTS_SetParameters()
-      CALL SetErrStat(ErrID_Warn,' This subroutine has not been written yet.',ErrStat,ErrMsg,'CTTS_SetParameters')
-   END SUBROUTINE CTTS_SetParameters
-
 END SUBROUTINE InflowWind_SetParameters
 
 
