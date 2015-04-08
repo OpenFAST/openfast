@@ -21,8 +21,6 @@ typedef  ^                       ^                       Logical  TowerFileExist
 
 
 # Init Output
-#typedef  ^                       InitOutputType  CHARACTER(10)    WriteOutputHdr    :     -     -     "Names of output-to-file channels"                             -
-#typedef  ^                       ^               CHARACTER(10)    WriteOutputUnt    :     -     -     "Units of output-to-file channels"                             -
 typedef  ^                       InitOutputType       ProgDesc    Ver               -     -     -     "Version information off FFWind submodule"                     -
 
 
@@ -62,11 +60,6 @@ typedef  ^                       ^                       IntKi    NYGrids       
 typedef  ^                       ^                       IntKi    NZGrids           -     0     -     "Number of points in the vertical (z) direction of the grids"  -
 typedef  ^                       ^                       IntKi    NTGrids           -     0     -     "Number of points in the vertical (z) direction on the tower (below the grids)"  -
 typedef  ^                       ^                       IntKi    WindFileFormat    -     -     -     "Binary file format description number"                        -
-
-
-# ..... Inputs ....................................................................................................................
-# Define inputs that are not on this mesh here:
-typedef  ^                    InputType                  ReKi     Position          ::    -     -     "Array holding the input positions at a given timestep"        meters
 
 
 # ..... Outputs ...................................................................................................................

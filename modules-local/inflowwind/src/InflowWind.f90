@@ -80,7 +80,6 @@ MODULE InflowWind
    PUBLIC :: InflowWind_CalcOutput                             !< Calculate the wind velocities
    PUBLIC :: InflowWind_End                                    !< Ending routine (includes clean up)
 
-   PUBLIC :: WindInf_ADhack_diskVel
 
       ! These routines satisfy the framework, but do nothing at present.
    PUBLIC :: InflowWind_UpdateStates               !< Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
@@ -88,9 +87,6 @@ MODULE InflowWind
    PUBLIC :: InflowWind_CalcContStateDeriv         !< Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: InflowWind_UpdateDiscState            !< Tight coupling routine for updating discrete states
 
-
-      ! Not coded
-   !NOTE: Jacobians have not been coded.
 
 
 
@@ -107,7 +103,9 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
                      OutData,    TimeInterval,  InitOutData,                        &
                      ErrStat,    ErrMsg )
 
+      IMPLICIT                                                 NONE
 
+      CHARACTER(*),              PARAMETER                  :: RoutineName="InflowWind_Init"
 
          ! Initialization data and guesses
 
@@ -134,19 +132,13 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       TYPE(InflowWind_InputFile)                            :: InputFileData     !< Data from input file
 
       TYPE(IfW_UniformWind_InitInputType)                   :: Uniform_InitData  !< initialization info
-      TYPE(IfW_UniformWind_InputType)                       :: Uniform_InitGuess !< input positions.
       TYPE(IfW_UniformWind_OutputType)                      :: Uniform_OutData   !< output velocities
 
       TYPE(IfW_TSFFWind_InitInputType)                      :: TSFF_InitData     !< initialization info
-      TYPE(IfW_TSFFWind_InputType)                          :: TSFF_InitGuess    !< input positions.
-      TYPE(IfW_TSFFWind_ContinuousStateType)                :: TSFF_ContStates   !< Unused
-      TYPE(IfW_TSFFWind_DiscreteStateType)                  :: TSFF_DiscStates   !< Unused
-      TYPE(IfW_TSFFWind_ConstraintStateType)                :: TSFF_ConstrStates !< Unused
       TYPE(IfW_TSFFWind_OutputType)                         :: TSFF_OutData      !< output velocities
 
 
       TYPE(IfW_BladedFFWind_InitInputType)                  :: BladedFF_InitData       !< initialization info
-      TYPE(IfW_BladedFFWind_InputType)                      :: BladedFF_InitGuess      !< input positions.
       TYPE(IfW_BladedFFWind_OutputType)                     :: BladedFF_OutData        !< output velocities
 
 
@@ -204,7 +196,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
       IF ( InitData%UseInputFile ) THEN
          CALL InflowWind_ReadInput( ParamData%InputFileName, ParamData%EchoFileName, InputFileData, TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
@@ -213,7 +205,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             !  In the future we will make it possible to just copy the data from the InitData%PassedFileData (of derived type
             !  InflowWind_InputFile), and run things as normal using that data.  For now though, we will not allow this.
          CALL SetErrStat(ErrID_Fatal,' The UseInputFile flag cannot be set to .FALSE. at present.  This feature is not '// &
-               'presently supported.',ErrStat,ErrMsg,'InflowWind_Init')
+               'presently supported.',ErrStat,ErrMsg,RoutineName)
          CALL Cleanup()
          RETURN
       ENDIF
@@ -225,7 +217,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          ! Validate the InflowWind input file information.
 
       CALL InflowWind_ValidateInput( InputFileData, TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat>= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
@@ -235,7 +227,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          ! Set the ParamData and OtherStates for InflowWind using the input file information.
 
       CALL InflowWind_SetParameters( InputFileData, ParamData, OtherStates, TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat>= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
@@ -246,7 +238,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          ! Allocate arrays for the WriteOutput
 
       CALL AllocAry( OutData%WriteOutput, ParamData%NumOuts, 'WriteOutput', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat>= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
@@ -254,14 +246,14 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       OutData%WriteOutput = 0.0_ReKi
       
       CALL AllocAry( InitOutData%WriteOutputHdr, ParamData%NumOuts, 'WriteOutputHdr', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat>= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
       ENDIF
 
       CALL AllocAry( InitOutData%WriteOutputUnt, ParamData%NumOuts, 'WriteOutputUnt', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat>= AbortErrLev ) THEN
          CALL Cleanup()
          RETURN
@@ -276,7 +268,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       IF ( .NOT. ALLOCATED(InputGuess%PositionXYZ) ) THEN
          CALL AllocAry( InputGuess%PositionXYZ, 3, InitData%NumWindPoints, &
                      "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat>= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
@@ -285,7 +277,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       IF ( .NOT. ALLOCATED(OutData%VelocityUVW) ) THEN
          CALL AllocAry( OutData%VelocityUVW, 3, InitData%NumWindPoints, &
                      "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat>= AbortErrLev ) THEN
             CALL Cleanup()
             RETURN
@@ -296,7 +288,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          ! Check that the arrays for the points and velocities are the same size
       IF ( SIZE( InputGuess%PositionXYZ, DIM = 2 ) /= SIZE( OutData%VelocityUVW, DIM = 2 ) ) THEN
          CALL SetErrStat(ErrID_Fatal,' Programming error: Different number of XYZ coordinates and expected output velocities.', &
-                     ErrStat,ErrMsg,'InflowWind_Init')
+                     ErrStat,ErrMsg,RoutineName)
       ENDIF
 
 
@@ -326,49 +318,49 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
             IF (.NOT. ALLOCATED(ParamData%UniformWind%Tdata) ) THEN
                CALL AllocAry( ParamData%UniformWind%Tdata, ParamData%UniformWind%NumDataLines, 'Uniform wind time', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) RETURN
             END IF
          
             IF (.NOT. ALLOCATED(ParamData%UniformWind%V) ) THEN
                CALL AllocAry( ParamData%UniformWind%V, ParamData%UniformWind%NumDataLines, 'Uniform wind horizontal wind speed', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) RETURN
             END IF
          
             IF (.NOT. ALLOCATED(ParamData%UniformWind%Delta) ) THEN
                CALL AllocAry( ParamData%UniformWind%Delta, ParamData%UniformWind%NumDataLines, 'Uniform wind direction', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) RETURN
             END IF
          
             IF (.NOT. ALLOCATED(ParamData%UniformWind%VZ) ) THEN
                CALL AllocAry( ParamData%UniformWind%VZ, ParamData%UniformWind%NumDataLines, 'Uniform vertical wind speed', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) RETURN
             END IF
          
             IF (.NOT. ALLOCATED(ParamData%UniformWind%HShr) ) THEN
                CALL AllocAry( ParamData%UniformWind%HShr, ParamData%UniformWind%NumDataLines, 'Uniform horizontal linear shear', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) RETURN
             END IF
          
             IF (.NOT. ALLOCATED(ParamData%UniformWind%VShr) ) THEN
                CALL AllocAry( ParamData%UniformWind%VShr, ParamData%UniformWind%NumDataLines, 'Uniform vertical power-law shear exponent', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) RETURN
             END IF
          
             IF (.NOT. ALLOCATED(ParamData%UniformWind%VLinShr) ) THEN
                CALL AllocAry( ParamData%UniformWind%VLinShr, ParamData%UniformWind%NumDataLines, 'Uniform vertical linear shear', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) RETURN
             END IF
          
             IF (.NOT. ALLOCATED(ParamData%UniformWind%VGust) ) THEN
                CALL AllocAry( ParamData%UniformWind%VGust, ParamData%UniformWind%NumDataLines, 'Uniform gust velocity', TmpErrStat, TmpErrMsg )
-               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+               CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
                IF ( ErrStat >= AbortErrLev ) RETURN
             END IF
 
@@ -452,14 +444,14 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
                         TRIM(Num2LStr(ParamData%UniformWind%Delta(1)*R2D))//                       &
                         ' degrees and the InflowWind input file specifies a PropogationDir of '//  &
                         TRIM(Num2LStr(ParamData%PropogationDir*R2D))//' degrees.',                 &
-                        ErrStat,ErrMsg,'InflowWind_Init' )
+                        ErrStat,ErrMsg,RoutineName )
             ENDIF
 
 
 
          CASE ( TSFF_WindNumber )
                ! Initialize the TSFFWind module
-            CALL SetErrStat( ErrID_Fatal,' TSFF winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init' )
+            CALL SetErrStat( ErrID_Fatal,' TSFF winds not supported yet.',ErrStat,ErrMsg,RoutineName )
 
 
 
@@ -472,7 +464,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
                ! Initialize the BladedFFWind module
             CALL IfW_BladedFFWind_Init(BladedFF_InitData, InputGuess%PositionXYZ, ParamData%BladedFFWind, OtherStates%BladedFFWind, &
                         BladedFF_OutData,    TimeInterval,  InitOutData%BladedFFWind,  TmpErrStat,          TmpErrMsg)
-            CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'InflowWind_Init')
+            CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
                ! Store wind file metadata
@@ -508,13 +500,13 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
          CASE ( HAWC_WindNumber )
                ! Initialize the HAWCWind module
-            CALL SetErrStat( ErrID_Fatal,' HAWC winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init' )
+            CALL SetErrStat( ErrID_Fatal,' HAWC winds not supported yet.',ErrStat,ErrMsg,RoutineName )
 
 
 
          CASE ( User_WindNumber )
                ! Initialize the User_Wind module
-            CALL SetErrStat( ErrID_Fatal,' User winds not supported yet.',ErrStat,ErrMsg,'InflowWind_Init' )
+            CALL SetErrStat( ErrID_Fatal,' User winds not supported yet.',ErrStat,ErrMsg,RoutineName )
 
 
 
@@ -673,9 +665,9 @@ CONTAINS
 
       ! add in stuff that we need to dispose of here
       CALL InflowWind_DestroyInputFile( InputFileData, TmpErrsTat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
 
-      CALL InflowWind_DestroyInputFile( InputFileData,  TmpErrStat, TmpErrMsg );  CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'InflowWind_Init')
+      CALL InflowWind_DestroyInputFile( InputFileData,  TmpErrStat, TmpErrMsg );  CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
 
 
    END SUBROUTINE CleanUp
@@ -706,6 +698,11 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
                               OtherStates, OutputData, ErrStat, ErrMsg )
 
 
+      IMPLICIT                                                    NONE
+
+      CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_CalcOutput"
+
+
          ! Inputs / Outputs
 
       REAL(DbKi),                               INTENT(IN   )  :: Time              !< Current simulation time in seconds
@@ -724,15 +721,12 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
          ! Local variables
 
       TYPE(IfW_UniformWind_InitInputType)                      :: Uniform_InitData       !< initialization info
-      TYPE(IfW_UniformWind_InputType)                          :: Uniform_InData         !< input positions.
       TYPE(IfW_UniformWind_OutputType)                         :: Uniform_OutData        !< output velocities
 
       TYPE(IfW_TSFFWind_InitInputType)                         :: TSFF_InitData       !< initialization info
-      TYPE(IfW_TSFFWind_InputType)                             :: TSFF_InData         !< input positions.
       TYPE(IfW_TSFFWind_OutputType)                            :: TSFF_OutData        !< output velocities
 
       TYPE(IfW_BladedFFWind_InitInputType)                     :: BladedFF_InitData       !< initialization info
-      TYPE(IfW_BladedFFWind_InputType)                         :: BladedFF_InData         !< input positions.
       TYPE(IfW_BladedFFWind_OutputType)                        :: BladedFF_OutData        !< output velocities
 
       REAL(ReKi), ALLOCATABLE                                  :: PositionXYZprime(:,:)   !< PositionXYZ array in the prime (wind) coordinates
@@ -755,11 +749,11 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
       IF ( .NOT. ALLOCATED(OutputData%VelocityUVW) ) THEN
          CALL AllocAry( OutputData%VelocityUVW, 3, SIZE(InputData%PositionXYZ,DIM=2), &
                      "Velocity array returned from IfW_CalcOutput", TmpErrStat, TmpErrMsg )
-         CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+         CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) RETURN
       ELSEIF ( SIZE(InputData%PositionXYZ,DIM=2) /= SIZE(OutputData%VelocityUVW,DIM=2) ) THEN
          CALL SetErrStat( ErrID_Fatal," Programming error: Position and Velocity arrays are not sized the same.",  &
-               ErrStat, ErrMsg, ' IfW_CalcOutput')
+               ErrStat, ErrMsg, RoutineName)
       ENDIF
 
 
@@ -778,7 +772,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
          !! do this.
       CALL AllocAry( PositionXYZprime, 3, SIZE(InputData%PositionXYZ,DIM=2), &
                   "Array for holding the XYZprime position data", TmpErrStat, TmpErrMsg )
-      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+      CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
 
@@ -813,7 +807,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
                ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
             CALL MOVE_ALLOC( Uniform_OutData%Velocity,   OutputData%VelocityUVW )
 
-            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
             IF ( ErrStat >= AbortErrLev ) RETURN
 
                ! Call IfW_UniforWind_CalcOutput again in order to get the values needed for the OutList -- note that we do not report errors from this
@@ -847,7 +841,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
                ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
             CALL MOVE_ALLOC( Uniform_OutData%Velocity,   OutputData%VelocityUVW )
 
-            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
             IF ( ErrStat >= AbortErrLev ) RETURN
 
 
@@ -861,7 +855,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
                   ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
                IF ( TmpErrStat >= ErrID_Fatal ) THEN
-                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
                   RETURN
                ELSE
                   TmpErrStat  =  ErrID_None
@@ -881,7 +875,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 !!!               ! Allocate the position array to pass in
 !!!            CALL AllocAry( FF_InData%Position, 3, SIZE(InputData%Position,2), &
 !!!                           "Position grid for passing to IfW_FFWind_CalcOutput", TmpErrStat, TmpErrMsg )
-!!!            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+!!!            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 !!!            IF ( ErrStat >= AbortErrLev ) RETURN
 !!!
 !!!            ! Copy positions over
@@ -894,7 +888,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 !!!               ! Copy the velocities over
 !!!            OutputData%Velocity  = FF_OutData%Velocity
 !!!
-!!!            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+!!!            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 !!!            IF ( ErrStat >= AbortErrLev ) RETURN
 
 
@@ -917,7 +911,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
                ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
             CALL MOVE_ALLOC( BladedFF_OutData%Velocity,   OutputData%VelocityUVW )
 
-            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
             IF ( ErrStat >= AbortErrLev ) RETURN
 
 
@@ -931,7 +925,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
                   ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
                IF ( TmpErrStat >= ErrID_Fatal ) THEN
-                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_CalcOutput' )
+                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
                   RETURN
                ELSE
                   TmpErrStat  =  ErrID_None
@@ -967,7 +961,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
          CASE DEFAULT
 
             CALL SetErrStat( ErrID_Fatal, ' Error: Undefined wind type in IfW_CalcOutput. ' &
-                      //'Call WindInflow_Init() before calling this function.', ErrStat, ErrMsg, ' IfW_CalcOutput' )
+                      //'Call WindInflow_Init() before calling this function.', ErrStat, ErrMsg, RoutineName )
 
             OutputData%VelocityUVW(:,:) = 0.0
             RETURN
@@ -1046,7 +1040,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
          CASE DEFAULT
             CALL SetErrStat( ErrID_Fatal, ' Error: Undefined wind type in IfW_CalcOutput. ' &
-                      //'Call WindInflow_Init() before calling this function.', ErrStat, ErrMsg, ' IfW_CalcOutput' )
+                      //'Call WindInflow_Init() before calling this function.', ErrStat, ErrMsg, RoutineName )
             RETURN
 
       END SELECT
@@ -1081,6 +1075,10 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
    ! that we have to reinitialize before calling the routines again.
    !----------------------------------------------------------------------------------------------------
 
+      IMPLICIT                                                    NONE
+
+      CHARACTER(*),              PARAMETER                     :: RoutineName="InflowWind_End"
+
          ! Initialization data and guesses
 
       TYPE(InflowWind_InputType),               INTENT(INOUT)  :: InputData         !< Input data for initialization
@@ -1099,13 +1097,10 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
 
          ! Local variables
 
-      TYPE(IfW_UniformWind_InputType)                               :: Uniform_InputData      !< input positions.
       TYPE(IfW_UniformWind_OutputType)                              :: Uniform_OutData        !< output velocities
 
-!!!      TYPE(IfW_TSFFWind_InputType)                               :: TSFF_InputData      !< input positions.
 !!!      TYPE(IfW_TSFFWind_OutputType)                              :: TSFF_OutData        !< output velocities
 
-      TYPE(IfW_BladedFFWind_InputType)                              :: BladedFF_InputData      !< input positions.
       TYPE(IfW_BladedFFWind_OutputType)                             :: BladedFF_OutData        !< output velocities
 
 !!!     TYPE(CTTS_Backgr)                                           :: BackGrndValues
@@ -1151,7 +1146,7 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
             ! Do nothing
 
          CASE DEFAULT  ! keep this check to make sure that all new wind types have been accounted for
-            CALL SetErrStat(ErrID_Fatal,' Undefined wind type.',ErrStat,ErrMsg,'InflowWind_End')
+            CALL SetErrStat(ErrID_Fatal,' Undefined wind type.',ErrStat,ErrMsg,RoutineName)
 
       END SELECT
 
@@ -1376,46 +1371,5 @@ SUBROUTINE InflowWind_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState,
       z_residual%DummyConstrState = 0
 
 END SUBROUTINE InflowWind_CalcConstrStateResidual
-!====================================================================================================
-!====================================================================================================
-FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
-! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
-! when a consensus on the definition of "average velocity" is determined, this function will be
-! removed.
-!----------------------------------------------------------------------------------------------------
-
-      ! Passed variables
-
-   REAL(DbKi),                                  INTENT(IN   )  :: Time              !< Time
-   TYPE(InflowWind_ParameterType),              INTENT(IN   )  :: ParamData         !< Parameters
-   TYPE(InflowWind_OtherStateType),             INTENT(INOUT)  :: OtherStates       !< Other/optimization states
-
-   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat
-   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg
-
-      ! Function definition
-   REAL(ReKi)                    :: WindInf_ADhack_diskVel(3)
-
-
-   ErrStat = ErrID_None
-
-   SELECT CASE ( ParamData%WindType )
-!!!      CASE (FF_WindNumber)
-!!!
-!!!         WindInf_ADhack_diskVel(1)   = OtherStates%FFWind%MeanFFWS
-!!!         WindInf_ADhack_diskVel(2:3) = 0.0
-
-      CASE DEFAULT
-         ErrStat = ErrID_Fatal
-         ErrMsg = ' WindInf_ADhack_diskVel: Undefined wind type.'
-         WindInf_ADhack_diskVel  =  0.0_ReKi
-
-   END SELECT
-
-   RETURN
-
-END FUNCTION WindInf_ADhack_diskVel
-
-
 !====================================================================================================
 END MODULE InflowWind
