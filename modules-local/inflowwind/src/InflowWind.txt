@@ -15,6 +15,7 @@ usefrom IfW_UniformWind.txt
 usefrom IfW_TSFFWind.txt
 usefrom IfW_BladedFFWind.txt
 usefrom IfW_HAWCWind.txt
+usefrom IfW_UserWind.txt
 include Registry_NWTC_Library.txt
 
 
@@ -125,6 +126,7 @@ typedef  ^                       ^    IfW_UniformWind_InitOutputType UniformWind
 typedef  ^                       ^       IfW_TSFFWind_InitOutputType TSFFWind          -     -     -     "TSFFWind InitOutput info"                               -
 typedef  ^                       ^   IfW_BladedFFWind_InitOutputType BladedFFWind      -     -     -     "BladedFFWind InitOutput info"                           -
 typedef  ^                       ^       IfW_HAWCWind_InitOutputType HAWCWind          -     -     -     "HAWCWind InitOutput info"                           -
+typedef  ^                       ^       IfW_UserWind_InitOutputType UserWind          -     -     -     "UserWind InitOutput info"                           -
 typedef  ^                       ^                 WindFileMetaData  WindFileInfo      -     -     -     "Meta data from the wind file"                           -
 
 
@@ -135,6 +137,7 @@ typedef  ^                       OtherStateType    IntKi             TimeIndex  
 typedef  ^                       ^   IfW_UniformWind_OtherStateType  UniformWind       -     -     -     "OtherStates from UniformWind"                 -
 typedef  ^                       ^      IfW_TSFFWind_OtherStateType  TSFFWind          -     -     -     "OtherStates from TSFFWind"                              -
 typedef  ^                       ^  IfW_BladedFFWind_OtherStateType  BladedFFWind      -     -     -     "OtherStates from BladedFFWind"                          -
+typedef  ^                       ^      IfW_UserWind_OtherStateType  UserWind          -     -     -     "OtherStates from UserWind"                              -
 typedef  ^                       ^                 ReKi              AllOuts           :     -     -     "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
 typedef  ^                       ^                 ReKi              WindViUVW         ::    -     -     "List of UVW velocities for wind velocity measurements, 3xNWindVel. corresponds to ParamData%WindViXYZ"  meters/second
 
@@ -170,7 +173,7 @@ typedef  ^                       ^     IfW_UniformWind_ParameterType UniformWind
 typedef  ^                       ^        IfW_TSFFWind_ParameterType TSFFWind          -     -     -     "Parameters from TSFFWind -- TurbSim full-field format"  -
 typedef  ^                       ^    IfW_BladedFFWind_ParameterType BladedFFWind      -     -     -     "Parameters from BladedFFWind -- Bladed-style full-field format"  -
 #typedef  ^                       ^        IfW_HAWCWind_ParameterType HAWCWind          -     -     -     "Parameters from HAWCWind"                               -
-#typedef  ^                       ^        IfW_UserWind_ParameterType UserWind          -     -     -     "Parameters from UserWind"                               -
+typedef  ^                       ^        IfW_UserWind_ParameterType UserWind          -     -     -     "Parameters from UserWind"                               -
 #typedef  ^                       ^          IfW_CTWind_ParameterType CTWind            -     -     -     "Parameters from CTWind"                                 -
 typedef  ^                       ^                 IntKi             NumOuts           -     0     -     "Number of parameters in the output list (number of outputs requested)" -
 typedef  ^                       ^                 OutParmType       OutParam          {:}   -     -     "Names and units (and other characteristics) of all requested output parameters" -
