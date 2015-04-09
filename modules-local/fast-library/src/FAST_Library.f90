@@ -12,44 +12,25 @@
 MODULE FAST_Data
 
    USE, INTRINSIC :: ISO_C_Binding
-   USE FAST_IO_Subs   ! all of the ModuleName and ModuleName_types modules are inherited from FAST_IO_Subs
+   USE FAST_Subs   ! all of the ModuleName and ModuleName_types modules are inherited from FAST_Subs
                        
    IMPLICIT  NONE
    SAVE
    
-      ! Local variables:
-   INTEGER,                PARAMETER     :: IntfStrLen  = 1025                     ! length of strings through the C interface
-   REAL(DbKi),             PARAMETER     :: t_initial = 0.0_DbKi                    ! Initial time
-   
-   
-      ! Data for the glue code:
-   TYPE(FAST_ParameterType)              :: p_FAST                                  ! Parameters for the glue code (bjj: made global for now)
-   TYPE(FAST_OutputFileType)             :: y_FAST                                  ! Output variables for the glue code
-   TYPE(FAST_MiscVarType)                :: m_FAST                                  ! Miscellaneous variables
+      ! Local parameters:
+   REAL(DbKi),     PARAMETER             :: t_initial = 0.0_DbKi                    ! Initial time
 
-   TYPE(FAST_ModuleMapType)              :: MeshMapData                             ! Data for mapping between modules
-   
-   TYPE(ElastoDyn_Data)                  :: ED                                      ! Data for the ElastoDyn module
-   TYPE(ServoDyn_Data)                   :: SrvD                                    ! Data for the ServoDyn module
-   TYPE(AeroDyn_Data)                    :: AD                                      ! Data for the AeroDyn module
-   TYPE(InflowWind_Data)                 :: IfW                                     ! Data for InflowWind module
-   TYPE(HydroDyn_Data)                   :: HD                                      ! Data for the HydroDyn module
-   TYPE(SubDyn_Data)                     :: SD                                      ! Data for the SubDyn module
-   TYPE(MAP_Data)                        :: MAPp                                    ! Data for the MAP (Mooring Analysis Program) module
-   TYPE(FEAMooring_Data)                 :: FEAM                                    ! Data for the FEAMooring module
-   TYPE(MoorDyn_Data)                    :: MD                                      ! Data for the MoorDyn module
-   TYPE(IceFloe_Data)                    :: IceF                                    ! Data for the IceFloe module
-   TYPE(IceDyn_Data)                     :: IceD                                    ! Data for the IceDyn module
-
-      ! Other/Misc variables
-
-   INTEGER(IntKi)                        :: n_t_global                              ! simulation time step, loop counter for global (FAST) simulation
-   INTEGER(IntKi)                        :: ErrStat                                 ! Error status
-   CHARACTER(IntfStrLen-1)               :: ErrMsg                                  ! Error message
-
+   INTEGER,        PARAMETER             :: IntfStrLen  = 1025                      ! length of strings through the C interface
    INTEGER(IntKi), PARAMETER             :: MAXOUTPUTS = 1000                       ! Maximum number of outputs
    INTEGER(IntKi), PARAMETER             :: MAXInitINPUTS = 10                      ! Maximum number of initialization values from Simulink
    INTEGER(IntKi), PARAMETER             :: NumFixedInputs = 8
+   
+   
+      ! Global (static) data:
+   TYPE(FAST_TurbineType)                :: Turbine                                 ! Data for each turbine
+   INTEGER(IntKi)                        :: n_t_global                              ! simulation time step, loop counter for global (FAST) simulation
+   INTEGER(IntKi)                        :: ErrStat                                 ! Error status
+   CHARACTER(IntfStrLen-1)               :: ErrMsg                                  ! Error message
    
    
 END MODULE FAST_Data
@@ -93,11 +74,11 @@ subroutine FAST_Sizes(TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_
    
    
    
-   CALL FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg, InputFileName, ExternInitData )
+   CALL FAST_InitializeAll_T( t_initial, 1_IntKi, Turbine, ErrStat, ErrMsg, InputFileName, ExternInitData )
                   
    AbortErrLev_c = AbortErrLev   
-   NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( y_FAST%numOuts )) ! includes time
-   dt_c          = p_FAST%dt
+   NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( Turbine%y_FAST%numOuts )) ! includes time
+   dt_c          = Turbine%p_FAST%dt
 
    ErrStat_c     = ErrStat
    ErrMsg_c      = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
@@ -107,11 +88,11 @@ subroutine FAST_Sizes(TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_
 #endif   
     
       ! return the names of the output channels
-   IF ( ALLOCATED( y_FAST%ChannelNames ) )  then
+   IF ( ALLOCATED( Turbine%y_FAST%ChannelNames ) )  then
       k = 1;
       DO i=1,NumOuts_c
          DO j=1,ChanLen
-            ChannelNames_c(k)=y_FAST%ChannelNames(i)(j:j)
+            ChannelNames_c(k)=Turbine%y_FAST%ChannelNames(i)(j:j)
             k = k+1
          END DO
       END DO
@@ -151,24 +132,23 @@ subroutine FAST_Start(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c,
       RETURN
    END IF
 
-   CALL FAST_SetExternalInputs(NumInputs_c, InputAry, m_FAST)
+   CALL FAST_SetExternalInputs(NumInputs_c, InputAry, Turbine%m_FAST)
 
 #endif      
    !...............................................................................................................................
    ! Initialization of solver: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
    !...............................................................................................................................  
-   CALL FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )      
+   CALL FAST_Solution0_T(Turbine, ErrStat, ErrMsg )      
    
       ! return outputs here, too
-   IF(NumOutputs_c /= SIZE(y_FAST%ChannelNames) ) THEN
+   IF(NumOutputs_c /= SIZE(Turbine%y_FAST%ChannelNames) ) THEN
       ErrStat = ErrID_Fatal
       ErrMsg  = trim(ErrMsg)//NewLine//"FAST_Start:size of NumOutputs is invalid."
       RETURN
    ELSE
       
-      CALL FillOutputAry(p_FAST, y_FAST, IfW%WriteOutput, ED%Output(1)%WriteOutput, SrvD%y%WriteOutput, HD%y%WriteOutput, &
-                              SD%y%WriteOutput, MAPp%y%WriteOutput, FEAM%y%WriteOutput, MD%y%WriteOutput, IceF%y%WriteOutput, IceD%y, Outputs)   
-      OutputAry(1)              = m_FAST%t_global 
+      CALL FillOutputAry_T(Turbine, Outputs)   
+      OutputAry(1)              = Turbine%m_FAST%t_global 
       OutputAry(2:NumOutputs_c) = Outputs 
       
    END IF
@@ -199,11 +179,11 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
    INTEGER(IntKi)                        :: i
                  
    
-   IF ( n_t_global > m_FAST%n_TMax_m1 ) THEN !finish 
+   IF ( n_t_global > Turbine%m_FAST%n_TMax_m1 ) THEN !finish 
       
       ! we can't continue because we might over-step some arrays that are allocated to the size of the simulation
 
-      IF (n_t_global == m_FAST%n_TMax_m1 + 1) THEN  ! we call update an extra time in Simulink, which we can ignore until the time shift with outputs is solved
+      IF (n_t_global == Turbine%m_FAST%n_TMax_m1 + 1) THEN  ! we call update an extra time in Simulink, which we can ignore until the time shift with outputs is solved
          n_t_global = n_t_global + 1
          ErrStat_c = ErrID_None
          ErrMsg_c = TRANSFER( C_NULL_CHAR, ErrMsg_c )
@@ -212,7 +192,7 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
          ErrMsg_c  = TRANSFER( "Simulation completed."//C_NULL_CHAR, ErrMsg_c )
       END IF
       
-   ELSEIF(NumOutputs_c /= SIZE(y_FAST%ChannelNames) ) THEN
+   ELSEIF(NumOutputs_c /= SIZE(Turbine%y_FAST%ChannelNames) ) THEN
       ErrStat_c = ErrID_Fatal
       ErrMsg_c  = TRANSFER( "FAST_Update:size of OutputAry is invalid or FAST has too many outputs."//C_NULL_CHAR, ErrMsg_c )
       RETURN
@@ -222,9 +202,9 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       RETURN
    ELSE
 
-      CALL FAST_SetExternalInputs(NumInputs_c, InputAry, m_FAST)
+      CALL FAST_SetExternalInputs(NumInputs_c, InputAry, Turbine%m_FAST)
 
-      CALL FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )                  
+      CALL FAST_Solution_T( t_initial, n_t_global, Turbine, ErrStat, ErrMsg )                  
       n_t_global = n_t_global + 1
 
       
@@ -235,9 +215,8 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
    END IF
    
-   CALL FillOutputAry(p_FAST, y_FAST, IfW%WriteOutput, ED%Output(1)%WriteOutput, SrvD%y%WriteOutput, HD%y%WriteOutput, &
-                           SD%y%WriteOutput, MAPp%y%WriteOutput, FEAM%y%WriteOutput, MD%y%WriteOutput, IceF%y%WriteOutput, IceD%y, Outputs)   
-   OutputAry(1)              = m_FAST%t_global 
+   CALL FillOutputAry_T(Turbine, Outputs)   
+   OutputAry(1)              = Turbine%m_FAST%t_global 
    OutputAry(2:NumOutputs_c) = Outputs 
 
 #ifdef CONSOLE_FILE   
@@ -271,7 +250,7 @@ subroutine FAST_SetExternalInputs(NumInputs_c, InputAry, m_FAST)
             
       IF ( NumInputs_c > NumFixedInputs ) THEN  ! NumFixedInputs is the fixed number of inputs
          IF ( NumInputs_c == NumFixedInputs + 3 ) &
-         m_FAST%ExternInput%LidarFocus = InputAry(9:11)
+             m_FAST%ExternInput%LidarFocus = InputAry(9:11)
       END IF   
       
 end subroutine FAST_SetExternalInputs
@@ -282,7 +261,7 @@ subroutine FAST_End() BIND (C, NAME='FAST_End')
    IMPLICIT NONE
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_End
 
-   CALL ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrID_None )
+   CALL ExitThisProgram_T( Turbine, ErrID_None )
    
 end subroutine FAST_End
 !==================================================================================================================================

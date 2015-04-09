@@ -2,7 +2,7 @@
 ! The FAST_Prog.f90, FAST_IO.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013-2014  National Renewable Energy Laboratory
+! Copyright (C) 2013-2015  National Renewable Energy Laboratory
 !
 !    This file is part of FAST.
 !
@@ -31,72 +31,61 @@ PROGRAM FAST
 !   OUTPUT_ADDEDMASS        (outputs a file called "<RootName>.AddedMass" that contains HydroDyn's added-mass matrix.
 !   OUTPUT_JACOBIAN
 !   FPE_TRAP_ENABLED        (use with gfortran when checking for floating point exceptions)
+!   DOUBLE_PRECISION        (compile in double precision)
 !.................................................................................................
 
 
-USE FAST_IO_Subs   ! all of the ModuleName and ModuleName_types modules are inherited from FAST_IO_Subs
+USE FAST_Subs   ! all of the ModuleName and ModuleName_types modules are inherited from FAST_IO_Subs
                        
 IMPLICIT  NONE
    
-   ! Local variables:
+   ! Local parameters:
 REAL(DbKi),             PARAMETER     :: t_initial = 0.0_DbKi                    ! Initial time
-
+INTEGER(IntKi),         PARAMETER     :: NumTurbines = 1
    
-   ! Data for the glue code:
-TYPE(FAST_ParameterType)              :: p_FAST                                  ! Parameters for the glue code (bjj: made global for now)
-TYPE(FAST_OutputFileType)             :: y_FAST                                  ! Output variables for the glue code
-TYPE(FAST_MiscVarType)                :: m_FAST                                  ! Miscellaneous variables
-
-TYPE(FAST_ModuleMapType)              :: MeshMapData                             ! Data for mapping between modules
-   
-TYPE(ElastoDyn_Data)                  :: ED                                      ! Data for the ElastoDyn module
-TYPE(ServoDyn_Data)                   :: SrvD                                    ! Data for the ServoDyn module
-TYPE(AeroDyn_Data)                    :: AD                                      ! Data for the AeroDyn module
-TYPE(InflowWind_Data)                 :: IfW                                     ! Data for InflowWind module
-TYPE(HydroDyn_Data)                   :: HD                                      ! Data for the HydroDyn module
-TYPE(SubDyn_Data)                     :: SD                                      ! Data for the SubDyn module
-TYPE(MAP_Data)                        :: MAPp                                    ! Data for the MAP (Mooring Analysis Program) module
-TYPE(FEAMooring_Data)                 :: FEAM                                    ! Data for the FEAMooring module
-TYPE(MoorDyn_Data)                    :: MD                                      ! Data for the MoorDyn module
-TYPE(IceFloe_Data)                    :: IceF                                    ! Data for the IceFloe module
-TYPE(IceDyn_Data)                     :: IceD                                    ! Data for the IceDyn module
-
    ! Other/Misc variables
+TYPE(FAST_TurbineType)                :: Turbine(NumTurbines)                    ! Data for each turbine instance
 
-
-
+INTEGER(IntKi)                        :: i_turb                                  ! current turbine number
 INTEGER(IntKi)                        :: n_t_global                              ! simulation time step, loop counter for global (FAST) simulation
 INTEGER(IntKi)                        :: ErrStat                                 ! Error status
 CHARACTER(1024)                       :: ErrMsg                                  ! Error message
 
 
-   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   ! initialization
-   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   DO i_turb = 1,NumTurbines
+      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      ! initialization
+      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-   CALL FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
-      CALL CheckError( ErrStat, ErrMsg, 'during module initialization' )
+      CALL FAST_InitializeAll_T( t_initial, i_turb, Turbine(i_turb), ErrStat, ErrMsg )     ! bjj: we need to get the input files for each turbine (not necessarially the same one)
+         CALL CheckError( ErrStat, ErrMsg, 'during module initialization' )
                                                   
-   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   ! loose coupling
-   !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      ! loose coupling
+      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    
-   !...............................................................................................................................
-   ! Initialization: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
-   !...............................................................................................................................     
-   CALL FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
-      CALL CheckError( ErrStat, ErrMsg, 'during simulation initialization'  )
-              
+      !...............................................................................................................................
+      ! Initialization: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
+      !...............................................................................................................................     
+      CALL FAST_Solution0_T( Turbine(i_turb), ErrStat, ErrMsg )
+         CALL CheckError( ErrStat, ErrMsg, 'during simulation initialization'  )
+             
+   END DO
+
    !...............................................................................................................................
    ! Time Stepping:
    !...............................................................................................................................         
    
-   DO n_t_global = 0, m_FAST%n_TMax_m1
+   DO n_t_global = 0, Turbine(1)%m_FAST%n_TMax_m1 ! bjj: we have to make sure the n_TMax_m1 is the same for all turbines or have some logic
+      
       ! this takes data from n_t_global and gets values at n_t_global + 1
+      DO i_turb = 1,NumTurbines
   
-      CALL FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )                  
-         CALL CheckError( ErrStat, ErrMsg  )
-            
+         CALL FAST_Solution_T( t_initial, n_t_global, Turbine(i_turb), ErrStat, ErrMsg )
+            CALL CheckError( ErrStat, ErrMsg  )
+                                    
+      END DO
+
    END DO ! n_t_global
   
   
@@ -104,8 +93,10 @@ CHARACTER(1024)                       :: ErrMsg                                 
    !  Write simulation times and stop
    !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    
-   CALL ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrID_None )
-
+   DO i_turb = 1,NumTurbines
+      CALL ExitThisProgram_T( Turbine(i_turb), ErrID_None )
+   END DO
+   
 
 CONTAINS
    !...............................................................................................................................
@@ -127,10 +118,13 @@ CONTAINS
             IF (PRESENT(ErrLocMsg)) THEN
                SimMsg = ErrLocMsg
             ELSE
-               SimMsg = 'at simulation time '//TRIM(Num2LStr(m_FAST%t_global))//' of '//TRIM(Num2LStr(p_FAST%TMax))//' seconds'
+               SimMsg = 'at simulation time '//TRIM(Num2LStr(Turbine(i_turb)%m_FAST%t_global))//' of '//TRIM(Num2LStr(Turbine(i_turb)%p_FAST%TMax))//' seconds'
             END IF
             
-            CALL ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrID, SimMsg )
+            CALL ExitThisProgram( Turbine(i_turb)%p_FAST, Turbine(i_turb)%y_FAST, Turbine(i_turb)%m_FAST, &
+                     Turbine(i_turb)%ED, Turbine(i_turb)%SrvD, Turbine(i_turb)%AD, Turbine(i_turb)%IfW, &
+                     Turbine(i_turb)%HD, Turbine(i_turb)%SD, Turbine(i_turb)%MAP, Turbine(i_turb)%FEAM, Turbine(i_turb)%MD, &
+                     Turbine(i_turb)%IceF, Turbine(i_turb)%IceD, Turbine(i_turb)%MeshMapData, ErrID, SimMsg )
             
          END IF
          

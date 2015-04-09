@@ -2,7 +2,7 @@
 ! The FAST_Prog.f90, FAST_IO.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013-2014  National Renewable Energy Laboratory
+! Copyright (C) 2013-2015  National Renewable Energy Laboratory
 !
 !    This file is part of FAST.
 !
@@ -23,7 +23,7 @@
 ! (File) Revision #: $Rev$
 ! URL: $HeadURL$
 !**********************************************************************************************************************************
-MODULE FAST_IO_Subs
+MODULE FAST_Subs
 
    USE NWTC_Library
    USE NWTC_LAPACK
@@ -1625,6 +1625,18 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, EDOutput, SrvDOutput, HDO
 
    RETURN
 END SUBROUTINE WrOutputLine
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE FillOutputAry_T(Turbine, Outputs)
+                   
+   TYPE(FAST_TurbineType),   INTENT(IN   ) :: Turbine
+   REAL(ReKi),               INTENT(  OUT) :: Outputs(:)                       ! single array of output 
+   
+
+      CALL FillOutputAry(Turbine%p_FAST, Turbine%y_FAST, Turbine%IfW%WriteOutput, Turbine%ED%Output(1)%WriteOutput, Turbine%SrvD%y%WriteOutput, &
+                Turbine%HD%y%WriteOutput, Turbine%SD%y%WriteOutput, Turbine%MAP%y%WriteOutput, Turbine%FEAM%y%WriteOutput, Turbine%MD%y%WriteOutput, &
+                Turbine%IceF%y%WriteOutput, Turbine%IceD%y, Outputs)   
+                        
+END SUBROUTINE FillOutputAry_T                        
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, EDOutput, SrvDOutput, HDOutput, SDOutput, MAPOutput, FEAMOutput, &
                         MDOutput, IceFOutput, y_IceD, OutputAry)
@@ -4191,7 +4203,7 @@ SUBROUTINE AD_SetInitInput(InitInData_AD, InitOutData_ED, y_ED, p_FAST, ErrStat,
 
    RETURN
 END SUBROUTINE AD_SetInitInput
-!...............................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, u_AD, FileName, ErrStat, ErrMsg) 
    TYPE(ED_InputType),        INTENT(IN)  :: u_ED         
    TYPE(SD_InputType),        INTENT(IN)  :: u_SD         
@@ -4249,7 +4261,7 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, u_AD, FileName, ErrSt
    CLOSE(unOut)
          
 END SUBROUTINE WriteInputMeshesToFile   
-!...............................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, UnOut, ErrStat, ErrMsg, FileName) 
    REAL(DbKi),                 INTENT(IN)    :: time
    TYPE(ED_OutputType),        INTENT(IN)    :: y_ED         
@@ -4312,7 +4324,7 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, UnOut, E
    !CLOSE(unOut)
    !      
 END SUBROUTINE WriteMotionMeshesToFile   
-!...............................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE WriteMappingTransferToFile(Mesh1_I,Mesh1_O,Mesh2_I,Mesh2_O,Map_Mod1_Mod2,Map_Mod2_Mod1,BinOutputName)
 ! this routine is used for debugging mesh mapping
 !...............................................................................................................................
@@ -4451,7 +4463,7 @@ SUBROUTINE WriteMappingTransferToFile(Mesh1_I,Mesh1_O,Mesh2_I,Mesh2_O,Map_Mod1_M
    
 
 END SUBROUTINE WriteMappingTransferToFile 
-!...............................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ResetRemapFlags(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF, IceD )
 ! This routine resets the remap flags on all of the meshes
 !...............................................................................................................................
@@ -4561,7 +4573,7 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF, I
    END IF
       
 END SUBROUTINE ResetRemapFlags  
-!...............................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SetModuleSubstepTime(ModuleID, p_FAST, y_FAST, ErrStat, ErrMsg)
 ! This module sets the number of subcycles (substeps) for modules, checking to make sure that their requested time step is valid 
 !...............................................................................................................................
@@ -4603,7 +4615,7 @@ SUBROUTINE SetModuleSubstepTime(ModuleID, p_FAST, y_FAST, ErrStat, ErrMsg)
    RETURN
       
 END SUBROUTINE SetModuleSubstepTime   
-!...............................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg)
 ! This routine initializes all of the mapping data structures needed between the various modules.
 !...............................................................................................................................
@@ -4932,7 +4944,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
 
       
 END SUBROUTINE InitModuleMappings
-!...............................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE WriteOutputToFile(t_global, p_FAST, y_FAST, ED, AD, IfW, HD, SD, SrvD, MAPp, FEAM, MD, IceF, IceD, ErrStat, ErrMsg)
 ! This routine determines if it's time to write to the output files, and calls the routine to write to the files
 ! with the output data. It should be called after all the output solves for a given time have been completed.
@@ -4986,7 +4998,7 @@ SUBROUTINE WriteOutputToFile(t_global, p_FAST, y_FAST, ED, AD, IfW, HD, SD, SrvD
    END IF
             
 END SUBROUTINE WriteOutputToFile     
-!...............................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, calcJacobian, NextJacCalcTime, &
                         p_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 ! This subroutine solves the input-output relations for all of the modules. It is a subroutine because it gets done twice--
@@ -5108,7 +5120,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
          
                         
 END SUBROUTINE CalcOutputs_And_SolveForInputs  
-!...............................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 ! This routine implements the "option 1" solve for all inputs with direct links to HD, SD, MAP, and the ED platform reference 
 ! point
@@ -5302,7 +5314,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, HD, SD,
 #endif         
                   
 END SUBROUTINE SolveOption1
-!...............................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD, SrvD, IfW, MeshMapData, ErrStat, ErrMsg, firstCall)
 ! This routine implements the "option 2" solve for all inputs without direct links to HD, SD, MAP, or the ED platform reference 
 ! point
@@ -5388,11 +5400,45 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD, SrvD, IfW
    
    
 END SUBROUTINE SolveOption2
-!...............................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
    
 
+SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, InFile, ExternInitData )
+! a wrapper routine to call FAST_Initialize a the full-turbine simulation level (makes easier to write top-level driver)
 
-!...............................................................................................................................
+   REAL(DbKi),                        INTENT(IN   ) :: t_initial      ! initial time
+   INTEGER(IntKi),                    INTENT(IN   ) :: TurbID         ! turbine Identifier (1-NumTurbines)
+   TYPE(FAST_TurbineType),            INTENT(INOUT) :: Turbine        ! all data for one instance of a turbine
+   INTEGER(IntKi),                    INTENT(  OUT) :: ErrStat        ! Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT) :: ErrMsg         ! Error message if ErrStat /= ErrID_None
+   CHARACTER(*),             OPTIONAL,INTENT(IN   ) :: InFile         ! A CHARACTER string containing the name of the primary FAST input file (if not present, we'll get it from the command line)   
+   TYPE(FAST_ExternInitType),OPTIONAL,INTENT(IN   ) :: ExternInitData ! Initialization input data from an external source (Simulink)
+   
+   Turbine%TurbID = TurbID  
+   
+   
+   IF (PRESENT(InFile)) THEN
+      IF (PRESENT(ExternInitData)) THEN
+         CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+                     Turbine%ED, Turbine%SrvD, Turbine%AD, Turbine%IfW, &
+                     Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
+                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg, InFile, ExternInitData )
+      ELSE         
+         CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+                     Turbine%ED, Turbine%SrvD, Turbine%AD, Turbine%IfW, &
+                     Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
+                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg, InFile  )
+      END IF
+   ELSE
+      CALL FAST_InitializeAll( t_initial, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+                     Turbine%ED, Turbine%SrvD, Turbine%AD, Turbine%IfW, &
+                     Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
+                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
+   END IF
+   
+         
+END SUBROUTINE FAST_InitializeAll_T
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg, InFile, ExternInitData )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           ! initial time
@@ -6103,7 +6149,7 @@ CONTAINS
    END SUBROUTINE Cleanup
 
 END SUBROUTINE FAST_InitializeAll
-!...............................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_global_next       ! next global time step (t + dt), at which we're extrapolating inputs (and ED outputs)
@@ -6431,7 +6477,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, Srv
 
 
 END SUBROUTINE FAST_ExtrapInterpMods
-!...............................................................................................................................
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           ! start time of the simulation 
@@ -6776,7 +6822,7 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, I
    
    
 END SUBROUTINE FAST_InitIOarrays
-!...............................................................................................................................   
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, ErrStat, ErrMsg )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           ! initial simulation time (almost always 0)
@@ -7058,8 +7104,9 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
    END IF
          
 END SUBROUTINE FAST_AdvanceStates
-!...............................................................................................................................   
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, ErrStat, ErrMsg )
+!...............................................................................................................................   
 
    TYPE(FAST_ParameterType), INTENT(INOUT) :: p_FAST              ! Parameters for the glue code
    TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              ! Output variables for the glue code
@@ -7156,7 +7203,7 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp
    END IF   
                      
 END SUBROUTINE FAST_EndMods
-!...............................................................................................................................   
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE FAST_DestroyAll( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType), INTENT(INOUT) :: p_FAST              ! Parameters for the glue code
@@ -7260,7 +7307,32 @@ SUBROUTINE FAST_DestroyAll( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, M
       
    
 END SUBROUTINE FAST_DestroyAll
-!...............................................................................................................................   
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE ExitThisProgram_T( Turbine, ErrLevel_in, ErrLocMsg )
+   
+   TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine
+   INTEGER(IntKi),           INTENT(IN)    :: ErrLevel_in         ! Error level when Error == .TRUE. (required when Error is .TRUE.)
+   CHARACTER(*), OPTIONAL,   INTENT(IN)    :: ErrLocMsg           ! an optional message describing the location of the error
+   
+   
+   IF (PRESENT(ErrLocMsg)) THEN
+      
+      CALL ExitThisProgram( Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+                     Turbine%ED, Turbine%SrvD, Turbine%AD, Turbine%IfW, &
+                     Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
+                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrLevel_in, ErrLocMsg )
+   
+   ELSE     
+      
+      CALL ExitThisProgram( Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+                     Turbine%ED, Turbine%SrvD, Turbine%AD, Turbine%IfW, &
+                     Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
+                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrLevel_in )
+      
+   END IF
+
+END SUBROUTINE ExitThisProgram_T
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrLevel_in, ErrLocMsg )
 ! This subroutine is called when FAST exits. It calls all the modules' end routines and cleans up variables declared in the
 ! main program. If there was an error, it also aborts. Otherwise, it prints the run times and performs a normal exit.
@@ -7348,7 +7420,21 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, M
 
 
 END SUBROUTINE ExitThisProgram
-!...............................................................................................................................   
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE FAST_Solution0_T(Turbine, ErrStat, ErrMsg)
+
+   TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine             ! all data for one instance of a turbine
+   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             ! Error status of the operation
+   CHARACTER(*),             INTENT(  OUT) :: ErrMsg              ! Error message if ErrStat /= ErrID_None
+
+
+      CALL FAST_Solution0(Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+                     Turbine%ED, Turbine%SrvD, Turbine%AD, Turbine%IfW, &
+                     Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
+                     Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )
+      
+END SUBROUTINE FAST_Solution0_T
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              ! Parameters for the glue code
@@ -7446,6 +7532,21 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAP
          
 
 END SUBROUTINE FAST_Solution0
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE FAST_Solution_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
+
+   REAL(DbKi),               INTENT(IN   ) :: t_initial           ! initial time
+   INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          ! loop counter
+   TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine             ! all data for one instance of a turbine
+   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             ! Error status of the operation
+   CHARACTER(*),             INTENT(  OUT) :: ErrMsg              ! Error message if ErrStat /= ErrID_None
+   
+      CALL FAST_Solution(t_initial, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+                  Turbine%ED, Turbine%SrvD, Turbine%AD, Turbine%IfW, &
+                  Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
+                  Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )                  
+                  
+END SUBROUTINE FAST_Solution_T
 !............................................................................................................................... 
 SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 ! this routine takes data from n_t_global and gets values at n_t_global + 1
@@ -7718,7 +7819,10 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD
    
 
 END SUBROUTINE FAST_Solution
-!............................................................................................................................... 
-!............................................................................................................................... 
+!----------------------------------------------------------------------------------------------------------------------------------
 
-END MODULE FAST_IO_Subs
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
+
+END MODULE FAST_Subs

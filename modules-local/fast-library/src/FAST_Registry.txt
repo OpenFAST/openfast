@@ -348,3 +348,21 @@ typedef	^	FAST_MiscVarType	FAST_ExternInputType	ExternInput	-	-	-	"external inpu
 typedef	^	FAST_ExternInitType	DbKi	Tmax	-	-1	-	"External code specified Tmax"	s
 typedef	^	FAST_ExternInitType	IntKi	SensorType	-	SensorType_None	-	"lidar sensor type, which should not be pulsed at the moment; this input should be replaced with a section in the InflowWind input file"	-
 typedef	^	FAST_ExternInitType	LOGICAL	LidRadialVel	-	-	-	"TRUE => return radial component, FALSE => return 'x' direction estimate"
+
+# ..... FAST Turbine Data (one realization) .......................................................................................................
+typedef	^	FAST_TurbineType	IntKi	TurbID	-	1	-	"Turbine ID Number"	-
+typedef	^	FAST_TurbineType	FAST_ParameterType	p_FAST	-	-	-	"Parameters for the glue code"	-
+typedef	^	FAST_TurbineType	FAST_OutputFileType	y_FAST	-	-	-	"Output variables for the glue code"	-
+typedef	^	FAST_TurbineType	FAST_MiscVarType	m_FAST	-	-	-	"Miscellaneous variables"	-
+typedef	^	FAST_TurbineType	FAST_ModuleMapType	MeshMapData	-	-	-	"Data for mapping between modules"	-
+typedef	^	FAST_TurbineType	ElastoDyn_Data	ED	-	-	-	"Data for the ElastoDyn module"	-
+typedef	^	FAST_TurbineType	ServoDyn_Data	SrvD	-	-	-	"Data for the ServoDyn module"	-
+typedef	^	FAST_TurbineType	AeroDyn_Data	AD	-	-	-	"Data for the AeroDyn module"	-
+typedef	^	FAST_TurbineType	InflowWind_Data	IfW	-	-	-	"Data for InflowWind module"	-
+typedef	^	FAST_TurbineType	HydroDyn_Data	HD	-	-	-	"Data for the HydroDyn module"	-
+typedef	^	FAST_TurbineType	SubDyn_Data	SD	-	-	-	"Data for the SubDyn module"	-
+typedef	^	FAST_TurbineType	MAP_Data	MAP	-	-	-	"Data for the MAP (Mooring Analysis Program) module"	-
+typedef	^	FAST_TurbineType	FEAMooring_Data	FEAM	-	-	-	"Data for the FEAMooring module"	-
+typedef	^	FAST_TurbineType	MoorDyn_Data	MD	-	-	-	"Data for the MoorDyn module"	-
+typedef	^	FAST_TurbineType	IceFloe_Data	IceF	-	-	-	"Data for the IceFloe module"	-
+typedef	^	FAST_TurbineType	IceDyn_Data	IceD	-	-	-	"Data for the IceDyn module"	-
