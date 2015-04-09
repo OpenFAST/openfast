@@ -399,7 +399,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             InitOutData%WindFileInfo%ZRange_Limited   =  .FALSE.                             ! Hard boundaries not enforced in z-direction
             InitOutData%WindFileInfo%BinaryFormat     =  0_IntKi
             InitOutData%WindFileInfo%IsBinary         =  .FALSE.
-
+            InitOutData%WindFileInfo%TI               =  0.0_ReKi
+            InitOutData%WindFileInfo%TI_listed        =  .FALSE.
       
 
 
@@ -435,6 +436,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             InitOutData%WindFileInfo%ZRange_Limited   =  .FALSE.                             ! Hard boundaries not enforced in z-direction
             InitOutData%WindFileInfo%BinaryFormat     =  0_IntKi
             InitOutData%WindFileInfo%IsBinary         =  .FALSE.
+            InitOutData%WindFileInfo%TI               =  0.0_ReKi
+            InitOutData%WindFileInfo%TI_listed        =  .FALSE.
 
 
                ! Check if the fist data point from the file is not along the X-axis while applying the windfield rotation
@@ -479,15 +482,17 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             InitOutData%WindFileInfo%YRange              =  (/ -ParamData%TSFFWind%FFYHWid, ParamData%TSFFWind%FFYHWid /)
             InitOutData%WindFileInfo%YRange_Limited      =  .TRUE.      ! Hard boundaries enforced in y-direction
             IF ( ParamData%TSFFWind%TowerDataExist ) THEN        ! have tower data
-               InitOutData%WindFileInfo%ZRange        =  (/ 0.0_Reki,                                                         & 
-                                                            ParamData%TSFFWind%RefHt + ParamData%TSFFWind%FFZHWid /)
+               InitOutData%WindFileInfo%ZRange           =  (/ 0.0_Reki,                                                         & 
+                                                               ParamData%TSFFWind%RefHt + ParamData%TSFFWind%FFZHWid /)
             ELSE
-               InitOutData%WindFileInfo%ZRange        =  (/ ParamData%TSFFWind%RefHt - ParamData%TSFFWind%FFZHWid,    &
-                                                            ParamData%TSFFWind%RefHt + ParamData%TSFFWind%FFZHWid /)
+               InitOutData%WindFileInfo%ZRange           =  (/ ParamData%TSFFWind%RefHt - ParamData%TSFFWind%FFZHWid,    &
+                                                               ParamData%TSFFWind%RefHt + ParamData%TSFFWind%FFZHWid /)
             ENDIF
             InitOutData%WindFileInfo%ZRange_Limited      =  .TRUE.
             InitOutData%WindFileInfo%BinaryFormat        =  ParamData%TSFFWind%WindFileFormat
             InitOutData%WindFileInfo%IsBinary            =  .TRUE.
+            InitOutData%WindFileInfo%TI                  =  0.0_ReKi
+            InitOutData%WindFileInfo%TI_listed           =  .FALSE.
 
 
 
@@ -504,13 +509,13 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             IF ( ErrStat >= AbortErrLev ) RETURN
 
                ! Store wind file metadata
-            InitOutData%WindFileInfo%FileName         =  InputFileData%BladedFF_FileName
-            InitOutData%WindFileInfo%WindType         =  BladedFF_WindNumber
-            InitOutData%WindFileInfo%RefHt            =  ParamData%BladedFFWind%RefHt
-            InitOutData%WindFileInfo%RefHt_Set        =  .TRUE.
-            InitOutData%WindFileInfo%DT               =  ParamData%BladedFFWind%FFDTime
-            InitOutData%WindFileInfo%NumTSteps        =  ParamData%BladedFFWind%NFFSteps
-            InitOutData%WindFileInfo%ConstantDT       =  .TRUE.
+            InitOutData%WindFileInfo%FileName            =  InputFileData%BladedFF_FileName
+            InitOutData%WindFileInfo%WindType            =  BladedFF_WindNumber
+            InitOutData%WindFileInfo%RefHt               =  ParamData%BladedFFWind%RefHt
+            InitOutData%WindFileInfo%RefHt_Set           =  .TRUE.
+            InitOutData%WindFileInfo%DT                  =  ParamData%BladedFFWind%FFDTime
+            InitOutData%WindFileInfo%NumTSteps           =  ParamData%BladedFFWind%NFFSteps
+            InitOutData%WindFileInfo%ConstantDT          =  .TRUE.
             IF ( ParamData%BladedFFWind%Periodic ) THEN
                InitOutData%WindFileInfo%TRange           =  (/ 0.0_ReKi, ParamData%BladedFFWind%TotalTime /)
                InitOutData%WindFileInfo%TRange_Limited   =  .FALSE.
@@ -519,18 +524,20 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
                   -  ParamData%BladedFFWind%InitXPosition*ParamData%BladedFFWind%InvMFFWS
                InitOutData%WindFileInfo%TRange_Limited   =  .TRUE.
             ENDIF
-            InitOutData%WindFileInfo%YRange           =  (/ -ParamData%BladedFFWind%FFYHWid, ParamData%BladedFFWind%FFYHWid /)
-            InitOutData%WindFileInfo%YRange_Limited   =  .TRUE.      ! Hard boundaries enforced in y-direction
+            InitOutData%WindFileInfo%YRange              =  (/ -ParamData%BladedFFWind%FFYHWid, ParamData%BladedFFWind%FFYHWid /)
+            InitOutData%WindFileInfo%YRange_Limited      =  .TRUE.      ! Hard boundaries enforced in y-direction
             IF ( ParamData%BladedFFWind%TowerDataExist ) THEN        ! have tower data
-               InitOutData%WindFileInfo%ZRange        =  (/ 0.0_Reki,                                                         & 
+               InitOutData%WindFileInfo%ZRange           =  (/ 0.0_Reki,                                                         & 
                                                             ParamData%BladedFFWind%RefHt + ParamData%BladedFFWind%FFZHWid /)
             ELSE
-               InitOutData%WindFileInfo%ZRange        =  (/ ParamData%BladedFFWind%RefHt - ParamData%BladedFFWind%FFZHWid,    &
+               InitOutData%WindFileInfo%ZRange           =  (/ ParamData%BladedFFWind%RefHt - ParamData%BladedFFWind%FFZHWid,    &
                                                             ParamData%BladedFFWind%RefHt + ParamData%BladedFFWind%FFZHWid /)
             ENDIF
-            InitOutData%WindFileInfo%ZRange_Limited   =  .TRUE.
-            InitOutData%WindFileInfo%BinaryFormat     =  ParamData%BladedFFWind%WindFileFormat
-            InitOutData%WindFileInfo%IsBinary         =  .TRUE.
+            InitOutData%WindFileInfo%ZRange_Limited      =  .TRUE.
+            InitOutData%WindFileInfo%BinaryFormat        =  ParamData%BladedFFWind%WindFileFormat
+            InitOutData%WindFileInfo%IsBinary            =  .TRUE.
+            InitOutData%WindFileInfo%TI                  =  InitOutData%BladedFFWind%TI
+            InitOutData%WindFileInfo%TI_listed           =  .TRUE.   ! This must be listed in the file someplace
 
 
 
@@ -607,57 +614,6 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !!!!           IF (ErrStat == ErrID_None .AND. ParamData%CTTS_Flag) &
 !!!!              CALL CTTS_SetRefVal(InitData%ReferenceHeight, REAL(0.0, ReKi), ErrStat, ErrMsg)      !FIXME: will need to put this routine in the Init of CT
 !!!
-!!!
-!!!         CASE (FF_WindNumber)
-!!!
-!!!            FF_InitData%ReferenceHeight = InitData%ReferenceHeight
-!!!            FF_InitData%Width           = InitData%Width
-!!!            FF_InitData%WindFileName    = ParamData%WindFileName
-!!!
-!!!            CALL IfW_FFWind_Init(FF_InitData,   FF_InitGuess,  ParamData%FFWind,                         &
-!!!                                 FF_ContStates, FF_DiscStates, FF_ConstrStates,     OtherStates%FFWind,  &
-!!!                                 FF_OutData,    TimeInterval,  InitOutData%FFWind,  TmpErrStat,          TmpErrMsg)
-!!!
-!!!               CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
-!!!               IF ( ErrStat >= AbortErrLev ) RETURN
-!!!
-!!!
-!NOTE: remove the WriteOutputHdr from the full field modules.  This is handled in the CalcOutput module of InflowWind
-!!!              ! Copy Relevant info over to InitOutData
-!!!
-!!!                  ! Allocate and copy over the WriteOutputHdr info
-!!!               CALL AllocAry( InitOutData%WriteOutputHdr, SIZE(InitOutData%FFWind%WriteOutputHdr,1), &
-!!!                              'Empty array for names of outputable information.', TmpErrStat, TmpErrMsg )
-!!!                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
-!!!                  IF ( ErrStat >= AbortErrLev ) RETURN
-!!!
-!!!               InitOutData%WriteOutputHdr    =  InitOutData%FFWind%WriteOutputHdr
-!!!
-!!!                  ! Allocate and copy over the WriteOutputUnt info
-!!!               CALL AllocAry( InitOutData%WriteOutputUnt, SIZE(InitOutData%FFWind%WriteOutputUnt,1), &
-!!!                              'Empty array for units of outputable information.', TmpErrStat, TmpErrMsg )
-!!!                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
-!!!                  IF ( ErrStat >= AbortErrLev ) RETURN
-!!!
-!!!               InitOutData%WriteOutputUnt    =  InitOutData%FFWind%WriteOutputUnt
-!!!
-!!!
-!!!
-!!!
-!!!                  ! Copy the hub height info over
-!!!               InitOutData%HubHeight         =  InitOutData%FFWind%HubHeight
-!!!
-!!!            !FIXME: Fix this when CTTS_Wind is available
-!!!!               ! Set CT parameters
-!!!!            IF ( ErrStat == ErrID_None .AND. ParamData%CTTS_Flag ) THEN
-!!!!               Height     = FF_GetValue('HubHeight', ErrStat, ErrMsg)
-!!!!               IF ( ErrStat /= 0 ) Height = InitData%ReferenceHeight
-!!!!
-!!!!               HalfWidth  = 0.5*FF_GetValue('GridWidth', ErrStat, ErrMsg)
-!!!!               IF ( ErrStat /= 0 ) HalfWidth = 0
-!!!!
-!!!!               CALL CTTS_SetRefVal(Height, HalfWidth, ErrStat, ErrMsg)
-!!!!            END IF
 !!!
 !!!
 !!!         CASE (User_WindNumber)
@@ -986,21 +942,6 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
 
 
-
-!!!         CASE (User_WindNumber)
-
-!!!               OutputData%Velocity(:,PointCounter) = UsrWnd_GetWindSpeed( Time, InputData%Position(:,PointCounter), ErrStat )!, ErrMsg)
-
-
-!!!         CASE (FD_WindNumber)
-
-!!!               OutputData%Velocity(:,PointCounter) = FD_GetWindSpeed(     Time, InputData%Position(:,PointCounter), ErrStat )
-
-
-
-!!!         CASE (HAWC_WindNumber)
-
-!!!               OutputData%Velocity(:,PointCounter) = HW_GetWindSpeed(     Time, InputData%Position(:,PointCounter), ErrStat )
 
 
 

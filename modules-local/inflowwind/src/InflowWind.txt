@@ -47,6 +47,8 @@ typedef  ^                       ^                 ReKi              ZRange     
 typedef  ^                       ^                 Logical           ZRange_Limited    -     -     -     "ZRange limits strictly enforced"                        -
 typedef  ^                       ^                 IntKi             BinaryFormat      -     -     -     "Binary format identifier"                               -
 typedef  ^                       ^                 Logical           IsBinary          -     -     -     "Windfile is a binary file"                              -
+typedef  ^                       ^                 ReKi              TI                {3}   -     -     "Turbulence intensity (U,V,W)"                           -
+typedef  ^                       ^                 Logical           TI_listed         -     -     -     "Turbulence intesity given in file"                      -
 
 
 
@@ -122,7 +124,7 @@ typedef  ^                       ^                 ReKi              HubHeight  
 typedef  ^                       ^    IfW_UniformWind_InitOutputType UniformWind       -     -     -     "UniformWind InitOutput info"                            -
 typedef  ^                       ^       IfW_TSFFWind_InitOutputType TSFFWind          -     -     -     "TSFFWind InitOutput info"                               -
 typedef  ^                       ^   IfW_BladedFFWind_InitOutputType BladedFFWind      -     -     -     "BladedFFWind InitOutput info"                           -
-typedef  ^                       ^   IfW_HAWCWind_InitOutputType HAWCWind      -     -     -     "HAWCWind InitOutput info"                           -
+typedef  ^                       ^       IfW_HAWCWind_InitOutputType HAWCWind          -     -     -     "HAWCWind InitOutput info"                           -
 typedef  ^                       ^                 WindFileMetaData  WindFileInfo      -     -     -     "Meta data from the wind file"                           -
 
 
@@ -130,7 +132,7 @@ typedef  ^                       ^                 WindFileMetaData  WindFileInf
 #   e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 #   at a given time, etc.)
 typedef  ^                       OtherStateType    IntKi             TimeIndex         -     0     -     "An Index into the TData array"                          -
-typedef  ^                       ^   IfW_UniformWind_OtherStateType  UniformWind            -     -     -     "OtherStates from UniformWind"                 -
+typedef  ^                       ^   IfW_UniformWind_OtherStateType  UniformWind       -     -     -     "OtherStates from UniformWind"                 -
 typedef  ^                       ^      IfW_TSFFWind_OtherStateType  TSFFWind          -     -     -     "OtherStates from TSFFWind"                              -
 typedef  ^                       ^  IfW_BladedFFWind_OtherStateType  BladedFFWind      -     -     -     "OtherStates from BladedFFWind"                          -
 typedef  ^                       ^                 ReKi              AllOuts           :     -     -     "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
@@ -172,9 +174,6 @@ typedef  ^                       ^    IfW_BladedFFWind_ParameterType BladedFFWin
 #typedef  ^                       ^          IfW_CTWind_ParameterType CTWind            -     -     -     "Parameters from CTWind"                                 -
 typedef  ^                       ^                 IntKi             NumOuts           -     0     -     "Number of parameters in the output list (number of outputs requested)" -
 typedef  ^                       ^                 OutParmType       OutParam          {:}   -     -     "Names and units (and other characteristics) of all requested output parameters" -
-#typedef  ^                       ^                 ReKi              HWindSpeed        -     -     -     "Horizontal windspeed for steady wind conditions"        -
-#typedef  ^                       ^                 ReKi              RefHt             -     -     -     "Reference height for horizontal wind speed for steady wind"   -
-#typedef  ^                       ^                 ReKi              PLexp             -     -     -     "Power law exponent"                                     -
 
 
 # ..... Inputs ....................................................................................................................

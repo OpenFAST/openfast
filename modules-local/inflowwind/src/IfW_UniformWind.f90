@@ -110,6 +110,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    REAL(ReKi)                                                  :: TmpData(NumCols)  ! Temp variable for reading all columns from a line
    REAL(ReKi)                                                  :: DelDiff           ! Temp variable for storing the direction difference
 
+   INTEGER(IntKi)                                              :: UnitWind     ! Unit number for the InflowWind input file
    INTEGER(IntKi)                                              :: I
    INTEGER(IntKi)                                              :: NumComments
    INTEGER(IntKi)                                              :: ILine             ! Counts the line number in the file
@@ -165,7 +166,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
 
       ! Get a unit number to use
 
-   CALL GetNewUnit(OtherStates%UnitWind, TmpErrStat, TmpErrMsg)
+   CALL GetNewUnit(UnitWind, TmpErrStat, TmpErrMsg)
    CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    IF (ErrStat >= AbortErrLev) RETURN
 
@@ -183,7 +184,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       ! Open the file for reading
       !-------------------------------------------------------------------------------------------------
 
-   CALL OpenFInpFile (OtherStates%UnitWind, TRIM(InitData%WindFileName), TmpErrStat, TmpErrMsg)
+   CALL OpenFInpFile (UnitWind, TRIM(InitData%WindFileName), TmpErrStat, TmpErrMsg)
    CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -198,7 +199,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    DO WHILE ( (INDEX( LINE, '!' ) > 0) .OR. (INDEX( LINE, '#' ) > 0) .OR. (INDEX( LINE, '%' ) > 0) ) ! Lines containing "!" are treated as comment lines
       NumComments = NumComments + 1
 
-      READ(OtherStates%UnitWind,'( A )',IOSTAT=TmpErrStat) LINE
+      READ(UnitWind,'( A )',IOSTAT=TmpErrStat) LINE
 
       IF ( TmpErrStat /=0 ) THEN
          CALL SetErrStat(ErrID_Fatal,' Error reading from uniform wind file on line '//TRIM(Num2LStr(NumComments))//'.',   &
@@ -220,7 +221,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    DO WHILE (TmpErrStat == ErrID_None)  ! read the rest of the file (until an error occurs)
       ParamData%NumDataLines = ParamData%NumDataLines + 1
 
-      READ(OtherStates%UnitWind,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols )
+      READ(UnitWind,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols )
 
    END DO !WHILE
 
@@ -294,10 +295,10 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       ! Rewind the file (to the beginning) and skip the comment lines
       !-------------------------------------------------------------------------------------------------
 
-   REWIND( OtherStates%UnitWind )
+   REWIND( UnitWind )
 
    DO I=1,NumComments
-      CALL ReadCom( OtherStates%UnitWind, TRIM(InitData%WindFileName), 'Header line #'//TRIM(Num2LStr(I)), TmpErrStat, TmpErrMsg )
+      CALL ReadCom( UnitWind, TRIM(InitData%WindFileName), 'Header line #'//TRIM(Num2LStr(I)), TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    END DO !I
@@ -309,7 +310,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
 
    DO I=1,ParamData%NumDataLines
 
-      CALL ReadAry( OtherStates%UnitWind, TRIM(InitData%WindFileName), TmpData(1:NumCols), NumCols, 'TmpData', &
+      CALL ReadAry( UnitWind, TRIM(InitData%WindFileName), TmpData(1:NumCols), NumCols, 'TmpData', &
                 'Data from uniform wind file line '//TRIM(Num2LStr(NumComments+I)), TmpErrStat, TmpErrMsg)
       CALL SetErrStat(TmpErrStat,'Error retrieving data from the uniform wind file line'//TRIM(Num2LStr(NumComments+I)),   &
             ErrStat,ErrMsg,RoutineName)
@@ -401,7 +402,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       ! Close the file
       !-------------------------------------------------------------------------------------------------
 
-   CLOSE( OtherStates%UnitWind )
+   CLOSE( UnitWind )
 
 
       !-------------------------------------------------------------------------------------------------
