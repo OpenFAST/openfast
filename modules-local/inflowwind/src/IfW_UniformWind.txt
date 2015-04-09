@@ -35,7 +35,6 @@ typedef  ^                       ^                       LOGICAL  WindFileConsta
 #   e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 #   at a given time, etc.)
 typedef  ^                       OtherStateType          IntKi    TimeIndex         -     -     -     "An Index into the TData array"                                -
-typedef  ^                       ^                       IntKi    UnitWind          -     -     -     "Unit number for the wind file opened"                         -
 
 
 # ..... Parameters ................................................................................................................

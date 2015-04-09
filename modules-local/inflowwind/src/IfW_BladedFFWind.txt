@@ -22,6 +22,7 @@ typedef  ^                       ^                       Logical  TowerFileExist
 
 # Init Output
 typedef  ^                       InitOutputType       ProgDesc    Ver               -     -     -     "Version information off FFWind submodule"                     -
+typedef  ^                       ^                       ReKi     TI                {3}   -     -     "Turbulence intensity given in the file"                       -
 
 
 # Define any data that are not considered actual states here:
@@ -29,7 +30,6 @@ typedef  ^                       InitOutputType       ProgDesc    Ver           
 #   at a given time, etc.)
 typedef  ^                       OtherStateType          IntKi    TimeIndex         -     0     -     "An Index into the TData array"                                -
 typedef  ^                       ^                       Logical  Initialized       -  .FALSE.  -     "Flag to indicate if the module was initialized"               -
-typedef  ^                       ^                       IntKi    UnitWind          -     -     -     "Unit number for the wind file opened"                         -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:

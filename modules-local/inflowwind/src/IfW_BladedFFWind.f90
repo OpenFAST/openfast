@@ -97,7 +97,8 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
    REAL(ReKi)                                            :: BinTI   (3)    ! turbulence intensities of the wind components as defined in the FF binary file, not necessarially the actual TI
    REAL(ReKi)                                            :: UBar
    REAL(ReKi)                                            :: ZCenter
-
+ 
+   INTEGER(IntKi)                                        :: UnitWind     ! Unit number for the InflowWind input file
    INTEGER(B2Ki)                                         :: Dum_Int2
    INTEGER(IntKi)                                        :: I
    LOGICAL                                               :: CWise
@@ -151,7 +152,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
       ! Get a unit number to use
 
-   CALL GetNewUnit(OtherStates%UnitWind, TmpErrStat, TmpErrMsg)
+   CALL GetNewUnit(UnitWind, TmpErrStat, TmpErrMsg)
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_BladedFFWind')
    IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -168,14 +169,14 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
       ! binary file it is, and close it.
       !----------------------------------------------------------------------------------------------
 
-   CALL OpenBInpFile (OtherStates%UnitWind, TRIM(ParamData%WindFileName), TmpErrStat, TmpErrMsg)
+   CALL OpenBInpFile (UnitWind, TRIM(ParamData%WindFileName), TmpErrStat, TmpErrMsg)
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_BladedFFWind')
    IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! Read the first binary integer from the file to get info on the type.
       ! Cannot use library read routines since this is a 2-byte integer.
-   READ ( OtherStates%UnitWind, IOSTAT=TmpErrStat )  Dum_Int2
-   CLOSE( OtherStates%UnitWind )
+   READ ( UnitWind, IOSTAT=TmpErrStat )  Dum_Int2
+   CLOSE( UnitWind )
 
    IF (TmpErrStat /= 0) THEN
       CALL SetErrStat( ErrID_Fatal, ' Error reading first binary integer from file "'//TRIM(ParamData%WindFileName)//'."', &
@@ -212,10 +213,10 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
          ! Read the summary file to get necessary scaling information
          !...........................................................................................
 
-            CALL Read_Summary_FF (OtherStates%UnitWind, TRIM(SumFile), CWise, ZCenter, TI, TmpErrStat, TmpErrMsg )
+            CALL Read_Summary_FF (UnitWind, TRIM(SumFile), CWise, ZCenter, TI, TmpErrStat, TmpErrMsg )
                CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )                  
                IF ( ErrStat >= AbortErrLev ) THEN
-                  CLOSE ( OtherStates%UnitWind )
+                  CLOSE ( UnitWind )
                   RETURN
                END IF
             
@@ -226,18 +227,18 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
          ! Open the binary file and read its header
          !...........................................................................................
 
-            CALL OpenBInpFile (OtherStates%UnitWind, TRIM(ParamData%WindFileName), TmpErrStat, TmpErrMsg )
+            CALL OpenBInpFile (UnitWind, TRIM(ParamData%WindFileName), TmpErrStat, TmpErrMsg )
                CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )                  
                IF ( ErrStat >= AbortErrLev ) THEN
-                  CLOSE ( OtherStates%UnitWind )
+                  CLOSE ( UnitWind )
                   RETURN
                END IF
             
             IF ( Dum_Int2 == -99 ) THEN                                                      ! Newer-style BLADED format
-               CALL Read_Bladed_FF_Header1 (OtherStates%UnitWind, BinTI, TmpErrStat, TmpErrMsg)
+               CALL Read_Bladed_FF_Header1 (UnitWind, BinTI, TmpErrStat, TmpErrMsg)
                   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )                  
                   IF ( ErrStat >= AbortErrLev ) THEN
-                     CLOSE ( OtherStates%UnitWind )
+                     CLOSE ( UnitWind )
                      RETURN
                   END IF
 
@@ -249,10 +250,10 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
                ENDDO
 
             ELSE
-               CALL Read_Bladed_FF_Header0 (OtherStates%UnitWind, TmpErrStat, TmpErrMsg)     ! Older-style BLADED format
+               CALL Read_Bladed_FF_Header0 (UnitWind, TmpErrStat, TmpErrMsg)     ! Older-style BLADED format
                   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )                  
                   IF ( ErrStat >= AbortErrLev ) THEN
-                     CLOSE ( OtherStates%UnitWind )
+                     CLOSE ( UnitWind )
                      RETURN
                   END IF
 
@@ -283,7 +284,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
          !...........................................................................................
 
             CALL Read_Bladed_Grids( OtherStates, CWise, TI, TmpErrStat, TmpErrMsg)
-            CLOSE ( OtherStates%UnitWind )
+            CLOSE ( UnitWind )
 
                CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )                  
                IF ( ErrStat >= AbortErrLev ) RETURN
@@ -301,14 +302,14 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
                   CALL Read_FF_Tower( OtherStates, TmpErrStat, TmpErrMsg )
                   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )                  
                   IF ( ErrStat >= AbortErrLev ) THEN
-                     CLOSE ( OtherStates%UnitWind )
+                     CLOSE ( UnitWind )
                      RETURN
                   END IF
                   ParamData%TowerDataExist   =  .TRUE.
                ELSE
                   CALL SetErrStat( ErrID_Fatal, ' Tower file '//TRIM(TwrFile)//' specified for Bladed full-field '// &
                            'wind files does not exist.', ErrStat, ErrMsg, RoutineName)
-                  CLOSE ( OtherStates%UnitWind )
+                  CLOSE ( UnitWind )
                   RETURN
                ENDIF
             ELSE
@@ -341,8 +342,8 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
       ! Set the InitOutput information
       !-------------------------------------------------------------------------------------------------
 
-   InitOutdata%Ver         = IfW_BladedFFWind_Ver
-
+   InitOutdata%Ver         =  IfW_BladedFFWind_Ver
+   InitOutdata%TI          =  TI
 
    RETURN
 
@@ -406,7 +407,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
          ! Open summary file.
          !----------------------------------------------------------------------------------------------
 
-      CALL OpenFInpFile ( OtherStates%UnitWind, TRIM( FileName ), TmpErrStat, TmpErrMsg )
+      CALL OpenFInpFile ( UnitWind, TRIM( FileName ), TmpErrStat, TmpErrMsg )
       CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )                  
       IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -428,7 +429,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
          LineCount = LineCount + 1
 
-         READ ( OtherStates%UnitWind, '(A)', IOSTAT=TmpErrStat ) LINE
+         READ ( UnitWind, '(A)', IOSTAT=TmpErrStat ) LINE
          IF ( TmpErrStat /= 0 ) THEN
 
                ! the "HEIGHT OFFSET" and "PERIODIC" parameters are not necessary.  We'll assume they are zero/false if we didn't find it.
@@ -521,7 +522,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
                   LineCount = LineCount + 1
 
-                  READ ( OtherStates%UnitWind, '(A)', IOSTAT=TmpErrStat ) LINE
+                  READ ( UnitWind, '(A)', IOSTAT=TmpErrStat ) LINE
                   IF ( TmpErrStat /= 0 ) THEN
                      CALL SetErrStat( ErrID_Fatal, ' Error reading line #'//TRIM(Num2LStr(LineCount))//' of the summary file, "'//TRIM(FileName)//&
                                           '". Could not find all of the required parameters.', ErrStat, ErrMsg, RoutineName )                  
@@ -590,7 +591,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
       ! Close the summary file
       !-------------------------------------------------------------------------------------------------
 
-      CLOSE ( OtherStates%UnitWind )
+      CLOSE ( UnitWind )
 
 
       !-------------------------------------------------------------------------------------------------
@@ -1160,7 +1161,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
    END SUBROUTINE Read_Bladed_FF_Header1
    !====================================================================================================
    SUBROUTINE Read_Bladed_Grids ( OtherStates, CWise, TI, ErrStat, ErrMsg )
-   ! This subroutine continues reading OtherStates%UnitWind, starting after the headers have been read.
+   ! This subroutine continues reading UnitWind, starting after the headers have been read.
    ! It reads the Grids and converts the data to un-normalized wind speeds in m/s.
    !   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
    !----------------------------------------------------------------------------------------------------
@@ -1274,7 +1275,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
                      ! Get the next integer from the file.
                      ! This is a 2-byte integer, so we can't use the library read routines.
-                  READ (OtherStates%UnitWind,IOStat=TmpErrStat)  Dum_Int2
+                  READ (UnitWind,IOStat=TmpErrStat)  Dum_Int2
                   IF (TmpErrStat /= 0) THEN
                      IF ( IT == TmpNumSteps ) THEN ! There really were an even number of steps
                         ParamData%NFFSteps = TmpNumSteps - 1
@@ -1374,7 +1375,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
       ! Open the file
       !-------------------------------------------------------------------------------------------------
 
-      CALL OpenBInpFile (OtherStates%UnitWind, TRIM(ParamData%WindFileName), TmpErrStat, TmpErrMsg)
+      CALL OpenBInpFile (UnitWind, TRIM(ParamData%WindFileName), TmpErrStat, TmpErrMsg)
          CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
          IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1383,7 +1384,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
       ! parameters already read.
       !-------------------------------------------------------------------------------------------------
             ! This is a 4-byte real, so we can't use the library read routines.
-         READ (OtherStates%UnitWind, IOSTAT=TmpErrStat)   Dum_Real4               ! dz, in meters [4-byte REAL]
+         READ (UnitWind, IOSTAT=TmpErrStat)   Dum_Real4               ! dz, in meters [4-byte REAL]
             IF ( TmpErrStat /= 0 )  THEN
                CALL SetErrStat( ErrID_Fatal, ' Error reading dz in the binary tower file "'//TRIM( ParamData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
@@ -1396,7 +1397,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
 
             ! This is a 4-byte real, so we can't use the library read routines.
-         READ (OtherStates%UnitWind, IOSTAT=TmpErrStat)   Dum_Real4               ! dx, in meters [4-byte REAL]
+         READ (UnitWind, IOSTAT=TmpErrStat)   Dum_Real4               ! dx, in meters [4-byte REAL]
             IF ( TmpErrStat /= 0 )  THEN
                CALL SetErrStat( ErrID_Fatal, ' Error reading dx in the binary tower file "'//TRIM( ParamData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
@@ -1409,7 +1410,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
 
             ! This is a 4-byte real, so we can't use the library read routines.
-         READ (OtherStates%UnitWind, IOSTAT=TmpErrStat)   Dum_Real4               ! Zmax, in meters [4-byte REAL]
+         READ (UnitWind, IOSTAT=TmpErrStat)   Dum_Real4               ! Zmax, in meters [4-byte REAL]
             IF ( TmpErrStat /= 0 )  THEN
                CALL SetErrStat( ErrID_Fatal, ' Error reading Zmax in the binary tower file "'//TRIM( ParamData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
@@ -1422,7 +1423,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
 
             ! This is a 4-byte integer, so we can't use the library read routines.
-         READ (OtherStates%UnitWind, IOSTAT=TmpErrStat)   Dum_Int4                ! NumOutSteps [4-byte INTEGER]
+         READ (UnitWind, IOSTAT=TmpErrStat)   Dum_Int4                ! NumOutSteps [4-byte INTEGER]
             IF ( TmpErrStat /= 0 )  THEN
                CALL SetErrStat( ErrID_Fatal, ' Error reading NumOutSteps in the binary tower file "'//TRIM( ParamData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
@@ -1435,7 +1436,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
 
             ! This is a 4-byte integer, so we can't use the library read routines.
-         READ (OtherStates%UnitWind, IOSTAT=TmpErrStat)   Dum_Int4                ! NumZ      [4-byte INTEGER]
+         READ (UnitWind, IOSTAT=TmpErrStat)   Dum_Int4                ! NumZ      [4-byte INTEGER]
             IF ( TmpErrStat /= 0 )  THEN
                CALL SetErrStat( ErrID_Fatal, ' Error reading NumZ in the binary tower file "'//TRIM( ParamData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
@@ -1444,7 +1445,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
 
             ! This is a 4-byte real, so we can't use the library read routines.
-         READ (OtherStates%UnitWind, IOSTAT=TmpErrStat)   Dum_Real4               ! UHub      [4-byte REAL]
+         READ (UnitWind, IOSTAT=TmpErrStat)   Dum_Real4               ! UHub      [4-byte REAL]
             IF ( TmpErrStat /= 0 )  THEN
                CALL SetErrStat( ErrID_Fatal, ' Error reading UHub in the binary tower file "'//TRIM( ParamData%WindFileName )//'."', ErrStat, ErrMsg, RoutineName )
                RETURN
@@ -1461,14 +1462,14 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
                ! Read the TI values fromthe tower file: 4-byte reals.
                
                !bjj: not sure you can call this routine to read from a binary file...
-            !CALL ReadVar( OtherStates%UnitWind, TRIM(ParamData%WindFileName), TI(IC), 'TI('//TRIM(Num2LStr(IC))//')', 'TI value for u,v, or w', TmpErrStat, TmpErrMsg )
+            !CALL ReadVar( UnitWind, TRIM(ParamData%WindFileName), TI(IC), 'TI('//TRIM(Num2LStr(IC))//')', 'TI value for u,v, or w', TmpErrStat, TmpErrMsg )
             !IF (TmpErrStat /= ErrID_None) THEN
             !   ParamData%NTGrids  = 0
             !   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
             !   IF (ErrStat >= AbortErrLev) RETURN
             !ENDIF
             !
-            READ (OtherStates%UnitWind, IOSTAT=TmpErrStat)   TI(IC)               ! TI(u), TI(v), TI(w)  [4-byte REAL]
+            READ (UnitWind, IOSTAT=TmpErrStat)   TI(IC)               ! TI(u), TI(v), TI(w)  [4-byte REAL]
             
             IF (TmpErrStat /= 0) THEN
                ParamData%NTGrids  = 0
@@ -1513,7 +1514,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
                DO IC=1,ParamData%NFFComp   ! number of wind components
 
                      ! Read in the 2-byte integer. Can't use library read routines for this.
-                  READ (OtherStates%UnitWind, IOSTAT=TmpErrStat)   Dum_Int2       ! normalized wind-component, INT(2)
+                  READ (UnitWind, IOSTAT=TmpErrStat)   Dum_Int2       ! normalized wind-component, INT(2)
                   IF ( TmpErrStat /= 0 )  THEN
                      CALL SetErrStat( ErrID_Fatal, ' Error reading binary tower data file. it = '//TRIM(Num2LStr(it))// &
                                     ', nffsteps = '//TRIM(Num2LStr(ParamData%NFFSteps)), ErrStat, ErrMsg, RoutineName )
@@ -1533,7 +1534,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
       !-------------------------------------------------------------------------------------------------
       ! Close the file
       !-------------------------------------------------------------------------------------------------
-      CLOSE ( OtherStates%UnitWind )
+      CLOSE ( UnitWind )
 
       TmpErrMsg = '   Processed '//TRIM( Num2LStr(ParamData%NFFSteps) )//' time steps of '// &
             TRIM( Num2LStr(ParamData%NTGrids) )//'x1 tower data grids.'
