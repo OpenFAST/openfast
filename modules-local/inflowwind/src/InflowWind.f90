@@ -63,6 +63,8 @@ MODULE InflowWind
 !!!   USE                              FDWind                     ! 4-D binary wind files
 !!!   USE                              CTWind                     ! coherent turbulence from KH billow - binary file superimposed on another wind type
 !!!   USE                              UserWind                   ! user-defined wind module
+   USE                              IfW_UserWind_Types         ! Types for IfW_UserWind
+   USE                              IfW_UserWind               ! TurbSim style full-field binary wind files
 
 
 
@@ -140,6 +142,9 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
       TYPE(IfW_BladedFFWind_InitInputType)                  :: BladedFF_InitData       !< initialization info
       TYPE(IfW_BladedFFWind_OutputType)                     :: BladedFF_OutData        !< output velocities
+
+      TYPE(IfW_UserWind_InitInputType)                      :: User_InitData     !< initialization info
+      TYPE(IfW_UserWind_OutputType)                         :: User_OutData      !< output velocities
 
 
 !!!     TYPE(CTBladed_Backgr)                                        :: BackGrndValues
@@ -547,9 +552,14 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
 
 
-         CASE ( User_WindNumber )
-               ! Initialize the User_Wind module
-            CALL SetErrStat( ErrID_Fatal,' User winds not supported yet.',ErrStat,ErrMsg,RoutineName )
+
+         CASE (User_WindNumber)
+
+               ! Initialize the UserWind module
+            CALL IfW_UserWind_Init(User_InitData, InputGuess%PositionXYZ, ParamData%UserWind, OtherStates%UserWind, &
+                        User_OutData,    TimeInterval,  InitOutData%UserWind,  TmpErrStat,          TmpErrMsg)
+            CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+            IF ( ErrStat >= AbortErrLev ) RETURN
 
 
 
@@ -616,15 +626,9 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !!!
 !!!
 !!!
-!!!         CASE (User_WindNumber)
-!!!
-!!!               !FIXME: remove this error message when we add UD_Wind in
-!!!            CALL SetErrStat( ErrID_Fatal, ' InflowWind cannot currently handle the UD_Wind type.', ErrStat, ErrMsg, ' IfW_Init' )
-!!!            RETURN
-!!!
-!!!!            CALL UsrWnd_Init(ErrStat)
-!!!
-!!!
+
+
+
 !!!         CASE (HAWC_WindNumber)
 !!!
 !!!               !FIXME: remove this error message when we add HAWC_Wind in
@@ -721,6 +725,9 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
       TYPE(IfW_BladedFFWind_InitInputType)                     :: BladedFF_InitData       !< initialization info
       TYPE(IfW_BladedFFWind_OutputType)                        :: BladedFF_OutData        !< output velocities
 
+      TYPE(IfW_UserWind_InitInputType)                         :: User_InitData       !< initialization info
+      TYPE(IfW_UserWind_OutputType)                            :: User_OutData        !< output velocities
+
       REAL(ReKi), ALLOCATABLE                                  :: PositionXYZprime(:,:)   !< PositionXYZ array in the prime (wind) coordinates
 
       INTEGER(IntKi)                                           :: I                    !< Generic counters
@@ -801,7 +808,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
             IF ( ErrStat >= AbortErrLev ) RETURN
 
-               ! Call IfW_UniforWind_CalcOutput again in order to get the values needed for the OutList -- note that we do not report errors from this
+               ! Call IfW_UniformWind_CalcOutput again in order to get the values needed for the OutList -- note that we do not report errors from this
             IF ( ParamData%NWindVel >= 1_IntKi ) THEN
                   ! Move the arrays for the Velocity information
                CALL MOVE_ALLOC( OtherStates%WindViUVW,  Uniform_OutData%Velocity )
@@ -836,7 +843,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
             IF ( ErrStat >= AbortErrLev ) RETURN
 
 
-               ! Call IfW_UniforWind_CalcOutput again in order to get the values needed for the OutList
+               ! Call IfW_UniformWind_CalcOutput again in order to get the values needed for the OutList
             IF ( ParamData%NWindVel >= 1_IntKi ) THEN
                   ! Move the arrays for the Velocity information
                CALL MOVE_ALLOC( OtherStates%WindViUVW,  Uniform_OutData%Velocity )
@@ -876,7 +883,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
             IF ( ErrStat >= AbortErrLev ) RETURN
 
 
-               ! Call IfW_UniforWind_CalcOutput again in order to get the values needed for the OutList
+               ! Call IfW_TSFFWind_CalcOutput again in order to get the values needed for the OutList
             IF ( ParamData%NWindVel >= 1_IntKi ) THEN
                   ! Move the arrays for the Velocity information
                CALL MOVE_ALLOC( OtherStates%WindViUVW,  TSFF_OutData%Velocity )
@@ -919,7 +926,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
             IF ( ErrStat >= AbortErrLev ) RETURN
 
 
-               ! Call IfW_UniforWind_CalcOutput again in order to get the values needed for the OutList
+               ! Call IfW_BladedFFWind_CalcOutput again in order to get the values needed for the OutList
             IF ( ParamData%NWindVel >= 1_IntKi ) THEN
                   ! Move the arrays for the Velocity information
                CALL MOVE_ALLOC( OtherStates%WindViUVW,  BladedFF_OutData%Velocity )
@@ -939,6 +946,48 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
                   ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
                CALL MOVE_ALLOC( BladedFF_OutData%Velocity, OtherStates%WindViUVW )
             ENDIF
+
+
+         CASE (User_WindNumber)
+
+               ! Move the arrays for the Position and Velocity information
+            CALL MOVE_ALLOC( OutputData%VelocityUVW,  User_OutData%Velocity )
+
+
+               ! InputData only contains the Position array, so we can pass that directly.
+            CALL  IfW_UserWind_CalcOutput(  Time, PositionXYZprime, ParamData%UserWind, OtherStates%UserWind, &
+                                          User_OutData, TmpErrStat, TmpErrMsg)
+
+               ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
+            CALL MOVE_ALLOC( User_OutData%Velocity,   OutputData%VelocityUVW )
+
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+            IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+               ! Call IfW_UserWind_CalcOutput again in order to get the values needed for the OutList
+            IF ( ParamData%NWindVel >= 1_IntKi ) THEN
+                  ! Move the arrays for the Velocity information
+               CALL MOVE_ALLOC( OtherStates%WindViUVW,  User_OutData%Velocity )
+               CALL  IfW_UserWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%UserWind, &
+                                             OtherStates%UserWind, &
+                                             User_OutData, TmpErrStat, TmpErrMsg)
+
+                  ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
+               IF ( TmpErrStat >= ErrID_Fatal ) THEN
+                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+                  RETURN
+               ELSE
+                  TmpErrStat  =  ErrID_None
+                  TmpErrMsg   =  ''
+               ENDIF
+
+                  ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
+               CALL MOVE_ALLOC( User_OutData%Velocity, OtherStates%WindViUVW )
+            ENDIF
+
+
+
 
 
 
@@ -1027,6 +1076,9 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
          CASE (BladedFF_WindNumber)
                OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, BladedFF_OutData%DiskVel )
 
+         CASE (User_WindNumber)
+               !OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, User_OutData%DiskVel )
+
          CASE DEFAULT
             CALL SetErrStat( ErrID_Fatal, ' Error: Undefined wind type '//TRIM(Num2LStr(ParamData%WindType))//'. '// &
                       'Call WindInflow_Init() before calling this function.', ErrStat, ErrMsg, RoutineName )
@@ -1086,18 +1138,14 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
 
          ! Local variables
 
-      TYPE(IfW_UniformWind_OutputType)                              :: Uniform_OutData        !< output velocities
+      TYPE(IfW_UniformWind_OutputType)                         :: Uniform_OutData        !< output velocities
 
-      TYPE(IfW_TSFFWind_OutputType)                              :: TSFF_OutData        !< output velocities
+      TYPE(IfW_TSFFWind_OutputType)                            :: TSFF_OutData        !< output velocities
 
-      TYPE(IfW_BladedFFWind_OutputType)                             :: BladedFF_OutData        !< output velocities
+      TYPE(IfW_BladedFFWind_OutputType)                        :: BladedFF_OutData        !< output velocities
 
-!!!     TYPE(CTTS_Backgr)                                           :: BackGrndValues
+      TYPE(IfW_UserWind_OutputType)                            :: User_OutData        !< output velocities
 
-
-!NOTE: It isn't entirely clear what the purpose of Height is. Does it sometimes occur that Height  /= ParamData%ReferenceHeight???
-!      REAL(ReKi)                                         :: Height      ! Retrieved from FF
-!      REAL(ReKi)                                         :: HalfWidth   ! Retrieved from FF
 
 
 
@@ -1121,14 +1169,12 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
             CALL IfW_BladedFFWind_End( InputData%PositionXYZ, ParamData%BladedFFWind, &
                                  OtherStates%BladedFFWind, BladedFF_OutData, ErrStat, ErrMsg )
 
-!!!         CASE (User_WindNumber)
-!!!            CALL UsrWnd_Terminate( ErrStat )
-!!!
-!!!         CASE (FD_WindNumber)
-!!!            CALL FD_Terminate(     ErrStat )
-!!!
 !!!         CASE (HAWC_WindNumber)
 !!!            CALL HW_Terminate(     ErrStat )
+
+         CASE (User_WindNumber)
+            CALL IfW_UserWind_End( InputData%PositionXYZ, ParamData%UserWind, &
+                                 OtherStates%UserWind, User_OutData, ErrStat, ErrMsg )
 
          CASE ( Undef_WindNumber )
             ! Do nothing
@@ -1143,9 +1189,9 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
 
 
          ! Reset the wind type so that the initialization routine must be called
-      ParamData%WindType = Undef_WindNumber
-      ParamData%Initialized = .FALSE.
-      ParamData%CTTS_Flag  = .FALSE.
+      ParamData%WindType      = Undef_WindNumber
+      ParamData%Initialized   = .FALSE.
+      ParamData%CTTS_Flag     = .FALSE.
 
 
 END SUBROUTINE InflowWind_End
