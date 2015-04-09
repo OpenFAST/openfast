@@ -450,8 +450,44 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
 
          CASE ( TSFF_WindNumber )
+
+               ! Set InitData information
+            TSFF_InitData%WindFileName                   =  InputFileData%TSFF_FileName
+
                ! Initialize the TSFFWind module
-            CALL SetErrStat( ErrID_Fatal,' TSFF winds not supported yet.',ErrStat,ErrMsg,RoutineName )
+            CALL IfW_TSFFWind_Init(TSFF_InitData, InputGuess%PositionXYZ, ParamData%TSFFWind, OtherStates%TSFFWind, &
+                        TSFF_OutData,    TimeInterval,  InitOutData%TSFFWind,  TmpErrStat,          TmpErrMsg)
+            CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+            IF ( ErrStat >= AbortErrLev ) RETURN
+
+               ! Store wind file metadata
+            InitOutData%WindFileInfo%FileName            =  InputFileData%TSFF_FileName
+            InitOutData%WindFileInfo%WindType            =  TSFF_WindNumber
+            InitOutData%WindFileInfo%RefHt               =  ParamData%TSFFWind%RefHt
+            InitOutData%WindFileInfo%RefHt_Set           =  .TRUE.
+            InitOutData%WindFileInfo%DT                  =  ParamData%TSFFWind%FFDTime
+            InitOutData%WindFileInfo%NumTSteps           =  ParamData%TSFFWind%NFFSteps
+            InitOutData%WindFileInfo%ConstantDT          =  .TRUE.
+            IF ( ParamData%TSFFWind%Periodic ) THEN
+               InitOutData%WindFileInfo%TRange           =  (/ 0.0_ReKi, ParamData%TSFFWind%TotalTime /)
+               InitOutData%WindFileInfo%TRange_Limited   =  .FALSE.
+            ELSE  ! Shift the time range to compensate for the shifting of the wind grid
+               InitOutData%WindFileInfo%TRange           =  (/ 0.0_ReKi, ParamData%TSFFWind%TotalTime /)  &
+                  -  ParamData%TSFFWind%InitXPosition*ParamData%TSFFWind%InvMFFWS
+               InitOutData%WindFileInfo%TRange_Limited   =  .TRUE.
+            ENDIF
+            InitOutData%WindFileInfo%YRange              =  (/ -ParamData%TSFFWind%FFYHWid, ParamData%TSFFWind%FFYHWid /)
+            InitOutData%WindFileInfo%YRange_Limited      =  .TRUE.      ! Hard boundaries enforced in y-direction
+            IF ( ParamData%TSFFWind%TowerDataExist ) THEN        ! have tower data
+               InitOutData%WindFileInfo%ZRange        =  (/ 0.0_Reki,                                                         & 
+                                                            ParamData%TSFFWind%RefHt + ParamData%TSFFWind%FFZHWid /)
+            ELSE
+               InitOutData%WindFileInfo%ZRange        =  (/ ParamData%TSFFWind%RefHt - ParamData%TSFFWind%FFZHWid,    &
+                                                            ParamData%TSFFWind%RefHt + ParamData%TSFFWind%FFZHWid /)
+            ENDIF
+            InitOutData%WindFileInfo%ZRange_Limited      =  .TRUE.
+            InitOutData%WindFileInfo%BinaryFormat        =  ParamData%TSFFWind%WindFileFormat
+            InitOutData%WindFileInfo%IsBinary            =  .TRUE.
 
 
 
@@ -790,7 +826,6 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
       !---------------------------------
       !  
 
-
          ! Compute the wind velocities by stepping through all the data points and calling the appropriate GetWindSpeed routine
       SELECT CASE ( ParamData%WindType )
 
@@ -868,31 +903,44 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
 
 
+         CASE (TSFF_WindNumber)
+
+               ! Move the arrays for the Position and Velocity information
+            CALL MOVE_ALLOC( OutputData%VelocityUVW,  TSFF_OutData%Velocity )
 
 
-!!!         CASE (TSFF_WindNumber)
-!!!
-!!!               ! Allocate the position array to pass in
-!!!            CALL AllocAry( FF_InData%Position, 3, SIZE(InputData%Position,2), &
-!!!                           "Position grid for passing to IfW_FFWind_CalcOutput", TmpErrStat, TmpErrMsg )
-!!!            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-!!!            IF ( ErrStat >= AbortErrLev ) RETURN
-!!!
-!!!            ! Copy positions over
-!!!            FF_InData%Position   = InputData%Position
-!!!
-!!!            CALL  IfW_FFWind_CalcOutput(  Time,          FF_InData,     ParamData%FFWind,                         &
-!!!                                          FF_ContStates, FF_DiscStates, FF_ConstrStates,     OtherStates%FFWind,  &
-!!!                                          FF_OutData,    TmpErrStat,    TmpErrMsg)
-!!!
-!!!               ! Copy the velocities over
-!!!            OutputData%Velocity  = FF_OutData%Velocity
-!!!
-!!!            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-!!!            IF ( ErrStat >= AbortErrLev ) RETURN
+               ! InputData only contains the Position array, so we can pass that directly.
+            CALL  IfW_TSFFWind_CalcOutput(  Time, PositionXYZprime, ParamData%TSFFWind, OtherStates%TSFFWind, &
+                                          TSFF_OutData, TmpErrStat, TmpErrMsg)
+
+               ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
+            CALL MOVE_ALLOC( TSFF_OutData%Velocity,   OutputData%VelocityUVW )
+
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+            IF ( ErrStat >= AbortErrLev ) RETURN
 
 
-!!!               OutputData%Velocity(:,PointCounter) = FF_GetWindSpeed(     Time, InputData%Position(:,PointCounter), ErrStat, ErrMsg)
+               ! Call IfW_UniforWind_CalcOutput again in order to get the values needed for the OutList
+            IF ( ParamData%NWindVel >= 1_IntKi ) THEN
+                  ! Move the arrays for the Velocity information
+               CALL MOVE_ALLOC( OtherStates%WindViUVW,  TSFF_OutData%Velocity )
+               CALL  IfW_TSFFWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%TSFFWind, &
+                                             OtherStates%TSFFWind, &
+                                             TSFF_OutData, TmpErrStat, TmpErrMsg)
+
+                  ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
+               IF ( TmpErrStat >= ErrID_Fatal ) THEN
+                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+                  RETURN
+               ELSE
+                  TmpErrStat  =  ErrID_None
+                  TmpErrMsg   =  ''
+               ENDIF
+
+                  ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
+               CALL MOVE_ALLOC( TSFF_OutData%Velocity, OtherStates%WindViUVW )
+            ENDIF
+
 
 
 
@@ -960,8 +1008,8 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
          CASE DEFAULT
 
-            CALL SetErrStat( ErrID_Fatal, ' Error: Undefined wind type in IfW_CalcOutput. ' &
-                      //'Call WindInflow_Init() before calling this function.', ErrStat, ErrMsg, RoutineName )
+            CALL SetErrStat( ErrID_Fatal, ' Error: Undefined wind type '//TRIM(Num2LStr(ParamData%WindType))//'. '// &
+                      'Call WindInflow_Init() before calling this function.', ErrStat, ErrMsg, RoutineName )
 
             OutputData%VelocityUVW(:,:) = 0.0
             RETURN
@@ -1032,15 +1080,15 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
          CASE (Uniform_WindNumber)
                OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, Uniform_OutData%DiskVel )
 
-!!!         CASE (TSFF_WindNumber)
-!!!               OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, TSFF_OutData%DiskVel )
+         CASE (TSFF_WindNumber)
+               OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, TSFF_OutData%DiskVel )
 
          CASE (BladedFF_WindNumber)
                OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, BladedFF_OutData%DiskVel )
 
          CASE DEFAULT
-            CALL SetErrStat( ErrID_Fatal, ' Error: Undefined wind type in IfW_CalcOutput. ' &
-                      //'Call WindInflow_Init() before calling this function.', ErrStat, ErrMsg, RoutineName )
+            CALL SetErrStat( ErrID_Fatal, ' Error: Undefined wind type '//TRIM(Num2LStr(ParamData%WindType))//'. '// &
+                      'Call WindInflow_Init() before calling this function.', ErrStat, ErrMsg, RoutineName )
             RETURN
 
       END SELECT
@@ -1099,7 +1147,7 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
 
       TYPE(IfW_UniformWind_OutputType)                              :: Uniform_OutData        !< output velocities
 
-!!!      TYPE(IfW_TSFFWind_OutputType)                              :: TSFF_OutData        !< output velocities
+      TYPE(IfW_TSFFWind_OutputType)                              :: TSFF_OutData        !< output velocities
 
       TYPE(IfW_BladedFFWind_OutputType)                             :: BladedFF_OutData        !< output velocities
 
@@ -1124,10 +1172,9 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
             CALL IfW_UniformWind_End( InputData%PositionXYZ, ParamData%UniformWind, &
                                  OtherStates%UniformWind, Uniform_OutData, ErrStat, ErrMsg )
 
-!!!         CASE (TSFF_WindNumber)
-!!!            CALL IfW_TSFFWind_End( TSFF_InitData,   ParamData%TSFFWind,                                        &
-!!!                                 TSFF_ContStates, TSFF_DiscStates,    TSFF_ConstrStates,  OtherStates%TSFFWind,  &
-!!!                                 TSFF_OutData,    ErrStat,          ErrMsg )
+         CASE (TSFF_WindNumber)
+            CALL IfW_TSFFWind_End( InputData%PositionXYZ, ParamData%TSFFWind, &
+                                 OtherStates%TSFFWind, TSFF_OutData, ErrStat, ErrMsg )
 
          CASE (BladedFF_WindNumber)
             CALL IfW_BladedFFWind_End( InputData%PositionXYZ, ParamData%BladedFFWind, &

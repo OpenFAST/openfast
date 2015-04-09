@@ -66,8 +66,9 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
    !  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
    !-------------------------------------------------------------------------------------------------
 
-   IMPLICIT                       NONE
+   IMPLICIT                                                       NONE
 
+   CHARACTER(*),              PARAMETER                        :: RoutineName="IfW_BladedFFWind_Init"
 
       ! Passed Variables
    TYPE(IfW_BladedFFWind_InitInputType),        INTENT(IN   )  :: InitData       ! Initialization data passed to the module
@@ -117,29 +118,25 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
    TmpErrStat  = ErrID_None
 
 
-      !-------------------------------------------------------------------------------------------------
-      ! Set values for unused output types.
-      !     This is just to keep the compiler from complaining (not really necessary).
-      !-------------------------------------------------------------------------------------------------
 
-
-      ! Allocate the empty position array.
+      ! Check that the PositionXYZ and OutData%Velocity arrays have both been allocated
    IF ( .NOT. ALLOCATED(PositionXYZ) ) THEN
-      CALL AllocAry( PositionXYZ, 3, 1, &
-                  'Empty position array in initialization.', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_BladedFFWind_Init')
-      IF ( ErrStat >= AbortErrLev ) RETURN
-      PositionXYZ(:,1)      = 0.0
+      CALL SetErrStat(ErrID_Fatal,' Programming error: The PositionXYZ array has not been allocated prior to call to '//RoutineName//'.',   &
+                  ErrStat,ErrMsg,'')
    ENDIF
 
-      ! Allocate the empty velocity array.
-   IF ( .NOT. ALLOCATED(OutData%Velocity) ) THEN
-      CALL AllocAry( OutData%Velocity, 3, 1, &
-                  'Empty velocity array in initialization.', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,'IfW_BladedFFWind_Init')
-      IF ( ErrStat >= AbortErrLev ) RETURN
-      OutData%Velocity(:,1)         = 0.0
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+      ! Check that the PositionXYZ and OutData%Velocity arrays are the same size.
+   IF ( ALLOCATED(OutData%Velocity) .AND. & 
+        ( (SIZE( PositionXYZ, DIM = 1 ) /= SIZE( OutData%Velocity, DIM = 1 )) .OR. &
+          (SIZE( PositionXYZ, DIM = 2 ) /= SIZE( OutData%Velocity, DIM = 2 ))      )  ) THEN
+      CALL SetErrStat(ErrID_Fatal,' Programming error: Different number of XYZ coordinates and expected output velocities.', &
+                  ErrStat,ErrMsg,RoutineName)
+      RETURN
    ENDIF
+
 
 
       !-------------------------------------------------------------------------------------------------
@@ -147,7 +144,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
       !-------------------------------------------------------------------------------------------------
 
    IF ( OtherStates%Initialized ) THEN
-      CALL SetErrStat(ErrID_Warn,' BladedFFWind has already been initialized.',ErrStat,ErrMsg,'IfW_BladedFFWind_Init')
+      CALL SetErrStat(ErrID_Warn,' BladedFFWind has already been initialized.',ErrStat,ErrMsg,RoutineName)
       RETURN      ! No point continuing since already initialized.
    ENDIF
 
@@ -216,7 +213,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
          !...........................................................................................
 
             CALL Read_Summary_FF (OtherStates%UnitWind, TRIM(SumFile), CWise, ZCenter, TI, TmpErrStat, TmpErrMsg )
-               CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_BladedFFWind_Init' )                  
+               CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )                  
                IF ( ErrStat >= AbortErrLev ) THEN
                   CLOSE ( OtherStates%UnitWind )
                   RETURN
@@ -230,7 +227,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
          !...........................................................................................
 
             CALL OpenBInpFile (OtherStates%UnitWind, TRIM(ParamData%WindFileName), TmpErrStat, TmpErrMsg )
-               CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_BladedFFWind_Init' )                  
+               CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )                  
                IF ( ErrStat >= AbortErrLev ) THEN
                   CLOSE ( OtherStates%UnitWind )
                   RETURN
@@ -238,7 +235,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
             
             IF ( Dum_Int2 == -99 ) THEN                                                      ! Newer-style BLADED format
                CALL Read_Bladed_FF_Header1 (OtherStates%UnitWind, BinTI, TmpErrStat, TmpErrMsg)
-                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_BladedFFWind_Init' )                  
+                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )                  
                   IF ( ErrStat >= AbortErrLev ) THEN
                      CLOSE ( OtherStates%UnitWind )
                      RETURN
@@ -253,7 +250,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
             ELSE
                CALL Read_Bladed_FF_Header0 (OtherStates%UnitWind, TmpErrStat, TmpErrMsg)     ! Older-style BLADED format
-                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_BladedFFWind_Init' )                  
+                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )                  
                   IF ( ErrStat >= AbortErrLev ) THEN
                      CLOSE ( OtherStates%UnitWind )
                      RETURN
@@ -269,7 +266,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
             IF ( ABS( UBar - ParamData%MeanFFWS ) > 0.1 )  THEN
                   CALL SetErrStat( ErrID_Fatal, ' Error: Incompatible mean hub-height wind speeds in FF wind files. '//&
-                           '(Check that the .sum and .wnd files were generated together.)', ErrStat, ErrMsg, 'IfW_BladedFFWind_Init' )                  
+                           '(Check that the .sum and .wnd files were generated together.)', ErrStat, ErrMsg, RoutineName )                  
                RETURN
             ENDIF
 
@@ -288,7 +285,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
             CALL Read_Bladed_Grids( OtherStates, CWise, TI, TmpErrStat, TmpErrMsg)
             CLOSE ( OtherStates%UnitWind )
 
-               CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_BladedFFWind_Init' )                  
+               CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )                  
                IF ( ErrStat >= AbortErrLev ) RETURN
             
          !...........................................................................................
@@ -302,7 +299,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
                   ! throw fatal error and exit.
                IF (  Exists )  THEN
                   CALL Read_FF_Tower( OtherStates, TmpErrStat, TmpErrMsg )
-                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_BladedFFWind_Init' )                  
+                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )                  
                   IF ( ErrStat >= AbortErrLev ) THEN
                      CLOSE ( OtherStates%UnitWind )
                      RETURN
@@ -310,7 +307,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
                   ParamData%TowerDataExist   =  .TRUE.
                ELSE
                   CALL SetErrStat( ErrID_Fatal, ' Tower file '//TRIM(TwrFile)//' specified for Bladed full-field '// &
-                           'wind files does not exist.', ErrStat, ErrMsg, 'IfW_BladedFFWind_Init')
+                           'wind files does not exist.', ErrStat, ErrMsg, RoutineName)
                   CLOSE ( OtherStates%UnitWind )
                   RETURN
                ENDIF
@@ -323,7 +320,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
       CASE DEFAULT
          CALL SetErrStat( ErrID_Fatal, ' This is not a bladed-style binary wind file (binary format identifier: '//  &
                   TRIM(Num2LStr(ParamData%WindFileFormat))//'.  This might be a TurbSim binary wind file.', &
-                  ErrStat, ErrMsg, 'IfW_BladedFFWind_Init' )
+                  ErrStat, ErrMsg, RoutineName )
          RETURN
 
    END SELECT
@@ -1563,7 +1560,9 @@ SUBROUTINE IfW_BladedFFWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates
    !   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
    !-------------------------------------------------------------------------------------------------
 
-   IMPLICIT                                                 NONE
+   IMPLICIT                                                       NONE
+
+   CHARACTER(*),        PARAMETER                              :: RoutineName="IfW_BladedFFWind_CalcOutput"
 
       ! Passed Variables
    REAL(DbKi),                                  INTENT(IN   )  :: Time              ! time from the start of the simulation
@@ -1616,12 +1615,12 @@ SUBROUTINE IfW_BladedFFWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates
       ! Allocate Velocity output array
    IF ( .NOT. ALLOCATED(OutData%Velocity)) THEN
       CALL AllocAry( OutData%Velocity, 3, NumPoints, "Velocity matrix at timestep", TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,"IfW_BladedFFWind:CalcOutput -- Could not allocate the output velocity array.",   &
-         ErrStat,ErrMsg,'IfW_BladedFFWind_CalcOutput')
+      CALL SetErrStat(TmpErrStat," Could not allocate the output velocity array.",   &
+         ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) RETURN
    ELSEIF ( SIZE(OutData%Velocity,DIM=2) /= NumPoints ) THEN
       CALL SetErrStat( ErrID_Fatal," Programming error: Position and Velocity arrays are not sized the same.",  &
-         ErrStat, ErrMsg, ' IfW_BladedFFWind_CalcOutput')
+         ErrStat, ErrMsg, RoutineName)
       RETURN
    ENDIF
 
@@ -1980,6 +1979,7 @@ SUBROUTINE IfW_BladedFFWind_End( PositionXYZ, ParamData, OtherStates, OutData, E
 
    IMPLICIT                                                       NONE
 
+   CHARACTER(*),                 PARAMETER                     :: RoutineName="IfW_BladedFFWind_End"
       ! Passed Variables
    REAL(ReKi),                   ALLOCATABLE,   INTENT(INOUT)  :: PositionXYZ(:,:)  ! Coordinate position list
    TYPE(IfW_BladedFFWind_ParameterType),        INTENT(INOUT)  :: ParamData         ! Parameters
@@ -2011,19 +2011,19 @@ SUBROUTINE IfW_BladedFFWind_End( PositionXYZ, ParamData, OtherStates, OutData, E
       ! Destroy parameter data
 
    CALL IfW_BladedFFWind_DestroyParam(       ParamData,     TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_BladedFFWind_End' )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 
 
       ! Destroy the state data
 
    CALL IfW_BladedFFWind_DestroyOtherState(  OtherStates,   TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_BladedFFWind_End' )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 
 
       ! Destroy the output data
 
    CALL IfW_BladedFFWind_DestroyOutput(      OutData,       TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, 'IfW_BladedFFWind_End' )
+   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 
 
       ! flag as uninitialized

@@ -132,28 +132,24 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    TmpErrMsg   = ""
 
 
-      !-------------------------------------------------------------------------------------------------
-      ! Set values for unused output types.
-      !     This is just to keep the compiler from complaining (not really necessary).
-      !-------------------------------------------------------------------------------------------------
-
-      ! Allocate the empty position array.
+      ! Check that the PositionXYZ array has been allocated.  The OutData%Velocity does not need to be allocated yet.
    IF ( .NOT. ALLOCATED(PositionXYZ) ) THEN
-      CALL AllocAry( PositionXYZ, 3, 1, &
-                  'Empty position array in initialization.', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      CALL SetErrStat(ErrID_Fatal,' Programming error: The PositionXYZ array has not been allocated prior to call to '//RoutineName//'.',   &
+                  ErrStat,ErrMsg,'')
    ENDIF
-   PositionXYZ(:,1)      = 0.0
 
-      ! Allocate the empty velocity array.
-   IF ( .NOT. ALLOCATED(OutData%Velocity) ) THEN
-      CALL AllocAry( OutData%Velocity, 3, 1, &
-                  'Empty velocity array in initialization.', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+      ! Check that the PositionXYZ and OutData%Velocity arrays are the same size.
+   IF ( ALLOCATED(OutData%Velocity) .AND. & 
+        ( (SIZE( PositionXYZ, DIM = 1 ) /= SIZE( OutData%Velocity, DIM = 1 )) .OR. &
+          (SIZE( PositionXYZ, DIM = 2 ) /= SIZE( OutData%Velocity, DIM = 2 ))      )  ) THEN
+      CALL SetErrStat(ErrID_Fatal,' Programming error: Different number of XYZ coordinates and expected output velocities.', &
+                  ErrStat,ErrMsg,RoutineName)
+      RETURN
    ENDIF
-   OutData%Velocity(:,1)         = 0.0
+
 
 
 
@@ -170,7 +166,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       ! Get a unit number to use
 
    CALL GetNewUnit(OtherStates%UnitWind, TmpErrStat, TmpErrMsg)
-   CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+   CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    IF (ErrStat >= AbortErrLev) RETURN
 
 
