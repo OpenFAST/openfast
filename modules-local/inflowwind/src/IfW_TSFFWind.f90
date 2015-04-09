@@ -118,27 +118,23 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, PositionXYZ, ParamData, OtherStates, &
    TmpErrStat  = ErrID_None
 
 
-      !-------------------------------------------------------------------------------------------------
-      ! Set values for unused output types.
-      !     This is just to keep the compiler from complaining (not really necessary).
-      !-------------------------------------------------------------------------------------------------
 
-      ! Allocate the empty position array.
+      ! Check that the PositionXYZ and OutData%Velocity arrays have both been allocated
    IF ( .NOT. ALLOCATED(PositionXYZ) ) THEN
-      CALL AllocAry( PositionXYZ, 3, 1, &
-                     'Empty position array in initialization.', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
-      PositionXYZ(:,1)      = 0.0
+      CALL SetErrStat(ErrID_Fatal,' Programming error: The PositionXYZ array has not been allocated prior to call to '//RoutineName//'.',   &
+                  ErrStat,ErrMsg,'')
    ENDIF
 
-      ! Allocate the empty velocity array.
-   IF ( .NOT. ALLOCATED(OutData%Velocity) ) THEN
-      CALL AllocAry( OutData%Velocity, 3, 1, &
-                     'Empty velocity array in initialization.', TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
-      OutData%Velocity(:,1)         = 0.0
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+      ! Check that the PositionXYZ and OutData%Velocity arrays are the same size.
+   IF ( ALLOCATED(OutData%Velocity) .AND. & 
+        ( (SIZE( PositionXYZ, DIM = 1 ) /= SIZE( OutData%Velocity, DIM = 1 )) .OR. &
+          (SIZE( PositionXYZ, DIM = 2 ) /= SIZE( OutData%Velocity, DIM = 2 ))      )  ) THEN
+      CALL SetErrStat(ErrID_Fatal,' Programming error: Different number of XYZ coordinates and expected output velocities.', &
+                  ErrStat,ErrMsg,RoutineName)
+      RETURN
    ENDIF
 
 
@@ -487,6 +483,8 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, PositionXYZ, ParamData, OtherStates, &
 
          IF ( ParamData%NTGrids > 0 ) THEN
 
+            ParamData%TowerDataExist   =  .TRUE.
+
             IF ( .NOT. ALLOCATED( ParamData%FFTower ) ) THEN
                CALL AllocAry( ParamData%FFTower, ParamData%NFFComp, ParamData%NTGrids, ParamData%NFFSteps, &
                      'Tower wind file data array.', TmpErrStat, TmpErrMsg )
@@ -639,7 +637,7 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,   
    TmpErrMsg   = ""
 
    IF ( .NOT. OtherStates%Initialized ) THEN
-      ErrMsg   = ' Initialialize the FFWind module before calling its subroutines.'
+      ErrMsg   = ' Initialialize the TSFFWind module before calling its subroutines.'
       ErrStat  = ErrID_Fatal
       RETURN
    ENDIF
