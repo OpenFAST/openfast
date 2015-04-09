@@ -7,7 +7,6 @@ source\dependencies\NWTC_Library\*.f90
 source\dependencies\NWTC_Library\*.txt
 
 docs\2014-12-FEAM_Final_report.pdf
-docs\2014-12-DOE-TEES_Report-FOWT_Anchors-Final.pdf
 docs\FEAM_Guide.pdf
 
 compiling\VisualStudio\FEAM_Driver.vfproj
