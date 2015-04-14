@@ -78,7 +78,7 @@ typedef	^	^	LOGICAL	CompUserTwrLd	-	-	-	"Compute additional tower loading {false
 typedef	^	^	LOGICAL	UseDWM	-	-	-	"Use the DWM module in AeroDyn"	-
 # Input file names:
 typedef	^	^	CHARACTER(1024)	EDFile	-	-	-	"The name of the ElastoDyn input file"	-
-typedef	^	^	CHARACTER(1024)	BDBldFile	{NumModules}	-	-	"Name of files containing BeamDyn inputs for each blade"	-
+typedef	^	^	CHARACTER(1024)	BDBldFile	{MaxNBlades}	-	-	"Name of files containing BeamDyn inputs for each blade"	-
 typedef	^	^	CHARACTER(1024)	AeroFile	-	-	-	"Name of file containing aerodynamic input parameters"	-
 typedef	^	^	CHARACTER(1024)	ServoFile	-	-	-	"Name of file containing control and electrical-drive input parameters"	-
 typedef	^	^	CHARACTER(1024)	HydroFile	-	-	-	"Name of file containing hydrodynamic input parameters"	-

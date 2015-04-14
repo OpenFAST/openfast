@@ -172,11 +172,10 @@ SUBROUTINE FAST_Init( p, y_FAST, ErrStat, ErrMsg, InFile, TMax  )
 
    REAL(DbKi)                   :: TmpTime                              ! A temporary variable for error checking
    INTEGER                      :: i                                    ! loop counter
-   INTEGER                      :: Stat                                 ! The status of the call to GET_CWD
    !CHARACTER(1024)              :: DirName                              ! A CHARACTER string containing the path of the current working directory
    CHARACTER(1024)              :: LastArg                              ! A second command-line argument that will allow DWM module to be used in AeroDyn
    CHARACTER(1024)              :: InputFile                            ! A CHARACTER string containing the name of the primary FAST input file
-   CHARACTER(1024)              :: CompiledVer                          ! A string describing the FAST version as well as some of the compile options we're using
+
 
    CHARACTER(*), PARAMETER      :: RoutineName = "FAST_Init"
    
@@ -206,7 +205,7 @@ SUBROUTINE FAST_Init( p, y_FAST, ErrStat, ErrMsg, InFile, TMax  )
       p%UseDWM  = .FALSE.
    ELSE ! get it from the command line
       InputFile = ""  ! initialize to empty string to make sure it's input from the command line
-      CALL CheckArgs( InputFile, Stat, LastArg )  ! if Stat /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
+      CALL CheckArgs( InputFile, ErrStat2, LastArg )  ! if ErrStat2 /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
       
       IF (LEN_TRIM(InputFile) == 0) THEN ! no input file was specified
          CALL SetErrStat( ErrID_Fatal, 'The required input file was not specified on the command line.', ErrStat, ErrMsg, RoutineName )
@@ -687,7 +686,6 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
    INTEGER(IntKi)                          :: I                                  ! temporary counter
    INTEGER(IntKi)                          :: J                                  ! temporary counter
    INTEGER(IntKi)                          :: Module_Number                      ! loop counter through the modules
-   INTEGER(IntKi)                          :: JacSize                            ! variable describing size of jacobian matrix
    CHARACTER(200)                          :: Fmt                                ! temporary format string
    CHARACTER(200)                          :: DescStr                            ! temporary string to write text
    CHARACTER(*), PARAMETER                 :: NotUsedTxt = " [not called]"       ! text written if a module is not called
@@ -882,7 +880,6 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
 
       ! Local variables:
    INTEGER(IntKi)                :: I                                         ! loop counter
-   INTEGER(IntKi)                :: NumOuts                                   ! Number of output channel names read from the file
    INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
    INTEGER(IntKi)                :: UnEc                                      ! I/O unit for echo file. If > 0, file is open for writing.
 
@@ -1565,10 +1562,6 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, EDOutput, SrvDOutput, HDO
 
       ! Local variables.
 
-   INTEGER(IntKi)                   :: i                                         ! loop counter
-   INTEGER(IntKi)                   :: indxLast                                  ! The index of the last row value to be written to AllOutData for this time step (column).
-   INTEGER(IntKi)                   :: indxNext                                  ! The index of the next row value to be written to AllOutData for this time step (column).
-
    CHARACTER(200)                   :: Frmt                                      ! A string to hold a format specifier
    CHARACTER(ChanLen)               :: TmpStr                                    ! temporary string to print the time output as text
 
@@ -1753,8 +1746,6 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD, y_SrvD, u_SrvD, MeshMapData,
       ! local variables
    INTEGER(IntKi)                                 :: J                        ! Loops through nodes / elements
    INTEGER(IntKi)                                 :: K                        ! Loops through blades
-   INTEGER(IntKi)                                 :: NodeNum                  ! Node number for blade/element in mesh
-   TYPE(MeshType)                                 :: u_mapped                 ! interpolated value of input
    INTEGER(IntKi)                                 :: ErrStat2                 ! temporary Error status of the operation
    CHARACTER(LEN(ErrMsg))                         :: ErrMsg2                  ! temporary Error message if ErrStat /= ErrID_None
 
@@ -1857,8 +1848,6 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, MeshMapData, Er
    CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg       ! Error message
 !  TYPE(AD_OutputType),              INTENT(IN)     :: y_AD         ! AeroDyn outputs
 
-      ! local variable(s)
-   INTEGER(IntKi)                                   :: i            ! 
 
 
    ErrStat = ErrID_None
@@ -4126,8 +4115,6 @@ SUBROUTINE AD_SetInitInput(InitInData_AD, InitOutData_ED, y_ED, p_FAST, ErrStat,
       ! Local variables
 
    !TYPE(AD_InitOptions)       :: ADOptions                  ! Options for AeroDyn
-   INTEGER                    :: NumADBldNodes              ! Number of blade nodes in AeroDyn
-   REAL(ReKi)                 :: AD_RefHt
 
    INTEGER                    :: K
 
@@ -4583,8 +4570,6 @@ SUBROUTINE SetModuleSubstepTime(ModuleID, p_FAST, y_FAST, ErrStat, ErrMsg)
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             ! Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              ! Error message if ErrStat /= ErrID_None
 
-   ! Local variable
-   REAL(DbKi)                              :: ModuleTimeStep      ! Used to determine if output should be generated at this simulation time
       
    ErrStat = ErrID_None
    ErrMsg  = "" 
@@ -5439,7 +5424,8 @@ SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, In
          
 END SUBROUTINE FAST_InitializeAll_T
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg, InFile, ExternInitData )
+SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, &
+                               ErrStat, ErrMsg, InFile, ExternInitData )
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           ! initial time
    TYPE(FAST_ParameterType), INTENT(INOUT) :: p_FAST              ! Parameters for the glue code
@@ -5556,7 +5542,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
    !...............................................................................................................................  
       
    p_FAST%dt_module = p_FAST%dt ! initialize time steps for each module   
-   
    
    ! ........................
    ! initialize ElastoDyn (must be done first)
@@ -7228,8 +7213,6 @@ SUBROUTINE FAST_DestroyAll( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, M
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              ! Error message if ErrStat /= ErrID_None
    
    ! local variables
-   INTEGER(IntKi)                          :: i                   ! loop counter
-   
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(LEN(ErrMsg))                  :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_DestroyAll'
@@ -7547,7 +7530,7 @@ SUBROUTINE FAST_Solution_T(t_initial, n_t_global, Turbine, ErrStat, ErrMsg )
                   Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )                  
                   
 END SUBROUTINE FAST_Solution_T
-!............................................................................................................................... 
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat, ErrMsg )
 ! this routine takes data from n_t_global and gets values at n_t_global + 1
 
@@ -7579,7 +7562,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD
    REAL(DbKi)                              :: t_global_next       ! next simulation time (m_FAST%t_global + p_FAST%dt)
    INTEGER(IntKi)                          :: j_pc                ! predictor-corrector loop counter 
    
-   INTEGER(IntKi)                          :: I,J                 ! generic loop counters
+   INTEGER(IntKi)                          :: I                   ! generic loop counters
    
    
    INTEGER(IntKi)                          :: ErrStat2
@@ -7815,14 +7798,245 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD
       CALL SimStatus( m_FAST%TiLstPrn, m_FAST%PrevClockTime, m_FAST%t_global, p_FAST%TMax )
 
    ENDIF   
-   
-   
-
+     
 END SUBROUTINE FAST_Solution
 !----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, CheckpointInterval, NumTurbines, Turbine, CheckpointRoot, ErrStat, ErrMsg, Unit )
 
+   USE BladedInterface, ONLY: CallBladedDLL  ! Hack for Bladed-style DLL
 
+   REAL(DbKi),               INTENT(IN   ) :: t_initial           ! initial time
+   INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          ! loop counter
+   INTEGER(IntKi),           INTENT(IN   ) :: CheckpointInterval  ! interval between writing checkpoint files
+   INTEGER(IntKi),           INTENT(IN   ) :: NumTurbines         ! Number of turbines in this simulation
+   TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine             ! all data for one instance of a turbine (INTENT(OUT) only because of hack for Bladed DLL)
+   CHARACTER(*),             INTENT(IN   ) :: CheckpointRoot      ! Rootname of checkpoint file
+   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             ! Error status of the operation
+   CHARACTER(*),             INTENT(  OUT) :: ErrMsg              ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi), OPTIONAL, INTENT(INOUT) :: Unit                ! unit number for output file 
+   
+      ! local variables:
+   REAL(ReKi),               ALLOCATABLE   :: ReKiBuf(:)
+   REAL(DbKi),               ALLOCATABLE   :: DbKiBuf(:)
+   INTEGER(IntKi),           ALLOCATABLE   :: IntKiBuf(:)
+   
+   INTEGER(B4Ki)                           :: ArraySizes(3) 
+   
+   INTEGER(IntKi)                          :: unOut               ! unit number for output file 
+   INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
+   INTEGER(IntKi)                          :: ErrStat2            ! local error status
+   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_CreateCheckpoint_T' 
+  
+   CHARACTER(1024)                         :: FileName            ! Name of the (output) checkpoint file
+   CHARACTER(1024)                         :: DLLFileName         ! Name of the (output) checkpoint file
+   
+      ! init error status
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+      ! Get the arrays of data to be stored in the output file
+   CALL FAST_PackTurbineType( ReKiBuf, DbKiBuf, IntKiBuf, Turbine, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+   ArraySizes = 0   
+   IF ( ALLOCATED(ReKiBuf)  ) ArraySizes(1) = SIZE(ReKiBuf)
+   IF ( ALLOCATED(DbKiBuf)  ) ArraySizes(2) = SIZE(DbKiBuf)
+   IF ( ALLOCATED(IntKiBuf) ) ArraySizes(3) = SIZE(IntKiBuf)
 
+   FileName    = TRIM(CheckpointRoot)//'.'//TRIM(Num2LStr(Turbine%TurbID))//'.cp'
+   DLLFileName = TRIM(CheckpointRoot)//'.'//TRIM(Num2LStr(Turbine%TurbID))//'.dll.cp'
+   ! FileName = TRIM(CheckpointRoot)//'.cp'   
+   unOut=-1      
+   IF (PRESENT(Unit)) unOut = Unit
+         
+   IF ( unOut < 0 ) THEN
+
+      CALL GetNewUnit( unOut, ErrStat2, ErrMsg2 )
+      ! bjj: we want to overwrite, but we also don't want to delete the file in case we have an error on this save      
+      
+      CALL OpenBOutFile ( unOut, FileName, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev ) RETURN
+  
+         ! checkpoint file header:
+      WRITE (unOut, IOSTAT=ErrStat2)   INT(ReKi              ,B4Ki)     ! let's make sure we've got the correct number of bytes for reals on restart.
+      WRITE (unOut, IOSTAT=ErrStat2)   INT(DbKi              ,B4Ki)     ! let's make sure we've got the correct number of bytes for doubles on restart.
+      WRITE (unOut, IOSTAT=ErrStat2)   INT(IntKi             ,B4Ki)     ! let's make sure we've got the correct number of bytes for integers on restart.
+      WRITE (unOut, IOSTAT=ErrStat2)   NumTurbines                      ! Number of turbines
+      WRITE (unOut, IOSTAT=ErrStat2)   CheckpointInterval               ! time between checkpoint files
+      WRITE (unOut, IOSTAT=ErrStat2)   t_initial                        ! initial time
+   
+   END IF
+      
+      
+      ! data from current time step:
+   WRITE (unOut, IOSTAT=ErrStat2)   n_t_global                       ! current time step
+   WRITE (unOut, IOSTAT=ErrStat2)   ArraySizes                       ! Number of reals, doubles, and integers written to file
+   WRITE (unOut, IOSTAT=ErrStat2)   ReKiBuf                          ! Packed reals
+   WRITE (unOut, IOSTAT=ErrStat2)   DbKiBuf                          ! Packed doubles
+   WRITE (unOut, IOSTAT=ErrStat2)   IntKiBuf                         ! Packed integers
+      
+      
+   IF ( ALLOCATED(ReKiBuf)  ) DEALLOCATE(ReKiBuf)
+   IF ( ALLOCATED(DbKiBuf)  ) DEALLOCATE(DbKiBuf)
+   IF ( ALLOCATED(IntKiBuf) ) DEALLOCATE(IntKiBuf)
+   
+      !CALL FAST_CreateCheckpoint(t_initial, n_t_global, Turbine%p_FAST, Turbine%y_FAST, Turbine%m_FAST, &
+      !            Turbine%ED, Turbine%SrvD, Turbine%AD, Turbine%IfW, &
+      !            Turbine%HD, Turbine%SD, Turbine%MAP, Turbine%FEAM, Turbine%MD, &
+      !            Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )              
+   
+      
+   IF (Turbine%TurbID == NumTurbines) THEN
+      CLOSE(unOut)
+      unOut = -1
+   END IF
+   
+   IF (PRESENT(Unit)) Unit = unOut
+      
+      ! A hack to pack Bladed-style DLL data
+   IF (Turbine%SrvD%p%UseBladedInterface .AND. Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) > 0   ) THEN
+         ! store value to be overwritten
+      old_avrSwap1 = Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) 
+      FileName     = Turbine%SrvD%p%DLL_InFile
+         ! overwrite values:
+      Turbine%SrvD%p%DLL_InFile = DLLFileName
+      Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
+      Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = -8
+      CALL CallBladedDLL(Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%OtherSt%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         ! put values back:
+      Turbine%SrvD%p%DLL_InFile = FileName
+      Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(FileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
+      Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = old_avrSwap1
+   END IF
+   
+                  
+END SUBROUTINE FAST_CreateCheckpoint_T
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, CheckpointInterval, NumTurbines, Turbine, CheckpointRoot, ErrStat, ErrMsg, Unit )
+! The inverse of FAST_CreateCheckpoint_T
+   USE BladedInterface, ONLY: CallBladedDLL  ! Hack for Bladed-style DLL
+
+   REAL(DbKi),               INTENT(INOUT) :: t_initial           ! initial time
+   INTEGER(IntKi),           INTENT(INOUT) :: n_t_global          ! loop counter
+   INTEGER(IntKi),           INTENT(INOUT) :: CheckpointInterval  ! interval between writing checkpoint files
+   INTEGER(IntKi),           INTENT(INOUT) :: NumTurbines         ! Number of turbines in this simulation
+   TYPE(FAST_TurbineType),   INTENT(  OUT) :: Turbine             ! all data for one instance of a turbine
+   CHARACTER(*),             INTENT(IN   ) :: CheckpointRoot      ! Rootname of checkpoint file
+   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             ! Error status of the operation
+   CHARACTER(*),             INTENT(  OUT) :: ErrMsg              ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi), OPTIONAL, INTENT(INOUT) :: Unit                ! unit number for output file 
+   
+      ! local variables:
+   REAL(ReKi),               ALLOCATABLE   :: ReKiBuf(:)
+   REAL(DbKi),               ALLOCATABLE   :: DbKiBuf(:)
+   INTEGER(IntKi),           ALLOCATABLE   :: IntKiBuf(:)
+   
+   INTEGER(B4Ki)                           :: ArraySizes(3) 
+   
+   INTEGER(IntKi)                          :: unIn                ! unit number for input file 
+   INTEGER(IntKi)                          :: old_avrSwap1        ! previous value of avrSwap(1) !hack for Bladed DLL checkpoint/restore
+   INTEGER(IntKi)                          :: ErrStat2            ! local error status
+   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_RestoreFromCheckpoint_T' 
+  
+   CHARACTER(1024)                         :: FileName            ! Name of the (input) checkpoint file
+   CHARACTER(1024)                         :: DLLFileName         ! Name of the (input) checkpoint file
+
+            
+   FileName    = TRIM(CheckpointRoot)//'.'//TRIM(Num2LStr(Turbine%TurbID))//'.cp'
+   DLLFileName = TRIM(CheckpointRoot)//'.'//TRIM(Num2LStr(Turbine%TurbID))//'.dll.cp'
+   ! FileName = TRIM(CheckpointRoot)//'.cp'   
+   unIn=-1      
+   IF (PRESENT(Unit)) unIn = Unit
+         
+   IF ( unIn < 0 ) THEN
+
+      CALL GetNewUnit( unIn, ErrStat2, ErrMsg2 )
+      
+      CALL OpenBInpFile ( unIn, FileName, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev ) RETURN
+  
+         ! checkpoint file header:
+      READ (unIn, IOSTAT=ErrStat2)   ArraySizes     ! let's make sure we've got the correct number of bytes for reals, doubles, and integers on restart.
+      
+      IF ( ArraySizes(1) /= ReKi  ) CALL SetErrStat(ErrID_Fatal,"ReKi on restart is different than when checkpoint file was created.",ErrStat,ErrMsg,RoutineName)
+      IF ( ArraySizes(2) /= DbKi  ) CALL SetErrStat(ErrID_Fatal,"DbKi on restart is different than when checkpoint file was created.",ErrStat,ErrMsg,RoutineName)
+      IF ( ArraySizes(3) /= IntKi ) CALL SetErrStat(ErrID_Fatal,"IntKi on restart is different than when checkpoint file was created.",ErrStat,ErrMsg,RoutineName)
+      IF (ErrStat >= AbortErrLev) THEN
+         CLOSE(unIn)
+         unIn = -1
+         RETURN
+      END IF
+      
+      READ (unIn, IOSTAT=ErrStat2)   NumTurbines                      ! Number of turbines
+      READ (unIn, IOSTAT=ErrStat2)   CheckpointInterval               ! time between checkpoint files
+      READ (unIn, IOSTAT=ErrStat2)   t_initial                        ! initial time
+   
+   END IF
+      
+      
+      ! data from current time step:
+   READ (unIn, IOSTAT=ErrStat2)   n_t_global                       ! current time step
+   READ (unIn, IOSTAT=ErrStat2)   ArraySizes                       ! Number of reals, doubles, and integers written to file
+   
+   ALLOCATE(ReKiBuf( ArraySizes(1)), STAT=ErrStat2)
+      IF (ErrStat2 /=0) CALL SetErrStat(ErrID_Fatal, "Could not allocate ReKiBuf", ErrStat, ErrMsg, RoutineName )
+   ALLOCATE(DbKiBuf( ArraySizes(2)), STAT=ErrStat2)
+      IF (ErrStat2 /=0) CALL SetErrStat(ErrID_Fatal, "Could not allocate DbKiBuf", ErrStat, ErrMsg, RoutineName )
+   ALLOCATE(IntKiBuf(ArraySizes(3)), STAT=ErrStat2)
+      IF (ErrStat2 /=0) CALL SetErrStat(ErrID_Fatal, "Could not allocate IntKiBuf", ErrStat, ErrMsg, RoutineName )
+      IF (ErrStat < AbortErrLev) THEN
+      
+         READ (unIn, IOSTAT=ErrStat2)   ReKiBuf                          ! Packed reals
+         READ (unIn, IOSTAT=ErrStat2)   DbKiBuf                          ! Packed doubles
+         READ (unIn, IOSTAT=ErrStat2)   IntKiBuf                         ! Packed integers
+         
+      END IF
+
+      ! close file if necessary      
+   IF (Turbine%TurbID == NumTurbines) THEN
+      CLOSE(unIn)
+      unIn = -1
+   END IF
+   
+   IF (PRESENT(Unit)) Unit = unIn
+
+   IF (ErrStat < AbortErrLev) THEN
+         ! Put the arrays back in the data types
+      CALL FAST_UnpackTurbineType( ReKiBuf, DbKiBuf, IntKiBuf, Turbine, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+   
+   
+   IF ( ALLOCATED(ReKiBuf)  ) DEALLOCATE(ReKiBuf)
+   IF ( ALLOCATED(DbKiBuf)  ) DEALLOCATE(DbKiBuf)
+   IF ( ALLOCATED(IntKiBuf) ) DEALLOCATE(IntKiBuf)    
+   
+      ! A hack to restore Bladed-style DLL data
+   IF (Turbine%SrvD%p%UseBladedInterface .AND. Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) > 0   ) THEN
+         ! store value to be overwritten
+      old_avrSwap1 = Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) 
+      FileName     = Turbine%SrvD%p%DLL_InFile
+         ! overwrite values before calling DLL:
+      Turbine%SrvD%p%DLL_InFile = DLLFileName
+      Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
+      Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = -9
+      CALL CallBladedDLL(Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%OtherSt%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                           
+         ! put values back:
+      Turbine%SrvD%p%DLL_InFile = FileName
+      Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(FileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
+      Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = old_avrSwap1            
+   END IF   
+   
+      ! deal with sibling meshes here:
+      
+
+END SUBROUTINE FAST_RestoreFromCheckpoint_T
 !----------------------------------------------------------------------------------------------------------------------------------
 
 END MODULE FAST_Subs
