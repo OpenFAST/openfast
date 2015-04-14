@@ -143,11 +143,11 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
     INTEGER(IntKi)                                 :: NN,MM          ! Generic index
     INTEGER(IntKi)                                 :: NE             ! Generic index
     INTEGER(IntKi)                                 :: I              ! Generic loop index
-    INTEGER(IntKi)                                 :: M              ! Generic loop index
-    INTEGER(IntKi)                                 :: N              ! Generic loop index
+!    INTEGER(IntKi)                                 :: M              ! Generic loop index
+!    INTEGER(IntKi)                                 :: N              ! Generic loop index
     INTEGER(IntKi)                                 :: J              ! Generic loop index
     INTEGER(IntKi)                                 :: K              ! Generic loop index
-    INTEGER(IntKi)                                 :: L              ! Generic loop index
+!    INTEGER(IntKi)                                 :: L              ! Generic loop index
     INTEGER(IntKi)                                 :: LEG            ! Generic loop index
 
 
@@ -537,8 +537,8 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
     CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
     ! Passed variables:
-    INTEGER(IntKi)                                 :: ErrStat2       ! temporary Error status of the operation
-    CHARACTER(LEN(ErrMsg))                         :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+!    INTEGER(IntKi)                                 :: ErrStat2       ! temporary Error status of the operation
+!    CHARACTER(LEN(ErrMsg))                         :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
     REAL(DbKi),                     INTENT(IN)     :: t              ! Current time
     INTEGER(IntKi),                 INTENT(IN)     :: n              ! Current step
 
@@ -552,8 +552,8 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
     
     INTEGER(IntKi)                  :: MM,NN,LEG,NE                  ! Generic index
     INTEGER(IntKi)                  :: I,J,K,L                       ! Generic index
-    INTEGER(IntKi)                  :: Flag                          ! Generic index
-    INTEGER(IntKi)                  :: Sttus                         ! Status returned by an attempted allocation or READ.
+!    INTEGER(IntKi)                  :: Flag                          ! Generic index
+!    INTEGER(IntKi)                  :: Sttus                         ! Status returned by an attempted allocation or READ.
 
     ! Initialize variables
 
@@ -1374,9 +1374,9 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
 
     ! Local variables
 
-    TYPE(FEAM_ContinuousStateType)                 :: dxdt            ! Continuous state derivatives at t
+!    TYPE(FEAM_ContinuousStateType)                 :: dxdt            ! Continuous state derivatives at t
     TYPE(FEAM_InputType)                           :: u               ! Inputs at t
-    TYPE(FEAM_InputFile)                           :: InputFileData  ! Data stored in the module's input file
+!    TYPE(FEAM_InputFile)                           :: InputFileData  ! Data stored in the module's input file
 
     INTEGER(IntKi)                                 :: ErrStat2        ! Error status of the operation (occurs after initial error)
     CHARACTER(LEN(ErrMsg))                         :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
@@ -1439,9 +1439,9 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
     ! Local variables
     REAL(ReKi)                                     :: AllOuts(MaxOutPts)     ! All the the available output channels
     INTEGER(IntKi)                                 :: I,J                    ! Generic loop index
-    INTEGER(IntKi)                                 :: K                      ! Blade index
-    INTEGER(IntKi)                                 :: ErrStat2
-    CHARACTER(LEN(ErrMsg))                         :: ErrMsg2
+!    INTEGER(IntKi)                                 :: K                      ! Blade index
+!    INTEGER(IntKi)                                 :: ErrStat2
+!    CHARACTER(LEN(ErrMsg))                         :: ErrMsg2
     INTEGER(IntKi)                                 :: LEG                    ! Generic index
     REAL(ReKi)                                     :: TEMP                   ! Temporary storage
 
@@ -1643,7 +1643,7 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
     ! Local variables:
     INTEGER(IntKi)                :: I                                         ! loop counter
     INTEGER(IntKi)                :: J                                         ! loop counter
-    INTEGER(IntKi)                :: NumOuts                                   ! Number of output channel names read from the file 
+!    INTEGER(IntKi)                :: NumOuts                                   ! Number of output channel names read from the file 
     INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
 
     INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
@@ -2431,7 +2431,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       ! Local variables
 
    INTEGER                      :: I                                               ! Generic loop-counting index
-   INTEGER                      :: J                                               ! Generic loop-counting index
+!   INTEGER                      :: J                                               ! Generic loop-counting index
    INTEGER                      :: INDX                                            ! Index for valid arrays
 
    LOGICAL                      :: CheckOutListAgain                               ! Flag used to determine if output parameter starting with "M" is valid (or the negative of another parameter)
@@ -2573,7 +2573,7 @@ END SUBROUTINE SetOutParam
     INTEGER                    ::  I, J, K
 
     INTEGER                    ::  numNodes 
-    REAL                       ::  Orient(3,3)
+!    REAL                       ::  Orient(3,3)
 
     ! Initialize ErrStat
 
@@ -2800,7 +2800,7 @@ END SUBROUTINE SetOutParam
     CHARACTER(*),                           INTENT(   OUT )  ::  ErrMsg               ! Error message if ErrStat /= ErrID_None
 
 
-    INTEGER                    ::  I, J
+    INTEGER                    ::  I ! J
     INTEGER                    ::  numNodes 
     REAL(ReKi)                 ::  Pos(3)
 
