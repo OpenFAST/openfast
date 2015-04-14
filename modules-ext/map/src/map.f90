@@ -453,7 +453,9 @@ IF (ErrStat >= AbortErrLev) RETURN
     !  MAP Constraint State
     !  MAP Other State
     !  MAP Output State
+    !  MAP parameters (no arrays, but still want to copy scalars for pack/unpack) [packs only the Fortran side]
     ! =======================================================================================================  
+        
     CALL MAP_C2Fary_CopyConstrState(z, ErrStat2, ErrMsg2); 
       CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
     CALL MAP_C2Fary_CopyOutput(y, ErrStat, ErrMsg)
@@ -461,6 +463,8 @@ IF (ErrStat >= AbortErrLev) RETURN
     CALL MAP_C2Fary_CopyOtherState(other, ErrStat, ErrMsg)
       CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
     CALL MAP_C2Fary_CopyInput(u, ErrStat, ErrMsg)
+      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
+    CALL MAP_C2Fary_CopyParam(p, ErrStat2, ErrMsg2);  ! copy these scalars for pack/unpack reasons
       CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
     
     CALL MAP_Get_Output_Headers(InitOut, other)
@@ -496,8 +500,8 @@ IF (ErrStat >= AbortErrLev) RETURN
                     CtrlCode = MESH_SIBLING         , &                !          |
                     IOS      = COMPONENT_OUTPUT     , &                !          |
                     Force    = .TRUE.               , &                !          |
-                    ErrStat  = ErrStat2              , &                !          |
-                    ErrMess  = ErrMsg2                 )                !          |
+                    ErrStat  = ErrStat2             , &                !          |
+                    ErrMess  = ErrMsg2                )                !          |
        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
        IF (ErrStat >= AbortErrLev) RETURN
                                                                        !          |
@@ -694,7 +698,7 @@ IF (ErrStat >= AbortErrLev) RETURN
     ! Locals
     INTEGER(KIND=C_INT)                             :: status_from_MAP=0                 
     CHARACTER(KIND=C_CHAR), DIMENSION(1024)         :: message_from_MAP = ' '
-    INTEGER(IntKi)                                  :: i=0 
+!    INTEGER(IntKi)                                  :: i=0 
             
     INTEGER(IntKi)                                  :: ErrStat2     ! Error status of the operation
     CHARACTER(1024)                                 :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
@@ -723,6 +727,7 @@ IF (ErrStat >= AbortErrLev) RETURN
     CALL MAP_C2Fary_CopyOutput(y, ErrStat2, ErrMsg2);         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
     CALL MAP_C2Fary_CopyOtherState(other, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
     CALL MAP_C2Fary_CopyInput(u, ErrStat2, ErrMsg2);          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_C2Fary_CopyParam(p, ErrStat2, ErrMsg2);          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
            
     
     ! Destroy Fortran MAP types

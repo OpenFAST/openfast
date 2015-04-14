@@ -2737,15 +2737,15 @@ MAP_ERROR_CODE print_help_to_screen()
 {
   print_machine_name_to_screen( );
 
-  printf("MAP Input file section defitions:\n");
+  printf("MAP Input File section definitions:\n");
   printf("  Line dictionary definitions:\n");   
   printf("    -LineType, --User-defined name of line [-]  \n");   
-  printf("    -Diam,     --Line diamater, used to calulate area and line displacement per unit length [m]  \n");   
+  printf("    -Diam,     --Line diameter, used to calculate area and line displacement per unit length [m]  \n");   
   printf("    -MassDen,  --Mass (in air) per unit length [kg/m]  \n");   
   printf("    -EA,       --Axial stiffness [N] \n");   
   printf("    -CB,       --Cable/seabed Coulumb friction coefficient [-]  \n");   
   printf("    -CIntDamp, --Internal structural damping coefficient [Pa-s]  \n");   
-  printf("    -Ca,       --Cross-flow added-mass coeficient [-]\n");   
+  printf("    -Ca,       --Cross-flow added-mass coefficient [-]\n");   
   printf("    -Cdn,      --Cross-flow drag coefficient [-]\n");   
   printf("    -Cdt,      --Tangent (skin) drag coefficient[-]\n");   
   printf("  Node property definitions:\n");
@@ -2760,7 +2760,7 @@ MAP_ERROR_CODE print_help_to_screen()
   printf("    -FY,       --Applied Y external force at node. '#' must prefix VESSEL and FIX nodes [N]\n");
   printf("    -FZ,       --Applied Z external force at node. '#' must prefix VESSEL and FIX nodes [N]\n");
   printf("  Line property definitions:\n");
-  printf("    -Line,  --Line number; first starts at 1 [-]\n");
+  printf("    -Line,     --Line number; first starts at 1 [-]\n");
   printf("    -LineType, --Must match property defined in 'Line Dictions'[-]\n");
   printf("    -UnstrLen, --Unstretched line length [m]\n");
   printf("    -NodeAnch, --Anchor node number corresponding to 'Node Property Definitions' section [-]\n");
@@ -2769,12 +2769,12 @@ MAP_ERROR_CODE print_help_to_screen()
   printf("    \n");
   printf("  Line run-time options definitions\n");
   printf("    Outputs:\n");
-  printf("      -gx_pos,       --Fairlead posiion in global X [m]\n");
-  printf("      -gy_pos,       --Fairlead posiion in global Y [m]\n");
-  printf("      -gx_pos,       --Fairlead posiion in global Z [m]\n");
-  printf("      -gx_a_pos,     --Anchor posiion in global X [m]\n");
-  printf("      -gy_a_pos,     --Anchor posiion in global Y [m]\n");
-  printf("      -gz_a_pos,     --Anchor posiion in global Z [m]\n");
+  printf("      -gx_pos,       --Fairlead position in global X [m]\n");
+  printf("      -gy_pos,       --Fairlead position in global Y [m]\n");
+  printf("      -gx_pos,       --Fairlead position in global Z [m]\n");
+  printf("      -gx_a_pos,     --Anchor position in global X [m]\n");
+  printf("      -gy_a_pos,     --Anchor position in global Y [m]\n");
+  printf("      -gz_a_pos,     --Anchor position in global Z [m]\n");
   printf("      -gx_force,     --Fairlead force in global X (include applied forces) [N]\n");
   printf("      -gy_force,     --Fairlead force in global Y (include applied forces) [N]\n");
   printf("      -gz_force,     --Fairlead force in global Z (include applied forces) [N]\n");
@@ -2785,7 +2785,7 @@ MAP_ERROR_CODE print_help_to_screen()
   printf("      -tension_fair, --Line force-magnitude at fairlead (include applied loads) [N]\n");
   printf("      -tension_anch, --Line force-magnitude at anchor (include applied loads) [N]\n");
   printf("      -azimuth,      --Line lateral offset angle global X axis [deg]\n");
-  printf("      -altitude,     --Line inclination angle relative to global XY plane at fiarlead [deg]\n");
+  printf("      -altitude,     --Line inclination angle relative to global XY plane at fairlead [deg]\n");
   printf("      -lay_length,   --Length of line on seabed [m]\n");
   printf("      -line_tension, -- \n");
   printf("    Model features:\n");
