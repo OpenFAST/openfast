@@ -2682,10 +2682,10 @@ FUNCTION AD_WindVelocityWithDisturbance(  Time, u, p, x, xd, z, O, y, ErrStat, E
    REAL(ReKi)                       :: theta    ! Angle between x-axis and line from tower to blade element
    REAL(ReKi)                       :: width    ! half width of the wake after accounting for wake expansion proportional to square root of RADIUS
 
-   INTEGER                          :: Sttus
+!   INTEGER                          :: Sttus
 
-   INTEGER                          :: TmpErrStat
-   CHARACTER(LEN(ErrMsg))           :: TmpErrMsg
+!   INTEGER                          :: TmpErrStat
+!   CHARACTER(LEN(ErrMsg))           :: TmpErrMsg
 
 
    ErrStat = ErrID_None
@@ -2854,14 +2854,14 @@ SUBROUTINE TwrAeroLoads ( p, Node, NodeDCMGbl, NodeVelGbl, NodeWindVelGbl, NodeF
       ! Local variables.
 
    REAL(ReKi)                                :: NodeFrcLcl    (3)             ! The forces per unit length on the tower node in the local system.
-   REAL(ReKi)                                :: NodeLocTwr    (3)             ! The location of the node in the tower coordinate system.  This is used to get the tower section properties.
+!   REAL(ReKi)                                :: NodeLocTwr    (3)             ! The location of the node in the tower coordinate system.  This is used to get the tower section properties.
    REAL(ReKi)                                :: NodeVelRelGbl (3)             ! The relative wind velocity in the global reference frame..
    REAL(ReKi)                                :: NodeVelRelLcl (3)             ! The relative wind velocity in the local reference frame..
    REAL(ReKi)                                :: RelNmlWndSpd                  ! The relative wind speed normal to the tower axis.  sqrt(u^2+v^2)
-   REAL(ReKi)                                :: TwrFrcLcl     (3)             ! The drag coefficient corresponding to the computed Reynolds Number.
+!   REAL(ReKi)                                :: TwrFrcLcl     (3)             ! The drag coefficient corresponding to the computed Reynolds Number.
    REAL(ReKi)                                :: TwrNodeCd                     ! The drag coefficient corresponding to the computed Reynolds Number.
    REAL(ReKi)                                :: TwrNodeRe                     ! The Reynolds Number computed using the wind speed normal to the tower axis.
-   REAL(ReKi)                                :: WndDirLcl                     ! The wind direction relative to the local node coordinate system using only the u and v components.
+!   REAL(ReKi)                                :: WndDirLcl                     ! The wind direction relative to the local node coordinate system using only the u and v components.
 
    INTEGER(IntKi)                            :: IndLo                         ! The index pointing to the lower of the two points bounding an interpolated value.
 
