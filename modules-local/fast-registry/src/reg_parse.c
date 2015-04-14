@@ -695,37 +695,40 @@ must_have_real_or_double( char *str )
 char *
 fast_interface_type_shortname( char *str )
 {
-   char * retval ;
+   char * retval, *str2;
+   str2 = make_lower_temp(str);
 
-   retval = str ;
-
-   if        (  !strcmp(make_lower_temp(str), "initinputtype") )  {
+   if        (  !strcmp(str2, "initinputtype") )  {
      retval = "InitInput" ;
-   } else if (  !strcmp(make_lower_temp(str), "initoutputtype") ) {
+   } else if (  !strcmp(str2, "initoutputtype") ) {
      retval = "InitOutput" ;
-   } else if (  !strcmp(make_lower_temp(str), "inputtype") ) {
+   } else if (  !strcmp(str2, "inputtype") ) {
      retval = "Input" ;
-   } else if (  !strcmp(make_lower_temp(str), "outputtype") ) {
+   } else if (  !strcmp(str2, "outputtype") ) {
      retval = "Output" ;
-   } else if (  !strcmp(make_lower_temp(str), "continuousstatetype") ) {
+   } else if (  !strcmp(str2, "continuousstatetype") ) {
      retval = "ContState" ;
-   } else if (  !strcmp(make_lower_temp(str), "discretestatetype") )  {
+   } else if (  !strcmp(str2, "discretestatetype") )  {
      retval = "DiscState" ;
-   } else if (  !strcmp(make_lower_temp(str), "constraintstatetype") ) {
+   } else if (  !strcmp(str2, "constraintstatetype") ) {
      retval = "ConstrState" ;
-   } else if (  !strcmp(make_lower_temp(str), "otherstatetype") ) {
+   } else if (  !strcmp(str2, "otherstatetype") ) {
      retval = "OtherState" ;
-   } else if (  !strcmp(make_lower_temp(str), "parametertype") ) {
+   } else if (  !strcmp(str2, "parametertype") ) {
      retval = "Param" ;
-   } else if (  !strcmp(make_lower_temp(str), "partialoutputpinputtype") ) {
+   } else if (  !strcmp(str2, "partialoutputpinputtype") ) {
      retval = "dYdu" ;
-   } else if (  !strcmp(make_lower_temp(str), "partialcontstatepinputtype") ) {
+   } else if (  !strcmp(str2, "partialcontstatepinputtype") ) {
      retval = "dXdu" ;
-   } else if (  !strcmp(make_lower_temp(str), "partialdiscstatepinputtype") ) {
+   } else if (  !strcmp(str2, "partialdiscstatepinputtype") ) {
      retval = "dXddu" ;
-   } else if (  !strcmp(make_lower_temp(str), "partialconstrstatepinputtype") ) {
+   } else if (  !strcmp(str2, "partialconstrstatepinputtype") ) {
      retval = "dZdu" ;
    }
+   else{ 
+      retval = str; 
+   }
+
 
    return(retval) ;
 }
