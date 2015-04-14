@@ -50,7 +50,7 @@ gen_copy_c2f( FILE         *fp        , // *.f90 file we are writting to
     for ( r = q->fields ; r ; r = r->next )
     {
       if ( r->type != NULL ) {
-        if ( r->type->type_type == DERIVED && ! r->type->usefrom  ) {
+        if ( r->type->type_type == DERIVED   ) { // && ! r->type->usefrom
           fprintf(stderr,"Registry WARNING: derived data type %s of type %s is not passed through C interface\n",r->name,r->type->name) ;
         } else {
             if ( is_pointer(r) ) {
@@ -60,7 +60,20 @@ gen_copy_c2f( FILE         *fp        , // *.f90 file we are writting to
                  fprintf(fp,"    ELSE\n") ;
                  fprintf(fp,"       CALL C_F_POINTER(%sData%%C_obj%%%s, %sData%%%s, (/%sData%%C_obj%%%s_Len/))\n",nonick,r->name,nonick,r->name,nonick,r->name) ;
                  fprintf(fp,"    END IF\n") ;
-             }
+            }
+            else if (!has_deferred_dim(r, 0)) {
+               if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
+                  !strcmp(r->type->mapsto, "REAL(SiKi)") ||
+                  !strcmp(r->type->mapsto, "REAL(DbKi)") ||
+                  !strcmp(r->type->mapsto, "INTEGER(IntKi)") ||
+                  !strcmp(r->type->mapsto, "LOGICAL"))
+               {
+                  fprintf(fp, "    %sData%%%s = %sData%%C_obj%%%s\n", nonick, r->name, nonick, r->name);
+               }
+               else { // characters need to be copied differently
+                  fprintf(fp, "    %sData%%%s = TRANSFER(%sData%%C_obj%%%s, %sData%%%s )\n", nonick, r->name, nonick, r->name, nonick, r->name);
+               }
+            }
         }
       }
     }
@@ -77,7 +90,6 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, con
   char tmp[NAMELEN], tmp2[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   node_t *q, * r ;
   int d ;
-  int arySize;
 
   remove_nickname(ModName->nickname,inout,nonick) ;
   append_nickname((is_a_fast_interface_type(inoutlong))?ModName->nickname:"",inoutlong,addnick) ;
@@ -117,77 +129,75 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, con
 // check if this is an allocatable array:
         if ( r->ndims > 0 && has_deferred_dim(r,0) ) {
   fprintf(fp,"IF (%s(Src%sData%%%s)) THEN\n",assoc_or_allocated(r),nonick,r->name) ;
-           if ( sw_norealloc_lsh ) {
              strcpy(tmp,"") ;
-             arySize = 0;
-             for ( d = 1 ; d <= r->ndims ; d++ ) {
-  fprintf(fp,"   i%d_l = LBOUND(Src%sData%%%s,%d)\n",d,nonick,r->name,d) ;
-  fprintf(fp,"   i%d_u = UBOUND(Src%sData%%%s,%d)\n",d,nonick,r->name,d) ;
-                sprintf(tmp2,",i%d_l:i%d_u",d,d) ;
-                strcat(tmp,tmp2) ;
+
+             for (d = 1; d <= r->ndims; d++) {
+                fprintf(fp, "  i%d_l = LBOUND(Src%sData%%%s,%d)\n", d, nonick, r->name, d);
+                fprintf(fp, "  i%d_u = UBOUND(Src%sData%%%s,%d)\n", d, nonick, r->name, d);
+                sprintf(tmp2, ",i%d_l:i%d_u", d, d);
+                strcat(tmp, tmp2);
              }
 //fprintf(fp," nonick=%s\n", nonick    );
-  fprintf(fp,"   IF (.NOT. %s(Dst%sData%%%s)) THEN \n",assoc_or_allocated(r),nonick,r->name) ;
-  fprintf(fp,"      ALLOCATE(Dst%sData%%%s(%s),STAT=ErrStat2)\n",nonick,r->name,(char*)&(tmp[1])) ;
-  fprintf(fp,"      IF (ErrStat2 /= 0) THEN \n") ;
-  fprintf(fp,"         CALL SetErrStat(ErrID_Fatal, 'Error allocating Dst%sData%%%s.', ErrStat, ErrMsg,RoutineName)\n",nonick,r->name);
-  fprintf(fp,"         RETURN\n") ;
-  fprintf(fp,"      END IF\n") ;
+  fprintf(fp,"  IF (.NOT. %s(Dst%sData%%%s)) THEN \n",assoc_or_allocated(r),nonick,r->name) ;
+  fprintf(fp,"    ALLOCATE(Dst%sData%%%s(%s),STAT=ErrStat2)\n",nonick,r->name,(char*)&(tmp[1])) ;
+  fprintf(fp,"    IF (ErrStat2 /= 0) THEN \n") ;
+  fprintf(fp,"      CALL SetErrStat(ErrID_Fatal, 'Error allocating Dst%sData%%%s.', ErrStat, ErrMsg,RoutineName)\n",nonick,r->name);
+  fprintf(fp,"      RETURN\n") ;
+  fprintf(fp,"    END IF\n") ;
 
-        if ( sw_ccode && is_pointer(r) ) { // bjj: this needs to be updated if we've got multiple dimension arrays
-  fprintf(fp,"      Dst%sData%%c_obj%%%s_Len = SIZE(Dst%sData%%%s)\n",nonick,r->name,nonick,r->name) ; 
-  fprintf(fp,"      IF (Dst%sData%%c_obj%%%s_Len > 0) &\n",nonick,r->name) ; 
-  fprintf(fp,"         Dst%sData%%c_obj%%%s = C_LOC( Dst%sData%%%s(i1_l) ) \n",nonick,r->name, nonick,r->name ) ;      
-        }
-  fprintf(fp,"   END IF\n") ;
-           }
-        }
+             if ( sw_ccode && is_pointer(r) ) { // bjj: this needs to be updated if we've got multiple dimension arrays
+  fprintf(fp,"    Dst%sData%%c_obj%%%s_Len = SIZE(Dst%sData%%%s)\n",nonick,r->name,nonick,r->name) ; 
+  fprintf(fp,"    IF (Dst%sData%%c_obj%%%s_Len > 0) &\n",nonick,r->name) ; 
+  fprintf(fp,"      Dst%sData%%c_obj%%%s = C_LOC( Dst%sData%%%s(i1_l) ) \n",nonick,r->name, nonick,r->name ) ;      
+             }
 
-        if ( !strcmp( r->type->name, "meshtype" ) ) {
-          for ( d = r->ndims ; d >= 1 ; d-- ) {
-  fprintf(fp,"   DO i%d = LBOUND(Src%sData%%%s,%d), UBOUND(Src%sData%%%s,%d)\n",d,nonick,r->name,d,nonick,r->name,d  ) ;
-          }
-         if ( sw_ccode ) {
-  fprintf(fp,"  Dst%sData%%C_obj = Src%sData%%C_obj\n",nonick,nonick);
-         }
-  fprintf(fp,"     CALL MeshCopy( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat2, ErrMsg2 )\n",nonick,r->name,dimstr(r->ndims),nonick,r->name,dimstr(r->ndims)) ;
+  fprintf(fp,"  END IF\n") ; // end dest allocated/associated           
+        } 
+
+        if ( r->type->type_type == DERIVED  ) { // includes mesh and dll_type
+
+            for (d = r->ndims; d >= 1; d--) {
+  fprintf(fp,"    DO i%d = LBOUND(Src%sData%%%s,%d), UBOUND(Src%sData%%%s,%d)\n",d,nonick,r->name,d,nonick,r->name,d  ) ;
+            }
+
+            if (!strcmp(r->type->name, "meshtype")) {
+  fprintf(fp,"      CALL MeshCopy( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat2, ErrMsg2 )\n",nonick,r->name,dimstr(r->ndims),nonick,r->name,dimstr(r->ndims)) ;
   fprintf(fp,"         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)\n");
   fprintf(fp,"         IF (ErrStat>=AbortErrLev) RETURN\n");
-          for ( d = r->ndims ; d >= 1 ; d-- ) {
-  fprintf(fp,"   ENDDO\n") ;
+            } else if ( !strcmp( r->type->name, "dll_type" ) ) {
+  fprintf(fp,"      Dst%sData%%%s = Src%sData%%%s\n",nonick,r->name,nonick,r->name) ;
+            }
+            else { // && ! r->type->usefrom ) {
+               char nonick2[NAMELEN];
+               remove_nickname(r->type->module->nickname, r->type->name, nonick2);
+
+               fprintf(fp, "      CALL %s_Copy%s( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat2, ErrMsg2 )\n",
+                  r->type->module->nickname, fast_interface_type_shortname(nonick2),
+                  nonick, r->name, dimstr(r->ndims),
+                  nonick, r->name, dimstr(r->ndims));
+               fprintf(fp, "         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
+               fprintf(fp, "         IF (ErrStat>=AbortErrLev) RETURN\n");
+
+            }
+
+            for ( d = r->ndims ; d >= 1 ; d-- ) {
+  fprintf(fp,"    ENDDO\n") ;
+            }
+        } else { // not a derived type
+  fprintf(fp, "    Dst%sData%%%s = Src%sData%%%s\n",nonick,r->name,nonick,r->name) ;
+          if (sw_ccode) {
+//  fprintf(fp, "    Dst%sData%%C_obj%%%s = Dst%sData%%%s\n", nonick, r->name, nonick, r->name);
+  fprintf(fp, "    Dst%sData%%C_obj%%%s = Src%sData%%C_obj%%%s\n", nonick, r->name, nonick, r->name);
           }
-        } else if ( !strcmp( r->type->name, "dll_type" ) ) {
-  fprintf(fp,"   Dst%sData%%%s = Src%sData%%%s\n",nonick,r->name,nonick,r->name) ;
-        } else if ( r->type->type_type == DERIVED ) { // && ! r->type->usefrom ) {
-          char nonick2[NAMELEN] ;
-          remove_nickname(r->type->module->nickname,r->type->name,nonick2) ;
-          for ( d = r->ndims ; d >= 1 ; d-- ) {
-  fprintf(fp,"   DO i%d = LBOUND(Src%sData%%%s,%d), UBOUND(Src%sData%%%s,%d)\n",d,nonick,r->name,d,nonick,r->name,d  ) ;
-          }
-
-
-  fprintf(fp,"      CALL %s_Copy%s( Src%sData%%%s%s, Dst%sData%%%s%s, CtrlCode, ErrStat2, ErrMsg2 )\n",
-                                r->type->module->nickname,fast_interface_type_shortname(nonick2),
-                                nonick,r->name,dimstr(r->ndims),
-                                nonick,r->name,dimstr(r->ndims)) ;
-  fprintf(fp,"         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
-  fprintf(fp,"         IF (ErrStat>=AbortErrLev) RETURN\n");
-
-
-
-          for ( d = r->ndims ; d >= 1 ; d-- ) {
-  fprintf(fp,"   ENDDO\n") ;
-          }
-        } else {
-  fprintf(fp,"   Dst%sData%%%s = Src%sData%%%s\n",nonick,r->name,nonick,r->name) ;
         }
+
 // close IF (check on allocatable array)
         if ( r->ndims > 0 && has_deferred_dim(r,0) ) {
   fprintf(fp,"ENDIF\n") ;
         }
 
-      }
-    }
+      } // if non-null field
+    } // each field
   }
 
   fprintf(fp," END SUBROUTINE %s_Copy%s\n\n", ModName->nickname,nonick ) ;
@@ -198,7 +208,7 @@ void
 gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 {
 
-  char tmp[NAMELEN], tmp2[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
+  char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], addnick[NAMELEN], nonick[NAMELEN] ;
   char nonick2[NAMELEN];
   node_t *q, * r ;
   int frst, d;
@@ -218,7 +228,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp, "  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)\n") ;
   fprintf(fp, "  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)\n") ;
   fprintf(fp, "  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)\n") ;
-  fprintf(fp, "  TYPE(%s),  INTENT(INOUT) :: InData\n",addnick ) ;
+  fprintf(fp, "  TYPE(%s),  INTENT(IN) :: InData\n",addnick ) ;
   fprintf(fp, "  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp, "  CHARACTER(*),     INTENT(  OUT) :: ErrMsg\n") ;
   fprintf(fp, "  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly\n") ;
@@ -263,9 +273,9 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
     if (has_deferred_dim(r, 0)){
   //fprintf(fp, "\n");
   fprintf(fp, "  Int_BufSz   = Int_BufSz   + 1     ! %s allocated yes/no\n", r->name);
-  fprintf(fp, "  Int_BufSz   = Int_BufSz   + 2*%d  ! %s upper/lower bounds for each dimension\n", r->ndims, r->name);
 
-  fprintf(fp, "  IF ( %s(InData%%%s) ) THEN\n ", assoc_or_allocated(r), r->name);
+  fprintf(fp, "  IF ( %s(InData%%%s) ) THEN\n", assoc_or_allocated(r), r->name);
+  fprintf(fp, "    Int_BufSz   = Int_BufSz   + 2*%d  ! %s upper/lower bounds for each dimension\n", r->ndims, r->name);
     }
 
     if (!strcmp(r->type->name, "meshtype") ||
@@ -275,11 +285,11 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
        if (frst == 1) {
   fprintf(fp, "   ! Allocate buffers for subtypes, if any (we'll get sizes from these) \n"); frst = 0;
        }
-  fprintf(fp, "  Int_BufSz   = Int_BufSz   + 3*%d  ! %s size of buffers for each call to pack subtype\n", r->ndims, r->name);
 
        for (d = r->ndims; d >= 1; d--) {
   fprintf(fp, "    DO i%d = LBOUND(InData%%%s,%d), UBOUND(InData%%%s,%d)\n", d, r->name, d, r->name, d);
        }
+  fprintf(fp, "      Int_BufSz   = Int_BufSz + 3  ! %s: size of buffers for each call to pack subtype\n", r->name);
 
       if ( !strcmp( r->type->name, "meshtype" ) ) {
   fprintf(fp, "      CALL MeshPack( InData%%%s%s, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2, .TRUE. ) ! %s \n",
@@ -390,18 +400,21 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp, "  IF ( .NOT. %s(InData%%%s) ) THEN\n", assoc_or_allocated(r), r->name);
   fprintf(fp, "    IntKiBuf( Int_Xferred ) = 0\n", r->name); // not allocated
   fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n", r->name);
-  fprintf(fp, "    IntKiBuf( Int_Xferred:Int_Xferred+2*%d-1 ) = 0\n", r->ndims, r->name);
-  fprintf(fp, "    Int_Xferred = Int_Xferred + 2*%d\n", r->ndims);
+  //fprintf(fp, "    IntKiBuf( Int_Xferred:Int_Xferred+2*%d-1 ) = 0\n", r->ndims, r->name);
+  //fprintf(fp, "    Int_Xferred = Int_Xferred + 2*%d\n", r->ndims);
   fprintf(fp, "  ELSE\n");
   fprintf(fp, "    IntKiBuf( Int_Xferred ) = 1\n", r->name); // allocated
   fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n", r->name);
-  //fprintf(fp, "  Int_BufSz   = Int_BufSz   + 1 ! %s allocated yes/no\n", r->name);
       for (d = r->ndims; d >= 1; d--) {
   fprintf(fp, "    IntKiBuf( Int_Xferred    ) = LBOUND(InData%%%s,%d)\n", r->name, d);
   fprintf(fp, "    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%%%s,%d)\n", r->name, d);
   fprintf(fp, "    Int_Xferred = Int_Xferred + 2\n");
       } 
   fprintf(fp, "\n");
+  sprintf(tmp3, "  IF (SIZE(InData%%%s)>0)", r->name);
+    }
+    else{
+       sprintf(tmp3, "  ");
     }
 
 
@@ -436,7 +449,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 
        fprintf(fp, "      IF(ALLOCATED(Re_Buf)) THEN\n");
        fprintf(fp, "        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1\n");
-       fprintf(fp, "        ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf\n");
+       fprintf(fp, "        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf\n");
        fprintf(fp, "        Re_Xferred = Re_Xferred + SIZE(Re_Buf)\n");
        fprintf(fp, "        DEALLOCATE(Re_Buf)\n");
        fprintf(fp, "      ELSE\n");
@@ -445,7 +458,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 
        fprintf(fp, "      IF(ALLOCATED(Db_Buf)) THEN\n");
        fprintf(fp, "        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1\n");
-       fprintf(fp, "        DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf\n");
+       fprintf(fp, "        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf\n");
        fprintf(fp, "        Db_Xferred = Db_Xferred + SIZE(Db_Buf)\n");
        fprintf(fp, "        DEALLOCATE(Db_Buf)\n");
        fprintf(fp, "      ELSE\n");
@@ -454,7 +467,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 
        fprintf(fp, "      IF(ALLOCATED(Int_Buf)) THEN\n");
        fprintf(fp, "        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1\n");
-       fprintf(fp, "        IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf\n");
+       fprintf(fp, "        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf\n");
        fprintf(fp, "        Int_Xferred = Int_Xferred + SIZE(Int_Buf)\n");
        fprintf(fp, "        DEALLOCATE(Int_Buf)\n");
        fprintf(fp, "      ELSE\n");
@@ -473,23 +486,23 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 
        if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
           !strcmp(r->type->mapsto, "REAL(SiKi)")) {
-          fprintf(fp, "      ReKiBuf ( Re_Xferred:Re_Xferred+(%s)-1 ) = %sInData%%%s%s\n",
-             (r->ndims>0) ? tmp2 : "1", (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "");
+          fprintf(fp, "    %s ReKiBuf ( Re_Xferred:Re_Xferred+(%s)-1 ) = %sInData%%%s%s\n",
+             tmp3, (r->ndims>0) ? tmp2 : "1", (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "");
           fprintf(fp, "      Re_Xferred   = Re_Xferred   + %s\n", (r->ndims>0) ? tmp2 : "1");
        }
        else if (!strcmp(r->type->mapsto, "REAL(DbKi)")) {
-          fprintf(fp, "      DbKiBuf ( Db_Xferred:Db_Xferred+(%s)-1 ) = %sInData%%%s%s\n",
-             (r->ndims>0) ? tmp2 : "1", (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "");
+          fprintf(fp, "    %s DbKiBuf ( Db_Xferred:Db_Xferred+(%s)-1 ) = %sInData%%%s%s\n",
+             tmp3, (r->ndims>0) ? tmp2 : "1", (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "");
           fprintf(fp, "      Db_Xferred   = Db_Xferred   + %s\n", (r->ndims>0) ? tmp2 : "1");
        }
        else if (!strcmp(r->type->mapsto, "INTEGER(IntKi)") ) {
-          fprintf(fp, "      IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ) = %sInData%%%s%s\n",
-             (r->ndims>0) ? tmp2 : "1", (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "");
+          fprintf(fp, "    %s IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ) = %sInData%%%s%s\n",
+             tmp3, (r->ndims>0) ? tmp2 : "1", (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "");
           fprintf(fp, "      Int_Xferred   = Int_Xferred   + %s\n", (r->ndims>0) ? tmp2 : "1");
        }
        else if (!strcmp(r->type->mapsto, "LOGICAL") ) {
-          fprintf(fp, "      IntKiBuf ( Int_Xferred:Int_Xferred+%s-1 ) = TRANSFER(%s InData%%%s %s, IntKiBuf(1), %s)\n",
-             (r->ndims>0) ? tmp2 : "1", (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "",
+          fprintf(fp, "    %s IntKiBuf ( Int_Xferred:Int_Xferred+%s-1 ) = TRANSFER(%s InData%%%s %s, IntKiBuf(1), %s)\n",
+             tmp3, (r->ndims>0) ? tmp2 : "1", (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "",
              (r->ndims>0) ? tmp2 : "1");
           fprintf(fp, "      Int_Xferred   = Int_Xferred   + %s\n", (r->ndims>0) ? tmp2 : "1");
        }
@@ -536,7 +549,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 void
 gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 {
-  char tmp[NAMELEN], tmp2[NAMELEN], addnick[NAMELEN], nonick[NAMELEN], nonick2[NAMELEN];
+  char tmp[NAMELEN], tmp2[NAMELEN], tmp3[NAMELEN], addnick[NAMELEN], nonick[NAMELEN], nonick2[NAMELEN];
   node_t *q, * r ;
   int d ;
 
@@ -600,7 +613,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         // determine if the array was allocated when packed:
         fprintf(fp, "  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN\n", r->name); // not allocated
         fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n", r->name);
-        fprintf(fp, "    Int_Xferred = Int_Xferred + 2*%d\n", r->ndims);
+      //fprintf(fp, "    Int_Xferred = Int_Xferred + 2*%d\n", r->ndims);
         fprintf(fp, "  ELSE\n");
         fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n", r->name);
 
@@ -611,17 +624,25 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
            sprintf(tmp2, ",i%d_l:i%d_u", d, d);
            strcat(tmp, tmp2);
         }
-        fprintf(fp, "    IF (ALLOCATED(OutData%%%s)) DEALLOCATE(OutData%%%s)\n", r->name, r->name);
+
+        fprintf(fp, "    IF (%s(OutData%%%s)) DEALLOCATE(OutData%%%s)\n", assoc_or_allocated(r), r->name, r->name); // BJJ: need NULLIFY(), too?
         fprintf(fp, "    ALLOCATE(OutData%%%s(%s),STAT=ErrStat2)\n", r->name, (char*)&(tmp[1]));
         fprintf(fp, "    IF (ErrStat2 /= 0) THEN \n");
         fprintf(fp, "       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%%%s.', ErrStat, ErrMsg,RoutineName)\n", r->name);
         fprintf(fp, "       RETURN\n");
         fprintf(fp, "    END IF\n");
 
-        // BJJ: also need C_LOC for C code and also need to alloc c_obj stuff
+        if (sw_ccode && is_pointer(r)) { // bjj: this needs to be updated if we've got multiple dimension arrays
+          fprintf(fp, "    OutData%%c_obj%%%s_Len = SIZE(OutData%%%s)\n", r->name, r->name);
+          fprintf(fp, "    IF (OutData%%c_obj%%%s_Len > 0) &\n", r->name);
+          fprintf(fp, "       OutData%%c_obj%%%s = C_LOC( OutData%%%s(i1_l) ) \n", r->name, r->name);
+        }
 
+        sprintf(tmp3, "  IF (SIZE(OutData%%%s)>0)", r->name);
      }
      else{
+        sprintf(tmp3, "  ");
+
         for (d = 1; d <= r->ndims; d++) {
            fprintf(fp, "    i%d_l = LBOUND(OutData%%%s,%d)\n", d, r->name, d); 
            fprintf(fp, "    i%d_u = UBOUND(OutData%%%s,%d)\n", d, r->name, d);
@@ -641,6 +662,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         // initialize buffers to send to subtype-unpack routines:
         // reals:
         fprintf(fp, "      Buf_size=IntKiBuf( Int_Xferred )\n");
+        fprintf(fp, "      Int_Xferred = Int_Xferred + 1\n");
         fprintf(fp, "      IF(Buf_size > 0) THEN\n");
         fprintf(fp, "        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)\n");
         fprintf(fp, "        IF (ErrStat2 /= 0) THEN \n");
@@ -651,10 +673,10 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         fprintf(fp, "        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )\n");
         fprintf(fp, "        Re_Xferred = Re_Xferred + Buf_size\n");
         fprintf(fp, "      END IF\n");
-        fprintf(fp, "      Int_Xferred = Int_Xferred + 1\n");
 
          // doubles:
         fprintf(fp, "      Buf_size=IntKiBuf( Int_Xferred )\n");
+        fprintf(fp, "      Int_Xferred = Int_Xferred + 1\n");
         fprintf(fp, "      IF(Buf_size > 0) THEN\n");
         fprintf(fp, "        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)\n");
         fprintf(fp, "        IF (ErrStat2 /= 0) THEN \n");
@@ -665,10 +687,10 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         fprintf(fp, "        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )\n");
         fprintf(fp, "        Db_Xferred = Db_Xferred + Buf_size\n");
         fprintf(fp, "      END IF\n");
-        fprintf(fp, "      Int_Xferred = Int_Xferred + 1\n");
 
         // integers:
         fprintf(fp, "      Buf_size=IntKiBuf( Int_Xferred )\n");
+        fprintf(fp, "      Int_Xferred = Int_Xferred + 1\n");
         fprintf(fp, "      IF(Buf_size > 0) THEN\n");
         fprintf(fp, "        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)\n");
         fprintf(fp, "        IF (ErrStat2 /= 0) THEN \n");
@@ -676,11 +698,8 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         fprintf(fp, "           RETURN\n");
         fprintf(fp, "        END IF\n");
 
-        fprintf(fp, "        Int_Xferred = Int_Xferred + 1\n");
         fprintf(fp, "        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )\n");
         fprintf(fp, "        Int_Xferred = Int_Xferred + Buf_size\n");
-        fprintf(fp, "      ELSE\n");
-        fprintf(fp, "        Int_Xferred = Int_Xferred + 1\n");
         fprintf(fp, "      END IF\n");
 
 
@@ -723,42 +742,43 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 
         if (!strcmp(r->type->mapsto, "REAL(ReKi)")) {
            if (is_pointer(r)) { // bjj: this isn't very generic, but it's quick and will work for all current cases
-              fprintf(fp, "      OutData%%%s = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(%s)-1 ), mask%d, 0.0_ReKi ), C_FLOAT)\n",
-                 r->name, tmp2, r->ndims);
+              fprintf(fp, "    %s OutData%%%s = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(%s)-1 ), mask%d, 0.0_ReKi ), C_FLOAT)\n",
+                 tmp3, r->name, tmp2, r->ndims);
               // BJJ: also need C_LOC for C code and also need to alloc c_obj stuff
            }
            else {
-              fprintf(fp, "      OutData%%%s = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(%s)-1 ), mask%d, 0.0_ReKi )\n",
-                 r->name, tmp2, r->ndims);
+              fprintf(fp, "    %s OutData%%%s = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(%s)-1 ), mask%d, 0.0_ReKi )\n",
+                 tmp3, r->name, tmp2, r->ndims);
            }
            fprintf(fp, "      Re_Xferred   = Re_Xferred   + %s\n", tmp2);
         }
         else if (!strcmp(r->type->mapsto, "REAL(SiKi)"))
         {
-           fprintf(fp, "      OutData%%%s = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(%s)-1 ), mask%d, 0.0_ReKi ), SiKi)\n",
-              r->name, tmp2, r->ndims);
+           fprintf(fp, "    %s OutData%%%s = REAL( UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(%s)-1 ), mask%d, 0.0_ReKi ), SiKi)\n",
+              tmp3, r->name, tmp2, r->ndims);
            fprintf(fp, "      Re_Xferred   = Re_Xferred   + %s\n", tmp2);
         }
         else if (!strcmp(r->type->mapsto, "REAL(DbKi)")) {
            if (is_pointer(r)) { // bjj: this isn't very generic, but it's quick and will work for all current cases
-              fprintf(fp, "      OutData%%%s = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(%s)-1 ), mask%d, 0.0_DbKi ), C_DOUBLE)\n",
-                 r->name, tmp2, r->ndims);
+              fprintf(fp, "    %s OutData%%%s = REAL( UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(%s)-1 ), mask%d, 0.0_DbKi ), C_DOUBLE)\n",
+                 tmp3, r->name, tmp2, r->ndims);
               // BJJ: also need C_LOC for C code and also need to alloc c_obj stuff
            }
            else {
-              fprintf(fp, "      OutData%%%s = UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(%s)-1 ), mask%d, 0.0_DbKi )\n",
-                 r->name, (r->ndims>0) ? tmp2 : "1", r->ndims);
+              fprintf(fp, "    %s OutData%%%s = UNPACK(DbKiBuf( Db_Xferred:Db_Xferred+(%s)-1 ), mask%d, 0.0_DbKi )\n",
+                 tmp3, r->name, (r->ndims>0) ? tmp2 : "1", r->ndims);
            }
            fprintf(fp, "      Db_Xferred   = Db_Xferred   + %s\n", tmp2);
         }
         else if (!strcmp(r->type->mapsto, "INTEGER(IntKi)")) {
-           fprintf(fp, "      OutData%%%s = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ), mask%d, 0_IntKi )\n",
-              r->name, (r->ndims>0) ? tmp2 : "1", r->ndims);
+           fprintf(fp, "    %s OutData%%%s = UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ), mask%d, 0_IntKi )\n",
+              tmp3, r->name, (r->ndims>0) ? tmp2 : "1", r->ndims);
            fprintf(fp, "      Int_Xferred   = Int_Xferred   + %s\n", tmp2);
         }
         else if (!strcmp(r->type->mapsto, "LOGICAL")) {
-           fprintf(fp, "      OutData%%%s = TRANSFER( UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ), mask%d, 0 ), mask0)\n",
-              r->name, (r->ndims>0) ? tmp2 : "1", r->ndims);
+           //fprintf(fp, "    %s OutData%%%s = TRANSFER( UNPACK( IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ), mask%d, 0 ), OutData%%%s)\n",
+           fprintf(fp, "    %s OutData%%%s = UNPACK( TRANSFER( IntKiBuf ( Int_Xferred:Int_Xferred+(%s)-1 ), OutData%%%s), mask%d,.TRUE.)\n",
+              tmp3, r->name, (r->ndims>0) ? tmp2 : "1", r->name, r->ndims);
            fprintf(fp, "      Int_Xferred   = Int_Xferred   + %s\n", tmp2);
         }
 
@@ -784,8 +804,6 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
      else {
         // scalar intrinsic data types
         // do all dimensions of arrays (no need for loop over i%d)
-        sprintf(tmp2, "SIZE(OutData%%%s)", r->name);
-
          if (!strcmp(r->type->mapsto, "REAL(ReKi)")) {
               fprintf(fp, "      OutData%%%s = ReKiBuf( Re_Xferred )\n", r->name);
               fprintf(fp, "      Re_Xferred   = Re_Xferred + 1\n");
@@ -815,6 +833,23 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
            fprintf(fp, "        Int_Xferred = Int_Xferred   + 1\n");
            fprintf(fp, "      END DO ! I\n");
         }
+
+// need to move this (scalars and strings) to the %c_obj% type, too!
+// compare with copy routine
+        if (sw_ccode && !has_deferred_dim(r, 0)) {
+              if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
+                 !strcmp(r->type->mapsto, "REAL(SiKi)") ||
+                 !strcmp(r->type->mapsto, "REAL(DbKi)") ||
+                 !strcmp(r->type->mapsto, "INTEGER(IntKi)") ||
+                 !strcmp(r->type->mapsto, "LOGICAL"))
+              {
+                 fprintf(fp, "      OutData%%C_obj%%%s = OutData%%%s\n", r->name, r->name);
+              }
+              else { // characters need to be copied differently
+                 fprintf(fp, "      OutData%%C_obj%%%s = TRANSFER(OutData%%%s, OutData%%C_obj%%%s )\n", r->name, r->name, r->name);
+              }
+        }
+
      }
 
      if (has_deferred_dim(r, 0)){
