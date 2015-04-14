@@ -405,7 +405,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp, "  ELSE\n");
   fprintf(fp, "    IntKiBuf( Int_Xferred ) = 1\n", r->name); // allocated
   fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n", r->name);
-      for (d = r->ndims; d >= 1; d--) {
+  for (d = 1; d <= r->ndims; d++) {
   fprintf(fp, "    IntKiBuf( Int_Xferred    ) = LBOUND(InData%%%s,%d)\n", r->name, d);
   fprintf(fp, "    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%%%s,%d)\n", r->name, d);
   fprintf(fp, "    Int_Xferred = Int_Xferred + 2\n");
@@ -611,7 +611,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
      strcpy(tmp, "");
      if (has_deferred_dim(r, 0)){
         // determine if the array was allocated when packed:
-        fprintf(fp, "  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN\n", r->name); // not allocated
+        fprintf(fp, "  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! %s not allocated\n", r->name); // not allocated
         fprintf(fp, "    Int_Xferred = Int_Xferred + 1\n", r->name);
       //fprintf(fp, "    Int_Xferred = Int_Xferred + 2*%d\n", r->ndims);
         fprintf(fp, "  ELSE\n");
@@ -712,7 +712,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
               r->name, dimstr(r->ndims), r->name);
         }
         else if (r->type->type_type == DERIVED) { // && ! r->type->usefrom ) {           
-           remove_nickname(r->type->module->nickname, r->type->name, nonick2);           
+           remove_nickname(r->type->module->nickname, r->type->name, nonick2);
            fprintf(fp, "      CALL %s_Unpack%s( Re_Buf, Db_Buf, Int_Buf, OutData%%%s%s, ErrStat2, ErrMsg2 ) ! %s \n",
               r->type->module->nickname, fast_interface_type_shortname(nonick2), r->name,
               dimstr(r->ndims), r->name);
