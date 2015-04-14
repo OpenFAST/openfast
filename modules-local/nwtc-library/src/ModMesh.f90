@@ -820,7 +820,7 @@ CONTAINS
 !     7        FieldMask                           FIELDMASK_SIZE
 !     7+$7     Table Entries                       $5 * SIZE(ElemRecType)
 !
-   SUBROUTINE MeshPack ( Mesh, ReBuf, DbBuf, IntBuf , ErrStat, ErrMess, SizeOnly )
+   SUBROUTINE MeshPack ( Mesh, ReKiBuf, DbKiBuf, IntKiBuf , ErrStat, ErrMess, SizeOnly )
       ! Given a mesh and allocatable buffers of type INTEGER(IntKi), REAL(ReKi), and REAL(DbKi), 
       ! return the mesh information compacted into consecutive elements of the corresponding buffers. 
       ! This would be done to allow subsequent writing of the buffers to a file for restarting later. 
@@ -830,199 +830,226 @@ CONTAINS
       ! separately for each sibling, because the fields allocated with the siblings are separate 
       ! and unique to each sibling.
    
-     TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being packed
-     REAL(ReKi),     ALLOCATABLE, INTENT(  OUT) :: ReBuf(:)  ! Real buffer
-     REAL(DbKi),     ALLOCATABLE, INTENT(  OUT) :: DbBuf(:)  ! Double buffer
-     INTEGER(IntKi), ALLOCATABLE, INTENT(  OUT) :: IntBuf(:) ! Int buffer
+     TYPE(MeshType),              INTENT(IN   ) :: Mesh        ! Mesh being packed
+     REAL(ReKi),     ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)  ! Real buffer
+     REAL(DbKi),     ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)  ! Double buffer
+     INTEGER(IntKi), ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:) ! Int buffer
      INTEGER(IntKi),              INTENT(  OUT) :: ErrStat
      CHARACTER(*),                INTENT(  OUT) :: ErrMess
      LOGICAL,OPTIONAL,            INTENT(IN   ) :: SizeOnly
+     
    ! Local
-     INTEGER i,ic,nelem,n_int,n_re,n_db,ii,jj,CtrlCode,x
-     INTEGER Ielement, Xelement
-     TYPE(ElemRecType), POINTER :: ElemRec
-     LOGICAL SzOnly
+     INTEGER(IntKi)                             :: Re_BufSz      ! number of reals in the buffer
+     INTEGER(IntKi)                             :: Re_Xferred    ! number of reals transferred
+     INTEGER(IntKi)                             :: Db_BufSz      ! number of doubles in the buffer
+     INTEGER(IntKi)                             :: Db_Xferred    ! number of doubles transferred
+     INTEGER(IntKi)                             :: Int_BufSz     ! number of integers in the buffer
+     INTEGER(IntKi)                             :: Int_Xferred   ! number of integers transferred
+   
+   
+     INTEGER i,j, nelemnodes
+     LOGICAL OnlySize
+     INTEGER(IntKi)                             :: ErrStat2
+     !CHARACTER(1024)                            :: ErrMess2
+     CHARACTER(*),      PARAMETER               :: RoutineName = "MeshPack"   
 
-     SzOnly = .FALSE.
-     IF ( PRESENT(SizeOnly) ) SzOnly = SizeOnly
+     
+     ErrStat = ErrID_None
+     ErrMess = ""
+     
+     OnlySize = .FALSE.
+     IF ( PRESENT(SizeOnly) ) OnlySize = SizeOnly
 
 
-!bjj: if we modify the code below to check if things are allocated/etc we can remove this requirement (and then we have to rethink the unpack)
-     IF (.NOT. Mesh%Committed ) THEN
-        ErrStat = ErrID_Fatal
-        ErrMess = " MeshPack: Uncommitted meshes cannot be packed."
-        RETURN
+     ! bjj: figure out what to do about sibling meshes... (for now, I'm going to ignore them)
+     
+     !.........................................
+     ! get number of integer values
+     !.........................................
+      IF (.NOT. Mesh%Initialized) THEN ! we don't need to store any data; it's a blank mesh
+         Int_BufSz = 1
+      ELSE ! initialized, may or may not be committed           
+         Int_BufSz =  3                & ! number of logicals in MeshType (initialized, committed, RemapFlag)
+                     + FIELDMASK_SIZE  & ! number of logicals in MeshType (fieldmask)
+                     + 4                 ! number of non-pointer integers (ios, nnodes, nextelem, nscalars)
+         
+         !......
+         ! we'll store the element structure (and call MeshCommit on Unpack if necessary to get the remaining fields like det_jac)
+         !......
+         DO i = 1, NELEMKINDS
+
+            Int_BufSz = Int_BufSz+1 ! Mesh%ElemTable(i)%nelem
+            if (Mesh%ElemTable(i)%nelem > 0) Int_BufSz = Int_BufSz+1 ! number of nodes in this kind of element            
+                  
+            DO j = 1, Mesh%ElemTable(i)%nelem            
+               !Int_BufSz = Int_BufSz+1 ! which kind of element 
+               !Int_BufSz = Int_BufSz+1 ! skip Nneighbors until that's implemented (as well as neighbor list)
+               Int_BufSz = Int_BufSz + SIZE( Mesh%ElemTable(i)%Elements(j)%ElemNodes ) ! nodes in this element                     
+            END DO
+         
+         END DO             
+         
+      END IF
+      
+     !.........................................
+     ! get number of real values
+     !.........................................
+     Re_BufSz = 0
+     IF (Mesh%Initialized) THEN
+        Re_BufSz = Re_BufSz + Mesh%Nnodes * 3 ! Position
+        Re_BufSz = Re_BufSz + Mesh%Nnodes * 9 ! RefOrientation
+        IF ( Mesh%FieldMask(MASKID_FORCE) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
+        IF ( Mesh%FieldMask(MASKID_MOMENT) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
+        IF ( Mesh%FieldMask(MASKID_ORIENTATION) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 9
+        IF ( Mesh%FieldMask(MASKID_TRANSLATIONDISP) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
+        IF ( Mesh%FieldMask(MASKID_ROTATIONVEL) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
+        IF ( Mesh%FieldMask(MASKID_TRANSLATIONVEL) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
+        IF ( Mesh%FieldMask(MASKID_ROTATIONACC) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
+        IF ( Mesh%FieldMask(MASKID_TRANSLATIONACC) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
+        IF ( Mesh%nScalars .GT. 0 ) Re_BufSz = Re_BufSz + Mesh%Nnodes * Mesh%nScalars
      END IF
+     
+     !.........................................
+     ! get number of double values (none now)
+     !.........................................
+     Db_BufSz = 0
+          
+     
+     !.........................................
+     ! allocate buffer arrays
+     !.........................................          
+     IF ( Re_BufSz  .GT. 0 ) THEN 
+        ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+        IF (ErrStat2 /= 0) THEN 
+          CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMess,RoutineName)
+          RETURN
+        END IF
+     END IF
+     IF ( Db_BufSz  .GT. 0 ) THEN 
+        ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+        IF (ErrStat2 /= 0) THEN 
+          CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMess,RoutineName)
+          RETURN
+        END IF
+     END IF
+     IF ( Int_BufSz  .GT. 0 ) THEN 
+        ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+        IF (ErrStat2 /= 0) THEN 
+          CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMess,RoutineName)
+          RETURN
+        END IF
+     END IF
+     IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
 
-    ! Traverse the element list and calculate size needed to store element records
-     n_int = 0
-     nelem = 0
-     CtrlCode = 0
-     CALL MeshNextElement( Mesh, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement, ElemRec=ElemRec )
-     IF (ErrStat >= AbortErrLev) RETURN
-
-     DO WHILE ( CtrlCode .NE. MESH_NOMORE )
-       nelem = nelem + 1
-       n_int = n_int + 1                       ! add word for element kind
-       n_int = n_int + 1                       ! add word for number of nodes
-       n_int = n_int + NumNodes( Xelement )    ! space for nodes in this element
-!#if 0
-! TODO
-!       n_int = n_int + ElemRec%Nneighbors         ! space for neighbor list, stored as element indices
-!#endif
-       CtrlCode = MESH_NEXT
-       CALL MeshNextElement( Mesh, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement )
-       IF (ErrStat >= AbortErrLev) RETURN
-
-     ENDDO
-     n_int = n_int + HDR_FIRSTELEM + FIELDMASK_SIZE  ! add space for header
-     ALLOCATE( IntBuf( n_int ) )
-
-     n_re = 0
-     n_re = n_re + Mesh%Nnodes * 3 ! Position
-     n_re = n_re + Mesh%Nnodes * 9 ! RefOrientation
-     IF ( Mesh%FieldMask(MASKID_FORCE) ) n_re = n_re + Mesh%Nnodes * 3
-     IF ( Mesh%FieldMask(MASKID_MOMENT) ) n_re = n_re + Mesh%Nnodes * 3
-     IF ( Mesh%FieldMask(MASKID_ORIENTATION) ) n_re = n_re + Mesh%Nnodes * 9
-     IF ( Mesh%FieldMask(MASKID_ROTATIONVEL) ) n_re = n_re + Mesh%Nnodes * 3
-     IF ( Mesh%FieldMask(MASKID_ROTATIONACC) ) n_re = n_re + Mesh%Nnodes * 3
-     IF ( Mesh%FieldMask(MASKID_TRANSLATIONDISP) ) n_re = n_re + Mesh%Nnodes * 3
-     IF ( Mesh%FieldMask(MASKID_TRANSLATIONVEL) ) n_re = n_re + Mesh%Nnodes * 3
-     IF ( Mesh%FieldMask(MASKID_TRANSLATIONACC) ) n_re = n_re + Mesh%Nnodes * 3
-     IF ( Mesh%nScalars .GT. 0 ) n_re = n_re + Mesh%Nnodes * Mesh%nScalars
-
-     ALLOCATE( ReBuf( n_re ) )
-
-     n_db = 0  ! unused for now
-
-     IF ( .NOT. SzOnly ) THEN
-
-       ! Actually pack the Int buffer
-       IntBuf(HDR_INTBUFSIZE) = BYTES_IN_INT  * n_int
-       IntBuf(HDR_REALBUFSIZE) = BYTES_IN_REAL * n_re
-       IntBuf(HDR_DBLBUFSIZE) = BYTES_IN_DBL  * n_db
-       IntBuf(HDR_IOS) = Mesh%IOS
-       IntBuf(HDR_NUMNODES) = Mesh%Nnodes
-       IntBuf(HDR_NUMELEMREC) = nelem
-       DO i =0,FIELDMASK_SIZE-1
-         x = 0 ; IF ( Mesh%FieldMask(i+1) ) x = 1   ! convert logical to ints
-         IntBuf(HDR_FIELDMASK+i) = x
-       ENDDO
-       !ic = FIELDMASK_SIZE+HDR_FIXEDLEN+1
-       ic = HDR_FIRSTELEM
-       CtrlCode = 0
-       CALL MeshNextElement( Mesh, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement, ElemRec=ElemRec )
-       IF (ErrStat >= AbortErrLev) RETURN
-
-       DO WHILE ( CtrlCode .NE. MESH_NOMORE )
-         IntBuf(ic) = Xelement ; ic = ic + 1
-         IntBuf(ic) = NumNodes(Xelement) ; ic = ic + 1
-         DO i = 1,NumNodes(Xelement)
-           IntBuf(ic) = ElemRec%ElemNodes(i)
-           ic = ic + 1
-         ENDDO
-!#if 0
-! TODO
-!         DO i = 1,ElemRec%Nneighbors
-!           IntBuf(ic) = 0 !   ElemRec%Neighbors(i)
-!           ic = ic + 1
-!         ENDDO
-!#endif
-         CtrlCode = MESH_NEXT
-         CALL MeshNextElement( Mesh, CtrlCode, ErrStat, ErrMess, Ielement=Ielement, Xelement=Xelement, ElemRec=ElemRec )
-         IF (ErrStat >= AbortErrLev) RETURN
-
-       ENDDO
-
-       ! Actually pack the Real buffer
-       ic = 1
-       DO i = 1, Mesh%Nnodes
-         ReBuf(ic) = Mesh%Position(1,i) ; ic = ic + 1
-         ReBuf(ic) = Mesh%Position(2,i) ; ic = ic + 1
-         ReBuf(ic) = Mesh%Position(3,i) ; ic = ic + 1
-       ENDDO
-
-
-       DO i = 1, Mesh%Nnodes
-         DO jj = 1,3
-            DO ii = 1,3
-               ReBuf(ic) = Mesh%RefOrientation(ii,jj,i) ; ic = ic + 1
+     
+     !.........................................
+     ! store data in buffer arrays
+     !.........................................     
+     Re_Xferred  = 1
+     Db_Xferred  = 1
+     Int_Xferred = 1        
+     
+     ! ..... fill IntKiBuf .....
+     
+      IF (.NOT. Mesh%Initialized) THEN ! we don't need to store any data; it's a blank mesh
+         IntKiBuf(Int_Xferred) = 0; ;  Int_Xferred = Int_Xferred + 1
+      ELSE ! initialized, may or may not be committed                    
+            ! transfer the logicals
+         IntKiBuf(Int_Xferred) = 1;   Int_Xferred = Int_Xferred + 1 
+         IntKiBuf(Int_Xferred) = TRANSFER( Mesh%committed, IntKiBuf(1) );  Int_Xferred = Int_Xferred + 1 
+         IntKiBuf(Int_Xferred:Int_Xferred+FIELDMASK_SIZE-1) = TRANSFER( Mesh%fieldmask, IntKiBuf(Int_Xferred:Int_Xferred+FIELDMASK_SIZE-1) );  Int_Xferred = Int_Xferred + FIELDMASK_SIZE
+         IntKiBuf(Int_Xferred) = TRANSFER( Mesh%RemapFlag, IntKiBuf(1) );  Int_Xferred = Int_Xferred + 1        
+            ! integers
+         IntKiBuf(Int_Xferred) = Mesh%ios;           Int_Xferred = Int_Xferred + 1 
+         IntKiBuf(Int_Xferred) = Mesh%nnodes;        Int_Xferred = Int_Xferred + 1 
+         IntKiBuf(Int_Xferred) = Mesh%nextelem;      Int_Xferred = Int_Xferred + 1 
+         IntKiBuf(Int_Xferred) = Mesh%nscalars;      Int_Xferred = Int_Xferred + 1 
+         
+            ! element structure
+         DO i = 1, NELEMKINDS
+            
+            IntKiBuf(Int_Xferred) = Mesh%ElemTable(i)%nelem;      Int_Xferred = Int_Xferred + 1 ! number of elements
+            
+            if (Mesh%ElemTable(i)%nelem > 0) then
+               nelemnodes = SIZE( Mesh%ElemTable(i)%Elements(1)%ElemNodes );
+               IntKiBuf(Int_Xferred) = nelemnodes; Int_Xferred = Int_Xferred + 1 ! nodes per element
+                                          
+                  ! nodes in this element
+               DO j = 1, Mesh%ElemTable(i)%nelem            
+                  IntKiBuf(Int_Xferred:Int_Xferred+nelemnodes-1) = Mesh%ElemTable(i)%Elements(j)%ElemNodes; Int_Xferred = Int_Xferred + nelemnodes 
+               END DO
+            end if
+         
+         END DO             
+         
+      END IF         
+     
+     ! ..... fill ReKiBuf .....
+     IF (Mesh%Initialized) THEN
+         DO i = 1, Mesh%Nnodes ! Position
+            ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%Position(:,i); Re_Xferred = Re_Xferred + 3
+         END DO
+         DO i = 1, Mesh%Nnodes ! RefOrientation
+            DO j = 1,3
+               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%RefOrientation(:,j,i); Re_Xferred = Re_Xferred + 3
             ENDDO
-         ENDDO
-       ENDDO
-
-       IF ( Mesh%FieldMask(MASKID_FORCE) ) THEN ! n_re = n_re + Mesh%Nnodes * 3
-         DO i = 1, Mesh%Nnodes
-           ReBuf(ic) = Mesh%Force(1,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%Force(2,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%Force(3,i) ; ic = ic + 1
-         ENDDO
-       ENDIF
-       IF ( Mesh%FieldMask(MASKID_MOMENT) ) THEN ! n_re = n_re + Mesh%Nnodes * 3
-         DO i = 1, Mesh%Nnodes
-           ReBuf(ic) = Mesh%Moment(1,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%Moment(2,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%Moment(3,i) ; ic = ic + 1
-         ENDDO
-       ENDIF
-       IF ( Mesh%FieldMask(MASKID_ORIENTATION) ) THEN ! n_re = n_re + Mesh%Nnodes * 9
-         DO i = 1, Mesh%Nnodes
-           DO jj = 1,3
-             DO ii = 1,3
-               ReBuf(ic) = Mesh%Orientation(ii,jj,i) ; ic = ic + 1
-             ENDDO
-           ENDDO
-         ENDDO
-       ENDIF
-       IF ( Mesh%FieldMask(MASKID_TRANSLATIONDISP) ) THEN ! n_re = n_re + Mesh%Nnodes * 3
-         DO i = 1, Mesh%Nnodes
-           ReBuf(ic) = Mesh%TranslationDisp(1,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%TranslationDisp(2,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%TranslationDisp(3,i) ; ic = ic + 1
-         ENDDO
-       ENDIF
-       IF ( Mesh%FieldMask(MASKID_ROTATIONVEL) ) THEN ! n_re = n_re + Mesh%Nnodes * 3
-         DO i = 1, Mesh%Nnodes
-           ReBuf(ic) = Mesh%RotationVel(1,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%RotationVel(2,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%RotationVel(3,i) ; ic = ic + 1
-         ENDDO
-       ENDIF
-       IF ( Mesh%FieldMask(MASKID_TRANSLATIONVEL) ) THEN ! n_re = n_re + Mesh%Nnodes * 3
-         DO i = 1, Mesh%Nnodes
-           ReBuf(ic) = Mesh%TranslationVel(1,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%TranslationVel(2,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%TranslationVel(3,i) ; ic = ic + 1
-         ENDDO
-       ENDIF
-       IF ( Mesh%FieldMask(MASKID_ROTATIONACC) ) THEN ! n_re = n_re + Mesh%Nnodes * 3
-         DO i = 1, Mesh%Nnodes
-           ReBuf(ic) = Mesh%RotationAcc(1,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%RotationAcc(2,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%RotationAcc(3,i) ; ic = ic + 1
-         ENDDO
-       ENDIF
-       IF ( Mesh%FieldMask(MASKID_TRANSLATIONACC) ) THEN ! n_re = n_re + Mesh%Nnodes * 3
-         DO i = 1, Mesh%Nnodes
-           ReBuf(ic) = Mesh%TranslationAcc(1,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%TranslationAcc(2,i) ; ic = ic + 1
-           ReBuf(ic) = Mesh%TranslationAcc(3,i) ; ic = ic + 1
-         ENDDO
-       ENDIF
-       IF ( Mesh%nScalars .GT. 0 ) THEN ! n_re = n_re + Mesh%Nnodes * Mesh%nScalar
-         DO i = 1, Mesh%Nnodes
-           DO ii = 1,Mesh%nScalars
-             ReBuf(ic) = Mesh%Scalars(ii,i) ; ic = ic + 1
-           ENDDO
-         ENDDO
-       ENDIF
-     ENDIF
-     ALLOCATE( DbBuf( 1 ) )  ! dummy allocation
-
+         END DO
+                
+         IF ( Mesh%FieldMask(MASKID_FORCE) ) THEN ! Force
+            DO i = 1, Mesh%Nnodes
+               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%Force(:,i); Re_Xferred = Re_Xferred + 3
+            ENDDO
+         ENDIF
+         IF ( Mesh%FieldMask(MASKID_MOMENT) ) THEN ! Moment
+            DO i = 1, Mesh%Nnodes
+               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%Moment(:,i); Re_Xferred = Re_Xferred + 3
+            ENDDO
+         ENDIF
+         IF ( Mesh%FieldMask(MASKID_ORIENTATION) ) THEN ! Orientation
+            DO i = 1, Mesh%Nnodes 
+               DO j = 1,3
+                  ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%Orientation(:,j,i); Re_Xferred = Re_Xferred + 3
+               ENDDO
+            END DO
+         ENDIF
+         IF ( Mesh%FieldMask(MASKID_TRANSLATIONDISP) ) THEN ! TranslationDisp
+            DO i = 1, Mesh%Nnodes
+               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%TranslationDisp(:,i); Re_Xferred = Re_Xferred + 3
+            ENDDO
+         ENDIF
+         IF ( Mesh%FieldMask(MASKID_ROTATIONVEL) ) THEN ! RotationVel
+            DO i = 1, Mesh%Nnodes
+               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%RotationVel(:,i); Re_Xferred = Re_Xferred + 3
+            ENDDO
+         ENDIF
+         IF ( Mesh%FieldMask(MASKID_TRANSLATIONVEL) ) THEN ! TranslationVel
+            DO i = 1, Mesh%Nnodes
+               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%TranslationVel(:,i); Re_Xferred = Re_Xferred + 3
+            ENDDO
+         ENDIF
+         IF ( Mesh%FieldMask(MASKID_ROTATIONACC) ) THEN ! RotationAcc
+            DO i = 1, Mesh%Nnodes
+               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%RotationAcc(:,i); Re_Xferred = Re_Xferred + 3
+            ENDDO
+         ENDIF
+         IF ( Mesh%FieldMask(MASKID_TRANSLATIONACC) ) THEN ! TranslationAcc
+            DO i = 1, Mesh%Nnodes
+               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%TranslationAcc(:,i); Re_Xferred = Re_Xferred + 3
+            ENDDO
+         ENDIF
+         
+         IF ( Mesh%nScalars .GT. 0 ) THEN ! n_re = n_re + Mesh%Nnodes * Mesh%nScalar
+            DO i = 1, Mesh%Nnodes
+               ReKiBuf(Re_Xferred:Re_Xferred+Mesh%nScalars-1) = Mesh%Scalars(:,i); Re_Xferred = Re_Xferred + Mesh%nScalars
+            ENDDO
+         ENDIF         
+         
+     END IF
+     
      !bjj: where are we keeping track of which ones are siblings so that we can unpack them (set pointers) properly for restart?
    END SUBROUTINE MeshPack
 
-   SUBROUTINE MeshUnpack( Mesh, Re_Buf, Db_Buf, Int_Buf, ErrStat, ErrMess )
+   SUBROUTINE MeshUnpack( Mesh, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMess )
       ! Given a blank, uncreated mesh and buffers of type INTEGER(IntKi), REAL(ReKi), and 
       ! REAL(DbKi), unpack the mesh information from the buffers. This would be done to 
       ! recreate a mesh after reading in the buffers on a restart of the program. The sense 
@@ -1033,201 +1060,211 @@ CONTAINS
       ! If the mesh has an already recreated sibling mesh from a previous call to MeshUnpack, specify 
       ! the existing sibling as an optional argument so that the sibling relationship is also recreated.
    
-     TYPE(MeshType),              INTENT(INOUT) :: Mesh
-     REAL(ReKi),     ALLOCATABLE, INTENT(IN   ) :: Re_Buf(:)
-     REAL(DbKi),     ALLOCATABLE, INTENT(IN   ) :: Db_Buf(:)
-     INTEGER(IntKi), ALLOCATABLE, INTENT(IN   ) :: Int_Buf(:)
-     INTEGER(IntKi),              INTENT(  OUT) :: ErrStat
-     CHARACTER(*),                INTENT(  OUT) :: ErrMess
+      TYPE(MeshType),              INTENT(INOUT) :: Mesh
+      REAL(ReKi),     ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+      REAL(DbKi),     ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+      INTEGER(IntKi), ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+      INTEGER(IntKi),              INTENT(  OUT) :: ErrStat
+      CHARACTER(*),                INTENT(  OUT) :: ErrMess
 
-   ! Local
-     LOGICAL Force, Moment, Orientation, TranslationDisp, TranslationVel, RotationVel, TranslationAcc, RotationAcc
-     INTEGER nScalars
-     INTEGER i,ic,ii,jj,nelemnodes
-     INTEGER Xelement
-     !TYPE(ElemRecType), POINTER :: ElemRec
+         ! Local
+      LOGICAL committed, RemapFlag, fieldmask(FIELDMASK_SIZE)
+      INTEGER nScalars, ios, nnodes, nextelem, nelemnodes, nelem
+      INTEGER i,j
+     
+      INTEGER(IntKi)                             :: Re_Xferred    ! number of reals transferred
+      INTEGER(IntKi)                             :: Db_Xferred    ! number of doubles transferred
+      INTEGER(IntKi)                             :: Int_Xferred   ! number of integers transferred
+      
+      INTEGER(IntKi)                             :: ErrStat2
+      CHARACTER(1024)                            :: ErrMess2
+      CHARACTER(*),      PARAMETER               :: RoutineName = "MeshUnpack"        
+     
+      Re_Xferred  = 1
+      Db_Xferred  = 1
+      Int_Xferred = 1
 
-     Force = .FALSE.
-     Moment = .FALSE.
-     Orientation = .FALSE.
-     TranslationDisp = .FALSE.
-     TranslationVel = .FALSE.
-     RotationVel = .FALSE.
-     TranslationAcc = .FALSE.
-     RotationAcc = .FALSE.
-     nScalars = 0
-     IF ( Int_Buf(HDR_FIELDMASK+MASKID_FORCE-1)       .EQ. 1 ) Force = .TRUE.
-     IF ( Int_Buf(HDR_FIELDMASK+MASKID_MOMENT-1)      .EQ. 1 ) Moment = .TRUE.
-     IF ( Int_Buf(HDR_FIELDMASK+MASKID_ORIENTATION-1) .EQ. 1 ) Orientation = .TRUE.
-     IF ( Int_Buf(HDR_FIELDMASK+MASKID_TRANSLATIONDISP-1) .EQ. 1 ) TranslationDisp = .TRUE.
-     IF ( Int_Buf(HDR_FIELDMASK+MASKID_TRANSLATIONVEL-1) .EQ. 1 ) TranslationVel = .TRUE.
-     IF ( Int_Buf(HDR_FIELDMASK+MASKID_ROTATIONVEL-1)    .EQ. 1 ) RotationVel = .TRUE.
-     IF ( Int_Buf(HDR_FIELDMASK+MASKID_TRANSLATIONACC-1) .EQ. 1 ) TranslationAcc = .TRUE.
-     IF ( Int_Buf(HDR_FIELDMASK+MASKID_ROTATIONACC-1)    .EQ. 1 ) RotationAcc = .TRUE.
-     IF ( Int_Buf(HDR_FIELDMASK+MASKID_SCALAR-1)      .GT. 0 ) nScalars = Int_Buf(HDR_FIELDMASK+MASKID_SCALAR-1)
+      ErrStat = ErrID_None
+      ErrMess = ""
+     
+      IF (IntKiBuf(Int_Xferred) == 0 ) THEN ! this is a blank mesh
+         CALL MeshDestroy( Mesh, ErrStat2, ErrMess2, .TRUE. )
+         CALL SetErrStat(ErrStat2,ErrMess2,ErrStat,ErrMess,RoutineName)
+         RETURN
+      END IF
+      
+      
+         ! initialized, may or may not be committed           
+            
+      Mesh%initialized = .true.; Int_Xferred = Int_Xferred + 1
+      committed        = TRANSFER( IntKiBuf(Int_Xferred), Mesh%committed );  Int_Xferred = Int_Xferred + 1 
+      fieldmask        = TRANSFER( IntKiBuf(Int_Xferred:Int_Xferred+FIELDMASK_SIZE-1), fieldmask );  Int_Xferred = Int_Xferred + FIELDMASK_SIZE 
+      RemapFlag        = TRANSFER( IntKiBuf(Int_Xferred), Mesh%RemapFlag ); Int_Xferred = Int_Xferred + 1 
+         ! integers
+      ios              = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
+      nnodes           = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
+      nextelem         = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
+      nscalars         = IntKiBuf(Int_Xferred) ; Int_Xferred = Int_Xferred + 1 
+                  
+                                                            
+      CALL MeshCreate( Mesh, ios, nnodes                                         &
+                        ,ErrStat=ErrStat2, ErrMess=ErrMess2                      &
+                        ,Force          =fieldmask(MASKID_FORCE)                 &
+                        ,Moment         =fieldmask(MASKID_MOMENT)                &
+                        ,Orientation    =fieldmask(MASKID_ORIENTATION)           &
+                        ,TranslationDisp=fieldmask(MASKID_TRANSLATIONDISP)       &
+                        ,TranslationVel =fieldmask(MASKID_TRANSLATIONVEL )       &
+                        ,RotationVel    =fieldmask(MASKID_ROTATIONVEL )          &
+                        ,TranslationAcc =fieldmask(MASKID_TRANSLATIONACC )       &
+                        ,RotationAcc    =fieldmask(MASKID_ROTATIONACC )          &
+                        ,nScalars       = nScalars                               &
+                     )
+         CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
 
-     CALL MeshCreate( Mesh, Int_Buf(HDR_IOS), Int_Buf(HDR_NUMNODES)                    &
-                     ,ErrStat=ErrStat, ErrMess=ErrMess                                 &
-                     ,Force=Force, Moment=Moment, Orientation=Orientation              &
-                     ,TranslationDisp=TranslationDisp                                  &
-                     ,TranslationVel=TranslationVel, RotationVel=RotationVel           &
-                     ,TranslationAcc=TranslationAcc, RotationAcc=RotationAcc           &
-                     , nScalars = nScalars                                             &
-                    )
-     IF (ErrStat >= AbortErrLev) RETURN
+      Mesh%RemapFlag = RemapFlag
+      Mesh%nextelem  = nextelem
+     
+            ! element structure
+      DO i = 1, NELEMKINDS            
+         nelem = IntKiBuf(Int_Xferred);      Int_Xferred = Int_Xferred + 1    ! number of elements            
+            
+         if (nelem > 0) then
+            nelemnodes = IntKiBuf(Int_Xferred); Int_Xferred = Int_Xferred + 1 ! nodes per element
+                                                                             
+               ! nodes in this element
+            DO j = 1,nelem                                                                     
+               
+               SELECT CASE (nelemnodes)
+               CASE (1)
+                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
+                  , P1 =IntKiBuf(Int_Xferred  )                                                             &
+                  )
+               CASE (2)
+                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
+                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1)                               &
+                  )
+               CASE (3)
+                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
+                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
+                  )
+               CASE (4)
+                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
+                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
+                  , P4 =IntKiBuf(Int_Xferred+ 3)                                                            &
+                  )
+               CASE (6)
+                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
+                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
+                  , P4 =IntKiBuf(Int_Xferred+ 3),P5 =IntKiBuf(Int_Xferred+ 4),P6 =IntKiBuf(Int_Xferred+ 5)  &
+                  )
+               CASE (8)
+                  CALL MeshConstructElement( Mesh, i, ErrStat2, ErrMess2                                    &
+                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
+                  , P4 =IntKiBuf(Int_Xferred+ 3),P5 =IntKiBuf(Int_Xferred+ 4),P6 =IntKiBuf(Int_Xferred+ 5)  &
+                  , P7 =IntKiBuf(Int_Xferred+ 6),P8 =IntKiBuf(Int_Xferred+ 7)                               &
+                  )
+               CASE (10)
+                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
+                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
+                  , P4 =IntKiBuf(Int_Xferred+ 3),P5 =IntKiBuf(Int_Xferred+ 4),P6 =IntKiBuf(Int_Xferred+ 5)  &
+                  , P7 =IntKiBuf(Int_Xferred+ 6),P8 =IntKiBuf(Int_Xferred+ 7),P9 =IntKiBuf(Int_Xferred+ 8)  &
+                  , P10=IntKiBuf(Int_Xferred+ 9)                                                            &
+                  )
+               CASE (15)
+                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
+                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
+                  , P4 =IntKiBuf(Int_Xferred+ 3),P5 =IntKiBuf(Int_Xferred+ 4),P6 =IntKiBuf(Int_Xferred+ 5)  &
+                  , P7 =IntKiBuf(Int_Xferred+ 6),P8 =IntKiBuf(Int_Xferred+ 7),P9 =IntKiBuf(Int_Xferred+ 8)  &
+                  , P10=IntKiBuf(Int_Xferred+ 9),P11=IntKiBuf(Int_Xferred+10),P12=IntKiBuf(Int_Xferred+11)  &
+                  , P13=IntKiBuf(Int_Xferred+12),P14=IntKiBuf(Int_Xferred+13),P15=IntKiBuf(Int_Xferred+14)  &
+                  )
+               CASE (20)
+                  CALL MeshConstructElement( Mesh, i, ErrStat, ErrMess                                      &
+                  , P1 =IntKiBuf(Int_Xferred   ),P2 =IntKiBuf(Int_Xferred+ 1),P3 =IntKiBuf(Int_Xferred+ 2)  &
+                  , P4 =IntKiBuf(Int_Xferred+ 3),P5 =IntKiBuf(Int_Xferred+ 4),P6 =IntKiBuf(Int_Xferred+ 5)  &
+                  , P7 =IntKiBuf(Int_Xferred+ 6),P8 =IntKiBuf(Int_Xferred+ 7),P9 =IntKiBuf(Int_Xferred+ 8)  &
+                  , P10=IntKiBuf(Int_Xferred+ 9),P11=IntKiBuf(Int_Xferred+10),P12=IntKiBuf(Int_Xferred+11)  &
+                  , P13=IntKiBuf(Int_Xferred+12),P14=IntKiBuf(Int_Xferred+13),P15=IntKiBuf(Int_Xferred+14)  &
+                  , P16=IntKiBuf(Int_Xferred+15),P17=IntKiBuf(Int_Xferred+16),P18=IntKiBuf(Int_Xferred+17)  &
+                  , P19=IntKiBuf(Int_Xferred+18),P20=IntKiBuf(Int_Xferred+19)                               &
+                  )
+               CASE DEFAULT
+                  CALL SetErrStat(ErrID_Fatal,"No such element. Probably manged buffer.",ErrStat,ErrMess,RoutineName)
+                  RETURN
+               END SELECT  
+               Int_Xferred = Int_Xferred + nelemnodes
+            END DO   ! Elements of this kind
+         end if ! if there are any elements of this kind
 
-     ic = HDR_FIRSTELEM
-     DO i = 1, Int_Buf(HDR_NUMELEMREC)
-       Xelement = Int_Buf(ic) ; ic = ic + 1
-       nelemnodes = Int_Buf(ic) ; ic = ic + 1
-       SELECT CASE (nelemnodes )
-         CASE (1)
-           CALL MeshConstructElement( Mesh, Xelement, ErrStat, ErrMess                          &
-            , P1 =Int_Buf(ic   )                                                                &
-            )
-         CASE (2)
-           CALL MeshConstructElement( Mesh, Xelement, ErrStat, ErrMess                          &
-            , P1 =Int_Buf(ic   ), P2= Int_Buf(ic+1 )                                            &
-            )
-         CASE (3)
-           CALL MeshConstructElement( Mesh, Xelement, ErrStat, ErrMess                          &
-            , P1 =Int_Buf(ic   ), P2 =Int_Buf(ic+1 ), P3 =Int_Buf(ic+2 )                        &
-            )
-         CASE (4)
-           CALL MeshConstructElement( Mesh, Xelement, ErrStat, ErrMess                          &
-            , P1 =Int_Buf(ic   ), P2 =Int_Buf(ic+1 ), P3 =Int_Buf(ic+2 ), P4 =Int_Buf(ic+3 )    &
-            )
-         CASE (6)
-           CALL MeshConstructElement( Mesh, Xelement, ErrStat, ErrMess                          &
-            , P1 =Int_Buf(ic   ), P2 =Int_Buf(ic+1 ), P3 =Int_Buf(ic+2 ), P4 =Int_Buf(ic+3 )    &
-            , P5 =Int_Buf(ic+4 ), P6 =Int_Buf(ic+5 )                                            &
-            )
-         CASE (8)
-           CALL MeshConstructElement( Mesh, Xelement, ErrStat, ErrMess                          &
-            , P1 =Int_Buf(ic   ), P2 =Int_Buf(ic+1 ), P3 =Int_Buf(ic+2 ), P4 =Int_Buf(ic+3 )    &
-            , P5 =Int_Buf(ic+4 ), P6 =Int_Buf(ic+5 ), P7 =Int_Buf(ic+6 ), P8 =Int_Buf(ic+7 )    &
-            )
-         CASE (10)
-           CALL MeshConstructElement( Mesh, Xelement, ErrStat, ErrMess                          &
-            , P1 =Int_Buf(ic   ), P2 =Int_Buf(ic+1 ), P3 =Int_Buf(ic+2 ), P4 =Int_Buf(ic+3 )    &
-            , P5 =Int_Buf(ic+4 ), P6 =Int_Buf(ic+5 ), P7 =Int_Buf(ic+6 ), P8 =Int_Buf(ic+7 )    &
-            , P9 =Int_Buf(ic+8 ), P10=Int_Buf(ic+9 )                                            &
-            )
-         CASE (15)
-           CALL MeshConstructElement( Mesh, Xelement, ErrStat, ErrMess                          &
-            , P1 =Int_Buf(ic   ), P2 =Int_Buf(ic+1 ), P3 =Int_Buf(ic+2 ), P4 =Int_Buf(ic+3 )    &
-            , P5 =Int_Buf(ic+4 ), P6 =Int_Buf(ic+5 ), P7 =Int_Buf(ic+6 ), P8 =Int_Buf(ic+7 )    &
-            , P9 =Int_Buf(ic+8 ), P10=Int_Buf(ic+9 ), P11=Int_Buf(ic+10), P12=Int_Buf(ic+11)    &
-            , P13=Int_Buf(ic+12), P14=Int_Buf(ic+13), P15=Int_Buf(ic+14)                        &
-            )
-         CASE (20)
-           CALL MeshConstructElement( Mesh, Xelement, ErrStat, ErrMess                          &
-            , P1 =Int_Buf(ic   ), P2 =Int_Buf(ic+1 ), P3 =Int_Buf(ic+2 ), P4 =Int_Buf(ic+3 )    &
-            , P5 =Int_Buf(ic+4 ), P6 =Int_Buf(ic+5 ), P7 =Int_Buf(ic+6 ), P8 =Int_Buf(ic+7 )    &
-            , P9 =Int_Buf(ic+8 ), P10=Int_Buf(ic+9 ), P11=Int_Buf(ic+10), P12=Int_Buf(ic+11)    &
-            , P13=Int_Buf(ic+12), P14=Int_Buf(ic+13), P15=Int_Buf(ic+14), P16=Int_Buf(ic+15)    &
-            , P17=Int_Buf(ic+16), P18=Int_Buf(ic+17), P19=Int_Buf(ic+18), P20=Int_Buf(ic+19)    &
-            )
-         CASE DEFAULT
-           ! Throw a fault here. There is no such element. Probably buffer mangled.
-            ErrStat = ErrID_Fatal
-            ErrMess = 'ModMesh: MeshUnpack: No such element.  Probably manged buffer.'
-            CALL ProgAbort ( ErrMess )
-            RETURN
-      END SELECT
-      IF (ErrStat >= AbortErrLev) RETURN
-
-       ic = ic + nelemnodes ;
-
-     ENDDO
-
-     ! Unpack the Real Buffer
-     ic = 1
-     DO i = 1, Mesh%Nnodes
-       Mesh%Position(1,i) = Re_Buf(ic) ; ic = ic + 1
-       Mesh%Position(2,i) = Re_Buf(ic) ; ic = ic + 1
-       Mesh%Position(3,i) = Re_Buf(ic) ; ic = ic + 1
-     ENDDO
-
-     DO i = 1, Mesh%Nnodes
-        DO jj = 1,3
-           DO ii = 1,3
-             Mesh%RefOrientation(ii,jj,i) = Re_Buf(ic) ; ic = ic + 1
-           ENDDO
-        ENDDO
-     ENDDO
-
-     IF ( Mesh%FieldMask(MASKID_FORCE) ) THEN
-       DO i = 1, Mesh%Nnodes
-         Mesh%Force(1,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%Force(2,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%Force(3,i) = Re_Buf(ic) ; ic = ic + 1
-       ENDDO
-     ENDIF
-     IF ( Mesh%FieldMask(MASKID_MOMENT) ) THEN
-       DO i = 1, Mesh%Nnodes
-         Mesh%Moment(1,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%Moment(2,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%Moment(3,i) = Re_Buf(ic) ; ic = ic + 1
-       ENDDO
-     ENDIF
-     IF ( Mesh%FieldMask(MASKID_ORIENTATION) ) THEN
-       DO i = 1, Mesh%Nnodes
-         DO jj = 1,3
-           DO ii = 1,3
-             Mesh%Orientation(ii,jj,i) = Re_Buf(ic) ; ic = ic + 1
-           ENDDO
+      END DO ! kinds of elements
+      
+     ! ..... fill ReKiBuf .....
+      DO i = 1, Mesh%Nnodes ! Position
+         Mesh%Position(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
+      END DO
+      DO i = 1, Mesh%Nnodes ! RefOrientation
+         DO j = 1,3
+            Mesh%RefOrientation(:,j,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
          ENDDO
-       ENDDO
-     ENDIF
-     IF ( Mesh%FieldMask(MASKID_TRANSLATIONDISP) ) THEN
-       DO i = 1, Mesh%Nnodes
-         Mesh%TranslationDisp(1,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%TranslationDisp(2,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%TranslationDisp(3,i) = Re_Buf(ic) ; ic = ic + 1
-       ENDDO
-     ENDIF
-     IF ( Mesh%FieldMask(MASKID_ROTATIONVEL) ) THEN
-       DO i = 1, Mesh%Nnodes
-         Mesh%RotationVel(1,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%RotationVel(2,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%RotationVel(3,i) = Re_Buf(ic) ; ic = ic + 1
-       ENDDO
-     ENDIF
-     IF ( Mesh%FieldMask(MASKID_TRANSLATIONVEL) ) THEN
-       DO i = 1, Mesh%Nnodes
-         Mesh%TranslationVel(1,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%TranslationVel(2,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%TranslationVel(3,i) = Re_Buf(ic) ; ic = ic + 1
-       ENDDO
-     ENDIF
-     IF ( Mesh%FieldMask(MASKID_ROTATIONACC) ) THEN
-       DO i = 1, Mesh%Nnodes
-         Mesh%RotationAcc(1,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%RotationAcc(2,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%RotationAcc(3,i) = Re_Buf(ic) ; ic = ic + 1
-       ENDDO
-     ENDIF
-     IF ( Mesh%FieldMask(MASKID_TRANSLATIONACC) ) THEN
-       DO i = 1, Mesh%Nnodes
-         Mesh%TranslationAcc(1,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%TranslationAcc(2,i) = Re_Buf(ic) ; ic = ic + 1
-         Mesh%TranslationAcc(3,i) = Re_Buf(ic) ; ic = ic + 1
-       ENDDO
-     ENDIF
-     IF ( Mesh%nScalars .GT. 0 ) THEN
-       DO i = 1, Mesh%Nnodes
-         DO ii = 1,Mesh%nScalars
-           Mesh%Scalars(ii,i) = Re_Buf(ic) ; ic = ic + 1
+      END DO
+                
+      IF ( FieldMask(MASKID_FORCE) ) THEN ! Force
+         DO i = 1, Mesh%Nnodes
+            Mesh%Force(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
          ENDDO
-       ENDDO
-     ENDIF
-
-     CALL MeshCommit(Mesh, ErrStat, ErrMess)
-
-     RETURN
-
-
+      ENDIF
+      IF ( FieldMask(MASKID_MOMENT) ) THEN ! Moment
+         DO i = 1, Mesh%Nnodes
+            Mesh%Moment(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
+         ENDDO
+      ENDIF
+      IF ( FieldMask(MASKID_ORIENTATION) ) THEN ! Orientation
+         DO i = 1, Mesh%Nnodes 
+            DO j = 1,3
+               Mesh%Orientation(:,j,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
+            ENDDO
+         END DO
+      ENDIF
+      IF ( FieldMask(MASKID_TRANSLATIONDISP) ) THEN ! TranslationDisp
+         DO i = 1, Mesh%Nnodes
+            Mesh%TranslationDisp(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
+         ENDDO
+      ENDIF
+      IF ( FieldMask(MASKID_ROTATIONVEL) ) THEN ! RotationVel
+         DO i = 1, Mesh%Nnodes
+            Mesh%RotationVel(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
+         ENDDO
+      ENDIF
+      IF ( FieldMask(MASKID_TRANSLATIONVEL) ) THEN ! TranslationVel
+         DO i = 1, Mesh%Nnodes
+            Mesh%TranslationVel(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
+         ENDDO
+      ENDIF
+      IF ( FieldMask(MASKID_ROTATIONACC) ) THEN ! RotationAcc
+         DO i = 1, Mesh%Nnodes
+            Mesh%RotationAcc(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
+         ENDDO
+      ENDIF
+      IF ( FieldMask(MASKID_TRANSLATIONACC) ) THEN ! TranslationAcc
+         DO i = 1, Mesh%Nnodes
+            Mesh%TranslationAcc(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
+         ENDDO
+      ENDIF
+         
+      IF ( Mesh%nScalars .GT. 0 ) THEN ! n_re = n_re + Mesh%Nnodes * Mesh%nScalar
+         DO i = 1, Mesh%Nnodes
+            Mesh%Scalars(:,i) = ReKiBuf(Re_Xferred:Re_Xferred+Mesh%nScalars-1); Re_Xferred = Re_Xferred + Mesh%nScalars
+         ENDDO
+      ENDIF         
+                     
+      ! commit the mesh
+      IF (committed) THEN
+         CALL MeshCommit(Mesh, ErrStat2, ErrMess2)
+         CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess, RoutineName)
+      END IF
+      
+      RETURN
 
    END SUBROUTINE MeshUnpack
 

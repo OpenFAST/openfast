@@ -58,8 +58,8 @@ MODULE NWTC_Base
    TYPE DLL_Type
 
       INTEGER(C_INTPTR_T)       :: FileAddr                                        ! The address of file FileName.         (RETURN value from LoadLibrary ) [Windows]
-      TYPE(C_PTR)               :: FileAddrX                                       ! The address of file FileName.         (RETURN value from dlopen ) [Linux]
-      TYPE(C_FUNPTR)            :: ProcAddr                                        ! The address of procedure ProcName.    (RETURN value from GetProcAddress or dlsym)
+      TYPE(C_PTR)               :: FileAddrX = C_NULL_PTR                          ! The address of file FileName.         (RETURN value from dlopen ) [Linux]
+      TYPE(C_FUNPTR)            :: ProcAddr  = C_NULL_FUNPTR                       ! The address of procedure ProcName.    (RETURN value from GetProcAddress or dlsym) [initialized to Null for pack/unpack]
 
       CHARACTER(1024)           :: FileName                                        ! The name of the DLL file including the full path to the current working directory.
       CHARACTER(1024)           :: ProcName                                        ! The name of the procedure in the DLL that will be called.

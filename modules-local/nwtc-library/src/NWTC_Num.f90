@@ -952,7 +952,7 @@ SUBROUTINE DCM_SetLogMapForInterp( tensor )
    REAL(ReKi)                    :: temp(3), temp1(3) ! difference between two tensors
    REAL(ReKi)                    :: period(3)         ! the period to add to the rotational parameters
    INTEGER(IntKi)                :: nc                ! size of the tensors matrix
-   INTEGER(IntKi)                :: ic, k             ! loop counters for each array dimension
+   INTEGER(IntKi)                :: ic                ! loop counters for each array dimension
    
    nc = size(tensor,2)
           
