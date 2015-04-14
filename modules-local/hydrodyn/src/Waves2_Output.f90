@@ -174,7 +174,7 @@ SUBROUTINE Wvs2OUT_WriteOutputs( UnOutFile, Time, y, p, ErrStat, ErrMsg )
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
       ! Local variables
-   REAL(ReKi)                             :: OutData (0:p%NumOuts)       ! an output array
+!   REAL(ReKi)                             :: OutData (0:p%NumOuts)       ! an output array
    INTEGER                                :: I                           ! Generic loop counter
    CHARACTER(200)                         :: Frmt                        ! a string to hold a format statement
    
@@ -230,10 +230,10 @@ SUBROUTINE Wvs2OUT_Init( InitInp, y,  p, InitOut, ErrStat, ErrMsg )
    
       ! Local variables
    INTEGER                                        :: I                    ! Generic loop counter      
-   INTEGER                                        :: J                    ! Generic loop counter      
-   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
-   CHARACTER(1024)                                ::  OutFileName         ! The name of the output file  including the full path.
-   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
+!   INTEGER                                        :: J                    ! Generic loop counter      
+!   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
+!   CHARACTER(1024)                                ::  OutFileName         ! The name of the output file  including the full path.
+!   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
    
    CHARACTER(1024)                                 :: ErrMsgTmp           ! Temporary Error status
    INTEGER(IntKi)                                  :: ErrStatTmp          ! Temporary Error message
@@ -321,7 +321,7 @@ FUNCTION   GetWaves2Channels    ( NUserOutputs, UserOutputs, OutList, foundMask,
    
    CHARACTER(10)                          :: OutListTmp                                ! A string to temporarily hold OutList(I).
    CHARACTER(28), PARAMETER               :: OutPFmt   = "( I4, 3X,A 10,1 X, A10 )"    ! Output format parameter output list.
-   LOGICAL                                :: InvalidOutput(MaxWaves2Outputs)           ! This array determines if the output channel is valid for this configuration
+!   LOGICAL                                :: InvalidOutput(MaxWaves2Outputs)           ! This array determines if the output channel is valid for this configuration
    LOGICAL                                :: CheckOutListAgain
   
    LOGICAL                                :: newFoundMask (NUserOutputs)              ! A Mask indicating whether a user requested channel belongs to a modules output channels.
@@ -430,7 +430,7 @@ SUBROUTINE Wvs2OUT_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
    INTEGER(IntKi)                         :: ErrStatTmp                                ! Temporary error status
  
    INTEGER                                :: I                                         ! Generic loop-counting index.
-   INTEGER                                :: J                                         ! Generic loop-counting index.
+!   INTEGER                                :: J                                         ! Generic loop-counting index.
    INTEGER                                :: INDX                                      ! Index for valid arrays
    
    CHARACTER(10)                          :: OutListTmp                                ! A string to temporarily hold OutList(I).

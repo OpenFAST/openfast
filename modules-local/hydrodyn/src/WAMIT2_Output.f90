@@ -95,7 +95,7 @@ SUBROUTINE WMT2OUT_MapOutputs( CurrentTime, y, F_Waves2, AllOuts, ErrStat, ErrMs
    INTEGER(IntKi),                     INTENT(   OUT )  :: ErrStat        ! Error status of the operation
    CHARACTER(*),                       INTENT(   OUT )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
 
-   INTEGER                                              :: I
+!   INTEGER                                              :: I
    
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -170,7 +170,7 @@ SUBROUTINE WMT2OUT_WriteOutputs( UnOutFile, Time, y, p, ErrStat, ErrMsg )
    CHARACTER(*),              INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
       ! Local variables
-   REAL(ReKi)                             :: OutData (0:p%NumOuts)       ! an output array
+!   REAL(ReKi)                             :: OutData (0:p%NumOuts)       ! an output array
    INTEGER                                :: I                           ! Generic loop counter
    CHARACTER(200)                         :: Frmt                        ! a string to hold a format statement
    
@@ -226,10 +226,10 @@ SUBROUTINE WMT2OUT_Init( InitInp, y,  p, InitOut, ErrStat, ErrMsg )
    
       ! Local variables
    INTEGER                                        :: I                    ! Generic loop counter      
-   INTEGER                                        :: J                    ! Generic loop counter      
-   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
-   CHARACTER(1024)                                ::  OutFileName         ! The name of the output file  including the full path.
-   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
+!   INTEGER                                        :: J                    ! Generic loop counter      
+!   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
+!   CHARACTER(1024)                                ::  OutFileName         ! The name of the output file  including the full path.
+!   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
    
    !-------------------------------------------------------------------------------------------------      
    ! Initialize local variables
@@ -312,7 +312,7 @@ FUNCTION   GetWAMIT2Channels    ( NUserOutputs, UserOutputs, OutList, foundMask,
    
    CHARACTER(10)                          :: OutListTmp                                ! A string to temporarily hold OutList(I).
    CHARACTER(28), PARAMETER               :: OutPFmt   = "( I4, 3X,A 10,1 X, A10 )"    ! Output format parameter output list.
-   LOGICAL                                :: InvalidOutput(MaxWAMIT2Outputs)           ! This array determines if the output channel is valid for this configuration
+!   LOGICAL                                :: InvalidOutput(MaxWAMIT2Outputs)           ! This array determines if the output channel is valid for this configuration
    LOGICAL                                :: CheckOutListAgain
   
    LOGICAL                                :: newFoundMask (NUserOutputs)              ! A Mask indicating whether a user requested channel belongs to a modules output channels.
@@ -416,7 +416,7 @@ SUBROUTINE WMT2OUT_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
       ! Local variables.
    
    INTEGER                                :: I                                         ! Generic loop-counting index.
-   INTEGER                                :: J                                         ! Generic loop-counting index.
+!   INTEGER                                :: J                                         ! Generic loop-counting index.
    INTEGER                                :: INDX                                      ! Index for valid arrays
    
    CHARACTER(10)                          :: OutListTmp                                ! A string to temporarily hold OutList(I).

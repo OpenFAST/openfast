@@ -80,7 +80,7 @@ SUBROUTINE Morison_DirCosMtrx( pos0, pos1, DirCos )
    Real(DbKi)                   ::   xz, xyz
    Real(DbKi)                   ::   x0, y0, z0
    Real(DbKi)                   ::   x1, y1, z1
-   Real(DbKi)                   ::   temp
+!   Real(DbKi)                   ::   temp
 
    x0 = pos0(1)
    y0 = pos0(2)
@@ -327,8 +327,8 @@ SUBROUTINE DistrInertialLoads( nodeIndx, densWater, Ca, Cp, AxCa, AxCp, R, tMG, 
    CHARACTER(*),       INTENT (   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
    INTEGER                               :: I
-   REAL(ReKi)                            :: f, f1, f2, f3, v_len, adotk
-   REAL(ReKi)                            :: p0(3), m(3), v(3), af(3)
+   REAL(ReKi)                            :: f, f1, f2, f3, adotk !, v_len
+   REAL(ReKi)                            :: v(3), af(3) !p0(3), m(3), 
    
       ! Initialize ErrStat
          
@@ -734,7 +734,7 @@ SUBROUTINE LumpFloodedBuoyancy( sgn, densFill, R, tM, FillFS, Z, C, g, F_BF  )
    REAL(ReKi),         INTENT (   OUT )  :: F_BF(6)
 
    
-   REAL(ReKi)                            :: f, f1, f2, f3
+   REAL(ReKi)                            :: f, f1, f2 !, f3
    
    f  = -densFill*g*sgn
    
@@ -1717,12 +1717,12 @@ SUBROUTINE SplitElements(numNodes, nodes, numElements, elements, ErrStat, ErrMsg
    INTEGER,                  INTENT (   OUT )  :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),             INTENT (   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
-   INTEGER                                     :: I, J, K, iCurrent, nSplits
+   INTEGER                                     :: I, J, iCurrent, nSplits !, K
    REAL(ReKi)                                  :: splits(5)
    INTEGER                                     :: node1Indx, node2Indx
-   TYPE(Morison_NodeType)                      :: node1, node2, newNode, newNode2
-   TYPE(Morison_MemberType)                    :: element, newElement, newElement2
-   REAL(ReKi)                                  :: zBoundary
+   TYPE(Morison_NodeType)                      :: node1, node2, newNode !, newNode2
+   TYPE(Morison_MemberType)                    :: element, newElement !, newElement2
+!   REAL(ReKi)                                  :: zBoundary
    INTEGER                                     :: origNumElements
    
    
@@ -2087,7 +2087,7 @@ SUBROUTINE SetSplitNodeProperties( numNodes, nodes, numElements, elements, ErrSt
    INTEGER                                     :: I
    TYPE(Morison_MemberType)                    :: element
    REAL(ReKi)                                  :: dR, dz
-   REAL(ReKi)                                  :: DirCos(3,3)
+!   REAL(ReKi)                                  :: DirCos(3,3)
    
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -2321,9 +2321,9 @@ SUBROUTINE SetAxialCoefs( NJoints, NAxCoefs, AxialCoefs, numNodes, nodes, numEle
    TYPE(Morison_MemberType),   INTENT( INOUT )  :: elements(:)
    TYPE(Morison_NodeType),     INTENT( INOUT )  :: nodes(:)
    
-   TYPE(Morison_NodeType)                       :: node1, node2
+ !  TYPE(Morison_NodeType)                       :: node1, node2 
    
-   INTEGER                                     :: I, J
+   INTEGER                                     :: I !, J
    
    DO I=1,numNodes
       
@@ -2410,7 +2410,7 @@ SUBROUTINE SetElementFillProps( numFillGroups, filledGroups, numElements, elemen
    INTEGER,                       INTENT( IN    )  :: numElements
    TYPE(Morison_MemberType),      INTENT( INOUT )  :: elements(:)  
    
-   INTEGER                                         :: I, J
+   INTEGER                                         :: I !, J
    
    DO I=1,numElements
       
@@ -2530,7 +2530,7 @@ SUBROUTINE SplitMeshNodes( numNodes, nodes, numElements, elements, numSplitNodes
    CHARACTER(*),             INTENT (   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
    
    INTEGER                                     :: I, J, splitNodeIndx
-   TYPE(Morison_MemberType)                    :: element
+!   TYPE(Morison_MemberType)                    :: element
    TYPE(Morison_NodeType)                      :: node1, node2, newNode
    
    
@@ -2727,12 +2727,12 @@ SUBROUTINE CreateLumpedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWave, Wa
    TYPE(Morison_MemberType)   ::  element
    TYPE(Morison_NodeType)     ::  node, node1, node2
    REAL(ReKi)                 ::  L, sgn
-   REAL(ReKi)                 ::  k(3)
+!   REAL(ReKi)                 ::  k(3)
    REAL(ReKi)                 ::  z0
    REAL(ReKi),ALLOCATABLE     ::  F_DP(:,:)
    REAL(ReKi)                 ::  F_B(6)
    REAL(ReKi)                 ::  F_BF(6)
-   REAL(ReKi)                 ::  AM(6,6), Vmat(3,1), F_I(6), AM_M(6,6)
+   REAL(ReKi)                 ::  Vmat(3,1), F_I(6), AM_M(6,6) !AM(6,6), 
    REAL(ReKi)                 ::  dragConst
    
    
@@ -2740,11 +2740,11 @@ SUBROUTINE CreateLumpedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWave, Wa
    INTEGER, ALLOCATABLE       :: commonNodeLst(:)
    LOGICAL, ALLOCATABLE       :: usedJointList(:)
    INTEGER                    :: nCommon
-   REAL(ReKi)                 :: CA
+!   REAL(ReKi)                 :: CA
    REAL(ReKi)                 :: AMfactor
    REAL(ReKi)                 :: An(3), Vn(3), af(3)
-   REAL(ReKi)                 :: AM11, AM22, AM33
-   REAL(ReKi)                 :: f1, f2, VnDotAf, Vmag
+!   REAL(ReKi)                 :: AM11, AM22, AM33
+   REAL(ReKi)                 :: f1, VnDotAf, Vmag !f2, 
    
    
       ! Initialize ErrStat
@@ -3328,14 +3328,14 @@ SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWav
    
             
    
-   INTEGER                    ::  I, J, count, node2Indx
+   INTEGER                    ::  I, count, node2Indx !, J
    INTEGER                    ::  elementWaterState
    TYPE(Morison_MemberType)   ::  element
-   TYPE(Morison_NodeType)     ::  node1, node2
-   REAL(ReKi)                 ::  L
+!   TYPE(Morison_NodeType)     ::  node1, node2 
+!   REAL(ReKi)                 ::  L
    REAL(ReKi)                 ::  k(3)
    REAL(ReKi),ALLOCATABLE     ::  F_I(:,:)
-   REAL(ReKi),ALLOCATABLE     ::  F_DP(:,:)
+!   REAL(ReKi),ALLOCATABLE     ::  F_DP(:,:)
    REAL(ReKi)                 ::  F_B(6)
    REAL(ReKi)                 ::  F_BF(6)
    REAL(ReKi)                 ::  z0
@@ -3796,17 +3796,17 @@ SUBROUTINE Morison_ProcessMorisonGeometry( InitInp, ErrStat, ErrMsg )
   
       ! Local variables
          
-   INTEGER                                      :: I, J, j1, j2, tempINT                    ! generic integer for counting
-   TYPE(Morison_JointType)                      :: joint1, joint2                                   
-   Real(ReKi)                                   :: z1
-   Real(ReKi)                                   :: z2
+   INTEGER                                      :: I    !, J, j1, j2, tempINT                ! generic integer for counting
+!   TYPE(Morison_JointType)                      :: joint1, joint2                                   
+!   Real(ReKi)                                   :: z1
+!   Real(ReKi)                                   :: z2
    Real(ReKi)                                   :: d
    INTEGER                                      :: temp
    INTEGER                                      :: prop1Indx, prop2Indx, node1Indx, node2Indx
    INTEGER                                      :: maxNodes        = 0
    INTEGER                                      :: maxElements     = 0
    INTEGER                                      :: maxSuperMembers = 0
-   TYPE(Morison_NodeType)                       :: node1, node2, tempNode
+ !  TYPE(Morison_NodeType)                       :: node1, node2, tempNode
    TYPE(Morison_MemberPropType)                 :: propSet
    INTEGER                                      :: numSplitNodes
    TYPE(Morison_NodeType),ALLOCATABLE           :: splitNodes(:)
@@ -4077,8 +4077,8 @@ SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitO
 
       
      ! TYPE(Morison_InitInputType)                       :: InitLocal   ! Local version of the input data for the geometry processing routine
-      INTEGER, ALLOCATABLE                                          :: distribToNodeIndx(:)
-      INTEGER, ALLOCATABLE                                          :: lumpedToNodeIndx(:)
+!      INTEGER, ALLOCATABLE                                          :: distribToNodeIndx(:)
+!      INTEGER, ALLOCATABLE                                          :: lumpedToNodeIndx(:)
       
          ! Initialize ErrStat
          
@@ -4538,16 +4538,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
       INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
       CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-      REAL(ReKi)                                        :: F_D(6), F_DP(6), F_I(6), kvec(3), v(3),  vf(3), vrel(3), vmag
-      INTEGER                                           :: I, J, K, nodeIndx
+      REAL(ReKi)                                        :: kvec(3), v(3), vrel(3), vmag !, F_I(6), F_DP(6), F_D(6),  vf(3)
+      INTEGER                                           :: I, J, nodeIndx !, K
       REAL(ReKi)                                        :: AllOuts(MaxMrsnOutputs)  ! TODO: think about adding to OtherState
       REAL(ReKi)                                        :: qdotdot(6)     ! The structural acceleration of a mesh node
       REAL(ReKi)                                        :: accel_fluid(6) ! Acceleration of fluid at the mesh node
       REAL(ReKi)                                        :: dragFactor     ! The lumped drag factor
       REAL(ReKi)                                        :: AnProd         ! Dot product of the directional area of the joint
-      REAL(ReKi)                                        :: F_B(6)
-      REAL(ReKi)                                        :: C(3,3)
-      REAL(ReKi)                                        :: sgn
+!      REAL(ReKi)                                        :: F_B(6)
+!      REAL(ReKi)                                        :: C(3,3)
+!      REAL(ReKi)                                        :: sgn
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         

@@ -98,7 +98,7 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
     REAL(ReKi), ALLOCATABLE                :: Rad_C (:,:)                          ! C matrix of the radiation state-space system on the input file ss
 
     INTEGER                                :: I                                    ! Generic index
-    INTEGER                                :: J                                    ! Generic index  
+!    INTEGER                                :: J                                    ! Generic index  
     INTEGER                                :: xx (1,6)                             ! Active DOF's on the input file .ss
     INTEGER(IntKi)                         :: spdof (1,6)                          ! States per dof  
     INTEGER                                :: DOFs                                 ! Number of DOFS  
@@ -438,7 +438,7 @@ SUBROUTINE SS_Rad_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrM
                                                                        !   nectivity information does not have to be recalculated)
       INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
       CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-      REAL(DbKi)  :: test(6,1)
+!      REAL(DbKi)  :: test(6,1)
       
       ! Initialize ErrStat    
       ErrStat = ErrID_None         

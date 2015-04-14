@@ -430,9 +430,9 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, OtherState, InitOut, E
       ! Local variables
    INTEGER                                        :: I                    ! Generic loop counter      
    INTEGER                                        :: J                    ! Generic loop counter      
-   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
-   CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
-   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
+!   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
+!   CHARACTER(1024)                                :: OutFileName          ! The name of the output file  including the full path.
+!   CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
    LOGICAL                                        :: hasWAMITOuts         ! Are there any WAMIT-related outputs
    LOGICAL                                        :: hasWAMIT2Outs        ! Are there any WAMIT-related outputs
    LOGICAL                                        :: hasWaves2Outs        ! Are there any WAMIT-related outputs
@@ -627,8 +627,8 @@ SUBROUTINE HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName,  p, InitOut, ErrSta
    
       ! Local variables
    INTEGER                                        :: I                    ! Generic loop counter      
-   INTEGER                                        :: J                    ! Generic loop counter      
-   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
+!   INTEGER                                        :: J                    ! Generic loop counter      
+!   INTEGER                                        :: Indx                 ! Counts the current index into the WaveKinNd array
    CHARACTER(1024)                                ::  OutFileName         ! The name of the output file  including the full path.
    CHARACTER(200)                                 :: Frmt                 ! a string to hold a format statement
                 
@@ -861,7 +861,7 @@ SUBROUTINE HDOut_ChkOutLst( OutList, y, p, ErrStat, ErrMsg )
       ! Local variables.
    
    INTEGER                                :: I                                         ! Generic loop-counting index.
-   INTEGER                                :: J                                         ! Generic loop-counting index.
+!   INTEGER                                :: J                                         ! Generic loop-counting index.
    INTEGER                                :: INDX                                      ! Index for valid arrays
    
    CHARACTER(10)                          :: OutListTmp                                ! A string to temporarily hold OutList(I).

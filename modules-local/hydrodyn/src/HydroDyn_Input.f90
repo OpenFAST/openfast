@@ -205,22 +205,22 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
       ! Local variables
 
    INTEGER                                          :: I                    ! generic integer for counting
-   INTEGER                                          :: J                    ! generic integer for counting
+!   INTEGER                                          :: J                    ! generic integer for counting
    CHARACTER(   2)                                  :: strI                 ! string version of the loop counter
 
    INTEGER                                          :: UnIn                 ! Unit number for the input file
-   LOGICAL                                          :: EchoStore            ! Stored version of NWTC_Library Echo variable
-   INTEGER                                          :: UnEchoStore          ! Stored unit name for another module's echo file
+!   LOGICAL                                          :: EchoStore            ! Stored version of NWTC_Library Echo variable
+!   INTEGER                                          :: UnEchoStore          ! Stored unit name for another module's echo file
    INTEGER                                          :: UnEchoLocal          ! The local unit number for this module's echo file
    CHARACTER(1024)                                  :: EchoFile             ! Name of HydroDyn echo file
    CHARACTER(1024)                                  :: Line                 ! String to temporarially hold value of read line
-   CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
-   CHARACTER(1024)                                  :: TmpFmt               ! Temporary storage for format statement
+!   CHARACTER(1024)                                  :: TmpPath              ! Temporary storage for relative path name
+!   CHARACTER(1024)                                  :: TmpFmt               ! Temporary storage for format statement
    CHARACTER(1024)                                  :: FileName             ! Name of HydroDyn input file
    CHARACTER(  35)                                  :: Frmt                 ! Output format for logical parameters. (matches NWTC Subroutine Library format)
-   INTEGER                                          :: JointID              ! Temporary storage of JointID read from HydroDyn input file
-   INTEGER                                          :: PropSetID            ! Temporary storage of PropSetID read from HydroDyn input file
-   INTEGER                                          :: MemberID             ! Temporary storage of MemberID read from HydroDyn input file
+!   INTEGER                                          :: JointID              ! Temporary storage of JointID read from HydroDyn input file
+!   INTEGER                                          :: PropSetID            ! Temporary storage of PropSetID read from HydroDyn input file
+!   INTEGER                                          :: MemberID             ! Temporary storage of MemberID read from HydroDyn input file
    INTEGER, ALLOCATABLE                             :: tmpArray(:)          ! Temporary array storage of the joint output list
 
 
@@ -2300,7 +2300,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    REAL(ReKi)                                       :: z2
    REAL(ReKi)                                       :: MinMembrDpth
    REAL(ReKi)                                       :: MaxMembrDpth
-   CHARACTER(10), ALLOCATABLE                       :: tmpOutLst(:)         !
+!   CHARACTER(10), ALLOCATABLE                       :: tmpOutLst(:)         !
    CHARACTER(3)                                     :: TmpExtension         ! Temporary variable for holding the file extension for 10d, 11d, 12d, 10s, 11s, 12s WAMIT files
    LOGICAL                                          :: TmpFileExist         ! Temporary variable in checking the existance of an input file.
    LOGICAL                                          :: JointUsed

@@ -230,7 +230,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          ! Local Variables
-      TYPE(FFT_DataType)                                 :: FFT_Data             !< the instance of the FFT module we're using
+!      TYPE(FFT_DataType)                                 :: FFT_Data             !< the instance of the FFT module we're using
 
       INTEGER(IntKi)                                     :: I                    !< Generic counter
       INTEGER(IntKi)                                     :: J                    !< Generic counter
@@ -5425,8 +5425,8 @@ SUBROUTINE WAMIT2_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrM
 
          ! Local Variables:
       INTEGER(IntKi)                                     :: I                          ! Generic index
-      INTEGER(IntKi)                                     :: J                          ! Generic index
-      INTEGER(IntKi)                                     :: K                          ! Generic index
+!      INTEGER(IntKi)                                     :: J                          ! Generic index
+!      INTEGER(IntKi)                                     :: K                          ! Generic index
       REAL(ReKi)                                         :: AllOuts(MaxWAMIT2Outputs)
 
 

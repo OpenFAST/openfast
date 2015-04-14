@@ -1342,8 +1342,8 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
 
       INTEGER                                           :: I               ! Generic loop counter
       INTEGER                                           :: nTime           ! Number of inputs
-      INTEGER(IntKi)                                    :: ErrStat2        ! Error status of the operation (secondary error)
-      CHARACTER(LEN(ErrMsg))                            :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
+!      INTEGER(IntKi)                                    :: ErrStat2        ! Error status of the operation (secondary error)
+!      CHARACTER(LEN(ErrMsg))                            :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
       
       
           ! Create dummy variables required by framework but which are not used by the module
@@ -1439,7 +1439,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
       !REAL(ReKi)                           :: F_Rdtn   (6)                            ! Total load contribution from wave radiation damping (i.e., the diffraction problem) (N, N-m)
       INTEGER(IntKi)                       :: I                                       ! Generic index
       INTEGER(IntKi)                       :: J                                       ! Generic index
-      INTEGER(IntKi)                       :: K                                       ! Generic index
+!      INTEGER(IntKi)                       :: K                                       ! Generic index
       REAL(ReKi)                           :: q(6), qdot(6), qdotdot(6)
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
       REAL(ReKi)                           :: AllOuts(MaxWAMITOutputs)  

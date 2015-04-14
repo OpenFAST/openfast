@@ -79,7 +79,7 @@ SUBROUTINE ShiftValuesLeft(XDHistory, NSteps)
       INTEGER(IntKi),  INTENT(IN   )  :: NSteps                                 ! Number of elements in the array
       
       INTEGER(IntKi)                  :: I
-      INTEGER(IntKi)                  :: J
+!      INTEGER(IntKi)                  :: J
       INTEGER(IntKi)                  :: K
       
       DO K = 0,NSteps-2
@@ -665,7 +665,7 @@ SUBROUTINE Conv_Rdtn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, E
       INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
       CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
       
-      REAL(ReKi)                           :: F_Rdtn (6)
+!      REAL(ReKi)                           :: F_Rdtn (6)
       REAL(ReKi)                           :: F_RdtnDT (6)                            ! The portion of the total load contribution from wave radiation damping associated with the convolution integral proportional to ( RdtnDT - RdtnRmndr ) (N, N-m)
       
       INTEGER                              :: I                                       ! Generic index
@@ -759,7 +759,7 @@ SUBROUTINE Conv_Rdtn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, ErrSt
       CHARACTER(*),                        INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
           ! Local Variables
-      REAL(ReKi)                           :: IncrmntUD                  ! Incremental change in UD over a single radiation time step (m/s, rad/s)
+!      REAL(ReKi)                           :: IncrmntUD                  ! Incremental change in UD over a single radiation time step (m/s, rad/s)
       REAL(ReKi)                           :: RdtnRmndr                  ! Fractional amount of the p%RdtnDT timestep
       INTEGER(IntKi)                       :: J                          ! Generic index
       INTEGER(IntKi)                       :: K                          ! Generic index
