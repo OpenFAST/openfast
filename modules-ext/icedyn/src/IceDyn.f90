@@ -42,7 +42,7 @@ MODULE IceDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', 'v1.01.01-by', '6-Apr-2015' )
+   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', 'v1.01.01-by', '14-Apr-2015' )
 
    ! ..... Public Subroutines ...................................................................................................
 
@@ -394,8 +394,8 @@ SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
       INTEGER(IntKi)                                    :: I             ! Loop count
       REAL(ReKi)                                        :: Del2          ! Deflection of the current ice tooth, for model 2,3
       REAL(ReKi)                                        :: Del(p%Zn)     ! Deflection of ice tooth in each zone, for model 4
-      REAL(ReKi)                                        :: StrRt         ! Strain rate (s^-1)
-      REAL(ReKi)                                        :: SigCrp        ! Creep stress (Pa)
+!      REAL(ReKi)                                        :: StrRt         ! Strain rate (s^-1)
+!      REAL(ReKi)                                        :: SigCrp        ! Creep stress (Pa)
       
       INTEGER(IntKi)                                    :: nt            ! Current time step
       INTEGER(IntKi)                                    :: Nc            ! Current ice tooth number
@@ -2056,7 +2056,7 @@ SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat
    REAL(ReKi), allocatable                  :: rdmv(:)                      ! Random ice velocity time series (m/s)
    REAL(ReKi), allocatable                  :: rdmte(:)                     ! Random ice loading event time (s)
    REAL(ReKi), allocatable                  :: rdmsig(:)                    ! Random ice strength time series (Pa)
-   REAL(ReKi), allocatable                  :: rdmTstr(:)                   ! Random ice strength of ice teeth (Pa)
+!   REAL(ReKi), allocatable                  :: rdmTstr(:)                   ! Random ice strength of ice teeth (Pa)
    REAL(ReKi)                               :: t                            ! Time for generating random parameters time series (s)
    REAL(ReKi)                               :: rdmScrp                      ! Random ice creeping strength (MPa)
    INTEGER(IntKi)                           :: Nthmax                       ! Approximate maximum ice teeth number
@@ -2654,8 +2654,8 @@ SUBROUTINE IceD_Init_OtherStates( OtherState, p, x, InputFileData, ErrStat, ErrM
 
       ! local variables
    INTEGER(IntKi)                                 :: I                 ! loop counter
-   REAL(ReKi)                                     :: StrRt             ! Strain rate (s^-1)
-   REAL(ReKi)                                     :: SigCrp            ! Creep stress (Pa)
+!   REAL(ReKi)                                     :: StrRt             ! Strain rate (s^-1)
+!   REAL(ReKi)                                     :: SigCrp            ! Creep stress (Pa)
       ! Initialize error data
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -2740,7 +2740,7 @@ SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrS
    CHARACTER(*),                 INTENT(OUT)    :: ErrMsg            ! Error message   
 
       ! local variables
-   INTEGER(IntKi)                               :: I                 ! loop counter
+!   INTEGER(IntKi)                               :: I                 ! loop counter
    REAL(ReKi)                                   :: SigLogh           ! sigma_log(h), standard deviation of log(h)
    REAL(ReKi)                                   :: MiuLogh           ! miu_log(h), mean value of log(h)
    REAL(ReKi)                                   :: VelSig            ! parameter for a Rayleigh distribution
