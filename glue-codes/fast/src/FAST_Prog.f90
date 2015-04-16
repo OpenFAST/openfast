@@ -51,32 +51,68 @@ INTEGER(IntKi)                        :: n_t_global                             
 INTEGER(IntKi)                        :: ErrStat                                 ! Error status
 CHARACTER(1024)                       :: ErrMsg                                  ! Error message
 
+   ! data for restart:
+CHARACTER(1024)                       :: CheckpointRoot                          ! Rootname of the checkpoint file
+CHARACTER(20)                         :: FlagArg                                 ! flag argument from command line
+INTEGER(IntKi)                        :: Restart_step                            ! step to start on (for restart) 
 
-   DO i_turb = 1,NumTurbines
-      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-      ! initialization
-      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-      CALL FAST_InitializeAll_T( t_initial, i_turb, Turbine(i_turb), ErrStat, ErrMsg )     ! bjj: we need to get the input files for each turbine (not necessarially the same one)
+      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+      ! determine if this is a restart from checkpoint
+      !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+   CALL NWTC_Init() ! open console for writing
+   ProgName = 'FAST'
+   CheckpointRoot = ""
+   CALL CheckArgs( CheckpointRoot, ErrStat, Flag=FlagArg )  ! if ErrStat /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
+      
+   IF ( TRIM(FlagArg) == 'RESTART' ) THEN ! Restart from checkpoint file
+      CALL FAST_RestoreFromCheckpoint_Tary(t_initial, Restart_step, Turbine, CheckpointRoot, ErrStat, ErrMsg  )
+         CALL CheckError( ErrStat, ErrMsg, 'during restore from checkpoint'  )            
+   ELSE
+      Restart_step = 0
+      
+      DO i_turb = 1,NumTurbines
+         !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+         ! initialization
+         !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+         
+         CALL FAST_InitializeAll_T( t_initial, i_turb, Turbine(i_turb), ErrStat, ErrMsg )     ! bjj: we need to get the input files for each turbine (not necessarially the same one)
          CALL CheckError( ErrStat, ErrMsg, 'during module initialization' )
-                                                  
+                        
       !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       ! loose coupling
       !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-   
-      !...............................................................................................................................
-      ! Initialization: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
-      !...............................................................................................................................     
-      CALL FAST_Solution0_T( Turbine(i_turb), ErrStat, ErrMsg )
+      
+         !...............................................................................................................................
+         ! Initialization: (calculate outputs based on states at t=t_initial as well as guesses of inputs and constraint states)
+         !...............................................................................................................................     
+         CALL FAST_Solution0_T( Turbine(i_turb), ErrStat, ErrMsg )
          CALL CheckError( ErrStat, ErrMsg, 'during simulation initialization'  )
-             
-   END DO
+      
+      END DO
+   END IF
+   
 
+      
    !...............................................................................................................................
    ! Time Stepping:
    !...............................................................................................................................         
    
-   DO n_t_global = 0, Turbine(1)%m_FAST%n_TMax_m1 ! bjj: we have to make sure the n_TMax_m1 is the same for all turbines or have some logic
+   DO n_t_global = Restart_step, Turbine(1)%m_FAST%n_TMax_m1 ! bjj: we have to make sure the n_TMax_m1 and n_ChkptTime are the same for all turbines or have some logic
+            
+      ! write checkpoint file if requested
+      IF (mod(n_t_global, Turbine(1)%p_FAST%n_ChkptTime) == 0 .AND. Restart_step /= n_t_global) then
+         CheckpointRoot = TRIM(Turbine(1)%p_FAST%OutFileRoot)//'.'//TRIM(Num2LStr(n_t_global))
+
+         
+         CALL FAST_CreateCheckpoint_Tary(t_initial, n_t_global, Turbine, CheckpointRoot, ErrStat, ErrMsg)
+            IF(ErrStat >= AbortErrLev .and. AbortErrLev >= ErrID_Severe) THEN
+               ErrStat = MIN(ErrStat,ErrID_Severe) ! We don't need to stop simulation execution on this error
+               ErrMsg = TRIM(ErrMsg)//Newline//'WARNING: Checkpoint file could not be generated. Simulation continuing.'
+            END IF
+            CALL CheckError( ErrStat, ErrMsg  )
+      END IF
+      
       
       ! this takes data from n_t_global and gets values at n_t_global + 1
       DO i_turb = 1,NumTurbines
@@ -86,6 +122,7 @@ CHARACTER(1024)                       :: ErrMsg                                 
                                     
       END DO
 
+      
    END DO ! n_t_global
   
   
@@ -118,14 +155,13 @@ CONTAINS
             IF (PRESENT(ErrLocMsg)) THEN
                SimMsg = ErrLocMsg
             ELSE
-               SimMsg = 'at simulation time '//TRIM(Num2LStr(Turbine(i_turb)%m_FAST%t_global))//' of '//TRIM(Num2LStr(Turbine(i_turb)%p_FAST%TMax))//' seconds'
+               SimMsg = 'at simulation time '//TRIM(Num2LStr(Turbine(1)%m_FAST%t_global))//' of '//TRIM(Num2LStr(Turbine(1)%p_FAST%TMax))//' seconds'
             END IF
             
-            CALL ExitThisProgram( Turbine(i_turb)%p_FAST, Turbine(i_turb)%y_FAST, Turbine(i_turb)%m_FAST, &
-                     Turbine(i_turb)%ED, Turbine(i_turb)%SrvD, Turbine(i_turb)%AD, Turbine(i_turb)%IfW, &
-                     Turbine(i_turb)%HD, Turbine(i_turb)%SD, Turbine(i_turb)%MAP, Turbine(i_turb)%FEAM, Turbine(i_turb)%MD, &
-                     Turbine(i_turb)%IceF, Turbine(i_turb)%IceD, Turbine(i_turb)%MeshMapData, ErrID, SimMsg )
-            
+            DO i_turb = 1,NumTurbines
+               CALL ExitThisProgram_T( Turbine(i_turb), ErrID, SimMsg )
+            END DO
+                        
          END IF
          
       END IF

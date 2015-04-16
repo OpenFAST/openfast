@@ -632,8 +632,8 @@ CONTAINS
 
     ! Local variables
     INTEGER                      :: I                                        ! Generic loop-counting index
-    INTEGER                      :: J                                        ! Generic loop-counting index
-    INTEGER                      :: INDX                                     ! Index for valid arrays
+!    INTEGER                      :: J                                        ! Generic loop-counting index
+!    INTEGER                      :: INDX                                     ! Index for valid arrays
 
     CHARACTER(ChanLen)           :: OutListTmp                               ! A string to temporarily hold OutList(I), the name of each output channel
     CHARACTER(ChanLen)           :: qVal                                     ! quantity type string to match to list of valid options

@@ -190,7 +190,7 @@ SUBROUTINE FAST_Init( p, y_FAST, ErrStat, ErrMsg, InFile, TMax  )
    CALL DispCopyrightLicense( FAST_Ver )
 
 
-      ! Tell our nice users what they're running
+      ! Tell our users what they're running
    CALL WrScr( ' Running '//GetVersion()//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
 
    !...............................................................................................................................
@@ -290,8 +290,6 @@ SUBROUTINE FAST_Init( p, y_FAST, ErrStat, ErrMsg, InFile, TMax  )
       p%TurbineType = Type_LandBased
    END IF   
          
-      ! figure out how many time steps we should go before writing screen output:      
-    p%n_SttsTime = MAX( 1, NINT( p%SttsTime / p%DT ) )
     
     p%WrGraphics = .FALSE. !.TRUE.
    
@@ -317,9 +315,11 @@ SUBROUTINE FAST_Init( p, y_FAST, ErrStat, ErrMsg, InFile, TMax  )
       CALL SetErrStat( ErrID_Fatal, 'TMax must not exceed 9999.999 seconds with text tabular (time-marching) output files.', ErrStat, ErrMsg, RoutineName )
    END IF
 
-   IF ( p%TStart   <  0.0_DbKi     ) CALL SetErrStat( ErrID_Fatal, 'TStart must not be less than 0 seconds.', ErrStat, ErrMsg, RoutineName )
-   IF ( p%SttsTime <= 0.0_DbKi     ) CALL SetErrStat( ErrID_Fatal, 'SttsTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )
-   IF ( p%KMax     <   1_IntKi     ) CALL SetErrStat( ErrID_Fatal, 'KMax must be greater than 0.', ErrStat, ErrMsg, RoutineName )
+   IF ( p%TStart      <  0.0_DbKi ) CALL SetErrStat( ErrID_Fatal, 'TStart must not be less than 0 seconds.', ErrStat, ErrMsg, RoutineName )
+!  IF ( p%SttsTime    <= 0.0_DbKi ) CALL SetErrStat( ErrID_Fatal, 'SttsTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )
+   IF ( p%n_SttsTime  < 1_IntKi   ) CALL SetErrStat( ErrID_Fatal, 'SttsTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )
+   IF ( p%n_ChkptTime < 1_IntKi   ) CALL SetErrStat( ErrID_Fatal, 'ChkptTime must be greater than 0 seconds.', ErrStat, ErrMsg, RoutineName )
+   IF ( p%KMax        < 1_IntKi   ) CALL SetErrStat( ErrID_Fatal, 'KMax must be greater than 0.', ErrStat, ErrMsg, RoutineName )
    
    IF (p%CompElast   == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompElast must be 1 (ElastoDyn) or 2 (BeamDyn).', ErrStat, ErrMsg, RoutineName )   
    IF (p%CompAero    == Module_Unknown) CALL SetErrStat( ErrID_Fatal, 'CompAero must be 0 (None) or 1 (AeroDyn).', ErrStat, ErrMsg, RoutineName )
@@ -879,6 +879,7 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
    CHARACTER(*),             INTENT(OUT)   :: ErrMsg                          ! Error message
 
       ! Local variables:
+   REAL(DbKi)                    :: TmpTime                                   ! temporary variable to read SttsTime and ChkptTime before converting to #steps based on DT
    INTEGER(IntKi)                :: I                                         ! loop counter
    INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
    INTEGER(IntKi)                :: UnEc                                      ! I/O unit for echo file. If > 0, file is open for writing.
@@ -1201,9 +1202,16 @@ END DO
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! SttsTime - Amount of time between screen status messages (s):
-   CALL ReadVar( UnIn, InputFile, p%SttsTime, "SttsTime", "Amount of time between screen status messages (s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, TmpTime, "SttsTime", "Amount of time between screen status messages (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) RETURN           
+      p%n_SttsTime = NINT( TmpTime / p%DT )
+
+      ! ChkptTime - Amount of time between creating checkpoint files for potential restart (s):
+   CALL ReadVar( UnIn, InputFile, TmpTime, "ChkptTime", "Amount of time between creating checkpoint files for potential restart (s)", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN           
+      p%n_ChkptTime = NINT( TmpTime / p%DT )
 
       ! DT_Out - Time step for tabular output (s):
    CALL ReadVar( UnIn, InputFile, p%DT_Out, "DT_Out", "Time step for tabular output (s)", ErrStat2, ErrMsg2, UnEc)
@@ -7801,13 +7809,47 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD
      
 END SUBROUTINE FAST_Solution
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, CheckpointInterval, NumTurbines, Turbine, CheckpointRoot, ErrStat, ErrMsg, Unit )
+SUBROUTINE FAST_CreateCheckpoint_Tary(t_initial, n_t_global, Turbine, CheckpointRoot, ErrStat, ErrMsg)
+
+   REAL(DbKi),               INTENT(IN   ) :: t_initial           ! initial time
+   INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          ! loop counter
+   TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine(:)          ! all data for all turbines
+   CHARACTER(*),             INTENT(IN   ) :: CheckpointRoot      ! Rootname of checkpoint file
+   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             ! Error status of the operation
+   CHARACTER(*),             INTENT(  OUT) :: ErrMsg              ! Error message if ErrStat /= ErrID_None
+
+      ! local variables
+   INTEGER(IntKi)                          :: NumTurbines         ! Number of turbines in this simulation
+   INTEGER(IntKi)                          :: i_turb
+   INTEGER                                 :: Unit
+   INTEGER(IntKi)                          :: ErrStat2            ! local error status
+   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_CreateCheckpoint_Tary' 
+   
+   
+   NumTurbines = SIZE(Turbine)   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   ! TRIM(CheckpointRoot)//'.'//TRIM(Num2LStr(Turbine%TurbID))//
+   
+      ! This allows us to put all the turbine data in one file.
+   Unit = -1         
+   DO i_turb = 1,NumTurbines
+      CALL FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine(i_turb), CheckpointRoot, ErrStat2, ErrMsg2, Unit )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev ) RETURN
+   END DO
+               
+   
+END SUBROUTINE FAST_CreateCheckpoint_Tary
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, CheckpointRoot, ErrStat, ErrMsg, Unit )
 
    USE BladedInterface, ONLY: CallBladedDLL  ! Hack for Bladed-style DLL
 
    REAL(DbKi),               INTENT(IN   ) :: t_initial           ! initial time
    INTEGER(IntKi),           INTENT(IN   ) :: n_t_global          ! loop counter
-   INTEGER(IntKi),           INTENT(IN   ) :: CheckpointInterval  ! interval between writing checkpoint files
    INTEGER(IntKi),           INTENT(IN   ) :: NumTurbines         ! Number of turbines in this simulation
    TYPE(FAST_TurbineType),   INTENT(INOUT) :: Turbine             ! all data for one instance of a turbine (INTENT(OUT) only because of hack for Bladed DLL)
    CHARACTER(*),             INTENT(IN   ) :: CheckpointRoot      ! Rootname of checkpoint file
@@ -7838,15 +7880,16 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, CheckpointInterval, Nu
       ! Get the arrays of data to be stored in the output file
    CALL FAST_PackTurbineType( ReKiBuf, DbKiBuf, IntKiBuf, Turbine, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF (ErrStat >= AbortErrLev ) RETURN
       
    ArraySizes = 0   
    IF ( ALLOCATED(ReKiBuf)  ) ArraySizes(1) = SIZE(ReKiBuf)
    IF ( ALLOCATED(DbKiBuf)  ) ArraySizes(2) = SIZE(DbKiBuf)
    IF ( ALLOCATED(IntKiBuf) ) ArraySizes(3) = SIZE(IntKiBuf)
 
-   FileName    = TRIM(CheckpointRoot)//'.'//TRIM(Num2LStr(Turbine%TurbID))//'.cp'
-   DLLFileName = TRIM(CheckpointRoot)//'.'//TRIM(Num2LStr(Turbine%TurbID))//'.dll.cp'
-   ! FileName = TRIM(CheckpointRoot)//'.cp'   
+   FileName    = TRIM(CheckpointRoot)//'.chkp'
+   DLLFileName = TRIM(CheckpointRoot)//'.dll.chkp'
+
    unOut=-1      
    IF (PRESENT(Unit)) unOut = Unit
          
@@ -7863,15 +7906,15 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, CheckpointInterval, Nu
       WRITE (unOut, IOSTAT=ErrStat2)   INT(ReKi              ,B4Ki)     ! let's make sure we've got the correct number of bytes for reals on restart.
       WRITE (unOut, IOSTAT=ErrStat2)   INT(DbKi              ,B4Ki)     ! let's make sure we've got the correct number of bytes for doubles on restart.
       WRITE (unOut, IOSTAT=ErrStat2)   INT(IntKi             ,B4Ki)     ! let's make sure we've got the correct number of bytes for integers on restart.
+      WRITE (unOut, IOSTAT=ErrStat2)   AbortErrLev
       WRITE (unOut, IOSTAT=ErrStat2)   NumTurbines                      ! Number of turbines
-      WRITE (unOut, IOSTAT=ErrStat2)   CheckpointInterval               ! time between checkpoint files
       WRITE (unOut, IOSTAT=ErrStat2)   t_initial                        ! initial time
+      WRITE (unOut, IOSTAT=ErrStat2)   n_t_global                       ! current time step
    
    END IF
       
       
-      ! data from current time step:
-   WRITE (unOut, IOSTAT=ErrStat2)   n_t_global                       ! current time step
+      ! data from current turbine at time step:
    WRITE (unOut, IOSTAT=ErrStat2)   ArraySizes                       ! Number of reals, doubles, and integers written to file
    WRITE (unOut, IOSTAT=ErrStat2)   ReKiBuf                          ! Packed reals
    WRITE (unOut, IOSTAT=ErrStat2)   DbKiBuf                          ! Packed doubles
@@ -7888,7 +7931,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, CheckpointInterval, Nu
       !            Turbine%IceF, Turbine%IceD, Turbine%MeshMapData, ErrStat, ErrMsg )              
    
       
-   IF (Turbine%TurbID == NumTurbines) THEN
+   IF (Turbine%TurbID == NumTurbines .OR. .NOT. PRESENT(Unit)) THEN
       CLOSE(unOut)
       unOut = -1
    END IF
@@ -7906,22 +7949,68 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, CheckpointInterval, Nu
       Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = -8
       CALL CallBladedDLL(Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%OtherSt%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
          ! put values back:
       Turbine%SrvD%p%DLL_InFile = FileName
       Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(FileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
       Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = old_avrSwap1
    END IF
    
+   
                   
 END SUBROUTINE FAST_CreateCheckpoint_T
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, CheckpointInterval, NumTurbines, Turbine, CheckpointRoot, ErrStat, ErrMsg, Unit )
+SUBROUTINE FAST_RestoreFromCheckpoint_Tary(t_initial, n_t_global, Turbine, CheckpointRoot, ErrStat, ErrMsg  )
+
+   REAL(DbKi),               INTENT(IN   ) :: t_initial           ! initial time
+   INTEGER(IntKi),           INTENT(  OUT) :: n_t_global          ! loop counter
+   TYPE(FAST_TurbineType),   INTENT(  OUT) :: Turbine(:)          ! all data for one instance of a turbine
+   CHARACTER(*),             INTENT(IN   ) :: CheckpointRoot      ! Rootname of checkpoint file
+   INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             ! Error status of the operation
+   CHARACTER(*),             INTENT(  OUT) :: ErrMsg              ! Error message if ErrStat /= ErrID_None
+
+      ! local variables
+   REAL(DbKi)                              :: t_initial_out
+   INTEGER(IntKi)                          :: NumTurbines_out
+   INTEGER(IntKi)                          :: NumTurbines         ! Number of turbines in this simulation
+   INTEGER(IntKi)                          :: i_turb
+   INTEGER                                 :: Unit
+   INTEGER(IntKi)                          :: ErrStat2            ! local error status
+   CHARACTER(1024)                         :: ErrMsg2             ! local error message
+   CHARACTER(*),             PARAMETER     :: RoutineName = 'FAST_RestoreFromCheckpoint_Tary' 
+   
+   
+   NumTurbines = SIZE(Turbine)   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+      ! Display the copyright notice
+   CALL DispCopyrightLicense( FAST_Ver )
+
+      ! Tell our users what they're running
+   CALL WrScr( ' Running '//GetVersion()//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+   
+   Unit = -1         
+   DO i_turb = 1,NumTurbines
+      CALL FAST_RestoreFromCheckpoint_T(t_initial_out, n_t_global, NumTurbines_out, Turbine(i_turb), CheckpointRoot, ErrStat2, ErrMsg2, Unit )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+         IF (t_initial_out /= t_initial) CALL SetErrStat(ErrID_Fatal, "invalid value of t_initial.", ErrStat, ErrMsg, RoutineName )
+         IF (NumTurbines_out /= NumTurbines) CALL SetErrStat(ErrID_Fatal, "invalid value of NumTurbines.", ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) RETURN
+   END DO
+
+   CALL WrScr( ' Restarting simulation at '//TRIM(Num2LStr(n_t_global*Turbine(1)%p_FAST%DT))//' seconds.' )
+   
+   
+END SUBROUTINE FAST_RestoreFromCheckpoint_Tary
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, CheckpointRoot, ErrStat, ErrMsg, Unit )
 ! The inverse of FAST_CreateCheckpoint_T
    USE BladedInterface, ONLY: CallBladedDLL  ! Hack for Bladed-style DLL
 
    REAL(DbKi),               INTENT(INOUT) :: t_initial           ! initial time
    INTEGER(IntKi),           INTENT(INOUT) :: n_t_global          ! loop counter
-   INTEGER(IntKi),           INTENT(INOUT) :: CheckpointInterval  ! interval between writing checkpoint files
    INTEGER(IntKi),           INTENT(INOUT) :: NumTurbines         ! Number of turbines in this simulation
    TYPE(FAST_TurbineType),   INTENT(  OUT) :: Turbine             ! all data for one instance of a turbine
    CHARACTER(*),             INTENT(IN   ) :: CheckpointRoot      ! Rootname of checkpoint file
@@ -7946,8 +8035,11 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, CheckpointInterva
    CHARACTER(1024)                         :: DLLFileName         ! Name of the (input) checkpoint file
 
             
-   FileName    = TRIM(CheckpointRoot)//'.'//TRIM(Num2LStr(Turbine%TurbID))//'.cp'
-   DLLFileName = TRIM(CheckpointRoot)//'.'//TRIM(Num2LStr(Turbine%TurbID))//'.dll.cp'
+   ErrStat=ErrID_None
+   ErrMsg=""
+   
+   FileName    = TRIM(CheckpointRoot)//'.chkp'
+   DLLFileName = TRIM(CheckpointRoot)//'.dll.chkp'
    ! FileName = TRIM(CheckpointRoot)//'.cp'   
    unIn=-1      
    IF (PRESENT(Unit)) unIn = Unit
@@ -7969,18 +8061,19 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, CheckpointInterva
       IF (ErrStat >= AbortErrLev) THEN
          CLOSE(unIn)
          unIn = -1
+         IF (PRESENT(Unit)) Unit = unIn
          RETURN
       END IF
       
+      READ (unIn, IOSTAT=ErrStat2)   AbortErrLev
       READ (unIn, IOSTAT=ErrStat2)   NumTurbines                      ! Number of turbines
-      READ (unIn, IOSTAT=ErrStat2)   CheckpointInterval               ! time between checkpoint files
       READ (unIn, IOSTAT=ErrStat2)   t_initial                        ! initial time
+      READ (unIn, IOSTAT=ErrStat2)   n_t_global                       ! current time step
    
    END IF
       
       
       ! data from current time step:
-   READ (unIn, IOSTAT=ErrStat2)   n_t_global                       ! current time step
    READ (unIn, IOSTAT=ErrStat2)   ArraySizes                       ! Number of reals, doubles, and integers written to file
    
    ALLOCATE(ReKiBuf( ArraySizes(1)), STAT=ErrStat2)
@@ -7998,7 +8091,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, CheckpointInterva
       END IF
 
       ! close file if necessary      
-   IF (Turbine%TurbID == NumTurbines) THEN
+   IF (Turbine%TurbID == NumTurbines .OR. .NOT. PRESENT(Unit)) THEN
       CLOSE(unIn)
       unIn = -1
    END IF

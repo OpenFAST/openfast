@@ -86,10 +86,11 @@ typedef	^	^	CHARACTER(1024)	SubFile	-	-	-	"Name of file containing sub-structura
 typedef	^	^	CHARACTER(1024)	MooringFile	-	-	-	"Name of file containing mooring system input parameters"	-
 typedef	^	^	CHARACTER(1024)	IceFile	-	-	-	"Name of file containing ice loading input parameters"	-
 #  Parameters for file/screen output
-typedef	^	^	DbKi	SttsTime	-	-	-	"Amount of time between screen status messages"	s
+#typedef	^	^	DbKi	SttsTime	-	-	-	"Amount of time between screen status messages"	s
 typedef	^	^	DbKi	TStart	-	-	-	"Time to begin tabular output"	s
 typedef	^	^	DbKi	DT_Out	-	-	-	"Time step for tabular output"	s
 typedef	^	^	INTEGER	n_SttsTime	-	-	-	"Number of time steps between screen status messages"	-
+typedef	^	^	INTEGER	n_ChkptTime	-	-	-	"Number of time steps between writing checkpoint files"	-
 typedef	^	^	IntKi	TurbineType	-	-	-	"Type_LandBased, Type_Offshore_Fixed, or Type_Offshore_Floating"	-
 typedef	^	^	LOGICAL	WrBinOutFile	-	-	-	"Write a binary output file? (.outb)"	-
 typedef	^	^	LOGICAL	WrTxtOutFile	-	-	-	"Write a text (formatted) output file? (.out)"	-
