@@ -35,7 +35,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.05.03a-bjj', '14-Apr-2015')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.05.03a-bjj', '16-Apr-2015')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -1911,11 +1911,12 @@ CONTAINS
    RETURN
    END FUNCTION CurTime ! ()
 !=======================================================================
-   SUBROUTINE DispCopyrightLicense( ProgInfo )
+   SUBROUTINE DispCopyrightLicense( ProgInfo, AdditionalComment )
 
       ! This routine displays some text about copyright and license.
 
-   TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    ! Contains the name and version info
+   TYPE( ProgDesc ), INTENT(IN)           :: ProgInfo    ! Contains the name and version info
+   CHARACTER(*),     INTENT(IN), optional :: AdditionalComment
 
       ! local variable
    INTEGER(IntKi)         :: DateLen   ! the trim length of the ProgInfo date field
@@ -1944,7 +1945,15 @@ CONTAINS
    CALL WrScr( 'Copyright (C) '//TRIM(year)//' National Renewable Energy Laboratory' )
    CALL WrScr('')
    CALL WrScr( 'This program comes with ABSOLUTELY NO WARRANTY. '//&
-               'See the "license.txt" file distributed with this software for details.')
+               'See the "license.txt" file distributed with this software for details.')   
+
+   IF (PRESENT(AdditionalComment)) THEN
+      CALL WrScr(Stars)
+      CALL WrScr(Stars)
+      CALL WrScr( AdditionalComment )
+      CALL WrScr('')       
+   END IF
+   
    CALL WrScr(Stars)
    CALL WrScr('')
 
