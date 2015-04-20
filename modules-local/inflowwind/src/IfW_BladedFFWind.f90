@@ -1671,53 +1671,49 @@ CONTAINS
 
       IMPLICIT                                              NONE
 
-      REAL(DbKi),                         INTENT(IN   )  :: Time
-      REAL(ReKi),                         INTENT(IN   )  :: Position(3)    ! takes the place of XGrnd, YGrnd, ZGrnd
-      TYPE(IfW_BladedFFWind_ParameterType),     INTENT(IN   )  :: ParamData      ! Parameters
-      TYPE(IfW_BladedFFWind_OtherStateType),    INTENT(INOUT)  :: OtherStates    ! Other State data   (storage for the main data)
-      REAL(ReKi)                                         :: FF_Interp(3)   ! The U, V, W velocities
+      CHARACTER(*),           PARAMETER                     :: RoutineName="FF_Interp"
 
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
+      REAL(DbKi),                            INTENT(IN   )  :: Time
+      REAL(ReKi),                            INTENT(IN   )  :: Position(3)    ! takes the place of XGrnd, YGrnd, ZGrnd
+      TYPE(IfW_BladedFFWind_ParameterType),  INTENT(IN   )  :: ParamData      ! Parameters
+      TYPE(IfW_BladedFFWind_OtherStateType), INTENT(INOUT)  :: OtherStates    ! Other State data   (storage for the main data)
+      REAL(ReKi)                                            :: FF_Interp(3)   ! The U, V, W velocities
+
+      INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat
+      CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg
 
          ! Local Variables:
 
-      REAL(ReKi)                                         :: TimeShifted
-      REAL(ReKi),PARAMETER                               :: Tol = 1.0E-3   ! a tolerance for determining if two reals are the same (for extrapolation)
-      REAL(ReKi)                                         :: W_YH_Z
-      REAL(ReKi)                                         :: W_YH_ZH
-      REAL(ReKi)                                         :: W_YH_ZL
-      REAL(ReKi)                                         :: W_YL_Z
-      REAL(ReKi)                                         :: W_YL_ZH
-      REAL(ReKi)                                         :: W_YL_ZL
-      REAL(ReKi)                                         :: Wnd(2)
-      REAL(ReKi)                                         :: T
-      REAL(ReKi)                                         :: TGRID
-      REAL(ReKi)                                         :: Y
-      REAL(ReKi)                                         :: YGRID
-      REAL(ReKi)                                         :: Z
-      REAL(ReKi)                                         :: ZGRID
+      REAL(ReKi)                                            :: TimeShifted
+      REAL(ReKi),PARAMETER                                  :: Tol = 1.0E-3   ! a tolerance for determining if two reals are the same (for extrapolation)
+      REAL(ReKi)                                            :: T
+      REAL(ReKi)                                            :: TGRID
+      REAL(ReKi)                                            :: Y
+      REAL(ReKi)                                            :: YGRID
+      REAL(ReKi)                                            :: Z
+      REAL(ReKi)                                            :: ZGRID
+      REAL(ReKi)                                            :: N(8)           ! array for holding scaling factors for the interpolation algorithm
+      REAL(ReKi)                                            :: u(8)           ! array for holding the corner values for the interpolation algorithm across a cubic volume
+      REAL(ReKi)                                            :: M(4)           ! array for holding scaling factors for the interpolation algorithm
+      REAL(ReKi)                                            :: v(4)           ! array for holding the corner values for the interpolation algorithm across an area
 
-      INTEGER(IntKi)                                     :: IDIM
-      INTEGER(IntKi)                                     :: IG
-      INTEGER(IntKi)                                     :: IT
-      INTEGER(IntKi)                                     :: ITHI
-      INTEGER(IntKi)                                     :: ITLO
-      INTEGER(IntKi)                                     :: IYHI
-      INTEGER(IntKi)                                     :: IYLO
-      INTEGER(IntKi)                                     :: IZHI
-      INTEGER(IntKi)                                     :: IZLO
+      INTEGER(IntKi)                                        :: IDIM
+      INTEGER(IntKi)                                        :: ITHI
+      INTEGER(IntKi)                                        :: ITLO
+      INTEGER(IntKi)                                        :: IYHI
+      INTEGER(IntKi)                                        :: IYLO
+      INTEGER(IntKi)                                        :: IZHI
+      INTEGER(IntKi)                                        :: IZLO
 
-      LOGICAL                                            :: OnGrid
+      LOGICAL                                               :: OnGrid
 
       !-------------------------------------------------------------------------------------------------
       ! Initialize variables
       !-------------------------------------------------------------------------------------------------
 
-      FF_Interp(:)          = 0.0                         ! the output velocities (in case ParamData%NFFComp /= 3)
-      Wnd(:)                = 0.0                         ! just in case we're on an end point
+      FF_Interp(:)        = 0.0_ReKi                         ! the output velocities (in case ParamData%NFFComp /= 3)
 
-      ErrStat               = ErrID_None
+      ErrStat              = ErrID_None
       ErrMsg               = ""
       
       !-------------------------------------------------------------------------------------------------
@@ -1741,7 +1737,7 @@ CONTAINS
 
          TGRID = TimeShifted*ParamData%FFRate
          ITLO  = INT( TGRID )             ! convert REAL to INTEGER (add 1 later because our grids start at 1, not 0)
-         T     = TGRID - ITLO             ! a value between 0 and 1 that indicates a relative location between ITLO and ITHI
+         T     = 2.0_ReKi * ( TGRID - REAL(ITLO, ReKi) ) - 1.0_ReKi     ! a value between -1 and 1 that indicates a relative position between ITLO and ITHI
 
          ITLO = ITLO + 1
          IF ( ITLO == ParamData%NFFSteps ) THEN
@@ -1755,7 +1751,7 @@ CONTAINS
 
          TGRID = TimeShifted*ParamData%FFRate
          ITLO  = INT( TGRID )             ! convert REAL to INTEGER (add 1 later because our grids start at 1, not 0)
-         T     = TGRID - ITLO             ! a value between 0 and 1 that indicates a relative location between ITLO and ITHI
+         T     = 2.0_ReKi * ( TGRID - REAL(ITLO, ReKi) ) - 1.0_ReKi     ! a value between -1 and 1 that indicates a relative position between ITLO and ITHI
 
          ITLO = ITLO + 1                  ! add one since our grids start at 1, not 0
          ITHI = ITLO + 1
@@ -1764,7 +1760,7 @@ CONTAINS
             IF ( ITLO == ParamData%NFFSteps  ) THEN
                ITHI = ITLO
                IF ( T <= TOL ) THEN ! we're on the last point
-                  T = 0.0
+                  T = -1.0_ReKi
                ELSE  ! We'll extrapolate one dt past the last value in the file
                   ITLO = ITHI - 1
                ENDIF
@@ -1788,27 +1784,30 @@ CONTAINS
       IF (ZGRID > -1*TOL) THEN
          OnGrid = .TRUE.
 
+            ! Index for start and end slices
          IZLO = INT( ZGRID ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
          IZHI = IZLO + 1
 
-         Z = ZGRID - ( IZLO - 1 )            ! a value between 0 and 1 that indicates a relative location between IZLO and IZHI
+            ! Set Z as a value between -1 and 1 for the relative location between IZLO and IZHI.
+            ! Subtract 1_IntKi from Z since the indices are starting at 1, not 0
+         Z = 2.0_ReKi * (ZGRID - REAL(IZLO - 1_IntKi, ReKi)) - 1.0_ReKi
 
          IF ( IZLO < 1 ) THEN
             IF ( IZLO == 0 .AND. Z >= 1.0-TOL ) THEN
-               Z    = 0.0
+               Z    = -1.0_ReKi
                IZLO = 1
             ELSE
-               ErrMsg   = ' Error: FF wind array boundaries violated. Grid too small in Z direction (Z='//&
+               ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction (Z='//&
                           TRIM(Num2LStr(Position(3)))//' m is below the grid).'
                ErrStat  = ErrID_Fatal
                RETURN
             ENDIF
          ELSEIF ( IZLO >= ParamData%NZGrids ) THEN
             IF ( IZLO == ParamData%NZGrids .AND. Z <= TOL ) THEN
-               Z    = 0.0
+               Z    = -1.0_ReKi
                IZHI = IZLO                   ! We're right on the last point, which is still okay
             ELSE
-               ErrMsg   = ' Error: FF wind array boundaries violated. Grid too small in Z direction (Z='//&
+               ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction (Z='//&
                           TRIM(Num2LStr(Position(3)))//' m is above the grid).'
                ErrStat  = ErrID_Fatal
                RETURN
@@ -1820,7 +1819,7 @@ CONTAINS
          OnGrid = .FALSE.  ! this is on the tower
 
          IF ( ParamData%NTGrids < 1 ) THEN
-            ErrMsg   = ' Error: FF wind array boundaries violated. Grid too small in Z direction '// &
+            ErrMsg   = ' FF wind array boundaries violated. Grid too small in Z direction '// &
                        '(height (Z='//TRIM(Num2LStr(Position(3)))//' m) is below the grid and no tower points are defined).'
             ErrStat  = ErrID_Fatal
             RETURN
@@ -1830,11 +1829,16 @@ CONTAINS
 
 
          IF ( IZLO >= ParamData%NTGrids ) THEN  !our dz is the difference between the bottom tower point and the ground
-            IZLO = ParamData%NTGrids
+            IZLO  = ParamData%NTGrids
 
-            Z    = 1.0 - Position(3) / (ParamData%GridBase - (IZLO-1)/ParamData%InvFFZD) !check that this isn't 0
+               ! Check that this isn't zero.  Value between -1 and 1 corresponding to the relative position.
+            Z = 1.0_ReKi - 2.0_ReKi * (Position(3) / (ParamData%GridBase - REAL(IZLO - 1_IntKi, ReKi)/ParamData%InvFFZD))
+
          ELSE
-            Z    = ABS(ZGRID) - (IZLO - 1)
+
+               ! Set Z as a value between -1 and 1 for the relative location between IZLO and IZHI.  Used in the interpolation.
+            Z = 2.0_ReKi * (ABS(ZGRID) - REAL(IZLO - 1_IntKi, ReKi)) - 1.0_ReKi
+
          ENDIF
          IZHI = IZLO + 1
 
@@ -1852,19 +1856,21 @@ CONTAINS
             IYLO = INT( YGRID ) + 1             ! convert REAL to INTEGER, then add one since our grids start at 1, not 0
             IYHI = IYLO + 1
 
-            Y    = YGRID - ( IYLO - 1 )         ! a value between 0 and 1 that indicates a relative location between IYLO and IYHI
+               ! Set Y as a value between -1 and 1 for the relative location between IYLO and IYHI.  Used in the interpolation.
+               ! Subtract 1_IntKi from IYLO since grids start at index 1, not 0
+            Y = 2.0_ReKi * (YGRID - REAL(IYLO - 1_IntKi, ReKi)) - 1.0_ReKi
 
             IF ( IYLO >= ParamData%NYGrids .OR. IYLO < 1 ) THEN
                IF ( IYLO == 0 .AND. Y >= 1.0-TOL ) THEN
-                  Y    = 0.0
+                  Y    = -1.0_ReKi
                   IYLO = 1
                ELSE IF ( IYLO == ParamData%NYGrids .AND. Y <= TOL ) THEN
-                  Y    = 0.0
+                  Y    = -1.0_ReKi
                   IYHI = IYLO                   ! We're right on the last point, which is still okay
                ELSE
                   ErrMsg   = ' FF wind array boundaries violated: Grid too small in Y direction. Y='// &
                              TRIM(Num2LStr(Position(2)))//'; Y boundaries = ['//TRIM(Num2LStr(-1.0*ParamData%FFYHWid))// &
-                             ', '//TRIM(Num2LStr(ParamData%FFYHWid))//'] in the wind-file coordinates'
+                             ', '//TRIM(Num2LStr(ParamData%FFYHWid))//']'
                   ErrStat = ErrID_Fatal         ! we don't return anything
                   RETURN
                ENDIF
@@ -1876,37 +1882,30 @@ CONTAINS
 
          DO IDIM=1,ParamData%NFFComp       ! all the components
 
-            IT = ITLO            ! Start using the ITLO slice
 
-            DO IG=1,2            ! repeat for 2 time slices (by changing the value of IT. note that we can't loop from IXLO to IXHI because they could be ParamData%NFFSteps and 1 respectively)
+!New Algorithm here
+            N(1)  = ( 1.0_ReKi + Z )*( 1.0_ReKi - Y )*( 1.0_ReKi - T )
+            N(2)  = ( 1.0_ReKi + Z )*( 1.0_ReKi + Y )*( 1.0_ReKi - T )
+            N(3)  = ( 1.0_ReKi - Z )*( 1.0_ReKi + Y )*( 1.0_ReKi - T )
+            N(4)  = ( 1.0_ReKi - Z )*( 1.0_ReKi - Y )*( 1.0_ReKi - T )
+            N(5)  = ( 1.0_ReKi + Z )*( 1.0_ReKi - Y )*( 1.0_ReKi + T )
+            N(6)  = ( 1.0_ReKi + Z )*( 1.0_ReKi + Y )*( 1.0_ReKi + T )
+            N(7)  = ( 1.0_ReKi - Z )*( 1.0_ReKi + Y )*( 1.0_ReKi + T )
+            N(8)  = ( 1.0_ReKi - Z )*( 1.0_ReKi - Y )*( 1.0_ReKi + T )
+            N     = N / REAL( SIZE(N), ReKi )  ! normalize
 
-               !-------------------------------------------------------------------------------------------
-               ! Get the wind velocity values for the four corners of the grid for this time.
-               !-------------------------------------------------------------------------------------------
 
-               W_YL_ZL = ParamData%FFData( IZLO, IYLO, IDIM, IT )
-               W_YL_ZH = ParamData%FFData( IZHI, IYLO, IDIM, IT )
-               W_YH_ZL = ParamData%FFData( IZLO, IYHI, IDIM, IT )
-               W_YH_ZH = ParamData%FFData( IZHI, IYHI, IDIM, IT )
+            u(1)  = ParamData%FFData( IZHI, IYLO, IDIM, ITLO )
+            u(2)  = ParamData%FFData( IZHI, IYHI, IDIM, ITLO )
+            u(3)  = ParamData%FFData( IZLO, IYHI, IDIM, ITLO )
+            u(4)  = ParamData%FFData( IZLO, IYLO, IDIM, ITLO )
+            u(5)  = ParamData%FFData( IZHI, IYLO, IDIM, ITHI )
+            u(6)  = ParamData%FFData( IZHI, IYHI, IDIM, ITHI )
+            u(7)  = ParamData%FFData( IZLO, IYHI, IDIM, ITHI )
+            u(8)  = ParamData%FFData( IZLO, IYLO, IDIM, ITHI )
+            
+            FF_Interp(IDIM)  =  SUM ( N * u ) 
 
-
-               !-------------------------------------------------------------------------------------------
-               ! Interpolate within the grid for this time.
-               !-------------------------------------------------------------------------------------------
-
-               W_YL_Z  = ( W_YL_ZH - W_YL_ZL )*Z + W_YL_ZL
-               W_YH_Z  = ( W_YH_ZH - W_YH_ZL )*Z + W_YH_ZL
-               Wnd(IG) = ( W_YH_Z  - W_YL_Z  )*Y + W_YL_Z
-
-               IT = ITHI            ! repeat for the using the ITHI slice
-
-            END DO !IG
-
-            !----------------------------------------------------------------------------------------------
-            ! Interpolate between the two times.
-            !----------------------------------------------------------------------------------------------
-
-            FF_Interp(IDIM) = ( Wnd(2) - Wnd(1) ) * T + Wnd(1)    ! interpolated velocity
 
          END DO !IDIM
 
@@ -1918,51 +1917,28 @@ CONTAINS
 
          DO IDIM=1,ParamData%NFFComp    ! all the components
 
-            IT = ITLO            ! Start using the ITLO slice
-
-            DO IG=1,2            ! repeat for 2 time slices (by changing the value of IT. note that we can't loop from IXLO to IXHI because they could be ParamData%NFFSteps and 1 respectively)
-
-               !-------------------------------------------------------------------------------------------
-               ! Get the wind velocity values for the two corners of the grid for this time.
-               !-------------------------------------------------------------------------------------------
-
-               W_YH_ZL = ParamData%FFTower( IDIM, IZLO, IT )
-
-               IF ( IZHI > ParamData%NTGrids ) THEN
-                  W_YH_ZH = 0.0
-               ELSE
-                  W_YH_ZH = ParamData%FFTower( IDIM, IZHI, IT )
-               ENDIF
-
-
-               !-------------------------------------------------------------------------------------------
-               ! Interpolate within the grid for this time.
-               !-------------------------------------------------------------------------------------------
-
-               Wnd(IG) = ( W_YH_ZH - W_YH_ZL )*Z + W_YH_ZL
-
-               IT = ITHI            ! repeat for the using the ITHI slice
-
-            END DO !IG
-
             !----------------------------------------------------------------------------------------------
-            ! Interpolate between the two times.
+            ! Interpolate between the two times using an area interpolation.
             !----------------------------------------------------------------------------------------------
 
-            FF_Interp(IDIM) = ( Wnd(2) - Wnd(1) ) * T + Wnd(1)    ! interpolated velocity
+               ! Setup the scaling factors.  Set the unused portion of the array to zero
+            M(1)  =  ( 1.0_ReKi + Z )*( 1.0_ReKi - T )
+            M(2)  =  ( 1.0_ReKi + Z )*( 1.0_ReKi + T )
+            M(3)  =  ( 1.0_ReKi - Z )*( 1.0_ReKi - T )
+            M(4)  =  ( 1.0_ReKi - Z )*( 1.0_ReKi + T )
+            M     =  M / 4.0_ReKi               ! normalize
+
+            v(1)  =  ParamData%FFTower( IDIM, IZHI, ITLO )
+            v(2)  =  ParamData%FFTower( IDIM, IZHI, ITHI )
+            v(3)  =  ParamData%FFTower( IDIM, IZLO, ITLO )
+            v(4)  =  ParamData%FFTower( IDIM, IZLO, ITHI )
+            
+            FF_Interp(IDIM)  =  SUM ( M * v ) 
+
 
          END DO !IDIM
 
       ENDIF ! OnGrid
-
-
-
-         !REMOVE THIS for AeroDyn 15
-         ! Return the average disk velocity values needed by AeroDyn 14.  This is the WindInf_ADhack_diskVel routine.
-      OutData%DiskVel(1)   =  ParamData%MeanFFWS
-      OutData%DiskVel(2:3) =  0.0_ReKi
-
-
       RETURN
 
    END FUNCTION FF_Interp
