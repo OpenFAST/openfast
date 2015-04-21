@@ -987,7 +987,6 @@ CONTAINS
          DO IDIM=1,ParamData%NFFComp       ! all the components
 
 
-!New Algorithm here
             N(1)  = ( 1.0_ReKi + Z )*( 1.0_ReKi - Y )*( 1.0_ReKi - T )
             N(2)  = ( 1.0_ReKi + Z )*( 1.0_ReKi + Y )*( 1.0_ReKi - T )
             N(3)  = ( 1.0_ReKi - Z )*( 1.0_ReKi + Y )*( 1.0_ReKi - T )

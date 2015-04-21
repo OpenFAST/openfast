@@ -1,9 +1,9 @@
 ------- InflowWind v3.00.* INPUT FILE -------------------------------------------------------------------------
 This is a sample Inflow-Wind input file.
 ---------------------------------------------------------------------------------------------------------------
-False                Echo           - Echo input data to <RootName>.ech (flag)
-  6                  WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined)
- 0.0                 PropogationDir - Direction of wind propogation (meteorological direction)
+True                 Echo           - Echo input data to <RootName>.ech (flag)
+  1                  WindType       - switch for wind file type (1=steady; 2=uniform; 3=binary TurbSim FF; 4=binary Bladed-style FF; 5=HAWC format; 6=User defined)
+ 60.0                 PropogationDir - Direction of wind propogation (meteoroligical rotation from aligned with X (positive rotates towards -Y) -- degrees)
  9                   NWindVel       - Number of points to output the wind velocity (0 to 9)
  0,1,2,3,4,5,6,7,8,9 WindVxiList    - List of coordinates in the inertial X direction (m)
  0,1,2,3,4,5,6,7,8,9 WindVyiList    - List of coordinates in the inertial Y direction (m)
@@ -13,8 +13,9 @@ False                Echo           - Echo input data to <RootName>.ech (flag)
  90.0                RefHt          - Reference height for horizontal wind speed
   0.14               PLexp          - Power law exponent
 ================== Parameters for Uniform wind file   [used only for WindType = 2] ============================
-""                   Filename       - Filename of time series data for uniform wind field.
+"Sample1.hh"         Filename       - Filename of time series data for uniform wind field.
  90.0                RefHt          - Reference height for horizontal wind speed
+ 100.0               RefLength      - Reference length for linear horizontal and vertical sheer
 ================== Parameters for Binary TurbSim Full-Field files   [used only for WindType = 3] ==============
 ""                   Filename       - Name of the Full field wind file to use (.bts)
 ================== Parameters for Binary Bladed-style Full-Field files   [used only for WindType = 4] =========

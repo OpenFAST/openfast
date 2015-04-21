@@ -737,15 +737,17 @@ WARN_LOGFILE           =
 
 INPUT                  =                                                \
                            $(IfWDriverDir)/InflowWind_Driver.f90        \
-                           $(IfWDriverDir)/ InflowWind_Driver_Subs.f90  \
+                           $(IfWDriverDir)/InflowWind_Driver_Subs.f90   \
                            $(IfWDriverDir)/InflowWind_Driver_Types.f90  \
                            $(IfWSourceDir)/CTWind.f90                   \
                            $(IfWSourceDir)/FDWind.f90                   \
                            $(IfWSourceDir)/HAWCWind.f90                 \
-                           $(IfWSourceDir)/IfW_FFWind.f90               \
-                           $(IfWSourceDir)/IfW_FFWind_Types.f90         \
-                           $(IfWSourceDir)/IfW_HHWind.f90               \
-                           $(IfWSourceDir)/IfW_HHWind_Types.f90         \
+                           $(IfWSourceDir)/IfW_TSFFWind.f90             \
+                           $(IfWSourceDir)/IfW_TSFFWind_Types.f90       \
+                           $(IfWSourceDir)/IfW_BladedFFWind.f90         \
+                           $(IfWSourceDir)/IfW_BladedFFWind_Types.f90   \
+                           $(IfWSourceDir)/IfW_UniformWind.f90          \
+                           $(IfWSourceDir)/IfW_UniformWind_Types.f90    \
                            $(IfWSourceDir)/InflowWind.f90               \
                            $(IfWSourceDir)/InflowWind_Subs.f90          \
                            $(IfWSourceDir)/InflowWind_Types.f90         \
