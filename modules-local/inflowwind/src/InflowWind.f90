@@ -157,20 +157,22 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
          ! Local Variables
       INTEGER(IntKi)                                        :: I                 !< Generic counter
-
+      INTEGER(IntKi)                                        :: SumFileUnit       !< Unit number for the summary file
+      CHARACTER(256)                                        :: SumFileName       !< Name of the summary file
+      CHARACTER(256)                                        :: EchoFileName      !< Name of the summary file
 
 
          !----------------------------------------------------------------------------------------------
          ! Initialize variables and check to see if this module has been initialized before.
          !----------------------------------------------------------------------------------------------
 
-      ErrStat = ErrID_None
-      ErrMsg  = ""
+      ErrStat        =  ErrID_None
+      ErrMsg         =  ""
 
 
          ! Set a few variables.
 
-      ParamData%DT            = TimeInterval             ! InflowWind does not require a specific time interval, so this is never changed.
+      ParamData%DT   = TimeInterval             ! InflowWind does not require a specific time interval, so this is never changed.
       CALL NWTC_Init()
       CALL DispNVD( IfW_Ver )
 
@@ -193,14 +195,14 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          ! Set the names of the files based on the inputfilename
       ParamData%InputFileName = InitData%InputFileName
       CALL GetRoot( ParamData%InputFileName, ParamData%RootFileName )
-      ParamData%EchoFileName  = TRIM(ParamData%RootFileName)//".IfW.ech"
-      ParamData%SumFileName   = TRIM(ParamData%RootFileName)//".IfW.sum"
+      EchoFileName  = TRIM(ParamData%RootFileName)//".IfW.ech"
+      SumFileName   = TRIM(ParamData%RootFileName)//".IfW.sum"
 
 
          ! Parse all the InflowWind related input files and populate the *_InitDataType derived types
 
       IF ( InitData%UseInputFile ) THEN
-         CALL InflowWind_ReadInput( ParamData%InputFileName, ParamData%EchoFileName, InputFileData, TmpErrStat, TmpErrMsg )
+         CALL InflowWind_ReadInput( ParamData%InputFileName, EchoFileName, InputFileData, TmpErrStat, TmpErrMsg )
          CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
@@ -238,7 +240,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          RETURN
       ENDIF
 
-
+ 
 
          ! Allocate arrays for the WriteOutput
 
@@ -267,6 +269,21 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       InitOutData%WriteOutputHdr = ParamData%OutParam(1:ParamData%NumOuts)%Name
       InitOutData%WriteOutputUnt = ParamData%OutParam(1:ParamData%NumOuts)%Units     
  
+
+
+         ! If a summary file was requested, open it.
+      IF ( InputFileData%SumPrint ) THEN
+
+            ! Open the summary file and write some preliminary info to it
+         CALL InflowWind_OpenSumFile( SumFileUnit, SumFileName, IfW_Ver, ParamData%WindType, TmpErrStat, TmpErrMsg )
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         ENDIF
+      ELSE
+         SumFileUnit =  -1_IntKi       ! So that we don't try to write to something.  Used as indicator in submodules.
+      ENDIF
 
 
          ! Allocate the arrays for passing points in and velocities out
@@ -369,6 +386,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
                IF ( ErrStat >= AbortErrLev ) RETURN
             END IF
 
+
                ! Set the array information
             
             ParamData%UniformWind%Tdata(  :)       = 0.0_ReKi
@@ -408,14 +426,30 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             InitOutData%WindFileInfo%TI_listed        =  .FALSE.
       
 
+               ! Write summary file information
+            IF ( SumFileUnit > 0 ) THEN
+               WRITE(SumFileUnit,'(A)',IOSTAT=TmpErrStat)
+               WRITE(SumFileUnit,'(A80)',IOSTAT=TmpErrStat)          'Steady wind -- Constant wind profile for entire simulation. No windfile read in.'
+               WRITE(SumFileUnit,'(A40,G12.4)',IOSTAT=TmpErrStat)    '     Reference height:                  ',ParamData%UniformWind%RefHt
+               WRITE(SumFileUnit,'(A40,G12.4)',IOSTAT=TmpErrStat)    '     Horizontal velocity:               ',ParamData%UniformWind%V
+               WRITE(SumFileUnit,'(A40,G12.4)',IOSTAT=TmpErrStat)    '     Vertical sheer power law exponent: ',ParamData%UniformWind%VShr
+
+                  ! We are assuming that if the last line was written ok, then all of them were.
+               IF (TmpErrStat /= 0_IntKi) THEN
+                  CALL SetErrStat(ErrID_Fatal,'Error writing to summary file.',ErrStat,ErrMsg,RoutineName)
+                  CALL Cleanup
+                  RETURN
+               ENDIF   
+            ENDIF 
 
 
          CASE ( Uniform_WindNumber )
 
                ! Set InitData information
-            Uniform_InitData%ReferenceHeight =  InputFileData%Uniform_RefHt
-            Uniform_InitData%RefLength       =  InputFileData%Uniform_RefLength 
-            Uniform_InitData%WindFileName    =  InputFileData%Uniform_FileName
+            Uniform_InitData%ReferenceHeight          =  InputFileData%Uniform_RefHt
+            Uniform_InitData%RefLength                =  InputFileData%Uniform_RefLength 
+            Uniform_InitData%WindFileName             =  InputFileData%Uniform_FileName
+            Uniform_InitData%SumFileUnit              =  SumFileUnit
 
                ! Initialize the UniformWind module
             CALL IfW_UniformWind_Init(Uniform_InitData, InputGuess%PositionXYZ, ParamData%UniformWind, OtherStates%UniformWind, &
@@ -461,6 +495,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
                ! Set InitData information
             TSFF_InitData%WindFileName                   =  InputFileData%TSFF_FileName
+            TSFF_InitData%SumFileUnit                    =  SumFileUnit
 
                ! Initialize the TSFFWind module
             CALL IfW_TSFFWind_Init(TSFF_InitData, InputGuess%PositionXYZ, ParamData%TSFFWind, OtherStates%TSFFWind, &
@@ -504,8 +539,9 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          CASE ( BladedFF_WindNumber )
 
                ! Set InitData information
-            BladedFF_InitData%WindFileName      =  InputFileData%BladedFF_FileName
-            BladedFF_InitData%TowerFileExist    =  InputFileData%BladedFF_TowerFile
+            BladedFF_InitData%WindFileName               =  InputFileData%BladedFF_FileName
+            BladedFF_InitData%TowerFileExist             =  InputFileData%BladedFF_TowerFile
+            BladedFF_InitData%SumFileUnit                =  SumFileUnit
 
                ! Initialize the BladedFFWind module
             CALL IfW_BladedFFWind_Init(BladedFF_InitData, InputGuess%PositionXYZ, ParamData%BladedFFWind, OtherStates%BladedFFWind, &
@@ -647,8 +683,9 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       InitOutData%Ver   = IfW_Ver
 
 
-
-!FIXME: add summary file writing here
+         ! Close the summary file
+      CALL InflowWind_CloseSumFile( SumFileUnit, TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
 
 
       RETURN
@@ -663,7 +700,14 @@ CONTAINS
       CALL InflowWind_DestroyInputFile( InputFileData, TmpErrsTat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
 
-      CALL InflowWind_DestroyInputFile( InputFileData,  TmpErrStat, TmpErrMsg );  CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      CALL InflowWind_DestroyInputFile( InputFileData,  TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+
+         ! Close the summary file if we were writing one
+      IF ( SumFileUnit > 0 ) THEN
+         CALL InflowWind_CloseSumFile( SumFileUnit, TmpErrStat, TmpErrMsg )
+         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      ENDIF
 
 
    END SUBROUTINE CleanUp

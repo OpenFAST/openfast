@@ -17,11 +17,11 @@ include Registry_NWTC_Library.txt
 #########################
 
 typedef  IfW_TSFFWind/IfW_TSFFWind   InitInputType   CHARACTER(1024)  WindFileName      -     -     -     "Name of the wind file to use"                                 -
+typedef  ^                       ^                       IntKi    SumFileUnit       -     -     -     "Unit number for the summary file (-1 for none).  Provided by IfW." -
 
 
 # Init Output
 typedef  ^                       InitOutputType       ProgDesc    Ver               -     -     -     "Version information off FFWind submodule"                     -
-typedef  ^                       ^                       ReKi     HubHeight         -     -     -     "Height of the hub"                                            meters
 
 
 # Define any data that are not considered actual states here:

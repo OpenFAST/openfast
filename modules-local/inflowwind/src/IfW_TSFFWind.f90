@@ -576,8 +576,59 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, PositionXYZ, ParamData, OtherStates, &
                         TRIM( Num2LStr( ParamData%FFDTime*( ParamData%NFFSteps - 1 ) ) )//' seconds).'
       ENDIF
   
-      CALL WrScr( NewLine//TRIM(TmpErrMsg) ) 
-      
+      CALL WrScr( NewLine//TRIM(TmpErrMsg) )    ! Note: the TmpErrMsg gets used below for the summary file 
+
+
+
+      !-------------------------------------------------------------------------------------------------
+      ! Write to the summary file
+      !-------------------------------------------------------------------------------------------------
+
+   IF ( InitData%SumFileUnit > 0 ) THEN
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    'TurbSim wind type.  Read by InflowWind sub-module '//TRIM(IfW_TSFFWind_Ver%Name)//  &
+                                                                                 ' '//TRIM(IfW_TSFFWind_Ver%Ver)
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    TRIM(TmpErrMsg)
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    '     FileName:                    '//TRIM(ParamData%WindFileName)
+      WRITE(InitData%SumFileUnit,'(A34,I3)',   IOSTAT=TmpErrStat)    '     Binary file format id:       ',ParamData%WindFileFormat
+      WRITE(InitData%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Reference height (m):        ',ParamData%RefHt
+      WRITE(InitData%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Timestep (s):                ',ParamData%FFDTime
+      WRITE(InitData%SumFileUnit,'(A34,I12)',  IOSTAT=TmpErrStat)    '     Number of timesteps:         ',ParamData%NFFSteps
+      WRITE(InitData%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Mean windspeed (m/s):        ',ParamData%MeanFFWS
+      WRITE(InitData%SumFileUnit,'(A34,L1)',   IOSTAT=TmpErrStat)    '     Windfile is periodic:        ',ParamData%Periodic
+      WRITE(InitData%SumFileUnit,'(A34,L1)',   IOSTAT=TmpErrStat)    '     Windfile includes tower:     ',ParamData%TowerDataExist
+
+      IF ( ParamData%Periodic ) THEN
+         WRITE(InitData%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Time range (s):              [ '// &
+                     TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(ParamData%TotalTime))//' ]'
+      ELSE  ! Shift the time range to compensate for the shifting of the wind grid
+         WRITE(InitData%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Time range (s):              [ '// &
+                     TRIM(Num2LStr(-ParamData%InitXPosition*ParamData%InvMFFWS))//' : '// &
+                     TRIM(Num2LStr(ParamData%TotalTime-ParamData%InitXPosition*ParamData%InvMFFWS))//' ]'
+      ENDIF
+
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    '     Y range (m):                 [ '// &
+                     TRIM(Num2LStr(-ParamData%FFYHWid))//' : '//TRIM(Num2LStr(ParamData%FFYHWid))//' ]'
+
+      IF ( ParamData%TowerDataExist ) THEN
+         WRITE(InitData%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Z range (m):                 [ '// &
+                     TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(ParamData%RefHt + ParamData%FFZHWid))//' ]'
+      ELSE
+         WRITE(InitData%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Z range (m):                 [ '// &
+                     TRIM(Num2LStr(ParamData%RefHt - ParamData%FFZHWid))//' : '//TRIM(Num2LStr(ParamData%RefHt + ParamData%FFZHWid))//' ]'
+      ENDIF
+
+
+         ! We are assuming that if the last line was written ok, then all of them were.
+      IF (TmpErrStat /= 0_IntKi) THEN
+         CALL SetErrStat(ErrID_Fatal,'Error writing to summary file.',ErrStat,ErrMsg,RoutineName)
+         RETURN
+      ENDIF   
+   ENDIF 
+
+
+
+     
       
       RETURN
 

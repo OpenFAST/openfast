@@ -204,6 +204,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       IF ( TmpErrStat /=0 ) THEN
          CALL SetErrStat(ErrID_Fatal,' Error reading from uniform wind file on line '//TRIM(Num2LStr(NumComments))//'.',   &
                ErrStat, ErrMsg, RoutineName)
+         CLOSE(UnitWind)
          RETURN
       END IF
 
@@ -230,6 +231,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       TmpErrMsg=  ' Error reading data from Uniform wind file on line '// &
                   TRIM(Num2LStr(1+NumComments))//'.'
       CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      CLOSE(UnitWind)
       RETURN
    END IF
 
@@ -245,49 +247,73 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    IF (.NOT. ALLOCATED(ParamData%Tdata) ) THEN
       CALL AllocAry( ParamData%Tdata, ParamData%NumDataLines, 'Uniform wind time', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CLOSE(UnitWind)
+         RETURN
+      ENDIF
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%V) ) THEN
       CALL AllocAry( ParamData%V, ParamData%NumDataLines, 'Uniform wind horizontal wind speed', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CLOSE(UnitWind)
+         RETURN
+      ENDIF
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%Delta) ) THEN
       CALL AllocAry( ParamData%Delta, ParamData%NumDataLines, 'Uniform wind direction', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CLOSE(UnitWind)
+         RETURN
+      ENDIF
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%VZ) ) THEN
       CALL AllocAry( ParamData%VZ, ParamData%NumDataLines, 'Uniform vertical wind speed', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CLOSE(UnitWind)
+         RETURN
+      ENDIF
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%HShr) ) THEN
       CALL AllocAry( ParamData%HShr, ParamData%NumDataLines, 'Uniform horizontal linear shear', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CLOSE(UnitWind)
+         RETURN
+      ENDIF
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%VShr) ) THEN
       CALL AllocAry( ParamData%VShr, ParamData%NumDataLines, 'Uniform vertical power-law shear exponent', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CLOSE(UnitWind)
+         RETURN
+      ENDIF
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%VLinShr) ) THEN
       CALL AllocAry( ParamData%VLinShr, ParamData%NumDataLines, 'Uniform vertical linear shear', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CLOSE(UnitWind)
+         RETURN
+      ENDIF
    END IF
 
    IF (.NOT. ALLOCATED(ParamData%VGust) ) THEN
       CALL AllocAry( ParamData%VGust, ParamData%NumDataLines, 'Uniform gust velocity', TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CLOSE(UnitWind)
+         RETURN
+      ENDIF
    END IF
 
 
@@ -300,7 +326,10 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    DO I=1,NumComments
       CALL ReadCom( UnitWind, TRIM(InitData%WindFileName), 'Header line #'//TRIM(Num2LStr(I)), TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CLOSE(UnitWind)
+         RETURN
+      ENDIF
    END DO !I
 
 
@@ -314,7 +343,10 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
                 'Data from uniform wind file line '//TRIM(Num2LStr(NumComments+I)), TmpErrStat, TmpErrMsg)
       CALL SetErrStat(TmpErrStat,'Error retrieving data from the uniform wind file line'//TRIM(Num2LStr(NumComments+I)),   &
             ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CLOSE(UnitWind)
+         RETURN
+      ENDIF
 
       ParamData%Tdata(  I) = TmpData(1)
       ParamData%V(      I) = TmpData(2)
@@ -425,6 +457,31 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
    END IF
 
 
+
+      !-------------------------------------------------------------------------------------------------
+      ! Write to the summary file
+      !-------------------------------------------------------------------------------------------------
+
+   IF ( InitData%SumFileUnit > 0 ) THEN
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    'Uniform wind.  Module '//TRIM(IfW_UniformWind_Ver%Name)//  &
+                                                                                 ' '//TRIM(IfW_UniformWind_Ver%Ver)
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    '     FileName:                    '//TRIM(ParamData%WindFileName)
+      WRITE(InitData%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Reference height (m):        ',ParamData%RefHt
+      WRITE(InitData%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Reference length (m):        ',ParamData%RefLength
+      WRITE(InitData%SumFileUnit,'(A32,I8)',   IOSTAT=TmpErrStat)    '     Number of data lines:        ',ParamData%NumDataLines
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    '     Time range (s):              [ '// &
+                  TRIM(Num2LStr(InitOutData%WindFileTRange(1)))//' : '//TRIM(Num2LStr(InitOutData%WindFileTRange(2)))//' ]'
+
+         ! We are assuming that if the last line was written ok, then all of them were.
+      IF (TmpErrStat /= 0_IntKi) THEN
+         CALL SetErrStat(ErrID_Fatal,'Error writing to summary file.',ErrStat,ErrMsg,RoutineName)
+         RETURN
+      ENDIF   
+   ENDIF 
+
+
+
       !-------------------------------------------------------------------------------------------------
       ! Set the initial index into the time array (it indicates that we've initialized the module, too)
       ! and initialize the spatial scaling for the wind calculations
@@ -437,7 +494,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
       ! Set the InitOutput information
       !-------------------------------------------------------------------------------------------------
 
-   InitOutData%HubHeight   = ParamData%RefHt           
    InitOutdata%Ver         = IfW_UniformWind_Ver
 
 
