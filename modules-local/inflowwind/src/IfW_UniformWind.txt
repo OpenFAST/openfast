@@ -18,13 +18,13 @@ include Registry_NWTC_Library.txt
 
 typedef IfW_UniformWind/IfW_UniformWind InitInputType CHARACTER(1024) WindFileName  -     -     -     "Name of the wind file to use"                                 -
 typedef  ^                       ^                       ReKi     ReferenceHeight   -     -     -     "Hub height of the turbine"                                    meters
-typedef  ^                       ^                       ReKi     RefLength         -     -     -     "RefLength of the wind field to use"                               meters
+typedef  ^                       ^                       ReKi     RefLength         -     -     -     "RefLength of the wind field to use"                           meters
+typedef  ^                       ^                       IntKi    SumFileUnit       -     -     -     "Unit number for the summary file (-1 for none).  Provided by IfW." -
 
 
 
 # Init Output
 typedef  ^                       InitOutputType       ProgDesc    Ver               -     -     -     "Version information off HHWind submodule"                     -
-typedef  ^                       ^                       ReKi     HubHeight         -     -     -     "Height of the hub"                                            meters
 typedef  ^                       ^                       DbKi     WindFileDT        -     -     -     "TimeStep of the wind file -- zero value for none"             seconds
 typedef  ^                       ^                       ReKi     WindFileTRange    {2}   -     -     "Time range of the wind file"                                  seconds
 typedef  ^                       ^                       IntKi    WindFileNumTSteps -     -     -     "Number of timesteps in the time range of wind file"           -

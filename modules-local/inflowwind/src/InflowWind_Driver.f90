@@ -683,7 +683,6 @@ PROGRAM InflowWind_Driver
    !--------------------------------------------------------------------------------------------------------------------------------
 
 !TODO: save FFT info
-!TODO: print out the points info to file.
 !TODO: output file with data from IfW (on time steps)
 !TODO: Summary info
 
@@ -814,6 +813,9 @@ PROGRAM InflowWind_Driver
 
 !FFT calculations occur here.  Output to file.
 
+
+
+
    !--------------------------------------------------------------------------------------------------------------------------------
    !-=-=- We are done, so close everything down -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
@@ -822,14 +824,60 @@ PROGRAM InflowWind_Driver
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
                   InflowWind_y1,    ErrStat, ErrMsg )
 
+      ! Make sure no errors occured that give us reason to terminate now.
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL DriverCleanup()
+      CALL ProgAbort( ErrMsg )
+   ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose >= 7_IntKi ) ) THEN
+      CALL WrScr(NewLine//' InflowWind_End (1/3) returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
+                 NewLine//'                                ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+   ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose < 7_IntKi ) ) THEN
+      CALL ProgWarn( ErrMsg )
+   ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
+      CALL WrScr(NewLine//' InflowWind_End call 1 of 3:    ok')
+   ENDIF
+
+
+
    CALL InflowWind_End( InflowWind_u2, InflowWind_p, &
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
                   InflowWind_y2,    ErrStat, ErrMsg )
+
+      ! Make sure no errors occured that give us reason to terminate now.
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL DriverCleanup()
+      CALL ProgAbort( ErrMsg )
+   ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose >= 7_IntKi ) ) THEN
+      CALL WrScr(NewLine//' InflowWind_End (2/3) returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
+                 NewLine//'                                ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+   ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose < 7_IntKi ) ) THEN
+      CALL ProgWarn( ErrMsg )
+   ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
+      CALL WrScr(' InflowWind_End call 2 of 3:    ok')
+   ENDIF
+
+
 
    CALL InflowWind_End( InflowWind_u3, InflowWind_p, &
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
                   InflowWind_y3,    ErrStat, ErrMsg )
 
+      ! Make sure no errors occured that give us reason to terminate now.
+   IF ( ErrStat >= AbortErrLev ) THEN
+      CALL DriverCleanup()
+      CALL ProgAbort( ErrMsg )
+   ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose >= 7_IntKi ) ) THEN
+      CALL WrScr(NewLine//' InflowWind_End (3/3)  returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
+                 NewLine//'                                 ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+   ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( IfWDriver_Verbose < 7_IntKi ) ) THEN
+      CALL ProgWarn( ErrMsg )
+   ELSEIF ( IfWDriver_Verbose >= 7_IntKi ) THEN
+      CALL WrScr(' InflowWind_End call 3 of 3:    ok')
+   ENDIF
+
+
+
+   CALL DriverCleanup()
 
 CONTAINS
 

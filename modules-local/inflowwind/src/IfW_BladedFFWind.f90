@@ -345,6 +345,59 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
    InitOutdata%Ver         =  IfW_BladedFFWind_Ver
    InitOutdata%TI          =  TI
 
+
+
+      !-------------------------------------------------------------------------------------------------
+      ! Write to the summary file
+      !-------------------------------------------------------------------------------------------------
+
+   IF ( InitData%SumFileUnit > 0 ) THEN
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    'Bladed-style wind type.  Read by InflowWind sub-module '//   &
+                                                                     TRIM(IfW_BladedFFWind_Ver%Name)//' '//TRIM(IfW_BladedFFWind_Ver%Ver)
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    TRIM(TmpErrMsg)
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    '     FileName:                    '//TRIM(ParamData%WindFileName)
+      WRITE(InitData%SumFileUnit,'(A34,I3)',   IOSTAT=TmpErrStat)    '     Binary file format id:       ',ParamData%WindFileFormat
+      WRITE(InitData%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Reference height (m):        ',ParamData%RefHt
+      WRITE(InitData%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Timestep (s):                ',ParamData%FFDTime
+      WRITE(InitData%SumFileUnit,'(A34,I12)',  IOSTAT=TmpErrStat)    '     Number of timesteps:         ',ParamData%NFFSteps
+      WRITE(InitData%SumFileUnit,'(A34,G12.4)',IOSTAT=TmpErrStat)    '     Mean windspeed (m/s):        ',ParamData%MeanFFWS
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    '     Characteristic TI:            [ '// &
+                                                TRIM(Num2LStr(TI(1)))//', '//TRIM(Num2LStr(TI(2)))//', '//TRIM(Num2LStr(TI(3)))//' ] '
+      WRITE(InitData%SumFileUnit,'(A34,L1)',   IOSTAT=TmpErrStat)    '     Windfile is periodic:        ',ParamData%Periodic
+      WRITE(InitData%SumFileUnit,'(A34,L1)',   IOSTAT=TmpErrStat)    '     Windfile includes tower:     ',ParamData%TowerDataExist
+
+      IF ( ParamData%Periodic ) THEN
+         WRITE(InitData%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Time range (s):              [ '// &
+                     TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(ParamData%TotalTime))
+      ELSE  ! Shift the time range to compensate for the shifting of the wind grid
+         WRITE(InitData%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Time range (s):              [ '// &
+                     TRIM(Num2LStr(-ParamData%InitXPosition*ParamData%InvMFFWS))//' : '// &
+                     TRIM(Num2LStr(ParamData%TotalTime-ParamData%InitXPosition*ParamData%InvMFFWS))//' ]'
+      ENDIF
+
+      WRITE(InitData%SumFileUnit,'(A)',        IOSTAT=TmpErrStat)    '     Y range (m):                 [ '// &
+                     TRIM(Num2LStr(-ParamData%FFYHWid))//' : '//TRIM(Num2LStr(ParamData%FFYHWid))//' ]'
+
+      IF ( ParamData%TowerDataExist ) THEN
+         WRITE(InitData%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Z range (m):                 [ '// &
+                     TRIM(Num2LStr(0.0_ReKi))//' : '//TRIM(Num2LStr(ParamData%RefHt + ParamData%FFZHWid))//' ]'
+      ELSE
+         WRITE(InitData%SumFileUnit,'(A)',     IOSTAT=TmpErrStat)    '     Z range (m):                 [ '// &
+                     TRIM(Num2LStr(ParamData%RefHt - ParamData%FFZHWid))//' : '//TRIM(Num2LStr(ParamData%RefHt + ParamData%FFZHWid))//' ]'
+      ENDIF
+
+
+         ! We are assuming that if the last line was written ok, then all of them were.
+      IF (TmpErrStat /= 0_IntKi) THEN
+         CALL SetErrStat(ErrID_Fatal,'Error writing to summary file.',ErrStat,ErrMsg,RoutineName)
+         RETURN
+      ENDIF   
+   ENDIF 
+
+
+
+ 
    RETURN
 
 
@@ -1642,6 +1695,7 @@ SUBROUTINE IfW_BladedFFWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates
       END IF
 
    ENDDO
+
 
 
    RETURN

@@ -18,6 +18,7 @@ include Registry_NWTC_Library.txt
 
 typedef  IfW_BladedFFWind/IfW_BladedFFWind   InitInputType   CHARACTER(1024)  WindFileName      -     -     -     "Name of the wind file to use"                                 -
 typedef  ^                       ^                       Logical  TowerFileExist    -     -     -     "Tower file exists"                                            -
+typedef  ^                       ^                       IntKi    SumFileUnit       -     -     -     "Unit number for the summary file (-1 for none).  Provided by IfW." -
 
 
 # Init Output
