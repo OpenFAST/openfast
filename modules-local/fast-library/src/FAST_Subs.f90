@@ -8109,6 +8109,17 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    IF ( ALLOCATED(DbKiBuf)  ) DEALLOCATE(DbKiBuf)
    IF ( ALLOCATED(IntKiBuf) ) DEALLOCATE(IntKiBuf)    
    
+   
+      ! A sort-of hack to restore MAP DLL data (in particular Turbine%MAP%OtherSt%C_Obj%object)
+    ! these must be the same variables that are used in MAP_Init because they get allocated in the DLL and
+    ! destroyed in MAP_End
+   IF (Turbine%p_FAST%CompMooring == Module_MAP) THEN
+      CALL MAP_Restart( Turbine%MAP%Input(1), Turbine%MAP%p, Turbine%MAP%x(STATE_CURR), Turbine%MAP%xd(STATE_CURR), &
+                        Turbine%MAP%z(STATE_CURR), Turbine%MAP%OtherSt, Turbine%MAP%y, ErrStat2, ErrMsg2 )   
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                           
+   END IF
+   
+   
       ! A hack to restore Bladed-style DLL data
    IF (Turbine%SrvD%p%UseBladedInterface .AND. Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) > 0   ) THEN
          ! store value to be overwritten
