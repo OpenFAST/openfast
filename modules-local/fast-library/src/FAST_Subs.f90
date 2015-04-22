@@ -859,7 +859,10 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
    
    ! bjj: note that I'm not closing the summary file here, though at the present time we don't write to this file again.
    ! In the future, we may want to write additional information to this file during the simulation.
+   ! bjj 4/21/2015: closing the file now because of restart. If it needs to be open later, we can change it again.
    
+   CLOSE( y_FAST%UnSum )        
+   y_FAST%UnSum = -1
 
 END SUBROUTINE FAST_WrSum
 !----------------------------------------------------------------------------------------------------------------------------------

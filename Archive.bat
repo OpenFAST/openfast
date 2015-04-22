@@ -35,8 +35,8 @@ IF NOT "%1"==""  GOTO DeleteOld
 :DeleteOld
 @IF EXIST ARCHTMP.zip DEL ARCHTMP.zip
 @IF EXIST ARCHTMP.exe DEL ARCHTMP.exe
-@IF EXIST ARCHTMP.tar DEL ARCHTMP.tar
-@IF EXIST ARCHTMP.tar.gz DEL ARCHTMP.tar.gz
+@IF EXIST %PROGNAME%.tar DEL %PROGNAME%.tar
+@IF EXIST %PROGNAME%.tar.gz DEL %PROGNAME%.tar.gz
 
 rem CALL CopyFilesForRelease.bat
 
@@ -71,10 +71,10 @@ rem CALL CopyFilesForRelease.bat
 @ECHO --------------------------------------------------------------------------------------
 @ECHO.
 @rem first create a tar file, then compress it (gzip allows only one file)
-@%SEVENZIP% a -ttar ARCHTMP @ArcFiles.txt
-@%SEVENZIP% a -tgzip ARCHTMP.tar.gz ARCHTMP.tar
-@COPY ARCHTMP.tar.gz %ARCHPATH%\%ARCHNAME%.tar.gz
-@DEL ARCHTMP.tar, ARCHTMP.tar.gz
+@%SEVENZIP% a -ttar %PROGNAME% @ArcFiles.txt
+@%SEVENZIP% a -tgzip %PROGNAME%.tar.gz %PROGNAME%.tar
+@COPY %PROGNAME%.tar.gz %ARCHPATH%\%ARCHNAME%.tar.gz
+@DEL %PROGNAME%.tar, %PROGNAME%.tar.gz
 
 
 :Done

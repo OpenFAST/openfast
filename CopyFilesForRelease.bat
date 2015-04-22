@@ -24,7 +24,7 @@ IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
 :Registry
 ECHO FAST Registry
-COPY "%REG_Loc%\registry.exe"        "%bin_dir%\Registry_win32.exe"
+COPY "%Registry%"        "%bin_dir%\Registry_Win32.exe"
 
 SET src_folder=%REG_Loc%
 SET dst_folder=%depend_dir%\Registry

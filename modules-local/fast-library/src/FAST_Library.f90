@@ -265,5 +265,81 @@ subroutine FAST_End() BIND (C, NAME='FAST_End')
    
 end subroutine FAST_End
 !==================================================================================================================================
+subroutine FAST_CreateCheckpoint(CheckpointRootName_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CreateCheckpoint')
+!DEC$ ATTRIBUTES DLLEXPORT::FAST_CreateCheckpoint
+   USE FAST_Data
+   IMPLICIT NONE
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_CreateCheckpoint
+   CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)      
+   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
+   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
+   
+   ! local
+   CHARACTER(IntfStrLen)                 :: CheckpointRootName   
+   INTEGER(IntKi)                        :: I
+   INTEGER(IntKi)                        :: Unit
+             
+   
+      ! transfer the character array from C to a Fortran string:   
+   CheckpointRootName = TRANSFER( CheckpointRootName_c, CheckpointRootName )
+   I = INDEX(CheckpointRootName,C_NULL_CHAR) - 1                 ! if this has a c null character at the end...
+   IF ( I > 0 ) CheckpointRootName = CheckpointRootName(1:I)     ! remove it
+   
+   Unit = -1
+   CALL FAST_CreateCheckpoint_T(t_initial, n_t_global, 1, Turbine, CheckpointRootName, ErrStat, ErrMsg, Unit )
+
+      ! transfer Fortran variables to C:      
+   ErrStat_c = ErrStat
+   ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+
+
+#ifdef CONSOLE_FILE   
+   if (ErrStat /= ErrID_None) call wrscr1(trim(ErrMsg))
+#endif   
+      
+end subroutine FAST_CreateCheckpoint 
+!==================================================================================================================================
+subroutine FAST_Restart(CheckpointRootName_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Restart')
+!DEC$ ATTRIBUTES DLLEXPORT::FAST_Restart
+   USE FAST_Data
+   IMPLICIT NONE
+!GCC$ ATTRIBUTES DLLEXPORT :: FAST_Restart
+   CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)      
+   INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
+   CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
+   
+   ! local
+   CHARACTER(IntfStrLen)                 :: CheckpointRootName   
+   INTEGER(IntKi)                        :: I
+   INTEGER(IntKi)                        :: Unit
+   REAL(DbKi)                            :: t_initial_out
+   INTEGER(IntKi)                        :: NumTurbines_out
+   CHARACTER(*),           PARAMETER     :: RoutineName = 'FAST_Restart' 
+             
+   
+      ! transfer the character array from C to a Fortran string:   
+   CheckpointRootName = TRANSFER( CheckpointRootName_c, CheckpointRootName )
+   I = INDEX(CheckpointRootName,C_NULL_CHAR) - 1                 ! if this has a c null character at the end...
+   IF ( I > 0 ) CheckpointRootName = CheckpointRootName(1:I)     ! remove it
+   
+   Unit = -1
+   CALL FAST_RestoreFromCheckpoint_T(t_initial_out, n_t_global, NumTurbines_out, Turbine, CheckpointRootName, ErrStat, ErrMsg, Unit )
+   
+      ! check that these are valid:
+      IF (t_initial_out /= t_initial) CALL SetErrStat(ErrID_Fatal, "invalid value of t_initial.", ErrStat, ErrMsg, RoutineName )
+      IF (NumTurbines_out /= 1) CALL SetErrStat(ErrID_Fatal, "invalid value of NumTurbines.", ErrStat, ErrMsg, RoutineName )
+   
+   
+      ! transfer Fortran variables to C:      
+   ErrStat_c = ErrStat
+   ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+
+
+#ifdef CONSOLE_FILE   
+   if (ErrStat /= ErrID_None) call wrscr1(trim(ErrMsg))
+#endif   
+      
+end subroutine FAST_Restart 
+!==================================================================================================================================   
 
 
