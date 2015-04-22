@@ -1183,7 +1183,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   node_t *q, * r ;
   int i, j, max_ndims, max_nrecurs, max_alloc_ndims;
 
-  if (!strcmpi(typnm, "output")){
+  if (!strcmp(make_lower_temp(typnm), "output")){
      strcpy(uy,"y");
   }
   else{ 
