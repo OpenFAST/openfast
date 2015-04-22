@@ -354,8 +354,11 @@ gen_c_module( FILE * fph, node_t * ModName )
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
       if ( q->usefrom == 0 ) {
+        if (q->mapsto) remove_nickname(ModName->nickname, make_lower_temp(q->mapsto), nonick);
         fprintf(fph,  "  typedef struct %s {\n",q->mapsto) ;
-        fprintf(fph,  "    void * object ;\n") ; 
+        //if (!strcmp(make_lower_temp(nonick), "otherstatetype") !strcmp(make_lower_temp(nonick), "initinputtype")){
+           fprintf(fph, "    void * object ;\n");
+        //}
         if ( sw_embed_class_ptr ) {
           fprintf(fph,"    %s * class ; // user must define a class named %s in C++ code\n",q->mapsto,q->mapsto) ;
           fprintf(fph,"    int *index ;\n") ;
@@ -366,7 +369,7 @@ gen_c_module( FILE * fph, node_t * ModName )
           if ( r->type != NULL ) {
             star = ' ' ;
             if ( r->ndims > 0 ) {
-              if ( r->dims[0]->deferred ) star = '*' ;
+               if ( has_deferred_dim(r, 0) ) star = '*';
             }
             if ( r->type->type_type == DERIVED ) {
               if ( strcmp(make_lower_temp(r->type->mapsto),"meshtype") ) { // do not output mesh types for C code,
@@ -375,7 +378,7 @@ gen_c_module( FILE * fph, node_t * ModName )
             } else {
               char tmp[NAMELEN] ; tmp[0] = '\0' ;
               if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , tmp ) ;
-              if ( r->ndims > 0 && r->dims[0]->deferred ) {
+              if (r->ndims > 0 && has_deferred_dim(r, 0)) {
                 fprintf(fph,"    %s * %s ; ",C_type( r->type->mapsto), r->name ) ;
                 fprintf(fph,"    int %s_Len ;",r->name ) ;
               } else {
@@ -388,8 +391,9 @@ gen_c_module( FILE * fph, node_t * ModName )
                     p++;
                   }
                 }    
-                if ( strcmp( C_type(r->type->mapsto), "char" )==0 ){ // if it's a char we need to add the array size
-                  fprintf(fph,"    %s %s[%s] ;",C_type( r->type->mapsto ),r->name,buf ) ;
+                if (strcmp(C_type(r->type->mapsto), "char") == 0 ){ // if it's a char we need to add the array size
+                   if (r->ndims == 0) 
+                      fprintf(fph,"    %s %s[%s] ;",C_type( r->type->mapsto ),r->name,buf ) ;
                 } else { // else, it's just a double or int value
                   fprintf(fph,"    %s %s ;",C_type( r->type->mapsto ),r->name ) ;
                 }                
@@ -397,10 +401,10 @@ gen_c_module( FILE * fph, node_t * ModName )
             }
             for ( i = 0 ; i < r->ndims ; i++ )
             {
-              if ( ! r->dims[0]->deferred ) 
-                fprintf(fph,"[((%d)-(%d)+1)] ;",r->dims[i]->coord_end,r->dims[i]->coord_start) ;
+               if (!has_deferred_dim(r, 0) && (strcmp(C_type(r->type->mapsto), "char") || r->ndims == 0)) //  skip this for characters?
+                fprintf(fph,"[%d] ;",r->dims[i]->coord_end - r->dims[i]->coord_start +1) ;
             }
-            fprintf(fph,"\n") ;
+            fprintf(fph, "\n");
           }
         }
         fprintf(fph,"  } %s_t ;\n", q->mapsto ) ;
