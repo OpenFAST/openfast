@@ -11,6 +11,7 @@ MODULE MAP
    PUBLIC :: MAP_UpdateStates
    PUBLIC :: MAP_CalcOutput
    PUBLIC :: MAP_End
+   PUBLIC :: MAP_Restart
 
 
    INTERFACE ! BEGIN: Interface to external C functions                                                                              
@@ -346,9 +347,131 @@ MODULE MAP
   !==========================================================================================================
 
   
-CONTAINS
+   CONTAINS
 
+  !==========   MAP_Restart   ======     <----------------------------------------------------------------------+
+  SUBROUTINE MAP_Restart( u, p, x, xd, z, other, y, ErrStat, ErrMsg )  
+  ! This routine is used on restart (in place of MAP_Init). It is used to get other%C_obj%object from stored values and to make sure the allocated
+  ! memory is aligned in a way the MAP DLL is happy with.
+  
+    TYPE( MAP_InputType ),           INTENT(INOUT)  :: u           ! INTENT(  OUT) : An initial guess for the input; input mesh must be defined
+    TYPE( MAP_ParameterType ),       INTENT(INOUT)  :: p           ! INTENT(  OUT) : Parameters
+    TYPE( MAP_ContinuousStateType ), INTENT(INOUT)  :: x           ! INTENT(  OUT) : Initial continuous states
+    TYPE( MAP_DiscreteStateType ),   INTENT(INOUT)  :: xd          ! INTENT(  OUT) : Initial discrete states
+    TYPE( MAP_ConstraintStateType ), INTENT(INOUT)  :: z           ! INTENT(  OUT) : Initial guess of the constraint states
+    TYPE( MAP_OtherStateType ),      INTENT(INOUT)  :: other       ! INTENT(  OUT) : Initial other/optimization states
+    TYPE( MAP_OutputType ),          INTENT(INOUT)  :: y           ! INTENT(  OUT) : Initial system outputs (outputs are not calculated; only the output mesh is initialized)  
+  
+  
+    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
+    ! Local variables
+    TYPE( MAP_InitInputType )                       :: InitInp     ! INTENT(IN  ) : Input data for initialization routine
+    TYPE( MAP_InitOutputType )                      :: InitOut     ! Output for initialization routine
+    TYPE( MAP_InputType )                           :: u_tmp       ! INTENT(  OUT) : An initial guess for the input; input mesh must be defined
+    TYPE( MAP_ContinuousStateType )                 :: x_tmp       ! INTENT(  OUT) : Initial continuous states
+    TYPE( MAP_DiscreteStateType )                   :: xd_tmp      ! INTENT(  OUT) : Initial discrete states
+    TYPE( MAP_ConstraintStateType )                 :: z_tmp       ! INTENT(  OUT) : Initial guess of the constraint states
+    TYPE( MAP_OtherStateType )                      :: other_tmp   ! INTENT(  OUT) : Initial other/optimization states
+    TYPE( MAP_OutputType )                          :: y_tmp       ! INTENT(  OUT) : Initial system outputs (outputs are not calculated; only the output mesh is initialized)
+
+    INTEGER(KIND=C_INT)                             :: status_from_MAP 
+    CHARACTER(KIND=C_CHAR), DIMENSION(1024)         :: message_from_MAP
+    
+    INTEGER(IntKi)                                  :: ErrStat2     ! Error status of the operation
+    CHARACTER(1024)                                 :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
+    CHARACTER(*), PARAMETER                         :: RoutineName = 'MAP_Restart'
+    
+        
+    ErrStat = ErrID_None
+    ErrMsg  = "" 
+ 
+    status_from_MAP = 0
+    message_from_MAP =  " "
+  
+      ! copy the data so we can use it later  (need to allocate these original types inside the MAP DLL so we don't get errors on deallocation later)
+    CALL MAP_CopyInput(         u,    u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_CopyContState(     x,    x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_CopyDiscState(    xd,   xd_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_CopyConstrState(   z,    z_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_CopyOtherState(other,other_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_CopyOutput(        y,    y_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    
+      ! now we'll clear out these types for use in the MAP DLL    
+    CALL MAP_DestroyInput(         u, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_DestroyContState(     x, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_DestroyDiscState(    xd, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_DestroyConstrState(   z, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_DestroyOtherState(other, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_DestroyOutput(        y, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    
+        
+    InitInp%C_obj%object = MAP_InitInput_Create(message_from_MAP,status_from_MAP)         ! routine in MAP dll      
+      CALL MAP_ERROR_CHECKER(message_from_MAP,status_from_MAP,ErrMsg2,ErrStat2)
+      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            
+    other%C_obj%object   = MAP_OtherState_Create(message_from_MAP,status_from_MAP)        ! routine in MAP dll
+      CALL MAP_ERROR_CHECKER(message_from_MAP,status_from_MAP,ErrMsg2,ErrStat2)
+      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+    InitInp%C_Obj%summary_file_name = ""
+    InitInp%C_Obj%summary_file_name(1) = C_NULL_CHAR     
+    CALL MAP_set_summary_file_name(InitInp%C_obj, message_from_map, status_from_MAP); 
+      CALL MAP_ERROR_CHECKER(message_from_MAP,status_from_MAP,ErrMsg2,ErrStat2); 
+      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)      
+      
+    CALL MAP_Initialize_Base(u%C_obj, p%C_obj, x%C_obj, z%C_obj, other%C_obj, y%C_obj, InitOut%C_obj)    ! routine in MAP dll
+  
+    CALL map_set_input_file_contents(InitInp, p)
+
+    
+    ! This binds MSQS_Init function in C++ with Fortran
+    CALL MSQS_Init(InitInp%C_obj   , &
+                   u%C_obj         , &
+                   p%C_obj         , &
+                   x%C_obj         , &
+                   xd%C_obj        , &
+                   z%C_obj         , &
+                   other%C_obj     , &
+                   y%C_obj         , &
+                   InitOut%C_obj   , &
+                   status_from_MAP , &
+                   message_from_MAP )
+      CALL MAP_ERROR_CHECKER(message_from_MAP,status_from_MAP,ErrMsg2,ErrStat2);
+      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+            
+      ! make sure the C and Fortran sides are consistent before deleting them on the Fortran side:
+    CALL MAP_C2Fary_CopyInput(u,          ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
+    CALL MAP_C2Fary_CopyContState(x,      ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
+    CALL MAP_C2Fary_CopyDiscState(xd,     ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
+    CALL MAP_C2Fary_CopyConstrState(z,    ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
+    CALL MAP_C2Fary_CopyOtherState(other, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
+    CALL MAP_C2Fary_CopyOutput(y,         ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
+      
+    
+      ! copy the data back so we can use it
+    CALL MAP_CopyInput(         u_tmp,    u, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_CopyContState(     x_tmp,    x, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_CopyDiscState(    xd_tmp,   xd, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_CopyConstrState(   z_tmp,    z, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_CopyOtherState(other_tmp,other, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_CopyOutput(        y_tmp,    y, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    
+      ! now we'll destroy these temporary types    
+    CALL MAP_DestroyInput(         u_tmp, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_DestroyContState(     x_tmp, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_DestroyDiscState(    xd_tmp, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_DestroyConstrState(   z_tmp, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_DestroyOtherState(other_tmp, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_DestroyOutput(        y_tmp, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+                            
+    CALL MAP_DestroyInitInput(   InitInp, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+    CALL MAP_DestroyInitOutput(  InitOut, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
+
+  END SUBROUTINE MAP_Restart
+   
   !==========   MAP_Init   ======     <----------------------------------------------------------------------+
   SUBROUTINE MAP_Init( InitInp, u, p, x, xd, z, other, y, Interval, InitOut, ErrStat, ErrMsg )    
     IMPLICIT NONE
@@ -427,7 +550,7 @@ IF (ErrStat >= AbortErrLev) RETURN
 
     ! Read the MAP input file, and pass the arguments to the C++ sructures. 
     ! @note : this call the following C function in MAP_FortranBinding.cpp
-    CALL map_read_input_file_contents(InitInp%file_name , InitInp, ErrStat2)
+    CALL map_read_input_file_contents(InitInp%file_name , InitInp, p, ErrStat2)
       CALL SetErrStat(ErrStat2,"Cannot read the MAP input file.", ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN
 
@@ -458,11 +581,11 @@ IF (ErrStat >= AbortErrLev) RETURN
         
     CALL MAP_C2Fary_CopyConstrState(z, ErrStat2, ErrMsg2); 
       CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
-    CALL MAP_C2Fary_CopyOutput(y, ErrStat, ErrMsg)
+    CALL MAP_C2Fary_CopyOutput(y, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
-    CALL MAP_C2Fary_CopyOtherState(other, ErrStat, ErrMsg)
+    CALL MAP_C2Fary_CopyOtherState(other, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
-    CALL MAP_C2Fary_CopyInput(u, ErrStat, ErrMsg)
+    CALL MAP_C2Fary_CopyInput(u, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
     CALL MAP_C2Fary_CopyParam(p, ErrStat2, ErrMsg2);  ! copy these scalars for pack/unpack reasons
       CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)    
@@ -747,24 +870,36 @@ IF (ErrStat >= AbortErrLev) RETURN
  !                                                                                              !          |
   ! Reads the MAP input files. Assumes the MAP input file is formated as demonstrated with the 
   !   MAP distruction archives. Any changes to the format, and this read function may fail.    
-  SUBROUTINE map_read_input_file_contents(file, InitInp, ErrStat)                              
+  SUBROUTINE map_read_input_file_contents(file, InitInp, p, ErrStat)                              
+    TYPE(MAP_ParameterType), INTENT(INOUT) :: p                     
     TYPE(MAP_InitInputType), INTENT(INOUT) :: InitInp                     
     CHARACTER(255) ,         INTENT(IN   ) :: file                        
     INTEGER(IntKi),          INTENT(  OUT) :: ErrStat                     
     INTEGER                                :: success                     
-    INTEGER                                :: index_begn=1                
-    INTEGER                                :: index_cabl=0                
-    INTEGER                                :: index_node=0                
-    INTEGER                                :: index_elem=0                
-    INTEGER                                :: index_optn=0                
-    INTEGER                                :: i 
-    INTEGER                                :: N 
+    INTEGER                                :: index_begn                
+    INTEGER                                :: index_cabl                
+    INTEGER                                :: index_node                
+    INTEGER                                :: index_elem                
+    INTEGER                                :: index_optn                
+    INTEGER                                :: iLine 
     CHARACTER(255)                         :: line
    
     INTEGER                                :: Un
     CHARACTER(1024)                        :: ErrMsg
+    CHARACTER(*), PARAMETER                :: RoutineName = 'map_read_input_file_contents'
                                                                                                  
     ErrStat = ErrID_None  
+    
+    index_begn=1
+    index_cabl=0
+    index_node=0
+    index_elem=0
+    index_optn=0    
+    
+    iLine=0
+    
+    p%InputLineType = ""
+!    p%InputLines = ""
     
     ! Open the MAP input file
     Un = -1  
@@ -772,6 +907,7 @@ IF (ErrStat >= AbortErrLev) RETURN
     CALL OpenFInpFile ( Un, file, ErrStat, ErrMsg )
     IF ( ErrStat >= AbortErrLev )RETURN
 
+    
     ! Read the contents of the MAP input file                                     
     DO                                          
        READ( Un , '(A)' , IOSTAT=success ) line ! read one line of the MAP input file
@@ -779,21 +915,25 @@ IF (ErrStat >= AbortErrLev) RETURN
       ! we are no longer reading the MAP input file if we          
       !   reached the end                                          
       IF ( success.NE.0 ) EXIT                                     
-                                                                   
+                         
+      
       ! populate the cable library parameter                       
       IF ( index_begn.EQ.1 ) THEN                                  
          index_cabl = index_cabl + 1                               
          IF ( index_cabl.GE.4 ) THEN                               
              IF ( line(1:1).EQ."-" ) THEN                    
                index_begn=2                                        
-            ELSE                                                   
-                N = LEN_TRIM(line)
-                DO i = 1,N
-                   InitInp%C_obj%library_input_str(i) = line(i:i)   
-                END DO
-                InitInp%C_obj%library_input_str(N+1) = ' ' 
-                InitInp%C_obj%library_input_str(N+2) = C_NULL_CHAR
-               CALL MAP_SetCableLibraryData(InitInp%C_obj)         
+             ELSE                                                   
+                iLine = iLine + 1
+                if (iLine > SIZE(p%InputLines)) THEN
+                   CALL WrScr("Too many lines in MAP input file.")
+                   CLOSE ( Un )
+                   ErrStat = ErrID_Fatal
+                   RETURN 
+                end if
+                
+                p%InputLines(iLine) = line
+                p%InputLineType(iLine) = 'C'
             END IF                                                 
          END IF                                                    
       END IF                                                       
@@ -805,14 +945,18 @@ IF (ErrStat >= AbortErrLev) RETURN
          IF ( index_node.GE.4 ) THEN                               
              IF ( line(1:1).EQ."-" ) THEN          
                index_begn=3                                        
-            ELSE                                                   
-                N = LEN_TRIM(line)
-                DO i = 1,N
-                   InitInp%C_obj%node_input_str(i) = line(i:i)   
-                END DO
-                InitInp%C_obj%node_input_str(N+1) = ' '
-                InitInp%C_obj%node_input_str(N+2) = C_NULL_CHAR
-               CALL MAP_SetNodeData(InitInp%C_obj)                 
+             ELSE                  
+                
+                iLine = iLine + 1
+                if (iLine > SIZE(p%InputLines)) THEN
+                   CALL WrScr("Too many lines in MAP input file.")
+                   CLOSE ( Un )
+                   ErrStat = ErrID_Fatal
+                   RETURN 
+                end if
+                
+                p%InputLines(iLine) = line
+                p%InputLineType(iLine) = 'N'
             END IF                                                 
          END IF                                                    
       END IF                                                       
@@ -824,14 +968,18 @@ IF (ErrStat >= AbortErrLev) RETURN
          IF ( index_elem.GE.4 ) THEN                               
              IF ( line(1:1).EQ."-" ) THEN               
                index_begn=4                                        
-            ELSE                                                   
-                N = LEN_TRIM(line)
-                DO i = 1,N
-                   InitInp%C_obj%line_input_str(i) = line(i:i)   
-                END DO
-                InitInp%C_obj%line_input_str(N+1) = ' '
-                InitInp%C_obj%line_input_str(N+2) = C_NULL_CHAR
-                CALL MAP_SetElementData(InitInp%C_obj)             
+             ELSE                      
+                
+                iLine = iLine + 1
+                if (iLine > SIZE(p%InputLines)) THEN
+                   CALL WrScr("Too many lines in MAP input file.")
+                   CLOSE ( Un )
+                   ErrStat = ErrID_Fatal
+                   RETURN 
+                end if
+                
+                p%InputLines(iLine) = line
+                p%InputLineType(iLine) = 'E'                
             END IF                                                 
          END IF                                                    
       END IF                                                       
@@ -841,24 +989,61 @@ IF (ErrStat >= AbortErrLev) RETURN
       IF ( index_begn.EQ.4 ) THEN                                  
          index_optn = index_optn + 1                               
          IF ( index_optn.GE.4 ) THEN                               
-             IF ( line(1:1).NE."!" )  THEN              
-                N = LEN_TRIM(line)
-                DO i = 1,N
-                   InitInp%C_obj%option_input_str(i) = line(i:i)   
-                END DO
-                InitInp%C_obj%option_input_str(N+1) = ' '
-                InitInp%C_obj%option_input_str(N+2) = C_NULL_CHAR
-               CALL MAP_SetSolverOptions(InitInp%C_obj)            
+             IF ( line(1:1).NE."!" )  THEN   
+                
+                iLine = iLine + 1
+                if (iLine > SIZE(p%InputLines)) THEN
+                   CALL WrScr("Too many lines in MAP input file.")
+                   ErrStat = ErrID_Fatal
+                   CLOSE ( Un )
+                   RETURN 
+                end if
+                
+                p%InputLines(iLine) = line
+                p%InputLineType(iLine) = 'S'
             END IF                                                 
          END IF                                                    
       END IF                                                       
    END DO                                                          
                                                                                
     ! Close the MAP input file                                                                   !          |
-    CLOSE( Un )                                                                
+    CLOSE( Un )               
+    
+    CALL map_set_input_file_contents(InitInp, p)
+    
   END SUBROUTINE map_read_input_file_contents                                                    !   -------+
  !==========================================================================================================
-
+  SUBROUTINE map_set_input_file_contents(InitInp, p)
+    TYPE(MAP_InitInputType), INTENT(INOUT) :: InitInp                     
+    TYPE(MAP_ParameterType), INTENT(INOUT) :: p                     
+    INTEGER                                :: iLine 
+                                                                                                 
+    
+    DO iLine = 1,SIZE(p%InputLines)
+      IF ( LEN_TRIM(p%InputLineType(1)) == 0 ) EXIT
+          
+      IF ( LEN_TRIM(p%InputLines(iLine)) + 2 <= SIZE(InitInp%C_obj%library_input_str) ) THEN ! make sure there is a C_NULL_CHAR on this string
+          
+         SELECT CASE( p%InputLineType(iLine) )
+         CASE('C')             
+            InitInp%C_obj%library_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%library_input_str )
+            CALL MAP_SetCableLibraryData(InitInp%C_obj)
+         CASE ('N')            
+            InitInp%C_obj%node_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%node_input_str )
+            CALL MAP_SetNodeData(InitInp%C_obj)                 
+         CASE ('E')
+            InitInp%C_obj%line_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%line_input_str )
+            CALL MAP_SetElementData(InitInp%C_obj)                 
+         CASE ('S')
+            InitInp%C_obj%option_input_str = TRANSFER(TRIM(p%InputLines(iLine))//" "//C_NULL_CHAR, InitInp%C_obj%option_input_str )
+            CALL MAP_SetSolverOptions(InitInp%C_obj)                  
+         END SELECT
+             
+       END IF
+    END DO
+               
+  END SUBROUTINE map_set_input_file_contents 
+ !==========================================================================================================
 
   ! ==========   MAP_ERROR   ======     <-------------------------------------------------------------------+
   !                                                                                              !          |
