@@ -6,6 +6,7 @@
    REAL(ReKi), INTENT(INOUT):: uf(:),vf(:),af(:),xf(:)
 
    REAL(ReKi):: rotf_temp(3), roti_temp(3), rot_temp(3)
+
    INTEGER(IntKi):: i, j, temp_id
 
    DO i=2, node_total
@@ -19,7 +20,7 @@
            roti_temp(j) = coef(8) * ainc(temp_id+3+j)
        ENDDO
 !       CALL CrvCompose_temp(rot_temp,roti_temp,rotf_temp,0)
-       CALL CrvCompose_temp(rot_temp,roti_temp,rotf_temp,0)
+       CALL CrvCompose(rot_temp,roti_temp,rotf_temp,0)
        DO j = 1, 3
            uf(temp_id+3+j) = rot_temp(j)
        ENDDO
