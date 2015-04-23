@@ -1179,7 +1179,7 @@ void
 gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnmlong )
 {
   char nonick[NAMELEN] ;
-  char *ddtname; char uy[1];
+  char *ddtname; char uy[2];
   node_t *q, * r ;
   int i, j, max_ndims, max_nrecurs, max_alloc_ndims;
 
