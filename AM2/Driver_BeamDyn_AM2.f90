@@ -95,15 +95,15 @@ PROGRAM MAIN
    ! -------------------------------------------------------------------------
 
    t_initial = 0.0D+00
-   t_final   = 1.0D+02
+   t_final   = 5.0D+00
 
    pc_max = 1  ! Number of predictor-corrector iterations; 1 corresponds to an explicit calculation where UpdateStates 
                ! is called only once  per time step for each module; inputs and outputs are extrapolated in time and 
                ! are available to modules that have an implicit dependence on other-module data
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
-!   dt_global = 1.0D-03
-   dt_global = 1.0D-03*5.0D0
+   dt_global = 1.0D-03
+!   dt_global = 1.0D-03*5.0D0
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -135,7 +135,8 @@ PROGRAM MAIN
 !   BD_InitInput%InputFile = 'BeamDyn_Input_CX100.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_5MW.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_5MW_New.inp'
-   BD_InitInput%InputFile = 'Siemens_53_Input.inp'
+!   BD_InitInput%InputFile = 'Siemens_53_Input.inp'
+BD_InitInput%InputFile = 'Coupling_Debug.inp'
 !   BD_InitInput%InputFile = 'GA2_Debug.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_DTU10MW.inp'
 !   BD_InitInput%InputFile = 'BeamDyn_Input_Sample.inp'
@@ -144,7 +145,7 @@ PROGRAM MAIN
 !   BD_InitInput%InputFile = 'BeamDyn_Curved.inp'
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
    ALLOCATE(BD_InitInput%gravity(3)) 
-   BD_InitInput%gravity(1) = -9.80665
+   BD_InitInput%gravity(1) = 0.0D0 !-9.80665
    BD_InitInput%gravity(2) = 0.0D0 
    BD_InitInput%gravity(3) = 0.0D0 
 
@@ -157,7 +158,7 @@ PROGRAM MAIN
    BD_InitInput%GlbRot(:,:) = 0.0D0
    temp_vec(1) = 0.0
    temp_vec(2) = 0.0
-   temp_vec(3) = 0.0 !4.0D0*TAN((3.1415926D0/2.0D0)/4.0D0)
+   temp_vec(3) = 4.0D0*TAN((3.1415926D0/2.0D0)/4.0D0)
    CALL CrvMatrixR(temp_vec,temp_R)
    BD_InitInput%GlbRot(1:3,1:3) = temp_R(1:3,1:3)
 
@@ -278,10 +279,10 @@ WRITE(*,*) "Time Step: ", n_t_global
 !                    temp_H(3,1),temp_H(3,2),temp_H(3,3)      
 CALL CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_total),temp_cc)
       WRITE(QiDisUnit,6000) t_global,&
-                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
-                           &temp_cc(1:3)
-!                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total),&
-!                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
+!                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
+!                           &temp_cc(1:3)
+                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total),&
+                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldForce%Force(1:3,1),&
 !                           &BD_OutPut(1)%BldForce%Moment(1:3,1)
@@ -385,11 +386,13 @@ END PROGRAM MAIN
    REAL(ReKi)              :: temp_qq(3)
    REAL(ReKi)              :: temp_R(3,3)
    REAL(ReKi)              :: pai
+   REAL(ReKi)              :: omega
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
    pai = ACOS(-1.0D0)
+   omega = pai*2.0D0/1.173D0
    temp_rr(:)     = 0.0D0
    temp_pp(:)     = 0.0D0
    temp_qq(:)     = 0.0D0
@@ -403,31 +406,24 @@ END PROGRAM MAIN
    ! Calculate root displacements and rotations
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%Orientation(:,:,:) = 0.0D0
-   temp_pp(3) = 4.0D0*TAN(((pai*t*1.0D0/3.0D0))/4.0D0)
-   CALL CrvMatrixR(temp_pp,temp_R)
-   u%RootMotion%Orientation(1:3,1:3,1) = MATMUL(temp_R(1:3,1:3),p%GlbRot)
-!   u%RootMotion%Orientation(1:3,1:3,1) = temp_R(1:3,1:3)
-   temp_vec(:) = MATMUL(temp_R,p%GlbPos(1:3)+MATMUL(p%GlbRot,p%uuN0(1:3,1)))
-   u%RootMotion%TranslationDisp(1:3,1)  = temp_vec(1:3) - (p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1)))
+   DO i=1,3
+       u%RootMotion%Orientation(i,i,1) = 1.0D0
+   ENDDO
+   u%RootMotion%TranslationDisp(1,1)  = 0.092*SIN(omega*t+pai/2.0D0)
    ! END Calculate root displacements and rotations
 
    ! Calculate root translational and angular velocities
    u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(:,:) = 0.0D0
 
-   u%RootMotion%RotationVel(3,1) = pai*1.0D0/3.0D0
-   u%RootMotion%TranslationVel(1:3,1) = -1.0D0*MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
-!   u%RootMotion%RotationVel(2,1) = -3.1415926D+00*1.0D0/3.0D0
-!   u%RootMotion%TranslationVel(1:3,1) = -1.0D0*MATMUL(Tilde(temp_vec),u%RootMotion%RotationVel(1:3,1))
+   u%RootMotion%TranslationVel(1,1) = 0.092*omega*COS(omega*t+pai/2.0D0)
    ! END Calculate root translational and angular velocities
 
 
    ! Calculate root translational and angular accelerations
    u%RootMotion%TranslationAcc(:,:) = 0.0D0
    u%RootMotion%RotationAcc(:,:) = 0.0D0
-   temp_vec2(1:3) = MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),temp_vec)
-   u%RootMotion%TranslationAcc(1:3,1) = MATMUL(Tilde(u%RootMotion%RotationVel(1:3,1)),temp_vec2) + &
-                                       &MATMUL(Tilde(u%RootMotion%RotationAcc(1:3,1)),temp_vec)
+   u%RootMotion%TranslationAcc(1,1) = -0.092*omega*omega*SIN(omega*t+pai/2.0D0)
    ! END Calculate root translational and angular accelerations
 !------------------
 ! End rotating beam
@@ -470,6 +466,12 @@ END PROGRAM MAIN
    ErrMsg  = ''
    ! Initial displacements and rotations
    x%q(:) = 0.0D0
+   DO i=1,p%elem_total
+       DO j=1,p%node_elem
+           temp_id = (i-1)*p%dof_node*p%node_elem+(j-1)*p%dof_node
+           x%q(temp_id+2) = -0.092
+       ENDDO
+   ENDDO
    ! Initial velocities and angular velocities
    DO i=1,p%elem_total
        DO j=1,p%node_elem

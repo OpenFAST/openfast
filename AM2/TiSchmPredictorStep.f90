@@ -1,8 +1,8 @@
-   SUBROUTINE TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,uuNf,vvNf,aaNf,xxNf,node_total,dof_node)
+   SUBROUTINE TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,uuNf,vvNf,aaNf,xxNf,uuNf_inc,node_total,dof_node)
 
    REAL(ReKi),INTENT(IN)::uuNi(:),vvNi(:),aaNi(:),xxNi(:)
    REAL(DbKi),INTENT(IN)::deltat,coef(:)
-   REAL(ReKi),INTENT(INOUT)::uuNf(:),vvNf(:),aaNf(:),xxNf(:)
+   REAL(ReKi),INTENT(INOUT)::uuNf(:),vvNf(:),aaNf(:),xxNf(:),uuNf_inc(:)
 
    INTEGER(IntKi),INTENT(IN)::node_total,dof_node
 
@@ -27,6 +27,8 @@
        DO j=1,3
            temp_id = (i - 1) * dof_node + j
            uuNf(temp_id) = uuNi(temp_id) + tr(j)
+           uuNf_inc(temp_id) = tr(j)
+           uuNf_inc(temp_id+3) = tr(j+3)
            tr_temp(j) = tr(j+3)
            uuNi_temp(j) = uuNi(temp_id + 3)
        ENDDO

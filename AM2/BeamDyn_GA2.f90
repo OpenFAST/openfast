@@ -19,6 +19,7 @@
    TYPE(BD_InputType)                           :: u_interp0    ! interpolated value of inputs 
 !   INTEGER(IntKi)                               :: flag_scale
    INTEGER(IntKi)                               :: i
+   REAL(ReKi)                                   :: uuNf_inc(p%dof_total)
 
    ! Initialize ErrStat
 
@@ -63,14 +64,15 @@
    CALL BD_Input_ExtrapInterp( u, utimes, u_interp, t+p%dt, ErrStat, ErrMsg )
    CALL TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
                              p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
-                             p%node_total,p%dof_node )
+                             uuNf_inc,p%node_total,p%dof_node )
 DO i=1,p%dof_total
 !WRITE(*,*) 'uuNf',i,x%q(i)
 ENDDO
    ! find x at t+dt
    CALL InputGlobalLocal(p,u_interp,0)
-   CALL BeamDyn_BoundaryGA2(x,u_interp,t+p%dt,OtherState,ErrStat,ErrMsg)
+   CALL BeamDyn_BoundaryGA2(x,p,u_interp,t+p%dt,OtherState,ErrStat,ErrMsg)
    CALL DynamicSolution_GA2( p%uuN0,x%q,x%dqdt,OtherState%acc,OtherState%xcc,&
+                             uuNf_inc,                                       &
                              p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,       &
                              p%damp_flag,p%beta,                             &
                              p%node_elem,p%dof_node,p%elem_total,p%dof_total,&

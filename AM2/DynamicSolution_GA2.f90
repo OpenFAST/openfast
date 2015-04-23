@@ -1,4 +1,5 @@
    SUBROUTINE DynamicSolution_GA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
+                                   uuNf_inc,                               &
                                    Stif0,Mass0,gravity,u,damp_flag,beta,   &
                                    node_elem,dof_node,elem_total,dof_total,&
                                    node_total,niter,ngp,coef)
@@ -22,6 +23,7 @@
    REAL(ReKi),         INTENT(INOUT):: vvNf(:)
    REAL(ReKi),         INTENT(INOUT):: aaNf(:)
    REAL(ReKi),         INTENT(INOUT):: xxNf(:)
+   REAL(ReKi),         INTENT(IN   ):: uuNf_inc(:)
  
    REAL(ReKi)                       :: errf
    REAL(ReKi)                       :: temp1
@@ -46,10 +48,12 @@
    INTEGER(IntKi)                   :: j
    INTEGER(IntKi)                   :: k
    INTEGER(IntKi)                   :: temp_id
+   REAL(ReKi)                       :: vvNf_p(dof_total)
    
    ai = 0.0D0
    Eref = 0.0D0
 
+   vvNf_p(:) = vvNf(:)
    DO i=1,niter
 !       WRITE(*,*) "N-R Iteration #", i
 !       IF(i==3) STOP
@@ -62,6 +66,7 @@
                                       Stif0,Mass0,gravity,u,damp_flag,beta,&
                                       elem_total,node_elem,dof_node,ngp,   &
                                       StifK,RHS,MassM,DampG)
+!       RHS = RHS - MATMUL(StifK,uuNf_inc) - MATMUL(DampG,vvNf_p)
        StifK = MassM + coef(7) * DampG + coef(8) * StifK
        DO j=1,node_total
            temp_id = (j-1)*dof_node
