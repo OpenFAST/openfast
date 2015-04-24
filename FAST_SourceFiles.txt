@@ -11,10 +11,10 @@ Source\InflowWind_Subs.f90
 Source\InflowWind_Types.f90
 Source\Lidar_Types.f90
 Source\Lidar.f90
-Source\Registry\TSFFWind.txt
-Source\Registry\BladedFFWind.txt
-Source\Registry\UniformWind.txt
-Source\Registry\UserWind.txt
+Source\Registry\IfW_TSFFWind.txt
+Source\Registry\IfW_BladedFFWind.txt
+Source\Registry\IfW_UniformWind.txt
+Source\Registry\IfW_UserWind.txt
 Source\Registry\Lidar.txt
 Source\Registry\InflowWind.txt
 
