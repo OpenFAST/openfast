@@ -112,12 +112,11 @@ typedef  ^                       ^                 LOGICAL           LidRadialVe
 
 
 typedef  ^                       InitInputType     CHARACTER(1024)   InputFileName     -     -     -     "Name of the InflowWind input file to use"                                    -
-typedef  ^                       ^                 DbKi              DT                -     -     -     "Time step.  Supplied by driver"                                              seconds
 #Is TurbineHeight needed?  Possibly as a check on the wind data.
 #typedef  ^                       ^                 ReKi              TurbineHeight     -     -     -     "Hub height of the turbine"                                                   meters
-typedef  ^                       ^                 ReKi              Width             -     -     -     "Width of the wind field to use"                                              meters
 typedef  ^                       ^                 IntKi             NumWindPoints     -     -     -     "Number of wind velocity points expected"                                     -
 typedef  ^                       ^                 LOGICAL           UseInputFile      -  .TRUE.   -     "Should we read everthing from an input file, or do we get it some other way" -
+typedef  ^                       ^                 CHARACTER(1024)	RootName          -     -     -     "RootName for writing output files"
 typedef  ^                       ^              InflowWind_InputFile PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
 typedef  ^                       ^              Lidar_InitInputType  lidar             -     -     -     "InitInput for lidar data"                                             -
 
@@ -126,11 +125,6 @@ typedef  ^                       ^              Lidar_InitInputType  lidar      
 typedef  ^                       InitOutputType    CHARACTER(10)     WriteOutputHdr    :     -     -     "Names of output-to-file channels"                       -
 typedef  ^                       ^                 CHARACTER(10)     WriteOutputUnt    :     -     -     "Units of output-to-file channels"                       -
 typedef  ^                       ^                 ProgDesc          Ver               -     -     -     "Version information of InflowWind module"               -
-typedef  ^                       ^    IfW_UniformWind_InitOutputType UniformWind       -     -     -     "UniformWind InitOutput info"                            -
-typedef  ^                       ^       IfW_TSFFWind_InitOutputType TSFFWind          -     -     -     "TSFFWind InitOutput info"                               -
-typedef  ^                       ^   IfW_BladedFFWind_InitOutputType BladedFFWind      -     -     -     "BladedFFWind InitOutput info"                           -
-#typedef  ^                       ^       IfW_HAWCWind_InitOutputType HAWCWind          -     -     -     "HAWCWind InitOutput info"                           -
-typedef  ^                       ^       IfW_UserWind_InitOutputType UserWind          -     -     -     "UserWind InitOutput info"                           -
 typedef  ^                       ^                 WindFileMetaData  WindFileInfo      -     -     -     "Meta data from the wind file"                           -
 
 
