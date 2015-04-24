@@ -944,7 +944,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    ENDIF
 
 
-
+#ifdef UNUSED_INPUTFILE_LINES
    !-------------------------------------------------------------------------------------------------
    !  FFT calculations
    !-------------------------------------------------------------------------------------------------
@@ -991,7 +991,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ENDIF
    ENDIF
 
-
+#endif
 
    !-------------------------------------------------------------------------------------------------
    !  points file input
