@@ -517,6 +517,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       RETURN
    ENDIF
 
+#ifdef UNUSED_INPUTFILE_LINES
 
    !-------------------------------------------------------------------------------------------------
    !> Read the _Parameters for coherent turbulence [used only for WindType = 3 or 4]_ section
@@ -807,6 +808,8 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       CALL Cleanup()
       RETURN
    END IF
+
+#endif
 
    !---------------------- OUTPUT --------------------------------------------------         
    CALL ReadCom( UnitInput, InputFileName, 'Section Header: Output', TmpErrStat, TmpErrMsg, UnitEcho )
