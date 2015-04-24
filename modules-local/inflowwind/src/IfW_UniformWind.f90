@@ -735,7 +735,7 @@ CONTAINS
 
 
    FUNCTION WindInf_ADhack_diskVel( Time,ParamData, OtherStates,ErrStat, ErrMsg )
-   ! This function should be deleted ASAP.  It's purpose is to reproduce results of AeroDyn 12.57;
+   ! This function should be deleted ASAP.  Its purpose is to reproduce results of AeroDyn 12.57;
    ! when a consensus on the definition of "average velocity" is determined, this function will be
    ! removed.
    !----------------------------------------------------------------------------------------------------
@@ -761,7 +761,7 @@ CONTAINS
    
       
       ErrStat = ErrID_None
-   
+      ErrMsg  = ""
    
          !-------------------------------------------------------------------------------------------------
          ! Linearly interpolate in time (or use nearest-neighbor to extrapolate)

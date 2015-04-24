@@ -38,7 +38,7 @@ PROGRAM InflowWind_Driver
    IMPLICIT NONE
 
       ! Info on this code
-   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("InflowWind_Driver","v1.01.00a-adp","22-Dec-2014")
+   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("InflowWind_Driver","v1.01.00a-adp","22-Apr-2015")
    INTEGER(IntKi)                                     :: IfWDriver_Verbose =  5  ! Verbose level.  0 = none, 5 = some, 10 = lots
 
       ! Types needed here (from InflowWind module)
@@ -432,7 +432,7 @@ PROGRAM InflowWind_Driver
 
       ! Set the number of points we are expecting to ask for initially
    InflowWind_InitInp%NumWindPoints    =  1_IntKi                       ! Default for only asking at a single height
-   IF ( SettingsFlags%WindGrid ) THEN\
+   IF ( SettingsFlags%WindGrid ) THEN
          ! Just in case the number of gridpoints in a direction is <= 0.
       InflowWind_InitInp%NumWindPoints =  ( MAX(Settings%GridN(1),1_IntKi) ) * ( MAX(Settings%GridN(2),1_IntKi) ) *   &
                                           ( MAX(Settings%GridN(3),1_IntKi) )
@@ -820,6 +820,8 @@ PROGRAM InflowWind_Driver
    !-=-=- We are done, so close everything down -=-=-
    !--------------------------------------------------------------------------------------------------------------------------------
 
+   CALL InflowWind_DestroyInitOutput( InflowWind_InitOut,    ErrStat, ErrMsg )
+   
    CALL InflowWind_End( InflowWind_u1, InflowWind_p, &
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
                   InflowWind_y1,    ErrStat, ErrMsg )
