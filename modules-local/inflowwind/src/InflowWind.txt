@@ -14,8 +14,10 @@
 usefrom IfW_UniformWind.txt
 usefrom IfW_TSFFWind.txt
 usefrom IfW_BladedFFWind.txt
-usefrom IfW_HAWCWind.txt
+#usefrom IfW_HAWCWind.txt
 usefrom IfW_UserWind.txt
+usefrom Lidar.txt
+
 include Registry_NWTC_Library.txt
 
 
@@ -62,7 +64,7 @@ typedef  ^                       ^                 IntKi             WindType   
 typedef  ^                       ^                 ReKi              PropogationDir    -     -     -     "Direction of wind propogation (meteorological direction)"  (degrees)
 typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points to output the wind velocity (0 to 9)"
 typedef  ^                       ^                 ReKi              WindVxiList       :     -     -     "List of X coordinates for wind velocity measurements"   meters
-typedef  ^                       ^                 ReKi              WindVyiList       :     -     -     "List of Y coordinates for wind velocity measurements"   meters 
+typedef  ^                       ^                 ReKi              WindVyiList       :     -     -     "List of Y coordinates for wind velocity measurements"   meters
 typedef  ^                       ^                 ReKi              WindVziList       :     -     -     "List of Z coordinates for wind velocity measurements"   meters
 typedef  ^                       ^                 ReKi              Steady_HWindSpeed -     -     -     "Steady wind -- horizontal windspeed"                    meters/s
 typedef  ^                       ^                 ReKi              Steady_RefHt      -     -     -     "Steady wind -- reference height"                        meters
@@ -99,10 +101,13 @@ typedef  ^                       ^                 ReKi              HAWC_URef  
 typedef  ^                       ^                 CHARACTER(1024)   HAWC_ProfileType  -     -     -     "HAWC -- Wind profile type ('LOG'=logarithmic, 'PL'=power law, or 'UD'=user defined)" -
 typedef  ^                       ^                 ReKi              HAWC_PLExp        -     -     -     "HAWC -- Power law exponent (used for PL wind profile type only)"   -
 typedef  ^                       ^                 ReKi              HAWC_Z0           -     -     -     "HAWC -- Surface roughness length (used for LOG wind profile type only)"  -
-typedef  ^                       ^                 LOGICAL           SumPrint          -     -     -     "Write summary info to a file <ROOTNAME>.IfW.Sum"        - 
+typedef  ^                       ^                 LOGICAL           SumPrint          -     -     -     "Write summary info to a file <ROOTNAME>.IfW.Sum"        -
 typedef  ^                       ^                 IntKi             NumOuts           -     -     -     "Number of parameters in the output list (number of outputs requested)" -
 typedef  ^                       ^                 CHARACTER(10)     OutList           :     -     -     "List of user-requested output channels"                 -
-
+typedef  ^                       ^                 IntKi             SensorType        -  SensorType_None    -     "Sensor type (for lidar/sensor module)"                 -
+typedef  ^                       ^                 IntKi             NumPulseGate      -     -     -     "the number of range gates to return wind speeds at"                 -
+typedef  ^                       ^                 ReKi              RotorApexOffsetPos 3    -     -     "position of the lidar unit relative to the rotor apex of rotation"	m
+typedef  ^                       ^                 LOGICAL           LidRadialVel      -     -     -     "TRUE => return radial component, FALSE => return 'x' direction estimate"	-
 
 
 
@@ -114,6 +119,7 @@ typedef  ^                       ^                 ReKi              Width      
 typedef  ^                       ^                 IntKi             NumWindPoints     -     -     -     "Number of wind velocity points expected"                                     -
 typedef  ^                       ^                 LOGICAL           UseInputFile      -  .TRUE.   -     "Should we read everthing from an input file, or do we get it some other way" -
 typedef  ^                       ^              InflowWind_InputFile PassedFileData    -     -     -     "If we don't use the input file, pass everything through this"                -
+typedef  ^                       ^              Lidar_InitInputType  lidar             -     -     -     "InitInput for lidar data"                                             -
 
 
 # Init Output
@@ -123,7 +129,7 @@ typedef  ^                       ^                 ProgDesc          Ver        
 typedef  ^                       ^    IfW_UniformWind_InitOutputType UniformWind       -     -     -     "UniformWind InitOutput info"                            -
 typedef  ^                       ^       IfW_TSFFWind_InitOutputType TSFFWind          -     -     -     "TSFFWind InitOutput info"                               -
 typedef  ^                       ^   IfW_BladedFFWind_InitOutputType BladedFFWind      -     -     -     "BladedFFWind InitOutput info"                           -
-typedef  ^                       ^       IfW_HAWCWind_InitOutputType HAWCWind          -     -     -     "HAWCWind InitOutput info"                           -
+#typedef  ^                       ^       IfW_HAWCWind_InitOutputType HAWCWind          -     -     -     "HAWCWind InitOutput info"                           -
 typedef  ^                       ^       IfW_UserWind_InitOutputType UserWind          -     -     -     "UserWind InitOutput info"                           -
 typedef  ^                       ^                 WindFileMetaData  WindFileInfo      -     -     -     "Meta data from the wind file"                           -
 
@@ -173,11 +179,13 @@ typedef  ^                       ^        IfW_UserWind_ParameterType UserWind   
 #typedef  ^                       ^          IfW_CTWind_ParameterType CTWind            -     -     -     "Parameters from CTWind"                                 -
 typedef  ^                       ^                 IntKi             NumOuts           -     0     -     "Number of parameters in the output list (number of outputs requested)" -
 typedef  ^                       ^                 OutParmType       OutParam          {:}   -     -     "Names and units (and other characteristics) of all requested output parameters" -
+typedef  ^                       ^          lidar_ParameterType      lidar             -     -     -     "Lidar parameter data"                                       -
 
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are not on this mesh here:
 typedef  ^                    InputType            ReKi              PositionXYZ       ::    -     -     "Array holding the input positions at a given timestep"  meters
+typedef  ^                       ^                 lidar_InputType   lidar             -     -     -     "Lidar data"                                       -
 
 
 # ..... Outputs ...................................................................................................................
@@ -185,6 +193,7 @@ typedef  ^                    InputType            ReKi              PositionXYZ
 typedef  ^                    OutputType           ReKi              VelocityUVW       ::    -     -     "Array holding the U,V,W velocity for a given timestep"  meters/sec
 typedef  ^                    OutputType           ReKi              WriteOutput       :     -     -     "Array with values to output to file"                    -
 typedef  ^                       ^                 ReKi              DiskVel           {3}   -     -     "Vector holding the U,V,W average velocity of the disk"  meters/sec
+typedef  ^                       ^              lidar_OutputType     lidar             -     -     -     "Lidar data"                                       -
 
 
 # ..... States not used by this module ...................................................................................................................
