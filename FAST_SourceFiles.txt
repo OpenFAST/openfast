@@ -4,10 +4,17 @@ Source\IfW_BladedFFWind_Types.f90
 Source\IfW_BladedFFWind.f90
 Source\IfW_UniformWind_Types.f90
 Source\IfW_UniformWind.f90
+Source\IfW_UserWind_Types.f90
+Source\IfW_UserWind.f90
 Source\InflowWind.f90
+Source\InflowWind_Subs.f90
 Source\InflowWind_Types.f90
-Source\Registry\IfW_TSFFWind.txt
-Source\Registry\IfW_BladedFFWind.txt
-Source\Registry\IfW_UniformWind.txt
+Source\Lidar_Types.f90
+Source\Lidar.f90
+Source\Registry\TSFFWind.txt
+Source\Registry\BladedFFWind.txt
+Source\Registry\UniformWind.txt
+Source\Registry\UserWind.txt
+Source\Registry\Lidar.txt
 Source\Registry\InflowWind.txt
 
