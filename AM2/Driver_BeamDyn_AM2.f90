@@ -102,8 +102,7 @@ PROGRAM MAIN
                ! are available to modules that have an implicit dependence on other-module data
 
    ! specify time increment; currently, all modules will be time integrated with this increment size
-   dt_global = 1.0D-03
-!   dt_global = 1.0D-03*5.0D0
+   dt_global = 1.0D-03*1.0D0
 
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -150,7 +149,7 @@ BD_InitInput%InputFile = 'Coupling_Debug.inp'
    BD_InitInput%gravity(3) = 0.0D0 
 
    ALLOCATE(BD_InitInput%GlbPos(3)) 
-   BD_InitInput%GlbPos(1) = 1.0D+00
+   BD_InitInput%GlbPos(1) = 0.0D+00
    BD_InitInput%GlbPos(2) = 0.0D+01
    BD_InitInput%GlbPos(3) = 0.0D0
 
@@ -218,7 +217,14 @@ WRITE(*,*) "Time Step: ", n_t_global
 ! Compute initial condition given root motion
 !--------------------------------------------
       IF(n_t_global .EQ. 0) THEN
-          CALL BD_InitialCondition(BD_Input(1),BD_Parameter,BD_ContinuousState,ErrStat,ErrMsg)
+!          CALL BD_InitialCondition(BD_Input(1),BD_Parameter,BD_ContinuousState,ErrStat,ErrMsg)
+          CALL BD_CalcIC(BD_Input(1),BD_Parameter,BD_ContinuousState,BD_OtherState)
+WRITE(*,*) 'q'
+WRITE(*,*) BD_ContinuousState%q(:)
+WRITE(*,*) 'v'
+WRITE(*,*) BD_ContinuousState%dqdt(:)
+WRITE(*,*) 'a'
+WRITE(*,*) BD_OtherState%Acc(:)
       ENDIF
 !------------------------------
 ! END Compute initial condition
@@ -279,10 +285,11 @@ WRITE(*,*) "Time Step: ", n_t_global
 !                    temp_H(3,1),temp_H(3,2),temp_H(3,3)      
 CALL CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_total),temp_cc)
       WRITE(QiDisUnit,6000) t_global,&
-!                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
+                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_total),&
+                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,1)
 !                           &temp_cc(1:3)
-                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total),&
-                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
+!                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_total),&
+!                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_total)
 !                           &BD_OutPut(1)%BldForce%Force(1:3,1),&
 !                           &BD_OutPut(1)%BldForce%Moment(1:3,1)
@@ -300,9 +307,9 @@ CALL CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_
                            &BD_OutPut(1)%BldForce%Force(1:3,1),&
                            &BD_OutPut(1)%BldForce%Moment(1:3,1)
 
-      WRITE(QiReacUnit,6000) t_global,&
-                           &BD_OutPut(1)%ReactionForce%Force(1:3,1),&
-                           &BD_OutPut(1)%ReactionForce%Moment(1:3,1)
+!      WRITE(QiReacUnit,6000) t_global,&
+!                           &BD_OutPut(1)%ReactionForce%Force(1:3,1),&
+!                           &BD_OutPut(1)%ReactionForce%Moment(1:3,1)
       ! Save all final variables 
 
       CALL BD_CopyContState   (BD_ContinuousState_pred,  BD_ContinuousState, 0, Errstat, ErrMsg)
@@ -409,21 +416,21 @@ END PROGRAM MAIN
    DO i=1,3
        u%RootMotion%Orientation(i,i,1) = 1.0D0
    ENDDO
-   u%RootMotion%TranslationDisp(1,1)  = 0.092*SIN(omega*t+pai/2.0D0)
+   u%RootMotion%TranslationDisp(1,1)  = SIN(omega*t)
    ! END Calculate root displacements and rotations
 
    ! Calculate root translational and angular velocities
    u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(:,:) = 0.0D0
 
-   u%RootMotion%TranslationVel(1,1) = 0.092*omega*COS(omega*t+pai/2.0D0)
+   u%RootMotion%TranslationVel(1,1) = omega*COS(omega*t)
    ! END Calculate root translational and angular velocities
 
 
    ! Calculate root translational and angular accelerations
    u%RootMotion%TranslationAcc(:,:) = 0.0D0
    u%RootMotion%RotationAcc(:,:) = 0.0D0
-   u%RootMotion%TranslationAcc(1,1) = -0.092*omega*omega*SIN(omega*t+pai/2.0D0)
+   u%RootMotion%TranslationAcc(1,1) = -omega*omega*SIN(omega*t)
    ! END Calculate root translational and angular accelerations
 !------------------
 ! End rotating beam
