@@ -31,8 +31,8 @@
 !------------------
    x%dqdt(1:3) = u%RootMotion%TranslationVel(1:3,1)
    x%dqdt(4:6) = u%Rootmotion%RotationVel(1:3,1)
-   OtherState%acc(1:3) = u%RootMotion%TranslationAcc(1:3,1)
-   OtherState%acc(4:6) = u%RootMotion%RotationAcc(1:3,1)
+!   OtherState%acc(1:3) = u%RootMotion%TranslationAcc(1:3,1)
+!   OtherState%acc(4:6) = u%RootMotion%RotationAcc(1:3,1)
 !WRITE(*,*) 'BC Vel:'
 !WRITE(*,*) x%dqdt(1:6)
 !WRITE(*,*) 'BC Acc'

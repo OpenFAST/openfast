@@ -108,9 +108,9 @@
 !           WRITE(*,*) "Eref = ", Eref
            IF(Enorm .LE. Eref) RETURN
        ENDIF    
-       DO j=1,dof_total
+!       DO j=1,dof_total
 !           WRITE(*,*) "Inc(j)=",j,ai(j)
-       ENDDO
+!       ENDDO
        CALL UpdateDynamic(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
            
        IF(i==niter) THEN

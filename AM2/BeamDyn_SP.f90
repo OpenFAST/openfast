@@ -29,6 +29,7 @@ MODULE BeamDyn_SP
    PUBLIC :: CrvExtractCrv                ! Tight coupling routine for updating discrete states
    PUBLIC :: Tilde
    PUBLIC :: MotionTensor
+   PUBLIC :: BD_CalcIC
 
 CONTAINS
 
@@ -136,6 +137,12 @@ INCLUDE 'MotionTensor.f90'
 INCLUDE 'InputGlobalLocal.f90'
 INCLUDE 'ElementMatrix_Force_New.f90'
 INCLUDE 'ComputeReactionForce.f90'
+
+INCLUDE 'BD_CalcIC.f90'
+INCLUDE 'BD_CalcAcc.f90'
+INCLUDE 'Solution_Acc.f90'
+INCLUDE 'GenerateDynamicElement_ACC.f90'
+INCLUDE 'ElementMatrix_Acc.f90'
 
    SUBROUTINE BeamDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !

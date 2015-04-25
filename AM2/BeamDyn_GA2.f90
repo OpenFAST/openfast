@@ -65,9 +65,9 @@
    CALL TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
                              p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
                              uuNf_inc,p%node_total,p%dof_node )
-DO i=1,p%dof_total
+!DO i=1,p%dof_total
 !WRITE(*,*) 'uuNf',i,x%q(i)
-ENDDO
+!ENDDO
    ! find x at t+dt
    CALL InputGlobalLocal(p,u_interp,0)
    CALL BeamDyn_BoundaryGA2(x,p,u_interp,t+p%dt,OtherState,ErrStat,ErrMsg)
