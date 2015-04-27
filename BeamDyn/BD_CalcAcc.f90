@@ -12,10 +12,10 @@
    INTEGER(IntKi)                             :: j 
    REAL(ReKi)                                 :: MoTens(6,6)
    
-   CALL MotionTensor(p%GlbRot,p%GlbPos,MoTens,0)
-   CALL Solution_ACC(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
-                     p%damp_flag,p%beta,&
-                     p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,MoTens,&
-                     OtherState)
+   CALL BD_MotionTensor(p%GlbRot,p%GlbPos,MoTens,0)
+   CALL BD_SolutionAcc(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
+                       p%damp_flag,p%beta,&
+                       p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,MoTens,&
+                       OtherState)
 
    END SUBROUTINE BD_CalcAcc

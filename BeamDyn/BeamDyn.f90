@@ -215,7 +215,7 @@ INCLUDE 'ElementMatrix_Acc.f90'
 
    CALL DispNVD( BeamDyn_Ver )
 
-   CALL BeamDyn_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat,ErrMsg)
+   CALL BD_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat,ErrMsg)
    p%analysis_type  = InputFileData%analysis_type
    p%time_flag  = InputFileData%time_integrator
    p%damp_flag  = InputFileData%InpBl%damp_flag
@@ -228,7 +228,7 @@ INCLUDE 'ElementMatrix_Acc.f90'
    p%gravity(2) = InitInp%gravity(1)
    p%gravity(3) = InitInp%gravity(2)
 
-   CALL CrvExtractCrv(InitInp%GlbRot,temp_glbrot)
+   CALL BD_CrvExtractCrv(InitInp%GlbRot,temp_glbrot)
    CALL AllocAry(p%GlbPos,3,'Global position vector',ErrStat2,ErrMsg2)
    CALL AllocAry(p%GlbRot,3,3,'Global rotation tensor',ErrStat2,ErrMsg2)
    p%GlbPos(:) = 0.0D0
@@ -247,7 +247,7 @@ INCLUDE 'ElementMatrix_Acc.f90'
    DO i=1,InputFileData%member_total
        IF(i == 1) temp_id = 1 
        temp_id2= temp_id + InputFileData%kp_member(i) - 1
-       CALL ComputeIniCoef(InputFileData%kp_member(i),InputFileData%kp_coordinate(temp_id:temp_id2,1:4),SP_Coef(temp_id:temp_id2-1,1:4,1:4))
+       CALL BD_ComputeIniCoef(InputFileData%kp_member(i),InputFileData%kp_coordinate(temp_id:temp_id2,1:4),SP_Coef(temp_id:temp_id2-1,1:4,1:4))
        temp_id = temp_id2
    ENDDO
    CALL AllocAry(p%member_length,InputFileData%member_total,2,'member length array',ErrStat2,ErrMsg2)
@@ -256,7 +256,7 @@ INCLUDE 'ElementMatrix_Acc.f90'
    p%segment_length(:,:) = 0.0D0
    p%blade_length = 0.0D0
 
-   CALL BldComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,SP_Coef,&
+   CALL BD_ComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,SP_Coef,&
                                p%segment_length,p%member_length,p%blade_length)
    p%elem_total = InputFileData%member_total
    p%node_elem  = InputFileData%order_elem + 1       ! node per element
@@ -271,7 +271,7 @@ INCLUDE 'ElementMatrix_Acc.f90'
    temp_GLL(:) = 0.0D0
    CALL AllocAry(temp_w,p%node_elem,'GLL weight array',ErrStat2,ErrMsg2)
    temp_w(:) = 0.0D0
-   CALL BD_gen_gll_LSGL(p%node_elem-1,temp_GLL,temp_w)
+   CALL BD_GenerateGLL(p%node_elem-1,temp_GLL,temp_w)
    DEALLOCATE(temp_w)
 
    CALL AllocAry(temp_L2,3,p%ngp*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2) 
@@ -280,7 +280,7 @@ INCLUDE 'ElementMatrix_Acc.f90'
    temp_GL(:) = 0.0D0
    CALL AllocAry(temp_w,p%ngp,'GL weight array',ErrStat2,ErrMsg2)
    temp_w(:) = 0.0D0
-   CALL BldGaussPointWeight(p%ngp,temp_GL,temp_w)
+   CALL BD_GaussPointWeight(p%ngp,temp_GL,temp_w)
    DEALLOCATE(temp_w)
 
    DO i=1,p%elem_total
@@ -298,8 +298,8 @@ INCLUDE 'ElementMatrix_Acc.f90'
                        temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
                    ENDDO
                    eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
-                   CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
-                   CALL ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV)
+                   CALL BD_ComputeIniNodalPosition(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
+                   CALL BD_ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV)
                    temp_id2 = (j-1)*p%dof_node 
                    p%uuN0(temp_id2+1,i) = temp_POS(1)
                    p%uuN0(temp_id2+2,i) = temp_POS(2)
@@ -320,7 +320,7 @@ INCLUDE 'ElementMatrix_Acc.f90'
                        temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
                    ENDDO
                    eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
-                   CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
+                   CALL BD_ComputeIniNodalPosition(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
                    temp_id2 = (i-1)*p%ngp+j+1
                    temp_L2(1:3,temp_id2) = temp_POS(1:3)
                    EXIT
@@ -444,7 +444,7 @@ INCLUDE 'ElementMatrix_Acc.f90'
    CALL AllocAry(p%coef,9,'GA2 coefficient',ErrStat2,ErrMsg2)
    p%coef(:)  = 0.0D0
    p%rhoinf = InputFileData%rhoinf
-   IF(p%time_flag .EQ. 2) CALL TiSchmComputeCoefficients(p%rhoinf,p%dt,p%coef)
+   IF(p%time_flag .EQ. 2) CALL BD_TiSchmComputeCoefficients(p%rhoinf,p%dt,p%coef)
    ! Allocate OtherState if using multi-step method; initialize n
 
 
@@ -799,6 +799,7 @@ INCLUDE 'ElementMatrix_Acc.f90'
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    TYPE(BD_OtherStateType):: OS_tmp
+   TYPE(BD_InputType):: u_tmp
    INTEGER(IntKi):: i
    INTEGER(IntKi):: j
    INTEGER(IntKi):: temp_id
@@ -844,29 +845,32 @@ INCLUDE 'ElementMatrix_Acc.f90'
 
    IF(p%analysis_type .EQ. 2) THEN
        CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
- temp3(1:3) = u%RootMotion%TranslationDisp(1:3,1)
- x%q(1:3) = MATMUL(TRANSPOSE(p%GlbRot),temp3)
- x%q(4:6) = 0.0D0
- CALL BD_MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
- temp6(1:3) = u%RootMotion%TranslationVel(1:3,1)
- temp6(4:6) = u%RootMotion%RotationVel(1:3,1)
- temp6(:) = MATMUL(temp66,temp6)
- x%dqdt(1:6) = temp6(1:6)
- temp6(1:3) = u%RootMotion%TranslationAcc(:,1)
- temp6(4:6) = u%RootMotion%RotationAcc(:,1)
- temp6(:) = MATMUL(temp66,temp6)
- OS_tmp%Acc(1:6) = temp6(1:6)
- CALL BD_CalcAcc(u,p,x,OS_tmp)
+       CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
+       CALL BD_InputGlobalLocal(p,u_tmp,0)
+       CALL BD_BoundaryGA2(x,p,u_tmp,t,OS_tmp,ErrStat,ErrMsg)
+!       temp3(1:3) = u%RootMotion%TranslationDisp(1:3,1)
+!       x%q(1:3) = MATMUL(TRANSPOSE(p%GlbRot),temp3)
+!       x%q(4:6) = 0.0D0
+!       CALL BD_MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
+!       temp6(1:3) = u%RootMotion%TranslationVel(1:3,1)
+!       temp6(4:6) = u%RootMotion%RotationVel(1:3,1)
+!       temp6(:) = MATMUL(temp66,temp6)
+!       x%dqdt(1:6) = temp6(1:6)
+!       temp6(1:3) = u%RootMotion%TranslationAcc(:,1)
+!       temp6(4:6) = u%RootMotion%RotationAcc(:,1)
+!       temp6(:) = MATMUL(temp66,temp6)
+!       OS_tmp%Acc(1:6) = temp6(1:6)
+       CALL BD_CalcAcc(u,p,x,OS_tmp)
 
-CALL MotionTensor(p%GlbRot,p%GlbPos,MoTens,0)
-       CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,OtherState%Acc,                                       &
-                                  p%Stif0_GL,p%Mass0_GL,p%gravity,u,                                 &
-                                  p%damp_flag,p%beta,                                                &
-                                  p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
-                                  MoTens,p%analysis_type,temp_Force,temp_ReactionForce)
+       CALL BD_MotionTensor(p%GlbRot,p%GlbPos,MoTens,0)
+       CALL BD_DynamicSolutionForce(p%uuN0,x%q,x%dqdt,OS_tmp%Acc,                                      &
+                                    p%Stif0_GL,p%Mass0_GL,p%gravity,u,                                 &
+                                    p%damp_flag,p%beta,                                                &
+                                    p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+                                    MoTens,p%analysis_type,temp_Force,temp_ReactionForce)
    ENDIF
 
-   CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
+   CALL BD_MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
    temp6(:) = 0.0D0
    temp6(:) = temp_ReactionForce(1:6)
    temp6(:) = MATMUL(TRANSPOSE(temp66),temp6)
