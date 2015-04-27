@@ -1,4 +1,4 @@
-   SUBROUTINE CrvMatrixR(cc,Rr) 
+   SUBROUTINE BD_CrvMatrixR(cc,Rr) 
 
    REAL(ReKi),INTENT(IN)::cc(:)
    REAL(ReKi),INTENT(OUT)::Rr(:,:)
@@ -26,4 +26,4 @@
    Rr(2,3) = tr0*(c2*c3 - c0*c1)
    Rr(3,3) = tr0*(c3*c3 + c0*c0) - 1.0D0
 
-   END SUBROUTINE CrvMatrixR
+   END SUBROUTINE BD_CrvMatrixR

@@ -1,4 +1,4 @@
-   SUBROUTINE InertialForce(m00,mEta,rho,vvv,aaa,Fi,Mi,Gi,Ki)
+   SUBROUTINE BD_InertialForce(m00,mEta,rho,vvv,aaa,Fi,Mi,Gi,Ki)
 
    REAL(ReKi),INTENT(IN)::m00,mEta(:),rho(:,:)
    REAL(ReKi),INTENT(IN)::vvv(:),aaa(:)
@@ -49,9 +49,5 @@ ENDDO
                 &MATMUL(rho,Tilde(omd)) - Tilde(nu) +&
                 &MATMUL(epsi,Tilde(ome)) - &
                 &MATMUL(Tilde(ome),Tilde(gama))
-!   WRITE(*,*) "Ki at Node #"
-!   DO i=1,6
-!       WRITE(*,*) Ki(i,1),Ki(i,2),Ki(i,3),Ki(i,4),Ki(i,5),Ki(i,6)
-!   ENDDO
 
-   END SUBROUTINE InertialForce
+   END SUBROUTINE BD_InertialForce

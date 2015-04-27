@@ -1,4 +1,4 @@
-   SUBROUTINE BldGenerateDynamicElement(uuN0,uuNf,vvNf,aaNf,                 &
+   SUBROUTINE BD_GenerateDynamicElement(uuN0,uuNf,vvNf,aaNf,                 &
                                         Stif0,Mass0,gravity,u,damp_flag,beta,&
                                         elem_total,node_elem,dof_node,ngp,   &
                                         StifK,RHS,MassM,DampG)
@@ -88,7 +88,7 @@
 
    DO nelem=1,elem_total
        Nuu0(:) = uuN0(:,nelem)
-       CALL ElemNodalDispGL(uuNf,node_elem,dof_node,nelem,Nuuu)
+       CALL BD_ElemNodalDisp(uuNf,node_elem,dof_node,nelem,Nuuu)
        temp_id = (nelem-1)*ngp
        DO j=1,ngp
            EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
@@ -96,20 +96,20 @@
            DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,temp_id+j+1)
            DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
        ENDDO
-       CALL NodalRelRotGL(Nuu0,node_elem,dof_node,Nrr0)
-       CALL NodalRelRotGL(Nuuu,node_elem,dof_node,Nrrr)
-       CALL ElemNodalDispGL(vvNf,node_elem,dof_node,nelem,Nvvv)
-       CALL ElemNodalDispGL(aaNf,node_elem,dof_node,nelem,Naaa)
+       CALL BD_NodalRelRot(Nuu0,node_elem,dof_node,Nrr0)
+       CALL BD_NodalRelRot(Nuuu,node_elem,dof_node,Nrrr)
+       CALL BD_ElemNodalDisp(vvNf,node_elem,dof_node,nelem,Nvvv)
+       CALL BD_ElemNodalDisp(aaNf,node_elem,dof_node,nelem,Naaa)
 
-       CALL ElementMatrix_GA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
+       CALL BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
                               EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                               damp_flag,beta,                          &
                               ngp,node_elem,dof_node,elk,elf,elm,elg)
 
-       CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elk,StifK)
-       CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elm,MassM)
-       CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elg,DampG)
-       CALL AssembleRHSGL(nelem,dof_elem,node_elem,dof_node,elf,RHS)
+       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elk,StifK)
+       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elm,MassM)
+       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elg,DampG)
+       CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS)
    ENDDO
 
    DEALLOCATE(Nuu0)
@@ -137,4 +137,4 @@
         ENDIF
 
 
-   END SUBROUTINE BldGenerateDynamicElement
+   END SUBROUTINE BD_GenerateDynamicElement

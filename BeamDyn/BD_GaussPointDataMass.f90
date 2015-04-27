@@ -1,5 +1,5 @@
-   SUBROUTINE BldGaussPointDataMass_GA2(hhx,hpx,Nvvv,Naaa,RR0,node_elem,dof_node,&
-                                        vvv,aaa,vvp,mmm,mEta,rho)
+   SUBROUTINE BD_GaussPointDataMass(hhx,hpx,Nvvv,Naaa,RR0,node_elem,dof_node,&
+                                    vvv,aaa,vvp,mmm,mEta,rho)
 
    REAL(ReKi),     INTENT(IN   ):: hhx(:)
    REAL(ReKi),     INTENT(IN   ):: hpx(:)
@@ -40,4 +40,4 @@
    mEta = MATMUL(RR0,mEta)
    rho = MATMUL(RR0,MATMUL(rho,TRANSPOSE(RR0)))
 
-   END SUBROUTINE BldGaussPointDataMass_GA2
+   END SUBROUTINE BD_GaussPointDataMass

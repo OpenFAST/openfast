@@ -1,4 +1,4 @@
-   SUBROUTINE AssembleRHSGL(nelem,dof_elem,node_elem,dof_node,ElemRHS,GlobalRHS)
+   SUBROUTINE BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,ElemRHS,GlobalRHS)
    !-------------------------------------------------------------------------------
    ! This subroutine assembles global force vector.
    !-------------------------------------------------------------------------------
@@ -17,4 +17,4 @@
        GlobalRHS(temp_id) = GlobalRHS(temp_id)+ElemRHS(i)
    ENDDO 
 
-   END SUBROUTINE AssembleRHSGL
+   END SUBROUTINE BD_AssembleRHS

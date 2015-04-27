@@ -1,7 +1,7 @@
-   SUBROUTINE DynamicSolution_GA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
-                                   Stif0,Mass0,gravity,u,damp_flag,beta,   &
-                                   node_elem,dof_node,elem_total,dof_total,&
-                                   node_total,niter,ngp,coef)
+   SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
+                                     Stif0,Mass0,gravity,u,damp_flag,beta,   &
+                                     node_elem,dof_node,elem_total,dof_total,&
+                                     node_total,niter,ngp,coef)
 
    REAL(ReKi),         INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),         INTENT(IN   ):: Stif0(:,:,:)
@@ -52,18 +52,11 @@
 
    DO i=1,niter
 !       WRITE(*,*) "N-R Iteration #", i
-!       IF(i==3) STOP
        StifK = 0.0D0
        RHS = 0.0D0
        MassM = 0.0D0
        DampG = 0.0D0
-!WRITE(*,*) 'uuNf'
-!WRITE(*,*) uuNf(1:6)
-!WRITE(*,*) 'vvNf'
-!WRITE(*,*) vvNf(1:6)
-!WRITE(*,*) 'aaNf'
-!WRITE(*,*) aaNf(1:6)
-       CALL BldGenerateDynamicElement(uuN0,uuNf,vvNf,aaNf,                 &
+       CALL BD_GenerateDynamicElement(uuN0,uuNf,vvNf,aaNf,                 &
                                       Stif0,Mass0,gravity,u,damp_flag,beta,&
                                       elem_total,node_elem,dof_node,ngp,   &
                                       StifK,RHS,MassM,DampG)
@@ -74,13 +67,7 @@
            F_PointLoad(temp_id+4:temp_id+6) = u%PointLoad%Moment(1:3,j)
        ENDDO
        RHS(:) = RHS(:) + F_PointLoad(:)
-!       k=0
-!       DO j=1,dof_total
-!           WRITE(*,*) "j=",j
-!           WRITE(*,*) "RHS(j)=",j,RHS(j)
-!           WRITE(*,*) StifK(j,1+k),StifK(j,2+k),StifK(j,3+k),StifK(j,4+k),StifK(j,5+k),StifK(j,6+k)
-!       ENDDO
-!       STOP
+
        errf = 0.0D0
        feqv = 0.0D0
        DO j=1,dof_total-6
@@ -90,8 +77,6 @@
                StifK_LU(j,k) = StifK(j+6,k+6)
            ENDDO
        ENDDO
-!       CALL Norm(dof_total-6,feqv,errf)
-!       WRITE(*,*) "NORM(feqv) = ", errf
        
        CALL ludcmp(StifK_LU,dof_total-6,indx,d)
        CALL lubksb(StifK_LU,dof_total-6,indx,RHS_LU,ai_temp)
@@ -101,10 +86,6 @@
            ai(j+6) = ai_temp(j)
        ENDDO
 
-!       DO j=1,dof_total-6
-!           WRITE(*,*) "Inc(j)=",j,ai_temp(j)
-!           WRITE(*,*) "feqv(j)=",j,feqv(j)
-!       ENDDO
 
        IF(i==1) THEN
            Eref = SQRT(DOT_PRODUCT(ai_temp,feqv))*TOLF
@@ -113,11 +94,9 @@
        IF(i .GT. 1) THEN
            Enorm = 0.0D0
            Enorm = SQRT(DOT_PRODUCT(ai_temp,feqv))
-!           WRITE(*,*) "Enorm = ", Enorm
-!           WRITE(*,*) "Eref = ", Eref
            IF(Enorm .LE. Eref) RETURN
        ENDIF    
-       CALL UpdateDynamic(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
+       CALL BD_UpdateDynamicGA2(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
            
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"
@@ -125,4 +104,4 @@
        ENDIF
    ENDDO
    
-   END SUBROUTINE DynamicSolution_GA2
+   END SUBROUTINE BD_DynamicSolutionGA2

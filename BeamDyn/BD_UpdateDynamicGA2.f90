@@ -1,4 +1,4 @@
-   SUBROUTINE UpdateDynamic(ainc,uf,vf,af,xf,coef,node_total,dof_node)
+   SUBROUTINE BD_UpdateDynamicGA2(ainc,uf,vf,af,xf,coef,node_total,dof_node)
 
    REAL(ReKi), INTENT(IN):: ainc(:)
    REAL(DbKi),INTENT(IN)::coef(:)
@@ -31,4 +31,4 @@
        ENDDO
    ENDDO
 
-   END SUBROUTINE UpdateDynamic
+   END SUBROUTINE BD_UpdateDynamicGA2
