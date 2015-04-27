@@ -74,11 +74,12 @@ SUBROUTINE DWM_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, 
    
    CALL WrScr("  Reading the wind file for DWM simulation." )
    
-   InitInp%IfW_InitInputs%WindFileType    = DEFAULT_WindNumber
-   InitInp%IfW_InitInputs%lidar%SensorType = SensorType_None
+      ! InitInp%IfW_InitInputs%InputFileName is already set in FAST
+   InitInp%IfW_InitInputs%UseInputFile     = .TRUE.
+   InitInp%IfW_InitInputs%NumWindPoints    = 1
+   InitInp%IfW_InitInputs%lidar%SensorType = SensorType_None      
    
-   
-   CALL IfW_Init( InitInp%IfW_InitInputs,   u%IfW_Inputs,    p%IfW_Params,                          &
+   CALL InflowWind_Init( InitInp%IfW_InitInputs,   u%IfW_Inputs,    p%IfW_Params,                                &
                      x%IfW_ContStates, xd%IfW_DiscStates,   z%IfW_ConstrStates,    OtherState%IfW_OtherStates,   &
                      y%IfW_Outputs,    Interval,  InitOut%IfW_InitOutput,   ErrStat,    ErrMess )
       
@@ -125,7 +126,7 @@ SUBROUTINE DWM_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMess )
          
       CALL write_result_file( OtherState, p, y, u )
       
-      CALL IfW_End(  u%IfW_Inputs, p%IfW_Params, x%IfW_ContStates, xd%IfW_DiscStates, z%IfW_ConstrStates, &
+      CALL InflowWind_End(  u%IfW_Inputs, p%IfW_Params, x%IfW_ContStates, xd%IfW_DiscStates, z%IfW_ConstrStates, &
                      OtherState%IfW_OtherStates, y%IfW_Outputs, ErrStat, ErrMess )
 
          ! Close files here:

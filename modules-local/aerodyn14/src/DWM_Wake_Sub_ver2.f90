@@ -1455,8 +1455,8 @@ FUNCTION filter_velocity (OS,p,u,x,xd,z,y,timestep,y_0,z_0,wake_radius)
     !radius_length = NINT( wake_radius/OS%DWDD%ppR*p%RotorR )             ! R(m): turbine radius
     radius_length = NINT(2*p%RotorR )
     
-    IF (.NOT. ALLOCATED(u%IfW_Inputs%Position) ) THEN
-       CALL AllocAry( u%IfW_Inputs%Position, 3, 1, "Position array to send to IfW_CalcOutput", ErrStat, ErrMsg )
+    IF (.NOT. ALLOCATED(u%IfW_Inputs%PositionXYZ) ) THEN
+       CALL AllocAry( u%IfW_Inputs%PositionXYZ, 3, 1, "Position array to send to IfW_CalcOutput", ErrStat, ErrMsg )
        !IF (ErrStat >= AbortErrLev)  RETURN
     END IF
 
@@ -1468,13 +1468,13 @@ FUNCTION filter_velocity (OS,p,u,x,xd,z,y,timestep,y_0,z_0,wake_radius)
             
           
                  
-            u%IfW_Inputs%Position(1,1) = 0.0
-            u%IfW_Inputs%Position(2,1) = REAL(y_axis,ReKi)
-            u%IfW_Inputs%Position(3,1) = REAL(z_axis,ReKi)                                         
-            CALL IfW_CalcOutput( timestep, u%IfW_Inputs, p%IfW_Params, &
+            u%IfW_Inputs%PositionXYZ(1,1) = 0.0
+            u%IfW_Inputs%PositionXYZ(2,1) = REAL(y_axis,ReKi)
+            u%IfW_Inputs%PositionXYZ(3,1) = REAL(z_axis,ReKi)                                         
+            CALL InflowWind_CalcOutput( timestep, u%IfW_Inputs, p%IfW_Params, &
                                  x%IfW_ContStates, xd%IfW_DiscStates, z%IfW_ConstrStates, OS%IfW_OtherStates, &   ! States -- none in this case
                                  y%IfW_Outputs, ErrStat, ErrMsg )
-            temp_wind_velocity (:) = y%IfW_Outputs%Velocity(:,1)                          
+            temp_wind_velocity (:) = y%IfW_Outputs%VelocityUVW(:,1)                          
           
             !temp_filter_velocity(:) = temp_filter_velocity(:) + AD_WindVelocityWithDisturbance(  REAL(timestep,ReKi), A_u, A_p, A_x, A_xd, A_z, A_O, A_y, ErrStat, ErrMsg,&
                                                                                        !(/0.0,REAL(y_axis,ReKi),REAL(z_axis,ReKi)/) )
@@ -1588,7 +1588,7 @@ SUBROUTINE Get_wake_center ( OS, p, y, u, x, xd, z, wakewidth, wake_center )
     
     x_step = Modified_U * (DWM_time_step*OS%meandering_data%scale_factor)
     
-    CALL AllocAry( u%IfW_Inputs%Position, 3, 1, "Position array to send to IfW_CalcOutput", ErrStat, ErrMsg )
+    CALL AllocAry( u%IfW_Inputs%PositionXYZ, 3, 1, "Position array to send to IfW_CalcOutput", ErrStat, ErrMsg )
     IF (ErrStat >= AbortErrLev)  RETURN
 
     
@@ -1602,16 +1602,16 @@ SUBROUTINE Get_wake_center ( OS, p, y, u, x, xd, z, wakewidth, wake_center )
                            !AD_GetUndisturbedWind ( (REAL(((release_time-1)+1)*DWM_time_step*OS%meandering_data%scale_factor,ReKi)), (/0.0,&                  
                                                 !REAL(0,ReKi),REAL(p%TurbRefHt,ReKi)/), ErrStat)                                ! get the velocity at the turbine plane
                                                 
-       u%IfW_Inputs%Position(1,1) = (0.0_ReKi)
-       u%IfW_Inputs%Position(2,1) = (0.0_ReKi)
-       u%IfW_Inputs%Position(3,1) = (p%hub_height)
+       u%IfW_Inputs%PositionXYZ(1,1) = (0.0_ReKi)
+       u%IfW_Inputs%PositionXYZ(2,1) = (0.0_ReKi)
+       u%IfW_Inputs%PositionXYZ(3,1) = (p%hub_height)
 
        
-       CALL IfW_CalcOutput( ( ((release_time-1)+1)*DWM_time_step*OS%meandering_data%scale_factor), u%IfW_Inputs, p%IfW_Params, &
+       CALL InflowWind_CalcOutput( ( ((release_time-1)+1)*DWM_time_step*OS%meandering_data%scale_factor), u%IfW_Inputs, p%IfW_Params, &
                             x%IfW_ContStates, xd%IfW_DiscStates, z%IfW_ConstrStates, OS%IfW_OtherStates, &   ! States -- none in this case
                             y%IfW_Outputs, ErrStat, ErrMsg )
 
-       temp_center_wake (:) = y%IfW_Outputs%Velocity(:,1)
+       temp_center_wake (:) = y%IfW_Outputs%VelocityUVW(:,1)
        !temp_center_wake (3) = y%IfW_Outputs%Velocity(3,1)
                                                              
        wake_center (release_time,2,2) = temp_center_wake (2) * (DWM_time_step*OS%meandering_data%scale_factor) * U_Scale_Factor + wake_center (release_time,1,2)+ &

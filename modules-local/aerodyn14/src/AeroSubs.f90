@@ -7,8 +7,6 @@ MODULE AeroSubs
 
    USE                     NWTC_Library
    USE                     AeroDyn_Types
-   USE  InflowWind
-   USE  InflowWind_Types
 
    USE AeroGenSubs, ONLY : MaxInfl
 
@@ -91,6 +89,9 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    ! Read the AeroDyn input file
    !-------------------------------------------------------------------------------------------------
 
+   CALL ReadCom( UnIn, InitInp%ADFileName, 'Header', ErrStatLcl, ErrMessLcl )
+      CALL SetErrStat(ErrStatLcl, ErrMessLcl,ErrStat, ErrMess,'AD_GetInput')   
+   
       ! Read in the title line
    CALL ReadStr( UnIn, InitInp%ADFileName, InitInp%Title, VarName='Title', VarDescr='File title', ErrStat=ErrStatLcl, ErrMsg=ErrMessLcl)
    CALL SetErrStat(ErrStatLcl, ErrMessLcl,ErrStat, ErrMess,'AD_GetInput')
@@ -103,24 +104,6 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       CALL WrScr( ' Heading of the AeroDyn input file: '//NewLine//'   '//TRIM(InitInp%Title) )
    END IF
    p%TITLE = InitInp%TITLE
-
-      ! Read in the units specifier  - REMOVE SOON!!!!!
-   CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='Units', VarDescr='Units option', ErrStat=ErrStatLcl, ErrMsg=ErrMessLcl)
-   CALL SetErrStat(ErrStatLcl, ErrMessLcl,ErrStat, ErrMess,'AD_GetInput')
-   IF (ErrStat >= AbortErrLev) THEN
-      CLOSE(UnIn)
-      RETURN
-   END IF
-
-   LINE = ADJUSTL( LINE )
-   CALL Conv2UC(LINE(1:3))
-
-   IF (LINE(1:2) /= 'SI') THEN
-      CALL ProgWarn( 'English units are no longer allowed in AeroDyn. Please modify your input files to use the metric system.')
-      ErrStat = ErrID_Fatal
-      CLOSE(UnIn)
-      RETURN
-   END IF
 
    p%SIunit = .TRUE.
 
@@ -300,22 +283,8 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       END SELECT
    END IF
 
-
-      ! Read in the wind file name
-   CALL ReadVar( UnIn, InitInp%ADFileName, InitInp%WindFileName, VarName='WindFileName', VarDescr='Name of the wind file', ErrStat=ErrStat, ErrMsg=ErrMess)
-   IF (ErrStat >= AbortErrLev) THEN
-      CLOSE(UnIn)
-      RETURN
-   END IF
-   IF ( PathIsRelative( InitInp%WindFileName ) ) InitInp%WindFileName = TRIM(FilePath)//TRIM(InitInp%WindFileName)
-
-      ! Read in the wind reference (hub) height above ground
-   CALL ReadVar( UnIn, InitInp%ADFileName, P%Rotor%HH, VarName='RefHt', VarDescr='Wind reference height', ErrStat=ErrStat, ErrMsg=ErrMess)
-   IF (ErrStat >= AbortErrLev) THEN
-      CLOSE(UnIn)
-      RETURN
-   END IF
-
+   p%Rotor%HH = InitInp%HubHt   
+   
 !bjj: this is a hack job to allow both the new tower influence and the old tower wake models to be used
 !   CALL ReadStr( UnIn, InitInp%ADFileName, LINE, VarName='NewTowerModel?', VarDescr='Check for tower influence model', ErrStat=ErrStat )
    CALL ReadVar( UnIn, InitInp%ADFileName, LINE, VarName='NewTowerModel?', VarDescr='Check for tower influence model', ErrStat=ErrStat, ErrMsg=ErrMess )
@@ -888,7 +857,6 @@ ELSE
 ENDIF
 
 
-WRITE(UnOut,Ec_StrFrmt) 'WindFile','Wind file name',TRIM(InitInp%WindFileName)
 WRITE(UnOut,Ec_ReFrmt) p%Rotor%HH,'HH','Wind reference (hub) height, '//TRIM(Dst_Unit)
 
 IF ( p%TwrProps%PJM_Version ) THEN
@@ -2756,7 +2724,7 @@ RETURN
 END FUNCTION AD_WindVelocityWithDisturbance
 
 !====================================================================================================
-SUBROUTINE DiskVel ( Time, P, O, ErrStat, ErrMess )
+SUBROUTINE DiskVel ( Time, P, O, AvgInfVel, ErrStat, ErrMess )
 !   SUBROUTINE DiskVel
  !  calculates the mean velocities relative to the rotor disk
  !  calls routine to get wind velocity at a specified location
@@ -2770,23 +2738,20 @@ SUBROUTINE DiskVel ( Time, P, O, ErrStat, ErrMess )
    REAL(DbKi), INTENT(IN) :: Time
    TYPE(AD_ParameterType),       INTENT(IN)     :: p           ! Parameters
    TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   REAL(ReKi),                   INTENT(IN)     :: AvgInfVel(3) !some sort of averaged wind speed (currently depends on wind file type)
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
 
    REAL(ReKi)                 :: Vinplane
    REAL(ReKi)                 :: VXY
-   REAL(ReKi)                 :: AvgInfVel(3)
-   REAL(ReKi)                 :: Position(3)
 
    ErrStat = ErrID_None
    ErrMess = ""
    
-Position = (/0.0_ReKi, 0.0_ReKi, P%Rotor%HH /)
+!Position = (/0.0_ReKi, 0.0_ReKi, P%Rotor%HH /)
 !AvgInfVel(:) = WindInf_ADhack_diskVel( REAL(Time, ReKi), Position, ErrStat )
 
-AvgInfVel(:) = WindInf_ADhack_diskVel( Time,p%IfW_Params, O%IfW_OtherStates,ErrStat, ErrMess )
-IF (ErrStat >= AbortErrLev) RETURN
 
 VXY   = AvgInfVel(1) * O%Rotor%CYaw - AvgInfVel(2) * O%Rotor%SYaw
 
