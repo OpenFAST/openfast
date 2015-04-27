@@ -21,7 +21,7 @@
 !  InflowWind.txt       -- InflowWind_Types will be auto-generated based on the descriptions found in this file.
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2013  National Renewable Energy Laboratory
+! Copyright (C) 2015  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
@@ -187,6 +187,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       ! Temoporary messages
    INTEGER(IntKi)                                     :: TmpErrStat
    CHARACTER(LEN(ErrMsg))                             :: TmpErrMsg
+   CHARACTER(1024)                                    :: PriPath                                   ! Path name of the primary file
 
 
       ! Initialize local data
@@ -196,6 +197,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    ErrStat                 = ErrID_None
    ErrMsg                  = ""
    InputFileData%EchoFlag  = .FALSE.  ! initialize for error handling (cleanup() routine)
+   CALL GetPath( InputFileName, PriPath )    ! Input files will be relative to the path where the primary input file is located.
 
 
       ! allocate the array for the OutList
@@ -445,6 +447,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       CALL CleanUp()
       RETURN
    ENDIF
+   IF ( PathIsRelative( InputFileData%Uniform_FileName ) ) InputFileData%Uniform_FileName = TRIM(PriPath)//TRIM(InputFileData%Uniform_FileName)
 
       ! Read RefHt
    CALL ReadVar( UnitInput, InputFileName, InputFileData%Uniform_RefHt, 'RefHt', &
@@ -485,6 +488,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       CALL CleanUp()
       RETURN
    ENDIF
+   IF ( PathIsRelative( InputFileData%TSFF_FileName ) ) InputFileData%TSFF_FileName = TRIM(PriPath)//TRIM(InputFileData%TSFF_FileName)
 
 
    !-------------------------------------------------------------------------------------------------
@@ -501,13 +505,15 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
       ! Read BladedStyle%WindFileName
    CALL ReadVar( UnitInput, InputFileName, InputFileData%BladedFF_FileName, 'FileName', &
-               'Name of the TurbSim full field wind file to use (.bts)', TmpErrStat, TmpErrMsg, UnitEcho )
+               'Rootname of the full-field wind file to use (.wnd, .sum)', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
       CALL CleanUp()
       RETURN
    ENDIF
-
+   IF ( PathIsRelative( InputFileData%BladedFF_FileName ) ) InputFileData%BladedFF_FileName = TRIM(PriPath)//TRIM(InputFileData%BladedFF_FileName)
+   InputFileData%BladedFF_FileName = TRIM(InputFileData%BladedFF_FileName)//'.wnd'
+   
       ! Read TowerFileFlag
    CALL ReadVar( UnitInput, InputFileName, InputFileData%BladedFF_TowerFile, 'TowerFileFlag', &
                'Have tower file (.twr) [flag]', TmpErrStat, TmpErrMsg, UnitEcho )
@@ -548,6 +554,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       CALL CleanUp()
       RETURN
    ENDIF
+   IF ( PathIsRelative( InputFileData%CTTS_FileName ) ) InputFileData%CTTS_FileName = TRIM(PriPath)//TRIM(InputFileData%CTTS_FileName)
 
       ! Read CTWind%PathName
    CALL ReadVar( UnitInput, InputFileName, InputFileData%CTTS_Path, 'CTTS_Path', &
@@ -557,6 +564,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       CALL CleanUp()
       RETURN
    ENDIF
+   IF ( PathIsRelative( InputFileData%CTTS_Path ) ) InputFileData%CTTS_Path = TRIM(PriPath)//TRIM(InputFileData%CTTS_Path)
 
 
 
@@ -580,6 +588,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       CALL Cleanup()
       RETURN
    END IF
+   IF ( PathIsRelative( InputFileData%HAWC_FileName_u ) ) InputFileData%HAWC_FileName_u = TRIM(PriPath)//TRIM(InputFileData%HAWC_FileName_u)
 
       ! Read HAWC_FileName_v
    CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_FileName_v, 'HAWC_FileName_v', &
@@ -589,6 +598,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       CALL Cleanup()
       RETURN
    END IF
+   IF ( PathIsRelative( InputFileData%HAWC_FileName_v ) ) InputFileData%HAWC_FileName_v = TRIM(PriPath)//TRIM(InputFileData%HAWC_FileName_v)
 
       ! Read HAWC_FileName_w
    CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_FileName_w, 'HAWC_FileName_w', &
@@ -598,6 +608,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       CALL Cleanup()
       RETURN
    END IF
+   IF ( PathIsRelative( InputFileData%HAWC_FileName_w ) ) InputFileData%HAWC_FileName_w = TRIM(PriPath)//TRIM(InputFileData%HAWC_FileName_w)
 
       ! Read HAWC_nx
    CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_nx, 'HAWC_nx', &

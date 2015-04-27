@@ -17,7 +17,7 @@ MODULE IfW_TSFFWind
 !
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2013  National Renewable Energy Laboratory
+! Copyright (C) 2015  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
@@ -146,7 +146,7 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, PositionXYZ, ParamData, OtherStates, &
 
    IF ( OtherStates%Initialized ) THEN
       CALL SetErrStat(ErrID_Warn,' TSFFWind has already been initialized.',ErrStat,ErrMsg,RoutineName)
-      RETURN   ! No point continuing since alread initialized
+      RETURN      ! No point continuing since already initialized.
    ENDIF
 
 

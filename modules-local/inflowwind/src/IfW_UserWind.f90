@@ -7,7 +7,7 @@ MODULE IfW_UserWind
 !!    -- IfW_UserWind_End           -- clear out any stored stuff.  Only called at the end of FAST.
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2013  National Renewable Energy Laboratory
+! Copyright (C) 2015  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !

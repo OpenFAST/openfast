@@ -21,7 +21,7 @@
 !  InflowWind.txt       -- InflowWind_Types will be auto-generated based on the descriptions found in this file.
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2013  National Renewable Energy Laboratory
+! Copyright (C) 2015  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
@@ -167,7 +167,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
       ErrStat        =  ErrID_None
       ErrMsg         =  ""
-
+      SumFileUnit    =  -1_IntKi ! set at beginning in case of error
 
          ! Set a few variables.
 
@@ -700,9 +700,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       InitOutData%Ver   = IfW_Ver
 
 
-         ! Close the summary file
-      CALL InflowWind_CloseSumFile( SumFileUnit, TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      CALL CleanUp()
 
 
       RETURN
