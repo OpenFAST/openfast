@@ -31,6 +31,7 @@
            uuNi_temp(j) = uuNi(temp_id + 3)
        ENDDO
        rot_temp = 0.0D0
+!       CALL CrvCompose_temp(rot_temp,tr_temp,uuNi_temp,0)
        CALL CrvCompose(rot_temp,tr_temp,uuNi_temp,0)
        DO j=1,3
            temp_id = (i - 1) * dof_node +j

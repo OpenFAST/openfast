@@ -1,9 +1,12 @@
 	SUBROUTINE lubksb(a,n,indx,b,ui)
-    
-    INTEGER(IntKi),INTENT(IN):: indx(:),n
-    REAL(ReKi),INTENT(IN):: a(:,:)
-    REAL(ReKi),INTENT(INOUT):: b(:)
-    REAL(ReKi),INTENT(OUT):: ui(:)
+!***************************************************************************************
+! This subroutine solves Ax=b by backward substitution.
+!***************************************************************************************
+    INTEGER(IntKi),INTENT(IN):: indx(:) 
+    INTEGER(IntKi),INTENT(IN):: n ! DOF total - 6
+    REAL(ReKi),INTENT(IN):: a(:,:) ! Mass matrix
+    REAL(ReKi),INTENT(INOUT):: b(:) ! Unknowns in Ax=b
+    REAL(ReKi),INTENT(OUT):: ui(:) ! Unknowns in Ax=b
     
     INTEGER(IntKi):: i,ii,j,ll
     REAL(ReKi):: summ

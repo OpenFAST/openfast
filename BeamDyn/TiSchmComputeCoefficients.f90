@@ -1,16 +1,30 @@
-   SUBROUTINE TiSchmComputeCoefficients(beta,gama,deltat,alfaM,alfaF,coef)
+   SUBROUTINE TiSchmComputeCoefficients(rhoinf,deltat,coef)
 
-   REAL(ReKi),INTENT(IN)::beta, gama, deltat, alfaM, alfaF
+   REAL(DbKi),INTENT(IN   ):: rhoinf
+   REAL(DbKi),INTENT(IN   ):: deltat
+   REAL(DbKi),INTENT(  OUT):: coef(:)
+   
+   REAL(DbKi)              :: tr0
+   REAL(DbKi)              :: tr1
+   REAL(DbKi)              :: tr2
+   REAL(DbKi)              :: alfam
+   REAL(DbKi)              :: alfaf
+   REAL(DbKi)              :: gama
+   REAL(DbKi)              :: beta
+   REAL(DbKi)              :: oalfaM
+   REAL(DbKi)              :: deltat2
 
-   REAL(ReKi),INTENT(INOUT):: coef(:)
-
-   REAL(ReKi)::deltat2, oalfaM, tr0, tr1, tr2
+   tr0 = rhoinf + 1.0D0
+   alfam = (2.0D0 * rhoinf - 1.0D0) / tr0
+   alfaf = rhoinf / tr0
+   gama = 0.5D0 - alfam + alfaf
+   beta = 0.25 * (1.0D0 - alfam + alfaf) * (1.0D0 - alfam + alfaf)
 
    deltat2 = deltat * deltat
-   oalfaM = 1.0D0 - alfaM
-   tr0 =  alfaF / oalfaM
-   tr1 = alfaM / oalfaM
-   tr2 = (1.0D0 - alfaF) / oalfaM
+   oalfaM = 1.0D0 - alfam
+   tr0 = alfaf / oalfaM
+   tr1 = alfam / oalfaM
+   tr2 = (1.0D0 - alfaf) / oalfaM
 
    coef(1) = beta * tr0 * deltat2
    coef(2) = (0.5D0 - beta/oalfaM) * deltat2

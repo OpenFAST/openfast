@@ -1,21 +1,3 @@
-!..................................................................................................................................
-! LICENSING
-! Copyright (C) 2013  National Renewable Energy Laboratory
-!
-!    This file is part of BeamDyn.
-!
-!    BeamDyn is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
-!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
-!
-!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
-!
-!    You should have received a copy of the GNU General Public License along with BeamDyn.
-!    If not, see <http://www.gnu.org/licenses/>.
-!
-!**********************************************************************************************************************************
-!
-!**********************************************************************************************************************************
 MODULE BeamDyn
 
    USE BeamDyn_Types
@@ -25,374 +7,1043 @@ MODULE BeamDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER  :: BDyn_Ver = ProgDesc( 'BeamDyn', 'v1.00.04', '13-February-2013' )
+   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn_RK4', 'v1.00.00','12-March-2014')
 
-   ! ..... Public Subroutines ...................................................................................................
+   ! ..... Public Subroutines....................................................................
 
-   PUBLIC :: BDyn_Init                           ! Initialization routine
-   PUBLIC :: BDyn_End                            ! Ending routine (includes clean up)
-
-   PUBLIC :: BDyn_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
-                                                 !   continuous states, and updating discrete states
-   PUBLIC :: BDyn_CalcOutput                     ! Routine for computing outputs
-
-   PUBLIC :: BDyn_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
-   PUBLIC :: BDyn_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
-   PUBLIC :: BDyn_UpdateDiscState                ! Tight coupling routine for updating discrete states
-
-   PUBLIC :: StaticSolution                      ! for static verificaiton
+   PUBLIC :: BD_Init                           ! Initialization routine
+   PUBLIC :: BD_End                            ! Ending routine (includes clean up)
+   PUBLIC :: BD_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
+   PUBLIC :: BD_CalcOutput                     ! Routine for computing outputs
+   PUBLIC :: BD_CalcOutput_Coupling                     ! Routine for computing outputs
+   PUBLIC :: BD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
+   PUBLIC :: BD_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
+   PUBLIC :: BD_UpdateDiscState                ! Tight coupling routine for updating discrete states
+   PUBLIC :: CrvMatrixR                ! Tight coupling routine for updating discrete states
+   PUBLIC :: CrvCompose                ! Tight coupling routine for updating discrete states
+   PUBLIC :: CrvCompose_temp                ! Tight coupling routine for updating discrete states
+   PUBLIC :: CrvMatrixH                ! Tight coupling routine for updating discrete states
+   PUBLIC :: CrvMatrixB                ! Tight coupling routine for updating discrete states
+   PUBLIC :: CrvExtractCrv                ! Tight coupling routine for updating discrete states
+   PUBLIC :: Tilde
+   PUBLIC :: Norm
+   PUBLIC :: ludcmp
+   PUBLIC :: lubksb
+   PUBLIC :: MotionTensor
 
 CONTAINS
-INCLUDE 'NodeLoc.f90'
+
+!INCLUDE 'NodeLoc.f90'
 INCLUDE 'Tilde.f90'
-INCLUDE 'OuterProduct.f90'
 INCLUDE 'CrvMatrixR.f90'
 INCLUDE 'CrvMatrixH.f90'
 INCLUDE 'CrvCompose.f90'
-INCLUDE 'ElemNodalDisp.f90'
-INCLUDE 'NodalRelRot.f90'
-INCLUDE 'NodalDataAt0.f90'
-INCLUDE 'NodalData.f90'
+INCLUDE 'ElemNodalDispGL.f90'
+INCLUDE 'ElemNodalStifGL.f90'
+INCLUDE 'ElemNodalMassGL.f90'
+INCLUDE 'NodalRelRotGL.f90'
+INCLUDE 'BldGaussPointWeight.f90'
+INCLUDE 'diffmtc.f90'
+INCLUDE 'BldComputeJacobianLSGL.f90'
+INCLUDE 'BldGaussPointDataAt0.f90'
+INCLUDE 'BldGaussPointData.f90'
 INCLUDE 'ElasticForce.f90'
+INCLUDE 'BldGaussPointDataMass.f90'
+INCLUDE 'MassMatrix.f90'
+INCLUDE 'GyroForce.f90'
+INCLUDE 'GravityLoads.f90'
 INCLUDE 'ElementMatrix.f90'
-INCLUDE 'AssembleStiffK.f90'
-INCLUDE 'AssembleRHS.f90'
-INCLUDE 'BeamStatic.f90'
-INCLUDE 'Norm.f90'
-INCLUDE 'CGSolver.f90'
-INCLUDE 'UpdateConfiguration.f90'
-INCLUDE 'StaticSolution.f90'
+INCLUDE 'AssembleStiffKGL.f90'
+INCLUDE 'AssembleRHSGL.f90'
+INCLUDE 'GenerateDynamicElement.f90'
+INCLUDE 'ludcmp.f90'
+INCLUDE 'lubksb.f90'
+!INCLUDE 'AppliedNodalLoad.f90'
+!INCLUDE 'PrescribedRootMotion.f90'
+INCLUDE 'DynamicSolution.f90'
+INCLUDE 'BeamDyn_RK4.f90'
+INCLUDE 'BeamDyn_RK2.f90'
+INCLUDE 'CrvMatrixHinv.f90'
+INCLUDE 'ComputeUDN.f90'
+INCLUDE 'BD_CalcContStateDeriv.f90'
 
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
+INCLUDE 'ReadPrimaryFile.f90'
+INCLUDE 'ComputeSectionProperty.f90'
+INCLUDE 'ReadBladeFile.f90'
+INCLUDE 'BeamDyn_ReadInput.f90'
+INCLUDE 'MemberArcLength.f90'
+INCLUDE 'BldComputeMemberLength.f90'
+INCLUDE 'ComputeIniNodalPosition.f90'
+INCLUDE 'Norm.f90'
+INCLUDE 'CrossProduct.f90'
+INCLUDE 'CrvExtractCrv.f90'
+INCLUDE 'ComputeIniNodalCrv.f90'
+INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
+
+INCLUDE 'ElementMatrix_Force.f90'
+INCLUDE 'GenerateDynamicElement_Force.f90'
+INCLUDE 'DynamicSolution_Force.f90'
+INCLUDE 'ComputeIniCoef.F90'
+INCLUDE 'ComputeIniNodalPositionSP.f90'
+
+INCLUDE 'BeamDyn_Static.f90'
+INCLUDE 'BeamDyn_StaticSolution.f90'
+INCLUDE 'BeamDyn_GenerateStaticElement.f90'
+INCLUDE 'BeamDyn_StaticElementMatrix.f90'
+INCLUDE 'BeamDyn_StaticElasticForce.f90'
+
+INCLUDE 'BeamDyn_StaticElasticForce_New.f90'
+
+INCLUDE 'UpdateConfiguration.f90'
+INCLUDE 'OuterProduct.f90'
+INCLUDE 'GenerateStaticElement_Force.f90'
+INCLUDE 'StaticSolution_Force.f90'
+INCLUDE 'ElementMatrixStatic_Force.f90'
+
+INCLUDE 'CrvMatrixB.f90'
+INCLUDE 'AssembleStiffK_AM2.f90'
+INCLUDE 'AssembleRHS_AM2.f90'
+INCLUDE 'UpdateConfiguration_AM2.f90'
+INCLUDE 'AM2LinearizationMatrix.f90'
+INCLUDE 'ElementMatrix_AM2.f90'
+INCLUDE 'GenerateDynamicElement_AM2.f90'
+INCLUDE 'DynamicSolution_AM2.f90'
+INCLUDE 'BeamDyn_AM2.f90'
+INCLUDE 'BeamDyn_BoundaryPre.f90'
+INCLUDE 'BeamDyn_BoundaryAM2.f90'
+INCLUDE 'CrvCompose_temp.f90'
+INCLUDE 'CrvCompose_temp2.f90'
+INCLUDE 'CrvCompose_Check.f90'
+INCLUDE 'RescaleCheck.f90'
+INCLUDE 'DissipativeForce.f90'
+INCLUDE 'BldGaussPointDataXdot.f90'
+INCLUDE 'Solution_CCSD.f90'
+INCLUDE 'GenerateDynamicElement_CCSD.f90'
+INCLUDE 'ElementMatrix_CCSD.f90'
+
+INCLUDE 'BeamDyn_GA2.f90'
+INCLUDE 'TiSchmPredictorStep.f90'
+INCLUDE 'TiSchmComputeCoefficients.f90'
+INCLUDE 'BeamDyn_BoundaryGA2.f90'
+INCLUDE 'DynamicSolution_GA2.f90'
+INCLUDE 'BldGenerateDynamicElement.f90'
+INCLUDE 'UpdateDynamic.f90'
+INCLUDE 'ElementMatrix_GA2.f90'
+INCLUDE 'BldGaussPointDataMass_GA2.f90'
+INCLUDE 'InertialForce.f90'
+INCLUDE 'ElasticForce_GA2.f90'
+
+INCLUDE 'MotionTensor.f90'
+INCLUDE 'InputGlobalLocal.f90'
+INCLUDE 'ElementMatrix_Force_New.f90'
+INCLUDE 'ComputeReactionForce.f90'
+
+INCLUDE 'BD_CalcIC.f90'
+INCLUDE 'BD_CalcAcc.f90'
+INCLUDE 'Solution_Acc.f90'
+INCLUDE 'GenerateDynamicElement_ACC.f90'
+INCLUDE 'ElementMatrix_Acc.f90'
+
+   SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
 ! This routine is called at the start of the simulation to perform initialization steps.
 ! The parameters are set here and not changed during the simulation.
 ! The initial states and initial guess for the input are defined.
-!..................................................................................................................................
+!.....................................................................................................................
 
-      TYPE(BDyn_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
-      TYPE(BDyn_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
-      TYPE(BDyn_ParameterType),       INTENT(  OUT)  :: p           ! Parameters
-      TYPE(BDyn_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
-      TYPE(BDyn_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
-      TYPE(BDyn_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-      TYPE(BDyn_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states
-      TYPE(BDyn_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated;
-                                                                      !    only the output mesh is initialized)
-      REAL(DbKi),                       INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that
-                                                                      !   (1) BDyn_UpdateStates() is called in loose coupling &
-                                                                      !   (2) BDyn_UpdateDiscState() is called in tight coupling.
-                                                                      !   Input is the suggested time from the glue code;
-                                                                      !   Output is the actual coupling interval that will be used
-                                                                      !   by the glue code.
-      TYPE(BDyn_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
-      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(BD_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
+   TYPE(BD_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
+   TYPE(BD_ParameterType),       INTENT(  OUT)  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
+   TYPE(BD_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
+   TYPE(BD_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
+   TYPE(BD_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states
+   TYPE(BD_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated;
+                                                                    !    only the output mesh is initialized)
+   REAL(DbKi),                        INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that
+                                                                    !   (1) Mod1_UpdateStates() is called in loose coupling &
+                                                                    !   (2) Mod1_UpdateDiscState() is called in tight coupling.  !   Input is the suggested time from the glue code;
+                                                                    !   Output is the actual coupling interval that will be used
+                                                                    !   by the glue code.
+   TYPE(BD_InitOutputType),           INTENT(  OUT)  :: InitOut     ! Output for initialization routine
+   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-      !-------------------------------------
-      ! local variables
-      !-------------------------------------
+   ! local variables
+   TYPE(BD_InputFile)      :: InputFileData    ! Data stored in the module's input file
+   INTEGER(IntKi)          :: i                ! do-loop counter
+   INTEGER(IntKi)          :: j                ! do-loop counter
+   INTEGER(IntKi)          :: k                ! do-loop counter
+   INTEGER(IntKi)          :: m                ! do-loop counter
+   INTEGER(IntKi)          :: temp_int
+   INTEGER(IntKi)          :: temp_id
+   INTEGER(IntKi)          :: temp_id2
+   REAL(ReKi)              :: temp_EP1(3)
+   REAL(ReKi)              :: temp_EP2(3)
+   REAL(ReKi)              :: temp_MID(3)
+   REAL(ReKi)              :: temp_Coef(4,4)
+   REAL(ReKi)              :: temp66(6,6)
+   REAL(ReKi)              :: temp_twist
+   REAL(ReKi)              :: eta
+   REAL(ReKi)              :: temp_POS(3)
+   REAL(ReKi)              :: temp_e1(3)
+   REAL(ReKi)              :: temp_CRV(3)
+   REAL(ReKi)              :: temp_GLB(3)
+   REAL(ReKi)              :: temp_glbrot(3)
+   REAL(ReKi),PARAMETER    :: EPS = 1.0D-10
+   REAL(ReKi),ALLOCATABLE  :: temp_GLL(:)
+   REAL(ReKi),ALLOCATABLE  :: temp_GL(:)
+   REAL(ReKi),ALLOCATABLE  :: temp_w(:)
+   REAL(ReKi),ALLOCATABLE  :: temp_ratio(:,:)
+   REAL(ReKi),ALLOCATABLE  :: temp_L2(:,:)
+   REAL(ReKi),ALLOCATABLE  :: SP_Coef(:,:,:)
+   INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
+   CHARACTER(LEN(ErrMsg))       :: ErrMsg2                      ! Temporary Error message
 
-      INTEGER(IntKi)          :: i,j                ! do-loop counter
-      Real(ReKi)              :: xl               ! left most point
-      Real(ReKi)              :: xr               ! right most point
-      REAL(ReKi)              :: blength          !beam length: xr - xl
-      REAL(ReKi)              :: elem_length      !element length: blength/elem_total
-      REAL(ReKi),ALLOCATABLE  :: dloc(:)
+   REAL(ReKi)             :: TmpPos(3)
 
-      INTEGER(IntKi)          :: ErrStat2     ! Error status of the operation
-      CHARACTER(LEN(ErrMsg))   :: ErrMsg2      ! Error message if ErrStat /= ErrID_None
+  ! Initialize ErrStat
 
-      ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = "" 
-
-      ! Initialize the NWTC Subroutine Library
-
-      CALL NWTC_Init( )
-
-      ! Display the module information
-
-      CALL DispNVD( BDyn_Ver )
-
-      ! Define parameters here:
-
-      p%elem_total = 2 
-      p%order    = 5 
-      p%dof_node = 6
-      p%node_total = p%elem_total * p%order  + 1
-      p%dof_total  = p%node_total * p%dof_node
-      p%node_elem  = p%order + 1
-      p%dof_elem   = p%node_elem * p%dof_node
-      p%niter = 100
-
-      xl = 0.   ! left most point (on x axis)
-      xr = 10.  ! right most point (on x axis)
-      blength = xr - xl
-      elem_length = blength / p%elem_total
-
-      !p%det_jac = elem_length/2.0D0
-      p%Jacobian = elem_length/2.0D0
-
-      ! allocate all allocatable paramete arrays
-
-      ALLOCATE( p%Stif0(6,6,p%node_total),      STAT=ErrStat )
-      p%Stif0 = 0.0D0
-      !Allocate( p%M(6,6,p%num_node),      STAT=ErrStat )
-       
-      ALLOCATE( p%gll_w(p%node_elem),      STAT=ErrStat )
-      p%gll_w = 0.0D0
-      ALLOCATE( p%gll_p(p%node_elem),      STAT=ErrStat )
-      p%gll_p = 0.0D0
-      ALLOCATE( p%gll_deriv(p%node_elem,p%node_elem),      STAT=ErrStat )
-      p%gll_deriv = 0.0D0
-      ALLOCATE( p%uuN0(p%dof_total),      STAT=ErrStat )
-      p%uuN0 = 0.0D0
-      ALLOCATE( OtherState%uuNf(p%dof_total), STAT = ErrStat)
-      OtherState%uuNf = 0.0D0
-      ALLOCATE( p%bc(p%dof_total), STAT = ErrStat)
-      p%bc = 0.0D0
-      ALLOCATE( p%F_ext(p%dof_total), STAT = ErrStat)
-      p%F_ext = 0.0D0
-      p%F_ext(p%dof_total-1) = -3.14159D+01 * 1.0D-03
-!      p%F_ext(p%dof_total-5) = 3.14159D+01 * 1.D0
-!      p%F_ext(p%dof_total-3) = -3.0D+00 * 1.0D-02
-!      p%F_ext(p%dof_total-4) = -3.0D+00 * 1.0D-02
-!      p%F_ext(p%dof_total - 1) = -6.28D+01
-      p%bc = 0.0D0
-      ALLOCATE( dloc(p%node_total), STAT = ErrStat)
-      dloc = 0.0D0
-      ! Check parameters for validity (general case) 
-               
-!     IF ( EqualRealNos( p%mu, 0.0_ReKi ) ) THEN
-!        ErrStat = ErrID_Fatal
-!        ErrMsg  = ' Error in BeamDyn: Mass must be non-zero to avoid division-by-zero errors.'
-!        RETURN
-!     END IF
-
-      ! Allocate OtherState if using multi-step method; initialize n
-
-      ! Calculate general spectral element stuff specific to "order"
-
-      CALL BDyn_gen_gll(p%order, p%gll_p, p%gll_w, ErrStat, ErrMsg)
-
-      CALL BDyn_gen_deriv(p%order, p%gll_p, p%gll_deriv, ErrStat, ErrMsg)
-
-      CALL NodeLoc(dloc,xl,elem_length,p%gll_p,p%order,p%elem_total,p%node_total,blength)
-
-      DO i=1,p%node_total
-          p%uuN0((i-1)*p%dof_node + 1) = dloc(i)
-          p%Stif0(1,1,i) = 1.0D+04
-          p%Stif0(2,2,i) = 1.0D+04
-          p%Stif0(3,3,i) = 1.0D+04
-          p%Stif0(4,4,i) = 1.0D+04
-          p%Stif0(5,5,i) = 1.0D+02
-          p%Stif0(6,6,i) = 1.0D+02
-      ENDDO
-      DEALLOCATE(dloc)
-
-      OPEN(unit = 110, file = 'NodeLocation.dat', status = 'unknown')
-      DO i=1,p%node_total
-          j = (i-1) * p%dof_node
-          WRITE(110,*) p%uuN0(j+1)
-      ENDDO
-!     DO i = 1, p%elem_total
-!        p%det_jac(i) = elem_length / 2.   ! element-specific determinant of jacobian of transformation
-!     ENDDO     
-
-      ! Define boundary conditions (0->fixed, 1->free)
-      p%bc = 1.0D0
-      DO i=1, p%dof_node
-          p%bc(i) = 0.0D0
-      ENDDO ! fix left end for a clamped beam 
-
-      ! Define initial guess for the system inputs here:
-
-      ! Define system output initializations (set up mesh) here:
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
 
 
-END SUBROUTINE BDyn_Init
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-!
-! This routine is called at the end of the simulation.
-!..................................................................................................................................
+   ! Initialize the NWTC Subroutine Library
 
-      TYPE(BDyn_InputType),           INTENT(INOUT)  :: u           ! System inputs
-      TYPE(BDyn_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
-      TYPE(BDyn_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
-      TYPE(BDyn_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
-      TYPE(BDyn_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-      TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(BDyn_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   CALL NWTC_Init( )
 
-      ! Initialize ErrStat
+   ! Display the module information
 
-      ErrStat = ErrID_None
-      ErrMsg  = "" 
+   CALL DispNVD( BeamDyn_Ver )
 
-      ! Place any last minute operations or calculations here:
+   CALL BeamDyn_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat,ErrMsg)
+   p%analysis_type  = InputFileData%analysis_type
+   p%time_flag  = InputFileData%time_integrator
+   p%damp_flag  = InputFileData%InpBl%damp_flag
+   CALL AllocAry(p%beta,6,'Damping coefficient',ErrStat2,ErrMsg2)
+   p%beta(:)  = InputFileData%InpBl%beta(:)
 
-      ! Close files here:
+   CALL AllocAry(p%gravity,3,'Gravity vector',ErrStat2,ErrMsg2)
+   p%gravity(:) = 0.0D0
+   p%gravity(1) = InitInp%gravity(3)
+   p%gravity(2) = InitInp%gravity(1)
+   p%gravity(3) = InitInp%gravity(2)
 
-      ! Destroy the input data:
+   CALL CrvExtractCrv(InitInp%GlbRot,temp_glbrot)
+   CALL AllocAry(p%GlbPos,3,'Global position vector',ErrStat2,ErrMsg2)
+   CALL AllocAry(p%GlbRot,3,3,'Global rotation tensor',ErrStat2,ErrMsg2)
+   p%GlbPos(:) = 0.0D0
+   p%GlbRot(:,:) = 0.0D0
+   p%GlbPos(1:3) = InitInp%GlbPos(1:3)
+   p%GlbRot(1:3,1:3) = InitInp%GlbRot(1:3,1:3)
+   ! Hardwire value for initial position vector
+!   temp_glbrot(:) = 0.0D0
+!   temp_glbrot(3) = 4.0D0*TAN((3.1415926D0/2.0D0)/4.0D0)
 
-      CALL BDyn_DestroyInput( u, ErrStat, ErrMsg )
+   CALL AllocAry(SP_Coef,InputFileData%kp_total-1,4,4,'Spline coefficient matrix',ErrStat2,ErrMsg2)
+   SP_Coef(:,:,:) = 0.0D0
 
-      ! Destroy the parameter data:
+   temp_id = 0
+   temp_id2 = 0
+   DO i=1,InputFileData%member_total
+       IF(i == 1) temp_id = 1 
+       temp_id2= temp_id + InputFileData%kp_member(i) - 1
+       CALL ComputeIniCoef(InputFileData%kp_member(i),InputFileData%kp_coordinate(temp_id:temp_id2,1:4),SP_Coef(temp_id:temp_id2-1,1:4,1:4))
+       temp_id = temp_id2
+   ENDDO
+   CALL AllocAry(p%member_length,InputFileData%member_total,2,'member length array',ErrStat2,ErrMsg2)
+   p%member_length(:,:) = 0.0D0
+   CALL AllocAry(p%segment_length,InputFileData%kp_total-1,3,'segment length array',ErrStat2,ErrMsg2)
+   p%segment_length(:,:) = 0.0D0
+   p%blade_length = 0.0D0
 
-      CALL BDyn_DestroyParam( p, ErrStat, ErrMsg )
+   CALL BldComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,SP_Coef,&
+                               p%segment_length,p%member_length,p%blade_length)
+   p%elem_total = InputFileData%member_total
+   p%node_elem  = InputFileData%order_elem + 1       ! node per element
+   p%ngp        = p%node_elem - 1
+   p%dof_node   = 6
+   temp_int     = p%node_elem * p%dof_node
 
-      ! Destroy the state data:
+   CALL AllocAry(p%uuN0,temp_int,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
+   p%uuN0(:,:) = 0.0D0
 
-      CALL BDyn_DestroyContState(   x,           ErrStat, ErrMsg )
-      CALL BDyn_DestroyDiscState(   xd,          ErrStat, ErrMsg )
-      CALL BDyn_DestroyConstrState( z,           ErrStat, ErrMsg )
-      CALL BDyn_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
+   CALL AllocAry(temp_GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
+   temp_GLL(:) = 0.0D0
+   CALL AllocAry(temp_w,p%node_elem,'GLL weight array',ErrStat2,ErrMsg2)
+   temp_w(:) = 0.0D0
+   CALL BD_gen_gll_LSGL(p%node_elem-1,temp_GLL,temp_w)
+   DEALLOCATE(temp_w)
 
-      ! Destroy the output data:
+   CALL AllocAry(temp_L2,3,p%ngp*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2) 
+   temp_L2(:,:) = 0.0D0
+   CALL AllocAry(temp_GL,p%ngp,'temp_GL',ErrStat2,ErrMsg2) 
+   temp_GL(:) = 0.0D0
+   CALL AllocAry(temp_w,p%ngp,'GL weight array',ErrStat2,ErrMsg2)
+   temp_w(:) = 0.0D0
+   CALL BldGaussPointWeight(p%ngp,temp_GL,temp_w)
+   DEALLOCATE(temp_w)
 
-      CALL BDyn_DestroyOutput( y, ErrStat, ErrMsg )
+   DO i=1,p%elem_total
+       IF(i == 1) THEN
+           temp_id = 0
+       ELSE
+           temp_id = temp_id + InputFileData%kp_member(i-1) - 1
+       ENDIF
+       DO j=1,p%node_elem
+           eta = (temp_GLL(j) + 1.0D0)/2.0D0
+           DO k=1,InputFileData%kp_member(i)-1
+               temp_id2 = temp_id + k
+               IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN
+                   DO m=1,4
+                       temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
+                   ENDDO
+                   eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
+                   CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
+                   CALL ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV)
+                   temp_id2 = (j-1)*p%dof_node 
+                   p%uuN0(temp_id2+1,i) = temp_POS(1)
+                   p%uuN0(temp_id2+2,i) = temp_POS(2)
+                   p%uuN0(temp_id2+3,i) = temp_POS(3)
+                   p%uuN0(temp_id2+4,i) = temp_CRV(1)
+                   p%uuN0(temp_id2+5,i) = temp_CRV(2)
+                   p%uuN0(temp_id2+6,i) = temp_CRV(3)
+                   EXIT
+               ENDIF
+           ENDDO
+       ENDDO
+       DO j=1,p%ngp
+           eta = (temp_GL(j) + 1.0D0)/2.0D0
+           DO k=1,InputFileData%kp_member(i)-1
+               temp_id2 = temp_id + k
+               IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN
+                   DO m=1,4
+                       temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
+                   ENDDO
+                   eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
+                   CALL ComputeIniNodalPositionSP(temp_Coef,eta,temp_POS,temp_e1,temp_twist)
+                   temp_id2 = (i-1)*p%ngp+j+1
+                   temp_L2(1:3,temp_id2) = temp_POS(1:3)
+                   EXIT
+               ENDIF
+           ENDDO
+       ENDDO
+   ENDDO
+   temp_L2(1:3,1) = p%uuN0(1:3,1)
+   temp_L2(1:3,p%ngp*p%elem_total+2) = p%uuN0(temp_int-5:temp_int-3,p%elem_total)
+
+   DEALLOCATE(temp_GLL)
+
+   CALL AllocAry(temp_ratio,p%ngp,p%elem_total,'temp_ratio',ErrStat2,ErrMsg2) 
+   temp_ratio(:,:) = 0.0D0
+
+   DO i=1,p%ngp
+       temp_GL(i) = (temp_GL(i) + 1.0D0)/2.0D0
+   ENDDO
+
+   DO i=1,p%elem_total
+       IF(i .EQ. 1) THEN
+           DO j=1,p%ngp
+               temp_ratio(j,i) = temp_GL(j)*p%member_length(i,2)
+           ENDDO
+       ELSE
+           DO j=1,i-1
+               temp_ratio(:,i) = temp_ratio(:,i) + p%member_length(j,2)
+           ENDDO
+           DO j=1,p%ngp
+               temp_ratio(j,i) = temp_ratio(j,i) + temp_GL(j)*p%member_length(i,2)
+           ENDDO
+       ENDIF
+   ENDDO
+
+   CALL AllocAry(p%Stif0_GL,6,6,p%ngp*p%elem_total,'Stif0_GL',ErrStat2,ErrMsg2) 
+   p%Stif0_GL(:,:,:) = 0.0D0
+   CALL AllocAry(p%Mass0_GL,6,6,p%ngp*p%elem_total,'Mass0_GL',ErrStat2,ErrMsg2) 
+   p%Mass0_GL(:,:,:) = 0.0D0
+   DO i=1,p%elem_total
+       DO j=1,p%ngp
+           temp_id = (i-1)*p%ngp+j
+           DO k=1,InputFileData%InpBl%station_total
+               IF(temp_ratio(j,i) - InputFileData%InpBl%station_eta(k) <= EPS) THEN
+                   IF(ABS(temp_ratio(j,i) - InputFileData%InpBl%station_eta(k)) <= EPS) THEN
+                       p%Stif0_GL(1:6,1:6,temp_id) = InputFileData%InpBl%stiff0(1:6,1:6,k)
+                       p%Mass0_GL(1:6,1:6,temp_id) = InputFileData%InpBl%mass0(1:6,1:6,k)
+                   ELSE 
+                       temp66(:,:) = 0.0D0
+                       temp66(1:6,1:6) = (InputFileData%InpBl%stiff0(1:6,1:6,k)-InputFileData%InpBl%stiff0(1:6,1:6,k-1)) / &
+                                         (InputFileData%InpBl%station_eta(k) - InputFileData%InpBl%station_eta(k-1))
+                       p%Stif0_GL(1:6,1:6,temp_id) = temp66(1:6,1:6) * temp_ratio(j,i) + &
+                                                     InputFileData%InpBl%stiff0(1:6,1:6,k-1) - &
+                                                     temp66(1:6,1:6) * InputFileData%InpBl%station_eta(k-1)
+                       temp66(:,:) = 0.0D0
+                       temp66(1:6,1:6) = (InputFileData%InpBl%mass0(1:6,1:6,k)-InputFileData%InpBl%mass0(1:6,1:6,k-1)) / &
+                                         (InputFileData%InpBl%station_eta(k) - InputFileData%InpBl%station_eta(k-1))
+                       p%Mass0_GL(1:6,1:6,temp_id) = temp66(1:6,1:6) * temp_ratio(j,i) + &
+                                                     InputFileData%InpBl%mass0(1:6,1:6,k-1) - &
+                                                     temp66(1:6,1:6) * InputFileData%InpBl%station_eta(k-1)
+                   ENDIF
+                   EXIT
+               ENDIF
+           ENDDO
+       ENDDO
+   ENDDO
+!   temp66(:,:) = 0.0D0
+!   temp66(1:3,1:3) = InitInp%GlbRot(1:3,1:3)
+!   temp66(4:6,4:6) = InitInp%GlbRot(1:3,1:3)
+!   DO i=1,p%ngp*p%elem_total
+!       p%Stif0_GL(:,:,i) = MATMUL(TRANSPOSE(temp66),MATMUL(p%Stif0_GL(:,:,i),temp66))
+!       p%Mass0_GL(:,:,i) = MATMUL(TRANSPOSE(temp66),MATMUL(p%Mass0_GL(:,:,i),temp66))
+!   ENDDO
+
+   DEALLOCATE(temp_GL)
+   DEALLOCATE(temp_ratio)
+
+   WRITE(*,*) "Finished Read Input"
+!   WRITE(*,*) "member_total = ", InputFileData%member_total
+!   WRITE(*,*) "gravity = ", p%gravity
+!   DO i=1,InputFileData%member_total
+!       DO j=1,InputFileData%kp_member(i)
+!           WRITE(*,*) "kp_coordinate:", InputFileData%kp_coordinate(j,:)
+!       ENDDO
+!   ENDDO
+!   DO i=1,InputFiledata%member_total
+!       WRITE(*,*) "ith_member_length",i,p%member_length(i,:)
+!!       WRITE(*,*) "temp_ratio: ", temp_ratio(:,i)
+!       DO j=1,p%node_elem
+!           WRITE(*,*) "Nodal Position:",j
+!           WRITE(*,*) p%uuN0((j-1)*6+1,i),p%uuN0((j-1)*6+2,i),p%uuN0((j-1)*6+3,i)
+!           WRITE(*,*) p%uuN0((j-1)*6+4,i),p%uuN0((j-1)*6+5,i),p%uuN0((j-1)*6+6,i)
+!       ENDDO
+!!       DO j=1,p%ngp+2
+!!           WRITE(*,*) "Gauss Point Position:",j
+!!           WRITE(*,*) temp_L2(1:3,j)
+!!       ENDDO
+!   ENDDO
+!   WRITE(*,*) "Blade Length: ", p%blade_length
+!   WRITE(*,*) "node_elem: ", p%node_elem
+!   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,1)
+!   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,2)
+!   WRITE(*,*) "Stiff0: ", InputFileData%InpBl%stiff0(4,:,3)
+
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(1,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(2,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(3,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(4,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(5,:,1)
+!   WRITE(*,*) "Stiff0_GL: ", p%Stif0_GL(6,:,1)
+!   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,1)
+!   WRITE(*,*) "Mass0_GL: ", p%Mass0_GL(4,:,2)
+   ! Define parameters here:
+
+   p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node  
+   p%dof_total   = p%node_total*p%dof_node   ! total number of dof
+   p%dt = Interval
+   p%alpha = 0.5D0
+!   WRITE(*,*) "node_total: ", p%node_total
+!   STOP
+   
+   CALL AllocAry(p%coef,9,'GA2 coefficient',ErrStat2,ErrMsg2)
+   p%coef(:)  = 0.0D0
+   p%rhoinf = InputFileData%rhoinf
+   IF(p%time_flag .EQ. 2) CALL TiSchmComputeCoefficients(p%rhoinf,p%dt,p%coef)
+   ! Allocate OtherState if using multi-step method; initialize n
 
 
-END SUBROUTINE BDyn_End
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+   ! Allocate continuous states and define initial system states here:
+
+   CALL AllocAry(x%q,p%dof_total,'x%q',ErrStat2,ErrMsg2)
+   x%q(:) = 0.0D0
+!DO i=1,p%node_total
+!    temp_id = (i-1)*p%dof_node
+!    x%q(temp_id+2) = 0.1
+!ENDDO
+   CALL AllocAry(x%dqdt,p%dof_total,'x%dqdt',ErrStat2,ErrMsg2)
+   x%dqdt(:) = 0.0D0
+
+   CALL AllocAry(OtherState%acc,p%dof_total,'OtherState%acc',ErrStat2,ErrMsg2)
+   OtherState%acc(:) = 0.0D0
+   CALL AllocAry(OtherState%xcc,p%dof_total,'OtherState%xcc',ErrStat2,ErrMsg2)
+   OtherState%xcc(:) = 0.0D0
+
+   CALL AllocAry(OtherState%facc,p%dof_total,'OtherState%facc',ErrStat2,ErrMsg2)
+   OtherState%facc(:) = 0.0D0
+
+   p%niter = 20
+
+   ! Define system output initializations (set up mesh) here:
+   CALL MeshCreate( BlankMesh        = u%RootMotion            &
+                   ,IOS              = COMPONENT_INPUT        &
+                   ,NNodes           = 1                      &
+                   , TranslationDisp = .TRUE. &
+                   , TranslationVel  = .TRUE. &
+                   , TranslationAcc  = .TRUE. &
+                   , Orientation     = .TRUE. &
+                   , RotationVel     = .TRUE. &
+                   , RotationAcc     = .TRUE. &
+                   ,nScalars        = 0                      &
+                   ,ErrStat         = ErrStat               &
+                   ,ErrMess         = ErrMsg                )
+
+   CALL MeshCreate( BlankMesh        = u%PointLoad            &
+                   ,IOS              = COMPONENT_INPUT        &
+                   ,NNodes           = p%node_total           &
+                   ,Force            = .TRUE. &
+                   ,Moment           = .TRUE. &
+                   ,nScalars        = 0                     &
+                   ,ErrStat         = ErrStat               &
+                   ,ErrMess         = ErrMsg                )
+
+   temp_int = p%ngp * p%elem_total + 2
+   CALL MeshCreate( BlankMesh        = u%DistrLoad          &
+                   ,IOS              = COMPONENT_INPUT      &
+                   ,NNodes           = temp_int             &
+                   ,Force            = .TRUE. &
+                   ,Moment           = .TRUE. &
+                   ,nScalars        = 0                     &
+                   ,ErrStat         = ErrStat               &
+                   ,ErrMess         = ErrMsg                )
+
+   temp_int = p%node_elem*p%elem_total
+   CALL MeshCreate( BlankMesh        = y%BldMotion        &
+                   ,IOS              = COMPONENT_OUTPUT   &
+                   ,NNodes           = temp_int           &
+                   ,TranslationDisp  = .TRUE.             &
+                   ,Orientation      = .TRUE.             &
+                   ,TranslationVel   = .TRUE.             &
+                   ,RotationVel      = .TRUE.             &
+                   ,TranslationAcc   = .TRUE.             &
+                   ,RotationAcc      = .TRUE.             &
+                   ,nScalars         = 0                  &
+                   ,ErrStat          = ErrStat            &
+                   ,ErrMess          = ErrMsg             )
+
+   CALL MeshCreate( BlankMesh        = y%ReactionForce  &
+                   ,IOS              = COMPONENT_OUTPUT &
+                   ,NNodes           = 1                &
+                   ,Force            = .TRUE.           &
+                   ,Moment           = .TRUE.           &
+                   ,nScalars        = 0                 &
+                   ,ErrStat         = ErrStat           &
+                   ,ErrMess         = ErrMsg            )
+
+   CALL MeshConstructElement ( Mesh = u%RootMotion            &
+                             , Xelement = ELEMENT_POINT      &
+                             , P1       = 1                  &
+                             , ErrStat  = ErrStat            &
+                             , ErrMess  = ErrMsg             )
+
+   DO i=1,p%node_total
+       CALL MeshConstructElement( Mesh     = u%PointLoad      &
+                                 ,Xelement = ELEMENT_POINT    &
+                                 ,P1       = i                &
+                                 ,ErrStat  = ErrStat          &
+                                 ,ErrMess  = ErrMsg           )
+   ENDDO
+
+   temp_int = p%ngp * p%elem_total + 2
+   DO i=1,temp_int-1
+       CALL MeshConstructElement( Mesh     = u%DistrLoad      &
+                                 ,Xelement = ELEMENT_LINE2    &
+                                 ,P1       = i                &
+                                 ,P2       = i+1              &
+                                 ,ErrStat  = ErrStat          &
+                                 ,ErrMess  = ErrMsg           )
+   ENDDO
+
+   temp_int = p%node_elem*p%elem_total
+   DO i=1,temp_int-1
+       CALL MeshConstructElement( Mesh     = y%BldMotion      &
+                                 ,Xelement = ELEMENT_LINE2    &
+                                 ,P1       = i                &
+                                 ,P2       = i+1              &
+                                 ,ErrStat  = ErrStat          &
+                                 ,ErrMess  = ErrMsg           )
+   ENDDO
+   ! place single node at origin; position affects mapping/coupling with other modules
+   TmpPos(:) = 0.0D0
+   TmpPos(:) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1))
+   CALL MeshPositionNode ( Mesh = u%RootMotion      &
+                         , INode = 1                &
+                         , Pos = TmpPos             &
+                         , ErrStat   = ErrStat      &
+                         , ErrMess   = ErrMsg       )
+
+   CALL MeshPositionNode ( Mesh = y%ReactionForce   &
+                         , INode = 1                &
+                         , Pos = TmpPos             &
+                         , ErrStat   = ErrStat      &
+                         , ErrMess   = ErrMsg       )
+
+   DO i=1,p%elem_total
+       DO j=1,p%node_elem
+           temp_id = (j-1) * p%dof_node
+           TmpPos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+           temp_id = (i-1)*(p%node_elem-1)+j
+           CALL MeshPositionNode ( Mesh    = u%PointLoad  &
+                                  ,INode   = temp_id      &
+                                  ,Pos     = TmpPos       &
+                                  ,ErrStat = ErrStat      &
+                                  ,ErrMess = ErrMsg       )
+       ENDDO
+   ENDDO
+   DO i=1,p%elem_total
+       DO j=1,p%node_elem
+           temp_id = (j-1)*p%dof_node
+!           TmpPos(1:3) = p%uuN0(temp_id+1:temp_id+3,i)
+           TmpPos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+           temp_id = (i-1)*p%node_elem+j
+           CALL MeshPositionNode ( Mesh    = y%BldMotion  &
+                                  ,INode   = temp_id      &
+                                  ,Pos     = TmpPos       &
+                                  ,ErrStat = ErrStat      &
+                                  ,ErrMess = ErrMsg       )
+       ENDDO
+   ENDDO
+
+   DO i=1,p%ngp*p%elem_total+2
+       TmpPos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
+       CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
+                              ,INode   = i            &
+                              ,Pos     = TmpPos       &
+                              ,ErrStat = ErrStat      &
+                              ,ErrMess = ErrMsg       )
+   ENDDO
+
+   CALL MeshCommit ( Mesh    = u%RootMotion    &
+                    ,ErrStat = ErrStat         &
+                    ,ErrMess = ErrMsg          )
+   CALL MeshCommit ( Mesh    = u%PointLoad     &
+                    ,ErrStat = ErrStat         &
+                    ,ErrMess = ErrMsg          )
+   CALL MeshCommit ( Mesh    = u%DistrLoad     &
+                    ,ErrStat = ErrStat         &
+                    ,ErrMess = ErrMsg          )
+
+   CALL MeshCopy ( SrcMesh  = u%PointLoad      &
+                 , DestMesh = y%BldForce       & 
+                 , CtrlCode = MESH_SIBLING     &
+                 , Force           = .TRUE.    &
+                 , Moment          = .TRUE.    &
+                 , ErrStat  = ErrStat          &
+                 , ErrMess  = ErrMsg           )
+   CALL MeshCommit ( Mesh    = y%ReactionForce &
+                    ,ErrStat = ErrStat         &
+                    ,ErrMess = ErrMsg          )
+   CALL MeshCommit ( Mesh    = y%BldMotion     &
+                    ,ErrStat = ErrStat         &
+                    ,ErrMess = ErrMsg          )
+
+   ! Define initialization-routine input here:
+
+   u%RootMotion%TranslationDisp(:,:) = 0.0D0
+   u%RootMotion%TranslationVel(:,:)  = 0.0D0
+   u%RootMotion%TranslationAcc(:,:)  = 0.0D0
+   u%RootMotion%Orientation(:,:,:) = 0.0D0
+   u%RootMotion%Orientation(1,1,:) = 1.0D0
+   u%RootMotion%Orientation(2,2,:) = 1.0D0
+   u%RootMotion%Orientation(3,3,:) = 1.0D0
+   u%RootMotion%RotationVel(:,:)   = 0.0D0
+   u%RootMotion%RotationAcc(:,:)   = 0.0D0
+
+   u%RootMotion%TranslationDisp(1,1) = 0.1D0
+!  u%RootMotion%TranslationDisp(1,1) = 0.0D0
+
+   DO i=1,u%PointLoad%ElemTable(ELEMENT_POINT)%nelem
+       j = u%PointLoad%ElemTable(ELEMENT_POINT)%Elements(i)%ElemNodes(1)
+       u%PointLoad%Force(:,j)  = 0.0D0
+       u%PointLoad%Moment(:,j) = 0.0D0
+   ENDDO
+
+   DO i = 1, u%DistrLoad%ElemTable(ELEMENT_LINE2)%nelem
+       j = u%DistrLoad%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
+       k = u%DistrLoad%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
+       u%DistrLoad%Force(:,j)  = 0.0D0
+       u%DistrLoad%Force(:,k)  = 0.0D0
+       u%DistrLoad%Moment(:,j) = 0.0D0
+       u%DistrLoad%Moment(:,k) = 0.0D0
+   ENDDO
+
+   CALL BD_CalcIC(u,p,x,OtherState)
+   ! Define initial guess for the system outputs here:
+
+   y%BldForce%Force(:,:)    = 0.0D0
+   y%BldForce%Moment(:,:)   = 0.0D0
+
+   y%ReactionForce%Force(:,:)    = 0.0D0
+   y%ReactionForce%Moment(:,:)   = 0.0D0
+
+   y%BldMotion%TranslationDisp(:,:) = 0.0D0
+   y%BldMotion%Orientation(:,:,:)   = 0.0D0
+   y%BldMotion%TranslationVel(:,:)  = 0.0D0
+   y%BldMotion%RotationVel(:,:)     = 0.0D0
+   y%BldMotion%TranslationAcc(:,:)  = 0.0D0
+   y%BldMotion%RotationAcc(:,:)     = 0.0D0
+
+   ! set remap flags to true
+   y%ReactionForce%RemapFlag = .True.
+   y%BldForce%RemapFlag = .True.
+   y%BldMotion%RemapFlag = .True.
+   u%RootMotion%RemapFlag = .True.
+
+   OtherState%Rescale_counter = 0
+
+   END SUBROUTINE BD_Init
+
+   !----------------------------------------------------------------------------------------------------------------------------------
+   SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+   !
+   ! This routine is called at the end of the simulation.
+   !..................................................................................................................................
+
+   TYPE(BD_InputType),           INTENT(INOUT)  :: u           ! System inputs
+   TYPE(BD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
+   TYPE(BD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
+   TYPE(BD_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   TYPE(BD_OutputType),          INTENT(INOUT)  :: y           ! System outputs
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
+
+   ! Place any last minute operations or calculations here:
+
+   ! Close files here:
+
+   ! Destroy the input data:
+
+   CALL BD_DestroyInput( u, ErrStat, ErrMsg )
+
+   ! Destroy the parameter data:
+
+   CALL BD_DestroyParam( p, ErrStat, ErrMsg )
+
+   ! Destroy the state data:
+
+   CALL BD_DestroyContState(   x,           ErrStat, ErrMsg )
+   CALL BD_DestroyDiscState(   xd,          ErrStat, ErrMsg )
+   CALL BD_DestroyConstrState( z,           ErrStat, ErrMsg )
+   CALL BD_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
+
+   ! Destroy the output data:
+
+   CALL BD_DestroyOutput( y, ErrStat, ErrMsg )
+
+
+   END SUBROUTINE BD_End
+
+   SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !
 ! Routine for solving for constraint states, integrating continuous states, and updating discrete states
 ! Constraint states are solved for input t; Continuous and discrete states are updated for t + p%dt
 ! (stepsize dt assumed to be in ModName parameter)
 !..................................................................................................................................
 
-      REAL(DbKi),                           INTENT(IN   ) :: t          ! Current simulation time in seconds
-      INTEGER(IntKi),                       INTENT(IN   ) :: n          ! Current simulation time step n = 0,1,...
-      TYPE(BDyn_InputType),               INTENT(INOUT) :: u(:)       ! Inputs at utimes
-      REAL(DbKi),                           INTENT(IN   ) :: utimes(:)  ! Times associated with u(:), in seconds
-      TYPE(BDyn_ParameterType),           INTENT(IN   ) :: p          ! Parameters
-      TYPE(BDyn_ContinuousStateType),     INTENT(INOUT) :: x          ! Input: Continuous states at t;
+   REAL(DbKi),                      INTENT(IN   ) :: t          ! Current simulation time in seconds
+   INTEGER(IntKi),                  INTENT(IN   ) :: n          ! Current simulation time step n = 0,1,...
+   TYPE(BD_InputType),            INTENT(INOUT) :: u(:)       ! Inputs at utimes
+   REAL(DbKi),                      INTENT(IN   ) :: utimes(:)  ! Times associated with u(:), in seconds
+   TYPE(BD_ParameterType),        INTENT(IN   ) :: p          ! Parameters
+   TYPE(BD_ContinuousStateType),  INTENT(INOUT) :: x          ! Input: Continuous states at t;
                                                                       !   Output: Continuous states at t + Interval
-      TYPE(BDyn_DiscreteStateType),       INTENT(INOUT) :: xd         ! Input: Discrete states at t;
+   TYPE(BD_DiscreteStateType),    INTENT(INOUT) :: xd         ! Input: Discrete states at t;
                                                                       !   Output: Discrete states at t  + Interval
-      TYPE(BDyn_ConstraintStateType),     INTENT(INOUT) :: z          ! Input: Initial guess of constraint states at t+dt;
+   TYPE(BD_ConstraintStateType),  INTENT(INOUT) :: z          ! Input: Initial guess of constraint states at t+dt;
                                                                       !   Output: Constraint states at t+dt
-      TYPE(BDyn_OtherStateType),          INTENT(INOUT) :: OtherState ! Other/optimization states
-      INTEGER(IntKi),                       INTENT(  OUT) :: ErrStat    ! Error status of the operation
-      CHARACTER(*),                         INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
+   TYPE(BD_OtherStateType),       INTENT(INOUT) :: OtherState ! Other/optimization states
+   INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat    ! Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
 
-      ! local variables
+   ! local variables
+   INTEGER(IntKi):: i
+   INTEGER(IntKi):: j
+   INTEGER(IntKi):: temp_id
+   REAL(ReKi):: temp
+   REAL(ReKi):: temp_pp(3)
+   REAL(ReKi):: temp_qq(3)
+   REAL(ReKi):: temp_rr(3)
+   ! Initialize ErrStat
 
-      TYPE(BDyn_InputType)            :: u_interp  ! input interpolated from given u at utimes
-      TYPE(BDyn_ContinuousStateType)  :: xdot      ! continuous state time derivative
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
 
-      !INTEGER(IntKi) :: i
+   IF(p%analysis_type == 2) THEN
+!WRITE(*,*) x%q(:)
+       IF(p%time_flag .EQ. 1) THEN
+           CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       ELSEIF(p%time_flag .EQ. 2) THEN
+           CALL BeamDyn_GA2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       ELSEIF(p%time_flag .EQ. 3) THEN
+           CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       ELSEIF(p%time_flag .EQ. 4) THEN
+           CALL BeamDyn_RK2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       ENDIF
+  
+!       DO i=2,p%node_total
+!           temp_id = (i-1)*6
+!           temp_pp(:) = 0.0D0
+!           temp_qq(:) = 0.0D0
+!           temp_rr(:) = 0.0D0
+!           DO j=1,3
+!               temp_pp(j) = x%q(temp_id+3+j)
+!           ENDDO
+!           CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
+!           DO j=1,3
+!               x%q(temp_id+3+j) = temp_rr(j)
+!           ENDDO
+!       ENDDO
+   ELSEIF(p%analysis_type == 1) THEN
+       CALL BeamDyn_Static( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+!DO i=5,0,-1            
+!WRITE(*,*) "Displacement: ",i,x%q(p%dof_total-i)
+!ENDDO
+   ENDIF
 
-      ! Initialize ErrStat
+   END SUBROUTINE BD_UpdateStates
 
-      ErrStat = ErrID_None
-      ErrMsg  = "" 
+   !----------------------------------------------------------------------------------------------------------------------------------
+   SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+   !
+   ! Routine for computing outputs, used in both loose and tight coupling.
+   !..................................................................................................................................
 
-      ErrStat = ErrID_Fatal
-      ErrMsg  = ' Error in BDyn_UpdateStates: THERE IS NOTHING HERE '
-      RETURN
-
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
-END SUBROUTINE BDyn_UpdateStates
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-!
-! Routine for computing outputs, used in both loose and tight coupling.
-!..................................................................................................................................
-
-      REAL(DbKi),                       INTENT(IN   )  :: t           ! Current simulation time in seconds
-      TYPE(BDyn_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(BDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(BDyn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(BDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(BDyn_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
+   REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t
+   TYPE(BD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
+   TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   TYPE(BD_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
                                                                     !   nectivity information does not have to be recalculated)
-      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-      ! Local variables
-      Real(ReKi)           :: tmp_vector(3)
+   TYPE(BD_ContinuousStateType):: xdot
+   INTEGER(IntKi):: i
+   INTEGER(IntKi):: j
+   INTEGER(IntKi):: temp_id
+   INTEGER(IntKi):: temp_id2
+   REAL(ReKi):: cc(3)
+   REAL(ReKi):: cc0(3)
+   REAL(ReKi):: temp_cc(3)
+   REAL(ReKi):: temp_R(3,3)
+   REAL(ReKi):: temp66(6,6)
+   REAL(ReKi):: temp6(6)
+   REAL(ReKi):: temp_Force(p%dof_total)
+   REAL(ReKi):: temp_ReactionForce(6)
+   ! Initialize ErrStat
 
-      INTEGER(IntKi)       :: i
-      INTEGER(IntKi)       :: ilocal
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
 
-      ! Initialize ErrStat
+   CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,0)
+   DO i=1,p%elem_total
+       DO j=1,p%node_elem
+           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+           temp_id2= (i-1)*p%node_elem+j
+           y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,x%q(temp_id+1:temp_id+3))
+           cc(1:3) = x%q(temp_id+4:temp_id+6)
+           temp_id = (j-1)*p%dof_node
+           cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
+!           CALL CrvCompose_temp(temp_cc,cc0,cc,0)
+           CALL CrvCompose(temp_cc,cc0,cc,0)
+           temp_cc = MATMUL(p%GlbRot,temp_cc)
+           CALL CrvMatrixR(temp_cc,temp_R)
+           y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
 
-      ErrStat = ErrID_None
-      ErrMsg  = "" 
+           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+           temp6(:) = 0.0D0
+           temp6(1:3) = x%dqdt(temp_id+1:temp_id+3)
+           temp6(4:6) = x%dqdt(temp_id+4:temp_id+6)
+           temp6(:) = MATMUL(temp66,temp6)
+           y%BldMotion%TranslationVel(1:3,temp_id2) = temp6(1:3)
+           y%BldMotion%RotationVel(1:3,temp_id2) = temp6(4:6)
+       ENDDO
+   ENDDO
 
-      ErrStat = ErrID_Fatal
-      ErrMsg  = ' Error in BDyn_UpdateStates: THERE IS NOTHING HERE '
-      RETURN
+!   IF(p%analysis_type .EQ. 0) THEN
+!       DO i=1,p%elem_total
+!           DO j=1,p%node_elem
+!               temp_id1 = ((i-1)*(p%node_elem-1)+j-1)*3
+!               temp_id2 = (j-1)*p%dof_node
+!               temp_id3 = temp_id1*2
+!               POS_temp(temp_id1+1:temp_id1+3) = p%uuN0(temp_id2+1:temp_id2+3,i) + &
+!                                                &x%q(temp_id3+1:temp_id3+3)
+!           ENDDO
+!       ENDDO       
+!   ENDIF
 
+   IF(p%analysis_type .EQ. 2) THEN
+!       CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
+!       CALL BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg) 
+       DO i=1,p%elem_total
+           DO j=1,p%node_elem
+               temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+               temp_id2= (i-1)*p%node_elem+j
 
-END SUBROUTINE BDyn_CalcOutput
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
-!
-! Routine for computing derivatives of continuous states.
-!..................................................................................................................................
+               temp6(:) = 0.0D0
+               temp6(1:3) = OtherState%acc(temp_id+1:temp_id+3)
+               temp6(4:6) = OtherState%acc(temp_id+4:temp_id+6)
+               temp6(:) = MATMUL(temp66,temp6)
+               y%BldMotion%TranslationAcc(1:3,temp_id2) = temp6(1:3)
+               y%BldMotion%RotationAcc(1:3,temp_id2) = temp6(4:6)
+           ENDDO
+       ENDDO
+!       CALL BD_DestroyContState(xdot, ErrStat, ErrMsg)
+       CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,OtherState%Acc,                                  &
+                                  p%Stif0_GL,p%Mass0_GL,p%gravity,u,                                 &
+                                  p%damp_flag,p%beta,                                                &
+                                  p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+                                  temp66,p%analysis_type,temp_Force,temp_ReactionForce)
+   ELSEIF(p%analysis_type .EQ. 1) THEN
+       CALL StaticSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
+                                 &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+                                 &p%analysis_type,temp_Force)
+   ENDIF
 
-      REAL(DbKi),                       INTENT(IN   )  :: t           ! Current simulation time in seconds
-      TYPE(BDyn_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(BDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(BDyn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(BDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(BDyn_ContinuousStateType), INTENT(INOUT)  :: xdot        ! Continuous state derivatives at t
-      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat   ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
+   temp6(:) = 0.0D0
+   temp6(:) = temp_ReactionForce(1:6)
+   temp6(:) = MATMUL(TRANSPOSE(temp66),temp6)
+   y%ReactionForce%Force(1:3,1) = temp6(1:3)
+   y%ReactionForce%Moment(1:3,1) = temp6(4:6)
+   DO i=1,p%node_total
+       temp_id = (i-1)*p%dof_node
+       temp6(:) = 0.0D0
+       temp6(:) = temp_Force(temp_id+1:temp_id+6)
+       temp6(:) = MATMUL(TRANSPOSE(temp66),temp6)
+       y%BldForce%Force(1:3,i) = temp6(1:3)
+       y%BldForce%Moment(1:3,i) = temp6(4:6)
+   ENDDO
 
-      ! local variables
-      INTEGER(IntKi)  :: i              ! do-loop counter
-      INTEGER(IntKi)  :: j              ! do-loop counter
-      INTEGER(IntKi)  :: k              ! do-loop counter
-      INTEGER(IntKi)  :: ilocal              ! do-loop counter
-      INTEGER(IntKi)  :: jlocal              ! do-loop counter
-      INTEGER(IntKi)  :: klocal              ! do-loop counter
-      INTEGER(IntKi)  :: nlocal              ! do-loop counter
+   END SUBROUTINE BD_CalcOutput
 
-      ! Initialize ErrStat
+   SUBROUTINE BD_CalcOutput_Coupling( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+   !
+   ! Routine for computing outputs, used in both loose and tight coupling.
+   !..................................................................................................................................
 
-      ErrStat = ErrID_None
-      ErrMsg  = "" 
+   REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t
+   TYPE(BD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
+   TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   TYPE(BD_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
+                                                                    !   nectivity information does not have to be recalculated)
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-      ! Compute the first time derivatives of the continuous states here:
+   TYPE(BD_ContinuousStateType):: xdot
+   INTEGER(IntKi):: i
+   INTEGER(IntKi):: j
+   INTEGER(IntKi):: temp_id
+   INTEGER(IntKi):: temp_id2
+   REAL(ReKi):: cc(3)
+   REAL(ReKi):: cc0(3)
+   REAL(ReKi):: temp_cc(3)
+   REAL(ReKi):: temp3(3)
+   REAL(ReKi):: temp_R(3,3)
+   REAL(ReKi):: temp66(6,6)
+   REAL(ReKi):: MoTens(6,6)
+   REAL(ReKi):: temp6(6)
+   REAL(ReKi):: temp_Force(p%dof_total)
+   REAL(ReKi):: temp_ReactionForce(6)
+   ! Initialize ErrStat
 
-      ErrStat = ErrID_Fatal
-      ErrMsg  = ' Error in BDyn_CalcContStateDeriv: THERE IS NOTHING HERE '
-      RETURN
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
 
+   CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,0)
+   DO i=1,p%elem_total
+       DO j=1,p%node_elem
+           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+           temp_id2= (i-1)*p%node_elem+j
+           y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,x%q(temp_id+1:temp_id+3))
+           cc(1:3) = x%q(temp_id+4:temp_id+6)
+           temp_id = (j-1)*p%dof_node
+           cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
+!           CALL CrvCompose_temp(temp_cc,cc0,cc,0)
+           CALL CrvCompose(temp_cc,cc0,cc,0)
+           temp_cc = MATMUL(p%GlbRot,temp_cc)
+           CALL CrvMatrixR(temp_cc,temp_R)
+           y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
 
-END SUBROUTINE BDyn_CalcContStateDeriv
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! Routine for updating discrete states
-!..................................................................................................................................
+           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+           temp6(:) = 0.0D0
+           temp6(1:3) = x%dqdt(temp_id+1:temp_id+3)
+           temp6(4:6) = x%dqdt(temp_id+4:temp_id+6)
+           temp6(:) = MATMUL(temp66,temp6)
+           y%BldMotion%TranslationVel(1:3,temp_id2) = temp6(1:3)
+           y%BldMotion%RotationVel(1:3,temp_id2) = temp6(4:6)
+       ENDDO
+   ENDDO
 
-      REAL(DbKi),                       INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                   INTENT(IN   )  :: n           ! Current step of the simulation: t = n*Interval
-      TYPE(BDyn_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(BDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(BDyn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(BDyn_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at t;
+   IF(p%analysis_type .EQ. 2) THEN
+!       CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
+!       CALL BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg) 
+!       CALL BD_DestroyContState(xdot, ErrStat, ErrMsg)
+temp3(1:3) = u%RootMotion%TranslationDisp(1:3,1)
+x%q(1:3) = MATMUL(TRANSPOSE(p%GlbRot),temp3)
+x%q(4:6) = 0.0D0
+CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
+temp6(1:3) = u%RootMotion%TranslationVel(1:3,1)
+temp6(4:6) = u%RootMotion%RotationVel(1:3,1)
+temp6(:) = MATMUL(temp66,temp6)
+x%dqdt(1:6) = temp6(1:6)
+temp6(1:3) = u%RootMotion%TranslationAcc(:,1)
+temp6(4:6) = u%RootMotion%RotationAcc(:,1)
+temp6(:) = MATMUL(temp66,temp6)
+OtherState%Acc(1:6) = temp6(1:6)
+CALL BD_CalcAcc(u,p,x,OtherState)
+
+CALL MotionTensor(p%GlbRot,p%GlbPos,MoTens,0)
+       CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,OtherState%Acc,                                       &
+                                  p%Stif0_GL,p%Mass0_GL,p%gravity,u,                                 &
+                                  p%damp_flag,p%beta,                                                &
+                                  p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+                                  MoTens,p%analysis_type,temp_Force,temp_ReactionForce)
+   ENDIF
+
+   CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
+   temp6(:) = 0.0D0
+   temp6(:) = temp_ReactionForce(1:6)
+   temp6(:) = MATMUL(TRANSPOSE(temp66),temp6)
+   y%ReactionForce%Force(1:3,1) = temp6(1:3)
+   y%ReactionForce%Moment(1:3,1) = temp6(4:6)
+   DO i=1,p%node_total
+       temp_id = (i-1)*p%dof_node
+       temp6(:) = 0.0D0
+       temp6(:) = temp_Force(temp_id+1:temp_id+6)
+       temp6(:) = MATMUL(TRANSPOSE(temp66),temp6)
+       y%BldForce%Force(1:3,i) = temp6(1:3)
+       y%BldForce%Moment(1:3,i) = temp6(4:6)
+   ENDDO
+
+   END SUBROUTINE BD_CalcOutput_Coupling
+   !----------------------------------------------------------------------------------------------------------------------------------
+   SUBROUTINE BD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+   !
+   ! Routine for updating discrete states
+   !..................................................................................................................................
+
+   REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
+   INTEGER(IntKi),                    INTENT(IN   )  :: n           ! Current step of the simulation: t = n*Interval
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
+   TYPE(BD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at t;
                                                                     !   Output: Discrete states at t + Interval
-      TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
       ! Initialize ErrStat
 
@@ -403,53 +1054,53 @@ SUBROUTINE BDyn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrM
 
 !      xd%DummyDiscState = 0.0
 
-END SUBROUTINE BDyn_UpdateDiscState
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BDyn_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residual, ErrStat, ErrMsg )
-!
-! Routine for solving for the residual of the constraint state equations
-!..................................................................................................................................
+END SUBROUTINE BD_UpdateDiscState
+   !----------------------------------------------------------------------------------------------------------------------------------
+   SUBROUTINE BD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residual, ErrStat, ErrMsg )
+   !
+   ! Routine for solving for the residual of the constraint state equations
+   !..................................................................................................................................
 
-      REAL(DbKi),                       INTENT(IN   )  :: t           ! Current simulation time in seconds
-      TYPE(BDyn_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(BDyn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(BDyn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(BDyn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(BDyn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(BDyn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(BDyn_ConstraintStateType), INTENT(  OUT)  :: Z_residual  ! Residual of the constraint state equations using
-                                                                      !     the input values described above
-      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-
-      ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = "" 
+   REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
+   TYPE(BD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
+   TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   TYPE(BD_ConstraintStateType), INTENT(  OUT)  :: Z_residual  ! Residual of the constraint state equations using
+                                                                    !     the input values described above
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
 
-      ! Solve for the constraint states here:
+   ! Initialize ErrStat
 
-      Z_residual%DummyConstrState = 0
+   ErrStat = ErrID_None
+   ErrMsg  = "" 
 
-END SUBROUTINE BDyn_CalcConstrStateResidual
-!----------------------------------------------------------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------------------------------------------------------
-subroutine BDyn_gen_gll(N, x, w, ErrStat, ErrMsg)
-!
-! This subroutine determines the (N+1) Gauss-Lobatto-Legendre points x and weights w
-!
-! For details, see
-! @book{Deville-etal:2002,
-!  author =    {M. O. Deville and P. F. Fischer and E. H. Mund},
-!  title =     {High-Order Methods for Incompressible Fluid Flow},
-!  publisher = {Cambridge University Press},
-!  address = {Cambridge},
-!  year =      2002
-!}
-!
-!..................................................................................................................................
+
+   ! Solve for the constraint states here:
+
+   Z_residual%DummyConstrState = 0
+
+   END SUBROUTINE BD_CalcConstrStateResidual
+
+   !----------------------------------------------------------------------------------------------------------------------------------
+   SUBROUTINE BD_gen_gll_LSGL(N, x, w)
+   !
+   ! This subroutine determines the (N+1) Gauss-Lobatto-Legendre points x and weights w
+   !
+   ! For details, see
+   ! @book{Deville-etal:2002,
+   !  author =    {M. O. Deville and P. F. Fischer and E. H. Mund},
+   !  title =     {High-Order Methods for Incompressible Fluid Flow},
+   !  publisher = {Cambridge University Press},
+   !  address = {Cambridge},
+   !  year =      2002
+   !}
+   !
+   !..................................................................................................................................
 
    ! input variables
 
@@ -457,8 +1108,6 @@ subroutine BDyn_gen_gll(N, x, w, ErrStat, ErrMsg)
    REAL(ReKi),                     INTENT(  OUT)  :: x(N+1)      ! location of GLL nodes
    REAL(ReKi),                     INTENT(  OUT)  :: w(N+1)      ! quadrature weights at GLL nodes
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! local variables  
 
@@ -475,10 +1124,6 @@ subroutine BDyn_gen_gll(N, x, w, ErrStat, ErrMsg)
    INTEGER(IntKi)      :: j         ! do-loop counter
    INTEGER(IntKi)      :: k         ! do-loop counter
 
-   ! Initialize ErrStat
-
-   ErrStat = ErrID_None
-   ErrMsg  = "" 
 
    tol = 1e-15
 
@@ -490,130 +1135,35 @@ subroutine BDyn_gen_gll(N, x, w, ErrStat, ErrMsg)
    x(1) = -1.
    x(N1) = 1.
 
-   pi = acos(-1.)  ! perhaps use NWTC library value, but does not matter here; just used to guess at solution
+   pi = ACOS(-1.)  ! perhaps use NWTC library value, but does not matter here; just used to guess at solution
 
-   do i = 1, N1
+   DO i = 1, N1
 
-      x_it = -cos(pi * float(i-1) / N) ! initial guess - chebyshev points
+      x_it = -COS(pi * FLOAT(i-1) / N) ! initial guess - chebyshev points
 
-      do j = 1, maxit
+      DO j = 1, maxit
          x_old = x_it
          dleg(1) = 1.0
          dleg(2) = x_it
-         do k = 2,N
-            dleg(k+1) = (  (2.0*dfloat(k) - 1.0) * dleg(k) * x_it &
-                            - (dfloat(k)-1.0)*dleg(k-1) ) / dfloat(k)
-         enddo
+         DO k = 2,N
+            dleg(k+1) = (  (2.0*DFLOAT(k) - 1.0) * dleg(k) * x_it &
+                            - (DFLOAT(k)-1.0)*dleg(k-1) ) / DFLOAT(k)
+         ENDDO
 
          x_it = x_it - ( x_it * dleg(N1) - dleg(N) ) / &
-                       (dfloat(N1) * dleg(N1) )
+                       (DFLOAT(N1) * dleg(N1) )
 
-         if (abs(x_it - x_old) .lt. tol) then
-            exit
-         end if
-      enddo
-
-      if (i==maxit) then
-         ErrStat = ErrID_Fatal
-         ErrMsg  = ' Error in BeamDyn: BDyn_gen_gll: reached max iterations in gll solve'
-      end if
+         IF (ABS(x_it - x_old) .lt. tol) THEN
+            EXIT
+         ENDIF
+      ENDDO
 
       x(i) = x_it
-      w(i) = 2.0 / (dfloat(N * N1) * dleg(N1)**2 )
+      w(i) = 2.0 / (DFLOAT(N * N1) * dleg(N1)**2 )
 
-   enddo
+   ENDDO
 
-   return
-end subroutine BDyn_gen_gll
-!----------------------------------------------------------------------------------------------------------------------------------
-subroutine BDyn_gen_deriv(N, xgll, deriv, ErrStat, ErrMsg)
-!
-! Calculates derivative array for order N one-dimensional basis function evaluated at location of (N+1) nodes
-!
-! deriv(i,j) = d phi_i(x) / d x |_{x_j}
-!
-! where phi_i(x) is the lagrangian interpolant associated with the ith node and x_j is the location of the jth node
-!
-! For details, see
-! @book{Deville-etal:2002,
-!  author =    {M. O. Deville and P. F. Fischer and E. H. Mund},
-!  title =     {High-Order Methods for Incompressible Fluid Flow},
-!  publisher = {Cambridge University Press},
-!  address = {Cambridge},
-!  year =      2002
-!}
-!
-!..................................................................................................................................
-
-   ! input variables
-
-   INTEGER(IntKi),       INTENT(IN   )  :: N               ! Order of spectral element
-   REAL(ReKi),           INTENT(IN   )  :: xgll(N+1)       ! location of GLL nodes
-   REAL(ReKi),           INTENT(  OUT)  :: deriv(N+1,N+1)  ! derivative tensor
-
-   INTEGER(IntKi),       INTENT(  OUT)  :: ErrStat         ! Error status of the operation
-   CHARACTER(*),         INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
-
-   ! local variables  
-
-   !REAL(ReKi)          :: tol       ! tolerance for newton-raphson solve
-   !INTEGER(IntKi)      :: maxit     ! maximum allowable iterations in newton-raphson solve
-   !REAL(ReKi)          :: x_it      ! current NR-iteration value
-   !REAL(ReKi)          :: x_old     ! last NR-iteration value
-
-   INTEGER(IntKi)      :: N1        ! N1 = N + 1
-
-   INTEGER(IntKi)      :: i         ! do-loop counter
-   INTEGER(IntKi)      :: j         ! do-loop counter
-   INTEGER(IntKi)      :: k         ! do-loop counter
-
-   REAL(ReKi) dleg(N+1,N+1)
-
-   ! Initialize ErrStat
-
-   ErrStat = ErrID_None
-   ErrMsg  = "" 
-
-   N1 = N+1
-
-   do i = 1, N1
-      dleg(1,i) = 1.0
-      dleg(2,i) = xgll(i)
-      do k = 2,N
-         dleg(k+1,i) = ( (2.0*dfloat(k) - 1.0) * dleg(k,i) * xgll(i) &
-                          - (dfloat(k)-1.0)*dleg(k-1,i) ) / dfloat(k)
-      enddo
-   enddo
-
-   do i = 1, N1
-      do j = 1, N1
-
-         if (i.eq.j) then
-            if (i.eq.1) then
-               deriv(i,j) = -dfloat(N1*N)/4.0
-            else if (i.eq.N1) then
-               deriv(i,j) = +dfloat(N1*N)/4.0
-            else
-               deriv(i,j) = 0.0
-            end if
-         else
-
-            deriv(i,j) = dleg(n1,j) / ( dleg(n1,i)*(xgll(j) - xgll(i)) )
-
-         endif
-
-      enddo
-   enddo
+   END SUBROUTINE BD_gen_gll_LSGL
 
 
-
-   return
-end subroutine BDyn_gen_deriv
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!..................................................................................................................................
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! WE ARE NOT YET IMPLEMENTING THE JACOBIANS...
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 END MODULE BeamDyn
-!**********************************************************************************************************************************

@@ -1,8 +1,13 @@
    SUBROUTINE AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,ElemK,GlobalK)
-
-   REAL(ReKi),INTENT(IN)::ElemK(:,:)
-   INTEGER(IntKi),INTENT(IN)::nelem,node_elem,dof_elem,dof_node
-   REAL(ReKi),INTENT(INOUT)::GlobalK(:,:)
+   !-------------------------------------------------------------------------------
+   ! This subroutine assembles total stiffness matrix.
+   !-------------------------------------------------------------------------------
+   REAL(ReKi),INTENT(IN)::ElemK(:,:) ! Element mass matrix
+   INTEGER(IntKi),INTENT(IN)::nelem ! Number of elements
+   INTEGER(IntKi),INTENT(IN)::node_elem ! Nodes per element
+   INTEGER(IntKi),INTENT(IN)::dof_elem ! Degrees of freedom per element
+   INTEGER(IntKi),INTENT(IN)::dof_node ! Degrees of freedom per node
+   REAL(ReKi),INTENT(INOUT)::GlobalK(:,:) ! Global stiffness matrix
 
    INTEGER(IntKi)::i,j,temp_id1,temp_id2
 

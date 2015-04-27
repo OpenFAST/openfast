@@ -9,6 +9,9 @@
    INTEGER(IntKi)::i
 
    ! Prepare
+DO i=1,6
+!WRITE(*,*) 'aaa:',i,aaa(i)
+ENDDO
    ome(:) = vvv(4:6)
    omd(:) = aaa(4:6)
    tempV(:) = vvv(1:3)
