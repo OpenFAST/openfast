@@ -1,4 +1,4 @@
-   SUBROUTINE GravityLoads(m00,mEta,grav,Fg)
+   SUBROUTINE BD_GravityForce(m00,mEta,grav,Fg)
 
    REAL(ReKi),INTENT(IN   ):: m00
    REAL(ReKi),INTENT(IN   ):: mEta(:)
@@ -10,4 +10,4 @@
    Fg(4:6) = MATMUL(Tilde(mEta),grav)
    
 
-   END SUBROUTINE GravityLoads
+   END SUBROUTINE BD_GravityForce

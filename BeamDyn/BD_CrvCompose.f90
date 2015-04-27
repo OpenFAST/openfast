@@ -3,7 +3,7 @@
 !   This method is detailed in the paper: Bauchau, O.A., 2008, "Interpolation of finite rotations in flexible 
 !   multi-body dynamics simulations", IMechE, Equation (9). 
 !**********************************************************************************************************************************
-   SUBROUTINE CrvCompose_temp(rr,pp,qq,flag)
+   SUBROUTINE BD_CrvCompose(rr,pp,qq,flag)
 
    REAL(ReKi),INTENT(IN):: pp(:) ! Rotational degrees of freedom for various inputs depending on which program calls CrvCompose
    REAL(ReKi),INTENT(IN):: qq(:) ! Rotational degrees of freedom for various inputs depending on which program calls CrvCompose
@@ -11,10 +11,6 @@
    REAL(ReKi),INTENT(OUT):: rr(:) ! Rotation parameter returned to program
 
    REAL(ReKi):: pp0,pp1,pp2,pp3,qq0,qq1,qq2,qq3,tr1,tr2,dd1,dd2
-
-!   integer irescale
-
-!   irescale = 0
 
    IF(flag==1 .OR. flag==3) THEN
        pp1 = -pp(1)
@@ -33,8 +29,8 @@
        qq3 = -qq(3)
    ELSE
        qq1 = qq(1)
-       qq2 = qq(2)
-       qq3 = qq(3)
+       qq2 = qq(2) 
+       qq3 = qq(3) 
    ENDIF
    qq0 = 2.0D0 - (qq1 * qq1 + qq2 * qq2 + qq3 * qq3)/8.0D0
 
@@ -43,20 +39,15 @@
    dd1 = tr1 + tr2
    dd2 = tr1 - tr2
 
-!   IF(dd1>dd2) THEN
+   IF(dd1>dd2) THEN
        tr1 = 4.0D0 / dd1
-!   ELSE
-!       irescale = 1       
-!       tr1 = -4.0D0 / dd2
-!   ENDIF
+   ELSE
+       tr1 = -4.0D0 / dd2
+   ENDIF
 
    rr(1) = tr1 * (pp1 * qq0 + pp0 * qq1 - pp3 * qq2 + pp2 * qq3)
    rr(2) = tr1 * (pp2 * qq0 + pp3 * qq1 + pp0 * qq2 - pp1 * qq3)
    rr(3) = tr1 * (pp3 * qq0 - pp2 * qq1 + pp1 * qq2 + pp0 * qq3)
 
-!   if (irescale.eq.1) then
-!      write(*,*) 'RESCALING'
-!      write(*,*) rr
-!   endif
 
-   END SUBROUTINE CrvCompose_temp
+   END SUBROUTINE BD_CrvCompose 

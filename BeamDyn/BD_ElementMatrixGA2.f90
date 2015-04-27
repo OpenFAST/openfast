@@ -1,7 +1,7 @@
-   SUBROUTINE ElementMatrix_GA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
-                                EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
-                                damp_flag,beta,                          &
-                                ngp,node_elem,dof_node,elk,elf,elm,elg)
+   SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
+                                  EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
+                                  damp_flag,beta,                          &
+                                  ngp,node_elem,dof_node,elk,elf,elm,elg)
 
    REAL(ReKi),     INTENT(IN   ):: Nuu0(:)
    REAL(ReKi),     INTENT(IN   ):: Nuuu(:)
@@ -103,16 +103,16 @@
    elg(:,:) = 0.0D0
    elm(:,:) = 0.0D0
    
-   CALL BD_gen_gll_LSGL(node_elem-1,GLL_temp,w_temp)
-   CALL BldGaussPointWeight(ngp,gp,gw)
+   CALL BD_GenerateGLL(node_elem-1,GLL_temp,w_temp)
+   CALL BD_GaussPointWeight(ngp,gp,gw)
    DO igp=1,ngp
        gpr = gp(igp)
-       CALL BldComputeJacobianLSGL(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian)
-       CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10)
+       CALL BD_ComputeJacobian(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian)
+       CALL BD_GaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10)
        Stif(:,:) = 0.0D0
        Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
-       CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)
-       CALL ElasticForce_GA2(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
+       CALL BD_GaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)
+       CALL BD_ElasticForceGA2(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
 
        mmm  = 0.0D0
        mEta = 0.0D0
@@ -121,12 +121,12 @@
        mEta(2)      = -EMass0_GL(1,6,igp)
        mEta(3)      =  EMass0_GL(1,5,igp)
        rho(1:3,1:3) =  EMass0_GL(4:6,4:6,igp)
-       CALL BldGaussPointDataMass_GA2(hhx,hpx,Nvvv,Naaa,RR0,node_elem,dof_node,vvv,aaa,vvp,mmm,mEta,rho)
-       CALL InertialForce(mmm,mEta,rho,vvv,aaa,Fi,Mi,Gi,Ki)
+       CALL BD_GaussPointDataMass(hhx,hpx,Nvvv,Naaa,RR0,node_elem,dof_node,vvv,aaa,vvp,mmm,mEta,rho)
+       CALL BD_InertialForce(mmm,mEta,rho,vvv,aaa,Fi,Mi,Gi,Ki)
        IF(damp_flag .NE. 0) THEN
-           CALL DissipativeForce(beta,Stif,vvv,vvp,E1,Fc,Fd,Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd)
+           CALL BD_DissipativeForce(beta,Stif,vvv,vvp,E1,Fc,Fd,Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd)
        ENDIF
-       CALL GravityLoads(mmm,mEta,gravity,Fg)
+       CALL BD_GravityForce(mmm,mEta,gravity,Fg)
        Fd(:) = Fd(:) - Fg(:)
 
        DO i=1,node_elem
@@ -184,4 +184,4 @@
             IF(ALLOCATED(w_temp)) DEALLOCATE(w_temp)
         ENDIF
 
-   END SUBROUTINE ElementMatrix_GA2
+   END SUBROUTINE BD_ElementMatrixGA2

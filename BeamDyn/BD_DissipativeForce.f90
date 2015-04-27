@@ -1,5 +1,5 @@
-   SUBROUTINE DissipativeForce(beta,Stiff,vvv,vvp,E1,Fc,Fd,&
-                              &Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd)
+   SUBROUTINE BD_DissipativeForce(beta,Stiff,vvv,vvp,E1,Fc,Fd,&
+                                  Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd)
 
    REAL(ReKi),INTENT(IN   ):: beta(:)
    REAL(ReKi),INTENT(IN   ):: Stiff(:,:)
@@ -110,4 +110,4 @@
    Yd(4:6,1:3) = b11
    Yd(4:6,4:6) = b12
 
-   END SUBROUTINE DissipativeForce
+   END SUBROUTINE BD_DissipativeForce

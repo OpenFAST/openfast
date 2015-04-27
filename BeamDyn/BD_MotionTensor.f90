@@ -1,4 +1,4 @@
-   SUBROUTINE MotionTensor(RotTen,Pos,MotTen,flag)
+   SUBROUTINE BD_MotionTensor(RotTen,Pos,MotTen,flag)
 
    REAL(ReKi),     INTENT(IN   ):: RotTen(:,:) 
    REAL(ReKi),     INTENT(IN   ):: Pos(:) 
@@ -17,4 +17,4 @@
        MotTen(1:3,4:6) = TRANSPOSE(MATMUL(Tilde(Pos),RotTen))
    ENDIF
 
-   END SUBROUTINE MotionTensor 
+   END SUBROUTINE BD_MotionTensor 

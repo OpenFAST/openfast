@@ -1,4 +1,4 @@
-   SUBROUTINE BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10)
+   SUBROUTINE BD_GaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10)
    !----------------------------------------------------------------------------------------
    ! This subroutine computes initial Gauss point values: uu0, E10, and Stif
    !----------------------------------------------------------------------------------------
@@ -50,4 +50,4 @@
        uu0(i+3) = rot_temp(i)
    ENDDO
 
-   END SUBROUTINE BldGaussPointDataAt0
+   END SUBROUTINE BD_GaussPointDataAt0

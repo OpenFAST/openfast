@@ -1,4 +1,4 @@
-   SUBROUTINE AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,ElemK,GlobalK)
+   SUBROUTINE BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,ElemK,GlobalK)
    !-------------------------------------------------------------------------------
    ! This subroutine assembles total stiffness matrix.
    !-------------------------------------------------------------------------------
@@ -19,4 +19,4 @@
        ENDDO
    ENDDO
 
-   END SUBROUTINE AssembleStiffKGL
+   END SUBROUTINE BD_AssembleStiffK

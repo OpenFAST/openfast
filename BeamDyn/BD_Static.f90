@@ -1,4 +1,4 @@
-   SUBROUTINE BeamDyn_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
+   SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 
    REAL(DbKi),                      INTENT(IN   ):: t           ! Current simulation time in seconds
    INTEGER(IntKi),                  INTENT(IN   ):: n           ! time step number
@@ -80,4 +80,4 @@
    ENDDO
 
 
-   END SUBROUTINE BeamDyn_Static
+   END SUBROUTINE BD_Static

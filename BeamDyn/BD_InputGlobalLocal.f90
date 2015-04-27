@@ -1,4 +1,4 @@
-   SUBROUTINE InputGlobalLocal(p,u,flag)
+   SUBROUTINE BD_InputGlobalLocal(p,u,flag)
 
    TYPE(BD_ParameterType), INTENT(IN   ):: p 
    TYPE(BD_InputType),     INTENT(INOUT):: u
@@ -54,4 +54,4 @@
        
    ENDIF
 
-   END SUBROUTINE InputGlobalLocal
+   END SUBROUTINE BD_InputGlobalLocal

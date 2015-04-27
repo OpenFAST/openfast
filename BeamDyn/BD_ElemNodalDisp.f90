@@ -3,7 +3,7 @@
 !   for uuN0, uuN, and vvn (initial nodal configuration, nodal displacements, and velocity of mass) these values 
 !   are then passed back to GenerateDynamicElement.  
 !**********************************************************************************************************************************
-   SUBROUTINE ElemNodalDispGL(uu,node_elem,dof_node,nelem,Nu)
+   SUBROUTINE BD_ElemNodalDisp(uu,node_elem,dof_node,nelem,Nu)
 
    REAL(ReKi),INTENT(IN):: uu(:) ! Initial position vector, nodal displacements, and velocity of mass
    INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
@@ -24,4 +24,4 @@
        ENDDO
    ENDDO
 
-   END SUBROUTINE ElemNodalDispGL
+   END SUBROUTINE BD_ElemNodalDisp

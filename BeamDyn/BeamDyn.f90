@@ -17,13 +17,12 @@ MODULE BeamDyn
    PUBLIC :: BD_CalcOutput                     ! Routine for computing outputs
    PUBLIC :: BD_CalcOutput_Coupling                     ! Routine for computing outputs
    PUBLIC :: BD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
-   PUBLIC :: BD_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
+!   PUBLIC :: BD_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: BD_UpdateDiscState                ! Tight coupling routine for updating discrete states
    PUBLIC :: CrvMatrixR                ! Tight coupling routine for updating discrete states
    PUBLIC :: CrvCompose                ! Tight coupling routine for updating discrete states
-   PUBLIC :: CrvCompose_temp                ! Tight coupling routine for updating discrete states
-   PUBLIC :: CrvMatrixH                ! Tight coupling routine for updating discrete states
-   PUBLIC :: CrvMatrixB                ! Tight coupling routine for updating discrete states
+!   PUBLIC :: CrvMatrixH                ! Tight coupling routine for updating discrete states
+!   PUBLIC :: CrvMatrixB                ! Tight coupling routine for updating discrete states
    PUBLIC :: CrvExtractCrv                ! Tight coupling routine for updating discrete states
    PUBLIC :: Tilde
    PUBLIC :: Norm
@@ -86,7 +85,7 @@ INCLUDE 'DynamicSolution_Force.f90'
 INCLUDE 'ComputeIniCoef.F90'
 INCLUDE 'ComputeIniNodalPositionSP.f90'
 
-INCLUDE 'BeamDyn_Static.f90'
+INCLUDE 'BD_Static.f90'
 INCLUDE 'BeamDyn_StaticSolution.f90'
 INCLUDE 'BeamDyn_GenerateStaticElement.f90'
 INCLUDE 'BeamDyn_StaticElementMatrix.f90'
@@ -121,7 +120,7 @@ INCLUDE 'Solution_CCSD.f90'
 INCLUDE 'GenerateDynamicElement_CCSD.f90'
 INCLUDE 'ElementMatrix_CCSD.f90'
 
-INCLUDE 'BeamDyn_GA2.f90'
+INCLUDE 'BD_GA2.f90'
 INCLUDE 'TiSchmPredictorStep.f90'
 INCLUDE 'TiSchmComputeCoefficients.f90'
 INCLUDE 'BeamDyn_BoundaryGA2.f90'
@@ -772,40 +771,16 @@ INCLUDE 'ElementMatrix_Acc.f90'
    ErrMsg  = "" 
 
    IF(p%analysis_type == 2) THEN
-!WRITE(*,*) x%q(:)
-       IF(p%time_flag .EQ. 1) THEN
-           CALL BeamDyn_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-       ELSEIF(p%time_flag .EQ. 2) THEN
-           CALL BeamDyn_GA2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-       ELSEIF(p%time_flag .EQ. 3) THEN
-           CALL BeamDyn_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-       ELSEIF(p%time_flag .EQ. 4) THEN
-           CALL BeamDyn_RK2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-       ENDIF
-  
-!       DO i=2,p%node_total
-!           temp_id = (i-1)*6
-!           temp_pp(:) = 0.0D0
-!           temp_qq(:) = 0.0D0
-!           temp_rr(:) = 0.0D0
-!           DO j=1,3
-!               temp_pp(j) = x%q(temp_id+3+j)
-!           ENDDO
-!           CALL CrvCompose(temp_rr,temp_pp,temp_qq,0)
-!           DO j=1,3
-!               x%q(temp_id+3+j) = temp_rr(j)
-!           ENDDO
-!       ENDDO
+       CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
    ELSEIF(p%analysis_type == 1) THEN
-       CALL BeamDyn_Static( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!DO i=5,0,-1            
-!WRITE(*,*) "Displacement: ",i,x%q(p%dof_total-i)
-!ENDDO
+!       CALL BD_Static( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
    ENDIF
 
    END SUBROUTINE BD_UpdateStates
 
    !----------------------------------------------------------------------------------------------------------------------------------
+
+
    SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !
    ! Routine for computing outputs, used in both loose and tight coupling.
@@ -823,124 +798,7 @@ INCLUDE 'ElementMatrix_Acc.f90'
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-   TYPE(BD_ContinuousStateType):: xdot
-   INTEGER(IntKi):: i
-   INTEGER(IntKi):: j
-   INTEGER(IntKi):: temp_id
-   INTEGER(IntKi):: temp_id2
-   REAL(ReKi):: cc(3)
-   REAL(ReKi):: cc0(3)
-   REAL(ReKi):: temp_cc(3)
-   REAL(ReKi):: temp_R(3,3)
-   REAL(ReKi):: temp66(6,6)
-   REAL(ReKi):: temp6(6)
-   REAL(ReKi):: temp_Force(p%dof_total)
-   REAL(ReKi):: temp_ReactionForce(6)
-   ! Initialize ErrStat
-
-   ErrStat = ErrID_None
-   ErrMsg  = "" 
-
-   CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,0)
-   DO i=1,p%elem_total
-       DO j=1,p%node_elem
-           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-           temp_id2= (i-1)*p%node_elem+j
-           y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,x%q(temp_id+1:temp_id+3))
-           cc(1:3) = x%q(temp_id+4:temp_id+6)
-           temp_id = (j-1)*p%dof_node
-           cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
-!           CALL CrvCompose_temp(temp_cc,cc0,cc,0)
-           CALL CrvCompose(temp_cc,cc0,cc,0)
-           temp_cc = MATMUL(p%GlbRot,temp_cc)
-           CALL CrvMatrixR(temp_cc,temp_R)
-           y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
-
-           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-           temp6(:) = 0.0D0
-           temp6(1:3) = x%dqdt(temp_id+1:temp_id+3)
-           temp6(4:6) = x%dqdt(temp_id+4:temp_id+6)
-           temp6(:) = MATMUL(temp66,temp6)
-           y%BldMotion%TranslationVel(1:3,temp_id2) = temp6(1:3)
-           y%BldMotion%RotationVel(1:3,temp_id2) = temp6(4:6)
-       ENDDO
-   ENDDO
-
-!   IF(p%analysis_type .EQ. 0) THEN
-!       DO i=1,p%elem_total
-!           DO j=1,p%node_elem
-!               temp_id1 = ((i-1)*(p%node_elem-1)+j-1)*3
-!               temp_id2 = (j-1)*p%dof_node
-!               temp_id3 = temp_id1*2
-!               POS_temp(temp_id1+1:temp_id1+3) = p%uuN0(temp_id2+1:temp_id2+3,i) + &
-!                                                &x%q(temp_id3+1:temp_id3+3)
-!           ENDDO
-!       ENDDO       
-!   ENDIF
-
-   IF(p%analysis_type .EQ. 2) THEN
-!       CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
-!       CALL BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg) 
-       DO i=1,p%elem_total
-           DO j=1,p%node_elem
-               temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-               temp_id2= (i-1)*p%node_elem+j
-
-               temp6(:) = 0.0D0
-               temp6(1:3) = OtherState%acc(temp_id+1:temp_id+3)
-               temp6(4:6) = OtherState%acc(temp_id+4:temp_id+6)
-               temp6(:) = MATMUL(temp66,temp6)
-               y%BldMotion%TranslationAcc(1:3,temp_id2) = temp6(1:3)
-               y%BldMotion%RotationAcc(1:3,temp_id2) = temp6(4:6)
-           ENDDO
-       ENDDO
-!       CALL BD_DestroyContState(xdot, ErrStat, ErrMsg)
-       CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,OtherState%Acc,                                  &
-                                  p%Stif0_GL,p%Mass0_GL,p%gravity,u,                                 &
-                                  p%damp_flag,p%beta,                                                &
-                                  p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
-                                  temp66,p%analysis_type,temp_Force,temp_ReactionForce)
-   ELSEIF(p%analysis_type .EQ. 1) THEN
-       CALL StaticSolution_Force(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
-                                 &p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
-                                 &p%analysis_type,temp_Force)
-   ENDIF
-
-   CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
-   temp6(:) = 0.0D0
-   temp6(:) = temp_ReactionForce(1:6)
-   temp6(:) = MATMUL(TRANSPOSE(temp66),temp6)
-   y%ReactionForce%Force(1:3,1) = temp6(1:3)
-   y%ReactionForce%Moment(1:3,1) = temp6(4:6)
-   DO i=1,p%node_total
-       temp_id = (i-1)*p%dof_node
-       temp6(:) = 0.0D0
-       temp6(:) = temp_Force(temp_id+1:temp_id+6)
-       temp6(:) = MATMUL(TRANSPOSE(temp66),temp6)
-       y%BldForce%Force(1:3,i) = temp6(1:3)
-       y%BldForce%Moment(1:3,i) = temp6(4:6)
-   ENDDO
-
-   END SUBROUTINE BD_CalcOutput
-
-   SUBROUTINE BD_CalcOutput_Coupling( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-   !
-   ! Routine for computing outputs, used in both loose and tight coupling.
-   !..................................................................................................................................
-
-   REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t
-   TYPE(BD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(BD_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
-                                                                    !   nectivity information does not have to be recalculated)
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-   TYPE(BD_ContinuousStateType):: xdot
+   TYPE(BD_OtherStateType):: OS_tmp
    INTEGER(IntKi):: i
    INTEGER(IntKi):: j
    INTEGER(IntKi):: temp_id
@@ -960,7 +818,7 @@ INCLUDE 'ElementMatrix_Acc.f90'
    ErrStat = ErrID_None
    ErrMsg  = "" 
 
-   CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,0)
+   CALL BD_MotionTensor(p%GlbRot,p%GlbPos,temp66,0)
    DO i=1,p%elem_total
        DO j=1,p%node_elem
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
@@ -969,10 +827,9 @@ INCLUDE 'ElementMatrix_Acc.f90'
            cc(1:3) = x%q(temp_id+4:temp_id+6)
            temp_id = (j-1)*p%dof_node
            cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
-!           CALL CrvCompose_temp(temp_cc,cc0,cc,0)
-           CALL CrvCompose(temp_cc,cc0,cc,0)
+           CALL BD_CrvCompose(temp_cc,cc0,cc,0)
            temp_cc = MATMUL(p%GlbRot,temp_cc)
-           CALL CrvMatrixR(temp_cc,temp_R)
+           CALL BD_CrvMatrixR(temp_cc,temp_R)
            y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
 
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
@@ -986,22 +843,20 @@ INCLUDE 'ElementMatrix_Acc.f90'
    ENDDO
 
    IF(p%analysis_type .EQ. 2) THEN
-!       CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
-!       CALL BD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg) 
-!       CALL BD_DestroyContState(xdot, ErrStat, ErrMsg)
-temp3(1:3) = u%RootMotion%TranslationDisp(1:3,1)
-x%q(1:3) = MATMUL(TRANSPOSE(p%GlbRot),temp3)
-x%q(4:6) = 0.0D0
-CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
-temp6(1:3) = u%RootMotion%TranslationVel(1:3,1)
-temp6(4:6) = u%RootMotion%RotationVel(1:3,1)
-temp6(:) = MATMUL(temp66,temp6)
-x%dqdt(1:6) = temp6(1:6)
-temp6(1:3) = u%RootMotion%TranslationAcc(:,1)
-temp6(4:6) = u%RootMotion%RotationAcc(:,1)
-temp6(:) = MATMUL(temp66,temp6)
-OtherState%Acc(1:6) = temp6(1:6)
-CALL BD_CalcAcc(u,p,x,OtherState)
+       CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
+ temp3(1:3) = u%RootMotion%TranslationDisp(1:3,1)
+ x%q(1:3) = MATMUL(TRANSPOSE(p%GlbRot),temp3)
+ x%q(4:6) = 0.0D0
+ CALL BD_MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
+ temp6(1:3) = u%RootMotion%TranslationVel(1:3,1)
+ temp6(4:6) = u%RootMotion%RotationVel(1:3,1)
+ temp6(:) = MATMUL(temp66,temp6)
+ x%dqdt(1:6) = temp6(1:6)
+ temp6(1:3) = u%RootMotion%TranslationAcc(:,1)
+ temp6(4:6) = u%RootMotion%RotationAcc(:,1)
+ temp6(:) = MATMUL(temp66,temp6)
+ OS_tmp%Acc(1:6) = temp6(1:6)
+ CALL BD_CalcAcc(u,p,x,OS_tmp)
 
 CALL MotionTensor(p%GlbRot,p%GlbPos,MoTens,0)
        CALL DynamicSolution_Force(p%uuN0,x%q,x%dqdt,OtherState%Acc,                                       &
@@ -1026,7 +881,7 @@ CALL MotionTensor(p%GlbRot,p%GlbPos,MoTens,0)
        y%BldForce%Moment(1:3,i) = temp6(4:6)
    ENDDO
 
-   END SUBROUTINE BD_CalcOutput_Coupling
+   END SUBROUTINE BD_CalcOutput
    !----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE BD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
    !
@@ -1087,7 +942,7 @@ END SUBROUTINE BD_UpdateDiscState
    END SUBROUTINE BD_CalcConstrStateResidual
 
    !----------------------------------------------------------------------------------------------------------------------------------
-   SUBROUTINE BD_gen_gll_LSGL(N, x, w)
+   SUBROUTINE BD_GenerateGLL(N, x, w)
    !
    ! This subroutine determines the (N+1) Gauss-Lobatto-Legendre points x and weights w
    !
@@ -1163,7 +1018,7 @@ END SUBROUTINE BD_UpdateDiscState
 
    ENDDO
 
-   END SUBROUTINE BD_gen_gll_LSGL
+   END SUBROUTINE BD_GenerateGLL
 
 
 END MODULE BeamDyn

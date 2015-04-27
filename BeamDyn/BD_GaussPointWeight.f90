@@ -1,4 +1,4 @@
-   SUBROUTINE BldGaussPointWeight(n, x, w)
+   SUBROUTINE BD_GaussPointWeight(n, x, w)
    !-------------------------------------------------------------------------------
    ! This subroutine generates n-point gauss-legendre quadrature points and weights
    !-------------------------------------------------------------------------------
@@ -47,5 +47,5 @@
            w(i)=2.d0*xl/((1.d0-z*z)*pp*pp)
            w(n+1-i)=w(i)
 12         CONTINUE
-   END SUBROUTINE BldGaussPointWeight
+   END SUBROUTINE BD_GaussPointWeight
 !  (c) copr. 1986-92 numerical recipes software +k$<,(5cl.

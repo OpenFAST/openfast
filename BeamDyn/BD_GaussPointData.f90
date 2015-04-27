@@ -1,4 +1,4 @@
-   SUBROUTINE BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
+   SUBROUTINE BD_GaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
                                 uuu,uup,E1,RR0,kapa,Stif,cet)
    !--------------------------------------------------------------------------
    ! This subroutine computes Gauss point values: 1) uuu, 2) uup, 3) E1
@@ -93,4 +93,4 @@
    CALL CrvMatrixR(rotu_temp,Wrk)
    kapa = MATMUL(Wrk,cc)
 
-   END SUBROUTINE BldGaussPointData
+   END SUBROUTINE BD_GaussPointData

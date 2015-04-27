@@ -1,4 +1,4 @@
-   SUBROUTINE BeamDyn_AM2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
+   SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 
    REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
    INTEGER(IntKi),                    INTENT(IN   )  :: n           ! time step number
@@ -13,12 +13,11 @@
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! local variables
-      
-   TYPE(BD_ContinuousStateType)                 :: xdot       ! Holds temporary modification to x
    TYPE(BD_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
+   TYPE(BD_OtherStateType     )                 :: OS_tmp       ! Holds temporary modification to x
    TYPE(BD_InputType)                           :: u_interp    ! interpolated value of inputs 
    TYPE(BD_InputType)                           :: u_interp0    ! interpolated value of inputs 
-   INTEGER(IntKi)                               :: flag_scale
+!   INTEGER(IntKi)                               :: flag_scale
    INTEGER(IntKi)                               :: i
 
    ! Initialize ErrStat
@@ -59,23 +58,21 @@
                  , ErrMess  = ErrMsg               )
 
    CALL BD_CopyContState(x, x_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
-   CALL BD_CopyContState(x, xdot, MESH_NEWCOPY, ErrStat, ErrMsg)
+   CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
    ! interpolate u to find u_interp = u(t)
-   CALL BD_Input_ExtrapInterp( u, utimes, u_interp, t+p%dt, ErrStat, ErrMsg )
-   CALL BD_Input_ExtrapInterp( u, utimes, u_interp0, t, ErrStat, ErrMsg )
-!WRITE(*,*) u_interp0%PointLoad%Force(:,p%node_total)
-!WRITE(*,*) u_interp%PointLoad%Force(:,p%node_total)
+!   CALL BD_Input_ExtrapInterp( u, utimes, u_interp, t+p%dt, ErrStat, ErrMsg )
+   CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
+                                p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
+                                p%node_total,p%dof_node )
    ! find x at t+dt
-   CALL BeamDyn_BoundaryAM2(x,u_interp,t+p%dt,OtherState%Rescale_counter,ErrStat,ErrMsg)
-   CALL BD_CalcContStateDeriv(t,u_interp0,p,x_tmp,xd,z,OtherState,xdot,ErrStat,ErrMsg)
-   CALL DynamicSolution_AM2( p%uuN0,x%q,x%dqdt,x_tmp%q,x_tmp%dqdt,xdot%q,xdot%dqdt,&
-                             p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,             &
-                             p%damp_flag,p%beta,                                   &
-                             p%node_elem,p%dof_node,p%elem_total,p%dof_total,      &
-                             p%node_total,p%ngp,p%niter,OtherState%NR_counter,p%dt,p%alpha)
-   CALL RescaleCheck(x,p%node_total,OtherState%Rescale_counter)
-
-!   CALL BeamDyn_ApplyBoundaryCondition(x,u(1),ErrStat,ErrMsg)
+   CALL BD_InputGlobalLocal(p,u_interp,0)
+   CALL BD_BoundaryGA2(x,p,u_interp,t+p%dt,OtherState,ErrStat,ErrMsg)
+   CALL BD_DynamicSolutionGA2( p%uuN0,x%q,x%dqdt,OtherState%acc,OtherState%xcc,&
+                               p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,       &
+                               p%damp_flag,p%beta,                             &
+                               p%node_elem,p%dof_node,p%elem_total,p%dof_total,&
+                               p%node_total,p%niter,p%ngp,p%coef)
+!   CALL RescaleCheck(x,p%node_total,OtherState%Rescale_counter)
 
    CALL MeshDestroy ( u_interp%RootMotion        &
                     , ErrStat  = ErrStat         &
@@ -86,15 +83,5 @@
    CALL MeshDestroy ( u_interp%DistrLoad         &
                     , ErrStat  = ErrStat         &
                     , ErrMess  = ErrMsg           )
-
-   CALL MeshDestroy ( u_interp0%RootMotion        &
-                    , ErrStat  = ErrStat         &
-                    , ErrMess  = ErrMsg           )
-   CALL MeshDestroy ( u_interp0%PointLoad        &
-                    , ErrStat  = ErrStat         &
-                    , ErrMess  = ErrMsg           )
-   CALL MeshDestroy ( u_interp0%DistrLoad         &
-                    , ErrStat  = ErrStat         &
-                    , ErrMess  = ErrMsg           )
-
-   END SUBROUTINE BeamDyn_AM2
+   
+   END SUBROUTINE BD_GA2

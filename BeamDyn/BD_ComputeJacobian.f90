@@ -1,4 +1,4 @@
-   SUBROUTINE BldComputeJacobianLSGL(rr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,jacobian)
+   SUBROUTINE BD_ComputeJacobian(rr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,jacobian)
    !_------------------------------------------------------------------------------------------------
    ! This subroutine 1) computes the jacobian of a element;
    !                 2) adjusts derivative of shape functions.
@@ -43,4 +43,4 @@
        hpx(inode) = hpx(inode)/jacobian
    ENDDO
 
-   END SUBROUTINE BldComputeJacobianLSGL
+   END SUBROUTINE BD_ComputeJacobian

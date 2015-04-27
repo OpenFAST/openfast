@@ -1,4 +1,4 @@
-   SUBROUTINE BeamDyn_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
+   SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
 
    TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
    REAL(DbKi),                   INTENT(IN   )  :: t           ! Inputs at t
@@ -51,4 +51,4 @@
 !ENDIF
 !x%dqdt(5) = -3.1415926D0/3.0D0
 !-------END DEBUG-----
-   END SUBROUTINE BeamDyn_BoundaryGA2
+   END SUBROUTINE BD_BoundaryGA2

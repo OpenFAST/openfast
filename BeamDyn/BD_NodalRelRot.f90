@@ -4,7 +4,7 @@
 !   created by ElemNodalDispGL and sends the values to CrvCompose to calculate the rotation parameters. 
 !   The rotation parameters are returned to BldGenerateStaticElement and then sent to ElementMatrixLSGL.
 !**********************************************************************************************************************************  
-  SUBROUTINE NodalRelRotGL(Nu,node_elem,dof_node,Nr)
+  SUBROUTINE BD_NodalRelRot(Nu,node_elem,dof_node,Nr)
 
    REAL(ReKi),INTENT(IN):: Nu(:) ! Nodal initial position for each element, and Nodal displacement of Mass 1 for each element respectively
    INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
@@ -37,4 +37,4 @@
    ENDDO
 
 
-   END SUBROUTINE NodalRelRotGL
+   END SUBROUTINE BD_NodalRelRot

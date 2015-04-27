@@ -1,4 +1,4 @@
-   SUBROUTINE ElasticForce_GA2(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
+   SUBROUTINE BD_ElasticForceGA2(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
 
    REAL(ReKi),INTENT(IN)::E1(:),RR0(:,:),kapa(:)
    REAL(ReKi),INTENT(IN)::Stif(:,:),cet
@@ -23,13 +23,7 @@
    ENDDO
    fff = 0.0D0 
    fff = MATMUL(Stif,eee)
-!   DO i=1,6
-!       WRITE(*,*) "eee = ",i,eee(i)
-!   ENDDO
 
-!   DO i=1,6
-!      WRITE(*,*) Stif(i,1), Stif(i,2), Stif(i,3), Stif(i,4), Stif(i,5), Stif(i,6)
-!   ENDDO
    Wrk = 0.0D0     
    Wrk = MATMUL(TRANSPOSE(RR0),tempS)
    e1s = Wrk(1)      !epsilon_{11} in material basis
@@ -43,9 +37,6 @@
        fff(i+3) = fff(i+3) + cet*e1s*k1s*RR0(i,1)
    ENDDO 
 
-!   DO i=1,6
-!      WRITE(*,*) Stif(i,1), Stif(i,2), Stif(i,3), Stif(i,4), Stif(i,5), Stif(i,6)
-!   ENDDO
    Fc = 0.0D0
    Fc = fff
    Wrk = 0.0D0 
@@ -77,10 +68,6 @@
    epsi = MATMUL(C11,Tilde(E1))
    mu = MATMUL(C21,Tilde(E1))
    
-!   WRITE(*,*) "epsi at Node #"
-!   DO i=1,3
-!       WRITE(*,*) epsi(i,1),epsi(i,2),epsi(i,3)
-!   ENDDO
    Wrk = 0.0D0
 
    Oe = 0.0D0
@@ -104,9 +91,4 @@
    Wrk33(1:3,1:3) = Oe(1:3,4:6)
    Qe(4:6,4:6) = MATMUL(TRANSPOSE(Tilde(E1)),Wrk33)
 
-!   WRITE(*,*) "Oe at Node #"
-!   DO i=1,6
-!       WRITE(*,*) Oe(i,1), Oe(i,2), Oe(i,3), Oe(i,4), Oe(i,5), Oe(i,6)
-!   ENDDO
-!   STOP
-   END SUBROUTINE ElasticForce_GA2
+   END SUBROUTINE BD_ElasticForceGA2

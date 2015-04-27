@@ -1,4 +1,4 @@
-   SUBROUTINE TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,uuNf,vvNf,aaNf,xxNf,node_total,dof_node)
+   SUBROUTINE BD_TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,uuNf,vvNf,aaNf,xxNf,node_total,dof_node)
 
    REAL(ReKi),INTENT(IN)::uuNi(:),vvNi(:),aaNi(:),xxNi(:)
    REAL(DbKi),INTENT(IN)::deltat,coef(:)
@@ -31,7 +31,6 @@
            uuNi_temp(j) = uuNi(temp_id + 3)
        ENDDO
        rot_temp = 0.0D0
-!       CALL CrvCompose_temp(rot_temp,tr_temp,uuNi_temp,0)
        CALL CrvCompose(rot_temp,tr_temp,uuNi_temp,0)
        DO j=1,3
            temp_id = (i - 1) * dof_node +j
@@ -40,4 +39,4 @@
 
    ENDDO
 
-   END SUBROUTINE TiSchmPredictorStep
+   END SUBROUTINE BD_TiSchmPredictorStep
