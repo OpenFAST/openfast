@@ -67,7 +67,7 @@ MODULE InflowWind
    IMPLICIT NONE
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v3.00.01a-adp', '01-Nov-2014' )
+   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v3.00.01a-adp', '27-Apr-2015' )
 
 
 
@@ -336,6 +336,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       ! Initialize the submodules based on the WindType
       !-----------------------------------------------------------------
 
+      InitOutData%WindFileInfo%MWS = HUGE(InitOutData%WindFileInfo%MWS)
 
       SELECT CASE ( ParamData%WindType )
 
@@ -441,7 +442,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             InitOutData%WindFileInfo%IsBinary         =  .FALSE.
             InitOutData%WindFileInfo%TI               =  0.0_ReKi
             InitOutData%WindFileInfo%TI_listed        =  .FALSE.
-      
+            InitOutData%WindFileInfo%MWS              = InputFileData%Steady_HWindSpeed
 
                ! Write summary file information
             IF ( SumFileUnit > 0 ) THEN
@@ -550,6 +551,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             InitOutData%WindFileInfo%IsBinary            =  .TRUE.
             InitOutData%WindFileInfo%TI                  =  0.0_ReKi
             InitOutData%WindFileInfo%TI_listed           =  .FALSE.
+            InitOutData%WindFileInfo%MWS                 = ParamData%TSFFWind%MeanFFWS
 
 
 
@@ -596,6 +598,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             InitOutData%WindFileInfo%IsBinary            =  .TRUE.
             InitOutData%WindFileInfo%TI                  =  BladedFF_InitOutData%TI
             InitOutData%WindFileInfo%TI_listed           =  .TRUE.   ! This must be listed in the file someplace
+            InitOutData%WindFileInfo%MWS                 = ParamData%BladedFFWind%MeanFFWS
 
 
 
@@ -611,7 +614,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
                ! Initialize the UserWind module
             CALL IfW_UserWind_Init(User_InitData, InputGuess%PositionXYZ, ParamData%UserWind, OtherStates%UserWind, &
                         User_OutData,    TimeInterval,  User_InitOutData,  TmpErrStat,          TmpErrMsg)
-            CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
 
