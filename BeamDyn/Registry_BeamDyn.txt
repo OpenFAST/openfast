@@ -1,0 +1,108 @@
+##################################################################################################################################
+# Registry for Module1, creates MODULE Module1_Types
+# Module Module1_Types contains all of the user-defined types needed in Module1. It also contains copy, destroy, pack, and
+# unpack routines associated with each defined data types.
+##################################################################################################################################
+# Entries are of the form
+# keyword <modulename/modname> <TypeBeingDefined> <FieldType> <FieldName> <Dims> <InitialValue> <Ctrl> "<DESCRIP>" "<UNITS>"
+##################################################################################################################################
+
+# ..... Initialization data
+# .......................................................................................................
+# Define inputs that the initialization routine may need here:
+# e.g., the name of the input file, the file root name, etc.
+typedef BeamDyn/BD InitInputType CHARACTER(1024) InputFile - - - "Name of the input file; remove if there is no file" -
+typedef BeamDyn/BD InitInputType CHARACTER(1024) RootName  - - - "RootName for writing output files" -
+typedef BeamDyn/BD InitInputType ReKi            gravity  {:} - - "Gravitational acceleration" m/s^2
+typedef BeamDyn/BD InitInputType ReKi            GlbPos   {:} - - "Initial Position Vector of the local blade coordinate system"
+typedef BeamDyn/BD InitInputType ReKi            GlbRot   {:}{:} - - "Initial direction cosine matrix of the loacl blade coordinate system"
+
+# Define outputs that the initialization routine may need here:
+# e.g., the name of the input file, the file root name, etc.
+typedef BeamDyn/BD InitOutputType Reki DummyInitVar - - - "A variable" -
+
+# ..... States
+# ....................................................................................................................
+# Define continuous (differentiable) states here:
+typedef BeamDyn/BD ContinuousStateType ReKi q        {:} - - "q - displacement of Mass 1" m
+typedef      ^              ^             ^   dqdt     {:} - -  "dqdt - velocity of Mass 1" m/s
+
+# Define discrete (nondifferentiable) states here:
+typedef BeamDyn/BD BD_DiscreteStateType ReKi DummyDiscState - - - "A variable, Replace if you have discrete states" -
+
+# Define constraint states here:
+typedef BeamDyn/BD ConstraintStateType ReKi DummyConstrState - - - "A variable, Replace if you have constraint states" -
+
+# Define any data that are not considered actual states here:
+# e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
+# at a given time, etc.)
+typedef BeamDyn/BD OtherStateType ReKi  DummyOtherState  - - - "A variable, replace if you have Other States"
+typedef BeamDyn/BD OtherStateType IntKi Rescale_counter  - - - "A variable, replace if you have Other States"
+typedef BeamDyn/BD OtherStateType IntKi NR_counter  - - - "A variable, replace if you have Other States"
+typedef BeamDyn/BD OtherStateType ReKi  acc        {:} - - "Accerleration in GA2"
+typedef BeamDyn/BD OtherStateType ReKi  xcc        {:} - - "Algorithm accerleration in GA2" 
+typedef BeamDyn/BD OtherStateType ReKi  facc        {:} - - "Global Accerleration in GA2 by rotating acc directly"
+
+# ..... Parameters
+# ................................................................................................................
+# Define parameters here:
+# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
+
+typedef BeamDyn/BD ParameterType DbKi   alpha   - - -  "Numerical Damping Coefficient"  
+typedef BeamDyn/BD ParameterType ReKi   uuN0      {:}{:} - -  "Initial Postion Vector" -
+typedef      ^            ^       ^     Stif0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
+typedef      ^            ^       ^     Mass0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
+typedef BeamDyn/BD ParameterType ReKi   gravity   {:} - -  "Gravitational acceleration" m/s^2 
+typedef      ^            ^       ^     segment_length   {:}{:} - -  "Array stored length of each segment" -
+typedef      ^            ^       ^     member_length   {:}{:} - -  "Array stored length of each member" -
+typedef      ^            ^       ^     blade_length     - - -  "Blade Length" -
+typedef      ^            ^     IntKi   node_elem - - -  "Node per element" -
+typedef      ^            ^       ^     dof_node  - - -  "dof per node" -
+typedef      ^            ^       ^     elem_total  - - -  "Total number of elements" -
+typedef      ^            ^       ^     node_total  - - -  "Total number of nodes" -
+typedef      ^            ^       ^     dof_total  - - -  "Total number of dofs" -
+typedef      ^            ^       ^     ngp  - - -  "Number of Gauss points" -
+typedef      ^            ^       ^     analysis_type  - - -  "analysis_type flag" -
+typedef      ^            ^       ^     damp_flag  - - -  "damping flag" -
+typedef      ^            ^       ^     time_flag  - - -  "time integrator flag: 1-AM2, 2-G-Alpha, 3-RK4" -
+typedef      ^            ^       ^     niter  - - -  "analysis_type flag" -
+typedef      ^            ^      DbKi   dt     - - -  "module dt" s
+typedef      ^            ^      ReKi   beta   {:} - -  "Damping Coefficient" -
+typedef      ^            ^      DbKi   coef   {:} - -  "GA2 Coefficient" -
+typedef BeamDyn/BD ParameterType DbKi   rhoinf - - -  "Numerical Damping Coefficient for GA2"  
+typedef      ^            ^      ReKi   GlbPos {:} - -  "Initial Position Vector between origins of Global and blade frames" -
+typedef      ^            ^      ReKi   GlbRot {:}{:} - -  "Initial Rotation Tensor between Global and Blade frames" -
+# ..... Inputs
+# ....................................................................................................................
+# Define inputs that are not on this mesh here:
+typedef BeamDyn/BD   InputType  MeshType  RootMotion - - - "contains motion" -
+typedef BeamDyn/BD   InputType  MeshType  PointLoad - - - "Applied point forces along beam axis" -
+typedef BeamDyn/BD   InputType  MeshType  DistrLoad - - - "Applied distributed forces along beam axis" -
+# ..... Outputs
+# ...................................................................................................................
+# Define outputs that are contained on the mesh here:
+typedef BeamDyn/BD   OutputType  MeshType  ReactionForce - - - "contains force and moments" -
+typedef BeamDyn/BD   OutputType  MeshType  BldForce - - - "contains force and moments" -
+typedef BeamDyn/BD   OutputType  MeshType  BldMotion - - - "Motion (disp,rot,vel) along beam axis" -
+# ..... Blade Input file data........................................................................
+typedef BeamDyn/BD    BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"
+typedef BeamDyn/BD    BladeInputData    IntKi    format_index     -     -     -    "Number of blade input stations"
+typedef BeamDyn/BD    BladeInputData    ReKi     station_eta     {:}    -     -    "Station location in eta [0,1]"
+typedef BeamDyn/BD    BladeInputData    ReKi     stiff0       {:}{:}{:} -     -    "C/S stiffness matrix arrays"   
+typedef BeamDyn/BD    BladeInputData    ReKi     mass0        {:}{:}{:} -     -    "C/S mass matrix arrays"   
+typedef BeamDyn/BD    BladeInputData    ReKi     beta             {:} - - "Damping Coefficient" -
+typedef BeamDyn/BD    BladeInputData    IntKi    damp_flag    - - - "Damping Flag: 0-No Damping, 1-Damped"
+# ..... Input file data..............................................................................
+# This is data defined in the Input File for this module (or could otherwise be passed in)
+# ..... Primary Input file data......................................................................
+typedef BeamDyn/BD    BD_InputFile    IntKi    analysis_type    - - - "Analysis Type: 0-Rigid, 1-Static, 2-Dynamic" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    time_integrator    - - - "Analysis Type: 1-AM2, 2-G-Alpha, 3-RK4" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    member_total     - - - "Total number of members" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    kp_total         - - - "Total number of key point" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    kp_member       {:} - - "Total number of key point" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    order_elem       - - - "Order of interpolation (basis) function" -
+typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate   {:}{:} - - "Key point coordinates array" -
+typedef BeamDyn/BD    BD_InputFile    DbKi     rhoinf          - - - "Key point coordinates array" -
+typedef BeamDyn/BD    BD_InputFile    BladeInputData    InpBl   - - - "Input data for individual blades"   "see BladeInputData Type" 
+typedef BeamDyn/BD    BD_InputFile    CHARACTER(1024) BldFile   - - -  "Name of blade input file"
+typedef BeamDyn/BD    BD_InputFile    Logical  Echo             - - -  "Echo"
