@@ -98,7 +98,7 @@ INTEGER(IntKi)                        :: Restart_step                           
    ! Time Stepping:
    !...............................................................................................................................         
    
-   DO n_t_global = Restart_step, Turbine(1)%m_FAST%n_TMax_m1 ! bjj: we have to make sure the n_TMax_m1 and n_ChkptTime are the same for all turbines or have some logic
+   DO n_t_global = Restart_step, Turbine(1)%p_FAST%n_TMax_m1 ! bjj: we have to make sure the n_TMax_m1 and n_ChkptTime are the same for all turbines or have some logic
             
       ! write checkpoint file if requested
       IF (mod(n_t_global, Turbine(1)%p_FAST%n_ChkptTime) == 0 .AND. Restart_step /= n_t_global) then

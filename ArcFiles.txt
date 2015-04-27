@@ -141,12 +141,13 @@ CertTest\5MW_Baseline\HydroData\*
 CertTest\5MW_Baseline\ServoData\Source\DISCON.f90
 CertTest\5MW_Baseline\ServoData\Source\DISCON_ITIBarge.f90
 CertTest\5MW_Baseline\ServoData\Source\DISCON_OC3Hywind.f90
-CertTest\5MW_Baseline\Wind\NoShr_12.wnd
 CertTest\5MW_Baseline\Wind\90m_12mps_twr.inp
 CertTest\5MW_Baseline\Wind\90m_12mps_twr.bts
-CertTest\5MW_Baseline\Wind\08ms.wnd
 
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Blade.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_InflowWind_12mps.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_InflowWind_Steady8mps.dat
+CertTest\5MW_Baseline\NRELOffshrBsline5MW_AeroDyn_Equil_noTwr.dat
 
 
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_Onshore_ElastoDyn.dat
@@ -184,28 +185,24 @@ CertTest\5MW_Baseline\NRELOffshrBsline5MW_ITIBarge4_ElastoDyn_Tower.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_ITIBarge4_ServoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_ITIBarge4_HydroDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_ITIBarge4_MAP.dat
-CertTest\5MW_Baseline\NRELOffshrBsline5MW_ITIBarge4_AeroDyn.dat
 
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_MIT_NREL_TLP_ElastoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_MIT_NREL_TLP_ElastoDyn_Tower.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_MIT_NREL_TLP_ServoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_MIT_NREL_TLP_HydroDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_MIT_NREL_TLP_MAP.dat
-CertTest\5MW_Baseline\NRELOffshrBsline5MW_MIT_NREL_TLP_AeroDyn.dat
 
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC3Hywind_ElastoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC3Hywind_ElastoDyn_Tower.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC3Hywind_ServoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC3Hywind_HydroDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC3Hywind_MAP.dat
-CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC3Hywind_AeroDyn.dat
 
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4DeepCwindSemi_ElastoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4DeepCwindSemi_ElastoDyn_Tower.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4DeepCwindSemi_ServoDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4DeepCwindSemi_HydroDyn.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4DeepCwindSemi_MAP.dat
-CertTest\5MW_Baseline\NRELOffshrBsline5MW_OC4DeepCwindSemi_AeroDyn.dat
 
 
 
@@ -235,12 +232,17 @@ CertTest\AOC\AOC_Tower.dat
 CertTest\AOC\Test06_ElastoDyn.dat
 CertTest\AOC\Test06_ServoDyn.dat
 CertTest\AOC\Test06_AD.ipt
+CertTest\AOC\Test06_InflowWind.dat
+
 CertTest\AOC\Test07_ElastoDyn.dat
 CertTest\AOC\Test07_ServoDyn.dat
 CertTest\AOC\Test07_AD.ipt
+CertTest\AOC\Test07_InflowWind.dat
+
 CertTest\AOC\Test08_ElastoDyn.dat
 CertTest\AOC\Test08_ServoDyn.dat
 CertTest\AOC\Test08_AD.ipt
+CertTest\AOC\Test08_InflowWind.dat
 
 
 
@@ -266,18 +268,27 @@ CertTest\AWT27\AWT_Tower.dat
 CertTest\AWT27\Test01_ElastoDyn.dat
 CertTest\AWT27\Test01_ServoDyn.dat
 CertTest\AWT27\Test01_AD.ipt
+CertTest\AWT27\Test01_InflowWind.dat
+
 CertTest\AWT27\Test02_ElastoDyn.dat
 CertTest\AWT27\Test02_ServoDyn.dat
 CertTest\AWT27\Test02_AD.ipt
+CertTest\AWT27\Test02_InflowWind.dat
+
 CertTest\AWT27\Test03_ElastoDyn.dat
 CertTest\AWT27\Test03_ServoDyn.dat
 CertTest\AWT27\Test03_AD.ipt
+CertTest\AWT27\Test03_InflowWind.dat
+
 CertTest\AWT27\Test04_ElastoDyn.dat
 CertTest\AWT27\Test04_ServoDyn.dat
 CertTest\AWT27\Test04_AD.ipt
+CertTest\AWT27\Test04_InflowWind.dat
+
 CertTest\AWT27\Test05_ElastoDyn.dat
 CertTest\AWT27\Test05_ServoDyn.dat
 CertTest\AWT27\Test05_AD.ipt
+CertTest\AWT27\Test05_InflowWind.dat
 
 
 
@@ -296,15 +307,16 @@ CertTest\SWRT\Wind\IEC.ipt
 CertTest\SWRT\SWRT_Blade.dat
 CertTest\SWRT\SWRT_Furl.dat
 CertTest\SWRT\SWRT_Tower.dat
+CertTest\SWRT\SWRT_AeroDyn.dat
 CertTest\SWRT\Test15_ElastoDyn.dat
 CertTest\SWRT\Test15_ServoDyn.dat
-CertTest\SWRT\Test15_AD.ipt
+CertTest\SWRT\Test15_InflowWind.dat
 CertTest\SWRT\Test16_ElastoDyn.dat
 CertTest\SWRT\Test16_ServoDyn.dat
-CertTest\SWRT\Test16_AD.ipt
+CertTest\SWRT\Test16_InflowWind.dat
 CertTest\SWRT\Test17_ElastoDyn.dat
 CertTest\SWRT\Test17_ServoDyn.dat
-CertTest\SWRT\Test17_AD.ipt
+CertTest\SWRT\Test17_InflowWind.dat
 
 
 
@@ -327,9 +339,12 @@ CertTest\UAE_VI\UAE_Ames_Tower.dat
 CertTest\UAE_VI\Test09_ElastoDyn.dat
 CertTest\UAE_VI\Test09_ServoDyn.dat
 CertTest\UAE_VI\Test09_AD.ipt
+CertTest\UAE_VI\Test09_InflowWind.dat
+
 CertTest\UAE_VI\Test10_ElastoDyn.dat
 CertTest\UAE_VI\Test10_ServoDyn.dat
 CertTest\UAE_VI\Test10_AD.ipt
+CertTest\UAE_VI\Test10_InflowWind.dat
 
 
 
@@ -349,18 +364,18 @@ CertTest\WP_Baseline\Baseline_Blade_NoDamp.dat
 CertTest\WP_Baseline\Baseline_Tower.dat
 CertTest\WP_Baseline\Baseline_Tower_NoDamp.dat
 
+CertTest\WP_Baseline\WP_Baseline_InflowWind_12mps.dat
+CertTest\WP_Baseline\WP_Baseline_InflowWind_ECD.dat
+CertTest\WP_Baseline\WP_Baseline_AeroDyn_Dynin.dat
+
 CertTest\WP_Baseline\Test11_ElastoDyn.dat
 CertTest\WP_Baseline\Test11_ServoDyn.dat
-CertTest\WP_Baseline\Test11_AD.ipt
 
 CertTest\WP_Baseline\Test12_ElastoDyn.dat
 CertTest\WP_Baseline\Test12_ServoDyn.dat
-CertTest\WP_Baseline\Test12_AD.ipt
 
 CertTest\WP_Baseline\Test13_ElastoDyn.dat
 CertTest\WP_Baseline\Test13_ServoDyn.dat
-CertTest\WP_Baseline\Test13_AD.ipt
-
 
 
 CertTest\Test01.fst

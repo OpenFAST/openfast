@@ -31,6 +31,7 @@ MODULE FAST_Subs
    USE FAST_ModTypes
       
    USE AeroDyn
+   USE InflowWind
    USE ElastoDyn
    USE FEAMooring
    USE MoorDyn
@@ -153,7 +154,7 @@ SUBROUTINE FAST_EndOutput( p_FAST, y_FAST, ErrStat, ErrMsg )
 
 END SUBROUTINE FAST_EndOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE FAST_Init( p, y_FAST, ErrStat, ErrMsg, InFile, TMax  )
+SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax  )
 ! This subroutine checks for command-line arguments, gets the root name of the input files
 ! (including full path name), and creates the names of the output files.
 !..................................................................................................................................
@@ -164,6 +165,7 @@ SUBROUTINE FAST_Init( p, y_FAST, ErrStat, ErrMsg, InFile, TMax  )
 
    TYPE(FAST_ParameterType), INTENT(INOUT)         :: p                 ! The parameter data for the FAST (glue-code) simulation
    TYPE(FAST_OutputFileType),INTENT(INOUT)         :: y_FAST            ! The output data for the FAST (glue-code) simulation
+   REAL(DbKi),               INTENT(IN)            :: t_initial         ! the beginning time of the simulation
    INTEGER(IntKi),           INTENT(OUT)           :: ErrStat           ! Error status
    CHARACTER(*),             INTENT(OUT)           :: ErrMsg            ! Error message
    CHARACTER(*),             INTENT(IN), OPTIONAL  :: InFile            ! A CHARACTER string containing the name of the primary FAST input file (if not present, we'll get it from the command line)
@@ -292,7 +294,8 @@ SUBROUTINE FAST_Init( p, y_FAST, ErrStat, ErrMsg, InFile, TMax  )
          
     
     p%WrGraphics = .FALSE. !.TRUE.
-   
+    p%n_TMax_m1  = CEILING( ( (p%TMax - t_initial) / p%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
+
    !...............................................................................................................................
    ! Do some error checking on the inputs (validation):
    !...............................................................................................................................
@@ -302,6 +305,10 @@ SUBROUTINE FAST_Init( p, y_FAST, ErrStat, ErrMsg, InFile, TMax  )
       CALL SetErrStat( ErrID_Fatal, 'TMax must not be less than TStart.', ErrStat, ErrMsg, RoutineName )
    END IF
 
+   IF ( p%n_ChkptTime < p%n_TMax_m1 .AND. .NOT. p%WrBinOutFile) THEN
+      CALL SetErrStat( ErrID_Severe, 'It is highly recommended that time-marching output files be generated in binary format when generating checkpoint files.', ErrStat, ErrMsg, RoutineName )
+   END IF
+      
    IF ( p%DT <= 0.0_DbKi )  THEN
       CALL SetErrStat( ErrID_Fatal, 'DT must be greater than 0.', ErrStat, ErrMsg, RoutineName )
    ELSE ! Test DT and TMax to ensure numerical stability -- HINT: see the use of OnePlusEps
@@ -385,7 +392,7 @@ SUBROUTINE FAST_Init( p, y_FAST, ErrStat, ErrMsg, InFile, TMax  )
    RETURN
 END SUBROUTINE FAST_Init
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, InitOutData_AD, InitOutData_HD, &
+SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, InitOutData_AD, InitOutData_IfW, InitOutData_HD, &
                             InitOutData_SD, InitOutData_MAP, InitOutData_FEAM, InitOutData_MD, InitOutData_IceF, InitOutData_IceD, ErrStat, ErrMsg )
 ! This routine initializes the output for the glue code, including writing the header for the primary output file.
 ! was previously called WrOutHdr()
@@ -399,7 +406,8 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, In
 
    TYPE(ED_InitOutputType),        INTENT(IN)           :: InitOutData_ED                        ! Initialization output for ElastoDyn
    TYPE(SrvD_InitOutputType),      INTENT(IN)           :: InitOutData_SrvD                      ! Initialization output for ServoDyn
-   TYPE(AD_InitOutputType),        INTENT(IN)           :: InitOutData_AD                        ! Initialization output for ServoDyn
+   TYPE(AD_InitOutputType),        INTENT(IN)           :: InitOutData_AD                        ! Initialization output for AeroDyn
+   TYPE(InflowWind_InitOutputType),INTENT(IN)           :: InitOutData_IfW                       ! Initialization output for InflowWind
    TYPE(HydroDyn_InitOutputType),  INTENT(IN)           :: InitOutData_HD                        ! Initialization output for HydroDyn
    TYPE(SD_InitOutputType),        INTENT(IN)           :: InitOutData_SD                        ! Initialization output for SubDyn
    TYPE(MAP_InitOutputType),       INTENT(IN)           :: InitOutData_MAP                       ! Initialization output for MAP
@@ -436,11 +444,13 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, In
    y_FAST%Module_Ver( Module_ED )   = InitOutData_ED%Ver
    y_FAST%FileDescLines(2)          = TRIM(y_FAST%FileDescLines(2) ) //'; '//TRIM(GetNVD(y_FAST%Module_Ver( Module_ED )  ))
 
-   IF ( p_FAST%CompAero == Module_AD )  THEN
-      y_FAST%Module_Ver( Module_IfW ) = InitOutData_AD%IfW_InitOutput%Ver ! call copy routine?
-      y_FAST%Module_Ver( Module_AD  ) = InitOutData_AD%Ver
-     
+   IF ( p_FAST%CompInflow == Module_IfW )  THEN
+      y_FAST%Module_Ver( Module_IfW ) = InitOutData_IfW%Ver ! call copy routine for this type if it every uses dynamic memory     
       y_FAST%FileDescLines(2)  = TRIM(y_FAST%FileDescLines(2) ) //'; '//TRIM(GetNVD(y_FAST%Module_Ver( Module_IfW ))) 
+   END IF   
+   
+   IF ( p_FAST%CompAero == Module_AD )  THEN
+      y_FAST%Module_Ver( Module_AD  ) = InitOutData_AD%Ver     
       y_FAST%FileDescLines(2)  = TRIM(y_FAST%FileDescLines(2) ) //'; '//TRIM(GetNVD(y_FAST%Module_Ver( Module_AD  ) ))                  
    END IF
 
@@ -487,8 +497,7 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, In
    y_FAST%numOuts(Module_AD)   = 0
    
    !y_FAST%numOuts(Module_InfW)  = 3  !hack for now: always output 3 wind speeds at hub-height
-   IF ( ALLOCATED( InitOutData_AD%IfW_InitOutput%WriteOutputHdr ) ) &
-                                                       y_FAST%numOuts(Module_IfW)  = SIZE(InitOutData_AD%IfW_InitOutput%WriteOutputHdr)
+   IF ( ALLOCATED( InitOutData_IfW%WriteOutputHdr  ) ) y_FAST%numOuts(Module_IfW)  = SIZE(InitOutData_IfW%WriteOutputHdr)
    IF ( ALLOCATED( InitOutData_ED%WriteOutputHdr   ) ) y_FAST%numOuts(Module_ED)   = SIZE(InitOutData_ED%WriteOutputHdr)
    IF ( ALLOCATED( InitOutData_SrvD%WriteOutputHdr ) ) y_FAST%numOuts(Module_SrvD) = SIZE(InitOutData_SrvD%WriteOutputHdr)
    IF ( ALLOCATED( InitOutData_HD%WriteOutputHdr   ) ) y_FAST%numOuts(Module_HD)   = SIZE(InitOutData_HD%WriteOutputHdr)
@@ -515,11 +524,10 @@ SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, In
    indxLast = 1
    indxNext = 2
 
-   IF ( y_FAST%numOuts(Module_IfW) > 0_IntKi ) THEN  !InflowWind: hack for now
+   IF ( y_FAST%numOuts(Module_IfW) > 0_IntKi ) THEN  
       indxLast = indxNext + y_FAST%numOuts(Module_IfW) - 1
-      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_AD%IfW_InitOutput%WriteOutputHdr
-      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_AD%IfW_InitOutput%WriteOutputUnt
-      
+      y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_IfW%WriteOutputHdr
+      y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_IfW%WriteOutputUnt      
       indxNext = indxLast + 1
    END IF
 
@@ -711,14 +719,14 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
    WRITE (y_FAST%UnSum,Fmt)  TRIM( GetNVD(        NWTC_Ver ) )
    WRITE (y_FAST%UnSum,Fmt)  TRIM( GetNVD( y_FAST%Module_Ver( Module_ED )   ) )
 
+   DescStr = GetNVD( y_FAST%Module_Ver( Module_IfW ) )
+   IF ( p_FAST%CompInflow /= Module_IfW ) DescStr = TRIM(DescStr)//NotUsedTxt
+   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
+   
    DescStr = GetNVD( y_FAST%Module_Ver( Module_AD ) )
    IF ( p_FAST%CompAero /= Module_AD ) DescStr = TRIM(DescStr)//NotUsedTxt
    WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-   
-   DescStr = GetNVD( y_FAST%Module_Ver( Module_IfW ) )
-   IF ( p_FAST%CompAero /= Module_AD ) DescStr = TRIM(DescStr)//NotUsedTxt !IfW is a submodule of AD right now
-   WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )
-   
+      
    DescStr = GetNVD( y_FAST%Module_Ver( Module_SrvD ) )
    IF ( p_FAST%CompServo /= Module_SrvD ) DescStr = TRIM(DescStr)//NotUsedTxt
    WRITE (y_FAST%UnSum,Fmt)  TRIM( DescStr )  
@@ -1042,6 +1050,19 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
             p%CompElast = Module_Unknown
          END IF
                                   
+      ! CompInflow - inflow wind velocities (switch) {0=still air; 1=InflowWind}:
+   CALL ReadVar( UnIn, InputFile, p%CompInflow, "CompInflow", "inflow wind velocities (switch) {0=still air; 1=InflowWind}", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+          ! immediately convert to values used inside the code:
+         IF ( p%CompInflow == 0 ) THEN 
+            p%CompInflow = Module_NONE
+         ELSEIF ( p%CompInflow == 1 ) THEN
+            p%CompInflow = Module_IfW
+         ELSE
+            p%CompInflow = Module_Unknown
+         END IF
+
       ! CompAero - Compute aerodynamic loads (switch) {0=None; 1=AeroDyn}:
    CALL ReadVar( UnIn, InputFile, p%CompAero, "CompAero", "Compute aerodynamic loads (switch) {0=None; 1=AeroDyn}", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
@@ -1157,6 +1178,12 @@ DO i=1,MaxNBlades
    IF ( PathIsRelative( p%BDBldFile(i) ) ) p%BDBldFile(i) = TRIM(PriPath)//TRIM(p%BDBldFile(i))
 END DO
    
+      ! InflowFile - Name of file containing inflow wind input parameters (-):
+   CALL ReadVar( UnIn, InputFile, p%InflowFile, "InflowFile", "Name of file containing inflow wind input parameters (-)", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   IF ( PathIsRelative( p%InflowFile ) ) p%InflowFile = TRIM(PriPath)//TRIM(p%InflowFile)
+
       ! AeroFile - Name of file containing aerodynamic input parameters (-):
    CALL ReadVar( UnIn, InputFile, p%AeroFile, "AeroFile", "Name of file containing aerodynamic input parameters (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
@@ -1636,7 +1663,7 @@ SUBROUTINE FillOutputAry_T(Turbine, Outputs)
    REAL(ReKi),               INTENT(  OUT) :: Outputs(:)                       ! single array of output 
    
 
-      CALL FillOutputAry(Turbine%p_FAST, Turbine%y_FAST, Turbine%IfW%WriteOutput, Turbine%ED%Output(1)%WriteOutput, Turbine%SrvD%y%WriteOutput, &
+      CALL FillOutputAry(Turbine%p_FAST, Turbine%y_FAST, Turbine%IfW%y%WriteOutput, Turbine%ED%Output(1)%WriteOutput, Turbine%SrvD%y%WriteOutput, &
                 Turbine%HD%y%WriteOutput, Turbine%SD%y%WriteOutput, Turbine%MAP%y%WriteOutput, Turbine%FEAM%y%WriteOutput, Turbine%MD%y%WriteOutput, &
                 Turbine%IceF%y%WriteOutput, Turbine%IceD%y, Outputs)   
                         
@@ -1852,7 +1879,7 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, MeshMapData, Er
    TYPE(FAST_MiscVarType),           INTENT(IN)     :: m_FAST       ! Glue-code misc variables (including inputs from external sources like Simulink)
    TYPE(SrvD_InputType),             INTENT(INOUT)  :: u_SrvD       ! ServoDyn Inputs at t
    TYPE(ED_OutputType),              INTENT(IN)     :: y_ED         ! ElastoDyn outputs
-   REAL(ReKi),                       INTENT(IN)     :: y_IfW(3)     ! InflowWind outputs
+   TYPE(InflowWind_OutputType),      INTENT(IN)     :: y_IfW        ! InflowWind outputs
    TYPE(SrvD_OutputType), OPTIONAL,  INTENT(IN)     :: y_SrvD_prev  ! ServoDyn outputs from t - dt
    TYPE(FAST_ModuleMapType),         INTENT(INOUT)  :: MeshMapData  ! Data for mapping between modules
    INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat      ! Error status
@@ -1869,14 +1896,14 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, MeshMapData, Er
    u_SrvD%YawAngle  = y_ED%YawAngle !nacelle yaw plus platform yaw
 
       ! Calculate horizontal hub-height wind direction and the nacelle yaw error estimate (both positive about zi-axis); these are
-      !   zero if there is no wind input when AeroDyn is not used:
+      !   zero if there is no wind input when InflowWind is not used:
 
       !bjj: rename pass YawAngle (not YawErr from ED)
-   IF ( p_FAST%CompAero == Module_AD )  THEN   ! AeroDyn has been used.
+   IF ( p_FAST%CompInflow == Module_IfW )  THEN 
 
-      u_SrvD%WindDir  = ATAN2( y_IfW(2), y_IfW(1) )
+      u_SrvD%WindDir  = ATAN2( y_IfW%VelocityUVW(2,1), y_IfW%VelocityUVW(1,1) )
       u_SrvD%YawErr   = u_SrvD%WindDir - y_ED%YawAngle
-      u_SrvD%HorWindV = SQRT( y_IfW(1)**2 + y_IfW(2)**2 )
+      u_SrvD%HorWindV = SQRT( y_IfW%VelocityUVW(1,1)**2 + y_IfW%VelocityUVW(2,1)**2 )
 
    ELSE                    ! No AeroDynamics.
 
@@ -3958,23 +3985,80 @@ END SUBROUTINE Perturb_u_ED_SD_HD
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE IfW_InputSolve( u_IfW, p_IfW, m_FAST, y_ED, MeshMapData, ErrStat, ErrMsg )
+SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, y_ED, ErrStat, ErrMsg )
 
-      ! Passed variables
-   TYPE(IfW_InputType),         INTENT(INOUT)   :: u_IfW        ! The inputs to InflowWind
-   TYPE(IfW_ParameterType),     INTENT(IN   )   :: p_IfW        ! The parameters to InflowWind   
-   TYPE(ED_OutputType),         INTENT(IN)      :: y_ED         ! The outputs of the structural dynamics module
-   TYPE(FAST_MiscVarType),      INTENT(IN   )   :: m_FAST       ! misc FAST data, including inputs from external codes like Simulink
-   TYPE(FAST_ModuleMapType),    INTENT(INOUT)   :: MeshMapData  ! Data for mapping between modules
-   INTEGER(IntKi)                               :: ErrStat      ! Error status of the operation
-   CHARACTER(*)                                 :: ErrMsg       ! Error message if ErrStat /= ErrID_None
+   TYPE(InflowWind_InputType),     INTENT(INOUT)   :: u_IfW       ! The inputs to InflowWind
+   TYPE(InflowWind_ParameterType), INTENT(IN   )   :: p_IfW       ! The parameters to InflowWind   
+   TYPE(ED_OutputType),            INTENT(IN)      :: y_ED        ! The outputs of the structural dynamics module
+   TYPE(FAST_ParameterType),       INTENT(IN   )   :: p_FAST      ! FAST parameter data 
+   TYPE(FAST_MiscVarType),         INTENT(IN   )   :: m_FAST      ! misc FAST data, including inputs from external codes like Simulink      
+   
+   INTEGER(IntKi)                                  :: ErrStat     ! Error status of the operation
+   CHARACTER(*)                                    :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+      ! Local variables:
+
+   INTEGER(IntKi)                                  :: J           ! Loops through nodes / elements.
+   INTEGER(IntKi)                                  :: K           ! Loops through blades.
+   INTEGER(IntKi)                                  :: Node        ! Node number for blade/node on mesh
+   INTEGER(IntKi)                                  :: NTwrNodes   ! Node number for blade/node on tower mesh
 
 
    ErrStat = ErrID_None
    ErrMsg  = ""
       
+   
+      ! Fill input array for InflowWind
+   
+   !-------------------------------------------------------------------------------------------------
+   ! bjj: this is a hack for now, just to get IfW separate from AD
+   ! bjj: it assumes AD 14 is used!!!
+   !-------------------------------------------------------------------------------------------------
+   Node = 0      
+   IF (p_FAST%CompServo == MODULE_SrvD) THEN
+      Node = Node + 1
+      u_IfW%PositionXYZ(:,Node) = y_ED%RotorApexMotion%Position(:,1) ! undisplaced position. Maybe we want to use the displaced position at some point in time.
+   END IF       
+            
+   IF (p_FAST%CompAero == MODULE_AD) THEN   
+         
+      DO K = 1,SIZE(y_ED%BladeLn2Mesh)
+         DO J = 1,SIZE(y_ED%BladeLn2Mesh(K)%TranslationDisp,2)-2 ! SUBTRACT 2 because ED has nodes at top and bottom
+            Node = Node + 1
+            !u_IfW%PositionXYZ(:,Node) = u_AD%InputMarkers(K)%Position(:,J)
+            u_IfW%PositionXYZ(:,Node) = y_ED%BladeLn2Mesh(K)%TranslationDisp(:,J) + y_ED%BladeLn2Mesh(K)%Position(:,J)                           
+         END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
+      END DO !K = 1,p%NumBl         
+                  
+      NTwrNodes = SIZE(u_IfW%PositionXYZ,2) - Node 
+      DO J=1,NTwrNodes
+         Node = Node + 1      
+         ! u_IfW%PositionXYZ(:,Node) = u_AD%Twr_InputMarkers%TranslationDisp(:,J) + u%Twr_InputMarkers%Position(:,J)
+         u_IfW%PositionXYZ(:,Node) = y_ED%TowerLn2Mesh%TranslationDisp(:,J) + y_ED%TowerLn2Mesh%Position(:,J)
+      END DO      
+         
+   END IF
+   
+               
+   CALL IfW_SetExternalInputs( p_IfW, m_FAST, y_ED, u_IfW )
 
-   ! bjj: this is a total hack to get the lidar inputs into AeroDyn. We should use a mesh to take care of this messiness
+
+END SUBROUTINE IfW_InputSolve
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE IfW_SetExternalInputs( p_IfW, m_FAST, y_ED, u_IfW )
+! This routine sets the inputs required for InflowWind from an external source (Simulink)
+!..................................................................................................................................
+
+   TYPE(InflowWind_ParameterType),   INTENT(IN)     :: p_IfW        ! InflowWind parameters
+   TYPE(FAST_MiscVarType),           INTENT(IN)     :: m_FAST       ! Glue-code misc variables (including inputs from external sources like Simulink)
+   TYPE(ED_OutputType),              INTENT(IN)     :: y_ED         ! The outputs of the structural dynamics module
+   TYPE(InflowWind_InputType),       INTENT(INOUT)  :: u_IfW        ! InflowWind Inputs at t
+
+      ! local variables
+   INTEGER(IntKi)                                   :: i            ! loop counter
+   
+   ! bjj: this is a total hack to get the lidar inputs into InflowWind. We should use a mesh to take care of this messiness (and, really this Lidar Focus should come
+   ! from Fortran (a scanning pattern or file-lookup inside InflowWind), not MATLAB.
             
    u_IfW%lidar%LidPosition = y_ED%RotorApexMotion%Position(:,1) + y_ED%RotorApexMotion%TranslationDisp(:,1) & ! rotor apex position
                                                                   + p_IfW%lidar%RotorApexOffsetPos            ! lidar offset-from-rotor-apex position
@@ -3982,17 +4066,20 @@ SUBROUTINE IfW_InputSolve( u_IfW, p_IfW, m_FAST, y_ED, MeshMapData, ErrStat, Err
    u_IfW%lidar%MsrPosition = m_FAST%ExternInput%LidarFocus + u_IfW%lidar%LidPosition
 
 
-END SUBROUTINE IfW_InputSolve
-!====================================================================================================
-SUBROUTINE AD_InputSolve( u_AD, y_ED, MeshMapData, ErrStat, ErrMsg )
+END SUBROUTINE IfW_SetExternalInputs
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE AD_InputSolve( p_FAST, u_AD, y_ED, y_IfW, MeshMapData, ErrStat, ErrMsg )
 ! THIS ROUTINE IS A HACK TO GET THE OUTPUTS FROM ELASTODYN INTO AERODYN. IT WILL BE REPLACED WHEN THIS CODE LINKS WITH
 ! AERODYN IN THE NEW FRAMEWORK
 !,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
 
       ! Passed variables
+   TYPE(FAST_ParameterType),    INTENT(IN   )   :: p_FAST      ! parameter FAST data    
    TYPE(AD_InputType),          INTENT(INOUT)   :: u_AD        ! The inputs to AeroDyn
-   TYPE(ED_OutputType),         INTENT(IN)      :: y_ED        ! The outputs of the structural dynamics module
+   TYPE(ED_OutputType),         INTENT(IN)      :: y_ED        ! The outputs from the structural dynamics module
+   TYPE(InflowWind_OutputType), INTENT(IN)      :: y_IfW       ! The outputs from InflowWind
    TYPE(FAST_ModuleMapType),    INTENT(INOUT)   :: MeshMapData ! Data for mapping between modules
+   
    INTEGER(IntKi)                               :: ErrStat     ! Error status of the operation
    CHARACTER(*)                                 :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -4007,11 +4094,26 @@ SUBROUTINE AD_InputSolve( u_AD, y_ED, MeshMapData, ErrStat, ErrMsg )
    
    ErrStat = ErrID_None
    ErrMsg  = ""
-   
+
    NumBl    = SIZE(u_AD%InputMarkers,1)
    BldNodes = u_AD%InputMarkers(1)%Nnodes
    
-         
+            
+   !-------------------------------------------------------------------------------------------------
+   ! Set the inflow wind inputs:
+   !-------------------------------------------------------------------------------------------------
+   IF (p_FAST%CompInflow == MODULE_IfW) THEN
+      IF (p_FAST%CompServo == MODULE_SrvD) THEN
+         u_AD%InflowVelocity = y_IfW%VelocityUVW(:,2:)  ! first point is used for ServoDyn input
+      ELSE
+         u_AD%InflowVelocity = y_IfW%VelocityUVW(:,:)  
+      END IF               
+   ELSE
+      u_AD%InflowVelocity = 0.0_ReKi           ! whole array
+   END IF
+      
+   u_AD%AvgInfVel = y_IfW%DiskVel
+   
    !-------------------------------------------------------------------------------------------------
    ! Blade positions, orientations, and velocities:
    !-------------------------------------------------------------------------------------------------
@@ -4141,6 +4243,8 @@ SUBROUTINE AD_SetInitInput(InitInData_AD, InitOutData_ED, y_ED, p_FAST, ErrStat,
    InitInData_AD%NumBl        = InitOutData_ED%NumBl
    InitInData_AD%UseDWM       = p_FAST%UseDWM
    
+   InitInData_AD%DWM_InitInputs%IfW_InitInputs%InputFileName   = p_FAST%InflowFile
+   
       ! Hub position and orientation (relative here, but does not need to be)
 
    InitInData_AD%TurbineComponents%Hub%Position(:)      = y_ED%HubPtMotion%Position(:,1) - y_ED%HubPtMotion%Position(:,1)  ! bjj: was 0; mesh was changed by adding p_ED%HubHt to 3rd component
@@ -4192,11 +4296,8 @@ SUBROUTINE AD_SetInitInput(InitInData_AD, InitOutData_ED, y_ED, p_FAST, ErrStat,
       InitInData_AD%TwrNodeLocs = y_ED%TowerLn2Mesh%Position(:,1:InitInData_AD%NumTwrNodes)  ! ED has extra nodes at beginning and top and bottom of tower
    END IF
    
-   
-      ! lidar  
-      
-   InitInData_AD%IfW_InitInputs%lidar%Tmax                = p_FAST%TMax
-   InitInData_AD%IfW_InitInputs%lidar%HubPosition         = (/0.0_ReKi, 0.0_ReKi, InitOutData_ED%HubHt /)
+      ! hub height         
+   InitInData_AD%HubHt = InitOutData_ED%HubHt
              
 
    RETURN
@@ -4981,7 +5082,7 @@ SUBROUTINE WriteOutputToFile(t_global, p_FAST, y_FAST, ED, AD, IfW, HD, SD, SrvD
 
             ! Generate glue-code output file
 
-            CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW%WriteOutput, ED%Output(1)%WriteOutput, SrvD%y%WriteOutput, HD%y%WriteOutput, &
+            CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW%y%WriteOutput, ED%Output(1)%WriteOutput, SrvD%y%WriteOutput, HD%y%WriteOutput, &
                            SD%y%WriteOutput, MAPp%y%WriteOutput, FEAM%y%WriteOutput, MD%y%WriteOutput, IceF%y%WriteOutput, IceD%y, ErrStat, ErrMsg )
                               
       END IF
@@ -5090,19 +5191,20 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
 
-      ! use the ElastoDyn outputs from option1 to update the inputs for AeroDyn and ServoDyn (necessary only if they have states)
+      ! use the ElastoDyn outputs from option1 to update the inputs for InflowWind, AeroDyn, and ServoDyn (necessary only if they have states)
       
+   IF ( p_FAST%CompInflow == Module_IfW ) THEN      
+      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(1), IfW%p, ED%Output(1), ErrStat2, ErrMsg2 )       
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+   END IF      
+               
    IF ( p_FAST%CompAero == Module_AD ) THEN
-      
-      CALL IfW_InputSolve( AD%OtherSt%IfW_Inputs, AD%p%IfW_Params, m_FAST, ED%Output(1), MeshMapData, ErrStat2, ErrMsg2 )         
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-      
-      CALL AD_InputSolve( AD%Input(1), ED%Output(1), MeshMapData, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+      CALL AD_InputSolve( p_FAST, AD%Input(1), ED%Output(1), IfW%y, MeshMapData, ErrStat2, ErrMsg2 )   
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )           
    END IF      
    
    IF ( p_FAST%CompServo == Module_SrvD  ) THEN         
-      CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%WriteOutput, MeshmapData, ErrStat2, ErrMsg2 )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
+      CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, MeshmapData, ErrStat2, ErrMsg2 )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
    END IF         
                      
@@ -5347,23 +5449,26 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD, SrvD, IfW
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+
+   IF (p_FAST%CompInflow == Module_IfW) THEN
+      ! must be done after ED_CalcOutput and before AD_CalcOutput
+      CALL IfW_InputSolve( p_FAST, m_FAST, IfW%Input(1), IfW%p, ED%Output(1), ErrStat2, ErrMsg2 )       
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            
+      CALL InflowWind_CalcOutput( this_time, IfW%Input(1), IfW%p, IfW%x(this_state), IfW%xd(this_state), IfW%z(this_state), &
+                                  IfW%OtherSt, IfW%y, ErrStat2, ErrMsg2 )         
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
+   END IF
+   
    
    IF ( p_FAST%CompAero == Module_AD ) THEN !bjj: do this before calling SrvD so that SrvD can get the correct wind speed...
-      CALL IfW_InputSolve( AD%OtherSt%IfW_Inputs, AD%p%IfW_Params, m_FAST, ED%Output(1), MeshMapData, ErrStat2, ErrMsg2 )         
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )        
-      
-      CALL AD_InputSolve( AD%Input(1), ED%Output(1), MeshMapData, ErrStat2, ErrMsg2 )
+                        
+      CALL AD_InputSolve( p_FAST, AD%Input(1), ED%Output(1), IfW%y, MeshMapData, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
       CALL AD_CalcOutput( this_time, AD%Input(1), AD%p, AD%x(this_state), AD%xd(this_state), AD%z(this_state), AD%OtherSt, AD%y, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
- 
-!bjj FIX THIS>>>>>         
-         !InflowWind outputs
-      IF ( allocated(AD%y%IfW_Outputs%WriteOutput) ) &
-      IfW%WriteOutput = AD%y%IfW_Outputs%WriteOutput
-!<<<         
-
+        
    END IF
       
                        
@@ -5371,9 +5476,9 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD, SrvD, IfW
          
          ! note that the inputs at step(n) for ServoDyn include the outputs from step(n-1)
       IF ( firstCall ) THEN
-         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%WriteOutput, MeshMapData, ErrStat2, ErrMsg2 )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
+         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, MeshMapData, ErrStat2, ErrMsg2 )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
       ELSE
-         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%WriteOutput, MeshMapData, ErrStat2, ErrMsg2, SrvD%y_prev   ) 
+         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, MeshMapData, ErrStat2, ErrMsg2, SrvD%y_prev   ) 
       END IF
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -5473,7 +5578,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
                                            
    TYPE(AD_InitInputType)                  :: InitInData_AD       ! Initialization input data
    TYPE(AD_InitOutputType)                 :: InitOutData_AD      ! Initialization output data
-                                           
+      
+   TYPE(InflowWind_InitInputType)          :: InitInData_IfW      ! Initialization input data
+   TYPE(InflowWind_InitOutputType)         :: InitOutData_IfW     ! Initialization output data
+   
    TYPE(HydroDyn_InitInputType)            :: InitInData_HD       ! Initialization input data
    TYPE(HydroDyn_InitOutputType)           :: InitOutData_HD      ! Initialization output data
                                            
@@ -5535,12 +5643,12 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
       ! ... Open and read input files, initialize global parameters. ...
    IF (PRESENT(InFile)) THEN
       IF (PRESENT(ExternInitData)) THEN
-         CALL FAST_Init( p_FAST, y_FAST, ErrStat2, ErrMsg2, InFile, ExternInitData%TMax )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)         
+         CALL FAST_Init( p_FAST, y_FAST, t_initial, ErrStat2, ErrMsg2, InFile, ExternInitData%TMax )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)         
       ELSE         
-         CALL FAST_Init( p_FAST, y_FAST, ErrStat2, ErrMsg2, InFile )                       ! We have the name of the input file from somewhere else (e.g. Simulink)
+         CALL FAST_Init( p_FAST, y_FAST, t_initial, ErrStat2, ErrMsg2, InFile )                       ! We have the name of the input file from somewhere else (e.g. Simulink)
       END IF
    ELSE
-      CALL FAST_Init( p_FAST, y_FAST, ErrStat2, ErrMsg2 )
+      CALL FAST_Init( p_FAST, y_FAST, t_initial, ErrStat2, ErrMsg2 )
    END IF
    
    CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -5553,7 +5661,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
    !...............................................................................................................................  
       
    p_FAST%dt_module = p_FAST%dt ! initialize time steps for each module   
-   
+
    ! ........................
    ! initialize ElastoDyn (must be done first)
    ! ........................
@@ -5651,18 +5759,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
                
       CALL AD_SetInitInput(InitInData_AD, InitOutData_ED, ED%Output(1), p_FAST, ErrStat2, ErrMsg2)            ! set the values in InitInData_AD
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         
-         ! bjj: these should come from an InflowWind input file; I'm hard coding them here for now
-      IF ( PRESENT(ExternInitData) ) THEN
-         InitInData_AD%IfW_InitInputs%lidar%SensorType          = ExternInitData%SensorType   
-         InitInData_AD%IfW_InitInputs%lidar%LidRadialVel        = ExternInitData%LidRadialVel   
-         InitInData_AD%IfW_InitInputs%lidar%RotorApexOffsetPos  = 0.0         
-         InitInData_AD%IfW_InitInputs%lidar%NumPulseGate        = 0
-      ELSE
-         InitInData_AD%IfW_InitInputs%lidar%SensorType = SensorType_None
-      END IF
-         
-                     
+                                       
       CALL AD_Init( InitInData_AD, AD%Input(1), AD%p, AD%x(STATE_CURR), AD%xd(STATE_CURR), AD%z(STATE_CURR), AD%OtherSt, &
                      AD%y, p_FAST%dt_module( MODULE_AD ), InitOutData_AD, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -5683,26 +5780,63 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
          RETURN
       END IF       
       
-   END IF
+   END IF ! CompAero
    
+               
    ! ........................
-   ! initialize InflowWind (was already initialized in AeroDyn)
+   ! initialize InflowWind
    ! ........................   
-   IF (ALLOCATED(InitOutData_AD%IfW_InitOutput%WriteOutputHdr)) THEN
-      CALL AllocAry(IfW%WriteOutput, SIZE(InitOutData_AD%IfW_InitOutput%WriteOutputHdr), 'Ifw%WriteOutput',ErrStat2,ErrMsg2)
-   ELSE
-      CALL AllocAry(IfW%WriteOutput, 3, 'Ifw%WriteOutput',ErrStat2,ErrMsg2)
-   END IF
-   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   ALLOCATE( IfW%Input( p_FAST%InterpOrder+1 ), IfW%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating IfW%Input and IfW%InputTimes.",ErrStat,ErrMsg,RoutineName)
+         CALL Cleanup()
+         RETURN
+      END IF
+              
+   IF ( p_FAST%CompInflow == Module_IfW ) THEN
+      
+      InitInData_IfW%InputFileName    = p_FAST%InflowFile
+      InitInData_IfW%RootName         = p_FAST%OutFileRoot
+      InitInData_IfW%UseInputFile     = .TRUE.
+   
+      InitInData_IfW%NumWindPoints = 0      
+      IF ( p_FAST%CompServo == Module_SrvD ) InitInData_IfW%NumWindPoints = InitInData_IfW%NumWindPoints + 1
+      IF ( p_FAST%CompAero  == Module_AD   ) InitInData_IfW%NumWindPoints = InitInData_IfW%NumWindPoints &
+                                               + InitOutData_ED%NumBl * AD%y%OutputLoads(1)%NNodes + AD%y%Twr_OutputLoads%NNodes
+      
+      ! lidar        
+      InitInData_IfW%lidar%Tmax                   = p_FAST%TMax
+      InitInData_IfW%lidar%HubPosition            = (/0.0_ReKi, 0.0_ReKi, InitOutData_ED%HubHt /)
+         ! bjj: these should come from an InflowWind input file; I'm hard coding them here for now
+      IF ( PRESENT(ExternInitData) ) THEN
+         InitInData_IfW%lidar%SensorType          = ExternInitData%SensorType   
+         InitInData_IfW%lidar%LidRadialVel        = ExternInitData%LidRadialVel   
+         InitInData_IfW%lidar%RotorApexOffsetPos  = 0.0         
+         InitInData_IfW%lidar%NumPulseGate        = 0
+      ELSE
+         InitInData_IfW%lidar%SensorType          = SensorType_None
+      END IF
+                                     
+      CALL InflowWind_Init( InitInData_IfW, IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR), IfW%OtherSt, &
+                     IfW%y, p_FAST%dt_module( MODULE_IfW ), InitOutData_IfW, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      p_FAST%ModuleInitialized(Module_IfW) = .TRUE.            
+      CALL SetModuleSubstepTime(Module_IfW, p_FAST, y_FAST, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
-      END IF 
-   IfW%WriteOutput = 0.0
-
+      END IF       
+      
+   ELSE
+      InitOutData_IfW%WindFileInfo%MWS = 0.0_ReKi
+   END IF   ! CompInflow
+   
 
    ! ........................
-   ! some checks for the high-speed shaft brake hack in ElastoDyn:
+   ! some checks for AeroDyn inputs with the high-speed shaft brake hack in ElastoDyn:
    ! (DO NOT COPY THIS CODE!)
    ! ........................   
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
@@ -5710,17 +5844,34 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
          ! bjj: this is a hack to get high-speed shaft braking in FAST v8
       
       IF ( InitOutData_SrvD%UseHSSBrake ) THEN
-         IF ( AD%p%DYNINFL ) THEN
-            CALL SetErrStat(ErrID_Fatal,'AeroDyn "DYNINFL" InfModel is invalid for models with high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
+         IF ( p_FAST%CompAero == Module_AD ) THEN
+            IF ( AD%p%DYNINFL ) THEN
+               CALL SetErrStat(ErrID_Fatal,'AeroDyn "DYNINFL" InfModel is invalid for models with high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
+            END IF
          END IF
          
+            
          IF ( ED%p%method == 1 ) THEN ! bjj: should be using ElastoDyn's Method_ABM4 Method_AB4 parameters
             CALL SetErrStat(ErrID_Fatal,'ElastoDyn must use the AB4 or ABM4 integration method to implement high-speed shaft braking.',ErrStat,ErrMsg,RoutineName)
          END IF               
       END IF
       
-   END IF
+   END IF  
    
+   ! ........................
+   ! some checks for AeroDyn's Dynamic Inflow with Mean Wind Speed from InflowWind:
+   ! (DO NOT COPY THIS CODE!)
+   ! bjj: AeroDyn should not need this rule of thumb; it should check the instantaneous values when the code runs
+   ! ........................   
+   
+   IF ( p_FAST%CompAero == Module_AD ) THEN
+      IF (AD%p%DynInfl) THEN               
+         IF ( InitOutData_IfW%WindFileInfo%MWS  < 8.0 ) THEN
+            CALL SetErrStat(ErrID_Fatal,'AeroDyn "DYNINFL" InfModel is invalid for models with wind speeds less than 8 m/s.',ErrStat,ErrMsg,RoutineName)
+            !CALL SetErrStat(ErrID_Info,'Estimated average inflow wind speed is less than 8 m/s. Dynamic Inflow will be turned off.',ErrStat,ErrMess,RoutineName )
+         END IF
+      END IF      
+   END IF
    
    ! ........................
    ! initialize HydroDyn 
@@ -5752,10 +5903,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
       p_FAST%ModuleInitialized(Module_HD) = .TRUE.
       CALL SetModuleSubstepTime(Module_HD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
-!call wrscr1( 'FAST/Morison/LumpedMesh:')      
-!call meshprintinfo( CU, HD%Input(1)%morison%LumpedMesh )          
-      
+            
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -6032,7 +6180,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
    ! Set up output for glue code (must be done after all modules are initialized so we have their WriteOutput information)
    ! ........................
 
-   CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, InitOutData_AD, InitOutData_HD, InitOutData_SD, &
+   CALL FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_SrvD, InitOutData_AD, InitOutData_IfW, InitOutData_HD, InitOutData_SD, &
                          InitOutData_MAP, InitOutData_FEAM, InitOutData_MD, InitOutData_IceF, InitOutData_IceD, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
@@ -6062,7 +6210,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
    ! other misc variables initialized here:
    ! -------------------------------------------------------------------------
       
-   m_FAST%n_TMax_m1  = CEILING( ( (p_FAST%TMax - t_initial) / p_FAST%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
    m_FAST%t_global   = t_initial
          
    ! Initialize external inputs for first step  
@@ -6100,6 +6247,11 @@ CONTAINS
       CALL AD_DestroyInitInput(  InitInData_AD,  ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       CALL AD_DestroyInitOutput( InitOutData_AD, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   
+      CALL InflowWind_DestroyInitInput(  InitInData_IfW,  ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL InflowWind_DestroyInitOutput( InitOutData_IfW, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
       CALL SrvD_DestroyInitInput(  InitInData_SrvD,  ErrStat2, ErrMsg2 )
@@ -6240,6 +6392,34 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, Srv
         !AD_OutputTimes(1) = t_global_next 
             
       END IF  ! CompAero      
+      
+      ! InflowWind
+      IF ( p_FAST%CompInflow == Module_IfW ) THEN
+         
+         CALL InflowWind_Input_ExtrapInterp(IfW%Input, IfW%InputTimes, IfW%u, t_global_next, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+            
+         !CALL InflowWind_Output_ExtrapInterp(IfW_Output, IfW_OutputTimes, IfW%y, t_global_next, ErrStat2, ErrMsg2)
+         !   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+            
+            
+         ! Shift "window" of IfW%Input and IfW_Output
+  
+         DO j = p_FAST%InterpOrder, 1, -1
+            CALL InflowWind_CopyInput (IfW%Input(j),  IfW%Input(j+1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+           !CALL InflowWind_CopyOutput(IfW_Output(j), IfW_Output(j+1), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            IfW%InputTimes(j+1)  = IfW%InputTimes(j)
+           !IfW_OutputTimes(j+1) = IfW_OutputTimes(j)
+         END DO
+  
+         CALL InflowWind_CopyInput (IfW%u,  IfW%Input(1),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
+        !CALL InflowWind_CopyOutput(IfW%y,  IfW_Output(1), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         IfW%InputTimes(1)  = t_global_next          
+        !IfW_OutputTimes(1) = t_global_next 
+            
+      END IF  ! CompInflow          
       
       
       ! ServoDyn
@@ -6603,6 +6783,37 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, I
    END IF ! CompAero == Module_AD 
    
    
+   IF ( p_FAST%CompInflow == Module_IfW ) THEN      
+         ! Copy values for interpolation/extrapolation:
+
+      DO j = 1, p_FAST%InterpOrder + 1
+         IfW%InputTimes(j) = t_initial - (j - 1) * p_FAST%dt
+         !IfW%OutputTimes(i) = t_initial - (j - 1) * dt
+      END DO
+
+      DO j = 2, p_FAST%InterpOrder + 1
+         CALL InflowWind_CopyInput (IfW%Input(1),  IfW%Input(j),  MESH_NEWCOPY, Errstat2, ErrMsg2)
+            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END DO
+      CALL InflowWind_CopyInput (IfW%Input(1),  IfW%u,  MESH_NEWCOPY, Errstat2, ErrMsg2) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+
+         ! Initialize predicted states for j_pc loop:
+      CALL InflowWind_CopyContState   (IfW%x( STATE_CURR), IfW%x( STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_CURR), IfW%xd(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)  
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL InflowWind_CopyConstrState (IfW%z( STATE_CURR), IfW%z( STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )      
+      IF ( p_FAST%n_substeps( MODULE_IfW ) > 1 ) THEN
+         CALL InflowWind_CopyOtherState( IfW%OtherSt, IfW%OtherSt_old, MESH_NEWCOPY, Errstat2, ErrMsg2)
+            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+      END IF         
+
+   END IF ! CompInflow == Module_IfW 
+      
+   
    IF ( p_FAST%CompHydro == Module_HD ) THEN      
          ! Copy values for interpolation/extrapolation:
       DO j = 1, p_FAST%InterpOrder + 1
@@ -6910,6 +7121,30 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
    END IF            
 
                         
+   ! InflowWind: get predicted states
+   IF ( p_FAST%CompInflow == Module_IfW ) THEN
+      CALL InflowWind_CopyContState   (IfW%x( STATE_CURR), IfW%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_CURR), IfW%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)  
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL InflowWind_CopyConstrState (IfW%z( STATE_CURR), IfW%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            
+      IF ( p_FAST%n_substeps( Module_IfW ) > 1 ) THEN
+         CALL InflowWind_CopyOtherState( IfW%OtherSt, IfW%OtherSt_old, MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
+            
+      DO j_ss = 1, p_FAST%n_substeps( MODULE_IfW )
+         n_t_module = n_t_global*p_FAST%n_substeps( MODULE_IfW ) + j_ss - 1
+         t_module   = n_t_module*p_FAST%dt_module( MODULE_IfW ) + t_initial
+            
+         CALL InflowWind_UpdateStates( t_module, n_t_module, IfW%Input, IfW%InputTimes, IfW%p, IfW%x(STATE_PRED), IfW%xd(STATE_PRED), IfW%z(STATE_PRED), IfW%OtherSt, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END DO !j_ss
+   END IF          
+   
+   
    ! ServoDyn: get predicted states
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
       CALL SrvD_CopyContState   (SrvD%x( STATE_CURR), SrvD%x( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -7153,6 +7388,12 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    END IF
       
+   IF ( p_FAST%ModuleInitialized(Module_IfW) ) THEN
+      CALL InflowWind_End( IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR), IfW%OtherSt,   &
+                           IfW%y,   ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   END IF   
+   
    IF ( p_FAST%ModuleInitialized(Module_SrvD) ) THEN
       CALL SrvD_End( SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), SrvD%OtherSt, &
                      SrvD%y, ErrStat2, ErrMsg2 )
@@ -7490,8 +7731,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAP
 
       ! the initial ServoDyn and IfW/Lidar inputs from Simulink:
    IF ( p_FAST%CompServo == Module_SrvD ) CALL SrvD_SetExternalInputs( p_FAST, m_FAST, SrvD%Input(1) )   
-   IF ( p_FAST%CompAero  == Module_AD   ) CALL IfW_InputSolve( AD%OtherSt%IfW_Inputs, AD%p%IfW_Params, m_FAST, ED%Output(1), MeshMapData, ErrStat2, ErrMsg2 )         
-
+   IF ( p_FAST%CompInflow == Module_IfW ) CALL IfW_SetExternalInputs( IfW%p, m_FAST, ED%Output(1), IfW%Input(1) )  
 
    CALL CalcOutputs_And_SolveForInputs(  n_t_global, m_FAST%t_global,  STATE_CURR, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
                         p_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )
@@ -7638,6 +7878,11 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END IF
             
+         IF ( p_FAST%n_substeps( Module_IfW ) > 1 ) THEN
+            CALL InflowWind_CopyOtherState( IfW%OtherSt_old, IfW%OtherSt, MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         END IF
+                     
          IF ( p_FAST%n_substeps( Module_SrvD ) > 1 ) THEN
             CALL SrvD_CopyOtherState( SrvD%OtherSt_old, SrvD%OtherSt, MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -7704,6 +7949,17 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD
       CALL AD_CopyDiscState   (AD%xd(STATE_PRED), AD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)  
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AD_CopyConstrState (AD%z( STATE_PRED), AD%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)      
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+            
+      
+   ! InflowWind: copy final predictions to actual states; copy current outputs to next 
+   IF ( p_FAST%CompInflow == Module_IfW ) THEN
+      CALL InflowWind_CopyContState   (IfW%x( STATE_PRED), IfW%x( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL InflowWind_CopyDiscState   (IfW%xd(STATE_PRED), IfW%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)  
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL InflowWind_CopyConstrState (IfW%z( STATE_PRED), IfW%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)      
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
             

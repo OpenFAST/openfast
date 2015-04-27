@@ -55,6 +55,7 @@ param	^	-	INTEGER	IceD_MaxLegs	-	4	-	"because I don't know how many legs there a
 typedef	FAST	FAST_ParameterType	DbKi	DT	-	-	-	"Integration time step [global time]"	s
 typedef	^	^	DbKi	DT_module	{NumModules}	-	-	"Integration time step [global time]"	s
 typedef	^	^	IntKi	n_substeps	{NumModules}	-	-	"The number of module substeps for advancing states from t_global to t_global_next"	-
+typedef	^	^	INTEGER	n_TMax_m1	-	-	-	"The time step of TMax - dt (the end time of the simulation)"	(-)
 typedef	^	^	DbKi	TMax	-	-	-	"Total run time"	s
 typedef	^	^	IntKi	InterpOrder	-	-	-	"Interpolation order {0,1,2}"	-
 typedef	^	^	IntKi	NumCrctn	-	-	-	"Number of correction iterations"	-
@@ -67,6 +68,7 @@ typedef	^	^	Reki	UJacSclFact	-	-	-	"Scaling factor used to get similar magnitude
 typedef	^	^	IntKi	SizeJac_ED_SD_HD	{4}	-	-	"(1)=size of ED portion; (2)=size of SD portion [2 meshes]; (3)=size of HD portion; (4)=size of matrix"	-
 # Feature switches and flags:
 typedef	^	^	IntKi	CompElast	-	-	-	"Compute blade loads (switch) {Module_ED; Module_BD}"	-
+typedef	^	^	IntKi	CompInflow	-	-	-	"Compute inflow wind conditions (switch) {Module_None; Module_IfW}"	-
 typedef	^	^	IntKi	CompAero	-	-	-	"Compute aerodynamic loads (switch) {Module_None; Module_AD}"	-
 typedef	^	^	IntKi	CompServo	-	-	-	"Compute control and electrical-drive dynamics (switch) {Module_None; Module_SrvD}"	-
 typedef	^	^	IntKi	CompHydro	-	-	-	"Compute hydrodynamic loads (switch) {Module_None; Module_HD}"	-
@@ -79,6 +81,7 @@ typedef	^	^	LOGICAL	UseDWM	-	-	-	"Use the DWM module in AeroDyn"	-
 # Input file names:
 typedef	^	^	CHARACTER(1024)	EDFile	-	-	-	"The name of the ElastoDyn input file"	-
 typedef	^	^	CHARACTER(1024)	BDBldFile	{MaxNBlades}	-	-	"Name of files containing BeamDyn inputs for each blade"	-
+typedef	^	^	CHARACTER(1024)	InflowFile	-	-	-	"Name of file containing inflow wind input parameters"	-
 typedef	^	^	CHARACTER(1024)	AeroFile	-	-	-	"Name of file containing aerodynamic input parameters"	-
 typedef	^	^	CHARACTER(1024)	ServoFile	-	-	-	"Name of file containing control and electrical-drive input parameters"	-
 typedef	^	^	CHARACTER(1024)	HydroFile	-	-	-	"Name of file containing hydrodynamic input parameters"	-
@@ -125,9 +128,6 @@ typedef	^	^	IceD_OtherStateType	OtherSt	{:}	-	-	"Other/optimization states"
 typedef	^	^	IceD_ParameterType	p	{:}	-	-	"Parameters"
 typedef	^	^	IceD_InputType	u	{:}	-	-	"System inputs"
 typedef	^	^	IceD_OutputType	y	{:}	-	-	"System outputs"
-#typedef	^	^	IceD_ContinuousStateType	x_pred	{:}	-	-	"Predicted continuous states"
-#typedef	^	^	IceD_DiscreteStateType	xd_pred	{:}	-	-	"Predicted discrete states"
-#typedef	^	^	IceD_ConstraintStateType	z_pred	{:}	-	-	"Predicted constraint states"
 typedef	^	^	IceD_OtherStateType	OtherSt_old	{:}	-	-	"Other/optimization states (copied for the case of subcycling)"
 typedef	^	^	IceD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
@@ -140,9 +140,6 @@ typedef	^	^	ED_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
 typedef	^	^	ED_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	ED_InputType	u	-	-	-	"System inputs"
 typedef	^	^	ED_OutputType	y	-	-	-	"System outputs"
-#typedef	^	^	ED_ContinuousStateType	x_pred	-	-	-	"Predicted continuous states"
-#typedef	^	^	ED_DiscreteStateType	xd_pred	-	-	-	"Predicted discrete states"
-#typedef	^	^	ED_ConstraintStateType	z_pred	-	-	-	"Predicted constraint states"
 typedef	^	^	ED_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (copied for the case of subcycling)"
 typedef	^	^	ED_OutputType	Output	{:}	-	-	"Array of outputs associated with InputTimes"
 typedef	^	^	ED_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
@@ -157,9 +154,6 @@ typedef	^	^	SrvD_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
 typedef	^	^	SrvD_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	SrvD_InputType	u	-	-	-	"System inputs"
 typedef	^	^	SrvD_OutputType	y	-	-	-	"System outputs"
-#typedef	^	^	SrvD_ContinuousStateType	x_pred	-	-	-	"Predicted continuous states"
-#typedef	^	^	SrvD_DiscreteStateType	xd_pred	-	-	-	"Predicted discrete states"
-#typedef	^	^	SrvD_ConstraintStateType	z_pred	-	-	-	"Predicted constraint states"
 typedef	^	^	SrvD_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (copied for the case of subcycling)"
 typedef	^	^	SrvD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
@@ -173,15 +167,21 @@ typedef	^	^	AD_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
 typedef	^	^	AD_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	AD_InputType	u	-	-	-	"System inputs"
 typedef	^	^	AD_OutputType	y	-	-	-	"System outputs"
-#typedef	^	^	AD_ContinuousStateType	x_pred	-	-	-	"Predicted continuous states"
-#typedef	^	^	AD_DiscreteStateType	xd_pred	-	-	-	"Predicted discrete states"
-#typedef	^	^	AD_ConstraintStateType	z_pred	-	-	-	"Predicted constraint states"
 typedef	^	^	AD_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (copied for the case of subcycling)"
 typedef	^	^	AD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
 # ..... InflowWind data .......................................................................................................
-typedef	FAST	InflowWind_Data	ReKi	WriteOutput	{:}	-	-	"Temporary hack for getting wind-speed outputs from InflowWind"
+typedef	FAST	InflowWind_Data	InflowWind_ContinuousStateType	x	{2}	-	-	"Continuous states"
+typedef	^	^	InflowWind_DiscreteStateType	xd	{2}	-	-	"Discrete states"
+typedef	^	^	InflowWind_ConstraintStateType	z	{2}	-	-	"Constraint states"
+typedef	^	^	InflowWind_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
+typedef	^	^	InflowWind_ParameterType	p	-	-	-	"Parameters"
+typedef	^	^	InflowWind_InputType	u	-	-	-	"System inputs"
+typedef	^	^	InflowWind_OutputType	y	-	-	-	"System outputs"
+typedef	^	^	InflowWind_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (copied for the case of subcycling)"
+typedef	^	^	InflowWind_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
+typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
 
 # ..... SubDyn data .......................................................................................................
 typedef	FAST	SubDyn_Data	SD_ContinuousStateType	x	{2}	-	-	"Continuous states"
@@ -191,9 +191,6 @@ typedef	^	^	SD_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
 typedef	^	^	SD_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	SD_InputType	u	-	-	-	"System inputs"
 typedef	^	^	SD_OutputType	y	-	-	-	"System outputs"
-#typedef	^	^	SD_ContinuousStateType	x_pred	-	-	-	"Predicted continuous states"
-#typedef	^	^	SD_DiscreteStateType	xd_pred	-	-	-	"Predicted discrete states"
-#typedef	^	^	SD_ConstraintStateType	z_pred	-	-	-	"Predicted constraint states"
 typedef	^	^	SD_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (copied for the case of subcycling)"
 typedef	^	^	SD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
@@ -206,9 +203,6 @@ typedef	^	^	HydroDyn_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
 typedef	^	^	HydroDyn_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	HydroDyn_InputType	u	-	-	-	"System inputs"
 typedef	^	^	HydroDyn_OutputType	y	-	-	-	"System outputs"
-#typedef	^	^	HydroDyn_ContinuousStateType	x_pred	-	-	-	"Predicted continuous states"
-#typedef	^	^	HydroDyn_DiscreteStateType	xd_pred	-	-	-	"Predicted discrete states"
-#typedef	^	^	HydroDyn_ConstraintStateType	z_pred	-	-	-	"Predicted constraint states"
 typedef	^	^	HydroDyn_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (copied for the case of subcycling)"
 typedef	^	^	HydroDyn_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
@@ -221,9 +215,6 @@ typedef	^	^	IceFloe_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
 typedef	^	^	IceFloe_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	IceFloe_InputType	u	-	-	-	"System inputs"
 typedef	^	^	IceFloe_OutputType	y	-	-	-	"System outputs"
-#typedef	^	^	IceFloe_ContinuousStateType	x_pred	-	-	-	"Predicted continuous states"
-#typedef	^	^	IceFloe_DiscreteStateType	xd_pred	-	-	-	"Predicted discrete states"
-#typedef	^	^	IceFloe_ConstraintStateType	z_pred	-	-	-	"Predicted constraint states"
 typedef	^	^	IceFloe_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (copied for the case of subcycling)"
 typedef	^	^	IceFloe_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
@@ -236,9 +227,6 @@ typedef	^	^	MAP_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
 typedef	^	^	MAP_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	MAP_InputType	u	-	-	-	"System inputs"
 typedef	^	^	MAP_OutputType	y	-	-	-	"System outputs"
-#typedef	^	^	MAP_ContinuousStateType	x_pred	-	-	-	"Predicted continuous states"
-#typedef	^	^	MAP_DiscreteStateType	xd_pred	-	-	-	"Predicted discrete states"
-#typedef	^	^	MAP_ConstraintStateType	z_pred	-	-	-	"Predicted constraint states"
 typedef	^	^	MAP_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (copied for the case of subcycling)"
 typedef	^	^	MAP_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
@@ -251,9 +239,6 @@ typedef	^	^	FEAM_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
 typedef	^	^	FEAM_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	FEAM_InputType	u	-	-	-	"System inputs"
 typedef	^	^	FEAM_OutputType	y	-	-	-	"System outputs"
-#typedef	^	^	FEAM_ContinuousStateType	x_pred	-	-	-	"Predicted continuous states"
-#typedef	^	^	FEAM_DiscreteStateType	xd_pred	-	-	-	"Predicted discrete states"
-#typedef	^	^	FEAM_ConstraintStateType	z_pred	-	-	-	"Predicted constraint states"
 typedef	^	^	FEAM_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (copied for the case of subcycling)"
 typedef	^	^	FEAM_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
@@ -266,9 +251,6 @@ typedef	^	^	MD_OtherStateType	OtherSt	-	-	-	"Other/optimization states"
 typedef	^	^	MD_ParameterType	p	-	-	-	"Parameters"
 typedef	^	^	MD_InputType	u	-	-	-	"System inputs"
 typedef	^	^	MD_OutputType	y	-	-	-	"System outputs"
-#typedef	^	^	MD_ContinuousStateType	x_pred	-	-	-	"Predicted continuous states"
-#typedef	^	^	MD_DiscreteStateType	xd_pred	-	-	-	"Predicted discrete states"
-#typedef	^	^	MD_ConstraintStateType	z_pred	-	-	-	"Predicted constraint states"
 typedef	^	^	MD_OtherStateType	OtherSt_old	-	-	-	"Other/optimization states (copied for the case of subcycling)"
 typedef	^	^	MD_InputType	Input	{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}	-	-	"Array of times associated with Input Array"
@@ -341,7 +323,6 @@ typedef	^	FAST_MiscVarType	REAL	UsrTime2	-	-	-	"User CPU time for simulation (wi
 typedef	^	FAST_MiscVarType	INTEGER	StrtTime	{8}	-	-	"Start time of simulation (including intialization)"
 typedef	^	FAST_MiscVarType	INTEGER	SimStrtTime	{8}	-	-	"Start time of simulation (after initialization)"
 #typedef	^	FAST_MiscVarType	IntKi	n_t_global	-	-	-	"simulation time step, loop counter for global (FAST) simulation"	(s)
-typedef	^	FAST_MiscVarType	INTEGER	n_TMax_m1	-	-	-	"The time step of TMax - dt (the end time of the simulation)"	(-)
 typedef	^	FAST_MiscVarType	Logical	calcJacobian	-	-	-	"Should we calculate Jacobians in Option 1?"	(flag)
 typedef	^	FAST_MiscVarType	FAST_ExternInputType	ExternInput	-	-	-	"external input values"	-
 
