@@ -1,9 +1,12 @@
-   SUBROUTINE ludcmp(a,n,indx,d) 
+SUBROUTINE ludcmp(a,n,indx,d) 
+!***************************************************************************************
+! This subroutine performs LU Decomposition
+!***************************************************************************************
 
-INTEGER(IntKi),INTENT(IN):: n
-INTEGER(IntKi),INTENT(OUT):: indx(:)
-REAL(ReKi),INTENT(INOUT):: a(:,:)
-REAL(ReKi),INTENT(OUT):: d
+INTEGER(IntKi),INTENT(IN):: n ! DOF total - 6
+INTEGER(IntKi),INTENT(OUT):: indx(:) 
+REAL(ReKi),INTENT(INOUT):: a(:,:) ! Mass matrix
+REAL(ReKi),INTENT(OUT):: d ! Determinate
 
 REAL(ReKi),PARAMETER:: tolf = 1.0D-20
 

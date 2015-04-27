@@ -1,12 +1,28 @@
    SUBROUTINE BldComputeJacobianLSGL(rr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,jacobian)
-   REAL(ReKi),INTENT(IN):: rr,Nuu0(:),gp(:),GLL_temp(:)
-   REAL(ReKi),INTENT(OUT):: jacobian
-   REAL(ReKi),INTENT(OUT):: hhx(:),hpx(:)
-   INTEGER(IntKi),INTENT(IN):: node_elem,dof_node
-   INTEGER(IntKi),INTENT(IN):: ngp,igp
+   !_------------------------------------------------------------------------------------------------
+   ! This subroutine 1) computes the jacobian of a element;
+   !                 2) adjusts derivative of shape functions.
+   ! For details, see
+   ! Bauchau, O.A., "Flexible Multibody Dynamics", Springer, pp. 643
+   !-------------------------------------------------------------------------------------------------
+   REAL(ReKi),    INTENT(IN   )::  rr            ! rrth Gauss point location 
+   REAL(ReKi),    INTENT(IN   )::  Nuu0(:)       ! Element nodal initial position
+   REAL(ReKi),    INTENT(IN   )::  gp(:)         ! Gauss point location
+   REAL(ReKi),    INTENT(IN   )::  GLL_temp(:)   ! Gauss-Lobatto-Legendre point location
+   INTEGER(IntKi),INTENT(IN   )::  node_elem     ! Number of node per element
+   INTEGER(IntKi),INTENT(IN   )::  dof_node      ! Number of DoF per node
+   INTEGER(IntKi),INTENT(IN   )::  ngp           ! Total number of Gauss point
+   INTEGER(IntKi),INTENT(IN   )::  igp           ! ith Gauss point
+   REAL(ReKi),    INTENT(  OUT):: jacobian       ! Jacobian of element
+   REAL(ReKi),    INTENT(  OUT):: hhx(:)         ! Shape function
+   REAL(ReKi),    INTENT(  OUT):: hpx(:)         ! Derivative of shape function
 
-   REAL(ReKi)::Gup0(3)
-   INTEGER(IntKi)::inode,temp_id,i
+
+   ! Local variables
+   REAL(ReKi)                  :: Gup0(3)
+   INTEGER(IntKi)              :: inode
+   INTEGER(IntKi)              :: temp_id
+   INTEGER(IntKi)              :: i
 
    hhx = 0.0D0
    hpx = 0.0D0
@@ -23,8 +39,6 @@
    jacobian = 0.0D0
    jacobian = SQRT(DOT_PRODUCT(Gup0,Gup0))
    
-   !WRITE(*,*) "Jacobian = ", jacobian
-
    DO inode=1,node_elem
        hpx(inode) = hpx(inode)/jacobian
    ENDDO

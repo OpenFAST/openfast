@@ -1,138 +1,163 @@
-   SUBROUTINE ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Next,hhp,Stif0,Jac,&
-                            &w,node_elem,nelem,norder,dof_node,elk,elf)
+   SUBROUTINE ElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
+                           &ngp,node_elem,dof_node,elf,elm)
+                           
+   !-------------------------------------------------------------------------------
+   ! This subroutine total element forces and mass matrices
+   !-------------------------------------------------------------------------------
 
-   REAL(ReKi),INTENT(IN)::Nuu0(:),Nuuu(:),Nrr0(:),Nrrr(:),Next(:)
-   REAL(ReKi),INTENT(IN)::hhp(:,:),Stif0(:,:,:),Jac
-   REAL(ReKi),INTENT(IN)::w(:)
-   INTEGER(IntKi),INTENT(IN)::node_elem,nelem,norder,dof_node
+   REAL(ReKi),INTENT(IN):: Nuu0(:) ! Nodal initial position for each element
+   REAL(ReKi),INTENT(IN):: Nuuu(:) ! Nodal displacement of Mass 1 for each element
+   REAL(ReKi),INTENT(IN):: Nrr0(:) ! Nodal rotation parameters for initial position
+   REAL(ReKi),INTENT(IN):: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
+   REAL(ReKi),INTENT(IN):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
+   REAL(ReKi),INTENT(IN):: EStif0_GL(:,:,:) ! Nodal material properties for each element
+   REAL(ReKi),INTENT(IN):: EMass0_GL(:,:,:) ! Nodal material properties for each element
+   REAL(ReKi),INTENT(IN):: gravity(:) ! 
+   REAL(ReKi),INTENT(IN):: DistrLoad_GL(:,:) ! Nodal material properties for each element
+   INTEGER(IntKi),INTENT(IN):: ngp ! Number of Gauss points
+   INTEGER(IntKi),INTENT(IN):: node_elem ! Node per element
+   INTEGER(IntKi),INTENT(IN):: dof_node ! Degrees of freedom per node
 
-   REAL(ReKi),INTENT(INOUT)::elk(:,:),elf(:)      
+   REAL(ReKi),INTENT(OUT):: elf(:)  ! Total element force (Fd, Fc, Fb)
+   REAL(ReKi),INTENT(OUT):: elm(:,:) ! Total element mass matrix
 
-   REAL(ReKi),ALLOCATABLE::Fc_elem(:,:),Fd_elem(:,:),Oe_elem(:,:,:)
-   REAL(ReKi),ALLOCATABLE::Pe_elem(:,:,:),Qe_elem(:,:,:),Se_elem(:,:,:)
-   REAL(ReKi)::E10(3),RR0(3,3),kapa(3),E1(3),Stif(6,6),cet
-   REAL(ReKi)::Fc(6),Fd(6),Oe(6,6),Pe(6,6),Qe(6,6)
+   REAL(ReKi),ALLOCATABLE:: gp(:) ! Gauss points
+   REAL(ReKi),ALLOCATABLE:: gw(:) ! Gauss point weights
+   REAL(ReKi),ALLOCATABLE:: hhx(:) ! Shape function
+   REAL(ReKi),ALLOCATABLE:: hpx(:) ! Derivative of shape function
+   REAL(ReKi),ALLOCATABLE:: GLL_temp(:) ! Temp Gauss-Lobatto-Legendre points
+   REAL(ReKi),ALLOCATABLE:: w_temp(:) ! Temp GLL weights
+   
+   REAL(ReKi):: uu0(6)
+   REAL(ReKi):: E10(3)
+   REAL(ReKi):: RR0(3,3)
+   REAL(ReKi):: kapa(3)
+   REAL(ReKi):: E1(3)
+   REAL(ReKi):: Stif(6,6)
+   REAL(ReKi):: cet
+   REAL(ReKi):: uuu(6)
+   REAL(ReKi):: uup(3)
+   REAL(ReKi):: Jacobian
+   REAL(ReKi):: gpr
+   REAL(ReKi):: Fc(6)
+   REAL(ReKi):: Fd(6)
+   REAL(ReKi):: Fg(6)
+   REAL(ReKi):: vvv(6)
+   REAL(ReKi):: vvp(6)
+   REAL(ReKi):: mmm
+   REAL(ReKi):: mEta(3)
+   REAL(ReKi):: rho(3,3)
+   REAL(ReKi):: Fb(6)
+   REAL(ReKi):: Mi(6,6)
 
-   INTEGER(IntKi)::i,j,k,m,n,temp_id1,temp_id2
+   INTEGER(IntKi)::igp
+   INTEGER(IntKi)::i
+   INTEGER(IntKi)::j
+   INTEGER(IntKi)::m
+   INTEGER(IntKi)::n
+   INTEGER(IntKi)::temp_id1
+   INTEGER(IntKi)::temp_id2
    INTEGER(IntKi)::allo_stat
-      
 
-   ALLOCATE(Fc_elem(dof_node,node_elem),STAT = allo_stat)
+   ALLOCATE(gp(ngp), STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   Fc_elem = 0.0D0
+   gp = 0.0D0
+
+   ALLOCATE(gw(ngp), STAT = allo_stat)
+   IF(allo_stat/=0) GOTO 9999
+   gw = 0.0D0
+
+   ALLOCATE(hhx(node_elem), STAT = allo_stat)
+   IF(allo_stat/=0) GOTO 9999
+   hhx = 0.0D0
+
+   ALLOCATE(hpx(node_elem), STAT = allo_stat)
+   IF(allo_stat/=0) GOTO 9999
+   hpx = 0.0D0
    
-   ALLOCATE(Fd_elem(dof_node,node_elem),STAT = allo_stat)
+   ALLOCATE(GLL_temp(node_elem), STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   Fd_elem = 0.0D0
+   GLL_temp = 0.0D0
    
-   ALLOCATE(Oe_elem(dof_node,dof_node,node_elem),STAT = allo_stat)
+   ALLOCATE(w_temp(node_elem), STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
-   Oe_elem = 0.0D0
-   
-   ALLOCATE(Pe_elem(dof_node,dof_node,node_elem),STAT = allo_stat)
-   IF(allo_stat/=0) GOTO 9999
-   Pe_elem = 0.0D0
-   
-   ALLOCATE(Qe_elem(dof_node,dof_node,node_elem),STAT = allo_stat)
-   IF(allo_stat/=0) GOTO 9999
-   Qe_elem = 0.0D0
-   
-   ALLOCATE(Se_elem(dof_node,dof_node,node_elem),STAT = allo_stat)
-   IF(allo_stat/=0) GOTO 9999
-   Se_elem = 0.0D0
+   w_temp = 0.0D0
 
-   DO i=1,node_elem
-       E10 = 0.0D0
-       E1 = 0.0D0
-       RR0 = 0.0D0
-       kapa = 0.0D0
-       Fc = 0.0D0
-       Fd = 0.0D0
-       Oe = 0.0D0
-       Pe = 0.0D0
-       Qe = 0.0D0
-       Stif = 0.0D0
-       cet = 0.0D0
-       CALL NodalDataAt0(node_elem,nelem,norder,dof_node,i,hhp,Nuu0,Jac,E10)
-       CALL NodalData(Nuuu,Nrrr,Nuu0,Nrr0,E10,hhp,Stif0,Jac,&
-                      &node_elem,nelem,i,norder,dof_node,&
-                      &E1,RR0,kapa,Stif,cet)
-       CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
-       Fc_elem(1:6,i) = Fc(1:6)
-       Fd_elem(1:6,i) = Fd(1:6)
-       Oe_elem(1:6,1:6,i) = Oe(1:6,1:6)
-       Pe_elem(1:6,1:6,i) = Pe(1:6,1:6)
-       Qe_elem(1:6,1:6,i) = Qe(1:6,1:6)
-       Se_elem(1:6,1:6,i) = Stif(1:6,1:6)
-   ENDDO
+   elf = 0.0D0
+   elm = 0.0D0
 
 
-   DO i=1,node_elem
-       DO j=1,6
-           temp_id1 = (i-1)*dof_node+j
-           DO k=1,6
-               temp_id2 = (i-1)*dof_node+k
-               elk(temp_id1,temp_id2) = elk(temp_id1, temp_id2) + w(i)*Qe_elem(j,k,i)*Jac
-           ENDDO
-       ENDDO
-   ENDDO
+   CALL BD_gen_gll_LSGL(ngp,GLL_temp,w_temp)
+   CALL BldGaussPointWeight(ngp,gp,gw)
 
-   DO i=1,node_elem
-       DO j=1,node_elem
-           DO k=1,6
-               temp_id1=(i-1)*dof_node+k
-               DO m=1,6
-                   temp_id2=(j-1)*dof_node+m
-                    elk(temp_id1,temp_id2)=elk(temp_id1,temp_id2)+w(i)*Pe_elem(k,m,i)*hhp(j,i)
-                    elk(temp_id1,temp_id2)=elk(temp_id1,temp_id2)+w(j)*Oe_elem(k,m,j)*hhp(i,j)
-               ENDDO
-           ENDDO
-       ENDDO
-   ENDDO
+   DO igp=1,ngp
+       gpr=gp(igp)
+       CALL BldComputeJacobianLSGL(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian)
 
+       CALL BldGaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10)
+!       WRITE(*,*) 'E10'
+!       WRITE(*,*) E10
+       Stif(:,:) = 0.0D0
+       Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
+       CALL BldGaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)       
+       mmm  = 0.0D0
+       mEta = 0.0D0
+       rho  = 0.0D0
+       mmm          = EMass0_GL(1,1,igp)
+       mEta(2)      = -EMass0_GL(1,6,igp)
+       mEta(3)      =  EMass0_GL(1,5,igp)
+       rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
+       
+       CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,vvp,mmm,mEta,rho)
+       CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd)
+       CALL MassMatrix(mmm,mEta,rho,Mi)
+       CALL GyroForce(mEta,rho,uuu,vvv,Fb)
+       CALL GravityLoads(mmm,mEta,gravity,Fg)
+       Fd(:) = Fd(:) - Fg(:) - DistrLoad_GL(:,igp)
 
-   DO i=1,node_elem
-       DO j=1,node_elem
-           DO k=1,6
-               temp_id1=(i-1)*dof_node+k
-               DO m=1,6
-                   temp_id2=(j-1)*dof_node+m
-                   DO n=1,node_elem
-                       elk(temp_id1,temp_id2)=elk(temp_id1,temp_id2)+w(n)*hhp(i,n)*Se_elem(k,m,n)*hhp(j,n)/Jac
+       DO i=1,node_elem
+           DO j=1,node_elem
+               DO m=1,dof_node
+                   temp_id1 = (i-1)*dof_node+m
+                   DO n=1,dof_node
+                       temp_id2 = (j-1)*dof_node+n
+                       elm(temp_id1,temp_id2) = elm(temp_id1,temp_id2) + hhx(i)*Mi(m,n)*hhx(j)*Jacobian*gw(igp)
                    ENDDO
                ENDDO
            ENDDO
        ENDDO
-   ENDDO
 
-   DO i=1,node_elem
-       DO j=1,6
-           temp_id1 = (i-1)*dof_node+j
-           elf(temp_id1) = elf(temp_id1) - w(i) * Fd_elem(j,i) * Jac
-!           elf(temp_id1) = elf(temp_id1) + w(i) * Next((i-1)*dof_node+j) * Jac
-!           elf(temp_id1) = elf(temp_id1) +  Next((i-1)*dof_node+j) 
-           DO m=1,node_elem
-              elf(temp_id1) = elf(temp_id1) - w(m) * hhp(i,m) * Fc_elem(j,m)
+       DO i=1,node_elem
+           DO j=1,dof_node
+               temp_id1 = (i-1) * dof_node+j
+               elf(temp_id1) = elf(temp_id1) - hhx(i)*Fd(j)*Jacobian*gw(igp)
+               elf(temp_id1) = elf(temp_id1) - hpx(i)*Fc(j)*Jacobian*gw(igp)
+               elf(temp_id1) = elf(temp_id1) - hhx(i)*Fb(j)*Jacobian*gw(igp)
            ENDDO
        ENDDO
    ENDDO
 
+   DEALLOCATE(gp)
+   DEALLOCATE(gw)
+   DEALLOCATE(hhx)
+   DEALLOCATE(hpx)
+   DEALLOCATE(GLL_temp)
+   DEALLOCATE(w_temp)
 
+!   j=6
+!   DO i=1,18
+!       WRITE(*,*) elm(i,j+1), elm(i,j+2),elm(i,j+3),elm(i,j+4),elm(i,j+5),elm(i,j+6)
+!       WRITE(*,*) elf(i)
+!   ENDDO
+!   STOP
 
-   DEALLOCATE(Fc_elem)
-   DEALLOCATE(Fd_elem)
-   DEALLOCATE(Oe_elem)
-   DEALLOCATE(Pe_elem)
-   DEALLOCATE(Qe_elem)
-   DEALLOCATE(Se_elem)
-   
    9999 IF(allo_stat/=0) THEN
-            IF(ALLOCATED(Fc_elem)) DEALLOCATE(Fc_elem)
-            IF(ALLOCATED(Fd_elem)) DEALLOCATE(Fd_elem)
-            IF(ALLOCATED(Oe_elem)) DEALLOCATE(Oe_elem)
-            IF(ALLOCATED(Pe_elem)) DEALLOCATE(Pe_elem)
-            IF(ALLOCATED(Qe_elem)) DEALLOCATE(Qe_elem)
-            IF(ALLOCATED(Se_elem)) DEALLOCATE(Se_elem)
+            IF(ALLOCATED(gp))  DEALLOCATE(gp)
+            IF(ALLOCATED(gw))  DEALLOCATE(gw)
+            IF(ALLOCATED(hhx)) DEALLOCATE(hhx)
+            IF(ALLOCATED(hpx)) DEALLOCATE(hpx)
+            IF(ALLOCATED(GLL_temp)) DEALLOCATE(GLL_temp)
+            IF(ALLOCATED(w_temp)) DEALLOCATE(w_temp)
         ENDIF
 
    END SUBROUTINE ElementMatrix

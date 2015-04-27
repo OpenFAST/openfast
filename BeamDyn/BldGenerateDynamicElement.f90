@@ -1,22 +1,47 @@
-   SUBROUTINE BldGenerateDynamicElement(uuN0,uuNf,vvNf,aaNf,Fext,Stif0,m00,mEta0,rho0,&
-                                       &elem_total,node_elem,dof_node,ngp,StifK,RHS,MassM,DampG)
+   SUBROUTINE BldGenerateDynamicElement(uuN0,uuNf,vvNf,aaNf,                 &
+                                        Stif0,Mass0,gravity,u,damp_flag,beta,&
+                                        elem_total,node_elem,dof_node,ngp,   &
+                                        StifK,RHS,MassM,DampG)
 
-   REAL(ReKi),INTENT(IN):: uuN0(:),uuNf(:),Fext(:),Stif0(:,:,:)
-   REAL(ReKi),INTENT(IN):: vvNf(:),aaNf(:),m00(:),mEta0(:,:),rho0(:,:,:)
-   INTEGER(IntKi),INTENT(IN):: elem_total,node_elem,dof_node,ngp
-   REAL(ReKi),INTENT(OUT):: StifK(:,:),RHS(:) 
-   REAL(ReKi),INTENT(OUT):: MassM(:,:),DampG(:,:)
+   REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
+   REAL(ReKi),        INTENT(IN   ):: uuNf(:)
+   REAL(ReKi),        INTENT(IN   ):: vvNf(:)
+   REAL(ReKi),        INTENT(IN   ):: aaNf(:)
+   REAL(ReKi),        INTENT(IN   ):: Stif0(:,:,:)
+   REAL(ReKi),        INTENT(IN   ):: Mass0(:,:,:)
+   REAL(ReKi),        INTENT(IN   ):: gravity(:)
+   TYPE(BD_InputType),INTENT(IN   ):: u
+   INTEGER(IntKi),    INTENT(IN   ):: damp_flag
+   REAL(ReKi),        INTENT(IN   ):: beta(:)
+   INTEGER(IntKi),    INTENT(IN   ):: elem_total
+   INTEGER(IntKi),    INTENT(IN   ):: node_elem
+   INTEGER(IntKi),    INTENT(IN   ):: dof_node
+   INTEGER(IntKi),    INTENT(IN   ):: ngp
 
-   REAL(ReKi),ALLOCATABLE:: Nuu0(:),Nuuu(:),Next(:),Nrr0(:),Nrrr(:)
-   REAL(ReKi),ALLOCATABLE:: Nvvv(:),Naaa(:)
-   REAL(ReKi),ALLOCATABLE:: NStif0(:,:,:)
-   REAL(ReKi),ALLOCATABLE:: Nm00(:),NmEta0(:,:),Nrho0(:,:,:)
-   REAL(ReKi),ALLOCATABLE:: elk(:,:),elf(:)
-   REAL(ReKi),ALLOCATABLE:: elm(:,:),elg(:,:)
+   REAL(ReKi),        INTENT(  OUT):: StifK(:,:)
+   REAL(ReKi),        INTENT(  OUT):: RHS(:) 
+   REAL(ReKi),        INTENT(  OUT):: MassM(:,:)
+   REAL(ReKi),        INTENT(  OUT):: DampG(:,:)
 
-   INTEGER(IntKi):: dof_elem,rot_elem
-   INTEGER(IntKi):: nelem,j
-   INTEGER(IntKi):: allo_stat
+   REAL(ReKi),          ALLOCATABLE:: Nuu0(:)
+   REAL(ReKi),          ALLOCATABLE:: Nuuu(:)
+   REAL(ReKi),          ALLOCATABLE:: Nrr0(:)
+   REAL(ReKi),          ALLOCATABLE:: Nrrr(:)
+   REAL(ReKi),          ALLOCATABLE:: Nvvv(:)
+   REAL(ReKi),          ALLOCATABLE:: Naaa(:)
+   REAL(ReKi),          ALLOCATABLE:: elk(:,:)
+   REAL(ReKi),          ALLOCATABLE:: elf(:)
+   REAL(ReKi),          ALLOCATABLE:: elm(:,:)
+   REAL(ReKi),          ALLOCATABLE:: elg(:,:)
+   REAL(ReKi)                      :: EStif0_GL(6,6,node_elem-1)
+   REAL(ReKi)                      :: EMass0_GL(6,6,node_elem-1)
+   REAL(ReKi)                      :: DistrLoad_GL(6,node_elem-1)
+   INTEGER(IntKi)                  :: dof_elem
+   INTEGER(IntKi)                  :: rot_elem
+   INTEGER(IntKi)                  :: nelem
+   INTEGER(IntKi)                  :: j
+   INTEGER(IntKi)                  :: temp_id
+   INTEGER(IntKi)                  :: allo_stat
 
    dof_elem = dof_node * node_elem
    rot_elem = (dof_node/2) * node_elem
@@ -34,7 +59,7 @@
    Nrr0 = 0.0D0
 
    ALLOCATE(Nrrr(rot_elem),STAT = allo_stat)
-   IF(allo_stat/=0) GOTO 9999
+   
    Nrrr = 0.0D0
 
    ALLOCATE(Nvvv(dof_elem),STAT = allo_stat)
@@ -45,26 +70,6 @@
    IF(allo_stat/=0) GOTO 9999
    Naaa = 0.0D0
 
-   ALLOCATE(Next(dof_elem),STAT = allo_stat)
-   IF(allo_stat /=0) GOTO 9999
-   Next = 0.0D0
-
-   ALLOCATE(NStif0(dof_node,dof_node,node_elem),STAT = allo_stat)
-   IF(allo_stat/=0) GOTO 9999
-   NStif0 = 0.0D0
-
-   ALLOCATE(Nm00(node_elem),STAT = allo_stat)
-   IF(allo_stat/=0) GOTO 9999
-   Nm00 = 0.0D0
-   
-   ALLOCATE(NmEta0(3,node_elem),STAT = allo_stat)
-   IF(allo_stat/=0) GOTO 9999
-   NmEta0 = 0.0D0
-   
-   ALLOCATE(Nrho0(3,3,node_elem),STAT = allo_stat)
-   IF(allo_stat/=0) GOTO 9999
-   Nrho0 = 0.0D0
-   
    ALLOCATE(elf(dof_elem),STAT = allo_stat)
    IF(allo_stat/=0) GOTO 9999
    elf = 0.0D0
@@ -82,25 +87,24 @@
    elg = 0.0D0
 
    DO nelem=1,elem_total
-       CALL ElemNodalDispGL(uuN0,node_elem,dof_node,nelem,Nuu0)
+       Nuu0(:) = uuN0(:,nelem)
        CALL ElemNodalDispGL(uuNf,node_elem,dof_node,nelem,Nuuu)
-    
-       CALL ElemNodalStifGL(Stif0,node_elem,dof_node,nelem,NStif0) 
-       CALL ElemNodalMassGL(m00,mEta0,rho0,node_elem,dof_node,nelem,Nm00,NmEta0,Nrho0)  
-
-       CALL ElemNodalDispGL(Fext,node_elem,dof_node,nelem,Next)
-
+       temp_id = (nelem-1)*ngp
+       DO j=1,ngp
+           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
+           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+           DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,temp_id+j+1)
+           DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
+       ENDDO
        CALL NodalRelRotGL(Nuu0,node_elem,dof_node,Nrr0)
        CALL NodalRelRotGL(Nuuu,node_elem,dof_node,Nrrr)
-       
        CALL ElemNodalDispGL(vvNf,node_elem,dof_node,nelem,Nvvv)
        CALL ElemNodalDispGL(aaNf,node_elem,dof_node,nelem,Naaa)
-       
-!       CALL ElementMatrixDynGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,Nvvv,Naaa,Stif0,m00,mEta0,rho0,&
-!                              &ngp,node_elem,dof_node,elk,elf,elm,elg)
 
-       CALL ElementMatrixDynLSGL(Nuu0,Nuuu,Nrr0,Nrrr,Next,Nvvv,Naaa,NStif0,Nm00,NmEta0,Nrho0,&
-                                &ngp,node_elem,dof_node,elk,elf,elm,elg)
+       CALL ElementMatrix_GA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
+                              EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
+                              damp_flag,beta,                          &
+                              ngp,node_elem,dof_node,elk,elf,elm,elg)
 
        CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elk,StifK)
        CALL AssembleStiffKGL(nelem,node_elem,dof_elem,dof_node,elm,MassM)
@@ -114,11 +118,6 @@
    DEALLOCATE(Nrrr)
    DEALLOCATE(Nvvv)
    DEALLOCATE(Naaa)
-   DEALLOCATE(Next)
-   DEALLOCATE(NStif0)
-   DEALLOCATE(Nm00)
-   DEALLOCATE(NmEta0)
-   DEALLOCATE(Nrho0)
    DEALLOCATE(elf)
    DEALLOCATE(elk)
    DEALLOCATE(elm)
@@ -131,11 +130,6 @@
             IF(ALLOCATED(Nrrr)) DEALLOCATE(Nrrr)
             IF(ALLOCATED(Nvvv)) DEALLOCATE(Nvvv)
             IF(ALLOCATED(Naaa)) DEALLOCATE(Naaa)
-            IF(ALLOCATED(Next)) DEALLOCATE(Next)
-            IF(ALLOCATED(NStif0)) DEALLOCATE(NStif0)
-            IF(ALLOCATED(Nm00)) DEALLOCATE(Nm00)
-            IF(ALLOCATED(NmEta0)) DEALLOCATE(NmEta0)
-            IF(ALLOCATED(Nrho0)) DEALLOCATE(Nrho0)
             IF(ALLOCATED(elf)) DEALLOCATE(elf)
             IF(ALLOCATED(elk)) DEALLOCATE(elk)
             IF(ALLOCATED(elm)) DEALLOCATE(elm)
