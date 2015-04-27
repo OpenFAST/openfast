@@ -1698,6 +1698,12 @@ SUBROUTINE IfW_BladedFFWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates
 
 
 
+      !REMOVE THIS for AeroDyn 15
+      ! Return the average disk velocity values needed by AeroDyn 14.  This is the WindInf_ADhack_diskVel routine.
+   OutData%DiskVel(1)   =  ParamData%MeanFFWS
+   OutData%DiskVel(2:3) =  0.0_ReKi
+
+
    RETURN
 
 CONTAINS
