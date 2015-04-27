@@ -52,7 +52,7 @@ typedef  ^                       ^                 IntKi             BinaryForma
 typedef  ^                       ^                 Logical           IsBinary          -     -     -     "Windfile is a binary file"                              -
 typedef  ^                       ^                 ReKi              TI                {3}   -     -     "Turbulence intensity (U,V,W)"                           -
 typedef  ^                       ^                 Logical           TI_listed         -     -     -     "Turbulence intesity given in file"                      -
-
+typedef  ^                       ^                 ReKi              MWS               -     -     -     "Approximate mean wind speed"                            -
 
 
 #########################
