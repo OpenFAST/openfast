@@ -1988,8 +1988,14 @@ CONTAINS
             M(4)  =  ( 1.0_ReKi - Z )*( 1.0_ReKi + T )
             M     =  M / 4.0_ReKi               ! normalize
 
-            v(1)  =  ParamData%FFTower( IDIM, IZHI, ITLO )
-            v(2)  =  ParamData%FFTower( IDIM, IZHI, ITHI )
+            IF (IZHI > ParamData%NTGrids) THEN
+               v(1)  =  0.0_ReKi  ! on the ground
+               v(2)  =  0.0_ReKi  ! on the ground
+            ELSE
+               v(1)  =  ParamData%FFTower( IDIM, IZHI, ITLO )
+               v(2)  =  ParamData%FFTower( IDIM, IZHI, ITHI )
+            END IF
+            
             v(3)  =  ParamData%FFTower( IDIM, IZLO, ITLO )
             v(4)  =  ParamData%FFTower( IDIM, IZLO, ITHI )
             

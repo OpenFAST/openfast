@@ -820,6 +820,8 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       RETURN
    END IF
 
+#else
+   InputFileData%CTTS_CoherentTurb = .FALSE.
 #endif
 
    !---------------------- OUTPUT --------------------------------------------------         
