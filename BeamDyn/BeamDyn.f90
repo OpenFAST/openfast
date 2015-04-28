@@ -15,133 +15,90 @@ MODULE BeamDyn
    PUBLIC :: BD_End                            ! Ending routine (includes clean up)
    PUBLIC :: BD_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
    PUBLIC :: BD_CalcOutput                     ! Routine for computing outputs
-   PUBLIC :: BD_CalcOutput_Coupling                     ! Routine for computing outputs
+!   PUBLIC :: BD_CalcOutput_Coupling                     ! Routine for computing outputs
    PUBLIC :: BD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
 !   PUBLIC :: BD_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: BD_UpdateDiscState                ! Tight coupling routine for updating discrete states
-   PUBLIC :: CrvMatrixR                ! Tight coupling routine for updating discrete states
-   PUBLIC :: CrvCompose                ! Tight coupling routine for updating discrete states
+   PUBLIC :: BD_CrvMatrixR                ! Tight coupling routine for updating discrete states
+   PUBLIC :: BD_CrvCompose                ! Tight coupling routine for updating discrete states
 !   PUBLIC :: CrvMatrixH                ! Tight coupling routine for updating discrete states
 !   PUBLIC :: CrvMatrixB                ! Tight coupling routine for updating discrete states
-   PUBLIC :: CrvExtractCrv                ! Tight coupling routine for updating discrete states
-   PUBLIC :: Tilde
-   PUBLIC :: Norm
+   PUBLIC :: BD_CrvExtractCrv                ! Tight coupling routine for updating discrete states
+   PUBLIC :: BD_Tilde
+   PUBLIC :: BD_Norm
    PUBLIC :: ludcmp
    PUBLIC :: lubksb
-   PUBLIC :: MotionTensor
+   PUBLIC :: BD_MotionTensor
+   PUBLIC :: BD_CalcIC
 
 CONTAINS
 
-!INCLUDE 'NodeLoc.f90'
-INCLUDE 'Tilde.f90'
-INCLUDE 'CrvMatrixR.f90'
-INCLUDE 'CrvMatrixH.f90'
-INCLUDE 'CrvCompose.f90'
-INCLUDE 'ElemNodalDispGL.f90'
-INCLUDE 'ElemNodalStifGL.f90'
-INCLUDE 'ElemNodalMassGL.f90'
-INCLUDE 'NodalRelRotGL.f90'
-INCLUDE 'BldGaussPointWeight.f90'
-INCLUDE 'diffmtc.f90'
-INCLUDE 'BldComputeJacobianLSGL.f90'
-INCLUDE 'BldGaussPointDataAt0.f90'
-INCLUDE 'BldGaussPointData.f90'
-INCLUDE 'ElasticForce.f90'
-INCLUDE 'BldGaussPointDataMass.f90'
-INCLUDE 'MassMatrix.f90'
-INCLUDE 'GyroForce.f90'
-INCLUDE 'GravityLoads.f90'
-INCLUDE 'ElementMatrix.f90'
-INCLUDE 'AssembleStiffKGL.f90'
-INCLUDE 'AssembleRHSGL.f90'
-INCLUDE 'GenerateDynamicElement.f90'
+INCLUDE 'BD_Tilde.f90'
+INCLUDE 'BD_CrvMatrixR.f90'
+INCLUDE 'BD_CrvMatrixH.f90'
+INCLUDE 'BD_CrvCompose.f90'
+INCLUDE 'BD_ElemNodalDisp.f90'
+INCLUDE 'BD_NodalRelRot.f90'
+INCLUDE 'BD_ElementMatrixGA2.f90'
+INCLUDE 'BD_GaussPointWeight.f90'
+INCLUDE 'BD_ComputeJacobian.f90'
+INCLUDE 'BD_GaussPointDataAt0.f90'
+INCLUDE 'BD_GaussPointData.f90'
+INCLUDE 'BD_ElasticForce.f90'
+INCLUDE 'BD_GaussPointDataMass.f90'
+INCLUDE 'BD_InertialForce.f90'
+INCLUDE 'BD_DissipativeForce.f90'
+INCLUDE 'BD_GravityForce.f90'
+INCLUDE 'BD_AssembleStiffK.f90'
+INCLUDE 'BD_AssembleRHS.f90'
 INCLUDE 'ludcmp.f90'
 INCLUDE 'lubksb.f90'
-!INCLUDE 'AppliedNodalLoad.f90'
-!INCLUDE 'PrescribedRootMotion.f90'
-INCLUDE 'DynamicSolution.f90'
-INCLUDE 'BeamDyn_RK4.f90'
-INCLUDE 'BeamDyn_RK2.f90'
-INCLUDE 'CrvMatrixHinv.f90'
-INCLUDE 'ComputeUDN.f90'
-INCLUDE 'BD_CalcContStateDeriv.f90'
+INCLUDE 'BD_UpdateDynamicGA2.f90'
+INCLUDE 'BD_MotionTensor.f90'
+INCLUDE 'BD_CalcAcc.f90'
+INCLUDE 'BD_GenerateDynamicElementAcc.f90'
+INCLUDE 'BD_ElementMatrixAcc.f90'
+INCLUDE 'BD_MassMatrix.f90'
+INCLUDE 'BD_GyroForce.f90'
+INCLUDE 'BD_ElementMatrixForce.f90'
+INCLUDE 'BD_GenerateDynamicElementForce.f90'
+INCLUDE 'BD_DynamicSolutionForce.f90'
+INCLUDE 'BD_ComputeReactionForce.f90'
+INCLUDE 'BD_ReadInput.f90'
+INCLUDE 'BD_ReadPrimaryFile.f90'
+INCLUDE 'BD_ReadBladeFile.f90'
+INCLUDE 'BD_diffmtc.f90'
+!INCLUDE 'BD_ComputeSectionProperty.f90'
+INCLUDE 'BD_ComputeMemberLength.f90'
+INCLUDE 'BD_ComputeIniNodalPosition.f90'
+INCLUDE 'BD_Norm.f90'
+INCLUDE 'BD_CrossProduct.f90'
+INCLUDE 'BD_CrvExtractCrv.f90'
+INCLUDE 'BD_ComputeIniNodalCrv.f90'
+INCLUDE 'BD_ComputeIniCoef.F90'
+INCLUDE 'BD_OuterProduct.f90'
 
-INCLUDE 'ReadPrimaryFile.f90'
-INCLUDE 'ComputeSectionProperty.f90'
-INCLUDE 'ReadBladeFile.f90'
-INCLUDE 'BeamDyn_ReadInput.f90'
-INCLUDE 'MemberArcLength.f90'
-INCLUDE 'BldComputeMemberLength.f90'
-INCLUDE 'ComputeIniNodalPosition.f90'
-INCLUDE 'Norm.f90'
-INCLUDE 'CrossProduct.f90'
-INCLUDE 'CrvExtractCrv.f90'
-INCLUDE 'ComputeIniNodalCrv.f90'
-INCLUDE 'BeamDyn_ApplyBoundaryCondition.f90'
-
-INCLUDE 'ElementMatrix_Force.f90'
-INCLUDE 'GenerateDynamicElement_Force.f90'
-INCLUDE 'DynamicSolution_Force.f90'
-INCLUDE 'ComputeIniCoef.F90'
-INCLUDE 'ComputeIniNodalPositionSP.f90'
-
-INCLUDE 'BD_Static.f90'
-INCLUDE 'BeamDyn_StaticSolution.f90'
-INCLUDE 'BeamDyn_GenerateStaticElement.f90'
-INCLUDE 'BeamDyn_StaticElementMatrix.f90'
-INCLUDE 'BeamDyn_StaticElasticForce.f90'
-
-INCLUDE 'BeamDyn_StaticElasticForce_New.f90'
-
-INCLUDE 'UpdateConfiguration.f90'
-INCLUDE 'OuterProduct.f90'
-INCLUDE 'GenerateStaticElement_Force.f90'
-INCLUDE 'StaticSolution_Force.f90'
-INCLUDE 'ElementMatrixStatic_Force.f90'
-
-INCLUDE 'CrvMatrixB.f90'
-INCLUDE 'AssembleStiffK_AM2.f90'
-INCLUDE 'AssembleRHS_AM2.f90'
-INCLUDE 'UpdateConfiguration_AM2.f90'
-INCLUDE 'AM2LinearizationMatrix.f90'
-INCLUDE 'ElementMatrix_AM2.f90'
-INCLUDE 'GenerateDynamicElement_AM2.f90'
-INCLUDE 'DynamicSolution_AM2.f90'
-INCLUDE 'BeamDyn_AM2.f90'
-INCLUDE 'BeamDyn_BoundaryPre.f90'
-INCLUDE 'BeamDyn_BoundaryAM2.f90'
-INCLUDE 'CrvCompose_temp.f90'
-INCLUDE 'CrvCompose_temp2.f90'
-INCLUDE 'CrvCompose_Check.f90'
-INCLUDE 'RescaleCheck.f90'
-INCLUDE 'DissipativeForce.f90'
-INCLUDE 'BldGaussPointDataXdot.f90'
-INCLUDE 'Solution_CCSD.f90'
-INCLUDE 'GenerateDynamicElement_CCSD.f90'
-INCLUDE 'ElementMatrix_CCSD.f90'
+!INCLUDE 'BD_Static.f90'
+!INCLUDE 'BeamDyn_StaticSolution.f90'
+!INCLUDE 'BeamDyn_GenerateStaticElement.f90'
+!INCLUDE 'BeamDyn_StaticElementMatrix.f90'
+!INCLUDE 'BeamDyn_StaticElasticForce.f90'
+!INCLUDE 'BeamDyn_StaticElasticForce_New.f90'
+!INCLUDE 'GenerateStaticElement_Force.f90'
+!INCLUDE 'StaticSolution_Force.f90'
+!INCLUDE 'ElementMatrixStatic_Force.f90'
 
 INCLUDE 'BD_GA2.f90'
-INCLUDE 'TiSchmPredictorStep.f90'
-INCLUDE 'TiSchmComputeCoefficients.f90'
-INCLUDE 'BeamDyn_BoundaryGA2.f90'
-INCLUDE 'DynamicSolution_GA2.f90'
-INCLUDE 'BldGenerateDynamicElement.f90'
-INCLUDE 'UpdateDynamic.f90'
-INCLUDE 'ElementMatrix_GA2.f90'
-INCLUDE 'BldGaussPointDataMass_GA2.f90'
-INCLUDE 'InertialForce.f90'
-INCLUDE 'ElasticForce_GA2.f90'
-
-INCLUDE 'MotionTensor.f90'
-INCLUDE 'InputGlobalLocal.f90'
-INCLUDE 'ElementMatrix_Force_New.f90'
-INCLUDE 'ComputeReactionForce.f90'
+INCLUDE 'BD_TiSchmPredictorStep.f90'
+INCLUDE 'BD_TiSchmComputeCoefficients.f90'
+INCLUDE 'BD_BoundaryGA2.f90'
+INCLUDE 'BD_DynamicSolutionGA2.f90'
+INCLUDE 'BD_GenerateDynamicElementGA2.f90'
+INCLUDE 'BD_InputGlobalLocal.f90'
+!INCLUDE 'ElementMatrix_Force_New.f90'
 
 INCLUDE 'BD_CalcIC.f90'
-INCLUDE 'BD_CalcAcc.f90'
-INCLUDE 'Solution_Acc.f90'
-INCLUDE 'GenerateDynamicElement_ACC.f90'
-INCLUDE 'ElementMatrix_Acc.f90'
+INCLUDE 'BD_SolutionAcc.f90'
 
    SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
@@ -787,7 +744,7 @@ INCLUDE 'ElementMatrix_Acc.f90'
    !..................................................................................................................................
 
    REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
+   TYPE(BD_InputType),           INTENT(INOUT)  :: u           ! Inputs at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
    TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t
    TYPE(BD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t

@@ -18,7 +18,7 @@
        e1(i) = Coef(i,2) + 2.0D0*Coef(i,3)*temp + 3.0D0*Coef(i,4)*temp*temp
    ENDDO
 !   WRITE(*,*) "e1",e1(:)
-   e1(:) = e1(:)/Norm(e1)
+   e1(:) = e1(:)/BD_Norm(e1)
    Twist_Angle = 0.0D0
    Twist_Angle = Coef(4,1) + Coef(4,2)*temp + Coef(4,3)*temp*temp + Coef(4,4)*temp*temp*temp 
 !   WRITE(*,*) "e1",e1(:)

@@ -62,8 +62,7 @@
    ENDDO
    rot_temp = 0.0D0
    rot0_temp = 0.0D0
-!   CALL CrvCompose_temp(rot_temp,rotu_temp,rrr,0)
-   CALL CrvCompose(rot_temp,rotu_temp,rrr,0)
+   CALL BD_CrvCompose(rot_temp,rotu_temp,rrr,0)
    DO i=1,3
        uuu(i+3) = rot_temp(i)
        rot0_temp(i) = uu0(i+3)
@@ -71,8 +70,8 @@
 
    cc = 0.0D0
    RR0 = 0.0D0
-   CALL CrvCompose_temp(cc,rot_temp,rot0_temp,0)
-   CALL CrvMatrixR(cc,RR0)
+   CALL BD_CrvCompose(cc,rot_temp,rot0_temp,0)
+   CALL BD_CrvMatrixR(cc,RR0)
 
    tempR6 = 0.0D0
    DO i=1,3
@@ -88,9 +87,9 @@
 
    Wrk = 0.0D0
    kapa = 0.0D0
-   CALL CrvMatrixH(rrr,Wrk)
+   CALL BD_CrvMatrixH(rrr,Wrk)
    cc = MATMUL(Wrk,rrp)
-   CALL CrvMatrixR(rotu_temp,Wrk)
+   CALL BD_CrvMatrixR(rotu_temp,Wrk)
    kapa = MATMUL(Wrk,cc)
 
    END SUBROUTINE BD_GaussPointData

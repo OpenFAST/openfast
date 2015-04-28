@@ -7,7 +7,7 @@
 
    Fg = 0.0D0
    Fg(1:3) = m00 * grav(1:3)
-   Fg(4:6) = MATMUL(Tilde(mEta),grav)
+   Fg(4:6) = MATMUL(BD_Tilde(mEta),grav)
    
 
    END SUBROUTINE BD_GravityForce

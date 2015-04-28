@@ -112,7 +112,7 @@
        Stif(:,:) = 0.0D0
        Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
        CALL BD_GaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)
-       CALL BD_ElasticForceGA2(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
+       CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
 
        mmm  = 0.0D0
        mEta = 0.0D0

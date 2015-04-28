@@ -14,11 +14,11 @@
    pi = ACOS(-1.0D0)
    x%q(1:3) = u%RootMotion%TranslationDisp(1:3,1)
 !   x%q(6) = 4.0D0*TAN((3.1415926D0*t*1.0D0/3.0D0+(2.0D0*pi*OtherState%Rescale_Counter))/4.0D0)
-   CALL CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),x%q(4:6))
+   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),x%q(4:6))
 !WRITE(*,*) x%q(4:6)
-   CALL CrvExtractCrv(p%GlbRot(1:3,1:3),temp_cc(1:3))
+   CALL BD_CrvExtractCrv(p%GlbRot(1:3,1:3),temp_cc(1:3))
 !WRITE(*,*) temp_cc(1:3) 
-   CALL CrvCompose(x%q(4:6),x%q(4:6),temp_cc,0)
+   CALL BD_CrvCompose(x%q(4:6),x%q(4:6),temp_cc,0)
 !   x%q(4:6) = 0.0D0
 !WRITE(*,*) 'BC Disp:'
 !WRITE(*,*) x%q(1:6)

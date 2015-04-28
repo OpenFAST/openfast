@@ -28,8 +28,7 @@
            Nu_temp(k) = Nu(temp_id+k+3)
        ENDDO
        Nr_temp = 0.0D0
-!       CALL CrvCompose_temp(Nr_temp,Nu_temp1,Nu_temp,1)
-       CALL CrvCompose(Nr_temp,Nu_temp1,Nu_temp,1)
+       CALL BD_CrvCompose(Nr_temp,Nu_temp1,Nu_temp,1)
        DO k=1,3
            temp_id = (i-1)*3+k
            Nr(temp_id) = Nr_temp(k)

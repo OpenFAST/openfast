@@ -18,8 +18,7 @@
            rotf_temp(j) = uf(temp_id+3+j)
            roti_temp(j) = coef(8) * ainc(temp_id+3+j)
        ENDDO
-!       CALL CrvCompose_temp(rot_temp,roti_temp,rotf_temp,0)
-       CALL CrvCompose_temp(rot_temp,roti_temp,rotf_temp,0)
+       CALL BD_CrvCompose(rot_temp,roti_temp,rotf_temp,0)
        DO j = 1, 3
            uf(temp_id+3+j) = rot_temp(j)
        ENDDO

@@ -1,4 +1,4 @@
-   SUBROUTINE CrvMatrixH(cc,Hh) 
+   SUBROUTINE BD_CrvMatrixH(cc,Hh) 
 
    REAL(ReKi),INTENT(IN)::cc(:)
    REAL(ReKi),INTENT(OUT)::Hh(:,:)
@@ -29,4 +29,4 @@
    Hh(2,3) = cb2 * cf3 - cb1
    Hh(3,3) = cb3 * cf3 + cb0
 
-   END SUBROUTINE CrvMatrixH
+   END SUBROUTINE BD_CrvMatrixH

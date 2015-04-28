@@ -56,10 +56,10 @@
        RHS = 0.0D0
        MassM = 0.0D0
        DampG = 0.0D0
-       CALL BD_GenerateDynamicElement(uuN0,uuNf,vvNf,aaNf,                 &
-                                      Stif0,Mass0,gravity,u,damp_flag,beta,&
-                                      elem_total,node_elem,dof_node,ngp,   &
-                                      StifK,RHS,MassM,DampG)
+       CALL BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
+                                         Stif0,Mass0,gravity,u,damp_flag,beta,&
+                                         elem_total,node_elem,dof_node,ngp,   &
+                                         StifK,RHS,MassM,DampG)
        StifK = MassM + coef(7) * DampG + coef(8) * StifK
        DO j=1,node_total
            temp_id = (j-1)*dof_node

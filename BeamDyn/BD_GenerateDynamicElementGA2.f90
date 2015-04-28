@@ -1,7 +1,7 @@
-   SUBROUTINE BD_GenerateDynamicElement(uuN0,uuNf,vvNf,aaNf,                 &
-                                        Stif0,Mass0,gravity,u,damp_flag,beta,&
-                                        elem_total,node_elem,dof_node,ngp,   &
-                                        StifK,RHS,MassM,DampG)
+   SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
+                                           Stif0,Mass0,gravity,u,damp_flag,beta,&
+                                           elem_total,node_elem,dof_node,ngp,   &
+                                           StifK,RHS,MassM,DampG)
 
    REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),        INTENT(IN   ):: uuNf(:)
@@ -137,4 +137,4 @@
         ENDIF
 
 
-   END SUBROUTINE BD_GenerateDynamicElement
+   END SUBROUTINE BD_GenerateDynamicElementGA2

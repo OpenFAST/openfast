@@ -1,4 +1,4 @@
-      SUBROUTINE diffmtc(np,ns,spts,npts,igp,hhx,hpx)
+      SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx)
 !
 ! calculate Lagrangian interpolant tensor at ns points where basis
 ! functions are assumed to be associated with (np+1) GLL points on
@@ -80,4 +80,4 @@
          hpx(i) = dPhis(i,igp)
       ENDDO
 
-      END SUBROUTINE diffmtc
+      END SUBROUTINE BD_diffmtc

@@ -1,4 +1,4 @@
-!   SUBROUTINE OuterProduct(vec1,vec2,outer)
+!   SUBROUTINE BD_OuterProduct(vec1,vec2,outer)
 
 !   REAL(ReKi),INTENT(IN):: vec1(:),vec2(:)
 !   REAL(ReKi),INTENT(OUT)::outer(SIZE(vec1),SIZE(vec2))
@@ -15,12 +15,12 @@
 !       ENDDO
 !   ENDDO
       
-!   END SUBROUTINE OuterProduct
+!   END SUBROUTINE BD_OuterProduct
 
-   FUNCTION OuterProduct(vec1,vec2)
+   FUNCTION BD_OuterProduct(vec1,vec2)
 
    REAL(ReKi),INTENT(IN):: vec1(:),vec2(:)
-   REAL(ReKi)::OuterProduct(SIZE(vec1),SIZE(vec2))
+   REAL(ReKi)::BD_OuterProduct(SIZE(vec1),SIZE(vec2))
 
    INTEGER(IntKi)::i,j,n1,n2
 
@@ -29,8 +29,8 @@
 
    DO i=1,n1
        DO j=1,n2
-           OuterProduct(i,j) = vec1(i) * vec2(j)
+           BD_OuterProduct(i,j) = vec1(i) * vec2(j)
        ENDDO
    ENDDO
       
-   END FUNCTION OuterProduct
+   END FUNCTION BD_OuterProduct

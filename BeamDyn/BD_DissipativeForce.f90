@@ -35,7 +35,7 @@
    ! Compute strain rates
    !---------------------------
    eed(1:6) = vvp(1:6)
-   eed(1:3) = eed(1:3) + MATMUL(Tilde(E1),ome)
+   eed(1:3) = eed(1:3) + MATMUL(BD_Tilde(E1),ome)
 
    !---------------------------
    ! Compute damping matrix
@@ -56,39 +56,39 @@
    !---------------------------
    ffd(1:6) = MATMUL(betaC,eed)
    Fc(1:6) = Fc(1:6) + ffd(1:6)
-   Fd(4:6) = Fd(4:6) + MATMUL(Tilde(ffd(1:3)),E1)
+   Fd(4:6) = Fd(4:6) + MATMUL(BD_Tilde(ffd(1:3)),E1)
 
    !----------------------------
    ! Compute stiffness matrix Sd
    !----------------------------
    Sd(:,:) = 0.0D0
-   Sd(1:3,1:3) = MATMUL(D11,TRANSPOSE(Tilde(ome)))
-   Sd(1:3,4:6) = MATMUL(D12,TRANSPOSE(Tilde(ome)))
-   Sd(4:6,1:3) = MATMUL(D21,TRANSPOSE(Tilde(ome)))
-   Sd(4:6,4:6) = MATMUL(D22,TRANSPOSE(Tilde(ome)))
+   Sd(1:3,1:3) = MATMUL(D11,TRANSPOSE(BD_Tilde(ome)))
+   Sd(1:3,4:6) = MATMUL(D12,TRANSPOSE(BD_Tilde(ome)))
+   Sd(4:6,1:3) = MATMUL(D21,TRANSPOSE(BD_Tilde(ome)))
+   Sd(4:6,4:6) = MATMUL(D22,TRANSPOSE(BD_Tilde(ome)))
 
    !----------------------------
    ! Compute stiffness matrix Pd
    !----------------------------
    Pd(:,:) = 0.0D0
-   b11(1:3,1:3) = MATMUL(TRANSPOSE(Tilde(E1)),D11)
-   b12(1:3,1:3) = MATMUL(TRANSPOSE(Tilde(E1)),D12)
-   Pd(4:6,1:3) = Tilde(ffd(1:3)) + MATMUL(b11,TRANSPOSE(Tilde(ome)))
-   Pd(4:6,1:3) = MATMUL(b12,TRANSPOSE(Tilde(ome)))
+   b11(1:3,1:3) = MATMUL(TRANSPOSE(BD_Tilde(E1)),D11)
+   b12(1:3,1:3) = MATMUL(TRANSPOSE(BD_Tilde(E1)),D12)
+   Pd(4:6,1:3) = BD_Tilde(ffd(1:3)) + MATMUL(b11,TRANSPOSE(BD_Tilde(ome)))
+   Pd(4:6,1:3) = MATMUL(b12,TRANSPOSE(BD_Tilde(ome)))
 
    !----------------------------
    ! Compute stiffness matrix Od
    !----------------------------
    Od(:,:) = 0.0D0
-   alpha(1:3,1:3) = Tilde(vvp(1:3)) - MATMUL(Tilde(ome),Tilde(E1))
-   Od(1:3,4:6) = MATMUL(D11,alpha) - Tilde(ffd(1:3))
-   Od(4:6,4:6) = MATMUL(D21,alpha) - Tilde(ffd(4:6))
+   alpha(1:3,1:3) = BD_Tilde(vvp(1:3)) - MATMUL(BD_Tilde(ome),BD_Tilde(E1))
+   Od(1:3,4:6) = MATMUL(D11,alpha) - BD_Tilde(ffd(1:3))
+   Od(4:6,4:6) = MATMUL(D21,alpha) - BD_Tilde(ffd(4:6))
 
    !----------------------------
    ! Compute stiffness matrix Qd
    !----------------------------
    Qd(:,:) = 0.0D0
-   Qd(4:6,4:6) = MATMUL(TRANSPOSE(Tilde(E1)),Od(1:3,4:6))
+   Qd(4:6,4:6) = MATMUL(TRANSPOSE(BD_Tilde(E1)),Od(1:3,4:6))
 
    !-----------------------------
    ! Compute gyroscopic matrix Gd
@@ -101,7 +101,7 @@
    ! Compute gyroscopic matrix Xd
    !-----------------------------
    Xd(:,:) = 0.0D0
-   Xd(4:6,4:6) = MATMUL(TRANSPOSE(Tilde(E1)),Gd(1:3,4:6))
+   Xd(4:6,4:6) = MATMUL(TRANSPOSE(BD_Tilde(E1)),Gd(1:3,4:6))
 
    !-----------------------------
    ! Compute gyroscopic matrix Yd

@@ -42,7 +42,7 @@
    Wrk = 0.0D0 
    Wrk(1:3) = fff(1:3)
    Fd = 0.0D0 
-   Fd(4:6) = MATMUL(TRANSPOSE(Tilde(E1)),Wrk)
+   Fd(4:6) = MATMUL(TRANSPOSE(BD_Tilde(E1)),Wrk)
 
    C11 = 0.0D0
    C12 = 0.0D0
@@ -58,15 +58,15 @@
        Wrk(i) = RR0(i,1)
    ENDDO
    Wrk33 = 0.0D0
-   Wrk33 = OuterProduct(Wrk,Wrk) 
+   Wrk33 = BD_OuterProduct(Wrk,Wrk) 
    C12 = C12 + cet*k1s*Wrk33
    C21 = C21 + cet*k1s*Wrk33
    C22 = C22 + cet*e1s*Wrk33
 
    epsi = 0.0D0 
    mu = 0.0D0
-   epsi = MATMUL(C11,Tilde(E1))
-   mu = MATMUL(C21,Tilde(E1))
+   epsi = MATMUL(C11,BD_Tilde(E1))
+   mu = MATMUL(C21,BD_Tilde(E1))
    
    Wrk = 0.0D0
 
@@ -75,20 +75,20 @@
    Oe(4:6,4:6) = mu(1:3,1:3)
    
    Wrk(1:3) = fff(1:3)
-   Oe(1:3,4:6) = Oe(1:3,4:6) - Tilde(Wrk)
+   Oe(1:3,4:6) = Oe(1:3,4:6) - BD_Tilde(Wrk)
    Wrk = 0.0D0
    Wrk(1:3) = fff(4:6)
-   Oe(4:6,4:6) = Oe(4:6,4:6) - Tilde(Wrk)
+   Oe(4:6,4:6) = Oe(4:6,4:6) - BD_Tilde(Wrk)
 
    Pe = 0.0D0
    Wrk = 0.0D0
    Wrk(1:3) = fff(1:3)
-   Pe(4:6,1:3) = Tilde(Wrk) + TRANSPOSE(epsi)
+   Pe(4:6,1:3) = BD_Tilde(Wrk) + TRANSPOSE(epsi)
    Pe(4:6,4:6) = TRANSPOSE(mu)
 
    Qe = 0.0D0
    Wrk33 = 0.0D0
    Wrk33(1:3,1:3) = Oe(1:3,4:6)
-   Qe(4:6,4:6) = MATMUL(TRANSPOSE(Tilde(E1)),Wrk33)
+   Qe(4:6,4:6) = MATMUL(TRANSPOSE(BD_Tilde(E1)),Wrk33)
 
    END SUBROUTINE BD_ElasticForce
