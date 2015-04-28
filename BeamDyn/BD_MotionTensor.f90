@@ -10,11 +10,11 @@
    IF (flag .EQ. 0) THEN
        MotTen(1:3,1:3) = RotTen(1:3,1:3)
        MotTen(4:6,4:6) = RotTen(1:3,1:3)
-       MotTen(1:3,4:6) = MATMUL(Tilde(Pos),RotTen)
+       MotTen(1:3,4:6) = MATMUL(BD_Tilde(Pos),RotTen)
    ELSEIF(flag .EQ. 1) THEN
        MotTen(1:3,1:3) = TRANSPOSE(RotTen(1:3,1:3))
        MotTen(4:6,4:6) = TRANSPOSE(RotTen(1:3,1:3))
-       MotTen(1:3,4:6) = TRANSPOSE(MATMUL(Tilde(Pos),RotTen))
+       MotTen(1:3,4:6) = TRANSPOSE(MATMUL(BD_Tilde(Pos),RotTen))
    ENDIF
 
    END SUBROUTINE BD_MotionTensor 

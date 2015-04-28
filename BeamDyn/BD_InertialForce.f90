@@ -17,37 +17,37 @@ ENDDO
    tempV(:) = vvv(1:3)
    tempA(:) = aaa(1:3)
 
-   beta = MATMUL(Tilde(ome),mEta)
+   beta = MATMUL(BD_Tilde(ome),mEta)
    gama = MATMUL(rho,ome)
    nu = MATMUL(rho,omd)
 
    !Compute Fi
-   Fi(1:3)= m00*tempA+MATMUL(Tilde(omd),mEta)+MATMUL(Tilde(ome),beta)
-   Fi(4:6) = MATMUL(Tilde(mEta),tempA) + nu + MATMUL(Tilde(ome),gama) 
+   Fi(1:3)= m00*tempA+MATMUL(BD_Tilde(omd),mEta)+MATMUL(BD_Tilde(ome),beta)
+   Fi(4:6) = MATMUL(BD_Tilde(mEta),tempA) + nu + MATMUL(BD_Tilde(ome),gama) 
 
    !Mass Matrix
    Mi = 0.0D0
    DO i=1,3
        Mi(i,i) = m00
    ENDDO
-   Mi(1:3,4:6) = TRANSPOSE(Tilde(mEta))
-   Mi(4:6,1:3) = Tilde(mEta)
+   Mi(1:3,4:6) = TRANSPOSE(BD_Tilde(mEta))
+   Mi(4:6,1:3) = BD_Tilde(mEta)
    Mi(4:6,4:6) = rho
 
    !Gyroscopic Matrix
    Gi = 0.0D0
-   epsi = MATMUL(Tilde(ome),rho)
-   mu = MATMUL(Tilde(ome),TRANSPOSE(Tilde(mEta)))
-   Gi(1:3,4:6) = TRANSPOSE(Tilde(beta)) + mu
-   Gi(4:6,4:6) = epsi - Tilde(gama)
+   epsi = MATMUL(BD_Tilde(ome),rho)
+   mu = MATMUL(BD_Tilde(ome),TRANSPOSE(BD_Tilde(mEta)))
+   Gi(1:3,4:6) = TRANSPOSE(BD_Tilde(beta)) + mu
+   Gi(4:6,4:6) = epsi - BD_Tilde(gama)
 
    !Stiffness Matrix
    Ki = 0.0D0
-   Ki(1:3,4:6) = MATMUL(Tilde(omd),TRANSPOSE(Tilde(mEta))) +&
-                &MATMUL(Tilde(ome),mu)
-   Ki(4:6,4:6) = MATMUL(Tilde(tempA),Tilde(mEta)) + &
-                &MATMUL(rho,Tilde(omd)) - Tilde(nu) +&
-                &MATMUL(epsi,Tilde(ome)) - &
-                &MATMUL(Tilde(ome),Tilde(gama))
+   Ki(1:3,4:6) = MATMUL(BD_Tilde(omd),TRANSPOSE(BD_Tilde(mEta))) +&
+                &MATMUL(BD_Tilde(ome),mu)
+   Ki(4:6,4:6) = MATMUL(BD_Tilde(tempA),BD_Tilde(mEta)) + &
+                &MATMUL(rho,BD_Tilde(omd)) - BD_Tilde(nu) +&
+                &MATMUL(epsi,BD_Tilde(ome)) - &
+                &MATMUL(BD_Tilde(ome),BD_Tilde(gama))
 
    END SUBROUTINE BD_InertialForce

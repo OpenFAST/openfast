@@ -35,7 +35,7 @@
    ENDDO
 
    e3 = 0.0D0
-   e3 = CrossProduct(e1,e2)
+   e3 = BD_CrossProduct(e1,e2)
    DO i=1,3
        Rr(i,3) = e3(i)
    ENDDO

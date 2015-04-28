@@ -1,4 +1,4 @@
-   SUBROUTINE ReadPrimaryFile(InputFile,InputFileData,&
+   SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
               OutFileRoot,UnEc,ErrStat,ErrMsg)
    !------------------------------------------------------------------------------------
    ! This routine reads in the primary BeamDyn input file and places the values it reads
@@ -89,4 +89,4 @@
    CALL ReadCom(UnIn,InputFile,'Section Header: Blade Parameter',ErrStat2,ErrMsg2,UnEc)
    CALL ReadVar ( UnIn, InputFile, InputFileData%BldFile, 'BldFile', 'Name of the file containing properties for blade', ErrStat2, ErrMsg2, UnEc )
 
-   END SUBROUTINE ReadPrimaryFile
+   END SUBROUTINE BD_ReadPrimaryFile

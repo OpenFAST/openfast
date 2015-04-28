@@ -26,7 +26,7 @@
 
    hhx = 0.0D0
    hpx = 0.0D0
-   CALL diffmtc(node_elem-1,ngp,gp,GLL_temp,igp,hhx,hpx)
+   CALL BD_diffmtc(node_elem-1,ngp,gp,GLL_temp,igp,hhx,hpx)
 
    Gup0 = 0.0D0
    DO inode=1,node_elem

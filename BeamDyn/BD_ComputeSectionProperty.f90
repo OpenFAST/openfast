@@ -1,4 +1,4 @@
-   SUBROUTINE ComputeSectionProperty(flp,edg,ang,qflp,qedg,qcrs)
+   SUBROUTINE BD_ComputeSectionProperty(flp,edg,ang,qflp,qedg,qcrs)
 
    REAL(ReKi),INTENT(IN   ) ::flp
    REAL(ReKi),INTENT(IN   ) ::edg
@@ -19,4 +19,4 @@
    qflp = 0.5D0*(flp-SQRT((1.0D0-temp*temp)*(flp-edg)*(flp-edg))+edg)
    qcrs = 0.5D0*temp*(edg-flp)
 
-   END SUBROUTINE ComputeSectionProperty
+   END SUBROUTINE BD_ComputeSectionProperty

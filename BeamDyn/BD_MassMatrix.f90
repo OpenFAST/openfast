@@ -15,8 +15,8 @@
    DO i=1,3
        Mi(i,i) = m00
    ENDDO
-   Mi(1:3,4:6) = TRANSPOSE(Tilde(mEta))
-   Mi(4:6,1:3) = Tilde(mEta)
+   Mi(1:3,4:6) = TRANSPOSE(BD_Tilde(mEta))
+   Mi(4:6,1:3) = BD_Tilde(mEta)
    Mi(4:6,4:6) = rho
 
    

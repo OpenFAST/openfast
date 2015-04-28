@@ -40,7 +40,7 @@
    temp6(:) = 0.0D0
    temp6(1:3) = u%RootMotion%TranslationAcc(:,1)
    temp6(4:6) = u%RootMotion%RotationAcc(:,1)
-   CALL MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
+   CALL BD_MotionTensor(p%GlbRot,p%GlbPos,temp66,1)
    temp6(:) = MATMUL(temp66,temp6)
    OtherState%Acc(1:3) = temp6(1:3)
    OtherState%Acc(4:6) = temp6(4:6)

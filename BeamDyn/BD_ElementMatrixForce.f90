@@ -57,6 +57,8 @@
    REAL(ReKi)                   :: Gd(6,6)
    REAL(ReKi)                   :: Xd(6,6)
    REAL(ReKi)                   :: Yd(6,6)
+   REAL(ReKi)                   :: temp_Naaa(dof_node*node_elem)
+   REAL(ReKi)                   :: temp_aaa(dof_node)
    INTEGER(IntKi)               :: igp
    INTEGER(IntKi)               :: i
    INTEGER(IntKi)               :: j
@@ -109,7 +111,7 @@
        mEta(2)      = -EMass0_GL(1,6,igp)
        mEta(3)      =  EMass0_GL(1,5,igp)
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
-       CALL BD_GaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,vvp,mmm,mEta,rho)
+       CALL BD_GaussPointDataMass(hhx,hpx,Nvvv,temp_Naaa,RR0,node_elem,dof_node,vvv,temp_aaa,vvp,mmm,mEta,rho)
        CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
        IF(damp_flag .EQ. 1) THEN
            CALL BD_DissipativeForce(beta,Stif,vvv,vvp,E1,Fc,Fd,Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd)

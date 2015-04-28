@@ -44,8 +44,7 @@
        rotu_temp(i) = uu0(i+3)
    ENDDO
    rot_temp = 0.0D0
-!   CALL CrvCompose_temp(rot_temp,rot0_temp,rotu_temp,0)
-   CALL CrvCompose(rot_temp,rot0_temp,rotu_temp,0)
+   CALL BD_CrvCompose(rot_temp,rot0_temp,rotu_temp,0)
    DO i=1,3
        uu0(i+3) = rot_temp(i)
    ENDDO

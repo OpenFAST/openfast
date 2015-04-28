@@ -18,7 +18,7 @@
        u%RootMotion%Orientation(:,:,1) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(RotTen))
        u%RootMotion%Orientation(:,:,1) = MATMUL(u%RootMotion%Orientation(:,:,1),RotTen)
        u%RootMotion%Orientation(:,:,1) = MATMUL(TRANSPOSE(RotTen),u%RootMotion%Orientation(:,:,1))
-       CALL MotionTensor(RotTen,Pos,temp66,1)
+       CALL BD_MotionTensor(RotTen,Pos,temp66,1)
        temp6(:) = 0.0D0
        temp6(1:3) = u%RootMotion%TranslationVel(1:3,1)
        temp6(4:6) = u%RootMotion%RotationVel(1:3,1)
@@ -32,7 +32,7 @@
        u%RootMotion%TranslationAcc(1:3,1) = temp6(1:3)
        u%RootMotion%RotationAcc(1:3,1) = temp6(4:6)
        ! Transform Applied Forces from Global to Local (Blade) frame
-       CALL MotionTensor(RotTen,Pos,temp66,0)
+       CALL BD_MotionTensor(RotTen,Pos,temp66,0)
        DO i=1,p%node_total
            temp6(:) = 0.0D0
            temp6(1:3) = u%PointLoad%Force(1:3,i)

@@ -1,4 +1,4 @@
-   SUBROUTINE ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
+   SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
 
    ! Passed variables:
    TYPE(BladeInputData), INTENT(  OUT):: BladeInputFileData
@@ -64,4 +64,4 @@
        ENDDO
    ENDDO
 
-   END SUBROUTINE ReadBladeFile
+   END SUBROUTINE BD_ReadBladeFile
