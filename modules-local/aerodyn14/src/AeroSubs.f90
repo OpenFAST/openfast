@@ -534,16 +534,18 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
          END IF
 
       ELSE IF ( ErrStat < 0 ) THEN
-         CALL ProgWarn(' Error reading from line '//TRIM(Int2Lstr(IElm))//' of the AeroDyn element table.' )
 
          CALL ProgWarn( ' Premature end of file while reading line '//TRIM(Int2Lstr(IElm))// &
                      ' of the AeroDyn element table in file "'//TRIM(InitInp%ADFileName)//'."' )
          close(unin)
+         ErrStat = ErrID_Fatal
+         ErrMess = 'Error reading from line '//TRIM(Int2Lstr(IElm))//' of the AeroDyn element table.' )
          RETURN
       ELSE
-         CALL ProgWarn(' Error reading from line '//TRIM(Int2Lstr(IElm))// &
-                       ' of the AeroDyn element table in file "'//TRIM(InitInp%ADFileName)//'."' )
          close(unin)
+         ErrStat = ErrID_Fatal
+         ErrMess = 'Error reading from line '//TRIM(Int2Lstr(IElm))// &
+                       ' of the AeroDyn element table in file "'//TRIM(InitInp%ADFileName)//'."'
          RETURN
       END IF
 
