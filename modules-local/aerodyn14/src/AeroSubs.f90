@@ -539,7 +539,7 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
                      ' of the AeroDyn element table in file "'//TRIM(InitInp%ADFileName)//'."' )
          close(unin)
          ErrStat = ErrID_Fatal
-         ErrMess = 'Error reading from line '//TRIM(Int2Lstr(IElm))//' of the AeroDyn element table.' )
+         ErrMess = 'Error reading from line '//TRIM(Int2Lstr(IElm))//' of the AeroDyn element table.'
          RETURN
       ELSE
          close(unin)
