@@ -449,7 +449,8 @@ PROGRAM InflowWind_Driver
    InflowWind_InitInp%InputFileName    =  Settings%IfWIptFileName       ! For now, IfW cannot work without an input file.
    !InflowWind_InitInp%DT               =  Settings%DT
    InflowWind_InitInp%UseInputFile     =  .TRUE.
-
+   InflowWind_InitInp%RootName = ""
+   !CALL GetRoot( InflowWind_InitInp%InputFileName, InflowWind_InitInp%RootName )
 
    IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr('Calling InflowWind_Init...')
 
