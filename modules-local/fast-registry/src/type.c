@@ -155,7 +155,6 @@ set_state_dims ( char * dims , node_t * node )
   char *c ;
   char dspec[NAMELEN] ;
   int inbrace ;
-  int i, deferred ;
 
   if ( dims == NULL ) dims = "-" ;
   modifiers = 0 ;

@@ -983,6 +983,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
 
 #define MAXRECURSE 9
 // HERE
+#if 0
 void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, const int order, node_t *r, char * deref, int recurselevel) {
    node_t *q, *r1 ;
    int j ;
@@ -1025,21 +1026,17 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
          }
 
          if        ( order == 0 ) {
-            fprintf(fp, "  CALL MeshCopy(%s(1)%s%%%s%s, %s_out%s%%%s%s, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n", uy, deref, r->name, dex
+  fprintf(fp, "  CALL MeshCopy(%s(1)%s%%%s%s, %s_out%s%%%s%s, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n", uy, deref, r->name, dex
                , uy, deref, r->name, dex);
-  fprintf(fp,"         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
-  fprintf(fp,"         IF (ErrStat>=AbortErrLev) RETURN\n");
          } else if ( order == 1 ) {
   fprintf(fp,"  CALL MeshExtrapInterp1(%s(1)%s%%%s%s, %s(2)%s%%%s%s, tin, %s_out%s%%%s%s, tin_out, ErrStat2, ErrMsg2 )\n"
      , uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex);
-  fprintf(fp,"         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
-  fprintf(fp,"         IF (ErrStat>=AbortErrLev) RETURN\n");
          } else if ( order == 2 ) {
   fprintf(fp,"  CALL MeshExtrapInterp2(%s(1)%s%%%s%s, %s(2)%s%%%s%s, %s(3)%s%%%s%s, tin, %s_out%s%%%s%s, tin_out, ErrStat2, ErrMsg2 )\n"
      , uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex);
-  fprintf(fp,"         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
-  fprintf(fp,"         IF (ErrStat>=AbortErrLev) RETURN\n");
          }
+   fprintf(fp, "         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
+   fprintf(fp, "         IF (ErrStat>=AbortErrLev) RETURN\n");
 
          for ( j = r->ndims ; j > 0 ; j-- ) {
   fprintf(fp,"  ENDDO\n") ;
@@ -1127,6 +1124,160 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
 
    }
 }
+#endif
+void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, const int order, node_t *r, char * deref, int recurselevel) {
+   node_t *q, *r1;
+   int j;
+   int mesh = 0;
+   char derefrecurse[NAMELEN], dex[NAMELEN], tmp[NAMELEN];
+   if (recurselevel > MAXRECURSE) {
+      fprintf(stderr, "REGISTRY ERROR: too many levels of array subtypes\n");
+      exit(9);
+   }
+   if (r->type != NULL) {
+
+      // check if this is an allocatable array:
+      if (r->ndims > 0 && has_deferred_dim(r, 0)) {
+         fprintf(fp, "IF (%s(%s_out%s%%%s) .AND. %s(%s1%s%%%s)) THEN\n", assoc_or_allocated(r), uy, deref, r->name,
+            assoc_or_allocated(r), uy, deref, r->name);
+      }
+      if (r->type->type_type == DERIVED) {
+
+
+
+         if ((q = get_entry(make_lower_temp(r->type->name), ModName->module_ddt_list)) != NULL) {
+            for (r1 = q->fields; r1; r1 = r1->next)
+            {
+               sprintf(derefrecurse, "%s%%%s", deref, r->name);
+               for (j = r->ndims; j > 0; j--) {
+
+                  fprintf(fp, "  DO i%d%d = LBOUND(%s_out%s,%d),UBOUND(%s_out%s,%d)\n", recurselevel, j, uy, derefrecurse, j, uy, derefrecurse, j);
+                  sprintf(derefrecurse, "%s%%%s(i%d%d)", deref, r->name, recurselevel, j);
+               }
+               gen_extint_order(fp, ModName, typnm, uy, order, r1, derefrecurse, recurselevel + 1);
+               for (j = r->ndims; j > 0; j--) {
+                  fprintf(fp, "  ENDDO\n");
+               }
+            }
+         }
+
+         else { 
+            
+            strcpy(dex, "");
+            for (j = r->ndims; j > 0; j--) {
+               fprintf(fp, "  DO i%d%d = LBOUND(%s_out%s%%%s,%d),UBOUND(%s_out%s%%%s,%d)\n", 0, 1, uy, deref, r->name, j, uy, deref, r->name, j);
+               if (j == r->ndims) strcat(dex, "(");
+               sprintf(tmp, "i%d%d", 0, j);
+               if (j == 1) strcat(tmp, ")"); else strcat(tmp, ",");
+               strcat(dex, tmp);
+            }
+
+            if (!strcmp(r->type->mapsto, "MeshType")) {
+               if (order == 0) {
+                  fprintf(fp, "      CALL MeshCopy(%s1%s%%%s%s, %s_out%s%%%s%s, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n", uy, deref, r->name, dex
+                     , uy, deref, r->name, dex);
+               }
+               else if (order == 1) {
+                  fprintf(fp, "      CALL MeshExtrapInterp1(%s1%s%%%s%s, %s2%s%%%s%s, tin, %s_out%s%%%s%s, tin_out, ErrStat2, ErrMsg2 )\n"
+                     , uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex);
+               }
+               else if (order == 2) {
+                  fprintf(fp, "      CALL MeshExtrapInterp2(%s1%s%%%s%s, %s2%s%%%s%s, %s3%s%%%s%s, tin, %s_out%s%%%s%s, tin_out, ErrStat2, ErrMsg2 )\n"
+                     , uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex);
+               }
+            }
+            else {
+               char nonick2[NAMELEN];
+               remove_nickname(r->type->module->nickname, r->type->name, nonick2);
+
+               if (order == 0) {
+                  fprintf(fp, "      CALL %s_Copy%s(%s1%s%%%s%s, %s_out%s%%%s%s, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n", r->type->module->nickname, fast_interface_type_shortname(nonick2)
+                     , uy, deref, r->name, dex, uy, deref, r->name, dex);
+               }
+               else if (order == 1) {
+                  fprintf(fp, "      CALL %s_%s_ExtrapInterp1( %s1%s%%%s%s, %s2%s%%%s%s, tin, %s_out%s%%%s%s, tin_out, ErrStat2, ErrMsg2 )\n",
+                     r->type->module->nickname, fast_interface_type_shortname(nonick2)
+                     , uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex);
+               }
+               else if (order == 2) {
+                  fprintf(fp, "      CALL %s_%s_ExtrapInterp2( %s1%s%%%s%s, %s2%s%%%s%s, %s3%s%%%s%s, tin, %s_out%s%%%s%s, tin_out, ErrStat2, ErrMsg2 )\n",
+                     r->type->module->nickname, fast_interface_type_shortname(nonick2)
+                     , uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex, uy, deref, r->name, dex);
+               }
+            }
+
+            fprintf(fp, "        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
+          //fprintf(fp, "        IF (ErrStat>=AbortErrLev) RETURN\n");
+            for (j = r->ndims; j >= 1; j--) {
+               fprintf(fp, "   ENDDO\n");
+            }
+
+         }
+      }
+      else if (!strcmp(r->type->mapsto, "REAL(ReKi)") ||
+         !strcmp(r->type->mapsto, "REAL(SiKi)") ||
+         !strcmp(r->type->mapsto, "REAL(DbKi)")) {
+         if (r->ndims == 0) {
+         }
+         else if (r->ndims == 1 && order > 0) {
+            fprintf(fp, "  ALLOCATE(b1(SIZE(%s_out%s%%%s,1)))\n", uy, deref, r->name);
+            fprintf(fp, "  ALLOCATE(c1(SIZE(%s_out%s%%%s,1)))\n", uy, deref, r->name);
+         }
+         else if (r->ndims == 2 && order > 0) {
+            fprintf(fp, "  ALLOCATE(b2(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2) ))\n", uy, deref, r->name, uy, deref, r->name);
+            fprintf(fp, "  ALLOCATE(c2(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2) ))\n", uy, deref, r->name, uy, deref, r->name);
+         }
+         else if (r->ndims == 3 && order > 0) {
+            fprintf(fp, "  ALLOCATE(b3(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2), &\n", uy, deref, r->name, uy, deref, r->name);
+            fprintf(fp, "              SIZE(%s_out%s%%%s,3)                     ))\n", uy, deref, r->name);
+            fprintf(fp, "  ALLOCATE(c3(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2), &\n", uy, deref, r->name, uy, deref, r->name);
+            fprintf(fp, "              SIZE(%s_out%s%%%s,3)                     ))\n", uy, deref, r->name);
+         }
+         else if (r->ndims == 4 && order > 0) {
+            fprintf(fp, "  ALLOCATE(b4(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2), &\n", uy, deref, r->name, uy, deref, r->name);
+            fprintf(fp, "              SIZE(%s_out%s%%%s,3),SIZE(%s_out%s%%%s,4) ))\n", uy, deref, r->name, uy, deref, r->name);
+            fprintf(fp, "  ALLOCATE(c4(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2), &\n", uy, deref, r->name, uy, deref, r->name);
+            fprintf(fp, "              SIZE(%s_out%s%%%s,3),SIZE(%s_out%s%%%s,4) ))\n", uy, deref, r->name, uy, deref, r->name);
+         }
+         else if (r->ndims == 5 && order > 0) {
+            fprintf(fp, "  ALLOCATE(b5(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2), &\n", uy, deref, r->name, uy, deref, r->name);
+            fprintf(fp, "              SIZE(%s_out%s%%%s,3),SIZE(%s_out%s%%%s,4), &\n", uy, deref, r->name, uy, deref, r->name);
+            fprintf(fp, "              SIZE(%s_out%s%%%s,5)                         ))\n", uy, deref, r->name);
+            fprintf(fp, "  ALLOCATE(c5(SIZE(%s_out%s%%%s,1),SIZE(%s_out%s%%%s,2), &\n", uy, deref, r->name, uy, deref, r->name);
+            fprintf(fp, "              SIZE(%s_out%s%%%s,3),SIZE(%s_out%s%%%s,4), &\n", uy, deref, r->name, uy, deref, r->name);
+            fprintf(fp, "              SIZE(%s_out%s%%%s,5)                     ))\n", uy, deref, r->name);
+         }
+         else                    {
+            if (order > 0) fprintf(stderr, "Registry WARNING: too many dimensions for %s%%%s\n", deref, r->name);
+         }
+
+         if (order == 0) {
+            fprintf(fp, "  %s_out%s%%%s = %s1%s%%%s\n", uy, deref, r->name, uy, deref, r->name);
+         }
+         else if (order == 1) {
+            fprintf(fp, "  b%d = -(%s1%s%%%s - %s2%s%%%s)/t(2)\n", r->ndims, uy, deref, r->name, uy, deref, r->name);
+            fprintf(fp, "  %s_out%s%%%s = %s1%s%%%s + b%d * t_out\n", uy, deref, r->name, uy, deref, r->name, r->ndims);
+         }
+         else if (order == 2) {
+            fprintf(fp, "  b%d = (t(3)**2*(%s1%s%%%s - %s2%s%%%s) + t(2)**2*(-%s1%s%%%s + %s3%s%%%s))/(t(2)*t(3)*(t(2) - t(3)))\n",
+               r->ndims, uy, deref, r->name, uy, deref, r->name, uy, deref, r->name, uy, deref, r->name);
+            fprintf(fp, "  c%d = ( (t(2)-t(3))*%s1%s%%%s + t(3)*%s2%s%%%s - t(2)*%s3%s%%%s ) / (t(2)*t(3)*(t(2) - t(3)))\n",
+               r->ndims, uy, deref, r->name, uy, deref, r->name, uy, deref, r->name);
+            fprintf(fp, "  %s_out%s%%%s = %s1%s%%%s + b%d * t_out + c%d * t_out**2\n"
+               , uy, deref, r->name, uy, deref, r->name, r->ndims, r->ndims);
+         }
+         if (r->ndims >= 1 && order > 0) {
+            fprintf(fp, "  DEALLOCATE(b%d)\n", r->ndims);
+            fprintf(fp, "  DEALLOCATE(c%d)\n", r->ndims);
+         }
+      }
+      // check if this is an allocatable array:
+      if (r->ndims > 0 && has_deferred_dim(r, 0)) {
+         fprintf(fp, "END IF ! check if allocated\n");
+      }
+
+   }
+}
 
 void calc_extint_order(FILE *fp, const node_t *ModName, node_t *r, int recurselevel, int *max_ndims, int *max_nrecurs, int *max_alloc_ndims) {
    node_t *q, *r1 ;
@@ -1174,7 +1325,7 @@ void calc_extint_order(FILE *fp, const node_t *ModName, node_t *r, int recursele
 
 }
 
-
+#if 0
 void
 gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnmlong )
 {
@@ -1232,7 +1383,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
      if (q->usefrom == 0) {
         ddtname = q->name;
         remove_nickname(ModName->nickname, ddtname, nonick);
-        if (!strcmp(nonick, typnmlong)) {
+        if (!strcmp(nonick, make_lower_temp(typnmlong))) {
            for (r = q->fields; r; r = r->next)
            {
               // recursive
@@ -1301,7 +1452,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
     if ( q->usefrom == 0 ) {
       ddtname = q->name ;
       remove_nickname(ModName->nickname,ddtname,nonick) ;
-      if ( !strcmp( nonick, typnmlong )) {
+      if ( !strcmp( nonick, make_lower_temp(typnmlong) )) {
         for ( r = q->fields ; r ; r = r->next )
         {
           // recursive
@@ -1323,7 +1474,7 @@ fprintf(fp,"  END IF\n") ;
     if ( q->usefrom == 0 ) {
       ddtname = q->name ;
       remove_nickname(ModName->nickname,ddtname,nonick) ;
-      if ( !strcmp( nonick, typnmlong )) {
+      if ( !strcmp( nonick, make_lower_temp(typnmlong) )) {
         for ( r = q->fields ; r ; r = r->next )
         {
           // recursive
@@ -1354,7 +1505,7 @@ fprintf(fp,"  END IF\n") ;
     if ( q->usefrom == 0 ) {
       ddtname = q->name ;
       remove_nickname(ModName->nickname,ddtname,nonick) ;
-      if ( !strcmp( nonick, typnmlong )) {
+      if ( !strcmp( nonick, make_lower_temp(typnmlong) )) {
         for ( r = q->fields ; r ; r = r->next )
         {
           // recursive
@@ -1373,6 +1524,329 @@ fprintf(fp,"  END IF\n") ;
   fprintf(fp," END SUBROUTINE %s_%s_ExtrapInterp\n",ModName->nickname,typnm) ;
   fprintf(fp,"\n") ;
 }
+#endif
+
+void
+gen_ExtrapInterp1(FILE *fp, const node_t * ModName, const char * typnm, const char * typnmlong, const char * uy, const int max_ndims, const int max_nrecurs, const int max_alloc_ndims)
+{
+   char nonick[NAMELEN];
+   char *ddtname;
+   node_t *q, *r;
+   int i, j;
+
+   fprintf(fp, "\n");
+   fprintf(fp, " SUBROUTINE %s_%s_ExtrapInterp1(%s1, %s2, tin, %s_out, tin_out, ErrStat, ErrMsg )\n", ModName->nickname, typnm, uy, uy, uy);
+   fprintf(fp, "!\n");
+   fprintf(fp, "! This subroutine calculates a extrapolated (or interpolated) %s %s_out at time t_out, from previous/future time\n", typnm, uy);
+   fprintf(fp, "! values of %s (which has values associated with times in t).  Order of the interpolation is 1.\n", uy);
+   fprintf(fp, "!\n");
+   fprintf(fp, "!  f(t) = a + b * t, or\n");
+   fprintf(fp, "!\n");
+   fprintf(fp, "!  where a and b are determined as the solution to\n");
+   fprintf(fp, "!  f(t1) = %s1, f(t2) = %s2\n", uy, uy, uy);
+   fprintf(fp, "!\n");
+   fprintf(fp, "!..................................................................................................................................\n");
+   fprintf(fp, "\n");
+
+
+   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s1    ! %s at t1 > t2\n", ModName->nickname, typnmlong, uy, typnm);
+   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s2    ! %s at t2 \n", ModName->nickname, typnmlong, uy, typnm);
+   fprintf(fp, " REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the %ss\n", typnm);
+   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s_out ! %s at tin_out\n", ModName->nickname, typnmlong, uy, typnm);
+   fprintf(fp, " REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to\n");
+   fprintf(fp, " INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation\n");
+   fprintf(fp, " CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None\n");
+   fprintf(fp, "   ! local variables\n");
+   fprintf(fp, " REAL(DbKi)                                 :: t(2)     ! Times associated with the %ss\n", typnm);
+   fprintf(fp, " REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd\n");
+   fprintf(fp, " CHARACTER(*),                    PARAMETER :: RoutineName = '%s_%s_ExtrapInterp1'\n", ModName->nickname, typnm);
+
+
+   if (max_alloc_ndims >= 0){
+      fprintf(fp, " REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation\n");
+      fprintf(fp, " REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation\n");
+      if (max_alloc_ndims >= 1){
+         fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation\n");
+         fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation\n");
+         if (max_alloc_ndims >= 2){
+            fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: b2       ! temporary for extrapolation/interpolation\n");
+            fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: c2       ! temporary for extrapolation/interpolation\n");
+            if (max_alloc_ndims >= 3){
+               fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: b3       ! temporary for extrapolation/interpolation\n");
+               fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: c3       ! temporary for extrapolation/interpolation\n");
+               if (max_alloc_ndims >= 4){
+                  fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: b4       ! temporary for extrapolation/interpolation\n");
+                  fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: c4       ! temporary for extrapolation/interpolation\n");
+                  if (max_alloc_ndims >= 5){
+                     fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: b5       ! temporary for extrapolation/interpolation\n");
+                     fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: c5       ! temporary for extrapolation/interpolation\n");
+                  } // 5
+               } // 4
+            } // 3
+         } // 2
+      } // 1
+   } // 0
+   fprintf(fp, " INTEGER(IntKi)                             :: ErrStat2 ! local errors\n");
+   fprintf(fp, " CHARACTER(1024)                            :: ErrMsg2  ! local errors\n");
+   for (j = 1; j <= max_ndims; j++) {
+      for (i = 0; i <= max_nrecurs; i++) {
+         fprintf(fp, " INTEGER                                    :: i%d%d    ! dim%d level %d counter variable for arrays of ddts\n", i, j, j, i);
+      }
+   }
+
+   fprintf(fp, "    ! Initialize ErrStat\n");
+   fprintf(fp, " ErrStat = ErrID_None\n");
+   fprintf(fp, " ErrMsg  = \"\"\n");
+   fprintf(fp, "    ! we'll subtract a constant from the times to resolve some \n");
+   fprintf(fp, "    ! numerical issues when t gets large (and to simplify the equations)\n");
+   fprintf(fp, " t = tin - tin(1)\n");
+   fprintf(fp, " t_out = tin_out - tin(1)\n");
+   fprintf(fp, "\n");
+
+   fprintf(fp, "   IF ( EqualRealNos( t(1), t(2) ) ) THEN\n");
+   fprintf(fp, "     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)\n");
+   fprintf(fp, "     RETURN\n");
+   fprintf(fp, "   END IF\n");
+
+
+   for (q = ModName->module_ddt_list; q; q = q->next)
+   {
+      if (q->usefrom == 0) {
+         ddtname = q->name;
+         remove_nickname(ModName->nickname, ddtname, nonick);
+         if (!strcmp(nonick, make_lower_temp(typnmlong))) {
+            for (r = q->fields; r; r = r->next)
+            {
+               // recursive
+               gen_extint_order(fp, ModName, typnm, uy, 1, r, "", 0);
+            }
+         }
+      }
+   }
+
+   fprintf(fp, " END SUBROUTINE %s_%s_ExtrapInterp1\n", ModName->nickname, typnm);
+   fprintf(fp, "\n");
+}
+
+void
+gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong, char * uy, const int max_ndims, const int max_nrecurs, const int max_alloc_ndims)
+{
+   char nonick[NAMELEN];
+   char *ddtname;
+   node_t *q, *r;
+   int i, j;
+
+
+   fprintf(fp, "\n");
+   fprintf(fp, " SUBROUTINE %s_%s_ExtrapInterp2(%s1, %s2, %s3, tin, %s_out, tin_out, ErrStat, ErrMsg )\n", ModName->nickname, typnm, uy, uy, uy, uy);
+   fprintf(fp, "!\n");
+   fprintf(fp, "! This subroutine calculates a extrapolated (or interpolated) %s %s_out at time t_out, from previous/future time\n", typnm, uy);
+   fprintf(fp, "! values of %s (which has values associated with times in t).  Order of the interpolation is 2.\n", uy);
+   fprintf(fp, "!\n");
+   fprintf(fp, "!  expressions below based on either\n");
+   fprintf(fp, "!\n");
+   fprintf(fp, "!  f(t) = a + b * t + c * t**2\n");
+   fprintf(fp, "!\n");
+   fprintf(fp, "!  where a, b and c are determined as the solution to\n");
+   fprintf(fp, "!  f(t1) = %s1, f(t2) = %s2, f(t3) = %s3\n", uy, uy, uy);
+   fprintf(fp, "!\n");
+   fprintf(fp, "!..................................................................................................................................\n");
+   fprintf(fp, "\n");
+
+
+   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s1      ! %s at t1 > t2 > t3\n", ModName->nickname, typnmlong, uy, typnm);
+   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s2      ! %s at t2 > t3\n", ModName->nickname, typnmlong, uy, typnm);
+   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s3      ! %s at t3\n", ModName->nickname, typnmlong, uy, typnm);
+   fprintf(fp, " REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the %ss\n", typnm);
+   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s_out     ! %s at tin_out\n", ModName->nickname, typnmlong, uy, typnm);
+   fprintf(fp, " REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to\n");
+   fprintf(fp, " INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation\n");
+   fprintf(fp, " CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None\n");
+   fprintf(fp, "   ! local variables\n");
+   fprintf(fp, " REAL(DbKi)                                 :: t(3)      ! Times associated with the %ss\n", typnm);
+   fprintf(fp, " REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd\n");
+   fprintf(fp, " INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)\n");
+
+
+   if (max_alloc_ndims >= 0){
+      fprintf(fp, " REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation\n");
+      fprintf(fp, " REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation\n");
+      if (max_alloc_ndims >= 1){
+         fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation\n");
+         fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation\n");
+         if (max_alloc_ndims >= 2){
+            fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: b2       ! temporary for extrapolation/interpolation\n");
+            fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:)      :: c2       ! temporary for extrapolation/interpolation\n");
+            if (max_alloc_ndims >= 3){
+               fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: b3       ! temporary for extrapolation/interpolation\n");
+               fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:)    :: c3       ! temporary for extrapolation/interpolation\n");
+               if (max_alloc_ndims >= 4){
+                  fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: b4       ! temporary for extrapolation/interpolation\n");
+                  fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:)  :: c4       ! temporary for extrapolation/interpolation\n");
+                  if (max_alloc_ndims >= 5){
+                     fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: b5       ! temporary for extrapolation/interpolation\n");
+                     fprintf(fp, " REAL(DbKi),ALLOCATABLE,DIMENSION(:,:,:,:,:):: c5       ! temporary for extrapolation/interpolation\n");
+                  } // 5
+               } // 4
+            } // 3
+         } // 2
+      } // 1
+   } // 0
+   fprintf(fp, " INTEGER(IntKi)                             :: ErrStat2 ! local errors\n");
+   fprintf(fp, " CHARACTER(1024)                            :: ErrMsg2  ! local errors\n");
+   fprintf(fp, " CHARACTER(*),            PARAMETER         :: RoutineName = '%s_%s_ExtrapInterp2'\n", ModName->nickname, typnm);
+   for (j = 1; j <= max_ndims; j++) {
+      for (i = 0; i <= max_nrecurs; i++) {
+         fprintf(fp, " INTEGER                                    :: i%d%d    ! dim%d level %d counter variable for arrays of ddts\n", i, j, j, i);
+      }
+   }
+   fprintf(fp, "    ! Initialize ErrStat\n");
+   fprintf(fp, " ErrStat = ErrID_None\n");
+   fprintf(fp, " ErrMsg  = \"\"\n");
+   fprintf(fp, "    ! we'll subtract a constant from the times to resolve some \n");
+   fprintf(fp, "    ! numerical issues when t gets large (and to simplify the equations)\n");
+   fprintf(fp, " t = tin - tin(1)\n");
+   fprintf(fp, " t_out = tin_out - tin(1)\n");
+   fprintf(fp, "\n");
+
+
+   fprintf(fp, "   IF ( EqualRealNos( t(1), t(2) ) ) THEN\n");
+   fprintf(fp, "     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)\n");
+   fprintf(fp, "     RETURN\n");
+   fprintf(fp, "   ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN\n");
+   fprintf(fp, "     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)\n");
+   fprintf(fp, "     RETURN\n");
+   fprintf(fp, "   ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN\n");
+   fprintf(fp, "     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)\n");
+   fprintf(fp, "     RETURN\n");
+   fprintf(fp, "   END IF\n");
+
+   for (q = ModName->module_ddt_list; q; q = q->next)
+   {
+      if (q->usefrom == 0) {
+         ddtname = q->name;
+         remove_nickname(ModName->nickname, ddtname, nonick);
+         if (!strcmp(nonick, make_lower_temp(typnmlong))) {
+            for (r = q->fields; r; r = r->next)
+            {
+               // recursive
+               gen_extint_order(fp, ModName, typnm, uy, 2, r, "", 0);
+            }
+         }
+      }
+   }
+
+
+   fprintf(fp, " END SUBROUTINE %s_%s_ExtrapInterp2\n", ModName->nickname, typnm);
+   fprintf(fp, "\n");
+}
+
+
+void
+gen_ExtrapInterp(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong)
+{
+   char nonick[NAMELEN];
+   char *ddtname; char uy[2];
+   node_t *q, *r;
+   int i, j, max_ndims, max_nrecurs, max_alloc_ndims;
+
+   if (!strcmp(make_lower_temp(typnm), "output")){
+      strcpy(uy, "y");
+   }
+   else{
+      strcpy(uy, "u");
+   }
+
+   fprintf(fp, "\n");
+   fprintf(fp, " SUBROUTINE %s_%s_ExtrapInterp(%s, t, %s_out, t_out, ErrStat, ErrMsg )\n", ModName->nickname, typnm, uy, uy);
+   fprintf(fp, "!\n");
+   fprintf(fp, "! This subroutine calculates a extrapolated (or interpolated) %s %s_out at time t_out, from previous/future time\n", typnm, uy);
+   fprintf(fp, "! values of %s (which has values associated with times in t).  Order of the interpolation is given by the size of %s\n", uy, uy);
+   fprintf(fp, "!\n");
+   fprintf(fp, "!  expressions below based on either\n");
+   fprintf(fp, "!\n");
+   fprintf(fp, "!  f(t) = a\n");
+   fprintf(fp, "!  f(t) = a + b * t, or\n");
+   fprintf(fp, "!  f(t) = a + b * t + c * t**2\n");
+   fprintf(fp, "!\n");
+   fprintf(fp, "!  where a, b and c are determined as the solution to\n");
+   fprintf(fp, "!  f(t1) = %s1, f(t2) = %s2, f(t3) = %s3  (as appropriate)\n", uy, uy, uy);
+   fprintf(fp, "!\n");
+   fprintf(fp, "!..................................................................................................................................\n");
+   fprintf(fp, "\n");
+
+
+   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s(:) ! %s at t1 > t2 > t3\n", ModName->nickname, typnmlong, uy, typnm);
+   fprintf(fp, " REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the %ss\n", typnm);
+   //jm Modified from INTENT(  OUT) to INTENT(INOUT) to prevent ALLOCATABLE array arguments in the DDT
+   //jm from being maliciously deallocated through the call.See Sec. 5.1.2.7 of bonehead Fortran 2003 standard
+   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s_out ! %s at tin_out\n", ModName->nickname, typnmlong, uy, typnm);
+   fprintf(fp, " REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to\n");
+   fprintf(fp, " INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation\n");
+   fprintf(fp, " CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None\n");
+   fprintf(fp, "   ! local variables\n");
+   fprintf(fp, " INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)\n");
+   fprintf(fp, " INTEGER(IntKi)                             :: ErrStat2        ! local errors\n");
+   fprintf(fp, " CHARACTER(1024)                            :: ErrMsg2         ! local errors\n");
+   fprintf(fp, " CHARACTER(*),    PARAMETER                 :: RoutineName = '%s_%s_ExtrapInterp'\n", ModName->nickname, typnm);
+   fprintf(fp, "    ! Initialize ErrStat\n");
+   fprintf(fp, " ErrStat = ErrID_None\n");
+   fprintf(fp, " ErrMsg  = \"\"\n");
+   fprintf(fp, " if ( size(t) .ne. size(%s)) then\n", uy);
+   fprintf(fp, "    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(%s)',ErrStat,ErrMsg,RoutineName)\n",uy);
+   fprintf(fp, "    RETURN\n");
+   fprintf(fp, " endif\n");
+
+   fprintf(fp, " order = SIZE(%s) - 1\n", uy);
+
+   fprintf(fp, " IF ( order .eq. 0 ) THEN\n");
+   fprintf(fp, "   CALL %s_Copy%s(%s(1), %s_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )\n", ModName->nickname, typnm, uy, uy);
+   fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
+   fprintf(fp, " ELSE IF ( order .eq. 1 ) THEN\n");
+   fprintf(fp, "   CALL %s_%s_ExtrapInterp1(%s(1), %s(2), t, %s_out, t_out, ErrStat2, ErrMsg2 )\n", ModName->nickname, typnm, uy, uy, uy);
+   fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
+   fprintf(fp, " ELSE IF ( order .eq. 2 ) THEN\n");
+   fprintf(fp, "   CALL %s_%s_ExtrapInterp2(%s(1), %s(2), %s(3), t, %s_out, t_out, ErrStat2, ErrMsg2 )\n", ModName->nickname, typnm, uy, uy, uy, uy);
+   fprintf(fp, "     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)\n");
+   fprintf(fp, " ELSE \n");
+   fprintf(fp, "   CALL SetErrStat(ErrID_Fatal,'size(%s) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)\n", uy);
+   fprintf(fp, "   RETURN\n");
+   fprintf(fp, " ENDIF \n");
+
+   fprintf(fp, " END SUBROUTINE %s_%s_ExtrapInterp\n", ModName->nickname, typnm);
+   fprintf(fp, "\n");
+
+
+   max_ndims = 0; // ModName->module_ddt_list->max_ndims; //bjj: this is max for module, not for typnmlong
+   max_nrecurs = 0; // MAXRECURSE;
+   max_alloc_ndims = 0;
+
+   for (q = ModName->module_ddt_list; q; q = q->next)
+   {
+      if (q->usefrom == 0) {
+         ddtname = q->name;
+         remove_nickname(ModName->nickname, ddtname, nonick);
+         if (!strcmp(nonick, make_lower_temp(typnmlong))) {
+            for (r = q->fields; r; r = r->next)
+            {
+               // recursive
+               calc_extint_order(fp, ModName, r, 0, &max_ndims, &max_nrecurs, &max_alloc_ndims);
+            }
+         }
+      }
+   }
+
+
+   gen_ExtrapInterp1(fp, ModName, typnm, typnmlong, uy, max_ndims, max_nrecurs, max_alloc_ndims);
+   gen_ExtrapInterp2(fp, ModName, typnm, typnmlong, uy, max_ndims, max_nrecurs, max_alloc_ndims);
+     
+}
+
+
+
+
+
+
 
 void
 gen_rk4( FILE *fp , const node_t * ModName )
@@ -1795,8 +2269,8 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
 //    gen_modname_unpack( fp, ModName ) ;
 //    gen_rk4( fp, ModName ) ;
     if (!sw_noextrap){
-        gen_ExtrapInterp( fp, ModName, "Input", "inputtype" ) ;
-        gen_ExtrapInterp( fp, ModName, "Output", "outputtype" ) ;
+        gen_ExtrapInterp( fp, ModName, "Input", "InputType" ) ;
+        gen_ExtrapInterp( fp, ModName, "Output", "OutputType" ) ;
     }
 
     fprintf(fp,"END MODULE %s_Types\n",ModName->name ) ;
