@@ -900,7 +900,7 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
    INTEGER(IntKi)                :: OutFileFmt                                ! An integer that indicates what kind of tabular output should be generated (1=text, 2=binary, 3=both)
    LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
    LOGICAL                       :: TabDelim                                  ! Determines if text output should be delimited by tabs (true) or space (false)
-   CHARACTER(LEN(ErrMsg))        :: ErrMsg2                                   ! Temporary Error message
+   CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
    CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
 
    CHARACTER(10)                 :: AbortLevel                                ! String that indicates which error level should be used to abort the program: WARNING, SEVERE, or FATAL
@@ -1785,7 +1785,7 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD, y_SrvD, u_SrvD, MeshMapData,
    INTEGER(IntKi)                                 :: J                        ! Loops through nodes / elements
    INTEGER(IntKi)                                 :: K                        ! Loops through blades
    INTEGER(IntKi)                                 :: ErrStat2                 ! temporary Error status of the operation
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2                  ! temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2                  ! temporary Error message if ErrStat /= ErrID_None
 
 
       ! Initialize error status
@@ -2004,7 +2004,7 @@ SUBROUTINE Transfer_SD_to_HD( y_SD, u_HD_M_LumpedMesh, u_HD_M_DistribMesh, MeshM
    
       ! local variables
    INTEGER(IntKi)                             :: ErrStat2                     ! temporary Error status of the operation
-   CHARACTER(LEN(ErrMsg))                     :: ErrMsg2                      ! temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2                      ! temporary Error message if ErrStat /= ErrID_None
       
       
    ErrStat = ErrID_None
@@ -2040,7 +2040,7 @@ SUBROUTINE Transfer_ED_to_HD( y_ED, u_HD, MeshMapData, ErrStat, ErrMsg )
    
       ! local variables
    INTEGER(IntKi)                             :: ErrStat2                     ! temporary Error status of the operation
-   CHARACTER(LEN(ErrMsg))                     :: ErrMsg2                      ! temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2                      ! temporary Error message if ErrStat /= ErrID_None
       
       
    ErrStat = ErrID_None
@@ -2095,7 +2095,7 @@ SUBROUTINE Transfer_ED_to_HD_SD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_MAP, u_FEAM
    
       ! local variables
    INTEGER(IntKi)                             :: ErrStat2                     ! temporary Error status of the operation
-   CHARACTER(LEN(ErrMsg))                     :: ErrMsg2                      ! temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2                      ! temporary Error message if ErrStat /= ErrID_None
       
       
    ErrStat = ErrID_None
@@ -2276,7 +2276,7 @@ SUBROUTINE Transfer_HD_to_SD( u_mapped, u_SD_LMesh, u_mapped_positions, y_HD, u_
    
       ! local variables
    INTEGER(IntKi)                                 :: ErrStat2                  ! temporary Error status of the operation
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
 
    CHARACTER(*), PARAMETER                        :: RoutineName = 'Transfer_HD_to_SD'   
    
@@ -2412,7 +2412,7 @@ SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
    INTEGER(IntKi)                                    :: i                         ! loop counter (jacobian column number)
    INTEGER(IntKi)                                    :: K                         ! Input-output-solve iteration counter
    INTEGER(IntKi)                                    :: ErrStat2                  ! temporary Error status of the operation
-   CHARACTER(LEN(ErrMsg))                            :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
    
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_HD_InputOutputSolve'
    
@@ -2890,7 +2890,7 @@ SUBROUTINE ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
    INTEGER(IntKi)                                    :: i,j                       ! loop counters (jacobian column number)
    INTEGER(IntKi)                                    :: K                         ! Input-output-solve iteration counter
    INTEGER(IntKi)                                    :: ErrStat2                  ! temporary Error status of the operation
-   CHARACTER(LEN(ErrMsg))                            :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
    
 #ifdef OUTPUT_ADDEDMASS   
    REAL(ReKi)                                        :: AddedMassMatrix(6,6)
@@ -4740,7 +4740,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, AD, HD, SD, SrvD, MAPp, FEAM, MD, IceF
    INTEGER                                 :: K, i    ! loop counters
    INTEGER                                 :: NumBl   ! number of blades
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMSg))                  :: ErrMSg2
+   CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'InitModuleMappings'
    !............................................................................................................................
    
@@ -5068,7 +5068,7 @@ SUBROUTINE WriteOutputToFile(t_global, p_FAST, y_FAST, ED, AD, IfW, HD, SD, SrvD
 
    REAL(DbKi)                              :: OutTime             ! Used to determine if output should be generated at this simulation time
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMSg))                  :: ErrMSg2
+   CHARACTER(ErrMsgLen)                    :: ErrMSg2
       
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -5131,7 +5131,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              ! Error message if ErrStat /= ErrID_None
    
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMSg))                  :: ErrMSg2
+   CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'CalcOutputs_And_SolveForInputs'
    
    
@@ -5184,10 +5184,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
       ! transfer ED outputs to other modules used in option 1:
    CALL Transfer_ED_to_HD_SD_Mooring( p_FAST, ED%Output(1), HD%Input(1), SD%Input(1), MAPp%Input(1), FEAM%Input(1), MD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )         
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-                    
-!call wrscr1( 'FAST/init/Morison/LumpedMesh:')      
-!call meshprintinfo( CU, HD%Input(1)%morison%LumpedMesh )          
-              
+                                  
    CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
 
@@ -5249,7 +5246,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, HD, SD,
 
    INTEGER                                 :: i                   ! loop counter
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMSg))                  :: ErrMSg2
+   CHARACTER(ErrMsgLen)                    :: ErrMSg2
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'SolveOption1'       
    
@@ -5437,7 +5434,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD, SrvD, IfW
    
 
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMSg))                  :: ErrMSg2
+   CHARACTER(ErrMsgLen)                    :: ErrMSg2
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'SolveOption2'       
    
@@ -5608,7 +5605,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
    INTEGER(IntKi)                          :: IceDim              ! dimension we're pre-allocating for number of IceDyn legs/instances
    INTEGER(IntKi)                          :: I                   ! generic loop counter
                                            
-   CHARACTER(LEN(ErrMSg))                  :: ErrMsg2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
                                            
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_InitializeAll'       
    
@@ -5724,7 +5721,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, 
       CALL SrvD_Init( InitInData_SrvD, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
                       SrvD%OtherSt, SrvD%y, p_FAST%dt_module( MODULE_SrvD ), InitOutData_SrvD, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
       p_FAST%ModuleInitialized(Module_SrvD) = .TRUE.
 
       !IF ( InitOutData_SrvD%CouplingScheme == ExplicitLoose ) THEN ...  bjj: abort if we're doing anything else!
@@ -6325,7 +6321,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, Srv
    ! local variables
    INTEGER(IntKi)                          :: i, j                ! loop counters
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                  :: ErrMsg2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
    
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_ExtrapInterpMods'       
    
@@ -6679,7 +6675,7 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, SrvD, AD, I
    ! local variables
    INTEGER(IntKi)                          :: i, j                ! loop counters
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                  :: ErrMsg2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_InitIOarrays'       
    
    
@@ -7060,7 +7056,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
    INTEGER(IntKi)                          :: j_ss                ! substep loop counter 
    INTEGER(IntKi)                          :: n_t_module          ! simulation time step, loop counter for individual modules       
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                  :: ErrMsg2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_AdvanceStates'       
    
    
@@ -7362,7 +7358,7 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAPp
    INTEGER(IntKi)                          :: i                   ! loop counter
    
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                  :: ErrMsg2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_EndMods'
                   
       !...............................................................................................................................
@@ -7466,7 +7462,7 @@ SUBROUTINE FAST_DestroyAll( p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, M
    
    ! local variables
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                  :: ErrMsg2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_DestroyAll'
 
 
@@ -7697,7 +7693,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, SrvD, AD, IfW, HD, SD, MAP
    INTEGER(IntKi), PARAMETER               :: n_t_global = -1     ! loop counter
    
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                  :: ErrMsg2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_Solution0'
 
    
@@ -7817,7 +7813,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, SrvD
    
    
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                  :: ErrMsg2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_Solution'
 
 
