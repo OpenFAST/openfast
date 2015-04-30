@@ -135,7 +135,7 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
 
     TYPE(FEAM_InputFile)                           :: InputFileData  ! Data stored in the module's input file
     INTEGER(IntKi)                                 :: ErrStat2       ! temporary Error status of the operation
-    CHARACTER(LEN(ErrMsg))                         :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+    CHARACTER(ErrMsgLen)                           :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
 
     REAL(ReKi)                                     :: Dist           ! A temporary real  value
     REAL(ReKi)                                     :: Curv           ! A temporary real  value
@@ -538,7 +538,7 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
 
     ! Passed variables:
 !    INTEGER(IntKi)                                 :: ErrStat2       ! temporary Error status of the operation
-!    CHARACTER(LEN(ErrMsg))                         :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
+!    CHARACTER(ErrMsgLen)                           :: ErrMsg2        ! temporary Error message if ErrStat /= ErrID_None
     REAL(DbKi),                     INTENT(IN)     :: t              ! Current time
     INTEGER(IntKi),                 INTENT(IN)     :: n              ! Current step
 
@@ -1379,7 +1379,7 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
 !    TYPE(FEAM_InputFile)                           :: InputFileData  ! Data stored in the module's input file
 
     INTEGER(IntKi)                                 :: ErrStat2        ! Error status of the operation (occurs after initial error)
-    CHARACTER(LEN(ErrMsg))                         :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
+    CHARACTER(ErrMsgLen)                           :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
     INTEGER(IntKi)                                 :: I               ! Generic loop index
 
 
@@ -1441,7 +1441,7 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
     INTEGER(IntKi)                                 :: I,J                    ! Generic loop index
 !    INTEGER(IntKi)                                 :: K                      ! Blade index
 !    INTEGER(IntKi)                                 :: ErrStat2
-!    CHARACTER(LEN(ErrMsg))                         :: ErrMsg2
+!    CHARACTER(ErrMsgLen)                           :: ErrMsg2
     INTEGER(IntKi)                                 :: LEG                    ! Generic index
     REAL(ReKi)                                     :: TEMP                   ! Temporary storage
 
@@ -1562,7 +1562,7 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
  
     INTEGER(IntKi)                         :: UnEcho              ! Unit number for the echo file
     INTEGER(IntKi)                         :: ErrStat2            ! The error status code
-    CHARACTER(LEN(ErrMsg))                 :: ErrMsg2             ! The error message, if an error occurred
+    CHARACTER(ErrMsgLen)                   :: ErrMsg2             ! The error message, if an error occurred
 
     ! initialize values: 
 
@@ -1648,7 +1648,7 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
 
     INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
     LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
-    CHARACTER(LEN(ErrMsg))        :: ErrMsg2                                   ! Temporary Error message
+    CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
     CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
     CHARACTER(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
     CHARACTER(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
@@ -2048,7 +2048,7 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
 
     ! Local variables  
     INTEGER(IntKi)                             :: ErrStat2       ! Temporary error ID   
-    CHARACTER(LEN(ErrMsg))                     :: ErrMsg2        ! Temporary message describing error
+    CHARACTER(ErrMsgLen)                       :: ErrMsg2        ! Temporary message describing error
 
     ! Initialize variables
 
