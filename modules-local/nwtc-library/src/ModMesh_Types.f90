@@ -111,7 +111,7 @@ MODULE ModMesh_Types
       LOGICAL :: fieldmask(FIELDMASK_SIZE) = .FALSE.         ! Dimension as number of allocatable fields, below
       LOGICAL,POINTER :: RemapFlag  => NULL()                ! false=no action/ignore; true=remap required
       INTEGER :: ios                                         ! Mesh type: input (1), output(2), or state(3)
-      INTEGER :: Nnodes                                      ! Number of nodes (vertices) in mesh
+      INTEGER :: Nnodes = 0                                  ! Number of nodes (vertices) in mesh
 
      ! Mesh elements
       TYPE(ElemTabType), POINTER :: ElemTable(:) => NULL()   ! Elements in the mesh, by type
