@@ -375,7 +375,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    TYPE(CB_MatArrays)                           :: CBparams      ! CB parameters to be stored and written to summary file
    TYPE(FEM_MatArrays)                          :: FEMparams     ! FEM parameters to be stored and written to summary file
    INTEGER(IntKi)                               :: ErrStat2      ! Error status of the operation
-   CHARACTER(LEN(ErrMsg))                       :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2       ! Error message if ErrStat /= ErrID_None
    
    
          ! Initialize variables
@@ -700,7 +700,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
       TYPE(SD_ContinuousStateType)                 :: dxdt        ! Continuous state derivatives at t- for output file qmdotdot purposes only
       INTEGER(IntKi)                               :: ErrStat2    ! Error status of the operation (occurs after initial error)
-      CHARACTER(LEN(ErrMsg))                       :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
+      CHARACTER(ErrMsgLen)                         :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
                                                  
       ! Initialize ErrStat
       ErrStat = ErrID_None
@@ -974,7 +974,7 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat, 
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
           
       INTEGER(IntKi)                               :: ErrStat2
-      CHARACTER(LEN(ErrMsg))                       :: ErrMsg2
+      CHARACTER(ErrMsgLen)                         :: ErrMsg2
       
       
       
@@ -2784,7 +2784,7 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
    ! Initialize ErrStat
 
    INTEGER(IntKi)                                  :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                          :: ErrMsg2
+   CHARACTER(ErrMsgLen)                            :: ErrMsg2
       
       ErrStat = ErrID_None
       ErrMsg  = "" 
@@ -2864,7 +2864,7 @@ SUBROUTINE Craig_Bampton(Init, p, CBparams, ErrStat, ErrMsg)
    REAL(ReKi)                                ::  JDamping1 ! temporary storage for first element of JDamping array 
       
    INTEGER(IntKi)                            :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                    :: ErrMsg2
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2
    
 
    ErrStat = ErrID_None
@@ -3155,7 +3155,7 @@ SUBROUTINE CBMatrix( MRR, MLL, MRL, KRR, KLL, KRL, DOFM, Init, &
                                                        !where 1 <= less than or equal to ipvt(i) <= less than or equal to m.
                                                        
    INTEGER(IntKi)                         :: ErrStat2                                                                    
-   CHARACTER(LEN(ErrMsg))                 :: ErrMsg2
+   CHARACTER(ErrMsgLen)                   :: ErrMsg2
    CHARACTER(*), PARAMETER                :: RoutineName = 'CBMatrix'
                                                        
    ErrStat = ErrID_None 
@@ -3403,7 +3403,7 @@ SUBROUTINE EigenSolve(K, M, nDOF, NOmega, Reduced, Init,p, Phi, Omega, ErrStat, 
    INTEGER,    ALLOCATABLE                   :: KEY(:)
    
    INTEGER(IntKi)                            :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                    :: ErrMsg2
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2
                   
       
    ErrStat = ErrID_None
@@ -3750,7 +3750,7 @@ SUBROUTINE SetParameters(Init, p, MBBb, MBmb, KBBb, FGRb, PhiRb, OmegaL, FGL, Ph
    INTEGER(IntKi)                            :: I
    integer(IntKi)                            :: n                          ! size of jacobian in AM2 calculation
    INTEGER(IntKi)                            :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                    :: ErrMsg2
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2
 
    CHARACTER(*), PARAMETER                   :: RoutineName = 'SetParameters'
    
@@ -3912,7 +3912,7 @@ SUBROUTINE AllocParameters(p, DOFM, ErrStat, ErrMsg)
 
       ! local variables
    INTEGER(IntKi)                               :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                       :: ErrMsg2
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2
    
       ! initialize error handling:
    ErrStat = ErrID_None
@@ -3978,7 +3978,7 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
 
       ! local variables
    INTEGER(IntKi)                            :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                    :: ErrMsg2
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2
    
       ! initialize error handling:
    ErrStat = ErrID_None
@@ -4189,7 +4189,7 @@ SUBROUTINE OutSummary(Init, p, FEMparams,CBparams, ErrStat,ErrMsg)
    !LOCALS
    INTEGER(IntKi)                         :: UnSum          ! unit number for this summary file   
    INTEGER(IntKi)                         :: ErrStat2       ! Temporary storage for local errors
-   CHARACTER(LEN(ErrMsg))                 :: ErrMsg2       ! Temporary storage for local errors             
+   CHARACTER(ErrMsgLen)                   :: ErrMsg2       ! Temporary storage for local errors             
    CHARACTER(1024)                        :: SummaryName    ! name of the SubDyn summary file          
    
    CHARACTER(*),PARAMETER                 :: SectionDivide = '____________________________________________________________________________________________________'
