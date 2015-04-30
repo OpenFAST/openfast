@@ -89,7 +89,7 @@ SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
    TYPE(IceD_InputFile)                           :: InputFileData           ! Data stored in the module's input file
    INTEGER(IntKi)                                 :: ErrStat2                ! temporary Error status of the operation
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    REAL(ReKi)                                     :: TmpPos(3)
 
 
