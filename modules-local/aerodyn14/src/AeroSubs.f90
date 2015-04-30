@@ -55,7 +55,7 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    LOGICAL                    :: PremEOF_indicator
    CHARACTER(1024)            :: LINE
    CHARACTER(1024)            :: FilePath             ! The path name of the AeroDyn input file (so files listed in it can be defined relative to the main input file location)
-   CHARACTER(LEN(ErrMess))    :: ErrMessLcl
+   CHARACTER(ErrMsgLen)       :: ErrMessLcl
 
    !bjj: error handling here needs to be fixed! (we overwrite any non-AbortErrLev errors)
    
@@ -746,7 +746,7 @@ END SUBROUTINE AD_GetInput
    CHARACTER(  3)                         :: Vel_Unit
                                           
    CHARACTER(1),PARAMETER                 :: Delim = ' '  ! bjj: made this a parameter because I don't think tabs work very well in a summary file
-   CHARACTER(LEN(ErrMess))                :: ErrMessLcl
+   CHARACTER(ErrMsgLen)                   :: ErrMessLcl
 
 
    ErrStat = ErrID_None
@@ -1024,7 +1024,7 @@ CHARACTER( 40)               :: TITLE  (2)
 CHARACTER(1024)              :: LINE
 
    INTEGER                    :: ErrStatLcL        ! Error status returned by called routines.
-   CHARACTER(LEN(ErrMess))    :: ErrMessLcl          ! Error message returned by called routines.
+   CHARACTER(ErrMsgLen)       :: ErrMessLcl          ! Error message returned by called routines.
 
 
 
@@ -1669,7 +1669,7 @@ END SUBROUTINE READTwr
    REAL(ReKi)                 :: VN
 
    INTEGER                                   :: ErrStatLcL        ! Error status returned by called routines.
-   CHARACTER(LEN(ErrMess))                   :: ErrMessLcl          ! Error message returned by called routines.
+   CHARACTER(ErrMsgLen)                      :: ErrMessLcl          ! Error message returned by called routines.
 
    ErrStat = ErrID_None
    ErrMess = ""
@@ -1862,7 +1862,7 @@ END SUBROUTINE ELEMFRC
    INTEGER                       :: MAXICOUNT
    INTEGER                       :: Sttus
    INTEGER(IntKi)                :: ErrStatLcl
-   character(len(ErrMess))       :: ErrMessLcl
+   character(ErrMsgLen)          :: ErrMessLcl
 
    ErrStat = ErrID_None
    ErrMess = ""
@@ -2655,7 +2655,7 @@ FUNCTION AD_WindVelocityWithDisturbance(  Time, u, p, x, xd, z, O, y, ErrStat, E
 !   INTEGER                          :: Sttus
 
 !   INTEGER                          :: TmpErrStat
-!   CHARACTER(LEN(ErrMsg))           :: TmpErrMsg
+!   CHARACTER(ErrMsgLen)             :: TmpErrMsg
 
 
    ErrStat = ErrID_None
@@ -3294,7 +3294,7 @@ END SUBROUTINE BEDDAT
    INTEGER                    :: NP1
 
    INTEGER                                   :: ErrStatLcL        ! Error status returned by called routines.
-   CHARACTER(LEN(ErrMess))                   :: ErrMessLcl          ! Error message returned by called routines.
+   CHARACTER(ErrMsgLen)                      :: ErrMessLcl          ! Error message returned by called routines.
    
    ErrStat = ErrID_None
    ErrMess = ""
@@ -4016,7 +4016,7 @@ END FUNCTION SAT
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
    INTEGER                                   :: ErrStatLcL        ! Error status returned by called routines.
-   CHARACTER(LEN(ErrMess))                   :: ErrMessLcl          ! Error message returned by called routines.
+   CHARACTER(ErrMsgLen)                      :: ErrMessLcl          ! Error message returned by called routines.
    
    ErrStat = ErrID_None
    ErrMess = ""
@@ -4090,7 +4090,7 @@ END SUBROUTINE Inflow
    REAL(ReKi)                 :: WindPsi
 
    INTEGER                                   :: ErrStatLcL        ! Error status returned by called routines.
-   CHARACTER(LEN(ErrMess))                   :: ErrMessLcl          ! Error message returned by called routines.
+   CHARACTER(ErrMsgLen)                      :: ErrMessLcl          ! Error message returned by called routines.
    
    
    INTEGER                    :: mode
@@ -4786,7 +4786,7 @@ END SUBROUTINE infdist
    INTEGER                    :: mode
    
    INTEGER                                   :: ErrStatLcL        ! Error status returned by called routines.
-   CHARACTER(LEN(ErrMess))                   :: ErrMessLcl          ! Error message returned by called routines.
+   CHARACTER(ErrMsgLen)                      :: ErrMessLcl          ! Error message returned by called routines.
 
 
 ErrStat = ErrID_None
