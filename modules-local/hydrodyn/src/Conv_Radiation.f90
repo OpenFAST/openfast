@@ -506,7 +506,7 @@ END SUBROUTINE Conv_Rdtn_End
 !      TYPE(Conv_Rdtn_ConstraintStateType)                 :: z_Residual  ! Residual of the constraint state equations (Z)
 !         
 !      INTEGER(IntKi)                                    :: ErrStat2    ! Error status of the operation (occurs after initial error)
-!      CHARACTER(LEN(ErrMsg))                            :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
+!      CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
 !                        
 !         ! Initialize ErrStat
 !         
@@ -609,7 +609,7 @@ SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherS
     
       TYPE(Conv_Rdtn_InputType)                           :: u               ! Instantaneous inputs
       INTEGER(IntKi)                                    :: ErrStat2        ! Error status of the operation (secondary error)
-      CHARACTER(LEN(ErrMsg))                            :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
+      CHARACTER(ErrMsgLen)                              :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
 
       
          ! Initialize variables

@@ -1211,7 +1211,7 @@ SUBROUTINE HydroDyn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSt
       TYPE(HydroDyn_ConstraintStateType)                 :: z_Residual      ! Residual of the constraint state functions (Z)
       TYPE(HydroDyn_InputType)                           :: u               ! Instantaneous inputs
       INTEGER(IntKi)                                     :: ErrStat2        ! Error status of the operation (secondary error)
-      CHARACTER(LEN(ErrMsg))                             :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
+      CHARACTER(ErrMsgLen)                               :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
       INTEGER                                            :: nTime           ! number of inputs 
 !BJJ: I'd probably make this (below) an OtherState variable so you don't have to allocate/deallocate each time 
       TYPE(WAMIT_InputType), ALLOCATABLE                 :: Inputs_WAMIT(:)  
@@ -1294,7 +1294,7 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
       INTEGER                                            :: I, J        ! Generic counters
       
       INTEGER(IntKi)                                     :: ErrStat2        ! Error status of the operation (secondary error)
-      CHARACTER(LEN(ErrMsg))                             :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
+      CHARACTER(ErrMsgLen)                               :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
       
       
       REAL(ReKi)                           :: WaveElev (p%NWaveElev) ! Instantaneous total elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)
@@ -1617,7 +1617,7 @@ FUNCTION CalcLoadsAtWRP( y, u, y_mapped, AllHdroOrigin_position, MrsnLumpedMesh_
 
       ! local variables
    INTEGER(IntKi)                                 :: ErrStat2                  ! temporary Error status of the operation
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
    
    y%AllHdroOrigin%Force = 0.0
    y%AllHdroOrigin%Moment= 0.0

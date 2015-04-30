@@ -225,7 +225,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
 
    INTEGER(IntKi)                                   :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                           :: ErrMsg2
+   CHARACTER(ErrMsgLen)                             :: ErrMsg2
    
    
       ! Initialize local data

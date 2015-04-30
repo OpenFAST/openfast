@@ -864,7 +864,7 @@ SUBROUTINE SS_Rad_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg
       TYPE(SS_Rad_InputType)                           :: u_interp    ! interpolated value of inputs 
 
       INTEGER(IntKi)                                   :: ErrStat2    ! local error status
-      CHARACTER(LEN(ErrMsg))                           :: ErrMsg2     ! local error message (ErrMsg)
+      CHARACTER(ErrMsgLen)                             :: ErrMsg2     ! local error message (ErrMsg)
       
       ! Initialize ErrStat
 
@@ -970,7 +970,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(LEN(Msg))        :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
 
       !............................................................................................................................
       ! Set error status/message;
@@ -1030,7 +1030,7 @@ SUBROUTINE SS_Rad_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg
       TYPE(SS_Rad_InputType)                             :: u_interp
          
       INTEGER(IntKi)                                     :: ErrStat2    ! local error status
-      CHARACTER(LEN(ErrMsg))                             :: ErrMsg2     ! local error message (ErrMsg)
+      CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! local error message (ErrMsg)
 
       
       ! Initialize ErrStat
@@ -1122,7 +1122,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(LEN(Msg))        :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
 
       !............................................................................................................................
       ! Set error status/message;
@@ -1187,7 +1187,7 @@ SUBROUTINE SS_Rad_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMs
       TYPE(SS_Rad_ContinuousStateType)                   :: xdot_pred   ! Derivative of continuous states at t
 
       INTEGER(IntKi)                                     :: ErrStat2    ! local error status
-      CHARACTER(LEN(ErrMsg))                             :: ErrMsg2     ! local error message (ErrMsg)
+      CHARACTER(ErrMsgLen)                               :: ErrMsg2     ! local error message (ErrMsg)
       
       
       ! Initialize ErrStat
@@ -1258,7 +1258,7 @@ CONTAINS
 
          ! local variables
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
-      CHARACTER(LEN(Msg))        :: ErrMsg3     ! The error message (ErrMsg)
+      CHARACTER(ErrMsgLen)       :: ErrMsg3     ! The error message (ErrMsg)
 
       !............................................................................................................................
       ! Set error status/message;

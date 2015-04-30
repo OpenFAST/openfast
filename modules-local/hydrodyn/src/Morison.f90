@@ -4444,7 +4444,7 @@ SUBROUTINE Morison_UpdateStates( Time, u, p, x, xd, z, OtherState, ErrStat, ErrM
       TYPE(Morison_ConstraintStateType)                 :: z_Residual  ! Residual of the constraint state equations (Z)
          
       INTEGER(IntKi)                                    :: ErrStat2    ! Error status of the operation (occurs after initial error)
-      CHARACTER(LEN(ErrMsg))                            :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
+      CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
                         
          ! Initialize ErrStat
          
