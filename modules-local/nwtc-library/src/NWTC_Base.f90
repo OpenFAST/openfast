@@ -35,7 +35,8 @@ MODULE NWTC_Base
       ! General constants:
 
    INTEGER, PARAMETER            :: BITS_IN_ADDR  = C_INTPTR_T*8                  ! The number of bits in an address (32-bit or 64-bit).
-
+   INTEGER, PARAMETER            :: ErrMsgLen = 1024
+   
    INTEGER(IntKi), PARAMETER     :: ChanLen   = 10                                ! The allowable length of channel names (i.e., width of output columns) in the FAST framework
 
    INTEGER(IntKi), PARAMETER     :: NWTC_Verbose = 10

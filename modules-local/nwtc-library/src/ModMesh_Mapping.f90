@@ -104,7 +104,7 @@ SUBROUTINE MeshMapCreate( Src, Dest, MeshMap, ErrStat, ErrMsg )
    INTEGER(IntKi)                           :: ElementNodes
    LOGICAL                                  :: MapCreated
    INTEGER(IntKi)                           :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                   :: ErrMsg2
+   CHARACTER(ErrMsgLen)                     :: ErrMsg2
    
 
    ErrStat = ErrID_None
@@ -274,7 +274,7 @@ SUBROUTINE MeshMapDestroy( MeshMap, ErrStat, ErrMsg )
    CHARACTER(*),             INTENT(  OUT)  :: ErrMsg       ! Error message if ErrStat /= ErrID_None
    
    INTEGER(IntKi)                           :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                   :: ErrMsg2
+   CHARACTER(ErrMsgLen)                     :: ErrMsg2
 
 
    ErrStat = ErrID_None
@@ -309,7 +309,7 @@ SUBROUTINE MeshMapWrBin( UnIn, Src, Dest, MeshMap, ErrStat, ErrMsg, FileName )
    INTEGER(IntKi)                           :: ErrStat2  ! Temporary storage for local errors
    INTEGER(IntKi)                           :: I , j , k, n       ! loop counter
    INTEGER(B4Ki)                            :: MeshesInFile(3), MatInFile(2)
-   CHARACTER(LEN(ErrMsg))                   :: ErrMsg2
+   CHARACTER(ErrMsgLen)                     :: ErrMsg2
 
    ErrMsg = ""
    ErrStat = ErrID_None
@@ -442,7 +442,7 @@ SUBROUTINE Transfer_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
    REAL(ReKi)                              :: LoadsScaleFactor  ! bjj: added this scaling factor to get loads in a better numerical range 
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                  :: ErrMsg2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
 
    
    ! logic
@@ -1013,7 +1013,7 @@ SUBROUTINE Create_PointMesh(Src, Temp_Point_Src, ErrStat, ErrMsg)
       ! local variables
    INTEGER(IntKi)                                 :: i !loop over the nodes
    INTEGER(IntKi)                                 :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1074,7 +1074,7 @@ SUBROUTINE CreateLoadMap_L2_to_P( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
       ! Local variables:
    INTEGER(IntKi)                                 :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2   
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2   
    
    
    ErrStat = ErrID_None
@@ -1109,7 +1109,7 @@ SUBROUTINE CreateMotionMap_L2_to_P( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
       ! Local variables:
    INTEGER(IntKi)                                 :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1141,7 +1141,7 @@ SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
    REAL(ReKi)                            :: LoadsScaleFactor  ! bjj: added this scaling factor to get loads in a better numerical range 
    INTEGER(IntKi)                        :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                :: ErrMsg2
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2
 
    ! logic
 
@@ -1241,7 +1241,7 @@ SUBROUTINE CreateLoadMap_P_to_L2( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
       ! LOCAL variables:
    INTEGER(IntKi)                                 :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1272,7 +1272,7 @@ SUBROUTINE CreateMotionMap_P_to_L2( Src, Dest, MeshMap, ErrStat, ErrMsg )
       ! Local variables:
    INTEGER(IntKi)                                 :: i
    INTEGER(IntKi)                                 :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1309,7 +1309,7 @@ SUBROUTINE Transfer_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
    ! local variables
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                  :: ErrMsg2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
    
    REAL(ReKi)                              :: LoadsScaleFactor  ! bjj: added this scaling factor to get loads in a better numerical range 
 
@@ -1814,7 +1814,7 @@ SUBROUTINE CreateMotionMap_P_to_P( Src, Dest, MeshMap, ErrStat, ErrMsg )
       ! Local variables:
    INTEGER(IntKi)                                 :: i
    INTEGER(IntKi)                                 :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1849,7 +1849,7 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
       ! local variables
    REAL(ReKi)                            :: LoadsScaleFactor  ! Scaling factor for loads (to help with numerical issues)
    INTEGER(IntKi)                        :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                :: ErrMsg2
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2
       
    
    ErrStat = ErrID_None
@@ -1975,7 +1975,7 @@ SUBROUTINE Transfer_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, S
    INTEGER(IntKi)                                 :: jNode     ! node number
 
    INTEGER(IntKi)                                 :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
    
    
    
@@ -2094,7 +2094,7 @@ SUBROUTINE Convert_Point_To_Line2_Loads(Dest, MeshMap, ErrStat, ErrMsg, DestDisp
    REAL(ReKi)     :: c
    
    INTEGER(IntKi)                                 :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
    
    
    n=3*Dest%Nnodes !also SIZE(MeshMap%LoadLn2_F,1) and SIZE(MeshMap%LoadLn2_M,1)
@@ -2216,7 +2216,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
    
    
    INTEGER(IntKi)                                 :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
    
    
    
@@ -2705,7 +2705,7 @@ SUBROUTINE Create_InverseLumping_Matrix( Dest, MeshMap, ErrStat, ErrMsg )
    INTEGER(IntKi)                          :: N, n1, n2  ! node numbers
    INTEGER(IntKi)                          :: j,k, iElem, iComp
    INTEGER(IntKi)                          :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                  :: ErrMsg2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
 
 
    ErrStat = ErrID_None
@@ -2785,7 +2785,7 @@ SUBROUTINE CreateLoadMap_L2_to_L2( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
       ! Local variables:
    INTEGER(IntKi)                                 :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -2841,7 +2841,7 @@ SUBROUTINE CreateMotionMap_L2_to_L2( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
       ! Local variables:
    INTEGER(IntKi)                                 :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                         :: ErrMsg2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
 
    ErrStat = ErrID_None
    ErrMsg  = ""

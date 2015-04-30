@@ -35,7 +35,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.05.03a-bjj', '16-Apr-2015')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.05.04a-bjj', '30-Apr-2015')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -1447,7 +1447,8 @@ CONTAINS
    FirstArg = .TRUE.
 
    IF ( PRESENT(Arg2) ) Arg2 = ""
-   
+   IF ( PRESENT(flag) ) flag = ""
+
       ! Parse them.
 
    IF ( NumArg .GT. 0 )  THEN
@@ -2833,7 +2834,7 @@ CONTAINS
       ! local variables
 
    INTEGER(IntKi)                        :: ErrStat2                                   ! Temporary Error status
-   CHARACTER(LEN(ErrMsg))                :: ErrMsg2                                    ! Temporary Error message
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2                                    ! Temporary Error message
 
 
    ErrStat = ErrID_None
@@ -6751,7 +6752,7 @@ SUBROUTINE WrBinFAST(FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, Al
    INTEGER(B1Ki), ALLOCATABLE    :: ChanNameASCII(:)                 ! The ASCII equivalent of ChanName
    INTEGER(B1Ki), ALLOCATABLE    :: ChanUnitASCII(:)                 ! The ASCII equivalent of ChanUnit
 
-   CHARACTER(LEN(ErrMsg))        :: ErrMsg2                          ! temporary error message
+   CHARACTER(ErrMsgLen)          :: ErrMsg2                          ! temporary error message
 
 
    !...............................................................................................................................
