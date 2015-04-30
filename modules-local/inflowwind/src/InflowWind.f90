@@ -151,7 +151,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
          ! Temporary variables for error handling
       INTEGER(IntKi)                                        :: TmpErrStat
-      CHARACTER(LEN(ErrMsg))                                :: TmpErrMsg         !< temporary error message
+      CHARACTER(ErrMsgLen)                                  :: TmpErrMsg         !< temporary error message
 
 
          ! Local Variables
@@ -312,6 +312,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             CALL Cleanup()
             RETURN
          ENDIF
+         InputGuess%PositionXYZ = 0.0_ReKi
       ENDIF
       IF ( .NOT. ALLOCATED(OutData%VelocityUVW) ) THEN
          CALL AllocAry( OutData%VelocityUVW, 3, InitData%NumWindPoints, &
@@ -321,6 +322,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             CALL Cleanup()
             RETURN
          ENDIF
+         OutData%VelocityUVW = 0.0_ReKi
       ENDIF
 
 
@@ -790,7 +792,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
          ! Temporary variables for error handling
       INTEGER(IntKi)                                           :: TmpErrStat
-      CHARACTER(LEN(ErrMsg))                                   :: TmpErrMsg            ! temporary error message
+      CHARACTER(ErrMsgLen)                                     :: TmpErrMsg            ! temporary error message
 
 
 

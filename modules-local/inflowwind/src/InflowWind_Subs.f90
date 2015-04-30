@@ -186,7 +186,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
       ! Temoporary messages
    INTEGER(IntKi)                                     :: TmpErrStat
-   CHARACTER(LEN(ErrMsg))                             :: TmpErrMsg
+   CHARACTER(ErrMsgLen)                               :: TmpErrMsg
    CHARACTER(1024)                                    :: PriPath                                   ! Path name of the primary file
 
 
@@ -915,7 +915,7 @@ SUBROUTINE InflowWind_ValidateInput( InputFileData, ErrStat, ErrMsg )
 
       ! Temporary variables
    INTEGER(IntKi)                                     :: TmpErrStat           !< Temporary error status  for subroutine and function calls
-   CHARACTER(LEN(ErrMsg))                             :: TmpErrMsg            !< Temporary error message for subroutine and function calls
+   CHARACTER(ErrMsgLen)                               :: TmpErrMsg            !< Temporary error message for subroutine and function calls
 
       ! Local variables
    INTEGER(IntKi)                                     :: I                    !< Generic counter
@@ -1329,7 +1329,7 @@ SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrS
 
       ! Temporary variables
    INTEGER(IntKi)                                     :: TmpErrStat           !< Temporary error status  for subroutine and function calls
-   CHARACTER(LEN(ErrMsg))                             :: TmpErrMsg            !< Temporary error message for subroutine and function calls
+   CHARACTER(ErrMsgLen)                               :: TmpErrMsg            !< Temporary error message for subroutine and function calls
 
       ! Local variables
    INTEGER(IntKi)                                     :: I                    !< Generic counter
@@ -1762,7 +1762,7 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
 
          ! Temporary variables for error handling
       INTEGER(IntKi)                                           :: TmpErrStat
-      CHARACTER(LEN(ErrMsg))                                   :: TmpErrMsg            ! temporary error message
+      CHARACTER(ErrMsgLen)                                     :: TmpErrMsg            ! temporary error message
 
 
 
@@ -2139,7 +2139,7 @@ SUBROUTINE InflowWind_GetMean( StartTime, EndTime, delta_time, InputPosition, Me
    INTEGER(IntKi)                                     :: I
    INTEGER(IntKi)                                     :: Nt
    INTEGER(IntKi)                                     :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                             :: ErrMsg2
+   CHARACTER(ErrMsgLen)                               :: ErrMsg2
 
    
    CHARACTER(*), PARAMETER                            :: RoutineName = 'InflowWind_GetMean'

@@ -119,7 +119,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
 
       ! Temporary variables for error handling
    INTEGER(IntKi)                                              :: TmpErrStat        ! Temp variable for the error status
-   CHARACTER(LEN(ErrMsg))                                      :: TmpErrMsg      ! temporary error message
+   CHARACTER(ErrMsgLen)                                        :: TmpErrMsg      ! temporary error message
 
 
       !-------------------------------------------------------------------------------------------------
@@ -538,7 +538,7 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,
 
       ! temporary variables
    INTEGER(IntKi)                                              :: TmpErrStat     ! temporary error status
-   CHARACTER(LEN(ErrMsg))                                      :: TmpErrMsg      ! temporary error message
+   CHARACTER(ErrMsgLen)                                        :: TmpErrMsg      ! temporary error message
 
 
 
@@ -872,7 +872,7 @@ SUBROUTINE IfW_UniformWind_End( PositionXYZ, ParamData, OtherStates, OutData, Er
 
       ! Local Variables
    INTEGER(IntKi)                                              :: TmpErrStat        ! temporary error status
-   CHARACTER(LEN(ErrMsg))                                      :: TmpErrMsg         ! temporary error message
+   CHARACTER(ErrMsgLen)                                        :: TmpErrMsg         ! temporary error message
 
 
       !-=- Initialize the routine -=-

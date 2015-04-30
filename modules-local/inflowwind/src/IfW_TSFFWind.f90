@@ -88,7 +88,7 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, PositionXYZ, ParamData, OtherStates, &
 
       ! Temporary variables for error handling
    INTEGER(IntKi)                                           :: TmpErrStat        ! temporary error status
-   CHARACTER(LEN(ErrMsg))                                   :: TmpErrMsg         ! temporary error message
+   CHARACTER(ErrMsgLen)                                     :: TmpErrMsg         ! temporary error message
 
 
       ! Local Variables:
@@ -276,7 +276,7 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, PositionXYZ, ParamData, OtherStates, &
       
          ! Temporary variables for error handling
       INTEGER(IntKi)                                     :: TmpErrStat     ! temporary error status
-      CHARACTER(LEN(ErrMsg))                             :: TmpErrMsg      ! temporary error message
+      CHARACTER(ErrMsgLen)                               :: TmpErrMsg      ! temporary error message
 
 
       ParamData%NFFComp = 3                                              ! this file contains 3 wind components
@@ -676,7 +676,7 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,   
 
       ! temporary variables
    INTEGER(IntKi)                                           :: TmpErrStat     ! temporary error status
-   CHARACTER(LEN(ErrMsg))                                   :: TmpErrMsg      ! temporary error message
+   CHARACTER(ErrMsgLen)                                     :: TmpErrMsg      ! temporary error message
 
 
 
@@ -1085,7 +1085,7 @@ SUBROUTINE IfW_TSFFWind_End( PositionXYZ, ParamData, OtherStates,   &
 
       ! Local Variables
    INTEGER(IntKi)                                        :: TmpErrStat     ! temporary error status
-   CHARACTER(LEN(ErrMsg))                                :: TmpErrMsg      ! temporary error message
+   CHARACTER(ErrMsgLen)                                  :: TmpErrMsg      ! temporary error message
 
 
       !-=- Initialize the routine -=-

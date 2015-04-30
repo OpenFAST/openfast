@@ -88,7 +88,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
       ! Temporary variables for error handling
    INTEGER(IntKi)                                        :: TmpErrStat     ! temporary error status
-   CHARACTER(LEN(ErrMsg))                                :: TmpErrMsg      ! temporary error message
+   CHARACTER(ErrMsgLen)                                  :: TmpErrMsg      ! temporary error message
 
 
       ! Local Variables:
@@ -441,7 +441,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
          ! Temporary variables for error handling
       INTEGER(IntKi)                                     :: TmpErrStat     ! temporary error status
-      CHARACTER(LEN(ErrMsg))                             :: TmpErrMsg      ! temporary error message
+      CHARACTER(ErrMsgLen)                               :: TmpErrMsg      ! temporary error message
 
          !----------------------------------------------------------------------------------------------
          ! Initialize some variables
@@ -687,7 +687,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
          ! Temporary Error Handling
       INTEGER(IntKi)                                     :: TmpErrStat     ! for checking the IOSTAT from a READ or Open statement
-      CHARACTER(LEN(ErrMsg))                             :: TmpErrMsg      ! Temporary ErrMsg
+      CHARACTER(ErrMsgLen)                               :: TmpErrMsg      ! Temporary ErrMsg
 
 
       !-------------------------------------------------------------------------------------------------
@@ -860,7 +860,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
          ! Temporary Error Handling
       INTEGER(IntKi)                                     :: TmpErrStat
-      CHARACTER(LEN(ErrMsg))                             :: TmpErrMsg
+      CHARACTER(ErrMsgLen)                               :: TmpErrMsg
 
 
       !-------------------------------------------------------------------------------------------------
@@ -1247,7 +1247,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
          ! Temporary variables for error handling
 
       INTEGER(IntKi)                                     :: TmpErrStat     ! for checking the result of IOSTAT on READ or Open statements
-      CHARACTER(LEN(ErrMsg))                             :: TmpErrMsg
+      CHARACTER(ErrMsgLen)                               :: TmpErrMsg
 
 
       !-------------------------------------------------------------------------------------------------
@@ -1408,7 +1408,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
          ! Temporary Error Handling
 
       INTEGER(IntKi)                                     :: TmpErrStat     ! IOSTAT value.
-      CHARACTER(LEN(ErrMsg))                             :: TmpErrMsg
+      CHARACTER(ErrMsgLen)                               :: TmpErrMsg
 
       !-------------------------------------------------------------------------------------------------
       ! Initialization
@@ -1637,7 +1637,7 @@ SUBROUTINE IfW_BladedFFWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates
 
       ! temporary variables
    INTEGER(IntKi)                                              :: TmpErrStat        ! temporary error status
-   CHARACTER(LEN(ErrMsg))                                      :: TmpErrMsg         ! temporary error message
+   CHARACTER(ErrMsgLen)                                        :: TmpErrMsg         ! temporary error message
 
 
       !-------------------------------------------------------------------------------------------------
@@ -2037,7 +2037,7 @@ SUBROUTINE IfW_BladedFFWind_End( PositionXYZ, ParamData, OtherStates, OutData, E
 
       ! Local Variables
    INTEGER(IntKi)                                        :: TmpErrStat     ! temporary error status
-   CHARACTER(LEN(ErrMsg))                                :: TmpErrMsg      ! temporary error message
+   CHARACTER(ErrMsgLen)                                  :: TmpErrMsg      ! temporary error message
 
 
       !-=- Initialize the routine -=-

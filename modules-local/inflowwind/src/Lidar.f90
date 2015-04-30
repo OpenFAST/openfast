@@ -90,7 +90,7 @@ SUBROUTINE Lidar_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
       ! local variables                   
                                           
    INTEGER(IntKi)                                        :: ErrStat2    ! temporary Error status of the operation
-   CHARACTER(LEN(ErrMsg))                                :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(ErrMsgLen)                                  :: ErrMsg2     ! temporary Error message if ErrStat /= ErrID_None
                                           
    CHARACTER(*),   PARAMETER                             :: RoutineName = 'Lidar_Init'
                                           
@@ -309,7 +309,7 @@ SUBROUTINE Lidar_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       
    INTEGER(IntKi)                                        :: IRangeGt
    INTEGER(IntKi)                                        :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                                :: ErrMsg2
+   CHARACTER(ErrMsgLen)                                  :: ErrMsg2
                                                          
    CHARACTER(*), PARAMETER                               :: RoutineName = 'Lidar_CalcOutput'
    
