@@ -108,7 +108,7 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, con
   fprintf(fp, "   INTEGER(IntKi)                 :: i%d, i%d_l, i%d_u  !  bounds (upper/lower) for an array dimension %d\n", d, d, d, d);
   }
   fprintf(fp,"   INTEGER(IntKi)                 :: ErrStat2\n") ;
-  fprintf(fp,"   CHARACTER(1024)                :: ErrMsg2\n");
+  fprintf(fp,"   CHARACTER(ErrMsgLen)           :: ErrMsg2\n");
   fprintf(fp,"   CHARACTER(*), PARAMETER        :: RoutineName = '%s_Copy%s'\n", ModName->nickname, nonick);
   fprintf(fp, "! \n");
   fprintf(fp,"   ErrStat = ErrID_None\n") ;
@@ -253,7 +253,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp, "  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5\n") ;
   fprintf(fp, "  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers\n") ;
   fprintf(fp, "  INTEGER(IntKi)                 :: ErrStat2\n");
-  fprintf(fp, "  CHARACTER(1024)                :: ErrMsg2\n");
+  fprintf(fp, "  CHARACTER(ErrMsgLen)           :: ErrMsg2\n");
   fprintf(fp, "  CHARACTER(*), PARAMETER        :: RoutineName = '%s_Pack%s'\n", ModName->nickname, nonick);
 
   fprintf(fp, " ! buffers to store subtypes, if any\n");
@@ -608,7 +608,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  INTEGER(IntKi)                 :: i%d, i%d_l, i%d_u  !  bounds (upper/lower) for an array dimension %d\n", d, d, d, d);
   }
   fprintf(fp, "  INTEGER(IntKi)                 :: ErrStat2\n");
-  fprintf(fp, "  CHARACTER(1024)                :: ErrMsg2\n");
+  fprintf(fp, "  CHARACTER(ErrMsgLen)           :: ErrMsg2\n");
   fprintf(fp, "  CHARACTER(*), PARAMETER        :: RoutineName = '%s_UnPack%s'\n", ModName->nickname, nonick);
 
   fprintf(fp," ! buffers to store meshes, if any\n") ;
@@ -1419,7 +1419,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
    } // 1
   } // 0
   fprintf(fp," INTEGER(IntKi)                             :: ErrStat2 ! local errors\n");
-  fprintf(fp," CHARACTER(1024)                            :: ErrMsg2  ! local errors\n");
+  fprintf(fp," CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors\n");
   for ( j = 1 ; j <= max_ndims ; j++ ) {
     for ( i = 0 ; i <= max_nrecurs ; i++ ) {
   fprintf(fp," INTEGER                                    :: i%d%d    ! dim%d level %d counter variable for arrays of ddts\n",i,j,j,i) ;
@@ -1527,7 +1527,7 @@ fprintf(fp,"  END IF\n") ;
 #endif
 
 void
-gen_ExtrapInterp1(FILE *fp, const node_t * ModName, const char * typnm, const char * typnmlong, const char * uy, const int max_ndims, const int max_nrecurs, const int max_alloc_ndims)
+gen_ExtrapInterp1(FILE *fp, const node_t * ModName, char * typnm, char * typnmlong, char * uy, const int max_ndims, const int max_nrecurs, const int max_alloc_ndims)
 {
    char nonick[NAMELEN];
    char *ddtname;
@@ -1587,7 +1587,7 @@ gen_ExtrapInterp1(FILE *fp, const node_t * ModName, const char * typnm, const ch
       } // 1
    } // 0
    fprintf(fp, " INTEGER(IntKi)                             :: ErrStat2 ! local errors\n");
-   fprintf(fp, " CHARACTER(1024)                            :: ErrMsg2  ! local errors\n");
+   fprintf(fp, " CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors\n");
    for (j = 1; j <= max_ndims; j++) {
       for (i = 0; i <= max_nrecurs; i++) {
          fprintf(fp, " INTEGER                                    :: i%d%d    ! dim%d level %d counter variable for arrays of ddts\n", i, j, j, i);
@@ -1693,7 +1693,7 @@ gen_ExtrapInterp2(FILE *fp, const node_t * ModName, char * typnm, char * typnmlo
       } // 1
    } // 0
    fprintf(fp, " INTEGER(IntKi)                             :: ErrStat2 ! local errors\n");
-   fprintf(fp, " CHARACTER(1024)                            :: ErrMsg2  ! local errors\n");
+   fprintf(fp, " CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors\n");
    fprintf(fp, " CHARACTER(*),            PARAMETER         :: RoutineName = '%s_%s_ExtrapInterp2'\n", ModName->nickname, typnm);
    for (j = 1; j <= max_ndims; j++) {
       for (i = 0; i <= max_nrecurs; i++) {
@@ -1787,7 +1787,7 @@ gen_ExtrapInterp(FILE *fp, const node_t * ModName, char * typnm, char * typnmlon
    fprintf(fp, "   ! local variables\n");
    fprintf(fp, " INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)\n");
    fprintf(fp, " INTEGER(IntKi)                             :: ErrStat2        ! local errors\n");
-   fprintf(fp, " CHARACTER(1024)                            :: ErrMsg2         ! local errors\n");
+   fprintf(fp, " CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors\n");
    fprintf(fp, " CHARACTER(*),    PARAMETER                 :: RoutineName = '%s_%s_ExtrapInterp'\n", ModName->nickname, typnm);
    fprintf(fp, "    ! Initialize ErrStat\n");
    fprintf(fp, " ErrStat = ErrID_None\n");
