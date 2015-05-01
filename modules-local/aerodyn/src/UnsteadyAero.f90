@@ -989,7 +989,7 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, ErrStat, ErrMsg )
          
       end if
       
-      if ( xd%tau_V(i,j) >= (1.0_ReKi + T_sh/ T_VL) ) then
+      if ( xd%tau_V(i,j) >= (T_VL + T_sh) ) then
          xd%tau_V(i,j)     = 0.0_ReKi
       end if
       
