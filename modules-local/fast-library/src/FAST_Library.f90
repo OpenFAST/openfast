@@ -179,11 +179,11 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
    INTEGER(IntKi)                        :: i
                  
    
-   IF ( n_t_global > Turbine%m_FAST%n_TMax_m1 ) THEN !finish 
+   IF ( n_t_global > Turbine%p_FAST%n_TMax_m1 ) THEN !finish 
       
       ! we can't continue because we might over-step some arrays that are allocated to the size of the simulation
 
-      IF (n_t_global == Turbine%m_FAST%n_TMax_m1 + 1) THEN  ! we call update an extra time in Simulink, which we can ignore until the time shift with outputs is solved
+      IF (n_t_global == Turbine%p_FAST%n_TMax_m1 + 1) THEN  ! we call update an extra time in Simulink, which we can ignore until the time shift with outputs is solved
          n_t_global = n_t_global + 1
          ErrStat_c = ErrID_None
          ErrMsg_c = TRANSFER( C_NULL_CHAR, ErrMsg_c )
