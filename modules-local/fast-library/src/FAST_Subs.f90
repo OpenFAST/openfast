@@ -1830,19 +1830,32 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD, y_SrvD, u_SrvD, MeshMapData,
    
    
       ! ED inputs from AeroDyn
+   IF (p_FAST%CompElast == Module_ED) THEN
+      IF ( p_FAST%CompAero == Module_AD ) THEN   
+      
+         DO K = 1,SIZE(u_ED%BladeLn2Mesh,1) ! Loop through all blades (p_ED%NumBl)
+            DO J = 1,y_AD%OutputLoads(K)%Nnodes ! Loop through the blade nodes / elements (p_ED%BldNodes)
+
+               u_ED%BladeLn2Mesh(K)%Force(:,J)  = y_AD%OutputLoads(K)%Force(:,J)
+               u_ED%BladeLn2Mesh(K)%Moment(:,J) = y_AD%OutputLoads(K)%Moment(:,J)
+            
+            END DO !J
+         END DO   !K
+      ELSE
+         DO K = 1,SIZE(u_ED%BladeLn2Mesh,1) ! Loop through all blades (p_ED%NumBl)
+            u_ED%BladeLn2Mesh(K)%Force  = 0.0_ReKi
+            u_ED%BladeLn2Mesh(K)%Moment = 0.0_ReKi
+         END DO         
+      END IF
+   END IF
+      
+      
+      
+      
 !   IF ( p_FAST%CompAero == Module_AD .and. ALLOCATED(ADAeroLoads%Blade) ) THEN
 !bjj: need another check on this perhaps
-   IF ( p_FAST%CompAero == Module_AD ) THEN
-      DO K = 1,SIZE(u_ED%BladeLn2Mesh,1) ! Loop through all blades (p_ED%NumBl)
-         DO J = 1,y_AD%OutputLoads(K)%Nnodes ! Loop through the blade nodes / elements (p_ED%BldNodes)
-
-            u_ED%BladeLn2Mesh(K)%Force(:,J)  = y_AD%OutputLoads(K)%Force(:,J)
-            u_ED%BladeLn2Mesh(K)%Moment(:,J) = y_AD%OutputLoads(K)%Moment(:,J)
+   IF ( p_FAST%CompAero == Module_AD ) THEN   
             
-         END DO !J
-      END DO   !K
-      
-      
          ! add aero force to the tower, if it's provided:
       IF ( y_AD%Twr_OutputLoads%Committed ) THEN
       
@@ -1852,19 +1865,13 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD, y_SrvD, u_SrvD, MeshMapData,
       
          J = y_AD%Twr_OutputLoads%NNodes
          
-         IF (y_AD%Twr_OutputLoads%FIELDMASK(MASKID_FORCE) ) &
+         IF ( y_AD%Twr_OutputLoads%FIELDMASK(MASKID_FORCE) ) &
             u_ED%TowerLn2Mesh%Force(:,1:J)  = u_ED%TowerLn2Mesh%Force( :,1:J) + y_AD%Twr_OutputLoads%Force
          
-         IF (y_AD%Twr_OutputLoads%FIELDMASK(MASKID_MOMENT) ) &
+         IF ( y_AD%Twr_OutputLoads%FIELDMASK(MASKID_MOMENT) ) &
             u_ED%TowerLn2Mesh%Moment(:,1:J) = u_ED%TowerLn2Mesh%Moment(:,1:J) + y_AD%Twr_OutputLoads%Moment 
       
       END IF   
-         
-   ELSE
-      DO K = 1,SIZE(u_ED%BladeLn2Mesh,1) ! Loop through all blades (p_ED%NumBl)
-         u_ED%BladeLn2Mesh(K)%Force  = 0.0_ReKi
-         u_ED%BladeLn2Mesh(K)%Moment = 0.0_ReKi
-      END DO
    END IF
    
    u_ED%PtfmAddedMass = 0.0_ReKi
@@ -4017,7 +4024,7 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, y_ED, ErrStat, ErrMsg )
    Node = 0      
    IF (p_FAST%CompServo == MODULE_SrvD) THEN
       Node = Node + 1
-      u_IfW%PositionXYZ(:,Node) = y_ED%RotorApexMotion%Position(:,1) ! undisplaced position. Maybe we want to use the displaced position at some point in time.
+      u_IfW%PositionXYZ(:,Node) = y_ED%HubPtMotion%Position(:,1) ! undisplaced position. Maybe we want to use the displaced position (y_ED%HubPtMotion%TranslationDisp) at some point in time.
    END IF       
             
    IF (p_FAST%CompAero == MODULE_AD) THEN   
@@ -4060,8 +4067,8 @@ SUBROUTINE IfW_SetExternalInputs( p_IfW, m_FAST, y_ED, u_IfW )
    ! bjj: this is a total hack to get the lidar inputs into InflowWind. We should use a mesh to take care of this messiness (and, really this Lidar Focus should come
    ! from Fortran (a scanning pattern or file-lookup inside InflowWind), not MATLAB.
             
-   u_IfW%lidar%LidPosition = y_ED%RotorApexMotion%Position(:,1) + y_ED%RotorApexMotion%TranslationDisp(:,1) & ! rotor apex position
-                                                                  + p_IfW%lidar%RotorApexOffsetPos            ! lidar offset-from-rotor-apex position
+   u_IfW%lidar%LidPosition = y_ED%HubPtMotion%Position(:,1) + y_ED%HubPtMotion%TranslationDisp(:,1) & ! rotor apex position (absolute)
+                                                            + p_IfW%lidar%RotorApexOffsetPos            ! lidar offset-from-rotor-apex position
       
    u_IfW%lidar%MsrPosition = m_FAST%ExternInput%LidarFocus + u_IfW%lidar%LidPosition
 
@@ -4117,25 +4124,34 @@ SUBROUTINE AD_InputSolve( p_FAST, u_AD, y_ED, y_IfW, MeshMapData, ErrStat, ErrMs
    !-------------------------------------------------------------------------------------------------
    ! Blade positions, orientations, and velocities:
    !-------------------------------------------------------------------------------------------------
-   
-   DO K = 1,NumBl !p%NumBl ! Loop through all blades
+   IF (p_FAST%CompElast == Module_ED) THEN
+      DO K = 1,NumBl !p%NumBl ! Loop through all blades
       
-      !CALL Transfer_Line2_to_Line2( y_ED%BladeLn2Mesh(K), u_AD%InputMarkers(K), MeshMapData%ED_L_2_AD_L_B(K), ErrStat, ErrMsg )
-      !   IF (ErrStat >= AbortErrLev ) RETURN
+         !CALL Transfer_Line2_to_Line2( y_ED%BladeLn2Mesh(K), u_AD%InputMarkers(K), MeshMapData%ED_L_2_AD_L_B(K), ErrStat, ErrMsg )
+         !   IF (ErrStat >= AbortErrLev ) RETURN
          
-      u_AD%InputMarkers(K)%RotationVel = 0.0_ReKi ! bjj: we don't need this field
+         u_AD%InputMarkers(K)%RotationVel = 0.0_ReKi ! bjj: we don't need this field
       
-      DO J = 1,BldNodes !p%BldNodes ! Loop through the blade nodes / elements
+         DO J = 1,BldNodes !p%BldNodes ! Loop through the blade nodes / elements
 
-         NodeNum = J         ! note that this assumes ED has same discretization as AD
+            NodeNum = J         ! note that this assumes ED has same discretization as AD
          
-         u_AD%InputMarkers(K)%Position(:,J)       = y_ED%BladeLn2Mesh(K)%TranslationDisp(:,NodeNum) + y_ED%BladeLn2Mesh(K)%Position(:,NodeNum) 
-         u_AD%InputMarkers(K)%Orientation(:,:,J)  = y_ED%BladeLn2Mesh(K)%Orientation(:,:,NodeNum)
-         u_AD%InputMarkers(K)%TranslationVel(:,J) = y_ED%BladeLn2Mesh(K)%TranslationVel(:,NodeNum)
-         u_AD%InputMarkers(K)%TranslationAcc(:,J) = y_ED%BladeLn2Mesh(K)%TranslationAcc(:,NodeNum)
+            u_AD%InputMarkers(K)%Position(:,J)       = y_ED%BladeLn2Mesh(K)%TranslationDisp(:,NodeNum) + y_ED%BladeLn2Mesh(K)%Position(:,NodeNum) 
+            u_AD%InputMarkers(K)%Orientation(:,:,J)  = y_ED%BladeLn2Mesh(K)%Orientation(:,:,NodeNum)
+            u_AD%InputMarkers(K)%TranslationVel(:,J) = y_ED%BladeLn2Mesh(K)%TranslationVel(:,NodeNum)
+            u_AD%InputMarkers(K)%TranslationAcc(:,J) = y_ED%BladeLn2Mesh(K)%TranslationAcc(:,NodeNum)
                   
-      END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
-   END DO !K = 1,p%NumBl
+         END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
+      END DO !K = 1,p%NumBl
+   ELSE
+      ! just leave them as the initial guesses?
+      DO K = 1,NumBl
+         u_AD%InputMarkers(K)%RotationVel    = 0.0_ReKi
+         u_AD%InputMarkers(K)%TranslationVel = 0.0_ReKi
+         u_AD%InputMarkers(K)%TranslationAcc = 0.0_ReKi
+      END DO
+      
+   END IF
    
    !-------------------------------------------------------------------------------------------------
    ! Hub positions, orientations, and velocities:
@@ -4151,7 +4167,7 @@ SUBROUTINE AD_InputSolve( p_FAST, u_AD, y_ED, y_IfW, MeshMapData, ErrStat, ErrMs
    !-------------------------------------------------------------------------------------------------
    
    DO K=1,NumBl
-      u_AD%TurbineComponents%Blade(K)%Orientation = y_ED%BladeRootMotions%Orientation(:,:,K)
+      u_AD%TurbineComponents%Blade(K)%Orientation = y_ED%BladeRootMotions14%Orientation(:,:,K)
       
       u_AD%TurbineComponents%Blade(K)%Position       = 0.0_ReKi !bjj we don't need this field
       u_AD%TurbineComponents%Blade(K)%RotationVel    = 0.0_ReKi !bjj we don't need this field
@@ -4266,16 +4282,19 @@ SUBROUTINE AD_SetInitInput(InitInData_AD, InitOutData_ED, y_ED, p_FAST, ErrStat,
    END IF
 
    DO K=1, InitInData_AD%NumBl
-      InitInData_AD%TurbineComponents%Blade(K)%Position        = y_ED%BladeRootMotions%Position(:,K)
-      InitInData_AD%TurbineComponents%Blade(K)%Orientation     = y_ED%BladeRootMotions%RefOrientation(:,:,K)
+      InitInData_AD%TurbineComponents%Blade(K)%Position        = y_ED%BladeRootMotions14%Position(:,K)
+      InitInData_AD%TurbineComponents%Blade(K)%Orientation     = y_ED%BladeRootMotions14%RefOrientation(:,:,K)
       InitInData_AD%TurbineComponents%Blade(K)%TranslationVel  = 0.0_ReKi ! bjj: we don't need this field
       InitInData_AD%TurbineComponents%Blade(K)%RotationVel     = 0.0_ReKi ! bjj: we don't need this field      
    END DO
   
 
       ! Blade length
-
-   InitInData_AD%TurbineComponents%BladeLength = InitOutData_ED%BladeLength
+   IF (p_FAST%CompElast == Module_ED) THEN
+      InitInData_AD%TurbineComponents%BladeLength = InitOutData_ED%BladeLength
+   ELSE
+      InitInData_AD%TurbineComponents%BladeLength = 12.573 !13.75700  ! FIX THIS!!!!! GET THIS FROM BEAMDYN (right now is value from Test01)
+   END IF
    
    
       ! Tower mesh ( here only because we currently need line2 meshes to contain the same nodes/elements )
