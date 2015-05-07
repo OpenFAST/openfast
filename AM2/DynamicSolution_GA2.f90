@@ -41,7 +41,7 @@
    REAL(ReKi)                       :: feqv(dof_total-6)
    REAL(ReKi)                       :: Eref
    REAL(ReKi)                       :: Enorm
-   REAL(ReKi),PARAMETER             :: TOLF = 1.0D-05
+   REAL(ReKi),PARAMETER             :: TOLF = 1.0D-07
    REAL(ReKi)                       :: d
    INTEGER(IntKi)                   :: indx(dof_total-6)
    INTEGER(IntKi)                   :: i
@@ -55,7 +55,7 @@
 
    vvNf_p(:) = vvNf(:)
    DO i=1,niter
-!       WRITE(*,*) "N-R Iteration #", i
+       WRITE(*,*) "N-R Iteration #", i
 !       IF(i==3) STOP
        StifK = 0.0D0
        RHS = 0.0D0
@@ -96,6 +96,8 @@
        CALL ludcmp(StifK_LU,dof_total-6,indx,d)
        CALL lubksb(StifK_LU,dof_total-6,indx,RHS_LU,ai_temp)
 
+!WRITE(*,*) 'Inc'
+!WRITE(*,*) ai_temp
        ai = 0.0D0
        DO j=1,dof_total-6
            ai(j+6) = ai_temp(j)
@@ -106,12 +108,15 @@
            Enorm = SQRT(DOT_PRODUCT(ai_temp,feqv))
 !           WRITE(*,*) "Enorm = ", Enorm
 !           WRITE(*,*) "Eref = ", Eref
-           IF(Enorm .LE. Eref) RETURN
+!           IF(Enorm .LE. Eref) RETURN
        ENDIF    
+IF(i == 5) RETURN
 !       DO j=1,dof_total
 !           WRITE(*,*) "Inc(j)=",j,ai(j)
 !       ENDDO
        CALL UpdateDynamic(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
+!WRITE(*,*) 'uuNf'
+!WRITE(*,*) uuNf
            
        IF(i==niter) THEN
            WRITE(*,*) "Solution does not converge after the maximum number of iterations"

@@ -838,6 +838,8 @@ INCLUDE 'ElementMatrix_Acc.f90'
        DO j=1,p%node_elem
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
            temp_id2= (i-1)*p%node_elem+j
+WRITE(*,*) 'x%q(1:3)'
+WRITE(*,*) x%q(temp_id+1:temp_id+3)
            y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,x%q(temp_id+1:temp_id+3))
            cc(1:3) = x%q(temp_id+4:temp_id+6)
            temp_id = (j-1)*p%dof_node
