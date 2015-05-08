@@ -54,7 +54,7 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
-   thisprog_ver = "FAST Registry (v2.07.01, 1-May-2015)";
+   thisprog_ver = "FAST Registry (v2.08.00, 8-May-2015)";
 
   fprintf(stderr,"\n") ;
   fprintf(stderr,"----- %s --------------\n", thisprog_ver) ;
@@ -67,8 +67,10 @@ main( int argc, char *argv[], char *env[] )
  //thisprog = *argv ;
  // strcpy(thisprog, thiscom);
   thisprog = "registry.exe";
-  strcpy(fname_in,"") ;
-  wrote_template = 0 ;
+  strcpy(fname_in, "");
+  strcpy(OutDir, "."); // if no OutDir is listed, use current directory
+  wrote_template = 0;
+  
 
   while (*argv) {
 
@@ -76,46 +78,29 @@ main( int argc, char *argv[], char *env[] )
         char * p ;
         p = *argv ;
         sym_add(p+2) ;
-      } else
-      if (!strncmp(*argv,"/D=",3)) {
+      } else if (!strncmp(*argv,"/D=",3)) {
         char * p ;
         p = *argv ;
         sym_add(p+3) ;
-      } else
-      if (!strcmp(*argv,"-force") || !strcmp(*argv,"/force") ) {
+      } else if (!strcmp(*argv,"-force") || !strcmp(*argv,"/force") ) {
         sw_output_template_force = 1 ;
-      } else
-      if (!strcmp(*argv,"-I") || !strcmp(*argv,"/I") ) {
+      } else if (!strcmp(*argv,"-O") || !strcmp(*argv,"/O") ) {
+        argv++ ; if ( *argv )  { strcpy( OutDir, *argv ) ; } 
+      } else if (!strcmp(*argv,"-I") || !strcmp(*argv,"/I") ) {
         argv++ ; if ( *argv ) { if( nincldirs < MAXINCLDIRS ) { strcpy( IncludeDirs[nincldirs++], *argv ) ; } }
-      } else
-      if (!strcmp(*argv,"-ccode")) {
+      } else if (!strcmp(*argv,"-ccode")) {
         sw_ccode = 1 ;
-      } else
-      if (!strcmp(*argv, "-noextrap")) {
+      } else if (!strcmp(*argv, "-noextrap")) {
           sw_noextrap = 1;
-      } else
-
-      if (!strncmp(*argv,"-shownodes",4)) {
+      } else if (!strncmp(*argv,"-shownodes",4)) {
         sw_shownodes = 1 ;
-      } else
-      if (!strncmp(*argv,"-embed",6)) {
+      } else if (!strncmp(*argv,"-embed",6)) {
         sw_embed_class_ptr = 1 ;
-      } else
-      if (!strncmp(*argv,"-f2c",4)) {
+      } else if (!strncmp(*argv,"-f2c",4)) {
         strcpy(sw_c2f_underscore,"__") ;
-      } else
-      if (!strncmp(*argv,"-nounderscore",6)) {
+      } else if (!strncmp(*argv,"-nounderscore",6)) {
         strcpy(sw_c2f_underscore,"") ;
-      } else
-#if 0
-      if (!strcmp(*argv,"-norealloc_lhs")) {
-        sw_norealloc_lsh = 1 ;
-      }
-      if (!strcmp(*argv,"-realloc_lhs")) {
-        sw_norealloc_lsh = 0 ;
-      }
-#endif
-      if (!strcmp(*argv,"-template") || !strcmp(*argv,"-registry") ||
+      } else if (!strcmp(*argv,"-template") || !strcmp(*argv,"-registry") ||
           !strcmp(*argv,"/template") || !strcmp(*argv,"/registry")  ) {
         char * arg ;
         arg = *argv ;
@@ -124,29 +109,31 @@ main( int argc, char *argv[], char *env[] )
         if (!strcmp(arg+1,"template")) output_template(sw_modname_subst,sw_modnickname_subst,sw_output_template_force,0) ;
         if (!strcmp(arg+1,"registry")) output_template(sw_modname_subst,sw_modnickname_subst,sw_output_template_force,1) ;
         wrote_template = 1 ;
-      } else
-      if (!strcmp(*argv,"-h") || !strcmp(*argv,"/h")) {
+      } else if (!strcmp(*argv,"-h") || !strcmp(*argv,"/h")) {
 usage:
 //        fprintf(stderr,"Usage: %s [options] registryfile -or- \n",thisprog) ;
-        fprintf(stderr,"Usage: %s [options] registryfile -or- \n",thiscom) ;
-        fprintf(stderr,"          [-force] [-template|-registry] ModuleName ModName \n") ;
-        fprintf(stderr,"    -h        this summary\n") ;
-        fprintf(stderr,"    -D<SYM>   define symbol for conditional evaluation inside registry file\n") ;
-        fprintf(stderr,"    -ccode    generate additional code for interfacing with C/C++\n") ;
-        fprintf(stderr,"      -f2c    use f2c convention for Fortran-callable C routines (double underscore)\n") ;
-        fprintf(stderr,"      -nound[erscore] use IBM C/Fortran interface specification (no underscore)\n") ;
-        fprintf(stderr,"    -keep  do not delete temporary files from registry program\n") ;
-        fprintf(stderr,"    -shownodes  output a listing of the nodes in registry's AST\n") ;
-        fprintf(stderr,"  === alternate usage for generating templates ===\n") ;
-        fprintf(stderr,"    -template ModuleName ModName\n") ;
-        fprintf(stderr,"                 Generate a template Module file none exists\n") ;
-        fprintf(stderr,"    -registry ModuleName ModName\n") ;
-        fprintf(stderr,"                 Generate a template registry file if none exists\n") ;
-        fprintf(stderr,"    -force Force generating of template or registry file\n") ;
-        fprintf(stderr,"  (the / character can be used in place of - when specifying options)\n") ;
+        fprintf(stderr, "Usage: %s registryfile [options] -or- \n",thiscom) ;
+        fprintf(stderr, "          [-force] [-template|-registry] ModuleName ModName \n") ;
+        fprintf(stderr, "Options:\n");
+        fprintf(stderr, "    -h                this summary\n");
+        fprintf(stderr, "    -I <dir>          look for usefrom files in directory \"dir\"\n");
+        fprintf(stderr, "    -O <dir>          generate types files in directory \"dir\"\n");
+        fprintf(stderr, "    -noextrap         do not generate ModName_Input_ExtrapInterp or ModName_Output_ExtrapInterp routines\n");
+        fprintf(stderr, "    -D<SYM>           define symbol for conditional evaluation inside registry file\n");
+        fprintf(stderr, "    -ccode            generate additional code for interfacing with C/C++\n") ;
+        fprintf(stderr, "      -f2c            use f2c convention for Fortran-callable C routines (double underscore)\n") ;
+        fprintf(stderr, "      -nound[erscore] use IBM C/Fortran interface specification (no underscore)\n") ;
+        fprintf(stderr, "    -keep             do not delete temporary files from registry program\n") ;
+        fprintf(stderr, "    -shownodes        output a listing of the nodes in registry's AST\n") ;
+        fprintf(stderr, "  === alternate usage for generating templates ===\n") ;
+        fprintf(stderr, "    -template ModuleName ModName\n") ;
+        fprintf(stderr, "                 Generate a template Module file none exists\n") ;
+        fprintf(stderr, "    -registry ModuleName ModName\n") ;
+        fprintf(stderr, "                 Generate a template registry file if none exists\n") ;
+        fprintf(stderr, "    -force Force generating of template or registry file\n") ;
+        fprintf(stderr, "  (the / character can be used in place of - when specifying options)\n") ;
         exit(1) ;
-      } else
-      if (!strcmp(*argv,"-keep") || !strcmp(*argv,"/keep") ) {
+      } else if (!strcmp(*argv,"-keep") || !strcmp(*argv,"/keep") ) {
         sw_keep = 1 ;
       }
       else { /* consider it an input file */
@@ -215,7 +202,7 @@ usage:
     fprintf(stderr,"--- Done ---\n") ;
   }
 
-  gen_module_files( ".", thisprog_ver ) ;
+  gen_module_files( OutDir, thisprog_ver);
 
 cleanup:
    if ( ! sw_keep ) {
