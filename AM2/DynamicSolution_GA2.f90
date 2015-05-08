@@ -55,7 +55,7 @@
 
    vvNf_p(:) = vvNf(:)
    DO i=1,niter
-       WRITE(*,*) "N-R Iteration #", i
+!       WRITE(*,*) "N-R Iteration #", i
 !       IF(i==3) STOP
        StifK = 0.0D0
        RHS = 0.0D0
@@ -108,9 +108,8 @@
            Enorm = SQRT(DOT_PRODUCT(ai_temp,feqv))
 !           WRITE(*,*) "Enorm = ", Enorm
 !           WRITE(*,*) "Eref = ", Eref
-!           IF(Enorm .LE. Eref) RETURN
+           IF(Enorm .LE. Eref) RETURN
        ENDIF    
-IF(i == 5) RETURN
 !       DO j=1,dof_total
 !           WRITE(*,*) "Inc(j)=",j,ai(j)
 !       ENDDO
