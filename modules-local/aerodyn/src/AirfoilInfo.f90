@@ -74,6 +74,8 @@ CONTAINS
       TYPE (InpErrsType)                     :: InpErrs                       ! The derived type for holding input errors.
 
 
+      ErrStat = ErrID_None
+      ErrMsg  = ""
 
          ! Display the version for this module.
 
@@ -479,6 +481,8 @@ CONTAINS
 
       TYPE (FileInfoType)                    :: FileInfo                      ! The derived type for holding the file information.
 
+      ErrStat = ErrID_None
+      ErrMsg  = ""
 
 
          ! Process the (possibly) nested set of files.  This copies the decommented contents of
