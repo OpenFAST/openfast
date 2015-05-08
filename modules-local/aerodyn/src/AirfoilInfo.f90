@@ -7,6 +7,7 @@ MODULE AirfoilInfo
 
    USE                                             AirfoilInfo_Types
    USE                                             NWTC_FitPack
+   USE                                          :: ISO_FORTRAN_ENV , ONLY : IOSTAT_EOR
 
    IMPLICIT NONE
 
@@ -31,12 +32,6 @@ CONTAINS
 
 
          ! This routine initializes AirfoilInfo by reading the airfoil files and generating the spline coefficients.
-
-
-      USE                                    :: AirfoilInfo_Types
-      USE                                    :: ISO_FORTRAN_ENV , ONLY : IOSTAT_EOR
-
-      IMPLICIT                                  NONE
 
 
          ! Argument declarations.
@@ -445,13 +440,6 @@ CONTAINS
 
 
          ! This routine reads an airfoil file.
-
-
-      USE                                    :: AirfoilInfo_Types
-      USE                                    :: ISO_FORTRAN_ENV , ONLY : IOSTAT_EOR
-      USE                                    :: NWTC_Library
-
-      IMPLICIT                                  NONE
 
 
          ! Argument declarations.
