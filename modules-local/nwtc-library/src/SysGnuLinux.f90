@@ -567,7 +567,7 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
       ErrStat = ErrID_Fatal
       WRITE(ErrMsg,'(I2)') BITS_IN_ADDR
       ErrMsg  = 'The dynamic library '//TRIM(DLL%FileName)//' could not be loaded. Check that the file '// &
-                'exists in the specified location and that it is compiled for '//TRIM(ErrMsg)//'-bit systems.'
+                'exists in the specified location and that it is compiled for '//TRIM(ErrMsg)//'-bit applications.'
       RETURN
    END IF
 

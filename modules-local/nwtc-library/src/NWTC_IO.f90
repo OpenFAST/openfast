@@ -35,7 +35,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.05.04a-bjj', '30-Apr-2015')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.06.00a-bjj', '9-May-2015')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -397,44 +397,27 @@ CONTAINS
    CHARACTER(*), ALLOCATABLE         :: Ary    (:)                                 ! Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim                                     ! The size of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
-   INTEGER,      INTENT(OUT),OPTIONAL:: ErrStat                                    ! Error status; if present, program does not abort on error
-   CHARACTER(*), INTENT(OUT),OPTIONAL:: ErrMsg                                     ! Error message corresponding to ErrStat
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
+
+   
+   ALLOCATE ( Ary(AryDim) , STAT=ErrStat )
 
 
-      ! Local declarations.
-
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-   CHARACTER(200)                    :: Msg                                        ! An error message
-
-
-   ALLOCATE ( Ary(AryDim) , STAT=Sttus )
-
-
-   IF ( Sttus /= 0 ) THEN
-      Msg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = ErrID_Fatal
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = Msg
-         END IF
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         CALL ProgAbort ( Msg )
+         ErrMsg = 'Error allocating memory for '//TRIM(Num2LStr(AryDim))//' characters in the '//TRIM( Descr )//' array.'
       END IF
-
    ELSE
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = Sttus
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = ''
-         END IF
-      END IF
-
+      ErrStat = ErrID_None
+      ErrMsg  = ''
    END IF
 
    RETURN
-   END SUBROUTINE AllCAry1 ! ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )
+   END SUBROUTINE AllCAry1 
 !=======================================================================
    SUBROUTINE AllCAry2 ( Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
 
@@ -446,46 +429,29 @@ CONTAINS
    CHARACTER(*), ALLOCATABLE         :: Ary    (:,:)                               ! Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
-   INTEGER,      INTENT(OUT),OPTIONAL:: ErrStat                                    ! Error status; if present, program does not abort on error
-   CHARACTER(*), INTENT(OUT),OPTIONAL:: ErrMsg                                     ! Error message corresponding to ErrStat
-
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
    CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
 
 
-      ! Local declarations.
 
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-   CHARACTER(200)                    :: Msg                                        ! Temporary string to hold error message
+   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
 
-
-   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=Sttus )
-
-   IF ( Sttus /= 0 ) THEN
-      Msg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = ErrID_Fatal
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = Msg
-         END IF
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         CALL ProgAbort ( Msg )
+         ErrMsg = 'Error allocating memory for '//TRIM(Num2LStr(AryDim1*AryDim2))//' characters in the '//TRIM( Descr )//' array.'
       END IF
-
    ELSE
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = Sttus
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = ''
-         END IF
-      END IF
-
+      ErrStat = ErrID_None
+      ErrMsg  = ''
    END IF
 
 
    RETURN
-   END SUBROUTINE AllCAry2 ! (  Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )
+   END SUBROUTINE AllCAry2
 !=======================================================================
    SUBROUTINE AllCAry3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
 
@@ -500,45 +466,28 @@ CONTAINS
    INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim3                                    ! The size of the third dimension of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
-   INTEGER,      INTENT(OUT),OPTIONAL:: ErrStat                                    ! Error status; if present, program does not abort on error
-   CHARACTER(*), INTENT(OUT),OPTIONAL:: ErrMsg                                     ! Error message corresponding to ErrStat
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
-      ! Local declarations.
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
 
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-   CHARACTER(200)                    :: Msg                                        ! Temporary string to hold error message
-
-
-
-   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=Sttus )
-
-   IF ( Sttus /= 0 ) THEN
-      Msg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = ErrID_Fatal
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = Msg
-         END IF
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         CALL ProgAbort ( Msg )
+         ErrMsg = 'Error allocating memory for '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3))//' characters in the '//TRIM( Descr )//' array.'
       END IF
-
    ELSE
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = Sttus
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = ''
-         END IF
-      END IF
-
+      ErrStat = ErrID_None
+      ErrMsg  = ''
    END IF
 
 
+
    RETURN
-   END SUBROUTINE AllCAry3 ! (  Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )
+   END SUBROUTINE AllCAry3
 !=======================================================================
    SUBROUTINE AllI1BAry1 ( Ary, AryDim, Descr, ErrStat, ErrMsg )
 
@@ -559,15 +508,19 @@ CONTAINS
 
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+      ELSE
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim*1))//' bytes of memory for the '//TRIM( Descr )//' array.'
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg = ' '
    END IF
 
    RETURN
-   END SUBROUTINE AllI1BAry1 ! ( Ary, AryDim, Descr, ErrStat, ErrMsg )
-   !=======================================================================
+   END SUBROUTINE AllI1BAry1
+!=======================================================================
    SUBROUTINE AllI2BAry1 ( Ary, AryDim, Descr, ErrStat, ErrMsg )
 
 
@@ -587,15 +540,19 @@ CONTAINS
 
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+      ELSE
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim*2))//' bytes of memory for the '//TRIM( Descr )//' array.'
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg = ' '
    END IF
 
    RETURN
-   END SUBROUTINE AllI2BAry1 ! ( Ary, AryDim, Descr, ErrStat, ErrMsg )
-   !=======================================================================
+   END SUBROUTINE AllI2BAry1
+!=======================================================================
    SUBROUTINE AllI4BAry1 ( Ary, AryDim, Descr, ErrStat, ErrMsg )
 
 
@@ -615,14 +572,18 @@ CONTAINS
 
    IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
-      ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+      ELSE
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim*4))//' bytes of memory for the '//TRIM( Descr )//' array.'
+      END IF
    ELSE
       ErrStat = ErrID_None
       ErrMsg = ' '
    END IF
 
    RETURN
-   END SUBROUTINE AllI4BAry1 ! ( Ary, AryDim, Descr, ErrStat, ErrMsg )
+   END SUBROUTINE AllI4BAry1
 !=======================================================================
    SUBROUTINE AllIAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
 
@@ -632,196 +593,30 @@ CONTAINS
 
       ! Argument declarations.
 
-   INTEGER,      ALLOCATABLE         :: Ary    (:,:)                               ! Array to be allocated
+   INTEGER(IntKi), ALLOCATABLE       :: Ary    (:,:)                               ! Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
-   INTEGER,      INTENT(OUT),OPTIONAL:: ErrStat                                    ! Error status; if present, program does not abort on error
-   CHARACTER(*), INTENT(OUT),OPTIONAL:: ErrMsg                                     ! Error message corresponding to ErrStat
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
-      ! Local declarations.
+   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
 
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-   CHARACTER(200)                    :: Msg                                        ! Temporary string to hold error message
-
-
-
-   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=Sttus )
-
-   IF ( Sttus /= 0 ) THEN
-      Msg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = ErrID_Fatal
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = Msg
-         END IF
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         CALL ProgAbort ( Msg )
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_INT))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
-
    ELSE
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = Sttus
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = ''
-         END IF
-      END IF
-
+      ErrStat = ErrID_None
+      ErrMsg  = ''
    END IF
-
 
    RETURN
-   END SUBROUTINE AllIAry2 ! (  Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )
-
-!=======================================================================
-   SUBROUTINE AllIPAry1 ( Ary, AryDim, Descr, ErrStat )
-
-      ! This routine allocates a 1-D INTEGER array.
-
-      ! Argument declarations.
-
-   INTEGER, POINTER         :: Ary    (:)                                  ! Array to be allocated
-   INTEGER, INTENT(IN)          :: AryDim                                      ! The size of the array.
-   INTEGER, INTENT(OUT),OPTIONAL:: ErrStat                                     ! Error status; if present, program does not abort on error
-
-   CHARACTER(*), INTENT(IN)     :: Descr                                       ! Brief array description.
-
-      ! Local declarations.
-   INTEGER                      :: Sttus                                       ! Status of allocation attempt.
-
-   IF ( ASSOCIATED(Ary) ) THEN
-      DEALLOCATE(Ary)
-      !ErrStat = ErrID_Warn
-      !ErrMsg = " AllIPAry1: Ary already allocated."
-   END IF
-
-   ALLOCATE ( Ary(AryDim) , STAT=Sttus )
-   Ary = 0
-
-   IF ( Sttus /= 0 )  THEN
-      CALL ProgAbort ( ' Error allocating memory for the '//TRIM( Descr )//' array.', PRESENT(ErrStat) )
-   END IF
-
-   IF ( PRESENT(ErrStat) ) ErrStat = Sttus
-
-   RETURN
-   END SUBROUTINE AllIPAry1 ! ( Ary, AryDim, Descr )
-!=======================================================================
-   SUBROUTINE AllIPAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat )
-
-
-      ! This routine allocates a 2-D INTEGER array.
-
-      ! Argument declarations.
-
-   INTEGER, POINTER         :: Ary    (:,:)                                ! Array to be allocated
-   INTEGER, INTENT(IN)          :: AryDim1                                     ! The size of the first dimension of the array.
-   INTEGER, INTENT(IN)          :: AryDim2                                     ! The size of the second dimension of the array.
-   INTEGER, INTENT(OUT),OPTIONAL:: ErrStat                                     ! Error status; if present, program does not abort on error
-
-   CHARACTER(*), INTENT(IN)     :: Descr                                       ! Brief array description.
-
-
-      ! Local declarations.
-
-   INTEGER                      :: Sttus                                       ! Status of allocation attempt.
-
-
-   IF ( ASSOCIATED(Ary) ) THEN
-      DEALLOCATE(Ary)
-      !ErrStat = ErrID_Warn
-      !ErrMsg = " AllIPAry2: Ary already allocated."
-   END IF
-
-   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=Sttus )
-   Ary = 0
-
-   IF ( Sttus /= 0 )  THEN
-      CALL ProgAbort ( ' Error allocating memory for the '//TRIM( Descr )//' array.', PRESENT(ErrStat) )
-   END IF
-
-   IF ( PRESENT(ErrStat) ) ErrStat = Sttus
-
-   RETURN
-   END SUBROUTINE AllIPAry2 ! (  Ary, AryDim1, AryDim2, Descr )
-!=======================================================================
-   SUBROUTINE AllRPAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat )
-
-      ! This routine allocates a 2-D REAL array.
-      ! Argument declarations.
-
-   REAL(ReKi), POINTER      :: Ary    (:,:)                                ! Array to be allocated
-   INTEGER, INTENT(IN)          :: AryDim1                                     ! The size of the first dimension of the array.
-   INTEGER, INTENT(IN)          :: AryDim2                                     ! The size of the second dimension of the array.
-   INTEGER, INTENT(OUT),OPTIONAL:: ErrStat                                     ! Error status; if present, program does not abort on error
-
-   CHARACTER(*), INTENT(IN)     :: Descr                                       ! Brief array description.
-
-      ! Local declarations.
-
-   INTEGER                      :: Sttus                                       ! Status of allocation attempt.
-
-   IF ( ASSOCIATED(Ary) ) THEN
-      DEALLOCATE(Ary)
-      !ErrStat = ErrID_Warn
-      !ErrMsg = " AllRPAry2: Ary already allocated."
-   END IF
-
-   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=Sttus )
-   Ary = 0
-
-   IF ( Sttus /= 0 )  THEN
-      CALL ProgAbort ( ' Error allocating memory for the '//TRIM( Descr )//' array.', PRESENT(ErrStat) )
-   END IF
-
-   IF ( PRESENT(ErrStat) ) ErrStat = Sttus
-
-   RETURN
-   END SUBROUTINE AllRPAry2 ! ( Pointer_to_Ary, AryDim1, AryDim2, Descr )
-!=======================================================================
-   SUBROUTINE AllRPAry3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat )  ! pointer to Ary, AryDim1, AryDim2, AryDim3
-
-
-      ! This routine allocates a 3-D REAL array.
-
-      ! Argument declarations.
-
-   REAL(ReKi), POINTER      :: Ary    (:,:,:)                              ! Array to be allocated
-
-   INTEGER, INTENT(IN)          :: AryDim1                                     ! The size of the first dimension of the array.
-   INTEGER, INTENT(IN)          :: AryDim2                                     ! The size of the second dimension of the array.
-   INTEGER, INTENT(IN)          :: AryDim3                                     ! The size of the third dimension of the array.
-   INTEGER, INTENT(OUT),OPTIONAL:: ErrStat                                     ! Error status; if present, program does not abort on error
-
-   CHARACTER(*), INTENT(IN)     :: Descr                                       ! Brief array description.
-
-
-      ! Local declarations.
-
-   INTEGER                      :: Sttus                                       ! Status of allocation attempt.
-
-
-   IF ( ASSOCIATED(Ary) ) THEN
-      DEALLOCATE(Ary)
-      !ErrStat = ErrID_Warn
-      !ErrMsg = " AllRPAry3: Ary already allocated."
-   END IF
-
-   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=Sttus )
-   Ary = 0
-
-   IF ( Sttus /= 0 )  THEN
-      CALL ProgAbort ( ' Error allocating memory for the '//TRIM( Descr )//' array.', PRESENT(ErrStat) )
-   END IF
-
-   IF ( PRESENT(ErrStat) ) ErrStat = Sttus
-
-
-   RETURN
-  END SUBROUTINE AllRPAry3 ! (  Ary, AryDim1, AryDim2, AryDim3, Descr )
+   END SUBROUTINE AllIAry2
 !=======================================================================
    SUBROUTINE AllIAry3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
 
@@ -831,50 +626,171 @@ CONTAINS
 
       ! Argument declarations.
 
-   INTEGER,      ALLOCATABLE         :: Ary    (:,:,:)                             ! Array to be allocated
+   INTEGER(IntKi),  ALLOCATABLE      :: Ary    (:,:,:)                             ! Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim3                                    ! The size of the third dimension of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
-   INTEGER,      INTENT(OUT),OPTIONAL:: ErrStat                                    ! Error status; if present, program does not abort on error
-   CHARACTER(*), INTENT(OUT),OPTIONAL:: ErrMsg                                     ! Error message corresponding to ErrStat
-
-
-      ! Local declarations.
-
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-   CHARACTER(200)                    :: Msg                                        ! Temporary string to hold error message
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status; if present, program does not abort on error
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
 
-   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=Sttus )
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
 
-   IF ( Sttus /= 0 ) THEN
-      Msg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = ErrID_Fatal
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = Msg
-         END IF
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         CALL ProgAbort ( Msg )
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_INT))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
-
    ELSE
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = Sttus
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = ''
-         END IF
-      END IF
-
+      ErrStat = ErrID_None
+      ErrMsg  = ''
    END IF
-
+   
 
    RETURN
-   END SUBROUTINE AllIAry3 ! (  Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )
+   END SUBROUTINE AllIAry3
+!=======================================================================
+   SUBROUTINE AllIPAry1 ( Ary, AryDim, Descr, ErrStat, ErrMsg )
+
+      ! This routine allocates a 1-D INTEGER array.
+
+      ! Argument declarations.
+
+   INTEGER,      POINTER             :: Ary    (:)                                 ! Array to be allocated
+   INTEGER,      INTENT(IN)          :: AryDim                                     ! The size of the array.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
+   CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
+
+
+   IF ( ASSOCIATED(Ary) ) THEN
+      DEALLOCATE(Ary)
+      !ErrStat = ErrID_Warn
+      !ErrMsg = " AllIPAry1: Ary already allocated."
+   END IF
+
+   ALLOCATE ( Ary(AryDim) , STAT=ErrStat )
+   
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+   
+   Ary = 0
+
+   RETURN
+   END SUBROUTINE AllIPAry1 
+!=======================================================================
+   SUBROUTINE AllIPAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
+
+
+      ! This routine allocates a 2-D INTEGER array.
+
+      ! Argument declarations.
+
+   INTEGER,      POINTER             :: Ary    (:,:)                               ! Array to be allocated
+   INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
+   CHARACTER(*), INTENT(IN)          :: Descr                                       ! Brief array description.
+
+
+
+   IF ( ASSOCIATED(Ary) ) THEN
+      DEALLOCATE(Ary)
+      !ErrStat = ErrID_Warn
+      !ErrMsg = " AllIPAry2: Ary already allocated."
+   END IF
+
+   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+   
+   Ary = 0
+   RETURN
+   END SUBROUTINE AllIPAry2 
+!=======================================================================
+   SUBROUTINE AllRPAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
+
+      ! This routine allocates a 2-D REAL array.
+      ! Argument declarations.
+
+   REAL(ReKi),   POINTER             :: Ary    (:,:)                               ! Array to be allocated
+   INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
+   CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
+
+
+   IF ( ASSOCIATED(Ary) ) THEN
+      DEALLOCATE(Ary)
+      !ErrStat = ErrID_Warn
+      !ErrMsg = " AllRPAry2: Ary already allocated."
+   END IF
+
+   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_REAL))//&
+                  ' bytes of memory for the '//TRIM( Descr )//' array.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+   
+   Ary = 0
+   RETURN
+   END SUBROUTINE AllRPAry2 
+!=======================================================================
+   SUBROUTINE AllRPAry3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg ) 
+
+
+      ! This routine allocates a 3-D REAL array.
+
+      ! Argument declarations.
+
+   REAL(ReKi),   POINTER             :: Ary    (:,:,:)                             ! Array to be allocated
+   INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim3                                    ! The size of the third dimension of the array.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
+   CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
+
+
+   IF ( ASSOCIATED(Ary) ) THEN
+      DEALLOCATE(Ary)
+      !ErrStat = ErrID_Warn
+      !ErrMsg = " AllRPAry3: Ary already allocated."
+   END IF
+
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
+                  ' bytes of memory for the '//TRIM( Descr )//' array.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+   
+   Ary = 0
+   RETURN
+  END SUBROUTINE AllRPAry3
 !=======================================================================
    SUBROUTINE AllLAry1 ( Ary, AryDim, Descr, ErrStat, ErrMsg )
 
@@ -887,46 +803,29 @@ CONTAINS
    LOGICAL,      ALLOCATABLE         :: Ary    (:)                                 ! Array to be allocated
    INTEGER,      INTENT(IN)          :: AryDim                                     ! The size of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
-   INTEGER,      INTENT(OUT),OPTIONAL:: ErrStat                                    ! Error status; if present, program does not abort on error
-   CHARACTER(*), INTENT(OUT),OPTIONAL:: ErrMsg                                     ! Error message corresponding to ErrStat
-
-
-      ! Local declarations.
-
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-   CHARACTER(200)                    :: Msg                                        ! Temporary string to hold error message
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status; if present, program does not abort on error
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
 
-   ALLOCATE ( Ary(AryDim) , STAT=Sttus )
+   ALLOCATE ( Ary(AryDim) , STAT=ErrStat )
 
-   IF ( Sttus /= 0 ) THEN
-      Msg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = ErrID_Fatal
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = Msg
-         END IF
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         CALL ProgAbort ( Msg )
-      END IF
-
+         ErrMsg = 'Error allocating memory for '//TRIM(Num2LStr(AryDim))//&
+                  ' logical values in the '//TRIM( Descr )//' array.'
+      END IF      
    ELSE
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = Sttus
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = ''
-         END IF
-      END IF
-
+      ErrStat = ErrID_None
+      ErrMsg  = ''
    END IF
 
 
-
    RETURN
-   END SUBROUTINE AllLAry1 ! ( Ary, AryDim, Descr [, ErrStat] [, ErrMsg] )
+   END SUBROUTINE AllLAry1
 !=======================================================================
    SUBROUTINE AllLAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
 
@@ -940,46 +839,29 @@ CONTAINS
    INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
    CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
-   INTEGER,      INTENT(OUT),OPTIONAL:: ErrStat                                    ! Error status; if present, program does not abort on error
-   CHARACTER(*), INTENT(OUT),OPTIONAL:: ErrMsg                                     ! Error message corresponding to ErrStat
-
-
-      ! Local declarations.
-
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-   CHARACTER(200)                    :: Msg                                        ! Temporary string to hold error message
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status; if present, program does not abort on error
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
 
-   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=Sttus )
+   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
 
-    IF ( Sttus /= 0 ) THEN
-      Msg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = ErrID_Fatal
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = Msg
-         END IF
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         CALL ProgAbort ( Msg )
-      END IF
-
+         ErrMsg = 'Error allocating memory for '//TRIM(Num2LStr(AryDim1*AryDim2))//&
+                  ' logical values in the '//TRIM( Descr )//' array.'
+      END IF      
    ELSE
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = Sttus
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = ''
-         END IF
-      END IF
-
+      ErrStat = ErrID_None
+      ErrMsg  = ''
    END IF
 
 
-
    RETURN
-   END SUBROUTINE AllLAry2 ! (  Ary, AryDim1, AryDim2, Descr [, ErrStat] [, ErrMsg] )
+   END SUBROUTINE AllLAry2
 !=======================================================================
    SUBROUTINE AllLAry3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
 
@@ -994,45 +876,29 @@ CONTAINS
    INTEGER,      INTENT(IN)          :: AryDim3                                    ! The size of the third dimension of the array.
 
    CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
-   INTEGER,      INTENT(OUT),OPTIONAL:: ErrStat                                    ! Error status; if present, program does not abort on error
-   CHARACTER(*), INTENT(OUT),OPTIONAL:: ErrMsg                                     ! Error message corresponding to ErrStat
-
-
-      ! Local declarations.
-
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-   CHARACTER(200)                    :: Msg                                        ! Temporary string to hold error message
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status; if present, program does not abort on error
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
 
-   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=Sttus )
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
 
-    IF ( Sttus /= 0 ) THEN
-      Msg = ' Error allocating memory for the '//TRIM( Descr )//' array.'
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = ErrID_Fatal
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = Msg
-         END IF
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         CALL ProgAbort ( Msg )
-      END IF
-
+         ErrMsg = 'Error allocating memory for '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3))//&
+                  ' logical values in the '//TRIM( Descr )//' array.'
+      END IF      
    ELSE
-
-      IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = Sttus
-         IF ( PRESENT(ErrMsg) ) THEN
-            ErrMsg  = ''
-         END IF
-      END IF
-
+      ErrStat = ErrID_None
+      ErrMsg  = ''
    END IF
 
 
    RETURN
-   END SUBROUTINE AllLAry3 ! (  Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )
+   END SUBROUTINE AllLAry3
 !=======================================================================
    SUBROUTINE AllR4Ary1 ( Ary, AryDim, Descr, ErrStat, ErrMsg )
 
@@ -1050,20 +916,14 @@ CONTAINS
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
-      ! Local declarations.
+   ALLOCATE ( Ary(AryDim) , STAT=ErrStat )
 
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-
-
-
-   ALLOCATE ( Ary(AryDim) , STAT=Sttus )
-
-   IF ( Sttus /= 0 ) THEN
+   IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
-         ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_SiKi))//' bytes of memory for the '//TRIM( Descr )//' array.'
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_SiKi))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
       ErrStat = ErrID_None
@@ -1071,7 +931,7 @@ CONTAINS
    END IF
 
    RETURN
-   END SUBROUTINE AllR4Ary1 ! ( Ary, AryDim, Descr, ErrStat, ErrMsg )
+   END SUBROUTINE AllR4Ary1
 !=======================================================================
    SUBROUTINE AllR8Ary1 ( Ary, AryDim, Descr, ErrStat, ErrMsg )
 
@@ -1088,33 +948,25 @@ CONTAINS
    INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
+   
+   ALLOCATE ( Ary(AryDim) , STAT=ErrStat )
 
-      ! Local declarations.
-
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-
-
-
-   ALLOCATE ( Ary(AryDim) , STAT=Sttus )
-
-   IF ( Sttus /= 0 ) THEN
+   IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
-         ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_R8Ki))//' bytes of memory for the '//TRIM( Descr )//' array.'
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_R8Ki))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
-
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
    END IF
 
    RETURN
-   END SUBROUTINE AllR8Ary1 ! ( Ary, AryDim, Descr, ErrStat, ErrMsg )
-
+   END SUBROUTINE AllR8Ary1
 !=======================================================================
-      SUBROUTINE AllR16Ary1 ( Ary, AryDim, Descr, ErrStat, ErrMsg )
+   SUBROUTINE AllR16Ary1 ( Ary, AryDim, Descr, ErrStat, ErrMsg )
 
 
       ! This routine allocates a 1-D 16-byte REAL array.
@@ -1130,29 +982,23 @@ CONTAINS
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
-      ! Local declarations.
+   ALLOCATE ( Ary(AryDim) , STAT=ErrStat )
 
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-
-
-
-   ALLOCATE ( Ary(AryDim) , STAT=Sttus )
-
-   IF ( Sttus /= 0 ) THEN
+   IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
-         ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_QuKi))//' bytes of memory for the '//TRIM( Descr )//' array.'
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim*BYTES_IN_QuKi))//' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
-
    ELSE
       ErrStat = ErrID_None
       ErrMsg  = ''
    END IF
 
+
    RETURN
-   END SUBROUTINE AllR16Ary1 ! ( Ary, AryDim, Descr, ErrStat, ErrMsg )
+   END SUBROUTINE AllR16Ary1
 !=======================================================================
    SUBROUTINE AllR4Ary2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
 
@@ -1171,20 +1017,15 @@ CONTAINS
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
-      ! Local declarations.
+   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
 
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-
-
-
-   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=Sttus )
-
-   IF ( Sttus /= 0 ) THEN
+   
+   IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
       IF ( ALLOCATED(Ary) ) THEN
-         ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_SiKi))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_SiKi))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1194,7 +1035,7 @@ CONTAINS
 
 
    RETURN
-   END SUBROUTINE AllR4Ary2 ! (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
+   END SUBROUTINE AllR4Ary2
 !=======================================================================
    SUBROUTINE AllR8Ary2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
 
@@ -1213,20 +1054,15 @@ CONTAINS
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
-      ! Local declarations.
 
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
+   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
 
-
-
-   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=Sttus )
-
-   IF ( Sttus /= 0 ) THEN
+   IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
       IF ( ALLOCATED(Ary) ) THEN
-         ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_R8Ki))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_R8Ki))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1236,7 +1072,7 @@ CONTAINS
 
 
    RETURN
-   END SUBROUTINE AllR8Ary2 ! (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
+   END SUBROUTINE AllR8Ary2
 !=======================================================================
    SUBROUTINE AllR16Ary2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
 
@@ -1255,20 +1091,15 @@ CONTAINS
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
-      ! Local declarations.
 
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
+   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=ErrStat )
 
-
-
-   ALLOCATE ( Ary(AryDim1,AryDim2) , STAT=Sttus )
-
-   IF ( Sttus /= 0 ) THEN
+   IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
-         ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_QuKi))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*BYTES_IN_QuKi))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1276,9 +1107,8 @@ CONTAINS
       ErrMsg  = ''
    END IF
 
-
    RETURN
-   END SUBROUTINE AllR16Ary2 ! (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
+   END SUBROUTINE AllR16Ary2
 !=======================================================================
    SUBROUTINE AllRAry3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
 
@@ -1298,20 +1128,14 @@ CONTAINS
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
-      ! Local declarations.
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
 
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-
-
-
-   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=Sttus )
-
-   IF ( Sttus /= 0 ) THEN
+   IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
-         ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1319,10 +1143,8 @@ CONTAINS
       ErrMsg  = ''
    END IF
 
-
-
    RETURN
-   END SUBROUTINE AllRAry3 ! (  Ary, AryDim1, AryDim2, AryDim3, Descr [, ErrStat] [, ErrMsg] )
+   END SUBROUTINE AllRAry3
 !=======================================================================
    SUBROUTINE AllRAry4 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat, ErrMsg )
 
@@ -1343,20 +1165,14 @@ CONTAINS
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
-      ! Local declarations.
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4) , STAT=ErrStat )
 
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-
-
-
-   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4) , STAT=Sttus )
-
-   IF ( Sttus /= 0 ) THEN
+   IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
-         ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_REAL))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1364,11 +1180,8 @@ CONTAINS
       ErrMsg  = ''
    END IF
 
-
-
-
    RETURN
-   END SUBROUTINE AllRAry4 ! (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr [, ErrStat] [, ErrMsg] )
+   END SUBROUTINE AllRAry4
 !=======================================================================
    SUBROUTINE AllRAry5 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )
 
@@ -1390,20 +1203,14 @@ CONTAINS
    CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
 
 
-      ! Local declarations.
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4,AryDim5) , STAT=ErrStat )
 
-   INTEGER                           :: Sttus                                      ! Status of allocation attempt.
-
-
-
-   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4,AryDim5) , STAT=Sttus )
-
-   IF ( Sttus /= 0 ) THEN
+   IF ( ErrStat /= 0 ) THEN
       ErrStat = ErrID_Fatal
       IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
-         ErrMsg = ' Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
       ELSE
-         ErrMsg = ' Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_REAL))//&
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_REAL))//&
                   ' bytes of memory for the '//TRIM( Descr )//' array.'
       END IF
    ELSE
@@ -1414,7 +1221,7 @@ CONTAINS
 
 
    RETURN
-   END SUBROUTINE AllRAry5 ! (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr [, ErrStat] [, ErrMsg] )
+   END SUBROUTINE AllRAry5
 !=======================================================================
    SUBROUTINE CheckArgs ( InputFile, ErrStat, Arg2, Flag )
 
@@ -3599,8 +3406,10 @@ CONTAINS
 
       CHARACTER( 20)                         :: InclInfoUC                    ! InclInfo converted to upper case.
       CHARACTER(512)                         :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseInclInfo'
 
-
+      ErrStat = ErrID_None
+      ErrMsg  = ""
 
          ! Check for an integer at the beginning of the line.  If found, it is where
          ! we will start reading the included file.
@@ -3619,13 +3428,13 @@ CONTAINS
 
             READ (Words(1)(:DashLoc-1),*,IOSTAT=ErrStatLcl)  RangeBeg         ! Parse the first number as the beginning fo the range.
             IF ( ErrStatLcl /= 0 )  THEN
-               CALL ExitThisRoutine( ErrID_Fatal, ' >> Fatal error for an incorrectly formatted include-file line range.' )
+               CALL SetErrStat(ErrID_Fatal,'Fatal error for an incorrectly formatted include-file line range.',ErrStat,ErrMsg,RoutineName)
                RETURN
             ENDIF ! ( ErrStatLcl /= 0 )
 
             READ (Words(1)(DashLoc+1:),*,IOSTAT=ErrStatLcl)  RangeEnd
             IF ( ErrStatLcl /= 0 )  THEN
-               CALL ExitThisRoutine( ErrID_Fatal, ' >> Fatal error for an incorrectly formatted include-file line range.' )
+               CALL SetErrStat(ErrID_Fatal,'Fatal error for an incorrectly formatted include-file line range.',ErrStat,ErrMsg,RoutineName)
                RETURN
             ENDIF ! ( ErrStatLcl /= 0 )
 
@@ -3633,16 +3442,16 @@ CONTAINS
                ! Are the line numbers valid?
 
             IF ( RangeBeg <= 0 )  THEN
-               CALL ExitThisRoutine( ErrID_Fatal, ' >> Fatal error for an incorrectly formatted include-file line range.'//NewLine &
-                                                //'    The start of the range must be > 0.' )
+               CALL SetErrStat(ErrID_Fatal,'Fatal error for an incorrectly formatted include-file line range.'//NewLine// &
+                  '    The start of the range must be > 0.',ErrStat,ErrMsg,RoutineName)
                RETURN
             ELSEIF ( RangeEnd < 0 )  THEN
-               CALL ExitThisRoutine( ErrID_Fatal, ' >> Fatal error for an incorrectly formatted include-file line range.'//NewLine &
-                                                //'    The end of the range must be >= 0.' )
+               CALL SetErrStat(ErrID_Fatal,'Fatal error for an incorrectly formatted include-file line range.'//NewLine// &
+                  '    The end of the range must be >= 0.',ErrStat,ErrMsg,RoutineName)
                RETURN
             ELSEIF ( ( RangeEnd > 0 ) .AND. ( RangeEnd < RangeBeg ) )  THEN
-               CALL ExitThisRoutine( ErrID_Fatal, ' >> Fatal error for an incorrectly formatted include-file line range.'//NewLine &
-                                                //'    The end of the range must be >= '//TRIM( Num2LStr( RangeBeg ) )//' or = 0.' )
+               CALL SetErrStat(ErrID_Fatal,'Fatal error for an incorrectly formatted include-file line range.'//NewLine// &
+                  '    The end of the range must be >= '//TRIM( Num2LStr( RangeBeg ) )//' or = 0.',ErrStat,ErrMsg,RoutineName)
                RETURN
             ENDIF ! ( ErrStatLcl /= 0 )
 
@@ -3650,9 +3459,8 @@ CONTAINS
 
             READ (Words(1),*,IOSTAT=ErrStatLcl)  RangeBeg
             IF ( ErrStatLcl /= 0 )  THEN                                      ! Was there a number after the "@"?  If so, assume it is the line to start reading.
-               ErrStat = ErrID_Fatal
-               CALL ExitThisRoutine( ErrID_Fatal, ' >> Fatal error for an incorrectly formatted include-file line range.'//NewLine &
-                                                //'    The end of the range must be >= '//TRIM( Num2LStr( RangeBeg ) )//' or = 0.' )
+               CALL SetErrStat(ErrID_Fatal,'Fatal error for an incorrectly formatted include-file line range.'//NewLine// &
+                  '    The end of the range must be >= '//TRIM( Num2LStr( RangeBeg ) )//' or = 0.',ErrStat,ErrMsg,RoutineName)
                RETURN
             ELSE                                                              ! Number found.  Assume it is the line to start reading.
                RangeEnd = 0                                                   ! TEMP: Read entire file after the start line.
@@ -3675,46 +3483,14 @@ CONTAINS
          ! If the file name is quote delimited, we should be able to read it as a quoted string.  Otherwise, leave it as is.
 
       IF ( INDEX( FileName, '"' )+INDEX( FileName, "'" ) > 0 )  THEN
-         READ (FileName,*,IOSTAT=ErrStatLcl,IOMSG=ErrMsg)  FileName
+         READ (FileName,*,IOSTAT=ErrStatLcl)  FileName  !,IOMSG=ErrMsg2
          IF ( ErrStatLcl /= 0 )  THEN
-            CALL ExitThisRoutine( ErrID_Fatal, ' >> Fatal error for an incorrectly formatted include-file name found.' )
+            CALL SetErrStat(ErrID_Fatal,'Fatal error for an incorrectly formatted include-file line range.',ErrStat,ErrMsg,RoutineName)
             RETURN
          ENDIF ! ( ErrStatLcl /= 0 )
       ENDIF ! ( INDEX( InclInfo, '"' )+INDEX( InclInfo, "'" ) > 0 )
 
-      CALL ExitThisRoutine( ErrID_None, ' ' )
-
       RETURN
-
-   !=======================================================================
-   CONTAINS
-   !=======================================================================
-      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
-
-         ! This subroutine cleans up the parent routine before exiting.
-
-
-            ! Argument declarations.
-
-         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
-
-         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
-
-
-            ! Local declarations.
-
-         LOGICAL                          :: IsOpen                           ! A flage that indicates if the input unit is still open.
-
-
-            ! Set error status/message
-
-         ErrStat = ErrID
-         ErrMsg  = Msg
-
-
-         RETURN
-
-      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
 
    END SUBROUTINE ParseInclInfo ! ( InclInfo, FileName, RangeBeg, RangeEnd, FromFile, ErrStat, ErrMsg )
 !=======================================================================
@@ -4285,7 +4061,9 @@ CONTAINS
       INTEGER(IntKi)                               :: RangeEnd  = 0           ! The last line in a range of lines to be included from a file.  Zero to read to the end of the file.
 
       INTEGER                                      :: File      = 0           ! Index into the arrays.
-
+      
+      CHARACTER(ErrMsgLen)                         :: ErrMsg2
+      CHARACTER(*),       PARAMETER                :: RoutineName = 'ProcessComFile'
       TYPE (FNlist_Type), POINTER                  :: CurrFile                ! The current file being pointed to in the linked list.
       TYPE (FNlist_Type), POINTER                  :: FirstFile               ! The first file in the linked list (TopFile).
       TYPE (FNlist_Type), POINTER                  :: LastFile                ! The last file in the linked list.
@@ -4295,17 +4073,21 @@ CONTAINS
          ! a linked list of the different files.
          ! This MUST be done before calling ReadComFile.
 
+      ErrStat = ErrID_None
+      ErrMsg  = ""
+      
       ALLOCATE ( FirstFile )
       LastFile => FirstFile
       NULLIFY ( LastFile%Next )
       LastFile%Filename = TopFileName
       CurrFile => LastFile
 
-      CALL ScanComFile ( FirstFile, CurrFile, LastFile, 1, 0, FileInfo%NumLines, ErrStatLcl, ErrMsg )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-         RETURN
-      ENDIF
+      CALL ScanComFile ( FirstFile, CurrFile, LastFile, 1, 0, FileInfo%NumLines, ErrStatLcl, ErrMsg2 )
+         CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStatLcl >= AbortErrLev )  THEN
+            CALL Cleanup()
+            RETURN
+         ENDIF
 
 
          ! Count the number of different files in the linked list and allocate the array for the list of files.
@@ -4321,10 +4103,11 @@ CONTAINS
       ENDDO
 
       ALLOCATE ( FileInfo%FileList( FileInfo%NumFiles ) , STAT=ErrStatLcl )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL ExitThisRoutine( ErrID_Fatal, ' >> Fatal error allocating memory for the FileInfo%FileList array in ReadAFfile.' )
-         RETURN
-      ENDIF
+         IF ( ErrStatLcl /= 0 )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the FileInfo%FileList array.' , ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
+            RETURN
+         ENDIF
 
 
          ! Copy the linked list of file names into the FileList array.
@@ -4344,70 +4127,50 @@ CONTAINS
          ! This MUST be done before calling ReadComFile.
 
       ALLOCATE ( FileInfo%FileLine( FileInfo%NumLines ) , STAT=ErrStatLcl )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL ExitThisRoutine( ErrID_Fatal, ' >> Fatal error allocating memory for the FileInfo%FileLine array in ReadAFfile.' )
-         RETURN
-      ENDIF
+         IF ( ErrStatLcl /= 0 )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the FileInfo%FileLine array.' , ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
+            RETURN
+         ENDIF
 
       ALLOCATE ( FileInfo%FileIndx( FileInfo%NumLines ) , STAT=ErrStatLcl )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL ExitThisRoutine( ErrID_Fatal, ' >> Fatal error allocating memory for the FileInfo%FileIndx array in ReadAFfile.' )
-         RETURN
-      ENDIF
+         IF ( ErrStatLcl /= 0 )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the FileInfo%FileIndx array.' , ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
+            RETURN
+         ENDIF
 
       ALLOCATE ( FileInfo%Lines( FileInfo%NumLines ) , STAT=ErrStatLcl )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL ExitThisRoutine( ErrID_Fatal, ' >> Fatal error allocating memory for the FileInfo%Lines array in ReadAFfile.' )
-         RETURN
-      ENDIF
+         IF ( ErrStatLcl /= 0 )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for the FileInfo%Lines array.' , ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
+            RETURN
+         ENDIF
 
 
          ! Read the file and save all but the comments.
 
       AryInd = 0
-      CALL ReadComFile ( FileInfo, FileIndx, AryInd, RangeBeg, RangeEnd, ErrStatLcl, ErrMsg )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL ExitThisRoutine( ErrID_Fatal, ErrMsg )
-         RETURN
-      ENDIF
+      CALL ReadComFile ( FileInfo, FileIndx, AryInd, RangeBeg, RangeEnd, ErrStatLcl, ErrMsg2 )
+         CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStatLcl >= AbortErrLev )  THEN
+            CALL Cleanup()
+            RETURN
+         ENDIF
 
-
+      CALL Cleanup()         
       RETURN
 
    !=======================================================================
    CONTAINS
    !=======================================================================
-      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+      SUBROUTINE Cleanup (  )
 
-         ! This subroutine cleans up all the allocatable arrays, sets the error status/message and closes the binary file
-
-            ! Passed arguments.
-
-         INTEGER(IntKi), INTENT(IN)     :: ErrID        ! The error identifier (ErrLev)
-
-         CHARACTER(*),   INTENT(IN)     :: Msg          ! The error message (ErrMsg)
-
+         ! This subroutine cleans up all the allocatable arrays and closes the binary file
 
             ! Local arguments.
 
          TYPE (FNlist_Type), POINTER     :: NextFile    ! The next file being pointed to in the linked list.
-
-
-            ! Set error status/message
-
-         ErrStat = ErrID
-         ErrMsg  = Msg
-
-
-            ! If there was an error, deallocate the arrays in the FileInfo structure.
-
-         IF ( ErrStat /= 0 )  THEN
-            IF ( ALLOCATED( FileInfo%FileLine ) ) DEALLOCATE( FileInfo%FileLine )
-            IF ( ALLOCATED( FileInfo%Lines    ) ) DEALLOCATE( FileInfo%FileIndx )
-            IF ( ALLOCATED( FileInfo%FileLine ) ) DEALLOCATE( FileInfo%FileList )
-            IF ( ALLOCATED( FileInfo%Lines    ) ) DEALLOCATE( FileInfo%Lines    )
-         END IF ! ( ErrLev /= 0 )
-
 
             ! Deallocate the linked list of file names.
 
@@ -4420,8 +4183,12 @@ CONTAINS
               NextFile => CurrFile%Next
           ENDDO
 
-
-      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
+         IF ( ALLOCATED( FileInfo%FileLine ) ) DEALLOCATE( FileInfo%FileLine )
+         IF ( ALLOCATED( FileInfo%Lines    ) ) DEALLOCATE( FileInfo%FileIndx )
+         IF ( ALLOCATED( FileInfo%FileLine ) ) DEALLOCATE( FileInfo%FileList )
+         IF ( ALLOCATED( FileInfo%Lines    ) ) DEALLOCATE( FileInfo%Lines    )
+                    
+      END SUBROUTINE Cleanup 
 
    END SUBROUTINE ProcessComFile ! ( TopFileName, FileInfo, ErrStat, ErrMsg )
 !=======================================================================
@@ -4849,7 +4616,7 @@ CONTAINS
 
       CALL ReadLine ( UnIn, CommChars, Line, LineLen, ErrStatLcl )            ! Reads a line.  Returns what is before the first comment character.
 
-      IF ( ( ErrStatLcl == 0 )  .AND. ( LineLen > 0 ) )  THEN
+      IF ( ( ErrStatLcl == 0 )  .AND. ( LineLen > 0 ) )  THEN ! ErrStatLcl is IOStat from Read statement
 
          Line = ADJUSTL( Line )
 
@@ -5510,7 +5277,7 @@ CONTAINS
    RETURN
    END SUBROUTINE ReadLAry ! ( UnIn, Fil, LogAry, AryLen, AryName, AryDescr [, ErrStat] [, UnEc] )
 !=============================================================================
-SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
+SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, IOStat )
 
 
       ! This routine reads a line from the specified input file and returns the non-comment
@@ -5519,7 +5286,7 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
       ! Argument declarations.
 
-   INTEGER(IntKi), INTENT(OUT)               :: ErrStat                       ! Error status.
+   INTEGER(IntKi), INTENT(OUT)               :: IOStat                       ! Error status.
 
    INTEGER, INTENT(IN)                       :: UnIn                          ! The unit number for the file being read.
    INTEGER, INTENT(OUT)                      :: LineLen                       ! The length of the line returned from ReadLine().
@@ -5527,22 +5294,19 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
    CHARACTER(*), INTENT(IN)                  :: CommChars                     ! The list of possible comment characters.
    CHARACTER(*), INTENT(OUT)                 :: Line                          ! The decommented line being returned to the calling routine.
 
-
       ! Local declarations.
 
    INTEGER                                    :: CommLoc                      ! The left-most location of a given comment character in the Line.
    INTEGER                                    :: FirstComm                    ! The location of first comment character in the Line.
    INTEGER                                    :: IC                           ! The index for the character location in the string.
-   INTEGER                                    :: IOS                          ! The status of the read.
    INTEGER                                    :: NumCommChars                 ! The number of comment characters in the CommChars array.
 
 
-   READ (UnIn,'(A)',IOSTAT=IOS)  Line
+   READ (UnIn,'(A)',IOSTAT=IOStat)  Line
 
-   IF ( IOS /= 0 )  THEN
+   IF ( IOStat /= 0 )  THEN
       Line    = ''
       LineLen = 0
-      ErrStat = IOS
       RETURN
    ENDIF
 
@@ -5565,7 +5329,7 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
 
    RETURN
-   END SUBROUTINE ReadLine ! ( UnIn, CommChars, Line, LineLen, ErrStat )
+   END SUBROUTINE ReadLine ! ( UnIn, CommChars, Line, LineLen, IOStat )
 !=======================================================================
    SUBROUTINE ReadLVar ( UnIn, Fil, LogVar, VarName, VarDescr, ErrStat, ErrMsg, UnEc )
 
@@ -6402,7 +6166,7 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
          ! Local declarations.
 
-      INTEGER(IntKi)                               :: ErrStatLcl              ! Error status local to this routine.
+      INTEGER(IntKi)                               :: ErrStatLcl              ! Error status local to this routine and/or IOStatus.
 
       INTEGER                                      :: CurrLine                ! The current line in the file.
       INTEGER                                      :: RangeBeg                ! The first line in a range of lines to be included from a file.
@@ -6418,35 +6182,35 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
       CHARACTER(1024)                              :: FileName                ! The name of this file being processed.
       CHARACTER(1024)                              :: IncFileName             ! The name of a file that this one includes.
       CHARACTER(512)                               :: Line                    ! The contents of a line returned from ReadLine() with comment removed.
+      CHARACTER(ErrMsgLen)                         :: ErrMsg2
+      CHARACTER(*),       PARAMETER                :: RoutineName = 'ScanComFile'
 
       TYPE (FNlist_Type), POINTER                  :: CurrFile                ! The current file being pointed to in the linked list.
       TYPE (FNlist_Type), POINTER                  :: NewFile                 ! The file being pointed to in the linked list is is to be included by ThisFile.
 
 
+      ErrStat = ErrID_None
+      ErrMsg  = ""
 
          ! Is this file already open from earlier in the recursion.  That would be bad.
 
       FileName = ThisFile%Filename
       INQUIRE ( FILE=Filename, OPENED=IsOpen )
       IF ( IsOpen )  THEN
-         ErrStat = ErrID_Fatal
-         CALL ExitThisRoutine( ErrID_Fatal, ' >> Fatal error scanning "'//TRIM( Filename ) &
-                                          //'" in ScanComFile.  A file cannot directly or indirectly include itself.' )
+         CALL SetErrStat( ErrID_Fatal, 'Fatal error scanning "'//TRIM( Filename ) &
+                          //'". A file cannot directly or indirectly include itself.', ErrStat, ErrMsg, RoutineName )
          RETURN
       ENDIF
 
 
          ! Open the input file.
+      UnIn = -1
+      CALL GetNewUnit ( UnIn, ErrStatLcl, ErrMsg2 )
 
-      CALL GetNewUnit ( UnIn, ErrStatLcl, ErrMsg )
+      CALL OpenFInpFile ( UnIn, Filename, ErrStatLcl, ErrMsg2 )
       IF ( ErrStatLcl /= 0 )  THEN
-         CALL ExitThisRoutine( ErrID_Fatal, ' >> '//TRIM( ADJUSTL( ErrMsg ) ) )
-         RETURN
-      ENDIF ! ( ErrStatLcl /= 0 )
-
-      CALL OpenFInpFile ( UnIn, Filename, ErrStatLcl, ErrMsg )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL ExitThisRoutine( ErrID_Fatal, ' >> '//TRIM( ADJUSTL( ErrMsg ) ) )
+         CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
          RETURN
       ENDIF ! ( ErrStatLcl /= 0 )
 
@@ -6455,7 +6219,12 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
       IF ( StartLine > 1 )  THEN
          DO CurrLine=1,StartLine-1
-            READ(UnIn,'()')
+            READ(UnIn,'()', IOStat=ErrStatLcl)
+            IF (ErrStatLcl /= 0) THEN
+               CALL SetErrStat( ErrID_Fatal, "Error reading file beginning.", ErrStat, ErrMsg, RoutineName )
+               CALL Cleanup()
+               RETURN
+            END IF            
          ENDDO ! CurrLine
       ENDIF ! ( StartLine > 1 )
 
@@ -6466,8 +6235,8 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
       IF ( LastLine > 0 )  THEN
          IF ( StartLine > LastLine )  THEN
-            CALL ExitThisRoutine( ErrID_Fatal, &
-                              ' >> Fatal error: In the call to ScanComFile, LastLine must be >= StartLine unless it is zero.' )
+            CALL SetErrStat( ErrID_Fatal, 'Fatal error: LastLine must be >= StartLine unless it is zero.', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
             RETURN
          ENDIF ! ( StartLine > LastLine )
       ENDIF ! ( LastLine > 0 )
@@ -6489,9 +6258,9 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
             ! Process the next line.
 
-         CALL ReadLine ( UnIn, CommChars, Line, LineLen, ErrStatLcl )               ! Reads a line.  Returns what is before the first comment character.
+         CALL ReadLine ( UnIn, CommChars, Line, LineLen, ErrStatLcl )  ! Reads a line.  Returns what is before the first comment character.
 
-         IF ( ( ErrStatLcl == 0 )  .AND. ( LineLen > 0 ) )  THEN
+         IF ( ( ErrStatLcl == 0 )  .AND. ( LineLen > 0 ) )  THEN ! ErrStatLcl is IOStatus from read statement
 
             Line = ADJUSTL( Line )
 
@@ -6503,13 +6272,12 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
                   ! Parse the contents of everything after the "@" to determine the name of the include file and the optional line range.
 
-               CALL ParseInclInfo ( Line(2:), IncFileName, RangeBeg, RangeEnd, ErrStat, ErrMsg )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine( ErrID_Fatal, ErrMsg//Newline// &
-                      ' >> The fatal error occurred in ScanComFile when processing line #'// &
-                      TRIM( Num2LStr( CurrLine ) )//' of "'//TRIM( FileName )//'".' )
-                  RETURN
-               ENDIF
+               CALL ParseInclInfo ( Line(2:), IncFileName, RangeBeg, RangeEnd, ErrStatLcl, ErrMsg2 )
+                  CALL SetErrStat( ErrStatLcl, TRIM( FileName )//':Line#'//TRIM( Num2LStr( CurrLine ) )//':'//TRIM(ErrMsg2), ErrStat, ErrMsg, RoutineName )
+                  IF (ErrStat >= AbortErrLev) THEN
+                     CALL Cleanup()
+                     RETURN
+                  END IF
 
 
                   ! Check to see if this file has been opened before.
@@ -6538,16 +6306,12 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
                   NewFile => LastFile
                ENDIF ! ( .NOT. FileFound )
 
-
-
-
-               CALL ScanComFile ( FirstFile, NewFile, LastFile, RangeBeg, RangeEnd, NumLines, ErrStatLcl, ErrMsg )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine( ErrID_Fatal, ErrMsg//Newline// &
-                      ' >> The fatal error occurred in ScanComFile when processing line #'// &
-                      TRIM( Num2LStr( CurrLine ) )//' of "'//TRIM( FileName )//'".' )
-                  RETURN
-               ENDIF
+               CALL ScanComFile ( FirstFile, NewFile, LastFile, RangeBeg, RangeEnd, NumLines, ErrStatLcl, ErrMsg2 )
+                  CALL SetErrStat( ErrStatLcl, TRIM( FileName )//':Line#'//TRIM( Num2LStr( CurrLine ) )//':'//TRIM(ErrMsg2), ErrStat, ErrMsg, RoutineName )
+                  IF (ErrStat >= AbortErrLev) THEN
+                     CALL Cleanup()
+                     RETURN
+                  END IF
 
             ELSE
 
@@ -6559,7 +6323,7 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
       ENDDO ! WHILE ( ErrStatLcl == 0 )
 
-      CALL ExitThisRoutine( ErrID_None, ' ' )
+      CALL Cleanup()
 
 
       RETURN
@@ -6567,27 +6331,13 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 !=======================================================================
    CONTAINS
    !=======================================================================
-      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+      SUBROUTINE Cleanup ( )
 
          ! This subroutine cleans up the parent routine before exiting.
-
-
-            ! Argument declarations.
-
-         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
-
-         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
-
 
             ! Local declarations.
 
          LOGICAL                          :: IsOpen                           ! A flage that indicates if the input unit is still open.
-
-
-            ! Set error status/message
-
-         ErrStat = ErrID
-         ErrMsg  = Msg
 
 
             ! Close the file if it it open..
@@ -6598,7 +6348,7 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, ErrStat )
 
          RETURN
 
-      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
+      END SUBROUTINE Cleanup
 
    END SUBROUTINE ScanComFile ! ( FileName, NumLines, NumFiles, ErrStat, ErrMsg )
 !=======================================================================

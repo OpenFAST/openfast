@@ -97,7 +97,7 @@ CONTAINS
       ! in bytes corresponding to a file unit number or returns -1 on error.
 
 
-   USE IFPORT
+   !USE IFPORT
 
 
       ! Function declaration.

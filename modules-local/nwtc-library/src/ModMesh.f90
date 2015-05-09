@@ -475,7 +475,9 @@ CONTAINS
 
       LOGICAL                    :: IsMotion
       LOGICAL                    :: IsLoad
-
+      INTEGER(IntKi)             :: ErrStat2 
+      CHARACTER(ErrMsgLen)       :: ErrMess2
+      CHARACTER(*),PARAMETER     :: RoutineName = 'MeshCreate'
 
          ! Local initializations:
 
@@ -486,12 +488,13 @@ CONTAINS
 
       IF ( mesh_debug ) print*,'Called MeshCreate'
 
-      CALL MeshDestroy( BlankMesh, ErrStat, ErrMess, .TRUE. )
+      CALL MeshDestroy( BlankMesh, ErrStat2, ErrMess2, .TRUE. )
                                                         ! make sure we're not leaving any pointers dangling
                                                         ! and nullify them for good measure
                                                         ! See comment on optional IgnoreSibling argument
                                                         ! in definition of MeshDestroy
-      IF (ErrStat >= AbortErrLev) RETURN
+      CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName) 
+         IF (ErrStat >= AbortErrLev) RETURN
 
       BlankMesh%initialized = .TRUE.
       BlankMesh%IOS         = IOS
@@ -507,19 +510,33 @@ CONTAINS
       IF ( PRESENT(IsNewSibling) ) IsNewSib = IsNewSibling
 
       IF ( .NOT. IsNewSib ) THEN
-         CALL AllocPAry( BlankMesh%Position, 3, Nnodes, 'MeshCreate: Position' )
-         CALL AllocPAry( BlankMesh%RefOrientation, 3, 3, Nnodes, 'MeshCreate: RefOrientation' )
+         CALL AllocPAry( BlankMesh%Position, 3, Nnodes, 'MeshCreate: Position', ErrStat2, ErrMess2 )
+            CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
+         CALL AllocPAry( BlankMesh%RefOrientation, 3, 3, Nnodes, 'MeshCreate: RefOrientation', ErrStat2, ErrMess2 )
+            CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
+            IF (ErrStat >= AbortErrLev) RETURN
             ! initialize these variables:
             BlankMesh%Position = 0.0_ReKi
-            CALL Eye(BlankMesh%RefOrientation, ErrStat, ErrMess)
-
-         ALLOCATE(BlankMesh%ElemTable(NELEMKINDS))
+            CALL Eye(BlankMesh%RefOrientation, ErrStat2, ErrMess2)
+               CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)     
+            
+         ALLOCATE(BlankMesh%ElemTable(NELEMKINDS),STAT=ErrStat2)
+         IF (ErrStat2/=0) THEN
+            CALL SetErrStat(ErrID_Fatal, "Error allocating ElemTable.", ErrStat, ErrMess,RoutineName)     
+            RETURN
+         END IF
+         
+            
          DO i = 1, NELEMKINDS
             BlankMesh%ElemTable(i)%nelem = 0  ; BlankMesh%ElemTable(i)%maxelem = 0
             NULLIFY(BlankMesh%ElemTable(i)%Elements )
          ENDDO
 
-         ALLOCATE(BlankMesh%RemapFlag, Stat=ErrStat ) ! assign some space for this pointer to point to
+         ALLOCATE(BlankMesh%RemapFlag, Stat=ErrStat2 ) ! assign some space for this pointer to point to
+         IF (ErrStat2/=0) THEN
+            CALL SetErrStat(ErrID_Fatal, "Error allocating RemapFlag.", ErrStat, ErrMess,RoutineName)     
+            RETURN
+         END IF
          BlankMesh%RemapFlag = .true.
 
       ELSE
@@ -536,7 +553,8 @@ CONTAINS
 
       IF ( PRESENT(Force) ) THEN
          IF ( Force ) THEN
-            CALL AllocAry( BlankMesh%Force, 3, Nnodes, 'MeshCreate: Force', ErrStat, ErrMess )
+            CALL AllocAry( BlankMesh%Force, 3, Nnodes, 'MeshCreate: Force', ErrStat2, ErrMess2 )
+            CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
             IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%Force = 0.
             BlankMesh%FieldMask(MASKID_FORCE) = .TRUE.
@@ -546,7 +564,8 @@ CONTAINS
 
       IF ( PRESENT(Moment) ) THEN
          IF ( Moment ) THEN
-            CALL AllocAry( BlankMesh%Moment, 3, Nnodes, 'MeshCreate: Moment', ErrStat, ErrMess )
+            CALL AllocAry( BlankMesh%Moment, 3, Nnodes, 'MeshCreate: Moment', ErrStat2, ErrMess2 )
+            CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
             IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%Moment = 0.
             BlankMesh%FieldMask(MASKID_MOMENT) = .TRUE.
@@ -556,9 +575,11 @@ CONTAINS
 
       IF ( PRESENT(Orientation) ) THEN
          IF ( Orientation ) THEN
-            CALL AllocAry( BlankMesh%Orientation, 3, 3, Nnodes, 'MeshCreate: Orientation', ErrStat, ErrMess )
-            IF (ErrStat >= AbortErrLev) RETURN
-            CALL Eye(BlankMesh%Orientation, ErrStat, ErrMess)  ! set this orientation to the identity matrix
+            CALL AllocAry( BlankMesh%Orientation, 3, 3, Nnodes, 'MeshCreate: Orientation', ErrStat2,ErrMess2 )
+               CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
+               IF (ErrStat >= AbortErrLev) RETURN
+            CALL Eye(BlankMesh%Orientation, ErrStat2, ErrMess2)  ! set this orientation to the identity matrix
+               CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
             BlankMesh%FieldMask(MASKID_ORIENTATION) = .TRUE.
             IsMotion = .TRUE.
          ENDIF
@@ -566,8 +587,9 @@ CONTAINS
 
       IF ( PRESENT(TranslationDisp) ) THEN
          IF ( TranslationDisp ) THEN
-            CALL AllocAry( BlankMesh%TranslationDisp, 3, Nnodes, 'MeshCreate: TranslationDisp', ErrStat, ErrMess )
-            IF (ErrStat >= AbortErrLev) RETURN
+            CALL AllocAry( BlankMesh%TranslationDisp, 3, Nnodes, 'MeshCreate: TranslationDisp', ErrStat2, ErrMess2 )
+               CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
+               IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%TranslationDisp = 0.
             BlankMesh%FieldMask(MASKID_TRANSLATIONDISP) = .TRUE.
             IsMotion = .TRUE.
@@ -576,8 +598,9 @@ CONTAINS
 
       IF ( PRESENT(TranslationVel) ) THEN
          IF ( TranslationVel ) THEN
-            CALL AllocAry( BlankMesh%TranslationVel, 3, Nnodes, 'MeshCreate: TranslationVel', ErrStat, ErrMess )
-            IF (ErrStat >= AbortErrLev) RETURN
+            CALL AllocAry( BlankMesh%TranslationVel, 3, Nnodes, 'MeshCreate: TranslationVel', ErrStat2, ErrMess2 )
+               CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
+               IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%TranslationVel = 0.
             BlankMesh%FieldMask(MASKID_TRANSLATIONVEL) = .TRUE.
             IsMotion = .TRUE.
@@ -586,8 +609,9 @@ CONTAINS
 
       IF ( PRESENT(RotationVel) ) THEN
          IF ( RotationVel ) THEN
-            CALL AllocAry( BlankMesh%RotationVel, 3, Nnodes, 'MeshCreate: RotationVel', ErrStat, ErrMess )
-            IF (ErrStat >= AbortErrLev) RETURN
+            CALL AllocAry( BlankMesh%RotationVel, 3, Nnodes, 'MeshCreate: RotationVel', ErrStat2, ErrMess2 )
+               CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
+               IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%RotationVel = 0.
             BlankMesh%FieldMask(MASKID_ROTATIONVEL) = .TRUE.
             IsMotion = .TRUE.
@@ -596,8 +620,9 @@ CONTAINS
 
       IF ( PRESENT(TranslationAcc) ) THEN
          IF ( TranslationAcc ) THEN
-            CALL AllocAry( BlankMesh%TranslationAcc, 3, Nnodes, 'MeshCreate: TranslationAcc', ErrStat, ErrMess )
-            IF (ErrStat >= AbortErrLev) RETURN
+            CALL AllocAry( BlankMesh%TranslationAcc, 3, Nnodes, 'MeshCreate: TranslationAcc', ErrStat2, ErrMess2 )
+               CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
+               IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%TranslationAcc = 0.
             BlankMesh%FieldMask(MASKID_TRANSLATIONACC) = .TRUE.
             IsMotion = .TRUE.
@@ -606,8 +631,9 @@ CONTAINS
 
       IF ( PRESENT(RotationAcc) ) THEN
          IF ( RotationAcc ) THEN
-            CALL AllocAry( BlankMesh%RotationAcc, 3, Nnodes, 'MeshCreate: RotationAcc', ErrStat, ErrMess )
-            IF (ErrStat >= AbortErrLev) RETURN
+            CALL AllocAry( BlankMesh%RotationAcc, 3, Nnodes, 'MeshCreate: RotationAcc', ErrStat2, ErrMess2 )
+               CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
+               IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%RotationAcc = 0.
             BlankMesh%FieldMask(MASKID_ROTATIONACC) = .TRUE.
             IsMotion = .TRUE.
@@ -618,8 +644,9 @@ CONTAINS
       BlankMesh%nScalars = 0
       IF ( PRESENT(nScalars) ) THEN
          IF ( nScalars .GT. 0 ) THEN
-            CALL AllocAry( BlankMesh%Scalars, nScalars, Nnodes, 'MeshCreate: Scalars', ErrStat,ErrMess )
-            IF (ErrStat >= AbortErrLev) RETURN
+            CALL AllocAry( BlankMesh%Scalars, nScalars, Nnodes, 'MeshCreate: Scalars', ErrStat2,ErrMess2 )
+               CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
+               IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%Scalars = 0.
             BlankMesh%FieldMask(MASKID_Scalar) = .TRUE.
             BlankMesh%nScalars = nScalars
@@ -634,24 +661,27 @@ CONTAINS
       IF ( IsMotion .AND. IOS == COMPONENT_INPUT ) THEN
 
          IF ( .NOT. BlankMesh%FieldMask(MASKID_TRANSLATIONDISP)) THEN
-            CALL AllocAry( BlankMesh%TranslationDisp, 3, Nnodes, 'MeshCreate: TranslationDisp', ErrStat, ErrMess )
-            IF (ErrStat >= AbortErrLev) RETURN
+            CALL AllocAry( BlankMesh%TranslationDisp, 3, Nnodes, 'MeshCreate: TranslationDisp', ErrStat2, ErrMess2 )
+               CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
+               IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%TranslationDisp = 0.
             BlankMesh%FieldMask(MASKID_TRANSLATIONDISP) = .TRUE.
             !CALL SetErrStat(ErrID_Info, 'Meshes with motion fields must also contain the TranslationDisp field.',ErrStat,ErrMsg,'MeshCreate')
          ENDIF
 
          IF ( .NOT. BlankMesh%FieldMask(MASKID_TRANSLATIONVEL)) THEN
-            CALL AllocAry( BlankMesh%TranslationVel, 3, Nnodes, 'MeshCreate: TranslationVel', ErrStat, ErrMess )
-            IF (ErrStat >= AbortErrLev) RETURN
+            CALL AllocAry( BlankMesh%TranslationVel, 3, Nnodes, 'MeshCreate: TranslationVel', ErrStat2, ErrMess2 )
+               CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
+               IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%TranslationVel = 0.
             BlankMesh%FieldMask(MASKID_TRANSLATIONVEL) = .TRUE.
             !CALL SetErrStat(ErrID_Info, 'Meshes with motion fields must also contain the TranslationVel field.',ErrStat,ErrMsg,'MeshCreate')
          ENDIF
          
          IF ( .NOT. BlankMesh%FieldMask(MASKID_TRANSLATIONACC)) THEN
-            CALL AllocAry( BlankMesh%TranslationAcc, 3, Nnodes, 'MeshCreate: TranslationAcc', ErrStat, ErrMess )
-            IF (ErrStat >= AbortErrLev) RETURN
+            CALL AllocAry( BlankMesh%TranslationAcc, 3, Nnodes, 'MeshCreate: TranslationAcc', ErrStat2, ErrMess2 )
+               CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
+               IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%TranslationAcc = 0.
             BlankMesh%FieldMask(MASKID_TRANSLATIONACC) = .TRUE.
             !CALL SetErrStat(ErrID_Info, 'Meshes with motion fields must also contain the TranslationAcc field.',ErrStat,ErrMsg,'MeshCreate')
@@ -662,8 +692,9 @@ CONTAINS
       IF ( IsLoad .AND. IOS == COMPONENT_INPUT ) THEN
                
          IF ( .NOT. BlankMesh%FieldMask(MASKID_MOMENT)) THEN
-            CALL AllocAry( BlankMesh%Moment, 3, Nnodes, 'MeshCreate: Moment', ErrStat, ErrMess )
-            IF (ErrStat >= AbortErrLev) RETURN
+            CALL AllocAry( BlankMesh%Moment, 3, Nnodes, 'MeshCreate: Moment', ErrStat2, ErrMess2 )
+               CALL SetErrStat(ErrStat2, ErrMess2, ErrStat, ErrMess,RoutineName)          
+               IF (ErrStat >= AbortErrLev) RETURN
             BlankMesh%Moment = 0.
             BlankMesh%FieldMask(MASKID_MOMENT) = .TRUE.
             !CALL SetErrStat(ErrID_Info, 'Meshes with load fields must also contain the Moment field.',ErrStat,ErrMsg,'MeshCreate')
