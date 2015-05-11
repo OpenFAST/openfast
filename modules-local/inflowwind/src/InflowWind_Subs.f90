@@ -1663,11 +1663,8 @@ SUBROUTINE InflowWind_OpenSumFile( SumFileUnit, SummaryName, IfW_Prog, WindType,
 
    SumFileUnit = -1
    CALL GetNewUnit( SumFileUnit )
-   CALL OpenFOutFile ( SumFileUnit, SummaryName, TmpErrStat )
-   IF ( TmpErrStat /= 0 ) THEN
-      CALL SetErrStat(ErrID_Fatal,'Failed to open summary file.',ErrStat,ErrMsg,'')
-      RETURN
-   END IF
+   CALL OpenFOutFile ( SumFileUnit, SummaryName, ErrStat, ErrMsg )
+   IF (ErrStat >=AbortErrLev) RETURN
 
 
          ! Write the summary file header
