@@ -108,6 +108,8 @@
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
        CALL BldGaussPointDataMass(hhx,hpx,Nvvv,RR0,node_elem,dof_node,vvv,vvp,mmm,mEta,rho)
        CALL ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd)
+!WRITE(*,*) 'Fc'
+!WRITE(*,*) Fc(:)
        IF(damp_flag .EQ. 1) THEN
            CALL DissipativeForce(beta,Stif,vvv,vvp,E1,Fc,Fd,Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd)
        ENDIF
@@ -119,6 +121,7 @@
                elf(temp_id1) = elf(temp_id1) + hhx(i)*Fb(j)*Jacobian*gw(igp)
                elf(temp_id1) = elf(temp_id1) + hhx(i)*Fd(j)*Jacobian*gw(igp)
                elf(temp_id1) = elf(temp_id1) + hpx(i)*Fc(j)*Jacobian*gw(igp)
+!               elf(temp_id1) = elf(temp_id1) + hhx(i)*Fc(j)*Jacobian*gw(igp)
            ENDDO
        ENDDO
    ENDDO
