@@ -7052,11 +7052,8 @@ SUBROUTINE MrsnOut_OpenOutput( ProgName, OutRootName,  p, InitOut, ErrStat, ErrM
       OutFileName = TRIM(OutRootName)//'.MRSN.out'
       CALL GetNewUnit( p%UnOutFile )
    
-      CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat ) 
-      IF ( ErrStat /= 0 ) THEN
-         ErrMsg = ' Error opening Morison-level output file.'
-         RETURN
-      END IF
+      CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat, ErrMsg ) 
+      IF (ErrStat >=AbortErrLev) RETURN
       
       
       

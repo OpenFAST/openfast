@@ -260,12 +260,8 @@ SUBROUTINE HDOut_OpenSum( UnSum, SummaryName, HD_Prog, ErrStat, ErrMsg )
 
    CALL GetNewUnit( UnSum )
 
-   CALL OpenFOutFile ( UnSum, SummaryName, ErrStat ) 
-   IF ( ErrStat /= 0 ) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'Failed to open summary file.'
-      RETURN
-   END IF
+   CALL OpenFOutFile ( UnSum, SummaryName, ErrStat, ErrMsg ) 
+   IF (ErrStat >=AbortErrLev) RETURN
       
       
          ! Write the summary file header
@@ -654,8 +650,8 @@ SUBROUTINE HDOut_OpenOutput( HydroDyn_ProgDesc, OutRootName,  p, InitOut, ErrSta
       OutFileName = TRIM(OutRootName)//'.HD.out'
       CALL GetNewUnit( p%UnOutFile )
    
-      CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat ) 
-      IF ( ErrStat /= 0 ) RETURN
+      CALL OpenFOutFile ( p%UnOutFile, OutFileName, ErrStat, ErrMsg ) 
+      IF (ErrStat >=AbortErrLev) RETURN
       
       
          ! Write the output file header

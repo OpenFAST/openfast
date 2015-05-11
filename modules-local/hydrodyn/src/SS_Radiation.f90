@@ -195,10 +195,10 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
     REWIND (UNIT=UnSS)   ! REWIND the file so we can read it in a second time.
 
     ! Skip the first 4 lines:  (NOTE: no error handling here because we would have caught it the first time through)
-    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'Header'  )! Reads the first entire line (Title header)
-    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'Enabled dofs'  )! Reads the first entire line (Title header)
-    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'N'  )! Reads the first entire line (Title header)
-    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'N per dofs'  )! Reads the first entire line (Title header)   
+    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'Header', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
+    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'Enabled dofs', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
+    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'N', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)
+    CALL ReadCom ( UnSS, TRIM(InitInp%InputFile)//'.ss', 'N per dofs', ErrStat2, ErrMsg2  )! Reads the first entire line (Title header)   
     
     DO I = 1,N !Read A MatriX
         CALL ReadAry( UnSS,TRIM(InitInp%InputFile)//'.ss', Rad_A(I,:), N, 'Rad_A', 'A_Matrix',ErrStat2, ErrMsg2)
