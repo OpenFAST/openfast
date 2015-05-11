@@ -31,8 +31,8 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes per blades"    -
 typedef   ^                            ^                             INTEGER                  DSMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
 typedef   ^                            ^                             ReKi                     a_s                             -             -         -        "speed of sound"        m/s
-typedef   ^                            ^                             INTEGER                  AFIndx                          {:}{:}        -         -        "Airfoil index for given blade node" -
-typedef   ^                            ^                             AFI_ParameterType        AFI_Params                      -             -         -        "Airfoil Info parameter data structure" -
+#typedef   ^                            ^                             INTEGER                  AFIndx                          {:}{:}        -         -        "Airfoil index for given blade node" -
+#typedef   ^                            ^                             AFI_ParameterType        AFI_Params                      -             -         -        "Airfoil Info parameter data structure" -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -             -         -        "Output format for numerical results"    -
 typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -             -         -        "Output format for header strings"    -
 typedef   ^                            ^                             INTEGER                  NumOuts                         -             -         -        "The number of outputs for this module as requested in the input file"    -
@@ -88,6 +88,8 @@ typedef   ^                            OtherStateType                LOGICAL    
 typedef   ^                            OtherStateType                LOGICAL                  LESF                            {:}{:}        -         -        "logical flag indicating if leading edge separation is possible"   -
 typedef   ^                            OtherStateType                LOGICAL                  VRTX                            {:}{:}        -         -        "logical flag indicating if a vortex is being processed"   -
 typedef   ^                            OtherStateType                LOGICAL                  FirstPass                       -             -         -        "logical flag indicating if this is the first time step"   -
+typedef   ^                            OtherStateType                INTEGER                  iBladeNode                      -             -         -        "index for the blade node being operated on (within the current blade)" -
+typedef   ^                            OtherStateType                INTEGER                  iBlade                          -             -         -        "index for the blade being operated on" -
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
@@ -98,8 +100,6 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  nNodesPerBlade                  -             -         -        "Number nodes per blades"    -
 typedef   ^                            ^                             INTEGER                  DSMod                           -             -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
 typedef   ^                            ^                             ReKi                     a_s                             -             -         -        "speed of sound"        m/s
-typedef   ^                            ^                             INTEGER                  AFIndx                          {:}{:}        -         -        "Airfoil index for given blade node" -
-typedef   ^                            ^                             AFI_ParameterType        AFI_Params                      -             -         -        "Airfoil Info parameter data structure" -
 typedef   ^                            ^                             INTEGER                  NumOuts                         -             -         -        "Number of outputs"        -
 typedef   ^                            ^                             INTEGER                  OutSwtch                        -             -         -        "Output requested channels to: [1=Unsteady.out 2=GlueCode.out  3=both files]"    -
 typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -             -         -        "Output format for numerical results"    -

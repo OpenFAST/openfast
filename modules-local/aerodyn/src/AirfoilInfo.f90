@@ -612,37 +612,181 @@ CONTAINS
 
             IF ( UA_Model == 1 )  THEN
 
-               CALL ParseVar ( FileInfo, CurLine, 'BL_AOL', AFInfo%Table(Table)%UA_BL%BL_AOL, ErrStatLcl, ErrMsg, UnEc )
+               CALL ParseVar ( FileInfo, CurLine, 'alpha0', AFInfo%Table(Table)%UA_BL%alpha0, ErrStatLcl, ErrMsg, UnEc )
                IF ( ErrStatLcl /= 0 )  THEN
                   CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
                   RETURN
                ENDIF
 
-               CALL ParseVar ( FileInfo, CurLine, 'BL_CnA', AFInfo%Table(Table)%UA_BL%BL_CnA, ErrStatLcl, ErrMsg, UnEc )
+               CALL ParseVar ( FileInfo, CurLine, 'alpha1', AFInfo%Table(Table)%UA_BL%alpha1, ErrStatLcl, ErrMsg, UnEc )
                IF ( ErrStatLcl /= 0 )  THEN
                   CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
                   RETURN
                ENDIF
 
-               CALL ParseVar ( FileInfo, CurLine, 'BL_CnS', AFInfo%Table(Table)%UA_BL%BL_CnS, ErrStatLcl, ErrMsg, UnEc )
+               CALL ParseVar ( FileInfo, CurLine, 'alpha2', AFInfo%Table(Table)%UA_BL%alpha2, ErrStatLcl, ErrMsg, UnEc )
                IF ( ErrStatLcl /= 0 )  THEN
                   CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
                   RETURN
                ENDIF
 
-               CALL ParseVar ( FileInfo, CurLine, 'BL_CnSL', AFInfo%Table(Table)%UA_BL%BL_CnSL, ErrStatLcl, ErrMsg, UnEc )
+               CALL ParseVar ( FileInfo, CurLine, 'eta_e', AFInfo%Table(Table)%UA_BL%eta_e, ErrStatLcl, ErrMsg, UnEc )
                IF ( ErrStatLcl /= 0 )  THEN
                   CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
                   RETURN
                ENDIF
 
-               CALL ParseVar ( FileInfo, CurLine, 'BL_AOD', AFInfo%Table(Table)%UA_BL%BL_AOD, ErrStatLcl, ErrMsg, UnEc )
+               CALL ParseVar ( FileInfo, CurLine, 'C_nalpha', AFInfo%Table(Table)%UA_BL%C_nalpha, ErrStatLcl, ErrMsg, UnEc )
                IF ( ErrStatLcl /= 0 )  THEN
                   CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
                   RETURN
                ENDIF
 
-               CALL ParseVar ( FileInfo, CurLine, 'BL_Cd0', AFInfo%Table(Table)%UA_BL%BL_Cd0, ErrStatLcl, ErrMsg, UnEc )
+               CALL ParseVar ( FileInfo, CurLine, 'T_f0', AFInfo%Table(Table)%UA_BL%T_f0, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+               
+               CALL ParseVar ( FileInfo, CurLine, 'T_V0', AFInfo%Table(Table)%UA_BL%T_V0, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+               
+               CALL ParseVar ( FileInfo, CurLine, 'T_p', AFInfo%Table(Table)%UA_BL%T_p, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'T_VL', AFInfo%Table(Table)%UA_BL%T_VL, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'b1', AFInfo%Table(Table)%UA_BL%b1, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'b2', AFInfo%Table(Table)%UA_BL%b2, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'b5', AFInfo%Table(Table)%UA_BL%b5, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'A1', AFInfo%Table(Table)%UA_BL%A1, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'A2', AFInfo%Table(Table)%UA_BL%A2, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'A5', AFInfo%Table(Table)%UA_BL%A5, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'S1', AFInfo%Table(Table)%UA_BL%S1, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'S2', AFInfo%Table(Table)%UA_BL%S2, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'S3', AFInfo%Table(Table)%UA_BL%S3, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'S4', AFInfo%Table(Table)%UA_BL%S4, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'Cn1', AFInfo%Table(Table)%UA_BL%Cn1, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'Cn2', AFInfo%Table(Table)%UA_BL%Cn2, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'St_sh', AFInfo%Table(Table)%UA_BL%St_sh, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'Cd0', AFInfo%Table(Table)%UA_BL%Cd0, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'Cm0', AFInfo%Table(Table)%UA_BL%Cm0, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'k0', AFInfo%Table(Table)%UA_BL%k0, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'k1', AFInfo%Table(Table)%UA_BL%k1, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'k2', AFInfo%Table(Table)%UA_BL%k2, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'k3', AFInfo%Table(Table)%UA_BL%k3, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'k1_hat', AFInfo%Table(Table)%UA_BL%k1_hat, ErrStatLcl, ErrMsg, UnEc )
+               IF ( ErrStatLcl /= 0 )  THEN
+                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
+                  RETURN
+               ENDIF
+
+               CALL ParseVar ( FileInfo, CurLine, 'x_cp_bar', AFInfo%Table(Table)%UA_BL%x_cp_bar, ErrStatLcl, ErrMsg, UnEc )
                IF ( ErrStatLcl /= 0 )  THEN
                   CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
                   RETURN
@@ -788,6 +932,7 @@ subroutine AFI_GetAirfoilParams( AFInfo, M, Re, alpha, alpha0, alpha1, alpha2, e
    real(ReKi),       intent(in   )       :: M                             ! mach number
    real(ReKi),       intent(in   )       :: Re                            ! Reynold's number
    real(ReKi),       intent(in   )       :: alpha                         !
+   
    real(ReKi),       intent(  out)       :: alpha0                        ! zero lift angle of attack (radians)
    real(ReKi),       intent(  out)       :: alpha1                        ! angle of attack at f = 0.7, approximately the stall angle; for alpha >= alpha0 (radians)
    real(ReKi),       intent(  out)       :: alpha2                        ! angle of attack at f = 0.7, approximately the stall angle; for alpha < alpha0 (radians)
@@ -825,38 +970,41 @@ subroutine AFI_GetAirfoilParams( AFInfo, M, Re, alpha, alpha0, alpha1, alpha2, e
    errMsg         = ''
    errStat        = ErrID_None
    
-   alpha0         =  -0.35_ReKi*pi/180.0
-   alpha1         =  11.0_ReKi*pi/180.0
-   alpha2         =  -11.0_ReKi*pi/180.0
-   eta_e          =  0.90               ! Recovery factor in the range [0.85 - 0.95]
-   C_nalpha       =  2*pi 
-   C_nalpha_circ  =  C_nalpha / sqrt(1.0_ReKi-M**2)
-   T_f0           =  3.0_ReKi  ! seconds
-   T_V0           =  6.0_ReKi
-   T_p            =  1.7_ReKi
-   T_VL           =  11.0_ReKi
-   b1             =  0.14_ReKi
-   b2             =  0.53_ReKi
-   b5             =  5.0_ReKi
-   A1             =  0.3_ReKi
-   A2             =  0.70_ReKi
-   A5             =  1.0_ReKi
-   S1             =  0.0262_ReKi   !!!!!!!!!!
-   S2             =  0.0201_ReKi   !!!!!!!!!!
-   S3             =  -0.0262_ReKi   !!!!!!!!!!
-   S4             =  -0.0201_ReKi   !!!!!!!!!!
-   Cn1            =  1.264_ReKi  ! Stall values of Cn
-   Cn2            =  -0.833_ReKi
-   St_sh          =  0.19_ReKi
-   Cd0            =  0.012_ReKi
-   Cm0            =  0.0_ReKi
-   k0             =  0.0_ReKi
-   k1             =  0.0_ReKi
-   k2             =  0.0_ReKi
-   k3             =  0.0_ReKi
-   k1_hat         =  0.0_ReKi
-   x_cp_bar       =  0.2_ReKi
    
+      ! These coefs are stored in the AFInfo data structures based on Re
+   alpha0         =  AFInfo%Table(1)%UA_BL%alpha0        !-0.35_ReKi*pi/180.0
+   alpha1         =  AFInfo%Table(1)%UA_BL%alpha1        !11.0_ReKi*pi/180.0
+   alpha2         =  AFInfo%Table(1)%UA_BL%alpha2        !-11.0_ReKi*pi/180.0
+   eta_e          =  AFInfo%Table(1)%UA_BL%eta_e         !0.90               ! Recovery factor in the range [0.85 - 0.95]
+   C_nalpha       =  AFInfo%Table(1)%UA_BL%C_nalpha      !2*pi  
+   T_f0           =  AFInfo%Table(1)%UA_BL%T_f0          !3.0_ReKi  ! seconds
+   T_V0           =  AFInfo%Table(1)%UA_BL%T_V0          !6.0_ReKi
+   T_p            =  AFInfo%Table(1)%UA_BL%T_p           !1.7_ReKi
+   T_VL           =  AFInfo%Table(1)%UA_BL%T_VL          !11.0_ReKi
+   b1             =  AFInfo%Table(1)%UA_BL%b1            !0.14_ReKi
+   b2             =  AFInfo%Table(1)%UA_BL%b2            !0.53_ReKi
+   b5             =  AFInfo%Table(1)%UA_BL%b5            !5.0_ReKi
+   A1             =  AFInfo%Table(1)%UA_BL%A1            !0.3_ReKi
+   A2             =  AFInfo%Table(1)%UA_BL%A2            !0.70_ReKi
+   A5             =  AFInfo%Table(1)%UA_BL%A5            !1.0_ReKi
+   S1             =  AFInfo%Table(1)%UA_BL%S1            !0.0262_ReKi   !!!!!!!!!!
+   S2             =  AFInfo%Table(1)%UA_BL%S2            !0.0201_ReKi   !!!!!!!!!!
+   S3             =  AFInfo%Table(1)%UA_BL%S3            !0.0262_ReKi   !!!!!!!!!!
+   S4             =  AFInfo%Table(1)%UA_BL%S4            !0.0201_ReKi   !!!!!!!!!!
+   Cn1            =  AFInfo%Table(1)%UA_BL%Cn1           !1.264_ReKi  ! Stall values of Cn
+   Cn2            =  AFInfo%Table(1)%UA_BL%Cn2           !-0.833_ReKi
+   St_sh          =  AFInfo%Table(1)%UA_BL%St_sh         !0.19_ReKi
+   Cd0            =  AFInfo%Table(1)%UA_BL%Cd0           !0.012_ReKi
+   Cm0            =  AFInfo%Table(1)%UA_BL%Cm0           !0.0_ReKi
+   k0             =  AFInfo%Table(1)%UA_BL%k0            !0.0_ReKi
+   k1             =  AFInfo%Table(1)%UA_BL%k1            !0.0_ReKi
+   k2             =  AFInfo%Table(1)%UA_BL%k2            !0.0_ReKi
+   k3             =  AFInfo%Table(1)%UA_BL%k3            !0.0_ReKi
+   k1_hat         =  AFInfo%Table(1)%UA_BL%k1_hat        !0.0_ReKi
+   x_cp_bar       =  AFInfo%Table(1)%UA_BL%x_cp_bar      !0.2_ReKi
+   
+   
+   C_nalpha_circ  =  C_nalpha / sqrt(1.0_ReKi-M**2)
   ! Cn1=1.9 Tp=1.7 Tf=3., Tv=6 Tvl=11, Cd0=0.012
    
 end subroutine AFI_GetAirfoilParams

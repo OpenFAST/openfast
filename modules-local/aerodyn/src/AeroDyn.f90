@@ -204,7 +204,7 @@ subroutine AD_SetParameters( InitInp, p, errStat, errMsg )
 ! The parameters are set here and not changed during the simulation.
 !..................................................................................................................................
    type(AD_InitInputType),       intent(inout)  :: InitInp     ! Input data for initialization routine, out is needed because of copy below
-   type(AD_ParameterType),       intent(  out)  :: p           ! Parameters
+   type(AD_ParameterType),       intent(inout)  :: p           ! Parameters
    integer(IntKi),                intent(inout)  :: errStat     ! Error status of the operation
    character(*),                  intent(inout)  :: errMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -225,7 +225,7 @@ subroutine AD_SetParameters( InitInp, p, errStat, errMsg )
    p%numBladeNodes  = InitInp%numBladeNodes 
    p%numBlades      = InitInp%numBlades    
    p%numOuts        = p%numBladeNodes*p%numBlades*AD_numChanPerNode
-   p%BEMT_SkewWakeMod = InitInp%BEMT_SkewWakeMod
+   ! p%BEMT_SkewWakeMod = InitInp%BEMT_SkewWakeMod
    IF (ALLOCATED(InitInp%AFInfo)) THEN
       i1_l = LBOUND(InitInp%AFInfo,1)
       i1_u = UBOUND(InitInp%AFInfo,1)
@@ -527,25 +527,25 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ! TODO: Look into MOVE_ALLOC()  GJH
    
       !augment the initialization inputs with the data from AFI_Init
-   IF (ALLOCATED(p%AFI_Params%AFInfo)) THEN
-      i1_l = LBOUND(p%AFI_Params%AFInfo,1)
-      i1_u = UBOUND(p%AFI_Params%AFInfo,1)
-      IF (.NOT. ALLOCATED(InitInp%BEMT%AFInfo)) THEN 
-         ALLOCATE(InitInp%BEMT%AFInfo(i1_l:i1_u),STAT=ErrStat)
-         IF (ErrStat /= 0) THEN 
-            ErrStat = ErrID_Fatal 
-            ErrMsg = 'AD_Init: Error allocating InitInp%BEMT%AFInfo.'
-            call AD_InitCleanup()
-         END IF
-      END IF
-      DO i1 = LBOUND(p%AFI_Params%AFInfo,1), UBOUND(p%AFI_Params%AFInfo,1)
-         CALL AFI_Copyafinfotype( p%AFI_Params%AFInfo(i1), InitInp%BEMT%AFInfo(i1), MESH_NEWCOPY, ErrStat, ErrMsg )
-      ENDDO
-   ELSE
-      ErrMsg = 'Invalid AirfoilInfo parameters returned from AD_Init()'
-      ErrStat = ErrID_Fatal
-      call AD_InitCleanup()
-   ENDIF
+   !IF (ALLOCATED(p%AFI_Params%AFInfo)) THEN
+   !   i1_l = LBOUND(p%AFI_Params%AFInfo,1)
+   !   i1_u = UBOUND(p%AFI_Params%AFInfo,1)
+   !   IF (.NOT. ALLOCATED(InitInp%BEMT%AFInfo)) THEN 
+   !      ALLOCATE(InitInp%BEMT%AFInfo(i1_l:i1_u),STAT=ErrStat)
+   !      IF (ErrStat /= 0) THEN 
+   !         ErrStat = ErrID_Fatal 
+   !         ErrMsg = 'AD_Init: Error allocating InitInp%BEMT%AFInfo.'
+   !         call AD_InitCleanup()
+   !      END IF
+   !   END IF
+   !   DO i1 = LBOUND(p%AFI_Params%AFInfo,1), UBOUND(p%AFI_Params%AFInfo,1)
+   !      CALL AFI_Copyafinfotype( p%AFI_Params%AFInfo(i1), InitInp%BEMT%AFInfo(i1), MESH_NEWCOPY, ErrStat, ErrMsg )
+   !   ENDDO
+   !ELSE
+   !   ErrMsg = 'Invalid AirfoilInfo parameters returned from AD_Init()'
+   !   ErrStat = ErrID_Fatal
+   !   call AD_InitCleanup()
+   !ENDIF
    !call AFI_Copyafinfotype( AFI_Params%AFInfo, AD_InitInData%AFInfo, MESH_NEWCOPY, ErrStat, ErrMsg )
    
      !............................................................................................
@@ -688,7 +688,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, errStat, e
       
       
          ! Call into the BEMT update states    NOTE:  This is a non-standard framework interface!!!!!  GJH
-      call BEMT_UpdateStates(t, n, OtherState%BEMT_u,  p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, errStat, errMsg)
+      call BEMT_UpdateStates(t, n, OtherState%BEMT_u,  p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI_Params%AFInfo, errStat, errMsg)
       
       
 end subroutine AD_UpdateStates
@@ -734,7 +734,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       ! NOTE: the x%BEMT, xd%BEMT, and OtherState%BEMT are simply dummy variables because the BEMT module does not use them or return them
       !
    
-   call BEMT_CalcOutput(t, OtherState%BEMT_u, p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, OtherState%BEMT_y, ErrStat, ErrMsg )
+   call BEMT_CalcOutput(t, OtherState%BEMT_u, p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI_Params%AFInfo, OtherState%BEMT_y, ErrStat, ErrMsg )
    ! TODO Check error status
    
 !-------------------------------------------------------   
@@ -830,7 +830,7 @@ subroutine AD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_resid
    
    call SetInputsForBEMT(u,OtherState%BEMT_u, ErrStat, ErrMsg)
    
-   call BEMT_CalcConstrStateResidual( Time, OtherState%BEMT_u, p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, z_residual%BEMT, ErrStat, ErrMsg )
+   call BEMT_CalcConstrStateResidual( Time, OtherState%BEMT_u, p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, z_residual%BEMT, p%AFI_Params%AFInfo, ErrStat, ErrMsg )
    
 END SUBROUTINE AD_CalcConstrStateResidual
 
