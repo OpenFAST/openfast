@@ -1036,7 +1036,7 @@ INTEGER                      :: Sttus
 
 LOGICAL                      :: Echo  
 INTEGER(IntKi)               :: UnIn
-!INTEGER(IntKi)               :: UnOut 
+INTEGER(IntKi)               :: IOS
 INTEGER(IntKi)               :: UnEc    !Echo file ID
 
 REAL(ReKi),PARAMETER        :: WrongNo=-9999.   ! Placeholder value for bad(old) values in JDampings
@@ -1088,14 +1088,9 @@ ENDDO
    !RRD - start modification
    ! Echo - Echo input to "[InputFileName].ech".
 
-!!!!READ (UnIn,*,IOSTAT=IOS)  WrEcho    !RRD suggest replacing the next 3 with what follows
-!!!!CALL CheckIOS ( IOS, SDInputFile, 'Echo', FlgType )
-!!!Echo = WrEcho    ! Why a new variable? - RRD
-    
 CALL ReadVar(UnIn, SDInputFile, Echo, 'Echo', 'Echo Input File Logic Variable',ErrStat, ErrMsg  )
 
 IF ( ErrStat /= ErrID_None ) THEN
-   ! CALL CheckIOS ( ErrStat, SDInputFile, 'Echo', FlgType, .TRUE. ) 
    ErrStat = ErrID_Fatal
    CALL CleanUp()
    RETURN
@@ -1131,8 +1126,8 @@ CALL Conv2UC( Line )    ! Convert Line to upper case.
 IF ( TRIM(Line) == 'DEFAULT' )  THEN   ! .TRUE. when one wants to use the default value timestep provided by the glue code.
     p%SDdeltaT=Init%DT
 ELSE                                   ! The input must have been specified numerically.
-   READ (Line,*,IOSTAT=ErrStat)  p%SDdeltaT
-   CALL CheckIOS ( ErrStat, SDInputFile, 'SDdeltaT', NumType, .TRUE., ErrMsg )
+   READ (Line,*,IOSTAT=IOS)  p%SDdeltaT
+      CALL CheckIOS ( IOS, SDInputFile, 'SDdeltaT', NumType, ErrStat,ErrMsg )
 
    IF ( ErrStat /= ErrID_None ) THEN
       ErrStat = ErrID_Fatal
