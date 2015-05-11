@@ -1646,7 +1646,7 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
 !    INTEGER(IntKi)                :: NumOuts                                   ! Number of output channel names read from the file 
     INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
 
-    INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
+    INTEGER(IntKi)                :: ErrStat2 , IOS                            ! Temporary Error status
     LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
     CHARACTER(ErrMsgLen)          :: ErrMsg2                                   ! Temporary Error message
     CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
@@ -1739,12 +1739,10 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
       IF ( ErrStat >= AbortErrLev ) RETURN
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DT
-         READ( Line, *, IOSTAT=ErrStat2) InputFileData%DT
-         IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckIOS ( ErrStat2, InputFile, "DT", NumType, .TRUE., ErrMsg2 )
-            CALL CheckError( ErrID_Fatal, ErrMsg2 )
-            RETURN
-         END IF
+         READ( Line, *, IOSTAT=IOS) InputFileData%DT
+            CALL CheckIOS ( IOS, InputFile, 'DT', NumType, ErrStat2, ErrMsg2 )
+            CALL CheckError(ErrStat2, ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN         
       END IF
         
       
@@ -1764,12 +1762,10 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
       IF ( ErrStat >= AbortErrLev ) RETURN
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%gravity
-         READ( Line, *, IOSTAT=ErrStat2) InputFileData%Gravity
-         IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckIOS ( ErrStat2, InputFile, "Gravity", NumType, .TRUE., ErrMsg2 )
-            CALL CheckError( ErrID_Fatal, ErrMsg2 )
-            RETURN
-         END IF
+         READ( Line, *, IOSTAT=IOS) InputFileData%Gravity
+            CALL CheckIOS ( IOS, InputFile, 'Gravity', NumType, ErrStat2, ErrMsg2 )
+            CALL CheckError(ErrStat2, ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN                  
       END IF    
     
     
@@ -1779,12 +1775,10 @@ INTEGER(IntKi), PARAMETER         :: AnchT(10) = (/ AnchT1, AnchT2, AnchT3, Anch
     IF ( ErrStat >= AbortErrLev ) RETURN 
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%WtrDens
-         READ( Line, *, IOSTAT=ErrStat2) InputFileData%WtrDens
-         IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckIOS ( ErrStat2, InputFile, "WtrDens", NumType, .TRUE., ErrMsg2 )
-            CALL CheckError( ErrID_Fatal, ErrMsg2 )
-            RETURN
-         END IF
+         READ( Line, *, IOSTAT=IOS) InputFileData%WtrDens
+            CALL CheckIOS ( IOS, InputFile, 'WtrDens', NumType, ErrStat2, ErrMsg2 )
+            CALL CheckError(ErrStat2, ErrMsg2)
+            IF ( ErrStat >= AbortErrLev ) RETURN                  
       END IF  
       
     ! MaxIter - Maximum number of static iterations:
