@@ -18,6 +18,7 @@
 # make sure that the file name does not have any trailing white spaces!
 include   Registry_NWTC_Library.txt
 usefrom   AirfoilInfo_Registry.txt
+usefrom   UnsteadyAero_Registry.txt
 #
 #
 # ..... Initialization data .......................................................................................................
@@ -44,9 +45,10 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             ReKi                     zHub                            {:}        -         -        "Distance to hub for each blade" m
 typedef   ^                            ^                             ReKi                     zLocal                          {:}{:}     -         -        "Distance to blade node, measured along the blade" m
 typedef   ^                            ^                             ReKi                     zTip                            {:}        -         -        "Distance to blade tip, measured along the blade" m
-typedef   ^                            ^                             AFInfoType               AFInfo                          {:}         -         -        "Parameters for the airfoils"
+#typedef   ^                            ^                             AFInfoType               AFInfo                          {:}         -         -        "Parameters for the airfoils"
 typedef   ^                            ^                             INTEGER                  NumAF                           -          -         -        "Parameters for the BEMT module"
 typedef   ^                            ^                             CHARACTER(1024)          AF_File                         {:}        -         -        "Parameters for the BEMT module"
+typedef   ^                            ^                             LOGICAL                  UA_Flag                         -             -         -        "logical flag indicating whether to use UnsteadyAero"        -
 #
 #
 # Define outputs from the initialization routine here:
@@ -63,6 +65,7 @@ typedef   ^                            ContinuousStateType           ReKi       
 # Define discrete (non-differentiable) states here:
 #
 typedef   ^                            DiscreteStateType             ReKi                     DummyDiscState           -          -         -         ""        -
+typedef   ^                            ^                             UA_DiscreteStateType     UA                        -             -         -        "states for UnsteadyAero"        -
 #
 #
 # Define constraint states here:
@@ -75,6 +78,7 @@ typedef   ^                            ConstraintStateType           ReKi       
 #   e.g. data used only for efficiency purposes (indices for searching in an array,  copies of previous calculations of output at a given time, etc.)
 #
 typedef   ^                            OtherStateType                ReKi                     DummyOtherState                     -           -         -         ""   -
+typedef   ^                            ^                             UA_OtherStateType        UA                                  -             -         -        "other states for UnsteadyAero"        -
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
@@ -99,7 +103,9 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             ReKi                     tipLossConst                    {:}{:}     -         -        "A constant computed during initialization based on B*(zTip-zLocal)/(2*zLocal)" -
 typedef   ^                            ^                             ReKi                     hubLossConst                    {:}{:}     -         -        "A constant computed during initialization based on B*(zLocal-zHub)/(2*zHub)" -
 typedef   ^                            ^                             ReKi                     zHub                            {:}        -         -        "Distance to hub for each blade" m
-typedef   ^                            ^                             AFInfoType               AFInfo                          {:}        -         -        "Parameters for the airfoils"
+#typedef   ^                            ^                             AFInfoType               AFInfo                          {:}        -         -        "Parameters for the airfoils"
+typedef   ^                            ^                             UA_ParameterType         UA                              -             -         -        "parameters for UnsteadyAero"        -
+typedef   ^                            ^                             LOGICAL                  UA_Flag                         -             -         -        "logical flag indicating whether to use UnsteadyAero"        -
 #
 
 #

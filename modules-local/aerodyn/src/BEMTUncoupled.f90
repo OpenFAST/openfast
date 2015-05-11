@@ -19,8 +19,7 @@ module BEMTUnCoupled
    contains
    
    
-   subroutine BEMTU_Wind(phi, axInduction, tanInduction, Vx, Vy,  &
-    chord, theta, airDens, mu, AOA,  Re)
+   subroutine BEMTU_Wind(phi, axInduction, tanInduction, Vx, Vy,  chord, theta, airDens, mu, AOA,  W, Re)
 
     
     ! in
@@ -28,10 +27,10 @@ module BEMTUnCoupled
     real(ReKi), intent(in) :: chord, theta, airDens, mu
 
     ! out
-    real(ReKi), intent(out) :: AOA,  Re
+    real(ReKi), intent(out) :: AOA,  Re, W
     
     ! locals
-    real(ReKi)              :: W
+    !real(ReKi)              :: W
     
     ! angle of attack
     AOA = phi - theta 
@@ -54,7 +53,9 @@ module BEMTUnCoupled
 end subroutine BEMTU_Wind
 
 !----------------------------------------------------------------------------------------------------------------------------------  
-subroutine ComputeAirfoilCoefs( phi, axInduction, tanInduction, Vx, Vy, chord, theta, airDens, mu, useAIDrag, useTIDrag, AFInfo, AOA, Re, Cl, Cd, Cx, Cy, errStat, errMsg )
+subroutine ComputeAirfoilCoefs( phi, axInduction, tanInduction, Vx, Vy, chord, theta, airDens, mu, useAIDrag, useTIDrag, AFInfo, &
+                      UA_Flag, p_UA, xd_UA, OtherState_UA, &
+                      AOA, Re, Cl, Cd, Cx, Cy, errStat, errMsg )
 ! This routine is called from BEMTU_InductionWithResidual and possibly BEMT_CalcOutput.
 ! Determine the Cl, Cd, Cx, Cy coeficients for a given set of induction factors and inflow angle
 !..................................................................................................................................
@@ -70,14 +71,20 @@ subroutine ComputeAirfoilCoefs( phi, axInduction, tanInduction, Vx, Vy, chord, t
    logical,                intent(in   ) :: useAIDrag
    logical,                intent(in   ) :: useTIDrag       
    type(AFInfoType),       intent(in   ) :: AFInfo
+   logical,                intent(in   ) :: UA_Flag
+   type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
+   type(UA_DiscreteStateType),   intent(in   ) :: xd_UA          ! Discrete states at Time
+   type(UA_OtherStateType),      intent(in   ) :: OtherState_UA  ! Other/optimization states
    real(ReKi),             intent(  out) :: AOA, Re, Cl, Cd, Cx, Cy
    integer(IntKi),         intent(  out) :: errStat       ! Error status of the operation
    character(*),           intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None 
    
+   real(ReKi)                            :: W
       ! Compute AOA, Re based on current values of axInduction, tanInduction
-   call BEMTU_Wind(phi, axInduction, tanInduction, Vx, Vy, chord, theta, airDens, mu, AOA, Re)
+   call BEMTU_Wind(phi, axInduction, tanInduction, Vx, Vy, chord, theta, airDens, mu, AOA, W, Re)
       
-   call  BE_CalcOutputs(AFInfo, AOA*R2D, log(Re), Cl, Cd, errStat, errMsg) ! AOA is in degrees in this look up table and Re is in log(Re)
+   call  BE_CalcOutputs( AFInfo, UA_Flag, AOA*R2D, W, log(Re), p_UA, xd_UA, OtherState_UA, Cl, Cd,  errStat, errMsg)  
+   !call  BE_CalcOutputs(AFInfo, AOA*R2D, log(Re), Cl, Cd, errStat, errMsg) ! AOA is in degrees in this look up table and Re is in log(Re)
    if (errStat >= AbortErrLev) then
       call SetErrStat( errStat, errMsg, errStat, errMsg, 'ComputeAirfoilCoefs' ) 
       return
@@ -94,6 +101,7 @@ end subroutine ComputeAirfoilCoefs
                            ! This is the residual calculation for the uncoupled BEM solve
 real(ReKi) function BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, rHub, lambda, AFInfo, &
                               Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, SkewWakeMod, &
+                              UA_Flag, p_UA, xd_UA, OtherState_UA, &
                               AOA, Re, Cl, Cd, Cx, Cy, axInduction, tanInduction, chi, ErrStat, ErrMsg)
       
 
@@ -120,6 +128,10 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations,
    logical,                intent(in   ) :: useHubLoss
    logical,                intent(in   ) :: useTipLoss
    integer,                intent(in   ) :: SkewWakeMod   ! Skewed wake model
+   logical,                intent(in   ) :: UA_Flag
+   type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
+   type(UA_DiscreteStateType),   intent(in   ) :: xd_UA          ! Discrete states at Time
+   type(UA_OtherStateType),      intent(in   ) :: OtherState_UA  ! Other/optimization states
    real(ReKi),             intent(  out) :: AOA, Re, Cl, Cd, Cx, Cy, axInduction, tanInduction, chi
    integer(IntKi),         intent(  out) :: ErrStat       ! Error status of the operation
    character(*),           intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
@@ -141,7 +153,9 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations,
     
    do I = 1,numReIterations
       
-      call ComputeAirfoilCoefs( phi, axInduction, tanInduction, Vx, Vy, chord, theta, airDens, mu, useAIDrag, useTIDrag, AFInfo, AOA, Re, Cl, Cd, Cx, Cy, errStat, errMsg )       
+      call ComputeAirfoilCoefs( phi, axInduction, tanInduction, Vx, Vy, chord, theta, airDens, mu, useAIDrag, useTIDrag, AFInfo, &
+                                UA_Flag, p_UA, xd_UA, OtherState_UA, &
+                                AOA, Re, Cl, Cd, Cx, Cy, errStat, errMsg )       
       if (errStat >= AbortErrLev) then
          call SetErrStat( errStat, errMsg, errStat, errMsg, 'BEMTU_InductionWithResidual' ) 
          return
@@ -166,6 +180,7 @@ end function BEMTU_InductionWithResidual
 
 real(ReKi) function UncoupledErrFn(phi, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, rHub, lambda, AFInfo, &
                               Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, SkewWakeMod, &
+                              UA_Flag, p_UA, xd_UA, OtherState_UA, &
                               ErrStat, ErrMsg)
       
 
@@ -192,6 +207,10 @@ real(ReKi) function UncoupledErrFn(phi, psi, chi0, numReIterations, airDens, mu,
    logical,                intent(in   ) :: useHubLoss
    logical,                intent(in   ) :: useTipLoss
    integer,                intent(in   ) :: SkewWakeMod   ! Skewed wake model
+   logical,                intent(in   ) :: UA_Flag
+   type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
+   type(UA_DiscreteStateType),   intent(in   ) :: xd_UA          ! Discrete states at Time
+   type(UA_OtherStateType),      intent(in   ) :: OtherState_UA  ! Other/optimization states
    integer(IntKi),         intent(  out) :: ErrStat       ! Error status of the operation
    character(*),           intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
   
@@ -208,6 +227,7 @@ real(ReKi) function UncoupledErrFn(phi, psi, chi0, numReIterations, airDens, mu,
       
       UncoupledErrFn = BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, rHub, lambda, AFInfo, &
                               Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, SkewWakeMod, &
+                              UA_Flag, p_UA, xd_UA, OtherState_UA, &
                               AOA, Re, Cl, Cd, Cx, Cy, axInduction, tanInduction, chi, ErrStat, ErrMsg)
       
    

@@ -18,7 +18,7 @@ private
 contains
 
 !==============================================================================   
-subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, ErrStat, ErrMsg)
+subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
 ! Called by : UA_CalcOutput
 ! Calls  to : CubicSplineInterpM   
 !..............................................................................
@@ -27,6 +27,7 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, ErrStat, ErrMsg)
    real(ReKi),       intent(  out) :: Cl                    ! Coefficient of lift (-)
    real(ReKi),       intent(  out) :: Cd                    ! Coefficient of drag (-)
    real(ReKi),       intent(  out) :: Cm                    ! Pitch moment coefficient (-)
+   real(ReKi),       intent(  out) :: Cd0                   ! Minimum Cd value (-)
    integer(IntKi),   intent(  out) :: ErrStat               ! Error status of the operation
    character(*),     intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
    
@@ -49,7 +50,7 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, ErrStat, ErrMsg)
       ErrStat = ErrID_Fatal
       return
    end if
-      
+   Cd0 =   AFInfo%Table(1)%UA_BL%Cd0
    IntAFCoefs(1:s1) = CubicSplineInterpM( 1.0*real( AOA ) &
                                              , AFInfo%Table(1)%Alpha &
                                              , AFInfo%Table(1)%Coefs &
@@ -436,7 +437,7 @@ end function Get_Cm
 
 
 !==============================================================================                              
-subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
+subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                St_sh, Kalpha, alpha_e, alpha0, dalpha0, eta_e, Kq, q_cur, X1, X2, &
                                Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, fprime, &
                                Cn_alpha_q_circ, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, errStat, errMsg )
@@ -448,10 +449,11 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, C
 
       
    integer(IntKi),                         intent(in   ) :: i,j               ! Blade node indices
-   type(UA_InputType),           intent(in   ) :: u                           ! Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
-   type(UA_ParameterType),       intent(in   ) :: p                           ! Parameters   TODO: this should only be in, but is needed because of a copy of AFInfo in a called subroutine. GJH 1/5/2015
-   type(UA_DiscreteStateType),   intent(in   ) :: xd                          ! Input: Discrete states at t;
-   type(UA_OtherStateType),      intent(in   ) :: OtherState                  ! Other/optimization states
+   type(UA_InputType),                     intent(in   ) :: u                 ! Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
+   type(UA_ParameterType),                 intent(in   ) :: p                 ! Parameters   TODO: this should only be in, but is needed because of a copy of AFInfo in a called subroutine. GJH 1/5/2015
+   type(UA_DiscreteStateType),             intent(in   ) :: xd                ! Input: Discrete states at t;
+   type(UA_OtherStateType),                intent(in   ) :: OtherState        ! Other/optimization states
+   type(AFInfoType),                       intent(in   ) :: AFInfo            ! The airfoil parameter data
    real(ReKi),                             intent(  out) :: Cn_prime          !
    real(ReKi),                             intent(  out) :: Cn1               ! critical value of Cn_prime at LE separation for alpha >= alpha0
    real(ReKi),                             intent(  out) :: Cn2               ! critical value of Cn_prime at LE separation for alpha < alpha0
@@ -546,7 +548,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, C
    ds          = Get_ds       ( u%U, p%c(i,j), p%dt )                              ! Eqn 1.5b
    
    ! Lookup values using Airfoil Info module
-   call AFI_GetAirfoilParams( p%AFI_Params%AFInfo(p%AFIndx(i,j)), M, u%Re, u%alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
+   call AFI_GetAirfoilParams( AFInfo, M, u%Re, u%alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
                               T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, errMsg, errStat )           
    
    if (OtherState%FirstPass) then
@@ -684,7 +686,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, C
       ! Finally, compute Cn using Eqn 1.50
    !Cn            = Cn_FS + Cn_v
 
-                               end subroutine ComputeKelvinChain
+ end subroutine ComputeKelvinChain
 !==============================================================================   
                           
 
@@ -722,14 +724,8 @@ subroutine UA_SetParameters( dt, InitInp, p, errStat, errMsg )
    p%nNodesPerBlade  = InitInp%nNodesPerBlade
    p%DSMod      = InitInp%DSMod    
    p%a_s        = InitInp%a_s       
-   p%AFI_Params = InitInp%AFI_Params
-   allocate(p%AFIndx(InitInp%nNodesPerBlade,InitInp%numBlades), stat = errStat)
-   if (errStat > ErrID_None) then
-      ! Set errmessage and return
-      deallocate(p%c)
-      return
-   end if
-   p%AFIndx     = InitInp%AFIndx
+   
+   
    
 end subroutine UA_SetParameters
 !==============================================================================   
@@ -835,7 +831,7 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
       ! Local variables
    character(len(errMsg))                       :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                               :: errStat2    ! temporary Error status of the operation
-   integer(IntKi)                               :: i,j, iNode
+   integer(IntKi)                               :: i,j, iNode, iOffset
    character(64)                                :: chanPrefix
    
       ! Initialize variables for this routine
@@ -867,33 +863,34 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
    allocate(InitOut%WriteOutputUnt(p%NumOuts*p%numBlades*p%nNodesPerBlade))
    
    iNode = 0
-   do i = 1,p%numBlades
-      do j = 1,p%nNodesPerBlade
-         iNode = iNode + 1
-         chanPrefix = "B"//trim(num2lstr(i))//"N"//trim(num2lstr(j))  
-         InitOut%WriteOutputHdr(iNode) =trim(chanPrefix)//'AOA'
-         InitOut%WriteOutputHdr(iNode+1) =trim(chanPrefix)//'Cn' 
-         InitOut%WriteOutputHdr(iNode+2) =trim(chanPrefix)//'Cc' 
-         InitOut%WriteOutputHdr(iNode+3) =trim(chanPrefix)//'Cm' 
-         InitOut%WriteOutputHdr(iNode+4) =trim(chanPrefix)//'Cl' 
-         InitOut%WriteOutputHdr(iNode+5) =trim(chanPrefix)//'Cd' 
-         InitOut%WriteOutputUnt(iNode)   ='(deg)  '
-         InitOut%WriteOutputUnt(iNode+1) ='(-)   '
-         InitOut%WriteOutputUnt(iNode+2) ='(-)   '
-         InitOut%WriteOutputUnt(iNode+3) ='(-)   '
-         InitOut%WriteOutputUnt(iNode+4) ='(-)   '
-         InitOut%WriteOutputUnt(iNode+5) ='(-)   '
+   do j = 1,p%numBlades
+      do i = 1,p%nNodesPerBlade
+         
+         iOffset = (i-1)*p%NumOuts + (j-1)*p%nNodesPerBlade*p%NumOuts 
+         chanPrefix = "B"//trim(num2lstr(j))//"N"//trim(num2lstr(i))  
+         InitOut%WriteOutputHdr(iOffset+1) =trim(chanPrefix)//'AOA'
+         InitOut%WriteOutputHdr(iOffset+2) =trim(chanPrefix)//'Cn' 
+         InitOut%WriteOutputHdr(iOffset+3) =trim(chanPrefix)//'Cc' 
+         InitOut%WriteOutputHdr(iOffset+4) =trim(chanPrefix)//'Cm' 
+         InitOut%WriteOutputHdr(iOffset+5) =trim(chanPrefix)//'Cl' 
+         InitOut%WriteOutputHdr(iOffset+6) =trim(chanPrefix)//'Cd' 
+         InitOut%WriteOutputUnt(iOffset+1)   ='(deg)  '
+         InitOut%WriteOutputUnt(iOffset+2) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+3) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+4) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+5) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+6) ='(-)   '
       end do
    end do
    
-   allocate(y%WriteOutput(p%NumOuts))
+   allocate(y%WriteOutput(p%NumOuts*p%numBlades*p%nNodesPerBlade))
    
 end subroutine UA_Init
 !==============================================================================     
                               
                               
 !============================================================================== 
-subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, ErrStat, ErrMsg )   
+subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg )   
 ! Tight coupling routine for updating discrete states
 !..............................................................................
    
@@ -903,7 +900,8 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, ErrStat, ErrMsg )
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters                                 
    type(UA_DiscreteStateType),   intent(inout)  :: xd          ! Input: Discrete states at Time; 
                                                                            ! Output: Discrete states at Time + Interval
-   type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Other/optimization states           
+   type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Other/optimization states  
+   type(AFInfoType),             intent(in   )  :: AFInfo      ! The airfoil parameter data
    integer(IntKi),               intent(  out)  :: errStat     ! Error status of the operation
    character(*),                 intent(  out)  :: errMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -953,7 +951,7 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, ErrStat, ErrMsg )
    errStat = ErrID_None         
    errMsg  = ""               
 
-      call ComputeKelvinChain(i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
+      call ComputeKelvinChain(i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                      St_sh, Kalpha, alpha_e, alpha0, dalpha0, eta_e, Kq, q_cur, X1, X2, &
                                      Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, fprime, &
                                      Cn_alpha_q_circ, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, errStat, errMsg )
@@ -1078,27 +1076,24 @@ end subroutine UA_UpdateDiscState
 !==============================================================================   
 
 !============================================================================== 
-subroutine UA_UpdateStates( i, j, t, n, Inputs, InputTimes, p, xd, OtherState, errStat, errMsg )
+subroutine UA_UpdateStates( u, p, xd, OtherState, AFInfo, errStat, errMsg )
 ! Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
 ! Continuous, constraint, and discrete states are updated to values at t + Interval.
 !..............................................................................
 
-   integer   ,                    intent(in   ) :: i               ! node index within a blade
-   integer   ,                    intent(in   ) :: j               ! blade index    
-   real(DbKi),                    intent(in   ) :: t               ! Current simulation time in seconds
-   integer(IntKi),                intent(in   ) :: n               ! Current step of the simulation: t = n*Interval
-   type(UA_InputType),            intent(inout) :: Inputs(:)       ! Inputs at InputTimes
-   real(DbKi),                    intent(in   ) :: InputTimes(:)   ! Times in seconds associated with Inputs
+   
+   type(UA_InputType),            intent(inout) :: u               ! Input at current timestep, t
    type(UA_ParameterType),        intent(in   ) :: p               ! Parameters
    type(UA_DiscreteStateType),    intent(inout) :: xd              ! Input: Discrete states at t;
                                                                    !   Output: Discrete states at t + Interval
    type(UA_OtherStateType),       intent(inout) :: OtherState      ! Other/optimization states
+   type(AFInfoType),              intent(in   ) :: AFInfo          ! The airfoil parameter data
    integer(IntKi),                intent(  out) :: errStat         ! Error status of the operation
    character(*),                  intent(  out) :: errMsg          ! Error message if ErrStat /= ErrID_None
 
       ! Local variables  
    
-   type(UA_InputType)                           :: u               ! Instantaneous inputs
+   
    integer(IntKi)                               :: errStat2        ! Error status of the operation (secondary error)
    character(len(ErrMsg))                       :: errMsg2         ! Error message if ErrStat2 /= ErrID_None
    
@@ -1107,27 +1102,24 @@ subroutine UA_UpdateStates( i, j, t, n, Inputs, InputTimes, p, xd, OtherState, e
    errStat   = ErrID_None           ! no error has occurred
    errMsg    = ""
          
-      ! Get the inputs at time t, based on the array of values sent by the glue code:
-      
-   call UA_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat, ErrMsg )  
-   if ( ErrStat >= AbortErrLev ) return     
+   
       
       ! Update discrete states:
-   call UA_UpdateDiscState( i, j, u, p, xd, OtherState, ErrStat, ErrMsg )
+   call UA_UpdateDiscState( OtherState%iBladeNode, OtherState%iBlade, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg )
       
 end subroutine UA_UpdateStates
 !==============================================================================   
 
 !============================================================================== 
-subroutine UA_CalcOutput( i, j, u, p, xd, OtherState, y, ErrStat, ErrMsg )   
+subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )   
 ! Routine for computing outputs, used in both loose and tight coupling.
 !..............................................................................
-   integer   ,                   intent(in   )  :: i           ! node index within a blade
-   integer   ,                   intent(in   )  :: j           ! blade index    
+   
    type(UA_InputType),           intent(inout)  :: u           ! Inputs at Time
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
    type(UA_DiscreteStateType),   intent(in   )  :: xd          ! Discrete states at Time
-   type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Other/optimization states
+   type(UA_OtherStateType),      intent(in   )  :: OtherState  ! Other/optimization states
+   type(AFInfoType),             intent(in   )  :: AFInfo      ! The airfoil parameter data
    type(UA_OutputType),          intent(inout)  :: y           ! Outputs computed at Time (Input only so that mesh con-
                                                                      !   nectivity information does not have to be recalculated)
    integer(IntKi),               intent(  out)  :: errStat     ! Error status of the operation
@@ -1173,34 +1165,34 @@ subroutine UA_CalcOutput( i, j, u, p, xd, OtherState, y, ErrStat, ErrMsg )
    real(ReKi)                                             :: eta_e
    real(ReKi)                                             :: St_sh
    real(ReKi)                                             :: Cl, Cd
-   integer                                                :: iNode
+   integer                                                :: iOffset
+   
    
    
    errStat   = ErrID_None           ! no error has occurred
    errMsg    = ""
    
-   iNode = 0
+  
+   iOffset = (OtherState%iBladeNode-1)*p%NumOuts + (OtherState%iBlade-1)*p%nNodesPerBlade*p%NumOuts 
    
    if (OtherState%FirstPass) then
       
-      iNode = iNode + 1
-      call GetSteadyOutputs(p%AFI_Params%AFInfo( p%AFIndx(i,j)), u%alpha, y%Cl, y%Cd, y%Cm, errStat, errMsg)
-      Cd0 = 0.012
+      
+      call GetSteadyOutputs(AFInfo, u%alpha, y%Cl, y%Cd, y%Cm, Cd0, errStat, errMsg)
+      
       y%Cn = y%Cl*cos(u%alpha) + (y%Cd-Cd0)*sin(u%alpha)
       y%Cc = y%Cl*sin(u%alpha) - (y%Cd-Cd0)*cos(u%alpha)
-      y%WriteOutput(iNode) = u%alpha*180.0/pi
-      y%WriteOutput(iNode+1) = y%Cn
-      y%WriteOutput(iNode+2) = y%Cc
-      y%WriteOutput(iNode+3) = y%Cm
-      y%WriteOutput(iNode+4) = y%Cl
-      y%WriteOutput(iNode+5) = y%Cd
+      y%WriteOutput(iOffset+1) = u%alpha*180.0/pi
+      y%WriteOutput(iOffset+2) = y%Cn
+      y%WriteOutput(iOffset+3) = y%Cc
+      y%WriteOutput(iOffset+4) = y%Cm
+      y%WriteOutput(iOffset+5) = y%Cl
+      y%WriteOutput(iOffset+6) = y%Cd
       
    else
       
-      iNode = iNode + 1
-      Cd0 = 0.012
             
-      call ComputeKelvinChain( i, j, u, p, xd, OtherState, Cn_prime, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
+      call ComputeKelvinChain( OtherState%iBladeNode, OtherState%iBlade, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                  St_sh, Kalpha, alpha_e, alpha0, dalpha0, eta_e, Kq, q_cur, X1, X2, &
                                  Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, fprime, &
                                  Cn_alpha_q_circ, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, errStat, errMsg )
@@ -1208,21 +1200,21 @@ subroutine UA_CalcOutput( i, j, u, p, xd, OtherState, y, ErrStat, ErrMsg )
       y%Cn= Cn_FS + Cn_v
             
          ! Eqn 1.52
-      y%Cc = eta_e*Cc_pot*sqrt(fprimeprime) + Cn_v*tan(alpha_e)*(1-xd%tau_v(i,j))
+      y%Cc = eta_e*Cc_pot*sqrt(fprimeprime) + Cn_v*tan(alpha_e)*(1-xd%tau_v(OtherState%iBladeNode, OtherState%iBlade))
             
          ! Eqn 1.2
       y%Cl = y%Cn*cos(u%alpha) + y%Cc*sin(u%alpha)
       y%Cd = y%Cn*sin(u%alpha) - y%Cc*cos(u%alpha) + Cd0
             
          ! Eqn 1.55
-      y%Cm = Get_Cm( Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, xd%tau_v(i,j) )
+      y%Cm = Get_Cm( Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, xd%tau_v(OtherState%iBladeNode, OtherState%iBlade) )
             
-      y%WriteOutput(iNode)   = u%alpha*180.0/pi  ! Angle of attack in degrees
-      y%WriteOutput(iNode+1) = y%Cn
-      y%WriteOutput(iNode+2) = y%Cc
-      y%WriteOutput(iNode+3) = y%Cm
-      y%WriteOutput(iNode+4) = y%Cl
-      y%WriteOutput(iNode+5) = y%Cd
+      y%WriteOutput(iOffset+1)   = u%alpha*180.0/pi  ! Angle of attack in degrees
+      y%WriteOutput(iOffset+2) = y%Cn
+      y%WriteOutput(iOffset+3) = y%Cc
+      y%WriteOutput(iOffset+4) = y%Cm
+      y%WriteOutput(iOffset+5) = y%Cl
+      y%WriteOutput(iOffset+6) = y%Cd
       
    end if
    

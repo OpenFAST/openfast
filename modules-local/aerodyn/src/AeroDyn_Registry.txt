@@ -19,6 +19,7 @@
 include   Registry_NWTC_Library.txt
 usefrom   AirfoilInfo_Registry.txt
 usefrom   BEMT_Registry.txt
+usefrom   UnsteadyAero_Registry.txt
 #
 #
 # ..... Initialization data .......................................................................................................
@@ -101,12 +102,12 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             ReKi                     tipLossConst                    {:}{:}     -         -        "A constant computed during initialization based on B*(zTip-zLocal)/(2*zLocal)" -
 typedef   ^                            ^                             ReKi                     hubLossConst                    {:}{:}     -         -        "A constant computed during initialization based on B*(zLocal-zHub)/(2*zHub)" -
 typedef   ^                            ^                             AFInfoType               AFInfo                          {:}        -         -        "Parameters for the airfoils"
-typedef   ^                            ^                             BEMT_ParameterType        BEMT                            -          -         -        "Parameters for the BEMT module"
+typedef   ^                            ^                             BEMT_ParameterType       BEMT                            -          -         -        "Parameters for the BEMT module"
 typedef   ^                            ^                             INTEGER                  NumAF                           -          -         -        "Parameters for the BEMT module"
 typedef   ^                            ^                             CHARACTER(1024)          AF_File                         {:}          -         -        "Parameters for the BEMT module"
 typedef   ^                            ^                             AFI_ParameterType        AFI_Params                      -          -         -         "" -
 typedef   ^                            ^                             INTEGER                  NumOuts                         -          -          -         "Number of HydroDyn module-level outputs (not the total number including sub-modules"        -
-typedef   ^                            ^                             INTEGER                  BEMT_SkewWakeMod                -          -         -        "The BEMT module skewed wake model, set to 0 if BEMT is not being used" -
+#typedef   ^                            ^                             INTEGER                  BEMT_SkewWakeMod                -          -         -        "The BEMT module skewed wake model, set to 0 if BEMT is not being used" -
 #
 
 #
