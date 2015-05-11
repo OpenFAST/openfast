@@ -350,7 +350,7 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
          RETURN
       ELSE
          READ (Line,*,IOSTAT=ErrStat)  P%TwrProps%TwrShad
-         CALL CheckIOS ( ErrStat, InitInp%ADFileName, 'TwrShad', NumType, .TRUE. )
+         CALL CheckIOS ( ErrStat, InitInp%ADFileName, 'TwrShad', NumType, ErrStat, ErrMess )
 !bjj: is this aborting?
          IF ( p%Echo )  THEN
             WRITE (p%UnEc,"( 2X, ES11.4e2, 2X, A, T30, ' - ', A )")  P%TwrProps%TwrShad, "TwrShad", 'Tower shadow deficit'
@@ -418,10 +418,9 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
       END IF
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in P%DtAero
-         READ( Line, *, IOSTAT=ErrStat) P%DtAero
-         IF ( ErrStat /= 0 ) THEN
-            CALL CheckIOS ( ErrStat, InitInp%ADFileName, "DT", NumType, .TRUE., ErrMess )
-            ErrStat = ErrID_Fatal
+         READ( Line, *, IOSTAT=ErrStatLcl) P%DtAero
+         IF ( ErrStatLcl /= 0 ) THEN
+            CALL CheckIOS ( ErrStatLcl, InitInp%ADFileName, "DT", NumType, ErrStat, ErrMess )
             RETURN
          ELSE
             ErrStat = ErrID_None
@@ -483,7 +482,7 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    O%ElOut%NumElOut    = 0 ! Initialize the element print array index
    O%ElOut%NumWndElOut = 0
 
-   CALL ReadCom( UnIn, InitInp%ADFileName, 'Element table headers', ErrStat)
+   CALL ReadCom( UnIn, InitInp%ADFileName, 'Element table headers', ErrStat, ErrMess)
       IF (ErrStat >= AbortErrLev) THEN
          CLOSE(UnIn)
          RETURN
@@ -1409,15 +1408,15 @@ END SUBROUTINE READFL
    !-------------------------------------------------------------------------------------------------
 
       ! Read in 2 header/comment lines
-   CALL ReadCom( UnIn, FilName, 'Title line 1', ErrStat )
+   CALL ReadCom( UnIn, FilName, 'Title line 1', ErrStat, ErrMess )
    IF ( ErrStat /= ErrID_None ) RETURN
 
-   CALL ReadCom( UnIn, FilName, 'Title line 2', ErrStat )
+   CALL ReadCom( UnIn, FilName, 'Title line 2', ErrStat, ErrMess )
    IF ( ErrStat /= ErrID_None ) RETURN
 
 
       ! Read in number of tower height entries, NTwrHt
-   CALL ReadVar( UnIn, FilName, p%TwrProps%NTwrHt, 'NTwrHt', 'Number of tower stations', ErrStat )
+   CALL ReadVar( UnIn, FilName, p%TwrProps%NTwrHt, 'NTwrHt', 'Number of tower stations', ErrStat, ErrMess )
    IF ( ErrStat /= ErrID_None ) RETURN
 
    IF (p%TwrProps%NTwrHt < 1) THEN
@@ -1427,7 +1426,7 @@ END SUBROUTINE READFL
    ENDIF
 
       ! Read in number of tower Reynolds number entries, NTwrRe
-   CALL ReadVar( UnIn, FilName, p%TwrProps%NTwrRe, 'NTwrRe', 'Number of tower Reynolds number rows', ErrStat )
+   CALL ReadVar( UnIn, FilName, p%TwrProps%NTwrRe, 'NTwrRe', 'Number of tower Reynolds number rows', ErrStat, ErrMess )
    IF ( ErrStat /= ErrID_None ) RETURN
 
    IF (p%TwrProps%NTwrRe < 1) THEN
@@ -1438,7 +1437,7 @@ END SUBROUTINE READFL
 
 
       ! Read in number of tower CD entries, NTwrCD
-   CALL ReadVar( UnIn, FilName, p%TwrProps%NTwrCD, 'NTwrCD', 'Number of tower CD columns', ErrStat )
+   CALL ReadVar( UnIn, FilName, p%TwrProps%NTwrCD, 'NTwrCD', 'Number of tower CD columns', ErrStat, ErrMess )
    IF ( ErrStat /= ErrID_None ) RETURN
 
    IF (p%TwrProps%NTwrCD < 1) THEN
@@ -1449,7 +1448,7 @@ END SUBROUTINE READFL
 
 
       ! Read in constant for tower wake model = 0 full potential flow = 0.1 model of Bak et al.
-   CALL ReadVar( UnIn, FilName, p%TwrProps%Tower_Wake_Constant, 'Tower_Wake_Constant', 'Constant for tower wake model', ErrStat )
+   CALL ReadVar( UnIn, FilName, p%TwrProps%Tower_Wake_Constant, 'Tower_Wake_Constant', 'Constant for tower wake model', ErrStat, ErrMess )
    IF ( ErrStat /= ErrID_None ) RETURN
 
    ! bjj: should there be a sanity check here, too?
@@ -1509,10 +1508,10 @@ END SUBROUTINE READFL
    ! section contains 2 heading lines in addition to NTwrHt rows of data with 3 columns
    !-------------------------------------------------------------------------------------------------
       ! Read in 2 header/comment lines
-   CALL ReadCom( UnIn, FilName, 'Distributed Tower Properties header 1', ErrStat )
+   CALL ReadCom( UnIn, FilName, 'Distributed Tower Properties header 1', ErrStat, ErrMess )
    IF ( ErrStat /= ErrID_None ) RETURN
 
-   CALL ReadCom( UnIn, FilName, 'Distributed Tower Properties header 2', ErrStat )
+   CALL ReadCom( UnIn, FilName, 'Distributed Tower Properties header 2', ErrStat, ErrMess )
    IF ( ErrStat /= ErrID_None ) RETURN
 
 
@@ -1585,10 +1584,10 @@ END SUBROUTINE READFL
    !-------------------------------------------------------------------------------------------------
 
       ! Read in 2 header/comment lines
-   CALL ReadCom( UnIn, FilName, 'Re vs CD Properties header 1', ErrStat )
+   CALL ReadCom( UnIn, FilName, 'Re vs CD Properties header 1', ErrStat, ErrMess )
    IF ( ErrStat /= ErrID_None ) RETURN
 
-   CALL ReadCom( UnIn, FilName, 'Re vs CD Properties header 2', ErrStat )
+   CALL ReadCom( UnIn, FilName, 'Re vs CD Properties header 2', ErrStat, ErrMess )
    IF ( ErrStat /= ErrID_None ) RETURN
 
    Fmt = '('//TRIM(Int2Lstr(p%TwrProps%NTwrCD+1))//'(2X,ES11.4e2))'
@@ -4498,7 +4497,8 @@ NumOut = maxInfl+(maxInfl-P%DynInflow%MaxInflo) + 1
 
 IF (O%OnePassDynDbg) THEN
 
-   CALL OpenFOutFile (UnDyn, 'DynDebug.plt')
+   CALL OpenFOutFile (UnDyn, 'DynDebug.plt', ErrStat, ErrMess)
+   IF (ErrStat>=AbortErrLev) RETURN
 
    Frmt = '( A4,    (: A1, A, I1.1 ) )'
 
