@@ -117,29 +117,29 @@ MODULE NWTC_Num
    REAL(ReKi)                                :: TwoByPi                       ! 2/Pi
    REAL(ReKi)                                :: TwoPi                         ! 2*Pi
 
-
-   TYPE, PUBLIC               :: CubSplineType                                ! This derived type is used to hold data for performing cubic splines.
-      INTEGER                                :: NumPts                        ! The number of points in the XAry and YAry arrays.
-      REAL(ReKi), ALLOCATABLE                :: Coef      (:,:)               ! The NumPts-1 length array of cubic coefficients.  The second dimension must be "0:3".
-      REAL(ReKi), ALLOCATABLE                :: XAry      (:)                 ! The NumPts length array of x values for the interpolation.
-      REAL(ReKi), ALLOCATABLE                :: YAry      (:)                 ! The NumPts length array of y values for the interpolation.
-   END TYPE CubSplineType
-
-   TYPE, PUBLIC               :: RegCubSplineType                             ! This derived type is used to hold data for performing cubic splines wuth regularly-spaced data.
-      INTEGER                                :: NumPts                        ! The number of points in the XAry and YAry arrays.
-      REAL(ReKi), ALLOCATABLE                :: Coef      (:,:)               ! The NumPts-1 length array of cubic coefficients.  The second dimension must be "0:3".
-      REAL(ReKi)                             :: DelX                          ! The distance between the equally spaced points in XAry.
-      REAL(ReKi), ALLOCATABLE                :: XAry      (:)                 ! The NumPts length array of x values for the interpolation.
-      REAL(ReKi), ALLOCATABLE                :: YAry      (:)                 ! The NumPts length array of y values for the interpolation.
-   END TYPE RegCubSplineType
-
-   TYPE, PUBLIC               :: RegGridType                                  ! This derived type is used to hold the contents of a regular grid of data.
-      INTEGER                                :: NumDims                       ! The number of dimensions for this grid.
-      REAL(ReKi), ALLOCATABLE                :: Mins      (:)                 ! The set of minimums for the grid in each NumDims dimensions.
-      REAL(ReKi), ALLOCATABLE                :: Steps     (:)                 ! The set of step sizes for the grid in each NumDims dimensions.
-      REAL(ReKi), ALLOCATABLE                :: Grid      (:)                 ! The NumDims dimensional grid.
-   END TYPE RegGridType
-
+!bjj: I'm not sure why MLB added these 3 types; they don't seem to be used anywhere
+   !TYPE, PUBLIC               :: CubSplineType                                ! This derived type is used to hold data for performing cubic splines.
+   !   INTEGER                                :: NumPts                        ! The number of points in the XAry and YAry arrays.
+   !   REAL(ReKi), ALLOCATABLE                :: Coef      (:,:)               ! The NumPts-1 length array of cubic coefficients.  The second dimension must be "0:3".
+   !   REAL(ReKi), ALLOCATABLE                :: XAry      (:)                 ! The NumPts length array of x values for the interpolation.
+   !   REAL(ReKi), ALLOCATABLE                :: YAry      (:)                 ! The NumPts length array of y values for the interpolation.
+   !END TYPE CubSplineType
+   !
+   !TYPE, PUBLIC               :: RegCubSplineType                             ! This derived type is used to hold data for performing cubic splines wuth regularly-spaced data.
+   !   INTEGER                                :: NumPts                        ! The number of points in the XAry and YAry arrays.
+   !   REAL(ReKi), ALLOCATABLE                :: Coef      (:,:)               ! The NumPts-1 length array of cubic coefficients.  The second dimension must be "0:3".
+   !   REAL(ReKi)                             :: DelX                          ! The distance between the equally spaced points in XAry.
+   !   REAL(ReKi), ALLOCATABLE                :: XAry      (:)                 ! The NumPts length array of x values for the interpolation.
+   !   REAL(ReKi), ALLOCATABLE                :: YAry      (:)                 ! The NumPts length array of y values for the interpolation.
+   !END TYPE RegCubSplineType
+   !
+   !TYPE, PUBLIC               :: RegGridType                                  ! This derived type is used to hold the contents of a regular grid of data.
+   !   INTEGER                                :: NumDims                       ! The number of dimensions for this grid.
+   !   REAL(ReKi), ALLOCATABLE                :: Mins      (:)                 ! The set of minimums for the grid in each NumDims dimensions.
+   !   REAL(ReKi), ALLOCATABLE                :: Steps     (:)                 ! The set of step sizes for the grid in each NumDims dimensions.
+   !   REAL(ReKi), ALLOCATABLE                :: Grid      (:)                 ! The NumDims dimensional grid.
+   !END TYPE RegGridType
+!bjj: end of MLB types removed
 
 !=======================================================================
 
@@ -318,7 +318,7 @@ CONTAINS
 
    INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
 
-   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+   CHARACTER(*), INTENT(OUT)    :: ErrMsg                                     ! Error message.
 
 
       ! Local declarations.
@@ -332,32 +332,34 @@ CONTAINS
 
    INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
    INTEGER                      :: I                                          ! The index into the arrays.
+   CHARACTER(*), PARAMETER      :: RoutineName = 'CubicSplineInit'
 
-
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
       ! Allocate the various intermediate arrays.
 
    ALLOCATE ( DelX( AryLen - 1 ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the DelX array in CubicSplineInit.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the DelX array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( Slope( AryLen - 1 ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the Slope array in CubicSplineInit.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the Slope array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( U( AryLen - 1 ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the U array in CubicSplineInit.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the U array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( V( AryLen - 1 ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the V array in CubicSplineInit.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the V array.' )
       RETURN
    ENDIF
 
@@ -458,7 +460,7 @@ CONTAINS
 
    INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
 
-   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+   CHARACTER(*), INTENT(OUT)    :: ErrMsg                                     ! Error message.
 
 
       ! Local declarations.
@@ -475,7 +477,7 @@ CONTAINS
    INTEGER                      :: I                                          ! The index into the arrays.
    INTEGER                      :: NumCrvs                                    ! Number of curves to be interpolated.
    INTEGER                      :: NumPts                                     ! Number of points in each curve.
-
+   CHARACTER(*), PARAMETER      :: RoutineName = 'CubicSplineInitM'
 
 
       ! How big are the arrays?
@@ -488,37 +490,37 @@ CONTAINS
 
    ALLOCATE ( ZLo( NumCrvs ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the ZLo array in CubicSplineInitM.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the ZLo array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( ZHi( NumCrvs ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the ZHi array in CubicSplineInitM.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the ZHi array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( DelX( NumPts - 1 ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the DelX array in CubicSplineInitM.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the DelX array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( Slope( NumPts-1, NumCrvs ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the Slope array in CubicSplineInitM.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the Slope array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( U( NumPts - 1 ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the U array in CubicSplineInitM.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the U array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( V( NumPts-1, NumCrvs ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the V array in CubicSplineInitM.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the V array.' )
       RETURN
    ENDIF
 
@@ -625,7 +627,7 @@ CONTAINS
 
    INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
 
-   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+   CHARACTER(*), INTENT(OUT)    :: ErrMsg                                     ! Error message.
 
 
       ! Local declarations.
@@ -636,6 +638,8 @@ CONTAINS
    INTEGER                      :: ILo                                        ! The index into the array for which X is just above or equal to XAry(ILo).
 
 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
       ! See if X is within the range of XAry.  Return the end point if it is not.
 
@@ -657,40 +661,7 @@ CONTAINS
    CubicSplineInterp = Coef(ILo,0) + XOff*( Coef(ILo,1) + XOff*( Coef(ILo,2) + XOff*Coef(ILo,3) ) )
 
 
-   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
-
    RETURN
-
-   !=======================================================================
-   CONTAINS
-   !=======================================================================
-      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
-
-         ! This subroutine cleans up the parent routine before exiting.
-
-
-            ! Argument declarations.
-
-         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
-
-         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
-
-
-            ! Local declarations.
-
-         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
-
-
-            ! Set error status/message
-
-         ErrStat = ErrID
-         ErrMsg  = Msg
-
-
-         RETURN
-
-      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
-
    END FUNCTION CubicSplineInterp ! ( X, AryLen, XAry, YAry, Coef, ErrStat, ErrMsg )
 !=======================================================================
    FUNCTION CubicSplineInterpM ( X, XAry, YAry, Coef, ErrStat, ErrMsg ) RESULT( Res )
@@ -716,7 +687,7 @@ CONTAINS
 
    INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
 
-   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+   CHARACTER(*),    INTENT(OUT) :: ErrMsg                                     ! Error message.
 
 
       ! Local declarations.
@@ -728,7 +699,7 @@ CONTAINS
    INTEGER                      :: NumCrvs                                    ! Number of curves to be interpolated.
    INTEGER                      :: NumPts                                     ! Number of points in each curve.
 
-
+   CHARACTER(*), PARAMETER      :: RoutineName = 'RegCubicSplineInterpM'
 
       ! How big are the arrays?
 
@@ -738,8 +709,12 @@ CONTAINS
 
    ALLOCATE ( Res( NumCrvs ) , STAT=ErrStatLcl )
    IF ( ErrStatLcl /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, '  >> Error allocating memory for the function result array in RegCubicSplineInterpM.' )
+      ErrStat = ErrID_Fatal
+      ErrMsg = RoutineName//':Error allocating memory for the function result array.'
       RETURN
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ""
    ENDIF
 
 
@@ -762,40 +737,7 @@ CONTAINS
 
    Res(:) = Coef(ILo,:,0) + XOff*( Coef(ILo,:,1) + XOff*( Coef(ILo,:,2) + XOff*Coef(ILo,:,3) ) )
 
-
-   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
-
    RETURN
-
-   !=======================================================================
-   CONTAINS
-   !=======================================================================
-      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
-
-         ! This subroutine cleans up the parent routine before exiting.
-
-
-            ! Argument declarations.
-
-         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
-
-         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
-
-
-            ! Local declarations.
-
-         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
-
-
-            ! Set error status/message
-
-         ErrStat = ErrID
-         ErrMsg  = Msg
-
-
-         RETURN
-
-      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
 
    END FUNCTION CubicSplineInterpM ! ( X, XAry, YAry, Coef, ErrStat, ErrMsg )
 !=======================================================================         
@@ -1297,7 +1239,7 @@ END SUBROUTINE DCM_SetLogMapForInterp
    INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
    INTEGER(IntKi), INTENT(OUT)  :: Ind                                        ! The index of the point in Ary just below Val.
 
-   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                     ! Error message.
 
 
       ! Local declarations.
@@ -1311,13 +1253,12 @@ END SUBROUTINE DCM_SetLogMapForInterp
       ! Check the validity of the data.
 
    IF ( NumPts == 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, ' >> The value of NumPts cannot be zero when calling GetOffsetReg.' )
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'GetOffsetReg:The value of NumPts cannot be zero.'
       RETURN
-   END IF
-
-   IF ( NumPts == 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, ' >> The value of NumPts cannot be zero when calling GetOffsetReg.' )
-      RETURN
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ""
    END IF
 
 
@@ -1341,40 +1282,7 @@ END SUBROUTINE DCM_SetLogMapForInterp
    Ind   = INT( ( Val - Ary(1) )/Del ) + 1
    Fract = ( Val - Ary(Ind) )/Del
 
-
-   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
-
    RETURN
-
-   !=======================================================================
-   CONTAINS
-   !=======================================================================
-      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
-
-         ! This subroutine cleans up the parent routine before exiting.
-
-
-            ! Argument declarations.
-
-         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
-
-         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
-
-
-            ! Local declarations.
-
-         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
-
-
-            ! Set error status/message
-
-         ErrStat = ErrID
-         ErrMsg  = Msg
-
-
-         RETURN
-
-      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
 
    END SUBROUTINE GetOffsetReg ! ( Ary, NumPts, Val, Ind, Fract, ErrStat, ErrMsg )
 !=======================================================================
@@ -1448,7 +1356,7 @@ END SUBROUTINE DCM_SetLogMapForInterp
 
    GetSmllRotAngs = 0.0
    ErrStat        = ErrID_None
-
+   ErrMsg         = ""
 
       ! calculate the small angles
    GetSmllRotAngs(1) = DCMat(2,3) - DCMat(3,2)
@@ -1512,7 +1420,7 @@ END SUBROUTINE DCM_SetLogMapForInterp
       CALL ProgAbort ( ' In function GL_Loc, the number of points used for Gauss-Legendre Quadrature must be between 1 and 6' &
                     //' (inclusive).  Instead, it is "'//TRIM( Int2LStr( NPts ) )//'".', PRESENT(ErrStat) )
       IF ( PRESENT(ErrStat) ) THEN ! this should always be true here
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
       END IF
    END IF
@@ -1521,7 +1429,7 @@ END SUBROUTINE DCM_SetLogMapForInterp
       CALL ProgAbort ( ' In function GL_Loc, the point being used for Gauss-Legendre Quadrature must be between 1 and ' &
                    //TRIM( Int2LStr( NPts ) )//' (inclusive).  Instead, it is "'//TRIM( Int2LStr( Ipt ) )//'".', PRESENT(ErrStat) )
       IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
       END IF
    END IF
@@ -2746,7 +2654,7 @@ END SUBROUTINE InterpStpReal3D
 
    INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
 
-   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                     ! Error message.
 
 
       ! Local declarations.
@@ -2762,26 +2670,26 @@ END SUBROUTINE InterpStpReal3D
 
    INTEGER(IntKi)               :: ErrStatLcL                                 ! Local error status.
    INTEGER                      :: I                                          ! The index into the arrays.
-
+   CHARACTER(*), PARAMETER      :: RoutineName = 'RegCubicSplineInit'
 
 
       ! Allocate the various intermediate arrays.
 
    ALLOCATE ( Slope( AryLen - 1 ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the Slope array in RegCubicSplineInit.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the Slope array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( U( AryLen - 1 ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the U array in RegCubicSplineInit.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the U array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( V( AryLen - 1 ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the V array in RegCubicSplineInit.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the V array.' )
       RETURN
    ENDIF
 
@@ -2885,8 +2793,8 @@ END SUBROUTINE InterpStpReal3D
 
    INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
 
-   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
-
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                     ! Error message.
+   
 
       ! Local declarations.
 
@@ -2905,7 +2813,7 @@ END SUBROUTINE InterpStpReal3D
    INTEGER                      :: NumCrvs                                    ! Number of curves to be interpolated.
    INTEGER                      :: NumPts                                     ! Number of points in each curve.
 
-
+   CHARACTER(*), PARAMETER      :: RoutineName = 'CubicSplineInitM'
 
       ! How big are the arrays?
 
@@ -2917,31 +2825,31 @@ END SUBROUTINE InterpStpReal3D
 
    ALLOCATE ( ZLo( NumCrvs ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the ZLo array in CubicSplineInitM.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the ZLo array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( ZHi( NumCrvs ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the ZHi array in CubicSplineInitM.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the ZHi array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( Slope( NumPts-1, NumCrvs ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the Slope array in RegCubicSplineInitM.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the Slope array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( U( NumPts - 1 ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the U array in RegCubicSplineInitM.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the U array.' )
       RETURN
    ENDIF
 
    ALLOCATE ( V( NumPts-1, NumCrvs ), STAT=ErrStatLcL )
    IF ( ErrStatLcL /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, NewLine//' >> Error allocating memory for the V array in RegCubicSplineInitM.' )
+      CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':Error allocating memory for the V array.' )
       RETURN
    ENDIF
 
@@ -3020,6 +2928,8 @@ END SUBROUTINE InterpStpReal3D
 
             ! Deallocate the Words array if it had been allocated.
 
+         IF ( ALLOCATED( ZHi   ) )  DEALLOCATE( ZHi   )
+         IF ( ALLOCATED( ZLo   ) )  DEALLOCATE( ZLo   )
          IF ( ALLOCATED( Slope ) )  DEALLOCATE( Slope )
          IF ( ALLOCATED( U     ) )  DEALLOCATE( U     )
          IF ( ALLOCATED( V     ) )  DEALLOCATE( V     )
@@ -3056,7 +2966,7 @@ END SUBROUTINE InterpStpReal3D
 
    INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
 
-   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                     ! Error message.
 
 
       ! Local declarations.
@@ -3065,7 +2975,8 @@ END SUBROUTINE InterpStpReal3D
 
    INTEGER                      :: ILo                                        ! The index into the array for which X is just above or equal to XAry(ILo).
 
-
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
       ! See if X is within the range of XAry.  Return the end point if it is not.
 
@@ -3087,39 +2998,7 @@ END SUBROUTINE InterpStpReal3D
    RegCubicSplineInterp = Coef(ILo,0) + XOff*( Coef(ILo,1) + XOff*( Coef(ILo,2) + XOff*Coef(ILo,3) ) )
 
 
-   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
-
    RETURN
-
-   !=======================================================================
-   CONTAINS
-   !=======================================================================
-      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
-
-         ! This subroutine cleans up the parent routine before exiting.
-
-
-            ! Argument declarations.
-
-         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
-
-         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
-
-
-            ! Local declarations.
-
-         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
-
-
-            ! Set error status/message
-
-         ErrStat = ErrID
-         ErrMsg  = Msg
-
-
-         RETURN
-
-      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
 
    END FUNCTION RegCubicSplineInterp ! ( X, AryLen, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 !=======================================================================
@@ -3147,7 +3026,7 @@ END SUBROUTINE InterpStpReal3D
 
    INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
 
-   CHARACTER(4096), INTENT(OUT) :: ErrMsg                                     ! Error message.
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                     ! Error message.
 
 
       ! Local declarations.
@@ -3160,6 +3039,8 @@ END SUBROUTINE InterpStpReal3D
    INTEGER                      :: NumPts                                     ! Number of points in each curve.
 
 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
       ! How big are the arrays?  Use the size to allocate the result.
 
@@ -3168,7 +3049,8 @@ END SUBROUTINE InterpStpReal3D
 
    ALLOCATE ( Res( NumCrvs ) , STAT=ErrStatLcl )
    IF ( ErrStatLcl /= 0 )  THEN
-      CALL ExitThisRoutine ( ErrID_Fatal, '  >> Error allocating memory for the function result array in RegCubicSplineInterpM.' )
+      ErrStat = ErrID_Fatal
+      ErrMsg  = "RegCubicSplineInterpM:Error allocating memory for the function result."
       RETURN
    ENDIF
 
@@ -3193,40 +3075,7 @@ END SUBROUTINE InterpStpReal3D
    Res(:) = Coef(ILo,:,0) + XOff*( Coef(ILo,:,1) + XOff*( Coef(ILo,:,2) + XOff*Coef(ILo,:,3) ) )
 
 
-   CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
-
    RETURN
-
-   !=======================================================================
-   CONTAINS
-   !=======================================================================
-      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
-
-         ! This subroutine cleans up the parent routine before exiting.
-
-
-            ! Argument declarations.
-
-         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
-
-         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
-
-
-            ! Local declarations.
-
-         LOGICAL                          :: IsOpen                           ! A flag that indicates if the input unit is still open.
-
-
-            ! Set error status/message
-
-         ErrStat = ErrID
-         ErrMsg  = Msg
-
-
-         RETURN
-
-      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
-
    END FUNCTION RegCubicSplineInterpM ! ( X, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 !=======================================================================
    SUBROUTINE RombergInt(f, a, b, R, err, eps, ErrStat)
@@ -3263,7 +3112,7 @@ END SUBROUTINE InterpStpReal3D
 
          ! Local declarations:
 
-      INTEGER                           :: m, i, j, k
+      INTEGER                           :: m, i, j, k, IOS
       INTEGER, PARAMETER                :: mmax = 50       ! Maximum iteration number for m
       INTEGER, PARAMETER                :: imax = 50       ! Maximum iteration number for i
 
@@ -3272,7 +3121,15 @@ END SUBROUTINE InterpStpReal3D
       REAL(ReKi)                        :: sumf
 
          ! Initialize T
-      ALLOCATE( T( mmax, imax ) )
+      ALLOCATE( T( mmax, imax ), Stat=ios )
+      IF (IOS /= 0) THEN
+         CALL ProgAbort ( 'RombergInt: Error allocating T.', PRESENT(ErrStat) )
+         IF ( PRESENT(ErrStat) ) THEN
+            ErrStat = ErrID_Fatal
+            RETURN
+         END IF
+      END IF
+      
       T = 0
 
       T(1, 1) = 0.5*(b - a)*( f(a) + f(b) )
@@ -3320,7 +3177,7 @@ END SUBROUTINE InterpStpReal3D
       CALL ProgAbort ( ' In subroutine RombergInt, the iteration reaches the maximum number. The integration did NOT converge! ', &
                        PRESENT(ErrStat) )
       IF ( PRESENT(ErrStat) ) THEN
-         ErrStat = 1
+         ErrStat = ErrID_Fatal
          RETURN
       END IF
 

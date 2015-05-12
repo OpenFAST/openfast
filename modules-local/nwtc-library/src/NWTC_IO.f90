@@ -35,7 +35,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.06.00a-bjj', '9-May-2015')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.06.00b-bjj', '11-May-2015')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -1975,7 +1975,7 @@ CONTAINS
    LOGICAL                                :: Opened                                       ! Flag indicating whether or not a file is opened.
    INTEGER(IntKi), PARAMETER              :: StartUnit = 10                               ! Starting unit number to check (numbers less than 10 reserved)
    INTEGER(IntKi), PARAMETER              :: MaxUnit   = 99                               ! The maximum unit number available (or 10 less than the number of files you want to have open at a time)
-   CHARACTER(300)                         :: Msg                                          ! Temporary error message
+   CHARACTER(ErrMsgLen)                   :: Msg                                          ! Temporary error message
 
 
       ! Initialize subroutine outputs
