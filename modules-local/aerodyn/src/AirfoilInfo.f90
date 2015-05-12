@@ -13,9 +13,10 @@ MODULE AirfoilInfo
 
    PRIVATE
 
-   PUBLIC                                       :: AFI_Init, ReadAFFile, AFI_GetAirfoilParams
+   PUBLIC                                       :: AFI_Init ! routine to initialize AirfoilInfo parameters
+   PUBLIC                                       :: AFI_GetAirfoilParams ! routine to calculate Airfoil parameters
 
-   TYPE(ProgDesc), PARAMETER                    :: AFI_Ver = ProgDesc( 'AirfoilInfo', 'v1.00.00c-mlb', '03-Mar-2014')               ! The name, version, and date of AirfoilInfo.
+   TYPE(ProgDesc), PARAMETER                    :: AFI_Ver = ProgDesc( 'AirfoilInfo', 'v1.00.01a-bjj', '11-May-2015')               ! The name, version, and date of AirfoilInfo.
 
 
 CONTAINS
@@ -25,10 +26,10 @@ CONTAINS
    ! SUBROUTINE BEMT_GenSplines   ( FileNum, Re, Ctrl, InitInput, ErrStatLcl, ErrMsg )                                ! Phase #2: For BEM, generate splines for Cl and Cd at specific Re/Ctrl setting.
    ! SUBROUTINE BEMT_GetClCd      ( FileNum, AoA, Re, Ctrl, InitInput, Cl, Cd, ErrStatLcl, ErrMsg )                   ! Phase #3: For BEM, compute Cl and Cd for the given AoA.
    ! SUBROUTINE GetAllCoefs      ( FileNum, AoA, Re, Ctrl, InitInput, Cl, Cd, Cm, Cpmin, ErrStatLcl, ErrMsg )        ! Phase #4: Compute all requested airfoil coefficients for the given AoA.
-   ! SUBROUTINE ReadAFfile       ( AFInfo, UA_Model, Col_Cm, Col_Cpmin, ErrStat, ErrMsg, InpErrs )             ! Read an airfoil file.
+   ! SUBROUTINE ReadAFfile       ( AFInfo, UA_Model, Col_Cm, Col_Cpmin, ErrStat, ErrMsg )             ! Read an airfoil file.
 
    !=============================================================================
-   SUBROUTINE AFI_Init ( InitInput, p, ErrStat, ErrMsg, UnEc )
+   SUBROUTINE AFI_Init ( InitInput, p, ErrStat, ErrMsg, UnEcho )
 
 
          ! This routine initializes AirfoilInfo by reading the airfoil files and generating the spline coefficients.
@@ -38,42 +39,32 @@ CONTAINS
 
       INTEGER(IntKi), INTENT(OUT)               :: ErrStat                    ! Error status.
 
-      INTEGER, INTENT(IN), OPTIONAL             :: UnEc                       ! I/O unit for echo file. If present and > 0, write to UnEc.      CHARACTER(*), INTENT(IN)               :: AFfile                        ! The file to be read.
+      INTEGER, INTENT(IN), OPTIONAL             :: UnEcho                     ! I/O unit for echo file. If present and > 0, write to UnEcho.
 
       CHARACTER(*), INTENT(OUT)                 :: ErrMsg                     ! Error message.
 
-      TYPE (AFI_InitInputType), INTENT(INOUT)   :: InitInput                  ! This structure stores values that are set by the calling routine during the initialization phase.
-      TYPE (AFI_ParameterType), INTENT(INOUT)   :: p                          ! This structure stores all the module parameters that are set by AirfoilInfo during the initialization phase.
+      TYPE (AFI_InitInputType), INTENT(IN   )   :: InitInput                  ! This structure stores values that are set by the calling routine during the initialization phase.
+      TYPE (AFI_ParameterType), INTENT(  OUT)   :: p                          ! This structure stores all the module parameters that are set by AirfoilInfo during the initialization phase.
 
 
          ! Local declarations.
 
-      REAL                                   :: AlphaReg      (-180:180)      ! Regularly spaced alphas for interpolated data at the specified Re.
       REAL(SiKi), ALLOCATABLE                :: Coef          (:)             ! The coefficients to send to the regrid routine for 2D splines.
-      REAL, ALLOCATABLE                      :: Coefs         (:,:,:,:)       ! Coefficients of cubic polynomials for the airfoil coefficients (maybe be two sets).
-      REAL(ReKi)                             :: DelAlpha                      ! The distance between alpha values in AlphaReg.
-      REAL, ALLOCATABLE                      :: IntAFCoefs    (:,:)           ! The interpolated airfoil coefficients.
-      REAL, ALLOCATABLE                      :: IntAFCoefsHR  (:,:)           ! The interpolated airfoil coefficients in high resolution (0.1 deg).
-      REAL                                   :: LogRe       = LOG( 1.75 )     ! LOG of Reynolds Number (in millions) to interpolate to.
-      REAL, ALLOCATABLE                      :: LogReAry      (:)             ! Array of LOG( Re ) values to interpolate.
-      REAL                                   :: Wt1                           ! Weighting factor for the low Re.
-      REAL                                   :: Wt2                           ! Weighting factor for the high Re.
 
       INTEGER                                :: Co                            ! The index into the coefficients array.
       INTEGER                                :: CoefSiz                       ! The size of the Coef array.
-      INTEGER                                :: ErrStatLcl                    ! Local error status.
       INTEGER                                :: File                          ! The file index.
-      INTEGER                                :: I                             ! Index into the arrays.
       INTEGER                                :: IA                            ! Index into the alpha array.
-      INTEGER                                :: Ind                           ! Index into the Coefs array.  Indicates which Re in the table is below the actual Re.
       INTEGER                                :: Indx                          ! Index into the arrays.
       INTEGER                                :: NumAl                         ! The length of the alpha array being sent to the regrid interface routine.
       INTEGER                                :: NumRe                         ! The length of the Re array being sent to the regrid interface routine.
       INTEGER                                :: Table                         ! Index into the Table array.
+      INTEGER                                :: UnEc                          ! Local echo file unit number
 
-      TYPE (InpErrsType)                     :: InpErrs                       ! The derived type for holding input errors.
-
-
+      INTEGER                                :: ErrStat2                      ! Local error status.
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2
+      CHARACTER(*), PARAMETER                :: RoutineName = 'AFI_Init'
+      
       ErrStat = ErrID_None
       ErrMsg  = ""
 
@@ -81,34 +72,38 @@ CONTAINS
 
       CALL DispNVD ( AFI_Ver )
 
-        
+      IF ( PRESENT(UnEcho) ) THEN
+         UnEc = UnEcho
+      ELSE
+         UnEc = -1
+      END IF
+             
+      
 
          ! Process the airfoil files.
 
-      ALLOCATE ( p%AFInfo( InitInput%NumAFfiles ), STAT=ErrStatLcL )
-      IF ( ErrStatLcl /= ErrID_None )  THEN
-         CALL ExitThisRoutine ( ErrID_Fatal, ' >> Error allocating memory for the p%AFInfo array in AFI_Init.' )
+      ALLOCATE ( p%AFInfo( InitInput%NumAFfiles ), STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, 'Error allocating memory for the p%AFInfo array.', ErrStat, ErrMsg, RoutineName )
          RETURN
       ENDIF
 
-      InpErrs%NumErrs = 0
 
       DO File=1,InitInput%NumAFfiles
 
-         IF ( PRESENT(UnEc) ) THEN
-            IF ( UnEc > 0 )  THEN
-               WRITE (UnEc,'("--",/,A)')  'Contents of "'//TRIM( InitInput%FileNames(File) )//'":'
-            END IF
+         IF ( UnEc > 0 )  THEN
+            WRITE (UnEc,'("--",/,A)')  'Contents of "'//TRIM( InitInput%FileNames(File) )//'":'
          END IF
          
 
          CALL ReadAFfile ( InitInput%FileNames(File), InitInput%UA_Model, InitInput%NumCoefs, InitInput%InCol_Alfa &
                          , InitInput%InCol_Cl, InitInput%InCol_Cd, InitInput%InCol_Cm, InitInput%InCol_Cpmin, p%AFInfo(File) &
-                         , ErrStatLcl, ErrMsg, UnEc ) !, InpErrs )
-         IF ( ErrStatLcl /= ErrID_None )  THEN
-            CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-            RETURN
-         ENDIF
+                         , ErrStat2, ErrMsg2, UnEc ) 
+            CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            IF ( ErrStat >= AbortErrLev )  THEN
+               CALL Cleanup ( )
+               RETURN
+            ENDIF
 
 
             ! Set the column indices for the variouse airfoil coefficients.
@@ -136,26 +131,28 @@ CONTAINS
 
                IF ( p%AFInfo(File)%Table(Table)%NumAlf /= p%AFInfo(File)%Table(1)%NumAlf )  THEN
           !     IF ( p%AFInfo(File)%NumTabs /= p%AFInfo(File)%Table(1)%NumAlf )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, '  >> Fatal Error: For airfoile file "'//TRIM( InitInput%FileNames(File) ) &
-                                        //'", Table #'//TRIM( Num2LStr( Table ) ) &
-                                        //' does not have the same set of alphas as the first table.' )
+                  CALL SetErrStat ( ErrID_Fatal, 'Fatal Error: Airfoile file "'//TRIM( InitInput%FileNames(File) ) &
+                                    //'", Table #'//TRIM( Num2LStr( Table ) ) &
+                                    //' does not have the same set of alphas as the first table.', ErrStat, ErrMsg, RoutineName )
+                  CALL Cleanup()
                   RETURN
                ENDIF
 
                DO IA=1,p%AFInfo(File)%Table(1)%NumAlf
                   IF ( p%AFInfo(File)%Table(Table)%Alpha(IA) /= p%AFInfo(File)%Table(1)%Alpha(IA) )  THEN
-                     CALL ExitThisRoutine ( ErrID_Fatal, '  >> Fatal Error: For airfoile file "' &
-                                           //TRIM( InitInput%FileNames(File) ) &
-                                           //'", Table #'//TRIM( Num2LStr( Table ) ) &
-                                           //' does not have the same set of alphas as the first table.' )
+                     CALL SetErrStat ( ErrID_Fatal, 'Fatal Error: Airfoile file "'//TRIM( InitInput%FileNames(File) ) &
+                                    //'", Table #'//TRIM( Num2LStr( Table ) ) &
+                                    //' does not have the same set of alphas as the first table.', ErrStat, ErrMsg, RoutineName )
+                     CALL Cleanup()
                      RETURN
                   ENDIF
                END DO ! IA
 
                IF ( p%AFInfo(File)%Table(Table)%Ctrl /= p%AFInfo(File)%Table(1)%Ctrl )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, '  >> Fatal Error: For airfoile file "'//TRIM( InitInput%FileNames(File) ) &
-                                        //'", Table #'//TRIM( Num2LStr( Table ) ) &
-                                        //' does not have the same value for Ctrl as the first table.' )
+                  CALL SetErrStat ( ErrID_Fatal, 'Fatal Error: airfoile file "'//TRIM( InitInput%FileNames(File) ) &
+                                 //'", Table #'//TRIM( Num2LStr( Table ) ) &
+                                 //' does not have the same value for Ctrl as the first table.', ErrStat, ErrMsg, RoutineName )
+                  CALL Cleanup()
                   RETURN
                ENDIF
             ENDDO ! Tab
@@ -165,9 +162,10 @@ CONTAINS
 
             ! Create an array of Re for interpolation and fill it with the LOG(Re) for each table in the file.
 !MLB: Maybe we should just store LogRe when we read in the Re.
-         ALLOCATE ( p%AFInfo(File)%LogRe( p%AFInfo(File)%NumTabs ), STAT=ErrStatLcl )
-         IF ( ErrStatLcl /= ErrID_None )  THEN
-            CALL ExitThisRoutine ( ErrID_Fatal, '  >> Error allocating memory for the LogReAry array in BEMT_GenSplines.' )
+         ALLOCATE ( p%AFInfo(File)%LogRe( p%AFInfo(File)%NumTabs ), STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat ( ErrID_Fatal, 'Error allocating memory for the LogReAry array.', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
             RETURN
          ENDIF
 
@@ -189,21 +187,19 @@ CONTAINS
             NumRe   = p%AFInfo(File)%NumTabs
     !        CoefSiz = NumAl*NumRe
             CoefSiz = NumAl*NumRe + 8
-            CALL AllocAry ( Coef, CoefSiz, "array for bicubic-spline coefficients for airfoil data", ErrStatLcl, ErrMsg )
-            IF ( ErrStatLcl /= 0 )  THEN
-               CALL ExitThisRoutine( ErrID_FATAL, ErrMsg )
-               RETURN
-            END IF
-
+            CALL AllocAry ( Coef, CoefSiz, "array for bicubic-spline coefficients for airfoil data", ErrStat2, ErrMsg2 )
+               CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
                ! Compute the splines for the drag coefficient.
 
             CALL AllocAry ( p%AFInfo(File)%CdSpCoef2D, CoefSiz, "array for bicubic-spline coefficients for Cd data" &
-                          , ErrStatLcl, ErrMsg )
-            IF ( ErrStatLcl /= 0 )  THEN
-               CALL ExitThisRoutine( ErrID_FATAL, ErrMsg )
+                          , ErrStat2, ErrMsg2 )
+               CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               
+            IF ( ErrStat >= AbortErrLev )  THEN
+               CALL Cleanup ( )
                RETURN
-            END IF
+            ENDIF
 
             Indx= 0
             DO IA=1,NumAl
@@ -219,22 +215,21 @@ CONTAINS
                                     , p%AFInfo(File)%NumCdAoAkts, p%AFInfo(File)%CdAoAknots &
                                     , p%AFInfo(File)%NumCdReKts , p%AFInfo(File)%CdReKnots &
                                     , CoefSiz                   , p%AFInfo(File)%CdSpCoef2D &
-                                    , ErrStatLcl                , ErrMsg )
-            IF ( ErrStatLcl /= ErrID_None )  THEN
-               CALL ExitThisRoutine ( ErrStatLcl, ErrMsg )
-               RETURN
-            ENDIF
+                                    , ErrStat2                  , ErrMsg2 )
+               CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
                ! Compute the splines for the lift coefficient.
 
             CALL AllocAry ( p%AFInfo(File)%ClSpCoef2D, CoefSiz, "array for bicubic-spline coefficients for Cl data" &
-                          , ErrStatLcl, ErrMsg )
-            IF ( ErrStatLcl /= 0 )  THEN
-               CALL ExitThisRoutine( ErrID_FATAL, ErrMsg )
-               RETURN
-            END IF
+                          , ErrStat2, ErrMsg2 )
+               CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+            IF ( ErrStat >= AbortErrLev )  THEN
+               CALL Cleanup ( )
+               RETURN
+            ENDIF
+               
             Indx= 0
             DO IA=1,NumAl
                DO Table=1,NumRe
@@ -249,11 +244,8 @@ CONTAINS
                                     , p%AFInfo(File)%NumClAoAkts, p%AFInfo(File)%ClAoAknots &
                                     , p%AFInfo(File)%NumClReKts , p%AFInfo(File)%ClReKnots &
                                     , CoefSiz                   , p%AFInfo(File)%ClSpCoef2D &
-                                    , ErrStatLcl                , ErrMsg )
-            IF ( ErrStatLcl /= ErrID_None )  THEN
-               CALL ExitThisRoutine ( ErrStatLcl, ErrMsg )
-               RETURN
-            ENDIF
+                                    , ErrStat2                  , ErrMsg2 )
+               CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
                ! Optionally compute the splines for the pitching-moment coefficient.
@@ -261,12 +253,14 @@ CONTAINS
             IF ( p%ColCm > 0 )  THEN
 
                CALL AllocAry ( p%AFInfo(File)%CmSpCoef2D, CoefSiz, "array for bicubic-spline coefficients for Cm data" &
-                             , ErrStatLcl, ErrMsg )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine( ErrID_FATAL, ErrMsg )
-                  RETURN
-               END IF
+                             , ErrStat2, ErrMsg2 )
+               CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+               IF ( ErrStat >= AbortErrLev )  THEN
+                  CALL Cleanup ( )
+                  RETURN
+               ENDIF
+               
                Indx= 0
                DO IA=1,NumAl
                   DO Table=1,NumRe
@@ -281,11 +275,8 @@ CONTAINS
                                        , p%AFInfo(File)%NumCmAoAkts, p%AFInfo(File)%CmAoAknots &
                                        , p%AFInfo(File)%NumCmReKts , p%AFInfo(File)%CmReKnots &
                                        , CoefSiz                   , p%AFInfo(File)%CmSpCoef2D &
-                                       , ErrStatLcl                , ErrMsg )
-               IF ( ErrStatLcl /= ErrID_None )  THEN
-                  CALL ExitThisRoutine ( ErrStatLcl, ErrMsg )
-                  RETURN
-               ENDIF
+                                       , ErrStat2                  , ErrMsg2 )
+               CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
             ENDIF ! ( p%ColCm > 0 )
 
@@ -295,12 +286,14 @@ CONTAINS
             IF ( p%ColCpmin > 0 )  THEN
 
                CALL AllocAry ( p%AFInfo(File)%CpminSpCoef2D, CoefSiz, "array for bicubic-spline coefficients for Cpmin data" &
-                             , ErrStatLcl, ErrMsg )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine( ErrID_FATAL, ErrMsg )
+                             , ErrStat2, ErrMsg2 )
+               CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               IF ( ErrStat >= AbortErrLev )  THEN
+                  CALL Cleanup ( )
                   RETURN
-               END IF
+               ENDIF
 
+               
                Indx= 0
                DO IA=1,NumAl
                   DO Table=1,NumRe
@@ -315,11 +308,8 @@ CONTAINS
                                        , p%AFInfo(File)%NumCpminAoAkts, p%AFInfo(File)%CpminAoAknots &
                                        , p%AFInfo(File)%NumCpminReKts , p%AFInfo(File)%CpminReKnots &
                                        , CoefSiz                      , p%AFInfo(File)%CpminSpCoef2D &
-                                       , ErrStatLcl                   , ErrMsg )
-               IF ( ErrStatLcl /= ErrID_None )  THEN
-                  CALL ExitThisRoutine ( ErrStatLcl, ErrMsg )
-                  RETURN
-               ENDIF
+                                       , ErrStat2                     , ErrMsg2 )
+               CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
             ENDIF ! ( p%ColCpmin > 0 )
 
@@ -336,7 +326,9 @@ CONTAINS
 
 !BUG: What happened to the 2D interpolation?  Maybe I haven't written this yet.
 
-               CALL ExitThisRoutine ( ErrID_FATAL, ' >> The part to compute the bi-cubic splines in AFI_Init is not written yet!' )
+               CALL SetErrStat ( ErrID_FATAL, 'The part to compute the bi-cubic splines in AFI_Init is not written yet!', ErrStat, ErrMsg, RoutineName )
+               CALL Cleanup()
+               RETURN
 
             END DO ! Co
 
@@ -346,9 +338,10 @@ CONTAINS
                ! Allocate the arrays to hold spline coefficients.
 
             ALLOCATE ( p%AFInfo(File)%Table(1)%SplineCoefs( p%AFInfo(File)%Table(1)%NumAlf-1 &
-                     , InitInput%NumCoefs, 0:3 ), STAT=ErrStatLcl )
-            IF ( ErrStatLcl /= ErrID_None )  THEN
-               CALL ExitThisRoutine ( ErrStatLcl, ' >> Error allocating memory for the SplineCoefs array in AFI_Init.' )
+                     , InitInput%NumCoefs, 0:3 ), STAT=ErrStat2 )
+            IF ( ErrStat2 /= 0 )  THEN
+               CALL SetErrStat ( ErrStat2, 'Error allocating memory for the SplineCoefs array.', ErrStat, ErrMsg, RoutineName )
+               CALL Cleanup()
                RETURN
             ENDIF
 
@@ -360,11 +353,8 @@ CONTAINS
             CALL CubicSplineInitM ( p%AFInfo(File)%Table(1)%Alpha &
                                   , p%AFInfo(File)%Table(1)%Coefs &
                                   , p%AFInfo(File)%Table(1)%SplineCoefs &
-                                  , ErrStatLcl, ErrMsg )
-            IF ( ErrStatLcl /= ErrID_None )  THEN
-               CALL ExitThisRoutine ( ErrStatLcl, ErrMsg )
-               RETURN
-            ENDIF
+                                  , ErrStat2, ErrMsg2 )
+               CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ENDIF ! ( p%AFInfo(File)%NumTabs > 1 )
 
@@ -379,7 +369,9 @@ CONTAINS
 
 !BUG: What happened to the 2D interpolation?  Maybe I haven't written this yet.
 
-               CALL ExitThisRoutine ( ErrID_FATAL, ' >> The part to compute the bi-cubic splines in AFI_Init is not written yet!' )
+               CALL SetErrStat ( ErrID_FATAL, 'The part to compute the bi-cubic splines in AFI_Init is not written yet!', ErrStat, ErrMsg, RoutineName )
+               CALL Cleanup()
+               RETURN
 
 ! We also need to deal with constant data.
 
@@ -389,7 +381,9 @@ CONTAINS
 
                      ! We need to deal with constant data.
 
-                  CALL ExitThisRoutine ( ErrID_FATAL, ' >> The part to deal with constant data in AFI_Init is not written yet!' )
+                  CALL SetErrStat ( ErrID_FATAL, 'The part to deal with constant data in AFI_Init is not written yet!', ErrStat, ErrMsg, RoutineName )
+                  CALL Cleanup()
+                  RETURN
 
                ENDIF ! p%AFInfo(File)%Table(1)%ConstData
 
@@ -399,46 +393,30 @@ CONTAINS
 
       END DO ! File
 
-      CALL ExitThisRoutine ( ErrID_None, ErrMsg )
+      CALL Cleanup ( )
 
       RETURN
 
    !=======================================================================
    CONTAINS
    !=======================================================================
-      SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+      SUBROUTINE Cleanup ( )
 
          ! This subroutine cleans up the parent routine before exiting.
-
-
-            ! Argument declarations.
-
-         INTEGER(IntKi), INTENT(IN)       :: ErrID                            ! The error identifier (ErrLev)
-
-         CHARACTER(*),   INTENT(IN)       :: Msg                              ! The error message (ErrMsg)
-
-
-            ! Set error status/message
-
-         ErrStat = ErrID
-         ErrMsg  = Msg
-
-
             ! Deallocate the temporary Coef array.
 
          IF ( ALLOCATED( Coef ) ) DEALLOCATE( Coef )
 
-
          RETURN
 
-      END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
+      END SUBROUTINE Cleanup 
 
-   END SUBROUTINE AFI_Init ! ( InitInput, ErrStatLcl, ErrMsg )
+   END SUBROUTINE AFI_Init
    
   
    !=============================================================================
    SUBROUTINE ReadAFfile ( AFfile, UA_Model, NumCoefs, InCol_Alfa, InCol_Cl, InCol_Cd, InCol_Cm, InCol_Cpmin, AFInfo &
-                         , ErrStat, ErrMsg, UnEc )!, InpErrs )
+                         , ErrStat, ErrMsg, UnEc )
 
 
          ! This routine reads an airfoil file.
@@ -446,55 +424,57 @@ CONTAINS
 
          ! Argument declarations.
 
-      INTEGER(IntKi), INTENT(IN)             :: InCol_Alfa                    ! The airfoil-table input column for angle of attack.
-      INTEGER(IntKi), INTENT(IN)             :: InCol_Cd                      ! The airfoil-table input column for drag coefficient.
-      INTEGER(IntKi), INTENT(IN)             :: InCol_Cl                      ! The airfoil-table input column for lift coefficient.
-      INTEGER(IntKi), INTENT(IN)             :: InCol_Cm                      ! The airfoil-table input column for pitching-moment coefficient.
-      INTEGER(IntKi), INTENT(IN)             :: InCol_Cpmin                   ! The airfoil-table input column for minimum pressure coefficient.
-      INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! Error status.
-      INTEGER(IntKi), INTENT(IN)             :: NumCoefs                      ! The number of aerodynamic coefficients to be stored.
-      INTEGER(IntKi), INTENT(IN)             :: UA_Model                      ! The type of unsteady-aero model.
+      INTEGER(IntKi),    INTENT(IN)           :: InCol_Alfa                    ! The airfoil-table input column for angle of attack.
+      INTEGER(IntKi),    INTENT(IN)           :: InCol_Cd                      ! The airfoil-table input column for drag coefficient.
+      INTEGER(IntKi),    INTENT(IN)           :: InCol_Cl                      ! The airfoil-table input column for lift coefficient.
+      INTEGER(IntKi),    INTENT(IN)           :: InCol_Cm                      ! The airfoil-table input column for pitching-moment coefficient.
+      INTEGER(IntKi),    INTENT(IN)           :: InCol_Cpmin                   ! The airfoil-table input column for minimum pressure coefficient.
+      INTEGER(IntKi),    INTENT(  OUT)        :: ErrStat                       ! Error status.
+      INTEGER(IntKi),    INTENT(IN)           :: NumCoefs                      ! The number of aerodynamic coefficients to be stored.
+      INTEGER(IntKi),    INTENT(IN)           :: UA_Model                      ! The type of unsteady-aero model.
 
-      INTEGER, INTENT(IN), OPTIONAL          :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.      CHARACTER(*), INTENT(IN)               :: AFfile                        ! The file to be read.
+      INTEGER,           INTENT(IN)           :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.      CHARACTER(*), INTENT(IN)               :: AFfile                        ! The file to be read.
 
-      CHARACTER(*), INTENT( IN)              :: AFfile                        ! The file to read in.
-      CHARACTER(*), INTENT(OUT)              :: ErrMsg                        ! Error message.
+      CHARACTER(*),      INTENT(IN)           :: AFfile                        ! The file to read in.
+      CHARACTER(*),      INTENT(  OUT)        :: ErrMsg                        ! Error message.
 
-      TYPE (AFInfoType), INTENT(INOUT)       :: AFInfo                        ! The derived type for holding the constant parameters for this airfoil.
-!      TYPE (InpErrsType), INTENT(INOUT)      :: InpErrs                       ! The derived type for holding input errors.
+      TYPE (AFInfoType), INTENT(INOUT)        :: AFInfo                        ! The derived type for holding the constant parameters for this airfoil.
 
 
          ! Local declarations.
 
-      REAL(SiKi)                             :: Coords   (2)                  ! An array to hold data from the airfoil-shape table.
-      REAL(SiKi), ALLOCATABLE                :: SiAry    (:)                  ! A temporary array to hold data from a table.
+      REAL(SiKi)                              :: Coords   (2)                  ! An array to hold data from the airfoil-shape table.
+      REAL(SiKi), ALLOCATABLE                 :: SiAry    (:)                  ! A temporary array to hold data from a table.
+                                              
+      INTEGER                                 :: Coef                          ! A DO index that points into the coefficient array.
+      INTEGER                                 :: Cols2Parse                    ! The number of columns that must be read from the coefficient tables.
+      INTEGER                                 :: CurLine                       ! The current line to be parsed in the FileInfo structure.
+      INTEGER                                 :: NumAlf                        ! The number of rows in the current table.
+      INTEGER                                 :: Row                           ! The row of a table to be parsed in the FileInfo structure.
+      INTEGER                                 :: Table                         ! The DO index for the tables.
+                                              
+      LOGICAL                                 :: BadVals                       ! A flag that indicates if the values in a table are invalid.
 
-      INTEGER                                :: Coef                          ! A DO index that points into the coefficient array.
-      INTEGER                                :: Cols2Parse                    ! The number of columns that must be read from the coefficient tables.
-      INTEGER                                :: CurLine                       ! The current line to be parsed in the FileInfo structure.
-      INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
-      INTEGER                                :: NumAlf                        ! The number of rows in the current table.
-      INTEGER                                :: Row                           ! The row of a table to be parsed in the FileInfo structure.
-      INTEGER                                :: Table                         ! The DO index for the tables.
+      TYPE (FileInfoType)                     :: FileInfo                      ! The derived type for holding the file information.
 
-      LOGICAL                                :: BadVals                       ! A flag that indicates if the values in a table are invalid.
-
-      TYPE (FileInfoType)                    :: FileInfo                      ! The derived type for holding the file information.
-
+      INTEGER(IntKi)                          :: ErrStat2                      ! Error status local to this routine.
+      CHARACTER(ErrMsgLen)                    :: ErrMsg2
+      CHARACTER(*), PARAMETER                 :: RoutineName = 'ReadAFfile'
+      
       ErrStat = ErrID_None
       ErrMsg  = ""
-
 
          ! Process the (possibly) nested set of files.  This copies the decommented contents of
          ! AFI_FileInfo%FileName and the files it includes (both directly and indirectly) into
          ! the FileInfo structure that we can then parse.
 
-      CALL ProcessComFile ( AFfile, FileInfo, ErrStatLcl, ErrMsg )
-      IF ( ErrStatLcl > 0 )  THEN
-         CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-         RETURN
-      ENDIF
-
+      CALL ProcessComFile ( AFfile, FileInfo, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+         
 
          ! Process the airfoil shape information if it is included.
 
@@ -503,29 +483,38 @@ CONTAINS
 
          ! These first two parameters are optional, so we don't check for errors.
 
-      CALL ParseVar ( FileInfo, CurLine, 'NonDimArea', AFInfo%NonDimArea, ErrStatLcl, ErrMsg, UnEc )
-      CALL ParseVar ( FileInfo, CurLine, 'NumCoords' , AFInfo%NumCoords , ErrStatLcl, ErrMsg, UnEc )
+      CALL ParseVar ( FileInfo, CurLine, 'NonDimArea', AFInfo%NonDimArea, ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL ParseVar ( FileInfo, CurLine, 'NumCoords' , AFInfo%NumCoords , ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
 
       IF ( AFInfo%NumCoords > 0 )  THEN
 
-         ALLOCATE ( AFInfo%X_Coord( AFInfo%NumCoords ) , STAT=ErrStatLcl )
-         IF ( ErrStatLcl /= 0 )  THEN
-            CALL ExitThisRoutine ( ErrID_Fatal, '  >> Error allocating memory for the AFInfo%X_Coord array in ReadAFfile.' )
+         ALLOCATE ( AFInfo%X_Coord( AFInfo%NumCoords ) , STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat ( ErrID_Fatal, 'Error allocating memory for AFInfo%X_Coord.', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
             RETURN
          ENDIF
 
-         ALLOCATE ( AFInfo%Y_Coord( AFInfo%NumCoords ) , STAT=ErrStatLcl )
-         IF ( ErrStatLcl /= 0 )  THEN
-            CALL ExitThisRoutine ( ErrID_Fatal, '  >> Error allocating memory for the AFInfo%Y_Coord array in ReadAFfile.'  )
+         ALLOCATE ( AFInfo%Y_Coord( AFInfo%NumCoords ) , STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat ( ErrID_Fatal, 'Error allocating memory for AFInfo%Y_Coord.', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
             RETURN
          ENDIF
 
          DO Row=1,AFInfo%NumCoords
-            CALL ParseAry ( FileInfo, CurLine, 'X_Coord/Y_Coord', Coords, 2, ErrStatLcl, ErrMsg, UnEc )
-            IF ( ErrStatLcl /= 0 )  THEN
-               CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-               RETURN
-            ENDIF
+            CALL ParseAry ( FileInfo, CurLine, 'X_Coord/Y_Coord', Coords, 2, ErrStat2, ErrMsg2, UnEc )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               END IF
             AFInfo%X_Coord(Row) = Coords(1)
             AFInfo%Y_Coord(Row) = Coords(2)
          ENDDO ! Row
@@ -536,282 +525,195 @@ CONTAINS
          ! How many columns do we need to read in the input and how many total coefficients will be used?
 
       Cols2Parse = MAX( InCol_Alfa, InCol_Cl, InCol_Cd, InCol_Cm, InCol_Cpmin )
-      ALLOCATE ( SiAry( Cols2Parse ) , STAT=ErrStatLcl )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL ExitThisRoutine ( ErrID_Fatal, ' >> Error allocating memory for the SiAry array in ReadAFfile.' )
+      ALLOCATE ( SiAry( Cols2Parse ) , STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, 'Error allocating memory for SiAry.', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
          RETURN
       ENDIF
 
 
          ! Work through the multiple tables.
 
-      CALL ParseVar ( FileInfo, CurLine, 'NumTabs' , AFInfo%NumTabs , ErrStatLcl, ErrMsg, UnEc )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-         RETURN
-      ENDIF
+      CALL ParseVar ( FileInfo, CurLine, 'NumTabs' , AFInfo%NumTabs , ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
 
       IF ( AFInfo%NumTabs < 1 )  THEN
-         CALL ExitThisRoutine ( ErrID_Fatal, ' >> NumTabs must be > 0 in "'//TRIM( AFfile )//'".' )
+         CALL SetErrStat ( ErrID_Fatal, 'NumTabs must be > 0.', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
          RETURN
       ENDIF
 
-      ALLOCATE ( AFInfo%Table( AFInfo%NumTabs ) , STAT=ErrStatLcl )
-      IF ( ErrStatLcl /= 0 )  THEN
-         CALL ExitThisRoutine ( ErrID_Fatal, ' >> Error allocating memory for the AFInfo%Table array in ReadAFfile.' )
+      ALLOCATE ( AFInfo%Table( AFInfo%NumTabs ) , STAT=ErrStat2 )
+      IF ( ErrStat2 /= 0 )  THEN
+         CALL SetErrStat ( ErrID_Fatal, 'Error allocating memory for AFInfo%Table.', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
          RETURN
       ENDIF
 
       DO Table=1,AFInfo%NumTabs
 
-         CALL ParseVar ( FileInfo, CurLine, 'Re', AFInfo%Table(Table)%Re, ErrStatLcl, ErrMsg, UnEc )
-         IF ( ErrStatLcl /= 0 )  THEN
-            CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-            RETURN
-         ENDIF
-         IF ( AFInfo%Table(Table)%Re <= 0.0 )  THEN
-!            IF ( InpErrs%NumErrs < InpErrs%MaxErrs )  THEN
-!               InpErrs%NumErrs                   = InpErrs%NumErrs + 1
-!               InpErrs%FileList(InpErrs%NumErrs) = AFfile
-!               InpErrs%FileLine(InpErrs%NumErrs) = FileInfo%FileLine(CurLine-1)
-!               InpErrs%ErrMsgs (InpErrs%NumErrs) = 'Re must be > 0'
-!            ELSE
-               CALL ExitThisRoutine ( ErrID_Severe, '  >> Re must be > 0 in "'//TRIM( AFfile ) &
-                                                  //'".'//NewLine//'  >> The error occurred on line #' &
-                                                  //TRIM( Num2LStr( FileInfo%FileLine(CurLine-1) ) )//'.' )
+         CALL ParseVar ( FileInfo, CurLine, 'Re', AFInfo%Table(Table)%Re, ErrStat2, ErrMsg2, UnEc )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            IF (ErrStat >= AbortErrLev) THEN
+               CALL Cleanup()
                RETURN
-!            ENDIF ! ( InpErrs%NumErrs < InpErrs%MaxErrs )
+            END IF
+         IF ( AFInfo%Table(Table)%Re <= 0.0 )  THEN
+               CALL SetErrStat ( ErrID_Severe, 'Re must be > 0 in "'//TRIM( AFfile ) &
+                                      //'".'//NewLine//'  >> The error occurred on line #' &
+                                      //TRIM( Num2LStr( FileInfo%FileLine(CurLine-1) ) )//'.', ErrStat, ErrMsg, RoutineName )
+               CALL Cleanup()
+               RETURN
          ENDIF ! ( AFInfo%Table(Table)%Re <= 0.0 )
 
-         CALL ParseVar ( FileInfo, CurLine, 'Ctrl', AFInfo%Table(Table)%Ctrl, ErrStatLcl, ErrMsg, UnEc )
-         IF ( ErrStatLcl /= 0 )  THEN
-            CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-            RETURN
-         ENDIF
-         IF ( AFInfo%Table(Table)%Ctrl /= 0.0 )  THEN
-!            IF ( InpErrs%NumErrs < InpErrs%MaxErrs )  THEN
-!               InpErrs%NumErrs                   = InpErrs%NumErrs + 1
-!               InpErrs%FileList(InpErrs%NumErrs) = AFfile
-!               InpErrs%FileLine(InpErrs%NumErrs) = FileInfo%FileLine(CurLine-1)
-!               InpErrs%ErrMsgs (InpErrs%NumErrs) = 'Ctrl must equal 0.0'
-!            ELSE
-               CALL ExitThisRoutine ( ErrID_Severe, '  >> Ctrl must equal 0.0 in "'//TRIM( AFfile ) &
-                                                  //'".'//NewLine//'  >> The error occurred on line #' &
-                                                  //TRIM( Num2LStr( FileInfo%FileLine(CurLine-1) ) )//'.' )
+         CALL ParseVar ( FileInfo, CurLine, 'Ctrl', AFInfo%Table(Table)%Ctrl, ErrStat2, ErrMsg2, UnEc )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            IF (ErrStat >= AbortErrLev) THEN
+               CALL Cleanup()
                RETURN
-!            ENDIF ! ( InpErrs%NumErrs < InpErrs%MaxErrs )
+            END IF
+         IF ( AFInfo%Table(Table)%Ctrl /= 0.0 )  THEN !bjj: use EqualRealNos?
+               CALL SetErrStat ( ErrID_Severe, 'Ctrl must equal 0.0 in "'//TRIM( AFfile ) &
+                                       //'".'//NewLine//'  >> The error occurred on line #' &
+                                       //TRIM( Num2LStr( FileInfo%FileLine(CurLine-1) ) )//'.', ErrStat, ErrMsg, RoutineName )
+               CALL Cleanup()
+               RETURN
          ENDIF ! ( AFInfo%Table(Table)%Ctrl <= 0.0 )
 
-         CALL ParseVar ( FileInfo, CurLine, 'InclUAdata', AFInfo%Table(Table)%InclUAdata, ErrStatLcl, ErrMsg, UnEc )
-         IF ( ErrStatLcl /= 0 )  THEN
-            CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-            RETURN
-         ENDIF
+         CALL ParseVar ( FileInfo, CurLine, 'InclUAdata', AFInfo%Table(Table)%InclUAdata, ErrStat2, ErrMsg2, UnEc )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            IF (ErrStat >= AbortErrLev) THEN
+               CALL Cleanup()
+               RETURN
+            END IF
 
          IF ( AFInfo%Table(Table)%InclUAdata )  THEN
 
             IF ( UA_Model == 1 )  THEN
 
-               CALL ParseVar ( FileInfo, CurLine, 'alpha0', AFInfo%Table(Table)%UA_BL%alpha0, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'alpha0', AFInfo%Table(Table)%UA_BL%alpha0, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'alpha1', AFInfo%Table(Table)%UA_BL%alpha1, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'alpha1', AFInfo%Table(Table)%UA_BL%alpha1, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'alpha2', AFInfo%Table(Table)%UA_BL%alpha2, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'alpha2', AFInfo%Table(Table)%UA_BL%alpha2, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'eta_e', AFInfo%Table(Table)%UA_BL%eta_e, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'eta_e', AFInfo%Table(Table)%UA_BL%eta_e, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'C_nalpha', AFInfo%Table(Table)%UA_BL%C_nalpha, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'C_nalpha', AFInfo%Table(Table)%UA_BL%C_nalpha, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'T_f0', AFInfo%Table(Table)%UA_BL%T_f0, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'T_f0', AFInfo%Table(Table)%UA_BL%T_f0, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                
-               CALL ParseVar ( FileInfo, CurLine, 'T_V0', AFInfo%Table(Table)%UA_BL%T_V0, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'T_V0', AFInfo%Table(Table)%UA_BL%T_V0, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                
-               CALL ParseVar ( FileInfo, CurLine, 'T_p', AFInfo%Table(Table)%UA_BL%T_p, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'T_p', AFInfo%Table(Table)%UA_BL%T_p, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'T_VL', AFInfo%Table(Table)%UA_BL%T_VL, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'T_VL', AFInfo%Table(Table)%UA_BL%T_VL, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'b1', AFInfo%Table(Table)%UA_BL%b1, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'b1', AFInfo%Table(Table)%UA_BL%b1, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'b2', AFInfo%Table(Table)%UA_BL%b2, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'b2', AFInfo%Table(Table)%UA_BL%b2, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'b5', AFInfo%Table(Table)%UA_BL%b5, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'b5', AFInfo%Table(Table)%UA_BL%b5, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'A1', AFInfo%Table(Table)%UA_BL%A1, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'A1', AFInfo%Table(Table)%UA_BL%A1, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'A2', AFInfo%Table(Table)%UA_BL%A2, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'A2', AFInfo%Table(Table)%UA_BL%A2, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'A5', AFInfo%Table(Table)%UA_BL%A5, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'A5', AFInfo%Table(Table)%UA_BL%A5, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'S1', AFInfo%Table(Table)%UA_BL%S1, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'S1', AFInfo%Table(Table)%UA_BL%S1, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'S2', AFInfo%Table(Table)%UA_BL%S2, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'S2', AFInfo%Table(Table)%UA_BL%S2, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'S3', AFInfo%Table(Table)%UA_BL%S3, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'S3', AFInfo%Table(Table)%UA_BL%S3, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'S4', AFInfo%Table(Table)%UA_BL%S4, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'S4', AFInfo%Table(Table)%UA_BL%S4, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'Cn1', AFInfo%Table(Table)%UA_BL%Cn1, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'Cn1', AFInfo%Table(Table)%UA_BL%Cn1, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'Cn2', AFInfo%Table(Table)%UA_BL%Cn2, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'Cn2', AFInfo%Table(Table)%UA_BL%Cn2, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'St_sh', AFInfo%Table(Table)%UA_BL%St_sh, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'St_sh', AFInfo%Table(Table)%UA_BL%St_sh, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'Cd0', AFInfo%Table(Table)%UA_BL%Cd0, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'Cd0', AFInfo%Table(Table)%UA_BL%Cd0, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'Cm0', AFInfo%Table(Table)%UA_BL%Cm0, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'Cm0', AFInfo%Table(Table)%UA_BL%Cm0, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'k0', AFInfo%Table(Table)%UA_BL%k0, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'k0', AFInfo%Table(Table)%UA_BL%k0, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'k1', AFInfo%Table(Table)%UA_BL%k1, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'k1', AFInfo%Table(Table)%UA_BL%k1, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'k2', AFInfo%Table(Table)%UA_BL%k2, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'k2', AFInfo%Table(Table)%UA_BL%k2, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'k3', AFInfo%Table(Table)%UA_BL%k3, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'k3', AFInfo%Table(Table)%UA_BL%k3, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'k1_hat', AFInfo%Table(Table)%UA_BL%k1_hat, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'k1_hat', AFInfo%Table(Table)%UA_BL%k1_hat, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'x_cp_bar', AFInfo%Table(Table)%UA_BL%x_cp_bar, ErrStatLcl, ErrMsg, UnEc )
-               IF ( ErrStatLcl /= 0 )  THEN
-                  CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-                  RETURN
-               ENDIF
+               CALL ParseVar ( FileInfo, CurLine, 'x_cp_bar', AFInfo%Table(Table)%UA_BL%x_cp_bar, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               END IF
+                  
             ENDIF ! ( UA_Model == 1 )
 
          ELSEIF ( UA_Model == 1 )  THEN
 
-            CALL ExitThisRoutine ( ErrID_Fatal &
-            , ' >> You must supply Beddoes-Leishman unsteady aerodynamics parameters for all airfoils if you want to use that' &
-            //' model.  You did not do so for Table #'//TRIM( Num2LStr( Table ) )//' in the "'//TRIM( AFfile )//'" airfoil file.' )
+            CALL SetErrStat ( ErrID_Fatal &
+            , 'You must supply Beddoes-Leishman unsteady aerodynamics parameters for all airfoils if you want to use that' &
+            //' model. You did not do so for Table #'//TRIM( Num2LStr( Table ) )//' in the "'//TRIM( AFfile )//'" airfoil file.', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
             RETURN
 
          ENDIF ! ( AFInfo%Table(Table)%InclUAdata )
 
-         CALL ParseVar ( FileInfo, CurLine, 'NumAlf', AFInfo%Table(Table)%NumAlf, ErrStatLcl, ErrMsg, UnEc )
-         IF ( ErrStatLcl /= 0 )  THEN
-            CALL ExitThisRoutine ( ErrID_Fatal, ErrMsg )
-            RETURN
-         ENDIF
+         CALL ParseVar ( FileInfo, CurLine, 'NumAlf', AFInfo%Table(Table)%NumAlf, ErrStat2, ErrMsg2, UnEc )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            IF (ErrStat >= AbortErrLev) THEN
+               CALL Cleanup()
+               RETURN
+            END IF
 
          IF ( AFInfo%Table(Table)%NumAlf < 1 )  THEN
-            CALL ExitThisRoutine( ErrID_Fatal, '  >> NumAlf must be a positive number on line #' &
-                           //TRIM( Num2LStr( FileInfo%FileLine(CurLine-1) ) )//' in "'//TRIM( AFfile )//'".' )
+            CALL SetErrStat( ErrID_Fatal, 'NumAlf must be a positive number on line #' &
+                           //TRIM( Num2LStr( FileInfo%FileLine(CurLine-1) ) )//' in "'//TRIM( AFfile )//'".', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
             RETURN
          ELSEIF ( AFInfo%Table(Table)%NumAlf < 3 )  THEN
             AFInfo%Table(Table)%ConstData = .TRUE.
@@ -822,25 +724,28 @@ CONTAINS
 
             ! Allocate the arrays for the airfoil coefficients.
 
-         ALLOCATE ( AFInfo%Table(Table)%Alpha( AFInfo%Table(Table)%NumAlf ), STAT=ErrStatLcl )
-         IF ( ErrStatLcl /= 0 )  THEN
-            CALL ExitThisRoutine( ErrID_Fatal, '  >> Error allocating memory for the AFInfo%Table%Alpha array in ReadAFfile.' )
+         ALLOCATE ( AFInfo%Table(Table)%Alpha( AFInfo%Table(Table)%NumAlf ), STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for AFInfo%Table%Alpha.', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
             RETURN
          ENDIF
 
-         ALLOCATE ( AFInfo%Table(Table)%Coefs( AFInfo%Table(Table)%NumAlf, NumCoefs ), STAT=ErrStatLcl )
-         IF ( ErrStatLcl /= 0 )  THEN
-            CALL ExitThisRoutine( ErrID_Fatal, '  >> Error allocating memory for the AFInfo%Table%Coefs array in ReadAFfile.' )
+         ALLOCATE ( AFInfo%Table(Table)%Coefs( AFInfo%Table(Table)%NumAlf, NumCoefs ), STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating memory for AFInfo%Table%Coefs.', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
             RETURN
          ENDIF
 
          DO Row=1,AFInfo%Table(Table)%NumAlf
 
-            CALL ParseAry ( FileInfo, CurLine, 'CoeffData', SiAry, Cols2Parse, ErrStatLcl, ErrMsg, UnEc )
-            IF ( ErrStatLcl /= 0 )  THEN
-               CALL ExitThisRoutine( ErrID_Fatal, ErrMsg )
-               RETURN
-            ENDIF
+            CALL ParseAry ( FileInfo, CurLine, 'CoeffData', SiAry, Cols2Parse, ErrStat2, ErrMsg2, UnEc )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               IF (ErrStat >= AbortErrLev) THEN
+                  CALL Cleanup()
+                  RETURN
+               END IF
 
    !mlb: testing         AFInfo%Table(Table)%Alpha(Row  ) = SiAry(InCol_Alfa)*D2R
             AFInfo%Table(Table)%Alpha(Row  ) = SiAry(InCol_Alfa)
@@ -877,8 +782,9 @@ CONTAINS
                ENDIF
             ENDDO ! Coef
             IF ( BadVals )  THEN
-               CALL ExitThisRoutine( ErrID_Warn, &
-                  ' >> Airfoil data should go from -180 to 180 and the coefficients at the ends should be the same.' )
+               CALL SetErrStat( ErrID_Warn, &
+                  'Airfoil data should go from -180 to 180 and the coefficients at the ends should be the same.', ErrStat, ErrMsg, RoutineName )
+               CALL Cleanup()
                RETURN
             ENDIF
          ENDIF ! ( .NOT. AFInfo%Table(Table)%ConstData )
@@ -886,47 +792,28 @@ CONTAINS
       ENDDO ! Table
 
 
-      CALL ExitThisRoutine( ErrID_None, '' )
+      CALL Cleanup( )
 
       RETURN
 
       !=======================================================================
       CONTAINS
       !=======================================================================
-         SUBROUTINE ExitThisRoutine ( ErrID, Msg )
+         SUBROUTINE Cleanup ()
 
             ! This subroutine cleans up all the allocatable arrays, sets the error status/message and closes the binary file
-
-               ! Passed arguments.
-
-            INTEGER(IntKi), INTENT(IN)     :: ErrID        ! The error identifier (ErrLev)
-
-            CHARACTER(*),   INTENT(IN)     :: Msg          ! The error message (ErrMsg)
-
-
-               ! Set error status/message
-
-            ErrStat = ErrID
-            ErrMsg  = Msg
+               
+            CALL NWTC_Library_DestroyFileInfoType (FileInfo, ErrStat2, ErrMsg2)
+            IF ( ALLOCATED(SiAry) ) DEALLOCATE(SiAry)
+            
+         END SUBROUTINE Cleanup 
 
 
-               ! If there was an error, deallocate the arrays in the FileInfo structure.
-
-            IF ( ErrStat /= 0 )  THEN
-               IF ( ALLOCATED( FileInfo%FileLine ) ) DEALLOCATE( FileInfo%FileLine )
-               IF ( ALLOCATED( FileInfo%FileIndx ) ) DEALLOCATE( FileInfo%FileIndx )
-               IF ( ALLOCATED( FileInfo%FileList ) ) DEALLOCATE( FileInfo%FileList )
-               IF ( ALLOCATED( FileInfo%Lines    ) ) DEALLOCATE( FileInfo%Lines    )
-            END IF ! ( ErrLev /= 0 )
-
-         END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
-
-
-      END SUBROUTINE ReadAFfile ! ( FileInfo, ErrStat, ErrMsg )
+   END SUBROUTINE ReadAFfile
       
       
-subroutine AFI_GetAirfoilParams( AFInfo, M, Re, alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, T_VL, St_sh, &
-                                 b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, errMsg, errStat )     
+   subroutine AFI_GetAirfoilParams( AFInfo, M, Re, alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, T_VL, St_sh, &
+                                    b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, errMsg, errStat )     
 
    type(AFInfoType), intent(in   )       :: AFInfo                        ! The derived type for holding the constant parameters for this airfoil.
    real(ReKi),       intent(in   )       :: M                             ! mach number
@@ -967,9 +854,9 @@ subroutine AFI_GetAirfoilParams( AFInfo, M, Re, alpha, alpha0, alpha1, alpha2, e
    integer(IntKi),   intent(  out)       :: errStat                       ! Error status. 
    character(*),     intent(  out)       :: errMsg                        ! Error message.
       
-   errMsg         = ''
-   errStat        = ErrID_None
-   
+      errMsg         = ''
+      errStat        = ErrID_None
+        
    
       ! These coefs are stored in the AFInfo data structures based on Re
    alpha0         =  AFInfo%Table(1)%UA_BL%alpha0        !-0.35_ReKi*pi/180.0
@@ -1005,9 +892,9 @@ subroutine AFI_GetAirfoilParams( AFInfo, M, Re, alpha, alpha0, alpha1, alpha2, e
    
    
    C_nalpha_circ  =  C_nalpha / sqrt(1.0_ReKi-M**2)
-  ! Cn1=1.9 Tp=1.7 Tf=3., Tv=6 Tvl=11, Cd0=0.012
+     ! Cn1=1.9 Tp=1.7 Tf=3., Tv=6 Tvl=11, Cd0=0.012
    
-end subroutine AFI_GetAirfoilParams
+   end subroutine AFI_GetAirfoilParams
                                  
 !=============================================================================
 END MODULE AirfoilInfo
