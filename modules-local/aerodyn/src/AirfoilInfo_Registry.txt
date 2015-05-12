@@ -127,7 +127,6 @@ typedef	^	^	INTEGER	AFfile	-	-	-	"The number of the airfoil file that applies to
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
-# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef	^	ParameterType	INTEGER	ColCd	-	-	-	"The column in the Coefs arrays that contains Cd data"	-
 typedef	^	^	INTEGER	ColCl	-	-	-	"The column in the Coefs arrays that contains Cl data"	-
 typedef	^	^	INTEGER	ColCm	-	-	-	"The column in the Coefs arrays that contains Cm data"	-
