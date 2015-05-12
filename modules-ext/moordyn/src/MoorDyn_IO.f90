@@ -131,6 +131,11 @@ CONTAINS
     CHARACTER(20)                :: OptValue             ! String to temporarially hold value of options variable input
     CHARACTER(1024)              :: FileName             !
 
+    INTEGER(IntKi)               :: ErrStat2
+    CHARACTER(ErrMsgLen)         :: ErrMsg2
+    CHARACTER(*), PARAMETER      :: RoutineName = 'MDIO_ReadInput'
+    
+    
     !
     UnEc = -1
 
@@ -144,13 +149,12 @@ CONTAINS
     FileName = TRIM(InitInp%FileName)
 
     CALL GetNewUnit( UnIn )
-    CALL OpenFInpFile( UnIn, FileName, ErrStat )
-
-    IF ( ErrStat /= ErrID_None ) THEN
-       CALL SetErrStat(ErrID_Fatal, ' Failed to open MoorDyn input file: '//FileName, ErrStat,ErrMsg,'MDIO_ReadInput')
-       CALL CleanUp()
-       RETURN
-    END IF
+    CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       IF ( ErrStat >= AbortErrLev ) THEN
+          CALL CleanUp()
+          RETURN
+       END IF
 
 
     !CALL WrScr( '  MD_Init: Opening MoorDyn input file:  '//FileName )
@@ -160,32 +164,29 @@ CONTAINS
     ! File header
     !-------------------------------------------------------------------------------------------------
 
-    CALL ReadCom( UnIn, FileName, 'MoorDyn input file header line 1', ErrStat )
-
-    IF ( ErrStat /= ErrID_None ) THEN
-!       ErrMsg  = ' Failed to read MoorDyn input file header line 1.'
-       CALL SetErrStat(ErrID_Fatal, 'Failed to read MoorDyn input file header line 1.',ErrStat,ErrMsg,'MDIO_ReadInput')
-       CALL CleanUp()
-       RETURN
-    END IF
+    CALL ReadCom( UnIn, FileName, 'MoorDyn input file header line 1', ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       IF ( ErrStat >= AbortErrLev ) THEN
+          CALL CleanUp()
+          RETURN
+       END IF
 
 
-    CALL ReadCom( UnIn, FileName, 'MoorDyn input file header line 2', ErrStat )
-
-    IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Failed to read MoorDyn input file header line 2.'
-       CALL CleanUp()
-       RETURN
-    END IF
+    CALL ReadCom( UnIn, FileName, 'MoorDyn input file header line 2', ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       IF ( ErrStat >= AbortErrLev ) THEN
+          CALL CleanUp()
+          RETURN
+       END IF
 
 
     ! Echo Input Files.
-    CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat )
-    IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Failed to read Echo parameter.'
-       CALL CleanUp()
-       RETURN
-    END IF
+    CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       IF ( ErrStat >= AbortErrLev ) THEN
+          CALL CleanUp()
+          RETURN
+       END IF
 
 
     ! If we are Echoing the input then we should re-read the first three lines so that we can echo them
@@ -201,46 +202,40 @@ CONTAINS
          !print *, 'name is ', EchoFile
 
          CALL GetNewUnit( UnEc )
-         CALL OpenEcho ( UnEc, EchoFile, ErrStat, ErrMsg )
-         IF ( ErrStat /= ErrID_None ) THEN
-   !           ErrMsg  = ' Failed to open Echo file.'
-            !print *, 'got an error in opening it'
-            CALL SetErrStat(ErrID_Fatal, ' Failed to open Echo file', ErrStat,ErrMsg,'MDIO_ReadInput')
-            CALL CleanUp()
-            RETURN
-         END IF
+         CALL OpenEcho ( UnEc, EchoFile, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            IF ( ErrStat >= AbortErrLev ) THEN
+               CALL CleanUp()
+               RETURN
+            END IF
 
          REWIND(UnIn)      ! rewind to start of input file to re-read the first few lines
 
 
 
 
-       CALL ReadCom( UnIn, FileName, 'MoorDyn input file header line 1', ErrStat, ErrMsg, UnEc )
+       CALL ReadCom( UnIn, FileName, 'MoorDyn input file header line 1', ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
 
-       IF ( ErrStat /= ErrID_None ) THEN
-          ErrMsg  = ' Failed to read MoorDyn input file header line 1.'
-          CALL CleanUp()
-          RETURN
-       END IF
-
-
-       CALL ReadCom( UnIn, FileName, 'MoorDyn input file header line 2', ErrStat, ErrMsg, UnEc )
-
-       IF ( ErrStat /= ErrID_None ) THEN
-          ErrMsg  = ' Failed to read MoorDyn input file header line 2.'
-          CALL CleanUp()
-          RETURN
-       END IF
+       CALL ReadCom( UnIn, FileName, 'MoorDyn input file header line 2', ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
 
 
        ! Echo Input Files. Note this line is prevented from being echoed by the ReadVar routine.
-       CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat, ErrMsg, UnEc )
-       !WRITE (UnEc,Frmt      ) InitInp%Echo, 'Echo', 'Echo input file'
-       IF ( ErrStat /= ErrID_None ) THEN
-          ErrMsg  = ' Failed to read Echo parameter.'
-          CALL CleanUp()
-          RETURN
-       END IF
+       CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
 
       !print *, 'at end of echo if statement'
 
@@ -253,46 +248,43 @@ CONTAINS
     !  Line Types Properties Section
     !-------------------------------------------------------------------------------------------------
 
-    CALL ReadCom( UnIn, FileName, 'Line types header', ErrStat, ErrMsg, UnEc )
+    CALL ReadCom( UnIn, FileName, 'Line types header', ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
 
-    IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Failed to read line types header line.'
-       CALL CleanUp()
-       RETURN
-    END IF
 
-
-    CALL ReadVar ( UnIn, FileName, p%NTypes, 'NTypes', 'Number of line types', ErrStat, ErrMsg, UnEc )
-
-    IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Failed to read NTypes parameter.'
-       CALL CleanUp()
-       RETURN
-    END IF
+    CALL ReadVar ( UnIn, FileName, p%NTypes, 'NTypes', 'Number of line types', ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
 
 
     ! Table header
     DO I = 1, 2
-       CALL ReadCom( UnIn, FileName, 'Line types table header', ErrStat, ErrMsg, UnEc )
-
-       IF ( ErrStat /= ErrID_None ) THEN
-          ErrMsg  = ' Failed to read Line types table header line.'
-          CALL CleanUp()
-          RETURN
-       END IF
+       CALL ReadCom( UnIn, FileName, 'Line types table header', ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
     END DO
 
     ! make sure NTypes isn't zero
     IF ( p%NTypes < 1 ) THEN
-       ErrMsg  = ' NTypes parameter must be greater than zero.'
+       CALL SetErrStat( ErrID_Fatal, 'NTypes parameter must be greater than zero.', ErrStat, ErrMsg, RoutineName )
        CALL CleanUp()
        RETURN
     END IF
 
     ! Allocate memory for LineTypeList array to hold line type properties
-    ALLOCATE ( other%LineTypeList(p%NTypes), STAT = ErrStat )
-    IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Error allocating space for LineTypeList array.'
+    ALLOCATE ( other%LineTypeList(p%NTypes), STAT = ErrStat2 )
+    IF ( ErrStat2 /= 0 ) THEN
+       CALL SetErrStat( ErrID_Fatal, 'Error allocating space for LineTypeList array.', ErrStat, ErrMsg, RoutineName )
        CALL CleanUp()
        RETURN
     END IF
@@ -300,10 +292,10 @@ CONTAINS
     ! read each line
     DO I = 1,p%NTypes
           ! read the table entries   Name      Diam    MassDenInAir    EA        cIntDamp     Can     Cat    Cdn     Cdt     in the MoorDyn input file
-       READ(UnIn,'(A)',IOSTAT=ErrStat) Line      !read into a line
+       READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
 
-       IF (ErrStat == 0) THEN
-          READ(Line,*,IOSTAT=ErrStat) other%LineTypeList(I)%name, other%LineTypeList(I)%d,  &
+       IF (ErrStat2 == 0) THEN
+          READ(Line,*,IOSTAT=ErrStat2) other%LineTypeList(I)%name, other%LineTypeList(I)%d,  &
              other%LineTypeList(I)%w, other%LineTypeList(I)%EA, other%LineTypeList(I)%BA, &
              other%LineTypeList(I)%Can, other%LineTypeList(I)%Cat, other%LineTypeList(I)%Cdn, other%LineTypeList(I)%Cdt
        END IF
@@ -311,8 +303,8 @@ CONTAINS
        other%LineTypeList(I)%IdNum = I  ! specify IdNum of line type for error checking
 
 
-       IF ( ErrStat /= ErrID_None ) THEN
-          ErrMsg  = ' Failed to read line type properties for line '//trim(Num2LStr(I))
+       IF ( ErrStat2 /= ErrID_None ) THEN
+          CALL SetErrStat( ErrID_Fatal, 'Failed to read line type properties for line '//trim(Num2LStr(I)), ErrStat, ErrMsg, RoutineName )
           CALL CleanUp()
           RETURN
        END IF
@@ -329,33 +321,30 @@ CONTAINS
     !  Connections Section
     !-------------------------------------------------------------------------------------------------
 
-    CALL ReadCom( UnIn, FileName, 'Connections header', ErrStat, ErrMsg, UnEc )
+    CALL ReadCom( UnIn, FileName, 'Connections header', ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
 
-    IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Failed to read connections header line.'
-       CALL CleanUp()
-       RETURN
-    END IF
 
-
-    CALL ReadVar ( UnIn, FileName, p%NConnects, 'NConnects', 'Number of Connects', ErrStat, ErrMsg, UnEc )
-
-    IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Failed to read NConnects parameter.'
-       CALL CleanUp()
-       RETURN
-    END IF
+    CALL ReadVar ( UnIn, FileName, p%NConnects, 'NConnects', 'Number of Connects', ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
 
 
     ! Table header
     DO I = 1, 2
-       CALL ReadCom( UnIn, FileName, 'Connects header', ErrStat, ErrMsg, UnEc )
-
-       IF ( ErrStat /= ErrID_None ) THEN
-          ErrMsg  = ' Failed to read Connects table header line.'
-          CALL CleanUp()
-          RETURN
-       END IF
+       CALL ReadCom( UnIn, FileName, 'Connects header', ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
     END DO
 
     ! make sure NConnects is at least two
@@ -366,9 +355,9 @@ CONTAINS
     END IF
 
      ! allocate ConnectList
-    ALLOCATE ( other%ConnectList(p%NConnects), STAT = ErrStat )
-    IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Error allocating space for ConnectList array.'
+    ALLOCATE ( other%ConnectList(p%NConnects), STAT = ErrStat2 )
+    IF ( ErrStat2 /= 0 ) THEN
+       CALL SetErrStat( ErrID_Fatal, 'Error allocating space for ConnectList array.', ErrStat, ErrMsg, RoutineName )
        CALL CleanUp()
        RETURN
     END IF
@@ -376,27 +365,26 @@ CONTAINS
     ! read each line
     DO I = 1,p%NConnects
           ! read the table entries   Node      Type      X        Y         Z        M        V        FX       FY      FZ
-       READ(UnIn,'(A)',IOSTAT=ErrStat) Line      !read into a line
+       READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
 
-       IF (ErrStat == 0) THEN
-          READ(Line,*,IOSTAT=ErrStat) other%ConnectList(I)%IdNum, other%ConnectList(I)%type, other%ConnectList(I)%conX, &
+       IF (ErrStat2 == 0) THEN
+          READ(Line,*,IOSTAT=ErrStat2) other%ConnectList(I)%IdNum, other%ConnectList(I)%type, other%ConnectList(I)%conX, &
                other%ConnectList(I)%conY, other%ConnectList(I)%conZ, other%ConnectList(I)%conM, &
                other%ConnectList(I)%conV, other%ConnectList(I)%conFX, other%ConnectList(I)%conFY, &
                 other%ConnectList(I)%conFZ
        END IF
 
-       ! check for sequential IdNums
-       IF ( other%ConnectList(I)%IdNum .NE. I ) THEN
-         ErrMsg  = ' Node numbers must be sequential starting from 1.'
-         CALL CleanUp()
-         RETURN
-       END IF
-
-
-       IF ( ErrStat /= ErrID_None ) THEN
-          ErrMsg  = ' Failed to read connects.'  ! would be nice to specify which line
+       IF ( ErrStat2 /= 0 ) THEN
+          CALL SetErrStat( ErrID_Fatal, 'Failed to read connects.' , ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line
           CALL CleanUp()
           RETURN
+       END IF
+       
+       ! check for sequential IdNums
+       IF ( other%ConnectList(I)%IdNum .NE. I ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'Node numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
+         CALL CleanUp()
+         RETURN
        END IF
 
        IF ( InitInp%Echo ) THEN
@@ -406,52 +394,47 @@ CONTAINS
     END DO
 
 
-
-
     !-------------------------------------------------------------------------------------------------
     !  Lines Section
     !-------------------------------------------------------------------------------------------------
 
-    CALL ReadCom( UnIn, FileName, 'Lines header', ErrStat, ErrMsg, UnEc )
+    CALL ReadCom( UnIn, FileName, 'Lines header', ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
 
-    IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Failed to read lines header line.'
-       CALL CleanUp()
-       RETURN
-    END IF
 
-
-    CALL ReadVar ( UnIn, FileName, p%NLines, 'NLines', 'Number of Lines', ErrStat, ErrMsg, UnEc )
-
-    IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Failed to read NLines parameter.'
-       CALL CleanUp()
-       RETURN
-    END IF
+    CALL ReadVar ( UnIn, FileName, p%NLines, 'NLines', 'Number of Lines', ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
 
 
     ! Table header
     DO I = 1, 2
-       CALL ReadCom( UnIn, FileName, 'Lines header', ErrStat, ErrMsg, UnEc )
-
-       IF ( ErrStat /= ErrID_None ) THEN
-          ErrMsg  = ' Failed to read Lines table header line.'
-          CALL CleanUp()
-          RETURN
-       END IF
+       CALL ReadCom( UnIn, FileName, 'Lines header', ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
     END DO
 
     ! make sure NLines is at least one
     IF ( p%NLines < 1 ) THEN
-       ErrMsg  = ' NLines parameter must be at least 1.'
+       CALL SetErrStat( ErrID_Fatal, 'NLines parameter must be at least 1.', ErrStat, ErrMsg, RoutineName )
        CALL CleanUp()
        RETURN
     END IF
 
      ! allocate LineList
-    ALLOCATE ( other%LineList(p%NLines), STAT = ErrStat )
-    IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Error allocating space for LineList array.'
+    ALLOCATE ( other%LineList(p%NLines), STAT = ErrStat2 )
+    IF ( ErrStat2 /= 0 ) THEN
+       CALL SetErrStat( ErrID_Fatal, 'Error allocating space for LineList array.', ErrStat, ErrMsg, RoutineName )
        CALL CleanUp()
        RETURN
     END IF
@@ -459,16 +442,23 @@ CONTAINS
     ! read each line
     DO I = 1,p%NLines
           ! read the table entries   Line     LineType  UnstrLen  NumSegs   NodeAnch  NodeFair  Flags/Outputs
-       READ(UnIn,'(A)',IOSTAT=ErrStat) Line      !read into a line
+       READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
 
-       IF (ErrStat == 0) THEN
-          READ(Line,*,IOSTAT=ErrStat) other%LineList(I)%IdNum, other%LineList(I)%type, other%LineList(I)%UnstrLen, &
+       IF (ErrStat2 == 0) THEN
+          READ(Line,*,IOSTAT=ErrStat2) other%LineList(I)%IdNum, other%LineList(I)%type, other%LineList(I)%UnstrLen, &
             other%LineList(I)%N, other%LineList(I)%AnchConnect, other%LineList(I)%FairConnect, other%LineList(I)%OutFlags
        END IF
 
+       IF ( ErrStat2 /= 0 ) THEN
+          CALL SetErrStat( ErrID_Fatal, 'Failed to read line data for Line '//trim(Num2LStr(I)), ErrStat, ErrMsg, RoutineName )
+          CALL CleanUp()
+          RETURN
+       END IF
+       
+       
        ! check for sequential IdNums
        IF ( other%LineList(I)%IdNum .NE. I ) THEN
-         ErrMsg  = ' Line numbers must be sequential starting from 1.'
+         CALL SetErrStat( ErrID_Fatal, 'Line numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
          CALL CleanUp()
          RETURN
        END IF
@@ -479,17 +469,11 @@ CONTAINS
            other%LineList(I)%PropsIdNum = J
            EXIT
            IF (J == p%NTypes) THEN   ! call an error if there is no match
-             ErrMsg = 'Unable to find matching line type name for Line '//trim(Num2LStr(I))
-             ErrStat = ErrID_Severe
+               CALL SetErrStat( ErrID_Severe, 'Unable to find matching line type name for Line '//trim(Num2LStr(I)), ErrStat, ErrMsg, RoutineName )
            END IF
          END IF
        END DO
 
-       IF ( ErrStat /= ErrID_None ) THEN
-          ErrMsg  = ' Failed to read line data for Line '//trim(Num2LStr(I))  ! would be nice to specify which line
-          CALL CleanUp()
-          RETURN
-       END IF
 
        IF ( InitInp%Echo ) THEN
           WRITE( UnEc, '(A)' ) TRIM(Line)
@@ -502,26 +486,31 @@ CONTAINS
     ! Read any options lines
     !-------------------------------------------------------------------------------------------------
 
-    CALL ReadCom( UnIn, FileName, 'Options header', ErrStat, ErrMsg, UnEc )
-
-    IF ( ErrStat /= ErrID_None ) THEN
-       ErrMsg  = ' Failed to read options header line.'
-       CALL CleanUp()
-       RETURN
-    END IF
+    CALL ReadCom( UnIn, FileName, 'Options header', ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
 
      ! loop through any remaining input lines, and use them to set options (overwriting default values in many cases).
      ! doing this manually since I'm not sure that there is a built in subroutine for reading any input value on any line number.
      DO
 
-       READ(UnIn,'(A)',IOSTAT=ErrStat) Line      !read into a line
+       READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
 
-       IF (ErrStat == 0) THEN
+       IF (ErrStat2 == 0) THEN
          IF (( Line(1:3) == '---' ) .OR. ( Line(1:3) == 'END' ) .OR. ( Line(1:3) == 'end' ))  EXIT  ! check if it's the end line
 
-         READ(Line,*,IOSTAT=ErrStat) OptValue, OptString  ! look at first two entries, ignore remaining words in line, which should be comments
+         READ(Line,*,IOSTAT=ErrStat2) OptValue, OptString  ! look at first two entries, ignore remaining words in line, which should be comments
        END IF
 
+       IF ( ErrStat2 /= 0 ) THEN
+          CALL SetErrStat( ErrID_Fatal, 'Failed to read options.', ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line had the error
+          CALL CleanUp()
+          RETURN
+       END IF
+                     
        CALL Conv2UC(OptString)
 
        ! check all possible options types and see if OptString is one of them, in which case set the variable.
@@ -546,15 +535,8 @@ CONTAINS
        else if ( OptString == 'THRESHIC')  then
          read (OptValue,*) InitInp%threshIC
        else
-         ErrStat = ErrID_Warn
-         CALL WrScr('unable to interpret input '//trim(OptString))
+         CALL SetErrStat( ErrID_Warn, 'unable to interpret input '//trim(OptString), ErrStat, ErrMsg, RoutineName ) 
        end if
-
-       IF ( ErrStat > ErrID_Warn ) THEN
-          ErrMsg  = ' Failed to read options.'  ! would be nice to specify which line had the error
-          CALL CleanUp()
-          RETURN
-       END IF
 
        IF ( InitInp%Echo ) THEN
           WRITE( UnEc, '(A)' ) TRIM(Line)
@@ -570,19 +552,20 @@ CONTAINS
    !     CALL ReadCom( UnIn, FileName, 'Outputs header', ErrStat, ErrMsg, UnEc )
 
     ! allocate InitInp%Outliest (to a really big number for now...)
-    CALL AllocAry( InitInp%OutList, 1000, "MoorDyn Input File's Outlist", ErrStat, ErrMsg )
-    !  CALL CheckError( ErrStat2, ErrMsg2 )
-    !  IF ( ErrStat >= AbortErrLev ) RETURN
+    CALL AllocAry( InitInp%OutList, 1000, "MoorDyn Input File's Outlist", ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL CleanUp()
+            RETURN
+         END IF
 
     ! OutList - List of user-requested output channels (-):
-    CALL ReadOutputList ( UnIn, FileName, InitInp%OutList, p%NumOuts, 'OutList', "List of user-requested output channels", ErrStat, ErrMsg, UnEc  )     ! Routine in NWTC Subroutine Library
-   !   CALL CheckError( ErrStat2, ErrMsg2 )
-   !   IF ( ErrStat >= AbortErrLev ) RETURN
-    IF ( ErrStat > ErrID_Warn ) THEN
-       ErrMsg  = ' Failed to read output list.'
-       CALL CleanUp()
-       RETURN
-    END IF
+    CALL ReadOutputList ( UnIn, FileName, InitInp%OutList, p%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          IF ( ErrStat >= AbortErrLev ) THEN
+             CALL CleanUp()
+             RETURN
+          END IF
 
    !print *, 'NumOuts is ', p%NumOuts
    !print *, '  OutList is ', InitInp%OutList(1:p%NumOuts)
@@ -592,9 +575,7 @@ CONTAINS
      ! This is the end of the input file
      !-------------------------------------------------------------------------------------------------
 
-           CLOSE( UnIn )
-        IF (InitInp%Echo) CLOSE( UnEc )
-
+         CALL CleanUp()
 
    CONTAINS
      ! subroutine to set ErrState and close the files if an error occurs
