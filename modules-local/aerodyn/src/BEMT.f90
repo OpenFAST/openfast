@@ -871,8 +871,8 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                      phi = ComputePhiWithInduction(u%Vy(i,j), u%Vx(i,j), z%axInduction(i,j), z%tanInduction(i,j), errStat, errMsg)
                      u_UA%U = BEMTC_Wind(z%axInduction(i,j), z%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u%chi0, u%psi(j), phi, u_UA%alpha, u_UA%Re, chi)
                   end if
-                  
-                  call UA_UpdateStates( u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i)), errStat, errMsg )
+!bjj: u_UA%U is zero, which is causing division-by-zero errors later                  
+                  call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i)), errStat, errMsg )
                   
                end if
                
@@ -887,7 +887,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
             do i = 1,p%numBladeNodes 
                z%phi = ComputePhiWithInduction(u%Vy(i,j), u%Vx(i,j), 0.0_ReKi, 0.0_ReKi, errStat, errMsg)
                if (p%UA_Flag) then
-                  call UA_UpdateStates( u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i)), errStat, errMsg ) 
+                  call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i)), errStat, errMsg ) 
                end if
             end do
          end do
