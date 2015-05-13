@@ -167,6 +167,12 @@ real(ReKi) function Get_Pitchrate( dt, alpha_cur, alpha_minus1, U, c )
    real(ReKi), intent(in   ) :: U                               ! air velocity magnitude relative to the airfoil (m/s)
    real(ReKi), intent(in   ) :: c                               ! chord length (m)
 
+!IF (EqualRealNos(U,0.0_ReKi)) then
+!   call ProgWarn('GetPitchRate: division by zero.')
+!   Get_Pitchrate = HUGE(Get_Pitchrate)
+!   RETURN
+!END IF
+
       ! Implements equation 1.8
    Get_Pitchrate = ( alpha_cur - alpha_minus1 ) * c / (U*dt)  
    
@@ -1076,12 +1082,13 @@ end subroutine UA_UpdateDiscState
 !==============================================================================   
 
 !============================================================================== 
-subroutine UA_UpdateStates( u, p, xd, OtherState, AFInfo, errStat, errMsg )
+subroutine UA_UpdateStates( i, j, u, p, xd, OtherState, AFInfo, errStat, errMsg )
 ! Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
 ! Continuous, constraint, and discrete states are updated to values at t + Interval.
 !..............................................................................
 
-   
+   integer(IntKi),                intent(in   ) :: i               ! node index within a blade
+   integer(IntKi),                intent(in   ) :: j               ! blade index 
    type(UA_InputType),            intent(inout) :: u               ! Input at current timestep, t
    type(UA_ParameterType),        intent(in   ) :: p               ! Parameters
    type(UA_DiscreteStateType),    intent(inout) :: xd              ! Input: Discrete states at t;
@@ -1103,9 +1110,19 @@ subroutine UA_UpdateStates( u, p, xd, OtherState, AFInfo, errStat, errMsg )
    errMsg    = ""
          
    
-      
+   OtherState%iBladeNode = i; 
+   OtherState%iBlade = j
+
+      !BJJ: this seems to be the root cause of all sorts of numerical problems....
+   IF (EqualRealNos(u%u, 0.0_ReKi) ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'UA_UpdateStates: U (air velocity magnitude relative to the airfoil) is zero.'
+      RETURN
+   END IF
+   
+   
       ! Update discrete states:
-   call UA_UpdateDiscState( OtherState%iBladeNode, OtherState%iBlade, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg )
+   call UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg )
       
 end subroutine UA_UpdateStates
 !==============================================================================   
@@ -1167,7 +1184,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
    real(ReKi)                                             :: Cl, Cd
    integer                                                :: iOffset
    
-   
+   !BJJ: what are OtherState%iBladeNode, OtherState%iBlade here? I don't see them set in the routine that calls UA_CalcOutput
    
    errStat   = ErrID_None           ! no error has occurred
    errMsg    = ""
