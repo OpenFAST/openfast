@@ -16,7 +16,7 @@
 # make sure that the file name does not have any trailing white spaces!
 include	Registry_NWTC_Library.txt
 
-# ..... Input file data ...........................................................................................................
+# ..... Airfoil data ...............................................................................................................
 # The following derived type stores Beddoes-Leishman unsteady-aero data for an airfoil at a single combination of Re and control setting. The data can be computed internally of not read from the input file.
 typedef   AirfoilInfo/AFI       AFI_UA_BL_Type   ReKi                alpha0      -  -  - "Angle of attack for zero lift (used for Beddoes-Leishman unsteady aero)"	degrees
 typedef   ^                     ^                ReKi                alpha1      -  -  - "" =

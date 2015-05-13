@@ -79,7 +79,22 @@ CONTAINS
       END IF
              
       
+         ! Set the column indices for the variouse airfoil coefficients.
 
+      p%ColCl    = 1  
+      p%ColCd    = 2  
+      p%ColCm    = 0 ! These may or may not be used; initialize to zero in case they aren't used
+      p%ColCpmin = 0 ! These may or may not be used; initialize to zero in case they aren't used
+      IF ( InitInput%InCol_Cm > 0 )  THEN
+         p%ColCm = 3
+         IF ( InitInput%InCol_Cpmin > 0 )  THEN
+            p%ColCpmin = 4
+         END IF
+      ELSE IF ( InitInput%InCol_Cpmin > 0 )  THEN
+            p%ColCpmin = 3
+      END IF      
+
+      
          ! Process the airfoil files.
 
       ALLOCATE ( p%AFInfo( InitInput%NumAFfiles ), STAT=ErrStat2 )
@@ -104,20 +119,6 @@ CONTAINS
                CALL Cleanup ( )
                RETURN
             ENDIF
-
-
-            ! Set the column indices for the variouse airfoil coefficients.
-
-         p%ColCl = 1
-         p%ColCd = 2
-         IF ( InitInput%InCol_Cm > 0 )  THEN
-            p%ColCm = 3
-            IF ( InitInput%InCol_Cpmin > 0 )  THEN
-               p%ColCpmin = 4
-            END IF
-         ELSE IF ( InitInput%InCol_Cpmin > 0 )  THEN
-               p%ColCpmin = 3
-         END IF
 
 
             ! Make sure that all the tables meet the current restrictions.

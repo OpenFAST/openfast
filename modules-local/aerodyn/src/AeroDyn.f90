@@ -229,22 +229,6 @@ subroutine AD_SetParameters( InitInp, p, errStat, errMsg )
    p%numBlades      = InitInp%numBlades    
    p%numOuts        = p%numBladeNodes*p%numBlades*AD_numChanPerNode
    ! p%BEMT_SkewWakeMod = InitInp%BEMT_SkewWakeMod
-   IF (ALLOCATED(InitInp%AFInfo)) THEN
-      i1_l = LBOUND(InitInp%AFInfo,1)
-      i1_u = UBOUND(InitInp%AFInfo,1)
-      IF (.NOT. ALLOCATED(p%AFInfo)) THEN 
-         ALLOCATE(p%AFInfo(i1_l:i1_u),STAT=ErrStat)
-         IF (ErrStat /= 0) THEN 
-            ErrStat = ErrID_Fatal 
-            ErrMsg = 'AFI_CopyParam: Error allocating p%AFInfo.'
-            RETURN
-         END IF
-      END IF
-      DO i1 = i1_l, i1_u
-         CALL AFI_Copyafinfotype( InitInp%AFInfo(i1), p%AFInfo(i1), MESH_NEWCOPY, ErrStat, ErrMsg )
-      ENDDO
-   ENDIF
-   !call AFI_Copyafinfotype( InitInp%AFInfo, p%AFInfo, MESH_NEWCOPY, ErrStat, ErrMsg )
    
    allocate ( p%chord(p%numBladeNodes, p%numBlades), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
@@ -436,40 +420,46 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 ! The initial states and initial guess for the input are defined.
 !..................................................................................................................................
 
-   type(AD_InitInputType),       intent(inout)  :: InitInp     ! Input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in AD_SetParameters()
-   type(AD_InputType),           intent(  out)  :: u           ! An initial guess for the input; input mesh must be defined
-   type(AD_ParameterType),       intent(  out)  :: p           ! Parameters
-   type(AD_ContinuousStateType), intent(  out)  :: x           ! Initial continuous states
-   type(AD_DiscreteStateType),   intent(  out)  :: xd          ! Initial discrete states
-   type(AD_ConstraintStateType), intent(  out)  :: z           ! Initial guess of the constraint states
-   type(AD_OtherStateType),      intent(  out)  :: OtherState  ! Initial other/optimization states
-   type(AD_OutputType),          intent(  out)  :: y           ! Initial system outputs (outputs are not calculated;
+   type(AD_InitInputType),       intent(inout) :: InitInp       ! Input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in AD_SetParameters()
+   type(AD_InputType),           intent(  out) :: u             ! An initial guess for the input; input mesh must be defined
+   type(AD_ParameterType),       intent(  out) :: p             ! Parameters
+   type(AD_ContinuousStateType), intent(  out) :: x             ! Initial continuous states
+   type(AD_DiscreteStateType),   intent(  out) :: xd            ! Initial discrete states
+   type(AD_ConstraintStateType), intent(  out) :: z             ! Initial guess of the constraint states
+   type(AD_OtherStateType),      intent(  out) :: OtherState    ! Initial other/optimization states
+   type(AD_OutputType),          intent(  out) :: y             ! Initial system outputs (outputs are not calculated;
                                                                 !   only the output mesh is initialized)
-   real(DbKi),                    intent(inout)  :: interval    ! Coupling interval in seconds: the rate that
+   real(DbKi),                   intent(inout) :: interval      ! Coupling interval in seconds: the rate that
                                                                 !   (1) AD_UpdateStates() is called in loose coupling &
                                                                 !   (2) AD_UpdateDiscState() is called in tight coupling.
                                                                 !   Input is the suggested time from the glue code;
                                                                 !   Output is the actual coupling interval that will be used
                                                                 !   by the glue code.
-   type(AD_InitOutputType),      intent(  out)  :: InitOut     ! Output for initialization routine
-   integer(IntKi),                intent(  out)  :: errStat     ! Error status of the operation
-   character(*),                  intent(  out)  :: errMsg      ! Error message if ErrStat /= ErrID_None
-
+   type(AD_InitOutputType),      intent(  out) :: InitOut       ! Output for initialization routine
+   integer(IntKi),               intent(  out) :: errStat       ! Error status of the operation
+   character(*),                 intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
+   
 
       ! Local variables
-   character(len(errMsg))                        :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
-   integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
-   type(AFI_InitInputType)                       :: AFI_InitInputs
-   !type(AFI_ParameterType)                       :: AFI_Params
-   integer                                      :: i, unEC, i1, i1_l, i1_u
-   character(1024)                              :: rootName, echoFile
-   !type(BEMT_InitInputType)                       :: BEMT_InitInData
-   type(BEMT_InitOutputType)                      :: BEMT_InitOutData
+   integer(IntKi)                              :: errStat2      ! temporary Error status of the operation
+   character(ErrMsgLen)                        :: errMsg2       ! temporary Error message if ErrStat /= ErrID_None
+      
+   TYPE(AD_InputFile)                          :: InputFileData ! Data stored in the module's input file
+   INTEGER(IntKi)                              :: UnEcho        ! Unit number for the echo file
+   
+      
+   integer                                     :: i, unEC, i1, i1_l, i1_u
+   !type(BEMT_InitInputType)                      :: BEMT_InitInData
+   type(BEMT_InitOutputType)                     :: BEMT_InitOutData
+   
+   CHARACTER(*), PARAMETER                      :: RoutineName = 'AD_Init'
+   
+   
       ! Initialize variables for this routine
 
    errStat = ErrID_None
    errMsg  = ""
-
+   UnEcho  = -1
 
       ! Initialize the NWTC Subroutine Library
 
@@ -479,77 +469,37 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    call DispNVD( AD_Ver )
    
-      ! Initialize the Airfoil Info module
-      ! Setup Airfoil info
-   AFI_InitInputs%NumAFfiles = InitInp%NumAF
    
-   allocate ( AFI_InitInputs%FileNames( AFI_InitInputs%NumAFfiles ), STAT=ErrStat )
-   if ( ErrStat /= 0 )  then
-      ErrStat = ErrID_Fatal 
-      ErrMsg = 'AD_Init: Error allocating AFI_InitInputs%FileNames.'
-      call AD_InitCleanup()
-   endif
+   p%NumBlades = InitInp%NumBlades ! need this before reading the AD input file so that we read only the number of blade files necessary
+   p%RootName  = TRIM(InitInp%RootName)//'.AD'
    
-   do i=1,AFI_InitInputs%NumAFfiles
-      AFI_InitInputs%FileNames(i) = InitInp%AF_File(i)
-   end do
+      ! Read the primary AeroDyn input file
+   CALL AD_ReadInput( InitInp%InputFile, InputFileData, interval, p%RootName, p%NumBlades, UnEcho, ErrStat2, ErrMsg2 )   
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
    
-   AFI_InitInputs%UA_Model    = 0
-   AFI_InitInputs%NumCoefs    = 3
-   AFI_InitInputs%InCol_Alfa  = 1
-   AFI_InitInputs%InCol_Cl    = 2
-   AFI_InitInputs%InCol_Cd    = 3
-   AFI_InitInputs%InCol_Cm    = 4
-   AFI_InitInputs%InCol_Cpmin = 0
-
-     ! Open the echo file.
-
-   CALL GetNewUnit ( UnEc, ErrStat, ErrMsg )
-   IF ( ErrStat /= 0 )  THEN
-      CALL ProgAbort ( NewLine//TRIM( ADJUSTL( ErrMsg ) ), .FALSE., 10.0, ErrStat )
-   ENDIF ! ( ErrStatLcl /= 0 )
-
-   CALL GetRoot ( AFI_InitInputs%FileNames(1), RootName )
-   EchoFile = TRIM( RootName )//'.ech' 
-
-   CALL OpenEcho ( UnEc, EchoFile, ErrStat, ErrMsg, AD_Ver )
-   IF ( ErrStat /= 0 )  THEN
-      CALL ProgAbort ( NewLine//TRIM( ADJUSTL( ErrMsg ) ), .FALSE., 10.0, ErrStat )
-   ENDIF ! ( ErrStatLcl /= 0 )
-   
-      ! Call AFI_Init to read in and process the airfoil files.
-      ! This includes creating the spline coefficients to be used for interpolation.
-
-   CALL AFI_Init ( AFI_InitInputs, p%AFI_Params, ErrStat, ErrMsg, UnEc )
-   IF ( ErrStat /= 0 )  THEN
-      CALL ProgAbort ( NewLine//TRIM( ADJUSTL( ErrMsg ) ), .FALSE., 10.0, ErrStat )
-   ENDIF ! ( ErrStatLcl /= 0 )
+      ! Validate the inputs
+   CALL ValidateInputData( InputFileData, p%NumBlades, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+      
+      
+      ! Initialize AFI module
+   CALL Init_AFIparams( InputFileData, p%AFI, UnEcHO, ErrStat, ErrMsg )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
    
    !call Set_BEMT_InitInp(InitInp, BEMT_InitInData, errStat, errMsg)
    
-   ! TODO: Look into MOVE_ALLOC()  GJH
-   
-      !augment the initialization inputs with the data from AFI_Init
-   !IF (ALLOCATED(p%AFI_Params%AFInfo)) THEN
-   !   i1_l = LBOUND(p%AFI_Params%AFInfo,1)
-   !   i1_u = UBOUND(p%AFI_Params%AFInfo,1)
-   !   IF (.NOT. ALLOCATED(InitInp%BEMT%AFInfo)) THEN 
-   !      ALLOCATE(InitInp%BEMT%AFInfo(i1_l:i1_u),STAT=ErrStat)
-   !      IF (ErrStat /= 0) THEN 
-   !         ErrStat = ErrID_Fatal 
-   !         ErrMsg = 'AD_Init: Error allocating InitInp%BEMT%AFInfo.'
-   !         call AD_InitCleanup()
-   !      END IF
-   !   END IF
-   !   DO i1 = LBOUND(p%AFI_Params%AFInfo,1), UBOUND(p%AFI_Params%AFInfo,1)
-   !      CALL AFI_Copyafinfotype( p%AFI_Params%AFInfo(i1), InitInp%BEMT%AFInfo(i1), MESH_NEWCOPY, ErrStat, ErrMsg )
-   !   ENDDO
-   !ELSE
-   !   ErrMsg = 'Invalid AirfoilInfo parameters returned from AD_Init()'
-   !   ErrStat = ErrID_Fatal
-   !   call AD_InitCleanup()
-   !ENDIF
-   !call AFI_Copyafinfotype( AFI_Params%AFInfo, AD_InitInData%AFInfo, MESH_NEWCOPY, ErrStat, ErrMsg )
    
      !............................................................................................
       ! Define parameters here
@@ -566,7 +516,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    call BEMT_Init(InitInp%BEMT, OtherState%BEMT_u, p%BEMT,  x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, OtherState%BEMT_y, interval, BEMT_InitOutData, errStat, errMsg )
    if (errStat >= AbortErrLev) then
       ! Clean up and exit
-      call AD_InitCleanup()
+      call Cleanup()
+      RETURN
    end if
    
       ! Open an output file and write the header information
@@ -575,7 +526,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    
    if (errStat >= AbortErrLev) then
       ! Clean up and exit
-      call AD_InitCleanup()
+      call Cleanup()
+      RETURN
    end if
    
    ! ---------------------------------------------------
@@ -586,19 +538,23 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    !call BEMT_DestroyInitInput(  BEMT_InitInData,  errStat, errMsg )
    !if (errStat >= AbortErrLev) then
    !   ! Clean up and exit
-   !   call AD_InitCleanup()
+   !   call Cleanup()
    !end if
    ! ---------------------------------------------------
    call BEMT_DestroyInitOutput( BEMT_InitOutData, errStat, errMsg )
    if (errStat >= AbortErrLev) then
       ! Clean up and exit
-      call AD_InitCleanup()
+      call Cleanup()
+      RETURN
    end if
 
 contains
+   subroutine Cleanup()
 
-subroutine AD_InitCleanup()
-end subroutine AD_InitCleanup
+      CALL AD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2 )
+      IF ( UnEcho > 0 ) CLOSE( UnEcho )
+      
+   end subroutine Cleanup
 
 end subroutine AD_Init
 
@@ -691,7 +647,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, errStat, e
       
       
          ! Call into the BEMT update states    NOTE:  This is a non-standard framework interface!!!!!  GJH
-      call BEMT_UpdateStates(t, n, OtherState%BEMT_u,  p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI_Params%AFInfo, errStat, errMsg)
+      call BEMT_UpdateStates(t, n, OtherState%BEMT_u,  p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI%AFInfo, errStat, errMsg)
       
       
 end subroutine AD_UpdateStates
@@ -737,7 +693,7 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       ! NOTE: the x%BEMT, xd%BEMT, and OtherState%BEMT are simply dummy variables because the BEMT module does not use them or return them
       !
    
-   call BEMT_CalcOutput(t, OtherState%BEMT_u, p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI_Params%AFInfo, OtherState%BEMT_y, ErrStat, ErrMsg )
+   call BEMT_CalcOutput(t, OtherState%BEMT_u, p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI%AFInfo, OtherState%BEMT_y, ErrStat, ErrMsg )
    ! TODO Check error status
    
 !-------------------------------------------------------   
@@ -833,7 +789,7 @@ subroutine AD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_resid
    
    call SetInputsForBEMT(u,OtherState%BEMT_u, ErrStat, ErrMsg)
    
-   call BEMT_CalcConstrStateResidual( Time, OtherState%BEMT_u, p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, z_residual%BEMT, p%AFI_Params%AFInfo, ErrStat, ErrMsg )
+   call BEMT_CalcConstrStateResidual( Time, OtherState%BEMT_u, p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, z_residual%BEMT, p%AFI%AFInfo, ErrStat, ErrMsg )
    
 END SUBROUTINE AD_CalcConstrStateResidual
 
@@ -843,6 +799,10 @@ subroutine SetInputsForBEMT(u,BEMT_u, errStat, errMsg)
    integer(IntKi),                intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                  intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
       
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
       ! In the actually version of AeroDyn, we will need to copy data from a mesh into the BEMT arrays.
    BEMT_u%theta    = u%theta  
    BEMT_u%chi0     = u%gamma   !TODO,  this needs to change to account for tilt GJH 11/17/14
@@ -858,27 +818,27 @@ subroutine SetInputsForBEMT(u,BEMT_u, errStat, errMsg)
 end subroutine SetInputsForBEMT
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AD_ReadInput( InputFileName, InputFileData, Default_DT, OutFileRoot, NumBl, ErrStat, ErrMsg )
+SUBROUTINE AD_ReadInput( InputFileName, InputFileData, Default_DT, OutFileRoot, NumBlades, UnEcho, ErrStat, ErrMsg )
 ! This subroutine reads the input file and stores all the data in the AD_InputFile structure.
 ! It does not perform data validation.
 !..................................................................................................................................
 
       ! Passed variables
-   REAL(DbKi),           INTENT(IN)       :: Default_DT      ! The default DT (from glue code)
+   REAL(DbKi),              INTENT(IN)    :: Default_DT      ! The default DT (from glue code)
 
-   CHARACTER(*), INTENT(IN)               :: InputFileName   ! Name of the input file
-   CHARACTER(*), INTENT(IN)               :: OutFileRoot     ! The rootname of all the output files written by this routine.
+   CHARACTER(*),            INTENT(IN)    :: InputFileName   ! Name of the input file
+   CHARACTER(*),            INTENT(IN)    :: OutFileRoot     ! The rootname of all the output files written by this routine.
 
-   TYPE(AD_InputFile),   INTENT(OUT)      :: InputFileData   ! Data stored in the module's input file
+   TYPE(AD_InputFile),      INTENT(OUT)   :: InputFileData   ! Data stored in the module's input file
+   INTEGER(IntKi),          INTENT(OUT)   :: UnEcho          ! Unit number for the echo file
 
-   INTEGER(IntKi),       INTENT(IN)       :: NumBl           ! Number of blades for this model
-   INTEGER(IntKi),       INTENT(OUT)      :: ErrStat         ! The error status code
-   CHARACTER(*),         INTENT(OUT)      :: ErrMsg          ! The error message, if an error occurred
+   INTEGER(IntKi),          INTENT(IN)    :: NumBlades       ! Number of blades for this model
+   INTEGER(IntKi),          INTENT(OUT)   :: ErrStat         ! The error status code
+   CHARACTER(*),            INTENT(OUT)   :: ErrMsg          ! The error message, if an error occurred
 
       ! local variables
 
    INTEGER(IntKi)                         :: I
-   INTEGER(IntKi)                         :: UnEcho          ! Unit number for the echo file
    INTEGER(IntKi)                         :: ErrStat2        ! The error status code
    CHARACTER(ErrMsgLen)                   :: ErrMsg2         ! The error message, if an error occurred
 
@@ -890,6 +850,7 @@ SUBROUTINE AD_ReadInput( InputFileName, InputFileData, Default_DT, OutFileRoot, 
 
    ErrStat = ErrID_None
    ErrMsg  = ''
+   UnEcho  = -1
    InputFileData%DTAero = Default_DT  ! the glue code's suggested DT for the module (may be overwritten in ReadPrimaryFile())
 
       ! get the primary/platform input-file data
@@ -905,14 +866,14 @@ SUBROUTINE AD_ReadInput( InputFileName, InputFileData, Default_DT, OutFileRoot, 
 
       ! get the blade input-file data
       
-   ALLOCATE( InputFileData%BladeProps( NumBl ), STAT = ErrStat2 )
+   ALLOCATE( InputFileData%BladeProps( NumBlades ), STAT = ErrStat2 )
    IF (ErrStat2 /= 0) THEN
       CALL SetErrStat(ErrID_Fatal,"Error allocating memory for BladeProps.", ErrStat, ErrMsg, RoutineName)
       CALL Cleanup()
       RETURN
    END IF
       
-   DO I=1,NumBl
+   DO I=1,NumBlades
       CALL ReadBladeInputs ( ADBlFile(I), InputFileData%BladeProps(I), InputFileData%NumBlNds, UnEcho, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName//TRIM(':Blade')//TRIM(Num2LStr(I)))
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -921,7 +882,14 @@ SUBROUTINE AD_ReadInput( InputFileName, InputFileData, Default_DT, OutFileRoot, 
          END IF
    END DO
    
+   
+      ! Initialize the Airfoil Info module
+   IF ( InputFileData%NumAFfiles > 0 ) THEN
+      
 
+      
+   END IF
+   
       ! cleanup
 
    CALL Cleanup ( )
@@ -933,8 +901,7 @@ CONTAINS
    ! This subroutine cleans up before exiting this subroutine
    !...............................................................................................................................
 
-      IF ( UnEcho > 0 ) CLOSE( UnEcho )
-
+      ! IF ( UnEcho > 0 ) CLOSE( UnEcho )
 
    END SUBROUTINE Cleanup
 
@@ -1061,7 +1028,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    
    
       ! DTAero - Time interval for aerodynamic calculations {or default} (s):
-   CALL ReadVar( UnIn, InputFile, InputFileData%DTAero, "DTAero", "Time interval for aerodynamic calculations {or default} (s)", ErrStat2, ErrMsg2, UnEc)
+   Line = ""
+   CALL ReadVar( UnIn, InputFile, Line, "DTAero", "Time interval for aerodynamic calculations {or default} (s)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
       CALL Conv2UC( Line )
@@ -1526,4 +1494,81 @@ CONTAINS
 
 END SUBROUTINE ReadBladeInputs      
 !----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
+! This routine validates the inputs from the AeroDyn input files.
+!..................................................................................................................................
+      
+      ! Passed variables:
+
+   TYPE(AD_InputFile),       INTENT(IN)     :: InputFileData                       ! All the data in the AeroDyn input file
+   INTEGER(IntKi),           INTENT(IN)     :: NumBl                               ! Number of blades
+   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             ! Error status
+   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              ! Error message
+
+   
+      ! local variables
+   INTEGER(IntKi)                           :: K                                   ! Blade number
+   CHARACTER(*), PARAMETER                  :: RoutineName = 'ValidateInputData'
+   
+   
+   IF ( InputFileData%NumAFfiles < 1 )  CALL SetErrStat( ErrID_Fatal, 'The number of unique airfoil tables (NumAFfiles) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   
+         ! validate the AFI input data because it doesn't appear to be done in AFI
+   IF ( InputFileData%InCol_Alfa  < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Alfa must not be a negative number.', ErrStat, ErrMsg, RoutineName )
+   IF ( InputFileData%InCol_Cl    < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Cl must not be a negative number.', ErrStat, ErrMsg, RoutineName )
+   IF ( InputFileData%InCol_Cd    < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Cd must not be a negative number.', ErrStat, ErrMsg, RoutineName )
+   IF ( InputFileData%InCol_Cm    < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Cm must not be a negative number.', ErrStat, ErrMsg, RoutineName )
+   IF ( InputFileData%InCol_Cpmin < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Cpmin must not be a negative number.', ErrStat, ErrMsg, RoutineName )
+   
+   
+   
+END SUBROUTINE ValidateInputData
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, ErrStat, ErrMsg )
+
+
+      ! Passed variables
+   TYPE(AD_InputFile),      INTENT(INOUT)   :: InputFileData      ! All the data in the AeroDyn input file (intent(out) only because of the call to MOVE_ALLOC)
+   TYPE(AFI_ParameterType), INTENT(  OUT)   :: p_AFI              ! parameters returned from the AFI (airfoil info) module
+   INTEGER(IntKi),          INTENT(IN   )   :: UnEc               ! I/O unit for echo file. If > 0, file is open for writing.
+   INTEGER(IntKi),          INTENT(  OUT)   :: ErrStat            ! Error status
+   CHARACTER(*),            INTENT(  OUT)   :: ErrMsg             ! Error message
+
+      ! local variables
+   TYPE(AFI_InitInputType)                  :: AFI_InitInputs ! initialization data for the AFI routines
+   
+   INTEGER(IntKi)                           :: ErrStat2
+   CHARACTER(ErrMsgLen)                     :: ErrMsg2
+   CHARACTER(*), PARAMETER                  :: RoutineName = 'Init_AFIparams'
+
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   
+      ! Setup Airfoil InitInput data structure:
+   AFI_InitInputs%NumAFfiles = InputFileData%NumAFfiles
+   CALL MOVE_ALLOC( InputFileData%AFNames, AFI_InitInputs%FileNames ) ! move from AFNames to FileNames      
+   AFI_InitInputs%UA_Model    = 0 !InputFileData%DSMod !was 0 but doesn't work for WTPerf\branches\v4.x\CertTest\af_files2\S809_CLN_298.DAT         !bjj: FIX ME!!! Not sure what they're supposed to be
+   AFI_InitInputs%NumCoefs    = 3                            !bjj: FIX ME!!! Not sure what they're supposed to be
+   AFI_InitInputs%InCol_Alfa  = InputFileData%InCol_Alfa
+   AFI_InitInputs%InCol_Cl    = InputFileData%InCol_Cl
+   AFI_InitInputs%InCol_Cd    = InputFileData%InCol_Cd
+   AFI_InitInputs%InCol_Cm    = InputFileData%InCol_Cm
+   AFI_InitInputs%InCol_Cpmin = InputFileData%InCol_Cpmin
+               
+      ! Call AFI_Init to read in and process the airfoil files.
+      ! This includes creating the spline coefficients to be used for interpolation.
+      ! I'm calling it here so that it writes to this echo file...
+
+   CALL AFI_Init ( AFI_InitInputs, p_AFI, ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+   
+   CALL AFI_DestroyInitInput( AFI_InitInputs, ErrStat2, ErrMsg2 )
+   
+END SUBROUTINE Init_AFIparams
+!----------------------------------------------------------------------------------------------------------------------------------
+   
+
+
 END MODULE AeroDyn
