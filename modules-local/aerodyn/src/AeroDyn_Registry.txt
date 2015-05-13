@@ -22,7 +22,7 @@ usefrom	UnsteadyAero_Registry.txt
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 typedef	AeroDyn/AD	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
-typedef	^	InitInputType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"
+typedef	^	InitInputType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 
 # Define outputs from the initialization routine here:
@@ -111,8 +111,8 @@ typedef	^	OtherStateType	BEMT_InputType	BEMT_u	-	-	-	"Inputs to the BEMT module"
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
-typedef	^	ParameterType	AFI_ParameterType	AFI_Params	-	-	-	"AirfoilInfo parameters"
-typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"
+typedef	^	ParameterType	AFI_ParameterType	AFI	-	-	-	"AirfoilInfo parameters"
+typedef	^	ParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"
 typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 
 
@@ -153,7 +153,6 @@ typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output f
 #
 typedef   AeroDyn/AD                   InitInputType                 DbKi                     DT                              -          -         -        "time step" s
 typedef   ^                            ^                             ReKi                     chord                           {:}{:}     -         -        "Chord length at node" m
-typedef   ^                            ^                             INTEGER                  numBlades                       -          -         -        "Number of blades"    -
 typedef   ^                            ^                             ReKi                     airDens                         -          -         -        "Air density"        kg/m^3
 typedef   ^                            ^                             ReKi                     kinVisc                         -          -         -        "Kinematic air viscosity"       m^2/s
 typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Skewed-wake correction model [switch] {0: no correction, 1: Pitt and Peters, 2: Teknikgruppen AB, 3: Coupled model}"  -
@@ -170,9 +169,6 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             ReKi                     zHub                            {:}        -         -        "Distance to hub for each blade" m
 typedef   ^                            ^                             ReKi                     zLocal                          {:}{:}     -         -        "Distance to blade node, measured along the blade" m
 typedef   ^                            ^                             ReKi                     zTip                            {:}        -         -        "Distance to blade tip, measured along the blade" m
-typedef   ^                            ^                             AFInfoType               AFInfo                          {:}        -         -        "Parameters for the airfoils"
-typedef   ^                            ^                             INTEGER                  NumAF                           -          -         -        "Parameters for the BEMT module"
-typedef   ^                            ^                             CHARACTER(1024)          AF_File                         {:}        -         -        "Parameters for the BEMT module"
 typedef   ^                            ^                             BEMT_InitInputType       BEMT                            -          -         -        "Parameters for the BEMT module"
 typedef   ^                            ^                             INTEGER                  BEMT_SkewWakeMod                -          -         -        "The BEMT module skewed wake model, set to 0 if BEMT is not being used" -
 #
@@ -185,7 +181,6 @@ typedef   ^                            InitOutputType                ProgDesc   
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
 typedef   ^                            ParameterType                 ReKi                     chord                           {:}{:}     -         -        "Chord length at node" m
-typedef   ^                            ^                             INTEGER                  numBlades                       -          -         -        "Number of blades"    -
 typedef   ^                            ^                             ReKi                     airDens                         -          -         -        "Air density"        kg/m^3
 typedef   ^                            ^                             ReKi                     kinVisc                         -          -         -        "Kinematic air viscosity"       m^2/s
 typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Skewed-wake correction model [switch] {0: no correction, 1: Pitt and Peters, 2: Teknikgruppen AB, 3: Coupled model}"  -
@@ -200,10 +195,6 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  AFindx                          {:}        -         -        "Index of airfoil data file for blade node location [array of numBladeNodes]"        -
 typedef   ^                            ^                             ReKi                     tipLossConst                    {:}{:}     -         -        "A constant computed during initialization based on B*(zTip-zLocal)/(2*zLocal)" -
 typedef   ^                            ^                             ReKi                     hubLossConst                    {:}{:}     -         -        "A constant computed during initialization based on B*(zLocal-zHub)/(2*zHub)" -
-typedef   ^                            ^                             AFInfoType               AFInfo                          {:}        -         -        "Parameters for the airfoils"
-typedef   ^                            ^                             INTEGER                  NumAF                           -          -         -        "Parameters for the BEMT module"
-typedef   ^                            ^                             CHARACTER(1024)          AF_File                         {:}          -         -        "Parameters for the BEMT module"
-#typedef   ^                            ^                             AFI_ParameterType        AFI_Params                      -          -         -         "" -
 #typedef   ^                            ^                             INTEGER                  BEMT_SkewWakeMod                -          -         -        "The BEMT module skewed wake model, set to 0 if BEMT is not being used" -
 #
 

@@ -117,22 +117,6 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%numBladeNodes  = InitInp%numBladeNodes 
    p%numBlades      = InitInp%numBlades    
    p%UA_Flag        = .TRUE.   ! TODO Make this something that is set by AD and passed in as an InitInp
-   !IF (ALLOCATED(InitInp%AFInfo)) THEN
-   !   i1_l = LBOUND(InitInp%AFInfo,1)
-   !   i1_u = UBOUND(InitInp%AFInfo,1)
-   !   IF (.NOT. ALLOCATED(p%AFInfo)) THEN 
-   !      ALLOCATE(p%AFInfo(i1_l:i1_u),STAT=ErrStat)
-   !      IF (ErrStat /= 0) THEN 
-   !         ErrStat = ErrID_Fatal 
-   !         ErrMsg = 'AFI_CopyParam: Error allocating p%AFInfo.'
-   !         RETURN
-   !      END IF
-   !   END IF
-   !   DO i1 = i1_l, i1_u
-   !      CALL AFI_Copyafinfotype( InitInp%AFInfo(i1), p%AFInfo(i1), MESH_NEWCOPY, ErrStat, ErrMsg )
-   !   ENDDO
-   !ENDIF
-   !call AFI_Copyafinfotype( InitInp%AFInfo, p%AFInfo, MESH_NEWCOPY, ErrStat, ErrMsg )
    
    allocate ( p%chord(p%numBladeNodes, p%numBlades), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
@@ -887,6 +871,9 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
             do i = 1,p%numBladeNodes 
                z%phi = ComputePhiWithInduction(u%Vy(i,j), u%Vx(i,j), 0.0_ReKi, 0.0_ReKi, errStat, errMsg)
                if (p%UA_Flag) then
+                     ! Set the active blade element for UnsteadyAero
+                  OtherState%UA%iBladeNode = i
+                  OtherState%UA%iBlade     = j
                   call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i)), errStat, errMsg ) 
                end if
             end do

@@ -1226,7 +1226,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
          ! Eqn 1.55
       y%Cm = Get_Cm( Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, xd%tau_v(OtherState%iBladeNode, OtherState%iBlade) )
             
-      y%WriteOutput(iOffset+1)   = u%alpha*180.0/pi  ! Angle of attack in degrees
+      y%WriteOutput(iOffset+1) = u%alpha*180.0/pi  ! Angle of attack in degrees
       y%WriteOutput(iOffset+2) = y%Cn
       y%WriteOutput(iOffset+3) = y%Cc
       y%WriteOutput(iOffset+4) = y%Cm
