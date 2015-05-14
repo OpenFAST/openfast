@@ -1199,13 +1199,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       
       y%Cn = y%Cl*cos(u%alpha) + (y%Cd-Cd0)*sin(u%alpha)
       y%Cc = y%Cl*sin(u%alpha) - (y%Cd-Cd0)*cos(u%alpha)
-      y%WriteOutput(iOffset+1) = u%alpha*180.0/pi
-      y%WriteOutput(iOffset+2) = y%Cn
-      y%WriteOutput(iOffset+3) = y%Cc
-      y%WriteOutput(iOffset+4) = y%Cm
-      y%WriteOutput(iOffset+5) = y%Cl
-      y%WriteOutput(iOffset+6) = y%Cd
-      
+            
    else
       
             
@@ -1225,14 +1219,16 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
             
          ! Eqn 1.55
       y%Cm = Get_Cm( Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, xd%tau_v(OtherState%iBladeNode, OtherState%iBlade) )
-            
-      y%WriteOutput(iOffset+1) = u%alpha*180.0/pi  ! Angle of attack in degrees
+                  
+   end if
+   
+   if (allocated(y%WriteOutput)) then  !bjj: because BEMT uses local variables for UA output, y%WriteOutput is not necessarially allocated. Need to figure out a better solution.
+      y%WriteOutput(iOffset+1) = u%alpha*180.0/pi
       y%WriteOutput(iOffset+2) = y%Cn
       y%WriteOutput(iOffset+3) = y%Cc
       y%WriteOutput(iOffset+4) = y%Cm
       y%WriteOutput(iOffset+5) = y%Cl
       y%WriteOutput(iOffset+6) = y%Cd
-      
    end if
    
 end subroutine UA_CalcOutput

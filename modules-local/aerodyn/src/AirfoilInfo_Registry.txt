@@ -97,8 +97,7 @@ typedef	^	^	AFI_Table_Type	Table	{:}	-	-	"The tables of airfoil data for given R
 # The following derived type stores information that comes from the calling module (say, AeroDyn):
 typedef	AirfoilInfo/AFI	InitInputType	INTEGER	NumAFfiles	-	-	-	"The number of airfoil files"	-
 typedef	^	^	CHARACTER(1024)	FileNames	{:}	-	-	"The name of the file the data were read from"	-
-typedef	^	^	INTEGER	UA_Model	-	-	-	"The type of unsteady aero model (1-Beddoes-Leishman)"	-
-typedef	^	^	INTEGER	NumCoefs	-	-	-	"The number of aerodynamic coefficients to be stored in the coefficients arrays"	-
+#typedef	^	^	INTEGER	UA_Model	-	-	-	"The type of unsteady aero model (1-Beddoes-Leishman)"	-
 typedef	^	^	INTEGER	InCol_Alfa	-	-	-	"The column of the coefficient tables that holds the angle of attack"	-
 typedef	^	^	INTEGER	InCol_Cl	-	-	-	"The column of the coefficient tables that holds the lift coefficient"	-
 typedef	^	^	INTEGER	InCol_Cd	-	-	-	"The column of the coefficient tables that holds the minimum pressure coefficient"	-

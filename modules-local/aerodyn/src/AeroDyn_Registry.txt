@@ -62,7 +62,7 @@ typedef	^	AD_InputFile	LOGICAL	AIDrag	-	-	-	"Include the drag term in the axial-
 typedef	^	AD_InputFile	LOGICAL	TIDrag	-	-	-	"Include the drag term in the tangential-induction calculation? [used only when WakeMod=1 and TanInd=TRUE]"	flag
 typedef	^	AD_InputFile	ReKi	IndToler	-	-	-	"Convergence tolerance for BEM induction factors [used only when WakeMod=1]"	-
 typedef	^	AD_InputFile	ReKi	MaxIter	-	-	-	"Maximum number of iteration steps [used only when WakeMod=1]"	-
-typedef	^	AD_InputFile	ReKi	DSMod	-	-	-	"Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2]"	-
+typedef	^	AD_InputFile	ReKi	UAMod	-	-	-	"Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez's variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2]"	-
 typedef	^	AD_InputFile	LOGICAL	FLookup	-	-	-	"Flag to indicate whether a lookup for f' will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2]"	flag
 typedef	^	AD_InputFile	ReKi	InCol_Alfa	-	-	-	"The column in the airfoil tables that contains the angle of attack"	-
 typedef	^	AD_InputFile	ReKi	InCol_Cl	-	-	-	"The column in the airfoil tables that contains the lift coefficient"	-
@@ -114,6 +114,9 @@ typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integratio
 typedef	^	ParameterType	AFI_ParameterType	AFI	-	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"
 typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
+typedef	^	ParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
+typedef	^	ParameterType	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
+typedef	^	ParameterType	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
 
 
 
@@ -136,7 +139,6 @@ typedef	^	ParameterType	OutParmType	OutParam	{:}	-	-	"Names and units (and other
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
 
-
 ###########################################################################################
 # DATA THAT GREG WAS USING BEFORE>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ###########################################################################################
@@ -152,25 +154,23 @@ typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output f
 #   e.g.,  the name of the input file,  the file root name,etc.
 #
 typedef   AeroDyn/AD                   InitInputType                 DbKi                     DT                              -          -         -        "time step" s
-typedef   ^                            ^                             ReKi                     chord                           {:}{:}     -         -        "Chord length at node" m
-typedef   ^                            ^                             ReKi                     airDens                         -          -         -        "Air density"        kg/m^3
-typedef   ^                            ^                             ReKi                     kinVisc                         -          -         -        "Kinematic air viscosity"       m^2/s
-typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Skewed-wake correction model [switch] {0: no correction, 1: Pitt and Peters, 2: Teknikgruppen AB, 3: Coupled model}"  -
-typedef   ^                            ^                             LOGICAL                  useTipLoss                      -          -         -        "Use the Prandtl tip-loss model?  [flag]"        -
-typedef   ^                            ^                             LOGICAL                  useHubLoss                      -          -         -        "Use the Prandtl hub-loss model?  [flag]"        -
-typedef   ^                            ^                             LOGICAL                  useInduction                    -          -         -        "Include induction in BEM calculations [flag] { If FALSE then useTanInd will be set to FALSE}"        -
-typedef   ^                            ^                             LOGICAL                  useTanInd                       -          -         -        "Include tangential induction in BEM calculations [flag]"        -
-typedef   ^                            ^                             LOGICAL                  useAIDrag                       -          -         -        "Include the drag term in the axial-induction calculation?  [flag]"        -
-typedef   ^                            ^                             LOGICAL                  useTIDrag                       -          -         -        "Include the drag term in the tangential-induction calculation?  Ignored if TanInd is False.  [flag]"        -
-typedef   ^                            ^                             INTEGER                  numBladeNodes                   -          -         -        "Number of blade nodes used in the analysis"        -
-typedef   ^                            ^                             INTEGER                  numReIterations                 -          -         -        "Number of iterations for finding the Reynolds number"        -
-typedef   ^                            ^                             INTEGER                  maxIndIterations                -          -         -        "Maximum number of iterations of induction factor solve"        -
-typedef   ^                            ^                             INTEGER                  AFindx                          {:}        -         -        "Index of airfoil data file for blade node location [array of numBladeNodes]"        -
-typedef   ^                            ^                             ReKi                     zHub                            {:}        -         -        "Distance to hub for each blade" m
-typedef   ^                            ^                             ReKi                     zLocal                          {:}{:}     -         -        "Distance to blade node, measured along the blade" m
-typedef   ^                            ^                             ReKi                     zTip                            {:}        -         -        "Distance to blade tip, measured along the blade" m
-typedef   ^                            ^                             BEMT_InitInputType       BEMT                            -          -         -        "Parameters for the BEMT module"
-typedef   ^                            ^                             INTEGER                  BEMT_SkewWakeMod                -          -         -        "The BEMT module skewed wake model, set to 0 if BEMT is not being used" -
+typedef   ^                            InitInputType                 ReKi                     chord                           {:}{:}     -         -        "Chord length at node" m
+typedef   ^                            InitInputType                 INTEGER                  skewWakeMod                     -          -         -        "Skewed-wake correction model [switch] {0: no correction, 1: Pitt and Peters, 2: Teknikgruppen AB, 3: Coupled model}"  -
+typedef   ^                            InitInputType                 LOGICAL                  useTipLoss                      -          -         -        "Use the Prandtl tip-loss model?  [flag]"        -
+typedef   ^                            InitInputType                 LOGICAL                  useHubLoss                      -          -         -        "Use the Prandtl hub-loss model?  [flag]"        -
+typedef   ^                            InitInputType                 LOGICAL                  useInduction                    -          -         -        "Include induction in BEM calculations [flag] { If FALSE then useTanInd will be set to FALSE}"        -
+typedef   ^                            InitInputType                 LOGICAL                  useTanInd                       -          -         -        "Include tangential induction in BEM calculations [flag]"        -
+typedef   ^                            InitInputType                 LOGICAL                  useAIDrag                       -          -         -        "Include the drag term in the axial-induction calculation?  [flag]"        -
+typedef   ^                            InitInputType                 LOGICAL                  useTIDrag                       -          -         -        "Include the drag term in the tangential-induction calculation?  Ignored if TanInd is False.  [flag]"        -
+typedef   ^                            InitInputType                 INTEGER                  numBladeNodes                   -          -         -        "Number of blade nodes used in the analysis"        -
+typedef   ^                            InitInputType                 INTEGER                  numReIterations                 -          -         -        "Number of iterations for finding the Reynolds number"        -
+typedef   ^                            InitInputType                 INTEGER                  maxIndIterations                -          -         -        "Maximum number of iterations of induction factor solve"        -
+typedef   ^                            InitInputType                 INTEGER                  AFindx                          {:}        -         -        "Index of airfoil data file for blade node location [array of numBladeNodes]"        -
+typedef   ^                            InitInputType                 ReKi                     zHub                            {:}        -         -        "Distance to hub for each blade" m
+typedef   ^                            InitInputType                 ReKi                     zLocal                          {:}{:}     -         -        "Distance to blade node, measured along the blade" m
+typedef   ^                            InitInputType                 ReKi                     zTip                            {:}        -         -        "Distance to blade tip, measured along the blade" m
+typedef   ^                            InitInputType                 BEMT_InitInputType       BEMT                            -          -         -        "Parameters for the BEMT module"
+typedef   ^                            InitInputType                 INTEGER                  BEMT_SkewWakeMod                -          -         -        "The BEMT module skewed wake model, set to 0 if BEMT is not being used" -
 #
 #
 # Define outputs from the initialization routine here:
@@ -181,8 +181,6 @@ typedef   ^                            InitOutputType                ProgDesc   
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
 typedef   ^                            ParameterType                 ReKi                     chord                           {:}{:}     -         -        "Chord length at node" m
-typedef   ^                            ^                             ReKi                     airDens                         -          -         -        "Air density"        kg/m^3
-typedef   ^                            ^                             ReKi                     kinVisc                         -          -         -        "Kinematic air viscosity"       m^2/s
 typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Skewed-wake correction model [switch] {0: no correction, 1: Pitt and Peters, 2: Teknikgruppen AB, 3: Coupled model}"  -
 typedef   ^                            ^                             LOGICAL                  useTipLoss                      -          -         -        "Use the Prandtl tip-loss model?  [flag]"        -
 typedef   ^                            ^                             LOGICAL                  useHubLoss                      -          -         -        "Use the Prandtl hub-loss model?  [flag]"        -

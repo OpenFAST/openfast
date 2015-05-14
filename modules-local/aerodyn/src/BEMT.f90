@@ -597,7 +597,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
 
       ! Local variables
-   character(len(errMsg))                         :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)                           :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                 :: errStat2    ! temporary Error status of the operation
    type(UA_InputType)                             :: u_UA
    type(UA_InitInputType)                         :: Init_UA_Data
@@ -636,8 +636,10 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       
    if ( p%UA_Flag ) then
       call BEMT_Set_UA_InitData( InitInp, Init_UA_Data, errStat, errMsg )
+      if (errStat >= AbortErrLev) return
       
       call UA_Init( Init_UA_Data, u_UA, p%UA, xd%UA, OtherState%UA, y_UA, interval, InitOutData_UA, errStat, errMsg )       
+      if (errStat >= AbortErrLev) return
    end if
       !............................................................................................
       ! Define initial guess for the system inputs here:

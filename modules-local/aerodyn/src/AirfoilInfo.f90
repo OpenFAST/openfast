@@ -26,7 +26,7 @@ CONTAINS
    ! SUBROUTINE BEMT_GenSplines   ( FileNum, Re, Ctrl, InitInput, ErrStatLcl, ErrMsg )                                ! Phase #2: For BEM, generate splines for Cl and Cd at specific Re/Ctrl setting.
    ! SUBROUTINE BEMT_GetClCd      ( FileNum, AoA, Re, Ctrl, InitInput, Cl, Cd, ErrStatLcl, ErrMsg )                   ! Phase #3: For BEM, compute Cl and Cd for the given AoA.
    ! SUBROUTINE GetAllCoefs      ( FileNum, AoA, Re, Ctrl, InitInput, Cl, Cd, Cm, Cpmin, ErrStatLcl, ErrMsg )        ! Phase #4: Compute all requested airfoil coefficients for the given AoA.
-   ! SUBROUTINE ReadAFfile       ( AFInfo, UA_Model, Col_Cm, Col_Cpmin, ErrStat, ErrMsg )             ! Read an airfoil file.
+   ! SUBROUTINE ReadAFfile       ( AFInfo, NumCoefs, Col_Cm, Col_Cpmin, ErrStat, ErrMsg )             ! Read an airfoil file.
 
    !=============================================================================
    SUBROUTINE AFI_Init ( InitInput, p, ErrStat, ErrMsg, UnEcho )
@@ -60,7 +60,9 @@ CONTAINS
       INTEGER                                :: NumRe                         ! The length of the Re array being sent to the regrid interface routine.
       INTEGER                                :: Table                         ! Index into the Table array.
       INTEGER                                :: UnEc                          ! Local echo file unit number
+      INTEGER                                :: NumCoefs                      ! The number of aerodynamic coefficients to be stored
 
+      
       INTEGER                                :: ErrStat2                      ! Local error status.
       CHARACTER(ErrMsgLen)                   :: ErrMsg2
       CHARACTER(*), PARAMETER                :: RoutineName = 'AFI_Init'
@@ -79,7 +81,7 @@ CONTAINS
       END IF
              
       
-         ! Set the column indices for the variouse airfoil coefficients.
+         ! Set the column indices for the various airfoil coefficients.
 
       p%ColCl    = 1  
       p%ColCd    = 2  
@@ -93,6 +95,7 @@ CONTAINS
       ELSE IF ( InitInput%InCol_Cpmin > 0 )  THEN
             p%ColCpmin = 3
       END IF      
+      NumCoefs = MAX(p%ColCd, p%ColCm,p%ColCpmin) ! number of non-zero coefficient columns
 
       
          ! Process the airfoil files.
@@ -111,7 +114,7 @@ CONTAINS
          END IF
          
 
-         CALL ReadAFfile ( InitInput%FileNames(File), InitInput%UA_Model, InitInput%NumCoefs, InitInput%InCol_Alfa &
+         CALL ReadAFfile ( InitInput%FileNames(File), NumCoefs, InitInput%InCol_Alfa &
                          , InitInput%InCol_Cl, InitInput%InCol_Cd, InitInput%InCol_Cm, InitInput%InCol_Cpmin, p%AFInfo(File) &
                          , ErrStat2, ErrMsg2, UnEc ) 
             CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -323,7 +326,7 @@ CONTAINS
             ! Compute the spline coefficients of the piecewise cubic polynomials for the irregularly-spaced airfoil data in each file.
             ! Unless the data are constant.
 
-            DO Co=1,InitInput%NumCoefs
+            DO Co=1,NumCoefs
 
 !BUG: What happened to the 2D interpolation?  Maybe I haven't written this yet.
 
@@ -339,7 +342,7 @@ CONTAINS
                ! Allocate the arrays to hold spline coefficients.
 
             ALLOCATE ( p%AFInfo(File)%Table(1)%SplineCoefs( p%AFInfo(File)%Table(1)%NumAlf-1 &
-                     , InitInput%NumCoefs, 0:3 ), STAT=ErrStat2 )
+                     , NumCoefs, 0:3 ), STAT=ErrStat2 )
             IF ( ErrStat2 /= 0 )  THEN
                CALL SetErrStat ( ErrStat2, 'Error allocating memory for the SplineCoefs array.', ErrStat, ErrMsg, RoutineName )
                CALL Cleanup()
@@ -363,7 +366,7 @@ CONTAINS
             ! Compute the spline coefficients of the piecewise cubic polynomials for the irregularly-spaced airfoil data in each file.
             ! Unless the data are constant.
 
-         DO Co=1,InitInput%NumCoefs
+         DO Co=1,NumCoefs
 
 
             IF ( p%AFInfo(File)%NumTabs > 1 )  THEN                  ! We use 2D cubic spline interpolation.
@@ -416,7 +419,7 @@ CONTAINS
    
   
    !=============================================================================
-   SUBROUTINE ReadAFfile ( AFfile, UA_Model, NumCoefs, InCol_Alfa, InCol_Cl, InCol_Cd, InCol_Cm, InCol_Cpmin, AFInfo &
+   SUBROUTINE ReadAFfile ( AFfile, NumCoefs, InCol_Alfa, InCol_Cl, InCol_Cd, InCol_Cm, InCol_Cpmin, AFInfo &
                          , ErrStat, ErrMsg, UnEc )
 
 
@@ -432,7 +435,6 @@ CONTAINS
       INTEGER(IntKi),    INTENT(IN)           :: InCol_Cpmin                   ! The airfoil-table input column for minimum pressure coefficient.
       INTEGER(IntKi),    INTENT(  OUT)        :: ErrStat                       ! Error status.
       INTEGER(IntKi),    INTENT(IN)           :: NumCoefs                      ! The number of aerodynamic coefficients to be stored.
-      INTEGER(IntKi),    INTENT(IN)           :: UA_Model                      ! The type of unsteady-aero model.
 
       INTEGER,           INTENT(IN)           :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.      CHARACTER(*), INTENT(IN)               :: AFfile                        ! The file to be read.
 
@@ -595,8 +597,6 @@ CONTAINS
 
          IF ( AFInfo%Table(Table)%InclUAdata )  THEN
 
-            IF ( UA_Model == 1 )  THEN
-
                CALL ParseVar ( FileInfo, CurLine, 'alpha0', AFInfo%Table(Table)%UA_BL%alpha0, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -692,15 +692,13 @@ CONTAINS
                   RETURN
                END IF
                   
-            ENDIF ! ( UA_Model == 1 )
+         ELSE !ELSEIF ( UA_Model == 1 )  THEN
 
-         ELSEIF ( UA_Model == 1 )  THEN
-
-            CALL SetErrStat ( ErrID_Fatal &
-            , 'You must supply Beddoes-Leishman unsteady aerodynamics parameters for all airfoils if you want to use that' &
-            //' model. You did not do so for Table #'//TRIM( Num2LStr( Table ) )//' in the "'//TRIM( AFfile )//'" airfoil file.', ErrStat, ErrMsg, RoutineName )
-            CALL Cleanup()
-            RETURN
+            !CALL SetErrStat ( ErrID_Fatal &
+            !, 'You must supply Beddoes-Leishman unsteady aerodynamics parameters for all airfoils if you want to use that' &
+            !//' model. You did not do so for Table #'//TRIM( Num2LStr( Table ) )//' in the "'//TRIM( AFfile )//'" airfoil file.', ErrStat, ErrMsg, RoutineName )
+            !CALL Cleanup()
+            !RETURN
 
          ENDIF ! ( AFInfo%Table(Table)%InclUAdata )
 
