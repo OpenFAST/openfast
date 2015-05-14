@@ -117,6 +117,13 @@ typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT modul
 typedef	^	ParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	ParameterType	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
 typedef	^	ParameterType	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
+typedef	^	ParameterType	LOGICAL	TipLoss	-	-	-	"Use the Prandtl tip-loss model? [used only when WakeMod=1]"	flag
+typedef	^	ParameterType	LOGICAL	HubLoss	-	-	-	"Use the Prandtl hub-loss model? [used only when WakeMod=1]"	flag
+typedef	^	ParameterType	LOGICAL	TanInd	-	-	-	"Include tangential induction in BEMT calculations? [used only when WakeMod=1]"	flag
+
+
+
+
 
 
 
@@ -139,6 +146,14 @@ typedef	^	ParameterType	OutParmType	OutParam	{:}	-	-	"Names and units (and other
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
 
+
+
+
+
+
+
+
+
 ###########################################################################################
 # DATA THAT GREG WAS USING BEFORE>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 ###########################################################################################
@@ -156,10 +171,7 @@ typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output f
 typedef   AeroDyn/AD                   InitInputType                 DbKi                     DT                              -          -         -        "time step" s
 typedef   ^                            InitInputType                 ReKi                     chord                           {:}{:}     -         -        "Chord length at node" m
 typedef   ^                            InitInputType                 INTEGER                  skewWakeMod                     -          -         -        "Skewed-wake correction model [switch] {0: no correction, 1: Pitt and Peters, 2: Teknikgruppen AB, 3: Coupled model}"  -
-typedef   ^                            InitInputType                 LOGICAL                  useTipLoss                      -          -         -        "Use the Prandtl tip-loss model?  [flag]"        -
-typedef   ^                            InitInputType                 LOGICAL                  useHubLoss                      -          -         -        "Use the Prandtl hub-loss model?  [flag]"        -
 typedef   ^                            InitInputType                 LOGICAL                  useInduction                    -          -         -        "Include induction in BEM calculations [flag] { If FALSE then useTanInd will be set to FALSE}"        -
-typedef   ^                            InitInputType                 LOGICAL                  useTanInd                       -          -         -        "Include tangential induction in BEM calculations [flag]"        -
 typedef   ^                            InitInputType                 LOGICAL                  useAIDrag                       -          -         -        "Include the drag term in the axial-induction calculation?  [flag]"        -
 typedef   ^                            InitInputType                 LOGICAL                  useTIDrag                       -          -         -        "Include the drag term in the tangential-induction calculation?  Ignored if TanInd is False.  [flag]"        -
 typedef   ^                            InitInputType                 INTEGER                  numBladeNodes                   -          -         -        "Number of blade nodes used in the analysis"        -
@@ -182,9 +194,6 @@ typedef   ^                            InitOutputType                ProgDesc   
 #
 typedef   ^                            ParameterType                 ReKi                     chord                           {:}{:}     -         -        "Chord length at node" m
 typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Skewed-wake correction model [switch] {0: no correction, 1: Pitt and Peters, 2: Teknikgruppen AB, 3: Coupled model}"  -
-typedef   ^                            ^                             LOGICAL                  useTipLoss                      -          -         -        "Use the Prandtl tip-loss model?  [flag]"        -
-typedef   ^                            ^                             LOGICAL                  useHubLoss                      -          -         -        "Use the Prandtl hub-loss model?  [flag]"        -
-typedef   ^                            ^                             LOGICAL                  useTanInd                       -          -         -        "Include tangential induction in BEM calculations [flag]"        -
 typedef   ^                            ^                             LOGICAL                  useAIDrag                          -          -         -        "Include the drag term in the axial-induction calculation?  [flag]"        -
 typedef   ^                            ^                             LOGICAL                  useTIDrag                          -          -         -        "Include the drag term in the tangential-induction calculation?  Ignored if TanInd is False.  [flag]"        -
 typedef   ^                            ^                             INTEGER                  numBladeNodes                   -          -         -        "Number of blade nodes used in the analysis"        -

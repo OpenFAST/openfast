@@ -33,95 +33,7 @@ module AeroDyn
    public :: AD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
    
   
-   contains
-  
-!subroutine Set_BEMT_InitInp(AD_InitInp, BEMT_InitInp, errStat, errMsg)
-!      type(AD_InitInputType) , intent(in   )   :: AD_InitInp           ! Input data for initialization
-!      type(BEMT_InitInputType), intent(  out)   :: BEMT_InitInp           ! Input data for initialization
-!      integer(IntKi)         , intent(inout)   :: errStat              ! Status of error message
-!      character(*)           , intent(inout)   :: errMsg               ! Error message if ErrStat /= ErrID_None
-!
-!         ! locals
-!      integer(IntKi)                           :: i, j
-!      integer(IntKi)                           :: errStat2             ! local status of error message
-!      character(len(errMsg))                   :: errMsg2              ! local error message if ErrStat /= ErrID_None
-!      real(ReKi)                               :: rHub, zTip, deltar
-!      errStat2 = ErrID_None
-!      errMsg2  = ''
-!   
-!      AD_InitInp%numBladeNodes  = WTP_Data%numSeg
-!      AD_InitInp%numBlades      = WTP_Data%numBlade
-!   
-!      allocate ( AD_InitInp%chord(AD_InitInp%numBladeNodes, AD_InitInp%numBlades), STAT = errStat2 )
-!      if ( errStat2 /= 0 ) then
-!         errStat2 = ErrID_Fatal
-!         errMsg2  = 'Error allocating memory for AD_InitInp%chord.'
-!         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'Set_WTP_InitInp' )
-!         return
-!      end if 
-!   
-!      allocate ( AD_InitInp%AFindx(AD_InitInp%numBladeNodes), STAT = errStat2 )
-!      if ( errStat2 /= 0 ) then
-!         errStat2 = ErrID_Fatal
-!         errMsg2  = 'Error allocating memory for AD_InitInp%chord array.'
-!         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'Set_WTP_InitInp' )
-!         return
-!      end if 
-!      
-!      allocate ( AD_InitInp%zLocal(AD_InitInp%numBladeNodes, AD_InitInp%numBlades), STAT = errStat2 )
-!      if ( errStat2 /= 0 ) then
-!         errStat2 = ErrID_Fatal
-!         errMsg2  = 'Error allocating memory for AD_InitInp%zLocal array.'
-!         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'Set_WTP_InitInp' )
-!         return
-!      end if 
-!   
-!      allocate ( AD_InitInp%zTip(AD_InitInp%numBlades), STAT = errStat2 )
-!      if ( errStat2 /= 0 ) then
-!         errStat2 = ErrID_Fatal
-!         errMsg2  = 'Error allocating memory for AD_InitInp%zTip array.'
-!         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'Set_WTP_InitInp' )
-!         return
-!      end if 
-!      
-!      allocate ( AD_InitInp%zHub(AD_InitInp%numBlades), STAT = errStat2 )
-!      if ( errStat2 /= 0 ) then
-!         errStat2 = ErrID_Fatal
-!         errMsg2  = 'Error allocating memory for AD_InitInp%rHub array.'
-!         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'Set_WTP_InitInp' )
-!         return
-!      end if 
-!   
-!      do i=1,AD_InitInp%numBladeNodes
-!         
-!         AD_InitInp%AFindx(i) = WTP_Data%BladeData(i)%AFfile  
-!      end do
-!   
-!      do j=1,AD_InitInp%numBlades
-!         BEMT_InitInp%zTip(j)  = AD_InitInp%zTip(j)
-!         BEMT_InitInp%zHub(j)  = AD_InitInp%zHub(j)
-!         
-!         do i=1,AD_InitInp%numBladeNodes
-!            BEMT_InitInp%chord (i,j)  = AD_InitInp%chord (i,j) 
-!            BEMT_InitInp%zLocal(i,j)  = AD_InitInp%zLocal(i,j)
-!         end do
-!      end do
-!      
-!      AD_InitInp%DT                  = BEMT_InitInp%DT                    
-!      AD_InitInp%airDens             = BEMT_InitInp%airDens          
-!      AD_InitInp%kinVisc             = BEMT_InitInp%kinVisc          
-!      AD_InitInp%skewWakeMod         = BEMT_InitInp%skewWakeMod      
-!      AD_InitInp%useTipLoss          = BEMT_InitInp%useTipLoss       
-!      AD_InitInp%useHubLoss          = BEMT_InitInp%useHubLoss       
-!      AD_InitInp%useTanInd           = BEMT_InitInp%useTanInd        
-!      AD_InitInp%useAIDrag           = BEMT_InitInp%useAIDrag        
-!      AD_InitInp%useTIDrag           = BEMT_InitInp%useTIDrag        
-!      AD_InitInp%numReIterations     = BEMT_InitInp%numReIterations  
-!      AD_InitInp%maxIndIterations    = BEMT_InitInp%maxIndIterations 
-!
-!
-!end subroutine Set_BEMT_InitInp
-  
+contains    
 subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
 
    type(AD_InitOutputType),       intent(  out)  :: InitOut     ! output data
@@ -279,10 +191,14 @@ subroutine AD_SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    p%AirDens          = InputFileData%AirDens          
    p%KinVisc          = InputFileData%KinVisc
    
+      ! do we really need these at this level? are they just BEMT parameters?
+   p%TipLoss          = InputFileData%TipLoss       
+   p%HubLoss          = InputFileData%HubLoss       
+   p%TanInd           = InputFileData%TanInd        
+   
+   
+   
    p%skewWakeMod      = InitInp%skewWakeMod     
-   p%useTipLoss       = InitInp%useTipLoss       
-   p%useHubLoss       = InitInp%useHubLoss       
-   p%useTanInd        = InitInp%useTanInd        
    p%useAIDrag        = InitInp%useAIDrag           
    p%useTIDrag        = InitInp%useTIDrag           
    p%numReIterations  = InitInp%numReIterations  
@@ -290,6 +206,7 @@ subroutine AD_SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    !p%NumOuts          = 2 + p%numBlades*p%numBladeNodes*AD_numChanPerNode  ! TODO This needs to be computed some other way 9/18/14 GJH   
    
 end subroutine AD_SetParameters
+!----------------------------------------------------------------------------------------------------------------------------------   
 
 
 subroutine AD_AllocOutput(y, p, errStat, errMsg)
@@ -1618,9 +1535,41 @@ SUBROUTINE Init_BEMTmodule( InputFileData, InitInp, u, p, x, xd, z, OtherState, 
    ErrMsg  = ""
    
       ! set initialization data here:   
-   InitInp%DT       = InputFileData%DTAero
-   InitInp%airDens  = InputFileData%AirDens 
-   InitInp%kinVisc  = InputFileData%KinVisc               
+   InitInp%DT         = InputFileData%DTAero
+   InitInp%airDens    = InputFileData%AirDens 
+   InitInp%kinVisc    = InputFileData%KinVisc               
+   
+   InitInp%useTipLoss = InputFileData%TipLoss
+   InitInp%useHubLoss = InputFileData%HubLoss
+   InitInp%useTanInd  = InputFileData%TanInd
+   
+!      InitInp%numBladeNodes       = InputFileData%numSeg
+!      InitInp%numBlades           = InputFileData%numBlade
+!      InitInp%skewWakeMod         = InputFileData%skewWakeMod      
+!      InitInp%useAIDrag           = InputFileData%useAIDrag        
+!      InitInp%useTIDrag           = InputFileData%useTIDrag        
+!      InitInp%numReIterations     = InputFileData%numReIterations  
+!      InitInp%maxIndIterations    = InputFileData%maxIndIterations 
+!      allocate ( InitInp%chord(AD_InitInp%numBladeNodes, AD_InitInp%numBlades), STAT = errStat2 )
+!      allocate ( InitInp%AFindx(AD_InitInp%numBladeNodes), STAT = errStat2 )
+!      allocate ( InitInp%zLocal(AD_InitInp%numBladeNodes, AD_InitInp%numBlades), STAT = errStat2 )
+!      allocate ( InitInp%zTip(AD_InitInp%numBlades), STAT = errStat2 )
+!      allocate ( InitInp%zHub(AD_InitInp%numBlades), STAT = errStat2 )
+!      do i=1,AD_InitInp%numBladeNodes
+!         AD_InitInp%AFindx(i) = WTP_Data%BladeData(i)%AFfile  
+!      end do
+!   
+!      do j=1,AD_InitInp%numBlades
+!         BEMT_InitInp%zTip(j)  = AD_InitInp%zTip(j)
+!         BEMT_InitInp%zHub(j)  = AD_InitInp%zHub(j)
+!         
+!         do i=1,AD_InitInp%numBladeNodes
+!            BEMT_InitInp%chord (i,j)  = AD_InitInp%chord (i,j) 
+!            BEMT_InitInp%zLocal(i,j)  = AD_InitInp%zLocal(i,j)
+!         end do
+!      end do
+
+   
    
    call BEMT_Init(InitInp, u, p,  x, xd, z, OtherState, y, Interval, InitOut, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
@@ -1628,7 +1577,6 @@ SUBROUTINE Init_BEMTmodule( InputFileData, InitInp, u, p, x, xd, z, OtherState, 
    CALL BEMT_DestroyInitOutput( InitOut, ErrStat2, ErrMsg2 )
    
 END SUBROUTINE Init_BEMTmodule
-!----------------------------------------------------------------------------------------------------------------------------------   
-
+!----------------------------------------------------------------------------------------------------------------------------------
 
 END MODULE AeroDyn
