@@ -76,6 +76,8 @@ typedef   ^                            ConstraintStateType           ReKi       
 #
 typedef   ^                            OtherStateType                ReKi                     DummyOtherState                     -           -         -         ""   -
 typedef   ^                            ^                             UA_OtherStateType        UA                                  -             -         -        "other states for UnsteadyAero"        -
+#typedef   ^                            ^                             UA_OutputType            y_UA                                -             -         -        "other states for UnsteadyAero"        -
+
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:

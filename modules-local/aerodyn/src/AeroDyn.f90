@@ -202,28 +202,26 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
    end subroutine AD_SetInitOut
    
 !----------------------------------------------------------------------------------------------------------------------------------   
-subroutine AD_SetParameters( InitInp, p, errStat, errMsg )
+subroutine AD_SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 ! This routine is called from AD_Init.
 ! The parameters are set here and not changed during the simulation.
 !..................................................................................................................................
-   type(AD_InitInputType),       intent(inout)  :: InitInp     ! Input data for initialization routine, out is needed because of copy below
-   type(AD_ParameterType),       intent(inout)  :: p           ! Parameters
-   integer(IntKi),                intent(inout)  :: errStat     ! Error status of the operation
-   character(*),                  intent(inout)  :: errMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(AD_InitInputType),       intent(inout)  :: InitInp          ! Input data for initialization routine, out is needed because of copy below
+   TYPE(AD_InputFile),           INTENT(IN   )  :: InputFileData    ! Data stored in the module's input file
+   TYPE(AD_ParameterType),       INTENT(INOUT)  :: p                ! Parameters
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat          ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg           ! Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
-   character(len(errMsg))                        :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
-   integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
-   integer(IntKi)                                :: i, j
-   INTEGER(IntKi)                                :: i1
-   INTEGER(IntKi)                                :: i1_l  ! lower bounds for an array dimension
-   INTEGER(IntKi)                                :: i1_u  ! upper bounds for an array dimension
+   CHARACTER(ErrMsgLen)                          :: ErrMsg2         ! temporary Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                                :: ErrStat2        ! temporary Error status of the operation
+   INTEGER(IntKi)                                :: i, j
    
       ! Initialize variables for this routine
 
-   errStat2 = ErrID_None
-   errMsg2  = ""
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
 
    p%numBladeNodes  = InitInp%numBladeNodes 
    p%numBlades      = InitInp%numBlades    
@@ -277,9 +275,10 @@ subroutine AD_SetParameters( InitInp, p, errStat, errMsg )
    end do
    
    
-   p%DT               = InitInp%DT                             
-   p%airDens          = InitInp%airDens          
-   p%kinVisc          = InitInp%kinVisc          
+   p%DT               = InputFileData%DTAero                             
+   p%AirDens          = InputFileData%AirDens          
+   p%KinVisc          = InputFileData%KinVisc
+   
    p%skewWakeMod      = InitInp%skewWakeMod     
    p%useTipLoss       = InitInp%useTipLoss       
    p%useHubLoss       = InitInp%useHubLoss       
@@ -448,9 +447,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    INTEGER(IntKi)                              :: UnEcho        ! Unit number for the echo file
    
       
-   integer                                     :: i, unEC, i1, i1_l, i1_u
+   integer                                     :: i
    !type(BEMT_InitInputType)                      :: BEMT_InitInData
-   type(BEMT_InitOutputType)                     :: BEMT_InitOutData
    
    CHARACTER(*), PARAMETER                      :: RoutineName = 'AD_Init'
    
@@ -470,7 +468,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    call DispNVD( AD_Ver )
    
    
-   p%NumBlades = InitInp%NumBlades ! need this before reading the AD input file so that we read only the number of blade files necessary
+   p%NumBlades = InitInp%NumBlades ! need this before reading the AD input file so that we know how many blade files to read
    p%RootName  = TRIM(InitInp%RootName)//'.AD'
    
       ! Read the primary AeroDyn input file
@@ -491,44 +489,43 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       
       
       ! Initialize AFI module
-   CALL Init_AFIparams( InputFileData, p%AFI, UnEcHO, ErrStat, ErrMsg )
+   CALL Init_AFIparams( InputFileData, p%AFI, UnEcHO, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+      
+      
+      ! Initialize the BEMT module
+   CALL Init_BEMTmodule( InputFileData, InitInp%BEMT, OtherState%BEMT_u, p%BEMT,  x%BEMT, xd%BEMT, z%BEMT, &
+                         OtherState%BEMT, OtherState%BEMT_y, Interval, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+      
+   
+      !............................................................................................
+      ! Define parameters here
+      !............................................................................................
+   CALL AD_SetParameters( InitInp, InputFileData, p, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
       END IF
    
-   !call Set_BEMT_InitInp(InitInp, BEMT_InitInData, errStat, errMsg)
-   
-   
-     !............................................................................................
-      ! Define parameters here
-      !............................................................................................
-   call AD_SetParameters( InitInp, p, errStat, errMsg )
-   if (errStat >= AbortErrLev) return
-   
    call AD_SetInitOut(p, InitOut, errStat, errMsg)
    
    call AD_AllocInput( u, p, errStat, errMsg ) 
    call AD_AllocOutput(y, p, errStat, errMsg)
    
-      ! Initialized the BEM module
-   call BEMT_Init(InitInp%BEMT, OtherState%BEMT_u, p%BEMT,  x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, OtherState%BEMT_y, interval, BEMT_InitOutData, errStat, errMsg )
-   if (errStat >= AbortErrLev) then
-      ! Clean up and exit
-      call Cleanup()
-      RETURN
-   end if
    
       ! Open an output file and write the header information
    !call AD_InitializeOutputFile(AD_Ver, delim, outFmtS, outFileRoot, unOutFile, errStat, errMsg)
-   
-   
-   if (errStat >= AbortErrLev) then
-      ! Clean up and exit
-      call Cleanup()
-      RETURN
-   end if
+
    
    ! ---------------------------------------------------
    ! DO NOT destroy this data because the driver will be using some of the initinp quantities each time step
@@ -541,12 +538,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    !   call Cleanup()
    !end if
    ! ---------------------------------------------------
-   call BEMT_DestroyInitOutput( BEMT_InitOutData, errStat, errMsg )
-   if (errStat >= AbortErrLev) then
-      ! Clean up and exit
-      call Cleanup()
-      RETURN
-   end if
+
 
 contains
    subroutine Cleanup()
@@ -927,7 +919,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    TYPE(AD_InputFile), INTENT(INOUT)   :: InputFileData                       ! All the data in the AeroDyn input file
    
       ! Local variables:
-   REAL(ReKi)                    :: TmpRAry(2)                                ! A temporary array to read a table from the input file
    INTEGER(IntKi)                :: I                                         ! loop counter
    INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
      
@@ -1137,8 +1128,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadCom( UnIn, InputFile, 'Section Header: Beddoes-Leishman Unsteady Airfoil Aerodynamics Options', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-      ! DSMod - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez’s variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%DSMod, "DSMod", "Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez’s variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-)", ErrStat2, ErrMsg2, UnEc)
+      ! UAMod - Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez’s variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-):
+   CALL ReadVar( UnIn, InputFile, InputFileData%UAMod, "UAMod", "Unsteady Aero Model Switch (switch) {1=Baseline model (Original), 2=Gonzalez’s variant (changes in Cn,Cc,Cm), 3=Minemma/Pierce variant (changes in Cc and Cm)} [used only when AFAreoMod=2] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       ! FLookup - Flag to indicate whether a lookup for f’ will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag):
@@ -1379,8 +1370,6 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, NumBlNds, UnEc, ErrS
 
       ! Local variables:
 
-   REAL(ReKi)                   :: TmpRAry(17)                                     ! Temporary variable to read table from file (up to 17 columns)
-
    INTEGER(IntKi)               :: I                                               ! A generic DO index.
    INTEGER( IntKi )             :: UnIn                                            ! Unit number for reading file
    INTEGER(IntKi)               :: ErrStat2 , IOS                                  ! Temporary Error status
@@ -1507,11 +1496,17 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
 
    
       ! local variables
-   INTEGER(IntKi)                           :: K                                   ! Blade number
+   INTEGER(IntKi)                           :: k                                   ! Blade number
+   INTEGER(IntKi)                           :: j                                   ! node number
    CHARACTER(*), PARAMETER                  :: RoutineName = 'ValidateInputData'
    
    
    IF ( InputFileData%NumAFfiles < 1 )  CALL SetErrStat( ErrID_Fatal, 'The number of unique airfoil tables (NumAFfiles) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   
+   if ( InputFileData%AirDens <= 0.0 )  call SetErrStat ( ErrID_Fatal, 'The air density (AirDens) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   if ( InputFileData%KinVisc <= 0.0 )  call SetErrStat ( ErrID_Fatal, 'The kinesmatic viscosity (KinVisc) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+   
+   
    
          ! validate the AFI input data because it doesn't appear to be done in AFI
    IF ( InputFileData%InCol_Alfa  < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Alfa must not be a negative number.', ErrStat, ErrMsg, RoutineName )
@@ -1519,6 +1514,25 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    IF ( InputFileData%InCol_Cd    < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Cd must not be a negative number.', ErrStat, ErrMsg, RoutineName )
    IF ( InputFileData%InCol_Cm    < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Cm must not be a negative number.', ErrStat, ErrMsg, RoutineName )
    IF ( InputFileData%InCol_Cpmin < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Cpmin must not be a negative number.', ErrStat, ErrMsg, RoutineName )
+   
+   
+      ! Check the list of airfoil tables to make sure they are all within limits.
+   DO k=1,NumBl
+      DO j=1,InputFileData%NumBlNds
+         IF ( ( InputFileData%BladeProps(k)%BlAFID(j) < 1 ) .OR. ( InputFileData%BladeProps(k)%BlAFID(j) > InputFileData%NumAFfiles ) )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'Blade '//TRIM(Num2LStr(k))//' node '//TRIM(Num2LStr(j))//' must be a number between 1 and NumAFfiles (' &
+               //TRIM(Num2LStr(InputFileData%NumAFfiles))//').', ErrStat, ErrMsg, RoutineName )
+         END IF
+      END DO ! j=nodes
+   END DO ! k=blades
+   
+   DO j=1,InputFileData%NumTwrNds
+      IF ( ( InputFileData%TwrAFID(j) < 1 ) .OR. ( InputFileData%TwrAFID(j) > InputFileData%NumAFfiles ) )  THEN
+         CALL SetErrStat( ErrID_Fatal, 'Tower node '//TRIM(Num2LStr(j))//' must be a number between 1 and NumAFfiles (' &
+            //TRIM(Num2LStr(InputFileData%NumAFfiles))//').', ErrStat, ErrMsg, RoutineName )
+      END IF
+   END DO ! j=nodes
+   
    
    
    
@@ -1549,8 +1563,6 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, ErrStat, ErrMsg )
       ! Setup Airfoil InitInput data structure:
    AFI_InitInputs%NumAFfiles = InputFileData%NumAFfiles
    CALL MOVE_ALLOC( InputFileData%AFNames, AFI_InitInputs%FileNames ) ! move from AFNames to FileNames      
-   AFI_InitInputs%UA_Model    = 0 !InputFileData%DSMod !was 0 but doesn't work for WTPerf\branches\v4.x\CertTest\af_files2\S809_CLN_298.DAT         !bjj: FIX ME!!! Not sure what they're supposed to be
-   AFI_InitInputs%NumCoefs    = 3                            !bjj: FIX ME!!! Not sure what they're supposed to be
    AFI_InitInputs%InCol_Alfa  = InputFileData%InCol_Alfa
    AFI_InitInputs%InCol_Cl    = InputFileData%InCol_Cl
    AFI_InitInputs%InCol_Cd    = InputFileData%InCol_Cd
@@ -1559,7 +1571,6 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, ErrStat, ErrMsg )
                
       ! Call AFI_Init to read in and process the airfoil files.
       ! This includes creating the spline coefficients to be used for interpolation.
-      ! I'm calling it here so that it writes to this echo file...
 
    CALL AFI_Init ( AFI_InitInputs, p_AFI, ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
@@ -1568,7 +1579,56 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, ErrStat, ErrMsg )
    
 END SUBROUTINE Init_AFIparams
 !----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE Init_BEMTmodule( InputFileData, InitInp, u, p, x, xd, z, OtherState, y, Interval, ErrStat, ErrMsg )
+! This routine initializes the BEMT module from within AeroDyn
+!..................................................................................................................................
+
+!bjj: make this a local variable at some point?
+   type(BEMT_InitInputType),       intent(inout) :: InitInp        ! Input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in BEMT_SetParameters()
+
+
+   TYPE(AD_InputFile),             INTENT(INOUT) :: InputFileData  ! All the data in the AeroDyn input file (intent(out) only because of the call to MOVE_ALLOC)
+   type(BEMT_InputType),           intent(  out) :: u              ! An initial guess for the input; input mesh must be defined
+   type(BEMT_ParameterType),       intent(  out) :: p              ! Parameters
+   type(BEMT_ContinuousStateType), intent(  out) :: x              ! Initial continuous states
+   type(BEMT_DiscreteStateType),   intent(  out) :: xd             ! Initial discrete states
+   type(BEMT_ConstraintStateType), intent(  out) :: z              ! Initial guess of the constraint states
+   type(BEMT_OtherStateType),      intent(  out) :: OtherState     ! Initial other/optimization states
+   type(BEMT_OutputType),          intent(  out) :: y              ! Initial system outputs (outputs are not calculated;
+                                                                   !   only the output mesh is initialized)
+   real(DbKi),                     intent(inout) :: interval       ! Coupling interval in seconds: the rate that
+                                                                   !   (1) BEMT_UpdateStates() is called in loose coupling &
+                                                                   !   (2) BEMT_UpdateDiscState() is called in tight coupling.
+                                                                   !   Input is the suggested time from the glue code;
+                                                                   !   Output is the actual coupling interval that will be used
+                                                                   !   by the glue code.
+   integer(IntKi),                 intent(  out) :: errStat        ! Error status of the operation
+   character(*),                   intent(  out) :: errMsg         ! Error message if ErrStat /= ErrID_None
+
+
+      ! Local variables
+   type(BEMT_InitOutputType)                     :: InitOut        ! Output for initialization routine
+                                                 
+   INTEGER(IntKi)                                :: ErrStat2
+   CHARACTER(ErrMsgLen)                          :: ErrMsg2
+   CHARACTER(*), PARAMETER                       :: RoutineName = 'Init_BEMTmodule'
+
    
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+      ! set initialization data here:   
+   InitInp%DT       = InputFileData%DTAero
+   InitInp%airDens  = InputFileData%AirDens 
+   InitInp%kinVisc  = InputFileData%KinVisc               
+   
+   call BEMT_Init(InitInp, u, p,  x, xd, z, OtherState, y, Interval, InitOut, ErrStat2, ErrMsg2 )
+      CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+      
+   CALL BEMT_DestroyInitOutput( InitOut, ErrStat2, ErrMsg2 )
+   
+END SUBROUTINE Init_BEMTmodule
+!----------------------------------------------------------------------------------------------------------------------------------   
 
 
 END MODULE AeroDyn
