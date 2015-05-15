@@ -15,7 +15,6 @@
 ###################################################################################################################################
 
 # ...... Include files (definitions from NWTC Library) ............................................................................
-# make sure that the file name does not have any trailing white spaces!
 include   Registry_NWTC_Library.txt
 usefrom   AirfoilInfo_Registry.txt
 usefrom   UnsteadyAero_Registry.txt
@@ -25,8 +24,7 @@ usefrom   UnsteadyAero_Registry.txt
 # Define inputs that the initialization routine may need here:
 #   e.g.,  the name of the input file,  the file root name,etc.
 #
-typedef   BEMT/BEMT                      InitInputType                 DbKi                     DT                              -          -         -        "time step" s
-typedef   ^                            ^                             ReKi                     chord                           {:}{:}     -         -        "Chord length at node" m
+typedef   BEMT/BEMT                    InitInputType                 ReKi                     chord                           {:}{:}     -         -        "Chord length at node" m
 typedef   ^                            ^                             INTEGER                  numBlades                       -          -         -        "Number of blades"    -
 typedef   ^                            ^                             ReKi                     airDens                         -          -         -        "Air density"        kg/m^3
 typedef   ^                            ^                             ReKi                     kinVisc                         -          -         -        "Kinematic air viscosity"       m^2/s

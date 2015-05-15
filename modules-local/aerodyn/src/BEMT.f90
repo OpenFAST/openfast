@@ -52,11 +52,12 @@ real(ReKi) function ComputePhiWithInduction( Vx, Vy, a, aprime, errStat, errMsg 
 end function ComputePhiWithInduction
  
 !----------------------------------------------------------------------------------------------------------------------------------   
-subroutine BEMT_Set_UA_InitData( InitInp, Init_UA_Data, errStat, errMsg )
+subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMsg )
 ! This routine is called from BEMT_Init.
 ! The parameters are set here and not changed during the simulation.
 !..................................................................................................................................
    type(BEMT_InitInputType),       intent(inout)  :: InitInp     ! Input data for initialization routine, out is needed because of copy below
+   real(DbKi),                     intent(in   )  :: interval    ! time interval  
    type(UA_InitInputType),         intent(  out)  :: Init_UA_Data           ! Parameters
    integer(IntKi),                 intent(inout)  :: errStat     ! Error status of the operation
    character(*),                   intent(inout)  :: errMsg      ! Error message if ErrStat /= ErrID_None
@@ -74,7 +75,7 @@ subroutine BEMT_Set_UA_InitData( InitInp, Init_UA_Data, errStat, errMsg )
    
       ! TODO:: Fully implement these initialization inputs
    
-   Init_UA_Data%dt              = InitInp%DT          
+   Init_UA_Data%dt              = interval          
    Init_UA_Data%OutRootName     = ''
                
    Init_UA_Data%numBlades       = InitInp%numBlades 
@@ -116,7 +117,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
 
    p%numBladeNodes  = InitInp%numBladeNodes 
    p%numBlades      = InitInp%numBlades    
-   p%UA_Flag        = .TRUE.   ! TODO Make this something that is set by AD and passed in as an InitInp
+   p%UA_Flag        = InitInp%UA_Flag
    
    allocate ( p%chord(p%numBladeNodes, p%numBlades), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
@@ -174,7 +175,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    end do
    
    
-   p%DT               = InitInp%DT                             
+  !p%DT               = InitInp%DT                             
    p%airDens          = InitInp%airDens          
    p%kinVisc          = InitInp%kinVisc          
    p%skewWakeMod      = InitInp%skewWakeMod     
@@ -621,6 +622,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       !............................................................................................
       ! Define parameters here
       !............................................................................................
+   p%DT = interval    
    call BEMT_SetParameters( InitInp, p, errStat, errMsg )
    if (errStat >= AbortErrLev) return
 
@@ -635,7 +637,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    !if (errStat >= AbortErrLev) return
       
    if ( p%UA_Flag ) then
-      call BEMT_Set_UA_InitData( InitInp, Init_UA_Data, errStat, errMsg )
+      call BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMsg )
       if (errStat >= AbortErrLev) return
       
       call UA_Init( Init_UA_Data, u_UA, p%UA, xd%UA, OtherState%UA, y_UA, interval, InitOutData_UA, errStat, errMsg )       

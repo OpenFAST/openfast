@@ -24,6 +24,7 @@ usefrom	UnsteadyAero_Registry.txt
 typedef	AeroDyn/AD	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
 typedef	^	InitInputType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
+typedef	^	InitInputType	LOGICAL	MustUseBEMT	-	-	.False.	"whether or not the BEMT model is required (i.e., WT_Perf)"	(flag)
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
@@ -111,16 +112,13 @@ typedef	^	OtherStateType	BEMT_InputType	BEMT_u	-	-	-	"Inputs to the BEMT module"
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
-typedef	^	ParameterType	AFI_ParameterType	AFI	-	-	-	"AirfoilInfo parameters"
+typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT}"	-
 typedef	^	ParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"
-typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 typedef	^	ParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	ParameterType	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
 typedef	^	ParameterType	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
-
-
-
-
+typedef	^	ParameterType	AFI_ParameterType	AFI	-	-	-	"AirfoilInfo parameters"
+typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
 
 
 
@@ -142,7 +140,6 @@ typedef	^	ParameterType	OutParmType	OutParam	{:}	-	-	"Names and units (and other
 #typedef	^	OutputType	MeshType	MeshedOutput	-	-	-	"Meshed output data"	-
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
-
 
 
 
