@@ -55,17 +55,13 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
    
    call AllocAry( InitOut%WriteOutputHdr, p%numOuts, 'WriteOutputHdr', errStat2, errMsg2 )
    if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for InitOut%WriteOutputHdr.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'AD_SetInitOut' )
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for InitOut%WriteOutputHdr.', errStat, errMsg, 'AD_SetInitOut' )
       return
    end if 
    
    call AllocAry( InitOut%WriteOutputUnt, p%numOuts, 'WriteOutputUnt', errStat2, errMsg2 )
    if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for InitOut%WriteOutputUnt.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'AD_SetInitOut' )
+      call SetErrStat( ErrID_Fatal, 'Error allocating memory for InitOut%WriteOutputUnt.', errStat, errMsg, 'AD_SetInitOut' )
       return
    end if
    
@@ -109,7 +105,7 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
       end do
    end do
    
-   
+   InitOut%Ver = AD_Ver
    
    end subroutine AD_SetInitOut
    
@@ -191,18 +187,9 @@ subroutine AD_SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    p%AirDens          = InputFileData%AirDens          
    p%KinVisc          = InputFileData%KinVisc
    
-      ! do we really need these at this level? are they just BEMT parameters?
-   p%TipLoss          = InputFileData%TipLoss       
-   p%HubLoss          = InputFileData%HubLoss       
-   p%TanInd           = InputFileData%TanInd        
+   ! so far, all the parameter inputs are used for the BEMT or UA modules
    
    
-   
-   p%skewWakeMod      = InitInp%skewWakeMod     
-   p%useAIDrag        = InitInp%useAIDrag           
-   p%useTIDrag        = InitInp%useTIDrag           
-   p%numReIterations  = InitInp%numReIterations  
-   p%maxIndIterations = InitInp%maxIndIterations 
    !p%NumOuts          = 2 + p%numBlades*p%numBladeNodes*AD_numChanPerNode  ! TODO This needs to be computed some other way 9/18/14 GJH   
    
 end subroutine AD_SetParameters
@@ -783,7 +770,7 @@ SUBROUTINE AD_ReadInput( InputFileName, InputFileData, Default_DT, OutFileRoot, 
    END IF
       
    DO I=1,NumBlades
-      CALL ReadBladeInputs ( ADBlFile(I), InputFileData%BladeProps(I), InputFileData%NumBlNds, UnEcho, ErrStat2, ErrMsg2 )
+      CALL ReadBladeInputs ( ADBlFile(I), InputFileData%BladeProps(I), UnEcho, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName//TRIM(':Blade')//TRIM(Num2LStr(I)))
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL Cleanup()
@@ -1124,10 +1111,10 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) RETURN
             
-      ! NumBlNds - Number of blade nodes used in the analysis (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%NumBlNds, "NumBlNds", "Number of blade nodes used in the analysis (-)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
+   !   ! NumBlNds - Number of blade nodes used in the analysis (-):
+   !CALL ReadVar( UnIn, InputFile, InputFileData%NumBlNds, "NumBlNds", "Number of blade nodes used in the analysis (-)", ErrStat2, ErrMsg2, UnEc)
+   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !   IF ( ErrStat >= AbortErrLev ) RETURN
       
       ! ADBlFile - Names of files containing distributed aerodynamic properties for each blade (see AD_BladeInputFile type):
    DO I = 1,MaxBl            
@@ -1269,7 +1256,7 @@ CONTAINS
    !...............................................................................................................................
 END SUBROUTINE ReadPrimaryFile      
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, NumBlNds, UnEc, ErrStat, ErrMsg )
+SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, UnEc, ErrStat, ErrMsg )
 ! This routine reads a blade input file.
 !..................................................................................................................................
 
@@ -1278,7 +1265,6 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, NumBlNds, UnEc, ErrS
 
    TYPE(AD_BladePropsType),  INTENT(INOUT)  :: BladeKInputFileData                 ! Data for Blade K stored in the module's input file
    CHARACTER(*),             INTENT(IN)     :: ADBlFile                            ! Name of the blade input file data
-   INTEGER(IntKi),           INTENT(IN)     :: NumBlNds                            ! Number of blade nodes to read from this file
    INTEGER(IntKi),           INTENT(IN)     :: UnEc                                ! I/O unit for echo file. If present and > 0, write to UnEc
 
    INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             ! Error status
@@ -1327,6 +1313,11 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, NumBlNds, UnEc, ErrS
    CALL ReadCom ( UnIn, ADBlFile, 'Section header: Blade Properties', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
+      ! NumBlNds - Number of blade nodes used in the analysis (-):
+   CALL ReadVar( UnIn, ADBlFile, BladeKInputFileData%NumBlNds, "NumBlNds", "Number of blade nodes used in the analysis (-)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
    CALL ReadCom ( UnIn, ADBlFile, 'Table header: names', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
@@ -1340,19 +1331,19 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, NumBlNds, UnEc, ErrS
    
       
       ! allocate space for blade inputs:
-   CALL AllocAry( BladeKInputFileData%BlSpn,   NumBlNds, 'BlSpn',   ErrStat2, ErrMsg2)
+   CALL AllocAry( BladeKInputFileData%BlSpn,   BladeKInputFileData%NumBlNds, 'BlSpn',   ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( BladeKInputFileData%BlCrvAC, NumBlNds, 'BlCrvAC', ErrStat2, ErrMsg2)
+   CALL AllocAry( BladeKInputFileData%BlCrvAC, BladeKInputFileData%NumBlNds, 'BlCrvAC', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( BladeKInputFileData%BlSwpAC, NumBlNds, 'BlSwpAC', ErrStat2, ErrMsg2)
+   CALL AllocAry( BladeKInputFileData%BlSwpAC, BladeKInputFileData%NumBlNds, 'BlSwpAC', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( BladeKInputFileData%BlCrvAng,NumBlNds, 'BlCrvAng',ErrStat2, ErrMsg2)
+   CALL AllocAry( BladeKInputFileData%BlCrvAng,BladeKInputFileData%NumBlNds, 'BlCrvAng',ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( BladeKInputFileData%BlTwist, NumBlNds, 'BlTwist', ErrStat2, ErrMsg2)
+   CALL AllocAry( BladeKInputFileData%BlTwist, BladeKInputFileData%NumBlNds, 'BlTwist', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( BladeKInputFileData%BlChord, NumBlNds, 'BlChord', ErrStat2, ErrMsg2)
+   CALL AllocAry( BladeKInputFileData%BlChord, BladeKInputFileData%NumBlNds, 'BlChord', ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry( BladeKInputFileData%BlAFID,  NumBlNds, 'BlAFID',  ErrStat2, ErrMsg2)
+   CALL AllocAry( BladeKInputFileData%BlAFID,  BladeKInputFileData%NumBlNds, 'BlAFID',  ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
       ! Return on error if we didn't allocate space for the next inputs
@@ -1361,7 +1352,7 @@ SUBROUTINE ReadBladeInputs ( ADBlFile, BladeKInputFileData, NumBlNds, UnEc, ErrS
       RETURN
    END IF
             
-   DO I=1,NumBlNds
+   DO I=1,BladeKInputFileData%NumBlNds
       READ( UnIn, *, IOStat=IOS ) BladeKInputFileData%BlSpn(I), BladeKInputFileData%BlCrvAC(I), BladeKInputFileData%BlSwpAC(I), &
                                   BladeKInputFileData%BlCrvAng(I), BladeKInputFileData%BlTwist(I), BladeKInputFileData%BlChord(I), &
                                   BladeKInputFileData%BlAFID(I)  
@@ -1406,52 +1397,81 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
       
       ! Passed variables:
 
-   TYPE(AD_InputFile),       INTENT(IN)     :: InputFileData                       ! All the data in the AeroDyn input file
-   INTEGER(IntKi),           INTENT(IN)     :: NumBl                               ! Number of blades
-   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             ! Error status
-   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              ! Error message
+   type(AD_InputFile),       intent(in)     :: InputFileData                       ! All the data in the AeroDyn input file
+   integer(IntKi),           intent(in)     :: NumBl                               ! Number of blades
+   integer(IntKi),           intent(out)    :: ErrStat                             ! Error status
+   character(*),             intent(out)    :: ErrMsg                              ! Error message
 
    
       ! local variables
-   INTEGER(IntKi)                           :: k                                   ! Blade number
-   INTEGER(IntKi)                           :: j                                   ! node number
-   CHARACTER(*), PARAMETER                  :: RoutineName = 'ValidateInputData'
+   integer(IntKi)                           :: k                                   ! Blade number
+   integer(IntKi)                           :: j                                   ! node number
+   character(*), parameter                  :: RoutineName = 'ValidateInputData'
    
    
-   IF ( InputFileData%NumAFfiles < 1 )  CALL SetErrStat( ErrID_Fatal, 'The number of unique airfoil tables (NumAFfiles) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    
    if ( InputFileData%AirDens <= 0.0 )  call SetErrStat ( ErrID_Fatal, 'The air density (AirDens) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if ( InputFileData%KinVisc <= 0.0 )  call SetErrStat ( ErrID_Fatal, 'The kinesmatic viscosity (KinVisc) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
-   
-   
-   
+      
          ! validate the AFI input data because it doesn't appear to be done in AFI
-   IF ( InputFileData%InCol_Alfa  < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Alfa must not be a negative number.', ErrStat, ErrMsg, RoutineName )
-   IF ( InputFileData%InCol_Cl    < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Cl must not be a negative number.', ErrStat, ErrMsg, RoutineName )
-   IF ( InputFileData%InCol_Cd    < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Cd must not be a negative number.', ErrStat, ErrMsg, RoutineName )
-   IF ( InputFileData%InCol_Cm    < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Cm must not be a negative number.', ErrStat, ErrMsg, RoutineName )
-   IF ( InputFileData%InCol_Cpmin < 0 ) CALL SetErrStat( ErrID_Fatal, 'InCol_Cpmin must not be a negative number.', ErrStat, ErrMsg, RoutineName )
+   if ( InputFileData%NumAFfiles < 1 )  call SetErrStat( ErrID_Fatal, 'The number of unique airfoil tables (NumAFfiles) must be greater than zero.', ErrStat, ErrMsg, RoutineName )   
+   if ( InputFileData%InCol_Alfa  < 0 ) call SetErrStat( ErrID_Fatal, 'InCol_Alfa must not be a negative number.', ErrStat, ErrMsg, RoutineName )
+   if ( InputFileData%InCol_Cl    < 0 ) call SetErrStat( ErrID_Fatal, 'InCol_Cl must not be a negative number.', ErrStat, ErrMsg, RoutineName )
+   if ( InputFileData%InCol_Cd    < 0 ) call SetErrStat( ErrID_Fatal, 'InCol_Cd must not be a negative number.', ErrStat, ErrMsg, RoutineName )
+   if ( InputFileData%InCol_Cm    < 0 ) call SetErrStat( ErrID_Fatal, 'InCol_Cm must not be a negative number.', ErrStat, ErrMsg, RoutineName )
+   if ( InputFileData%InCol_Cpmin < 0 ) call SetErrStat( ErrID_Fatal, 'InCol_Cpmin must not be a negative number.', ErrStat, ErrMsg, RoutineName )
    
    
-      ! Check the list of airfoil tables to make sure they are all within limits.
-   DO k=1,NumBl
-      DO j=1,InputFileData%NumBlNds
-         IF ( ( InputFileData%BladeProps(k)%BlAFID(j) < 1 ) .OR. ( InputFileData%BladeProps(k)%BlAFID(j) > InputFileData%NumAFfiles ) )  THEN
-            CALL SetErrStat( ErrID_Fatal, 'Blade '//TRIM(Num2LStr(k))//' node '//TRIM(Num2LStr(j))//' must be a number between 1 and NumAFfiles (' &
+      ! Check the list of airfoil tables for blades and tower to make sure they are all within limits.
+   do k=1,NumBl
+      do j=1,InputFileData%BladeProps(k)%NumBlNds
+         if ( ( InputFileData%BladeProps(k)%BlAFID(j) < 1 ) .OR. ( InputFileData%BladeProps(k)%BlAFID(j) > InputFileData%NumAFfiles ) )  then
+            call SetErrStat( ErrID_Fatal, 'Blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j))//' must be a number between 1 and NumAFfiles (' &
                //TRIM(Num2LStr(InputFileData%NumAFfiles))//').', ErrStat, ErrMsg, RoutineName )
-         END IF
-      END DO ! j=nodes
-   END DO ! k=blades
+         end if
+      end do ! j=nodes
+   end do ! k=blades
    
-   DO j=1,InputFileData%NumTwrNds
-      IF ( ( InputFileData%TwrAFID(j) < 1 ) .OR. ( InputFileData%TwrAFID(j) > InputFileData%NumAFfiles ) )  THEN
-         CALL SetErrStat( ErrID_Fatal, 'Tower node '//TRIM(Num2LStr(j))//' must be a number between 1 and NumAFfiles (' &
-            //TRIM(Num2LStr(InputFileData%NumAFfiles))//').', ErrStat, ErrMsg, RoutineName )
-      END IF
-   END DO ! j=nodes
+   do k=2,NumBl
+      if ( InputFileData%BladeProps(k)%NumBlNds /= InputFileData%BladeProps(k-1)%NumBlNds ) then
+         call SetErrStat( ErrID_Fatal, 'All blade property files must have the same number of blade nodes.', ErrStat, ErrMsg, RoutineName )
+         exit  ! exit do loop
+      end if
+   end do
    
    
+   do j=1,InputFileData%NumTwrNds
+      if ( ( InputFileData%TwrAFID(j) < 1 ) .OR. ( InputFileData%TwrAFID(j) > InputFileData%NumAFfiles ) )  then
+         call SetErrStat( ErrID_Fatal, 'Tower node '//trim(Num2LStr(j))//' must be a number between 1 and NumAFfiles (' &
+            //trim(Num2LStr(InputFileData%NumAFfiles))//').', ErrStat, ErrMsg, RoutineName )
+      end if
+   end do ! j=nodes
    
+   
+      ! Check that the chord is > 0 for both blade and tower.
+   do k=1,NumBl
+      do j=1,InputFileData%BladeProps(k)%NumBlNds
+         if ( InputFileData%BladeProps(k)%BlChord(j) <= 0.0_ReKi )  then
+            call SetErrStat( ErrID_Fatal, 'The chord for blade '//trim(Num2LStr(k))//' node '//trim(Num2LStr(j)) &
+                             //' must be greater than 0.', ErrStat, ErrMsg, RoutineName )
+         endif
+      end do ! j=nodes
+   end do ! k=blades
+   
+   do j=1,InputFileData%NumTwrNds
+      if ( InputFileData%TwrChord(j) <= 0.0_ReKi )  then
+         call SetErrStat( ErrID_Fatal, 'The chord for tower node '//trim(Num2LStr(j))//' must be greater than 0.' &
+                         , ErrStat, ErrMsg, RoutineName )
+      end if
+   end do ! j=nodes
+
+   
+   ! these checks should probably go into BEMT where they are used...
+   if ( InputFileData%MaxIter < 1 ) call SetErrStat( ErrID_Fatal, 'MaxIter must be greater than 0.', ErrStat, ErrMsg, RoutineName )
+   if ( InputFileData%IndToler <= 0.0_ReKi ) call SetErrStat( ErrID_Fatal, 'IndToler must be greater than 0.', ErrStat, ErrMsg, RoutineName )
+   
+   if ( InputFileData%WakeMod /= 0 .and. InputFileData%WakeMod /= 1) call SetErrStat (ErrID_Fatal, 'WakeMod must be 0 or 1', ErrStat, ErrMsg, RoutineName )
+   ! Don't do skewed wakes if induction calculations are disabled.
    
 END SUBROUTINE ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1535,21 +1555,24 @@ SUBROUTINE Init_BEMTmodule( InputFileData, InitInp, u, p, x, xd, z, OtherState, 
    ErrMsg  = ""
    
       ! set initialization data here:   
-   InitInp%DT         = InputFileData%DTAero
-   InitInp%airDens    = InputFileData%AirDens 
-   InitInp%kinVisc    = InputFileData%KinVisc               
+   InitInp%DT               = InputFileData%DTAero
+   InitInp%airDens          = InputFileData%AirDens 
+   InitInp%kinVisc          = InputFileData%KinVisc               
    
-   InitInp%useTipLoss = InputFileData%TipLoss
-   InitInp%useHubLoss = InputFileData%HubLoss
-   InitInp%useTanInd  = InputFileData%TanInd
+   InitInp%skewWakeMod      = InputFileData%SkewMod      ! bjj: check what these variables mean.... and make sure AD input file matches BEMT code
+   InitInp%useTipLoss       = InputFileData%TipLoss
+   InitInp%useHubLoss       = InputFileData%HubLoss
+   InitInp%useTanInd        = InputFileData%TanInd
+   InitInp%useAIDrag        = InputFileData%AIDrag        
+   InitInp%useTIDrag        = InputFileData%TIDrag  
+   InitInp%aTol             = InputFileData%IndToler
+   InitInp%maxIndIterations = InputFileData%MaxIter 
+   InitInp%useInduction     = InputFileData%WakeMod == 1
    
+
 !      InitInp%numBladeNodes       = InputFileData%numSeg
 !      InitInp%numBlades           = InputFileData%numBlade
-!      InitInp%skewWakeMod         = InputFileData%skewWakeMod      
-!      InitInp%useAIDrag           = InputFileData%useAIDrag        
-!      InitInp%useTIDrag           = InputFileData%useTIDrag        
 !      InitInp%numReIterations     = InputFileData%numReIterations  
-!      InitInp%maxIndIterations    = InputFileData%maxIndIterations 
 !      allocate ( InitInp%chord(AD_InitInp%numBladeNodes, AD_InitInp%numBlades), STAT = errStat2 )
 !      allocate ( InitInp%AFindx(AD_InitInp%numBladeNodes), STAT = errStat2 )
 !      allocate ( InitInp%zLocal(AD_InitInp%numBladeNodes, AD_InitInp%numBlades), STAT = errStat2 )
