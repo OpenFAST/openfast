@@ -58,7 +58,6 @@ typedef	^	^	ReKi	Re      	-	-	-	"Reynolds numbers in millions"	-
 typedef	^	^	INTEGER	NumAlf  	-	-	-	"Length of the Alpha and Coefs arrays"	-
 typedef	^	^	LOGICAL	ConstData	-	-	-	"Flag that tells if aerodynamic coefficients are the same for all alphas"	-
 typedef	^	^	LOGICAL	InclUAdata	-	-	-	"Flag that tells if UA data is included in the input file"	-
-typedef	^	^	INTEGER	UA_Model	-	-	-	"Length of the Alpha and Coefs arrays"	-
 typedef	^	^	AFI_UA_BL_Type	UA_BL	-	-	-	"The tables of Leishman-Beddoes unsteady-aero data for given Re and control setting"	-
 
 # The following derived type stores data for an airfoil for all combinations of Re and control setting.
@@ -107,22 +106,6 @@ typedef	^	^	INTEGER	InCol_Cpmin	-	-	-	"The column of the coefficient tables that
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
 
-# ..... States ....................................................................................................................
-# Define continuous (differentiable) states here:
-typedef	^	ContinuousStateType	ReKi	DummyContState	-	-	-	"Remove this variable if you have continuous states"	-
-
-# Define discrete (nondifferentiable) states here:
-typedef	^	DiscreteStateType	ReKi	DummyDiscState	-	-	-	"Remove this variable if you have discrete states"	-
-
-# Define constraint states here:
-typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"	-
-
-# Define any data that are not considered actual states here:
-typedef	^	OtherStateType	LOGICAL	IntCl	-	-	-	"A flag telling AFI to interpolate the lift cofficient this call"	-
-typedef	^	^	LOGICAL	IntCd	-	-	-	"A flag telling AFI to interpolate the drag cofficient this call"	-
-typedef	^	^	LOGICAL	IntCm	-	-	-	"A flag telling AFI to interpolate the pitching moment cofficient this call"	-
-typedef	^	^	LOGICAL	IntCpmin	-	-	-	"A flag telling AFI to interpolate the minimum pressure cofficient this call"	-
-typedef	^	^	INTEGER	AFfile	-	-	-	"The number of the airfoil file that applies to the current node"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
