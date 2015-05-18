@@ -16,7 +16,6 @@ module AeroDyn
    character(*),   parameter  :: AD_Nickname = 'AD'
    integer(IntKi), parameter  :: AD_numChanPerNode = 15  ! TODO This needs to be set dynamically ?? 9/18/14 GJH
    
-   REAL(ReKi), PARAMETER     ::epsilon = 1e-6
    
    INTEGER(IntKi), PARAMETER        :: MaxBl    =  3                                   ! Maximum number of blades allowed in simulation
    INTEGER(IntKi), PARAMETER        :: MaxOutPts = 1  !bjj: fix me!!!!!
@@ -43,12 +42,14 @@ module AeroDyn
    
   
 contains    
-subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
+subroutine AD_SetInitOut(p, InputFileData, InitInp, InitOut, errStat, errMsg)
 
-   type(AD_InitOutputType),       intent(  out)  :: InitOut     ! output data
-   type(AD_ParameterType),        intent(in   )  :: p           ! Parameters
-   integer(IntKi),                intent(inout)  :: errStat     ! Error status of the operation
-   character(*),                  intent(inout)  :: errMsg      ! Error message if ErrStat /= ErrID_None
+   type(AD_InitOutputType),       intent(  out)  :: InitOut          ! output data
+   type(AD_InputFile),            intent(in   )  :: InputFileData    ! Data stored in the module's input file
+   type(AD_InitInputType),        intent(in   )  :: InitInp          ! Input data for initialization routine
+   type(AD_ParameterType),        intent(in   )  :: p                ! Parameters
+   integer(IntKi),                intent(inout)  :: errStat          ! Error status of the operation
+   character(*),                  intent(inout)  :: errMsg           ! Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -58,7 +59,7 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
    
    
    
-   integer(IntKi)                                :: i, j
+   integer(IntKi)                                :: j, k
    character(len=10) :: chanPrefix
       ! Initialize variables for this routine
 
@@ -70,46 +71,56 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
    
    call AllocAry( InitOut%WriteOutputUnt, p%numOuts, 'WriteOutputUnt', errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+      
+   call AllocAry( InitOut%twist, p%numBladeNodes, p%numBlades, 'Twist', errStat2, errMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+   call AllocAry( InitOut%rLocal, p%numBladeNodes, p%numBlades, 'RLocal', errStat2, errMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
       
    if (ErrStat >= AbortErrLev) return
    
       ! Loop over blades and nodes to populate the output channel names and units
    
-   do j=1,p%numBlades
-      do i=1,p%numBladeNodes
+   do k=1,p%numBlades
+      do j=1,p%numBladeNodes
          
+         InitOut%twist(j,k)  = InputFileData%BladeProps(k)%BlTwist(j)
+         InitOut%rLocal(j,k) = InputFileData%BladeProps(k)%BlSpn(j) + InitInp%zHub(k)
 
-         chanPrefix = "B"//trim(num2lstr(j))//"N"//trim(num2lstr(i))
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 1 ) = trim(chanPrefix)//"Theta"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 1 ) = '  (deg)  '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 2 ) = trim(chanPrefix)//"Psi"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 2 ) = '  (deg)  '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 3 ) = trim(chanPrefix)//"Vx"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 3 ) = '  (m/s)  '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 4 ) = trim(chanPrefix)//"Vy"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 4 ) = '  (m/s)  '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 5 ) = ' '//trim(chanPrefix)//"AxInd"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 5 ) = '  (deg)  '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 6 ) = ' '//trim(chanPrefix)//"TanInd"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 6 ) = '  (deg)  '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 7 ) = trim(chanPrefix)//"IndVel"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 7 ) = '  (m/s)  '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 8 ) = ' '//trim(chanPrefix)//"Phi"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 8 ) = '  (deg)  '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 9 ) = ' '//trim(chanPrefix)//"AOA"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 9 ) = '  (deg)  '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 10 ) = ' '//trim(chanPrefix)//"Cl"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 10 ) = '   (-)   '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 11 ) = ' '//trim(chanPrefix)//"Cd"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 11 ) = '   (-)   '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 12 ) = ' '//trim(chanPrefix)//"Cx"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 12 ) = '   (-)   '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 13 ) = ' '//trim(chanPrefix)//"Cy"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 13 ) = '   (-)   '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 14 ) = ' '//trim(chanPrefix)//"Fx"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 14 ) = '  (N/m)  '
-         InitOut%WriteOutputHdr( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 15 ) = ' '//trim(chanPrefix)//"Fy"
-         InitOut%WriteOutputUnt( (j-1)*p%numBladeNodes*AD_numChanPerNode + (i-1)*AD_numChanPerNode + 15 ) = '  (N/m)  '
+         chanPrefix = "B"//trim(num2lstr(k))//"N"//trim(num2lstr(j))
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 1 ) = trim(chanPrefix)//"Theta"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 1 ) = '  (deg)  '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 2 ) = trim(chanPrefix)//"Psi"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 2 ) = '  (deg)  '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 3 ) = trim(chanPrefix)//"Vx"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 3 ) = '  (m/s)  '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 4 ) = trim(chanPrefix)//"Vy"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 4 ) = '  (m/s)  '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 5 ) = ' '//trim(chanPrefix)//"AxInd"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 5 ) = '  (deg)  '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 6 ) = ' '//trim(chanPrefix)//"TanInd"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 6 ) = '  (deg)  '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 7 ) = trim(chanPrefix)//"IndVel"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 7 ) = '  (m/s)  '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 8 ) = ' '//trim(chanPrefix)//"Phi"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 8 ) = '  (deg)  '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 9 ) = ' '//trim(chanPrefix)//"AOA"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 9 ) = '  (deg)  '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 10 ) = ' '//trim(chanPrefix)//"Cl"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 10 ) = '   (-)   '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 11 ) = ' '//trim(chanPrefix)//"Cd"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 11 ) = '   (-)   '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 12 ) = ' '//trim(chanPrefix)//"Cx"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 12 ) = '   (-)   '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 13 ) = ' '//trim(chanPrefix)//"Cy"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 13 ) = '   (-)   '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 14 ) = ' '//trim(chanPrefix)//"Fx"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 14 ) = '  (N/m)  '
+         InitOut%WriteOutputHdr( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 15 ) = ' '//trim(chanPrefix)//"Fy"
+         InitOut%WriteOutputUnt( (k-1)*p%numBladeNodes*AD_numChanPerNode + (j-1)*AD_numChanPerNode + 15 ) = '  (N/m)  '
       end do
    end do
    
@@ -122,7 +133,7 @@ subroutine AD_SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 ! This routine is called from AD_Init.
 ! The parameters are set here and not changed during the simulation.
 !..................................................................................................................................
-   TYPE(AD_InitInputType),       intent(inout)  :: InitInp          ! Input data for initialization routine, out is needed because of copy below
+   TYPE(AD_InitInputType),       intent(in   )  :: InitInp          ! Input data for initialization routine, out is needed because of copy below
    TYPE(AD_InputFile),           INTENT(IN   )  :: InputFileData    ! Data stored in the module's input file
    TYPE(AD_ParameterType),       INTENT(INOUT)  :: p                ! Parameters
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat          ! Error status of the operation
@@ -170,18 +181,16 @@ subroutine AD_SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
       
    if (ErrStat >= AbortErrLev) RETURN
    
-   do i=1,p%numBladeNodes         
-      p%AFindx(i) = InitInp%AFindx(i) 
-   end do
+   ! p%AFindex =
    
       ! Compute the tip and hub loss constants using the distances along the blade (provided as input for now) TODO: See how this really needs to be handled. GJH 
-   do j=1,p%numBlades
-      do i=1,p%numBladeNodes
-         p%chord(i,j)        = InitInp%chord(i,j)
-         p%tipLossConst(i,j) = p%numBlades*(InitInp%zTip    (j) - InitInp%zLocal(i,j)) / (2.0*InitInp%zLocal(i,j))
-         p%hubLossConst(i,j) = p%numBlades*(InitInp%zLocal(i,j) - InitInp%zHub    (j)) / (2.0*InitInp%zHub    (j))
-      end do
-   end do
+   !do j=1,p%numBlades
+   !   do i=1,p%numBladeNodes
+   !      !p%chord(i,j)        = InitInp%chord(i,j)
+   !      !p%tipLossConst(i,j) = p%numBlades*(InitInp%zTip    (j) - InitInp%zLocal(i,j)) / (2.0*InitInp%zLocal(i,j))
+   !      !p%hubLossConst(i,j) = p%numBlades*(InitInp%zLocal(i,j) - InitInp%zHub    (j)) / (2.0*InitInp%zHub    (j))
+   !   end do
+   !end do
    
             
    
@@ -275,7 +284,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 ! The initial states and initial guess for the input are defined.
 !..................................................................................................................................
 
-   type(AD_InitInputType),       intent(inout) :: InitInp       ! Input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in AD_SetParameters()
+   type(AD_InitInputType),       intent(in   ) :: InitInp       ! Input data for initialization routine
    type(AD_InputType),           intent(  out) :: u             ! An initial guess for the input; input mesh must be defined
    type(AD_ParameterType),       intent(  out) :: p             ! Parameters
    type(AD_ContinuousStateType), intent(  out) :: x             ! Initial continuous states
@@ -302,11 +311,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    type(AD_InputFile)                          :: InputFileData ! Data stored in the module's input file
    integer(IntKi)                              :: UnEcho        ! Unit number for the echo file
    
-      
-   integer                                     :: i
-   !type(BEMT_InitInputType)                      :: BEMT_InitInData
-   
-   character(*), parameter                      :: RoutineName = 'AD_Init'
+   character(*), parameter                     :: RoutineName = 'AD_Init'
    
    
       ! Initialize variables for this routine
@@ -359,7 +364,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    if (InputFileData%WakeMod == WakeMod_BEMT) then
             
          ! Initialize the BEMT module (also sets other variables for sub module)
-      call Init_BEMTmodule( InputFileData, InitInp, InitInp%BEMT, OtherState%BEMT_u, p%BEMT,  x%BEMT, xd%BEMT, z%BEMT, &
+      call Init_BEMTmodule( InputFileData, InitInp, OtherState%BEMT_u, p%BEMT,  x%BEMT, xd%BEMT, z%BEMT, &
                             OtherState%BEMT, OtherState%BEMT_y, ErrStat2, ErrMsg2 )
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
          if (ErrStat >= AbortErrLev) then
@@ -381,7 +386,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       !............................................................................................
       ! Define initialization output here
       !............................................................................................
-   call AD_SetInitOut(p, InitOut, errStat2, errMsg2)
+   call AD_SetInitOut(p, InputFileData, InitInp, InitOut, errStat2, errMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
    
       !............................................................................................
@@ -659,25 +664,21 @@ subroutine AD_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_resid
 ! Tight coupling routine for solving for the residual of the constraint state equations
 !..................................................................................................................................
 
-      REAL(DbKi),                   INTENT(IN   )   :: Time        ! Current simulation time in seconds
-      TYPE(AD_InputType),           INTENT(IN   )   :: u           ! Inputs at Time
-      TYPE(AD_ParameterType),       INTENT(IN   )   :: p           ! Parameters
-      TYPE(AD_ContinuousStateType), INTENT(IN   )   :: x           ! Continuous states at Time
-      TYPE(AD_DiscreteStateType),   INTENT(IN   )   :: xd          ! Discrete states at Time
-      TYPE(AD_ConstraintStateType), INTENT(INOUT)   :: z           ! Constraint states at Time (possibly a guess)
-      TYPE(AD_OtherStateType),      INTENT(INOUT)   :: OtherState  ! Other/optimization states
-      TYPE(AD_ConstraintStateType), INTENT(  OUT)   :: z_residual  ! Residual of the constraint state equations using
-                                                                   !     the input values described above
-      INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                   INTENT(IN   )   :: Time        ! Current simulation time in seconds
+   TYPE(AD_InputType),           INTENT(IN   )   :: u           ! Inputs at Time
+   TYPE(AD_ParameterType),       INTENT(IN   )   :: p           ! Parameters
+   TYPE(AD_ContinuousStateType), INTENT(IN   )   :: x           ! Continuous states at Time
+   TYPE(AD_DiscreteStateType),   INTENT(IN   )   :: xd          ! Discrete states at Time
+   TYPE(AD_ConstraintStateType), INTENT(INOUT)   :: z           ! Constraint states at Time (possibly a guess)
+   TYPE(AD_OtherStateType),      INTENT(INOUT)   :: OtherState  ! Other/optimization states
+   TYPE(AD_ConstraintStateType), INTENT(  OUT)   :: z_residual  ! Residual of the constraint state equations using
+                                                                  !     the input values described above
+   INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
 
-      !# set epsilon
-   !REAL(ReKi), PARAMETER     ::epsilon = 1e-6
    
-      ! Local variables
-   INTEGER    :: i,j
-   
+      ! Local variables   
    integer(intKi)                               :: ErrStat2
    character(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'AD_CalcConstrStateResidual'
@@ -1463,6 +1464,7 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, MustUseBEMT, ErrStat, ErrMsg
    
 
       ! check blade node properties
+   if ( InputFileData%BladeProps(1)%NumBlNds < 1 ) call SetErrStat( ErrID_Fatal, 'There must be at least one node per blade.',ErrStat, ErrMsg, RoutineName )
    do k=2,NumBl
       if ( InputFileData%BladeProps(k)%NumBlNds /= InputFileData%BladeProps(k-1)%NumBlNds ) then
          call SetErrStat( ErrID_Fatal, 'All blade property files must have the same number of blade nodes.', ErrStat, ErrMsg, RoutineName )
@@ -1611,19 +1613,12 @@ SUBROUTINE Init_AFIparams( InputFileData, p_AFI, UnEc, NumBl, ErrStat, ErrMsg )
    
 END SUBROUTINE Init_AFIparams
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Init_BEMTmodule( InputFileData, AD_InitInp, InitInp, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+SUBROUTINE Init_BEMTmodule( InputFileData, AD_InitInp, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 ! This routine initializes the BEMT module from within AeroDyn
 !..................................................................................................................................
 
-!>>>>>>>>>>>>>>>>>>>>>>>>>
-!FIX ME
-!bjj: make this intent in:
-   type(AD_InitInputType),         intent(inout) :: AD_InitInp     ! Input data for AD initialization routine
-!bjj: make this a local variable at some point and remove from AD_InitInp:
-   type(BEMT_InitInputType),       intent(inout) :: InitInp        ! Input data for initialization routine, needs to be inout because there is a copy of some data in InitInp in BEMT_SetParameters()
-!<<<<<<<<<<<<<<<<<
-
-   type(AD_InputFile),             intent(inout) :: InputFileData  ! All the data in the AeroDyn input file (intent(out) only because of the call to MOVE_ALLOC)
+   type(AD_InitInputType),         intent(in   ) :: AD_InitInp     ! Input data for AD initialization routine
+   type(AD_InputFile),             intent(in   ) :: InputFileData  ! All the data in the AeroDyn input file
    type(BEMT_InputType),           intent(  out) :: u              ! An initial guess for the input; input mesh must be defined
    type(BEMT_ParameterType),       intent(  out) :: p              ! Parameters
    type(BEMT_ContinuousStateType), intent(  out) :: x              ! Initial continuous states
@@ -1643,8 +1638,11 @@ SUBROUTINE Init_BEMTmodule( InputFileData, AD_InitInp, InitInp, u, p, x, xd, z, 
                                                                    !   Input is the suggested time from the glue code;
                                                                    !   Output is the actual coupling interval that will be used
                                                                    !   by the glue code.
+   type(BEMT_InitInputType)                      :: InitInp        ! Input data for initialization routine
    type(BEMT_InitOutputType)                     :: InitOut        ! Output for initialization routine
                                                  
+   integer(intKi)                                :: j              ! node index
+   integer(intKi)                                :: k              ! blade index
    integer(IntKi)                                :: ErrStat2
    character(ErrMsgLen)                          :: ErrMsg2
    character(*), parameter                       :: RoutineName = 'Init_BEMTmodule'
@@ -1655,9 +1653,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, AD_InitInp, InitInp, u, p, x, xd, z, 
    
    
       ! set initialization data here:   
-   Interval                 = InputFileData%DTAero
-   
-   !chord
+   Interval                 = InputFileData%DTAero   
    InitInp%numBlades        = AD_InitInp%NumBlades
    
    InitInp%airDens          = InputFileData%AirDens 
@@ -1674,32 +1670,27 @@ SUBROUTINE Init_BEMTmodule( InputFileData, AD_InitInp, InitInp, u, p, x, xd, z, 
    InitInp%numReIterations  = 1                                      ! This is currently not available in the input file and is only for testing  
    InitInp%maxIndIterations = InputFileData%MaxIter 
    
-!  call AllocAry( InitInp%chord, InitInp%numBladeNodes, InitInp%numBlades, ErrStat2, ErrMsg2 )
-!      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-!  call AllocAry( InitInp%AFindx, InitInp%numBladeNodes, ErrStat2, ErrMsg2 )
-!      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-   call AllocAry( InitInp%zHub, InitInp%numBlades, 'zHub', ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!  call AllocAry( InitInp%zLocal, InitInp%numBladeNodes, InitInp%numBlades, ErrStat2, ErrMsg2 )
-!      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-   call AllocAry( InitInp%zTip, InitInp%numBlades, 'zTip', ErrStat2, ErrMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   call AllocAry(InitInp%chord, InitInp%numBladeNodes,InitInp%numBlades,'chord', ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
+   call AllocAry(InitInp%AFindx,InitInp%numBladeNodes,InitInp%numBlades,'AFindx',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
+   call AllocAry(InitInp%zHub,                        InitInp%numBlades,'zHub',  ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(InitInp%zLocal,InitInp%numBladeNodes,InitInp%numBlades,'zLocal',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
+   call AllocAry(InitInp%zTip,                        InitInp%numBlades,'zTip',  ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    if ( ErrStat >= AbortErrLev ) then
       call Cleanup()
       return
    end if  
       
-!  InitInp%AFindx = InputFileData%BladeProps(1)%BlAFID
    InitInp%zHub   = AD_InitInp%zHub
    InitInp%zTip   = AD_InitInp%zTip
       
-!  do k=1,AD_InitInp%numBlades
-!     do j=1,AD_InitInp%numBladeNodes
-!        InitInp%chord (j,k)  = InputFileData%BladeProps(k)%BlChord(j)
-!        InitInp%zLocal(j,k)  = InputFileData%BladeProps(k)%BlSpn(j) ???? do we need to add rHub?
-!     end do
-!  end do
+  do k=1,InitInp%numBlades
+     do j=1,InitInp%numBladeNodes
+        InitInp%chord (j,k)  = InputFileData%BladeProps(k)%BlChord(j)
+        InitInp%zLocal(j,k)  = InputFileData%BladeProps(k)%BlSpn(j) + InitInp%zHub(k)
+        InitInp%AFindx(j,k)  = InputFileData%BladeProps(k)%BlAFID(j)
+     end do
+  end do
    
    InitInp%UA_Flag = InputFileData%AFAeroBladeMod == 2
    
@@ -1708,7 +1699,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, AD_InitInp, InitInp, u, p, x, xd, z, 
       call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
          
    if (.not. equalRealNos(Interval, InputFileData%DTAero) ) &
-      call SetErrStat( ErrID_Fatal, "DTAero was changed in Init_BEMTmodule; this is not allowed.", ErrStat2, ErrMsg2, RoutineName)
+      call SetErrStat( ErrID_Fatal, "DTAero was changed in Init_BEMTmodule(); this is not allowed.", ErrStat2, ErrMsg2, RoutineName)
    
    call Cleanup()
    return

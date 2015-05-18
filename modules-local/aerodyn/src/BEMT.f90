@@ -20,7 +20,7 @@ module BEMT
    type(ProgDesc), parameter  :: BEMT_Ver = ProgDesc( 'BEM', 'v0.01.00a-gjh', '10-July-2014' )
    character(*),   parameter  :: BEMT_Nickname = 'BEM'
    integer(IntKi), parameter  :: BEMT_numChanPerNode = 13  ! TODO This needs to be set dynamically ?? 9/18/14 GJH
-   !REAL(ReKi), PARAMETER     ::epsilon = 1e-6
+   
    ! ..... Public Subroutines ...................................................................................................
 
    public :: BEMT_Init                           ! Initialization routine
@@ -135,10 +135,10 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
       return
    end if 
    
-   allocate ( p%AFindx(p%numBladeNodes), STAT = errStat2 )
+   allocate ( p%AFindx(p%numBladeNodes,p%numBlades), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
       errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for p%chord array.'
+      errMsg2  = 'Error allocating memory for p%AFindx array.'
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_SetParameters' )
       return
    end if 
@@ -159,10 +159,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
       return
    end if 
    
-      ! TODO: I belive we need to extend this so that each blade could be a different set of airfoil tables!  GJH 5/4/2015
-   do i=1,p%numBladeNodes       
-      p%AFindx(i) = InitInp%AFindx(i) 
-   end do
+   p%AFindx = InitInp%AFindx 
    
       ! Compute the tip and hub loss constants using the distances along the blade (provided as input for now) TODO: See how this really needs to be handled. GJH 
    do j=1,p%numBlades
@@ -827,7 +824,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                
                if ( p%SkewWakeMod < 2 ) then
                   
-                  call BEMT_UnCoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, u%lambda, AFInfo(p%AFIndx(i)), u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), &
+                  call BEMT_UnCoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, u%lambda, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), &
                               u%Vx(i,j), u%Vy(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
                               p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                               p%numReIterations, p%maxIndIterations, p%aTol,  &
@@ -836,7 +833,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                   
                else if ( p%SkewWakeMod == 2 ) then
          
-                  CALL BEMT_CoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, u%lambda, AFInfo(p%AFIndx(i)), u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), &
+                  CALL BEMT_CoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, u%lambda, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), &
                               u%Vx(i,j), u%Vy(i,j), u%Vinf(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
                               p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                               p%maxIndIterations, p%aTol, z%axInduction(i,j), z%tanInduction(i,j), errStat, errMsg)       
@@ -851,7 +848,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                   
                   if ( p%SkewWakeMod < 2 ) then
                      call BEMTU_Wind(z%phi(i,j), 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u_UA%alpha,  u_UA%U, u_UA%Re)
-                     !BEMTU_InductionWithResidual(z%phi(i,j), u%psi(j), u%chi0, 1, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), lambda,  AFInfo(p%AFIndx(i)), &
+                     !BEMTU_InductionWithResidual(z%phi(i,j), u%psi(j), u%chi0, 1, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), lambda,  AFInfo(p%AFIndx(i,j)), &
                      !         u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%SkewWakeMod,  &
                      !         p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                      !         u_UA%alpha, u_UA%Re, Cl, Cd, Cx, Cy, axInduction, tanInduction, chi, ErrStat, ErrMsg)
@@ -860,7 +857,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                      u_UA%U = BEMTC_Wind(z%axInduction(i,j), z%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u%chi0, u%psi(j), phi, u_UA%alpha, u_UA%Re, chi)
                   end if
 !bjj: u_UA%U is zero, which is causing division-by-zero errors later                  
-                  call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i)), errStat, errMsg )
+                  call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), errStat, errMsg )
                   
                end if
                
@@ -878,7 +875,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                      ! Set the active blade element for UnsteadyAero
                   OtherState%UA%iBladeNode = i
                   OtherState%UA%iBlade     = j
-                  call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i)), errStat, errMsg ) 
+                  call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), errStat, errMsg ) 
                end if
             end do
          end do
@@ -994,14 +991,14 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
          if ( p%useInduction ) then
             r = u%rlocal(i,j)
             if (p%skewWakeMod < 2) then
-               fzero = BEMTU_InductionWithResidual(y%phi(i,j), psi, chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i)), &
+               fzero = BEMTU_InductionWithResidual(y%phi(i,j), psi, chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i,j)), &
                               Vx, Vy, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
                               p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                               y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), errStat, errMsg)
             else if (p%skewWakeMod == 2) then
                y%axInduction(i,j)  = z%axInduction(i,j)
                y%tanInduction(i,j) = z%tanInduction(i,j)
-               coupledResidual = BEMTC_Elemental( z%axInduction(i,j), z%tanInduction(i,j), psi, chi0, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i)), &
+               coupledResidual = BEMTC_Elemental( z%axInduction(i,j), z%tanInduction(i,j), psi, chi0, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i,j)), &
                               Vx, Vy, Vinf, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
                               p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                               y%phi(i,j), y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%chi(i,j), ErrStat, ErrMsg)
@@ -1010,7 +1007,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
             y%axInduction(i,j)  = 0.0_ReKi
             y%tanInduction(i,j) = 0.0_ReKi
             if (p%skewWakeMod < 2) then
-               call ComputeAirfoilCoefs( y%phi(i,j), 0.0_ReKi, 0.0_ReKi, Vx, Vy, p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, .TRUE., .TRUE., AFInfo(p%AFindx(i)), &
+               call ComputeAirfoilCoefs( y%phi(i,j), 0.0_ReKi, 0.0_ReKi, Vx, Vy, p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, .TRUE., .TRUE., AFInfo(p%AFindx(i,j)), &
                                          p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                                          y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), errStat, errMsg )       
                ! NEED TO COMPUTE AND RETURN chi as an output in this case
@@ -1166,7 +1163,7 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_res
                ! Solve for the constraint states here:
          
             IF ( p%SkewWakeMod < 2 ) THEN
-               z%phi(i,j) = UncoupledErrFn(z%phi(i,j), u%psi(j), u%chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i)), &
+               z%phi(i,j) = UncoupledErrFn(z%phi(i,j), u%psi(j), u%chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i,j)), &
                                  u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
                                  p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                                  ErrStat, ErrMsg)
