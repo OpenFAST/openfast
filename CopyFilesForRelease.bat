@@ -85,10 +85,10 @@ SET list_of_files=%src_folder%/FAST_SourceFiles.txt
 @CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
-:AeroDyn
-ECHO AeroDyn
-SET src_folder=%AD_Loc%\..
-SET dst_folder=%depend_dir%\AeroDyn
+:AeroDyn14
+ECHO AeroDyn14
+SET src_folder=%AD14_Loc%\..
+SET dst_folder=%depend_dir%\AeroDyn14
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
 @CALL :CopyFileList
