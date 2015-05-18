@@ -6,7 +6,7 @@
 MODULE AeroSubs
 
    USE                     NWTC_Library
-   USE                     AeroDyn_Types
+   USE                     AeroDyn14_Types
 
    USE AeroGenSubs, ONLY : MaxInfl
 
@@ -28,20 +28,20 @@ CONTAINS
 
 ! Updated version that uses FAST Interface types
 !====================================================================================================
-SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
+SUBROUTINE AD14_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
 !====================================================================================================
    USE                           AeroGenSubs, ONLY: AllocArrays
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_InitInputType),       INTENT(INOUT)  :: InitInp
-   TYPE(AD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
-   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
-   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
-   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O !therState  ! Initial other/optimization states
-   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMess
+   TYPE(AD14_InitInputType),       INTENT(INOUT)  :: InitInp
+   TYPE(AD14_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
+   TYPE(AD14_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
+   TYPE(AD14_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+   TYPE(AD14_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O !therState  ! Initial other/optimization states
+   TYPE(AD14_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMess
 
       ! Local Variables:
 
@@ -56,6 +56,7 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    CHARACTER(1024)            :: LINE
    CHARACTER(1024)            :: FilePath             ! The path name of the AeroDyn input file (so files listed in it can be defined relative to the main input file location)
    CHARACTER(ErrMsgLen)       :: ErrMessLcl
+   character(*), parameter    :: RoutineName = 'AD14_GetInput'
 
    !bjj: error handling here needs to be fixed! (we overwrite any non-AbortErrLev errors)
    
@@ -70,7 +71,7 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    ! Open the AeroDyn input file
    !-------------------------------------------------------------------------------------------------
    CALL OpenFInpFile(UnIn, TRIM(InitInp%ADFileName), ErrStatLcl, ErrMessLcl)
-   CALL SetErrStat(ErrStatLcl, ErrMessLcl,ErrStat, ErrMess,'AD_GetInput')
+   CALL SetErrStat(ErrStatLcl, ErrMessLcl,ErrStat, ErrMess,RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
       CLOSE(UnIn)
       RETURN
@@ -90,11 +91,11 @@ SUBROUTINE AD_GetInput(InitInp, P, x, xd, z, O, y, ErrStat, ErrMess )
    !-------------------------------------------------------------------------------------------------
 
    CALL ReadCom( UnIn, InitInp%ADFileName, 'Header', ErrStatLcl, ErrMessLcl )
-      CALL SetErrStat(ErrStatLcl, ErrMessLcl,ErrStat, ErrMess,'AD_GetInput')   
+      CALL SetErrStat(ErrStatLcl, ErrMessLcl,ErrStat, ErrMess,RoutineName)   
    
       ! Read in the title line
    CALL ReadStr( UnIn, InitInp%ADFileName, InitInp%Title, VarName='Title', VarDescr='File title', ErrStat=ErrStatLcl, ErrMsg=ErrMessLcl)
-   CALL SetErrStat(ErrStatLcl, ErrMessLcl,ErrStat, ErrMess,'AD_GetInput')
+   CALL SetErrStat(ErrStatLcl, ErrMessLcl,ErrStat, ErrMess,RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
       CLOSE(UnIn)
       RETURN
@@ -713,20 +714,20 @@ contains
    
    END SUBROUTINE CleanUp
 
-END SUBROUTINE AD_GetInput
+END SUBROUTINE AD14_GetInput
 !====================================================================================================
-   SUBROUTINE ADOut(InitInp, P, O, AD_Ver, FileName, ErrStat, ErrMess )
+   SUBROUTINE ADOut(InitInp, P, O, AD14_Ver, FileName, ErrStat, ErrMess )
  !  used to output data to a summary file
  ! *****************************************************
    IMPLICIT                    NONE
       ! Passed Variables:
-   TYPE(AD_InitInputType),       INTENT(IN   )  :: InitInp
-   TYPE(AD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(IN   )  :: O !therState ! Initial other/optimization states
-   TYPE(ProgDesc),               INTENT(IN   )  :: AD_ver
-   INTEGER,                      INTENT(  OUT)  :: ErrStat
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMess
-   CHARACTER(*),                 INTENT(IN   )  :: FileName
+   TYPE(AD14_InitInputType),       INTENT(IN   )  :: InitInp
+   TYPE(AD14_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(IN   )  :: O !therState ! Initial other/optimization states
+   TYPE(ProgDesc),                 INTENT(IN   )  :: AD14_ver
+   INTEGER,                        INTENT(  OUT)  :: ErrStat
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMess
+   CHARACTER(*),                   INTENT(IN   )  :: FileName
 
    
 
@@ -762,7 +763,7 @@ END SUBROUTINE AD_GetInput
       END IF
 
 
-      WRITE (UnOut,"(/A)")  'This file was generated by '//TRIM(GetNVD(AD_Ver))//&
+      WRITE (UnOut,"(/A)")  'This file was generated by '//TRIM(GetNVD(AD14_Ver))//&
                                 ' on '//CurDate()//' at '//CurTime()//'.'
 
 
@@ -988,15 +989,15 @@ END SUBROUTINE ADOut
    USE                           AeroGenSubs, ONLY: AllocArrays
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_InitInputType),       INTENT(INOUT)  :: InitInp
-   TYPE(AD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
-   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
-   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
-   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
-   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMess
+   TYPE(AD14_InitInputType),       INTENT(INOUT)  :: InitInp
+   TYPE(AD14_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
+   TYPE(AD14_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
+   TYPE(AD14_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+   TYPE(AD14_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMess
 
    ! Local Variables:
 
@@ -1377,15 +1378,15 @@ END SUBROUTINE READFL
    IMPLICIT                      NONE
       ! Passed Variables:
    INTEGER,                      INTENT(IN)     :: UnIn
-   TYPE(AD_InitInputType),       INTENT(INOUT)  :: InitInp
-   TYPE(AD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
-   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
-   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
-   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
-   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
-   INTEGER, INTENT(OUT)                   :: ErrStat
-   CHARACTER(*), INTENT(OUT)              :: ErrMess
+   TYPE(AD14_InitInputType),       INTENT(INOUT)  :: InitInp
+   TYPE(AD14_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
+   TYPE(AD14_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
+   TYPE(AD14_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+   TYPE(AD14_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   INTEGER, INTENT(OUT)                          :: ErrStat
+   CHARACTER(*), INTENT(OUT)                     :: ErrMess
 
       ! Local Variables:
 
@@ -1636,8 +1637,8 @@ END SUBROUTINE READTwr
 !====================================================================================================
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -1821,8 +1822,8 @@ END SUBROUTINE ELEMFRC
  ! ***************************************************
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN   )  :: p            ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O !therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),     INTENT(IN   )  :: p            ! Parameters
+   TYPE(AD14_OtherStateType),    INTENT(INOUT)  :: O !therState ! Initial other/optimization states
 
    REAL(ReKi),                   INTENT(IN   )  :: RLOCAL
    REAL(ReKi),                   INTENT(IN   )  :: VNB
@@ -1999,8 +2000,8 @@ END SUBROUTINE VIND
  ! ***************************************************
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -2048,8 +2049,8 @@ END SUBROUTINE VINDERR
  ! ******************************************************
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -2191,8 +2192,8 @@ END FUNCTION GetReynolds
  ! ***************************************************
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -2313,8 +2314,8 @@ SUBROUTINE GetTwrInfluence ( P, O, ErrStat, ErrMess,      &
 
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)     :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)     :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -2514,8 +2515,8 @@ SUBROUTINE GetTwrSectProp ( P, O, ErrStat, ErrMess,      &
 
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)     :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)     :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -2617,13 +2618,13 @@ FUNCTION AD_WindVelocityWithDisturbance(  Time, u, p, x, xd, z, O, y, ErrStat, E
       ! Passed Variables:
 
       REAL(DbKi),                   INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(AD_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
-      TYPE(AD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(AD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(AD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(AD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O !therState ! Other/optimization states
-      TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at Time (Input only so that mesh con-
+      TYPE(AD14_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
+      TYPE(AD14_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+      TYPE(AD14_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
+      TYPE(AD14_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
+      TYPE(AD14_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
+      TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O !therState ! Other/optimization states
+      TYPE(AD14_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at Time (Input only so that mesh con-
                                                                     !   nectivity information does not have to be recalculated)
       INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat  ! Error status of the operation
       CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg   ! Error message if ErrStat /= ErrID_None
@@ -2737,8 +2738,8 @@ SUBROUTINE DiskVel ( Time, P, O, AvgInfVel, ErrStat, ErrMess )
    IMPLICIT                      NONE
       ! Passed Variables:
    REAL(DbKi), INTENT(IN) :: Time
-   TYPE(AD_ParameterType),       INTENT(IN)     :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),     INTENT(IN)     :: p           ! Parameters
+   TYPE(AD14_OtherStateType),    INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    REAL(ReKi),                   INTENT(IN)     :: AvgInfVel(3) !some sort of averaged wind speed (currently depends on wind file type)
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
@@ -2798,10 +2799,6 @@ SUBROUTINE TwrAeroLoads ( p, Node, NodeDCMGbl, NodeVelGbl, NodeWindVelGbl, NodeF
       ! This routine calcualtes the aeroynamic loads of all tower nodes above the mean sea level.
       ! It doesn't worry about whether or not a node is below water.  The aero loads will be far less than the hydro loads.
 
-
-   USE                                          AeroDyn_Types
-   USE                                          NWTC_Library
-
    IMPLICIT                                     NONE
 
 
@@ -2814,7 +2811,7 @@ SUBROUTINE TwrAeroLoads ( p, Node, NodeDCMGbl, NodeVelGbl, NodeWindVelGbl, NodeF
 
    INTEGER,    INTENT(IN )                   :: Node                          ! Tower node index.
 
-   TYPE(AD_ParameterType), INTENT(IN)        :: p                             ! The AeroDyn parameters.
+   TYPE(AD14_ParameterType), INTENT(IN)      :: p                             ! The AeroDyn parameters.
 
 
       ! Local variables.
@@ -2901,8 +2898,8 @@ END SUBROUTINE TwrAeroLoads
 !USE                           Wind
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -2945,8 +2942,8 @@ END SUBROUTINE VNMOD
 !USE                           Beddoes
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -3105,7 +3102,7 @@ END SUBROUTINE BEDINIT
  ! *****************************************************
 !USE            Beddoes
    IMPLICIT                      NONE
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
 
 O%Beddoes%ANE1    = O%Beddoes%ANE
 O%Beddoes%ADOT1   = O%Beddoes%ADOT
@@ -3145,12 +3142,12 @@ END SUBROUTINE BedUpdate
 !USE                           Switch
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
-   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
-   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
-   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
-   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   TYPE(AD14_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
+   TYPE(AD14_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
+   TYPE(AD14_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+   TYPE(AD14_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -3259,8 +3256,8 @@ END SUBROUTINE BEDDAT
 
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -3387,8 +3384,8 @@ END SUBROUTINE BeddoesModel
 
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),   INTENT(IN)      :: p           ! Parameters
-   TYPE(AD_OtherStateType),  INTENT(INOUT)   :: O !therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),   INTENT(IN)      :: p           ! Parameters
+   TYPE(AD14_OtherStateType),  INTENT(INOUT)   :: O !therState ! Initial other/optimization states
    INTEGER(IntKi),           INTENT(  OUT)   :: ErrStat
    CHARACTER(*),             INTENT(  OUT)   :: ErrMess
 
@@ -3496,8 +3493,8 @@ END SUBROUTINE ATTACH
 
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -3722,8 +3719,8 @@ END SUBROUTINE SEPAR
 
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -3830,8 +3827,8 @@ END SUBROUTINE VORTEX
 !USE                           Airfoil
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -4009,8 +4006,8 @@ END FUNCTION SAT
    IMPLICIT                      NONE
       ! Passed Variables:
    REAL(DbKi),                   INTENT(IN)  :: Time
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -4068,8 +4065,8 @@ END SUBROUTINE Inflow
  ! **************************************
    IMPLICIT                      NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
 
    REAL(ReKi),INTENT(IN)      :: DFN
    REAL(ReKi),INTENT(IN)      :: DFT
@@ -4158,8 +4155,8 @@ END SUBROUTINE GetRM
 
    IMPLICIT       NONE
       ! Passed Variables:
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -4195,8 +4192,8 @@ END SUBROUTINE GetPhiLq
  ! *************************************************************
       IMPLICIT                      NONE
 
-      TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-      TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+      TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+      TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
       INTEGER, INTENT(OUT)                   :: ErrStat
       CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -4420,8 +4417,8 @@ END SUBROUTINE infinit
 
    IMPLICIT       NONE
 
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
    INTEGER     :: i
@@ -4465,12 +4462,12 @@ END SUBROUTINE infupdt
 
    IMPLICIT                      NONE
    REAL(DbKi),                   INTENT(IN)  :: Time
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
-   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
-   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
-   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
+   TYPE(AD14_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+   TYPE(AD14_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -4538,8 +4535,8 @@ END SUBROUTINE DynDebug
  !  parameters using Generalized Dynamic Wake Theory.
  ! **********************************************************************
    IMPLICIT                      NONE
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -4758,8 +4755,8 @@ END SUBROUTINE infdist
  ! *************************************************************
 
    IMPLICIT                      NONE
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 
@@ -4915,8 +4912,8 @@ END SUBROUTINE ABPRECOR
 
 IMPLICIT                      NONE
    ! Passed Variables:
-TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O !therState ! Initial other/optimization states
-TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
+TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O !therState ! Initial other/optimization states
+TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
 INTEGER   ,INTENT(IN)      :: matrixMode
 
 INTEGER(IntKi),   INTENT(OUT)  :: ErrStat      ! Error status of the operation
@@ -5448,12 +5445,12 @@ SUBROUTINE CheckRComp( P, x, xd, z, O, y, ErrStat, ErrMess, &
 ! This routine checks to see if RElm(:) and DR(:) are compatible within a millimeter;
 !----------------------------------------------------------------------------------------------------
    IMPLICIT                      NONE
-   TYPE(AD_ParameterType),       INTENT(IN)  :: p           ! Parameters
-   TYPE(AD_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
-   TYPE(AD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
-   TYPE(AD_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
-   TYPE(AD_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
-   TYPE(AD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   TYPE(AD14_ParameterType),       INTENT(IN)  :: p           ! Parameters
+   TYPE(AD14_ContinuousStateType), INTENT(INOUT)  :: x           ! Initial continuous states
+   TYPE(AD14_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Initial discrete states
+   TYPE(AD14_ConstraintStateType), INTENT(INOUT)  :: z           ! Initial guess of the constraint states
+   TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Initial other/optimization states
+   TYPE(AD14_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated;
    INTEGER, INTENT(OUT)                   :: ErrStat
    CHARACTER(*), INTENT(OUT)              :: ErrMess
 

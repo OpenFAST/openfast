@@ -70,7 +70,6 @@ CONTAINS
  !  IMPLICIT NONE
    
   ! TYPE(DWM_ConstraintStateType),  INTENT(INOUT)   :: z
-   !TYPE(AD_ParameterType),         INTENT(IN   )   :: X
    !TYPE(DWM_OutputType),           INTENT(INOUT)   :: y
    
     !  ! Internal variables
@@ -165,7 +164,6 @@ END SUBROUTINE turbine_average_velocity
 !..................................................................................................................................    
   ! IMPLICIT NONE
    !TYPE(DWM_ConstraintStateType),       INTENT(INOUT)   :: z
-   !TYPE(AD_ParameterType),   INTENT(IN   )   :: X
      
     !  ! Internal variables 
    !REAL(ReKi),ALLOCATEBLE           ::  array_velocity(:)
@@ -218,7 +216,6 @@ END SUBROUTINE pass_velocity
   ! IMPLICIT NONE
   ! TYPE(DWM_OutputType),       INTENT(INOUT)   :: y
   ! TYPE(DWM_ConstraintStateType),       INTENT(INOUT)   :: z
-  ! TYPE(AD_ParameterType),   INTENT(IN   )   :: X  
     
      ! ! Internal variables
    !REAL(ReKi)                     ::  thrust_coefficient          ( X%Element%NELM )
