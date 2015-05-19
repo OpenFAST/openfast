@@ -1,10 +1,8 @@
 module AeroDyn
     
    use NWTC_Library
-   use BEMT
-   use BEMT_Types
    use AeroDyn_Types
-   use AirfoilInfo_Types
+   use BEMT
    use AirfoilInfo
   
 
@@ -1388,7 +1386,7 @@ CONTAINS
    ! This subroutine cleans up local variables and closes files
    !...............................................................................................................................
 
-      IF (UnIn > 0) RETURN
+      IF (UnIn > 0) CLOSE(UnIn)
 
    END SUBROUTINE Cleanup
 
