@@ -1368,7 +1368,7 @@ subroutine BEMT_CoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, AFI
 !  Since this subroutine uses the hybrd_fcn module, we cannot include it within 
 !    the BEMTCoupled module, because it would generate circular references
 !------------------------------------------------------------------------------
-   use hybrd_fcn
+   use nwtc_bemt_minpack
 
    integer,                intent(in   ) :: numBlades
    integer,                intent(in   ) :: numBladeNodes
@@ -1464,7 +1464,7 @@ subroutine BEMT_CoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, AFI
    call UA_CopyOtherState( OtherState_UA, fcnArgs%OtherState_UA, MESH_NEWCOPY, errStat, errMsg )
    
       ! call root finding hybrd1 alogorithm
-   call hybrd1(2, x, fvec, aTol, info, wa, lwa, fcnArgs )
+   call NWTC_MINPACK_hybrd1(2, x, fvec, aTol, info, wa, lwa, fcnArgs )
    
    deallocate(wa)
    
