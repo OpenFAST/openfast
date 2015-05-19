@@ -342,7 +342,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          
       
       ! Validate the inputs
-   call ValidateInputData( InputFileData, p%NumBlades, InitInp%MustUseBEMT, ErrStat2, ErrMsg2 )
+   call ValidateInputData( InputFileData, p%NumBlades, .FALSE., ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -1416,8 +1416,8 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, MustUseBEMT, ErrStat, ErrMsg
    ErrMsg  = ""
    
    
-   if ( MustUseBEMT .AND. InputFileData%WakeMod /= WakeMod_BEMT) &
-      call SetErrStat ( ErrID_Fatal, 'AeroDyn must use BEMT model for simulations with this driver code.', ErrStat, ErrMsg, RoutineName )
+   !if ( MustUseBEMT .AND. InputFileData%WakeMod /= WakeMod_BEMT) &
+   !   call SetErrStat ( ErrID_Fatal, 'AeroDyn must use BEMT model for simulations with this driver code.', ErrStat, ErrMsg, RoutineName )
    
    
    if (InputFileData%DTAero <= 0.0)  call SetErrStat ( ErrID_Fatal, 'DTAero must be greater than zero.', ErrStat, ErrMsg, RoutineName )

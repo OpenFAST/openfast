@@ -24,7 +24,7 @@ usefrom	UnsteadyAero_Registry.txt
 typedef	AeroDyn/AD	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
 typedef	^	InitInputType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
-typedef	^	InitInputType	LOGICAL	MustUseBEMT	-	-	.False.	"whether or not the BEMT model is required (i.e., WT_Perf)"	(flag)
+#typedef	^	InitInputType	LOGICAL	MustUseBEMT	-	-	.False.	"whether or not the BEMT model is required (i.e., WT_Perf)"	(flag)
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
