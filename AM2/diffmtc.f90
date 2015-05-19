@@ -11,8 +11,8 @@
 !       npts(np+1)     : location of the (np+1) GLL points
 !
 !     OUTPUT
-!       dPhis(np+1,ns) : derivative evaluated at ns points
-!       ps(np+1,ns)    : (np+1) shape functions evaluated at ns points 
+!       hpx(np+1,ns) : derivative evaluated at ns points
+!       hhx(np+1,ns)    : (np+1) shape functions evaluated at ns points 
 
       INTEGER(IntKi),INTENT(IN):: np,ns,igp
       REAL(ReKi),INTENT(IN):: spts(:)
