@@ -195,10 +195,9 @@ REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     
       
          ! Open the WAMIT inputs data file
       CALL GetNewUnit( UnWAMITInp ) 
-      CALL OpenFInpFile ( UnWAMITInp, drvrInitInp%WAMITInputsFile, ErrStat   )  ! Open WAMIT inputs file.
+      CALL OpenFInpFile ( UnWAMITInp, drvrInitInp%WAMITInputsFile, ErrStat, ErrMsg   )  ! Open WAMIT inputs file.
       
       IF ( ErrStat /= 0 ) THEN
-         ErrMsg = '  WAMIT Input time-series file not found'
          CALL WrScr( ErrMsg )
          STOP
       END IF
@@ -229,10 +228,10 @@ REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     
       
          ! Open the Morison inputs data file
       CALL GetNewUnit( UnMorisonInp ) 
-      CALL OpenFInpFile ( UnMorisonInp, drvrInitInp%MorisonInputsFile, ErrStat   )  ! Open Morison inputs file.
+      CALL OpenFInpFile ( UnMorisonInp, drvrInitInp%MorisonInputsFile, ErrStat, ErrMsg   )  ! Open Morison inputs file.
       
       IF ( ErrStat /= 0 ) THEN
-         ErrMsg = '  Morison Input time-series file not found'
+         CALL WrScr('Morison Input time-series file not found')
          CALL WrScr( ErrMsg )
          STOP
       END IF
@@ -671,7 +670,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    FileName = TRIM(inputFile)
    
    CALL GetNewUnit( UnIn )   
-   CALL OpenFInpFile( UnIn, FileName, ErrStat )
+   CALL OpenFInpFile( UnIn, FileName, ErrStat, ErrMsg )
    
    IF ( ErrStat /= ErrID_None ) THEN
       ErrMsg  = ' Failed to open HydroDyn Driver input file: '//FileName
@@ -688,20 +687,18 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    ! File header
    !-------------------------------------------------------------------------------------------------
    
-   CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 1', ErrStat )
-   
+   CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 1', ErrStat, ErrMsg )
+
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read HydroDyn Driver input file header line 1.'
       ErrStat = ErrID_Fatal
       CLOSE( UnIn )
       RETURN
    END IF
 
 
-   CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 2', ErrStat )
+   CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 2', ErrStat, ErrMsg )
    
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read HydroDyn Driver input file header line 2.'
       ErrStat = ErrID_Fatal
       CLOSE( UnIn )
       RETURN
@@ -710,10 +707,9 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    
      ! Echo Input Files.
       
-   CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat )
+   CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo Input', ErrStat, ErrMsg )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Echo parameter.'
       ErrStat = ErrID_Fatal
       CLOSE( UnIn )
       RETURN
@@ -730,7 +726,6 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       CALL GetNewUnit( UnEchoLocal )   
       CALL OpenEcho ( UnEchoLocal, EchoFile, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN
-         !ErrMsg  = ' Failed to open Echo file.'
          ErrStat = ErrID_Fatal
          CLOSE( UnIn )
          RETURN
@@ -741,7 +736,6 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 1', ErrStat, ErrMsg, UnEchoLocal )
    
       IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read HydroDyn Driver input file header line 1.'
          ErrStat = ErrID_Fatal
          CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
          CLOSE( UnIn )
@@ -752,7 +746,6 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 2', ErrStat, ErrMsg, UnEchoLocal )
    
       IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read HydroDyn Driver input file header line 2.'
          ErrStat = ErrID_Fatal
          CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
          CLOSE( UnIn )
@@ -765,7 +758,6 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat, ErrMsg, UnEchoLocal )
       !WRITE (UnEchoLocal,Frmt      ) InitInp%Echo, 'Echo', 'Echo input file'
       IF ( ErrStat /= ErrID_None ) THEN
-         ErrMsg  = ' Failed to read Echo parameter.'
          ErrStat = ErrID_Fatal
          CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
          CLOSE( UnIn )
@@ -782,7 +774,6 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    CALL ReadCom( UnIn, FileName, 'Environmental conditions header', ErrStat, ErrMsg, UnEchoLocal )
    
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Comment line.'
       ErrStat = ErrID_Fatal
       CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
       CLOSE( UnIn )
@@ -795,7 +786,6 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    CALL ReadVar ( UnIn, FileName, InitInp%Gravity, 'Gravity', 'Gravity', ErrStat, ErrMsg, UnEchoLocal )
 
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Gravity parameter.'
       ErrStat = ErrID_Fatal
       CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
       CLOSE( UnIn )
@@ -812,7 +802,6 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    CALL ReadCom( UnIn, FileName, 'HYDRODYN header', ErrStat, ErrMsg, UnEchoLocal )
    
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read Comment line.'
       ErrStat = ErrID_Fatal
       CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
       CLOSE( UnIn )
@@ -1117,9 +1106,8 @@ CALL ReadCom( UnIn, FileName, 'Waves multipoint elevation output header', ErrSta
    END IF
 
       !> WaveElevSeriesFlag   -- are we doing multipoint wave elevation output?
-   CALL ReadVar ( UnIn, FileName, InitInp%WaveElevSeriesFlag, 'WaveElevSeriesFlag', 'WaveElevSeriesFlag', ErrStat )
+   CALL ReadVar ( UnIn, FileName, InitInp%WaveElevSeriesFlag, 'WaveElevSeriesFlag', 'WaveElevSeriesFlag', ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to read WaveElevSeries parameter.'
       ErrStat = ErrID_Fatal
       CLOSE( UnIn )
       RETURN
