@@ -1748,7 +1748,7 @@ gen_ExtrapInterp(FILE *fp, const node_t * ModName, char * typnm, char * typnmlon
    char nonick[NAMELEN];
    char *ddtname; char uy[2];
    node_t *q, *r;
-   int i, j, max_ndims, max_nrecurs, max_alloc_ndims;
+   int max_ndims, max_nrecurs, max_alloc_ndims;
 
    if (!strcmp(make_lower_temp(typnm), "output")){
       strcpy(uy, "y");
@@ -2296,10 +2296,12 @@ gen_module_files ( char * dirname, char * prog_ver )
         { sprintf(fname,"%s/%s_Types.f90",dirname,p->name) ; }
       else
         { sprintf(fname,"%s_Types.f90",p->name) ; }
+      sprintf(fname2, "%s_Types.f90", p->name);
+
       fprintf(stderr,"generating %s\n",fname) ;
 
       if ((fp = fopen( fname , "w" )) == NULL ) return(1) ;
-      print_warning(fp,fname, "") ;
+      print_warning(fp,fname2, "");
 
       if ( sw_ccode == 1 ) {
 
@@ -2312,7 +2314,7 @@ gen_module_files ( char * dirname, char * prog_ver )
         if ((fph = fopen( fname , "w" )) == NULL ) return(1) ;
 
 
-        print_warning(fph,fname, "//") ;
+        print_warning(fph,fname2, "//") ;
 
         fprintf(fph,"\n#ifndef _%s_TYPES_H\n",p->name);
         fprintf(fph,"#define _%s_TYPES_H\n\n",p->name);
