@@ -54,7 +54,7 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
-   thisprog_ver = "FAST Registry (v2.08.00, 8-May-2015)";
+   thisprog_ver = "FAST Registry (v2.08.01, 21-May-2015)";
 
   fprintf(stderr,"\n") ;
   fprintf(stderr,"----- %s --------------\n", thisprog_ver) ;
@@ -310,7 +310,7 @@ int
 matches( char * str , char * match )   // both must be null terminated
 {
    char * p, * q ;
-   int n, retval ;
+   int n  ;
 
    for ( n = 0, p = str, q = match ;  (*p && *q) ; p++, q++, n++ )
    {
