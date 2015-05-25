@@ -85,8 +85,9 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
    !Init_UA_Data%OutSFmt         =
    Init_UA_Data%NumOuts         = 0
    !Init_UA_Data%OutList         = 
-   Init_UA_Data%DSMod           = 1  
-   Init_UA_Data%a_s             = 340.29 ! m/s  
+   Init_UA_Data%UAMod           = InitInp%UAMod  
+   Init_UA_Data%Flookup         = InitInp%Flookup
+   Init_UA_Data%a_s             = InitInp%a_s ! m/s  
    
 end subroutine BEMT_Set_UA_InitData
 

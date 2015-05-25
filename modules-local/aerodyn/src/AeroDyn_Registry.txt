@@ -25,6 +25,10 @@ typedef	AeroDyn/AD	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the in
 typedef	^	InitInputType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 #typedef	^	InitInputType	LOGICAL	MustUseBEMT	-	-	.False.	"whether or not the BEMT model is required (i.e., WT_Perf)"	(flag)
+typedef	^	InitInputType	ReKi	HubPosition	{3}	-	-	"X-Y-Z reference position of hub"	m
+typedef	^	InitInputType	ReKi	HubOrientation	{3}{3}	-	-	"DCM reference orientation of hub"	-
+typedef	^	InitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
+typedef	^	InitInputType	ReKi	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
@@ -113,7 +117,12 @@ typedef	^	OtherStateType	BEMT_InputType	BEMT_u	-	-	-	"Inputs to the BEMT module"
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT}"	-
-typedef	^	ParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"
+typedef	^	ParameterType	LOGICAL	TwrPotent	-	-	-	"Calculate tower influence on wind based on potential flow around the tower?"	flag
+typedef	^	ParameterType	LOGICAL	TwrShadow	-	-	-	"Calculate downstream tower shadow?"	flag
+typedef	^	ParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
+typedef	^	ParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"	-
+typedef	^	ParameterType	IntKi	NumBlNds	-	-	-	"Number of nodes on each blade"	-
+typedef	^	ParameterType	IntKi	NumTwrNds	-	-	-	"Number of nodes on the tower"	-
 typedef	^	ParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	ParameterType	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
 typedef	^	ParameterType	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
@@ -130,16 +139,22 @@ typedef	^	ParameterType	OutParmType	OutParam	{:}	-	-	"Names and units (and other
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
-#typedef	^	InputType	MeshType	MeshedInput	-	-	-	"Meshed input data"	-
+typedef	^	InputType	MeshType	TowerMotion	-	-	-	"motion on the tower"	-
+typedef	^	InputType	MeshType	HubMotion	-	-	-	"motion on the hub"	-
+typedef	^	InputType	MeshType	BladeRootMotion	{:}	-	-	"motion on each blade root"	-
+typedef	^	InputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
 # Define inputs that are not on this mesh here:
-
-
+typedef	^	InputType	ReKi	InflowOnBlade	{:}{:}{:}			"U,V,W at elements on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
+typedef	^	InputType	ReKi	InflowOnTower	{:}{:}			"U,V,W at elements on the tower"	m/s
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-#typedef	^	OutputType	MeshType	MeshedOutput	-	-	-	"Meshed output data"	-
+typedef	^	OutputType	MeshType	TowerLoad	-	-	-	"loads on the tower"	-
+typedef	^	OutputType	MeshType	HubLoad	-	-	-	"loads on the hub"	-
+typedef	^	OutputType	MeshType	BladeLoad	{:}	-	-	"loads on each blade"	-
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
+
 
 
 
@@ -155,16 +170,10 @@ typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output f
 #
 #
 # ..... Initialization data .......................................................................................................
-# Define inputs that the initialization routine may need here:
-#   e.g.,  the name of the input file,  the file root name,etc.
-#
-typedef   AeroDyn/AD                   InitInputType                 DbKi                     DT                              -          -         -        "time step" s
-typedef   ^                            InitInputType                 ReKi                     zHub                            {:}        -         -        "Distance to hub for each blade" m
-typedef   ^                            InitInputType                 ReKi                     zTip                            {:}        -         -        "Distance to blade tip, measured along the blade" m
-#
 
 typedef   ^                            InitOutputType                ReKi                     Twist                           {:}{:}        -         -        "Twist at blade node" rad
 typedef   ^                            InitOutputType                ReKi                     rLocal                          {:}{:}        -         -        "Distance to blade node, measured from hub along the blade" m
+typedef   ^                            InitOutputType                ReKi                     RotorRad                         -            -         -        "unconde rotor raduis" m
 
 #
 # ..... Parameters ................................................................................................................
@@ -172,7 +181,6 @@ typedef   ^                            InitOutputType                ReKi       
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
 typedef   ^                            ParameterType                 ReKi                     chord                           {:}{:}     -         -        "Chord length at node" m
-typedef   ^                            ^                             INTEGER                  numBladeNodes                   -          -         -        "Number of blade nodes used in the analysis"        -
 typedef   ^                            ^                             INTEGER                  AFindx                          {:}        -         -        "Index of airfoil data file for blade node location [array of numBladeNodes]"        -
 typedef   ^                            ^                             ReKi                     tipLossConst                    {:}{:}     -         -        "A constant computed during initialization based on B*(zTip-zLocal)/(2*zLocal)" -
 typedef   ^                            ^                             ReKi                     hubLossConst                    {:}{:}     -         -        "A constant computed during initialization based on B*(zLocal-zHub)/(2*zHub)" -
