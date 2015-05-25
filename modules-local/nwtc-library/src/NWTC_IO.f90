@@ -35,7 +35,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.06.00b-bjj', '11-May-2015')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.06.01a-bjj', '25-May-2015')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -4163,7 +4163,7 @@ CONTAINS
 
    IF ( PRESENT(UnEc) )  THEN
       IF ( UnEc > 0 ) &
-         WRITE (UnEc,'(A)')  Comment
+         WRITE (UnEc,'(A)')  TRIM(Comment)
    END IF
 
 
