@@ -5,7 +5,7 @@ module AeroDyn_Driver_Subs
     
    implicit none   
    
-   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'AeroDyn_driver', 'v1.00.00', '22-May-2015' )  ! The version number of this program.
+   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'AeroDyn_driver', 'v1.00.00-bjj', '28-May-2015' )  ! The version number of this program.
                                                     
    contains
 
@@ -58,6 +58,10 @@ subroutine Dvr_Init(DvrData,errStat,errMsg )
    call Dvr_ReadInputFile(inputFile, DvrData, errStat2, errMsg2 )
       call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName) 
 
+      ! validate the inputs
+   call ValidateInputs(DvrData, errStat2, errMsg2)      
+      call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName) 
+      
 end subroutine Dvr_Init 
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
@@ -70,7 +74,8 @@ subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
 
       ! locals
-   integer(IntKi)                              :: k
+   real(reKi)                                  :: angle, theta(3)
+   integer(IntKi)                              :: k   
    integer(IntKi)                              :: errStat2      ! local status of error message
    character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
    character(*), parameter                     :: RoutineName = 'Init_AeroDyn'
@@ -85,7 +90,7 @@ subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
    errMsg  = ''
    
    InitInData%InputFile      = DvrData%AD_InputFile
-   InitInData%NumBlades      = DvrData%numBlade
+   InitInData%NumBlades      = DvrData%numBlades
    InitInData%RootName       = DvrData%outFileData%Root
                         
    
@@ -100,31 +105,42 @@ subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
       return
    end if
       
+   InitInData%HubPosition = (/ DvrData%Overhang * cos(DvrData%shftTilt), 0.0_ReKi, DvrData%HubHt /)
+   theta(1) = 0.0_ReKi
+   theta(2) = -DvrData%shftTilt
+   theta(3) = 0.0_ReKi
+   InitInData%HubOrientation = EulerConstruct( theta )
      
+   
       ! bjj: fix this!
    do k=1,InitInData%numBlades
          
-      InitInData%BladeRootPosition(:,k)  = (/ 0.0_ReKi, 0.0_ReKi, DvrData%hubRad /)
-         
-      !AD_Data%BladeRootOrientation(:,:,k) = 
+      angle = (k-1)*2.0*pi/real(InitInData%numBlades,ReKi)
+      
+      InitInData%BladeRootPosition(1,k)   =  DvrData%hubRad * sin(DvrData%precone)
+      InitInData%BladeRootPosition(2,k)   = -DvrData%hubRad * cos(DvrData%precone) * sin(angle) 
+      InitInData%BladeRootPosition(3,k)   = -DvrData%hubRad * cos(DvrData%precone) * cos(angle) 
+            
+      InitInData%BladeRootPosition(:,k)   = InitInData%HubPosition + matmul( InitInData%BladeRootPosition(:,k), InitInData%HubOrientation ) !bjj: note that the 2nd term is the transpose of jmj's equation, but it works with 1-d arrays in fortran)
+      
+      theta(1) = angle
+      theta(2) = DvrData%precone
+      theta(3) = 0.0_ReKi
+      InitInData%BladeRootOrientation(:,:,k) = matmul( EulerConstruct( theta ), InitInData%HubOrientation )
+      
    end do
       
-   !AD_Data%HubPosition = 
-   !AD_Data%HubOrientation =
       
-call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, dt, InitOutData, ErrStat2, ErrMsg2 )
+   call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, dt, InitOutData, ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       
       
-   ! move AD initOut data to WTP
-call move_alloc( InitOutData%twist,  DvrData%twist )
-call move_alloc( InitOutData%rLocal, DvrData%rLoc )
-DvrData%RotorRad = InitOutData%RotorRad
-      
-call move_alloc( InitOutData%WriteOutputHdr, DvrData%OutFileData%WriteOutputHdr )
-call move_alloc( InitOutData%WriteOutputUnt, DvrData%OutFileData%WriteOutputUnt )   
+      ! move AD initOut data to AD Driver
+   DvrData%RotorRad = InitOutData%RotorRad      
+   call move_alloc( InitOutData%WriteOutputHdr, DvrData%OutFileData%WriteOutputHdr )
+   call move_alloc( InitOutData%WriteOutputUnt, DvrData%OutFileData%WriteOutputUnt )   
      
-DvrData%OutFileData%AD_ver = InitOutData%ver
+   DvrData%OutFileData%AD_ver = InitOutData%ver
    
 contains
    subroutine cleanup()
@@ -146,15 +162,21 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
 
       ! local variables
-   integer(IntKi)                              :: errStat2      ! local status of error message
-   character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   !integer(IntKi)                              :: errStat2      ! local status of error message
+   !character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
    character(*), parameter                     :: RoutineName = 'Set_AD_Inputs'
 
    integer(intKi)                              :: j             ! loop counter for nodes
    integer(intKi)                              :: k             ! loop counter for blades
 
-   real(ReKi)                                  :: psiRotor, velocityHub, deltar
-   real(ReKi)                                  :: z             ! heigh (m)
+   real(ReKi)                                  :: z             ! height (m)
+   !real(ReKi)                                  :: angle
+   real(ReKi)                                  :: theta(3)
+   !real(ReKi)                                  :: orientation(3,3)
+   
+   
+   errStat = ErrID_None
+   errMsg  = ""
    
       time = (nt-1) * DvrData%Cases(iCase)%dT
       AD%inputTime(1) = time
@@ -177,33 +199,38 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
       AD%u(1)%HubMotion%RotationVel(    :,1) = 0.0_ReKi
       
       ! Blade root motions:
-      do k=1,DvrData%numBlade
-         AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) = AD%u(1)%BladeRootMotion(k)%RefOrientation(:,:,1)
+      do k=1,DvrData%numBlades
+         theta(1) = (k-1)*2.0*pi/real(DvrData%numBlades,ReKi) + time * DvrData%Cases(iCase)%RotSpeed
+         theta(2) = DvrData%precone
+         theta(3) = 0.0
+         
+         !AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) = AD%u(1)%BladeRootMotion(k)%RefOrientation(:,:,1)
+         AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) = matmul( EulerConstruct(theta), AD%u(1)%HubMotion%Orientation(  :,:,1) )
          AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) = 0.0_ReKi
          AD%u(1)%BladeRootMotion(k)%TranslationVel( :,1) = 0.0_ReKi
          AD%u(1)%BladeRootMotion(k)%RotationVel(    :,1) = 0.0_ReKi
-      end do !k=numBlade
+      end do !k=numBlades
       
       ! Blade motions:
-      do k=1,DvrData%numBlade
+      do k=1,DvrData%numBlades
          do j=1,AD%u(1)%BladeMotion(k)%nnodes
             AD%u(1)%BladeMotion(k)%Orientation(  :,:,j) = AD%u(1)%BladeMotion(k)%RefOrientation(:,:,j)
             AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) = 0.0_ReKi
             AD%u(1)%BladeMotion(k)%TranslationVel( :,j) = 0.0_ReKi
             AD%u(1)%BladeMotion(k)%RotationVel(    :,j) = 0.0_ReKi
          end do !j=nnodes
-      end do !k=numBlade
+      end do !k=numBlades
       
       ! Inflow wind velocities:
       ! InflowOnBlade
-      do k=1,DvrData%numBlade
+      do k=1,DvrData%numBlades
          do j=1,AD%u(1)%BladeMotion(k)%nnodes
             z = AD%u(1)%BladeMotion(k)%Position(3,j) + AD%u(1)%BladeMotion(k)%TranslationDisp(3,j)
             AD%u(1)%InflowOnBlade(1,j,k) = GetU(  DvrData%Cases(iCase)%WndSpeed, DvrData%HubHt, DvrData%Cases(iCase)%ShearExp, z )
             AD%u(1)%InflowOnBlade(2,j,k) = 0.0_ReKi !V
             AD%u(1)%InflowOnBlade(3,j,k) = 0.0_ReKi !W         
          end do !j=nnodes
-      end do !k=numBlade
+      end do !k=numBlades
       
       !InflowOnTower
       do j=1,AD%u(1)%TowerMotion%nnodes
@@ -212,40 +239,10 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
          AD%u(1)%InflowOnTower(2,j) = 0.0_ReKi !V
          AD%u(1)%InflowOnTower(3,j) = 0.0_ReKi !W         
       end do !j=nnodes
-      
-      
-      
-      !! Angular position of the rotor, starts at 0.0 
-      !psiRotor = time*DvrData%Cases(iCase)%RotSpeed ! in s * rad/s 
-      !
-      !   ! Velocity of inflow wind at the hub height
-      !velocityHub = DvrData%Cases(iCase)%WndSpeed ! m/s
-      !   ! Zero yaw for now
-      !AD%u(1)%gamma = DvrData%Cases(iCase)%Yaw
-      !   ! Rotor angular velocity
-      !AD%u(1)%omega = DvrData%Cases(iCase)%RotSpeed  
-      !   ! Average tip-speed ratio
-      !AD%u(1)%lambda = DvrData%Cases(iCase)%TSR
-      !  
-      !AD%u(1)%Vinf   = velocityHub
-      !
-      !do k=1,DvrData%numBlade
-      !   AD%u(1)%psi(k)   = psiRotor + (k-1)*2.0*pi/(DvrData%numBlade) ! find psi for each blade based on the rotor psi value
-      !   AD%u(1)%rTip(k)  = DvrData%RotorRad  ! set the tip radius to the initialization distance along the blade (straight blade assumption)
-      !
-      !   do j=1,size(DvrData%Twist,1)
-      !      AD%u(1)%theta (j,k)  = DvrData%Twist(j,k) + DvrData%Cases(iCase)%Pitch
-      !         u(1)%rLocal(j,k)  = DvrData%rLoc(j,k)
-      !         u(1)%Vx    (j,k)  =  velocityHub*cos(DvrData%Cases(iCase)%Precone)
-      !         u(1)%Vy    (j,k)  =  u(1)%omega*u(1)%rLocal(j,k)*cos(DvrData%Cases(iCase)%Precone)                                        
-      !   end do !i=1,size(DvrData%Twist,1) # blade nodes
-      !end do !j=1,DvrData%numBlade
-         
-   
-   
+                     
 end subroutine Set_AD_Inputs
 !----------------------------------------------------------------------------------------------------------------------------------
-function GetU(  URef, ZRef, PLExp, z ) result (U)
+function GetU( URef, ZRef, PLExp, z ) result (U)
    real(ReKi), intent(in) :: URef
    real(ReKi), intent(in) :: ZRef
    real(ReKi), intent(in) :: PLExp
@@ -269,12 +266,12 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
    character(1024)              :: PriPath
    character(1024)              :: inpVersion                               ! String containing the input-version information.
    character(1024)              :: line                                     ! String containing a line of input.
-   integer                      :: unIn, unEc, NumElmPr
-   integer                      :: ISeg, ICase
-   integer                      :: IOS, Sttus
+   integer                      :: unIn, unEc
+   integer                      :: ICase
+   integer                      :: Sttus
    character( 11)               :: DateNow                                  ! Date shortly after the start of execution.
    character(  8)               :: TimeNow                                  ! Time of day shortly after the start of execution.
-   real(ReKi)                   :: InpCase(10)                              ! Temporary array to hold combined-case input parameters.
+   real(ReKi)                   :: InpCase(8)                               ! Temporary array to hold combined-case input parameters.
    logical                      :: TabDel      
    logical                      :: echo   
 
@@ -302,23 +299,23 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
    
    call WrScr( 'Opening WT_Perf input file:  '//fileName )
 
-      ! Skip a line, read the run title and the version information.
+      ! Skip a line, read the run title information.
 
-   CALL ReadStr( UnIn, fileName, inpVersion, 'inpVersion', 'File Header: (line 1)', ErrStat2, ErrMsg2 )
+   CALL ReadStr( UnIn, fileName, inpVersion, 'inpVersion', 'File Header: (line 1)', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
-   CALL ReadStr( UnIn, fileName, DvrData%OutFileData%runTitle, 'runTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2 )
+   CALL ReadStr( UnIn, fileName, DvrData%OutFileData%runTitle, 'runTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
    call WrScr1 ( ' '//DvrData%OutFileData%runTitle )
    
       ! Read in the title line for the input-configuration subsection.
-   CALL ReadStr( UnIn, fileName, line, 'line', 'File Header: (line 3)', ErrStat2, ErrMsg2 )
+   CALL ReadStr( UnIn, fileName, line, 'line', 'File Header: (line 3)', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
       ! See if we should echo the output.     
-   call ReadVar ( unIn, fileName, echo, 'Echo', 'Echo Input', errStat2, errMsg2 )
+   call ReadVar ( unIn, fileName, echo, 'Echo', 'Echo Input', errStat2, errMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    if ( echo )  then
@@ -354,25 +351,26 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
       end if
    IF ( PathIsRelative( DvrData%AD_InputFile ) ) DvrData%AD_InputFile = TRIM(PriPath)//TRIM(DvrData%AD_InputFile)
 
-
-
-      ! Read the model-configuration section.
-
-   call ReadCom ( unIn, fileName,                                 'the model-configuration subtitle', errStat2, errMsg2, UnEc )
-      call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
-
    
       ! Read the turbine-data section.
 
    call ReadCom ( unIn, fileName, 'the turbine-data subtitle', errStat2, errMsg2, UnEc )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
-   call ReadVar ( unIn, fileName, DvrData%NumBlade, 'NumBlade', 'Number of blades.', errStat2, errMsg2, UnEc )
+   call ReadVar ( unIn, fileName, DvrData%numBlades,'NumBlades','Number of blades', errStat2, errMsg2, UnEc )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
-   call ReadVar ( unIn, fileName, DvrData%HubRad,   'HubRad',   'Hub radius.', errStat2, errMsg2, UnEc )
+   call ReadVar ( unIn, fileName, DvrData%HubRad,   'HubRad',   'Hub radius (m)', errStat2, errMsg2, UnEc )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
-   call ReadVar ( unIn, fileName, DvrData%HubHt,    'HubHt',    'Hub height.', errStat2, errMsg2, UnEc )
+   call ReadVar ( unIn, fileName, DvrData%HubHt,    'HubHt',    'Hub height (m)', errStat2, errMsg2, UnEc )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
-
+   call ReadVar ( unIn, fileName, DvrData%Overhang, 'Overhang',  'Overhang (m)', errStat2, errMsg2, UnEc )
+      call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+   call ReadVar ( unIn, fileName, DvrData%ShftTilt, 'ShftTilt',  'Shaft tilt (deg)', errStat2, errMsg2, UnEc )
+      call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+      DvrData%ShftTilt = DvrData%ShftTilt*D2R
+   call ReadVar ( unIn, fileName, DvrData%precone, 'Precone',  'Precone (deg)', errStat2, errMsg2, UnEc )
+      call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+      DvrData%precone = DvrData%precone*D2R
+            
       if ( errStat >= AbortErrLev ) then
          call cleanup()
          return
@@ -397,10 +395,11 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
          DvrData%OutFileData%delim = " "
       end if
                
-   call ReadVar ( unIn, fileName, Beep,               'Beep',     'Beep on exit?', errStat2, errMsg2, UnEc )
+      ! OutFmt - Format used for text tabular output (except time).  Resulting field should be 10 characters. (-):
+   call ReadVar( UnIn, fileName, DvrData%OutFileData%OutFmt, "OutFmt", "Format used for text tabular output (except time).  Resulting field should be 10 characters. (-)", ErrStat2, ErrMsg2, UnEc)
+      call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName ) !bjj: this is a global variable in NWTC_Library            
+   call ReadVar ( unIn, fileName, Beep,  'Beep',     'Beep on exit?', errStat2, errMsg2, UnEc )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName ) !bjj: this is a global variable in NWTC_Library
-   call ReadVar ( unIn, fileName, DvrData%InputTSR, 'InputTSR', 'Input speeds as TSRs?', errStat2, errMsg2, UnEc )
-      call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
       if ( errStat >= AbortErrLev ) then
          call cleanup()
          return
@@ -411,9 +410,13 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
 
    call ReadCom  ( unIn, fileName, 'the combined-case subtitle', errStat2, errMsg2, UnEc )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
-   call ReadVar  ( unIn, fileName, DvrData%NumCases, 'NumCases', 'Number of cases to run.', errStat2, errMsg2, UnEc )
+   call ReadVar ( unIn, fileName, DvrData%InputTSR, 'InputTSR', 'Input speeds as TSRs?', errStat2, errMsg2, UnEc )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
-   call ReadCom  ( unIn, fileName, 'the combined-case-block header', errStat2, errMsg2, UnEc )
+   call ReadVar  ( unIn, fileName, DvrData%NumCases, 'NumCases', 'Number of cases to run', errStat2, errMsg2, UnEc )
+      call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+   call ReadCom  ( unIn, fileName, 'the combined-case-block header (names)', errStat2, errMsg2, UnEc )
+      call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+   call ReadCom  ( unIn, fileName, 'the combined-case-block header (units)', errStat2, errMsg2, UnEc )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
 
       if ( errStat >= AbortErrLev ) then
@@ -421,41 +424,36 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
          return
       end if
       
-   IF ( DvrData%NumCases < 0 )  THEN
-
-      call setErrStat( ErrID_Fatal,'Variable "NumCases" must be >= 0.  Instead, it is "'//TRIM( Int2LStr( DvrData%NumCases ) )//'".' ,errstat,errmsg,routinename)
+   if ( DvrData%NumCases < 1 )  then
+      call setErrStat( ErrID_Fatal,'Variable "NumCases" must be > 0.' ,errstat,errmsg,routinename)
       call cleanup()
       return
+   end if
+   
+   allocate ( DvrData%Cases(DvrData%NumCases) , STAT=Sttus )
+   if ( Sttus /= 0 )  then
+      call setErrStat( ErrID_Fatal,'Error allocating memory for the Cases array.',errstat,errmsg,routinename)
+      call cleanup()
+      return
+   end if
 
-   ELSEIF ( DvrData%NumCases > 0 )  THEN
+   do ICase=1,DvrData%NumCases
 
-      ALLOCATE ( DvrData%Cases(DvrData%NumCases) , STAT=Sttus )
-      IF ( Sttus /= 0 )  THEN
-         call setErrStat( ErrID_Fatal,'Error allocating memory for the Cases array.',errstat,errmsg,routinename)
-         call cleanup()
-         return
-      ENDIF
-
-      DO ICase=1,DvrData%NumCases
-
-         CALL ReadAry ( unIn, fileName, InpCase,  10, 'InpCase',  'Wind Speed or TSR, Rotor Speed, and Pitch for Case #' &
-                       //TRIM( Int2LStr( ICase ) )//'.', errStat2, errMsg2, UnEc )
-            call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+      call ReadAry ( unIn, fileName, InpCase,  8, 'InpCase',  'parameters for Case #' &
+                     //trim( Int2LStr( ICase ) )//'.', errStat2, errMsg2, UnEc )
+         call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
             
-         DvrData%Cases(iCase)%TSR             = InpCase( 1) ! we'll calculate WS and TSR later, after we get RotorRad from AD 
-         DvrData%Cases(iCase)%WndSpeed        = InpCase( 1) ! we'll calculate WS and TSR later, after we get RotorRad from AD          
-         DvrData%Cases(ICase)%ShearExp        = InpCase( 2)
-         DvrData%Cases(ICase)%RotSpeed        = InpCase( 3)*RPM2RPS
-         DvrData%Cases(ICase)%Pitch           = InpCase( 4)*D2R
-         DvrData%Cases(ICase)%Yaw             = InpCase( 5)*D2R
-         DvrData%Cases(ICase)%Tilt            = InpCase( 6)*D2R
-         DvrData%Cases(iCase)%PreCone         = InpCase( 7)*D2R
-         DvrData%Cases(iCase)%AzAng0          = InpCase( 8)*D2R
-         DvrData%Cases(iCase)%dT              = InpCase( 9)*D2R
-         DvrData%Cases(iCase)%Tmax            = InpCase(10)*D2R
+      DvrData%Cases(iCase)%TSR             = InpCase( 1) ! we'll calculate WS and TSR later, after we get RotorRad from AD 
+      DvrData%Cases(iCase)%WndSpeed        = InpCase( 1) ! we'll calculate WS and TSR later, after we get RotorRad from AD          
+      DvrData%Cases(ICase)%ShearExp        = InpCase( 2)
+      DvrData%Cases(ICase)%RotSpeed        = InpCase( 3)*RPM2RPS
+      DvrData%Cases(ICase)%Pitch           = InpCase( 4)*D2R
+      DvrData%Cases(ICase)%Yaw             = InpCase( 5)*D2R
+      DvrData%Cases(iCase)%AzAng0          = InpCase( 6)*D2R
+      DvrData%Cases(iCase)%dT              = InpCase( 7)*D2R
+      DvrData%Cases(iCase)%Tmax            = InpCase( 8)*D2R
                
-      ENDDO ! ICase
-   END IF
+   end do ! ICase
    
    call cleanup ( )
 
@@ -466,7 +464,52 @@ contains
       if (UnIn>0) close(UnIn)
       if (UnEc>0) close(UnEc)
    end subroutine cleanup
-END SUBROUTINE Dvr_ReadInputFile
+end subroutine Dvr_ReadInputFile
+!----------------------------------------------------------------------------------------------------------------------------------
+subroutine ValidateInputs(DvrData, errStat, errMsg)
+
+   type(Dvr_SimData),             intent(in)    :: DvrData
+   integer,                       intent(  out) :: errStat           ! returns a non-zero value when an error occurs  
+   character(*),                  intent(  out) :: errMsg            ! Error message if errStat /= ErrID_None
+
+   ! local variables:
+   integer(intKi)                               :: i
+   integer(intKi)                               :: FmtWidth          ! number of characters in string produced by DvrData%OutFmt
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'ValidateInputs'
+   
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   
+      ! Turbine Data:
+   if ( DvrData%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", ErrStat, ErrMsg, RoutineName)
+   if ( DvrData%HubRad < 0.0_ReKi ) call SetErrStat( ErrID_Fatal, "HubRad must be a positive number.", ErrStat, ErrMsg, RoutineName)
+   if ( DvrData%HubHt < DvrData%HubRad ) call SetErrStat( ErrID_Fatal, "HubHt must be at least HubRad.", ErrStat, ErrMsg, RoutineName)
+   
+      
+      ! I-O Settings:
+      ! Check that DvrData%OutFileData%OutFmt is a valid format specifier and will fit over the column headings
+   call ChkRealFmtStr( DvrData%OutFileData%OutFmt, 'OutFmt', FmtWidth, ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   if ( FmtWidth /= ChanLen ) call SetErrStat( ErrID_Warn, 'OutFmt produces a column width of '// &
+      TRIM(Num2LStr(FmtWidth))//' instead of '//TRIM(Num2LStr(ChanLen))//' characters.', ErrStat, ErrMsg, RoutineName )
+
+      ! Combined-Case Analysis:
+   do i=1,DvrData%NumCases
+   
+      if (DvrData%Cases(i)%DT < epsilon(0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'dT must be larger than 0 in case '//trim(num2lstr(i))//'.',ErrStat, ErrMsg,RoutineName)
+      if (DvrData%Cases(i)%TMax < DvrData%Cases(i)%DT ) call SetErrStat(ErrID_Fatal,'TMax must be larger than dT in case '//trim(num2lstr(i))//'.',ErrStat, ErrMsg,RoutineName)
+      
+   end do
+   
+   
+   
+end subroutine ValidateInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine Dvr_WriteOutputLine(OutFileData, t, output, errStat, errMsg)
 
@@ -478,13 +521,9 @@ subroutine Dvr_WriteOutputLine(OutFileData, t, output, errStat, errMsg)
       
    ! Local variables.
 
-   integer(IntKi)                   :: i                                         ! loop counter
-   integer(IntKi)                   :: indxLast                                  ! The index of the last row value to be written to AllOutData for this time step (column).
-   integer(IntKi)                   :: indxNext                                  ! The index of the next row value to be written to AllOutData for this time step (column).
-
    character(200)                   :: frmt                                      ! A string to hold a format specifier
    character(15)                    :: tmpStr                                    ! temporary string to print the time output as text
-integer :: numOuts
+   integer :: numOuts
    
    errStat = ErrID_None
    errMsg  = ''
@@ -512,14 +551,10 @@ subroutine Dvr_InitializeOutputFile( iCase, CaseData, OutFileData, errStat, errM
       character(*)           ,  intent(inout)   :: errMsg               ! Error message if ErrStat /= ErrID_None
 
          ! locals
-      integer(IntKi)                            ::  j
-      
+      integer(IntKi)                            ::  i      
       integer(IntKi)                            :: numOuts
       
-      character(200)                            :: frmt ,frmt2         ! A string to hold a format specifier
-
       
-      numOuts = size(OutFileData%WriteOutputHdr)
       
       call GetNewUnit( OutFileData%unOutFile, ErrStat, ErrMsg )
          if ( ErrStat >= AbortErrLev ) then
@@ -528,54 +563,52 @@ subroutine Dvr_InitializeOutputFile( iCase, CaseData, OutFileData, errStat, errM
          end if
          
 
-      call OpenFOutFile ( OutFileData%unOutFile, trim(outFileData%Root)//'.ADdrv.'//trim(num2lstr(iCase))//'.out', ErrStat, ErrMsg )
+      call OpenFOutFile ( OutFileData%unOutFile, trim(outFileData%Root)//'.'//trim(num2lstr(iCase))//'.out', ErrStat, ErrMsg )
          if ( ErrStat >= AbortErrLev ) return
          
-      WRITE (OutFileData%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim(GetNVD(version))
-      WRITE (OutFileData%unOutFile,'(1X,A)') trim(GetNVD(OutFileData%AD_ver))
-      WRITE (OutFileData%unOutFile,'()' )    !print a blank line
-      WRITE (OutFileData%unOutFile,'(A,11(1x,A,"=",ES11.4e2,1x,A))'   ) 'Case '//trim(num2lstr(iCase))//':' &
-         ,'WndSpeed', CaseData%WndSpeed, 'm/s' &
-         ,'ShearExp', CaseData%ShearExp, '' &
-         ,'TSR',      CaseData%TSR, '' &
-         ,'RotSpeed', CaseData%RotSpeed*RPS2RPM,'rpm' &
-         ,'Pitch',    CaseData%Pitch*R2D, 'deg' &
-         ,'Yaw',      CaseData%Yaw*R2D, 'deg' &
-         ,'Tilt',     CaseData%Tilt*R2D, 'deg' &
-         ,'Precone',  CaseData%Precone*R2D, 'deg' &
-         ,'AzAng0',   CaseData%AzAng0*R2D, 'deg' &
-         ,'dT',       CaseData%dT, 's' &
-         ,'Tmax',     CaseData%Tmax,'s'
+      write (OutFileData%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim(GetNVD(version))
+      write (OutFileData%unOutFile,'(1X,A)') trim(GetNVD(OutFileData%AD_ver))
+      write (OutFileData%unOutFile,'()' )    !print a blank line
+      write (OutFileData%unOutFile,'(A,11(1x,A,"=",ES11.4e2,1x,A))'   ) 'Case '//trim(num2lstr(iCase))//':' &
+         ,  'WndSpeed', CaseData%WndSpeed, 'm/s' &
+         ,'; ShearExp', CaseData%ShearExp, '' &
+         ,'; TSR',      CaseData%TSR, '' &
+         ,'; RotSpeed', CaseData%RotSpeed*RPS2RPM,'rpm' &
+         ,'; Pitch',    CaseData%Pitch*R2D, 'deg' &
+         ,'; Yaw',      CaseData%Yaw*R2D, 'deg' &
+         ,'; AzAng0',   CaseData%AzAng0*R2D, 'deg' &
+         ,'; dT',       CaseData%dT, 's' &
+         ,'; Tmax',     CaseData%Tmax,'s'
       
-      WRITE (OutFileData%unOutFile,'()' )    !print a blank line
-         
-      
+      write (OutFileData%unOutFile,'()' )    !print a blank line
+              
 
+      numOuts = size(OutFileData%WriteOutputHdr)
          !......................................................
          ! Write the names of the output parameters on one line:
          !......................................................
-      frmt = '"'//OutFileData%delim//'"A15'      ! format for array elements 
-      frmt2 = '(A,'//trim(num2lstr(numOuts))//'('//trim(frmt)//'))'
-               
-      write (OutFileData%unOutFile,frmt2,IOSTAT=errStat)  '     Time           ', OutFileData%WriteOutputHdr
-      if ( errStat /= 0 ) then
-         errMsg = 'Error '//trim(Num2LStr(errStat))//' occurred while writing to file in Dvr_InitializeOutputFile() using this format: '&
-                  //trim(frmt2)
-         errStat = ErrID_Fatal
-         return
-      end if      
+
+      call WrFileNR ( OutFileData%unOutFile, '     Time           ' )
+
+      do i=1,NumOuts
+         call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//OutFileData%WriteOutputHdr(i) )
+      end do ! i
+
+      write (OutFileData%unOutFile,'()')
 
          !......................................................
          ! Write the units of the output parameters on one line:
          !......................................................
 
-      write (OutFileData%unOutFile,frmt2,IOSTAT=errStat)  '      (s)           ', OutFileData%WriteOutputUnt
-      if ( errStat /= 0 ) then
-         errMsg = 'Error '//trim(Num2LStr(errStat))//' occurred while writing to file in Dvr_InitializeOutputFile() using this format: '&
-                  //trim(frmt2)
-         errStat = ErrID_Fatal
-         return
-      end if
+      call WrFileNR ( OutFileData%unOutFile, '      (s)           ' )
+
+      do i=1,NumOuts
+         call WrFileNR ( OutFileData%unOutFile, OutFileData%delim//OutFileData%WriteOutputUnt(i) )
+      end do ! i
+
+      write (OutFileData%unOutFile,'()')      
+      
+
       
 end subroutine Dvr_InitializeOutputFile
 !----------------------------------------------------------------------------------------------------------------------------------

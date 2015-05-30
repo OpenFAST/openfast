@@ -18,6 +18,12 @@
 include   Registry_NWTC_Library.txt
 usefrom   AirfoilInfo_Registry.txt
 usefrom   UnsteadyAero_Registry.txt
+
+#param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Uncoupled           -      1     -   "Uncoupled (no correction)" -
+#param     BEMT/BEMT                   -                              INTEGER                 SkewMod_PittPeters          -      2     -   "Pitt/Peters" -
+#param     BEMT/BEMT                   -                              INTEGER                 SkewMod_Coupled             -      3     -   "Coupled" -
+
+
 #
 #
 # ..... Initialization data .......................................................................................................
@@ -28,7 +34,7 @@ typedef   BEMT/BEMT                    InitInputType                 ReKi       
 typedef   ^                            ^                             INTEGER                  numBlades                       -          -         -        "Number of blades"    -
 typedef   ^                            ^                             ReKi                     airDens                         -          -         -        "Air density"        kg/m^3
 typedef   ^                            ^                             ReKi                     kinVisc                         -          -         -        "Kinematic air viscosity"       m^2/s
-typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Skewed-wake correction model [switch] {0: no correction, 1: Pitt and Peters, 2: Teknikgruppen AB, 3: Coupled model}"  -
+typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Type of skewed-wake correction model [switch] {1=uncoupled, 2=Pitt/Peters, 3=coupled}"  -
 typedef   ^                            ^                             ReKi                     aTol                            -          -         -        "Tolerance for the induction solution" -
 typedef   ^                            ^                             LOGICAL                  useTipLoss                      -          -         -        "Use the Prandtl tip-loss model?  [flag]"        -
 typedef   ^                            ^                             LOGICAL                  useHubLoss                      -          -         -        "Use the Prandtl hub-loss model?  [flag]"        -
@@ -83,26 +89,26 @@ typedef   ^                            ^                             UA_OtherSta
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
-typedef   ^                            ParameterType                 DbKi                     DT                              -          -         -        "time step" s
-typedef   ^                            ^                             ReKi                     chord                           {:}{:}     -         -        "Chord length at node" m
-typedef   ^                            ^                             INTEGER                  numBlades                       -          -         -        "Number of blades"    -
-typedef   ^                            ^                             ReKi                     airDens                         -          -         -        "Air density"        kg/m^3
-typedef   ^                            ^                             ReKi                     kinVisc                         -          -         -        "Kinematic air viscosity"       m^2/s
-typedef   ^                            ^                             INTEGER                  skewWakeMod                     -          -         -        "Skewed-wake correction model [switch] {0: no correction, 1: Pitt and Peters, 2: Teknikgruppen AB, 3: Coupled model}"  -
-typedef   ^                            ^                             ReKi                     aTol                            -          -         -        "Tolerance for the induction solution" -
-typedef   ^                            ^                             LOGICAL                  useTipLoss                      -          -         -        "Use the Prandtl tip-loss model?  [flag]"        -
-typedef   ^                            ^                             LOGICAL                  useHubLoss                      -          -         -        "Use the Prandtl hub-loss model?  [flag]"        -
-typedef   ^                            ^                             LOGICAL                  useInduction                    -          -         -        "Include induction in BEMT calculations [flag] { If FALSE then useTanInd will be set to FALSE}"        -
-typedef   ^                            ^                             LOGICAL                  useTanInd                       -          -         -        "Include tangential induction in BEMT calculations [flag]"        -
-typedef   ^                            ^                             LOGICAL                  useAIDrag                          -          -         -        "Include the drag term in the axial-induction calculation?  [flag]"        -
-typedef   ^                            ^                             LOGICAL                  useTIDrag                          -          -         -        "Include the drag term in the tangential-induction calculation?  Ignored if TanInd is False.  [flag]"        -
-typedef   ^                            ^                             INTEGER                  numBladeNodes                   -          -         -        "Number of blade nodes used in the analysis"        -
-typedef   ^                            ^                             INTEGER                  numReIterations                 -          -         -        "Number of iterations for finding the Reynolds number"        -
-typedef   ^                            ^                             INTEGER                  maxIndIterations                -          -         -        "Maximum number of iterations of induction factor solve"        -
-typedef   ^                            ^                             INTEGER                  AFindx                          {:}{:}     -         -        "Index of airfoil data file for blade node location [array of numBladeNodes]"        -
-typedef   ^                            ^                             ReKi                     tipLossConst                    {:}{:}     -         -        "A constant computed during initialization based on B*(zTip-zLocal)/(2*zLocal)" -
-typedef   ^                            ^                             ReKi                     hubLossConst                    {:}{:}     -         -        "A constant computed during initialization based on B*(zLocal-zHub)/(2*zHub)" -
-typedef   ^                            ^                             ReKi                     zHub                            {:}        -         -        "Distance to hub for each blade" m
+typedef   ^                            ParameterType                 DbKi                     DT                              -             -         -        "time step" s
+typedef   ^                            ^                             ReKi                     chord                           {:}{:}        -         -        "Chord length at node" m
+typedef   ^                            ^                             INTEGER                  numBlades                       -             -         -        "Number of blades"    -
+typedef   ^                            ^                             ReKi                     airDens                         -             -         -        "Air density"        kg/m^3
+typedef   ^                            ^                             ReKi                     kinVisc                         -             -         -        "Kinematic air viscosity"       m^2/s
+typedef   ^                            ^                             INTEGER                  skewWakeMod                     -             -         -        "Type of skewed-wake correction model [switch] {1=uncoupled, 2=Pitt/Peters, 3=coupled}"  -
+typedef   ^                            ^                             ReKi                     aTol                            -             -         -        "Tolerance for the induction solution" -
+typedef   ^                            ^                             LOGICAL                  useTipLoss                      -             -         -        "Use the Prandtl tip-loss model?  [flag]"        -
+typedef   ^                            ^                             LOGICAL                  useHubLoss                      -             -         -        "Use the Prandtl hub-loss model?  [flag]"        -
+typedef   ^                            ^                             LOGICAL                  useInduction                    -             -         -        "Include induction in BEMT calculations [flag] { If FALSE then useTanInd will be set to FALSE}"        -
+typedef   ^                            ^                             LOGICAL                  useTanInd                       -             -         -        "Include tangential induction in BEMT calculations [flag]"        -
+typedef   ^                            ^                             LOGICAL                  useAIDrag                       -             -         -        "Include the drag term in the axial-induction calculation?  [flag]"        -
+typedef   ^                            ^                             LOGICAL                  useTIDrag                       -             -         -        "Include the drag term in the tangential-induction calculation?  Ignored if TanInd is False.  [flag]"        -
+typedef   ^                            ^                             INTEGER                  numBladeNodes                   -             -         -        "Number of blade nodes used in the analysis"        -
+typedef   ^                            ^                             INTEGER                  numReIterations                 -             -         -        "Number of iterations for finding the Reynolds number"        -
+typedef   ^                            ^                             INTEGER                  maxIndIterations                -             -         -        "Maximum number of iterations of induction factor solve"        -
+typedef   ^                            ^                             INTEGER                  AFindx                          {:}{:}        -         -        "Index of airfoil data file for blade node location [array of numBladeNodes]"        -
+typedef   ^                            ^                             ReKi                     tipLossConst                    {:}{:}        -         -        "A constant computed during initialization based on B*(zTip-zLocal)/(2*zLocal)" -
+typedef   ^                            ^                             ReKi                     hubLossConst                    {:}{:}        -         -        "A constant computed during initialization based on B*(zLocal-zHub)/(2*zHub)" -
+typedef   ^                            ^                             ReKi                     zHub                            {:}           -         -        "Distance to hub for each blade" m
 typedef   ^                            ^                             UA_ParameterType         UA                              -             -         -        "parameters for UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         -             -         -        "logical flag indicating whether to use UnsteadyAero"        -
 #
@@ -111,27 +117,28 @@ typedef   ^                            ^                             LOGICAL    
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 #
-typedef   ^                            InputType                     ReKi                     theta                           {:}{:}    -         -         "Twist angle (includes all sources of twist)  [Array of size (numBlades, NumBlNds)]" rad
-typedef   ^                            ^                             ReKi                     chi0                            -         -         -         "Angle between the vector normal to the rotor plane and the wind vector (e.g., the yaw angle in the case of no tilt)" rad
-typedef   ^                            ^                             ReKi                     psi                             {:}       -         -         "Azimuth angle" rad
-typedef   ^                            ^                             ReKi                     omega                           -         -         -         "Angular velocity of rotor" rad/s
-typedef   ^                            ^                             ReKi                     Vx                              {:}{:}    -         -         "Local axial velocity at node" m/s
-typedef   ^                            ^                             ReKi                     Vy                              {:}{:}    -         -         "Local tangential velocity at node" m/s
-typedef   ^                            ^                             ReKi                     Vinf                            {:}{:}    -         -         "Local upstream velocity at node" m/s
-typedef   ^                            ^                             ReKi                     lambda                          -         -         -         "Average tip speed ratio for rotor disk" -
-typedef   ^                            ^                             ReKi                     rTip                            {:}       -         -         "Radial distance from center-of-rotation to blade tip" m
-typedef   ^                            ^                             ReKi                     rLocal                          {:}{:}    -         -         "Radial distance from center-of-rotation to node" m
+typedef   ^                            InputType                     ReKi                     theta                           {:}{:}         -         -         "Twist angle (includes all sources of twist)  [Array of size (NumBlNds,numBlades)]" rad
+typedef   ^                            ^                             ReKi                     chi0                            -              -         -         "Angle between the vector normal to the rotor plane and the wind vector (e.g., the yaw angle in the case of no tilt)" rad
+typedef   ^                            ^                             ReKi                     psi                             {:}            -         -         "Azimuth angle" rad
+typedef   ^                            ^                             ReKi                     omega                           -              -         -         "Angular velocity of rotor" rad/s
+typedef   ^                            ^                             ReKi                     Vx                              {:}{:}         -         -         "Local axial velocity at node" m/s
+typedef   ^                            ^                             ReKi                     Vy                              {:}{:}         -         -         "Local tangential velocity at node" m/s
+typedef   ^                            ^                             ReKi                     Vinf                            {:}{:}         -         -         "Local upstream velocity at node" m/s
+typedef   ^                            ^                             ReKi                     lambda                          -              -         -         "Average tip speed ratio for rotor disk" -
+typedef   ^                            ^                             ReKi                     rTip                            {:}            -         -         "Radial distance from center-of-rotation to blade tip" m
+typedef   ^                            ^                             ReKi                     rLocal                          {:}{:}         -         -         "Radial distance from center-of-rotation to node" m
 #
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef   ^                            OutputType                    ReKi                     inducedVel                       {:}{:}    -         -         "Total local induced velocity" m/s
-typedef   ^                            ^                             ReKi                     phi                               {:}{:}    -         -         "angle between the plane of rotation and the direction of the local wind" rad
+typedef   ^                            OutputType                    ReKi                     inducedVel                      {:}{:}         -         -         "Total local induced velocity" m/s
+typedef   ^                            ^                             ReKi                     phi                             {:}{:}         -         -         "angle between the plane of rotation and the direction of the local wind" rad
 typedef   ^                            ^                             ReKi                     axInduction                     {:}{:}         -         -         "Distributed viscous drag loads"   -
 typedef   ^                            ^                             ReKi                     tanInduction                    {:}{:}         -         -         "Distributed inertial loads"   -
-typedef   ^                            ^                             ReKi                     Re                               {:}{:}         -         -         "Distributed inertial loads"   -
+typedef   ^                            ^                             ReKi                     Re                              {:}{:}         -         -         "Distributed inertial loads"   -
 typedef   ^                            ^                             ReKi                     AOA                             {:}{:}         -         -         "Distributed inertial loads"   -
-typedef   ^                            ^                             ReKi                     Cx                              {:}{:}         -         -         "Distributed inertial loads"   -
-typedef   ^                            ^                             ReKi                     Cy                              {:}{:}         -         -         "Distributed inertial loads"   -
+typedef   ^                            ^                             ReKi                     Cx                              {:}{:}         -         -         "normal force coefficient (normal to the plane, not chord) of the jth node in the kth blade"   -
+typedef   ^                            ^                             ReKi                     Cy                              {:}{:}         -         -         "tangential force coefficient (tangential to the plane, not chord) of the jth node in the kth blade"   -
+typedef   ^                            ^                             ReKi                     Cm                              {:}{:}         -         -         "pitching moment coefficient of the jth node in the kth blade"   -
 typedef   ^                            ^                             ReKi                     Cl                              {:}{:}         -         -         "Distributed inertial loads"   -
 typedef   ^                            ^                             ReKi                     Cd                              {:}{:}         -         -         "Distributed inertial loads"   -
-typedef   ^                            ^                             ReKi                     chi                              {:}{:}         -         -         "Distributed inertial loads"   -
+typedef   ^                            ^                             ReKi                     chi                             {:}{:}         -         -         "Distributed inertial loads"   -

@@ -342,13 +342,15 @@ recursive subroutine inductionFactors(r , Rtip, chord, Rhub, lambda, phi, azimut
 
     F = Ftip * Fhub
 
+    
     ! bem parameters
     
     !Fsphi     = 4.0_ReKi*F*sphi**2 
     !sigma_pcn = sigma_p*cn
     
     k = sigma_p*cn/4.0_ReKi/F/sphi/sphi
-
+!bjj: TODO: F is 0 for nodes at the blade root and blade tip, causing division-by-zero errors: FIX ME
+    
     ! compute axial induction factor
     if (phi > 0.0_ReKi) then  ! momentum/empirical
 
@@ -394,14 +396,14 @@ recursive subroutine inductionFactors(r , Rtip, chord, Rhub, lambda, phi, azimut
 
        ! Skewed wake correction
          
-   if ( skewWakeMod == 1 ) then
+   if ( skewWakeMod == SkewMod_PittPeters ) then
       chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
       !yawCorr = max(0.0,chi0-0.5236)
       !yawCorr = min(0.785,yawCorr)
       yawCorr = (15.0_ReKi*pi/64.0_ReKi*tan(chi/2.0_ReKi) * (r/Rtip) * saz)
       a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
         !a = min(a, 0.9)
-   else if ( skewWakeMod == 2 ) then
+   else if ( skewWakeMod == SkewMod_Coupled ) then
       chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
       a = a * ( 1.0_ReKi + 0.63_ReKi*(r/Rtip)**2 )*(c1 + c2*lambda + c3*lambda**2 + c4*lambda**3 )*( chi*180.0_ReKi/pi )*saz   ! chi needs to be in degrees here.
    end if
@@ -415,13 +417,12 @@ recursive subroutine inductionFactors(r , Rtip, chord, Rhub, lambda, phi, azimut
         kp = 0.0_ReKi
     end if
 
-    !if ( skewWakeMod > 0 ) then  
+    !if ( skewWakeMod > SkewMod_Uncoupled ) then  
     !  phitemp = InflowAngle(Vx_in, Vy_in, REAL(a, ReKi), REAL(ap))
     !  call inductionFactors(r_in     , Rtip_in, chord_in, Rhub_in,  lambda_in, phitemp, azimuth_in, yaw_in  , cn_in, ct_in, B, &
     !                          Vx_in, Vy_in, wakerotation,   hubLoss , tipLoss   , 0, &
     !                          fzero_out, a_out,           ap_out,           chi_out, ErrStat, ErrMsg)
     !  return
-    !
     !end if  
     
     ! error function
@@ -779,9 +780,9 @@ if ( .NOT. (EqualRealNos(phi,0.0_ReKi) ) ) then
    
       ! Skewed wake correction
        
-   if ( SkewWakeMod == 1 ) then
+   if ( SkewWakeMod == SkewMod_PittPeters ) then
       axInduction = axInduction * ( 1 + (15.0*pi/64.0)*tan(chi/2.0)*(rlocal/rtip)*sin(psi) )  !TODO: Verify this equation.  It doesn't match previous AD versions 
-  ! else if ( SkewWakeMod == 2 ) then
+  ! else if ( SkewWakeMod == SkewMod_Coupled ) then
   !    axInduction = axInduction * ( 1 + 0.63*(rlocal/rtip)**2 )*(c1 + c2*lambda + c3*lambda**2 + c4*lambda**3 )*( chi*180.0/pi )*sin(psi)   ! chi needs to be in degrees here.
    end if
         
