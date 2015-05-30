@@ -1057,7 +1057,148 @@ END SUBROUTINE DCM_SetLogMapForInterp
    ENDIF
 
 
-  END FUNCTION EqualRealNos16
+   END FUNCTION EqualRealNos16
+!=======================================================================
+   FUNCTION EulerConstruct(theta) result(M)
+   
+      ! this function creates a rotation matrix, M, from a 1-2-3 rotation
+      ! sequence of the 3 Euler angles, theta_x, theta_y, and theta_z.
+      ! M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). it is the inverse of EulerExtract().
+      !
+      ! M = R(theta_z) * R(theta_y) * R(theta_x)
+      !   = [ cz sz 0 |   [ cy  0 -sy |   [ 1   0   0 |
+      !     |-sz cz 0 | * |  0  1   0 | * | 0  cx  sx |
+      !     |  0  0 1 ]   | sy  0  cy ]   | 0 -sx  cx ]
+      !   = [ cy*cz   cx*sz+sx*sy*cz    sx*sz-cx*sy*cz |
+      !     |-cy*sz   cx*cz-sx*sy*sz    sx*cz+cx*sy*sz |
+      !     | sy           -sx*cy             cx*cy    ]
+      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+   
+      REAL(ReKi)             :: M(3,3)    ! rotation matrix M 
+      REAL(ReKi), INTENT(IN) :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
+      
+      REAL(ReKi)             :: cx        ! cos(theta_x)
+      REAL(ReKi)             :: sx        ! sin(theta_x)
+      REAL(ReKi)             :: cy        ! cos(theta_y)
+      REAL(ReKi)             :: sy        ! sin(theta_y)
+      REAL(ReKi)             :: cz        ! cos(theta_z)
+      REAL(ReKi)             :: sz        ! sin(theta_z)
+   
+
+      cx = cos( theta(1) )
+      sx = sin( theta(1) )
+      
+      cy = cos( theta(2) )
+      sy = sin( theta(2) )
+      
+      cz = cos( theta(3) )
+      sz = sin( theta(3) )
+         
+      M(1,1) =  cy*cz            
+      M(2,1) = -cy*sz            
+      M(3,1) =  sy    
+      
+      M(1,2) =  cx*sz+sx*sy*cz            
+      M(2,2) =  cx*cz-sx*sy*sz            
+      M(3,2) =       -sx*cy     
+      
+      M(1,3) =  sx*sz-cx*sy*cz            
+      M(2,3) =  sx*cz+cx*sy*sz            
+      M(3,3) =        cx*cy               
+   
+   END FUNCTION EulerConstruct
+!=======================================================================
+   FUNCTION EulerExtract(M) result(theta)
+   
+      ! if M is a rotation matrix from a 1-2-3 rotation sequence, this function
+      ! returns the 3 Euler angles, theta_x, theta_y, and theta_z, that formed 
+      ! the matrix. M represents a change of basis (from global to local coordinates; 
+      ! not a physical rotation of the body). M is the inverse of EulerConstruct().
+      !
+      ! M = R(theta_z) * R(theta_y) * R(theta_x)
+      !   = [ cz sz 0 |   [ cy  0 -sy |   [ 1   0   0 |
+      !     |-sz cz 0 | * |  0  1   0 | * | 0  cx  sx |
+      !     |  0  0 1 ]   | sy  0  cy ]   | 0 -sx  cx ]
+      !   = [ cy*cz   cx*sz+sx*sy*cz    sx*sz-cx*sy*cz |
+      !     |-cy*sz   cx*cz-sx*sy*sz    sx*cz+cx*sy*sz |
+      !     | sy           -sx*cy             cx*cy    ]
+      ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+   
+      REAL(ReKi), INTENT(IN) :: M(3,3)    ! rotation matrix M 
+      REAL(ReKi)             :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
+      
+      REAL(ReKi)             :: cx        ! cos(theta_x)
+      REAL(ReKi)             :: sx        ! sin(theta_x)
+      REAL(ReKi)             :: cy        ! cos(theta_y)
+      REAL(ReKi)             :: sy        ! sin(theta_y)
+      REAL(ReKi)             :: cz        ! cos(theta_z)
+      REAL(ReKi)             :: sz        ! sin(theta_z)
+   
+         ! use trig identity sx**2 + cx**2 = 1 to get cy:
+      cy = sqrt( m(1,1)**2 + m(2,1)**2 ) 
+            
+      if ( EqualRealNos(cy,0.0_ReKi) ) then
+      !if ( cy < 16*epsilon(0.0_ReKi) ) then
+         
+         theta(2) = atan2( m(3,1), cy )               ! theta_y
+         
+         ! cy = 0 -> sy = +/- 1
+         ! M  = [  0   cx*sz+/-sx*cz    sx*sz-/+cx*cz |
+         !      |  0   cx*cz-/+sx*sz    sx*cz+/-cx*sz |
+         !      |+/-1        0                0       ]
+         
+         ! gimbal lock allows us to choose theta_z = 0
+         theta(3) = 0.0_ReKi                          ! theta_z
+         
+         ! which reduces the matrix to 
+         ! M  = [  0  +/-sx  -/+cx |
+         !      |  0     cx     sx |
+         !      |+/-1    0       0 ]
+         
+         theta(1) = atan2(  m(2,3), m(2,2) )          ! theta_x
+      else
+
+         theta(3) = atan2( -m(2,1), m(1,1) )          ! theta_z         
+         cz       = cos( theta(3) )
+         sz       = sin( theta(3) )
+
+            ! get the appropriate sign for cy:
+         if ( EqualRealNos(cz, 0.0_ReKi) ) then
+            cy = sign( cy, -m(2,1)/sz )
+            !cy = -m(2,1)/sz
+         else
+            cy = sign( cy, m(1,1)/cz )
+            !cy = -m(1,1)/cz
+         end if
+         theta(2) = atan2( m(3,1), cy )               ! theta_y
+         
+        !theta(1) = atan2( -m(3,2), m(3,3) )          ! theta_x
+         
+         ! for numerical reasons, we're going to get theta_x using
+         ! M' = (R(theta_z) * R(theta_y))^T * M = R(theta_x)
+         !    = [ cy  0  sy |   [ cz -sz 0 |       [ 1   0   0 |
+         !      |  0  1   0 | * | sz  cz 0 | * M = | 0  cx  sx |
+         !      |-sy  0  cy ]   |  0   0 1 ]       | 0 -sx  cx ]
+         !    = [ cy*cz  -cy*sz  sy |       [ 1   0   0 |
+         !      |    sz      cz   0 | * M = | 0  cx  sx |
+         !      |-sy*cz   sy*sz  cy ]       | 0 -sx  cx ]
+         ! taking M'(2,2) and M'(2,3) , we get cx and sx:
+         ! sz*m(1,2) + cz*m(2,2) = cx
+         ! sz*m(1,3) + cz*m(2,3) = sx
+
+         cz = cos( theta(3) )
+         sz = sin( theta(3) )
+         
+         cx = sz*m(1,2) + cz*m(2,2)
+         sx = sz*m(1,3) + cz*m(2,3)
+         
+         theta(1) = atan2( sx, cx )
+         
+      end if
+            
+      
+   END FUNCTION EulerExtract
 !=======================================================================
    SUBROUTINE Eye2( A, ErrStat, ErrMsg )
 
