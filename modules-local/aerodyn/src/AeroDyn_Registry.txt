@@ -24,7 +24,6 @@ usefrom	UnsteadyAero_Registry.txt
 typedef	AeroDyn/AD	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
 typedef	^	InitInputType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
-#typedef	^	InitInputType	LOGICAL	MustUseBEMT	-	-	.False.	"whether or not the BEMT model is required (i.e., WT_Perf)"	(flag)
 typedef	^	InitInputType	ReKi	HubPosition	{3}	-	-	"X-Y-Z reference position of hub"	m
 typedef	^	InitInputType	ReKi	HubOrientation	{3}{3}	-	-	"DCM reference orientation of hub"	-
 typedef	^	InitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
@@ -34,7 +33,7 @@ typedef	^	InitInputType	ReKi	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference o
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
-
+typedef	^	InitOutputType	ReKi	RotorRad	-	-	-	"unconed rotor radius"	m
 
 # ..... Input file data ...........................................................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
@@ -108,8 +107,8 @@ typedef	^	ConstraintStateType	BEMT_ConstraintStateType	BEMT	-	-	-	"Constraint st
 typedef	^	OtherStateType	BEMT_OtherStateType	BEMT	-	-	-	"OtherStates from the BEMT module"	-
 typedef	^	OtherStateType	BEMT_OutputType	BEMT_y	-	-	-	"Outputs from the BEMT module"	-
 typedef	^	OtherStateType	BEMT_InputType	BEMT_u	-	-	-	"Inputs to the BEMT module"	-
-
-
+typedef	^	OtherStateType	ReKi	DisturbedInflow	{:}{:}{:}	-	-	"InflowOnBlade values modified by tower influence"	m/s
+typedef	^	OtherStateType	ReKi	WithoutSweepPitchTwist	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
 
 
 # ..... Parameters ................................................................................................................
@@ -154,54 +153,3 @@ typedef	^	OutputType	MeshType	HubLoad	-	-	-	"loads on the hub"	-
 typedef	^	OutputType	MeshType	BladeLoad	{:}	-	-	"loads on each blade"	-
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
-
-
-
-
-
-###########################################################################################
-# DATA THAT GREG WAS USING BEFORE>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-###########################################################################################
-
-
-
-
-
-#
-#
-# ..... Initialization data .......................................................................................................
-
-typedef   ^                            InitOutputType                ReKi                     Twist                           {:}{:}        -         -        "Twist at blade node" rad
-typedef   ^                            InitOutputType                ReKi                     rLocal                          {:}{:}        -         -        "Distance to blade node, measured from hub along the blade" m
-typedef   ^                            InitOutputType                ReKi                     RotorRad                         -            -         -        "unconde rotor raduis" m
-
-#
-# ..... Parameters ................................................................................................................
-# Define parameters here:
-# Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
-#
-typedef   ^                            ParameterType                 ReKi                     chord                           {:}{:}     -         -        "Chord length at node" m
-typedef   ^                            ^                             INTEGER                  AFindx                          {:}        -         -        "Index of airfoil data file for blade node location [array of numBladeNodes]"        -
-typedef   ^                            ^                             ReKi                     tipLossConst                    {:}{:}     -         -        "A constant computed during initialization based on B*(zTip-zLocal)/(2*zLocal)" -
-typedef   ^                            ^                             ReKi                     hubLossConst                    {:}{:}     -         -        "A constant computed during initialization based on B*(zLocal-zHub)/(2*zHub)" -
-#
-
-#
-# ..... Inputs ....................................................................................................................
-# Define inputs that are contained on the mesh here:
-#
-typedef   ^                            InputType                     ReKi                     theta                           {:}{:}    -         -         "Twist angle (includes all sources of twist)  [Array of size (numBlades, NumBlNds)]" rad
-typedef   ^                            ^                             ReKi                     gamma                           -         -         -         "Yaw angle" rad
-typedef   ^                            ^                             ReKi                     psi                             {:}       -         -         "Azimuth angle" rad
-typedef   ^                            ^                             ReKi                     omega                           -         -         -         "Angular velocity of rotor" rad/s
-typedef   ^                            ^                             ReKi                     Vx                              {:}{:}    -         -         "Local axial velocity at node" m/s
-typedef   ^                            ^                             ReKi                     Vy                              {:}{:}    -         -         "Local tangential velocity at node" m/s
-typedef   ^                            ^                             ReKi                     Vinf                            {:}{:}    -         -         "Local freestream velocity at node" m/s
-typedef   ^                            ^                             ReKi                     lambda                          -         -         -         "Average tip speed ratio for rotor disk" -
-typedef   ^                            ^                             ReKi                     rTip                            {:}       -         -         "Radial distance from center-of-rotation to blade tip" m
-typedef   ^                            ^                             ReKi                     rLocal                          {:}{:}    -         -         "Radial distance from center-of-rotation to node" m
-#
-# ..... Outputs ...................................................................................................................
-# Define outputs that are contained on the mesh here:
-typedef   ^                            OutputType                    ReKi                     inducedVel                      {:}{:}    -         -         "Total local induced velocity" m/s
-typedef   ^                            ^                             ReKi                     phi                             {:}{:}    -         -         "angle between the plane of rotation and the direction of the local wind" rad

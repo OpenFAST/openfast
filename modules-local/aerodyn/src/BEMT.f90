@@ -445,112 +445,44 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
 
 
       ! Local variables
-   character(len(errMsg))                        :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   character(ErrMsgLen  )                        :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
-
+   character(*), parameter                       :: RoutineName = 'BEMT_AllocOutput'
+   
       ! Initialize variables for this routine
 
-   errStat2 = ErrID_None
-   errMsg2  = ""
+   errStat = ErrID_None
+   errMsg  = ""
 
-   allocate ( y%inducedVel( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for y%inducedVel.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_AllocOutput' )
-      return
-   end if 
+   call allocAry( y%inducedVel, p%numBladeNodes, p%numBlades, 'y%inducedVel', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%phi, p%numBladeNodes, p%numBlades, 'y%phi', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%chi, p%numBladeNodes, p%numBlades, 'y%chi', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Re, p%numBladeNodes, p%numBlades, 'y%Re', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%axInduction, p%numBladeNodes, p%numBlades, 'y%axInduction', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%tanInduction, p%numBladeNodes, p%numBlades, 'y%tanInduction', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%AOA, p%numBladeNodes, p%numBlades, 'y%AOA', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cx, p%numBladeNodes, p%numBlades, 'y%Cx', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cy, p%numBladeNodes, p%numBlades, 'y%Cy', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cm, p%numBladeNodes, p%numBlades, 'y%Cm', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cl, p%numBladeNodes, p%numBlades, 'y%Cl', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Cd, p%numBladeNodes, p%numBlades, 'y%Cd', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   
+   if (ErrStat >= AbortErrLev) RETURN
+   
+      ! outputs documented in AeroDyn
    y%inducedVel = 0.0_ReKi
-   
-   allocate ( y%phi( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for y%phi.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_AllocOutput' )
-      return
-   end if 
-   y%phi = 0.0_ReKi
-   
-   allocate ( y%chi( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for y%chi.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_AllocOutput' )
-      return
-   end if 
-   y%chi = 0.0_ReKi
-   
-   
-   allocate ( y%Re( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for y%Re.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_AllocOutput' )
-      return
-   end if 
-   y%Re = 0.0_ReKi
-   
-   allocate ( y%axInduction( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for y%axInduction.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_AllocOutput' )
-      return
-   end if 
-   y%axInduction = 0.0_ReKi
-   
-   allocate ( y%tanInduction( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for y%tanInduction.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_AllocOutput' )
-      return
-   end if 
-   y%tanInduction = 0.0_ReKi
-   
-   allocate ( y%AOA( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for y%AOA.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_AllocOutput' )
-      return
-   end if 
-   y%AOA = 0.0_ReKi
-   
-   allocate ( y%Cx( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for y%Cx.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_AllocOutput' )
-      return
-   end if 
+   y%phi = 0.0_ReKi   
    y%Cx = 0.0_ReKi
-   
-   allocate ( y%Cy( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for y%Cy.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_AllocOutput' )
-      return
-   end if 
    y%Cy = 0.0_ReKi
-   
-   allocate ( y%Cl( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for y%Cl.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_AllocOutput' )
-      return
-   end if 
+   y%Cm = 0.0_ReKi  !bjj: FIX ME!! TODO: This isn't updated anywhere in this module
+
+      ! others:
+   y%chi = 0.0_ReKi
+   y%Re = 0.0_ReKi   
+   y%axInduction = 0.0_ReKi   
+   y%tanInduction = 0.0_ReKi
+   y%AOA = 0.0_ReKi   
    y%Cl = 0.0_ReKi
-   
-   allocate ( y%Cd( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for y%Cd.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_AllocOutput' )
-      return
-   end if 
    y%Cd = 0.0_ReKi
    
 end subroutine BEMT_AllocOutput
@@ -823,7 +755,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                OtherState%UA%iBladeNode = i
                OtherState%UA%iBlade     = j
                
-               if ( p%SkewWakeMod < 2 ) then
+               if ( p%SkewWakeMod < SkewMod_Coupled ) then
                   
                   call BEMT_UnCoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, u%lambda, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), &
                               u%Vx(i,j), u%Vy(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
@@ -832,7 +764,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                               z%phi(i,j), errStat, errMsg) 
                   if (errStat >= AbortErrLev) return
                   
-               else if ( p%SkewWakeMod == 2 ) then
+               else if ( p%SkewWakeMod == SkewMod_Coupled ) then
          
                   CALL BEMT_CoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, u%lambda, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), &
                               u%Vx(i,j), u%Vy(i,j), u%Vinf(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
@@ -847,7 +779,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                   ! We can get all of these from the BEMT Wind routines
                   
                   
-                  if ( p%SkewWakeMod < 2 ) then
+                  if ( p%SkewWakeMod < SkewMod_Coupled ) then
                      call BEMTU_Wind(z%phi(i,j), 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u_UA%alpha,  u_UA%U, u_UA%Re)
                      !BEMTU_InductionWithResidual(z%phi(i,j), u%psi(j), u%chi0, 1, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), lambda,  AFInfo(p%AFIndx(i,j)), &
                      !         u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%SkewWakeMod,  &
@@ -983,7 +915,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
          !else
             
          !end if
-         if (p%skewWakeMod < 2) then
+         if (p%skewWakeMod < SkewMod_Coupled) then
             y%phi(i,j) = z%phi(i,j)
          
          end if
@@ -991,12 +923,12 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
          
          if ( p%useInduction ) then
             r = u%rlocal(i,j)
-            if (p%skewWakeMod < 2) then
+            if (p%skewWakeMod < SkewMod_Coupled) then
                fzero = BEMTU_InductionWithResidual(y%phi(i,j), psi, chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i,j)), &
                               Vx, Vy, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
                               p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                               y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), errStat, errMsg)
-            else if (p%skewWakeMod == 2) then
+            else if (p%skewWakeMod == SkewMod_Coupled) then
                y%axInduction(i,j)  = z%axInduction(i,j)
                y%tanInduction(i,j) = z%tanInduction(i,j)
                coupledResidual = BEMTC_Elemental( z%axInduction(i,j), z%tanInduction(i,j), psi, chi0, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i,j)), &
@@ -1007,12 +939,12 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
          else
             y%axInduction(i,j)  = 0.0_ReKi
             y%tanInduction(i,j) = 0.0_ReKi
-            if (p%skewWakeMod < 2) then
+            if (p%skewWakeMod < SkewMod_Coupled) then
                call ComputeAirfoilCoefs( y%phi(i,j), 0.0_ReKi, 0.0_ReKi, Vx, Vy, p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, .TRUE., .TRUE., AFInfo(p%AFindx(i,j)), &
                                          p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                                          y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), errStat, errMsg )       
                ! NEED TO COMPUTE AND RETURN chi as an output in this case
-            else if (p%skewWakeMod == 2) then
+            else if (p%skewWakeMod == SkewMod_Coupled) then
                y%phi(i,j) = ComputePhiWithInduction( Vx, Vy, 0.0, 0.0, errStat, errMsg )
             end if
          end if
@@ -1022,7 +954,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
             return
          end if
         
-         if ( p%SkewWakeMod > 1 ) then !Use the coupled velocity equation
+         if ( p%SkewWakeMod > SkewMod_Uncoupled ) then !Use the coupled velocity equation
             y%inducedVel(I,J) = BEMTC_Wind(y%axInduction(i,j), y%tanInduction(i,j), Vx, Vy, p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, chi0, psi, phi , AOA, Re, chi)
            ! y%inducedVel(I,J) = sqrt( ( Vx*( cos(chi0) - y%axInduction(i,j) + Vy*y%tanInduction(i,j)*sin(y%chi(i,j))*cos(psi)*( 1 + sin(y%chi(i,j))*sin(psi) ) ) )**2 + &
            !           ( Vy*( 1 + y%tanInduction(i,j)*cos(y%chi(i,j))*( 1 + sin(y%chi(i,j))*sin(psi) ) ) + Vx*cos(psi)*( y%axInduction(i,j)*tan(y%chi(i,j)/2.0) - sin(chi0) ) )**2 )
@@ -1163,14 +1095,14 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_res
          
                ! Solve for the constraint states here:
          
-            IF ( p%SkewWakeMod < 2 ) THEN
+            IF ( p%SkewWakeMod < SkewMod_Coupled ) THEN
                z%phi(i,j) = UncoupledErrFn(z%phi(i,j), u%psi(j), u%chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i,j)), &
                                  u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
                                  p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                                  ErrStat, ErrMsg)
          
          
-            ELSE IF ( p%SkewWakeMod == 2 ) THEN
+            ELSE IF ( p%SkewWakeMod == SkewMod_Coupled ) THEN
              !z_residual%Residuals(i,j) = CpldResFn()
             END IF
          end do
