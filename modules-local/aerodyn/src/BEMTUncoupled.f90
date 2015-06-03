@@ -287,9 +287,10 @@ recursive subroutine inductionFactors(r , Rtip, chord, Rhub, lambda, phi, azimut
    
     
     if ( EqualRealNos(phi, 0.0_ReKi) ) then
-      fzero =  0.0
-      a     =  0.0
-      ap    =  0.0
+      fzero =  0.0_ReKi
+      a     =  0.0_ReKi
+      ap    =  0.0_ReKi
+      chi   =  0.0_ReKi
       return
     end if
     
@@ -342,6 +343,13 @@ recursive subroutine inductionFactors(r , Rtip, chord, Rhub, lambda, phi, azimut
 
     F = Ftip * Fhub
 
+    if ( EqualRealNos(F, 0.0_ReKi) ) then
+      fzero =  0.0_ReKi
+      a     =  1.0_ReKi
+      ap    =  -1.0_ReKi
+      chi   =  0.0_ReKi
+      return
+    end if
     
     ! bem parameters
     
@@ -404,9 +412,9 @@ recursive subroutine inductionFactors(r , Rtip, chord, Rhub, lambda, phi, azimut
       yawCorr = (15.0_ReKi*pi/64.0_ReKi*tan(chi/2.0_ReKi) * (r/Rtip) * saz)
       a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
         !a = min(a, 0.9)
-   else if ( skewWakeMod == SkewMod_Coupled ) then
-      chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
-      a = a * ( 1.0_ReKi + 0.63_ReKi*(r/Rtip)**2 )*(c1 + c2*lambda + c3*lambda**2 + c4*lambda**3 )*( chi*180.0_ReKi/pi )*saz   ! chi needs to be in degrees here.
+   !else if ( skewWakeMod == SkewMod_Coupled ) then
+   !   chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
+   !   a = a * ( 1.0_ReKi + 0.63_ReKi*(r/Rtip)**2 )*(c1 + c2*lambda + c3*lambda**2 + c4*lambda**3 )*( chi*180.0_ReKi/pi )*saz   ! chi needs to be in degrees here.
    end if
    
     ! compute tangential induction factor
@@ -727,6 +735,14 @@ if ( .NOT. (EqualRealNos(phi,0.0_ReKi) ) ) then
 
    F = Ftip * Fhub
 
+   if ( EqualRealNos(F, 0.0_DbKi) ) then
+      fzero =  0.0_ReKi
+      axInduction     =  1.0_ReKi
+      tanInduction    =  -1.0_ReKi
+      chi   =  0.0_ReKi
+      return
+   end if
+   
       ! bem parameters
    k  = sigma_p*Cx/4.0_DbKi/F/sphi/sphi  ! checked GJH
     
