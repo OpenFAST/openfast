@@ -474,7 +474,7 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
    y%phi = 0.0_ReKi   
    y%Cx = 0.0_ReKi
    y%Cy = 0.0_ReKi
-   y%Cm = 0.0_ReKi  !bjj: FIX ME!! TODO: This isn't updated anywhere in this module
+   y%Cm = 0.0_ReKi
 
       ! others:
    y%chi = 0.0_ReKi

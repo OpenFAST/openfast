@@ -218,13 +218,13 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
          rotateMat(3,3) = orientation(3,3) - 1.0_ReKi
          
          do j=1,AD%u(1)%BladeMotion(k)%nnodes        
+            position = AD%u(1)%BladeMotion(k)%Position(:,j) - AD%u(1)%HubMotion%Position(:,1) 
+            AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) = AD%u(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
+            
             orientation = transpose( AD%u(1)%BladeRootMotion(k)%RefOrientation(:,:,1) )
             orientation = matmul( AD%u(1)%BladeMotion(k)%RefOrientation(:,:,j), orientation )            
             AD%u(1)%BladeMotion(k)%Orientation(  :,:,j) = matmul( orientation, AD%u(1)%BladeRootMotion(k)%Orientation(:,:,1) )
-            
-            position = AD%u(1)%BladeMotion(k)%Position(:,j) - AD%u(1)%HubMotion%Position(:,1)
-            AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) = matmul( rotateMat, position ) + AD%u(1)%HubMotion%TranslationDisp(:,1)
-            
+                        
             position =  AD%u(1)%BladeMotion(k)%Position(:,j) + AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) &
                       - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
             AD%u(1)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
