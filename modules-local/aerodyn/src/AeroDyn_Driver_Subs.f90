@@ -57,7 +57,8 @@ subroutine Dvr_Init(DvrData,errStat,errMsg )
       ! Read the AeroDyn driver input file
    call Dvr_ReadInputFile(inputFile, DvrData, errStat2, errMsg2 )
       call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName) 
-
+      if (errStat >= AbortErrLev) return
+      
       ! validate the inputs
    call ValidateInputs(DvrData, errStat2, errMsg2)      
       call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName) 
@@ -167,7 +168,7 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
    real(ReKi)                                  :: theta(3)
    real(ReKi)                                  :: position(3)
    real(ReKi)                                  :: orientation(3,3)
-   real(ReKi)                                  :: orientationR(3,3)
+   real(ReKi)                                  :: rotateMat(3,3)
    
    
    errStat = ErrID_None
@@ -212,9 +213,9 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
       do k=1,DvrData%numBlades
          orientation = transpose( AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) )
          orientation = matmul( orientation, AD%u(1)%BladeRootMotion(k)%RefOrientation(  :,:,1) ) 
-         orientationR(1,1) = orientation(1,1) - 1.0_ReKi
-         orientationR(2,2) = orientation(2,2) - 1.0_ReKi
-         orientationR(3,3) = orientation(3,3) - 1.0_ReKi
+         rotateMat(1,1) = orientation(1,1) - 1.0_ReKi
+         rotateMat(2,2) = orientation(2,2) - 1.0_ReKi
+         rotateMat(3,3) = orientation(3,3) - 1.0_ReKi
          
          do j=1,AD%u(1)%BladeMotion(k)%nnodes        
             orientation = transpose( AD%u(1)%BladeRootMotion(k)%RefOrientation(:,:,1) )
@@ -222,10 +223,10 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
             AD%u(1)%BladeMotion(k)%Orientation(  :,:,j) = matmul( orientation, AD%u(1)%BladeRootMotion(k)%Orientation(:,:,1) )
             
             position = AD%u(1)%BladeMotion(k)%Position(:,j) - AD%u(1)%HubMotion%Position(:,1)
-            AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) = matmul( orientationR, position ) + AD%u(1)%HubMotion%TranslationDisp(:,j)
+            AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) = matmul( rotateMat, position ) + AD%u(1)%HubMotion%TranslationDisp(:,1)
             
             position =  AD%u(1)%BladeMotion(k)%Position(:,j) + AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) &
-                      - AD%u(1)%HubMotion%Position(:,j) - AD%u(1)%HubMotion%TranslationDisp(:,j)
+                      - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
             AD%u(1)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
             
             AD%u(1)%BladeMotion(k)%RotationVel(    :,j) = 0.0_ReKi
