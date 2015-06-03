@@ -420,7 +420,8 @@ recursive subroutine inductionFactors(r , Rtip, chord, Rhub, lambda, phi, azimut
     ! compute tangential induction factor
     kp = sigma_p*ct/4.0_ReKi/F/sphi/cphi
     ap = kp/(1.0_ReKi-kp)
-
+!bjj: 3-jun-2015: TODO: was able to trigger divide-by-zero here using ccBlade_UAE.dvr without tiploss or hubloss
+    
     if (.not. wakerotation) then
         ap = 0.0_ReKi
         kp = 0.0_ReKi

@@ -584,18 +584,20 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
             positionL(2) = InputFileData%BladeProps(k)%BlSwpAC(j)
             positionL(3) = InputFileData%BladeProps(k)%BlSpn(  j)
             
+               ! reference position of the jth node in the kth blade:
+            position = u%BladeRootMotion(k)%Position(:,1) + matmul(positionL,u%BladeRootMotion(k)%RefOrientation(:,:,1))  ! note that because positionL is a 1-D array, we're doing the transpose of matmul(transpose(u%BladeRootMotion(k)%RefOrientation),positionL)
+
+            
                ! reference orientation of the jth node in the kth blade, relative to the root in the local blade coordinate system:
             theta(1)     =  0.0_ReKi
             theta(2)     =  InputFileData%BladeProps(k)%BlCrvAng(j)
             theta(3)     = -InputFileData%BladeProps(k)%BlTwist( j)            
             orientationL = EulerConstruct( theta )
-                     
-               ! reference position of the jth node in the kth blade:
-            position = InitInp%BladeRootPosition(:,k) + matmul(positionL,u%BladeRootMotion(k)%RefOrientation(:,:,1))  ! note that because positionL is a 1-D array, we're doing the transpose of matmul(transpose(u%BladeRootMotion(k)%RefOrientation),positionL)
-            
+                                 
                ! reference orientation of the jth node in the kth blade
             orientation = matmul( orientationL, u%BladeRootMotion(k)%RefOrientation(:,:,1) )
 
+            
             call MeshPositionNode(u%BladeMotion(k), j, position, errStat2, errMsg2, orientation)
                call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
                
@@ -2115,7 +2117,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    
    InitInp%airDens          = InputFileData%AirDens 
    InitInp%kinVisc          = InputFileData%KinVisc                  
-   InitInp%skewWakeMod      = InputFileData%SkewMod      ! bjj: FIX ME: check what these variables mean.... and make sure AD input file matches BEMT code
+   InitInp%skewWakeMod      = InputFileData%SkewMod
    InitInp%aTol             = InputFileData%IndToler
    InitInp%useTipLoss       = InputFileData%TipLoss
    InitInp%useHubLoss       = InputFileData%HubLoss
