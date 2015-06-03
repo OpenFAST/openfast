@@ -33,7 +33,7 @@ typedef	^	InitInputType	ReKi	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference o
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
 typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
-typedef	^	InitOutputType	ReKi	RotorRad	-	-	-	"unconed rotor radius"	m
+
 
 # ..... Input file data ...........................................................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
@@ -50,10 +50,8 @@ typedef	^	AD_BladePropsType	IntKi	BlAFID	{:}	-	-	"ID of Airfoil at blade node"	-
 # ..... Primary Input file data ...................................................................................................
 typedef	^	AD_InputFile	DbKi	DTAero	-	-	-	"Time interval for aerodynamic calculations {or "default"}"	s
 typedef	^	AD_InputFile	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT}"	-
-typedef	^	AD_InputFile	IntKi	AFAeroBladeMod	-	-	-	"Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model}"	-
-typedef	^	AD_InputFile	IntKi	AFAeroTwrMod	-	-	-	"Type of tower airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model}"	-
-typedef	^	AD_InputFile	LOGICAL	TwrPotent	-	-	-	"Calculate tower influence on wind based on potential flow around the tower?"	flag
-typedef	^	AD_InputFile	LOGICAL	TwrShadow	-	-	-	"Calculate downstream tower shadow?"	flag
+typedef	^	AD_InputFile	IntKi	AFAeroMod	-	-	-	"Type of blade airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model}"	-
+typedef	^	AD_InputFile	IntKi	TwrInflnc	-	-	-	"Type of tower influence model {0=none, 1=potential flow, 2=tower shadow}"	-
 typedef	^	AD_InputFile	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	AD_InputFile	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	AD_InputFile	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
@@ -78,13 +76,11 @@ typedef	^	AD_InputFile	CHARACTER(1024)	AFNames	{:}	-	-	"Airfoil file names (NumA
 typedef	^	AD_InputFile	LOGICAL	UseBlCm	-	-	-	"Include aerodynamic pitching moment in calculations?"	flag
 #typedef	^	AD_InputFile	IntKi	NumBlNds	-	-	-	"Number of blade nodes used in the analysis"	-
 typedef	^	AD_InputFile	AD_BladePropsType	BladeProps	{:}	-	-	"blade property information from blade input files"	-
-typedef	^	AD_InputFile	ReKi	TwrWakeCnst	-	-	-	"Tower wake constant {0.0 - full potential flow, 0.1 - Bak model} [used only when TwrPotent=True]"	-
-typedef	^	AD_InputFile	LOGICAL	TwrUseCm	-	-	-	"Include aerodynamic pitching moment in tower aerodynamic load calculations? [used only when TwrAero=True]"	flag
+typedef	^	AD_InputFile	LOGICAL	TwrPFBak	-	-	-	"Include Bak correction to potential flow? [used only when TwrInflnc=1]"	flag
 typedef	^	AD_InputFile	IntKi	NumTwrNds	-	-	-	"Number of tower nodes used in the analysis"	-
 typedef	^	AD_InputFile	ReKi	TwrElev	{:}	-	-	"Elevation at tower node"	m
-typedef	^	AD_InputFile	ReKi	TwrTwist	{:}	-	-	"Twist at tower node"	radians
-typedef	^	AD_InputFile	ReKi	TwrChord	{:}	-	-	"Chord at tower node"	m
-typedef	^	AD_InputFile	IntKi	TwrAFID	{:}	-	-	"ID of Airfoil at tower node"	-
+typedef	^	AD_InputFile	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
+typedef	^	AD_InputFile	ReKi	TwrCd	{:}	-	-	"Coefficient of drag at tower node"	-
 typedef	^	AD_InputFile	LOGICAL	SumPrint	-	-	-	"Generate a summary file listing input options and interpolated properties to "<rootname>.AD.sum"?"	flag
 typedef	^	AD_InputFile	IntKi	NBlOuts	-	-	-	"Number of blade node outputs [0 - 9]"	-
 typedef	^	AD_InputFile	IntKi	BlOutNd	{9}	-	-	"Blade nodes whose values will be output"	-
@@ -116,12 +112,13 @@ typedef	^	OtherStateType	ReKi	WithoutSweepPitchTwist	{:}{:}{:}{:}	-	-	"Coordinat
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 typedef	^	ParameterType	DbKi	DT	-	-	-	"Time step for continuous state integration & discrete state update"	seconds
 typedef	^	ParameterType	IntKi	WakeMod	-	-	-	"Type of wake/induction model {0=none, 1=BEMT}"	-
-typedef	^	ParameterType	LOGICAL	TwrPotent	-	-	-	"Calculate tower influence on wind based on potential flow around the tower?"	flag
-typedef	^	ParameterType	LOGICAL	TwrShadow	-	-	-	"Calculate downstream tower shadow?"	flag
+typedef	^	ParameterType	IntKi	TwrInflnc	-	-	-	"Type of tower influence model {0=none, 1=potential flow, 2=tower shadow}"	-
 typedef	^	ParameterType	LOGICAL	TwrAero	-	-	-	"Calculate tower aerodynamic loads?"	flag
 typedef	^	ParameterType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"	-
 typedef	^	ParameterType	IntKi	NumBlNds	-	-	-	"Number of nodes on each blade"	-
 typedef	^	ParameterType	IntKi	NumTwrNds	-	-	-	"Number of nodes on the tower"	-
+typedef	^	ParameterType	ReKi	TwrDiam	{:}	-	-	"Diameter of tower at node"	m
+typedef	^	ParameterType	ReKi	TwrCd	{:}	-	-	"Coefficient of drag at tower node"	-
 typedef	^	ParameterType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 typedef	^	ParameterType	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
 typedef	^	ParameterType	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
@@ -143,13 +140,12 @@ typedef	^	InputType	MeshType	HubMotion	-	-	-	"motion on the hub"	-
 typedef	^	InputType	MeshType	BladeRootMotion	{:}	-	-	"motion on each blade root"	-
 typedef	^	InputType	MeshType	BladeMotion	{:}	-	-	"motion on each blade"	-
 # Define inputs that are not on this mesh here:
-typedef	^	InputType	ReKi	InflowOnBlade	{:}{:}{:}			"U,V,W at elements on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
-typedef	^	InputType	ReKi	InflowOnTower	{:}{:}			"U,V,W at elements on the tower"	m/s
+typedef	^	InputType	ReKi	InflowOnBlade	{:}{:}{:}			"U,V,W at nodes on each blade (note if we change the requirement that NumNodes is the same for each blade, this will need to change)"	m/s
+typedef	^	InputType	ReKi	InflowOnTower	{:}{:}			"U,V,W at nodes on the tower"	m/s
 
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
 typedef	^	OutputType	MeshType	TowerLoad	-	-	-	"loads on the tower"	-
-typedef	^	OutputType	MeshType	HubLoad	-	-	-	"loads on the hub"	-
 typedef	^	OutputType	MeshType	BladeLoad	{:}	-	-	"loads on each blade"	-
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"

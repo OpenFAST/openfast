@@ -57,6 +57,16 @@ program AeroDyn_Driver
       numSteps = ceiling( DvrData%Cases(iCase)%TMax / DvrData%Cases(iCase)%dT)      
       dT_Dvr   = DvrData%Cases(iCase)%dT
       
+      call WrScr ('   WndSpeed='//trim(num2lstr(DvrData%Cases(iCase)%WndSpeed))//&
+               ' m/s; ShearExp='//trim(num2lstr(DvrData%Cases(iCase)%ShearExp))//&
+                   '; RotSpeed='//trim(num2lstr(DvrData%Cases(iCase)%RotSpeed*RPS2RPM))//&
+                  ' rpm; Pitch='//trim(num2lstr(DvrData%Cases(iCase)%Pitch*R2D))//&
+                    ' deg; Yaw='//trim(num2lstr(DvrData%Cases(iCase)%Yaw*R2D))//&
+                     ' deg; dT='//trim(num2lstr(DvrData%Cases(iCase)%dT))//&
+                     ' s; Tmax='//trim(num2lstr(DvrData%Cases(iCase)%Tmax))//&
+                 ' s; numSteps='//trim(num2lstr(numSteps)) )
+      
+      
          ! Set the Initialization input data for AeroDyn based on the Driver input file data, and initialize AD
       call Init_AeroDyn(DvrData, AD, dT_Dvr, errStat, errMsg)
          call CheckError()
@@ -67,25 +77,7 @@ program AeroDyn_Driver
             ErrMsg = 'AeroDyn changed the time step for case '//trim(num2lstr(iCase))//'. Change DTAero to "default".'
             call CheckError()
          end if
-
-         ! set TSR and/or WS here (RotorRad comes from Init_AeroDyn):
-      IF ( DvrData%InputTSR )  THEN
-         DvrData%Cases(iCase)%WndSpeed = DvrData%RotorRad*DvrData%Cases(iCase)%RotSpeed/DvrData%Cases(iCase)%TSR
-      ELSE
-         DvrData%Cases(iCase)%TSR      = DvrData%RotorRad*DvrData%Cases(iCase)%RotSpeed/DvrData%Cases(iCase)%WndSpeed
-      ENDIF
-      
-      call WrScr ('   WndSpeed='//trim(num2lstr(DvrData%Cases(iCase)%WndSpeed))//&
-               ' m/s; ShearExp='//trim(num2lstr(DvrData%Cases(iCase)%ShearExp))//&
-                        '; TSR='//trim(num2lstr(DvrData%Cases(iCase)%TSR))//&
-                   '; RotSpeed='//trim(num2lstr(DvrData%Cases(iCase)%RotSpeed*RPS2RPM))//&
-                  ' rpm; Pitch='//trim(num2lstr(DvrData%Cases(iCase)%Pitch*R2D))//&
-                    ' deg; Yaw='//trim(num2lstr(DvrData%Cases(iCase)%Yaw*R2D))//&
-                 ' deg; AzAng0='//trim(num2lstr(DvrData%Cases(iCase)%AzAng0*R2D))//&
-                     ' deg; dT='//trim(num2lstr(DvrData%Cases(iCase)%dT))//&
-                     ' s; Tmax='//trim(num2lstr(DvrData%Cases(iCase)%Tmax))//' s' )
-                        
-      
+                                    
       
       call Dvr_InitializeOutputFile( iCase, DvrData%Cases(iCase), DvrData%OutFileData, errStat, errMsg)
          call CheckError()

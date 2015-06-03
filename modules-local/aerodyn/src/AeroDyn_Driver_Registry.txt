@@ -21,11 +21,9 @@ usefrom	AeroDyn_Registry.txt
 # ..... Table of cases to run .......................................................................................................
 typedef   AeroDyn_Driver/AD_Dvr     Dvr_Case      ReKi                   WndSpeed         -      -     -   "Wind Speed" "m/s"
 typedef   ^                         ^             ReKi                   ShearExp         -      -     -   "Power Law Wind-Shear Exponent" "-"
-typedef   ^                         ^             ReKi                   TSR              -      -     -   "Tip-Speed Ratio" "-"
 typedef   ^                         ^             ReKi                   RotSpeed         -      -     -   "Rotor Speed" "rad/s"
 typedef   ^                         ^             ReKi                   Pitch            -      -     -   "Pitch angle" "rad"
 typedef   ^                         ^             ReKi                   Yaw              -      -     -   "Yaw angle" "rad"
-typedef   ^                         ^             ReKi                   AzAng0           -      -     -   "Initial azimuth angle" "rad"
 typedef   ^                         ^             DbKi                   dT               -      -     -   "time increment" "s"
 typedef   ^                         ^             DbKi                   Tmax             -      -     -   "length of this simulation" "s"
 
@@ -63,11 +61,8 @@ typedef   ^                         ^            ReKi                    overhan
 typedef   ^                         ^            ReKi                    ShftTilt         -      -     -   "Shaft tilt angle" "rad"
 typedef   ^                         ^            ReKi                    Precone          -      -     -   "Precone angle (all blades)" "rad"
 typedef   ^                         ^            IntKi                   NumCases         -      -     -   "number of time-marching cases to run" "-"
-typedef   ^                         ^            logical                 InputTSR         -      -     -   "whether TSR (true) or WndSpeed (false) was entered in table; other will be calculated" "-"
 typedef   ^                         ^            Dvr_Case                Cases           {:}     -     -   "table of cases to run" "-"
 typedef   ^                         ^            Dvr_OutputFile          OutFileData      -      -     -   "data for driver output file" "-"
 #typedef  ^                         ^            AeroDyn_Data            AD               -      -     -   "data for the AeroDyn module"
 
-#bjj: these may need to be removed later:
-typedef   ^                         ^            ReKi                    rotorRad         -      -     -   "unconed Rotor radius" "m"
 
