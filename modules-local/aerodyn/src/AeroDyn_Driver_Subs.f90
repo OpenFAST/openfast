@@ -74,7 +74,7 @@ subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
 
       ! locals
-   real(reKi)                                  :: angle, theta(3)
+   real(reKi)                                  :: theta(3)
    integer(IntKi)                              :: k   
    integer(IntKi)                              :: errStat2      ! local status of error message
    character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
@@ -114,19 +114,13 @@ subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
    
       ! bjj: fix this!
    do k=1,InitInData%numBlades
-         
-      angle = (k-1)*2.0*pi/real(InitInData%numBlades,ReKi)
-      
-      InitInData%BladeRootPosition(1,k)   =  DvrData%hubRad * sin(DvrData%precone)
-      InitInData%BladeRootPosition(2,k)   = -DvrData%hubRad * cos(DvrData%precone) * sin(angle) 
-      InitInData%BladeRootPosition(3,k)   = -DvrData%hubRad * cos(DvrData%precone) * cos(angle) 
-            
-      InitInData%BladeRootPosition(:,k)   = InitInData%HubPosition + matmul( InitInData%BladeRootPosition(:,k), InitInData%HubOrientation ) !bjj: note that the 2nd term is the transpose of jmj's equation, but it works with 1-d arrays in fortran)
-      
-      theta(1) = angle
+                     
+      theta(1) = (k-1)*2.0*pi/real(InitInData%numBlades,ReKi)
       theta(2) = DvrData%precone
       theta(3) = 0.0_ReKi
       InitInData%BladeRootOrientation(:,:,k) = matmul( EulerConstruct( theta ), InitInData%HubOrientation )
+                  
+      InitInData%BladeRootPosition(:,k)   = InitInData%HubPosition + DvrData%hubRad * InitInData%BladeRootOrientation(3,:,k)      
       
    end do
       
@@ -136,7 +130,6 @@ subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
       
       
       ! move AD initOut data to AD Driver
-   DvrData%RotorRad = InitOutData%RotorRad      
    call move_alloc( InitOutData%WriteOutputHdr, DvrData%OutFileData%WriteOutputHdr )
    call move_alloc( InitOutData%WriteOutputUnt, DvrData%OutFileData%WriteOutputUnt )   
      
@@ -172,7 +165,9 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
    real(ReKi)                                  :: z             ! height (m)
    !real(ReKi)                                  :: angle
    real(ReKi)                                  :: theta(3)
-   !real(ReKi)                                  :: orientation(3,3)
+   real(ReKi)                                  :: position(3)
+   real(ReKi)                                  :: orientation(3,3)
+   real(ReKi)                                  :: orientationR(3,3)
    
    
    errStat = ErrID_None
@@ -181,31 +176,33 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
       time = (nt-1) * DvrData%Cases(iCase)%dT
       AD%inputTime(1) = time
       
-      !bjj: TODO FIX ME: set TowerMotion, HubMotion, BladeRootMotion, BladeMotion, InflowOnBlade, InflowOnTower
-
-      !bjj: FIX ME!!!!
       ! Tower motions:
       do j=1,AD%u(1)%TowerMotion%nnodes
-         AD%u(1)%TowerMotion%Orientation(  :,:,j) = AD%u(1)%TowerMotion%RefOrientation(:,:,j)
+         AD%u(1)%TowerMotion%Orientation(  :,:,j) = AD%u(1)%TowerMotion%RefOrientation(:,:,j) ! identity
          AD%u(1)%TowerMotion%TranslationDisp(:,j) = 0.0_ReKi
          AD%u(1)%TowerMotion%TranslationVel( :,j) = 0.0_ReKi
          AD%u(1)%TowerMotion%RotationVel(    :,j) = 0.0_ReKi
       end do !j=nnodes
       
       ! Hub motions:
-      AD%u(1)%HubMotion%Orientation(  :,:,1) = AD%u(1)%HubMotion%RefOrientation(:,:,1)
-      AD%u(1)%HubMotion%TranslationDisp(:,1) = 0.0_ReKi
+      theta(1) = 0.0_ReKi
+      theta(2) = 0.0_ReKi
+      theta(3) = DvrData%Cases(iCase)%Yaw
+      orientation = EulerConstruct(theta)
+      
+      AD%u(1)%HubMotion%Orientation(  :,:,1) = matmul( AD%u(1)%HubMotion%RefOrientation(:,:,1), orientation )
+      AD%u(1)%HubMotion%TranslationDisp(:,1) = matmul( AD%u(1)%HubMotion%Position(:,1), orientation ) - AD%u(1)%HubMotion%Position(:,1) ! = matmul( transpose(orientation) - eye(3), AD%u(1)%HubMotion%Position(:,1) )
       AD%u(1)%HubMotion%TranslationVel( :,1) = 0.0_ReKi
-      AD%u(1)%HubMotion%RotationVel(    :,1) = 0.0_ReKi
+      AD%u(1)%HubMotion%RotationVel(    :,1) = AD%u(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed
       
       ! Blade root motions:
-      do k=1,DvrData%numBlades
+      do k=1,DvrData%numBlades         
          theta(1) = (k-1)*2.0*pi/real(DvrData%numBlades,ReKi) + time * DvrData%Cases(iCase)%RotSpeed
-         theta(2) = DvrData%precone
-         theta(3) = 0.0
+         theta(2) =  DvrData%precone
+         theta(3) = -DvrData%Cases(iCase)%pitch
+         orientation = EulerConstruct(theta)
          
-         !AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) = AD%u(1)%BladeRootMotion(k)%RefOrientation(:,:,1)
-         AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) = matmul( EulerConstruct(theta), AD%u(1)%HubMotion%Orientation(  :,:,1) )
+         AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) = matmul( orientation, AD%u(1)%HubMotion%Orientation(  :,:,1) )
          AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) = 0.0_ReKi
          AD%u(1)%BladeRootMotion(k)%TranslationVel( :,1) = 0.0_ReKi
          AD%u(1)%BladeRootMotion(k)%RotationVel(    :,1) = 0.0_ReKi
@@ -213,10 +210,24 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
       
       ! Blade motions:
       do k=1,DvrData%numBlades
-         do j=1,AD%u(1)%BladeMotion(k)%nnodes
-            AD%u(1)%BladeMotion(k)%Orientation(  :,:,j) = AD%u(1)%BladeMotion(k)%RefOrientation(:,:,j)
-            AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) = 0.0_ReKi
-            AD%u(1)%BladeMotion(k)%TranslationVel( :,j) = 0.0_ReKi
+         orientation = transpose( AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) )
+         orientation = matmul( orientation, AD%u(1)%BladeRootMotion(k)%RefOrientation(  :,:,1) ) 
+         orientationR(1,1) = orientation(1,1) - 1.0_ReKi
+         orientationR(2,2) = orientation(2,2) - 1.0_ReKi
+         orientationR(3,3) = orientation(3,3) - 1.0_ReKi
+         
+         do j=1,AD%u(1)%BladeMotion(k)%nnodes        
+            orientation = transpose( AD%u(1)%BladeRootMotion(k)%RefOrientation(:,:,1) )
+            orientation = matmul( AD%u(1)%BladeMotion(k)%RefOrientation(:,:,j), orientation )            
+            AD%u(1)%BladeMotion(k)%Orientation(  :,:,j) = matmul( orientation, AD%u(1)%BladeRootMotion(k)%Orientation(:,:,1) )
+            
+            position = AD%u(1)%BladeMotion(k)%Position(:,j) - AD%u(1)%HubMotion%Position(:,1)
+            AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) = matmul( orientationR, position ) + AD%u(1)%HubMotion%TranslationDisp(:,j)
+            
+            position =  AD%u(1)%BladeMotion(k)%Position(:,j) + AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) &
+                      - AD%u(1)%HubMotion%Position(:,j) - AD%u(1)%HubMotion%TranslationDisp(:,j)
+            AD%u(1)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
+            
             AD%u(1)%BladeMotion(k)%RotationVel(    :,j) = 0.0_ReKi
          end do !j=nnodes
       end do !k=numBlades
@@ -271,12 +282,14 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
    integer                      :: Sttus
    character( 11)               :: DateNow                                  ! Date shortly after the start of execution.
    character(  8)               :: TimeNow                                  ! Time of day shortly after the start of execution.
-   real(ReKi)                   :: InpCase(8)                               ! Temporary array to hold combined-case input parameters.
+   
+   integer, parameter           :: NumCols = 7                              ! number of columns to be read from the input file
+   real(ReKi)                   :: InpCase(NumCols)                         ! Temporary array to hold combined-case input parameters.
    logical                      :: TabDel      
    logical                      :: echo   
 
-   INTEGER(IntKi)               :: ErrStat2                                        ! Temporary Error status
-   CHARACTER(ErrMsgLen)         :: ErrMsg2                                         ! Temporary Err msg
+   INTEGER(IntKi)               :: ErrStat2                                 ! Temporary Error status
+   CHARACTER(ErrMsgLen)         :: ErrMsg2                                  ! Temporary Err msg
    CHARACTER(*), PARAMETER      :: RoutineName = 'Dvr_ReadInputFile'
    
    
@@ -297,7 +310,7 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
    end if
 
    
-   call WrScr( 'Opening WT_Perf input file:  '//fileName )
+   call WrScr( 'Opening input file:  '//fileName )
 
       ! Skip a line, read the run title information.
 
@@ -410,8 +423,6 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
 
    call ReadCom  ( unIn, fileName, 'the combined-case subtitle', errStat2, errMsg2, UnEc )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
-   call ReadVar ( unIn, fileName, DvrData%InputTSR, 'InputTSR', 'Input speeds as TSRs?', errStat2, errMsg2, UnEc )
-      call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
    call ReadVar  ( unIn, fileName, DvrData%NumCases, 'NumCases', 'Number of cases to run', errStat2, errMsg2, UnEc )
       call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
    call ReadCom  ( unIn, fileName, 'the combined-case-block header (names)', errStat2, errMsg2, UnEc )
@@ -439,19 +450,17 @@ subroutine Dvr_ReadInputFile(fileName, DvrData, errStat, errMsg )
 
    do ICase=1,DvrData%NumCases
 
-      call ReadAry ( unIn, fileName, InpCase,  8, 'InpCase',  'parameters for Case #' &
+      call ReadAry ( unIn, fileName, InpCase,  NumCols, 'InpCase',  'parameters for Case #' &
                      //trim( Int2LStr( ICase ) )//'.', errStat2, errMsg2, UnEc )
          call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
             
-      DvrData%Cases(iCase)%TSR             = InpCase( 1) ! we'll calculate WS and TSR later, after we get RotorRad from AD 
-      DvrData%Cases(iCase)%WndSpeed        = InpCase( 1) ! we'll calculate WS and TSR later, after we get RotorRad from AD          
+      DvrData%Cases(iCase)%WndSpeed        = InpCase( 1)
       DvrData%Cases(ICase)%ShearExp        = InpCase( 2)
       DvrData%Cases(ICase)%RotSpeed        = InpCase( 3)*RPM2RPS
       DvrData%Cases(ICase)%Pitch           = InpCase( 4)*D2R
       DvrData%Cases(ICase)%Yaw             = InpCase( 5)*D2R
-      DvrData%Cases(iCase)%AzAng0          = InpCase( 6)*D2R
-      DvrData%Cases(iCase)%dT              = InpCase( 7)*D2R
-      DvrData%Cases(iCase)%Tmax            = InpCase( 8)*D2R
+      DvrData%Cases(iCase)%dT              = InpCase( 6)
+      DvrData%Cases(iCase)%Tmax            = InpCase( 7)
                
    end do ! ICase
    
@@ -572,11 +581,9 @@ subroutine Dvr_InitializeOutputFile( iCase, CaseData, OutFileData, errStat, errM
       write (OutFileData%unOutFile,'(A,11(1x,A,"=",ES11.4e2,1x,A))'   ) 'Case '//trim(num2lstr(iCase))//':' &
          ,  'WndSpeed', CaseData%WndSpeed, 'm/s' &
          ,'; ShearExp', CaseData%ShearExp, '' &
-         ,'; TSR',      CaseData%TSR, '' &
          ,'; RotSpeed', CaseData%RotSpeed*RPS2RPM,'rpm' &
          ,'; Pitch',    CaseData%Pitch*R2D, 'deg' &
          ,'; Yaw',      CaseData%Yaw*R2D, 'deg' &
-         ,'; AzAng0',   CaseData%AzAng0*R2D, 'deg' &
          ,'; dT',       CaseData%dT, 's' &
          ,'; Tmax',     CaseData%Tmax,'s'
       
