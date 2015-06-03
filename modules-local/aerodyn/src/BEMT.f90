@@ -927,14 +927,14 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
                fzero = BEMTU_InductionWithResidual(y%phi(i,j), psi, chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i,j)), &
                               Vx, Vy, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
                               p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
-                              y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), errStat, errMsg)
+                              y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%Cm(i,j), y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), errStat, errMsg)
             else if (p%skewWakeMod == SkewMod_Coupled) then
                y%axInduction(i,j)  = z%axInduction(i,j)
                y%tanInduction(i,j) = z%tanInduction(i,j)
                coupledResidual = BEMTC_Elemental( z%axInduction(i,j), z%tanInduction(i,j), psi, chi0, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i,j)), &
                               Vx, Vy, Vinf, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
                               p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
-                              y%phi(i,j), y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%chi(i,j), ErrStat, ErrMsg)
+                              y%phi(i,j), y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%Cm(i,j), y%chi(i,j), ErrStat, ErrMsg)
             end if
          else
             y%axInduction(i,j)  = 0.0_ReKi
@@ -942,7 +942,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
             if (p%skewWakeMod < SkewMod_Coupled) then
                call ComputeAirfoilCoefs( y%phi(i,j), 0.0_ReKi, 0.0_ReKi, Vx, Vy, p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, .TRUE., .TRUE., AFInfo(p%AFindx(i,j)), &
                                          p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
-                                         y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), errStat, errMsg )       
+                                         y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%Cm(i,j), errStat, errMsg )       
                ! NEED TO COMPUTE AND RETURN chi as an output in this case
             else if (p%skewWakeMod == SkewMod_Coupled) then
                y%phi(i,j) = ComputePhiWithInduction( Vx, Vy, 0.0, 0.0, errStat, errMsg )
