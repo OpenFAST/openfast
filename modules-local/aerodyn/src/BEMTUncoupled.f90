@@ -55,7 +55,7 @@ end subroutine BEMTU_Wind
 !----------------------------------------------------------------------------------------------------------------------------------  
 subroutine ComputeAirfoilCoefs( phi, axInduction, tanInduction, Vx, Vy, chord, theta, airDens, mu, useAIDrag, useTIDrag, AFInfo, &
                       UA_Flag, p_UA, xd_UA, OtherState_UA, &
-                      AOA, Re, Cl, Cd, Cx, Cy, errStat, errMsg )
+                      AOA, Re, Cl, Cd, Cx, Cy, Cm, errStat, errMsg )
 ! This routine is called from BEMTU_InductionWithResidual and possibly BEMT_CalcOutput.
 ! Determine the Cl, Cd, Cx, Cy coeficients for a given set of induction factors and inflow angle
 !..................................................................................................................................
@@ -75,7 +75,7 @@ subroutine ComputeAirfoilCoefs( phi, axInduction, tanInduction, Vx, Vy, chord, t
    type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
    type(UA_DiscreteStateType),   intent(in   ) :: xd_UA          ! Discrete states at Time
    type(UA_OtherStateType),      intent(in   ) :: OtherState_UA  ! Other/optimization states
-   real(ReKi),             intent(  out) :: AOA, Re, Cl, Cd, Cx, Cy
+   real(ReKi),             intent(  out) :: AOA, Re, Cl, Cd, Cx, Cy, Cm
    integer(IntKi),         intent(  out) :: errStat       ! Error status of the operation
    character(*),           intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None 
    
@@ -83,7 +83,7 @@ subroutine ComputeAirfoilCoefs( phi, axInduction, tanInduction, Vx, Vy, chord, t
       ! Compute AOA, Re based on current values of axInduction, tanInduction
    call BEMTU_Wind(phi, axInduction, tanInduction, Vx, Vy, chord, theta, airDens, mu, AOA, W, Re)
       
-   call  BE_CalcOutputs( AFInfo, UA_Flag, AOA*R2D, W, log(Re), p_UA, xd_UA, OtherState_UA, Cl, Cd,  errStat, errMsg)  
+   call  BE_CalcOutputs( AFInfo, UA_Flag, AOA*R2D, W, log(Re), p_UA, xd_UA, OtherState_UA, Cl, Cd, Cm, errStat, errMsg)  
    !call  BE_CalcOutputs(AFInfo, AOA*R2D, log(Re), Cl, Cd, errStat, errMsg) ! AOA is in degrees in this look up table and Re is in log(Re)
    if (errStat >= AbortErrLev) then
       call SetErrStat( errStat, errMsg, errStat, errMsg, 'ComputeAirfoilCoefs' ) 
@@ -102,7 +102,7 @@ end subroutine ComputeAirfoilCoefs
 real(ReKi) function BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, rHub, lambda, AFInfo, &
                               Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, SkewWakeMod, &
                               UA_Flag, p_UA, xd_UA, OtherState_UA, &
-                              AOA, Re, Cl, Cd, Cx, Cy, axInduction, tanInduction, chi, ErrStat, ErrMsg)
+                              AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, chi, ErrStat, ErrMsg)
       
 
 
@@ -132,7 +132,7 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations,
    type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
    type(UA_DiscreteStateType),   intent(in   ) :: xd_UA          ! Discrete states at Time
    type(UA_OtherStateType),      intent(in   ) :: OtherState_UA  ! Other/optimization states
-   real(ReKi),             intent(  out) :: AOA, Re, Cl, Cd, Cx, Cy, axInduction, tanInduction, chi
+   real(ReKi),             intent(  out) :: AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, chi
    integer(IntKi),         intent(  out) :: ErrStat       ! Error status of the operation
    character(*),           intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
   
@@ -155,7 +155,7 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations,
       
       call ComputeAirfoilCoefs( phi, axInduction, tanInduction, Vx, Vy, chord, theta, airDens, mu, useAIDrag, useTIDrag, AFInfo, &
                                 UA_Flag, p_UA, xd_UA, OtherState_UA, &
-                                AOA, Re, Cl, Cd, Cx, Cy, errStat, errMsg )       
+                                AOA, Re, Cl, Cd, Cx, Cy, Cm, errStat, errMsg )       
       if (errStat >= AbortErrLev) then
          call SetErrStat( errStat, errMsg, errStat, errMsg, 'BEMTU_InductionWithResidual' ) 
          return
@@ -217,7 +217,7 @@ real(ReKi) function UncoupledErrFn(phi, psi, chi0, numReIterations, airDens, mu,
    ! Local variables
    
    
-   real(ReKi)                            :: fzero, AOA, Re, Cl, Cd, Cx, Cy, axInduction, tanInduction, chi
+   real(ReKi)                            :: fzero, AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, chi
    integer                               :: I
    
    ErrStat = ErrID_None
@@ -228,7 +228,7 @@ real(ReKi) function UncoupledErrFn(phi, psi, chi0, numReIterations, airDens, mu,
       UncoupledErrFn = BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, rHub, lambda, AFInfo, &
                               Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, SkewWakeMod, &
                               UA_Flag, p_UA, xd_UA, OtherState_UA, &
-                              AOA, Re, Cl, Cd, Cx, Cy, axInduction, tanInduction, chi, ErrStat, ErrMsg)
+                              AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, chi, ErrStat, ErrMsg)
       
    
    
@@ -398,6 +398,7 @@ recursive subroutine inductionFactors(r , Rtip, chord, Rhub, lambda, phi, azimut
          
    if ( skewWakeMod == SkewMod_PittPeters ) then
       chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
+      ! TODO: Add check on chi to make sure it is < pi/2 and (positive check should be outside solve)  GJH 5/20/2015
       !yawCorr = max(0.0,chi0-0.5236)
       !yawCorr = min(0.785,yawCorr)
       yawCorr = (15.0_ReKi*pi/64.0_ReKi*tan(chi/2.0_ReKi) * (r/Rtip) * saz)
