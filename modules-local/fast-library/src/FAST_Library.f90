@@ -299,12 +299,15 @@ subroutine FAST_CreateCheckpoint(CheckpointRootName_c, ErrStat_c, ErrMsg_c) BIND
       
 end subroutine FAST_CreateCheckpoint 
 !==================================================================================================================================
-subroutine FAST_Restart(CheckpointRootName_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Restart')
+subroutine FAST_Restart(CheckpointRootName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Restart')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Restart
    USE FAST_Data
    IMPLICIT NONE
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Restart
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)      
+   INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
+   INTEGER(C_INT),         INTENT(  OUT) :: NumOuts_c      
+   REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
    
@@ -331,6 +334,10 @@ subroutine FAST_Restart(CheckpointRootName_c, ErrStat_c, ErrMsg_c) BIND (C, NAME
    
    
       ! transfer Fortran variables to C:      
+   AbortErrLev_c = AbortErrLev   
+   NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( Turbine%y_FAST%numOuts )) ! includes time
+   dt_c          = Turbine%p_FAST%dt      
+      
    ErrStat_c = ErrStat
    ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
 

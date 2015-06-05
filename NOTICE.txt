@@ -26,11 +26,17 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR
 IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-Basic Linear Algebra Subprograms (BLAS), which is used indirectly in LAPACK routines (http://www.netlib.org/blas/index.html)
+Basic Linear Algebra Subprograms (BLAS), which is used indirectly in LAPACK routines (http://www.netlib.org/blas/)
 
-Scalable LAPACK (ScaLAPACK) (http://www.netlib.org/scalapack/index.html)
+Scalable LAPACK (ScaLAPACK) (http://www.netlib.org/scalapack/)
 The authors of ScaLAPACK are L. S. Blackford, J. Choi, A. Cleary, E. D'Azevedo, J. Demmel, I. Dhillon, J. Dongarra, S. Hammarling, G. Henry, A. Petitet, K. Stanley, D. Walker, and R. C. Whaley.
 
 FFTPACK (http://www.netlib.org/fftpack/)
 The author of FFTPACK is Paul N. Swarztrauber
+
+Dierckx FitPack (http://www.netlib.org/dierckx/)
+Paul Dierckx, Department of Computer Science, K.U. Leuven, Celestijnenlaan 200 A, B-3001, Heverlee, Belgium
+
+minpack (http://www.netlib.org/minpack/)
+Developed by the University of Chicago, as Operator of Argonne National Laboratory.
 

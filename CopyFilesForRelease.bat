@@ -94,6 +94,17 @@ SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 @CALL :CopyFileList
 IF /I "%1"=="%SW_Module%" GOTO ClearVars
 
+
+:AeroDyn
+ECHO AeroDyn
+SET src_folder=%AD_Loc%\..
+SET dst_folder=%depend_dir%\AeroDyn
+SET list_of_files=%src_folder%\FAST_SourceFiles.txt
+
+@CALL :CopyFileList
+IF /I "%1"=="%SW_Module%" GOTO ClearVars
+
+
 :HydroDyn
 ECHO HydroDyn
 SET src_folder=%HD_Loc%\..
