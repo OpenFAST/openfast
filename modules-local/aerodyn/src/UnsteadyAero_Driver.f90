@@ -75,6 +75,10 @@ program UnsteadyAero_Driver
       ! Initialize the NWTC library
    call NWTC_Init()
    
+      ! Initialize error handling variables
+   ErrMsg  = ''
+   ErrStat = ErrID_None
+   
    RoutineName = 'UnsteadyAero_Driver'
     
    print *, 'Running UnsteadyAero_Driver'
@@ -292,7 +296,8 @@ program UnsteadyAero_Driver
    !     The routine cleans up the module echo file and resets the NWTC_Library, reattaching it to 
    !     any existing echo information
    !----------------------------------------------------------------------------------------------------  
- 
+      
+      if ( ErrStat /= ErrID_None ) print *, ErrMsg
       
       close( unOutFile, IOSTAT = ErrStat )
       

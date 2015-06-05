@@ -1131,7 +1131,7 @@ subroutine SetInputsForBEMT(p, u, BEMT_u, DisturbedInflow, WithoutSweepPitchTwis
          BEMT_u%rLocal(j,k) = sqrt( tmp_sz + tmp_sz_y )
          
       end do !j=nodes
-      BEMT_u%rTip(k) =  BEMT_u%rLocal(p%NumBlNds,k)  ! "Radial distance from center-of-rotation to blade tip" m
+      
    end do !k=blades
          
    ! values for coupled model:
@@ -1142,9 +1142,7 @@ subroutine SetInputsForBEMT(p, u, BEMT_u, DisturbedInflow, WithoutSweepPitchTwis
          BEMT_u%Vinf(j,k) = TwoNorm( DisturbedInflow(:,j,k) ) 
       end do
    end do
-   
-    !BEMT_u%lambda  =                        !-        ! "Average tip speed ratio for rotor disk" -
-   
+  
    
 end subroutine SetInputsForBEMT
 !----------------------------------------------------------------------------------------------------------------------------------

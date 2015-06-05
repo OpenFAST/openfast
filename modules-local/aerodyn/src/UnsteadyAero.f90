@@ -333,6 +333,11 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, alpha, alpha0, C_nalpha, AFInf
   
    !Get_f_from_Lookup = IntAFCoefs(4)   
    
+   if (abs(alpha-alpha0) < .01) then
+      Get_f_from_Lookup = 1.0_ReKi
+      return
+   end if
+   
    call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
       if (ErrStat > ErrID_None) return
    
@@ -520,7 +525,7 @@ end function Get_C_V
 !==============================================================================   
 
 !==============================================================================
-real(ReKi) function Get_Cn_v ( ds, T_V, Cn_v_minus1, C_V, C_V_minus1, tau_V, T_VL, Kalpha, alpha, alpha0 ) ! do I pass VRTX flag or tau_V?
+real(ReKi) function Get_Cn_v ( ds, T_V, Cn_v_minus1, C_V, C_V_minus1, tau_V, T_VL, T_V0, Kalpha, alpha, alpha0 ) ! do I pass VRTX flag or tau_V?
 ! Implements Equation 1.45 or 1.49 
 ! Called by : ComputeKelvinChain
 ! Calls  to : NONE
@@ -533,6 +538,7 @@ real(ReKi) function Get_Cn_v ( ds, T_V, Cn_v_minus1, C_V, C_V_minus1, tau_V, T_V
    real(ReKi), intent(in   ) :: C_V_minus1             ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex, previous time step (-)
    real(ReKi), intent(in   ) :: tau_V                  ! time variable, tracking the travel of the LE vortex over the airfoil suction surface (-)
    real(ReKi), intent(in   ) :: T_VL                   ! time variable associated with the vortex advection process; it represents the non-dimensional time in semi-chords needed for a vortex to travel from leading edge to trailing edge
+   real(ReKi), intent(in   ) :: T_V0                   !
    real(ReKi), intent(in   ) :: Kalpha                 ! backwards finite difference of alpha
    real(ReKi), intent(in   ) :: alpha                  ! angle of attack (rad)
    real(ReKi), intent(in   ) :: alpha0                 ! zero lift angle of attack (rad)
@@ -542,7 +548,9 @@ real(ReKi) function Get_Cn_v ( ds, T_V, Cn_v_minus1, C_V, C_V_minus1, tau_V, T_V
    factor = (alpha - alpha0) * Kalpha
    
    if (tau_V > T_VL .AND. factor >= 0.0_ReKi ) then  
+      !TODO: Need to examine eqn 1.49.  The manual states T_V0 / sigma3 and forces sigma3 = 2.0 ! GJH 5/28/2015
       Get_Cn_v = Cn_v_minus1*exp(-ds/T_V)   ! Eqn 1.49
+      !Get_Cn_v = Cn_v_minus1*exp(-2.0*ds/T_V0)   ! Eqn 1.49  alternative using T_V0 and forcing sigma3 for this eqn = 2.0
    else      
       Get_Cn_v = Get_ExpEqn( ds, T_V, Cn_v_minus1, C_V, C_V_minus1 )   ! Eqn 1.45
    end if
@@ -904,9 +912,12 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    
    if (p%Flookup) then
          ! Compute fprime using Eqn 1.30 and Eqn 1.31
-   
-      fprime_c        = Get_f_c_from_Lookup( u%Re, alpha_f, alpha0, C_nalpha, AFInfo, ErrStat, ErrMsg)
-   
+      !if (p%UAMod == 1) then
+      !   fprime_c   = Get_f_from_Lookup( p%UAMod, u%Re, alpha_f, alpha0, C_nalpha, AFInfo, ErrStat, ErrMsg)
+      !else   
+         fprime_c   = Get_f_c_from_Lookup( u%Re, alpha_f, alpha0, C_nalpha, AFInfo, ErrStat, ErrMsg)
+      !end if
+      
    
       if (OtherState%FirstPass) then
          fprime_c_minus1 = fprime_c
@@ -942,7 +953,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    C_V           = Get_C_V  ( Cn_alpha_q_circ, fprimeprime, p%UAMod )
    
       ! Compute Cn_v using either Eqn 1.45 or 1.49 depending on operating conditions
-   Cn_v          = Get_Cn_v ( ds, T_V, xd%Cn_v_minus1(i,j), C_V, xd%C_V_minus1(i,j), xd%tau_V(i,j), T_VL, Kalpha, u%alpha, alpha0 ) ! do I pass VRTX flag or tau_V?
+   Cn_v          = Get_Cn_v ( ds, T_V, xd%Cn_v_minus1(i,j), C_V, xd%C_V_minus1(i,j), xd%tau_V(i,j), T_VL, T_V0, Kalpha, u%alpha, alpha0 ) ! do I pass VRTX flag or tau_V?
    
    if (OtherState%FirstPass) then
       Cn_v = 0.0_ReKi
@@ -1280,22 +1291,22 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
       OtherState%sigma1(i,j) = 1.0_ReKi
       Kafactor             = Kalpha*dalpha0
       
-      if ( OtherState%TESF(i,j) ) then
+      if ( OtherState%TESF(i,j) ) then  ! Separating flow
          if (Kafactor < 0.0_ReKi) then
-            OtherState%sigma1(i,j) = 2.0_ReKi
+            OtherState%sigma1(i,j) = 2.0_ReKi  ! This must be the first check
          else if (.not. OtherState%LESF(i,j) ) then
-            OtherState%sigma1(i,j) = 1.0_ReKi
-         else if (xd%fprimeprime_minus1(i,j) <= 0.7_ReKi) then
-            OtherState%sigma1(i,j) = 2.0_ReKi
+            OtherState%sigma1(i,j) = 1.0_ReKi !.4_ReKi    ! Leading edge separation has not occurred
+         else if (xd%fprimeprime_minus1(i,j) <= 0.7_ReKi) then ! For this else, LESF = True
+            OtherState%sigma1(i,j) = 2.0_ReKi !1.0_ReKi 
          else
             OtherState%sigma1(i,j) = 1.75_ReKi
          end if
-      else
+      else ! Reattaching flow
          if (.not. OtherState%LESF(i,j) ) then
             OtherState%sigma1(i,j) = 0.5_ReKi
          end if
          
-         if ( OtherState%VRTX(i,j) .and. (xd%tau_V(i,j) <= T_VL) ) then  ! TODO: Verify 2/20/2015 GJH
+         if ( OtherState%VRTX(i,j) .and. (xd%tau_V(i,j) <= T_VL) ) then  ! Still shedding a vortex?
             OtherState%sigma1(i,j) = 0.25_ReKi
          end if
          if (Kafactor > 0.0_ReKi) then
@@ -1305,19 +1316,34 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
       
       OtherState%sigma3(i,j) = 1.0_ReKi
       
+      !if ( (xd%tau_V(i,j) <= 2.0_ReKi*T_VL) .and. (xd%tau_V(i,j) >= T_VL) ) then
+      !   OtherState%sigma3(i,j) = 3.0_ReKi
+      !   if (.not. OtherState%TESF(i,j)) then
+      !      OtherState%sigma3(i,j) = 4.0_ReKi
+      !      if ( OtherState%VRTX(i,j) .and. (xd%tau_V(i,j) <= T_VL) ) then
+      !         if (Kafactor < 0.0_ReKi) then
+      !            OtherState%sigma3(i,j) = 2.0_ReKi
+      !         else
+      !            OtherState%sigma3(i,j) = 1.0_ReKi
+      !         end if
+      !      end if
+      !   end if
+      !else if (Kafactor < 0 ) then 
+      !   OtherState%sigma3(i,j) = 4.0_ReKi
+      !end if
+      
+         ! We are testing this heirarchical logic instead of the above block 5/29/2015
       if ( (xd%tau_V(i,j) <= 2.0_ReKi*T_VL) .and. (xd%tau_V(i,j) >= T_VL) ) then
          OtherState%sigma3(i,j) = 3.0_ReKi
-         if (.not. OtherState%TESF(i,j)) then
-            OtherState%sigma3(i,j) = 4.0_ReKi
-            if ( OtherState%VRTX(i,j) .and. (xd%tau_V(i,j) <= T_VL) ) then
-               if (Kafactor < 0.0_ReKi) then
-                  OtherState%sigma3(i,j) = 2.0_ReKi
-               else
-                  OtherState%sigma3(i,j) = 1.0_ReKi
-               end if
-            end if
-         end if
-      else if (Kafactor < 0 ) then
+      else if (.not. OtherState%TESF(i,j)) then
+         OtherState%sigma3(i,j) = 4.0_ReKi
+      else if ( OtherState%VRTX(i,j) .and. (xd%tau_V(i,j) <= T_VL) ) then
+         if (Kafactor < 0.0_ReKi) then
+            OtherState%sigma3(i,j) = 2.0_ReKi
+         else
+            OtherState%sigma3(i,j) = 1.0_ReKi
+          end if           
+      else if (Kafactor < 0 ) then 
          OtherState%sigma3(i,j) = 4.0_ReKi
       end if
       
@@ -1524,8 +1550,13 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
          if ( Cn_prime <= Cn1 ) then
             y%Cc = eta_e*Cc_pot*sqrt(fprimeprime_c) !*sin(alpha_e + alpha0)
          else
-            if ( p%flookup ) then   
-               f      = Get_f_c_from_Lookup( u%Re, u%alpha, alpha0, C_nalpha, AFInfo, ErrStat, ErrMsg)
+            if ( p%flookup ) then 
+              ! if (p%UAMod == 1) then
+              !    f      = Get_f_from_Lookup( p%UAMod, u%Re, u%alpha, alpha0, C_nalpha, AFInfo, ErrStat, ErrMsg)
+              ! else   
+                  f      = Get_f_c_from_Lookup( u%Re, u%alpha, alpha0, C_nalpha, AFInfo, ErrStat, ErrMsg)
+              ! endif
+               
             else
                f      = Get_f( u%alpha, alpha0, alpha1, alpha2, S1, S2, S3, S4 )
             end if

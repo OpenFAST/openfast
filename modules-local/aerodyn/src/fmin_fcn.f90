@@ -15,8 +15,6 @@ module fminfcn
       real(ReKi)        :: rtip   
       real(ReKi)        :: chord 
       real(ReKi)        :: theta         
-      real(ReKi)        :: rHub
-      real(ReKi)        :: lambda
       type(AFInfoType)  :: AFInfo
       real(ReKi)        :: Vx
       real(ReKi)        :: Vy
@@ -25,6 +23,8 @@ module fminfcn
       logical           :: useTIDrag
       logical           :: useHubLoss
       logical           :: useTipLoss 
+      real(ReKi)        :: hubLossConst 
+      real(ReKi)        :: tipLossConst    
       integer(IntKi)    :: SkewWakeMod
       logical                     :: UA_Flag
       type(UA_ParameterType)      :: p_UA           ! Parameters
@@ -51,8 +51,8 @@ real(ReKi) function fmin_fcn(x, fcnArgs)
    !iflag = 0
    
    ! Call the UncoupledErrFn subroutine to compute the residual
-   fmin_fcn = UncoupledErrFn( x,  fcnArgs%psi, fcnArgs%chi0, 1, fcnArgs%airDens, fcnArgs%mu, fcnArgs%numBlades, fcnArgs%rlocal, fcnArgs%rtip, fcnArgs%chord, fcnArgs%theta, fcnArgs%rHub, fcnArgs%lambda, fcnArgs%AFInfo, &
-                              fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%SkewWakeMod, &
+   fmin_fcn = UncoupledErrFn( x,  fcnArgs%psi, fcnArgs%chi0, 1, fcnArgs%airDens, fcnArgs%mu, fcnArgs%numBlades, fcnArgs%rlocal, fcnArgs%rtip, fcnArgs%chord, fcnArgs%theta, fcnArgs%AFInfo, &
+                              fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst, fcnArgs%SkewWakeMod, &
                               fcnArgs%UA_Flag, fcnArgs%p_UA, fcnArgs%xd_UA, fcnArgs%OtherState_UA, &
                               errStat, errMsg)  
    

@@ -124,8 +124,6 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     Vx                              {:}{:}         -         -         "Local axial velocity at node" m/s
 typedef   ^                            ^                             ReKi                     Vy                              {:}{:}         -         -         "Local tangential velocity at node" m/s
 typedef   ^                            ^                             ReKi                     Vinf                            {:}{:}         -         -         "Local upstream velocity at node" m/s
-typedef   ^                            ^                             ReKi                     lambda                          -              -         -         "Average tip speed ratio for rotor disk" -
-typedef   ^                            ^                             ReKi                     rTip                            {:}            -         -         "Radial distance from center-of-rotation to blade tip" m
 typedef   ^                            ^                             ReKi                     rLocal                          {:}{:}         -         -         "Radial distance from center-of-rotation to node" m
 #
 # ..... Outputs ...................................................................................................................
