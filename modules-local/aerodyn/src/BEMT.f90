@@ -36,6 +36,8 @@ module BEMT
    
    contains
 
+
+    
 !----------------------------------------------------------------------------------------------------------------------------------   
 real(ReKi) function ComputePhiWithInduction( Vx, Vy, a, aprime, errStat, errMsg )
 ! This routine is used to compute the inflow angle, phi, from the local velocities and the induction factors.
@@ -406,14 +408,7 @@ subroutine BEMT_AllocInput( u, p, errStat, errMsg )
    end if 
    u%Vinf = 0.0_ReKi
    
-   allocate ( u%rTip( p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for u%rTip.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_AllocInput' )
-      return
-   end if 
-   u%rTip = 0.0_ReKi
+   
    
    allocate ( u%rLocal( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
@@ -425,7 +420,7 @@ subroutine BEMT_AllocInput( u, p, errStat, errMsg )
    u%rLocal = 0.0_ReKi
    
    
-   u%lambda = 0.0_ReKi
+   
    u%omega  = 0.0_ReKi
    
 end subroutine BEMT_AllocInput
@@ -757,8 +752,8 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                
                if ( p%SkewWakeMod < SkewMod_Coupled ) then
                   
-                  call BEMT_UnCoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, u%lambda, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), &
-                              u%Vx(i,j), u%Vy(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
+                  call BEMT_UnCoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j), u%theta(i,j),  &
+                              u%Vx(i,j), u%Vy(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
                               p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                               p%numReIterations, p%maxIndIterations, p%aTol,  &
                               z%phi(i,j), errStat, errMsg) 
@@ -766,8 +761,8 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                   
                else if ( p%SkewWakeMod == SkewMod_Coupled ) then
          
-                  CALL BEMT_CoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, u%lambda, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), &
-                              u%Vx(i,j), u%Vy(i,j), u%Vinf(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
+                  CALL BEMT_CoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j), u%theta(i,j), &
+                              u%Vx(i,j), u%Vy(i,j), u%Vinf(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
                               p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                               p%maxIndIterations, p%aTol, z%axInduction(i,j), z%tanInduction(i,j), errStat, errMsg)       
         
@@ -781,10 +776,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                   
                   if ( p%SkewWakeMod < SkewMod_Coupled ) then
                      call BEMTU_Wind(z%phi(i,j), 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u_UA%alpha,  u_UA%U, u_UA%Re)
-                     !BEMTU_InductionWithResidual(z%phi(i,j), u%psi(j), u%chi0, 1, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), lambda,  AFInfo(p%AFIndx(i,j)), &
-                     !         u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%SkewWakeMod,  &
-                     !         p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
-                     !         u_UA%alpha, u_UA%Re, Cl, Cd, Cx, Cy, axInduction, tanInduction, chi, ErrStat, ErrMsg)
+                     
                   else
                      phi = ComputePhiWithInduction(u%Vy(i,j), u%Vx(i,j), z%axInduction(i,j), z%tanInduction(i,j), errStat, errMsg)
                      u_UA%U = BEMTC_Wind(z%axInduction(i,j), z%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u%chi0, u%psi(j), phi, u_UA%alpha, u_UA%Re, chi)
@@ -906,15 +898,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
             ! Copy the current state to the outputs structure
          
          
-         !if ( p%SkewWakeMod > 0) then
-         !   fzero = BEMTU_InductionWithResidual(z%phi(i,j), psi, chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, p%AFindx(i), p%AFInfo, &
-         !                     Vx, Vy, p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
-         !                     y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), errStat, errMsg)
-         !
-         !   y%phi(i,j) = InflowAngle( Vx, Vy, y%axInduction(i,j), y%tanInduction(i,j) )
-         !else
-            
-         !end if
+        
          if (p%skewWakeMod < SkewMod_Coupled) then
             y%phi(i,j) = z%phi(i,j)
          
@@ -924,15 +908,15 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
          if ( p%useInduction ) then
             r = u%rlocal(i,j)
             if (p%skewWakeMod < SkewMod_Coupled) then
-               fzero = BEMTU_InductionWithResidual(y%phi(i,j), psi, chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i,j)), &
-                              Vx, Vy, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
+               fzero = BEMTU_InductionWithResidual(y%phi(i,j), psi, chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j), u%theta(i,j),  AFInfo(p%AFindx(i,j)), &
+                              Vx, Vy, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
                               p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                               y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%Cm(i,j), y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), errStat, errMsg)
             else if (p%skewWakeMod == SkewMod_Coupled) then
                y%axInduction(i,j)  = z%axInduction(i,j)
                y%tanInduction(i,j) = z%tanInduction(i,j)
-               coupledResidual = BEMTC_Elemental( z%axInduction(i,j), z%tanInduction(i,j), psi, chi0, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i,j)), &
-                              Vx, Vy, Vinf, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
+               coupledResidual = BEMTC_Elemental( z%axInduction(i,j), z%tanInduction(i,j), psi, chi0, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j), u%theta(i,j),  AFInfo(p%AFindx(i,j)), &
+                              Vx, Vy, Vinf, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
                               p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                               y%phi(i,j), y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%Cm(i,j), y%chi(i,j), ErrStat, ErrMsg)
             end if
@@ -1096,8 +1080,8 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_res
                ! Solve for the constraint states here:
          
             IF ( p%SkewWakeMod < SkewMod_Coupled ) THEN
-               z%phi(i,j) = UncoupledErrFn(z%phi(i,j), u%psi(j), u%chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rtip(j), p%chord(i,j), u%theta(i,j), p%zHub(j), u%lambda, AFInfo(p%AFindx(i,j)), &
-                                 u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%SkewWakeMod, &
+               z%phi(i,j) = UncoupledErrFn(z%phi(i,j), u%psi(j), u%chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j), u%theta(i,j), AFInfo(p%AFindx(i,j)), &
+                                 u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
                                  p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
                                  ErrStat, ErrMsg)
          
@@ -1115,8 +1099,8 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_res
 END SUBROUTINE BEMT_CalcConstrStateResidual
 
 
-subroutine BEMT_UnCoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, AFInfo, rlocal, rtip, chord, theta, rHub, &
-                           Vx, Vy, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, SkewWakeMod, &
+subroutine BEMT_UnCoupledSolve( numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
+                           Vx, Vy, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
                            UA_Flag, p_UA, xd_UA, OtherState_UA, &
                            numReIterations, maxIndIterations, aTol, &
                            phiStar, ErrStat, ErrMsg)
@@ -1129,13 +1113,11 @@ subroutine BEMT_UnCoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, A
    integer,                intent(in   ) :: numBladeNodes
    real(ReKi),             intent(in   ) :: airDens
    real(ReKi),             intent(in   ) :: mu
-   real(ReKi),             intent(in   ) :: lambda
    TYPE(AFInfoType),       INTENT(IN   ) :: AFInfo
    real(ReKi),             intent(in   ) :: rlocal         
    real(ReKi),             intent(in   ) :: rtip           
    real(ReKi),             intent(in   ) :: chord          
-   real(ReKi),             intent(in   ) :: theta          
-   real(ReKi),             intent(in   ) :: rHub 
+   real(ReKi),             intent(in   ) :: theta           
    real(ReKi),             intent(in   ) :: Vx             
    real(ReKi),             intent(in   ) :: Vy             
    real(ReKi),             intent(in   ) :: omega
@@ -1146,6 +1128,8 @@ subroutine BEMT_UnCoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, A
    logical,                intent(in   ) :: useTIDrag
    logical,                intent(in   ) :: useHubLoss
    logical,                intent(in   ) :: useTipLoss
+   real(ReKi),             intent(in   ) :: hubLossConst
+   real(ReKi),             intent(in   ) :: tipLossConst
    integer,                intent(in   ) :: SkewWakeMod   ! Skewed wake model
    logical,                intent(in   ) :: UA_Flag
    type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
@@ -1190,14 +1174,17 @@ subroutine BEMT_UnCoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, A
    if ( EqualRealNos(Vx, 0.0_ReKi) ) then
       phiStar =  0.0
       return
-    end if
+   else if ( EqualRealNos(Vy, 0.0_ReKi) ) then
+      phiStar =  pi / 2.0_ReKi
+      return
+   end if
    
    
    !# ------ BEM solution method see (Ning, doi:10.1002/we.1636) ------
 
                   
-   f1 = UncoupledErrFn(epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, rHub, lambda, AFInfo, &
-                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  SkewWakeMod, &
+   f1 = UncoupledErrFn(epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
                         UA_Flag, p_UA, xd_UA, OtherState_UA, &
                         errStat2, errMsg2)
    if (errStat2 >= AbortErrLev) then
@@ -1205,10 +1192,15 @@ subroutine BEMT_UnCoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, A
       return
    end if
     
+   if ( EqualRealNos(f1, 0.0_ReKi) ) then
+      phiStar =  epsilon2
+      return
+   end if
+   
 ! TODO: Should the induction factors be reset to zero!!!!!! GJH
    
-   f2 = UncoupledErrFn(pi/2.0, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, rHub, lambda, AFInfo, &
-                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, SkewWakeMod, &
+   f2 = UncoupledErrFn(pi/2.0, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta,  AFInfo, &
+                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
                         UA_Flag, p_UA, xd_UA, OtherState_UA, &
                         errStat2, errMsg2)
    if (errStat2 >= AbortErrLev) then
@@ -1221,16 +1213,16 @@ subroutine BEMT_UnCoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, A
       phi_upper = pi/2.0
    else 
          
-      f1 = UncoupledErrFn(-pi/4.0, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, rHub, lambda, AFInfo, &
-                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  SkewWakeMod, &
+      f1 = UncoupledErrFn(-pi/4.0, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
                         UA_Flag, p_UA, xd_UA, OtherState_UA, &
                         errStat2, errMsg2)
       if (errStat2 >= AbortErrLev) then
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
          return
       end if                  
-      f2 = UncoupledErrFn(-epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, rHub, lambda, AFInfo, &
-                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  SkewWakeMod, &
+      f2 = UncoupledErrFn(-epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
                         UA_Flag, p_UA, xd_UA, OtherState_UA, &
                         errStat2, errMsg2)
       if (errStat2 >= AbortErrLev) then
@@ -1258,9 +1250,7 @@ subroutine BEMT_UnCoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, A
    fcnArgs%rlocal          = rlocal
    fcnArgs%rtip            = rtip
    fcnArgs%chord           = chord
-   fcnArgs%theta           = theta
-   fcnArgs%rHub            = rHub
-   fcnArgs%lambda          = lambda    
+   fcnArgs%theta           = theta   
    call AFI_Copyafinfotype( AFInfo, fcnArgs%AFInfo, MESH_NEWCOPY, errStat, errMsg )  
    fcnArgs%Vx              = Vx
    fcnArgs%Vy              = Vy
@@ -1269,6 +1259,8 @@ subroutine BEMT_UnCoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, A
    fcnArgs%useTIDrag       = useTIDrag
    fcnArgs%useHubLoss      = useHubLoss
    fcnArgs%useTipLoss      = useTipLoss
+   fcnArgs%hubLossConst    = hubLossConst
+   fcnArgs%tipLossConst    = tipLossConst
    fcnArgs%SkewWakeMod     = SkewWakeMod   
    fcnArgs%UA_Flag         = UA_Flag
       ! Need to copy the following
@@ -1276,15 +1268,9 @@ subroutine BEMT_UnCoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, A
    call UA_CopyDiscState( xd_UA, fcnArgs%xd_UA, MESH_NEWCOPY, errStat, errMsg )  
    call UA_CopyOtherState( OtherState_UA, fcnArgs%OtherState_UA, MESH_NEWCOPY, errStat, errMsg )
    
-   
-   !phiStar2  = fmin( phi_lower, phi_upper, aTol, fcnargs)
-   !residual  = local_min ( phi_lower, phi_upper, aTol,  phiStar3, fcnArgs )
+
    call sub_brent(phiStar,fmin_fcn,phi_lower,phi_upper, aTol,maxIndIterations,fcnArgs)
-   !phiStar  = BrentRoots( phi_lower, phi_upper, aTol, maxIndIterations, fzero, niter, &
-   !                     psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, &
-   !                     theta, rHub, lambda, AFInfo, &
-   !                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  SkewWakeMod, &
-   !                     errStat2, errMsg2 )
+
    
    if (errStat2 > ErrID_None) then
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
@@ -1294,8 +1280,8 @@ subroutine BEMT_UnCoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, A
 end subroutine BEMT_UnCoupledSolve
 
 !------------------------------------------------------------------------------
-subroutine BEMT_CoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, AFInfo, rlocal, rtip, chord, theta, rHub, &
-                           Vx, Vy, Vinf, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, SkewWakeMod, &
+subroutine BEMT_CoupledSolve( numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
+                           Vx, Vy, Vinf, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
                            UA_Flag, p_UA, xd_UA, OtherState_UA, maxIndIterations, aTol, &
                            axInduction, tanInduction, ErrStat, ErrMsg)
 !  Since this subroutine uses the hybrd_fcn module, we cannot include it within 
@@ -1306,14 +1292,12 @@ subroutine BEMT_CoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, AFI
    integer,                intent(in   ) :: numBlades
    integer,                intent(in   ) :: numBladeNodes
    real(ReKi),             intent(in   ) :: airDens
-   real(ReKi),             intent(in   ) :: mu
-   real(ReKi),             intent(in   ) :: lambda 
+   real(ReKi),             intent(in   ) :: mu 
    TYPE(AFInfoType),       intent(in   ) :: AFInfo
    real(ReKi),             intent(in   ) :: rlocal         
    real(ReKi),             intent(in   ) :: rtip           
    real(ReKi),             intent(in   ) :: chord          
-   real(ReKi),             intent(in   ) :: theta          
-   real(ReKi),             intent(in   ) :: rHub 
+   real(ReKi),             intent(in   ) :: theta           
    real(ReKi),             intent(in   ) :: Vx             
    real(ReKi),             intent(in   ) :: Vy 
    real(ReKi),             intent(in   ) :: Vinf
@@ -1325,6 +1309,8 @@ subroutine BEMT_CoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, AFI
    logical,                intent(in   ) :: useTIDrag
    logical,                intent(in   ) :: useHubLoss
    logical,                intent(in   ) :: useTipLoss
+   real(ReKi),             intent(in   ) :: hubLossConst
+   real(ReKi),             intent(in   ) :: tipLossConst
    integer,                intent(in   ) :: SkewWakeMod   ! Skewed wake model
    integer,                intent(in   ) :: maxIndIterations   
    type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
@@ -1371,8 +1357,6 @@ subroutine BEMT_CoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, AFI
    fcnArgs%rtip            = rtip
    fcnArgs%chord           = chord
    fcnArgs%theta           = theta
-   fcnArgs%rHub            = rHub
-   fcnArgs%lambda          = lambda
    
    
    
@@ -1388,6 +1372,8 @@ subroutine BEMT_CoupledSolve( numBlades, numBladeNodes, airDens, mu, lambda, AFI
    fcnArgs%useTIDrag       = useTIDrag
    fcnArgs%useHubLoss      = useHubLoss
    fcnArgs%useTipLoss      = useTipLoss
+   fcnArgs%hubLossConst    = hubLossConst
+   fcnArgs%tipLossConst    = tipLossConst
    fcnArgs%SkewWakeMod     = SkewWakeMod
    fcnArgs%UA_Flag         = UA_Flag
    

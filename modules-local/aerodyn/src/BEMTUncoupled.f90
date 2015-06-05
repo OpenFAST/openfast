@@ -83,7 +83,7 @@ subroutine ComputeAirfoilCoefs( phi, axInduction, tanInduction, Vx, Vy, chord, t
       ! Compute AOA, Re based on current values of axInduction, tanInduction
    call BEMTU_Wind(phi, axInduction, tanInduction, Vx, Vy, chord, theta, airDens, mu, AOA, W, Re)
       
-   call  BE_CalcOutputs( AFInfo, UA_Flag, AOA*R2D, W, log(Re), p_UA, xd_UA, OtherState_UA, Cl, Cd, Cm, errStat, errMsg)  
+   call  BE_CalcOutputs( AFInfo, UA_Flag, AOA, W, log(Re), p_UA, xd_UA, OtherState_UA, Cl, Cd, Cm, errStat, errMsg)  
    !call  BE_CalcOutputs(AFInfo, AOA*R2D, log(Re), Cl, Cd, errStat, errMsg) ! AOA is in degrees in this look up table and Re is in log(Re)
    if (errStat >= AbortErrLev) then
       call SetErrStat( errStat, errMsg, errStat, errMsg, 'ComputeAirfoilCoefs' ) 
@@ -99,8 +99,8 @@ end subroutine ComputeAirfoilCoefs
 
 
                            ! This is the residual calculation for the uncoupled BEM solve
-real(ReKi) function BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, rHub, lambda, AFInfo, &
-                              Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, SkewWakeMod, &
+real(ReKi) function BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta,  AFInfo, &
+                              Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
                               UA_Flag, p_UA, xd_UA, OtherState_UA, &
                               AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, chi, ErrStat, ErrMsg)
       
@@ -117,8 +117,6 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations,
    real(ReKi),             intent(in   ) :: rtip   
    real(ReKi),             intent(in   ) :: chord 
    real(ReKi),             intent(in   ) :: theta         
-   real(ReKi),             intent(in   ) :: rHub
-   real(ReKi),             intent(in   ) :: lambda
    type(AFInfoType),       intent(in   ) :: AFInfo
    real(ReKi),             intent(in   ) :: Vx
    real(ReKi),             intent(in   ) :: Vy
@@ -127,6 +125,8 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations,
    logical,                intent(in   ) :: useTIDrag
    logical,                intent(in   ) :: useHubLoss
    logical,                intent(in   ) :: useTipLoss
+   real(ReKi),             intent(in   ) :: hubLossConst
+   real(ReKi),             intent(in   ) :: tipLossConst
    integer,                intent(in   ) :: SkewWakeMod   ! Skewed wake model
    logical,                intent(in   ) :: UA_Flag
    type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
@@ -144,14 +144,16 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations,
    
    ErrStat = ErrID_None
    ErrMsg  = ""
+   BEMTU_InductionWithResidual = 0.0_ReKi
     
       ! Set the local version of the induction factors
    axInduction  = 0.0_ReKi  ! axInductionIN
    tanInduction = 0.0_ReKi  ! tanInductionIN
    
+   
       ! If we say Re is dependent on axInduction, tanInduction, then we would create an iteration loop around the residual calculation
     
-   do I = 1,numReIterations
+   !do I = 1,numReIterations
       
       call ComputeAirfoilCoefs( phi, axInduction, tanInduction, Vx, Vy, chord, theta, airDens, mu, useAIDrag, useTIDrag, AFInfo, &
                                 UA_Flag, p_UA, xd_UA, OtherState_UA, &
@@ -161,25 +163,35 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations,
          return
       end if
       
-         ! Determine axInduction, tanInduction for the current Cl, Cd, phi
-      call inductionFactors( rlocal, rtip, chord, rHub, lambda, phi, psi, chi0, Cx, Cy, numBlades, &
-                              Vx, Vy, useTanInd, useHubLoss, useTipLoss,  SkewWakeMod, &
-                              fzero, axInduction, tanInduction, chi, errStat, errMsg)
-      if (errStat >= AbortErrLev) then
-         call SetErrStat( errStat, errMsg, errStat, errMsg, 'BEMTU_InductionWithResidual' ) 
-         return
+      if ( ( EqualRealNos(Vx, 0.0_ReKi) ) .or. ( EqualRealNos(Vy, 0.0_ReKi) ) ) then
+         
+         axInduction  = 0.0_ReKi
+         tanInduction = 0.0_ReKi
+         fzero        = 0.0_ReKi
+         
+      else
+         
+            ! Determine axInduction, tanInduction for the current Cl, Cd, phi
+         call inductionFactors( rlocal, rtip, chord, phi, psi, chi0, Cx, Cy, numBlades, &
+                                 Vx, Vy, useTanInd, useHubLoss, useTipLoss,  hubLossConst, tipLossConst,  SkewWakeMod, &
+                                 fzero, axInduction, tanInduction, chi, errStat, errMsg)
+         if (errStat >= AbortErrLev) then
+            call SetErrStat( errStat, errMsg, errStat, errMsg, 'BEMTU_InductionWithResidual' ) 
+            return
+         end if
+         
       end if
       
       BEMTU_InductionWithResidual = fzero  ! the residual
       
-   end do
+  ! end do
    
 end function BEMTU_InductionWithResidual
 
       ! This is the residual calculation for the uncoupled BEM solve
 
-real(ReKi) function UncoupledErrFn(phi, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, rHub, lambda, AFInfo, &
-                              Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, SkewWakeMod, &
+real(ReKi) function UncoupledErrFn(phi, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+                              Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
                               UA_Flag, p_UA, xd_UA, OtherState_UA, &
                               ErrStat, ErrMsg)
       
@@ -196,8 +208,6 @@ real(ReKi) function UncoupledErrFn(phi, psi, chi0, numReIterations, airDens, mu,
    real(ReKi),             intent(in   ) :: rtip   
    real(ReKi),             intent(in   ) :: chord 
    real(ReKi),             intent(in   ) :: theta         
-   real(ReKi),             intent(in   ) :: rHub
-   real(ReKi),             intent(in   ) :: lambda
    type(AFInfoType),       intent(in   ) :: AFInfo
    real(ReKi),             intent(in   ) :: Vx
    real(ReKi),             intent(in   ) :: Vy
@@ -206,6 +216,8 @@ real(ReKi) function UncoupledErrFn(phi, psi, chi0, numReIterations, airDens, mu,
    logical,                intent(in   ) :: useTIDrag
    logical,                intent(in   ) :: useHubLoss
    logical,                intent(in   ) :: useTipLoss
+   real(ReKi),             intent(in   ) :: hubLossConst
+   real(ReKi),             intent(in   ) :: tipLossConst
    integer,                intent(in   ) :: SkewWakeMod   ! Skewed wake model
    logical,                intent(in   ) :: UA_Flag
    type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
@@ -225,8 +237,8 @@ real(ReKi) function UncoupledErrFn(phi, psi, chi0, numReIterations, airDens, mu,
     
    
       
-      UncoupledErrFn = BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, rHub, lambda, AFInfo, &
-                              Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, SkewWakeMod, &
+      UncoupledErrFn = BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta,  AFInfo, &
+                              Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
                               UA_Flag, p_UA, xd_UA, OtherState_UA, &
                               AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, chi, ErrStat, ErrMsg)
       
@@ -237,162 +249,169 @@ end function UncoupledErrFn
                               
                               
                               
-recursive subroutine inductionFactors(r , Rtip, chord, Rhub, lambda, phi, azimuth, chi0, cn, ct, B, &
-                              Vx, Vy, wakerotation, hubLoss, tipLoss, skewWakeMod, &
+recursive subroutine inductionFactors(r , Rtip, chord, phi, azimuth, chi0, cn, ct, B, &
+                              Vx, Vy, wakerotation, hubLoss, tipLoss, hubLossConst, tipLossConst, skewWakeMod, &
                               fzero, a, ap, chi, ErrStat, ErrMsg)
 
-    implicit none
+   implicit none
 
-    ! in
-    real(ReKi), intent(in) :: r, chord, Rhub, Rtip, phi, cn, ct
-    REAL(ReKi),       INTENT(IN   ) :: lambda        ! Tip speed ratio
-    integer, intent(in) :: B
-    real(ReKi), intent(in) :: Vx, Vy
-    real(ReKi), intent(in) :: chi0, azimuth
-    logical, intent(in) ::  hubLoss, tipLoss, wakerotation
-    integer, intent(in) :: skewWakeMod  ! useCd,
+   ! in
+   real(ReKi), intent(in) :: r, chord, Rtip, phi, cn, ct
+   integer, intent(in) :: B
+   real(ReKi), intent(in) :: Vx, Vy
+   real(ReKi), intent(in) :: chi0, azimuth, hubLossConst, tipLossConst
+   logical, intent(in) ::  hubLoss, tipLoss,  wakerotation
+   integer, intent(in) :: skewWakeMod  ! useCd,
     
     
     
     
 
-    ! out
-    real(ReKi), intent(out) :: fzero, a, ap
-    REAL(ReKi),       INTENT(  OUT) :: chi
-    INTEGER(IntKi),   INTENT(  OUT) :: ErrStat       ! Error status of the operation
-    CHARACTER(*),     INTENT(  OUT) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   ! out
+   real(ReKi), intent(out) :: fzero, a, ap
+   REAL(ReKi),       INTENT(  OUT) :: chi
+   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat       ! Error status of the operation
+   CHARACTER(*),     INTENT(  OUT) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
-    ! local
+   ! local
     
-       ! constants
+      ! constants
    REAL(ReKi), PARAMETER :: c1 = 2.6296e-3 
    REAL(ReKi), PARAMETER :: c2 = 1.6222e-3 
    REAL(ReKi), PARAMETER :: c3 = -1.1111e-5 
    REAL(ReKi), PARAMETER :: c4 = -3.70371e-6 
    
-    real(ReKi)  :: yawCorr
+   real(ReKi)  :: yawCorr
     
    
     
-    real(ReKi) ::  sigma_p, sphi, cphi, lambda_r, saz !, pi
-    real(ReKi) :: factortip, Ftip, factorhub, Fhub
-    real(ReKi) :: k, kp,  F   !cn, ct,
-    real(ReKi) :: g1, g2, g3
-    real(ReKi) :: Fsphi, sigma_pcn
-    real(ReKi) :: phitemp
-    !real(ReKi) :: chi
+   real(ReKi) ::  sigma_p, sphi, cphi, lambda_r, saz !, pi
+   real(ReKi) :: factortip, Ftip, factorhub, Fhub
+   real(ReKi) :: k, kp,  F   !cn, ct,
+   real(ReKi) :: g1, g2, g3
+   real(ReKi) :: Fsphi, sigma_pcn
+   real(ReKi) :: phitemp
+   !real(ReKi) :: chi
 
-    errStat = ErrID_None
-    errMsg  = ""
+   errStat = ErrID_None
+   errMsg  = ""
    
     
-    if ( EqualRealNos(phi, 0.0_ReKi) ) then
+   if ( EqualRealNos(phi, 0.0_ReKi) ) then
       fzero =  0.0_ReKi
       a     =  0.0_ReKi
       ap    =  0.0_ReKi
       chi   =  0.0_ReKi
       return
-    end if
+   end if
     
+   sigma_p = B/2.0_ReKi/pi*chord/r
+   sphi = sin(phi)
+   cphi = cos(phi)
+
+   chi = 0.0_ReKi
+   !saz = sin(azimuth)
+    
+   if ( EqualRealNos(azimuth, 3.141593) ) then
+      saz = 0.0_ReKi
+   else if ( EqualRealNos(azimuth, 1.570796) ) then
+      saz = 1.0_ReKi
+   else if ( EqualRealNos(azimuth, 3*1.570796 )) then
+      saz = -1.0_ReKi
+   else     
+      saz = sin(azimuth)
+   end if
+    
+    
+      ! resolve into normal and tangential forces
+      !if ( .not. useCd ) then
+      !    cn = cl*cphi
+      !    ct = cl*sphi
+      !else
+      !    cn = cl*cphi + cd*sphi
+      !    ct = cl*sphi - cd*cphi
+      !end if
+
+      ! Prandtl's tip and hub loss factor
+   !Ftip = 1.0_ReKi
+   !! NOTE: check below isn't good enough: at tip Ftip should = 0.0, not 1.0
+   !! if ( tipLoss .AND. (.NOT.(EqualRealNos(sphi, 0.0_DbKi))) ) then
+   !if ( tipLoss  ) then
+   !   factortip = B/2.0_ReKi*(Rtip - r)/(r*abs(sphi))
+   !   Ftip      = 2.0_ReKi/pi*acos(exp(-factortip))
+   !end if
+   !
+   !Fhub = 1.0_ReKi
+   !!if ( hubLoss .AND. (.NOT.(EqualRealNos(sphi, 0.0_DbKi))) ) then
+   !if ( hubLoss ) then
+   !   factorhub = B/2.0_ReKi*(r - Rhub)/(Rhub*abs(sphi))
+   !   Fhub      = 2.0_ReKi/pi*acos(exp(-factorhub))
+   !end if
+   !
    
-    
-    
-    
-    sigma_p = B/2.0_ReKi/pi*chord/r
-    sphi = sin(phi)
-    cphi = cos(phi)
+         ! Prandtl's tip and hub loss factor
+   Ftip = 1.0
+   if ( tipLoss ) then
+      factortip = tipLossConst/abs(sphi)
+      Ftip = (2.0/pi)*acos(exp(-factortip))
+   end if
 
-    chi = 0.0_ReKi
-    !saz = sin(azimuth)
-    
-    if ( EqualRealNos(azimuth, 3.141593) ) then
-       saz = 0.0_ReKi
-    else if ( EqualRealNos(azimuth, 1.570796) ) then
-       saz = 1.0_ReKi
-    else if ( EqualRealNos(azimuth, 3*1.570796 )) then
-       saz = -1.0_ReKi
-    else     
-       saz = sin(azimuth)
-    end if
-    
-    
-    ! resolve into normal and tangential forces
-    !if ( .not. useCd ) then
-    !    cn = cl*cphi
-    !    ct = cl*sphi
-    !else
-    !    cn = cl*cphi + cd*sphi
-    !    ct = cl*sphi - cd*cphi
-    !end if
+   Fhub = 1.0
+   if ( hubLoss ) then
+      factorhub = hubLossConst/abs(sphi)
+      Fhub = (2.0/pi)*acos(exp(-factorhub))
+   end if
+      
+   F = Ftip * Fhub
 
-    ! Prandtl's tip and hub loss factor
-    Ftip = 1.0_ReKi
-    ! NOTE: check below isn't good enough: at tip Ftip should = 0.0, not 1.0
-   ! if ( tipLoss .AND. (.NOT.(EqualRealNos(sphi, 0.0_DbKi))) ) then
-    if ( tipLoss  ) then
-        factortip = B/2.0_ReKi*(Rtip - r)/(r*abs(sphi))
-        Ftip      = 2.0_ReKi/pi*acos(exp(-factortip))
-    end if
-
-    Fhub = 1.0_ReKi
-    !if ( hubLoss .AND. (.NOT.(EqualRealNos(sphi, 0.0_DbKi))) ) then
-    if ( hubLoss ) then
-        factorhub = B/2.0_ReKi*(r - Rhub)/(Rhub*abs(sphi))
-        Fhub      = 2.0_ReKi/pi*acos(exp(-factorhub))
-    end if
-
-    F = Ftip * Fhub
-
-    if ( EqualRealNos(F, 0.0_ReKi) ) then
+   if ( EqualRealNos(F, 0.0_ReKi) ) then
       fzero =  0.0_ReKi
       a     =  1.0_ReKi
       ap    =  -1.0_ReKi
       chi   =  0.0_ReKi
       return
-    end if
+   end if
     
-    ! bem parameters
+      ! bem parameters
     
-    !Fsphi     = 4.0_ReKi*F*sphi**2 
-    !sigma_pcn = sigma_p*cn
+      !Fsphi     = 4.0_ReKi*F*sphi**2 
+      !sigma_pcn = sigma_p*cn
     
-    k = sigma_p*cn/4.0_ReKi/F/sphi/sphi
+   k = sigma_p*cn/4.0_ReKi/F/sphi/sphi
 !bjj: TODO: F is 0 for nodes at the blade root and blade tip, causing division-by-zero errors: FIX ME
     
     ! compute axial induction factor
-    if (phi > 0.0_ReKi) then  ! momentum/empirical
+   if (phi > 0.0_ReKi) then  ! momentum/empirical
 
-        
-        
-    
+ 
         ! update axial induction factor
-        if (k <= 2.0_ReKi/3.0_ReKi) then  ! momentum state
-            a = k/(1.0_ReKi+k)
+      if (k <= 2.0_ReKi/3.0_ReKi) then  ! momentum state
+         a = k/(1.0_ReKi+k)
 
-        else  ! Glauert(Buhl) correction
+      else  ! Glauert(Buhl) correction
 
-            g1 = 2.0_ReKi*F*k - (10.0_ReKi/9-F)
-            g2 = 2.0_ReKi*F*k - (4.0_ReKi/3-F)*F
-            g3 = 2.0_ReKi*F*k - (25.0_ReKi/9-2*F)
+         g1 = 2.0_ReKi*F*k - (10.0_ReKi/9-F)
+         g2 = 2.0_ReKi*F*k - (4.0_ReKi/3-F)*F
+         g3 = 2.0_ReKi*F*k - (25.0_ReKi/9-2*F)
 
-            if (abs(g3) < 1e-6_ReKi) then  ! avoid singularity
-                a = 1.0_ReKi - 1.0_ReKi/2.0/sqrt(g2)
-            else
-                a = (g1 - sqrt(g2)) / g3
-            end if
+         if (abs(g3) < 1e-6_ReKi) then  ! avoid singularity
+               a = 1.0_ReKi - 1.0_ReKi/2.0/sqrt(g2)
+         else
+               a = (g1 - sqrt(g2)) / g3
+         end if
 
-        end if
+      end if
 
-    else  ! propeller brake region (a and ap not directly used but update anyway)
+   else  ! propeller brake region (a and ap not directly used but update anyway)
 
-        if (k > 1.0_ReKi) then
-        !if (sigma_pcn > Fsphi) then
-            a =   k/(k-1.0_ReKi) !sigma_pcn / (sigma_pcn - Fsphi )  !
-        else
-            a = 0.0_ReKi  ! dummy value
-        end if
+      if (k > 1.0_ReKi) then
+      !if (sigma_pcn > Fsphi) then
+         a =   k/(k-1.0_ReKi) !sigma_pcn / (sigma_pcn - Fsphi )  !
+      else
+         a = 0.0_ReKi  ! dummy value
+      end if
 
-    end if
+   end if
 
     ! apply yaw correction
     !if (skewWakeMod) then
@@ -411,21 +430,17 @@ recursive subroutine inductionFactors(r , Rtip, chord, Rhub, lambda, phi, azimut
       !yawCorr = min(0.785,yawCorr)
       yawCorr = (15.0_ReKi*pi/64.0_ReKi*tan(chi/2.0_ReKi) * (r/Rtip) * saz)
       a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
-        !a = min(a, 0.9)
-   !else if ( skewWakeMod == SkewMod_Coupled ) then
-   !   chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
-   !   a = a * ( 1.0_ReKi + 0.63_ReKi*(r/Rtip)**2 )*(c1 + c2*lambda + c3*lambda**2 + c4*lambda**3 )*( chi*180.0_ReKi/pi )*saz   ! chi needs to be in degrees here.
    end if
    
     ! compute tangential induction factor
-    kp = sigma_p*ct/4.0_ReKi/F/sphi/cphi
-    ap = kp/(1.0_ReKi-kp)
+   kp = sigma_p*ct/4.0_ReKi/F/sphi/cphi
+   ap = kp/(1.0_ReKi-kp)
 !bjj: 3-jun-2015: TODO: was able to trigger divide-by-zero here using ccBlade_UAE.dvr without tiploss or hubloss
     
-    if (.not. wakerotation) then
-        ap = 0.0_ReKi
-        kp = 0.0_ReKi
-    end if
+   if (.not. wakerotation) then
+      ap = 0.0_ReKi
+      kp = 0.0_ReKi
+   end if
 
     !if ( skewWakeMod > SkewMod_Uncoupled ) then  
     !  phitemp = InflowAngle(Vx_in, Vy_in, REAL(a, ReKi), REAL(ap))
@@ -436,233 +451,235 @@ recursive subroutine inductionFactors(r , Rtip, chord, Rhub, lambda, phi, azimut
     !end if  
     
     ! error function
-    lambda_r = Vy/Vx
-    if (phi > 0) then  ! momentum/empirical
-        fzero = sphi/(1-a) - cphi/lambda_r*(1-kp)
-    else  ! propeller brake region
-        fzero = sphi*(1-k) - cphi/lambda_r*(1-kp)
-    end if
+   lambda_r = Vy/Vx
+   if (phi > 0) then  ! momentum/empirical
+      if ( EqualRealNos(a, 1.0_ReKi) ) then
+         fzero = - cphi/lambda_r*(1-kp)
+      else       
+         fzero = sphi/(1-a) - cphi/lambda_r*(1-kp)
+      end if
+      
+   else  ! propeller brake region
+      fzero = sphi*(1-k) - cphi/lambda_r*(1-kp)
+   end if
     
 end subroutine inductionFactors
     
-recursive subroutine inductionFactors2(r_in     , Rtip_in, chord_in, Rhub_in,                      lambda_in, phi_in, azimuth_in, yaw_in  , cn_in, ct_in, B, &
-                              Vx_in, Vy_in, wakerotation,   hubLoss , tipLoss   , yawcorrection, &
-                              fzero_out, a_out,           ap_out,           chi_out, ErrStat, ErrMsg)
+!recursive subroutine inductionFactors2(r_in     , Rtip_in, chord_in, Rhub_in,                      lambda_in, phi_in, azimuth_in, yaw_in  , cn_in, ct_in, B, &
+!                              Vx_in, Vy_in, wakerotation,   hubLoss , tipLoss   , yawcorrection, &
+!                              fzero_out, a_out,           ap_out,           chi_out, ErrStat, ErrMsg)
+!
+!    implicit none
+!
+!    integer, parameter :: dp = SELECTED_REAL_KIND(  6,  30 )  !kind(0.d0) !!
+!
+!    ! in
+!    real(ReKi), intent(in) :: r_in, chord_in, Rhub_in, Rtip_in, phi_in, cn_in, ct_in
+!    REAL(ReKi),       INTENT(IN   ) :: lambda_in        ! Tip speed ratio
+!    integer, intent(in) :: B
+!    real(ReKi), intent(in) :: Vx_in, Vy_in
+!    real(ReKi), intent(in) :: yaw_in, azimuth_in
+!    logical, intent(in) ::  hubLoss, tipLoss, wakerotation
+!    integer, intent(in) :: yawcorrection  ! useCd,
+!    
+!    
+!    
+!    
+!
+!    ! out
+!    real(ReKi), intent(out) :: fzero_out, a_out, ap_out
+!    REAL(ReKi),       INTENT(  OUT) :: chi_out
+!    INTEGER(IntKi),   INTENT(  OUT) :: ErrStat       ! Error status of the operation
+!    CHARACTER(*),     INTENT(  OUT) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
+!
+!    ! local
+!    
+!       ! constants
+!   REAL(dp), PARAMETER :: c1 = 2.6296e-3 
+!   REAL(dp), PARAMETER :: c2 = 1.6222e-3 
+!   REAL(dp), PARAMETER :: c3 = -1.1111e-5 
+!   REAL(dp), PARAMETER :: c4 = -3.70371e-6 
+!   
+!    real(dp)  :: r, chord, Rhub, Rtip, phi, cn, ct, yawCorr
 
-    implicit none
+!    
+!    real(dp)  :: Vx, Vy
+!    real(dp)  :: yaw, azimuth
+!    
+!    real(dp) ::  sigma_p, sphi, cphi, lambda_r, saz !, pi
+!    real(dp) :: factortip, Ftip, factorhub, Fhub
+!    real(dp) :: k, kp,  F   !cn, ct,
+!    real(dp) :: g1, g2, g3
+!    real(dp) :: fzero, a, ap, Fsphi, sigma_pcn
+!    REAL(dp) :: chi
+!    real(ReKi) :: phitemp
+!    !real(dp) :: chi
+!
+!    errStat = ErrID_None
+!    errMsg  = ""
+!   
+!    phi = phi_in
+!    if ( EqualRealNos(phi, 0.0_ReKi) ) then
+!      fzero_out =  0.0
+!      a_out     =  0.0
+!      ap_out    =  0.0
+!      return
+!    end if
+!    
+!    r = r_in
+!    chord = chord_in
+!    Rhub = Rhub_in
+!    Rtip = Rtip_in
 
-    integer, parameter :: dp = SELECTED_REAL_KIND(  6,  30 )  !kind(0.d0) !!
-
-    ! in
-    real(ReKi), intent(in) :: r_in, chord_in, Rhub_in, Rtip_in, phi_in, cn_in, ct_in
-    REAL(ReKi),       INTENT(IN   ) :: lambda_in        ! Tip speed ratio
-    integer, intent(in) :: B
-    real(ReKi), intent(in) :: Vx_in, Vy_in
-    real(ReKi), intent(in) :: yaw_in, azimuth_in
-    logical, intent(in) ::  hubLoss, tipLoss, wakerotation
-    integer, intent(in) :: yawcorrection  ! useCd,
-    
-    
-    
-    
-
-    ! out
-    real(ReKi), intent(out) :: fzero_out, a_out, ap_out
-    REAL(ReKi),       INTENT(  OUT) :: chi_out
-    INTEGER(IntKi),   INTENT(  OUT) :: ErrStat       ! Error status of the operation
-    CHARACTER(*),     INTENT(  OUT) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
-
-    ! local
-    
-       ! constants
-   REAL(dp), PARAMETER :: c1 = 2.6296e-3 
-   REAL(dp), PARAMETER :: c2 = 1.6222e-3 
-   REAL(dp), PARAMETER :: c3 = -1.1111e-5 
-   REAL(dp), PARAMETER :: c4 = -3.70371e-6 
-   
-    real(dp)  :: r, chord, Rhub, Rtip, phi, cn, ct, yawCorr
-    REAL(dp)  :: lambda        ! Tip speed ratio
-    
-    real(dp)  :: Vx, Vy
-    real(dp)  :: yaw, azimuth
-    
-    real(dp) ::  sigma_p, sphi, cphi, lambda_r, saz !, pi
-    real(dp) :: factortip, Ftip, factorhub, Fhub
-    real(dp) :: k, kp,  F   !cn, ct,
-    real(dp) :: g1, g2, g3
-    real(dp) :: fzero, a, ap, Fsphi, sigma_pcn
-    REAL(dp) :: chi
-    real(ReKi) :: phitemp
-    !real(dp) :: chi
-
-    errStat = ErrID_None
-    errMsg  = ""
-   
-    phi = phi_in
-    if ( EqualRealNos(phi, 0.0_ReKi) ) then
-      fzero_out =  0.0
-      a_out     =  0.0
-      ap_out    =  0.0
-      return
-    end if
-    
-    r = r_in
-    chord = chord_in
-    Rhub = Rhub_in
-    Rtip = Rtip_in
-    lambda = lambda_in
-    
-    cn = cn_in
-    ct = ct_in
-    Vx = Vx_in
-    Vy = Vy_in
-    yaw = yaw_in
-    azimuth = azimuth_in
-    ! constants
-    !pi = 3.1415926535897932_dp
-    sigma_p = B/2.0_dp/pi*chord/r
-    sphi = sin(phi_in)
-    cphi = cos(phi_in)
-
-    chi = 0.0_dp
-    saz = sin(azimuth_in)
-    
-    if ( EqualRealNos(azimuth_in, 3.141593) ) then
-       saz = 0.0_dp
-    else if ( EqualRealNos(azimuth_in, 1.570796) ) then
-       saz = 1.0_dp
-    else if ( EqualRealNos(azimuth_in, 3*1.570796 )) then
-       saz = -1.0_dp
-    else     
-       saz = sin(azimuth)
-    end if
-    
-    
-    ! resolve into normal and tangential forces
-    !if ( .not. useCd ) then
-    !    cn = cl*cphi
-    !    ct = cl*sphi
-    !else
-    !    cn = cl*cphi + cd*sphi
-    !    ct = cl*sphi - cd*cphi
-    !end if
-
-    ! Prandtl's tip and hub loss factor
-    Ftip = 1.0_dp
-    ! NOTE: check below isn't good enough: at tip Ftip should = 0.0, not 1.0
-   ! if ( tipLoss .AND. (.NOT.(EqualRealNos(sphi, 0.0_DbKi))) ) then
-    if ( tipLoss  ) then
-        factortip = B/2.0_dp*(Rtip - r)/(r*abs(sphi))
-        Ftip      = 2.0_dp/pi*acos(exp(-factortip))
-    end if
-
-    Fhub = 1.0_dp
-    !if ( hubLoss .AND. (.NOT.(EqualRealNos(sphi, 0.0_DbKi))) ) then
-    if ( hubLoss ) then
-        factorhub = B/2.0_dp*(r - Rhub)/(Rhub*abs(sphi))
-        Fhub      = 2.0_dp/pi*acos(exp(-factorhub))
-    end if
-
-    F = Ftip * Fhub
-
-    ! bem parameters
-    
-    !Fsphi     = 4.0_dp*F*sphi**2 
-    !sigma_pcn = sigma_p*cn
-    
-    k = sigma_p*cn/4.0_dp/F/sphi/sphi
-
-    ! compute axial induction factor
-    if (phi > 0.0) then  ! momentum/empirical
-
-        
-        
-    
-        ! update axial induction factor
-        if (k <= 2.0_dp/3.0) then  ! momentum state
-            a = k/(1+k)
-
-        else  ! Glauert(Buhl) correction
-
-            g1 = 2.0_dp*F*k - (10.0_dp/9-F)
-            g2 = 2.0_dp*F*k - (4.0_dp/3-F)*F
-            g3 = 2.0_dp*F*k - (25.0_dp/9-2*F)
-
-            if (abs(g3) < 1e-6_dp) then  ! avoid singularity
-                a = 1.0_dp - 1.0_dp/2.0/sqrt(g2)
-            else
-                a = (g1 - sqrt(g2)) / g3
-            end if
-
-        end if
-
-    else  ! propeller brake region (a and ap not directly used but update anyway)
-
-        if (k > 1.0) then
-        !if (sigma_pcn > Fsphi) then
-            a =   k/(k-1) !sigma_pcn / (sigma_pcn - Fsphi )  !
-        else
-            a = 0.0_dp  ! dummy value
-        end if
-
-    end if
-
-    ! apply yaw correction
-    !if (yawcorrection) then
-    !    
-    !    chi = (0.6*a + 1.0)*yaw
-    !    a = a * (1.0 + 15.0*pi/32*tan(chi/2.0) * r/Rtip * saz)
-    !    a = min(a, 0.999999)
-    !end if
-
-       ! Skewed wake correction
-         
-   if ( yawcorrection == 1 ) then
-      chi = (0.6*a + 1.0)*yaw
-      !yawCorr = max(0.0,yaw-0.5236)
-      !yawCorr = min(0.785,yawCorr)
-      yawCorr = (15.0*pi/64*tan(chi/2.0) * (r/Rtip) * saz)
-      a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
-        !a = min(a, 0.9)
-   else if ( yawcorrection == 2 ) then
-      chi = (0.6*a + 1.0)*yaw
-      a = a * ( 1 + 0.63*(r/Rtip)**2 )*(c1 + c2*lambda + c3*lambda**2 + c4*lambda**3 )*( chi*180.0/pi )*saz   ! chi needs to be in degrees here.
-   end if
-   
-    ! compute tangential induction factor
-    kp = sigma_p*ct/4.0_dp/F/sphi/cphi
-    ap = kp/(1-kp)
-
-    if (.not. wakerotation) then
-        ap = 0.0_dp
-        kp = 0.0_dp
-    end if
-
-    !if ( yawcorrection > 0 ) then  
-    !  phitemp = InflowAngle(Vx_in, Vy_in, REAL(a, ReKi), REAL(ap))
-    !  call inductionFactors(r_in     , Rtip_in, chord_in, Rhub_in,  lambda_in, phitemp, azimuth_in, yaw_in  , cn_in, ct_in, B, &
-    !                          Vx_in, Vy_in, wakerotation,   hubLoss , tipLoss   , 0, &
-    !                          fzero_out, a_out,           ap_out,           chi_out, ErrStat, ErrMsg)
-    !  return
-    !
-    !end if  
-    
-    ! error function
-    lambda_r = Vy/Vx
-    if (phi > 0) then  ! momentum/empirical
-        fzero = sphi/(1-a) - cphi/lambda_r*(1-kp)
-    else  ! propeller brake region
-        fzero = sphi*(1-k) - cphi/lambda_r*(1-kp)
-    end if
-
-    ap_out = ap
-    a_out  = a
-    fzero_out = fzero
-    chi_out   = chi
-end subroutine inductionFactors2
+!    
+!    cn = cn_in
+!    ct = ct_in
+!    Vx = Vx_in
+!    Vy = Vy_in
+!    yaw = yaw_in
+!    azimuth = azimuth_in
+!    ! constants
+!    !pi = 3.1415926535897932_dp
+!    sigma_p = B/2.0_dp/pi*chord/r
+!    sphi = sin(phi_in)
+!    cphi = cos(phi_in)
+!
+!    chi = 0.0_dp
+!    saz = sin(azimuth_in)
+!    
+!    if ( EqualRealNos(azimuth_in, 3.141593) ) then
+!       saz = 0.0_dp
+!    else if ( EqualRealNos(azimuth_in, 1.570796) ) then
+!       saz = 1.0_dp
+!    else if ( EqualRealNos(azimuth_in, 3*1.570796 )) then
+!       saz = -1.0_dp
+!    else     
+!       saz = sin(azimuth)
+!    end if
+!    
+!    
+!    ! resolve into normal and tangential forces
+!    !if ( .not. useCd ) then
+!    !    cn = cl*cphi
+!    !    ct = cl*sphi
+!    !else
+!    !    cn = cl*cphi + cd*sphi
+!    !    ct = cl*sphi - cd*cphi
+!    !end if
+!
+!    ! Prandtl's tip and hub loss factor
+!    Ftip = 1.0_dp
+!    ! NOTE: check below isn't good enough: at tip Ftip should = 0.0, not 1.0
+!   ! if ( tipLoss .AND. (.NOT.(EqualRealNos(sphi, 0.0_DbKi))) ) then
+!    if ( tipLoss  ) then
+!        factortip = B/2.0_dp*(Rtip - r)/(r*abs(sphi))
+!        Ftip      = 2.0_dp/pi*acos(exp(-factortip))
+!    end if
+!
+!    Fhub = 1.0_dp
+!    !if ( hubLoss .AND. (.NOT.(EqualRealNos(sphi, 0.0_DbKi))) ) then
+!    if ( hubLoss ) then
+!        factorhub = B/2.0_dp*(r - Rhub)/(Rhub*abs(sphi))
+!        Fhub      = 2.0_dp/pi*acos(exp(-factorhub))
+!    end if
+!
+!    F = Ftip * Fhub
+!
+!    ! bem parameters
+!    
+!    !Fsphi     = 4.0_dp*F*sphi**2 
+!    !sigma_pcn = sigma_p*cn
+!    
+!    k = sigma_p*cn/4.0_dp/F/sphi/sphi
+!
+!    ! compute axial induction factor
+!    if (phi > 0.0) then  ! momentum/empirical
+!
+!        
+!        
+!    
+!        ! update axial induction factor
+!        if (k <= 2.0_dp/3.0) then  ! momentum state
+!            a = k/(1+k)
+!
+!        else  ! Glauert(Buhl) correction
+!
+!            g1 = 2.0_dp*F*k - (10.0_dp/9-F)
+!            g2 = 2.0_dp*F*k - (4.0_dp/3-F)*F
+!            g3 = 2.0_dp*F*k - (25.0_dp/9-2*F)
+!
+!            if (abs(g3) < 1e-6_dp) then  ! avoid singularity
+!                a = 1.0_dp - 1.0_dp/2.0/sqrt(g2)
+!            else
+!                a = (g1 - sqrt(g2)) / g3
+!            end if
+!
+!        end if
+!
+!    else  ! propeller brake region (a and ap not directly used but update anyway)
+!
+!        if (k > 1.0) then
+!        !if (sigma_pcn > Fsphi) then
+!            a =   k/(k-1) !sigma_pcn / (sigma_pcn - Fsphi )  !
+!        else
+!            a = 0.0_dp  ! dummy value
+!        end if
+!
+!    end if
+!
+!    ! apply yaw correction
+!    !if (yawcorrection) then
+!    !    
+!    !    chi = (0.6*a + 1.0)*yaw
+!    !    a = a * (1.0 + 15.0*pi/32*tan(chi/2.0) * r/Rtip * saz)
+!    !    a = min(a, 0.999999)
+!    !end if
+!
+!       ! Skewed wake correction
+!         
+!   if ( yawcorrection == 1 ) then
+!      chi = (0.6*a + 1.0)*yaw
+!      !yawCorr = max(0.0,yaw-0.5236)
+!      !yawCorr = min(0.785,yawCorr)
+!      yawCorr = (15.0*pi/64*tan(chi/2.0) * (r/Rtip) * saz)
+!      a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
+!        !a = min(a, 0.9)
+!   end if
+!   
+!    ! compute tangential induction factor
+!    kp = sigma_p*ct/4.0_dp/F/sphi/cphi
+!    ap = kp/(1-kp)
+!
+!    if (.not. wakerotation) then
+!        ap = 0.0_dp
+!        kp = 0.0_dp
+!    end if
+!
+!    !if ( yawcorrection > 0 ) then  
+!    !  phitemp = InflowAngle(Vx_in, Vy_in, REAL(a, ReKi), REAL(ap))
+!    !  call inductionFactors(r_in     , Rtip_in, chord_in, Rhub_in,  lambda_in, phitemp, azimuth_in, yaw_in  , cn_in, ct_in, B, &
+!    !                          Vx_in, Vy_in, wakerotation,   hubLoss , tipLoss   , 0, &
+!    !                          fzero_out, a_out,           ap_out,           chi_out, ErrStat, ErrMsg)
+!    !  return
+!    !
+!    !end if  
+!    
+!    ! error function
+!    lambda_r = Vy/Vx
+!    if (phi > 0) then  ! momentum/empirical
+!        fzero = sphi/(1-a) - cphi/lambda_r*(1-kp)
+!    else  ! propeller brake region
+!        fzero = sphi*(1-k) - cphi/lambda_r*(1-kp)
+!    end if
+!
+!    ap_out = ap
+!    a_out  = a
+!    fzero_out = fzero
+!    chi_out   = chi
+!end subroutine inductionFactors2
                               
-subroutine BEMT_InductionFactors( rlocal, rtip, chord, tipLossConst, hubLossConst, lambda, phi, psi, chi0, Cx, Cy, numBlades, &
-                              Vx, Vy, useTanInd, useHubLoss, useTipLoss, SkewWakeMod, &
+subroutine BEMT_InductionFactors( rlocal, rtip, chord,  phi, psi, chi0, Cx, Cy, numBlades, &
+                              Vx, Vy, useTanInd, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
                               fzero, axInduction, tanInduction, chi, ErrStat, ErrMsg)
     
       ! in
@@ -671,7 +688,6 @@ subroutine BEMT_InductionFactors( rlocal, rtip, chord, tipLossConst, hubLossCons
    REAL(ReKi),       INTENT(IN   ) :: chord         ! chord length for the blade element cross-section (m)
    REAL(ReKi),       INTENT(IN   ) :: tipLossConst  !
    REAL(ReKi),       INTENT(IN   ) :: hubLossConst  !
-   REAL(ReKi),       INTENT(IN   ) :: lambda        ! Tip speed ratio
    REAL(ReKi),       INTENT(IN   ) :: phi           ! angle between local chord line and local wind vector (rad)
    REAL(ReKi),       INTENT(IN   ) :: psi           ! asimuth angle   (rad) 
    real(ReKi),       intent(in   ) :: chi0         ! Yaw angle
@@ -800,8 +816,6 @@ if ( .NOT. (EqualRealNos(phi,0.0_ReKi) ) ) then
        
    if ( SkewWakeMod == SkewMod_PittPeters ) then
       axInduction = axInduction * ( 1 + (15.0*pi/64.0)*tan(chi/2.0)*(rlocal/rtip)*sin(psi) )  !TODO: Verify this equation.  It doesn't match previous AD versions 
-  ! else if ( SkewWakeMod == SkewMod_Coupled ) then
-  !    axInduction = axInduction * ( 1 + 0.63*(rlocal/rtip)**2 )*(c1 + c2*lambda + c3*lambda**2 + c4*lambda**3 )*( chi*180.0/pi )*sin(psi)   ! chi needs to be in degrees here.
    end if
         
       ! compute tangential induction factor
