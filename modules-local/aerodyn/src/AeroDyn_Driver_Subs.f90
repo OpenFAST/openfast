@@ -116,7 +116,7 @@ subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
       ! bjj: fix this!
    do k=1,InitInData%numBlades
                      
-      theta(1) = (k-1)*2.0*pi/real(InitInData%numBlades,ReKi)
+      theta(1) = (k-1)*TwoPi/real(InitInData%numBlades,ReKi)
       theta(2) = DvrData%precone
       theta(3) = 0.0_ReKi
       InitInData%BladeRootOrientation(:,:,k) = matmul( EulerConstruct( theta ), InitInData%HubOrientation )
@@ -190,15 +190,23 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
       theta(2) = 0.0_ReKi
       theta(3) = DvrData%Cases(iCase)%Yaw
       orientation = EulerConstruct(theta)
-      
-      AD%u(1)%HubMotion%Orientation(  :,:,1) = matmul( AD%u(1)%HubMotion%RefOrientation(:,:,1), orientation )
+            
       AD%u(1)%HubMotion%TranslationDisp(:,1) = matmul( AD%u(1)%HubMotion%Position(:,1), orientation ) - AD%u(1)%HubMotion%Position(:,1) ! = matmul( transpose(orientation) - eye(3), AD%u(1)%HubMotion%Position(:,1) )
+      
+      theta(1) = time * DvrData%Cases(iCase)%RotSpeed
+      theta(2) = 0.0_ReKi
+      theta(3) = 0.0_ReKi
+      AD%u(1)%HubMotion%Orientation(  :,:,1) = matmul( AD%u(1)%HubMotion%RefOrientation(:,:,1), orientation )
+      orientation = EulerConstruct( theta )      
+      AD%u(1)%HubMotion%Orientation(  :,:,1) = matmul( orientation, AD%u(1)%HubMotion%Orientation(  :,:,1) )
+      
       AD%u(1)%HubMotion%TranslationVel( :,1) = 0.0_ReKi
       AD%u(1)%HubMotion%RotationVel(    :,1) = AD%u(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed
       
+      
       ! Blade root motions:
       do k=1,DvrData%numBlades         
-         theta(1) = (k-1)*2.0*pi/real(DvrData%numBlades,ReKi) + time * DvrData%Cases(iCase)%RotSpeed
+         theta(1) = (k-1)*TwoPi/real(DvrData%numBlades,ReKi)
          theta(2) =  DvrData%precone
          theta(3) = -DvrData%Cases(iCase)%pitch
          orientation = EulerConstruct(theta)
@@ -208,30 +216,31 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
          AD%u(1)%BladeRootMotion(k)%TranslationVel( :,1) = 0.0_ReKi
          AD%u(1)%BladeRootMotion(k)%RotationVel(    :,1) = 0.0_ReKi
       end do !k=numBlades
-      
+            
       ! Blade motions:
       do k=1,DvrData%numBlades
-         orientation = transpose( AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) )
-         orientation = matmul( orientation, AD%u(1)%BladeRootMotion(k)%RefOrientation(  :,:,1) ) 
+         rotateMat = transpose( AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) )
+         rotateMat = matmul( rotateMat, AD%u(1)%BladeRootMotion(k)%RefOrientation(  :,:,1) ) 
+         
          rotateMat(1,1) = orientation(1,1) - 1.0_ReKi
          rotateMat(2,2) = orientation(2,2) - 1.0_ReKi
          rotateMat(3,3) = orientation(3,3) - 1.0_ReKi
-         
+         orientation = transpose(rotateMat)
+                  
          do j=1,AD%u(1)%BladeMotion(k)%nnodes        
             position = AD%u(1)%BladeMotion(k)%Position(:,j) - AD%u(1)%HubMotion%Position(:,1) 
             AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) = AD%u(1)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
             
-            orientation = transpose( AD%u(1)%BladeRootMotion(k)%RefOrientation(:,:,1) )
-            orientation = matmul( AD%u(1)%BladeMotion(k)%RefOrientation(:,:,j), orientation )            
-            AD%u(1)%BladeMotion(k)%Orientation(  :,:,j) = matmul( orientation, AD%u(1)%BladeRootMotion(k)%Orientation(:,:,1) )
-                        
+            AD%u(1)%BladeMotion(k)%Orientation(  :,:,j) = matmul( AD%u(1)%BladeMotion(k)%RefOrientation(:,:,j), orientation )
+            
+            
             position =  AD%u(1)%BladeMotion(k)%Position(:,j) + AD%u(1)%BladeMotion(k)%TranslationDisp(:,j) &
                       - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
             AD%u(1)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
-            
+
             AD%u(1)%BladeMotion(k)%RotationVel(    :,j) = 0.0_ReKi
          end do !j=nnodes
-      end do !k=numBlades
+      end do !k=numBlades       
       
       ! Inflow wind velocities:
       ! InflowOnBlade
