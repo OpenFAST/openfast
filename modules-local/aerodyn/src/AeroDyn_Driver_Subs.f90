@@ -221,11 +221,11 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
       do k=1,DvrData%numBlades
          rotateMat = transpose( AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) )
          rotateMat = matmul( rotateMat, AD%u(1)%BladeRootMotion(k)%RefOrientation(  :,:,1) ) 
-         
-         rotateMat(1,1) = orientation(1,1) - 1.0_ReKi
-         rotateMat(2,2) = orientation(2,2) - 1.0_ReKi
-         rotateMat(3,3) = orientation(3,3) - 1.0_ReKi
          orientation = transpose(rotateMat)
+         
+         rotateMat(1,1) = rotateMat(1,1) - 1.0_ReKi
+         rotateMat(2,2) = rotateMat(2,2) - 1.0_ReKi
+         rotateMat(3,3) = rotateMat(3,3) - 1.0_ReKi
                   
          do j=1,AD%u(1)%BladeMotion(k)%nnodes        
             position = AD%u(1)%BladeMotion(k)%Position(:,j) - AD%u(1)%HubMotion%Position(:,1) 
