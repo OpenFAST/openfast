@@ -1039,6 +1039,7 @@ subroutine SetInputsForBEMT(p, u, BEMT_u, DisturbedInflow, WithoutSweepPitchTwis
          V_diskAvg = V_diskAvg + tmp         
       end do
    end do
+   V_diskAvg = V_diskAvg / real( p%NumBlades * p%NumBlNds, ReKi ) 
    
       ! orientation vectors:
    x_hat_disk = u%HubMotion%Orientation(1,:,1) !actually also x_hat_hub      
@@ -1092,7 +1093,7 @@ subroutine SetInputsForBEMT(p, u, BEMT_u, DisturbedInflow, WithoutSweepPitchTwis
       
       do j=1,p%NumBlNds         
          
-            ! form coordinate system equivalent to u%BladeMotion(k)%Orientation(:,:,j) but iwthout live sweep (due to in-plane
+            ! form coordinate system equivalent to u%BladeMotion(k)%Orientation(:,:,j) but without live sweep (due to in-plane
             ! deflection), blade-pitch and twist (aerodynamic + elastic) angles:
          
          ! orientation = matmul( u%BladeMotion(k)%Orientation(:,:,j), transpose(orientation_nopitch) )
@@ -1108,7 +1109,7 @@ subroutine SetInputsForBEMT(p, u, BEMT_u, DisturbedInflow, WithoutSweepPitchTwis
                            
          x_hat = WithoutSweepPitchTwist(1,:,j,k)
          y_hat = WithoutSweepPitchTwist(2,:,j,k)
-         tmp   = DisturbedInflow(:,j,k) - u%BladeMotion(k)%TranslationVel(:,j)
+         tmp   = DisturbedInflow(:,j,k) - u%BladeMotion(k)%TranslationVel(:,j) ! rel_V(j)_Blade(k)
          
          BEMT_u%Vx(j,k) = dot_product( tmp, x_hat ) ! normal component (normal to the plane, not chord) of the inflow velocity of the jth node in the kth blade
          BEMT_u%Vy(j,k) = dot_product( tmp, y_hat ) ! tangential component (tangential to the plane, not chord) of the inflow velocity of the jth node in the kth blade
