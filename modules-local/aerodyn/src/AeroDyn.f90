@@ -25,12 +25,12 @@ module AeroDyn
    integer(intKi), parameter        :: WakeMod_none  = 0  
    integer(intKi), parameter        :: WakeMod_BEMT  = 1
    
-   integer(intKi), parameter        :: AFAeroMod_steady = 1       ! steady model
+   integer(intKi), parameter        :: AFAeroMod_steady      = 1  ! steady model
    integer(intKi), parameter        :: AFAeroMod_BL_unsteady = 2  ! Beddoes-Leishman unsteady model
    
-   integer(intKi), parameter        :: TwrInflnc_none = 0  ! none
-   integer(intKi), parameter        :: TwrInflnc_Potent = 1  ! potential flow
-   integer(intKi), parameter        :: TwrInflnc_Shadow = 2  ! tower shadow 
+   integer(intKi), parameter        :: TwrPotent_none     = 0  ! none
+   integer(intKi), parameter        :: TwrPotent_baseline = 1  ! baseline potential flow
+   integer(intKi), parameter        :: TwrPotent_Bak      = 2  ! potential flow with Bak correction 
    
    ! ..... Public Subroutines ...................................................................................................
 
@@ -174,7 +174,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%RootName  = TRIM(InitInp%RootName)//'.AD'
    
       ! Read the primary AeroDyn input file
-   call AD_ReadInput( InitInp%InputFile, InputFileData, interval, p%RootName, p%NumBlades, UnEcho, ErrStat2, ErrMsg2 )   
+   call ReadInputFiles( InitInp%InputFile, InputFileData, interval, p%RootName, p%NumBlades, UnEcho, ErrStat2, ErrMsg2 )   
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -194,7 +194,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       ! Define parameters
       !............................................................................................
       
-      ! Initialize AFI module
+      ! Initialize AFI module (read Airfoil tables)
    call Init_AFIparams( InputFileData, p%AFI, UnEcho, p%NumBlades, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       if (ErrStat >= AbortErrLev) then
@@ -649,12 +649,13 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
 
    p%DT               = InputFileData%DTAero      
    p%WakeMod          = InputFileData%WakeMod
-   p%TwrInflnc        = InputFileData%TwrInflnc
+   p%TwrPotent        = InputFileData%TwrPotent
+   p%TwrShadow        = InputFileData%TwrShadow
    p%TwrAero          = InputFileData%TwrAero
    
  ! p%numBlades        = InitInp%numBlades    ! this was set earlier because it was necessary
    p%NumBlNds         = InputFileData%BladeProps(1)%NumBlNds
-   if (p%TwrInflnc == TwrInflnc_none .and. .not. p%TwrAero) then
+   if (p%TwrPotent == TwrPotent_none .and. .not. p%TwrShadow .and. .not. p%TwrAero) then
       p%NumTwrNds     = 0
    else
       p%NumTwrNds     = InputFileData%NumTwrNds
@@ -1192,7 +1193,7 @@ subroutine SetOutputsFromBEMT(p, u, WithoutSweepPitchTwist, BEMT_y, y, ErrStat, 
    
 end subroutine SetOutputsFromBEMT
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AD_ReadInput( InputFileName, InputFileData, Default_DT, OutFileRoot, NumBlades, UnEcho, ErrStat, ErrMsg )
+SUBROUTINE ReadInputFiles( InputFileName, InputFileData, Default_DT, OutFileRoot, NumBlades, UnEcho, ErrStat, ErrMsg )
 ! This subroutine reads the input file and stores all the data in the AD_InputFile structure.
 ! It does not perform data validation.
 !..................................................................................................................................
@@ -1217,7 +1218,7 @@ SUBROUTINE AD_ReadInput( InputFileName, InputFileData, Default_DT, OutFileRoot, 
    CHARACTER(ErrMsgLen)                   :: ErrMsg2         ! The error message, if an error occurred
 
    CHARACTER(1024)                        :: ADBlFile(MaxBl) ! File that contains the blade information (specified in the primary input file)
-   CHARACTER(*), PARAMETER                :: RoutineName = 'AD_ReadInput'
+   CHARACTER(*), PARAMETER                :: RoutineName = 'ReadInputFiles'
    
    
       ! initialize values:
@@ -1271,7 +1272,7 @@ CONTAINS
 
    END SUBROUTINE Cleanup
 
-END SUBROUTINE AD_ReadInput
+END SUBROUTINE ReadInputFiles
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnEc, ErrStat, ErrMsg )
 ! This routine reads in the primary AeroDyn input file and places the values it reads in the InputFileData structure.
@@ -1414,10 +1415,14 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadVar( UnIn, InputFile, InputFileData%AFAeroMod, "AFAeroMod", "Type of airfoil aerodynamics model {1=steady model, 2=Beddoes-Leishman unsteady model} (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ! TwrInflnc - Type of tower influence model {0=none, 1=potential flow, 2=tower shadow} (switch) :
-   CALL ReadVar( UnIn, InputFile, InputFileData%TwrInflnc, "TwrInflnc", "Type of tower influence model {0=none, 1=potential flow, 2=tower shadow} (-)", ErrStat2, ErrMsg2, UnEc)
+      ! TwrPotent - Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} (switch) :
+   CALL ReadVar( UnIn, InputFile, InputFileData%TwrPotent, "TwrPotent", "Type tower influence on wind based on potential flow around the tower {0=none, 1=baseline potential flow, 2=potential flow with Bak correction} (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+      ! TwrShadow - Calculate tower influence on wind based on downstream tower shadow? (flag) :
+   CALL ReadVar( UnIn, InputFile, InputFileData%TwrShadow, "TwrShadow", "Calculate tower influence on wind based on downstream tower shadow? (flag)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
       ! TwrAero - Calculate tower aerodynamic loads? (flag):
    CALL ReadVar( UnIn, InputFile, InputFileData%TwrAero, "TwrAero", "Calculate tower aerodynamic loads? (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1597,11 +1602,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadCom( UnIn, InputFile, 'Section Header: Tower Influence and Aerodynamics', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-      ! TwrPFBak - Include Bak correction to potential flow? [used only when TwrInflnc=1] (flag):
-   CALL ReadVar( UnIn, InputFile, InputFileData%TwrPFBak, "TwrPFBak", "Include Bak correction to potential flow? [used only when TwrInflnc=1] (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-
       ! NumTwrNds - Number of tower nodes used in the analysis (-):
    CALL ReadVar( UnIn, InputFile, InputFileData%NumTwrNds, "NumTwrNds", "Number of tower nodes used in the analysis (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1874,8 +1874,8 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
       call SetErrStat ( ErrID_Fatal, 'AFAeroMod must be '//trim(num2lstr(AFAeroMod_Steady))//' (steady) or '//&
                         trim(num2lstr(AFAeroMod_BL_unsteady))//' (Beddoes-Leishman unsteady).', ErrStat, ErrMsg, RoutineName ) 
    end if
-   if (InputFileData%TwrInflnc /= TwrInflnc_none .and. InputFileData%TwrInflnc /= TwrInflnc_Potent .and. InputFileData%TwrInflnc /= TwrInflnc_Shadow) then
-      call SetErrStat ( ErrID_Fatal, 'TwrInflnc must be 0 (none), 1 (potential flow), or 2 (tower shadow).', ErrStat, ErrMsg, RoutineName ) 
+   if (InputFileData%TwrPotent /= TwrPotent_none .and. InputFileData%TwrPotent /= TwrPotent_baseline .and. InputFileData%TwrPotent /= TwrPotent_Bak) then
+      call SetErrStat ( ErrID_Fatal, 'TwrPotent must be 0 (none), 1 (baseline potential flow), or 2 (potential flow with Bak correction).', ErrStat, ErrMsg, RoutineName ) 
    end if   
    
    if (InputFileData%AirDens <= 0.0) call SetErrStat ( ErrID_Fatal, 'The air density (AirDens) must be greater than zero.', ErrStat, ErrMsg, RoutineName )
@@ -1955,8 +1955,7 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
       ! .............................
       ! check tower mesh data:
       ! .............................
-   
-   if ( InputFileData%TwrInflnc /= TwrInflnc_None .or. InputFileData%TwrAero ) then
+   if (InputFileData%TwrPotent /= TwrPotent_none .or. InputFileData%TwrShadow .or. InputFileData%TwrAero ) then
       
       if (InputFileData%NumTwrNds < 2) call SetErrStat( ErrID_Fatal, 'There must be at least two nodes on the tower.',ErrStat, ErrMsg, RoutineName )
          
