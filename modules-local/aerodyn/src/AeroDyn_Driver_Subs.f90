@@ -579,14 +579,15 @@ subroutine Dvr_InitializeOutputFile( iCase, CaseData, OutFileData, errStat, errM
       write (OutFileData%unOutFile,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim(GetNVD(version))
       write (OutFileData%unOutFile,'(1X,A)') trim(GetNVD(OutFileData%AD_ver))
       write (OutFileData%unOutFile,'()' )    !print a blank line
-      write (OutFileData%unOutFile,'(A,11(1x,A,"=",ES11.4e2,1x,A))'   ) 'Case '//trim(num2lstr(iCase))//':' &
-         ,  'WndSpeed', CaseData%WndSpeed, 'm/s' &
-         ,'; ShearExp', CaseData%ShearExp, '' &
-         ,'; RotSpeed', CaseData%RotSpeed*RPS2RPM,'rpm' &
-         ,'; Pitch',    CaseData%Pitch*R2D, 'deg' &
-         ,'; Yaw',      CaseData%Yaw*R2D, 'deg' &
-         ,'; dT',       CaseData%dT, 's' &
-         ,'; Tmax',     CaseData%Tmax,'s'
+     ! write (OutFileData%unOutFile,'(A,11(1x,A,"=",ES11.4e2,1x,A))'   ) 'Case '//trim(num2lstr(iCase))//':' &
+      write (OutFileData%unOutFile,'(A,11(1x,A,"=",A,1x,A))'   ) 'Case '//trim(num2lstr(iCase))//':' &
+         , 'WndSpeed', trim(num2lstr(CaseData%WndSpeed)), 'm/s;' &
+         , 'ShearExp', trim(num2lstr(CaseData%ShearExp)), ';' &
+         , 'RotSpeed', trim(num2lstr(CaseData%RotSpeed*RPS2RPM)),'rpm;' &
+         , 'Pitch',    trim(num2lstr(CaseData%Pitch*R2D)), 'deg;' &
+         , 'Yaw',      trim(num2lstr(CaseData%Yaw*R2D)), 'deg;' &
+         , 'dT',       trim(num2lstr(CaseData%dT)), 's;' &
+         , 'Tmax',     trim(num2lstr(CaseData%Tmax)),'s'
       
       write (OutFileData%unOutFile,'()' )    !print a blank line
               

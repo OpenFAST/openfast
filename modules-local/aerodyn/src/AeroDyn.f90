@@ -774,7 +774,7 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, errStat, e
    call AD_CopyInput( u(1), uInterp, MESH_NEWCOPY, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
-         call cleanup()
+         call Cleanup()
          return
       end if
       
@@ -796,12 +796,12 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, errStat, e
          
    end if
            
-   call cleanup()
+   call Cleanup()
    
 contains
-   subroutine cleanup()
+   subroutine Cleanup()
       call AD_DestroyInput( uInterp, errStat2, errMsg2)
-   end subroutine cleanup
+   end subroutine Cleanup
 end subroutine AD_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
@@ -1088,7 +1088,7 @@ subroutine SetInputsForBEMT(p, u, BEMT_u, DisturbedInflow, WithoutSweepPitchTwis
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       theta = EulerExtract( orientation ) !hub_theta_root(k)
       theta(3) = 0.0_ReKi         
-      orientation_nopitch = EulerConstruct( theta ) ! withoutPitch_theta_Root(k)
+      orientation_nopitch = matmul( EulerConstruct( theta ), u%HubMotion%Orientation(:,:,1) ) ! withoutPitch_theta_Root(k)
       
       do j=1,p%NumBlNds         
          
