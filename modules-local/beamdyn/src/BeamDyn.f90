@@ -31,14 +31,10 @@ MODULE BeamDyn
    PUBLIC :: BD_End                            ! Ending routine (includes clean up)
    PUBLIC :: BD_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating
    PUBLIC :: BD_CalcOutput                     ! Routine for computing outputs
-!   PUBLIC :: BD_CalcOutput_Coupling                     ! Routine for computing outputs
    PUBLIC :: BD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
-!   PUBLIC :: BD_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: BD_UpdateDiscState                ! Tight coupling routine for updating discrete states
    PUBLIC :: BD_CrvMatrixR                ! Tight coupling routine for updating discrete states
    PUBLIC :: BD_CrvCompose                ! Tight coupling routine for updating discrete states
-!   PUBLIC :: CrvMatrixH                ! Tight coupling routine for updating discrete states
-!   PUBLIC :: CrvMatrixB                ! Tight coupling routine for updating discrete states
    PUBLIC :: BD_CrvExtractCrv                ! Tight coupling routine for updating discrete states
    PUBLIC :: BD_Tilde
    PUBLIC :: BD_Norm
@@ -125,7 +121,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    CALL DispNVD( BeamDyn_Ver )
 
-   CALL BD_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat,ErrMsg)
+   CALL BD_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat2,ErrMsg2)
    p%analysis_type  = InputFileData%analysis_type
    p%time_flag  = InputFileData%time_integrator
    p%damp_flag  = InputFileData%InpBl%damp_flag
@@ -3026,6 +3022,7 @@ END SUBROUTINE ludcmp
    INTEGER(IntKi)                               :: UnEcho
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(LEN(ErrMsg))                       :: ErrMsg2
+   character(*), parameter                      :: RoutineName = 'BD_ReadInput'
    CHARACTER(1024)                              :: BldFile ! File that contains the blade information (specified in the primary input file)
 
    INTEGER(IntKi)     :: i
@@ -3034,7 +3031,11 @@ END SUBROUTINE ludcmp
    ErrMsg = ''
 
    CALL BD_ReadPrimaryFile(InputFileName,InputFileData,OutFileRoot,UnEcho,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL BD_ReadBladeFile(InputFileData%BldFile,InputFileData%InpBl,UnEcho,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+
+   IF(ErrStat >= AbortErrLev) RETURN
 
    END SUBROUTINE BD_ReadInput
 
@@ -3064,6 +3065,7 @@ END SUBROUTINE ludcmp
    INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
    LOGICAL                      :: Echo                         ! Determines if an echo file should be written
    CHARACTER(LEN(ErrMsg))       :: ErrMsg2                      ! Temporary Error message
+   character(*), parameter      :: RoutineName = 'BD_ReadPrimaryFile'
    CHARACTER(1024)              :: PriPath                      ! Path name of the primary file
    CHARACTER(1024)              :: FTitle              ! "File Title": the 2nd line of the input file, which contains a description of its contents
    CHARACTER(1024)              :: BldFile
@@ -3078,8 +3080,10 @@ END SUBROUTINE ludcmp
    Echo = .FALSE.
    UnEc = -1
 
-   CALL GetNewUnit(UnIn,ErrStat,ErrMsg)
+   CALL GetNewUnit(UnIn,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL OpenFInpFile(UnIn,InputFile,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    !-------------------------- HEADER ---------------------------------------------
    CALL ReadCom(UnIn,InputFile,'File Header: Module Version (line 1)',ErrStat2,ErrMsg2,UnEc)
