@@ -6,6 +6,7 @@
 # Entries are of the form
 # keyword <modulename/modname> <TypeBeingDefined> <FieldType> <FieldName> <Dims> <InitialValue> <Ctrl> "<DESCRIP>" "<UNITS>"
 ##################################################################################################################################
+include Registry_NWTC_Library.txt
 
 # ..... Initialization data
 # .......................................................................................................
@@ -22,7 +23,10 @@ typedef BeamDyn/BD InitInputType ReKi            RootVel  {:} - - "Initial root 
 
 # Define outputs that the initialization routine may need here:
 # e.g., the name of the input file, the file root name, etc.
-typedef BeamDyn/BD InitOutputType Reki DummyInitVar - - - "A variable" -
+typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputHdr {:}  -   -   "Names of the output-to-file channels"   -
+typedef   ^        InitOutputType CHARACTER(ChanLen)  WriteOutputUnt {:}  -   -   "Units of the output-to-file channels"   -
+typedef   ^        InitOutputType ProgDesc            Ver             -   -   -   "This module's name, version, and date"  -
+
 
 # ..... States
 # ....................................................................................................................
@@ -75,6 +79,9 @@ typedef      ^            ^      DbKi   coef   {:} - -  "GA2 Coefficient" -
 typedef BeamDyn/BD ParameterType DbKi   rhoinf - - -  "Numerical Damping Coefficient for GA2"  
 typedef      ^            ^      ReKi   GlbPos {:} - -  "Initial Position Vector between origins of Global and blade frames" -
 typedef      ^            ^      ReKi   GlbRot {:}{:} - -  "Initial Rotation Tensor between Global and Blade frames" -
+typedef      ^            ^      IntKi  NumOuts - - -  "Number of parameters in the output list (number of outputs requested)" -
+
+
 # ..... Inputs
 # ....................................................................................................................
 # Define inputs that are not on this mesh here:
@@ -87,6 +94,10 @@ typedef BeamDyn/BD   InputType  MeshType  DistrLoad - - - "Applied distributed f
 typedef BeamDyn/BD   OutputType  MeshType  ReactionForce - - - "contains force and moments" -
 typedef BeamDyn/BD   OutputType  MeshType  BldForce - - - "contains force and moments" -
 typedef BeamDyn/BD   OutputType  MeshType  BldMotion - - - "Motion (disp,rot,vel) along beam axis" -
+# Define outputs that are not on this mesh here:
+typedef  ^           OutputType  ReKi      WriteOutput  {:}  -  -  "Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
+
+
 # ..... Blade Input file data........................................................................
 typedef BeamDyn/BD    BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"
 typedef BeamDyn/BD    BladeInputData    IntKi    format_index     -     -     -    "Number of blade input stations"
