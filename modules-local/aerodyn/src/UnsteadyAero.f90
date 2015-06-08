@@ -560,7 +560,7 @@ end function Get_Cn_v
 
 
 !==============================================================================
-real(ReKi) function Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Dalphaf, alpha_f, Cn_FS, fprimeprime_m, AFInfo, UAMod, ErrStat, ErrMsg )
+real(ReKi) function Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Dalphaf, alpha_f, Cn_FS, fprimeprime_m, AFInfo, UAMod, Cm_alpha_nc, ErrStat, ErrMsg )
 ! Leishman's pitching moment coefficient about the 1/4 chord
 ! Called by : ComputeKelvinChain
 ! Calls  to : NONE
@@ -582,6 +582,7 @@ real(ReKi) function Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime
    real(ReKi),       intent(in   ) :: fprimeprime_m
    type(AFInfoType), intent(in   ) :: AFInfo
    integer,          intent(in   ) :: UAMod                         ! UA model
+   real(ReKi),       intent(  out) :: Cm_alpha_nc
    integer(IntKi),   intent(  out) :: ErrStat           ! Error status of the operation
    character(*),     intent(  out) :: ErrMsg            ! Error message if ErrStat /= ErrID_None
   
@@ -596,7 +597,8 @@ real(ReKi) function Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime
 
    
       ! Eqn 1.21 + 1.23 + 1.25a
-   Cm_common = Cm_q_circ - Cn_alpha_nc / 4.0_ReKi + Cm_q_nc
+   Cm_alpha_nc = - Cn_alpha_nc / 4.0_ReKi 
+   Cm_common = Cm_q_circ + Cm_alpha_nc + Cm_q_nc
    
    if ( UAMod == 1 ) then
          ! Eqn 1.40
@@ -653,7 +655,7 @@ end function Get_Cm
 subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
                                Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c, Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
-                               Cn_alpha_q_circ, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, ErrStat, ErrMsg )
+                               Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat, ErrMsg )
 ! 
 ! Called by : DRIVER
 ! Calls  to : Get_Beta_M_Sqrd, Get_Beta_M, AFI_GetAirfoilParams, Get_ds, Get_Pitchrate, Get_k_, Get_Kupper, Get_ExpEqn
@@ -699,6 +701,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    real(ReKi),                             intent(  out) :: Cn_alpha_q_circ   !
    real(ReKi),                             intent(  out) :: Cm_q_circ         !
    real(ReKi),                             intent(  out) :: Cn_alpha_nc       ! non-circulatory component of the normal force coefficient response to step change in alpha
+   real(ReKi),                             intent(  out) :: Cn_q_circ
+   real(ReKi),                             intent(  out) :: Cn_q_nc
    real(ReKi),                             intent(  out) :: Cm_q_nc           ! non-circulatory component of the moment coefficient response to step change in q
    real(ReKi),                             intent(  out) :: fprimeprime       !
    real(ReKi),                             intent(  out) :: Df                !
@@ -711,6 +715,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    real(ReKi),                             intent(  out) :: Cn_v              ! normal force coefficient due to the presence of LE vortex
    real(ReKi),                             intent(  out) :: C_V               ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex
    real(ReKi),                             intent(  out) :: Cn_FS             !
+   real(ReKi),                             intent(  out) :: T_f                                           !
+   real(ReKi),                             intent(  out) :: T_V                                           ! backwards finite difference of the non-dimensionalized distance parameter
                                                                               !
    integer(IntKi),                         intent(  out) :: ErrStat           ! Error status of the operation
    character(*),                           intent(  out) :: ErrMsg            ! Error message if ErrStat /= ErrID_None
@@ -721,12 +727,9 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    real(ReKi)                :: beta_M                                        ! Prandtl-Glauert compressibility correction factor,  sqrt(1-M**2)
    real(ReKi)                :: beta_M_Sqrd                                   ! square of the Prandtl-Glauert compressibility correction factor,  (1-M**2)
    real(ReKi)                :: Cn_alpha_q_nc                                 ! non-circulatory component of normal force coefficient response to step change in alpha and q
-   real(ReKi)                :: Cn_q_circ
    real(ReKi)                :: k_alpha                                       !
    real(ReKi)                :: T_alpha                                       !
    real(ReKi)                :: T_q                                           !
-   real(ReKi)                :: T_f                                           !
-   real(ReKi)                :: T_V                                           ! backwards finite difference of the non-dimensionalized distance parameter
    real(ReKi)                :: T_I                                           !
    real(ReKi)                :: C_nalpha_circ                                 ! slope of the circulatory normal force coefficient vs alpha curve
    real(ReKi)                :: T_f0                                          ! initial value of T_f, airfoil specific, used to compute D_f and fprimeprime
@@ -745,7 +748,6 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    real(ReKi)                :: S2                                            ! constant in the f-curve best-fit, alpha >= alpha0
    real(ReKi)                :: S3                                            ! constant in the f-curve best-fit, alpha <  alpha0
    real(ReKi)                :: S4                                            ! constant in the f-curve best-fit, alpha <  alpha0
-   real(ReKi)                :: Cn_q_nc                                       !
    real(ReKi)                :: k_q                                           !
    real(ReKi)                :: Kalpha_minus1                                 !
    real(ReKi)                :: Kq_minus1                                     !
@@ -849,6 +851,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
       X4              = Get_ExpEqn( ds*beta_M_Sqrd*b2, 1.0_ReKi, xd%X4_minus1(i,j), A2*(q_cur - q_minus1), 0.0_ReKi )
       Cn_q_circ       = Get_Cn_q_circ( q_cur, C_nalpha_circ, X3, X4  )
       Cn_alpha_q_circ = Cn_alpha_q_circ + Cn_q_circ
+   else
+      Cn_q_circ       = 0.0
    end if
    
       ! Compute K3prime_q using Eqn 1.22
@@ -1143,10 +1147,10 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
    if (ErrStat >= AbortErrLev) return    
    
       ! Allocate and set the InitOut data
-   p%NumOuts = 6
+   p%NumOuts = 30
    p%Delim   = ''
-   p%OutFmt  = 'ES11.4e2'
-   p%OutSFmt = 'A11'
+   p%OutFmt  = 'ES15.4e2'
+   p%OutSFmt = 'A15'
    allocate(InitOut%WriteOutputHdr(p%NumOuts*p%numBlades*p%nNodesPerBlade))
    
    allocate(InitOut%WriteOutputUnt(p%NumOuts*p%numBlades*p%nNodesPerBlade))
@@ -1163,12 +1167,60 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
          InitOut%WriteOutputHdr(iOffset+4) =trim(chanPrefix)//'Cm' 
          InitOut%WriteOutputHdr(iOffset+5) =trim(chanPrefix)//'Cl' 
          InitOut%WriteOutputHdr(iOffset+6) =trim(chanPrefix)//'Cd' 
+         InitOut%WriteOutputHdr(iOffset+7)  =trim(chanPrefix)//'Cn_alf_circ'
+         InitOut%WriteOutputHdr(iOffset+8)  =trim(chanPrefix)//'Cn_alf_nc'
+         InitOut%WriteOutputHdr(iOffset+9)  =trim(chanPrefix)//'Cn_q_circ'
+         InitOut%WriteOutputHdr(iOffset+10) =trim(chanPrefix)//'Cn_q_nc'
+         InitOut%WriteOutputHdr(iOffset+11) =trim(chanPrefix)//'Cm_alf_circ'
+         InitOut%WriteOutputHdr(iOffset+12) =trim(chanPrefix)//'Cm_alf_nc'
+         InitOut%WriteOutputHdr(iOffset+13) =trim(chanPrefix)//'Cm_q_circ'
+         InitOut%WriteOutputHdr(iOffset+14) =trim(chanPrefix)//'Cm_q_nc'
+         InitOut%WriteOutputHdr(iOffset+15) =trim(chanPrefix)//'Alpha_e'
+         InitOut%WriteOutputHdr(iOffset+16) =trim(chanPrefix)//"f'"
+         InitOut%WriteOutputHdr(iOffset+17) =trim(chanPrefix)//"f'_c"
+         InitOut%WriteOutputHdr(iOffset+18) =trim(chanPrefix)//"f''"
+         InitOut%WriteOutputHdr(iOffset+19) =trim(chanPrefix)//"f''_c"
+         InitOut%WriteOutputHdr(iOffset+20) =trim(chanPrefix)//"f''_m"
+         InitOut%WriteOutputHdr(iOffset+21) =trim(chanPrefix)//'T_f'
+         InitOut%WriteOutputHdr(iOffset+22) =trim(chanPrefix)//'T_V'
+         InitOut%WriteOutputHdr(iOffset+23) =trim(chanPrefix)//'LESF'
+         InitOut%WriteOutputHdr(iOffset+24) =trim(chanPrefix)//'TESF'
+         InitOut%WriteOutputHdr(iOffset+25) =trim(chanPrefix)//'VRTX'
+         InitOut%WriteOutputHdr(iOffset+26) =trim(chanPrefix)//'tau_v'
+         InitOut%WriteOutputHdr(iOffset+27) = trim(chanPrefix)//'Cn_v'         
+         InitOut%WriteOutputHdr(iOffset+28) = trim(chanPrefix)//'C_V '         
+         InitOut%WriteOutputHdr(iOffset+29) = trim(chanPrefix)//'Cn_FS' 
+         InitOut%WriteOutputHdr(iOffset+30) = trim(chanPrefix)//'Cm_FS'
          InitOut%WriteOutputUnt(iOffset+1)   ='(deg)  '
          InitOut%WriteOutputUnt(iOffset+2) ='(-)   '
          InitOut%WriteOutputUnt(iOffset+3) ='(-)   '
          InitOut%WriteOutputUnt(iOffset+4) ='(-)   '
          InitOut%WriteOutputUnt(iOffset+5) ='(-)   '
          InitOut%WriteOutputUnt(iOffset+6) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+7) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+8) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+9) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+10) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+11) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+12) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+13) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+14) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+15) ='deg'
+         InitOut%WriteOutputUnt(iOffset+16) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+17) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+18) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+19) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+20) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+21) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+22) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+23) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+24) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+25) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+26) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+27) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+28) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+29) ='(-)   '
+         InitOut%WriteOutputUnt(iOffset+30) ='(-)   '
       end do
    end do
    
@@ -1240,8 +1292,10 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
    real(ReKi)                                   :: alpha_f
    real(ReKi)                                   :: eta_e
    real(ReKi)                                   :: Kafactor
+   real(ReKi)                                   :: Cn_q_circ
+   real(ReKi)                                   :: Cn_q_nc
    real(ReKi)                                   :: St_sh
-   real(ReKi)                                   :: T_sh
+   real(ReKi)                                   :: T_sh, T_f, T_V
             
       ! Initialize ErrStat
          
@@ -1251,7 +1305,7 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
       call ComputeKelvinChain(i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                      St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
                                      Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c,Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
-                                     Cn_alpha_q_circ, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, ErrStat, ErrMsg )
+                                     Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat, ErrMsg )
       
       
       T_sh = 2.0_ReKi*(1.0_ReKi-fprimeprime) / St_sh
@@ -1266,10 +1320,10 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
          OtherState%LESF(i,j) = .false.
       end if
                                  
-      if (fprimeprime < xd%fprimeprime_minus1(i,j)) then
-         OtherState%TESF(i,j) = .true.
+      if ( fprimeprime < xd%fprimeprime_minus1(i,j)) then
+         OtherState%TESF(i,j) = .true.  ! Separation point is moving towards the Leading Edge
       else
-         OtherState%TESF(i,j) = .false.
+         OtherState%TESF(i,j) = .false. ! Separation point is moving towards the Trailing Edge
       end if
    
       ! Process VRTX-related quantities
@@ -1290,29 +1344,29 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
       
       OtherState%sigma1(i,j) = 1.0_ReKi
       Kafactor             = Kalpha*dalpha0
-      
-      if ( OtherState%TESF(i,j) ) then  ! Separating flow
-         if (Kafactor < 0.0_ReKi) then
-            OtherState%sigma1(i,j) = 2.0_ReKi  ! This must be the first check
-         else if (.not. OtherState%LESF(i,j) ) then
-            OtherState%sigma1(i,j) = 1.0_ReKi !.4_ReKi    ! Leading edge separation has not occurred
-         else if (xd%fprimeprime_minus1(i,j) <= 0.7_ReKi) then ! For this else, LESF = True
-            OtherState%sigma1(i,j) = 2.0_ReKi !1.0_ReKi 
-         else
-            OtherState%sigma1(i,j) = 1.75_ReKi
-         end if
-      else ! Reattaching flow
-         if (.not. OtherState%LESF(i,j) ) then
-            OtherState%sigma1(i,j) = 0.5_ReKi
-         end if
+     ! if ( fprimeprime < 0.7 .AND.  fprimeprime > 0.3 ) then 
+         if ( OtherState%TESF(i,j) ) then  ! Separating flow
+            if (Kafactor < 0.0_ReKi) then
+               OtherState%sigma1(i,j) = 2.0_ReKi  ! This must be the first check
+            else if (.not. OtherState%LESF(i,j) ) then
+               OtherState%sigma1(i,j) = 1.0_ReKi !.4_ReKi    ! Leading edge separation has not occurred
+            else if (xd%fprimeprime_minus1(i,j) <= 0.7_ReKi) then ! For this else, LESF = True
+               OtherState%sigma1(i,j) = 2.0_ReKi !1.0_ReKi 
+            else
+               OtherState%sigma1(i,j) = 1.75_ReKi
+            end if
+         else ! Reattaching flow
+            if (.not. OtherState%LESF(i,j) ) then
+               OtherState%sigma1(i,j) = 0.5_ReKi
+            end if
          
-         if ( OtherState%VRTX(i,j) .and. (xd%tau_V(i,j) <= T_VL) ) then  ! Still shedding a vortex?
-            OtherState%sigma1(i,j) = 0.25_ReKi
+            if ( OtherState%VRTX(i,j) .and. (xd%tau_V(i,j) <= T_VL) ) then  ! Still shedding a vortex?
+               OtherState%sigma1(i,j) = 0.25_ReKi
+            end if
+            if (Kafactor > 0.0_ReKi) then
+               OtherState%sigma1(i,j) = 0.75_ReKi
+            end if
          end if
-         if (Kafactor > 0.0_ReKi) then
-            OtherState%sigma1(i,j) = 0.75_ReKi
-         end if
-      end if
       
       OtherState%sigma3(i,j) = 1.0_ReKi
       
@@ -1504,7 +1558,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
    real(ReKi)                                             :: alpha_f
    real(ReKi)                                             :: eta_e
    real(ReKi)                                             :: St_sh
-   real(ReKi)                                             :: Cl_static, Cd_static, Cm_static, Cn_static
+   real(ReKi)                                             :: Cl_static, Cd_static, Cm_static, Cn_static, Cm_alpha_nc, Cn_q_circ, Cn_q_nc, T_f, T_V
    real(ReKi)                                             :: M, alpha1, alpha2, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, b1,b2,b5,A1,A2,A5,S1,S2,S3,S4,k1_hat,f, k2_hat
    integer                                                :: iOffset
    
@@ -1533,7 +1587,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       call ComputeKelvinChain( OtherState%iBladeNode, OtherState%iBlade, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                  St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
                                  Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c, Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
-                                 Cn_alpha_q_circ, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, ErrStat, ErrMsg )
+                                 Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat, ErrMsg )
       
             
          ! Eqn 1.50(a or b depending on UAMod)
@@ -1583,7 +1637,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
          fprimeprime_m = 0.0
       end if
       
-      Cm_FS = Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Dalphaf, alpha_f, Cn_FS, fprimeprime_m, AFInfo, p%UAMod, ErrStat, ErrMsg )
+      Cm_FS = Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Dalphaf, alpha_f, Cn_FS, fprimeprime_m, AFInfo, p%UAMod, Cm_alpha_nc, ErrStat, ErrMsg )
       
       y%Cm = Get_Cm( Cm_FS, T_VL, x_cp_bar, Cn_v, xd%tau_v(OtherState%iBladeNode, OtherState%iBlade) )
                   
@@ -1596,6 +1650,30 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       y%WriteOutput(iOffset+4) = y%Cm
       y%WriteOutput(iOffset+5) = y%Cl
       y%WriteOutput(iOffset+6) = y%Cd
+      y%WriteOutput(iOffset+7) = C_nalpha_circ*alpha_e  ! = Cn_alpha_circ
+      y%WriteOutput(iOffset+8) = Cn_alpha_nc
+      y%WriteOutput(iOffset+9) = Cn_q_circ
+      y%WriteOutput(iOffset+10) = Cn_q_nc
+      y%WriteOutput(iOffset+11) = 0.0  ! = Cm_alpha_circ  NOTE: we do not use this quantity
+      y%WriteOutput(iOffset+12) = Cm_alpha_nc
+      y%WriteOutput(iOffset+13) = Cm_q_circ
+      y%WriteOutput(iOffset+14) = Cm_q_nc
+      y%WriteOutput(iOffset+15) = alpha_e*180/pi
+      y%WriteOutput(iOffset+16) = fprime
+      y%WriteOutput(iOffset+17) = fprime_c
+      y%WriteOutput(iOffset+18) = fprimeprime
+      y%WriteOutput(iOffset+19) = fprimeprime_c
+      y%WriteOutput(iOffset+20) = fprimeprime_m
+      y%WriteOutput(iOffset+21) = T_f
+      y%WriteOutput(iOffset+22) = T_V
+      y%WriteOutput(iOffset+23) = OtherState%LESF(OtherState%iBladeNode, OtherState%iBlade)
+      y%WriteOutput(iOffset+24) = OtherState%TESF(OtherState%iBladeNode, OtherState%iBlade)
+      y%WriteOutput(iOffset+25) = OtherState%VRTX(OtherState%iBladeNode, OtherState%iBlade)
+      y%WriteOutput(iOffset+26) = xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)
+      y%WriteOutput(iOffset+27) = Cn_v         
+      y%WriteOutput(iOffset+28) = C_V          
+      y%WriteOutput(iOffset+29) = Cn_FS 
+      y%WriteOutput(iOffset+30) = Cm_FS
    end if
    
 end subroutine UA_CalcOutput

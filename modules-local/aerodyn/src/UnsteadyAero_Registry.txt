@@ -43,8 +43,8 @@ typedef   ^                            ^                             CHARACTER(1
 # Define outputs from the initialization routine here:                                                                                    
 #                                                                                                                                         
 typedef   ^                            InitOutputType                ProgDesc                 Version                         -             -         -        "Version structure" -
-typedef   ^                            InitOutputType                CHARACTER(10)            WriteOutputHdr                  {:}           -         -        "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
-typedef   ^                            ^                             CHARACTER(10)            WriteOutputUnt                  {:}           -         -        "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
+typedef   ^                            InitOutputType                CHARACTER(15)            WriteOutputHdr                  {:}           -         -        "The is the list of all HD-related output channel header strings (includes all sub-module channels)"    -
+typedef   ^                            ^                             CHARACTER(15)            WriteOutputUnt                  {:}           -         -        "The is the list of all HD-related output channel unit strings (includes all sub-module channels)"    -
 #
 #
 # ..... States ....................................................................................................................
