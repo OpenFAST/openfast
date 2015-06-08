@@ -1,3 +1,19 @@
+!**********************************************************************************************************************************
+! LICENSING
+! Copyright (C) 2015  National Renewable Energy Laboratory
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
+!**********************************************************************************************************************************
 MODULE BeamDyn
 
    USE BeamDyn_Types
@@ -7,7 +23,7 @@ MODULE BeamDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn_RK4', 'v1.00.00','12-March-2014')
+   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v1.00.00','8-June-2015')
 
    ! ..... Public Subroutines....................................................................
 
@@ -34,12 +50,13 @@ MODULE BeamDyn
 
 CONTAINS
 
-   SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
+!-----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
 !
 ! This routine is called at the start of the simulation to perform initialization steps.
 ! The parameters are set here and not changed during the simulation.
 ! The initial states and initial guess for the input are defined.
-!.....................................................................................................................
+!..................................................................................................................................
 
    TYPE(BD_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
    TYPE(BD_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
@@ -87,11 +104,13 @@ CONTAINS
    REAL(ReKi),ALLOCATABLE  :: temp_ratio(:,:)
    REAL(ReKi),ALLOCATABLE  :: temp_L2(:,:)
    REAL(ReKi),ALLOCATABLE  :: SP_Coef(:,:,:)
-   INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
-   CHARACTER(LEN(ErrMsg))       :: ErrMsg2                      ! Temporary Error message
+   REAL(ReKi)              :: TmpPos(3)
 
-   REAL(ReKi)             :: TmpPos(3)
-
+   INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
+   character(*), parameter :: RoutineName = 'BD_Init'
+   
+   
   ! Initialize ErrStat
 
    ErrStat = ErrID_None
@@ -579,9 +598,52 @@ CONTAINS
 
    OtherState%Rescale_counter = 0
 
+   ! place holder for File I/O data:
+   p%NumOuts = 0
+   
+   call AllocAry( y%WriteOutput, p%numOuts, 'WriteOutput', errStat2, errMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   call SetInitOut(p, InitOut, errStat, errMsg)
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+      
    END SUBROUTINE BD_Init
 
-   !----------------------------------------------------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------------------
+subroutine SetInitOut(p, InitOut, errStat, errMsg)
+
+   type(BD_InitOutputType),       intent(  out)  :: InitOut          ! output data
+   type(BD_ParameterType),        intent(in   )  :: p                ! Parameters
+   integer(IntKi),                intent(inout)  :: errStat          ! Error status of the operation
+   character(*),                  intent(inout)  :: errMsg           ! Error message if ErrStat /= ErrID_None
+
+
+      ! Local variables
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'SetInitOut'
+   
+   
+   
+      ! Initialize variables for this routine
+
+   errStat = ErrID_None
+   errMsg  = ""
+   
+   call AllocAry( InitOut%WriteOutputHdr, p%numOuts, 'WriteOutputHdr', errStat2, errMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+   
+   call AllocAry( InitOut%WriteOutputUnt, p%numOuts, 'WriteOutputUnt', errStat2, errMsg2 )
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+      
+   if (ErrStat >= AbortErrLev) return
+   
+      
+   InitOut%Ver = BeamDyn_Ver
+   
+end subroutine SetInitOut
+!-----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !
    ! This routine is called at the end of the simulation.
@@ -627,7 +689,7 @@ CONTAINS
 
 
    END SUBROUTINE BD_End
-
+!-----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !
 ! Routine for solving for constraint states, integrating continuous states, and updating discrete states
@@ -676,10 +738,7 @@ CONTAINS
    ENDIF
 
    END SUBROUTINE BD_UpdateStates
-
-   !----------------------------------------------------------------------------------------------------------------------------------
-
-
+!-----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !
    ! Routine for computing outputs, used in both loose and tight coupling.
@@ -819,7 +878,7 @@ CONTAINS
    CALL BD_DestroyOtherState(OS_tmp, ErrStat, ErrMsg )
 
    END SUBROUTINE BD_CalcOutput
-   !----------------------------------------------------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE BD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
    !
    ! Routine for updating discrete states
@@ -847,7 +906,7 @@ CONTAINS
 !      xd%DummyDiscState = 0.0
 
 END SUBROUTINE BD_UpdateDiscState
-   !----------------------------------------------------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE BD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residual, ErrStat, ErrMsg )
    !
    ! Routine for solving for the residual of the constraint state equations
@@ -877,8 +936,7 @@ END SUBROUTINE BD_UpdateDiscState
    Z_residual%DummyConstrState = 0
 
    END SUBROUTINE BD_CalcConstrStateResidual
-
-   !----------------------------------------------------------------------------------------------------------------------------------
+!-----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE BD_GenerateGLL(N, x, w)
    !
    ! This subroutine determines the (N+1) Gauss-Lobatto-Legendre points x and weights w
@@ -956,7 +1014,7 @@ END SUBROUTINE BD_UpdateDiscState
    ENDDO
 
    END SUBROUTINE BD_GenerateGLL
-
+!-----------------------------------------------------------------------------------------------------------------------------------
    FUNCTION BD_Tilde(vect)
 
    REAL(ReKi),INTENT(IN):: vect(3)
@@ -972,7 +1030,7 @@ END SUBROUTINE BD_UpdateDiscState
    BD_Tilde(3,2) = vect(1)
 
    END FUNCTION BD_Tilde
-
+!-----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE BD_CrvMatrixR(cc,Rr)
 
    REAL(ReKi),INTENT(IN)::cc(:)
@@ -1002,7 +1060,7 @@ END SUBROUTINE BD_UpdateDiscState
    Rr(3,3) = tr0*(c3*c3 + c0*c0) - 1.0D0
 
    END SUBROUTINE BD_CrvMatrixR
-
+!-----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE BD_CrvMatrixH(cc,Hh)
 
    REAL(ReKi),INTENT(IN)::cc(:)
