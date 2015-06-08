@@ -1666,9 +1666,22 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       y%WriteOutput(iOffset+20) = fprimeprime_m
       y%WriteOutput(iOffset+21) = T_f
       y%WriteOutput(iOffset+22) = T_V
-      y%WriteOutput(iOffset+23) = OtherState%LESF(OtherState%iBladeNode, OtherState%iBlade)
-      y%WriteOutput(iOffset+24) = OtherState%TESF(OtherState%iBladeNode, OtherState%iBlade)
-      y%WriteOutput(iOffset+25) = OtherState%VRTX(OtherState%iBladeNode, OtherState%iBlade)
+      if ( OtherState%LESF(OtherState%iBladeNode, OtherState%iBlade) ) then
+         y%WriteOutput(iOffset+23) = 1.0_ReKi
+      else
+         y%WriteOutput(iOffset+23) = 0.0_ReKi
+      end if
+      
+      if ( OtherState%TESF(OtherState%iBladeNode, OtherState%iBlade) ) then
+         y%WriteOutput(iOffset+24) = 1.0_ReKi
+      else
+         y%WriteOutput(iOffset+24) = 0.0_ReKi
+      end if
+      if ( OtherState%VRTX(OtherState%iBladeNode, OtherState%iBlade) ) then
+         y%WriteOutput(iOffset+25) = 1.0_ReKi
+      else
+         y%WriteOutput(iOffset+25) = 0.0_ReKi
+      end if
       y%WriteOutput(iOffset+26) = xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)
       y%WriteOutput(iOffset+27) = Cn_v         
       y%WriteOutput(iOffset+28) = C_V          
