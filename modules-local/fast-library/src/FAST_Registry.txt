@@ -13,9 +13,10 @@
 # (File) Revision #: $Rev$
 # URL: $HeadURL$
 ###################################################################################################################################
-# ...... Include files (definitions from NWTC Library) ............................................................................
+# ...... Include files (definitions from NWTC Library and module components) ............................................................................
 include	Registry_NWTC_Library.txt
 usefrom	ElastoDyn_Registry.txt
+usefrom	Registry_BeamDyn.txt
 usefrom	ServoDyn_Registry.txt
 usefrom	Registry-AD14.txt
 usefrom	AeroDyn_Registry.txt
@@ -64,6 +65,7 @@ typedef	^	^	IntKi	InterpOrder	-	-	-	"Interpolation order {0,1,2}"	-
 typedef	^	^	IntKi	NumCrctn	-	-	-	"Number of correction iterations"	-
 typedef	^	^	IntKi	KMax	-	-	-	"Maximum number of input-output-solve iterations (KMax >= 1)"	-
 typedef	^	^	IntKi	numIceLegs	-	-	-	"number of suport-structure legs in contact with ice (IceDyn coupling)"	-
+typedef	^	^	IntKi	nBeams	-	-	-	"number of BeamDyn instances"	-
 typedef	^	^	LOGICAL	ModuleInitialized	{NumModules}	-	-	"An array determining if the module has been initialized"	-
 # Data for Jacobians:
 typedef	^	^	DbKi	DT_Ujac	-	-	-	"Time between when we need to re-calculate these Jacobians"	s
@@ -133,6 +135,20 @@ typedef	^	^	IceD_InputType	u	{:}	-	-	"System inputs"
 typedef	^	^	IceD_OutputType	y	{:}	-	-	"System outputs"
 typedef	^	^	IceD_OtherStateType	OtherSt_old	{:}	-	-	"Other/optimization states (copied for the case of subcycling)"
 typedef	^	^	IceD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"
+typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
+
+# ..... BeamDyn data .......................................................................................................
+# [ the last dimension of each allocatable array is for the instance of BeamDyn being used ]
+# note that I'm making the allocatable-for-instance-used part INSIDE the data type (as opposed to an array of IceDyn_Data types) because I want to pass arrays of x, xd, z, x_pred, etc)
+typedef	FAST	BeamDyn_Data	BD_ContinuousStateType	x	{:}{:}	-	-	"Continuous states"
+typedef	^	^	BD_DiscreteStateType	xd	{:}{:}	-	-	"Discrete states"
+typedef	^	^	BD_ConstraintStateType	z	{:}{:}	-	-	"Constraint states"
+typedef	^	^	BD_OtherStateType	OtherSt	{:}	-	-	"Other/optimization states"
+typedef	^	^	BD_ParameterType	p	{:}	-	-	"Parameters"
+typedef	^	^	BD_InputType	u	{:}	-	-	"System inputs"
+typedef	^	^	BD_OutputType	y	{:}	-	-	"System outputs"
+typedef	^	^	BD_OtherStateType	OtherSt_old	{:}	-	-	"Other/optimization states (copied for the case of subcycling)"
+typedef	^	^	BD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
 
 # ..... ElastoDyn data .......................................................................................................
@@ -355,6 +371,7 @@ typedef	^	FAST_TurbineType	FAST_OutputFileType	y_FAST	-	-	-	"Output variables fo
 typedef	^	FAST_TurbineType	FAST_MiscVarType	m_FAST	-	-	-	"Miscellaneous variables"	-
 typedef	^	FAST_TurbineType	FAST_ModuleMapType	MeshMapData	-	-	-	"Data for mapping between modules"	-
 typedef	^	FAST_TurbineType	ElastoDyn_Data	ED	-	-	-	"Data for the ElastoDyn module"	-
+typedef	^	FAST_TurbineType	BeamDyn_Data	BD	-	-	-	"Data for the BeamDyn module"	-
 typedef	^	FAST_TurbineType	ServoDyn_Data	SrvD	-	-	-	"Data for the ServoDyn module"	-
 typedef	^	FAST_TurbineType	AeroDyn_Data	AD	-	-	-	"Data for the AeroDyn module"	-
 typedef	^	FAST_TurbineType	AeroDyn14_Data	AD14	-	-	-	"Data for the AeroDyn14 module"	-

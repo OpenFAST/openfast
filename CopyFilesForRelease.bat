@@ -10,15 +10,15 @@ CALL .\Compiling\Set_FAST_Paths.bat
 
 SET bin_dir=.\bin
 SET depend_dir=.\Source\dependencies
-SET SW_Module=-MODULE
+SET SW_ModuleOnly=-MODULE
 
-IF /I "%1"=="%SW_Module%" goto %2
+IF /I "%1"=="%SW_ModuleOnly%" goto %2
 
 :BinDir
 ECHO Binaries
 COPY "%CRUNCH%"                      "%bin_dir%"
 
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :dependencies
 
@@ -31,7 +31,7 @@ SET dst_folder=%depend_dir%\Registry
 SET list_of_files=%src_folder%\SourceFiles.txt
 
 @CALL :CopyFileList
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :NWTC_Library
 ECHO NWTC_Library
@@ -40,7 +40,7 @@ SET dst_folder=%depend_dir%\NWTC_Library
 SET list_of_files=%src_folder%\SourceFiles.txt
 
 @CALL :CopyFileList
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :NetLib
 ECHO NetLib
@@ -49,7 +49,7 @@ SET dst_folder=%depend_dir%\NetLib
 SET list_of_files=%src_folder%\SourceFiles.txt
 
 @CALL :CopyFileList
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :ElastoDyn
 ECHO ElastoDyn
@@ -58,7 +58,16 @@ SET dst_folder=%depend_dir%\ElastoDyn
 SET list_of_files=%src_folder%\FAST_SourceFiles_ED.txt
 
 @CALL :CopyFileList
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
+
+:BeamDyn
+ECHO BeamDyn
+SET src_folder=%BD_Loc%\..
+SET dst_folder=%depend_dir%\BeamDyn
+SET list_of_files=%src_folder%\FAST_SourceFiles.txt
+
+@CALL :CopyFileList
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :ServoDyn
 :TMD
@@ -73,7 +82,7 @@ SET src_folder=%TMD_Loc%\..
 SET list_of_files=%src_folder%/FAST_SourceFiles.txt
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
 
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 
 :InflowWind
@@ -83,7 +92,8 @@ SET dst_folder=%depend_dir%\InflowWind
 SET list_of_files=%src_folder%/FAST_SourceFiles.txt
 
 @CALL :CopyFileList
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
+
 
 :AeroDyn14
 ECHO AeroDyn14
@@ -92,7 +102,7 @@ SET dst_folder=%depend_dir%\AeroDyn14
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
 @CALL :CopyFileList
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 
 :AeroDyn
@@ -102,7 +112,7 @@ SET dst_folder=%depend_dir%\AeroDyn
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
 @CALL :CopyFileList
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 
 :HydroDyn
@@ -112,7 +122,7 @@ SET dst_folder=%depend_dir%\HydroDyn
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
 @CALL :CopyFileList
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :SubDyn
 ECHO SubDyn
@@ -121,7 +131,7 @@ SET dst_folder=%depend_dir%\SubDyn
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
 @CALL :CopyFileList
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :IceFloe
 ECHO IceFloe
@@ -130,7 +140,7 @@ SET dst_folder=%depend_dir%\IceFloe
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
 @CALL :CopyFileList
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :IceDyn
 ECHO IceDyn
@@ -139,7 +149,7 @@ SET dst_folder=%depend_dir%\IceDyn
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
 @CALL :CopyFileList
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :MAP
 ECHO MAP
@@ -153,7 +163,7 @@ SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 @CALL :CopyFileList
 rem Change the case of this source file, if necessary:
 MOVE "%dst_folder%\map.f90"   "%dst_folder%\MAP.f90"
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :MoorDyn
 ECHO MoorDyn
@@ -162,7 +172,7 @@ SET dst_folder=%depend_dir%\MoorDyn
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
 @CALL :CopyFileList
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 
 :FEAMooring
@@ -172,7 +182,7 @@ SET dst_folder=%depend_dir%\FEAMooring
 SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 
 @CALL :CopyFileList
-IF /I "%1"=="%SW_Module%" GOTO ClearVars
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 goto ClearVars
 
@@ -191,7 +201,7 @@ SET depend_dir=
 SET src_folder=
 SET dst_folder=
 SET list_of_files=
-SET SW_Module=
+SET SW_ModuleOnly=
 
 
 :Done
