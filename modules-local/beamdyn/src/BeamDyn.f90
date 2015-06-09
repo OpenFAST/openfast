@@ -3165,14 +3165,7 @@ END SUBROUTINE ludcmp
    INTEGER(IntKi)             :: ErrStat2                                        ! Temporary Error status
    CHARACTER(LEN(ErrMsg))     :: ErrMsg2                                         ! Temporary Err msg
    character(*), parameter    :: RoutineName = 'BD_ReadBladeFile'
-   REAL(ReKi)                 :: temp_xm2
-   REAL(ReKi)                 :: temp_xm3
-   REAL(ReKi)                 :: temp_mass(5)
-   REAL(ReKi)                 :: temp_bend(6)
-   REAL(ReKi)                 :: temp_sher(6)
-   REAL(ReKi)                 :: temp_edg
-   REAL(ReKi)                 :: temp_flp
-   REAL(ReKi)                 :: temp_crs
+   REAL(ReKi)                 :: temp66(6,6)
    INTEGER(IntKi)             :: i
    INTEGER(IntKi)             :: j
 
@@ -3231,11 +3224,47 @@ END SUBROUTINE ludcmp
                    'Blade C/S stiffness matrix',ErrStat2,ErrMsg2,UnEc)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDDO
+!       temp66(:,:) = 0.0D0
+!       temp66(:,:) = BladeInputFileData%stiff0(:,:,i)
+!       DO j=1,6
+!           BladeInputFileData%stiff0(j,1,i) = temp66(j,3)
+!           BladeInputFileData%stiff0(j,2,i) = temp66(j,1)
+!           BladeInputFileData%stiff0(j,3,i) = temp66(j,2)
+!           BladeInputFileData%stiff0(j,4,i) = temp66(j,6)
+!           BladeInputFileData%stiff0(j,5,i) = temp66(j,4)
+!           BladeInputFileData%stiff0(j,6,i) = temp66(j,5)
+!       ENDDO
+!       temp66(:,:) = 0.0D0
+!       temp66(:,:) = BladeInputFileData%stiff0(:,:,i)
+!       BladeInputFileData%stiff0(1,:,i) = temp66(3,:)
+!       BladeInputFileData%stiff0(2,:,i) = temp66(1,:)
+!       BladeInputFileData%stiff0(3,:,i) = temp66(2,:)
+!       BladeInputFileData%stiff0(4,:,i) = temp66(6,:)
+!       BladeInputFileData%stiff0(5,:,i) = temp66(4,:)
+!       BladeInputFileData%stiff0(6,:,i) = temp66(5,:)
        DO j=1,6
            CALL ReadAry(UnIn,BldFile,BladeInputFileData%mass0(j,:,i),6,'mass_matrix',&
                    'Blade C/S mass matrix',ErrStat2,ErrMsg2,UnEc)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDDO
+!       temp66(:,:) = 0.0D0
+!       temp66(:,:) = BladeInputFileData%mass0(:,:,i)
+!       DO j=1,6
+!           BladeInputFileData%mass0(j,1,i) = temp66(j,3)
+!           BladeInputFileData%mass0(j,2,i) = temp66(j,1)
+!           BladeInputFileData%mass0(j,3,i) = temp66(j,2)
+!           BladeInputFileData%mass0(j,4,i) = temp66(j,6)
+!           BladeInputFileData%mass0(j,5,i) = temp66(j,4)
+!           BladeInputFileData%mass0(j,6,i) = temp66(j,5)
+!       ENDDO
+!       temp66(:,:) = 0.0D0
+!       temp66(:,:) = BladeInputFileData%mass0(:,:,i)
+!       BladeInputFileData%mass0(1,:,i) = temp66(3,:)
+!       BladeInputFileData%mass0(2,:,i) = temp66(1,:)
+!       BladeInputFileData%mass0(3,:,i) = temp66(2,:)
+!       BladeInputFileData%mass0(4,:,i) = temp66(6,:)
+!       BladeInputFileData%mass0(5,:,i) = temp66(4,:)
+!       BladeInputFileData%mass0(6,:,i) = temp66(5,:)
    ENDDO
 
    END SUBROUTINE BD_ReadBladeFile
