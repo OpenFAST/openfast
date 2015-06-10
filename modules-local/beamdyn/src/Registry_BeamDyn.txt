@@ -71,7 +71,6 @@ typedef      ^            ^       ^     dof_total  - - -  "Total number of dofs"
 typedef      ^            ^       ^     ngp  - - -  "Number of Gauss points" -
 typedef      ^            ^       ^     analysis_type  - - -  "analysis_type flag" -
 typedef      ^            ^       ^     damp_flag  - - -  "damping flag" -
-typedef      ^            ^       ^     time_flag  - - -  "time integrator flag: 1-AM2, 2-G-Alpha, 3-RK4" -
 typedef      ^            ^       ^     niter  - - -  "analysis_type flag" -
 typedef      ^            ^      DbKi   dt     - - -  "module dt" s
 typedef      ^            ^      ReKi   beta   {:} - -  "Damping Coefficient" -
@@ -110,7 +109,6 @@ typedef BeamDyn/BD    BladeInputData    IntKi    damp_flag    - - - "Damping Fla
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Primary Input file data......................................................................
 typedef BeamDyn/BD    BD_InputFile    IntKi    analysis_type    - - - "Analysis Type: 0-Rigid, 1-Static, 2-Dynamic" -
-typedef BeamDyn/BD    BD_InputFile    IntKi    time_integrator    - - - "Analysis Type: 1-AM2, 2-G-Alpha, 3-RK4" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    member_total     - - - "Total number of members" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    kp_total         - - - "Total number of key point" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    kp_member       {:} - - "Total number of key point" -
