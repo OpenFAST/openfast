@@ -122,19 +122,23 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    CALL DispNVD( BeamDyn_Ver )
 
    CALL BD_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_ValidateInputData( InputFileData, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
    p%analysis_type  = InputFileData%analysis_type
-   p%time_flag  = InputFileData%time_integrator
    p%damp_flag  = InputFileData%InpBl%damp_flag
    CALL AllocAry(p%beta,6,'Damping coefficient',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    p%beta(:)  = InputFileData%InpBl%beta(:)
 
    CALL AllocAry(p%gravity,3,'Gravity vector',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    p%gravity(:) = 0.0D0
-   p%gravity(1) = InitInp%gravity(3)
-   p%gravity(2) = InitInp%gravity(1)
-   p%gravity(3) = InitInp%gravity(2)
+   p%gravity(:) = MATMUL(TRANSPOSE(InitInp%GlbRot),InitInp%gravity(:))
 
-   CALL BD_CrvExtractCrv(InitInp%GlbRot,temp_glbrot)
+   CALL BD_CrvExtractCrv(InitInp%GlbRot,temp_glbrot,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%GlbPos,3,'Global position vector',ErrStat2,ErrMsg2)
    CALL AllocAry(p%GlbRot,3,3,'Global rotation tensor',ErrStat2,ErrMsg2)
    p%GlbPos(:) = 0.0D0
@@ -3269,6 +3273,54 @@ END SUBROUTINE ludcmp
 
    END SUBROUTINE BD_ReadBladeFile
 
+SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
+! This routine validates the inputs from the BeamDyn input files.
+!..................................................................................................................................
+      
+      ! Passed variables:
+
+   TYPE(BD_InputFile),   INTENT(IN   ):: InputFileData                       ! All the data in the BeamDyn input file
+   INTEGER(IntKi),       INTENT(  OUT):: ErrStat                             ! Error status
+   CHARACTER(*),         INTENT(  OUT):: ErrMsg                              ! Error message
+
+   
+      ! local variables
+   INTEGER(IntKi)                     :: i                                   ! Blade number
+   CHARACTER(*), PARAMETER            :: RoutineName = 'BD_ValidateInputData'
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+         
+   IF(InputFileData%analysis_type .NE. 1 .AND. InputFileData%analysis_type .NE. 2) &
+       CALL SetErrStat ( ErrID_Fatal, 'Analysis type must be 1 (static) or 2 (dynamic)', ErrStat, ErrMsg, RoutineName )
+   IF(InputFileData%rhoinf .LT. 0.0 .OR. InputFileData%rhoinf .GT. 1.0) &
+       CALL SetErrStat ( ErrID_Fatal, 'Numerical damping parameter \rho_{inf} must be in the range of [0.0,1.0]', ErrStat, ErrMsg, RoutineName )
+   IF(InputFileData%member_total .LT. 1 ) &
+       CALL SetErrStat ( ErrID_Fatal, 'member_total must be greater than 0', ErrStat, ErrMsg, RoutineName )
+   IF(InputFileData%kp_total .LT. 1 ) &
+       CALL SetErrStat ( ErrID_Fatal, 'kp_total must be greater than 0', ErrStat, ErrMsg, RoutineName )
+   DO i=1,InputFileData%member_total
+       IF(InputFileData%kp_member(i) .LT. 3) THEN
+          CALL SetErrStat(ErrID_Fatal,'There must be at least three key points in '//TRIM(Num2LStr(i))//'th member.', ErrStat, ErrMsg,RoutineName)
+          EXIT
+       ENDIF
+   ENDDO
+   IF(SUM(InputFileData%kp_member) .NE. InputFileData%kp_total+InputFileData%member_total-1 ) &
+       CALL SetErrStat ( ErrID_Fatal, 'Geometric definition error: kp_total and key points in each member are inconsistent', ErrStat, ErrMsg,RoutineName)
+       
+   IF(InputFileData%order_elem .LT. 1 ) &
+       CALL SetErrStat ( ErrID_Fatal, 'order_elem must be greater than 0', ErrStat, ErrMsg, RoutineName )
+       
+   IF(InputFileData%InpBl%station_total .LT. 2 ) &
+       CALL SetErrStat ( ErrID_Fatal, 'Number of material stations along blade axis much be greater than 2', ErrStat, ErrMsg, RoutineName )
+   IF(InputFileData%InpBl%station_eta(1) .NE. 0.0 ) &
+       CALL SetErrStat ( ErrID_Fatal, 'The first station_eta must be equal to 0.0 (root)', ErrStat, ErrMsg, RoutineName )
+   IF(InputFileData%InpBl%station_eta(InputFileData%InpBl%station_total) .NE. 1.0 ) &
+       CALL SetErrStat ( ErrID_Fatal, 'The last station_eta must be equal to 1.0 (tip)', ErrStat, ErrMsg, RoutineName )
+   
+         
+END SUBROUTINE BD_ValidateInputData
+
       SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx)
 !
 ! calculate Lagrangian interpolant tensor at ns points where basis
@@ -3468,24 +3520,29 @@ END SUBROUTINE ludcmp
 
    END FUNCTION BD_CrossProduct
 
-   SUBROUTINE BD_CrvExtractCrv(Rr,cc)
+   SUBROUTINE BD_CrvExtractCrv(Rr,cc,ErrStat,ErrMsg)
    !--------------------------------------------------
    ! This subroutine computes the CRV parameters given
    ! the components of the rotation matrix
    !--------------------------------------------------
 
-   REAL(ReKi), INTENT(IN   ):: Rr(:,:)       ! Rotation Matrix
-   REAL(ReKi), INTENT(  OUT):: cc(:)         ! Crv paramteres
+   REAL(ReKi),    INTENT(IN   ):: Rr(:,:)       ! Rotation Matrix
+   REAL(ReKi),    INTENT(  OUT):: cc(:)         ! Crv paramteres
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
    !Local variables
-   REAL(ReKi):: pivot
-   REAL(ReKi):: sm0
-   REAL(ReKi):: sm1
-   REAL(ReKi):: sm2
-   REAL(ReKi):: sm3
-   REAL(ReKi):: em
-   REAL(ReKi):: temp
-   INTEGER(IntKi):: ipivot
+   REAL(ReKi)                  :: pivot
+   REAL(ReKi)                  :: sm0
+   REAL(ReKi)                  :: sm1
+   REAL(ReKi)                  :: sm2
+   REAL(ReKi)                  :: sm3
+   REAL(ReKi)                  :: em
+   REAL(ReKi)                  :: temp
+   INTEGER(IntKi)              :: ipivot
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
    cc = 0.0D0
    ipivot = 0
@@ -3567,13 +3624,16 @@ END SUBROUTINE ludcmp
    REAL(ReKi),INTENT(IN   ):: phi         ! Initial twist angle
    REAL(ReKi),INTENT(  OUT):: cc(:)       ! Initial Crv Parameter
 
-   REAL(ReKi):: e2(3)                     ! Unit normal vector
-   REAL(ReKi):: e3(3)                     ! Unit e3 = e1 * e2, cross-product
-   REAL(ReKi):: Rr(3,3)                   ! Initial rotation matrix
-   REAL(ReKi):: temp
-   REAL(ReKi):: temp2
-   REAL(ReKi):: Delta
-   INTEGER(IntKi):: i
+   REAL(ReKi)              :: e2(3)                     ! Unit normal vector
+   REAL(ReKi)              :: e3(3)                     ! Unit e3 = e1 * e2, cross-product
+   REAL(ReKi)              :: Rr(3,3)                   ! Initial rotation matrix
+   REAL(ReKi)              :: temp
+   REAL(ReKi)              :: temp2
+   REAL(ReKi)              :: Delta
+   INTEGER(IntKi)          :: i
+   INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(*), PARAMETER :: RoutineName = 'BD_ComputeIniNodalCrv'
 
 
    Rr = 0.0D0
@@ -3599,7 +3659,7 @@ END SUBROUTINE ludcmp
        Rr(i,3) = e3(i)
    ENDDO
 
-   CALL BD_CrvExtractCrv(Rr,cc)
+   CALL BD_CrvExtractCrv(Rr,cc,ErrStat2,ErrMsg2)
 
    END SUBROUTINE BD_ComputeIniNodalCrv
 
@@ -4539,6 +4599,9 @@ END SUBROUTINE ludcmp
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    REAL(ReKi)                                   :: temp_cc(3)
+   INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_BoundaryGA2'
 
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -4546,8 +4609,8 @@ END SUBROUTINE ludcmp
    ! Root displacements
    x%q(1:3) = u%RootMotion%TranslationDisp(1:3,1)
    ! Root rotations
-   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),x%q(4:6))
-!   CALL BD_CrvExtractCrv(p%GlbRot(1:3,1:3),temp_cc(1:3))
+   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),x%q(4:6),ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    temp_cc(:) = MATMUL(p%GlbRot,p%uuN0(4:6,1))
    CALL BD_CrvCompose(x%q(4:6),x%q(4:6),temp_cc,2)
    x%q(4:6) = MATMUL(TRANSPOSE(p%GlbRot),x%q(4:6))
@@ -4897,8 +4960,9 @@ END SUBROUTINE ludcmp
    REAL(ReKi)                                 :: temp3(3)
    REAL(ReKi)                                 :: temp_p0(3)
    TYPE(BD_InputType)                         :: u_tmp
-   INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
-   CHARACTER(36)       :: ErrMsg2                      ! Temporary Error message
+   INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(*), PARAMETER :: RoutineName = 'BD_CalcIC'
 
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
    CALL BD_InputGlobalLocal(p,u_tmp,0)
@@ -4907,7 +4971,7 @@ END SUBROUTINE ludcmp
        temp_id = (i-1)*p%dof_node
        x%q(temp_id+1:temp_id+3) = u_tmp%RootMotion%TranslationDisp(1:3,1)
    ENDDO
-   CALL BD_CrvExtractCrv(u_tmp%RootMotion%Orientation(1:3,1:3,1),temp3)
+   CALL BD_CrvExtractCrv(u_tmp%RootMotion%Orientation(1:3,1:3,1),temp3,ErrStat2,ErrMsg2)
    DO i=1,p%elem_total
        IF( i .EQ. 1) THEN
            k = 1
