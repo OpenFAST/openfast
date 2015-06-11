@@ -37,7 +37,6 @@ MODULE BeamDyn
    PUBLIC :: BD_CrvCompose                ! Tight coupling routine for updating discrete states
    PUBLIC :: BD_CrvExtractCrv                ! Tight coupling routine for updating discrete states
    PUBLIC :: BD_Tilde
-   PUBLIC :: BD_Norm
    PUBLIC :: ludcmp
    PUBLIC :: lubksb
    PUBLIC :: BD_MotionTensor
@@ -1712,7 +1711,7 @@ END SUBROUTINE BD_UpdateDiscState
        Wrk(i) = RR0(i,1)
    ENDDO
    Wrk33 = 0.0D0
-   Wrk33 = BD_OuterProduct(Wrk,Wrk)
+   Wrk33 = OuterProduct(Wrk,Wrk)
    C12 = C12 + cet*k1s*Wrk33
    C21 = C21 + cet*k1s*Wrk33
    C22 = C22 + cet*e1s*Wrk33
@@ -3492,33 +3491,13 @@ END SUBROUTINE BD_ValidateInputData
        e1(i) = Coef(i,2) + 2.0D0*Coef(i,3)*temp + 3.0D0*Coef(i,4)*temp*temp
    ENDDO
 !   WRITE(*,*) "e1",e1(:)
-   e1(:) = e1(:)/BD_Norm(e1)
+   e1(:) = e1(:)/TwoNorm(e1)
    Twist_Angle = 0.0D0
    Twist_Angle = Coef(4,1) + Coef(4,2)*temp + Coef(4,3)*temp*temp + Coef(4,4)*temp*temp*temp
 !   WRITE(*,*) "e1",e1(:)
 
 
    END SUBROUTINE BD_ComputeIniNodalPosition
-
-   FUNCTION BD_Norm(vector)
-
-   REAL(ReKi),INTENT(IN):: vector(:)
-   REAL(ReKi)           :: BD_Norm
-
-   BD_Norm = SQRT(DOT_PRODUCT(vector,vector))
-
-   END FUNCTION BD_Norm
-
-   FUNCTION BD_CrossProduct(a,b)
-
-   REAL(ReKi),INTENT(IN):: a(3),b(3)
-   REAL(ReKi)           :: BD_CrossProduct(3)
-
-   BD_CrossProduct(1) = a(2) * b(3) - a(3) * b(2)
-   BD_CrossProduct(2) = a(3) * b(1) - a(1) * b(3)
-   BD_CrossProduct(3) = a(1) * b(2) - a(2) * b(1)
-
-   END FUNCTION BD_CrossProduct
 
    SUBROUTINE BD_CrvExtractCrv(Rr,cc,ErrStat,ErrMsg)
    !--------------------------------------------------
@@ -3654,7 +3633,7 @@ END SUBROUTINE BD_ValidateInputData
    ENDDO
 
    e3 = 0.0D0
-   e3 = BD_CrossProduct(e1,e2)
+   e3 = Cross_Product(e1,e2)
    DO i=1,3
        Rr(i,3) = e3(i)
    ENDDO
@@ -3720,24 +3699,6 @@ END SUBROUTINE BD_ValidateInputData
 
 
    END SUBROUTINE BD_ComputeIniCoef
-
-   FUNCTION BD_OuterProduct(vec1,vec2)
-
-   REAL(ReKi),INTENT(IN):: vec1(:),vec2(:)
-   REAL(ReKi)::BD_OuterProduct(SIZE(vec1),SIZE(vec2))
-
-   INTEGER(IntKi)::i,j,n1,n2
-
-   n1=SIZE(vec1)
-   n2=SIZE(vec2)
-
-   DO i=1,n1
-       DO j=1,n2
-           BD_OuterProduct(i,j) = vec1(i) * vec2(j)
-       ENDDO
-   ENDDO
-
-   END FUNCTION BD_OuterProduct
 
    SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 
@@ -3866,7 +3827,7 @@ END SUBROUTINE BD_ValidateInputData
            ui(j+6) = ui_temp(j)
        ENDDO
 
-       temp = BD_Norm(feqv)
+       temp = TwoNorm(feqv)
        WRITE(13,*) i,temp
        piter=i !! ADDED BY NJ 3/18/14
 !       IF(i==1) Eref = SQRT(DOT_PRODUCT(ui_temp,feqv)*TOLF)
