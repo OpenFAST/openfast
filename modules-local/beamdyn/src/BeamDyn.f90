@@ -122,8 +122,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    CALL BD_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF( ErrStat >= AbortErrLev ) RETURN
    CALL BD_ValidateInputData( InputFileData, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF( ErrStat >= AbortErrLev ) RETURN
 
    p%analysis_type  = InputFileData%analysis_type
    p%damp_flag  = InputFileData%InpBl%damp_flag
@@ -2915,12 +2917,6 @@ END SUBROUTINE ludcmp
        Stif(:,:) = 0.0D0
        Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
        CALL BD_GaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,uuu,uup,E1,RR0,kapa,Stif,cet)
-!WRITE(*,*) 'uuu'
-!WRITE(*,*) uuu
-!WRITE(*,*) 'E1'
-!WRITE(*,*) E1
-!WRITE(*,*) 'kapa'
-!WRITE(*,*) kapa
        mmm  = 0.0D0
        mEta = 0.0D0
        rho  = 0.0D0
@@ -2930,12 +2926,6 @@ END SUBROUTINE ludcmp
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
        CALL BD_GaussPointDataMass(hhx,hpx,Nvvv,Naaa,RR0,node_elem,dof_node,vvv,aaa,vvp,mmm,mEta,rho)
        CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe)
-!WRITE(*,*) 'Fc'
-!WRITE(*,*) Fc
-!WRITE(*,*) 'Fd'
-!WRITE(*,*) Fd
-!WRITE(*,*) 'aaa'
-!WRITE(*,*) aaa
        IF(damp_flag .EQ. 1) THEN
            CALL BD_DissipativeForce(beta,Stif,vvv,vvp,E1,Fc,Fd,Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd)
        ENDIF
@@ -2944,12 +2934,6 @@ END SUBROUTINE ludcmp
        CALL BD_GravityForce(mmm,mEta,gravity,Fg)
        Fg(:) = Fg(:) + DistrLoad_GL(:,igp)
 
-!WRITE(*,*) 'Fi'
-!WRITE(*,*) Fi
-!WRITE(*,*) 'Fb'
-!WRITE(*,*) Fb
-!WRITE(*,*) 'Fg'
-!WRITE(*,*) Fg
        DO i=1,node_elem
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
