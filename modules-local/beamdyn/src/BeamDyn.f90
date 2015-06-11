@@ -139,16 +139,16 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    CALL BD_CrvExtractCrv(InitInp%GlbRot,temp_glbrot,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%GlbPos,3,'Global position vector',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%GlbRot,3,3,'Global rotation tensor',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    p%GlbPos(:) = 0.0D0
    p%GlbRot(:,:) = 0.0D0
    p%GlbPos(1:3) = InitInp%GlbPos(1:3)
    p%GlbRot(1:3,1:3) = InitInp%GlbRot(1:3,1:3)
-   ! Hardwire value for initial position vector
-!   temp_glbrot(:) = 0.0D0
-!   temp_glbrot(3) = 4.0D0*TAN((3.1415926D0/2.0D0)/4.0D0)
 
    CALL AllocAry(SP_Coef,InputFileData%kp_total-1,4,4,'Spline coefficient matrix',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    SP_Coef(:,:,:) = 0.0D0
 
    temp_id = 0
@@ -780,7 +780,6 @@ end subroutine SetInitOut
    CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
 
-   CALL BD_MotionTensor(p%GlbRot,p%GlbPos,MoTens,0)
    DO i=1,p%elem_total
        DO j=1,p%node_elem
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
@@ -795,31 +794,15 @@ end subroutine SetInitOut
            y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
 
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-           temp6(:) = 0.0D0
-           temp6(1:3) = x%dqdt(temp_id+1:temp_id+3)
-           temp6(4:6) = x%dqdt(temp_id+4:temp_id+6)
-           temp6(:) = MATMUL(MoTens,temp6)
-           y%BldMotion%TranslationVel(1:3,temp_id2) = temp6(1:3)
-           y%BldMotion%RotationVel(1:3,temp_id2) = temp6(4:6)
+           y%BldMotion%TranslationVel(1:3,temp_id2) = MATMUL(p%GlbRot,x%dqdt(temp_id+1:temp_id+3))
+           y%BldMotion%RotationVel(1:3,temp_id2) = MATMUL(p%GlbRot,x%dqdt(temp_id+4:temp_id+6))
        ENDDO
    ENDDO
 
    CALL BD_InputGlobalLocal(p,u_tmp,0)
    CALL BD_BoundaryGA2(x_tmp,p,u_tmp,t,OS_tmp,ErrStat,ErrMsg)
    IF(p%analysis_type .EQ. 2) THEN
-!WRITE(*,*) 'u_tmp%a'
-!WRITE(*,*) u_tmp%RootMotion%TranslationDisp(:,1)
-!WRITE(*,*) u_tmp%RootMotion%Orientation(:,:,1)
-!WRITE(*,*) u_tmp%RootMotion%TranslationVel(:,1)
-!WRITE(*,*) u_tmp%RootMotion%RotationVel(:,1)
-!WRITE(*,*) u_tmp%RootMotion%TranslationAcc(:,1)
-!WRITE(*,*) u_tmp%RootMotion%RotationAcc(:,1)
-!WRITE(*,*) u_tmp%PointLoad%Force(:,:)
-!WRITE(*,*) u_tmp%PointLoad%Moment(:,:)
-!       CALL BD_CalcAcc(u_tmp,p,x_tmp,OS_tmp)
        CALL BD_CalcForceAcc(u_tmp,p,x_tmp,OS_tmp)
-!WRITE(*,*) 'OS_tmp'
-!WRITE(*,*) OS_tmp%Acc(:)
        DO i=1,p%elem_total
            DO j=1,p%node_elem
                temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
@@ -833,9 +816,8 @@ end subroutine SetInitOut
                    temp6(1:3) = OS_tmp%Acc(temp_id+1:temp_id+3)
                    temp6(4:6) = OS_tmp%Acc(temp_id+4:temp_id+6)
                ENDIF
-                   temp6(:) = MATMUL(MoTens,temp6)
-                   y%BldMotion%TranslationAcc(1:3,temp_id2) = temp6(1:3)
-                   y%BldMotion%RotationAcc(1:3,temp_id2) = temp6(4:6)
+                   y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(p%GlbRot,temp6(1:3))
+                   y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(p%GlbRot,temp6(4:6))
            ENDDO
        ENDDO
        CALL BD_DynamicSolutionForce(p%uuN0,x_tmp%q,x_tmp%dqdt,OS_tmp%Acc,                              &
@@ -849,28 +831,20 @@ end subroutine SetInitOut
                                     temp_Force)
    ENDIF
 
-   CALL BD_MotionTensor(p%GlbRot,p%GlbPos,MoTens,1)
    temp6(:) = 0.0D0
    IF(p%analysis_type .EQ. 2) THEN
-!       temp6(:) = temp_ReactionForce(1:6)
        temp6(1:6) = -OS_tmp%Acc(1:6)
-       temp6(:) = MATMUL(TRANSPOSE(MoTens),temp6)
-       y%ReactionForce%Force(1:3,1) = temp6(1:3)
-       y%ReactionForce%Moment(1:3,1) = temp6(4:6)
+       y%ReactionForce%Force(1:3,1) = MATMUL(p%GlbRot,temp6(1:3))
+       y%ReactionForce%Moment(1:3,1) = MATMUL(p%GlbRot,temp6(4:6))
    ENDIF
    DO i=1,p%node_total
        temp_id = (i-1)*p%dof_node
        temp6(:) = 0.0D0
        temp6(:) = temp_Force(temp_id+1:temp_id+6)
-       temp6(:) = MATMUL(TRANSPOSE(MoTens),temp6)
-       y%BldForce%Force(1:3,i) = temp6(1:3)
-       y%BldForce%Moment(1:3,i) = temp6(4:6)
+       y%BldForce%Force(1:3,i) = MATMUL(p%GlbRot,temp6(1:3))
+       y%BldForce%Moment(1:3,i) = MATMUL(p%GlbRot,temp6(4:6))
    ENDDO
 
-!   CALL BD_CopyOtherState(OS_tmp, OtherState, MESH_NEWCOPY, ErrStat, ErrMsg)
-!   OtherState%Acc(1:3) = u_tmp%RootMotion%TranslationAcc(1:3,1)
-!   OtherState%Acc(4:6) = u_tmp%RootMotion%RotationAcc(1:3,1)
-!   OtherState%Xcc(:) = OtherState%Acc(:)
 
    CALL BD_DestroyInput(u_tmp, ErrStat, ErrMsg)
    CALL BD_DestroyContState(x_tmp, ErrStat, ErrMsg )
