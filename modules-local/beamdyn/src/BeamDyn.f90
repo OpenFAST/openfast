@@ -111,7 +111,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-
    ! Initialize the NWTC Subroutine Library
 
    CALL NWTC_Init( )
@@ -120,12 +119,13 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    CALL DispNVD( BeamDyn_Ver )
 
-   CALL BD_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,ErrStat2,ErrMsg2)
+   CALL BD_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,Interval,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF( ErrStat >= AbortErrLev ) RETURN
    CALL BD_ValidateInputData( InputFileData, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF( ErrStat >= AbortErrLev ) RETURN
+
 
    p%analysis_type  = InputFileData%analysis_type
    p%damp_flag  = InputFileData%InpBl%damp_flag
@@ -552,9 +552,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    u%RootMotion%Orientation(1:3,1:3,1) = InitInp%RootOri(1:3,1:3)
    u%RootMotion%TranslationVel(1:3,1) = InitInp%RootVel(1:3)
    u%RootMotion%RotationVel(1:3,1)   = InitInp%RootVel(4:6)
-
-WRITE(*,*) 'u',u%RootMotion%TranslationDisp(1:3,1)
-
 
    DO i=1,u%PointLoad%ElemTable(ELEMENT_POINT)%nelem
        j = u%PointLoad%ElemTable(ELEMENT_POINT)%Elements(i)%ElemNodes(1)
@@ -2968,11 +2965,12 @@ END SUBROUTINE ludcmp
 
    END SUBROUTINE BD_ComputeReactionForce
 
-   SUBROUTINE BD_ReadInput(InputFileName,InputFileData,OutFileRoot,ErrStat,ErrMsg)
+   SUBROUTINE BD_ReadInput(InputFileName,InputFileData,OutFileRoot, Default_DT,ErrStat,ErrMsg)
 
    ! Passed Variables:
    CHARACTER(*),                 INTENT(IN   )  :: InputFileName    ! Name of the input file
    CHARACTER(*),                 INTENT(IN   )  :: OutFileRoot     ! Name of the input file
+   REAL(DbKi),                   INTENT(IN   )    :: Default_DT      ! The default DT (from glue code)
    TYPE(BD_InputFile),           INTENT(  OUT)  :: InputFileData    ! Data stored in the module's input file
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat          ! The error status code
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg           ! The error message, if an error occurred
@@ -2993,6 +2991,7 @@ END SUBROUTINE ludcmp
    ErrStat = ErrID_None
    ErrMsg = ''
 
+   InputFileData%DTBeam = Default_DT
    CALL BD_ReadPrimaryFile(InputFileName,InputFileData,OutFileRoot,UnEcho,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    CALL BD_ReadBladeFile(InputFileData%BldFile,InputFileData%InpBl,UnEcho,ErrStat2,ErrMsg2)
@@ -3027,10 +3026,12 @@ END SUBROUTINE ludcmp
    INTEGER(IntKi)               :: UnIn                         ! Unit number for reading file
    INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
    LOGICAL                      :: Echo                         ! Determines if an echo file should be written
+   INTEGER(IntKi)               :: IOS                     ! Temporary Error status
    CHARACTER(LEN(ErrMsg))       :: ErrMsg2                      ! Temporary Error message
    character(*), parameter      :: RoutineName = 'BD_ReadPrimaryFile'
    CHARACTER(1024)              :: PriPath                      ! Path name of the primary file
    CHARACTER(1024)              :: FTitle              ! "File Title": the 2nd line of the input file, which contains a description of its contents
+   CHARACTER(200)               :: Line             ! Temporary storage of a line from the input
    CHARACTER(1024)              :: BldFile
 
    INTEGER(IntKi)               :: i
@@ -3059,15 +3060,46 @@ END SUBROUTINE ludcmp
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL ReadVar(UnIn,InputFile,Echo,'Echo','Echo switch',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   IF(Echo) THEN
-       CALL OpenEcho(UnEc,OutFileRoot//'.ech',ErrStat2,ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ENDIF
-   IF ( UnEc > 0 )  WRITE(UnEc,*)  'test'
+!   IF(Echo) THEN
+!       CALL OpenEcho(UnEc,OutFileRoot//'.ech',ErrStat2,ErrMsg2)
+!          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!   ENDIF
+!   IF ( UnEc > 0 )  WRITE(UnEc,*)  'test'
    CALL ReadVar(UnIn,InputFile,InputFileData%analysis_type,"analysis_type", "Analysis type",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL ReadVar(UnIn,InputFile,InputFileData%rhoinf,"rhoinf", "Coefficient for GA2",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   Line = ""
+   CALL ReadVar( UnIn, InputFile, Line, "DTBeam", "Time interval for BeamDyn  calculations {or default} (s)", ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTBeam
+         READ( Line, *, IOSTAT=IOS) InputFileData%DTBeam
+            CALL CheckIOS ( IOS, InputFile, 'DTBeam', NumType, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
+   Line = ""
+   CALL ReadVar( UnIn, InputFile, Line, "NRMax", "Max number of interations in Newton-Ralphson algorithm", ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+          InputFileData%NRMax = 10
+      ELSE ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTBeam
+         READ( Line, *, IOSTAT=IOS) InputFileData%NRMax
+            CALL CheckIOS ( IOS, InputFile, 'NRMax', NumType, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
+   Line = ""
+   CALL ReadVar( UnIn, InputFile, Line, "stop_tol", "Tolerance for stopping criterion", ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+          InputFileData%stop_tol = 1.0D-05
+      ELSE ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTBeam
+         READ( Line, *, IOSTAT=IOS) InputFileData%stop_tol
+            CALL CheckIOS ( IOS, InputFile, 'stop_tol', NumType, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
 
    !---------------------- GEOMETRY PARAMETER --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Geometry Parameter',ErrStat2,ErrMsg2,UnEc)
@@ -3135,7 +3167,7 @@ END SUBROUTINE ludcmp
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   CALL GetNewUnit(UnIn,ErrStat,ErrMsg)
+   CALL GetNewUnit(UnIn,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL OpenFInpFile (UnIn,BldFile,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3163,7 +3195,6 @@ END SUBROUTINE ludcmp
    CALL AllocAry(BladeInputFileData%station_eta,BladeInputFileData%station_total,'Station eta array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    BladeInputFileData%station_eta(:) = 0.0D0
-
    CALL ReadVar(UnIn,BldFile,BladeInputFileData%damp_flag,'damp_flag','Damping flag',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !  -------------- DAMPING PARAMETER-----------------------------------------------
