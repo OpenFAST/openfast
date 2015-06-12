@@ -553,6 +553,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    u%RootMotion%TranslationVel(1:3,1) = InitInp%RootVel(1:3)
    u%RootMotion%RotationVel(1:3,1)   = InitInp%RootVel(4:6)
 
+WRITE(*,*) 'u',u%RootMotion%TranslationDisp(1:3,1)
+
 
    DO i=1,u%PointLoad%ElemTable(ELEMENT_POINT)%nelem
        j = u%PointLoad%ElemTable(ELEMENT_POINT)%Elements(i)%ElemNodes(1)
