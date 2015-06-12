@@ -113,8 +113,11 @@ typedef BeamDyn/BD    BD_InputFile    IntKi    member_total     - - - "Total num
 typedef BeamDyn/BD    BD_InputFile    IntKi    kp_total         - - - "Total number of key point" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    kp_member       {:} - - "Total number of key point" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    order_elem       - - - "Order of interpolation (basis) function" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    NRMax       - - - "Total number of key point" -
+typedef BeamDyn/BD    BD_InputFile    ReKi     stop_tol   - - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate   {:}{:} - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    DbKi     rhoinf          - - - "Key point coordinates array" -
+typedef BeamDyn/BD    BD_InputFile    DbKi     DTBeam          - - - "Time interval for BeamDyn  calculations {or default} (s)" -
 typedef BeamDyn/BD    BD_InputFile    BladeInputData    InpBl   - - - "Input data for individual blades"   "see BladeInputData Type" 
 typedef BeamDyn/BD    BD_InputFile    CHARACTER(1024) BldFile   - - -  "Name of blade input file"
 typedef BeamDyn/BD    BD_InputFile    Logical  Echo             - - -  "Echo"
