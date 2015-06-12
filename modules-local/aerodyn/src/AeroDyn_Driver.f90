@@ -92,12 +92,7 @@ program AeroDyn_Driver
          call Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
             call CheckError()
    
-            ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
-
-         call AD_UpdateStates( time, n, AD%u, AD%InputTime, AD%p, AD%x, AD%xd, AD%z, AD%OtherState, errStat, errMsg )
-            call CheckError()
-      
-      
+            
             ! Calculate outputs at n
 
          call AD_CalcOutput( time, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, errStat, errMsg )
@@ -106,6 +101,13 @@ program AeroDyn_Driver
          call Dvr_WriteOutputLine(DvrData%OutFileData, time, AD%y%WriteOutput, errStat, errMsg)
             call CheckError()
             
+            
+            ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
+
+         call AD_UpdateStates( time, n, AD%u, AD%InputTime, AD%p, AD%x, AD%xd, AD%z, AD%OtherState, errStat, errMsg )
+            call CheckError()
+      
+                  
       end do !nt=1,numSteps
       
       call AD_End( AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, errStat, errMsg )
