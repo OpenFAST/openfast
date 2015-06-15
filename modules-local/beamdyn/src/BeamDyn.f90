@@ -420,15 +420,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                    ,ErrStat          = ErrStat            &
                    ,ErrMess          = ErrMsg             )
 
-   CALL MeshCreate( BlankMesh        = y%ReactionForce  &
-                   ,IOS              = COMPONENT_OUTPUT &
-                   ,NNodes           = 1                &
-                   ,Force            = .TRUE.           &
-                   ,Moment           = .TRUE.           &
-                   ,nScalars        = 0                 &
-                   ,ErrStat         = ErrStat           &
-                   ,ErrMess         = ErrMsg            )
-
    CALL MeshConstructElement ( Mesh = u%RootMotion            &
                              , Xelement = ELEMENT_POINT      &
                              , P1       = 1                  &
@@ -471,11 +462,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                          , ErrStat   = ErrStat      &
                          , ErrMess   = ErrMsg       )
 
-   CALL MeshPositionNode ( Mesh = y%ReactionForce   &
-                         , INode = 1                &
-                         , Pos = TmpPos             &
-                         , ErrStat   = ErrStat      &
-                         , ErrMess   = ErrMsg       )
 
    DO i=1,p%elem_total
        DO j=1,p%node_elem
@@ -525,10 +511,20 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    CALL MeshCopy ( SrcMesh  = u%PointLoad      &
                  , DestMesh = y%BldForce       &
                  , CtrlCode = MESH_SIBLING     &
+                 , IOS      = COMPONENT_OUTPUT &
                  , Force           = .TRUE.    &
                  , Moment          = .TRUE.    &
                  , ErrStat  = ErrStat          &
                  , ErrMess  = ErrMsg           )
+   CALL MeshCopy( SrcMesh   = u%RootMotion     &
+                 , DestMesh = y%ReactionForce  &
+                 , CtrlCode = MESH_SIBLING     &
+                 , IOS      = COMPONENT_OUTPUT &
+                 , Force           = .TRUE.    &
+                 , Moment          = .TRUE.    &
+                 , ErrStat  = ErrStat          &
+                 , ErrMess  = ErrMsg           )
+   
    CALL MeshCommit ( Mesh    = y%ReactionForce &
                     ,ErrStat = ErrStat         &
                     ,ErrMess = ErrMsg          )
@@ -747,7 +743,7 @@ end subroutine SetInitOut
    REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
    TYPE(BD_InputType),           INTENT(INOUT)  :: u           ! Inputs at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
    TYPE(BD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
    TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
    TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
@@ -3043,12 +3039,14 @@ END SUBROUTINE ludcmp
    ErrMsg  = ""
    Echo = .FALSE.
    UnEc = -1
+   CALL GetPath( InputFile, PriPath )     ! Input files will be relative to the path where the primary input file is located.
 
    CALL GetNewUnit(UnIn,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL OpenFInpFile(UnIn,InputFile,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
+      IF (ErrStat >= AbortErrLev) RETURN
+      
    !-------------------------- HEADER ---------------------------------------------
    CALL ReadCom(UnIn,InputFile,'File Header: Module Version (line 1)',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3143,6 +3141,7 @@ END SUBROUTINE ludcmp
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL ReadVar ( UnIn, InputFile, InputFileData%BldFile, 'MatFile', 'Name of the file containing properties for beam', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( PathIsRelative( InputFileData%BldFile ) ) InputFileData%BldFile = TRIM(PriPath)//TRIM(InputFileData%BldFile)
 
    END SUBROUTINE BD_ReadPrimaryFile
 
