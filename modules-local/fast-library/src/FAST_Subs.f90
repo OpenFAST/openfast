@@ -280,7 +280,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax  )
 
    p%KMax = 1                 ! after more checking, we may put this in the input file...
    !IF (p%CompIce == Module_IceF) p%KMax = 2
-   p%SizeJac_ED_SD_HD = 0     ! initialize this vector to zero; after we figure out what size the ED/SD/HD meshes are, we'll fill this
+   p%SizeJac_ED_SD_HD_BD = 0  ! initialize this vector to zero; after we figure out what size the ED/SD/HD/BD meshes are, we'll fill this
    
    p%numIceLegs = 0           ! initialize number of support-structure legs in contact with ice (IceDyn will set this later)
    
@@ -303,7 +303,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax  )
 
    !...............................................................................................................................
    ! Do some error checking on the inputs (validation):
-   !...............................................................................................................................
+   !...............................................................................................................................    
    IF ( p%TMax < 0.0_DbKi  )  THEN
       CALL SetErrStat( ErrID_Fatal, 'TMax must not be a negative number.', ErrStat, ErrMsg, RoutineName )
    ELSE IF ( p%TMax < p%TStart )  THEN
@@ -356,6 +356,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax  )
       IF (p%CompHydro /= Module_HD) CALL SetErrStat( ErrID_Fatal, 'HydroDyn must be used when IceDyn is used. Set CompHydro > 0 or CompIce = 0 in the FAST input file.', ErrStat, ErrMsg, RoutineName )
    END IF
    
+   IF (p%CompElast == Module_BD .and. p%CompAero == Module_AD14 ) CALL SetErrStat( ErrID_Fatal, 'AeroDyn14 cannot be used when BeamDyn is used. Change CompAero or CompElast in the FAST input file.', ErrStat, ErrMsg, RoutineName )
    
 !   IF ( p%InterpOrder < 0 .OR. p%InterpOrder > 2 ) THEN
    IF ( p%InterpOrder < 1 .OR. p%InterpOrder > 2 ) THEN
@@ -392,7 +393,6 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax  )
       CALL SetErrStat( ErrID_Info, 'CompUserPtfmLd will be ignored in this version of FAST.', ErrStat, ErrMsg, RoutineName )
       p%CompUserPtfmLd = .FALSE.
    END IF
-
    
    RETURN
 END SUBROUTINE FAST_Init
@@ -563,11 +563,12 @@ end do
 
    IF ( y_FAST%numOuts(Module_BD) > 0_IntKi ) THEN !BeamDyn
       do i=1,p_FAST%nBeams
-         if ( allocated(InitOutData_BD(i)%WriteOutputHdr) ) then
-            indxLast = indxNext + size(InitOutData_BD(i)%WriteOutputHdr) - 1
-            y_FAST%ChannelNames(indxNext:indxLast) = InitOutData_BD(i)%WriteOutputHdr
-            y_FAST%ChannelUnits(indxNext:indxLast) = InitOutData_BD(i)%WriteOutputUnt
-            indxNext = indxLast + 1
+         if ( allocated(InitOutData_BD(i)%WriteOutputHdr) ) then            
+            do j=1,size(InitOutData_BD(i)%WriteOutputHdr) 
+               y_FAST%ChannelNames(indxNext) = trim(InitOutData_BD(i)%WriteOutputHdr(j))//'B'//TRIM(Num2Lstr(i)) !bjj: do we want this "bx" at the end?
+               y_FAST%ChannelUnits(indxNext) = InitOutData_BD(i)%WriteOutputUnt(j)
+               indxNext = indxNext + 1
+            end do ! j            
          end if         
       end do                 
    END IF
@@ -852,23 +853,16 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
       
    !.......................... Information About Coupling ...................................................
       
-   IF ( ALLOCATED( MeshMapData%Jacobian_ED_SD_HD ) ) then
+   IF ( ALLOCATED( MeshMapData%Jacobian_ED_SD_HD_BD ) ) then !ED-SD-HD-BD
       
-      IF ( p_FAST%CompHydro == Module_HD ) THEN ! HydroDyn <-> {ElastoDyn or SubDyn}
-      
-         IF ( p_FAST%CompSub /= Module_SD ) THEN ! HydroDyn-ElastoDyn        
-            DescStr = "ElastoDyn to HydroDyn"
-         ELSE ! HydroDyn <-> SubDyn <-> ElastoDyn (in ED_SD_HD coupling)
-            DescStr = "ElastoDyn, SubDyn, and HydroDyn"
-         END IF ! HydroDyn <-> {ElastoDyn or SubDyn}
-   
-      ELSEIF ( p_FAST%CompSub == Module_SD ) THEN  ! SubDyn-ElastoDyn    
-         DescStr = "ElastoDyn to SubDyn"
-      !ELSE ! no HD or SD:
-      END IF ! ElastoDyn <-> {HydroDyn or SubDyn}      
-            
+      IF ( p_FAST%CompSub == Module_SD .OR. p_FAST%CompElast == Module_BD ) THEN  ! SubDyn-BeamDyn-HydroDyn-ElastoDyn
+         DescStr = 'ElastoDyn, SubDyn, HydroDyn, and/or BeamDyn'                  
+      ELSE ! IF ( p_FAST%CompHydro == Module_HD ) THEN
+         DescStr = "ElastoDyn to HydroDyn"
+      END IF
+                  
       WRITE(y_FAST%UnSum,'( A,I6)'  ) 'Number of rows in Jacobian matrix used for coupling '//TRIM(DescStr)//': ', &
-                                       SIZE(MeshMapData%Jacobian_ED_SD_HD, 1)
+                                       SIZE(MeshMapData%Jacobian_ED_SD_HD_BD, 1)
    END IF
 
    !.......................... Time step information: ...................................................
@@ -1603,7 +1597,7 @@ END SUBROUTINE FillOutputAry
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_SrvD, MeshMapData, ErrStat, ErrMsg )
 ! This routine sets the inputs required for ED--using the Option 2 solve method; currently the only input not solved in this routine
-! ar the fields on PlatformPtMesh,  which is solved in option 1.
+! are the fields on PlatformPtMesh and HubPtLoad,  which are solved in option 1.
 !..................................................................................................................................
 
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST                   ! Glue-code simulation parameters
@@ -1930,8 +1924,8 @@ SUBROUTINE Transfer_ED_to_HD( y_ED, u_HD, MeshMapData, ErrStat, ErrMsg )
    
 END SUBROUTINE Transfer_ED_to_HD
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Transfer_ED_to_HD_SD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_MAP, u_FEAM, u_MD, MeshMapData, ErrStat, ErrMsg )
-! This routine transfers the ED outputs into inputs required for HD, SD, MAP, and/or FEAM
+SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_MAP, u_FEAM, u_MD, u_BD, MeshMapData, ErrStat, ErrMsg )
+! This routine transfers the ED outputs into inputs required for HD, SD, BD, MAP, and/or FEAM
 !..................................................................................................................................
    TYPE(FAST_ParameterType),    INTENT(IN)    :: p_FAST                       ! Glue-code simulation parameters
    TYPE(ED_OutputType),         INTENT(IN   ) :: y_ED                         ! The outputs of the structural dynamics module
@@ -1940,6 +1934,7 @@ SUBROUTINE Transfer_ED_to_HD_SD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_MAP, u_FEAM
    TYPE(MAP_InputType),         INTENT(INOUT) :: u_MAP                        ! MAP input
    TYPE(FEAM_InputType),        INTENT(INOUT) :: u_FEAM                       ! FEAM input
    TYPE(MD_InputType),          INTENT(INOUT) :: u_MD                         ! MoorDyn input
+   TYPE(BD_InputType),          INTENT(INOUT) :: u_BD(:)                      ! BeamDyn inputs
    TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData
 
    INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                      ! Error status of the operation
@@ -1948,7 +1943,7 @@ SUBROUTINE Transfer_ED_to_HD_SD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_MAP, u_FEAM
       ! local variables
    INTEGER(IntKi)                             :: ErrStat2                     ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                       :: ErrMsg2                      ! temporary Error message if ErrStat /= ErrID_None
-      
+   CHARACTER(*), PARAMETER                    :: RoutineName = 'Transfer_ED_to_HD_SD_BD_Mooring'   
       
    ErrStat = ErrID_None
    ErrMsg = ""
@@ -1959,48 +1954,43 @@ SUBROUTINE Transfer_ED_to_HD_SD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_MAP, u_FEAM
       
          ! Map ED (motion) outputs to SD inputs:                     
       CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_SD%TPMesh, MeshMapData%ED_P_2_SD_TP, ErrStat2, ErrMsg2 ) 
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,'Transfer_ED_to_HD_SD_Mooring (u_SD%TPMesh)' )
-               
-         
-         ! HD's other inputs are set by SD:
-         
-      !IF ( p_FAST%CompHydro == Module_HD  ) THEN
-      !      
-      !      ! SD motions to HD:
-      !   CALL Transfer_SD_to_HD( y_SD, u_HD%Morison%LumpedMesh, u_HD%Morison%DistribMesh, MeshMapData, ErrStat, ErrMsg )
-      !      CALL ChecEkrror( ErrStat, 'Message from Transfer_ED_to_HD_SD_Mooring: '//NewLine//ErrMsg  )    
-      !                                                                            
-      !END IF         
-         
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_SD%TPMesh' )
+                                      
                   
    ELSEIF ( p_FAST%CompHydro == Module_HD ) THEN
          ! Map ED outputs to HD inputs:
       CALL Transfer_ED_to_HD( y_ED, u_HD, MeshMapData, ErrStat2, ErrMsg2 )                        
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,'Transfer_ED_to_HD_SD_Mooring' )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
             
    END IF      
    
+   IF ( p_FAST%CompElast == Module_BD ) THEN
+      ! map ED root motion outputs to BeamDyn:
+      CALL Transfer_ED_to_BD(y_ED, u_BD, MeshMapData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
+   END IF
+      
    
    IF ( p_FAST%CompMooring == Module_MAP ) THEN
       
          ! motions:
       CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat, ErrMsg )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,'Transfer_ED_to_HD_SD_Mooring (u_MAP%PtFairDisplacement)' )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MAP%PtFairDisplacement' )
                                  
    ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
          ! motions:
       CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_MD%PtFairleadDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat, ErrMsg )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,'Transfer_ED_to_HD_SD_Mooring (u_MD%PtFairleadDisplacement)' )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%PtFairleadDisplacement' )
                         
    ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
          ! motions:
       CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_FEAM%PtFairleadDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat, ErrMsg )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,'Transfer_ED_to_HD_SD_Mooring (u_FEAM%PtFairleadDisplacement)' )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_FEAM%PtFairleadDisplacement' )
                         
    END IF
    
             
-END SUBROUTINE Transfer_ED_to_HD_SD_Mooring
+END SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE MAP_InputSolve(  u_MAP, y_ED, MeshMapData, ErrStat, ErrMsg )
 ! This routine sets the inputs required for MAP.
@@ -2110,6 +2100,79 @@ SUBROUTINE IceD_InputSolve(  u_IceD, y_SD, MeshMapData, legNum, ErrStat, ErrMsg 
    CALL Transfer_Point_to_Point( y_SD%y2Mesh, u_IceD%PointMesh, MeshMapData%SD_P_2_IceD_P(legNum), ErrStat, ErrMsg )
 
 END SUBROUTINE IceD_InputSolve
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE Transfer_ED_to_BD(  y_ED, u_BD, MeshMapData, ErrStat, ErrMsg )
+! This routine sets the inputs required for IceFloe.
+!..................................................................................................................................
+
+      ! Passed variables
+   TYPE(BD_InputType),          INTENT(INOUT) :: u_BD(:)                      ! BeamDyn inputs
+   TYPE(ED_OutputType),         INTENT(IN   ) :: y_ED                         ! ElastoDyn outputs
+   TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData
+   
+   INTEGER(IntKi),              INTENT(  OUT) :: ErrStat                      ! Error status of the operation
+   CHARACTER(*)  ,              INTENT(  OUT) :: ErrMsg                       ! Error message if ErrStat /= ErrID_None
+
+      
+
+   
+      ! local variables
+   INTEGER(IntKi)                             :: k
+   INTEGER(IntKi)                             :: ErrStat2                  ! temporary Error status of the operation
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
+
+   CHARACTER(*), PARAMETER                    :: RoutineName = 'Transfer_ED_to_BD'   
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""   
+   
+      !----------------------------------------------------------------------------------------------------
+      ! Map ED outputs to BeamDyn inputs
+      !----------------------------------------------------------------------------------------------------
+      ! motions:
+   do k = 1,size(y_ED%BladeRootMotion)
+      CALL Transfer_Point_to_Point( y_ED%BladeRootMotion(k), u_BD(k)%RootMotion, MeshMapData%ED_P_2_BD_P(k), ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   end do
+   
+
+END SUBROUTINE Transfer_ED_to_BD
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE Transfer_ED_to_BD_tmp(  y_ED, MeshMapData, ErrStat, ErrMsg )
+! This routine sets the inputs required for IceFloe.
+!..................................................................................................................................
+
+      ! Passed variables
+   TYPE(ED_OutputType),         INTENT(IN   ) :: y_ED                         ! ElastoDyn outputs
+   TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData
+   
+   INTEGER(IntKi),              INTENT(  OUT) :: ErrStat                      ! Error status of the operation
+   CHARACTER(*)  ,              INTENT(  OUT) :: ErrMsg                       ! Error message if ErrStat /= ErrID_None
+
+      
+
+   
+      ! local variables
+   INTEGER(IntKi)                             :: k
+   INTEGER(IntKi)                             :: ErrStat2                  ! temporary Error status of the operation
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
+
+   CHARACTER(*), PARAMETER                    :: RoutineName = 'Transfer_ED_to_BD_tmp'   
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""   
+   
+      !----------------------------------------------------------------------------------------------------
+      ! Map ED outputs to BeamDyn inputs
+      !----------------------------------------------------------------------------------------------------
+      ! motions:
+   do k = 1,size(y_ED%BladeRootMotion)
+      CALL Transfer_Point_to_Point( y_ED%BladeRootMotion(k), MeshMapData%u_BD_RootMotion(k), MeshMapData%ED_P_2_BD_P(k), ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   end do
+   
+
+END SUBROUTINE Transfer_ED_to_BD_tmp
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Transfer_HD_to_SD( u_mapped, u_SD_LMesh, u_mapped_positions, y_HD, u_HD_M_LumpedMesh, u_HD_M_DistribMesh, MeshMapData, ErrStat, ErrMsg )
 ! This routine transfers the HD outputs into inputs required for ED. Note that this *adds* to the values already in 
@@ -2384,7 +2447,7 @@ SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                END IF         
                   
                   
-               MeshMapData%Jacobian_ED_SD_HD(:,i) = (Fn_U_perturb - Fn_U_Resid) / ThisPerturb
+               MeshMapData%Jacobian_ED_SD_HD_BD(:,i) = (Fn_U_perturb - Fn_U_Resid) / ThisPerturb
                   
             END DO ! ElastoDyn contribution ( columns 1-6 )
                
@@ -2412,7 +2475,7 @@ SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                      RETURN 
                   END IF
                   
-               MeshMapData%Jacobian_ED_SD_HD(:,i) = (Fn_U_perturb - Fn_U_Resid) / ThisPerturb
+               MeshMapData%Jacobian_ED_SD_HD_BD(:,i) = (Fn_U_perturb - Fn_U_Resid) / ThisPerturb
                                                                   
             END DO ! HydroDyn contribution ( columns 7-12 )
                
@@ -2426,7 +2489,7 @@ SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
          RETURN 
       END IF
 
-   AddedMassMatrix = MeshMapData%Jacobian_ED_SD_HD(1:6,7:12) * p_FAST%UJacSclFact   
+   AddedMassMatrix = MeshMapData%Jacobian_ED_SD_HD_BD(1:6,7:12) * p_FAST%UJacSclFact   
    CALL WrMatrix(AddedMassMatrix,UnAM, p_FAST%OutFmt)
    CLOSE( UnAM )
 #endif   
@@ -2456,15 +2519,15 @@ SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
       CALL WrFileNR(UnJac, ' y_ED_RotationAcc_Z') 
    WRITE(UnJac,'()')    
       
-   CALL WrMatrix(MeshMapData%Jacobian_ED_SD_HD,UnJac, p_FAST%OutFmt)
+   CALL WrMatrix(MeshMapData%Jacobian_ED_SD_HD_BD,UnJac, p_FAST%OutFmt)
    CLOSE( UnJac )      
 #endif   
             
             
                ! Get the LU decomposition of this matrix using a LAPACK routine: 
-               ! The result is of the form MeshMapDat%Jacobian_ED_SD_HD = P * L * U 
+               ! The result is of the form MeshMapDat%Jacobian_ED_SD_HD_BD = P * L * U 
 
-            CALL LAPACK_getrf( M=NumInputs, N=NumInputs, A=MeshMapData%Jacobian_ED_SD_HD, IPIV=MeshMapData%Jacobian_pivot, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+            CALL LAPACK_getrf( M=NumInputs, N=NumInputs, A=MeshMapData%Jacobian_ED_SD_HD_BD, IPIV=MeshMapData%Jacobian_pivot, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
                IF ( ErrStat >= AbortErrLev ) THEN
@@ -2479,7 +2542,7 @@ SUBROUTINE ED_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
          !-------------------------------------------------------------------------------------------------
          
          u_delta = -Fn_U_Resid
-         CALL LAPACK_getrs( TRANS='N', N=NumInputs, A=MeshMapData%Jacobian_ED_SD_HD, IPIV=MeshMapData%Jacobian_pivot, B=u_delta, &
+         CALL LAPACK_getrs( TRANS='N', N=NumInputs, A=MeshMapData%Jacobian_ED_SD_HD_BD, IPIV=MeshMapData%Jacobian_pivot, B=u_delta, &
                             ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
                IF ( ErrStat >= AbortErrLev ) THEN
@@ -2650,10 +2713,11 @@ CONTAINS
    !...............................................................................................................................
 END SUBROUTINE ED_HD_InputOutputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
+SUBROUTINE ED_SD_HD_BD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                      , u_ED, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED &
                                      , u_SD, p_SD, x_SD, xd_SD, z_SD, OtherSt_SD, y_SD & 
                                      , u_HD, p_HD, x_HD, xd_HD, z_HD, OtherSt_HD, y_HD & 
+                                     , u_BD, p_BD, x_BD, xd_BD, z_BD, OtherSt_BD, y_BD & 
                                      , u_MAP,  y_MAP  &
                                      , u_FEAM, y_FEAM & 
                                      , u_MD,   y_MD   & 
@@ -2667,6 +2731,7 @@ SUBROUTINE ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
    USE ElastoDyn
    USE SubDyn
    USE HydroDyn
+   USE BeamDyn
 
       ! Passed variables
 
@@ -2682,7 +2747,16 @@ SUBROUTINE ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
    TYPE(ED_ParameterType)            , INTENT(IN   ) :: p_ED                      ! Parameters
    TYPE(ED_InputType)                , INTENT(INOUT) :: u_ED                      ! System inputs
    TYPE(ED_OutputType)               , INTENT(INOUT) :: y_ED                      ! System outputs
-                                                                                  
+         
+      !BeamDyn (one instance per blade):                                                                 
+   TYPE(BD_ContinuousStateType)      , INTENT(IN   ) :: x_BD(:)                   ! Continuous states
+   TYPE(BD_DiscreteStateType)        , INTENT(IN   ) :: xd_BD(:)                  ! Discrete states
+   TYPE(BD_ConstraintStateType)      , INTENT(IN   ) :: z_BD(:)                   ! Constraint states
+   TYPE(BD_OtherStateType)           , INTENT(INOUT) :: OtherSt_BD(:)             ! Other/optimization states
+   TYPE(BD_ParameterType)            , INTENT(IN   ) :: p_BD(:)                   ! Parameters
+   TYPE(BD_InputType)                , INTENT(INOUT) :: u_BD(:)                   ! System inputs
+   TYPE(BD_OutputType)               , INTENT(INOUT) :: y_BD(:)                   ! System outputs
+   
       !SubDyn:                                                                    
    TYPE(SD_ContinuousStateType)      , INTENT(IN   ) :: x_SD                      ! Continuous states
    TYPE(SD_DiscreteStateType)        , INTENT(IN   ) :: xd_SD                     ! Discrete states
@@ -2721,14 +2795,14 @@ SUBROUTINE ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
    REAL(ReKi),                             PARAMETER :: TOL_Squared = (1.0E-4)**2 !not currently used because KMax = 1
    REAL(ReKi)                                        :: ThisPerturb               ! an arbitrary perturbation (these are linear, so it shouldn't matter)
    
-   CHARACTER(*),                           PARAMETER :: RoutineName = 'ED_SD_HD_InputOutputSolve'
+   CHARACTER(*),                           PARAMETER :: RoutineName = 'ED_SD_HD_BD_InputOutputSolve'
    
 !bjj: store these so that we don't reallocate every time?   
-   REAL(ReKi)                                        :: u(           p_FAST%SizeJac_ED_SD_HD(4))   ! size of loads/accelerations passed between the 3 modules
-   REAL(ReKi)                                        :: u_perturb(   p_FAST%SizeJac_ED_SD_HD(4))   ! size of loads/accelerations passed between the 3 modules
-   REAL(ReKi)                                        :: u_delta(     p_FAST%SizeJac_ED_SD_HD(4))   ! size of loads/accelerations passed between the 3 modules
-   REAL(ReKi)                                        :: Fn_U_perturb(p_FAST%SizeJac_ED_SD_HD(4))   ! value of U with perturbations
-   REAL(ReKi)                                        :: Fn_U_Resid(  p_FAST%SizeJac_ED_SD_HD(4))   ! Residual of U
+   REAL(ReKi)                                        :: u(           p_FAST%SizeJac_ED_SD_HD_BD(1))   ! size of loads/accelerations passed between the 4 modules
+   REAL(ReKi)                                        :: u_perturb(   p_FAST%SizeJac_ED_SD_HD_BD(1))   ! size of loads/accelerations passed between the 4 modules
+   REAL(ReKi)                                        :: u_delta(     p_FAST%SizeJac_ED_SD_HD_BD(1))   ! size of loads/accelerations passed between the 4 modules
+   REAL(ReKi)                                        :: Fn_U_perturb(p_FAST%SizeJac_ED_SD_HD_BD(1))   ! value of U with perturbations
+   REAL(ReKi)                                        :: Fn_U_Resid(  p_FAST%SizeJac_ED_SD_HD_BD(1))   ! Residual of U
                                                                                            
    TYPE(ED_InputType)                                :: u_ED_perturb              ! Perturbed system inputs
    TYPE(ED_OutputType)                               :: y_ED_perturb              ! Perturbed system outputs
@@ -2736,9 +2810,12 @@ SUBROUTINE ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
    TYPE(SD_OutputType)                               :: y_SD_perturb              ! Perturbed system outputs
    TYPE(HydroDyn_InputType)                          :: u_HD_perturb              ! Perturbed system inputs
    TYPE(HydroDyn_OutputType)                         :: y_HD_perturb              ! Perturbed system outputs
+   TYPE(BD_InputType)                                :: u_BD_perturb              ! Perturbed system inputs
+   TYPE(BD_OutputType), ALLOCATABLE                  :: y_BD_perturb(:)           ! Perturbed system outputs
                                                                                   
                                                                                   
    INTEGER(IntKi)                                    :: i,j                       ! loop counters (jacobian column number)
+   INTEGER(IntKi)                                    :: nb                        ! loop counter (blade number)
    INTEGER(IntKi)                                    :: K                         ! Input-output-solve iteration counter
    INTEGER(IntKi)                                    :: ErrStat2                  ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                              :: ErrMsg2                   ! temporary Error message if ErrStat /= ErrID_None
@@ -2760,9 +2837,6 @@ SUBROUTINE ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
     
    ErrStat = ErrID_None
    ErrMsg  = ""
-
-   ! note this routine should be called only
-   ! IF ( p_FAST%CompHydro == Module_HD .AND. p_FAST%CompSub == Module_SD ) 
    
       !----------------------------------------------------------------------------------------------------
       ! Some record keeping stuff:
@@ -2789,7 +2863,25 @@ SUBROUTINE ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
             CALL HydroDyn_CopyOutput( y_HD, y_HD_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )  
                CALL SetErrStat( ErrStat2, 'y_HD_perturb:'//ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          END IF
-
+         
+         IF ( p_FAST%CompElast == Module_BD ) THEN    
+            ALLOCATE( y_BD_perturb(p_FAST%nBeams) , STAT = ErrStat2 )
+            if (ErrStat2 /= 0) then
+               call SetErrStat( ErrID_Fatal, 'Error allocating y_BD_perturb.', ErrStat, ErrMsg, RoutineName )
+               call CleanUp()
+               return
+            end if
+            
+            !bjj: if this mesh could have different number of nodes per instance, we'd need an array. (but, it's a single point) 
+            CALL BD_CopyInput(  u_BD(1), u_BD_perturb, MESH_NEWCOPY, ErrStat2, ErrMsg2 )           
+               CALL SetErrStat( ErrStat2, 'u_BD_perturb:'//ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+            do nb=1,p_FAST%nBeams
+               CALL BD_CopyOutput( y_BD(nb), y_BD_perturb(nb), MESH_NEWCOPY, ErrStat2, ErrMsg2 )  
+                  CALL SetErrStat( ErrStat2, 'y_BD_perturb:'//ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+            end do
+            
+         END IF
+         
          IF (ErrStat >= AbortErrLev) THEN
             CALL CleanUp()
             RETURN
@@ -2799,9 +2891,16 @@ SUBROUTINE ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
          
       !----------------------------------------------------------------------------------------------------
       ! set up u vector, using local initial guesses:
-      !----------------------------------------------------------------------------------------------------                      
+      !---------------------------------------------------------------------------------------------------- 
       
-      CALL Create_ED_SD_HD_UVector(u, u_ED%PlatformPtMesh, u_SD%TPMesh, u_SD%LMesh, u_HD%Morison%LumpedMesh, u_HD%Morison%DistribMesh, u_HD%Mesh, p_FAST )
+      ! we need BeamDyn input mesh to be an array of meshes, so first we'll copy into temporary storage:
+      DO nb=1,p_FAST%nBeams
+         call MeshCopy( u_BD(nb)%RootMotion, MeshMapData%u_BD_RootMotion(nb), MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+      END DO
+      
+      CALL Create_ED_SD_HD_BD_UVector(u, u_ED%PlatformPtMesh, u_SD%TPMesh, u_SD%LMesh, u_HD%Morison%LumpedMesh, &
+               u_HD%Morison%DistribMesh, u_HD%Mesh, u_ED%HubPtLoad, MeshMapData%u_BD_RootMotion, p_FAST )
                   
       K = 0
       
@@ -2824,6 +2923,14 @@ SUBROUTINE ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          END IF
          
+         IF ( p_FAST%CompElast == Module_BD ) THEN 
+            do nb=1,p_FAST%nBeams
+               CALL BD_CalcOutput( this_time, u_BD(nb), p_BD(nb), x_BD(nb), xd_BD(nb), z_BD(nb), OtherSt_BD(nb), y_BD(nb), ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+            end do
+         END IF
+         
+         
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
             RETURN      
@@ -2835,10 +2942,10 @@ SUBROUTINE ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                                             
          !-------------------------------------------------------------------------------------------------
          ! Calculate Jacobian: partial U/partial u:
-         ! (note that we don't want to change u_ED, u_SD, or u_HD here)
+         ! (note that we don't want to change u_ED, u_SD, u_HD, or u_BD here)
          !-------------------------------------------------------------------------------------------------
          
-         CALL U_ED_SD_HD_Residual(y_ED, y_SD, y_HD, u, Fn_U_Resid)    !May set errors here...              
+         CALL U_ED_SD_HD_BD_Residual(y_ED, y_SD, y_HD, y_BD, u, Fn_U_Resid)    !May set errors here...              
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL CleanUp()
                RETURN      
@@ -2849,20 +2956,20 @@ SUBROUTINE ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
             !...............................
             ! Get ElastoDyn's contribution:
             !...............................
-            DO i=1,p_FAST%SizeJac_ED_SD_HD(1) !call ED_CalcOutput
+            DO i=1,p_FAST%SizeJac_ED_SD_HD_BD(2) !call ED_CalcOutput
                   
                ! perturb u_ED:
                CALL ED_CopyInput(  u_ED, u_ED_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                u_perturb = u            
-               CALL Perturb_u_ED_SD_HD( p_FAST, MeshMapData%Jac_u_indx, i, u_perturb, u_ED_perturb=u_ED_perturb, perturb=ThisPerturb ) ! perturb u and u_ED by ThisPerturb [routine sets ThisPerturb]
+               CALL Perturb_u_ED_SD_HD_BD( p_FAST, MeshMapData%Jac_u_indx, i, u_perturb, u_ED_perturb=u_ED_perturb, perturb=ThisPerturb ) ! perturb u and u_ED by ThisPerturb [routine sets ThisPerturb]
                   
                ! calculate outputs with perturbed inputs:
                CALL ED_CalcOutput( this_time, u_ED_perturb, p_ED, x_ED, xd_ED, z_ED, OtherSt_ED, y_ED_perturb, ErrStat2, ErrMsg2 ) !calculate y_ED_perturb
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                   
                   
-               CALL U_ED_SD_HD_Residual(y_ED_perturb, y_SD, y_HD, u_perturb, Fn_U_perturb) ! get this perturbation, U_perturb
+               CALL U_ED_SD_HD_BD_Residual(y_ED_perturb, y_SD, y_HD, y_BD, u_perturb, Fn_U_perturb) ! get this perturbation, U_perturb
                
                
                IF ( ErrStat >= AbortErrLev ) THEN
@@ -2870,66 +2977,103 @@ SUBROUTINE ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                   RETURN      
                END IF
             
-                MeshMapData%Jacobian_ED_SD_HD(:,i) = (Fn_U_perturb - Fn_U_Resid) / ThisPerturb
+                MeshMapData%Jacobian_ED_SD_HD_BD(:,i) = (Fn_U_perturb - Fn_U_Resid) / ThisPerturb
                   
-            END DO ! ElastoDyn contribution ( columns 1-6 )
+            END DO ! ElastoDyn contribution ( columns 1-p_FAST%SizeJac_ED_SD_HD_BD(2) )
                
-            i = p_FAST%SizeJac_ED_SD_HD(1)
+            i = p_FAST%SizeJac_ED_SD_HD_BD(2)
             !...............................
-            ! Get SubDyn's contribution:  (note if p_FAST%CompHydro /= Module_SD, SizeJac_ED_SD_HD(2) = 0)
+            ! Get SubDyn's contribution:  (note if p_FAST%CompSub /= Module_SD, SizeJac_ED_SD_HD_BD(3) = 0)
             !...............................               
-            DO j=1,p_FAST%SizeJac_ED_SD_HD(2) !call SD_CalcOutput
-               i = i + 1 ! i = j + p_FAST%SizeJac_ED_SD_HD(1)
+            DO j=1,p_FAST%SizeJac_ED_SD_HD_BD(3) !call SD_CalcOutput
+               i = i + 1 ! i = j + p_FAST%SizeJac_ED_SD_HD_BD(2)
                               
                ! perturb u_SD:
                CALL SD_CopyInput(  u_SD, u_SD_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                u_perturb = u            
-               CALL Perturb_u_ED_SD_HD( p_FAST, MeshMapData%Jac_u_indx, i, u_perturb, u_SD_perturb=u_SD_perturb, perturb=ThisPerturb ) ! perturb u and u_SD by ThisPerturb [routine sets ThisPerturb]
+               CALL Perturb_u_ED_SD_HD_BD( p_FAST, MeshMapData%Jac_u_indx, i, u_perturb, u_SD_perturb=u_SD_perturb, perturb=ThisPerturb ) ! perturb u and u_SD by ThisPerturb [routine sets ThisPerturb]
                   
                ! calculate outputs with perturbed inputs:
                CALL SD_CalcOutput( this_time, u_SD_perturb, p_SD, x_SD, xd_SD, z_SD, OtherSt_SD, y_SD_perturb, ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                   
                   
-               CALL U_ED_SD_HD_Residual(y_ED, y_SD_perturb, y_HD, u_perturb, Fn_U_perturb) ! get this perturbation    
+               CALL U_ED_SD_HD_BD_Residual(y_ED, y_SD_perturb, y_HD, y_BD, u_perturb, Fn_U_perturb) ! get this perturbation    
                
                IF ( ErrStat >= AbortErrLev ) THEN
                   CALL CleanUp()
                   RETURN      
                END IF                  
                
-               MeshMapData%Jacobian_ED_SD_HD(:,i) = (Fn_U_perturb - Fn_U_Resid) / ThisPerturb
+               MeshMapData%Jacobian_ED_SD_HD_BD(:,i) = (Fn_U_perturb - Fn_U_Resid) / ThisPerturb
                                     
             END DO ! SubDyn contribution
             
                   
             !...............................
-            ! Get HydroDyn's contribution: (note if p_FAST%CompHydro /= Module_HD, SizeJac_ED_SD_HD(3) = 0)
+            ! Get HydroDyn's contribution: (note if p_FAST%CompHydro /= Module_HD, SizeJac_ED_SD_HD_BD(4) = 0)
             !...............................             
-            DO j=1,p_FAST%SizeJac_ED_SD_HD(3) !call HydroDyn_CalcOutput            
-               i = i + 1 ! i = j + p_FAST%SizeJac_ED_SD_HD(1) + p_FAST%SizeJac_ED_SD_HD(2) 
+            DO j=1,p_FAST%SizeJac_ED_SD_HD_BD(4) !call HydroDyn_CalcOutput            
+               i = i + 1 ! i = j + p_FAST%SizeJac_ED_SD_HD_BD(2) + p_FAST%SizeJac_ED_SD_HD_BD(3) 
 
                ! perturb u_HD:
                CALL HydroDyn_CopyInput(  u_HD, u_HD_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                u_perturb = u            
-               CALL Perturb_u_ED_SD_HD( p_FAST, MeshMapData%Jac_u_indx, i, u_perturb, u_HD_perturb=u_HD_perturb, perturb=ThisPerturb ) ! perturb u and u_HD by ThisPerturb [routine sets ThisPerturb]
+               CALL Perturb_u_ED_SD_HD_BD( p_FAST, MeshMapData%Jac_u_indx, i, u_perturb, u_HD_perturb=u_HD_perturb, perturb=ThisPerturb ) ! perturb u and u_HD by ThisPerturb [routine sets ThisPerturb]
                   
                ! calculate outputs with perturbed inputs:
                CALL HydroDyn_CalcOutput( this_time, u_HD_perturb, p_HD, x_HD, xd_HD, z_HD, OtherSt_HD, y_HD_perturb, ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                   
-               CALL U_ED_SD_HD_Residual(y_ED, y_SD, y_HD_perturb, u_perturb, Fn_U_perturb) ! get this perturbation  
+               CALL U_ED_SD_HD_BD_Residual(y_ED, y_SD, y_HD_perturb, y_BD, u_perturb, Fn_U_perturb) ! get this perturbation  
                
                IF ( ErrStat >= AbortErrLev ) THEN
                   CALL CleanUp()
                   RETURN      
                END IF                  
                
-               MeshMapData%Jacobian_ED_SD_HD(:,i) = (Fn_U_perturb - Fn_U_Resid) / ThisPerturb
+               MeshMapData%Jacobian_ED_SD_HD_BD(:,i) = (Fn_U_perturb - Fn_U_Resid) / ThisPerturb
                                              
             END DO !HydroDyn contribution
+            
+            !...............................
+            ! Get BeamDyn's contribution: (note if p_FAST%CompElast /= Module_BD, SizeJac_ED_SD_HD_BD(5) = 0)
+            !............................... 
+            DO nb=1,p_FAST%nBeams
+               
+               ! make sure we perturb the outputs from only the current blade (overwrite the previous perturbation with y_BD values)
+               if (nb > 1) then               
+                  CALL BD_CopyOutput(  y_BD(nb-1), y_BD_perturb(nb-1), MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+               end if
+               
+               
+               DO j=1,p_FAST%SizeJac_ED_SD_HD_BD(4+nb) !call BD_CalcOutput            
+                  i = i + 1 ! i = j + p_FAST%SizeJac_ED_SD_HD_BD(2:3+nb)
+                  ! perturb u_BD:
+                  CALL BD_CopyInput(  u_BD(nb), u_BD_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+                  u_perturb = u            
+                  CALL Perturb_u_ED_SD_HD_BD( p_FAST, MeshMapData%Jac_u_indx, i, u_perturb, u_BD_perturb=u_BD_perturb, perturb=ThisPerturb ) ! perturb u and u_HD by ThisPerturb [routine sets ThisPerturb]
+                  
+                  ! calculate outputs with perturbed inputs:
+                  CALL BD_CalcOutput( this_time, u_BD_perturb, p_BD(nb), x_BD(nb), xd_BD(nb), z_BD(nb), OtherSt_BD(nb), y_BD_perturb(nb), ErrStat2, ErrMsg2 )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+                  
+                  CALL U_ED_SD_HD_BD_Residual(y_ED, y_SD, y_HD, y_BD_perturb, u_perturb, Fn_U_perturb) ! get this perturbation  
+               
+                  IF ( ErrStat >= AbortErrLev ) THEN
+                     CALL CleanUp()
+                     RETURN      
+                  END IF                  
+               
+                  MeshMapData%Jacobian_ED_SD_HD_BD(:,i) = (Fn_U_perturb - Fn_U_Resid) / ThisPerturb
+               END DO
+               
+               
+            END DO !BeamDyn contribution          
             
             
 #ifdef OUTPUT_ADDEDMASS  
@@ -2940,8 +3084,9 @@ IF (p_FAST%CompHydro == Module_HD ) THEN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
       IF ( ErrStat >= AbortErrLev ) RETURN               
    
-   AMIndx = p_FAST%SizeJac_ED_SD_HD(4) - 5 !the start of the HydroDyn Mesh inputs in the Jacobian
-   AddedMassMatrix = MeshMapData%Jacobian_ED_SD_HD(1:6,AMIndx:p_FAST%SizeJac_ED_SD_HD(4)) * p_FAST%UJacSclFact   
+   AMIndx = p_FAST%SizeJac_ED_SD_HD_BD(1) - 5 - p_FAST%SizeJac_ED_SD_HD_BD(5) &
+          - p_FAST%SizeJac_ED_SD_HD_BD(6) - p_FAST%SizeJac_ED_SD_HD_BD(7) !the start of the HydroDyn Mesh inputs in the Jacobian
+   AddedMassMatrix = MeshMapData%Jacobian_ED_SD_HD_BD(1:6,AMIndx:(AMIndx+5)) * p_FAST%UJacSclFact   
    CALL WrMatrix(AddedMassMatrix,UnAM, p_FAST%OutFmt)
    CLOSE( UnAM )
 END IF
@@ -2954,12 +3099,21 @@ END IF
       IF ( ErrStat >= AbortErrLev ) RETURN               
       
    CALL WrFileNR(UnJac, '  ')
-      CALL WrFileNR(UnJac, ' ElastoDyn_Force_X') 
-      CALL WrFileNR(UnJac, ' ElastoDyn_Force_Y') 
-      CALL WrFileNR(UnJac, ' ElastoDyn_Force_Z') 
-      CALL WrFileNR(UnJac, ' ElastoDyn_Moment_X') 
-      CALL WrFileNR(UnJac, ' ElastoDyn_Moment_Y') 
-      CALL WrFileNR(UnJac, ' ElastoDyn_Moment_Z') 
+      CALL WrFileNR(UnJac, ' ElastoDyn_Ptfm_Force_X') 
+      CALL WrFileNR(UnJac, ' ElastoDyn_Ptfm_Force_Y') 
+      CALL WrFileNR(UnJac, ' ElastoDyn_Ptfm_Force_Z') 
+      CALL WrFileNR(UnJac, ' ElastoDyn_Ptfm_Moment_X') 
+      CALL WrFileNR(UnJac, ' ElastoDyn_Ptfm_Moment_Y') 
+      CALL WrFileNR(UnJac, ' ElastoDyn_Ptfm_Moment_Z') 
+   IF (p_FAST%CompElast == Module_BD) then
+      CALL WrFileNR(UnJac, ' ElastoDyn_hub_Force_X') 
+      CALL WrFileNR(UnJac, ' ElastoDyn_hub_Force_Y') 
+      CALL WrFileNR(UnJac, ' ElastoDyn_hub_Force_Z') 
+      CALL WrFileNR(UnJac, ' ElastoDyn_hub_Moment_X') 
+      CALL WrFileNR(UnJac, ' ElastoDyn_hub_Moment_Y') 
+      CALL WrFileNR(UnJac, ' ElastoDyn_hub_Moment_Z')       
+   END IF
+   
    
    DO TmpIndx=1,u_SD%TPMesh%NNodes
       CALL WrFileNR(UnJac, ' SD_TPMesh_TranslationAcc_X_'//TRIM(Num2LStr(TmpIndx))) 
@@ -3018,18 +3172,33 @@ END IF
       CALL WrFileNR(UnJac, ' HD_Mesh_RotationAcc_Y_'//TRIM(Num2LStr(TmpIndx))) 
       CALL WrFileNR(UnJac, ' HD_Mesh_RotationAcc_Z_'//TRIM(Num2LStr(TmpIndx))) 
    END DO 
+   
+   DO nb=1,p_FAST%nBeams
+      DO TmpIndx=1,u_BD(nb)%RootMotion%NNodes
+         CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_TranslationAcc_X_'//TRIM(Num2LStr(TmpIndx))) 
+         CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_TranslationAcc_Y_'//TRIM(Num2LStr(TmpIndx))) 
+         CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_TranslationAcc_Z_'//TRIM(Num2LStr(TmpIndx))) 
+      END DO   
+      DO TmpIndx=1,u_BD(nb)%RootMotion%NNodes
+         CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_RotationAcc_X_'//TRIM(Num2LStr(TmpIndx))) 
+         CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_RotationAcc_Y_'//TRIM(Num2LStr(TmpIndx))) 
+         CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_RotationAcc_Z_'//TRIM(Num2LStr(TmpIndx))) 
+      END DO                
+   END DO
+         
    WRITE(UnJac,'()')    
       
-   CALL WrMatrix(MeshMapData%Jacobian_ED_SD_HD,UnJac, p_FAST%OutFmt)
+   CALL WrMatrix(MeshMapData%Jacobian_ED_SD_HD_BD,UnJac, p_FAST%OutFmt)
    CLOSE( UnJac )
 
 #endif               
             
             
                ! Get the LU decomposition of this matrix using a LAPACK routine: 
-               ! The result is of the form MeshMapDat%Jacobian_ED_SD_HD = P * L * U 
+               ! The result is of the form MeshMapDat%Jacobian_ED_SD_HD_BD = P * L * U 
 
-            CALL LAPACK_getrf( M=p_FAST%SizeJac_ED_SD_HD(4), N=p_FAST%SizeJac_ED_SD_HD(4), A=MeshMapData%Jacobian_ED_SD_HD, IPIV=MeshMapData%Jacobian_pivot, &
+            CALL LAPACK_getrf( M=p_FAST%SizeJac_ED_SD_HD_BD(1), N=p_FAST%SizeJac_ED_SD_HD_BD(1), &
+                              A=MeshMapData%Jacobian_ED_SD_HD_BD, IPIV=MeshMapData%Jacobian_pivot, &
                               ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                IF ( ErrStat >= AbortErrLev ) THEN
@@ -3045,7 +3214,7 @@ END IF
          !-------------------------------------------------------------------------------------------------
          
          u_delta = -Fn_U_Resid
-         CALL LAPACK_getrs( TRANS="N", N=p_FAST%SizeJac_ED_SD_HD(4), A=MeshMapData%Jacobian_ED_SD_HD, &
+         CALL LAPACK_getrs( TRANS="N", N=p_FAST%SizeJac_ED_SD_HD_BD(1), A=MeshMapData%Jacobian_ED_SD_HD_BD, &
                             IPIV=MeshMapData%Jacobian_pivot, B=u_delta, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                IF ( ErrStat >= AbortErrLev ) THEN
@@ -3060,7 +3229,7 @@ END IF
 !         IF ( DOT_PRODUCT(u_delta, u_delta) <= TOL_Squared ) EXIT
          
          u = u + u_delta                  
-         CALL Add_ED_SD_HD_u_delta( p_FAST, MeshMapData%Jac_u_indx, u_delta, u_ED, u_SD, u_HD )
+         CALL Add_ED_SD_HD_BD_u_delta( p_FAST, MeshMapData%Jac_u_indx, u_delta, u_ED, u_SD, u_HD, u_BD )
                            
          K = K + 1
          
@@ -3069,6 +3238,27 @@ END IF
       !...............................................
       ! This is effectively doing option 2, where we set the input velocities and displacements based on the outputs we just calculated
       !...............................................
+      
+      ! BD motion inputs: (from ED)
+      IF (p_FAST%CompElast == Module_BD ) THEN
+         
+            ! Make copies of the accelerations we just solved for (so we don't overwrite them)         
+         do nb = 1,p_FAST%nBeams            
+            MeshMapData%u_BD_RootMotion(nb)%RotationAcc     = u_BD(nb)%RootMotion%RotationAcc
+            MeshMapData%u_BD_RootMotion(nb)%TranslationAcc  = u_BD(nb)%RootMotion%TranslationAcc                  
+         end do
+         
+         call Transfer_ED_to_BD(y_ED, u_BD, MeshMapData, ErrStat2, ErrMsg2 )
+            call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+                  
+            ! put the acceleration data (calucluted in this routine) back         
+         do nb = 1,p_FAST%nBeams            
+            u_BD(nb)%RootMotion%RotationAcc    = MeshMapData%u_BD_RootMotion(nb)%RotationAcc   
+            u_BD(nb)%RootMotion%TranslationAcc = MeshMapData%u_BD_RootMotion(nb)%TranslationAcc                  
+         end do
+         
+      END IF
+            
       
       !...............
       ! HD motion inputs: (from SD and ED)
@@ -3139,13 +3329,14 @@ END IF
       
 CONTAINS                                 
    !...............................................................................................................................
-   SUBROUTINE U_ED_SD_HD_Residual( y_ED2, y_SD2, y_HD2, u_IN, U_Resid)
+   SUBROUTINE U_ED_SD_HD_BD_Residual( y_ED2, y_SD2, y_HD2, y_BD2, u_IN, U_Resid)
    ! transfer outputs of ED, HD, and SD (and any additional loads that get summed with them) into inputs for ED, HD, and SD
    !...............................................................................................................................
                                   
    TYPE(ED_OutputType)               , INTENT(IN   ) :: y_ED2                  ! System outputs
    TYPE(SD_OutputType)               , INTENT(IN   ) :: y_SD2                  ! System outputs
    TYPE(HydroDyn_OutputType)         , INTENT(IN   ) :: y_HD2                  ! System outputs
+   TYPE(BD_OutputType)               , INTENT(IN   ) :: y_BD2(:)               ! System outputs
    REAL(ReKi)                        , INTENT(IN   ) :: u_in(:)
    REAL(ReKi)                        , INTENT(  OUT) :: U_Resid(:)
 
@@ -3191,7 +3382,27 @@ CONTAINS
                
          END DO
          
-      END IF        
+      END IF  
+      
+      MeshMapData%u_ED_HubPtLoad%Force  = 0.0_ReKi
+      MeshMapData%u_ED_HubPtLoad%Moment = 0.0_ReKi
+      IF ( p_FAST%CompSub == Module_BD ) THEN
+         
+         ! Transfer ED motions to BD inputs:
+         call Transfer_ED_to_BD_tmp( y_ED2, MeshMapData, ErrStat2, ErrMsg2 )   ! sets MeshMapData%u_BD_RootMotion
+            CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            
+         ! Transfer BD loads to ED hub input:
+            ! we're mapping loads, so we also need the sibling meshes' displacements:
+         do nb=1,p_FAST%nBeams            
+            CALL Transfer_Point_to_Point( y_BD2(nb)%ReactionForce, MeshMapData%u_ED_HubPtLoad_2, MeshMapData%BD_P_2_ED_P(nb), ErrStat2, ErrMsg2, MeshMapData%u_BD_RootMotion(nb), y_ED2%HubPtMotion) !u_BD_RootMotion and y_ED2%HubPtMotion contain the displaced positions for load calculations
+               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               
+            MeshMapData%u_ED_HubPtLoad%Force  = MeshMapData%u_ED_HubPtLoad%Force  + MeshMapData%u_ED_HubPtLoad_2%Force  
+            MeshMapData%u_ED_HubPtLoad%Moment = MeshMapData%u_ED_HubPtLoad%Moment + MeshMapData%u_ED_HubPtLoad_2%Moment                
+         end do
+      END IF
+      
       
       
       IF ( p_FAST%CompSub == Module_SD ) THEN
@@ -3372,91 +3583,115 @@ CONTAINS
    ! Calculate the residual with these new inputs:
    !..................                  
          
-      CALL Create_ED_SD_HD_UVector(U_Resid, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%u_SD_TPMesh, MeshMapData%u_SD_LMesh, &
-                                            MeshMapData%u_HD_M_LumpedMesh,   MeshMapData%u_HD_M_DistribMesh, MeshMapData%u_HD_Mesh, p_FAST )         
+      CALL Create_ED_SD_HD_BD_UVector(U_Resid, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%u_SD_TPMesh, MeshMapData%u_SD_LMesh, &
+                                      MeshMapData%u_HD_M_LumpedMesh,   MeshMapData%u_HD_M_DistribMesh, MeshMapData%u_HD_Mesh, &
+                                      MeshMapData%u_ED_HubPtLoad, MeshMapData%u_BD_RootMotion, p_FAST ) 
          
       U_Resid = u_in - U_Resid
    
             
-   END SUBROUTINE U_ED_SD_HD_Residual   
+   END SUBROUTINE U_ED_SD_HD_BD_Residual   
    !...............................................................................................................................
    SUBROUTINE CleanUp()
       INTEGER(IntKi)             :: ErrStat3    ! The error identifier (ErrStat)
       CHARACTER(1024)            :: ErrMsg3     ! The error message (ErrMsg)
-                  
          
       IF ( calcJacobian ) THEN
          CALL ED_DestroyInput( u_ED_perturb, ErrStat3, ErrMsg3 )
-            IF (ErrStat3 /= ErrID_None) CALL WrScr(' ED_SD_HD_InputOutputSolve/ED_DestroyInput: '//TRIM(ErrMsg3) )
+            IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
          CALL ED_DestroyOutput(y_ED_perturb, ErrStat3, ErrMsg3 )
-            IF (ErrStat3 /= ErrID_None) CALL WrScr(' ED_SD_HD_InputOutputSolve/ED_DestroyOutput: '//TRIM(ErrMsg3) )
+            IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
          
          CALL SD_DestroyInput( u_SD_perturb, ErrStat3, ErrMsg3 )
-            IF (ErrStat3 /= ErrID_None) CALL WrScr(' ED_SD_HD_InputOutputSolve/SD_DestroyInput: '//TRIM(ErrMsg3) )
+            IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
          CALL SD_DestroyOutput(y_SD_perturb, ErrStat3, ErrMsg3 )
-            IF (ErrStat3 /= ErrID_None) CALL WrScr(' ED_SD_HD_InputOutputSolve/SD_DestroyOutput: '//TRIM(ErrMsg3) )                        
+            IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
 
          CALL HydroDyn_DestroyInput( u_HD_perturb, ErrStat3, ErrMsg3 )
-            IF (ErrStat3 /= ErrID_None) CALL WrScr(' ED_SD_HD_InputOutputSolve/HydroDyn_DestroyInput: '//TRIM(ErrMsg3) )
+            IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
          CALL HydroDyn_DestroyOutput(y_HD_perturb, ErrStat3, ErrMsg3 )
-            IF (ErrStat3 /= ErrID_None) CALL WrScr(' ED_SD_HD_InputOutputSolve/HydroDyn_DestroyOutput: '//TRIM(ErrMsg3) )                              
+            IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
+            
+         CALL BD_DestroyInput( u_BD_perturb, ErrStat3, ErrMsg3 )
+            IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
+         if (allocated(y_BD_perturb)) then
+            do nb=1,size(y_BD_perturb) 
+               CALL BD_DestroyOutput(y_BD_perturb(nb), ErrStat3, ErrMsg3 )
+                  IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
+            end do
+            deallocate(y_BD_perturb)
+         end if
+                        
       END IF
       
    
    END SUBROUTINE CleanUp
    !...............................................................................................................................
-END SUBROUTINE ED_SD_HD_InputOutputSolve
+END SUBROUTINE ED_SD_HD_BD_InputOutputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD_M_LumpedMesh, HD_M_DistribMesh, &
-                                   HD_WAMIT_Mesh, ErrStat, ErrMsg)
+SUBROUTINE Init_ED_SD_HD_BD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD_M_LumpedMesh, HD_M_DistribMesh, &
+                                   HD_WAMIT_Mesh, ED_HubPtLoad, u_BD, ErrStat, ErrMsg)
 
    TYPE(FAST_ParameterType)          , INTENT(INOUT) :: p_FAST                     
    TYPE(FAST_ModuleMapType)          , INTENT(INOUT) :: MeshMapData
    
-      ! input meshes for each of the 3 modules:
+      ! input meshes for each of the 4 modules:
    TYPE(MeshType)                    , INTENT(IN   ) :: ED_PlatformPtMesh
+   TYPE(MeshType)                    , INTENT(IN   ) :: ED_HubPtLoad
    TYPE(MeshType)                    , INTENT(IN   ) :: SD_TPMesh
    TYPE(MeshType)                    , INTENT(IN   ) :: SD_LMesh
    TYPE(MeshType)                    , INTENT(IN   ) :: HD_M_LumpedMesh
    TYPE(MeshType)                    , INTENT(IN   ) :: HD_M_DistribMesh
    TYPE(MeshType)                    , INTENT(IN   ) :: HD_WAMIT_Mesh
+   TYPE(BD_InputType)                , INTENT(IN   ) :: u_BD(:)
    
    INTEGER(IntKi)                    , INTENT(  OUT) :: ErrStat                   ! Error status of the operation
    CHARACTER(*)                      , INTENT(  OUT) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    
-   CHARACTER(*), PARAMETER                           :: RoutineName = 'Init_ED_SD_HD_Jacobian'
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'Init_ED_SD_HD_BD_Jacobian'
    
       ! local variables:
-   INTEGER(IntKi)                :: i, j, index
+   INTEGER(IntKi)                :: i, j, k, index
    
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-      ! determine how many inputs there are between the 3 modules (ED, SD, HD)
+      ! determine how many inputs there are between the 4 modules (ED, SD, HD, BD)
    
-   p_FAST%SizeJac_ED_SD_HD(1) = ED_PlatformPtMesh%NNodes*6        ! ED inputs: 3 forces and 3 moments per node (only 1 node)
+   p_FAST%SizeJac_ED_SD_HD_BD(2) = ED_PlatformPtMesh%NNodes*6        ! ED inputs: 3 forces and 3 moments per node (only 1 node)
                   
-   p_FAST%SizeJac_ED_SD_HD(2) = SD_TPMesh%NNodes*6                ! SD inputs: 6 accelerations per node (size of SD input from ED) 
+   p_FAST%SizeJac_ED_SD_HD_BD(3) = SD_TPMesh%NNodes*6                ! SD inputs: 6 accelerations per node (size of SD input from ED) 
    IF ( p_FAST%CompHydro == Module_HD ) THEN   
-      p_FAST%SizeJac_ED_SD_HD(2) = p_FAST%SizeJac_ED_SD_HD(2) &   
-                                 + SD_LMesh%NNodes *6             ! SD inputs: 6 loads per node (size of SD input from HD)       
+      p_FAST%SizeJac_ED_SD_HD_BD(3) = p_FAST%SizeJac_ED_SD_HD_BD(3) &   
+                                    + SD_LMesh%NNodes *6             ! SD inputs: 6 loads per node (size of SD input from HD)       
    END IF
                
-   p_FAST%SizeJac_ED_SD_HD(3) = HD_M_LumpedMesh%NNodes *6 &    ! HD inputs: 6 accelerations per node (on each Morison mesh) 
-                              + HD_M_DistribMesh%NNodes*6 &    ! HD inputs: 6 accelerations per node (on each Morison mesh)
-                              + HD_WAMIT_Mesh%NNodes*6         ! HD inputs: 6 accelerations per node (on the WAMIT mesh)      
+   p_FAST%SizeJac_ED_SD_HD_BD(4) = HD_M_LumpedMesh%NNodes *6 &    ! HD inputs: 6 accelerations per node (on each Morison mesh) 
+                                 + HD_M_DistribMesh%NNodes*6 &    ! HD inputs: 6 accelerations per node (on each Morison mesh)
+                                 + HD_WAMIT_Mesh%NNodes*6         ! HD inputs: 6 accelerations per node (on the WAMIT mesh)      
    
-   p_FAST%SizeJac_ED_SD_HD(4) = p_FAST%SizeJac_ED_SD_HD(1) &   ! all the inputs from these 3 modules
-                              + p_FAST%SizeJac_ED_SD_HD(2) &
-                              + p_FAST%SizeJac_ED_SD_HD(3)
+   IF ( p_FAST%CompElast == Module_BD ) THEN   
+      p_FAST%SizeJac_ED_SD_HD_BD(1) = p_FAST%SizeJac_ED_SD_HD_BD(1) &   
+                                     + ED_HubPtLoad%NNodes *6     ! ED inputs: 6 loads per node (size of ED input from BD)
+      
+      p_FAST%SizeJac_ED_SD_HD_BD(5:7) = 0 ! assumes a max of 3 blades
+      do k=1,size(u_BD)
+         p_FAST%SizeJac_ED_SD_HD_BD(4+k) = u_BD(k)%RootMotion%NNodes *6     ! BD inputs: 6 accelerations per node (size of BD input from ED)         
+      end do
+            
+   END IF
+                              
+                              
+                              
+   p_FAST%SizeJac_ED_SD_HD_BD(1) = sum( p_FAST%SizeJac_ED_SD_HD_BD )   ! all the inputs from these modules
                   
 
       ! allocate matrix to store jacobian 
-   CALL AllocAry( MeshMapData%Jacobian_ED_SD_HD, p_FAST%SizeJac_ED_SD_HD(4), p_FAST%SizeJac_ED_SD_HD(4), "Jacobian for ED-SD-HD", ErrStat, ErrMsg )
+   CALL AllocAry( MeshMapData%Jacobian_ED_SD_HD_BD, p_FAST%SizeJac_ED_SD_HD_BD(1), p_FAST%SizeJac_ED_SD_HD_BD(1), "Jacobian for ED-SD-HD-BD", ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) RETURN
          
       ! allocate matrix to store index to help us figure out what the ith value of the u vector really means
-   ALLOCATE ( MeshMapData%Jac_u_indx( p_FAST%SizeJac_ED_SD_HD(4), 3 ), STAT = ErrStat )
+   ALLOCATE ( MeshMapData%Jac_u_indx( p_FAST%SizeJac_ED_SD_HD_BD(1), 3 ), STAT = ErrStat )
       IF ( ErrStat /= 0 ) THEN
          ErrStat = ErrID_Fatal
          ErrMsg = 'Cannot allocate Jac_u_indx.'
@@ -3464,7 +3699,7 @@ SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
       END IF
          
    ! fill matrix to store index to help us figure out what the ith value of the u vector really means
-   ! ( see Create_ED_SD_HD_UVector() ... these MUST match )
+   ! ( see Create_ED_SD_HD_BD_UVector() ... these MUST match )
    ! column 1 indicates module's mesh and field
    ! column 2 indicates the first index of the acceleration/load field
    ! column 3 is the node
@@ -3492,6 +3727,29 @@ SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
       end do !j      
    end do !i
    
+   if (p_FAST%CompElast == Module_BD) then
+      
+      do i=1,ED_HubPtLoad%NNodes
+         do j=1,3
+            MeshMapData%Jac_u_indx(index,1) =  3 !Module/Mesh/Field: u_ED%HubPtMesh%Force = 3
+            MeshMapData%Jac_u_indx(index,2) =  j !index:  j
+            MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
+            index = index + 1
+         end do !j      
+      end do !i
+      
+      
+      do i=1,ED_HubPtLoad%NNodes
+         do j=1,3
+            MeshMapData%Jac_u_indx(index,1) =  4 !Module/Mesh/Field: u_ED%HubPtMesh%Moment = 4
+            MeshMapData%Jac_u_indx(index,2) =  j !index:  j
+            MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
+            index = index + 1
+         end do !j      
+      end do !i
+
+   end if
+   
       
    !...............
    ! SD inputs:   
@@ -3500,7 +3758,7 @@ SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    ! SD_TPMesh                        
    do i=1,SD_TPMesh%NNodes
       do j=1,3
-         MeshMapData%Jac_u_indx(index,1) =  3 !Module/Mesh/Field: u_SD%TPMesh%TranslationAcc = 3
+         MeshMapData%Jac_u_indx(index,1) =  5 !Module/Mesh/Field: u_SD%TPMesh%TranslationAcc = 5
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1                  
@@ -3509,7 +3767,7 @@ SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
                                             
    do i=1,SD_TPMesh%NNodes                  
       do j=1,3                              
-         MeshMapData%Jac_u_indx(index,1) =  4 !Module/Mesh/Field:  u_SD%TPMesh%RotationAcc = 4
+         MeshMapData%Jac_u_indx(index,1) =  6 !Module/Mesh/Field:  u_SD%TPMesh%RotationAcc = 6
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1
@@ -3521,7 +3779,7 @@ SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
       ! SD_LMesh
       do i=1,SD_LMesh%NNodes
          do j=1,3
-            MeshMapData%Jac_u_indx(index,1) =  5 !Module/Mesh/Field: u_SD%LMesh%Force = 5
+            MeshMapData%Jac_u_indx(index,1) =  7 !Module/Mesh/Field: u_SD%LMesh%Force = 7
             MeshMapData%Jac_u_indx(index,2) =  j !index:  j
             MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
             index = index + 1                  
@@ -3530,7 +3788,7 @@ SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
                                             
       do i=1,SD_LMesh%NNodes                   
          do j=1,3                              
-            MeshMapData%Jac_u_indx(index,1) =  6 !Module/Mesh/Field: u_SD%LMesh%Moment = 6
+            MeshMapData%Jac_u_indx(index,1) =  8 !Module/Mesh/Field: u_SD%LMesh%Moment = 8
             MeshMapData%Jac_u_indx(index,2) =  j !index:  j
             MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
             index = index + 1
@@ -3546,7 +3804,7 @@ SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    !(Morison%LumpedMesh)
    do i=1,HD_M_LumpedMesh%NNodes
       do j=1,3
-         MeshMapData%Jac_u_indx(index,1) =  7 !Module/Mesh/Field: u_HD%Morison%LumpedMesh%TranslationAcc = 7
+         MeshMapData%Jac_u_indx(index,1) =  9 !Module/Mesh/Field: u_HD%Morison%LumpedMesh%TranslationAcc = 9
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1
@@ -3555,7 +3813,7 @@ SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    
    do i=1,HD_M_LumpedMesh%NNodes
       do j=1,3
-         MeshMapData%Jac_u_indx(index,1) =  8 !Module/Mesh/Field:  u_HD%Morison%LumpedMesh%RotationAcc = 8
+         MeshMapData%Jac_u_indx(index,1) = 10 !Module/Mesh/Field:  u_HD%Morison%LumpedMesh%RotationAcc = 10
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1
@@ -3566,7 +3824,7 @@ SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    !(Morison%DistribMesh)
    do i=1,HD_M_DistribMesh%NNodes
       do j=1,3
-         MeshMapData%Jac_u_indx(index,1) =  9 !Module/Mesh/Field: u_HD%Morison%DistribMesh%TranslationAcc = 9
+         MeshMapData%Jac_u_indx(index,1) = 11 !Module/Mesh/Field: u_HD%Morison%DistribMesh%TranslationAcc = 11
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1
@@ -3575,7 +3833,7 @@ SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    
    do i=1,HD_M_DistribMesh%NNodes
       do j=1,3
-         MeshMapData%Jac_u_indx(index,1) = 10 !Module/Mesh/Field:  u_HD%Morison%DistribMesh%RotationAcc = 10
+         MeshMapData%Jac_u_indx(index,1) = 12 !Module/Mesh/Field:  u_HD%Morison%DistribMesh%RotationAcc = 12
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1
@@ -3585,7 +3843,7 @@ SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    !(Mesh)
    do i=1,HD_WAMIT_Mesh%NNodes
       do j=1,3
-         MeshMapData%Jac_u_indx(index,1) = 11 !Module/Mesh/Field: u_HD%Mesh%TranslationAcc = 11
+         MeshMapData%Jac_u_indx(index,1) = 13 !Module/Mesh/Field: u_HD%Mesh%TranslationAcc = 13
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1
@@ -3594,16 +3852,48 @@ SUBROUTINE Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TP
    
    do i=1,HD_WAMIT_Mesh%NNodes
       do j=1,3
-         MeshMapData%Jac_u_indx(index,1) = 12 !Module/Mesh/Field:  u_HD%Mesh%RotationAcc = 12
+         MeshMapData%Jac_u_indx(index,1) = 14 !Module/Mesh/Field:  u_HD%Mesh%RotationAcc = 14
          MeshMapData%Jac_u_indx(index,2) =  j !index:  j
          MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
          index = index + 1
       end do !j      
    end do !i        
    
-END SUBROUTINE Init_ED_SD_HD_Jacobian
+   !...............
+   ! BD inputs:
+   !...............
+   
+   if (p_FAST%CompElast == Module_BD) then
+                 
+      do k=1,size(u_BD)
+         
+         do i=1,u_BD(k)%RootMotion%NNodes
+            do j=1,3
+               MeshMapData%Jac_u_indx(index,1) =  13 + 2*k !Module/Mesh/Field: u_BD(k)%RootMotion%TranslationAcc = 15 (k=1), 17 (k=2), 19 (k=2)
+               MeshMapData%Jac_u_indx(index,2) =  j !index:  j
+               MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i
+      
+         do i=1,u_BD(k)%RootMotion%NNodes
+            do j=1,3
+               MeshMapData%Jac_u_indx(index,1) =  14 + 2*k !Module/Mesh/Field: u_BD(k)%RootMotion%RotationAcc = 16 (k=1), 18 (k=2), 20 (k=2)
+               MeshMapData%Jac_u_indx(index,2) =  j !index:  j
+               MeshMapData%Jac_u_indx(index,3) =  i !Node:   i
+               index = index + 1
+            end do !j      
+         end do !i
+                  
+      end do !k
+                  
+   end if
+   
+   
+END SUBROUTINE Init_ED_SD_HD_BD_Jacobian
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Create_ED_SD_HD_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD_M_LumpedMesh, HD_M_DistribMesh, HD_WAMIT_Mesh, p_FAST )
+SUBROUTINE Create_ED_SD_HD_BD_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD_M_LumpedMesh, HD_M_DistribMesh, HD_WAMIT_Mesh, &
+                                         ED_HubPtLoad,  BD_RootMotion, p_FAST )
 ! This routine basically packs the relevant parts of the modules' input meshes for use in this InputOutput solve.
 ! Do not change the order of this packing without changing subroutine Init_ED_SD_HD_Jacobian()!
 !..................................................................................................................................
@@ -3617,23 +3907,42 @@ SUBROUTINE Create_ED_SD_HD_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD
    TYPE(MeshType)                    , INTENT(IN   ) :: HD_M_LumpedMesh
    TYPE(MeshType)                    , INTENT(IN   ) :: HD_M_DistribMesh
    TYPE(MeshType)                    , INTENT(IN   ) :: HD_WAMIT_Mesh
+   TYPE(MeshType)                    , INTENT(IN   ) :: ED_HubPtLoad
+   TYPE(MeshType)                    , INTENT(IN   ) :: BD_RootMotion(:)
    
    TYPE(FAST_ParameterType)          , INTENT(IN   ) :: p_FAST
    
    
       ! local variables:
-   INTEGER(IntKi)                :: i, indx_first, indx_last
+   INTEGER(IntKi)                :: i, k, indx_first, indx_last
    
    !...............
    ! ED inputs:   
    !...............
    u( 1: 3) = ED_PlatformPtMesh%Force(:,1) / p_FAST%UJacSclFact
-   u( 4: 6) = ED_PlatformPtMesh%Moment(:,1) / p_FAST%UJacSclFact  
-            
+   u( 4: 6) = ED_PlatformPtMesh%Moment(:,1) / p_FAST%UJacSclFact    
+   indx_first = 7   
+   
+   if (p_FAST%CompElast == Module_BD) then
+      
+      do i=1,ED_HubPtLoad%NNodes
+         indx_last  = indx_first + 2 
+         u(indx_first:indx_last) = ED_HubPtLoad%Force(:,i) / p_FAST%UJacSclFact
+         indx_first = indx_last + 1
+      end do
+     
+      do i=1,ED_HubPtLoad%NNodes
+         indx_last  = indx_first + 2 
+         u(indx_first:indx_last) = ED_HubPtLoad%Moment(:,i) / p_FAST%UJacSclFact
+         indx_first = indx_last + 1
+      end do
+      
+   end if
+   
+
    !...............
    ! SD inputs (SD_TPMesh):      
    !...............
-   indx_first = 7   
    do i=1,SD_TPMesh%NNodes 
       indx_last  = indx_first + 2
       u(indx_first:indx_last) = SD_TPMesh%TranslationAcc(:,i) 
@@ -3646,7 +3955,7 @@ SUBROUTINE Create_ED_SD_HD_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD
       indx_first = indx_last + 1
    end do
          
-   IF ( p_FAST%CompHydro == Module_HD ) THEN   ! this SD mesh linked only when HD is enabled
+   if ( p_FAST%CompHydro == Module_HD ) then   ! this SD mesh linked only when HD is enabled
       ! SD inputs (SD_LMesh):        
       do i=1,SD_LMesh%NNodes
          indx_last  = indx_first + 2 
@@ -3659,7 +3968,7 @@ SUBROUTINE Create_ED_SD_HD_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD
          u(indx_first:indx_last) = SD_LMesh%Moment(:,i) / p_FAST%UJacSclFact
          indx_first = indx_last + 1
       end do
-   END IF
+   end if
    
    !...............
    ! HD inputs (Morison%LumpedMesh):
@@ -3702,10 +4011,32 @@ SUBROUTINE Create_ED_SD_HD_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD
       indx_first = indx_last + 1
    end do   
    
+   !...............
+   ! BD inputs:
+   !...............   
+   if (p_FAST%CompElast == Module_BD) then
+      
+      do k=1,p_FAST%nBeams
+         
+         do i=1,BD_RootMotion(k)%NNodes
+            indx_last  = indx_first + 2 
+            u(indx_first:indx_last) = BD_RootMotion(k)%TranslationAcc(:,i)
+            indx_first = indx_last + 1
+         end do !i
+      
+         do i=1,BD_RootMotion(k)%NNodes
+            indx_last  = indx_first + 2 
+            u(indx_first:indx_last) = BD_RootMotion(k)%RotationAcc(:,i)
+            indx_first = indx_last + 1
+         end do !i
+                  
+      end do !k      
+      
+   end if
    
-END SUBROUTINE Create_ED_SD_HD_UVector
+END SUBROUTINE Create_ED_SD_HD_BD_UVector
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Add_ED_SD_HD_u_delta( p_FAST, Jac_u_indx, u_delta, u_ED, u_SD, u_HD )
+SUBROUTINE Add_ED_SD_HD_BD_u_delta( p_FAST, Jac_u_indx, u_delta, u_ED, u_SD, u_HD, u_BD )
 ! This routine adds u_delta to the corresponding mesh field and scales it as appropriate
 !..................................................................................................................................
    TYPE(FAST_ParameterType)            , INTENT(IN   ) :: p_FAST         ! Glue-code simulation parameters
@@ -3714,6 +4045,7 @@ SUBROUTINE Add_ED_SD_HD_u_delta( p_FAST, Jac_u_indx, u_delta, u_ED, u_SD, u_HD )
    TYPE(ED_InputType)                  , INTENT(INOUT) :: u_ED           ! ED System inputs 
    TYPE(SD_InputType)                  , INTENT(INOUT) :: u_SD           ! SD System inputs 
    TYPE(HydroDyn_InputType)            , INTENT(INOUT) :: u_HD           ! SD System inputs 
+   TYPE(BD_InputType)                  , INTENT(INOUT) :: u_BD(:)        ! BD System inputs 
    
    ! local variables
    INTEGER                                             :: n
@@ -3733,46 +4065,65 @@ SUBROUTINE Add_ED_SD_HD_u_delta( p_FAST, Jac_u_indx, u_delta, u_ED, u_SD, u_HD )
          u_ED%PlatformPtMesh%Force( fieldIndx,node) = u_ED%PlatformPtMesh%Force( fieldIndx,node) + u_delta(n) * p_FAST%UJacSclFact       
       CASE ( 2) !Module/Mesh/Field: u_ED%PlatformPtMesh%Moment = 2
          u_ED%PlatformPtMesh%Moment(fieldIndx,node) = u_ED%PlatformPtMesh%Moment(fieldIndx,node) + u_delta(n) * p_FAST%UJacSclFact       
-      
-      CASE ( 3) !Module/Mesh/Field: u_SD%TPMesh%TranslationAcc = 3
+      CASE ( 3) !Module/Mesh/Field: u_ED%HubPtMesh%Force = 3
+         u_ED%HubPtLoad%Force( fieldIndx,node) = u_ED%HubPtLoad%Force( fieldIndx,node) + u_delta(n) * p_FAST%UJacSclFact     
+      CASE ( 4) !Module/Mesh/Field: u_ED%HubPtMesh%Moment = 4
+         u_ED%HubPtLoad%Moment(fieldIndx,node) = u_ED%HubPtLoad%Moment(fieldIndx,node) + u_delta(n) * p_FAST%UJacSclFact     
+               
+      CASE ( 5) !Module/Mesh/Field: u_SD%TPMesh%TranslationAcc = 5
          u_SD%TPMesh%TranslationAcc(fieldIndx,node) = u_SD%TPMesh%TranslationAcc(fieldIndx,node) + u_delta(n)        
-      CASE ( 4) !Module/Mesh/Field: u_SD%TPMesh%RotationAcc = 4
+      CASE ( 6) !Module/Mesh/Field: u_SD%TPMesh%RotationAcc = 6
          u_SD%TPMesh%RotationAcc(   fieldIndx,node) = u_SD%TPMesh%RotationAcc(   fieldIndx,node) + u_delta(n)        
-      CASE ( 5) !Module/Mesh/Field: u_SD%LMesh%Force = 5
+      CASE ( 7) !Module/Mesh/Field: u_SD%LMesh%Force = 7
          u_SD%LMesh%Force( fieldIndx,node) = u_SD%LMesh%Force( fieldIndx,node) + u_delta(n) * p_FAST%UJacSclFact     
-      CASE ( 6) !Module/Mesh/Field: u_SD%LMesh%Moment = 6
+      CASE ( 8) !Module/Mesh/Field: u_SD%LMesh%Moment = 8
          u_SD%LMesh%Moment(fieldIndx,node) = u_SD%LMesh%Moment(fieldIndx,node) + u_delta(n) * p_FAST%UJacSclFact     
       
-      CASE ( 7) !Module/Mesh/Field: u_HD%Morison%LumpedMesh%TranslationAcc = 7
+      CASE ( 9) !Module/Mesh/Field: u_HD%Morison%LumpedMesh%TranslationAcc = 9
          u_HD%Morison%LumpedMesh%TranslationAcc(fieldIndx,node) = u_HD%Morison%LumpedMesh%TranslationAcc(fieldIndx,node) + u_delta(n)        
-      CASE ( 8) !Module/Mesh/Field: u_HD%Morison%LumpedMesh%RotationAcc = 8
+      CASE (10) !Module/Mesh/Field: u_HD%Morison%LumpedMesh%RotationAcc = 10
          u_HD%Morison%LumpedMesh%RotationAcc(   fieldIndx,node) = u_HD%Morison%LumpedMesh%RotationAcc(   fieldIndx,node) + u_delta(n)        
-      CASE ( 9) !Module/Mesh/Field: u_HD%Morison%DistribMesh%TranslationAcc = 9
+      CASE (11) !Module/Mesh/Field: u_HD%Morison%DistribMesh%TranslationAcc = 11
          u_HD%Morison%DistribMesh%TranslationAcc(fieldIndx,node) = u_HD%Morison%DistribMesh%TranslationAcc(fieldIndx,node) + u_delta(n)        
-      CASE (10) !Module/Mesh/Field: u_HD%Morison%DistribMesh%RotationAcc = 10
+      CASE (12) !Module/Mesh/Field: u_HD%Morison%DistribMesh%RotationAcc = 12
          u_HD%Morison%DistribMesh%RotationAcc(   fieldIndx,node) = u_HD%Morison%DistribMesh%RotationAcc(   fieldIndx,node) + u_delta(n)      
-      CASE (11) !Module/Mesh/Field: u_HD%Mesh%TranslationAcc = 11
+      CASE (13) !Module/Mesh/Field: u_HD%Mesh%TranslationAcc = 13
          u_HD%Mesh%TranslationAcc(   fieldIndx,node) = u_HD%Mesh%TranslationAcc(   fieldIndx,node) + u_delta(n)      
-      CASE (12) !Module/Mesh/Field: u_HD%Mesh%RotationAcc = 12
-         u_HD%Mesh%RotationAcc(   fieldIndx,node) = u_HD%Mesh%RotationAcc(   fieldIndx,node) + u_delta(n)      
+      CASE (14) !Module/Mesh/Field: u_HD%Mesh%RotationAcc = 14
+         u_HD%Mesh%RotationAcc(   fieldIndx,node) = u_HD%Mesh%RotationAcc(   fieldIndx,node) + u_delta(n)     
+         
+      CASE (15) !Module/Mesh/Field: u_BD(1)%RootMotion%TranslationAcc = 15 (k=1)
+         u_BD(1)%RootMotion%TranslationAcc(fieldIndx,node) = u_BD(1)%RootMotion%TranslationAcc(fieldIndx,node) + u_delta(n)      
+      CASE (16) !Module/Mesh/Field: u_BD(1)%RootMotion%RotationAcc = 16 (k=1)
+         u_BD(1)%RootMotion%RotationAcc(   fieldIndx,node) = u_BD(1)%RootMotion%RotationAcc(   fieldIndx,node) + u_delta(n)     
+      CASE (17) !Module/Mesh/Field: u_BD(2)%RootMotion%TranslationAcc = 17 (k=2)
+         u_BD(2)%RootMotion%TranslationAcc(fieldIndx,node) = u_BD(2)%RootMotion%TranslationAcc(fieldIndx,node) + u_delta(n)      
+      CASE (18) !Module/Mesh/Field: u_BD(2)%RootMotion%RotationAcc = 18 (k=2)
+         u_BD(2)%RootMotion%RotationAcc(   fieldIndx,node) = u_BD(2)%RootMotion%RotationAcc(   fieldIndx,node) + u_delta(n)     
+      CASE (19) !Module/Mesh/Field: u_BD(3)%RootMotion%TranslationAcc = 19 (k=3)
+         u_BD(3)%RootMotion%TranslationAcc(fieldIndx,node) = u_BD(3)%RootMotion%TranslationAcc(fieldIndx,node) + u_delta(n)      
+      CASE (20) !Module/Mesh/Field: u_BD(3)%RootMotion%RotationAcc = 20 (k=3)
+         u_BD(3)%RootMotion%RotationAcc(   fieldIndx,node) = u_BD(3)%RootMotion%RotationAcc(   fieldIndx,node) + u_delta(n)     
+         
       
       END SELECT
                                    
    END DO
    
         
-END SUBROUTINE Add_ED_SD_HD_u_delta
+END SUBROUTINE Add_ED_SD_HD_BD_u_delta
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Perturb_u_ED_SD_HD( p_FAST, Jac_u_indx, n, u_perturb, u_ED_perturb, u_SD_perturb, u_HD_perturb, perturb )
+SUBROUTINE Perturb_u_ED_SD_HD_BD( p_FAST, Jac_u_indx, n, u_perturb, u_ED_perturb, u_SD_perturb, u_HD_perturb, u_BD_perturb, perturb )
 ! This routine perturbs the nth element of the u array (and ED input/output it corresponds to)
 !...............................................................................................................................
    TYPE(FAST_ParameterType)            , INTENT(IN   ) :: p_FAST                ! Glue-code simulation parameters
    INTEGER( IntKi )                    , INTENT(IN   ) :: Jac_u_indx(:,:)
    INTEGER( IntKi )                    , INTENT(IN   ) :: n
    REAL( ReKi )                        , INTENT(INOUT) :: u_perturb(:)
-   TYPE(ED_InputType),        OPTIONAL , INTENT(INOUT) :: u_ED_perturb           ! ED System inputs  (needed only when 1 <= n <=  6)
-   TYPE(SD_InputType),        OPTIONAL , INTENT(INOUT) :: u_SD_perturb           ! SD System inputs  (needed only when 7 <= n <= 12) [if SD is used]
-   TYPE(HydroDyn_InputType),  OPTIONAL , INTENT(INOUT) :: u_HD_perturb           ! HD System inputs  (needed only when 6+NumSDNodes <= n <= inf) [if HD is used and SD is used. if SD not used, 
+   TYPE(ED_InputType),        OPTIONAL , INTENT(INOUT) :: u_ED_perturb           ! ED System inputs  (needed only when                                  1 <= n <= NumEDNodes)
+   TYPE(SD_InputType),        OPTIONAL , INTENT(INOUT) :: u_SD_perturb           ! SD System inputs  (needed only when NumEDNodes                      +1 <= n <= NumEDNodes+NumSDNodes) [if SD is used] 
+   TYPE(HydroDyn_InputType),  OPTIONAL , INTENT(INOUT) :: u_HD_perturb           ! HD System inputs  (needed only when NumEDNodes+NumSDNodes           +1 <= n <= NumEDNodes+NumSDNodes+NumHDNodes) [if HD is used and SD is used. if SD not used, 
+   TYPE(BD_InputType),        OPTIONAL , INTENT(INOUT) :: u_BD_perturb           ! BD System inputs  (needed only when NumEDNodes+NumSDNodes+NumHDNodes+1 <= n <= inf) [if BD is used]
    REAL( ReKi )                        , INTENT(  OUT) :: perturb
    
    ! local variables
@@ -3791,47 +4142,71 @@ SUBROUTINE Perturb_u_ED_SD_HD( p_FAST, Jac_u_indx, n, u_perturb, u_ED_perturb, u
       u_ED_perturb%PlatformPtMesh%Force( fieldIndx,node) = u_ED_perturb%PlatformPtMesh%Force( fieldIndx,node) + perturb * p_FAST%UJacSclFact       
    CASE ( 2) !Module/Mesh/Field: u_ED%PlatformPtMesh%Moment = 2
       perturb = GetPerturb( u_ED_perturb%PlatformPtMesh%Moment(fieldIndx , node) )
-      u_ED_perturb%PlatformPtMesh%Moment(fieldIndx,node) = u_ED_perturb%PlatformPtMesh%Moment(fieldIndx,node) + perturb * p_FAST%UJacSclFact       
-      
-   CASE ( 3) !Module/Mesh/Field: u_SD%TPMesh%TranslationAcc = 3
+      u_ED_perturb%PlatformPtMesh%Moment(fieldIndx,node) = u_ED_perturb%PlatformPtMesh%Moment(fieldIndx,node) + perturb * p_FAST%UJacSclFact             
+   CASE ( 3) !Module/Mesh/Field: u_ED%HubPtMesh%Force = 3
+      perturb = GetPerturb( u_ED_perturb%HubPtLoad%Force(fieldIndx , node) )
+      u_ED_perturb%HubPtLoad%Force(   fieldIndx,node) = u_ED_perturb%HubPtLoad%Force(   fieldIndx,node) + perturb * p_FAST%UJacSclFact     
+   CASE ( 4) !Module/Mesh/Field: u_ED%HubPtMesh%Moment = 4
+      perturb = GetPerturb( u_ED_perturb%HubPtLoad%Moment(fieldIndx , node) )
+      u_ED_perturb%HubPtLoad%Moment(  fieldIndx,node) = u_ED_perturb%HubPtLoad%Moment(  fieldIndx,node) + perturb * p_FAST%UJacSclFact     
+               
+   CASE ( 5) !Module/Mesh/Field: u_SD%TPMesh%TranslationAcc = 5
       perturb = GetPerturb( u_SD_perturb%TPMesh%TranslationAcc(fieldIndx , node) )
       u_SD_perturb%TPMesh%TranslationAcc(fieldIndx,node) = u_SD_perturb%TPMesh%TranslationAcc(fieldIndx,node) + perturb        
-   CASE ( 4) !Module/Mesh/Field: u_SD%TPMesh%RotationAcc = 4
+   CASE ( 6) !Module/Mesh/Field: u_SD%TPMesh%RotationAcc = 6
       perturb = GetPerturb( u_SD_perturb%TPMesh%RotationAcc(fieldIndx , node) )
       u_SD_perturb%TPMesh%RotationAcc(   fieldIndx,node) = u_SD_perturb%TPMesh%RotationAcc(   fieldIndx,node) + perturb        
-   CASE ( 5) !Module/Mesh/Field: u_SD%LMesh%Force = 5
+   CASE ( 7) !Module/Mesh/Field: u_SD%LMesh%Force = 7
       perturb = GetPerturb( u_SD_perturb%LMesh%Force(fieldIndx , node) )
       u_SD_perturb%LMesh%Force( fieldIndx,node) = u_SD_perturb%LMesh%Force( fieldIndx,node) + perturb * p_FAST%UJacSclFact     
-   CASE ( 6) !Module/Mesh/Field: u_SD%LMesh%Moment = 6
+   CASE ( 8) !Module/Mesh/Field: u_SD%LMesh%Moment = 8
       perturb = GetPerturb( u_SD_perturb%LMesh%Moment(fieldIndx , node) )
       u_SD_perturb%LMesh%Moment(fieldIndx,node) = u_SD_perturb%LMesh%Moment(fieldIndx,node) + perturb * p_FAST%UJacSclFact     
       
-   CASE ( 7) !Module/Mesh/Field: u_HD%Morison%LumpedMesh%TranslationAcc = 7
+   CASE ( 9) !Module/Mesh/Field: u_HD%Morison%LumpedMesh%TranslationAcc = 9
       perturb = GetPerturb( u_HD_perturb%Morison%LumpedMesh%TranslationAcc(fieldIndx , node) )
       u_HD_perturb%Morison%LumpedMesh%TranslationAcc(fieldIndx,node) = u_HD_perturb%Morison%LumpedMesh%TranslationAcc(fieldIndx,node) + perturb        
-   CASE ( 8) !Module/Mesh/Field: u_HD%Morison%LumpedMesh%RotationAcc = 8
+   CASE ( 10) !Module/Mesh/Field: u_HD%Morison%LumpedMesh%RotationAcc = 10
       perturb = GetPerturb( u_HD_perturb%Morison%LumpedMesh%RotationAcc(fieldIndx , node) )
       u_HD_perturb%Morison%LumpedMesh%RotationAcc(   fieldIndx,node) = u_HD_perturb%Morison%LumpedMesh%RotationAcc(   fieldIndx,node) + perturb        
-   CASE ( 9) !Module/Mesh/Field: u_HD%Morison%DistribMesh%TranslationAcc = 9
+   CASE (11) !Module/Mesh/Field: u_HD%Morison%DistribMesh%TranslationAcc = 11
       perturb = GetPerturb( u_HD_perturb%Morison%DistribMesh%TranslationAcc(fieldIndx , node) )
       u_HD_perturb%Morison%DistribMesh%TranslationAcc(fieldIndx,node) = u_HD_perturb%Morison%DistribMesh%TranslationAcc(fieldIndx,node) + perturb        
-   CASE (10) !Module/Mesh/Field: u_HD%Morison%DistribMesh%RotationAcc = 10
+   CASE (12) !Module/Mesh/Field: u_HD%Morison%DistribMesh%RotationAcc = 12
       perturb = GetPerturb( u_HD_perturb%Morison%DistribMesh%RotationAcc(fieldIndx , node) )
       u_HD_perturb%Morison%DistribMesh%RotationAcc(   fieldIndx,node) = u_HD_perturb%Morison%DistribMesh%RotationAcc(   fieldIndx,node) + perturb      
-   CASE (11) !Module/Mesh/Field: u_HD%Mesh%TranslationAcc = 11
+   CASE (13) !Module/Mesh/Field: u_HD%Mesh%TranslationAcc = 13
       perturb = GetPerturb( u_HD_perturb%Mesh%TranslationAcc(fieldIndx , node) )
-      u_HD_perturb%Mesh%TranslationAcc(   fieldIndx,node) = u_HD_perturb%Mesh%TranslationAcc(   fieldIndx,node) + perturb      
-   CASE (12) !Module/Mesh/Field: u_HD%Mesh%RotationAcc = 12
+      u_HD_perturb%Mesh%TranslationAcc(fieldIndx,node) = u_HD_perturb%Mesh%TranslationAcc(fieldIndx,node) + perturb      
+   CASE (14) !Module/Mesh/Field: u_HD%Mesh%RotationAcc = 14
       perturb = GetPerturb( u_HD_perturb%Mesh%RotationAcc(fieldIndx , node) )
       u_HD_perturb%Mesh%RotationAcc(   fieldIndx,node) = u_HD_perturb%Mesh%RotationAcc(   fieldIndx,node) + perturb      
             
-      
+   CASE (15) !Module/Mesh/Field: u_BD(1)%RootMotion%TranslationAcc = 15 (k=1)
+      perturb = GetPerturb( u_BD_perturb%RootMotion%TranslationAcc(fieldIndx , node) )
+      u_BD_perturb%RootMotion%TranslationAcc(fieldIndx,node) = u_BD_perturb%RootMotion%TranslationAcc(fieldIndx,node) + perturb      
+   CASE (16) !Module/Mesh/Field: u_BD(1)%RootMotion%RotationAcc = 16 (k=1)
+      perturb = GetPerturb( u_BD_perturb%RootMotion%RotationAcc(fieldIndx , node) )
+      u_BD_perturb%RootMotion%RotationAcc(   fieldIndx,node) = u_BD_perturb%RootMotion%RotationAcc(   fieldIndx,node) + perturb      
+   CASE (17) !Module/Mesh/Field: u_BD(2)%RootMotion%TranslationAcc = 17 (k=2)
+      perturb = GetPerturb( u_BD_perturb%RootMotion%TranslationAcc(fieldIndx , node) )
+      u_BD_perturb%RootMotion%TranslationAcc(fieldIndx,node) = u_BD_perturb%RootMotion%TranslationAcc(fieldIndx,node) + perturb      
+   CASE (18) !Module/Mesh/Field: u_BD(2)%RootMotion%RotationAcc = 18 (k=2)
+      perturb = GetPerturb( u_BD_perturb%RootMotion%RotationAcc(fieldIndx , node) )
+      u_BD_perturb%RootMotion%RotationAcc(   fieldIndx,node) = u_BD_perturb%RootMotion%RotationAcc(   fieldIndx,node) + perturb      
+   CASE (19) !Module/Mesh/Field: u_BD(3)%RootMotion%TranslationAcc = 19 (k=3)
+      perturb = GetPerturb( u_BD_perturb%RootMotion%TranslationAcc(fieldIndx , node) )
+      u_BD_perturb%RootMotion%TranslationAcc(fieldIndx,node) = u_BD_perturb%RootMotion%TranslationAcc(fieldIndx,node) + perturb      
+   CASE (20) !Module/Mesh/Field: u_BD(3)%RootMotion%RotationAcc = 20 (k=3)
+      perturb = GetPerturb( u_BD_perturb%RootMotion%RotationAcc(fieldIndx , node) )
+      u_BD_perturb%RootMotion%RotationAcc(   fieldIndx,node) = u_BD_perturb%RootMotion%RotationAcc(   fieldIndx,node) + perturb      
+            
    END SELECT
                                    
    u_perturb(n) = u_perturb(n) + perturb
    
         
-END SUBROUTINE Perturb_u_ED_SD_HD
+END SUBROUTINE Perturb_u_ED_SD_HD_BD
 !----------------------------------------------------------------------------------------------------------------------------------
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -4199,9 +4574,9 @@ SUBROUTINE AD14_InputSolve_NoIfW( p_FAST, u_AD14, y_ED, MeshMapData, ErrStat, Er
    ! RotorFurl position, orientation, rotational velocity:
    !-------------------------------------------------------------------------------------------------
 
-   u_AD14%TurbineComponents%RotorFurl%Position    = y_ED%RotorFurlMotion%TranslationDisp(:,1) + y_ED%RotorFurlMotion%Position(:,1)  
-   u_AD14%TurbineComponents%RotorFurl%Orientation = y_ED%RotorFurlMotion%Orientation(:,:,1)         
-   u_AD14%TurbineComponents%RotorFurl%RotationVel = y_ED%RotorFurlMotion%RotationVel(:,1)
+   u_AD14%TurbineComponents%RotorFurl%Position    = y_ED%RotorFurlMotion14%TranslationDisp(:,1) + y_ED%RotorFurlMotion14%Position(:,1)  
+   u_AD14%TurbineComponents%RotorFurl%Orientation = y_ED%RotorFurlMotion14%Orientation(:,:,1)         
+   u_AD14%TurbineComponents%RotorFurl%RotationVel = y_ED%RotorFurlMotion14%RotationVel(:,1)
    u_AD14%TurbineComponents%RotorFurl%TranslationVel = 0.0_ReKi !bjj we don't need this field
    
    !-------------------------------------------------------------------------------------------------
@@ -4220,8 +4595,8 @@ SUBROUTINE AD14_InputSolve_NoIfW( p_FAST, u_AD14, y_ED, MeshMapData, ErrStat, Er
    
       ! Tower base position should be rT(0) instead of rZ, but AeroDyn needs this for
       ! the HubVDue2Yaw calculation:
-   u_AD14%TurbineComponents%Tower%Position     = y_ED%TowerBaseMotion%TranslationDisp(:,1) + y_ED%TowerBaseMotion%Position(:,1)
-   u_AD14%TurbineComponents%Tower%RotationVel  = y_ED%TowerBaseMotion%RotationVel(:,1)
+   u_AD14%TurbineComponents%Tower%Position     = y_ED%TowerBaseMotion14%TranslationDisp(:,1) + y_ED%TowerBaseMotion14%Position(:,1)
+   u_AD14%TurbineComponents%Tower%RotationVel  = y_ED%TowerBaseMotion14%RotationVel(:,1)
    u_AD14%TurbineComponents%Tower%Orientation    = 0.0_ReKi !bjj we don't need this field
    u_AD14%TurbineComponents%Tower%TranslationVel = 0.0_ReKi !bjj we don't need this field
   
@@ -4248,7 +4623,7 @@ SUBROUTINE AD14_InputSolve_NoIfW( p_FAST, u_AD14, y_ED, MeshMapData, ErrStat, Er
    !  u_AD14%MulTabLoc(IElements,IBlades) = ???
    
 END SUBROUTINE AD14_InputSolve_NoIfW
-!====================================================================================================
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE AD_SetInitInput(InitInData_AD14, InitOutData_ED, y_ED, p_FAST, ErrStat, ErrMsg)
 ! This subroutine sets up the information needed to initialize AeroDyn, then initializes AeroDyn
 !----------------------------------------------------------------------------------------------------
@@ -4630,25 +5005,35 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM, M
    !.....................................................................     
    
    ! ElastoDyn meshes
-   ED%Input( 1)%PlatformPtMesh%RemapFlag     = .FALSE.
-   ED%Output(1)%PlatformPtMesh%RemapFlag     = .FALSE.
-   ED%Input( 1)%TowerLn2Mesh%RemapFlag       = .FALSE.
-   ED%Output(1)%TowerLn2Mesh%RemapFlag       = .FALSE.
-   DO K=1,SIZE(ED%Input(1)%BladeLn2Mesh)
-      ED%Input( 1)%BladeLn2Mesh(K)%RemapFlag = .FALSE.
-      ED%Output(1)%BladeLn2Mesh(K)%RemapFlag = .FALSE.
+   ED%Input( 1)%PlatformPtMesh%RemapFlag        = .FALSE.
+   ED%Output(1)%PlatformPtMesh%RemapFlag        = .FALSE.
+   ED%Input( 1)%TowerLn2Mesh%RemapFlag          = .FALSE.
+   ED%Output(1)%TowerLn2Mesh%RemapFlag          = .FALSE.
+   DO K=1,SIZE(ED%Output(1)%BladeRootMotion)
+      ED%Output(1)%BladeRootMotion(K)%RemapFlag = .FALSE.      
    END DO
+   if (allocated(ED%Input(1)%BladeLn2Mesh)) then   
+      DO K=1,SIZE(ED%Input(1)%BladeLn2Mesh)
+         ED%Input( 1)%BladeLn2Mesh(K)%RemapFlag    = .FALSE.
+         ED%Output(1)%BladeLn2Mesh(K)%RemapFlag    = .FALSE.      
+      END DO
+   end if
+   
+   ED%Input( 1)%NacelleLoads%RemapFlag          = .FALSE.
+   ED%Output(1)%NacelleMotion%RemapFlag         = .FALSE.
+   ED%Input( 1)%HubPtLoad%RemapFlag             = .FALSE.
+   ED%Output(1)%HubPtMotion%RemapFlag           = .FALSE.
             
    ! BeamDyn meshes
    IF ( p_FAST%CompElast == Module_BD ) THEN
       DO i=1,p_FAST%nBeams            
-             BD%Input(1,i)%RootMotion%RemapFlag = .FALSE.
-             BD%Input(1,i)%PointLoad%RemapFlag  = .FALSE.
-             BD%Input(1,i)%DistrLoad%RemapFlag  = .FALSE.
+         BD%Input(1,i)%RootMotion%RemapFlag = .FALSE.
+         BD%Input(1,i)%PointLoad%RemapFlag  = .FALSE.
+         BD%Input(1,i)%DistrLoad%RemapFlag  = .FALSE.
              
-             BD%y(i)%ReactionForce%RemapFlag    = .FALSE.
-             BD%y(i)%BldForce%RemapFlag         = .FALSE.
-             BD%y(i)%BldMotion%RemapFlag        = .FALSE.
+         BD%y(i)%ReactionForce%RemapFlag    = .FALSE.
+         BD%y(i)%BldForce%RemapFlag         = .FALSE.
+         BD%y(i)%BldMotion%RemapFlag        = .FALSE.
       END DO                  
    END IF
       
@@ -4815,11 +5200,36 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
    !............................................................................................................................
    
    ErrStat = ErrID_None
-   ErrMsg = ""
-   
+   ErrMsg  = ""
+   NumBl   = SIZE(ED%Output(1)%BladeRootMotion,1)            
+
    !............................................................................................................................
    ! Create the data structures and mappings in MeshMapType 
    !............................................................................................................................
+   
+!-------------------------
+!  ElastoDyn <-> BeamDyn
+!-------------------------
+   IF ( p_FAST%CompElast == Module_BD ) THEN
+      
+      ! Blade meshes: (allocate two mapping data structures to number of blades, then allocate data inside the structures)
+      ALLOCATE( MeshMapData%ED_P_2_BD_P(NumBl), MeshMapData%BD_P_2_ED_P(NumBl), STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%ED_P_2_BD_P and MeshMapData%BD_P_2_ED_P.', &
+                            ErrStat, ErrMsg, RoutineName )
+            RETURN
+         END IF
+         
+      DO K=1,NumBl         
+         CALL MeshMapCreate( ED%Output(1)%BladeRootMotion(K), BD%Input(1,k)%RootMotion, MeshMapData%ED_P_2_BD_P(K), ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_BD_P('//TRIM(Num2LStr(K))//')' )
+         CALL MeshMapCreate( BD%y(k)%ReactionForce, ED%Input(1)%HubPtLoad,  MeshMapData%BD_P_2_ED_P(K), ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BD_P_2_ED_P('//TRIM(Num2LStr(K))//')' )
+      END DO      
+      
+   END IF
+   
+   
    
 !-------------------------
 !  ElastoDyn <-> ServoDyn
@@ -4840,7 +5250,6 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
    IF ( p_FAST%CompAero == Module_AD14 ) THEN ! ED-AD14
          
       ! Blade meshes: (allocate two mapping data structures to number of blades, then allocate data inside the structures)
-      NumBl = SIZE(ED%Input(1)%BladeLn2Mesh,1)            
       ALLOCATE( MeshMapData%ED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_ED_L_B(NumBl), STAT=ErrStat2 )
          IF ( ErrStat2 /= 0 ) THEN
             CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%ED_L_2_AD_L_B and MeshMapData%AD_L_2_ED_L_B.', &
@@ -4850,9 +5259,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
          
       DO K=1,NumBl         
          CALL MeshMapCreate( ED%Output(1)%BladeLn2Mesh(K), AD14%Input(1)%InputMarkers(K), MeshMapData%ED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_L_2_AD_L_('//TRIM(Num2LStr(K))//')' )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_L_2_AD_L_B('//TRIM(Num2LStr(K))//')' )
          CALL MeshMapCreate( AD14%y%OutputLoads(K), ED%Input(1)%BladeLn2Mesh(K),  MeshMapData%AD_L_2_ED_L_B(K), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_ED_L_('//TRIM(Num2LStr(K))//')' )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_ED_L_B('//TRIM(Num2LStr(K))//')' )
       END DO
          
       ! Tower mesh:
@@ -5096,17 +5505,18 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
    ! Initialize the Jacobian structures:
    !............................................................................................................................
    !IF ( p_FAST%TurbineType == Type_Offshore_Fixed ) THEN ! p_FAST%CompSub == Module_SD .AND. p_FAST%CompHydro == Module_HD 
-   IF ( p_FAST%CompSub == Module_SD ) THEN  !.OR. p_FAST%CompHydro == Module_HD ) THEN         
-      CALL Init_ED_SD_HD_Jacobian( p_FAST, MeshMapData, ED%Input(1)%PlatformPtMesh, SD%Input(1)%TPMesh, SD%Input(1)%LMesh, &
-                                    HD%Input(1)%Morison%LumpedMesh, HD%Input(1)%Morison%DistribMesh, HD%Input(1)%Mesh, ErrStat2, ErrMsg2)
+   IF ( p_FAST%CompSub == Module_SD .OR. p_FAST%CompElast == Module_BD ) THEN  !.OR. p_FAST%CompHydro == Module_HD ) THEN         
+      CALL Init_ED_SD_HD_BD_Jacobian( p_FAST, MeshMapData, ED%Input(1)%PlatformPtMesh, SD%Input(1)%TPMesh, SD%Input(1)%LMesh, &
+                                    HD%Input(1)%Morison%LumpedMesh, HD%Input(1)%Morison%DistribMesh, HD%Input(1)%Mesh, &
+                                    ED%Input(1)%HubPtLoad, BD%Input(1,:),  ErrStat2, ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                 
    ELSEIF ( p_FAST%CompHydro == Module_HD ) THEN
-         CALL AllocAry( MeshMapData%Jacobian_ED_SD_HD, SizeJac_ED_HD, SizeJac_ED_HD, 'Jacobian for ED-HD coupling', ErrStat2, ErrMsg2 )
+         CALL AllocAry( MeshMapData%Jacobian_ED_SD_HD_BD, SizeJac_ED_HD, SizeJac_ED_HD, 'Jacobian for ED-HD coupling', ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                 
    END IF
    
-   IF ( ALLOCATED( MeshMapData%Jacobian_ED_SD_HD ) ) THEN   
-      CALL AllocAry( MeshMapData%Jacobian_pivot, SIZE(MeshMapData%Jacobian_ED_SD_HD), 'Pivot array for Jacobian LU decomposition', ErrStat2, ErrMsg2 )
+   IF ( ALLOCATED( MeshMapData%Jacobian_ED_SD_HD_BD ) ) THEN   
+      CALL AllocAry( MeshMapData%Jacobian_pivot, SIZE(MeshMapData%Jacobian_ED_SD_HD_BD), 'Pivot array for Jacobian LU decomposition', ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                 
    END IF
    
@@ -5121,15 +5531,39 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
    ! initialize the temporary input meshes (for input-output solves):
    ! (note that we do this after ResetRemapFlags() so that the copies have remap=false)
    !............................................................................................................................
-   IF ( p_FAST%CompHydro == Module_HD .OR. p_FAST%CompSub == Module_SD ) THEN
+   IF ( p_FAST%CompHydro == Module_HD .OR. p_FAST%CompSub == Module_SD .OR. p_FAST%CompElast == Module_BD ) THEN
                   
-         ! Temporary meshes for transfering inputs to ED, HD, and SD
+         ! Temporary meshes for transfering inputs to ED, HD, BD, and SD
+      CALL MeshCopy ( ED%Input(1)%HubPtLoad, MeshMapData%u_ED_HubPtLoad, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_HubPtLoad' )                 
+            
       CALL MeshCopy ( ED%Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh' )                 
 
       CALL MeshCopy ( ED%Input(1)%PlatformPtMesh, MeshMapData%u_ED_PlatformPtMesh_2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh_2' )                 
                         
+             
+      IF ( p_FAST%CompElast == Module_BD ) THEN
+      
+            ! Temporary meshes for transfering inputs to ED and BD
+         CALL MeshCopy ( ED%Input(1)%HubPtLoad, MeshMapData%u_ED_HubPtLoad_2, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_ED_PlatformPtMesh' )     
+            
+         allocate( MeshMapData%u_BD_RootMotion( p_FAST%nBeams ), STAT = ErrStat2 )
+         if (ErrStat2 /= 0) then
+            CALL SetErrStat( ErrID_Fatal, "Error allocating u_BD_RootMotion", ErrStat, ErrMsg, RoutineName )     
+            return
+         end if
+         
+         do k=1,p_FAST%nBeams
+            CALL MeshCopy ( BD%Input(1,k)%RootMotion, MeshMapData%u_BD_RootMotion(k), MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':u_BD_RootMotion('//trim(num2lstr(k))//')' )                 
+         end do
+         
+                              
+      END IF         
+         
       IF ( p_FAST%CompSub == Module_SD ) THEN
          
          CALL MeshCopy ( SD%Input(1)%TPMesh, MeshMapData%u_SD_TPMesh, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
@@ -5161,6 +5595,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
       END IF
                               
    END IF
+   
+   
 
    !............................................................................................................................
 
@@ -5287,7 +5723,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    ! For cases with HydroDyn and/or SubDyn, it calls ED_CalcOuts (a time-sink) 2 times per step/correction (plus the 6 calls when calculating the Jacobian).
    ! For cases without HydroDyn or SubDyn, it calls ED_CalcOuts 1 time per step/correction.
       
-   CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
+   CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
    CALL SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD14, AD, SrvD, IfW, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
@@ -5311,7 +5747,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
          
       ! transfer ED outputs to other modules used in option 1:
-   CALL Transfer_ED_to_HD_SD_Mooring( p_FAST, ED%Output(1), HD%Input(1), SD%Input(1), MAPp%Input(1), FEAM%Input(1), MD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )         
+   CALL Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, ED%Output(1), HD%Input(1), SD%Input(1), MAPp%Input(1), FEAM%Input(1), MD%Input(1), BD%Input(1,:), MeshMapData, ErrStat2, ErrMsg2 )         
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
                                   
    CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
@@ -5462,10 +5898,11 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
    
    IF ( p_FAST%CompSub == Module_SD ) THEN !.OR. p_FAST%CompHydro == Module_HD ) THEN
                                  
-      CALL ED_SD_HD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
-                                    , ED%Input(1), ED%p, ED%x(this_state), ED%xd(this_state), ED%z(this_state), ED%OtherSt, ED%Output(1) &
-                                    , SD%Input(1), SD%p, SD%x(this_state), SD%xd(this_state), SD%z(this_state), SD%OtherSt, SD%y & 
-                                    , HD%Input(1), HD%p, HD%x(this_state), HD%xd(this_state), HD%z(this_state), HD%OtherSt, HD%y & 
+      CALL ED_SD_HD_BD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
+                                    , ED%Input(1),   ED%p, ED%x(  this_state), ED%xd(  this_state), ED%z(  this_state), ED%OtherSt, ED%Output(1) &
+                                    , SD%Input(1),   SD%p, SD%x(  this_state), SD%xd(  this_state), SD%z(  this_state), SD%OtherSt, SD%y & 
+                                    , HD%Input(1),   HD%p, HD%x(  this_state), HD%xd(  this_state), HD%z(  this_state), HD%OtherSt, HD%y & 
+                                    , BD%Input(1,:), BD%p, BD%x(:,this_state), BD%xd(:,this_state), BD%z(:,this_state), BD%OtherSt, BD%y & 
                                     , MAPp%Input(1),   MAPp%y &
                                     , FEAM%Input(1),   FEAM%y &   
                                     , MD%Input(1),     MD%y   &   
@@ -5850,8 +6287,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       END IF
       
    
-   InitInData_ED%InputFile     = p_FAST%EDFile
-   InitInData_ED%ADInputFile   = p_FAST%AeroFile
+   InitInData_ED%InputFile = p_FAST%EDFile
+   IF ( p_FAST%CompAero == Module_AD14 ) THEN
+      InitInData_ED%ADInputFile = p_FAST%AeroFile
+   ELSE
+      InitInData_ED%ADInputFile = ""
+   END IF
+   
    InitInData_ED%RootName      = p_FAST%OutFileRoot
    InitInData_ED%CompElast     = p_FAST%CompElast == Module_ED
 
@@ -5908,20 +6350,22 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       END IF        
    
    IF (p_FAST%CompElast == Module_BD) THEN
+      !bjj: FIX ME: TODO: verify that these are correct
       
       InitInData_BD%RootName     = p_FAST%OutFileRoot     
-      !bjj: FIX ME: TODO: verify that these are correct (also, set sizes in registry input file)
       InitInData_BD%gravity      = (/ 0.0_ReKi, 0.0_ReKi, -InitOutData_ED%Gravity /)       ! "Gravitational acceleration" m/s^2
-      InitInData_BD%GlbPos       = ED%Output(1)%HubPtMotion%Position(:,1) ! {:} - - "Initial Position Vector of the local blade coordinate system"
-      InitInData_BD%GlbRot       = ED%Output(1)%HubPtMotion%RefOrientation(:,:,1) ! {:}{:} - - "Initial direction cosine matrix of the loacl blade coordinate system"
                      
          ! now initialize IceD for additional legs (if necessary)
       dt_BD = p_FAST%dt_module( MODULE_BD )
                         
-      DO i=k,p_FAST%nBeams  
+      DO k=1,p_FAST%nBeams  
          
          InitInData_BD%InputFile    = p_FAST%BDBldFile(k)
-         InitInData_BD%RootDisp     = ED%Output(1)%BladeRootMotion(k)%Position(:,1) ! {:} - - "Initial root displacement"
+         
+         InitInData_BD%GlbPos       = ED%Output(1)%BladeRootMotion(k)%Position(:,1)         ! {:}    - - "Initial Position Vector of the local blade coordinate system"
+         InitInData_BD%GlbRot       = ED%Output(1)%BladeRootMotion(k)%RefOrientation(:,:,1) ! {:}{:} - - "Initial direction cosine matrix of the local blade coordinate system"
+         
+         InitInData_BD%RootDisp     = 0.0_ReKi ! {:} - - "Initial root displacement"
          InitInData_BD%RootOri      = ED%Output(1)%BladeRootMotion(k)%RefOrientation(:,:,1) ! {:}{:} - - "Initial root orientation"
          InitInData_BD%RootVel      = 0.0_ReKi ! {:} - - "Initial root velocities and angular veolcities"                  
          
@@ -6689,7 +7133,7 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD,
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
                         
             
-            ! Shift "window" of IceD%Input 
+            ! Shift "window" of BD%Input 
   
             DO j = p_FAST%InterpOrder, 1, -1
                CALL BD_CopyInput (BD%Input(j,k),  BD%Input(j+1,k),  MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -8223,7 +8667,8 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, H
                           ED%Output(1), ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-      CALL Transfer_ED_to_HD_SD_Mooring( p_FAST, ED%Output(1), HD%Input(1), SD%Input(1), MAPp%Input(1), FEAM%Input(1), MD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )         
+      CALL Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, ED%Output(1), HD%Input(1), SD%Input(1), MAPp%Input(1), FEAM%Input(1), MD%Input(1), &
+                                            BD%Input(1,:), MeshMapData, ErrStat2, ErrMsg2 )         
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                
    END IF   
@@ -8364,6 +8809,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       CALL CalcOutputs_And_SolveForInputs( n_t_global, t_global_next,  STATE_PRED, m_FAST%calcJacobian, m_FAST%NextJacCalcTime, &
                   p_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2 )            
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) RETURN
          
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    ! Step 2: Correct (continue in loop) 

@@ -103,7 +103,6 @@ INTEGER(IntKi)                        :: Restart_step                           
       ! write checkpoint file if requested
       IF (mod(n_t_global, Turbine(1)%p_FAST%n_ChkptTime) == 0 .AND. Restart_step /= n_t_global) then
          CheckpointRoot = TRIM(Turbine(1)%p_FAST%OutFileRoot)//'.'//TRIM(Num2LStr(n_t_global))
-
          
          CALL FAST_CreateCheckpoint_Tary(t_initial, n_t_global, Turbine, CheckpointRoot, ErrStat, ErrMsg)
             IF(ErrStat >= AbortErrLev .and. AbortErrLev >= ErrID_Severe) THEN
