@@ -44,18 +44,15 @@ typedef BeamDyn/BD ConstraintStateType ReKi DummyConstrState - - - "A variable, 
 # e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 # at a given time, etc.)
 typedef BeamDyn/BD OtherStateType ReKi  DummyOtherState  - - - "A variable, replace if you have Other States"
-typedef BeamDyn/BD OtherStateType IntKi Rescale_counter  - - - "A variable, replace if you have Other States"
 typedef BeamDyn/BD OtherStateType IntKi NR_counter  - - - "A variable, replace if you have Other States"
 typedef BeamDyn/BD OtherStateType ReKi  acc        {:} - - "Accerleration in GA2"
 typedef BeamDyn/BD OtherStateType ReKi  xcc        {:} - - "Algorithm accerleration in GA2" 
-typedef BeamDyn/BD OtherStateType ReKi  facc        {:} - - "Global Accerleration in GA2 by rotating acc directly"
 
 # ..... Parameters
 # ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 
-typedef BeamDyn/BD ParameterType DbKi   alpha   - - -  "Numerical Damping Coefficient"  
 typedef BeamDyn/BD ParameterType ReKi   uuN0      {:}{:} - -  "Initial Postion Vector" -
 typedef      ^            ^       ^     Stif0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
 typedef      ^            ^       ^     Mass0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
@@ -72,8 +69,10 @@ typedef      ^            ^       ^     ngp  - - -  "Number of Gauss points" -
 typedef      ^            ^       ^     analysis_type  - - -  "analysis_type flag" -
 typedef      ^            ^       ^     damp_flag  - - -  "damping flag" -
 typedef      ^            ^       ^     niter  - - -  "analysis_type flag" -
+typedef      ^            ^       ^     NRMax  - - -  "Maximum number of iterations in Newton-Ralphson algorithm" -
 typedef      ^            ^      DbKi   dt     - - -  "module dt" s
 typedef      ^            ^      ReKi   beta   {:} - -  "Damping Coefficient" -
+typedef      ^            ^      ReKi   tol    - - -  "Tolerance used in stoppoing criterion" -
 typedef      ^            ^      DbKi   coef   {:} - -  "GA2 Coefficient" -
 typedef BeamDyn/BD ParameterType DbKi   rhoinf - - -  "Numerical Damping Coefficient for GA2"  
 typedef      ^            ^      ReKi   GlbPos {:} - -  "Initial Position Vector between origins of Global and blade frames" -
