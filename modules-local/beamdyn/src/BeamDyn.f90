@@ -91,7 +91,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    REAL(ReKi)              :: temp_e1(3)
    REAL(ReKi)              :: temp_CRV(3)
    REAL(ReKi)              :: temp_GLB(3)
-   REAL(ReKi)              :: temp_glbrot(3)
    REAL(ReKi),PARAMETER    :: EPS = 1.0D-10
    REAL(ReKi),ALLOCATABLE  :: temp_GLL(:)
    REAL(ReKi),ALLOCATABLE  :: temp_GL(:)
@@ -126,28 +125,41 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF( ErrStat >= AbortErrLev ) RETURN
 
+!Read inputs from Driver/Glue code
+!1 Global position vector
+!2 Global rotation tensor
+!3 Gravity vector
+   CALL AllocAry(p%GlbPos,3,'Global position vector',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%GlbRot,3,3,'Global rotation tensor',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%gravity,3,'Gravity vector in Blade frame',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%GlbPos(:) = 0.0D0
+   p%GlbPos(1:3) = InitInp%GlbPos(1:3)
+   p%GlbRot(:,:) = 0.0D0
+   p%GlbRot(1:3,1:3) = InitInp%GlbRot(1:3,1:3)
+   p%gravity(:) = 0.0D0
+   p%gravity(:) = MATMUL(TRANSPOSE(InitInp%GlbRot),InitInp%gravity(:))
 
+! Analysis type: 1 Static 2 Dynamic
    p%analysis_type  = InputFileData%analysis_type
+! Numerical damping coefficient: [0,1].
+! No numerical damping if rhoinf = 1; maximum numerical damping if rhoinf = 0.
+   p%rhoinf = InputFileData%rhoinf
+! Compute generalized-alpha time integrator coefficients given rhoinf
+   CALL AllocAry(p%coef,9,'GA2 coefficient',ErrStat2,ErrMsg2)
+   p%coef(:)  = 0.0D0
+   CALL BD_TiSchmComputeCoefficients(p%rhoinf,p%dt,p%coef)
+! Time step size
+   p%dt = InputFileData%DTBeam
+
    p%damp_flag  = InputFileData%InpBl%damp_flag
    CALL AllocAry(p%beta,6,'Damping coefficient',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    p%beta(:)  = InputFileData%InpBl%beta(:)
 
-   CALL AllocAry(p%gravity,3,'Gravity vector',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   p%gravity(:) = 0.0D0
-   p%gravity(:) = MATMUL(TRANSPOSE(InitInp%GlbRot),InitInp%gravity(:))
 
-   CALL BD_CrvExtractCrv(InitInp%GlbRot,temp_glbrot,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%GlbPos,3,'Global position vector',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%GlbRot,3,3,'Global rotation tensor',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   p%GlbPos(:) = 0.0D0
-   p%GlbRot(:,:) = 0.0D0
-   p%GlbPos(1:3) = InitInp%GlbPos(1:3)
-   p%GlbRot(1:3,1:3) = InitInp%GlbRot(1:3,1:3)
 
    CALL AllocAry(SP_Coef,InputFileData%kp_total-1,4,4,'Spline coefficient matrix',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -340,15 +352,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         ! total number of node
    p%dof_total   = p%node_total*p%dof_node   ! total number of dof
-   p%dt = Interval
    p%alpha = 0.5D0
 !   WRITE(*,*) "node_total: ", p%node_total
 !   STOP
 
-   CALL AllocAry(p%coef,9,'GA2 coefficient',ErrStat2,ErrMsg2)
-   p%coef(:)  = 0.0D0
-   p%rhoinf = InputFileData%rhoinf
-   CALL BD_TiSchmComputeCoefficients(p%rhoinf,p%dt,p%coef)
    ! Allocate OtherState if using multi-step method; initialize n
 
 
