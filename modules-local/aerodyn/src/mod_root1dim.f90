@@ -92,10 +92,10 @@ subroutine sub_brent(x,f,a_in,b_in, toler_in,maxiter_in,fcnArgs,fa_in,fb_in,xtol
     ! Test whether root is bracketed
     if (.not. bracketsRoot(fa,fb)) then
         if (abs(fa)<abs(fb)) then
-            write(*,*) 'brent: WARNING: root is not bracketed, returning best endpoint a'
+            call WrScr( 'brent: WARNING: root is not bracketed, returning best endpoint a' )
             x = a
         else
-            write(*,*) 'brent: WARNING: root is not bracketed, returning best endpoint b'
+            call WrScr( 'brent: WARNING: root is not bracketed, returning best endpoint b' )
             x = b
         end if
         return

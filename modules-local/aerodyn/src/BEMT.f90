@@ -551,6 +551,15 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    call BEMT_SetParameters( InitInp, p, errStat, errMsg )
    if (errStat >= AbortErrLev) return
 
+      ! We need to set an other state version so that we can change this during executin if the AOA is too large!
+   allocate ( OtherState%UA_Flag( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
+   if ( errStat2 /= 0 ) then
+      errStat2 = ErrID_Fatal
+      errMsg2  = 'Error allocating memory for OtherState%UA_Flag.'
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_Init' )
+      return
+   end if 
+   OtherState%UA_Flag = p%UA_Flag
    
       ! initialize the constraint states
    call BEMT_InitContraintStates( z, p, errStat, errMsg )     ! initialize the continuous states
@@ -751,10 +760,10 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                OtherState%UA%iBlade     = j
                
                if ( p%SkewWakeMod < SkewMod_Coupled ) then
-                  
+                  ! TODO: Need to find the rtip location at initialization and then pass that in to the Solve GJH
                   call BEMT_UnCoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j), u%theta(i,j),  &
                               u%Vx(i,j), u%Vy(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
-                              p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
+                              .FALSE., p%UA, xd%UA, OtherState%UA, &  !p%UA_Flag
                               p%numReIterations, p%maxIndIterations, p%aTol,  &
                               z%phi(i,j), errStat, errMsg) 
                   if (errStat >= AbortErrLev) return
@@ -763,16 +772,16 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
          
                   CALL BEMT_CoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j), u%theta(i,j), &
                               u%Vx(i,j), u%Vy(i,j), u%Vinf(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
-                              p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
+                              .FALSE., p%UA, xd%UA, OtherState%UA, & !p%UA_Flag
                               p%maxIndIterations, p%aTol, z%axInduction(i,j), z%tanInduction(i,j), errStat, errMsg)       
         
                end if 
                
-               if (p%UA_Flag) then
+               if (OtherState%UA_Flag(i,j)) then
                   ! Need to generate the inputs for the unsteady aero module for time t
                   ! These are the local relative wind velocity, the angle of attack, and the Reynolds number
                   ! We can get all of these from the BEMT Wind routines
-                  
+                   
                   
                   if ( p%SkewWakeMod < SkewMod_Coupled ) then
                      call BEMTU_Wind(z%phi(i,j), 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u_UA%alpha,  u_UA%U, u_UA%Re)
@@ -781,9 +790,14 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                      phi = ComputePhiWithInduction(u%Vy(i,j), u%Vx(i,j), z%axInduction(i,j), z%tanInduction(i,j), errStat, errMsg)
                      u_UA%U = BEMTC_Wind(z%axInduction(i,j), z%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u%chi0, u%psi(j), phi, u_UA%alpha, u_UA%Re, chi)
                   end if
-!bjj: u_UA%U is zero, which is causing division-by-zero errors later                  
-                  call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), errStat, errMsg )
-                  
+!bjj: u_UA%U is zero, which is causing division-by-zero errors later      
+                  if ( abs(u_UA%alpha) > 40.0*D2R ) then
+                     OtherState%UA_Flag(i,j) = .FALSE.
+                     call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to high angle-of-attack.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
+                  else
+                     
+                     call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), errStat, errMsg )
+                  end if
                end if
                
             end do
@@ -796,11 +810,20 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
          do j = 1,p%numBlades       
             do i = 1,p%numBladeNodes 
                z%phi = ComputePhiWithInduction(u%Vy(i,j), u%Vx(i,j), 0.0_ReKi, 0.0_ReKi, errStat, errMsg)
-               if (p%UA_Flag) then
+               if (OtherState%UA_Flag(i,j)) then
                      ! Set the active blade element for UnsteadyAero
                   OtherState%UA%iBladeNode = i
                   OtherState%UA%iBlade     = j
-                  call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), errStat, errMsg ) 
+                  u_UA%U = BEMTC_Wind(z%axInduction(i,j), z%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u%chi0, u%psi(j), phi, u_UA%alpha, u_UA%Re, chi)
+                   
+                  if ( abs(u_UA%alpha) > 40.0*D2R ) then
+                     OtherState%UA_Flag(i,j) = .FALSE.
+                     !write( tmpStr, '(F15.4)' ) t
+                     call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to high angle-of-attack.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
+                  else
+                     
+                     call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), errStat, errMsg )
+                  end if
                end if
             end do
          end do
@@ -910,14 +933,14 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
             if (p%skewWakeMod < SkewMod_Coupled) then
                fzero = BEMTU_InductionWithResidual(y%phi(i,j), psi, chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j), u%theta(i,j),  AFInfo(p%AFindx(i,j)), &
                               Vx, Vy, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
-                              p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
+                              OtherState%UA_Flag(i,j), p%UA, xd%UA, OtherState%UA, &
                               y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%Cm(i,j), y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), errStat, errMsg)
             else if (p%skewWakeMod == SkewMod_Coupled) then
                y%axInduction(i,j)  = z%axInduction(i,j)
                y%tanInduction(i,j) = z%tanInduction(i,j)
                coupledResidual = BEMTC_Elemental( z%axInduction(i,j), z%tanInduction(i,j), psi, chi0, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j), u%theta(i,j),  AFInfo(p%AFindx(i,j)), &
                               Vx, Vy, Vinf, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
-                              p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
+                              OtherState%UA_Flag(i,j), p%UA, xd%UA, OtherState%UA, &
                               y%phi(i,j), y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%Cm(i,j), y%chi(i,j), ErrStat, ErrMsg)
             end if
          else
@@ -925,7 +948,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
             y%tanInduction(i,j) = 0.0_ReKi
             if (p%skewWakeMod < SkewMod_Coupled) then
                call ComputeAirfoilCoefs( y%phi(i,j), 0.0_ReKi, 0.0_ReKi, Vx, Vy, p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, .TRUE., .TRUE., AFInfo(p%AFindx(i,j)), &
-                                         p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
+                                         OtherState%UA_Flag(i,j), p%UA, xd%UA, OtherState%UA, &
                                          y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%Cm(i,j), errStat, errMsg )       
                ! NEED TO COMPUTE AND RETURN chi as an output in this case
             else if (p%skewWakeMod == SkewMod_Coupled) then
@@ -1082,7 +1105,7 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_res
             IF ( p%SkewWakeMod < SkewMod_Coupled ) THEN
                z%phi(i,j) = UncoupledErrFn(z%phi(i,j), u%psi(j), u%chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j), u%theta(i,j), AFInfo(p%AFindx(i,j)), &
                                  u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
-                                 p%UA_Flag, p%UA, xd%UA, OtherState%UA, &
+                                 OtherState%UA_Flag(i,j), p%UA, xd%UA, OtherState%UA, &
                                  ErrStat, ErrMsg)
          
          

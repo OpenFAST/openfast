@@ -83,6 +83,7 @@ typedef   ^                            ConstraintStateType           ReKi       
 #
 typedef   ^                            OtherStateType                ReKi                     DummyOtherState                     -           -         -         ""   -
 typedef   ^                            ^                             UA_OtherStateType        UA                                  -             -         -        "other states for UnsteadyAero"        -
+typedef   ^                            ^                             LOGICAL                  UA_Flag                         {:}{:}          -         -        "logical flag indicating whether to use UnsteadyAero"        -
 #typedef   ^                            ^                             UA_OutputType            y_UA                                -             -         -        "other states for UnsteadyAero"        -
 
 # ..... Parameters ................................................................................................................

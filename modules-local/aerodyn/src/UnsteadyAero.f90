@@ -404,7 +404,16 @@ real(ReKi) function Get_f_c_from_Lookup( Re, alpha, alpha0, C_nalpha, AFInfo, Er
       if (ErrStat > ErrID_None) return
    
    Cc =  Cl*sin(alpha) - (Cd-Cd0)*cos(alpha)
-   Get_f_c_from_Lookup = (  Cc / ( C_nalpha*( alpha-alpha0 )*tan(alpha) )  ) **2 
+      ! Apply an offset of 0.2 to fix cases where f_c should be negative, but we are using **2 so can only return positive values
+      ! Note: because we include this offset, it must be accounted for in the final value of Cc, eqn 1.38.  This will be applied
+      ! For both UA_Mod = 1,2, and 3 when using Flookup = T
+   Get_f_c_from_Lookup = (  Cc / ( C_nalpha*( alpha-alpha0 )*tan(alpha) )  + 0.2 ) **2 
+   
+   !Get_f_c_from_Lookup = (  Cc / ( C_nalpha*( alpha-alpha0 )*tan(alpha) )  ) **2 
+   !if ( Cc < 0.0_ReKi ) then
+   !   Get_f_c_from_Lookup = -Get_f_c_from_Lookup
+   !end if
+   
    if ( Get_f_c_from_Lookup > 1.0 ) then
       Get_f_c_from_Lookup = 1.0_ReKi
    end if
@@ -616,7 +625,7 @@ real(ReKi) function Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime
       
    else ! UAMod == 2
          ! TODO: Incomplete because we are not computing fprimeprime_m yet. GJH 5/21/2015
-      Get_Cm_FS = Cn_FS*fprimeprime_m + Cm_common
+      Get_Cm_FS = Cm0 + Cn_FS*fprimeprime_m + Cm_common
    end if
    
 end function Get_Cm_FS
@@ -762,6 +771,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    real(ReKi)                :: k_mq                                          !
    real(ReKi)                :: Kprimeprime_q                                 !
    real(ReKi)                :: fprime_c_minus1
+   real(ReKi)                :: alphaf_minus1
    
    
 
@@ -780,7 +790,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
       eta_e = 1.0
    end if
    
-   if (OtherState%FirstPass) then
+   if (OtherState%FirstPass(i,j)) then
       alpha_minus1 = u%alpha
       alpha_minus2 = u%alpha
    else
@@ -791,7 +801,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    dalpha0  = u%alpha - alpha0
    q_cur    = Get_Pitchrate( p%dt, u%alpha, alpha_minus1, u%U, p%c(i,j)  )  ! Eqn 1.8
    
-   if (OtherState%FirstPass) then
+   if (OtherState%FirstPass(i,j)) then
       q_minus1 = q_cur   
       q_minus2 = q_cur 
    else
@@ -879,7 +889,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    Cc_pot          = Cn_alpha_q_circ*tan(alpha_e+alpha0)
    
    
-   if (OtherState%FirstPass) then
+   if (OtherState%FirstPass(i,j)) then
       Cn_pot_minus1 = Cn_pot
    else
       Cn_pot_minus1 = xd%Cn_pot_minus1(i,j)
@@ -902,7 +912,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
       fprime        = Get_f( alpha_f, alpha0, alpha1, alpha2, S1, S2, S3, S4)
    end if
    
-   if (OtherState%FirstPass) then
+   if (OtherState%FirstPass(i,j)) then
       fprime_minus1 = fprime
    else
       fprime_minus1 = xd%fprime_minus1(i,j)
@@ -923,10 +933,12 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
       !end if
       
    
-      if (OtherState%FirstPass) then
+      if (OtherState%FirstPass(i,j)) then
          fprime_c_minus1 = fprime_c
+         alphaf_minus1   = alpha_f
       else
          fprime_c_minus1 = xd%fprime_c_minus1(i,j)
+         alphaf_minus1   = xd%alphaf_minus1(i,j)
       end if
    
          ! Compute Df using Eqn 1.33b   
@@ -943,7 +955,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    
    if ( p%UAMod == 3 ) then
          ! Eqn 1.41b
-      Dalphaf    = Get_ExpEqn( ds, T_f, xd%Dalphaf_minus1(i,j), fprime, fprime_minus1 )
+      Dalphaf    = Get_ExpEqn( ds, T_f, xd%Dalphaf_minus1(i,j), alpha_f, alphaf_minus1 )
    else
       Dalphaf    = 0.0_ReKi
    end if
@@ -959,7 +971,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
       ! Compute Cn_v using either Eqn 1.45 or 1.49 depending on operating conditions
    Cn_v          = Get_Cn_v ( ds, T_V, xd%Cn_v_minus1(i,j), C_V, xd%C_V_minus1(i,j), xd%tau_V(i,j), T_VL, T_V0, Kalpha, u%alpha, alpha0 ) ! do I pass VRTX flag or tau_V?
    
-   if (OtherState%FirstPass) then
+   if (OtherState%FirstPass(i,j)) then
       Cn_v = 0.0_ReKi
    end if
    
@@ -1047,6 +1059,7 @@ subroutine UA_InitStates( p, xd, OtherState, ErrStat, ErrMsg )
    allocate(xd%Df_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
    allocate(xd%Df_c_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
    allocate(xd%Dalphaf_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
+   allocate(xd%alphaf_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
    allocate(xd%fprime_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
    allocate(xd%fprime_c_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
    allocate(xd%tau_V(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
@@ -1057,7 +1070,7 @@ subroutine UA_InitStates( p, xd, OtherState, ErrStat, ErrMsg )
    allocate(OtherState%TESF(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
    allocate(OtherState%LESF(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
    allocate(OtherState%VRTX(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   
+   allocate(OtherState%FirstPass(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
    OtherState%sigma1    = 1.0_ReKi
    OtherState%sigma3    = 1.0_ReKi
    OtherState%TESF      = .FALSE.  
@@ -1084,6 +1097,7 @@ subroutine UA_InitStates( p, xd, OtherState, ErrStat, ErrMsg )
    xd%Df_minus1            = 0.0_ReKi
    xd%Df_c_minus1          = 0.0_ReKi
    xd%Dalphaf_minus1       = 0.0_ReKi
+   xd%alphaf_minus1        = 0.0_ReKi
    xd%fprime_minus1        = 0.0_ReKi
    xd%fprime_c_minus1      = 0.0_ReKi
    xd%tau_V                = 0.0_ReKi 
@@ -1388,17 +1402,17 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
       
          ! We are testing this heirarchical logic instead of the above block 5/29/2015
       if ( (xd%tau_V(i,j) <= 2.0_ReKi*T_VL) .and. (xd%tau_V(i,j) >= T_VL) ) then
-         OtherState%sigma3(i,j) = 3.0_ReKi
+         OtherState%sigma3(i,j) =  3.0_ReKi
       else if (.not. OtherState%TESF(i,j)) then
-         OtherState%sigma3(i,j) = 4.0_ReKi
+         OtherState%sigma3(i,j) =  4.0_ReKi
       else if ( OtherState%VRTX(i,j) .and. (xd%tau_V(i,j) <= T_VL) ) then
          if (Kafactor < 0.0_ReKi) then
-            OtherState%sigma3(i,j) = 2.0_ReKi
+            OtherState%sigma3(i,j) =  2.0_ReKi
          else
             OtherState%sigma3(i,j) = 1.0_ReKi
           end if           
       else if (Kafactor < 0 ) then 
-         OtherState%sigma3(i,j) = 4.0_ReKi
+         OtherState%sigma3(i,j) =  4.0_ReKi
       end if
       
       
@@ -1411,7 +1425,7 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
       !---------------------------------------------------------
       ! Update the Discrete States, xd
       !---------------------------------------------------------
-      if (OtherState%FirstPass) then
+      if (OtherState%FirstPass(i,j)) then
          xd%alpha_minus2(i,j)      = u%alpha
          xd%q_minus2(i,j)          = q_cur
       else
@@ -1439,9 +1453,10 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
       
       xd%Dalphaf_minus1(i,j)      = Dalphaf
       xd%fprime_minus1(i,j)       = fprime
+      xd%alphaf_minus1(i,j)       = alpha_f
       xd%Cn_v_minus1(i,j)         = Cn_v
       xd%C_V_minus1(i,j)          = C_V
-      OtherState%FirstPass        = .false.
+      OtherState%FirstPass(i,j)        = .false.
    
       if ( xd%tau_V(i,j) > 0.0 .or. OtherState%LESF(i,j) ) then                !! TODO:  Verify this condition 2/20/2015 GJH
          xd%tau_V(i,j)          = xd%tau_V(i,j) + 2.0_ReKi*p%dt*u%U / p%c(i,j)  
@@ -1557,7 +1572,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
    real(ReKi)                                             :: dalpha0
    real(ReKi)                                             :: alpha_f
    real(ReKi)                                             :: eta_e
-   real(ReKi)                                             :: St_sh
+   real(ReKi)                                             :: St_sh, Kafactor, f_c_offset
    real(ReKi)                                             :: Cl_static, Cd_static, Cm_static, Cn_static, Cm_alpha_nc, Cn_q_circ, Cn_q_nc, T_f, T_V
    real(ReKi)                                             :: M, alpha1, alpha2, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, b1,b2,b5,A1,A2,A5,S1,S2,S3,S4,k1_hat,f, k2_hat
    integer                                                :: iOffset
@@ -1570,7 +1585,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
   
    iOffset = (OtherState%iBladeNode-1)*p%NumOuts + (OtherState%iBlade-1)*p%nNodesPerBlade*p%NumOuts 
    
-   if (OtherState%FirstPass) then
+   if (OtherState%FirstPass(OtherState%iBladeNode, OtherState%iBlade)) then
       
       
       call GetSteadyOutputs(AFInfo, u%alpha, y%Cl, y%Cd, y%Cm, Cd0, ErrStat, ErrMsg)
@@ -1591,23 +1606,41 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       
             
          ! Eqn 1.50(a or b depending on UAMod)
-      y%Cn= Cn_FS + Cn_v
-            
-         
+      if (xd%tau_v(OtherState%iBladeNode, OtherState%iBlade) > 0.0) then
+         y%Cn= Cn_FS + Cn_v
+      else
+         y%Cn= Cn_FS
+      end if
+      
+         ! This offset is to account for a correction for negative values of f_c which we cannot return due to a squaring of the quantity when using a lookup.
+      if (p%Flookup) then
+         f_c_offset = 0.2_ReKi
+      else
+         f_c_offset = 0.0_ReKi
+      end if
+      
       if ( p%UAMod == 3 .OR. p%UAMod == 4) then
             ! Eqn 1.52a   TODO: NOTE:  This is what is used in AD v14, so we may need a way to use this when we want to match v14 as much as possible! GJH 5/21/2015
-         y%Cc = eta_e*Cc_pot*sqrt(fprimeprime_c) + Cn_v*tan(alpha_e)*(1-xd%tau_v(OtherState%iBladeNode, OtherState%iBlade))
+        ! TODO: Look at eliminating this vortex related contribution under reversing AOA and perhaps when VRTX = F
+         Kafactor             = Kalpha*dalpha0
+         if  ( Kafactor < 0.0_ReKi ) then ! .AND.  .NOT. OtherState%VRTX(OtherState%iBladeNode, OtherState%iBlade )  )then
+            y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset)
+         else         
+            y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*tan(alpha_e)*(1-xd%tau_v(OtherState%iBladeNode, OtherState%iBlade))
+         end if
+         
       elseif ( p%UAMod == 2 ) then
             ! Eqn 1.52b
-         y%Cc = eta_e*Cc_pot*sqrt(fprimeprime_c) 
+         y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset)
       else
          if ( Cn_prime <= Cn1 ) then
-            y%Cc = eta_e*Cc_pot*sqrt(fprimeprime_c) !*sin(alpha_e + alpha0)
+            y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) !*sin(alpha_e + alpha0)
          else
             if ( p%flookup ) then 
               ! if (p%UAMod == 1) then
               !    f      = Get_f_from_Lookup( p%UAMod, u%Re, u%alpha, alpha0, C_nalpha, AFInfo, ErrStat, ErrMsg)
               ! else   
+               ! TODO: Need to understand the effect of the offset on this f in the following equations and fprimeprime_c.
                   f      = Get_f_c_from_Lookup( u%Re, u%alpha, alpha0, C_nalpha, AFInfo, ErrStat, ErrMsg)
               ! endif
                
@@ -1632,7 +1665,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
          call GetSteadyOutputs(AFInfo, alpha_f, Cl_static, Cd_static, Cm_static, Cd0, ErrStat, ErrMsg)
          Cn_static = Cl_static*cos(alpha_f) + (Cd_static-Cd0)*sin(alpha_f)
          ! TODO: What about when Cn = 0  GJH 5/22/2015
-         fprimeprime_m = Cm_static / Cn_static 
+         fprimeprime_m = (Cm_static - Cm0) / Cn_static 
       else
          fprimeprime_m = 0.0
       end if
