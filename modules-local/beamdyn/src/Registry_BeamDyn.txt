@@ -43,8 +43,6 @@ typedef BeamDyn/BD ConstraintStateType ReKi DummyConstrState - - - "A variable, 
 # Define any data that are not considered actual states here:
 # e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 # at a given time, etc.)
-typedef BeamDyn/BD OtherStateType ReKi  DummyOtherState  - - - "A variable, replace if you have Other States"
-typedef BeamDyn/BD OtherStateType IntKi NR_counter  - - - "A variable, replace if you have Other States"
 typedef BeamDyn/BD OtherStateType ReKi  acc        {:} - - "Accerleration in GA2"
 typedef BeamDyn/BD OtherStateType ReKi  xcc        {:} - - "Algorithm accerleration in GA2" 
 
