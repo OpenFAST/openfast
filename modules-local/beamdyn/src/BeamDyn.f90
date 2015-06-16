@@ -153,6 +153,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 ! Compute generalized-alpha time integrator coefficients given rhoinf
    CALL AllocAry(p%coef,9,'GA2 coefficient',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%coef(:) = 0.0D0
    CALL BD_TiSchmComputeCoefficients(p%rhoinf,p%dt,p%coef, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 ! Maximum number of iterations in Newton-Ralphson algorithm
@@ -174,6 +175,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 ! Compute coefficients for cubic spline fit, clamped at two ends
    CALL AllocAry(SP_Coef,InputFileData%kp_total-1,4,4,'Spline coefficient matrix',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   SP_Coef(:,:,:) = 0.0D0
    temp_id = 0
    temp_id2 = 0
    DO i=1,InputFileData%member_total
@@ -187,8 +189,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 ! Compute blade/member/segment lengths and the ratios between member/segment and blade lengths
    CALL AllocAry(p%member_length,InputFileData%member_total,2,'member length array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%member_length(:,:) = 0.0D0
    CALL AllocAry(p%segment_length,InputFileData%kp_total-1,3,'segment length array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%segment_length(:,:) = 0.0D0
    CALL BD_ComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,SP_Coef,&
                                p%segment_length,p%member_length,p%blade_length,&
                                ErrStat2,ErrMsg2)
@@ -196,12 +200,15 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    temp_int = p%node_elem * p%dof_node
    CALL AllocAry(p%uuN0,temp_int,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%uuN0(:,:) = 0.0D0
    ! Temporary GLL point intrinsic coordinates array
    CALL AllocAry(temp_GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_GLL(:) = 0.0D0
    ! Temporary GLL weight function array
    CALL AllocAry(temp_w,p%node_elem,'GLL weight array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_w(:) = 0.0D0
    CALL BD_GenerateGLL(p%node_elem-1,temp_GLL,temp_w,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    DEALLOCATE(temp_w)
@@ -209,12 +216,15 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ! temp_L2: physical coordinates of Gauss points and two end points
    CALL AllocAry(temp_L2,3,p%ngp*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_L2(:,:) = 0.0D0
    ! Temporary Gauss point intrinsic coordinates array
    CALL AllocAry(temp_GL,p%ngp,'temp_GL',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_GL(:) = 0.0D0
    ! Temporary Gauss weight function array
    CALL AllocAry(temp_w,p%ngp,'GL weight array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_w(:) = 0.0D0
    CALL BD_GaussPointWeight(p%ngp,temp_GL,temp_w,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    DEALLOCATE(temp_w)
@@ -275,15 +285,16 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    temp_L2(1:3,1) = p%uuN0(1:3,1)
    temp_L2(1:3,p%ngp*p%elem_total+2) = p%uuN0(temp_int-5:temp_int-3,p%elem_total)
    DEALLOCATE(temp_GLL)
+   DEALLOCATE(SP_Coef)
 
 ! Compute sectional propertities ( 6 by 6 stiffness and mass matrices)
 ! at Gauss points
    CALL AllocAry(temp_ratio,p%ngp,p%elem_total,'temp_ratio',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_ratio(:,:) = 0.0D0
    DO i=1,p%ngp
        temp_GL(i) = (temp_GL(i) + 1.0D0)/2.0D0
    ENDDO
-
    DO i=1,p%elem_total
        IF(i .EQ. 1) THEN
            DO j=1,p%ngp
@@ -301,8 +312,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    CALL AllocAry(p%Stif0_GL,6,6,p%ngp*p%elem_total,'Stif0_GL',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%Stif0_GL(:,:,:) = 0.0D0
    CALL AllocAry(p%Mass0_GL,6,6,p%ngp*p%elem_total,'Mass0_GL',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%Mass0_GL(:,:,:) = 0.0D0
    DO i=1,p%elem_total
        DO j=1,p%ngp
            temp_id = (i-1)*p%ngp+j
@@ -330,13 +343,13 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            ENDDO
        ENDDO
    ENDDO
-
    DEALLOCATE(temp_GL)
    DEALLOCATE(temp_ratio)
 ! Physical damping flag and 6 damping coefficients
    p%damp_flag  = InputFileData%InpBl%damp_flag
    CALL AllocAry(p%beta,6,'Damping coefficient',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%beta(:)  = 0.0D0
    p%beta(:)  = InputFileData%InpBl%beta(:)
 
    IF( ErrStat >= AbortErrLev ) RETURN
@@ -345,14 +358,18 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 ! Allocate continuous states
    CALL AllocAry(x%q,p%dof_total,'x%q',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   x%q(:) = 0.0D0
    CALL AllocAry(x%dqdt,p%dof_total,'x%dqdt',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   x%dqdt(:) = 0.0D0
 ! Allocate other states: Acceleration and algorithm accelerations 
 ! for generalized-alpha time integator
    CALL AllocAry(OtherState%acc,p%dof_total,'OtherState%acc',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   OtherState%acc(:) = 0.0D0
    CALL AllocAry(OtherState%xcc,p%dof_total,'OtherState%xcc',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   OtherState%xcc(:) = 0.0D0
 
    ! Define system output initializations (set up mesh) here:
    CALL MeshCreate( BlankMesh        = u%RootMotion            &
@@ -4672,20 +4689,12 @@ END SUBROUTINE BD_ValidateInputData
                               EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                               damp_flag,beta,                          &
                               ngp,node_elem,dof_node,elk,elf,elm,elg)
-!WRITE(*,*) 'elf:',nelem
-!DO j=1,18
-!   WRITE(*,*) elf(j)
-!ENDDO
 
        CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elk,StifK)
        CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elm,MassM)
        CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elg,DampG)
        CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS)
    ENDDO
-!WRITE(*,*) 'RHS:'
-!DO j=1,30
-!   WRITE(*,*) RHS(j)
-!ENDDO
 
    DEALLOCATE(Nuu0)
    DEALLOCATE(Nuuu)
