@@ -98,6 +98,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    REAL(ReKi),ALLOCATABLE  :: temp_L2(:,:)
    REAL(ReKi),ALLOCATABLE  :: SP_Coef(:,:,:)
    REAL(ReKi)              :: TmpPos(3)
+   REAL(ReKi)              :: TmpDCM(3,3)
 
    INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
@@ -236,7 +237,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    DEALLOCATE(temp_w)
    ! temp_L2: the DistrLoad mesh node location
    ! temp_L2: physical coordinates of Gauss points and two end points
-   CALL AllocAry(temp_L2,3,p%ngp*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2)
+   CALL AllocAry(temp_L2,6,p%ngp*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Temporary Gauss point intrinsic coordinates array
    CALL AllocAry(temp_GL,p%ngp,'temp_GL',ErrStat2,ErrMsg2)
@@ -283,12 +284,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                    CALL BD_ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV,ErrStat2,ErrMsg2)
                       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                    temp_id2 = (j-1)*p%dof_node
-                   p%uuN0(temp_id2+1,i) = temp_POS(1)
-                   p%uuN0(temp_id2+2,i) = temp_POS(2)
-                   p%uuN0(temp_id2+3,i) = temp_POS(3)
-                   p%uuN0(temp_id2+4,i) = temp_CRV(1)
-                   p%uuN0(temp_id2+5,i) = temp_CRV(2)
-                   p%uuN0(temp_id2+6,i) = temp_CRV(3)
+                   p%uuN0(temp_id2+1:temp_id2+3,i) = temp_POS(1:3)
+                   p%uuN0(temp_id2+4:temp_id2+6,i) = temp_CRV(1:3)
                    EXIT
                ENDIF
            ENDDO
@@ -305,15 +302,20 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                    CALL BD_ComputeIniNodalPosition(temp_Coef,eta,temp_POS,temp_e1,temp_twist,&
                                                    ErrStat2, ErrMsg2)
                       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                   CALL BD_ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV,ErrStat2,ErrMsg2)
+                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                    temp_id2 = (i-1)*p%ngp+j+1
                    temp_L2(1:3,temp_id2) = temp_POS(1:3)
+                   temp_L2(4:6,temp_id2) = temp_CRV(1:3)
                    EXIT
                ENDIF
            ENDDO
        ENDDO
    ENDDO
    temp_L2(1:3,1) = p%uuN0(1:3,1)
+   temp_L2(4:6,1) = p%uuN0(4:6,1)
    temp_L2(1:3,p%ngp*p%elem_total+2) = p%uuN0(temp_int-5:temp_int-3,p%elem_total)
+   temp_L2(4:6,p%ngp*p%elem_total+2) = p%uuN0(temp_int-2:temp_int,p%elem_total)
    DEALLOCATE(temp_GLL)
    DEALLOCATE(SP_Coef)
 
@@ -505,12 +507,15 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ENDDO
    ! place single node at origin; position affects mapping/coupling with other modules
    TmpPos(:) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1))
+   temp_CRV(:) = MATMUL(p%GlbRot,p%uuN0(4:6,1))
+   CALL BD_CrvMatrixR(temp_CRV,TmpDCM)
+   TmpDCM(:,:) = TRANSPOSE(TmpDCM)
    CALL MeshPositionNode ( Mesh = u%RootMotion      &
                          , INode = 1                &
                          , Pos = TmpPos             &
                          , ErrStat   = ErrStat2     &
                          , ErrMess   = ErrMsg2      &
-                         , Orient = ??? ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
+                         , Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
@@ -518,28 +523,33 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        DO j=1,p%node_elem
            temp_id = (j-1) * p%dof_node
            TmpPos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+           temp_CRV(:) = MATMUL(p%GlbRot,p%uuN0(temp_id+4:temp_id+6,i))
+           CALL BD_CrvMatrixR(temp_CRV,TmpDCM)
+           TmpDCM(:,:) = TRANSPOSE(TmpDCM)
            temp_id = (i-1)*(p%node_elem-1)+j
            CALL MeshPositionNode ( Mesh    = u%PointLoad  &
                                   ,INode   = temp_id      &
                                   ,Pos     = TmpPos       &
                                   ,ErrStat = ErrStat2      &
                                   ,ErrMess = ErrMsg2       &
-                                  , Orient = ??? ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
+                                  , Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDDO
    ENDDO
    DO i=1,p%elem_total
        DO j=1,p%node_elem
            temp_id = (j-1)*p%dof_node
-!           TmpPos(1:3) = p%uuN0(temp_id+1:temp_id+3,i)
            TmpPos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+           temp_CRV(:) = MATMUL(p%GlbRot,p%uuN0(temp_id+4:temp_id+6,i))
+           CALL BD_CrvMatrixR(temp_CRV,TmpDCM)
+           TmpDCM(:,:) = TRANSPOSE(TmpDCM)
            temp_id = (i-1)*p%node_elem+j
            CALL MeshPositionNode ( Mesh    = y%BldMotion  &
                                   ,INode   = temp_id      &
                                   ,Pos     = TmpPos       &
                                   ,ErrStat = ErrStat2      &
                                   ,ErrMess = ErrMsg2       &
-                                  , Orient = ??? ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
+                                  , Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            
        ENDDO
@@ -547,12 +557,15 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    DO i=1,p%ngp*p%elem_total+2
        TmpPos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
+       temp_CRV(:) = MATMUL(p%GlbRot,temp_L2(4:6,i))
+       CALL BD_CrvMatrixR(temp_CRV,TmpDCM)
+       TmpDCM(:,:) = TRANSPOSE(TmpDCM)
        CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
                               ,INode   = i            &
                               ,Pos     = TmpPos       &
                               ,ErrStat = ErrStat2      &
                               ,ErrMess = ErrMsg2      &
-                              , Orient = ??? ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
+                              , Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        
    ENDDO
