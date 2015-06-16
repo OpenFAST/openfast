@@ -137,8 +137,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF( ErrStat >= AbortErrLev ) RETURN
    p%GlbPos(1:3)     = InitInp%GlbPos(1:3)
-   p%GlbRot(1:3,1:3) = InitInp%GlbRot(1:3,1:3)
-   p%gravity(:) = MATMUL(TRANSPOSE(InitInp%GlbRot),InitInp%gravity(:))
+   p%GlbRot(1:3,1:3) = TRANSPOSE(InitInp%GlbRot(1:3,1:3))
+   p%gravity(:) = MATMUL(TRANSPOSE(p%GlbRot),InitInp%gravity(:))
 
 ! Analysis type: 1 Static 2 Dynamic
    p%analysis_type  = InputFileData%analysis_type
@@ -395,7 +395,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       end if
    p%beta(:)  = 0.0D0
    p%beta(:)  = InputFileData%InpBl%beta(:)
-
    IF( ErrStat >= AbortErrLev ) RETURN
 
    WRITE(*,*) "Finished Read Input"
@@ -844,6 +843,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    REAL(ReKi):: cc(3)
    REAL(ReKi):: cc0(3)
    REAL(ReKi):: temp_cc(3)
+   REAL(ReKi):: temp_glb(3)
    REAL(ReKi):: temp_R(3,3)
    REAL(ReKi):: temp6(6)
    REAL(ReKi):: temp_Force(p%dof_total)
@@ -863,6 +863,8 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
@@ -879,10 +881,11 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
            cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
            CALL BD_CrvCompose(temp_cc,cc0,cc,0,ErrStat2,ErrMsg2)
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           
            temp_cc = MATMUL(p%GlbRot,temp_cc)
+           CALL BD_CrvCompose(temp_cc,temp_cc,temp_glb,0,ErrStat2,ErrMsg2)
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            CALL BD_CrvMatrixR(temp_cc,temp_R)
-           y%BldMotion%Orientation(1:3,1:3,temp_id2) = temp_R(1:3,1:3)
+           y%BldMotion%Orientation(1:3,1:3,temp_id2) = TRANSPOSE(temp_R(1:3,1:3))
 
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
            y%BldMotion%TranslationVel(1:3,temp_id2) = MATMUL(p%GlbRot,x%dqdt(temp_id+1:temp_id+3))
@@ -4649,6 +4652,7 @@ END SUBROUTINE BD_GA2
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    REAL(ReKi)                                   :: temp_cc(3)
+   REAL(ReKi)                                   :: temp_glb(3)
    INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_BoundaryGA2'
@@ -4661,7 +4665,11 @@ END SUBROUTINE BD_GA2
    ! Root rotations
    CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),x%q(4:6),ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    temp_cc(:) = MATMUL(p%GlbRot,p%uuN0(4:6,1))
+   CALL BD_CrvCompose(temp_cc,temp_cc,temp_glb,0,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CrvCompose(x%q(4:6),x%q(4:6),temp_cc,2,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    x%q(4:6) = MATMUL(TRANSPOSE(p%GlbRot),x%q(4:6))
@@ -4953,6 +4961,8 @@ END SUBROUTINE BD_GA2
        u%RootMotion%RotationVel(:,1)     = MATMUL(TRANSPOSE(RotTen),u%RootMotion%RotationVel(:,1))
        u%RootMotion%TranslationAcc(:,1)  = MATMUL(TRANSPOSE(RotTen),u%RootMotion%TranslationAcc(:,1))
        u%RootMotion%RotationAcc(:,1)     = MATMUL(TRANSPOSE(RotTen),u%RootMotion%RotationAcc(:,1))
+       ! Transform DCM to Rotation Tensor (RT)
+       u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
        ! Transform Applied Forces from Global to Local (Blade) frame
        DO i=1,p%node_total
            u%PointLoad%Force(1:3,i)  = MATMUL(TRANSPOSE(RotTen),u%PointLoad%Force(:,i))
@@ -4986,6 +4996,7 @@ END SUBROUTINE BD_GA2
    INTEGER(IntKi)                             :: temp_id
    REAL(ReKi)                                 :: temp3(3)
    REAL(ReKi)                                 :: temp_p0(3)
+   REAL(ReKi)                                 :: temp_glb(3)
    TYPE(BD_InputType)                         :: u_tmp
    INTEGER(IntKi)                             :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                       :: ErrMsg2                      ! Temporary Error message
@@ -5005,6 +5016,8 @@ END SUBROUTINE BD_GA2
    ENDDO
    CALL BD_CrvExtractCrv(u_tmp%RootMotion%Orientation(1:3,1:3,1),temp3,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    DO i=1,p%elem_total
        IF( i .EQ. 1) THEN
            k = 1
@@ -5013,13 +5026,16 @@ END SUBROUTINE BD_GA2
        ENDIF
        DO j=k,p%node_elem
            temp_id = (j-1)*p%dof_node
-           ! Rotate initial rotation parameter from blade frame to global frame
+           ! Step 1: Rotate initial position rotation vector into global frame
            temp_p0 = MATMUL(p%GlbRot,p%uuN0(temp_id+4:temp_id+6,i))
+           ! Step 2: Compose step1 with rotation vector from p%GlbRot
+           ! Initial position (undeformed) rotation vector in global frame obtained
+           ! R_0^{T} in global frame
+           CALL BD_CrvCompose(temp_p0,temp_p0,temp_glb,0,ErrStat2,ErrMsg2)
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-           ! R_f = RR_0 => R = R_f R_0^{T}
+           ! Step 3: R = R_{ini} R_0^{T}
            CALL BD_CrvCompose(x%q(temp_id+4:temp_id+6),temp3,temp_p0,2,ErrStat2,ErrMsg2)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           ! Rotate rotation parameter from global frame to blade frame
+           ! Step 4: Rotate rotation parameter (displacement) from global frame to blade frame
            x%q(temp_id+4:temp_id+6) = MATMUL(TRANSPOSE(p%GlbRot),x%q(temp_id+4:temp_id+6))
        ENDDO
    ENDDO
