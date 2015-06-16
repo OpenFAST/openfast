@@ -509,7 +509,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                          , INode = 1                &
                          , Pos = TmpPos             &
                          , ErrStat   = ErrStat2     &
-                         , ErrMess   = ErrMsg2       )
+                         , ErrMess   = ErrMsg2      &
+                         , Orient = ??? ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
 
@@ -522,7 +523,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                                   ,INode   = temp_id      &
                                   ,Pos     = TmpPos       &
                                   ,ErrStat = ErrStat2      &
-                                  ,ErrMess = ErrMsg2       )
+                                  ,ErrMess = ErrMsg2       &
+                                  , Orient = ??? ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDDO
    ENDDO
@@ -536,7 +538,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                                   ,INode   = temp_id      &
                                   ,Pos     = TmpPos       &
                                   ,ErrStat = ErrStat2      &
-                                  ,ErrMess = ErrMsg2       )
+                                  ,ErrMess = ErrMsg2       &
+                                  , Orient = ??? ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            
        ENDDO
@@ -548,7 +551,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                               ,INode   = i            &
                               ,Pos     = TmpPos       &
                               ,ErrStat = ErrStat2      &
-                              ,ErrMess = ErrMsg2       )
+                              ,ErrMess = ErrMsg2      &
+                              , Orient = ??? ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        
    ENDDO
@@ -901,6 +905,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
                                     p%damp_flag,p%beta,                                                &
                                     p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
                                     temp_Force,temp_ReactionForce)
+       !bjj: temp_ReactionForce not set
    ELSEIF(p%analysis_type .EQ. 1) THEN
        CALL BD_StaticSolutionForce( p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u_tmp,           &
                                     p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
@@ -2890,10 +2895,9 @@ END SUBROUTINE ludcmp
                                        Stif0,Mass0,gravity,u,&
                                        damp_flag,beta,&
                                        elem_total,node_elem,dof_node,ngp,RHS,Reaction)
+   !bjj: Reaction not set in BD_GenerateDynamicElementForce
 
-   Force(:) = 0.0D0
    Force(:) = RHS(:)
-   ReactionForce(:) = 0.0D0
    ReactionForce(:) = -Reaction(:)
 
    END SUBROUTINE BD_DynamicSolutionForce
@@ -2954,16 +2958,18 @@ END SUBROUTINE ludcmp
    INTEGER(IntKi)               :: UnIn                         ! Unit number for reading file
    INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
    LOGICAL                      :: Echo                         ! Determines if an echo file should be written
-   INTEGER(IntKi)               :: IOS                     ! Temporary Error status
-   CHARACTER(LEN(ErrMsg))       :: ErrMsg2                      ! Temporary Error message
+   INTEGER(IntKi)               :: IOS                          ! Temporary Error status
+   CHARACTER(ErrMsgLen)         :: ErrMsg2                      ! Temporary Error message
    character(*), parameter      :: RoutineName = 'BD_ReadPrimaryFile'
+   
    CHARACTER(1024)              :: PriPath                      ! Path name of the primary file
-   CHARACTER(1024)              :: FTitle              ! "File Title": the 2nd line of the input file, which contains a description of its contents
-   CHARACTER(200)               :: Line             ! Temporary storage of a line from the input
+   CHARACTER(1024)              :: FTitle                       ! "File Title": the 2nd line of the input file, which contains a description of its contents
+   CHARACTER(200)               :: Line                         ! Temporary storage of a line from the input
 
    INTEGER(IntKi)               :: i
    INTEGER(IntKi)               :: j
    INTEGER(IntKi)               :: temp_int
+   REAL(ReKi)                   :: tmpReAry(4)
 
    ! Initialize some variables:
    ErrStat = ErrID_None
@@ -2981,23 +2987,35 @@ END SUBROUTINE ludcmp
    !-------------------------- HEADER ---------------------------------------------
    CALL ReadCom(UnIn,InputFile,'File Header: Module Version (line 1)',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
    CALL ReadStr(UnIn,InputFile,FTitle,'FTitle','File Header: File Description (line 2)',ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
 
    !---------------------- SIMULATION CONTROL --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Simulation Control',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
    CALL ReadVar(UnIn,InputFile,Echo,'Echo','Echo switch',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 !   IF(Echo) THEN
 !       CALL OpenEcho(UnEc,OutFileRoot//'.ech',ErrStat2,ErrMsg2)
 !          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!          if (ErrStat >= AbortErrLev) then
+!             call cleanup()
+!             return
+!          end if
 !   ENDIF
 !   IF ( UnEc > 0 )  WRITE(UnEc,*)  'test'
    CALL ReadVar(UnIn,InputFile,InputFileData%analysis_type,"analysis_type", "Analysis type",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
    CALL ReadVar(UnIn,InputFile,InputFileData%rhoinf,"rhoinf", "Coefficient for GA2",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
    Line = ""
    CALL ReadVar( UnIn, InputFile, Line, "DTBeam", "Time interval for BeamDyn  calculations {or default} (s)", ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3007,9 +3025,14 @@ END SUBROUTINE ludcmp
             CALL CheckIOS ( IOS, InputFile, 'DTBeam', NumType, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
-   Line = ""
-   CALL ReadVar( UnIn, InputFile, Line, "NRMax", "Max number of interations in Newton-Ralphson algorithm", ErrStat2,ErrMsg2,UnEc)
+
+   CALL ReadVar( UnIn, InputFile, Line, "NRMax", "Max number of interations in Newton-Raphson algorithm", ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
           InputFileData%NRMax = 10
@@ -3018,9 +3041,14 @@ END SUBROUTINE ludcmp
             CALL CheckIOS ( IOS, InputFile, 'NRMax', NumType, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
+      
    Line = ""
    CALL ReadVar( UnIn, InputFile, Line, "stop_tol", "Tolerance for stopping criterion", ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
       CALL Conv2UC( Line )
       IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
           InputFileData%stop_tol = 1.0D-05
@@ -3030,38 +3058,72 @@ END SUBROUTINE ludcmp
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
 
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      
    !---------------------- GEOMETRY PARAMETER --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Geometry Parameter',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
    CALL ReadVar(UnIn,InputFile,InputFileData%member_total,"member_total", "Total number of member",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
    CALL ReadVar(UnIn,InputFile,InputFileData%kp_total,"kp_total", "Total number of key point",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(InputFileData%kp_member,InputFileData%member_total,'Number of key point in each member',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(InputFileData%kp_coordinate,InputFileData%kp_total,4,'Key point coordinates input array',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) return
+      
+      CALL AllocAry(InputFileData%kp_member,InputFileData%member_total,'Number of key point in each member',ErrStat2,ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      CALL AllocAry(InputFileData%kp_coordinate,InputFileData%kp_total,4,'Key point coordinates input array',ErrStat2,ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) then
+            call cleanup()
+            return
+         end if
+         
    InputFileData%kp_member(:) = 0
    InputFileData%kp_coordinate(:,:) = 0.0D0
    temp_int = 0
    DO i=1,InputFileData%member_total
-       READ(UnIn,*) j,InputFileData%kp_member(j) !bjj: fix me!
+      ! bjj: we cannot read j, InputFileData%kp_member(j) because j could be outside the valid range:
+      READ(UnIn,*,IOSTAT=IOS) j,temp_int 
+         CALL CheckIOS ( IOS, InputFile, 'Member number; Number of key points in this member', NumType, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) then
+            call cleanup()
+            return
+         end if
+         
+         if (j>0 .and. j<= InputFileData%member_total) then
+            InputFileData%kp_member(j) = temp_int
+         end if
+         
+         !bjj: what happens if the user enters a member number multiple times? or if not each member is accounted for?
+         !    I'm going to force them to be entered 1-InputFileData%kp_member to avoid this issue for now.
+         if (j /= i) then
+            call SetErrStat(ErrID_Warn, "Member numbers must be entered in monotonic increasing order, starting with 1.",ErrStat,ErrMsg,RoutineName)
+         end if
+         
    ENDDO
+   
+   
    CALL ReadCom(UnIn,InputFile,'key point x,y,z locations and initial twist angles',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
    CALL ReadCom(UnIn,InputFile,'key point and initial twist units',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
    DO i=1,InputFileData%kp_total
-       READ(UnIn,*) InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&
-                    InputFileData%kp_coordinate(i,1),InputFileData%kp_coordinate(i,4)
-       IF(UnEc>0) THEN
-           IF(i==1) WRITE(UnEc,'(/,A,/)') 'Key points coordinates and initial twist angle'
-           WRITE(UnEc,'(/,A,/)') InputFileData%kp_coordinate(i,2),InputFileData%kp_coordinate(i,3),&
-                                 InputFileData%kp_coordinate(i,1),InputFileData%kp_coordinate(i,4)
-       ENDIF
+       CALL ReadAry( UnIn, InputFile, TmpReAry, 4, 'kp_coordinate', 'Key point coordinates and initial twist', ErrStat2, ErrMsg2, UnEc )       
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       InputFileData%kp_coordinate(i,2) =  TmpReAry(1)
+       InputFileData%kp_coordinate(i,3) =  TmpReAry(2)
+       InputFileData%kp_coordinate(i,1) =  TmpReAry(3)
+       InputFileData%kp_coordinate(i,4) = -TmpReAry(4)
    ENDDO
-   InputFileData%kp_coordinate(:,4) = -InputFileData%kp_coordinate(:,4)
+   
    !---------------------- MESH PARAMETER -----------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Mesh Parameter',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3075,7 +3137,15 @@ END SUBROUTINE ludcmp
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( PathIsRelative( InputFileData%BldFile ) ) InputFileData%BldFile = TRIM(PriPath)//TRIM(InputFileData%BldFile)
 
-   END SUBROUTINE BD_ReadPrimaryFile
+   call cleanup()
+   return
+      
+contains
+   subroutine cleanup() 
+      close(UnIn)
+      return
+   end subroutine cleanup         
+END SUBROUTINE BD_ReadPrimaryFile
 
    SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
 
@@ -3647,7 +3717,7 @@ END SUBROUTINE BD_ValidateInputData
 
    END SUBROUTINE BD_ComputeIniCoef
 
-   SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
+SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 
    REAL(DbKi),                      INTENT(IN   ):: t           ! Current simulation time in seconds
    INTEGER(IntKi),                  INTENT(IN   ):: n           ! time step number
@@ -3675,11 +3745,31 @@ END SUBROUTINE BD_ValidateInputData
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   CALL BD_CopyInput(u(1),u_interp,MESH_NEWCOPY,ErrStat,ErrMsg)
+      ! allocate space for input type (mainly for meshes)
+   CALL BD_CopyInput(u(1),u_interp,MESH_NEWCOPY,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
+   CALL BD_CopyInput(u(1),u_temp,MESH_NEWCOPY,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
+   
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+         
+   call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
    CALL BD_InputGlobalLocal(p,u_interp,0,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
    ! Incorporate boundary conditions
-   CALL BD_BoundaryGA2(x,p,u_interp,t,OtherState,ErrStat,ErrMsg)
+   CALL BD_BoundaryGA2(x,p,u_interp,t,OtherState,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
 
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+      
    i = 1
    piter = 0
    niter = 20 !bjj FIX ME: isn't this p%niter?
@@ -3692,26 +3782,33 @@ END SUBROUTINE BD_ValidateInputData
            u_temp%DistrLoad%Moment(:,:) = u_interp%DistrLoad%Moment(:,:)/i*j
            CALL BD_StaticSolution(p%uuN0,x%q,p%Mass0_GL,p%Stif0_GL,p%gravity,u_temp,&
                                   p%node_elem,p%dof_node,p%elem_total,&
-                                  p%dof_total,p%node_total,p%ngp,niter,piter)
+                                  p%dof_total,p%node_total,p%ngp,niter,piter, ErrStat2, ErrMsg2)
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
            IF(niter .EQ. piter) EXIT
        ENDDO
        IF(piter .LT. niter) THEN
            i=0
        ELSE
            i=i+1
-           WRITE(*,*) "Warning: Load may be too large, BeamDyn will attempt to solve with addition steps"
-           WRITE(*,*) "Load_Step= ",i
+           call WrScr( "Warning: Load may be too large, BeamDyn will attempt to solve with additional steps.")
+           call WrScr( "  Load_Step="//trim(num2lstr(i)) )
            x%q(:) = 0.0D0
        ENDIF
    ENDDO
-   CALL BD_DestroyInput(u_interp, ErrStat, ErrMsg )
+   
+   call cleanup()
+   return
+   
+contains
+   subroutine cleanup()
+      CALL BD_DestroyInput(u_interp, ErrStat2, ErrMsg2 )
+      CALL BD_DestroyInput(u_temp,   ErrStat2, ErrMsg2 )
+   end subroutine cleanup
+END SUBROUTINE BD_Static
 
-
-   END SUBROUTINE BD_Static
-
-   SUBROUTINE BD_StaticSolution(uuN0,uuNf,Mass0,Stif0,gravity,u,&
+SUBROUTINE BD_StaticSolution(uuN0,uuNf,Mass0,Stif0,gravity,u,&
                                 node_elem,dof_node,elem_total,&
-                                dof_total,node_total,ngp,niter,piter)
+                                dof_total,node_total,ngp,niter,piter, ErrStat,ErrMsg)
 
    REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),        INTENT(IN   ):: Mass0(:,:,:)
@@ -3727,7 +3824,10 @@ END SUBROUTINE BD_ValidateInputData
    INTEGER(IntKi),    INTENT(IN   ):: node_total
    REAL(ReKi),        INTENT(INOUT):: uuNf(:)
    INTEGER(IntKi),    INTENT(  OUT):: piter !! ADDED piter AS OUTPUT
+   INTEGER(IntKi),                  INTENT(  OUT):: ErrStat     ! Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
+   ! local variables
    REAL(ReKi)                      :: StifK(dof_total,dof_total)
    REAL(ReKi)                      :: RHS(dof_total)
    REAL(ReKi)                      :: StifK_LU(dof_total-6,dof_total-6)
@@ -3747,6 +3847,13 @@ END SUBROUTINE BD_ValidateInputData
    INTEGER(IntKi)                  :: temp_id
 !   INTEGER(IntKi)                  :: temp_count
 
+   INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(*), PARAMETER :: RoutineName = 'BD_Static'
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
    Eref = 0.0D0
    DO i=1,niter
        StifK(:,:) = 0.0D0
@@ -3778,7 +3885,7 @@ END SUBROUTINE BD_ValidateInputData
        ENDDO
 
        temp = TwoNorm(feqv)
-       WRITE(13,*) i,temp
+       !WRITE(13,*) i,temp
        piter=i !! ADDED BY NJ 3/18/14
 !       IF(i==1) Eref = SQRT(DOT_PRODUCT(ui_temp,feqv)*TOLF)
 !       IF(i .GT. 1) THEN
@@ -3791,7 +3898,7 @@ END SUBROUTINE BD_ValidateInputData
            Enorm = 0.0D0
            Enorm = DOT_PRODUCT(ui_temp,feqv)
            IF(Enorm .GT. Eref/TOLF) THEN
-               WRITE(*,*) "Solution is diverging, exit N-R"
+               call WrScr( "Solution is diverging, exit N-R" )
                piter=niter
            ELSEIF(Enorm .LE. Eref) THEN
                RETURN
@@ -3800,12 +3907,12 @@ END SUBROUTINE BD_ValidateInputData
 
        CALL BD_StaticUpdateConfiguration(ui,uuNf,node_total,dof_node)
        IF(i==niter .OR. piter==niter) THEN
-           WRITE(*,*) "Solution does not converge after the maximum number of iterations"
-           EXIT !! USE EXIT INSTEAD OF STOP, NJ 3/18/2014
+           call SetErrStat( ErrID_Warn, "Solution does not converge after the maximum number of iterations.", ErrStat, ErrMsg, RoutineName)
+           exit
        ENDIF
    ENDDO
 
-   END SUBROUTINE BD_StaticSolution
+END SUBROUTINE BD_StaticSolution
 
    SUBROUTINE BD_GenerateStaticElement(uuN0,uuNf,Mass0,Stif0,gravity,u,&
                                        elem_total,node_elem,dof_node,ngp,StifK,RHS)
@@ -4354,7 +4461,7 @@ END SUBROUTINE BD_ValidateInputData
 
    END SUBROUTINE BD_StaticElementMatrixForce
 
-   SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
+SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 
    REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
    INTEGER(IntKi),                    INTENT(IN   )  :: n           ! time step number
@@ -4369,39 +4476,62 @@ END SUBROUTINE BD_ValidateInputData
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! local variables
-   TYPE(BD_ContinuousStateType)                 :: x_tmp       ! Holds temporary modification to x
-   TYPE(BD_OtherStateType     )                 :: OS_tmp       ! Holds temporary modification to x
-   TYPE(BD_InputType)                           :: u_interp    ! interpolated value of inputs
-   INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
-   CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
-   CHARACTER(*), PARAMETER :: RoutineName = 'BD_GA2'
+   TYPE(BD_ContinuousStateType)                       :: x_tmp      ! Holds temporary modification to x
+   TYPE(BD_OtherStateType     )                       :: OS_tmp     ! Holds temporary modification to x
+   TYPE(BD_InputType)                                 :: u_interp   ! interpolated value of inputs
+   INTEGER(IntKi)                                     :: ErrStat2   ! Temporary Error status
+   CHARACTER(ErrMsgLen)                               :: ErrMsg2    ! Temporary Error message
+   CHARACTER(*), PARAMETER                            :: RoutineName = 'BD_GA2'
 
    ! Initialize ErrStat
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   CALL BD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg)
-   !bjj: don't we call BD_Input_extrapinterp()?
-   CALL BD_CopyContState(x, x_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
-   CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
+   CALL BD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         
+   CALL BD_CopyContState(x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+      
+   CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+
+   call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+                 
+         
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
                                 p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
                                 p%node_total,p%dof_node )
    ! find x at t+dt
    CALL BD_InputGlobalLocal(p,u_interp,0,ErrStat2,ErrMsg2)
-   CALL BD_BoundaryGA2(x,p,u_interp,t+p%dt,OtherState,ErrStat,ErrMsg)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   
+   CALL BD_BoundaryGA2(x,p,u_interp,t+p%dt,OtherState,ErrStat2,ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
    CALL BD_DynamicSolutionGA2( p%uuN0,x%q,x%dqdt,OtherState%acc,OtherState%xcc,&
                                p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,       &
                                p%damp_flag,p%beta,                             &
                                p%node_elem,p%dof_node,p%elem_total,p%dof_total,&
-                               p%node_total,p%niter,p%ngp,p%coef)
+                               p%node_total,p%niter,p%ngp,p%coef, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-   CALL BD_DestroyInput(u_interp, ErrStat, ErrMsg)
-   CALL BD_DestroyContState(x_tmp, ErrStat, ErrMsg )
-   CALL BD_DestroyOtherState(OS_tmp, ErrStat, ErrMsg )
-
-   END SUBROUTINE BD_GA2
+   call cleanup()
+   return
+   
+contains
+   subroutine cleanup()
+      CALL BD_DestroyInput(u_interp, ErrStat2, ErrMsg2)
+      CALL BD_DestroyContState(x_tmp, ErrStat2, ErrMsg2 )
+      CALL BD_DestroyOtherState(OS_tmp, ErrStat2, ErrMsg2 )
+   end subroutine cleanup   
+END SUBROUTINE BD_GA2
 
    SUBROUTINE BD_TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,uuNf,vvNf,aaNf,xxNf,node_total,dof_node)
 
@@ -4520,6 +4650,7 @@ END SUBROUTINE BD_ValidateInputData
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    temp_cc(:) = MATMUL(p%GlbRot,p%uuN0(4:6,1))
    CALL BD_CrvCompose(x%q(4:6),x%q(4:6),temp_cc,2,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    x%q(4:6) = MATMUL(TRANSPOSE(p%GlbRot),x%q(4:6))
    ! Root velocities/angular velocities and accelerations/angular accelerations
    x%dqdt(1:3) = u%RootMotion%TranslationVel(1:3,1)
@@ -4532,7 +4663,7 @@ END SUBROUTINE BD_ValidateInputData
    SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
                                      Stif0,Mass0,gravity,u,damp_flag,beta,   &
                                      node_elem,dof_node,elem_total,dof_total,&
-                                     node_total,niter,ngp,coef)
+                                     node_total,niter,ngp,coef, ErrStat, ErrMsg)
 
    REAL(ReKi),         INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),         INTENT(IN   ):: Stif0(:,:,:)
@@ -4554,6 +4685,14 @@ END SUBROUTINE BD_ValidateInputData
    REAL(ReKi),         INTENT(INOUT):: aaNf(:)
    REAL(ReKi),         INTENT(INOUT):: xxNf(:)
 
+   INTEGER(IntKi),     INTENT(  OUT):: ErrStat     ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   ! local variables
+   INTEGER(IntKi)                   :: ErrStat2    ! Temporary Error status
+   CHARACTER(ErrMsgLen)             :: ErrMsg2     ! Temporary Error message
+   CHARACTER(*), PARAMETER          :: RoutineName = 'BD_DynamicSolutionGA2'         
+   
    REAL(ReKi)                       :: errf
    REAL(ReKi)                       :: StifK(dof_total,dof_total)
    REAL(ReKi)                       :: RHS(dof_total)
@@ -4575,6 +4714,9 @@ END SUBROUTINE BD_ValidateInputData
    INTEGER(IntKi)                   :: k
    INTEGER(IntKi)                   :: temp_id
 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
    ai = 0.0D0
    Eref = 0.0D0
 
@@ -4628,8 +4770,8 @@ END SUBROUTINE BD_ValidateInputData
 !WRITE(*,*) ai
 
        IF(i==niter) THEN
-           WRITE(*,*) "Solution does not converge after the maximum number of iterations"
-           STOP
+          CALL setErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of iterations", ErrStat, ErrMsg, RoutineName)
+          RETURN
        ENDIF
    ENDDO
 
