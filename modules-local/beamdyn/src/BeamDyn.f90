@@ -325,7 +325,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          call cleanup()
          return
       end if
-      
    temp_ratio(:,:) = 0.0D0
    DO i=1,p%ngp
        temp_GL(i) = (temp_GL(i) + 1.0D0)/2.0D0
