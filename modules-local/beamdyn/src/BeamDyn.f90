@@ -493,17 +493,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ENDDO
 
-   temp_int = p%node_elem*p%elem_total
-   DO i=1,temp_int-1
-       CALL MeshConstructElement( Mesh     = y%BldMotion      &
-                                 ,Xelement = ELEMENT_LINE2    &
-                                 ,P1       = i                &
-                                 ,P2       = i+1              &
-                                 ,ErrStat  = ErrStat2          &
-                                 ,ErrMess  = ErrMsg2           )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       
-   ENDDO
    ! place single node at origin; position affects mapping/coupling with other modules
    TmpPos(:) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1))
    temp_CRV(:) = MATMUL(p%GlbRot,p%uuN0(4:6,1))
@@ -553,6 +542,23 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            
        ENDDO
    ENDDO
+   
+   temp_int = p%node_elem*p%elem_total
+   DO i=1,temp_int-1
+      
+      if (.not. equalRealNos( TwoNorm( y%BldMotion%Position(:,i)-y%BldMotion%Position(:,i+1) ), 0.0_ReKi ) ) then
+         ! do not connect nodes that are collocated
+          CALL MeshConstructElement( Mesh     = y%BldMotion      &
+                                    ,Xelement = ELEMENT_LINE2    &
+                                    ,P1       = i                &
+                                    ,P2       = i+1              &
+                                    ,ErrStat  = ErrStat2          &
+                                    ,ErrMess  = ErrMsg2           )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      end if
+      
+   ENDDO
+   
 
    DO i=1,p%ngp*p%elem_total+2
        TmpPos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
@@ -4779,12 +4785,11 @@ END SUBROUTINE BD_GA2
        ENDDO
        CALL BD_UpdateDynamicGA2(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
        IF(i==1) THEN
-           Eref = SQRT(DOT_PRODUCT(ai_temp,feqv))*TOLF
+           Eref = SQRT(abs(DOT_PRODUCT(ai_temp,feqv)))*TOLF
            IF(Eref .LE. TOLF) RETURN
        ENDIF
        IF(i .GT. 1) THEN
-           Enorm = 0.0D0
-           Enorm = SQRT(DOT_PRODUCT(ai_temp,feqv))
+           Enorm = SQRT(abs(DOT_PRODUCT(ai_temp,feqv)))
            IF(Enorm .LE. Eref) RETURN
        ENDIF
 !WRITE(*,*) 'inc'
