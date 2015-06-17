@@ -893,7 +893,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
        ENDDO
    ENDDO
 
-   CALL BD_InputGlobalLocal(p,u_tmp,0,ErrStat2,ErrMsg2)
+   CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_BoundaryGA2(x_tmp,p,u_tmp,t,OS_tmp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3775,7 +3775,7 @@ SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
-   CALL BD_InputGlobalLocal(p,u_interp,0,ErrStat2,ErrMsg2)
+   CALL BD_InputGlobalLocal(p,u_interp,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
    ! Incorporate boundary conditions
    CALL BD_BoundaryGA2(x,p,u_interp,t,OtherState,ErrStat2,ErrMsg2)
@@ -4523,9 +4523,10 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
          
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
                                 p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
-                                p%node_total,p%dof_node )
+                                p%node_total,p%dof_node, ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    ! find x at t+dt
-   CALL BD_InputGlobalLocal(p,u_interp,0,ErrStat2,ErrMsg2)
+   CALL BD_InputGlobalLocal(p,u_interp,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
    CALL BD_BoundaryGA2(x,p,u_interp,t+p%dt,OtherState,ErrStat2,ErrMsg2)
@@ -4535,7 +4536,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
                                p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,       &
                                p%damp_flag,p%beta,                             &
                                p%node_elem,p%dof_node,p%elem_total,p%dof_total,&
-                               p%node_total,p%niter,p%ngp,p%coef, ErrStat2, ErrMsg2)
+                               p%node_total,p%niter,p%tol,p%ngp,p%coef, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    call cleanup()
@@ -4549,19 +4550,41 @@ contains
    end subroutine cleanup   
 END SUBROUTINE BD_GA2
 
-   SUBROUTINE BD_TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,uuNf,vvNf,aaNf,xxNf,node_total,dof_node)
+   SUBROUTINE BD_TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,&
+                   uuNf,vvNf,aaNf,xxNf,node_total,dof_node, &
+                   ErrStat, ErrMsg)
 
-   REAL(ReKi),INTENT(IN)::uuNi(:),vvNi(:),aaNi(:),xxNi(:)
-   REAL(DbKi),INTENT(IN)::deltat,coef(:)
-   REAL(ReKi),INTENT(INOUT)::uuNf(:),vvNf(:),aaNf(:),xxNf(:)
+   REAL(ReKi),    INTENT(IN   ):: uuNi(:)
+   REAL(ReKi),    INTENT(IN   ):: vvNi(:)
+   REAL(ReKi),    INTENT(IN   ):: aaNi(:)
+   REAL(ReKi),    INTENT(IN   ):: xxNi(:)
+   REAL(DbKi),    INTENT(IN   ):: deltat
+   REAL(DbKi),    INTENT(IN   ):: coef(:)
+   REAL(ReKi),    INTENT(INOUT):: uuNf(:)
+   REAL(ReKi),    INTENT(INOUT):: vvNf(:)
+   REAL(ReKi),    INTENT(INOUT):: aaNf(:)
+   REAL(ReKi),    INTENT(INOUT):: xxNf(:)
+   INTEGER(IntKi),INTENT(IN   ):: node_total
+   INTEGER(IntKi),INTENT(IN   ):: dof_node
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
-   INTEGER(IntKi),INTENT(IN)::node_total,dof_node
+   REAL(ReKi)                  ::vi
+   REAL(ReKi)                  ::ai
+   REAL(ReKi)                  ::xi
+   REAL(ReKi)                  ::tr(6)
+   REAL(ReKi)                  ::tr_temp(3)
+   REAL(ReKi)                  ::uuNi_temp(3)
+   REAL(ReKi)                  ::rot_temp(3)
+   INTEGER                     ::i
+   INTEGER                     ::j
+   INTEGER                     ::temp_id
+   INTEGER(IntKi)              :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)        :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(*), PARAMETER     :: RoutineName = 'BD_TimSchmPredictorStep'
 
-   REAL(ReKi)::vi,ai,xi,tr(6),tr_temp(3),uuNi_temp(3),rot_temp(3)
-   INTEGER::i,j,temp_id
-   INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
-   CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
-   CHARACTER(*), PARAMETER :: RoutineName = 'BD_TimSchmPredictorStep'
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
    DO i=1,node_total
 
@@ -4586,6 +4609,7 @@ END SUBROUTINE BD_GA2
        ENDDO
        rot_temp = 0.0D0
        CALL BD_CrvCompose(rot_temp,tr_temp,uuNi_temp,0,ErrStat2,ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
        DO j=1,3
            temp_id = (i - 1) * dof_node +j
            uuNf(temp_id + 3) = rot_temp(j)
@@ -4642,6 +4666,10 @@ END SUBROUTINE BD_GA2
    END SUBROUTINE BD_TiSchmComputeCoefficients
 
    SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
+   !------------------------------------------------------------
+   ! This subroutine applies the prescribed boundary conditions
+   ! into states and otherstates at the root finite element node
+   !------------------------------------------------------------
 
    TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
    REAL(DbKi),                   INTENT(IN   )  :: t           ! Inputs at t
@@ -4684,7 +4712,7 @@ END SUBROUTINE BD_GA2
    SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
                                      Stif0,Mass0,gravity,u,damp_flag,beta,   &
                                      node_elem,dof_node,elem_total,dof_total,&
-                                     node_total,niter,ngp,coef, ErrStat, ErrMsg)
+                                     node_total,niter,tol,ngp,coef, ErrStat, ErrMsg)
 
    REAL(ReKi),         INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),         INTENT(IN   ):: Stif0(:,:,:)
@@ -4701,11 +4729,11 @@ END SUBROUTINE BD_GA2
    INTEGER(IntKi),     INTENT(IN   ):: node_total
    INTEGER(IntKi),     INTENT(IN   ):: ngp
    INTEGER(IntKi),     INTENT(IN   ):: niter
+   REAL(ReKi),         INTENT(IN   ):: tol
    REAL(ReKi),         INTENT(INOUT):: uuNf(:)
    REAL(ReKi),         INTENT(INOUT):: vvNf(:)
    REAL(ReKi),         INTENT(INOUT):: aaNf(:)
    REAL(ReKi),         INTENT(INOUT):: xxNf(:)
-
    INTEGER(IntKi),     INTENT(  OUT):: ErrStat     ! Error status of the operation
    CHARACTER(*),       INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -4713,7 +4741,6 @@ END SUBROUTINE BD_GA2
    INTEGER(IntKi)                   :: ErrStat2    ! Temporary Error status
    CHARACTER(ErrMsgLen)             :: ErrMsg2     ! Temporary Error message
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_DynamicSolutionGA2'         
-   
    REAL(ReKi)                       :: errf
    REAL(ReKi)                       :: StifK(dof_total,dof_total)
    REAL(ReKi)                       :: RHS(dof_total)
@@ -4727,7 +4754,6 @@ END SUBROUTINE BD_GA2
    REAL(ReKi)                       :: feqv(dof_total-6)
    REAL(ReKi)                       :: Eref
    REAL(ReKi)                       :: Enorm
-   REAL(ReKi),PARAMETER             :: TOLF = 1.0D-05
    REAL(ReKi)                       :: d
    INTEGER(IntKi)                   :: indx(dof_total-6)
    INTEGER(IntKi)                   :: i
@@ -4742,7 +4768,6 @@ END SUBROUTINE BD_GA2
    Eref = 0.0D0
 
    DO i=1,niter
-!WRITE(*,*) "N-R Iteration #", i
        StifK = 0.0D0
        RHS = 0.0D0
        MassM = 0.0D0
@@ -4779,7 +4804,7 @@ END SUBROUTINE BD_GA2
        ENDDO
        CALL BD_UpdateDynamicGA2(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
        IF(i==1) THEN
-           Eref = SQRT(DOT_PRODUCT(ai_temp,feqv))*TOLF
+           Eref = SQRT(DOT_PRODUCT(ai_temp,feqv))*tol
            IF(Eref .LE. TOLF) RETURN
        ENDIF
        IF(i .GT. 1) THEN
@@ -4787,8 +4812,6 @@ END SUBROUTINE BD_GA2
            Enorm = SQRT(DOT_PRODUCT(ai_temp,feqv))
            IF(Enorm .LE. Eref) RETURN
        ENDIF
-!WRITE(*,*) 'inc'
-!WRITE(*,*) ai
 
        IF(i==niter) THEN
           CALL setErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of iterations", ErrStat, ErrMsg, RoutineName)
@@ -4939,11 +4962,16 @@ END SUBROUTINE BD_GA2
 
    END SUBROUTINE BD_GenerateDynamicElementGA2
 
-   SUBROUTINE BD_InputGlobalLocal( p, u, flag, ErrStat, ErrMsg)
-
+   SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
+   !-----------------------------------------------------------------------------
+   ! This subroutine tranforms the folloing quantities in Input data structure
+   ! from global frame to local (blade) frame:
+   ! 1 Displacements; 2 Linear/Angular velocities; 3 Linear/Angular accelerations
+   ! 4 Piont forces/moments; 5 Distributed forces/moments
+   ! It also transforms the DCM to rotation tensor in the input data structure
+   !-----------------------------------------------------------------------------
    TYPE(BD_ParameterType), INTENT(IN   ):: p
    TYPE(BD_InputType),     INTENT(INOUT):: u
-   INTEGER(IntKi),         INTENT(IN   ):: flag            ! 0: Global to Blade;
    INTEGER(IntKi),         INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
                                                            ! 1: Blade to Global
@@ -4954,27 +4982,23 @@ END SUBROUTINE BD_GA2
    ErrMsg  = ""
 
    RotTen(1:3,1:3) = p%GlbRot(:,:)
-   IF (flag .EQ. 0) THEN
-       ! Transform Root Motion from Global to Local (Blade) frame
-       u%RootMotion%TranslationDisp(:,1) = MATMUL(TRANSPOSE(RotTen),u%RootMotion%TranslationDisp(:,1))
-       u%RootMotion%TranslationVel(:,1)  = MATMUL(TRANSPOSE(RotTen),u%RootMotion%TranslationVel(:,1))
-       u%RootMotion%RotationVel(:,1)     = MATMUL(TRANSPOSE(RotTen),u%RootMotion%RotationVel(:,1))
-       u%RootMotion%TranslationAcc(:,1)  = MATMUL(TRANSPOSE(RotTen),u%RootMotion%TranslationAcc(:,1))
-       u%RootMotion%RotationAcc(:,1)     = MATMUL(TRANSPOSE(RotTen),u%RootMotion%RotationAcc(:,1))
-       ! Transform DCM to Rotation Tensor (RT)
-       u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
-       ! Transform Applied Forces from Global to Local (Blade) frame
-       DO i=1,p%node_total
-           u%PointLoad%Force(1:3,i)  = MATMUL(TRANSPOSE(RotTen),u%PointLoad%Force(:,i))
-           u%PointLoad%Moment(1:3,i) = MATMUL(TRANSPOSE(RotTen),u%PointLoad%Moment(:,i))
-       ENDDO
-       DO i=1,p%ngp * p%elem_total + 2
-           u%DistrLoad%Force(1:3,i)  = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Force(:,i))
-           u%DistrLoad%Moment(1:3,i) = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Moment(:,i))
-       ENDDO
-   ELSEIF(flag .EQ. 1) THEN
-
-   ENDIF
+   ! Transform Root Motion from Global to Local (Blade) frame
+   u%RootMotion%TranslationDisp(:,1) = MATMUL(TRANSPOSE(RotTen),u%RootMotion%TranslationDisp(:,1))
+   u%RootMotion%TranslationVel(:,1)  = MATMUL(TRANSPOSE(RotTen),u%RootMotion%TranslationVel(:,1))
+   u%RootMotion%RotationVel(:,1)     = MATMUL(TRANSPOSE(RotTen),u%RootMotion%RotationVel(:,1))
+   u%RootMotion%TranslationAcc(:,1)  = MATMUL(TRANSPOSE(RotTen),u%RootMotion%TranslationAcc(:,1))
+   u%RootMotion%RotationAcc(:,1)     = MATMUL(TRANSPOSE(RotTen),u%RootMotion%RotationAcc(:,1))
+   ! Transform DCM to Rotation Tensor (RT)
+   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
+   ! Transform Applied Forces from Global to Local (Blade) frame
+   DO i=1,p%node_total
+       u%PointLoad%Force(1:3,i)  = MATMUL(TRANSPOSE(RotTen),u%PointLoad%Force(:,i))
+       u%PointLoad%Moment(1:3,i) = MATMUL(TRANSPOSE(RotTen),u%PointLoad%Moment(:,i))
+   ENDDO
+   DO i=1,p%ngp * p%elem_total + 2
+       u%DistrLoad%Force(1:3,i)  = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Force(:,i))
+       u%DistrLoad%Moment(1:3,i) = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Moment(:,i))
+   ENDDO
 
    END SUBROUTINE BD_InputGlobalLocal
 
@@ -5007,7 +5031,7 @@ END SUBROUTINE BD_GA2
 
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_InputGlobalLocal(p,u_tmp,0,ErrStat2,ErrMsg2)
+   CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !Initialize displacements and rotations
    DO i=1,p%node_total
