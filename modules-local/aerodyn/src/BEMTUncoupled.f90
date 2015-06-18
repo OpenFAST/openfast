@@ -310,17 +310,17 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, azimuth, chi0, cn, c
    cphi = cos(phi)
 
    chi = 0.0_ReKi
-   !saz = sin(azimuth)
+   saz = sin(azimuth)
     
-   if ( EqualRealNos(azimuth, 3.141593) ) then
-      saz = 0.0_ReKi
-   else if ( EqualRealNos(azimuth, 1.570796) ) then
-      saz = 1.0_ReKi
-   else if ( EqualRealNos(azimuth, 3*1.570796 )) then
-      saz = -1.0_ReKi
-   else     
-      saz = sin(azimuth)
-   end if
+   !if ( EqualRealNos(azimuth, 3.141593) .OR. EqualRealNos(azimuth, -3.141593) ) then
+   !   saz = 0.0_ReKi
+   !else if ( EqualRealNos(azimuth, 1.570796) ) then
+   !   saz = 1.0_ReKi
+   !else if ( EqualRealNos(azimuth, 3*1.570796 ) .OR. EqualRealNos(azimuth, -1.570796) ) then
+   !   saz = -1.0_ReKi
+   !else     
+   !   saz = sin(azimuth)
+   !end if
     
     
       ! resolve into normal and tangential forces
@@ -386,6 +386,10 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, azimuth, chi0, cn, c
  
         ! update axial induction factor
       if (k <= 2.0_ReKi/3.0_ReKi) then  ! momentum state
+         if ( EqualRealNos( k, -1.0_ReKi) ) then
+            k = k - 0.1_ReKi
+         end if
+      
          a = k/(1.0_ReKi+k)
 
       else  ! Glauert(Buhl) correction
@@ -424,12 +428,19 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, azimuth, chi0, cn, c
        ! Skewed wake correction
          
    if ( skewWakeMod == SkewMod_PittPeters ) then
+      if ( abs(saz) > 0.005_ReKi ) then
       chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
-      ! TODO: Add check on chi to make sure it is < pi/2 and (positive check should be outside solve)  GJH 5/20/2015
-      !yawCorr = max(0.0,chi0-0.5236)
-      !yawCorr = min(0.785,yawCorr)
-      yawCorr = (15.0_ReKi*pi/64.0_ReKi*tan(chi/2.0_ReKi) * (r/Rtip) * saz)
-      a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
+      
+      !if (chi0 < 40.0*d2r .and. chi > 0.0 ) then
+         ! TODO: Add check on chi to make sure it is < pi/2 and (positive check should be outside solve)  GJH 5/20/2015
+         !yawCorr = max(0.0,chi0-0.5236)
+         !yawCorr = min(0.785,yawCorr)
+         yawCorr = (15.0_ReKi*pi/64.0_ReKi*tan(chi/2.0_ReKi) * (r/Rtip) * saz)
+         a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
+      !else
+     !    call WrScr('Warning: high yaw angle.  Not applying Pitt-Peters correction.')
+      end if
+      
    end if
    
     ! compute tangential induction factor

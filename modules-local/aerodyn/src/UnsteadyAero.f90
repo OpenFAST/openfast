@@ -1626,7 +1626,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
          if  ( Kafactor < 0.0_ReKi ) then ! .AND.  .NOT. OtherState%VRTX(OtherState%iBladeNode, OtherState%iBlade )  )then
             y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset)
          else         
-            y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*tan(alpha_e)*(1-xd%tau_v(OtherState%iBladeNode, OtherState%iBlade))
+            y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*tan(alpha_e)*(1-xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)/(2.0*T_VL))
          end if
          
       elseif ( p%UAMod == 2 ) then
