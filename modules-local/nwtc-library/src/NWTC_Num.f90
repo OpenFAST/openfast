@@ -529,6 +529,12 @@ CONTAINS
 
    DO I=1,NumPts-1
       DelX (I  ) =   XAry(I+1  ) - XAry(I  )
+      
+      if ( equalRealNos( DelX(I), 0.0_ReKi ) ) then
+         CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':XAry must have unique values.' )
+         RETURN
+      ENDIF
+      
       Slope(I,:) = ( YAry(I+1,:) - YAry(I,:) )/DelX(I)
    END DO ! I
 
@@ -539,6 +545,11 @@ CONTAINS
    V(1,:) = 6.0_ReKi*( Slope(2,:) - Slope(1,:) )
 
    DO I=2,NumPts-1
+      if ( equalRealNos( U(I-1), 0.0_ReKi ) ) then
+         CALL ExitThisRoutine ( ErrID_Fatal, RoutineName//':XAry must be monotonic.' )
+         RETURN
+      ENDIF
+            
       U(I)   = 2.0_ReKi*( DelX (I-1) + DelX (I)     ) - DelX(I-1)*DelX(I-1  )/U(I-1)
       V(I,:) = 6.0_ReKi*( Slope(I,:) - Slope(I-1,:) ) - DelX(I-1)*   V(I-1,:)/U(I-1)
    END DO ! I
@@ -551,10 +562,10 @@ CONTAINS
    ZHi(:) = 0.0_ReKi
 
    DO I=NumPts-1,1,-1
-      ZLo(:)      = ( V(I,:) - DelX(I)*ZHi(:) )/U(I)
+      ZLo(:)      = ( V(I,:) - DelX(I)*ZHi(:) )/U(I)                             ! bjj: already checked for u(I) == 0
       Coef(I,:,1) = Slope(I,:) - DelX(I)*( ZHi(:)/6.0_ReKi + ZLo(:)/3.0_ReKi )
       Coef(I,:,2) = 0.5_ReKi*ZLo(:)
-      Coef(I,:,3) = ( ZHi(:) - ZLo(:) )/( 6.0_ReKi*DelX(I) )
+      Coef(I,:,3) = ( ZHi(:) - ZLo(:) )/( 6.0_ReKi*DelX(I) )                     ! bjj: already checked for DelX(I) == 0
       ZHi(:)      = ZLo(:)
    END DO ! I
 
@@ -705,7 +716,7 @@ CONTAINS
 
    NumPts  = SIZE( XAry )
    NumCrvs = SIZE( YAry, 2 )
-   NumCrvs = SIZE( YAry, 2 )
+   !NumCrvs = SIZE( YAry, 2 )
 
    ALLOCATE ( Res( NumCrvs ) , STAT=ErrStatLcl )
    IF ( ErrStatLcl /= 0 )  THEN
