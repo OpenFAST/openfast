@@ -3723,10 +3723,10 @@ END SUBROUTINE BD_ValidateInputData
        RHS(temp_id1+3) = kp_coord(kp_member,i)
        RHS(temp_id1+4) = 0.0D0
        CALL LAPACK_getrf( 4*(kp_member-1), 4*(kp_member-1), K,indx,&
-                          ErrStat2, ErrMsg) 
+                          ErrStat2, ErrMsg2) 
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL LAPACK_getrs( 'N',4*(kp_member-1), K,indx,RHS,&
-                          ErrStat2, ErrMsg) 
+                          ErrStat2, ErrMsg2) 
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        DO j=1,kp_member-1
            DO m=1,4
@@ -4748,20 +4748,18 @@ END SUBROUTINE BD_GA2
    CHARACTER(ErrMsgLen)             :: ErrMsg2     ! Temporary Error message
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_DynamicSolutionGA2'         
    REAL(ReKi)                       :: errf
-   REAL(ReKi)                       :: StifK(dof_total,dof_total)
-   REAL(ReKi)                       :: RHS(dof_total)
-   REAL(ReKi)                       :: MassM(dof_total,dof_total)
-   REAL(ReKi)                       :: DampG(dof_total,dof_total)
-   REAL(ReKi)                       :: F_PointLoad(dof_total)
-   REAL(ReKi)                       :: StifK_LU(dof_total-6,dof_total-6)
-   REAL(ReKi)                       :: RHS_LU(dof_total-6)
-   REAL(ReKi)                       :: ai(dof_total)
-   REAL(ReKi)                       :: ai_temp(dof_total-6)
-   REAL(ReKi)                       :: feqv(dof_total-6)
+   REAL(ReKi),           ALLOCATABLE:: StifK(:,:)
+   REAL(ReKi),           ALLOCATABLE:: StifK_LU(:,:)
+   REAL(ReKi),           ALLOCATABLE:: RHS(:)
+   REAL(ReKi),           ALLOCATABLE:: RHS_LU(:)
+   REAL(ReKi),           ALLOCATABLE:: MassM(:,:)
+   REAL(ReKi),           ALLOCATABLE:: DampG(:,:)
+   REAL(ReKi),           ALLOCATABLE:: F_PointLoad(:)
+   REAL(ReKi),           ALLOCATABLE:: ai(:)
    REAL(ReKi)                       :: Eref
    REAL(ReKi)                       :: Enorm
    REAL(ReKi)                       :: d
-   INTEGER(IntKi)                   :: indx(dof_total-6)
+   INTEGER(IntKi),       ALLOCATABLE:: indx(:)
    INTEGER(IntKi)                   :: i
    INTEGER(IntKi)                   :: j
    INTEGER(IntKi)                   :: k
@@ -4770,14 +4768,36 @@ END SUBROUTINE BD_GA2
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   ai = 0.0D0
+   CALL AllocAry(StifK,dof_total,dof_total,'Stiffness Matrix',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(StifK_LU,dof_total-6,dof_total-6,'Stiffness Matrix LU',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(MassM,dof_total,dof_total,'Mass Matrix',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(DampG,dof_total,dof_total,'Damping Matrix',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(RHS,dof_total,'Right-hand-side vector',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(RHS_LU,dof_total-6,'Right-hand-side vector LU',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(F_PointLoad,dof_total,'F_PointLoad vector',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(ai,dof_total,'Increment vector',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(indx,dof_total-6,'Index vector for LU',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+       call Cleanup()
+       return
+   end if
+
    Eref = 0.0D0
 
    DO i=1,niter
-       StifK = 0.0D0
-       RHS = 0.0D0
-       MassM = 0.0D0
-       DampG = 0.0D0
+       StifK(:,:) = 0.0D0
+       RHS(:)     = 0.0D0
+       MassM(:,:) = 0.0D0
+       DampG(:,:) = 0.0D0
        CALL BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
                                          Stif0,Mass0,gravity,u,damp_flag,beta,&
                                          elem_total,node_elem,dof_node,ngp,   &
@@ -4790,40 +4810,61 @@ END SUBROUTINE BD_GA2
        ENDDO
        RHS(:) = RHS(:) + F_PointLoad(:)
 
-
-       errf = 0.0D0
-       feqv = 0.0D0
        DO j=1,dof_total-6
-           feqv(j) = RHS(j+6)
            RHS_LU(j) = RHS(j+6)
            DO k=1,dof_total-6
                StifK_LU(j,k) = StifK(j+6,k+6)
            ENDDO
        ENDDO
-
-       CALL ludcmp(StifK_LU,dof_total-6,indx,d)
-       CALL lubksb(StifK_LU,dof_total-6,indx,RHS_LU,ai_temp)
+    
+       CALL LAPACK_getrf( dof_total-6, dof_total-6, StifK_LU,indx,&
+                          ErrStat2, ErrMsg2) 
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL LAPACK_getrs( 'N',dof_total-6, StifK_LU,indx,RHS_LU,&
+                          ErrStat2, ErrMsg2) 
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
        ai = 0.0D0
        DO j=1,dof_total-6
-           ai(j+6) = ai_temp(j)
+           ai(j+6) = RHS_LU(j)
        ENDDO
        CALL BD_UpdateDynamicGA2(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
        IF(i==1) THEN
-           Eref = SQRT(abs(DOT_PRODUCT(ai_temp,feqv)))*TOLF
-           IF(Eref .LE. TOLF) RETURN
+           Eref = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))*tol
+           IF(Eref .LE. tol) THEN
+               CALL Cleanup()
+               RETURN
+           ENDIF
        ENDIF
        IF(i .GT. 1) THEN
-           Enorm = SQRT(abs(DOT_PRODUCT(ai_temp,feqv)))
-           IF(Enorm .LE. Eref) RETURN
+           Enorm = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))
+           IF(Enorm .LE. Eref) THEN
+               CALL Cleanup()
+               RETURN
+           ENDIF
        ENDIF
 
        IF(i==niter) THEN
           CALL setErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of iterations", ErrStat, ErrMsg, RoutineName)
+          CALL Cleanup()
           RETURN
        ENDIF
    ENDDO
 
+contains
+      subroutine Cleanup()
+
+         if (allocated(StifK      )) deallocate(StifK      )
+         if (allocated(StifK_LU   )) deallocate(StifK_LU   )
+         if (allocated(MassM      )) deallocate(MassM      )
+         if (allocated(DampG      )) deallocate(DampG      )
+         if (allocated(RHS        )) deallocate(RHS        )
+         if (allocated(RHS_LU     )) deallocate(RHS_LU     )
+         if (allocated(F_PointLoad)) deallocate(F_PointLoad)
+         if (allocated(ai         )) deallocate(ai         )
+         if (allocated(indx       )) deallocate(indx       )
+
+      end subroutine Cleanup
    END SUBROUTINE BD_DynamicSolutionGA2
 
    SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
