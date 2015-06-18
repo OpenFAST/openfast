@@ -484,8 +484,8 @@ CONTAINS
       CurLine = 1
 
 
-         ! These first two parameters are optional, so we don't check for errors.
-
+         ! These first two parameters are optional, so we don't check for errors. ! bjj: huh???? 
+      
       CALL ParseVar ( FileInfo, CurLine, 'NonDimArea', AFInfo%NonDimArea, ErrStat2, ErrMsg2, UnEc )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL ParseVar ( FileInfo, CurLine, 'NumCoords' , AFInfo%NumCoords , ErrStat2, ErrMsg2, UnEc )
