@@ -125,10 +125,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF( ErrStat >= AbortErrLev ) RETURN
 
-!Read inputs from Driver/Glue code
-!1 Global position vector
-!2 Global rotation tensor
-!3 Gravity vector
+   !Read inputs from Driver/Glue code
+   !1 Global position vector
+   !2 Global rotation tensor
+   !3 Gravity vector
    CALL AllocAry(p%GlbPos,3,'Global position vector',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%GlbRot,3,3,'Global rotation tensor',ErrStat2,ErrMsg2)
@@ -140,37 +140,37 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%GlbRot(1:3,1:3) = TRANSPOSE(InitInp%GlbRot(1:3,1:3))
    p%gravity(:) = MATMUL(TRANSPOSE(p%GlbRot),InitInp%gravity(:))
 
-! Analysis type: 1 Static 2 Dynamic
+   ! Analysis type: 1 Static 2 Dynamic
    p%analysis_type  = InputFileData%analysis_type
-! Numerical damping coefficient: [0,1].
-! No numerical damping if rhoinf = 1; maximum numerical damping if rhoinf = 0.
+   ! Numerical damping coefficient: [0,1].
+   ! No numerical damping if rhoinf = 1; maximum numerical damping if rhoinf = 0.
    p%rhoinf = InputFileData%rhoinf
-! Time step size
+   ! Time step size
    p%dt = InputFileData%DTBeam
-! Compute generalized-alpha time integrator coefficients given rhoinf
+   ! Compute generalized-alpha time integrator coefficients given rhoinf
    CALL AllocAry(p%coef,9,'GA2 coefficient',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF( ErrStat >= AbortErrLev ) RETURN
    p%coef(:) = 0.0D0
    CALL BD_TiSchmComputeCoefficients(p%rhoinf,p%dt,p%coef, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-! Maximum number of iterations in Newton-Ralphson algorithm
+   ! Maximum number of iterations in Newton-Ralphson algorithm
    p%niter = InputFileData%NRMax
-! Tolerance used in stopping criterion
+   ! Tolerance used in stopping criterion
    p%tol = InputFileData%stop_tol
-! Total number of elements
+   ! Total number of elements
    p%elem_total = InputFileData%member_total
-! Number of nodes per elelemt
+   ! Number of nodes per elelemt
    p%node_elem  = InputFileData%order_elem + 1   
-! Number of Gauss points
+   ! Number of Gauss points
    p%ngp        = p%node_elem - 1
-! Degree-of-freedom (DoF) per node
+   ! Degree-of-freedom (DoF) per node
    p%dof_node   = 6
-! Total numbder of (finite element) nodes
+   ! Total numbder of (finite element) nodes
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         
-! Total numbder of (finite element) dofs
+   ! Total numbder of (finite element) dofs
    p%dof_total   = p%node_total*p%dof_node   
-! Compute coefficients for cubic spline fit, clamped at two ends
+   ! Compute coefficients for cubic spline fit, clamped at two ends
    CALL AllocAry(SP_Coef,InputFileData%kp_total-1,4,4,'Spline coefficient matrix',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
@@ -189,7 +189,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        temp_id = temp_id2
    ENDDO
-! Compute blade/member/segment lengths and the ratios between member/segment and blade lengths
+   ! Compute blade/member/segment lengths and the ratios between member/segment and blade lengths
    CALL AllocAry(p%member_length,InputFileData%member_total,2,'member length array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -211,7 +211,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          return
       end if
    
-! Compute initial position vector uuN0 in blade frame
+   ! Compute initial position vector uuN0 in blade frame
    temp_int = p%node_elem * p%dof_node
    CALL AllocAry(p%uuN0,temp_int,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -319,8 +319,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    DEALLOCATE(temp_GLL)
    DEALLOCATE(SP_Coef)
 
-! Compute sectional propertities ( 6 by 6 stiffness and mass matrices)
-! at Gauss points
+   ! Compute sectional propertities ( 6 by 6 stiffness and mass matrices)
+   ! at Gauss points
    CALL AllocAry(temp_ratio,p%ngp,p%elem_total,'temp_ratio',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
@@ -385,7 +385,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ENDDO
    DEALLOCATE(temp_GL)
    DEALLOCATE(temp_ratio)
-! Physical damping flag and 6 damping coefficients
+   ! Physical damping flag and 6 damping coefficients
    p%damp_flag  = InputFileData%InpBl%damp_flag
    CALL AllocAry(p%beta,6,'Damping coefficient',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -398,13 +398,13 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    IF( ErrStat >= AbortErrLev ) RETURN
 
    WRITE(*,*) "Finished Read Input"
-! Allocate continuous states
+   ! Allocate continuous states
    CALL AllocAry(x%q,p%dof_total,'x%q',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(x%dqdt,p%dof_total,'x%dqdt',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-! Allocate other states: Acceleration and algorithm accelerations 
-! for generalized-alpha time integator
+   ! Allocate other states: Acceleration and algorithm accelerations 
+   ! for generalized-alpha time integator
    CALL AllocAry(OtherState%acc,p%dof_total,'OtherState%acc',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(OtherState%xcc,p%dof_total,'OtherState%xcc',ErrStat2,ErrMsg2)
