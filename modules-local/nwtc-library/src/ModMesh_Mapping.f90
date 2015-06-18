@@ -2543,12 +2543,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
             RETURN      
          END IF
       END IF
-   
-      !MeshMap%MapSrcToAugmt%OtherMesh_Element = -1
-      !MeshMap%MapSrcToAugmt(:)%OtherMesh_Element = Original_Src_Element( (Src%ElemTable(ELEMENT_LINE2)%nelem+1) : Aug_NElem ) ! we added just as many nodes as elements...
-      !MeshMap%MapSrcToAugmt(:)%shape_fn(2)       = shape_fn2( (Src%nnodes+1) : Aug_Nnodes )
-      !MeshMap%MapSrcToAugmt(:)%shape_fn(1)       = 1.0_ReKi - MeshMap%MapSrcToAugmt(:)%shape_fn(2)
-      
+         
       j=Src%ElemTable(ELEMENT_LINE2)%nelem 
       do i=LBOUND(MeshMap%MapSrcToAugmt,1),UBOUND(MeshMap%MapSrcToAugmt,1)
          j = j+1

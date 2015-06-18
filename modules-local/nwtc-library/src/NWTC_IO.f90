@@ -35,7 +35,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.06.01a-bjj', '29-May-2015')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.06.02a-bjj', '17-Jun-2015')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -2903,6 +2903,14 @@ CONTAINS
 
       !' >> The text being parsed was :'//NewLine//'    "'//TRIM( FileInfo%Lines(LineNum) )//'
       
+      IF (LineNum > size(FileInfo%Lines) ) THEN
+         CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   , ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
+      
+      
       CALL GetWords ( FileInfo%Lines(LineNum), Words, 2 )                     ! Read the first two words in Line.
       IF ( Words(2) == '' )  THEN
          CALL SetErrStat ( ErrID_Fatal, 'A fatal error occurred when parsing data from "' &
@@ -2962,6 +2970,14 @@ CONTAINS
 
       ErrStat = ErrID_None
       ErrMsg  = ""
+      
+      IF (LineNum > size(FileInfo%Lines) ) THEN
+         CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   , ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
+      
       
       ALLOCATE ( Words( AryLen ) , STAT=ErrStatLcl )
       IF ( ErrStatLcl /= 0 )  THEN
@@ -3044,6 +3060,13 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
 
+      IF (LineNum > size(FileInfo%Lines) ) THEN
+         CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   , ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
+      
       CALL GetWords ( FileInfo%Lines(LineNum), Words, 2 )                     ! Read the first two words in Line.
 
       CALL ChkParseData ( Words, ExpVarName, FileInfo%FileList(FileInfo%FileIndx(LineNum)) &
@@ -3104,6 +3127,12 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
 
+      IF (LineNum > size(FileInfo%Lines) ) THEN
+         CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   , ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
 
       ALLOCATE ( Words( AryLen ) , STAT=ErrStatLcl )
       IF ( ErrStatLcl /= 0 )  THEN
@@ -3301,6 +3330,14 @@ CONTAINS
       ErrMsg  = ""
 
 
+      IF (LineNum > size(FileInfo%Lines) ) THEN
+         CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   , ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
+      
+      
       CALL GetWords ( FileInfo%Lines(LineNum), Words, 2 )                                        ! Read the first two words in Line.
 
       CALL ChkParseData ( Words, ExpVarName, FileInfo%FileList(FileInfo%FileIndx(LineNum)) &
@@ -3361,6 +3398,14 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
 
+      IF (LineNum > size(FileInfo%Lines) ) THEN
+         CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   , ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
+      
+      
       ALLOCATE ( Words( AryLen ) , STAT=ErrStatLcl )
       IF ( ErrStatLcl /= 0 )  THEN
          CALL SetErrStat ( ErrID_Fatal, NewLine//'Fatal error allocating memory for the Words array.',ErrStat,ErrMsg,RoutineName )
@@ -3440,7 +3485,14 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
 
+      IF (LineNum > size(FileInfo%Lines) ) THEN
+         CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   , ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
 
+      
       CALL GetWords ( FileInfo%Lines(LineNum), Words, 2 )                     ! Read the first two words in Line.
 
       CALL ChkParseData ( Words, ExpVarName, FileInfo%FileList(FileInfo%FileIndx(LineNum)) &
@@ -3505,6 +3557,12 @@ CONTAINS
       ErrStat = ErrID_None
       ErrMsg  = ""
 
+      IF (LineNum > size(FileInfo%Lines) ) THEN
+         CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The "'//TRIM( AryName )//'" array was not assigned because the file is too short.' &
+                   , ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
 
       ALLOCATE ( Words( AryLen ) , STAT=ErrStatLcl )
       IF ( ErrStatLcl /= 0 )  THEN
@@ -3585,6 +3643,14 @@ CONTAINS
 
       ErrStat = ErrID_None
       ErrMsg  = ""
+      
+      IF (LineNum > size(FileInfo%Lines) ) THEN
+         CALL SetErrStat ( ErrID_Fatal, NewLine//' >> A fatal error occurred when parsing data.'//NewLine//  &
+                   ' >> The "'//TRIM( ExpVarName )//'" variable was not assigned because the file is too short.' &
+                   , ErrStat, ErrMsg, RoutineName )
+         RETURN
+      END IF
+      
       
       CALL GetWords ( FileInfo%Lines(LineNum), Words, 2 )                     ! Read the first two words in Line.
 
