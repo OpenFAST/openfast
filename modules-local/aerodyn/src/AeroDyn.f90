@@ -826,7 +826,6 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
 
    INTEGER(IntKi)                               :: i,j
-   character(10)                                :: chanPrefix
    real(ReKi)                                   :: q
    
    integer(intKi)                               :: ErrStat2
@@ -2315,7 +2314,7 @@ SUBROUTINE TwrInfl( p, u, OtherState, ErrStat, ErrMsg )
          
       
          ! calculate tower influence:
-         if ( abs(zbar) >= 1.0_ReKi .and. p%TwrPotent /= TwrPotent_none ) then
+         if ( abs(zbar) < 1.0_ReKi .and. p%TwrPotent /= TwrPotent_none ) then
             if ( p%TwrPotent == TwrPotent_baseline ) then
                
                denom = (xbar**2 + ybar**2)**2
