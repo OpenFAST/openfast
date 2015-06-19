@@ -3520,7 +3520,7 @@ CONTAINS
    
          END IF              
             
-      ELSE !IF ( p_FAST%CompHydro == Module_HD ) THEN ! This routine assumes either SubDyn or HydroDyn is in use, so I'm not going to do this check
+      ELSEIF ( p_FAST%CompHydro == Module_HD ) THEN 
 
       !..................
       ! Get HD inputs on 3 meshes
