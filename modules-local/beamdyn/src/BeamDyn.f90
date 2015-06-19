@@ -2185,18 +2185,26 @@ SUBROUTINE BD_GravityForce(m00,mEta,grav,Fg,ErrStat,ErrMsg)
 
 END SUBROUTINE BD_GravityForce
 
-   SUBROUTINE BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,ElemK,GlobalK)
+SUBROUTINE BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,ElemK,GlobalK,ErrStat,ErrMsg)
    !-------------------------------------------------------------------------------
    ! This subroutine assembles total stiffness matrix.
    !-------------------------------------------------------------------------------
-   REAL(ReKi),INTENT(IN)::ElemK(:,:) ! Element mass matrix
-   INTEGER(IntKi),INTENT(IN)::nelem ! Number of elements
-   INTEGER(IntKi),INTENT(IN)::node_elem ! Nodes per element
-   INTEGER(IntKi),INTENT(IN)::dof_elem ! Degrees of freedom per element
-   INTEGER(IntKi),INTENT(IN)::dof_node ! Degrees of freedom per node
-   REAL(ReKi),INTENT(INOUT)::GlobalK(:,:) ! Global stiffness matrix
+   REAL(ReKi),    INTENT(IN   ):: ElemK(:,:)    ! Element  matrix
+   INTEGER(IntKi),INTENT(IN   ):: nelem         ! Number of elements
+   INTEGER(IntKi),INTENT(IN   ):: node_elem     ! Nodes per element
+   INTEGER(IntKi),INTENT(IN   ):: dof_elem      ! Degrees of freedom per element
+   INTEGER(IntKi),INTENT(IN   ):: dof_node      ! Degrees of freedom per node
+   REAL(ReKi),    INTENT(INOUT):: GlobalK(:,:)  ! Global stiffness matrix
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
-   INTEGER(IntKi)::i,j,temp_id1,temp_id2
+   INTEGER(IntKi)              :: i
+   INTEGER(IntKi)              :: j
+   INTEGER(IntKi)              :: temp_id1
+   INTEGER(IntKi)              :: temp_id2
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
    DO i=1,dof_elem
        temp_id1 = (nelem-1)*(node_elem-1)*dof_node+i
@@ -2206,28 +2214,34 @@ END SUBROUTINE BD_GravityForce
        ENDDO
    ENDDO
 
-   END SUBROUTINE BD_AssembleStiffK
+END SUBROUTINE BD_AssembleStiffK
 
-   SUBROUTINE BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,ElemRHS,GlobalRHS)
+SUBROUTINE BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,ElemRHS,GlobalRHS,ErrStat,ErrMsg)
    !-------------------------------------------------------------------------------
    ! This subroutine assembles global force vector.
    !-------------------------------------------------------------------------------
 
-   REAL(ReKi),INTENT(IN)::ElemRHS(:) ! Total element force (Fc, Fd, Fb)
-   INTEGER(IntKi),INTENT(IN)::nelem ! Number of elements
-   INTEGER(IntKi),INTENT(IN)::dof_elem ! Degrees of freedom per element
-   INTEGER(IntKi),INTENT(IN)::node_elem ! Nodes per element
-   INTEGER(IntKi),INTENT(IN)::dof_node ! Degrees of freedom per node
-   REAL(ReKi),INTENT(INOUT)::GlobalRHS(:) ! Global force
+   REAL(ReKi),    INTENT(IN   ):: ElemRHS(:)    ! Total element force (Fc, Fd, Fb)
+   INTEGER(IntKi),INTENT(IN   ):: nelem         ! Number of elements
+   INTEGER(IntKi),INTENT(IN   ):: dof_elem      ! Degrees of freedom per element
+   INTEGER(IntKi),INTENT(IN   ):: node_elem     ! Nodes per element
+   INTEGER(IntKi),INTENT(IN   ):: dof_node      ! Degrees of freedom per node
+   REAL(ReKi),    INTENT(INOUT):: GlobalRHS(:)  ! Global force vector
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
-   INTEGER(IntKi)::i,temp_id
+   INTEGER(IntKi)              :: i
+   INTEGER(IntKi)              :: temp_id
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
    DO i=1,dof_elem
        temp_id = (nelem-1)*(node_elem-1)*dof_node+i
        GlobalRHS(temp_id) = GlobalRHS(temp_id)+ElemRHS(i)
    ENDDO
 
-   END SUBROUTINE BD_AssembleRHS
+END SUBROUTINE BD_AssembleRHS
 
 SUBROUTINE ludcmp(a,n,indx,d)
 !***************************************************************************************
@@ -2341,18 +2355,37 @@ END SUBROUTINE ludcmp
 
    END SUBROUTINE lubksb
 
-   SUBROUTINE BD_UpdateDynamicGA2(ainc,uf,vf,af,xf,coef,node_total,dof_node)
+SUBROUTINE BD_UpdateDynamicGA2(ainc,uf,vf,af,xf,coef,node_total,dof_node,ErrStat,ErrMsg)
+!---------------------------------------------------------------------------
+! This subroutine updates the 1) displacements/rotations(uf)
+! 2) linear/angular velocities(vf); 3) linear/angular accelerations(af); and 
+! 4) algorithmic accelerations(xf) given the increments obtained through
+! N-R algorithm
+!---------------------------------------------------------------------------
 
-   REAL(ReKi), INTENT(IN):: ainc(:)
-   REAL(DbKi),INTENT(IN)::coef(:)
-   INTEGER(IntKi), INTENT(IN):: node_total, dof_node
-   REAL(ReKi), INTENT(INOUT):: uf(:),vf(:),af(:),xf(:)
+   REAL(ReKi),    INTENT(IN   ):: ainc(:)
+   REAL(DbKi),    INTENT(IN   ):: coef(:)
+   INTEGER(IntKi),INTENT(IN   ):: node_total
+   INTEGER(IntKi),INTENT(IN   ):: dof_node
+   REAL(ReKi),    INTENT(INOUT):: uf(:)
+   REAL(ReKi),    INTENT(INOUT):: vf(:)
+   REAL(ReKi),    INTENT(INOUT):: af(:)
+   REAL(ReKi),    INTENT(INOUT):: xf(:)
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
-   REAL(ReKi):: rotf_temp(3), roti_temp(3), rot_temp(3)
-   INTEGER(IntKi):: i, j, temp_id
-   INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
-   CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
-   CHARACTER(*), PARAMETER :: RoutineName = 'BD_UpdateDynamicGA2'
+   REAL(ReKi)                  :: rotf_temp(3)
+   REAL(ReKi)                  :: roti_temp(3)
+   REAL(ReKi)                  :: rot_temp(3)
+   INTEGER(IntKi)              :: i
+   INTEGER(IntKi)              :: j
+   INTEGER(IntKi)              :: temp_id
+   INTEGER(IntKi)              :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)        :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(*), PARAMETER     :: RoutineName = 'BD_UpdateDynamicGA2'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
 
    DO i=2, node_total
        temp_id = (i - 1) * dof_node
@@ -2376,7 +2409,7 @@ END SUBROUTINE ludcmp
        ENDDO
    ENDDO
 
-   END SUBROUTINE BD_UpdateDynamicGA2
+END SUBROUTINE BD_UpdateDynamicGA2
 
    SUBROUTINE BD_MotionTensor(RotTen,Pos,MotTen,flag)
 
@@ -2468,8 +2501,8 @@ END SUBROUTINE ludcmp
 
 
        CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,&
-                              elm,MassM)
-       CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS)
+                              elm,MassM,ErrStat2,ErrMsg2)
+       CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS,ErrStat2,ErrMsg2)
 
    ENDDO
 
@@ -2942,7 +2975,7 @@ END SUBROUTINE ludcmp
                                   damp_flag,beta,          &
                                   ngp,node_elem,dof_node,elf)
 
-       CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS)
+       CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS,ErrStat2,ErrMsg2)
 
    ENDDO
 
@@ -3526,9 +3559,13 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx,ErrStat,ErrMsg)
 
  END SUBROUTINE BD_diffmtc
 
-   SUBROUTINE BD_ComputeMemberLength(member_total,kp_member,Coef,seg_length,member_length,total_length,&
-                                     ErrStat,ErrMsg)
-
+SUBROUTINE BD_ComputeMemberLength(member_total,kp_member,Coef,seg_length,member_length,total_length,&
+                                  ErrStat,ErrMsg)
+!----------------------------------------------------------------------------------------
+! This subroutine computes the segment length, member length, and total length of a beam.
+! It also computes the ration between the segment/member and total length.
+! Segment: defined by two adjacent key points
+!----------------------------------------------------------------------------------------
    INTEGER(IntKi),INTENT(IN   ):: member_total
    INTEGER(IntKi),INTENT(IN   ):: kp_member(:)
    REAL(ReKi),    INTENT(IN   ):: Coef(:,:,:)
@@ -3596,10 +3633,13 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx,ErrStat,ErrMsg)
    ENDDO
 
 
-   END SUBROUTINE BD_ComputeMemberLength
+END SUBROUTINE BD_ComputeMemberLength
 
-   SUBROUTINE BD_ComputeIniNodalPosition(Coef,eta,PosiVec,e1,Twist_Angle,ErrStat,ErrMsg)
-
+SUBROUTINE BD_ComputeIniNodalPosition(Coef,eta,PosiVec,e1,Twist_Angle,ErrStat,ErrMsg)
+!--------------------------------------------------------------------------------
+! This subroutine computes the initial nodal locations given the coefficients for
+! cubie spline fit. It also computes the unit tangent vector e1 for further use.
+!--------------------------------------------------------------------------------
    REAL(ReKi),    INTENT(IN   ):: Coef(:,:)     ! Coefficients for cubic spline interpolation
    REAL(ReKi),    INTENT(IN   ):: eta           ! Nodal location in [0,1] 
    REAL(ReKi),    INTENT(  OUT):: PosiVec(:)    ! Physical coordinates of GLL points in blade frame
@@ -3623,13 +3663,13 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx,ErrStat,ErrMsg)
    Twist_Angle = 0.0D0
    Twist_Angle = Coef(4,1) + Coef(4,2)*eta + Coef(4,3)*eta*eta + Coef(4,4)*eta*eta*eta
 
-   END SUBROUTINE BD_ComputeIniNodalPosition
+END SUBROUTINE BD_ComputeIniNodalPosition
 
-   SUBROUTINE BD_CrvExtractCrv(Rr,cc,ErrStat,ErrMsg)
-   !--------------------------------------------------
-   ! This subroutine computes the CRV parameters given
-   ! the components of the rotation matrix
-   !--------------------------------------------------
+SUBROUTINE BD_CrvExtractCrv(Rr,cc,ErrStat,ErrMsg)
+!--------------------------------------------------
+! This subroutine computes the CRV parameters given
+! the rotation matrix
+!--------------------------------------------------
 
    REAL(ReKi),    INTENT(IN   ):: Rr(:,:)       ! Rotation Matrix
    REAL(ReKi),    INTENT(  OUT):: cc(:)         ! Crv paramteres
@@ -3717,19 +3757,19 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx,ErrStat,ErrMsg)
    cc(2) = em*sm2
    cc(3) = em*sm3
 
-   END SUBROUTINE BD_CrvExtractCrv
+END SUBROUTINE BD_CrvExtractCrv
 
-   SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc,ErrStat,ErrMsg)
-   !-----------------------------------------------------
-   ! This subroutine computes initial CRV parameters
-   ! given geometry information
-   !-----------------------------------------------------
+SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc,ErrStat,ErrMsg)
+!-----------------------------------------------------
+! This subroutine computes initial CRV parameters
+! given geometry information
+!-----------------------------------------------------
 
    REAL(ReKi),    INTENT(IN   ):: e1(:)       ! Unit tangent vector
    REAL(ReKi),    INTENT(IN   ):: phi         ! Initial twist angle
    REAL(ReKi),    INTENT(  OUT):: cc(:)       ! Initial Crv Parameter
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat     ! Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    REAL(ReKi)                  :: e2(3)                     ! Unit normal vector
    REAL(ReKi)                  :: e3(3)                     ! Unit e3 = e1 * e2, cross-product
@@ -3771,10 +3811,14 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx,ErrStat,ErrMsg)
    CALL BD_CrvExtractCrv(Rr,cc,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   END SUBROUTINE BD_ComputeIniNodalCrv
+END SUBROUTINE BD_ComputeIniNodalCrv
 
-   SUBROUTINE BD_ComputeIniCoef(kp_member,kp_coord,Coef,ErrStat,ErrMsg)
-
+SUBROUTINE BD_ComputeIniCoef(kp_member,kp_coord,Coef,ErrStat,ErrMsg)
+!---------------------------------------------------------------
+! This subroutine computes the coefficients for cubie-spline fit
+! given key point locations. Clamped conditions are used at the
+! two end nodes: f''(0) = f''(1) = 0 
+!---------------------------------------------------------------
    REAL(ReKi),    INTENT(IN   ):: kp_coord(:,:) ! Keypoints cooridinates
    INTEGER(IntKi),INTENT(IN   ):: kp_member     ! Number of kps of each member
    REAL(ReKi),    INTENT(  OUT):: Coef(:,:,:)   ! Coefficients for cubie spline interpolation
@@ -3846,7 +3890,7 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx,ErrStat,ErrMsg)
    ENDDO
 
 
-   END SUBROUTINE BD_ComputeIniCoef
+END SUBROUTINE BD_ComputeIniCoef
 
 SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 
@@ -4118,8 +4162,8 @@ END SUBROUTINE BD_StaticSolution
                                    Mass0(:,:,temp_id+1:temp_id+ngp),Stif0(:,:,temp_id+1:temp_id+ngp),&
                                    ngp,node_elem,dof_node,elk,elf)
 
-       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elk,StifK)
-       CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS)
+       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elk,StifK,ErrStat2,ErrMsg2)
+       CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS,ErrStat2,ErrMsg2)
    ENDDO
 
    DEALLOCATE(Nuuu)
@@ -4428,7 +4472,7 @@ END SUBROUTINE BD_StaticSolution
        CALL BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                                         ngp,node_elem,dof_node,elf)
 
-       CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS)
+       CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS,ErrStat2,ErrMsg2)
 
    ENDDO
 
@@ -4601,7 +4645,9 @@ END SUBROUTINE BD_StaticSolution
    END SUBROUTINE BD_StaticElementMatrixForce
 
 SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
-
+!-------------------------------------------------------
+! This subroutine performs time marching from t_i to t_f
+!-------------------------------------------------------
    REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
    INTEGER(IntKi),                    INTENT(IN   )  :: n           ! time step number
    TYPE(BD_InputType),                INTENT(INOUT)  :: u(:)        ! Inputs at t
@@ -4643,18 +4689,20 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                  
-         
+   ! GA2: prediction        
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
                                 p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
                                 p%node_total,p%dof_node, ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   ! find x at t+dt
+   ! Transform quantities from global frame to local (blade) frame
    CALL BD_InputGlobalLocal(p,u_interp,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
+   ! Incorporate boundary conditions
    CALL BD_BoundaryGA2(x,p,u_interp,t+p%dt,OtherState,ErrStat2,ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
+   ! find x, acc, and xcc at t+dt
    CALL BD_DynamicSolutionGA2( p%uuN0,x%q,x%dqdt,OtherState%acc,OtherState%xcc,&
                                p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,       &
                                p%damp_flag,p%beta,                             &
@@ -4673,10 +4721,13 @@ contains
    end subroutine cleanup   
 END SUBROUTINE BD_GA2
 
-   SUBROUTINE BD_TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,&
-                   uuNf,vvNf,aaNf,xxNf,node_total,dof_node, &
-                   ErrStat, ErrMsg)
-
+SUBROUTINE BD_TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,&
+                uuNf,vvNf,aaNf,xxNf,node_total,dof_node, &
+                ErrStat, ErrMsg)
+!----------------------------------------------------------------
+! This subroutine calculates the predicted values (initial guess)
+! of u,v,acc, and xcc in generalized-alpha algorithm
+!----------------------------------------------------------------
    REAL(ReKi),    INTENT(IN   ):: uuNi(:)
    REAL(ReKi),    INTENT(IN   ):: vvNi(:)
    REAL(ReKi),    INTENT(IN   ):: aaNi(:)
@@ -4740,9 +4791,13 @@ END SUBROUTINE BD_GA2
 
    ENDDO
 
-   END SUBROUTINE BD_TiSchmPredictorStep
+END SUBROUTINE BD_TiSchmPredictorStep
 
-   SUBROUTINE BD_TiSchmComputeCoefficients(rhoinf,deltat,coef,ErrStat,ErrMsg)
+SUBROUTINE BD_TiSchmComputeCoefficients(rhoinf,deltat,coef,ErrStat,ErrMsg)
+!----------------------------------------------------------------------
+! This subroutine calculates the coefficients used in generalized-alpha
+! time integrator
+!----------------------------------------------------------------------
 
    REAL(DbKi),    INTENT(IN   ):: rhoinf
    REAL(DbKi),    INTENT(IN   ):: deltat
@@ -4786,9 +4841,9 @@ END SUBROUTINE BD_GA2
    coef(8) = beta * tr2 * deltat2
    coef(9) = tr2
 
-   END SUBROUTINE BD_TiSchmComputeCoefficients
+END SUBROUTINE BD_TiSchmComputeCoefficients
 
-   SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
+SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
    !------------------------------------------------------------
    ! This subroutine applies the prescribed boundary conditions
    ! into states and otherstates at the root finite element node
@@ -4830,13 +4885,17 @@ END SUBROUTINE BD_GA2
    OtherState%acc(1:3) = u%RootMotion%TranslationAcc(1:3,1)
    OtherState%acc(4:6) = u%RootMotion%RotationAcc(1:3,1)
 
-   END SUBROUTINE BD_BoundaryGA2
+END SUBROUTINE BD_BoundaryGA2
 
-   SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
+SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
                                      Stif0,Mass0,gravity,u,damp_flag,beta,   &
                                      node_elem,dof_node,elem_total,dof_total,&
                                      node_total,niter,tol,ngp,coef, ErrStat, ErrMsg)
-
+!------------------------------------------------------------------------------------
+! This subroutine perform time-marching in one interval
+! Given states (u,v) and accelerations (acc,xcc) at the initial of a time step (t_i),
+! it returns the values of states and accelerations at the end of a time step (t_f)
+!------------------------------------------------------------------------------------
    REAL(ReKi),         INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),         INTENT(IN   ):: Stif0(:,:,:)
    REAL(ReKi),         INTENT(IN   ):: Mass0(:,:,:)
@@ -4860,7 +4919,6 @@ END SUBROUTINE BD_GA2
    INTEGER(IntKi),     INTENT(  OUT):: ErrStat     ! Error status of the operation
    CHARACTER(*),       INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-   ! local variables
    INTEGER(IntKi)                   :: ErrStat2    ! Temporary Error status
    CHARACTER(ErrMsgLen)             :: ErrMsg2     ! Temporary Error message
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_DynamicSolutionGA2'         
@@ -4917,6 +4975,10 @@ END SUBROUTINE BD_GA2
                                          StifK,RHS,MassM,DampG,&
                                          ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          if (ErrStat >= AbortErrLev) then
+              call Cleanup()
+              return
+          end if
        StifK = MassM + coef(7) * DampG + coef(8) * StifK
        DO j=1,node_total
            temp_id = (j-1)*dof_node
@@ -4943,7 +5005,8 @@ END SUBROUTINE BD_GA2
        DO j=1,dof_total-6
            ai(j+6) = RHS_LU(j)
        ENDDO
-       CALL BD_UpdateDynamicGA2(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node)
+       CALL BD_UpdateDynamicGA2(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        IF(i==1) THEN
            Eref = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))*tol
            IF(Eref .LE. tol) THEN
@@ -4980,7 +5043,7 @@ contains
          if (allocated(indx       )) deallocate(indx       )
 
       end subroutine Cleanup
-   END SUBROUTINE BD_DynamicSolutionGA2
+END SUBROUTINE BD_DynamicSolutionGA2
 
    SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
                                            Stif0,Mass0,gravity,u,damp_flag,beta,&
@@ -5097,20 +5160,29 @@ contains
            DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
        ENDDO
        CALL BD_NodalRelRot(Nuu0,node_elem,dof_node,Nrr0,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_NodalRelRot(Nuuu,node_elem,dof_node,Nrrr,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_ElemNodalDisp(vvNf,node_elem,dof_node,nelem,Nvvv,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_ElemNodalDisp(aaNf,node_elem,dof_node,nelem,Naaa,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
        CALL BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,         &
                               EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                               damp_flag,beta,                          &
                               ngp,node_elem,dof_node,elk,elf,elm,elg,  &
                               ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elk,StifK)
-       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elm,MassM)
-       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elg,DampG)
-       CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS)
+       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elk,StifK,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elm,MassM,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elg,DampG,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ENDDO
 
 contains
