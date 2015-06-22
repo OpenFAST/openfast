@@ -2251,7 +2251,7 @@ END SUBROUTINE Transfer_HD_to_SD
 REAL(ReKi) FUNCTION GetPerturb(x)
    REAL(ReKi), INTENT(IN) :: x
       
-   !GetPerturb = sqrt( EPSILON(x)) * max( abs(x, 1._ReKi)  
+   !GetPerturb = sqrt( EPSILON(x)) * max( abs(x), 1._ReKi)  
 !      GetPerturb = 1.0e6
    GetPerturb = 1.0
       
@@ -3043,6 +3043,11 @@ SUBROUTINE ED_SD_HD_BD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
             ! Get BeamDyn's contribution: (note if p_FAST%CompElast /= Module_BD, SizeJac_ED_SD_HD_BD(5) = 0)
             !............................... 
             DO nb=1,p_FAST%nBeams
+               CALL BD_CopyOutput(y_BD(nb),y_BD_perturb(nb),MESH_UPDATECOPY,ErrStat2,ErrMsg2)
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+            END DO
+                        
+            DO nb=1,p_FAST%nBeams
                
                ! make sure we perturb the outputs from only the current blade (overwrite the previous perturbation with y_BD values)
                if (nb > 1) then               
@@ -3052,7 +3057,7 @@ SUBROUTINE ED_SD_HD_BD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                
                
                DO j=1,p_FAST%SizeJac_ED_SD_HD_BD(4+nb) !call BD_CalcOutput            
-                  i = i + 1 ! i = j + p_FAST%SizeJac_ED_SD_HD_BD(2:3+nb)
+                  i = i + 1 ! i = j + sum(p_FAST%SizeJac_ED_SD_HD_BD(2:3+nb))
                   ! perturb u_BD:
                   CALL BD_CopyInput(  u_BD(nb), u_BD_perturb, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
@@ -3062,7 +3067,6 @@ SUBROUTINE ED_SD_HD_BD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                   ! calculate outputs with perturbed inputs:
                   CALL BD_CalcOutput( this_time, u_BD_perturb, p_BD(nb), x_BD(nb), xd_BD(nb), z_BD(nb), OtherSt_BD(nb), y_BD_perturb(nb), ErrStat2, ErrMsg2 )
                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
-                  
                   CALL U_ED_SD_HD_BD_Residual(y_ED, y_SD, y_HD, y_BD_perturb, u_perturb, Fn_U_perturb) ! get this perturbation  
                
                   IF ( ErrStat >= AbortErrLev ) THEN
@@ -3344,7 +3348,7 @@ CONTAINS
    REAL(ReKi)                        , INTENT(IN   ) :: u_in(:)
    REAL(ReKi)                        , INTENT(  OUT) :: U_Resid(:)
 
-   INTEGER(IntKi)                                    :: i                      ! counter for ice leg loop
+   INTEGER(IntKi)                                    :: i                      ! counter for ice leg and beamdyn loops
    
    !..................
    ! Set mooring line and ice inputs (which don't have acceleration fields and aren't used elsewhere in this routine, thus we're using the actual inputs (not a copy) 
@@ -3390,16 +3394,16 @@ CONTAINS
       
       MeshMapData%u_ED_HubPtLoad%Force  = 0.0_ReKi
       MeshMapData%u_ED_HubPtLoad%Moment = 0.0_ReKi
-      IF ( p_FAST%CompSub == Module_BD ) THEN
+      IF ( p_FAST%CompElast == Module_BD ) THEN
          
          ! Transfer ED motions to BD inputs:
-         call Transfer_ED_to_BD_tmp( y_ED2, MeshMapData, ErrStat2, ErrMsg2 )   ! sets MeshMapData%u_BD_RootMotion
+         call Transfer_ED_to_BD_tmp( y_ED2, MeshMapData, ErrStat2, ErrMsg2 )   ! sets MeshMapData%u_BD_RootMotion(:)
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
          ! Transfer BD loads to ED hub input:
             ! we're mapping loads, so we also need the sibling meshes' displacements:
-         do nb=1,p_FAST%nBeams            
-            CALL Transfer_Point_to_Point( y_BD2(nb)%ReactionForce, MeshMapData%u_ED_HubPtLoad_2, MeshMapData%BD_P_2_ED_P(nb), ErrStat2, ErrMsg2, MeshMapData%u_BD_RootMotion(nb), y_ED2%HubPtMotion) !u_BD_RootMotion and y_ED2%HubPtMotion contain the displaced positions for load calculations
+         do i=1,p_FAST%nBeams            
+            CALL Transfer_Point_to_Point( y_BD2(i)%ReactionForce, MeshMapData%u_ED_HubPtLoad_2, MeshMapData%BD_P_2_ED_P(i), ErrStat2, ErrMsg2, MeshMapData%u_BD_RootMotion(i), y_ED2%HubPtMotion) !u_BD_RootMotion and y_ED2%HubPtMotion contain the displaced positions for load calculations
                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
             MeshMapData%u_ED_HubPtLoad%Force  = MeshMapData%u_ED_HubPtLoad%Force  + MeshMapData%u_ED_HubPtLoad_2%Force  
@@ -6387,6 +6391,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          InitInData_BD%RootDisp     = 0.0_ReKi                                              ! {:} - - "Initial root displacement"
          InitInData_BD%RootOri      = InitInData_BD%GlbRot                                  ! {:}{:} - - "Initial root orientation"
          InitInData_BD%RootVel      = 0.0_ReKi                                              ! {:} - - "Initial root velocities and angular veolcities"                  
+!           InitInData_BD%RootVel(4) =  1.26
+!           InitInData_BD%RootVel(6) = -0.11
          
          CALL BD_Init( InitInData_BD, BD%Input(1,k), BD%p(k),  BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), &
                             BD%OtherSt(k), BD%y(k), dt_BD, InitOutData_BD(k), ErrStat2, ErrMsg2 )
