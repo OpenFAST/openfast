@@ -1,3 +1,26 @@
+!**********************************************************************************************************************************
+! LICENSING
+! Copyright (C) 2015  National Renewable Energy Laboratory
+!
+!    This file is part of AeroDyn.
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
+!
+!**********************************************************************************************************************************
+! File last committed: $Date$
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
+!**********************************************************************************************************************************
 module BEMTUnCoupled
  
    use NWTC_Library
@@ -80,7 +103,7 @@ subroutine ComputeAirfoilCoefs( phi, axInduction, tanInduction, Vx, Vy, chord, t
    character(*),           intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None 
    
    real(ReKi)                            :: W
-      ! Compute AOA, Re based on current values of axInduction, tanInduction
+      ! Compute AOA, Re, W based on current values of axInduction, tanInduction
    call BEMTU_Wind(phi, axInduction, tanInduction, Vx, Vy, chord, theta, airDens, mu, AOA, W, Re)
       
    call  BE_CalcOutputs( AFInfo, UA_Flag, AOA, W, log(Re), p_UA, xd_UA, OtherState_UA, Cl, Cd, Cm, errStat, errMsg)  
