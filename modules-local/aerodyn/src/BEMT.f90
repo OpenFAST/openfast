@@ -1,3 +1,26 @@
+!**********************************************************************************************************************************
+! LICENSING
+! Copyright (C) 2015  National Renewable Energy Laboratory
+!
+!    This file is part of AeroDyn.
+!
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
+!
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
+!
+!**********************************************************************************************************************************
+! File last committed: $Date$
+! (File) Revision #: $Rev$
+! URL: $HeadURL$
+!**********************************************************************************************************************************
 module BEMT
     
    use NWTC_Library
@@ -870,7 +893,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
    integer(IntKi)                 :: count
    
    integer(IntKi)                 :: ErrStat2                                        ! Temporary Error code
-   character(len(ErrMsg))         :: ErrMsg2                                         ! Temporary error message
+   character(ErrMsgLen)           :: ErrMsg2                                         ! Temporary error message
    
 
    logical, parameter             :: UpdateValues  = .TRUE.                          ! determines if the OtherState values need to be updated
@@ -1009,7 +1032,7 @@ subroutine BEMT_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat
 ! Tight coupling routine for computing derivatives of continuous states
 !..................................................................................................................................
 
-   REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
+   REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
    TYPE(BEMT_InputType),           INTENT(IN   )  :: u           ! Inputs at t
    TYPE(BEMT_ParameterType),       INTENT(IN   )  :: p           ! Parameters
    TYPE(BEMT_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t

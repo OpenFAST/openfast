@@ -105,7 +105,18 @@ typedef	^	OtherStateType	BEMT_OutputType	BEMT_y	-	-	-	"Outputs from the BEMT mod
 typedef	^	OtherStateType	BEMT_InputType	BEMT_u	-	-	-	"Inputs to the BEMT module"	-
 typedef	^	OtherStateType	ReKi	DisturbedInflow	{:}{:}{:}	-	-	"InflowOnBlade values modified by tower influence"	m/s
 typedef	^	OtherStateType	ReKi	WithoutSweepPitchTwist	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
-
+typedef	^	OtherStateType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	-
+typedef	^	OtherStateType	ReKi	W_Twr	{:}	-	-	"relative wind speed normal to the tower at node j"	m/s
+typedef	^	OtherStateType	ReKi	X_Twr	{:}	-	-	"local x-component of force per unit length of the jth node in the tower"	m/s
+typedef	^	OtherStateType	ReKi	Y_Twr	{:}	-	-	"local y-component of force per unit length of the jth node in the tower"	m/s
+typedef	^	OtherStateType	ReKi	Curve	{:}{:}	-	-	"curvature angle, saved for possible output to file"	rad
+typedef	^	OtherStateType	ReKi	X	{:}{:}	-	-	"normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade"	N/m
+typedef	^	OtherStateType	ReKi	Y	{:}{:}	-	-	"tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade"	N/m
+typedef	^	OtherStateType	ReKi	M	{:}{:}	-	-	"pitching moment per unit length of the jth node in the kth blade"	Nm/m
+typedef	^	OtherStateType	ReKi	V_DiskAvg	{3}	-	-	"disk-average relative wind speed"	m/s
+typedef	^	OtherStateType	ReKi	V_dot_x	-	-	-
+typedef	^	OtherStateType	MeshType	HubLoad	-	-	-	"mesh at hub; used to compute an integral for mapping the output blade loads to a single point (for writing to file only)"	-
+typedef	^	OtherStateType	MeshMapType	B_L_2_H_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to the OtherState%HubLoad mesh"
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -125,13 +136,14 @@ typedef	^	ParameterType	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	m^2/s
 typedef	^	ParameterType	ReKi	SpdSound	-	-	-	"Speed of sound"	m/s
 typedef	^	ParameterType	AFI_ParameterType	AFI	-	-	-	"AirfoilInfo parameters"
 typedef	^	ParameterType	BEMT_ParameterType	BEMT	-	-	-	"Parameters for BEMT module"
-
-
-
 # parameters for output
 typedef	^	ParameterType	IntKi	NumOuts	-	-	-	"Number of parameters in the output list (number of outputs requested)"	-
 typedef	^	ParameterType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^	ParameterType	OutParmType	OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
+typedef	^	ParameterType	IntKi	NBlOuts	-	-	-	"Number of blade node outputs [0 - 9]"	-
+typedef	^	ParameterType	IntKi	BlOutNd	{9}	-	-	"Blade nodes whose values will be output"	-
+typedef	^	ParameterType	IntKi	NTwOuts	-	-	-	"Number of tower node outputs [0 - 9]"	-
+typedef	^	ParameterType	IntKi	TwOutNd	{9}	-	-	"Tower nodes whose values will be output"	-
 
 
 # ..... Inputs ....................................................................................................................
