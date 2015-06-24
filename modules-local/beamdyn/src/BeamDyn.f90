@@ -97,7 +97,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    REAL(ReKi),ALLOCATABLE  :: SP_Coef(:,:,:)
    REAL(ReKi)              :: TmpPos(3)
    REAL(ReKi)              :: TmpDCM(3,3)
-   REAL(ReKi),ALLOCATABLE  :: temp_glb(3)
+   REAL(ReKi)              :: temp_glb(3)
 
    INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
@@ -135,11 +135,18 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    CALL AllocAry(p%gravity,3,'Gravity vector in Blade frame',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF( ErrStat >= AbortErrLev ) RETURN
-   p%GlbPos(1:3)     = InitInp%GlbPos(1:3)
+   p%GlbPos(1)     = InitInp%GlbPos(3)
+   p%GlbPos(2)     = InitInp%GlbPos(1)
+   p%GlbPos(3)     = InitInp%GlbPos(2)
    p%GlbRot(1:3,1:3) = TRANSPOSE(InitInp%GlbRot(1:3,1:3))
-   p%gravity(:) = MATMUL(TRANSPOSE(p%GlbRot),InitInp%gravity(:))
-   CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
+   CALL BD_CrvExtractCrv(p%GlbRot,TmpPos,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_glb(1) = TmpPos(3)
+   temp_glb(2) = TmpPos(1)
+   temp_glb(3) = TmpPos(2)
+   CALL BD_CrvMatrixR(temp_glb,p%GlbRot,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%gravity(:) = MATMUL(TRANSPOSE(p%GlbRot),InitInp%gravity(:))
 
    ! Analysis type: 1 Static 2 Dynamic
    p%analysis_type  = InputFileData%analysis_type
@@ -495,11 +502,17 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ENDDO
 
    ! place single node at origin; position affects mapping/coupling with other modules
-   TmpPos(:) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1))
+   temp_POS(:) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1))
+   TmpPos(1) = temp_POS(2)
+   TmpPos(2) = temp_POS(3)
+   TmpPos(3) = temp_POS(1)
    temp_CRV(:) = MATMUL(p%GlbRot,p%uuN0(4:6,1))
-   CALL BD_CrvCompose(temp_CRV,temp_CRV,temp_glb,0,ErrStat2,ErrMsg2)
+   CALL BD_CrvCompose(temp_POS,temp_CRV,temp_glb,0,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
+   temp_CRV(1) = temp_POS(2)
+   temp_CRV(2) = temp_POS(3)
+   temp_CRV(3) = temp_POS(1)
+  CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    TmpDCM(:,:) = TRANSPOSE(TmpDCM)
    CALL MeshPositionNode ( Mesh = u%RootMotion      &
@@ -514,10 +527,16 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    DO i=1,p%elem_total
        DO j=1,p%node_elem
            temp_id = (j-1) * p%dof_node
-           TmpPos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+           temp_POS(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+           TmpPos(1) = temp_POS(2)
+           TmpPos(2) = temp_POS(3)
+           TmpPos(3) = temp_POS(1)
            temp_CRV(:) = MATMUL(p%GlbRot,p%uuN0(temp_id+4:temp_id+6,i))
-           CALL BD_CrvCompose(temp_CRV,temp_CRV,temp_glb,0,ErrStat2,ErrMsg2)
+           CALL BD_CrvCompose(temp_POS,temp_CRV,temp_glb,0,ErrStat2,ErrMsg2)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           temp_CRV(1) = temp_POS(2)
+           temp_CRV(2) = temp_POS(3)
+           temp_CRV(3) = temp_POS(1)
            CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            TmpDCM(:,:) = TRANSPOSE(TmpDCM)
@@ -534,10 +553,16 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    DO i=1,p%elem_total
        DO j=1,p%node_elem
            temp_id = (j-1)*p%dof_node
-           TmpPos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+           temp_POS(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+           TmpPos(1) = temp_POS(2)
+           TmpPos(2) = temp_POS(3)
+           TmpPos(3) = temp_POS(1)
            temp_CRV(:) = MATMUL(p%GlbRot,p%uuN0(temp_id+4:temp_id+6,i))
-           CALL BD_CrvCompose(temp_CRV,temp_CRV,temp_glb,0,ErrStat2,ErrMsg2)
+           CALL BD_CrvCompose(temp_POS,temp_CRV,temp_glb,0,ErrStat2,ErrMsg2)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           temp_CRV(1) = temp_POS(2)
+           temp_CRV(2) = temp_POS(3)
+           temp_CRV(3) = temp_POS(1)
            CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            TmpDCM(:,:) = TRANSPOSE(TmpDCM)
@@ -571,10 +596,16 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    
 
    DO i=1,p%ngp*p%elem_total+2
-       TmpPos(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
+       temp_POS(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
+       TmpPos(1) = temp_POS(2)
+       TmpPos(2) = temp_POS(3)
+       TmpPos(3) = temp_POS(1)
        temp_CRV(:) = MATMUL(p%GlbRot,temp_L2(4:6,i))
-       CALL BD_CrvCompose(temp_CRV,temp_CRV,temp_glb,0,ErrStat2,ErrMsg2)
+       CALL BD_CrvCompose(temp_POS,temp_CRV,temp_glb,0,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       temp_CRV(1) = temp_POS(2)
+       temp_CRV(2) = temp_POS(3)
+       temp_CRV(3) = temp_POS(1)
        CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        TmpDCM(:,:) = TRANSPOSE(TmpDCM)
