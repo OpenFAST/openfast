@@ -19,7 +19,9 @@ Source\FAST_Library.f90
 Source\dependencies\NWTC_Library\*
 Source\dependencies\NetLib\*
 Source\dependencies\ElastoDyn\*
+Source\dependencies\BeamDyn\*
 Source\dependencies\AeroDyn\*
+Source\dependencies\AeroDyn14\*
 Source\dependencies\InflowWind\*
 Source\dependencies\ServoDyn\*
 Source\dependencies\HydroDyn\*
@@ -68,6 +70,7 @@ Utilities\SimulationToolbox\ConvertFASTVersions\ConvertFAST8_0to3.m
 Utilities\SimulationToolbox\ConvertFASTVersions\ConvertFAST8_3to8.m
 Utilities\SimulationToolbox\ConvertFASTVersions\ConvertFAST8_8to9.m
 Utilities\SimulationToolbox\ConvertFASTVersions\ConvertFAST8_9to10.m
+Utilities\SimulationToolbox\ConvertFASTVersions\ConvertFAST8_10to12.m
 Utilities\SimulationToolbox\ConvertFASTVersions\ConvertHDto2_01_00.m
 Utilities\SimulationToolbox\ConvertFASTVersions\ConvertHDto2_02_00.m
 Utilities\SimulationToolbox\ConvertFASTVersions\ConvertSDto1_01_00.m
@@ -77,21 +80,19 @@ Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\ED_Blade.d
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\ED_Furling.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\ED_Tower.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\OutListParameters.xlsx
-Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\ED_Primary_v1.01.x.dat
-Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\FAST_Primary_v8.08.x.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\ED_Primary_v1.03.x.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\FAST_Primary_v8.12.x.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\SrvD_Primary_v1.02.x.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\AD_Primary_v14.04.x.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\AD_Primary_v14.04.x_NT.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\AD_Primary_v15.00.x.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\AD_Blade_v15.00.x.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\IfW_v3.00.x.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\HDv2.01.00.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\HDv2.02.x.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\SDv1.01.x.dat
 
-Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_ED_v1_00.m
-Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_ED_v1_01.m
-Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_FAST_v8_05.m
-Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_SrvD_v1_01.m
-Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_SrvD_v1_02.m
-Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_HD_v2_00_05.m
-Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_HD_v2_01_00.m
-Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\newInputs_HD_v2_02_00.m
+Utilities\SimulationToolbox\ConvertFASTVersions\InputConversions\*.m
 
 Utilities\SimulationToolbox\FAST2Matlab\AeroDyn2Matlab.m
 Utilities\SimulationToolbox\FAST2Matlab\Fast2Matlab.m
@@ -137,6 +138,7 @@ CertTest\Update.bat
 
 
 CertTest\5MW_Baseline\AeroData\*
+CertTest\5MW_Baseline\Airfoils\*
 CertTest\5MW_Baseline\HydroData\*
 CertTest\5MW_Baseline\ServoData\Source\DISCON.f90
 CertTest\5MW_Baseline\ServoData\Source\DISCON_ITIBarge.f90
@@ -215,17 +217,11 @@ CertTest\5MW_Baseline\NRELOffshrBsline5MW_ITIBarge4_FEAMooring.dat
 CertTest\5MW_Baseline\NRELOffshrBsline5MW_ServoDyn_TMD.dat
 
 
-CertTest\AOC\AeroData\S814_1.dat
-CertTest\AOC\AeroData\S814_15.dat
-CertTest\AOC\AeroData\S812_15.dat
-CertTest\AOC\AeroData\S812_2.dat
-CertTest\AOC\AeroData\S813_15.dat
-
+CertTest\AOC\AeroData\*
 CertTest\AOC\Wind\25m_12mps.inp
 CertTest\AOC\Wind\25m_12mps.sum
 CertTest\AOC\Wind\25m_12mps.wnd
 CertTest\AOC\Wind\NoShr_12.wnd
-CertTest\AOC\Wind\Shr11_30.wnd
 
 CertTest\AOC\AOC_Blade.dat
 CertTest\AOC\AOC_Tower.dat
@@ -246,16 +242,7 @@ CertTest\AOC\Test08_InflowWind.dat
 
 
 
-CertTest\AWT27\AeroData\AWT27_05.dat
-CertTest\AWT27\AeroData\AWT27_15.dat
-CertTest\AWT27\AeroData\AWT27_25.dat
-CertTest\AWT27\AeroData\AWT27_35.dat
-CertTest\AWT27\AeroData\AWT27_45.dat
-CertTest\AWT27\AeroData\AWT27_55.dat
-CertTest\AWT27\AeroData\AWT27_65.dat
-CertTest\AWT27\AeroData\AWT27_75.dat
-CertTest\AWT27\AeroData\AWT27_85.dat
-CertTest\AWT27\AeroData\AWT27_95.dat
+CertTest\AWT27\AeroData\*
 
 CertTest\AWT27\Wind\42m_12mps.inp
 CertTest\AWT27\Wind\42m_12mps.sum

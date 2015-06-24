@@ -299,6 +299,10 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax  )
          
     
     p%WrGraphics = .FALSE. !.TRUE.
+#ifdef DEBUG_BEAMDYN
+    p%WrGraphics = .TRUE.
+#endif
+
     p%n_TMax_m1  = CEILING( ( (p%TMax - t_initial) / p%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
 
    !...............................................................................................................................
@@ -4740,11 +4744,12 @@ SUBROUTINE AD_SetInitInput(InitInData_AD14, InitOutData_ED, y_ED, p_FAST, ErrSta
    RETURN
 END SUBROUTINE AD_SetInitInput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, FileName, ErrStat, ErrMsg) 
+SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, u_BD, FileName, ErrStat, ErrMsg) 
    TYPE(ED_InputType),        INTENT(IN)  :: u_ED         
    TYPE(SD_InputType),        INTENT(IN)  :: u_SD         
    TYPE(HydroDyn_InputType),  INTENT(IN)  :: u_HD         
    TYPE(MAP_InputType),       INTENT(IN)  :: u_MAP         
+   TYPE(BD_InputType),        INTENT(IN)  :: u_BD(:)         
    CHARACTER(*),              INTENT(IN)  :: FileName
    
    INTEGER(IntKi)                         :: ErrStat          ! Error status of the operation
@@ -4755,8 +4760,9 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, FileName, ErrStat, Er
    
       
    INTEGER(IntKi)           :: unOut
+   INTEGER(IntKi)           :: unOut2
    INTEGER(IntKi)           :: K_local
-   INTEGER(B4Ki), PARAMETER :: File_ID = 1
+   INTEGER(B4Ki), PARAMETER :: File_ID = 2
    INTEGER(B4Ki)            :: NumBl
       
 
@@ -4765,8 +4771,10 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, FileName, ErrStat, Er
    CALL GetNewUnit( unOut, ErrStat, ErrMsg )
    CALL OpenBOutFile ( unOut, TRIM(FileName), ErrStat, ErrMsg )
       IF (ErrStat /= ErrID_None) RETURN
-               
-      
+  
+      ! get unit for text output
+   CALL GetNewUnit( unOut2, ErrStat, ErrMsg )
+            
    ! note that I'm not doing anything with the errors here, so it won't tell
    ! you there was a problem writing the data unless it was the last call.
           
@@ -4781,6 +4789,12 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, FileName, ErrStat, Er
       ! Add all of the input meshes:
    DO K_local = 1,SIZE(u_ED%BladeLn2Mesh,1)
       CALL MeshWrBin( unOut, u_ED%BladeLn2Mesh(K_local), ErrStat, ErrMsg )
+      
+      write(unOut2,'(A)') '_____________________________________________________________________________'
+      write(unOut2,*)     'ElastoDyn blade ', k_local, ' mesh'
+      write(unOut2,'(A)') '_____________________________________________________________________________'      
+      CALL MeshPrintInfo(unOut2, u_ED%BladeLn2Mesh(K_local))
+      write(unOut2,'(A)') '_____________________________________________________________________________'
    END DO            
    CALL MeshWrBin( unOut, u_ED%TowerLn2Mesh,            ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_ED%PlatformPtMesh,          ErrStat, ErrMsg )
@@ -4790,20 +4804,30 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, FileName, ErrStat, Er
    CALL MeshWrBin( unOut, u_HD%Morison%lumpedMesh,      ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_HD%Mesh,                    ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_MAP%PtFairDisplacement,     ErrStat, ErrMsg )
+      ! Add how many BD blade meshes there are:
+   NumBl =  SIZE(u_BD,1)   ! Note that NumBl is B4Ki 
+   WRITE( unOut, IOSTAT=ErrStat )   NumBl
+   
+   DO K_local = 1,SIZE(u_BD,1)
+      CALL MeshWrBin( unOut, u_BD(K_local)%RootMotion, ErrStat, ErrMsg )
+      CALL MeshWrBin( unOut, u_BD(K_local)%DistrLoad, ErrStat, ErrMsg )
+   END DO            
       
       
       ! Close the file
    CLOSE(unOut)
+   CLOSE(unOut2)
          
 END SUBROUTINE WriteInputMeshesToFile   
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, UnOut, ErrStat, ErrMsg, FileName) 
+SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, UnOut, ErrStat, ErrMsg, FileName) 
    REAL(DbKi),                 INTENT(IN)    :: time
    TYPE(ED_OutputType),        INTENT(IN)    :: y_ED         
    TYPE(SD_InputType),         INTENT(IN)    :: u_SD         
    TYPE(SD_OutputType),        INTENT(IN)    :: y_SD         
    TYPE(HydroDyn_InputType),   INTENT(IN)    :: u_HD         
    TYPE(MAP_InputType),        INTENT(IN)    :: u_MAP         
+   TYPE(BD_OutputType),        INTENT(IN)    :: y_BD(:)
    INTEGER(IntKi) ,            INTENT(INOUT) :: unOut
    CHARACTER(*),   OPTIONAL,   INTENT(IN)    :: FileName
    
@@ -4815,7 +4839,7 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, UnOut, E
    REAL(R8Ki)               :: t
       
    INTEGER(IntKi)           :: K_local
-   INTEGER(B4Ki), PARAMETER :: File_ID = 100
+   INTEGER(B4Ki), PARAMETER :: File_ID = 101
    INTEGER(B4Ki)            :: NumBl
       
    t = time  ! convert to 8-bytes if necessary (DbKi might not be R8Ki)
@@ -4837,6 +4861,8 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, UnOut, E
          ! Add how many blade meshes there are:
       NumBl =  SIZE(y_ED%BladeLn2Mesh,1)   ! Note that NumBl is B4Ki 
       WRITE( unOut, IOSTAT=ErrStat )   NumBl
+      NumBl =  SIZE(y_BD,1)   ! Note that NumBl is B4Ki 
+      WRITE( unOut, IOSTAT=ErrStat )   NumBl
    end if
    
    WRITE( unOut, IOSTAT=ErrStat ) t          
@@ -4853,6 +4879,10 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, UnOut, E
    CALL MeshWrBin( unOut, u_HD%Morison%lumpedMesh,      ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_HD%Mesh,                    ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_MAP%PtFairDisplacement,     ErrStat, ErrMsg )
+   DO K_local = 1,SIZE(y_BD,1)
+      CALL MeshWrBin( unOut, y_BD(K_local)%BldMotion, ErrStat, ErrMsg )
+      !CALL MeshWrBin( unOut, u_BD(K_local)%DistrLoad, ErrStat, ErrMsg )
+   END DO            
       
    !   
    !   ! Close the file
@@ -5676,7 +5706,7 @@ SUBROUTINE WriteOutputToFile(t_global, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, HD
    ENDIF
       
    IF (p_FAST%WrGraphics) THEN
-      CALL WriteMotionMeshesToFile(t_global, ED%Output(1), SD%Input(1), SD%y, HD%Input(1), MAPp%Input(1), y_FAST%UnGra, ErrStat2, ErrMsg2, TRIM(p_FAST%OutFileRoot)//'.gra') 
+      CALL WriteMotionMeshesToFile(t_global, ED%Output(1), SD%Input(1), SD%y, HD%Input(1), MAPp%Input(1), BD%y, y_FAST%UnGra, ErrStat2, ErrMsg2, TRIM(p_FAST%OutFileRoot)//'.gra') 
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, "WriteOutputToFile" )
    END IF
             
@@ -6391,8 +6421,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          InitInData_BD%RootDisp     = 0.0_ReKi                                              ! {:} - - "Initial root displacement"
          InitInData_BD%RootOri      = InitInData_BD%GlbRot                                  ! {:}{:} - - "Initial root orientation"
          InitInData_BD%RootVel      = 0.0_ReKi                                              ! {:} - - "Initial root velocities and angular veolcities"                  
-!           InitInData_BD%RootVel(4) =  1.26
-!           InitInData_BD%RootVel(6) = -0.11
+!BJJ: FIX ME
+#ifdef DEBUG_BEAMDYN
+         InitInData_BD%RootVel(4) =  1.26
+         InitInData_BD%RootVel(6) = -0.11
+#endif         
          
          CALL BD_Init( InitInData_BD, BD%Input(1,k), BD%p(k),  BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), &
                             BD%OtherSt(k), BD%y(k), dt_BD, InitOutData_BD(k), ErrStat2, ErrMsg2 )
@@ -6408,9 +6441,9 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          ELSEIF ( .NOT. EqualRealNos( p_FAST%dt_module( MODULE_BD ),dt_BD )) THEN
             CALL SetErrStat(ErrID_Fatal,"All instances of BeamDyn (one per blade) must have the same time step.",ErrStat,ErrMsg,RoutineName)
          END IF
-                  
+                           
       END DO
-            
+               
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -8708,9 +8741,10 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, H
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
       
+      
 ! output some graphics. For now, WrGraphics is hard-coded to .FALSE.      
    IF (p_FAST%WrGraphics) THEN
-      CALL WriteInputMeshesToFile( ED%Input(1), SD%Input(1), HD%Input(1), MAPp%Input(1), TRIM(p_FAST%OutFileRoot)//'.InputMeshes.bin', ErrStat2, ErrMsg2)
+      CALL WriteInputMeshesToFile( ED%Input(1), SD%Input(1), HD%Input(1), MAPp%Input(1), BD%Input(1,:), TRIM(p_FAST%OutFileRoot)//'.InputMeshes.bin', ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF 
 
