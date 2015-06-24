@@ -896,7 +896,6 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
    REAL(ReKi)      :: n1_Point_vector(3)  ! vector going from node 1 in Line 2 element to Destination Point
    REAL(ReKi)      :: tmp(3)              ! temporary vector for cross product calculation
 
-   INTEGER(IntKi)  :: elem_with_min_dist
 
    INTEGER(IntKi)  :: iElem, iNode, i  ! do-loop counter for elements on Mesh1, associated node(S)
    INTEGER(IntKi)  :: jElem            ! do-loop counter for elements on Mesh2, associated node
@@ -991,7 +990,7 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
             ! if failed to find an element that the Point projected into, throw an error
          if (.not. found) then
 
-            if (elem_with_min_dist .lt. 1 )  then
+            if (Map(i)%OtherMesh_Element .lt. 1 )  then
                CALL SetErrStat( ErrID_Fatal, 'node does not project onto any line2 element', ErrStat, ErrMsg, 'CreateMapping_ProjectToLine2')
                RETURN
             endif
