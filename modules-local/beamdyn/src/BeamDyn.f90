@@ -74,6 +74,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    ! local variables
    TYPE(BD_InputFile)      :: InputFileData    ! Data stored in the module's input file
+   TYPE(BD_InputType)      :: u_tmp           ! An initial guess for the input; input mesh must be defined
    INTEGER(IntKi)          :: i                ! do-loop counter
    INTEGER(IntKi)          :: j                ! do-loop counter
    INTEGER(IntKi)          :: k                ! do-loop counter
@@ -689,7 +690,11 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        u%DistrLoad%Moment(:,k) = 0.0D0
    ENDDO
 
-   CALL BD_CalcIC(u,p,x,OtherState,ErrStat2,ErrMsg2)
+   CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CalcIC(u_tmp,p,x,OtherState,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Define initial guess for the system outputs here:
 
@@ -701,13 +706,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    y%BldMotion%TranslationDisp(:,:) = 0.0D0
    y%BldMotion%Orientation(:,:,:)   = 0.0D0
-   DO i=1,p%elem_total
-       DO j=1,p%node_elem
-           temp_int = (j-1)*p%dof_node
-           CALL BD_CrvMatrixR(p%uuN0(temp_int+4:temp_int+6,i),y%BldMotion%Orientation(:,:,(i-1)*p%node_elem+j),&
-                                     ErrStat2,ErrMsg2)
-       ENDDO
-   ENDDO
+
    y%BldMotion%TranslationVel(:,:)  = 0.0D0
    y%BldMotion%RotationVel(:,:)     = 0.0D0
    y%BldMotion%TranslationAcc(:,:)  = 0.0D0
@@ -5474,6 +5473,9 @@ SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
    REAL(ReKi)                           :: temp_v(3)
    REAL(ReKi)                           :: temp_v2(3)
    INTEGER(IntKi)                       :: i
+   INTEGER(IntKi)                       :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)                 :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(*), PARAMETER              :: RoutineName = 'BD_InputGlobalLocal'
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -5792,15 +5794,23 @@ SUBROUTINE BD_IniAcc( u, y, p, OtherState,ErrStat,ErrMsg)
            temp_id2= (i-1)*p%node_elem+j
            IF(i .EQ. 1 .AND. j .EQ. 1) THEN
                temp6(:) = 0.0D0
-               temp6(1:3) = u%RootMotion%TranslationAcc(1:3,1)
-               temp6(4:6) = u%RootMotion%RotationAcc(1:3,1)
+               temp6(1) = u%RootMotion%TranslationAcc(3,1)
+               temp6(2) = u%RootMotion%TranslationAcc(1,1)
+               temp6(3) = u%RootMotion%TranslationAcc(2,1)
+               temp6(4) = u%RootMotion%RotationAcc(3,1)
+               temp6(5) = u%RootMotion%RotationAcc(1,1)
+               temp6(6) = u%RootMotion%RotationAcc(2,1)
            ELSE
                temp6(:) = 0.0D0
-               temp6(1:3) = y%BldMotion%TranslationAcc(1:3,temp_id2)
-               temp6(4:6) = y%BldMotion%RotationAcc(1:3,temp_id2)
-               temp6(1:3) = MATMUL(TRANSPOSE(p%GlbRot),temp6(1:3))
-               temp6(4:6) = MATMUL(TRANSPOSE(p%GlbRot),temp6(4:6))
+               temp6(1) = y%BldMotion%TranslationAcc(3,temp_id2)
+               temp6(2) = y%BldMotion%TranslationAcc(1,temp_id2)
+               temp6(3) = y%BldMotion%TranslationAcc(2,temp_id2)
+               temp6(4) = y%BldMotion%RotationAcc(1,temp_id2)
+               temp6(5) = y%BldMotion%RotationAcc(2,temp_id2)
+               temp6(6) = y%BldMotion%RotationAcc(3,temp_id2)
            ENDIF
+           temp6(1:3) = MATMUL(TRANSPOSE(p%GlbRot),temp6(1:3))
+           temp6(4:6) = MATMUL(TRANSPOSE(p%GlbRot),temp6(4:6))
            OtherState%Acc(temp_id+1:temp_id+6) = temp6(1:6)
        ENDDO
    ENDDO
