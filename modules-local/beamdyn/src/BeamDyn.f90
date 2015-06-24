@@ -926,22 +926,34 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
        DO j=1,p%node_elem
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
            temp_id2= (i-1)*p%node_elem+j
-           y%BldMotion%TranslationDisp(1:3,temp_id2) = MATMUL(p%GlbRot,x%q(temp_id+1:temp_id+3))
+           temp_cc(:) = MATMUL(p%GlbRot,x%q(temp_id+1:temp_id+3))
+           y%BldMotion%TranslationDisp(1,temp_id2) = temp_cc(2)
+           y%BldMotion%TranslationDisp(2,temp_id2) = temp_cc(3)
+           y%BldMotion%TranslationDisp(3,temp_id2) = temp_cc(1)
            cc(1:3) = x%q(temp_id+4:temp_id+6)
            temp_id = (j-1)*p%dof_node
            cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
            CALL BD_CrvCompose(temp_cc,cc0,cc,0,ErrStat2,ErrMsg2)
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            temp_cc = MATMUL(p%GlbRot,temp_cc)
-           CALL BD_CrvCompose(temp_cc,temp_cc,temp_glb,0,ErrStat2,ErrMsg2)
+           CALL BD_CrvCompose(cc,temp_cc,temp_glb,0,ErrStat2,ErrMsg2)
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           temp_cc(1) = cc(2)
+           temp_cc(2) = cc(3)
+           temp_cc(3) = cc(1)
            CALL BD_CrvMatrixR(temp_cc,temp_R,ErrStat2,ErrMsg2)
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            y%BldMotion%Orientation(1:3,1:3,temp_id2) = TRANSPOSE(temp_R(1:3,1:3))
 
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-           y%BldMotion%TranslationVel(1:3,temp_id2) = MATMUL(p%GlbRot,x%dqdt(temp_id+1:temp_id+3))
-           y%BldMotion%RotationVel(1:3,temp_id2) = MATMUL(p%GlbRot,x%dqdt(temp_id+4:temp_id+6))
+           temp_cc(:) = MATMUL(p%GlbRot,x%dqdt(temp_id+1:temp_id+3))
+           y%BldMotion%TranslationVel(1,temp_id2) = temp_cc(2)
+           y%BldMotion%TranslationVel(2,temp_id2) = temp_cc(3)
+           y%BldMotion%TranslationVel(3,temp_id2) = temp_cc(1)
+           temp_cc(:) = MATMUL(p%GlbRot,x%dqdt(temp_id+4:temp_id+6))
+           y%BldMotion%RotationVel(1,temp_id2) = temp_cc(2)
+           y%BldMotion%RotationVel(2,temp_id2) = temp_cc(3)
+           y%BldMotion%RotationVel(3,temp_id2) = temp_cc(1)
        ENDDO
    ENDDO
 
@@ -965,8 +977,14 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
                    temp6(1:3) = OS_tmp%Acc(temp_id+1:temp_id+3)
                    temp6(4:6) = OS_tmp%Acc(temp_id+4:temp_id+6)
                ENDIF
-                   y%BldMotion%TranslationAcc(1:3,temp_id2) = MATMUL(p%GlbRot,temp6(1:3))
-                   y%BldMotion%RotationAcc(1:3,temp_id2) = MATMUL(p%GlbRot,temp6(4:6))
+                   temp_cc(:) = MATMUL(p%GlbRot,temp6(1:3))
+                   y%BldMotion%TranslationAcc(1,temp_id2) = temp_cc(2)
+                   y%BldMotion%TranslationAcc(2,temp_id2) = temp_cc(3)
+                   y%BldMotion%TranslationAcc(3,temp_id2) = temp_cc(1)
+                   temp_cc(:) = MATMUL(p%GlbRot,temp6(4:6))
+                   y%BldMotion%RotationAcc(1,temp_id2) = temp_cc(2)
+                   y%BldMotion%RotationAcc(2,temp_id2) = temp_cc(3)
+                   y%BldMotion%RotationAcc(3,temp_id2) = temp_cc(1)
            ENDDO
        ENDDO
        CALL BD_DynamicSolutionForce(p%uuN0,x_tmp%q,x_tmp%dqdt,OS_tmp%Acc,                              &
@@ -985,15 +1003,27 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    temp6(:) = 0.0D0
    IF(p%analysis_type .EQ. 2) THEN
        temp6(1:6) = -OS_tmp%Acc(1:6)
-       y%ReactionForce%Force(1:3,1) = MATMUL(p%GlbRot,temp6(1:3))
-       y%ReactionForce%Moment(1:3,1) = MATMUL(p%GlbRot,temp6(4:6))
+       temp_cc(:) = MATMUL(p%GlbRot,temp6(1:3))
+       y%ReactionForce%Force(1,1) = temp_cc(2)
+       y%ReactionForce%Force(2,1) = temp_cc(3)
+       y%ReactionForce%Force(3,1) = temp_cc(1)
+       temp_cc(:) = MATMUL(p%GlbRot,temp6(4:6))
+       y%ReactionForce%Moment(1,1) = temp_cc(2)
+       y%ReactionForce%Moment(2,1) = temp_cc(3)
+       y%ReactionForce%Moment(3,1) = temp_cc(1)
    ENDIF
    DO i=1,p%node_total
        temp_id = (i-1)*p%dof_node
        temp6(:) = 0.0D0
        temp6(:) = temp_Force(temp_id+1:temp_id+6)
-       y%BldForce%Force(1:3,i) = MATMUL(p%GlbRot,temp6(1:3))
-       y%BldForce%Moment(1:3,i) = MATMUL(p%GlbRot,temp6(4:6))
+       temp_cc(:) = MATMUL(p%GlbRot,temp6(1:3))
+       y%BldForce%Force(1,i) = temp_cc(2)
+       y%BldForce%Force(2,i) = temp_cc(3)
+       y%BldForce%Force(3,i) = temp_cc(1)
+       temp_cc(:) = MATMUL(p%GlbRot,temp6(4:6))
+       y%BldForce%Moment(1,i) = temp_cc(2)
+       y%BldForce%Moment(2,i) = temp_cc(3)
+       y%BldForce%Moment(3,i) = temp_cc(1)
    ENDDO
 
    call cleanup()
@@ -5441,12 +5471,34 @@ SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
    CHARACTER(*),           INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
                                                            ! 1: Blade to Global
    REAL(ReKi)                           :: RotTen(3,3)
+   REAL(ReKi)                           :: temp_v(3)
+   REAL(ReKi)                           :: temp_v2(3)
    INTEGER(IntKi)                       :: i
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
    RotTen(1:3,1:3) = p%GlbRot(:,:)
+   temp_v(:) = u%RootMotion%TranslationDisp(:,1)
+   u%RootMotion%TranslationDisp(1,1) = temp_v(3) 
+   u%RootMotion%TranslationDisp(2,1) = temp_v(1) 
+   u%RootMotion%TranslationDisp(3,1) = temp_v(2) 
+   temp_v(:) = u%RootMotion%TranslationVel(:,1)
+   u%RootMotion%TranslationVel(1,1) = temp_v(3) 
+   u%RootMotion%TranslationVel(2,1) = temp_v(1) 
+   u%RootMotion%TranslationVel(3,1) = temp_v(2) 
+   temp_v(:) = u%RootMotion%RotationVel(:,1)
+   u%RootMotion%RotationVel(1,1) = temp_v(3) 
+   u%RootMotion%RotationVel(2,1) = temp_v(1) 
+   u%RootMotion%RotationVel(3,1) = temp_v(2) 
+   temp_v(:) = u%RootMotion%TranslationAcc(:,1)
+   u%RootMotion%TranslationAcc(1,1) = temp_v(3) 
+   u%RootMotion%TranslationAcc(2,1) = temp_v(1) 
+   u%RootMotion%TranslationAcc(3,1) = temp_v(2) 
+   temp_v(:) = u%RootMotion%RotationAcc(:,1)
+   u%RootMotion%RotationAcc(1,1) = temp_v(3) 
+   u%RootMotion%RotationAcc(2,1) = temp_v(1) 
+   u%RootMotion%RotationAcc(3,1) = temp_v(2) 
    ! Transform Root Motion from Global to Local (Blade) frame
    u%RootMotion%TranslationDisp(:,1) = MATMUL(TRANSPOSE(RotTen),u%RootMotion%TranslationDisp(:,1))
    u%RootMotion%TranslationVel(:,1)  = MATMUL(TRANSPOSE(RotTen),u%RootMotion%TranslationVel(:,1))
@@ -5455,13 +5507,36 @@ SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
    u%RootMotion%RotationAcc(:,1)     = MATMUL(TRANSPOSE(RotTen),u%RootMotion%RotationAcc(:,1))
    ! Transform DCM to Rotation Tensor (RT)
    u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
+   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),temp_v,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_v2(1) = temp_v(3)
+   temp_v2(2) = temp_v(1)
+   temp_v2(3) = temp_v(2)
+   CALL BD_CrvMatrixR(temp_v2,u%RootMotion%Orientation(:,:,1),ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Transform Applied Forces from Global to Local (Blade) frame
    DO i=1,p%node_total
+       temp_v(:) = u%PointLoad%Force(1:3,i)
+       u%PointLoad%Force(1,i) = temp_v(3)
+       u%PointLoad%Force(2,i) = temp_v(1)
+       u%PointLoad%Force(3,i) = temp_v(2)
        u%PointLoad%Force(1:3,i)  = MATMUL(TRANSPOSE(RotTen),u%PointLoad%Force(:,i))
+       temp_v(:) = u%PointLoad%Moment(1:3,i)
+       u%PointLoad%Moment(1,i) = temp_v(3)
+       u%PointLoad%Moment(2,i) = temp_v(1)
+       u%PointLoad%Moment(3,i) = temp_v(2)
        u%PointLoad%Moment(1:3,i) = MATMUL(TRANSPOSE(RotTen),u%PointLoad%Moment(:,i))
    ENDDO
    DO i=1,p%ngp * p%elem_total + 2
+       temp_v(:) = u%DistrLoad%Force(1:3,i)
+       u%DistrLoad%Force(1,i) = temp_v(3)
+       u%DistrLoad%Force(2,i) = temp_v(1)
+       u%DistrLoad%Force(3,i) = temp_v(2)
        u%DistrLoad%Force(1:3,i)  = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Force(:,i))
+       temp_v(:) = u%DistrLoad%Moment(1:3,i)
+       u%DistrLoad%Moment(1,i) = temp_v(3)
+       u%DistrLoad%Moment(2,i) = temp_v(1)
+       u%DistrLoad%Moment(3,i) = temp_v(2)
        u%DistrLoad%Moment(1:3,i) = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Moment(:,i))
    ENDDO
 
