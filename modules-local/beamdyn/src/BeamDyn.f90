@@ -3167,9 +3167,9 @@ SUBROUTINE BD_DynamicSolutionForce(uuN0,uuN,vvN,aaN,                            
    if (ErrStat >= AbortErrLev) RETURN
 
 
-   END SUBROUTINE BD_DynamicSolutionForce
+END SUBROUTINE BD_DynamicSolutionForce
 
-   SUBROUTINE BD_ReadInput(InputFileName,InputFileData,OutFileRoot, Default_DT,ErrStat,ErrMsg)
+SUBROUTINE BD_ReadInput(InputFileName,InputFileData,OutFileRoot, Default_DT,ErrStat,ErrMsg)
 
    ! Passed Variables:
    CHARACTER(*),                 INTENT(IN   )  :: InputFileName    ! Name of the input file
@@ -3198,19 +3198,19 @@ SUBROUTINE BD_DynamicSolutionForce(uuN0,uuN,vvN,aaN,                            
 
    IF(ErrStat >= AbortErrLev) RETURN
 
-   END SUBROUTINE BD_ReadInput
+END SUBROUTINE BD_ReadInput
 
 
-   SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
-                                 OutFileRoot,UnEc,ErrStat,ErrMsg)
-   !------------------------------------------------------------------------------------
-   ! This routine reads in the primary BeamDyn input file and places the values it reads
-   ! in the InputFileData structure.
-   !   It opens an echo file if requested and returns the (still-open) echo file to the
-   !     calling routine.
-   !   It also returns the names of the BldFile, FurlFile, and TrwFile for further
-   !     reading of inputs.
-   !------------------------------------------------------------------------------------
+SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
+                              OutFileRoot,UnEc,ErrStat,ErrMsg)
+!------------------------------------------------------------------------------------
+! This routine reads in the primary BeamDyn input file and places the values it reads
+! in the InputFileData structure.
+!   It opens an echo file if requested and returns the (still-open) echo file to the
+!     calling routine.
+!   It also returns the names of the BldFile, FurlFile, and TrwFile for further
+!     reading of inputs.
+!------------------------------------------------------------------------------------
 
    ! Passed variables
    INTEGER(IntKi),               INTENT(  OUT) :: UnEc
@@ -3414,7 +3414,7 @@ contains
    end subroutine cleanup         
 END SUBROUTINE BD_ReadPrimaryFile
 
-   SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
+SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
 
    ! Passed variables:
    TYPE(BladeInputData), INTENT(  OUT):: BladeInputFileData
@@ -3528,7 +3528,7 @@ END SUBROUTINE BD_ReadPrimaryFile
 !       BladeInputFileData%mass0(6,:,i) = temp66(5,:)
    ENDDO
 
-   END SUBROUTINE BD_ReadBladeFile
+END SUBROUTINE BD_ReadBladeFile
 
 SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
 ! This routine validates the inputs from the BeamDyn input files.
@@ -4350,9 +4350,9 @@ contains
 
 END SUBROUTINE BD_GenerateStaticElement
 
-   SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
-                                     EMass0_GL,EStif0_GL,ngp,node_elem,dof_node,elk,elf,&
-                                     ErrStat,ErrMsg)
+SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
+                                  EMass0_GL,EStif0_GL,ngp,node_elem,dof_node,elk,elf,&
+                                  ErrStat,ErrMsg)
 
    REAL(ReKi),    INTENT(IN   ):: Nuu0(:)
    REAL(ReKi),    INTENT(IN   ):: Nuuu(:)
@@ -5290,11 +5290,11 @@ contains
       end subroutine Cleanup
 END SUBROUTINE BD_DynamicSolutionGA2
 
-   SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
-                                           Stif0,Mass0,gravity,u,damp_flag,beta,&
-                                           elem_total,node_elem,dof_node,ngp,   &
-                                           StifK,RHS,MassM,DampG,&
-                                           ErrStat,ErrMsg)
+SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
+                                        Stif0,Mass0,gravity,u,damp_flag,beta,&
+                                        elem_total,node_elem,dof_node,ngp,   &
+                                        StifK,RHS,MassM,DampG,&
+                                        ErrStat,ErrMsg)
 
    REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),        INTENT(IN   ):: uuNf(:)
