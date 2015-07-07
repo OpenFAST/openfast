@@ -81,11 +81,10 @@ PROGRAM MAIN
                           ErrStat,ErrMsg)
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
    CALL BD_CrvMatrixR(BD_InitInput%GlbRot(:,1),temp_R,ErrStat,ErrMsg)
-   BD_InitInput%GlbRot(1:3,1:3) = temp_R(1:3,1:3)
+   BD_InitInput%GlbRot(1:3,1:3) = TRANSPOSE(temp_R(1:3,1:3))
    BD_InitInput%RootDisp(:) = 0.0D+00
    BD_InitInput%RootOri(:,:) = 0.0D0
    BD_InitInput%RootOri(1:3,1:3) = BD_InitInput%GlbRot(1:3,1:3)
-
    t_global = t_initial
    n_t_final = ((t_final - t_initial) / dt_global )
 
@@ -108,13 +107,6 @@ PROGRAM MAIN
     OPEN(unit = QiReacUnit,file = 'QiReac_Single.out', status = 'REPLACE',ACTION = 'WRITE')
 
 
-WRITE(*,*) 't_ini',t_initial
-WRITE(*,*) 't_final',t_final
-WRITE(*,*) 'dt',dt_global
-WRITE(*,*) 'InputFileName: ',BD_InitInput%InputFile
-STOP
-
-
    CALL BD_Init(BD_InitInput        &
                    , BD_Input(1)         &
                    , BD_Parameter        &
@@ -135,15 +127,18 @@ STOP
 CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final
 WRITE(*,*) "Time Step: ", n_t_global
-!IF(n_t_global == 1) STOP 
+!IF(n_t_global == 2) STOP 
 
-      CALL BD_InputSolve( t_global + dt_global, BD_Input(1), BD_Parameter, ErrStat, ErrMsg)
 
      CALL BD_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
                              BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
+     IF(BD_Parameter%analysis_type .EQ. 2 .AND. n_t_global .EQ. 0) THEN
+         CALL BD_IniAcc( BD_Input(1), BD_Output(1), BD_Parameter, &
+               BD_OtherState,ErrStat,ErrMsg)
+     ENDIF
 
-CALL BD_CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_elem*BD_Parameter%elem_total),temp_cc,&
+     CALL BD_CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_elem*BD_Parameter%elem_total),temp_cc,&
                       ErrStat,ErrMsg)
       WRITE(QiTipDisp,6000) t_global,&
                            &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_elem*BD_Parameter%elem_total),&
@@ -158,6 +153,9 @@ CALL BD_CrvExtractCrv(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%no
                            &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_elem),&
                            &BD_OutPut(1)%BldMotion%RotationAcc(1:3,BD_Parameter%node_elem)
 
+     IF(BD_Parameter%analysis_type .EQ. 1 .AND. n_t_global .EQ. 1) RETURN
+
+     CALL BD_InputSolve( t_global + dt_global, BD_Input(1), BD_Parameter, ErrStat, ErrMsg)
 
      CALL BD_UpdateStates( t_global, n_t_global, BD_Input, BD_InputTimes, BD_Parameter, &
                                BD_ContinuousState, &
@@ -201,7 +199,7 @@ END PROGRAM MAIN
 
 
 
-   SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
+SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
  
    USE BeamDyn
    USE BeamDyn_Types
@@ -263,8 +261,8 @@ END PROGRAM MAIN
    u%PointLoad%Moment(:,:) = 0.0D0
    
 !   u%RootMotion%TranslationAcc(3,1) = 1.76991032448401212D-02
-!   u%PointLoad%Force(3,p%node_total) = 1.0D+02*SIN(2.0*t)
-   u%PointLoad%Force(3,p%node_total) = 2.0
+!   u%PointLoad%Force(1,p%node_total) = 1.0D+02*SIN(2.0*t)
+!   u%PointLoad%Force(1,p%node_total) = 2.0
 !   u%PointLoad%Force(3,p%node_total) = 1.0D+03*0.5*(1.0D0-COS(0.2*t))
 !   u%PointLoad%Force(3,3) = 1.0D+00
 
@@ -272,10 +270,11 @@ END PROGRAM MAIN
    u%DistrLoad%Force(:,:)  = 0.0D0
    u%DistrLoad%Moment(:,:) = 0.0D0
 
-   ut = t
+!   DO i=1,p%ngp*p%elem_total+2
+!       u%DistrLoad%Force(1,i) = 2.0
+!   ENDDO
 
-
-   END SUBROUTINE BD_InputSolve
+END SUBROUTINE BD_InputSolve
 
 SUBROUTINE BD_ReadDvrFile(DvrInputFile,t_ini,t_f,dt,InitInputData,&
                           ErrStat,ErrMsg)

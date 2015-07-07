@@ -147,7 +147,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    temp_glb(3) = TmpPos(2)
    CALL BD_CrvMatrixR(temp_glb,p%GlbRot,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   p%gravity(:) = MATMUL(TRANSPOSE(p%GlbRot),InitInp%gravity(:))
+   temp_POS(:) = MATMUL(TRANSPOSE(p%GlbRot),InitInp%gravity(:))
+   p%gravity(1) = temp_POS(3)
+   p%gravity(2) = temp_POS(1)
+   p%gravity(3) = temp_POS(2)
 
    ! Analysis type: 1 Static 2 Dynamic
    p%analysis_type  = InputFileData%analysis_type
@@ -921,7 +924,6 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          return
       end if
       
-
    DO i=1,p%elem_total
        DO j=1,p%node_elem
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
@@ -4026,6 +4028,7 @@ SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    INTEGER(IntKi)                                :: j
    INTEGER(IntKi)                                :: k
    INTEGER(IntKi)                                :: piter
+   REAL(ReKi)                                    :: gravity_temp(3)
    INTEGER(IntKi)                                :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                          :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER                       :: RoutineName = 'BD_Static'
@@ -4057,7 +4060,6 @@ SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       call cleanup()
       return
    end if
-      
    i = 1
    piter = 0
    DO WHILE(i .NE. 0)
@@ -4067,7 +4069,8 @@ SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
            u_temp%PointLoad%Moment(:,:) = u_interp%PointLoad%Moment(:,:)/i*j
            u_temp%DistrLoad%Force(:,:) = u_interp%DistrLoad%Force(:,:)/i*j
            u_temp%DistrLoad%Moment(:,:) = u_interp%DistrLoad%Moment(:,:)/i*j
-           CALL BD_StaticSolution(p%uuN0,x%q,p%Mass0_GL,p%Stif0_GL,p%gravity,u_temp,&
+           gravity_temp(:) = p%gravity(:)/i*j
+           CALL BD_StaticSolution(p%uuN0,x%q,p%Mass0_GL,p%Stif0_GL,gravity_temp,u_temp,&
                                   p%node_elem,p%dof_node,p%elem_total,&
                                   p%dof_total,p%node_total,p%ngp,p%niter,p%tol,piter, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
@@ -4290,7 +4293,7 @@ SUBROUTINE BD_GenerateStaticElement(uuN0,uuNf,Mass0,Stif0,gravity,u,&
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(elk,dof_elem,dof_elem,'elk',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(DistrLoad_GL,6,node_elem-1,'DistrLoad_GL',ErrStat2,ErrMsg2)
+   CALL AllocAry(DistrLoad_GL,6,ngp,'DistrLoad_GL',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    if (ErrStat >= AbortErrLev) then
        call Cleanup()
