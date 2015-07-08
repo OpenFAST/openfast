@@ -1290,8 +1290,12 @@ END DO
       ! ChkptTime - Amount of time between creating checkpoint files for potential restart (s):
    CALL ReadVar( UnIn, InputFile, TmpTime, "ChkptTime", "Amount of time between creating checkpoint files for potential restart (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN           
-      p%n_ChkptTime = NINT( TmpTime / p%DT )
+      IF ( ErrStat >= AbortErrLev ) RETURN        
+      IF (TmpTime > p%TMax) THEN
+         p%n_ChkptTime = HUGE(p%n_ChkptTime)
+      ELSE         
+         p%n_ChkptTime = NINT( TmpTime / p%DT )
+      END IF
 
       ! DT_Out - Time step for tabular output (s):
    CALL ReadVar( UnIn, InputFile, p%DT_Out, "DT_Out", "Time step for tabular output (s)", ErrStat2, ErrMsg2, UnEc)
@@ -2932,7 +2936,22 @@ SUBROUTINE ED_SD_HD_BD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
             do nb=1,p_FAST%nBeams
                CALL BD_CalcOutput( this_time, u_BD(nb), p_BD(nb), x_BD(nb), xd_BD(nb), z_BD(nb), OtherSt_BD(nb), y_BD(nb), ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+                  
             end do
+            
+#ifdef DEBUG_BEAMDYN            
+            if (k>0) then
+               do nb=1,p_FAST%nBeams
+                  write(74,'(ES10.3E2,2(1x,i3),100(1x,ES10.3E2))') this_time, k, nb, &
+                     u_BD(nb)%RootMotion%Orientation,    u_BD(nb)%RootMotion%TranslationDisp, &
+                     u_BD(nb)%RootMotion%TranslationVel, u_BD(nb)%RootMotion%RotationVel, &
+                     u_BD(nb)%RootMotion%TranslationAcc, u_BD(nb)%RootMotion%RotationAcc, &
+                     y_BD(nb)%ReactionForce%Force,       y_BD(nb)%ReactionForce%Moment, &
+                     y_BD(nb)%BldMotion%TranslationDisp(:,y_BD(nb)%BldMotion%Nnodes)
+               end do
+            end if
+#endif            
+            
          END IF
          
          
@@ -3186,16 +3205,12 @@ END IF
    END DO 
    
    DO nb=1,p_FAST%nBeams
-      DO TmpIndx=1,u_BD(nb)%RootMotion%NNodes
-         CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_TranslationAcc_X_'//TRIM(Num2LStr(TmpIndx))) 
-         CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_TranslationAcc_Y_'//TRIM(Num2LStr(TmpIndx))) 
-         CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_TranslationAcc_Z_'//TRIM(Num2LStr(TmpIndx))) 
-      END DO   
-      DO TmpIndx=1,u_BD(nb)%RootMotion%NNodes
-         CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_RotationAcc_X_'//TRIM(Num2LStr(TmpIndx))) 
-         CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_RotationAcc_Y_'//TRIM(Num2LStr(TmpIndx))) 
-         CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_RotationAcc_Z_'//TRIM(Num2LStr(TmpIndx))) 
-      END DO                
+      CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_TranslationAcc_X') 
+      CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_TranslationAcc_Y') 
+      CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_TranslationAcc_Z') 
+      CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_RotationAcc_X') 
+      CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_RotationAcc_Y') 
+      CALL WrFileNR(UnJac, ' BD_Root'//trim(num2lstr(nb))//'Motion_RotationAcc_Z') 
    END DO
          
    WRITE(UnJac,'()')    
@@ -4760,7 +4775,7 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, u_BD, FileName, ErrSt
    
       
    INTEGER(IntKi)           :: unOut
-   INTEGER(IntKi)           :: unOut2
+   !!!INTEGER(IntKi)           :: unOut2
    INTEGER(IntKi)           :: K_local
    INTEGER(B4Ki), PARAMETER :: File_ID = 2
    INTEGER(B4Ki)            :: NumBl
@@ -4772,8 +4787,8 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, u_BD, FileName, ErrSt
    CALL OpenBOutFile ( unOut, TRIM(FileName), ErrStat, ErrMsg )
       IF (ErrStat /= ErrID_None) RETURN
   
-      ! get unit for text output
-   CALL GetNewUnit( unOut2, ErrStat, ErrMsg )
+   !!!   ! get unit for text output
+   !!!CALL GetNewUnit( unOut2, ErrStat, ErrMsg )
             
    ! note that I'm not doing anything with the errors here, so it won't tell
    ! you there was a problem writing the data unless it was the last call.
@@ -4790,11 +4805,11 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, u_BD, FileName, ErrSt
    DO K_local = 1,SIZE(u_ED%BladeLn2Mesh,1)
       CALL MeshWrBin( unOut, u_ED%BladeLn2Mesh(K_local), ErrStat, ErrMsg )
       
-      write(unOut2,'(A)') '_____________________________________________________________________________'
-      write(unOut2,*)     'ElastoDyn blade ', k_local, ' mesh'
-      write(unOut2,'(A)') '_____________________________________________________________________________'      
-      CALL MeshPrintInfo(unOut2, u_ED%BladeLn2Mesh(K_local))
-      write(unOut2,'(A)') '_____________________________________________________________________________'
+      !!!write(unOut2,'(A)') '_____________________________________________________________________________'
+      !!!write(unOut2,*)     'ElastoDyn blade ', k_local, ' mesh'
+      !!!write(unOut2,'(A)') '_____________________________________________________________________________'      
+      !!!CALL MeshPrintInfo(unOut2, u_ED%BladeLn2Mesh(K_local))
+      !!!write(unOut2,'(A)') '_____________________________________________________________________________'
    END DO            
    CALL MeshWrBin( unOut, u_ED%TowerLn2Mesh,            ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_ED%PlatformPtMesh,          ErrStat, ErrMsg )
@@ -4816,11 +4831,11 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, u_BD, FileName, ErrSt
       
       ! Close the file
    CLOSE(unOut)
-   CLOSE(unOut2)
+   !!!CLOSE(unOut2)
          
 END SUBROUTINE WriteInputMeshesToFile   
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, UnOut, ErrStat, ErrMsg, FileName) 
+SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, u_BD, UnOut, ErrStat, ErrMsg, FileName) 
    REAL(DbKi),                 INTENT(IN)    :: time
    TYPE(ED_OutputType),        INTENT(IN)    :: y_ED         
    TYPE(SD_InputType),         INTENT(IN)    :: u_SD         
@@ -4828,6 +4843,7 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, Un
    TYPE(HydroDyn_InputType),   INTENT(IN)    :: u_HD         
    TYPE(MAP_InputType),        INTENT(IN)    :: u_MAP         
    TYPE(BD_OutputType),        INTENT(IN)    :: y_BD(:)
+   TYPE(BD_InputType),         INTENT(IN)    :: u_BD(:)
    INTEGER(IntKi) ,            INTENT(INOUT) :: unOut
    CHARACTER(*),   OPTIONAL,   INTENT(IN)    :: FileName
    
@@ -4835,7 +4851,6 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, Un
    CHARACTER(*)  , INTENT(OUT)               :: ErrMsg           ! Error message if ErrStat /= ErrID_None
    
    
-      !FileName = TRIM(p_FAST%OutFileRoot)//'.InputMeshes.bin'
    REAL(R8Ki)               :: t
       
    INTEGER(IntKi)           :: K_local
@@ -4880,8 +4895,8 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, Un
    CALL MeshWrBin( unOut, u_HD%Mesh,                    ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_MAP%PtFairDisplacement,     ErrStat, ErrMsg )
    DO K_local = 1,SIZE(y_BD,1)
-      CALL MeshWrBin( unOut, y_BD(K_local)%BldMotion, ErrStat, ErrMsg )
-      !CALL MeshWrBin( unOut, u_BD(K_local)%DistrLoad, ErrStat, ErrMsg )
+      CALL MeshWrBin( unOut, u_BD(K_local)%RootMotion, ErrStat, ErrMsg )
+      CALL MeshWrBin( unOut, y_BD(K_local)%BldMotion,  ErrStat, ErrMsg )
    END DO            
       
    !   
@@ -5700,15 +5715,17 @@ SUBROUTINE WriteOutputToFile(t_global, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, HD
 
             CALL WrOutputLine( t_global, p_FAST, y_FAST, IfW%y%WriteOutput, ED%Output(1)%WriteOutput, AD%y%WriteOutput, SrvD%y%WriteOutput, HD%y%WriteOutput, &
                            SD%y%WriteOutput, MAPp%y%WriteOutput, FEAM%y%WriteOutput, MD%y%WriteOutput, IceF%y%WriteOutput, IceD%y, BD%y, ErrStat, ErrMsg )
-                              
+              
+            
+            IF (p_FAST%WrGraphics) THEN
+               CALL WriteMotionMeshesToFile(t_global, ED%Output(1), SD%Input(1), SD%y, HD%Input(1), MAPp%Input(1), BD%y, BD%Input(1,:), y_FAST%UnGra, ErrStat2, ErrMsg2, TRIM(p_FAST%OutFileRoot)//'.gra') 
+                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, "WriteOutputToFile" )
+            END IF
+                        
       END IF
 
    ENDIF
       
-   IF (p_FAST%WrGraphics) THEN
-      CALL WriteMotionMeshesToFile(t_global, ED%Output(1), SD%Input(1), SD%y, HD%Input(1), MAPp%Input(1), BD%y, y_FAST%UnGra, ErrStat2, ErrMsg2, TRIM(p_FAST%OutFileRoot)//'.gra') 
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, "WriteOutputToFile" )
-   END IF
             
 END SUBROUTINE WriteOutputToFile     
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -6415,17 +6432,13 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          
          InitInData_BD%InputFile    = p_FAST%BDBldFile(k)
          
-         InitInData_BD%GlbPos       = ED%Output(1)%BladeRootMotion(k)%Position(:,1)         ! {:}    - - "Initial Position Vector of the local blade coordinate system"
-         InitInData_BD%GlbRot       = ED%Output(1)%BladeRootMotion(k)%RefOrientation(:,:,1) ! {:}{:} - - "Initial direction cosine matrix of the local blade coordinate system"
+         InitInData_BD%GlbPos       = ED%Output(1)%BladeRootMotion(k)%Position(:,1)          ! {:}    - - "Initial Position Vector of the local blade coordinate system"
+         InitInData_BD%GlbRot       = ED%Output(1)%BladeRootMotion(k)%RefOrientation(:,:,1)  ! {:}{:} - - "Initial direction cosine matrix of the local blade coordinate system"
          
-         InitInData_BD%RootDisp     = 0.0_ReKi                                              ! {:} - - "Initial root displacement"
-         InitInData_BD%RootOri      = InitInData_BD%GlbRot                                  ! {:}{:} - - "Initial root orientation"
-         InitInData_BD%RootVel      = 0.0_ReKi                                              ! {:} - - "Initial root velocities and angular veolcities"                  
-!BJJ: FIX ME
-#ifdef DEBUG_BEAMDYN
-         InitInData_BD%RootVel(4) =  1.26
-         InitInData_BD%RootVel(6) = -0.11
-#endif         
+         InitInData_BD%RootDisp     = ED%Output(1)%BladeRootMotion(k)%TranslationDisp(:,1)   ! {:}    - - "Initial root displacement"
+         InitInData_BD%RootOri      = ED%Output(1)%BladeRootMotion(k)%Orientation(:,:,1)     ! {:}{:} - - "Initial root orientation"
+         InitInData_BD%RootVel(1:3) = ED%Output(1)%BladeRootMotion(k)%TranslationVel(:,1)    ! {:}    - - "Initial root velocities and angular veolcities"                  
+         InitInData_BD%RootVel(4:6) = ED%Output(1)%BladeRootMotion(k)%RotationVel(:,1)       ! {:}    - - "Initial root velocities and angular veolcities"                  
          
          CALL BD_Init( InitInData_BD, BD%Input(1,k), BD%p(k),  BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), &
                             BD%OtherSt(k), BD%y(k), dt_BD, InitOutData_BD(k), ErrStat2, ErrMsg2 )
