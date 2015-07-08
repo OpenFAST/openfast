@@ -270,9 +270,9 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
    u%DistrLoad%Force(:,:)  = 0.0D0
    u%DistrLoad%Moment(:,:) = 0.0D0
 
-!   DO i=1,p%ngp*p%elem_total+2
-!       u%DistrLoad%Force(1,i) = 2.0
-!   ENDDO
+   DO i=1,p%ngp*p%elem_total+2
+       u%DistrLoad%Force(1,i) = 2.0*0.314159
+   ENDDO
 
 END SUBROUTINE BD_InputSolve
 

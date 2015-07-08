@@ -672,7 +672,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ! Define initialization-routine input here:
 
    u%RootMotion%TranslationDisp(1:3,1) = InitInp%RootDisp(1:3)
-   u%RootMotion%Orientation(1:3,1:3,1) = InitInp%RootOri(1:3,1:3)
+   u%RootMotion%Orientation(1:3,1:3,1) = InitInp%GlbRot(:,:)!InitInp%RootOri(1:3,1:3)
    u%RootMotion%TranslationVel(1:3,1)  = InitInp%RootVel(1:3)
    u%RootMotion%RotationVel(1:3,1)     = InitInp%RootVel(4:6)
    u%RootMotion%TranslationAcc(:,:)  = 0.0D0
@@ -699,6 +699,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CalcIC(u_tmp,p,x,OtherState,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   x%q(:) = 0.0D0
 
    ! Define initial guess for the system outputs here:
 
@@ -1627,7 +1628,7 @@ CONTAINS
 
    REAL(ReKi)                  :: x1
    REAL(ReKi)                  :: x2
-   REAL(ReKi),        PARAMETER:: eps = 3.d-14
+   REAL(ReKi),        PARAMETER:: eps = 3.d-07
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: j
    INTEGER(IntKi)              :: m
@@ -3440,6 +3441,9 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL OpenFInpFile (UnIn,BldFile,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) then
+            return
+         end if
 
    !  -------------- HEADER -------------------------------------------------------
    ! Skip the header.
@@ -3530,6 +3534,14 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
 !       BladeInputFileData%mass0(6,:,i) = temp66(5,:)
    ENDDO
 
+   call cleanup()
+   return
+      
+contains
+   subroutine cleanup() 
+      close(UnIn)
+      return
+   end subroutine cleanup         
 END SUBROUTINE BD_ReadBladeFile
 
 SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
@@ -4925,6 +4937,14 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                  
+!WRITE(*,*) 'x%q'
+!WRITE(*,*) x%q(:)
+!WRITE(*,*) 'x%dqdt'
+!WRITE(*,*) x%dqdt(:)
+!WRITE(*,*) 'OS%acc'
+!WRITE(*,*) OS_tmp%acc
+!WRITE(*,*) 'OS%xcc'
+!WRITE(*,*) OS_tmp%xcc
    ! GA2: prediction        
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
                                 p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
@@ -5209,6 +5229,7 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
    Eref = 0.0D0
 
    DO i=1,niter
+!WRITE(*,*) 'niter = ',i
        CALL BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
                                          Stif0,Mass0,gravity,u,damp_flag,beta,&
                                          elem_total,node_elem,dof_node,ngp,   &
@@ -5257,6 +5278,8 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        IF(i==1) THEN
            Eref = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))*tol
+!WRITE(*,*) 'Eref: ',Eref
+!WRITE(*,*) 'tol: ',tol
            IF(Eref .LE. tol) THEN
                CALL Cleanup()
                RETURN
@@ -5264,6 +5287,7 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
        ENDIF
        IF(i .GT. 1) THEN
            Enorm = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))
+!WRITE(*,*) 'Enorm: ',Enorm
            IF(Enorm .LE. Eref) THEN
                CALL Cleanup()
                RETURN
