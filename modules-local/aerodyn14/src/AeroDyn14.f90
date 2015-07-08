@@ -967,7 +967,7 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
 
             ! determine if MulTabLoc should be set.  
      
-         O%AirFoil%MulTabLoc = u%MulTabLoc(IElement,IBlade)
+         IF (.not. p%Reynolds) O%AirFoil%MulTabLoc = u%MulTabLoc(IElement,IBlade)
          
          !-------------------------------------------------------------------------------------------
          ! Get wind velocity components; calculate velocity normal to the rotor squared
