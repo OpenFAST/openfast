@@ -672,7 +672,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ! Define initialization-routine input here:
 
    u%RootMotion%TranslationDisp(1:3,1) = InitInp%RootDisp(1:3)
-   u%RootMotion%Orientation(1:3,1:3,1) = InitInp%GlbRot(:,:)!InitInp%RootOri(1:3,1:3)
+   u%RootMotion%Orientation(1:3,1:3,1) = InitInp%RootOri(1:3,1:3)
    u%RootMotion%TranslationVel(1:3,1)  = InitInp%RootVel(1:3)
    u%RootMotion%RotationVel(1:3,1)     = InitInp%RootVel(4:6)
    u%RootMotion%TranslationAcc(:,:)  = 0.0D0
@@ -695,11 +695,15 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!WRITE(*,*) 'u_Inic'
+!DO k=1,3
+!WRITE(*,*) u%RootMotion%Orientation(k,:,1)
+!ENDDO
+!WRITE(*,*) 'END u_Inic'
    CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CalcIC(u_tmp,p,x,OtherState,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   x%q(:) = 0.0D0
 
    ! Define initial guess for the system outputs here:
 
@@ -4915,6 +4919,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    INTEGER(IntKi)                                     :: ErrStat2   ! Temporary Error status
    CHARACTER(ErrMsgLen)                               :: ErrMsg2    ! Temporary Error message
    CHARACTER(*), PARAMETER                            :: RoutineName = 'BD_GA2'
+   INTEGER(IntKi)                                     :: i
 
    ! Initialize ErrStat
 
@@ -4936,15 +4941,12 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!WRITE(*,*) 'u_interp'
+!DO i=1,3
+!WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
+!ENDDO
+!WRITE(*,*) 'END u_interp'
                  
-!WRITE(*,*) 'x%q'
-!WRITE(*,*) x%q(:)
-!WRITE(*,*) 'x%dqdt'
-!WRITE(*,*) x%dqdt(:)
-!WRITE(*,*) 'OS%acc'
-!WRITE(*,*) OS_tmp%acc
-!WRITE(*,*) 'OS%xcc'
-!WRITE(*,*) OS_tmp%xcc
    ! GA2: prediction        
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
                                 p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
@@ -4957,6 +4959,14 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    ! Incorporate boundary conditions
    CALL BD_BoundaryGA2(x,p,u_interp,t+p%dt,OtherState,ErrStat2,ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!WRITE(*,*) 'x%q'
+!WRITE(*,*) x%q(:)
+!WRITE(*,*) 'x%dqdt'
+!WRITE(*,*) x%dqdt(:)
+!WRITE(*,*) 'OS%acc'
+!WRITE(*,*) OS_tmp%acc
+!WRITE(*,*) 'OS%xcc'
+!WRITE(*,*) OS_tmp%xcc
 
    ! find x, acc, and xcc at t+dt
    CALL BD_DynamicSolutionGA2( p%uuN0,x%q,x%dqdt,OtherState%acc,OtherState%xcc,&
@@ -5100,10 +5110,10 @@ SUBROUTINE BD_TiSchmComputeCoefficients(rhoinf,deltat,coef,ErrStat,ErrMsg)
 END SUBROUTINE BD_TiSchmComputeCoefficients
 
 SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
-   !------------------------------------------------------------
-   ! This subroutine applies the prescribed boundary conditions
-   ! into states and otherstates at the root finite element node
-   !------------------------------------------------------------
+!------------------------------------------------------------
+! This subroutine applies the prescribed boundary conditions
+! into states and otherstates at the root finite element node
+!------------------------------------------------------------
 
    TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
    REAL(DbKi),                   INTENT(IN   )  :: t           ! Inputs at t
@@ -5115,6 +5125,9 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
 
    REAL(ReKi)                                   :: temp_cc(3)
    REAL(ReKi)                                   :: temp_glb(3)
+   REAL(ReKi)                                   :: temp3(3)
+   REAL(ReKi)                                   :: temp_ref(3)
+   REAL(ReKi)                                   :: temp_root(3)
    INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_BoundaryGA2'
@@ -5125,14 +5138,26 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
    ! Root displacements
    x%q(1:3) = u%RootMotion%TranslationDisp(1:3,1)
    ! Root rotations
-   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),x%q(4:6),ErrStat2,ErrMsg2)
+   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),temp3,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    temp_cc(:) = MATMUL(p%GlbRot,p%uuN0(4:6,1))
-   CALL BD_CrvCompose(temp_cc,temp_cc,temp_glb,0,ErrStat2,ErrMsg2)
+   CALL BD_CrvCompose(temp_ref,temp_cc,temp_glb,0,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvCompose(x%q(4:6),x%q(4:6),temp_cc,2,ErrStat2,ErrMsg2)
+   CALL BD_CrvCompose(temp_root,temp_cc,temp3,0,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!WRITE(*,*) 'temp_u0'
+!WRITE(*,*) temp_cc
+!WRITE(*,*) 'temp_glb'
+!WRITE(*,*) temp_glb
+!WRITE(*,*) 'temp_ori'
+!WRITE(*,*) temp3
+!WRITE(*,*) 'temp_ref'
+!WRITE(*,*) temp_ref
+!WRITE(*,*) 'temp_root'
+!WRITE(*,*) temp_root
+   CALL BD_CrvCompose(x%q(4:6),temp_root,temp_ref,2,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    x%q(4:6) = MATMUL(TRANSPOSE(p%GlbRot),x%q(4:6))
    ! Root velocities/angular velocities and accelerations/angular accelerations
@@ -5594,6 +5619,8 @@ SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
    INTEGER(IntKi)                             :: temp_id
    REAL(ReKi)                                 :: temp3(3)
    REAL(ReKi)                                 :: temp_p0(3)
+   REAL(ReKi)                                 :: temp_ref(3)
+   REAL(ReKi)                                 :: temp_root(3)
    REAL(ReKi)                                 :: temp_glb(3)
    TYPE(BD_InputType)                         :: u_tmp
    INTEGER(IntKi)                             :: ErrStat2                     ! Temporary Error status
@@ -5616,6 +5643,10 @@ SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!WRITE(*,*) 'temp_glb'
+!WRITE(*,*) temp_glb
+!WRITE(*,*) 'temp_ori'
+!WRITE(*,*) temp3
    DO i=1,p%elem_total
        IF( i .EQ. 1) THEN
            k = 1
@@ -5629,10 +5660,19 @@ SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
            ! Step 2: Compose step1 with rotation vector from p%GlbRot
            ! Initial position (undeformed) rotation vector in global frame obtained
            ! R_0^{T} in global frame
-           CALL BD_CrvCompose(temp_p0,temp_p0,temp_glb,0,ErrStat2,ErrMsg2)
+           CALL BD_CrvCompose(temp_ref,temp_p0,temp_glb,0,ErrStat2,ErrMsg2)
+           CALL BD_CrvCompose(temp_root,temp_p0,temp3,0,ErrStat2,ErrMsg2)
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
            ! Step 3: R = R_{ini} R_0^{T}
-           CALL BD_CrvCompose(x%q(temp_id+4:temp_id+6),temp3,temp_p0,2,ErrStat2,ErrMsg2)
+!WRITE(*,*) 'temp_u0'
+!WRITE(*,*) temp_p0
+!WRITE(*,*) 'CalcIC'
+!WRITE(*,*) 'temp_ref'
+!WRITE(*,*) temp_ref
+!WRITE(*,*) 'temp_root'
+!WRITE(*,*) temp_root
+!WRITE(*,*) 'END CalcIC'
+           CALL BD_CrvCompose(x%q(temp_id+4:temp_id+6),temp_root,temp_ref,2,ErrStat2,ErrMsg2)
            ! Step 4: Rotate rotation parameter (displacement) from global frame to blade frame
            x%q(temp_id+4:temp_id+6) = MATMUL(TRANSPOSE(p%GlbRot),x%q(temp_id+4:temp_id+6))
        ENDDO
