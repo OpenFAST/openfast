@@ -510,12 +510,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    TmpPos(1) = temp_POS(2)
    TmpPos(2) = temp_POS(3)
    TmpPos(3) = temp_POS(1)
-   temp_CRV(:) = MATMUL(p%GlbRot,p%uuN0(4:6,1))
-   CALL BD_CrvCompose(temp_POS,temp_CRV,temp_glb,0,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   temp_CRV(1) = temp_POS(2)
-   temp_CRV(2) = temp_POS(3)
-   temp_CRV(3) = temp_POS(1)
+
+   temp_CRV(1) = temp_glb(2)
+   temp_CRV(2) = temp_glb(3)
+   temp_CRV(3) = temp_glb(1)
   CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    TmpDCM(:,:) = TRANSPOSE(TmpDCM)
@@ -576,7 +574,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                                   ,Pos     = TmpPos       &
                                   ,ErrStat = ErrStat2      &
                                   ,ErrMess = ErrMsg2       &
-                                  , Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
+                                  ,Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            
        ENDDO
@@ -5632,12 +5630,11 @@ SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
 
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!   CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !Initialize displacements and rotations
    DO i=1,p%node_total
        temp_id = (i-1)*p%dof_node
-       x%q(temp_id+1:temp_id+3) = u_tmp%RootMotion%TranslationDisp(1:3,1)
+       x%q(temp_id+1:temp_id+3) = u_tmp%RootMotion%TranslationDisp(1:3,1) !+ &
+                               
    ENDDO
    CALL BD_CrvExtractCrv(u_tmp%RootMotion%Orientation(1:3,1:3,1),temp3,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
