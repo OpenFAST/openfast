@@ -65,7 +65,7 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
    
    
    
-   integer(IntKi)                                :: j, k, n
+   integer(IntKi)                                :: i, j, k, n
       ! Initialize variables for this routine
 
    errStat = ErrID_None
@@ -77,6 +77,11 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
    call AllocAry( InitOut%WriteOutputUnt, p%numOuts, 'WriteOutputUnt', errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
+   do i=1,p%NumOuts
+      InitOut%WriteOutputHdr(i) = p%OutParam(i)%Name
+      InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
+   end do
+        
       
    if (ErrStat >= AbortErrLev) return
    
@@ -738,10 +743,6 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    p%numOuts          = InputFileData%NumOuts      
   !p%RootName       = TRIM(InitInp%RootName)//'.AD'   ! set earlier to it could be used   
    
-   call SetOutParam(InputFileData%OutList, p, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, p%numBlades, p%NumBlNds, p%NumTwrNds; sets: p%OutParam.
-      call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat >= AbortErrLev) return  
-
    p%NBlOuts = InputFileData%NBlOuts      
    p%BlOutNd = InputFileData%BlOutNd
    
@@ -752,7 +753,10 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
       p%NTwOuts = 0
    end if
    
-   
+   call SetOutParam(InputFileData%OutList, p, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, p%numBlades, p%NBlOuts, p%NTwOuts; sets: p%OutParam.
+      call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return  
+         
 end subroutine SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine AD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
