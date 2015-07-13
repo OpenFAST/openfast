@@ -62,6 +62,7 @@ PROGRAM MAIN
    Integer(IntKi)                     :: j               ! counter for various loops
 
    INTEGER(IntKi),PARAMETER:: QiTipDisp = 20
+   INTEGER(IntKi),PARAMETER:: QiTipVel = 50
    INTEGER(IntKi),PARAMETER:: QiMidDisp = 21
    INTEGER(IntKi),PARAMETER:: QiMidForce = 22
    INTEGER(IntKi),PARAMETER:: QiMidAcc = 23
@@ -99,9 +100,10 @@ PROGRAM MAIN
    ALLOCATE(BD_OutputTimes(BD_interp_order + 1)) 
 
     OPEN(unit = QiTipDisp, file = 'Qi_Tip_Disp_Single.out', status = 'REPLACE',ACTION = 'WRITE')
+    OPEN(unit = QiTipVel, file = 'Qi_Tip_Vel_Single.out', status = 'REPLACE',ACTION = 'WRITE')
 !    OPEN(unit = QiMidDisp, file = 'Qi_Mid_Disp.out', status = 'REPLACE',ACTION = 'WRITE')
 !    OPEN(unit = QiMidForce, file = 'Qi_Mid_Force.out', status = 'REPLACE',ACTION = 'WRITE')
-    OPEN(unit = QiMidAcc, file = 'Qi_Mid_Acc_Single.out', status = 'REPLACE',ACTION = 'WRITE')
+!    OPEN(unit = QiMidAcc, file = 'Qi_Mid_Acc_Single.out', status = 'REPLACE',ACTION = 'WRITE')
 !    OPEN(unit = QiMidVel, file = 'Qi_Mid_Vel.out', status = 'REPLACE',ACTION = 'WRITE')
     OPEN(unit = QiRootUnit,file = 'QiRoot_Single.out', status = 'REPLACE',ACTION = 'WRITE')
     OPEN(unit = QiReacUnit,file = 'QiReac_Single.out', status = 'REPLACE',ACTION = 'WRITE')
@@ -127,7 +129,7 @@ PROGRAM MAIN
 CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final
 WRITE(*,*) "Time Step: ", n_t_global
-!IF(n_t_global == 2) STOP 
+!IF(n_t_global == 1) STOP 
 
 
      CALL BD_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
@@ -143,15 +145,18 @@ WRITE(*,*) "Time Step: ", n_t_global
       WRITE(QiTipDisp,6000) t_global,&
                            &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,BD_Parameter%node_elem*BD_Parameter%elem_total),&
                            &temp_cc(1:3)
+      WRITE(QiTipVel,6000) t_global,&
+                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_elem*BD_Parameter%elem_total),&
+                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_elem*BD_Parameter%elem_total)
       WRITE(QiRootUnit,6000) t_global,&
                            &BD_OutPut(1)%BldForce%Force(1:3,1),&
                            &BD_OutPut(1)%BldForce%Moment(1:3,1)
       WRITE(QiReacUnit,6000) t_global,&
                            &BD_OutPut(1)%ReactionForce%Force(1:3,1),&
                            &BD_OutPut(1)%ReactionForce%Moment(1:3,1)
-      WRITE(QiMidAcc,6000) t_global,&
-                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_elem),&
-                           &BD_OutPut(1)%BldMotion%RotationAcc(1:3,BD_Parameter%node_elem)
+!      WRITE(QiMidAcc,6000) t_global,&
+!                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_elem),&
+!                           &BD_OutPut(1)%BldMotion%RotationAcc(1:3,BD_Parameter%node_elem)
 
      IF(BD_Parameter%analysis_type .EQ. 1 .AND. n_t_global .EQ. 1) RETURN
 
@@ -186,6 +191,7 @@ WRITE(*,*) 'Time: ', finish-start
 
    6000 FORMAT (ES12.5,6ES21.12)
    CLOSE (QiTipDisp)
+   CLOSE (QiTipVel)
    CLOSE (QiRootUnit)
    CLOSE (QiReacUnit)
 !   CLOSE (QiMidDisp)
@@ -217,6 +223,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
    REAL(ReKi)              :: temp_pp(3)
    REAL(ReKi)              :: temp_qq(3)
    REAL(ReKi)              :: temp_R(3,3)
+   REAL(ReKi)              :: temp_r0(3)
    REAL(ReKi)              :: pai
    REAL(ReKi)              :: omega
 
@@ -229,6 +236,11 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
    temp_pp(:)     = 0.0D0
    temp_qq(:)     = 0.0D0
    temp_R(:,:)    = 0.0D0
+   temp_r0(:) = 0.0D0 
+   temp_r0(3) = 1.0D0
+   temp_theta = 1.0006D0*t
+   temp_vec(:) = 0.0D0
+   temp_vec(2) = 4.0D0*TAN(temp_theta/4.0D0)
    ! gather point forces and line forces
 
 !------------------
@@ -236,22 +248,30 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
 !------------------
    ! Point mesh: RootMotion 
    ! Calculate root displacements and rotations
-   u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%Orientation(:,:,:) = 0.0D0
    DO i=1,3
        u%RootMotion%Orientation(i,i,1) = 1.0D0
    ENDDO
+   CALL BD_CrvMatrixR(temp_vec,u%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
+   temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
+   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
+   u%RootMotion%TranslationDisp(:,:)  = 0.0D0
+   u%RootMotion%TranslationDisp(:,1) = temp_rr(:) - temp_r0(:)
    ! END Calculate root displacements and rotations
 
    ! Calculate root translational and angular velocities
-   u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(:,:) = 0.0D0
+   u%RootMotion%RotationVel(2,1) = 1.0006D0
+   u%RootMotion%TranslationVel(:,:) = 0.0D0
+   u%RootMotion%TranslationVel(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr)
    ! END Calculate root translational and angular velocities
 
 
    ! Calculate root translational and angular accelerations
    u%RootMotion%TranslationAcc(:,:) = 0.0D0
    u%RootMotion%RotationAcc(:,:) = 0.0D0
+   u%RootMotion%TranslationAcc(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)), &
+               MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr))
    ! END Calculate root translational and angular accelerations
 !------------------
 ! End rotating beam
@@ -270,9 +290,9 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
    u%DistrLoad%Force(:,:)  = 0.0D0
    u%DistrLoad%Moment(:,:) = 0.0D0
 
-   DO i=1,p%ngp*p%elem_total+2
-       u%DistrLoad%Force(1,i) = 2.0*0.314159
-   ENDDO
+!   DO i=1,p%ngp*p%elem_total+2
+!       u%DistrLoad%Force(1,i) = 2.0*0.314159
+!   ENDDO
 
 END SUBROUTINE BD_InputSolve
 
