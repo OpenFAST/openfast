@@ -2142,6 +2142,13 @@ SUBROUTINE Transfer_ED_to_BD(  y_ED, u_BD, MeshMapData, ErrStat, ErrMsg )
    do k = 1,size(y_ED%BladeRootMotion)
       CALL Transfer_Point_to_Point( y_ED%BladeRootMotion(k), u_BD(k)%RootMotion, MeshMapData%ED_P_2_BD_P(k), ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      
+#ifdef DEBUG_BEAMDYN2
+   call meshprintinfo(80+k,y_ED%BladeRootMotion(k))
+   call meshprintinfo(60+k,u_BD(k)%RootMotion)   
+#endif
+      
+      
    end do
    
 
@@ -2940,7 +2947,7 @@ SUBROUTINE ED_SD_HD_BD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
             end do
             
 #ifdef DEBUG_BEAMDYN            
-            if (k>0) then
+            if (k>=0) then
                do nb=1,p_FAST%nBeams
                   write(74,'(ES10.3E2,2(1x,i3),100(1x,ES10.3E2))') this_time, k, nb, &
                      u_BD(nb)%RootMotion%Orientation,    u_BD(nb)%RootMotion%TranslationDisp, &
@@ -5123,7 +5130,10 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM, M
 
       IF (AD%Input(1)%TowerMotion%Committed) THEN
           AD%Input(1)%TowerMotion%RemapFlag = .FALSE.
-                   AD%y%TowerLoad%RemapFlag = .FALSE.
+          
+         IF (AD%y%TowerLoad%Committed) THEN
+                  AD%y%TowerLoad%RemapFlag = .FALSE.
+         END IF      
       END IF      
       
       DO k=1,SIZE(AD%Input(1)%BladeMotion)
@@ -5392,8 +5402,11 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
       IF ( AD%Input(1)%TowerMotion%Committed ) THEN
          CALL MeshMapCreate( ED%Output(1)%TowerLn2Mesh, AD%Input(1)%TowerMotion, MeshMapData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_L_2_AD_L_T' )
-         CALL MeshMapCreate( AD%y%TowerLoad, ED%Input(1)%TowerLn2Mesh,  MeshMapData%AD_L_2_ED_L_T, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_ED_L_T' )
+            
+         IF ( AD%y%TowerLoad%Committed ) THEN            
+            CALL MeshMapCreate( AD%y%TowerLoad, ED%Input(1)%TowerLn2Mesh,  MeshMapData%AD_L_2_ED_L_T, ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_ED_L_T' )
+         END IF         
       END IF
       
       
@@ -5769,6 +5782,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'CalcOutputs_And_SolveForInputs'
    
+   integer :: k
    
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    ! Option 1: solve for consistent inputs and outputs, which is required when Y has direct feedthrough in 
@@ -5816,13 +5830,35 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    CALL SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD14, AD, SrvD, IfW, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
          
+#ifdef DEBUG_BEAMDYN
+ do k=1,p_FAST%nBeams
+   write(75,'(ES10.3E2,1(1x,i3),100(1x,ES10.3E2))') 6.0, k, &
+      2.0, 3.0, 4.0 , &
+      BD%Input(1,k)%RootMotion%Orientation, &
+      BD%Input(1,k)%RootMotion%Orientation, &
+      BD%Input(1,k)%RootMotion%Orientation 
+end do
+#endif
+      
       ! transfer ED outputs to other modules used in option 1:
    CALL Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, ED%Output(1), HD%Input(1), SD%Input(1), MAPp%Input(1), FEAM%Input(1), MD%Input(1), BD%Input(1,:), MeshMapData, ErrStat2, ErrMsg2 )         
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-                                  
+                              
+#ifdef DEBUG_BEAMDYN
+ do k=1,p_FAST%nBeams
+   write(75,'(ES10.3E2,1(1x,i3),100(1x,ES10.3E2))') 2.0, k, &
+      2.0, 3.0, 4.0 , &
+      BD%Input(1,k)%RootMotion%Orientation, &
+      BD%Input(1,k)%RootMotion%Orientation, &
+      BD%Input(1,k)%RootMotion%Orientation 
+end do
+#endif
+      
+      
    CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
 
+      
       ! use the ElastoDyn outputs from option1 to update the inputs for InflowWind, AeroDyn, and ServoDyn (necessary only if they have states)
                      
    IF ( p_FAST%CompAero == Module_AD14 ) THEN
@@ -6439,10 +6475,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          InitInData_BD%RootOri      = ED%Output(1)%BladeRootMotion(k)%Orientation(:,:,1)     ! {:}{:} - - "Initial root orientation"
          InitInData_BD%RootVel(1:3) = ED%Output(1)%BladeRootMotion(k)%TranslationVel(:,1)    ! {:}    - - "Initial root velocities and angular veolcities"                  
          InitInData_BD%RootVel(4:6) = ED%Output(1)%BladeRootMotion(k)%RotationVel(:,1)       ! {:}    - - "Initial root velocities and angular veolcities"                  
-         
+                           
          CALL BD_Init( InitInData_BD, BD%Input(1,k), BD%p(k),  BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), &
                             BD%OtherSt(k), BD%y(k), dt_BD, InitOutData_BD(k), ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)                        
             
          !bjj: we're going to force this to have the same timestep because I don't want to have to deal with n BD modules with n timesteps.
          IF ( k == 1 ) THEN
@@ -6613,7 +6649,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       IF ( p_FAST%CompAero  == Module_AD14 ) THEN
          InitInData_IfW%NumWindPoints = InitInData_IfW%NumWindPoints + InitOutData_ED%NumBl * AD14%y%OutputLoads(1)%NNodes + AD14%y%Twr_OutputLoads%NNodes
       ELSEIF ( p_FAST%CompAero  == Module_AD ) THEN
-         InitInData_IfW%NumWindPoints = InitInData_IfW%NumWindPoints + InitOutData_ED%NumBl * AD%y%BladeLoad(1)%NNodes + AD%y%TowerLoad%NNodes
+         InitInData_IfW%NumWindPoints = InitInData_IfW%NumWindPoints + AD%Input(1)%TowerMotion%NNodes
+         DO k=1,InitOutData_ED%NumBl
+            InitInData_IfW%NumWindPoints = InitInData_IfW%NumWindPoints + AD%Input(1)%BladeMotion(k)%NNodes
+         END DO
       END IF
       
       ! lidar        
@@ -7610,7 +7649,7 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, A
          CALL BD_CopyInput (BD%Input(1,k),  BD%u(k),  MESH_NEWCOPY, Errstat2, ErrMsg2) ! do this to initialize meshes/allocatable arrays for output of ExtrapInterp routine
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )      
                                
-         
+                     
             ! Initialize predicted states for j_pc loop:
          CALL BD_CopyContState   (BD%x( k,STATE_CURR), BD%x( k,STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -8051,7 +8090,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
          DO j_ss = 1, p_FAST%n_substeps( Module_BD )
             n_t_module = n_t_global*p_FAST%n_substeps( Module_BD ) + j_ss - 1
             t_module   = n_t_module*p_FAST%dt_module( Module_BD ) + t_initial
-               
+                           
             CALL BD_UpdateStates( t_module, n_t_module, BD%Input(:,k), BD%InputTimes(:,k), BD%p(k), BD%x(k,STATE_PRED), &
                                        BD%xd(k,STATE_PRED), BD%z(k,STATE_PRED), BD%OtherSt(k), ErrStat2, ErrMsg2 )
                CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
