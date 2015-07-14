@@ -975,7 +975,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
                                          y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%Cm(i,j), errStat, errMsg )       
                ! NEED TO COMPUTE AND RETURN chi as an output in this case
             else if (p%skewWakeMod == SkewMod_Coupled) then
-               y%phi(i,j) = ComputePhiWithInduction( Vx, Vy, 0.0, 0.0, errStat, errMsg )
+               y%phi(i,j) = ComputePhiWithInduction( Vx, Vy, 0.0_ReKi, 0.0_ReKi, errStat, errMsg )
             end if
          end if
          

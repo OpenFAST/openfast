@@ -49,7 +49,7 @@ typedef   ^                     ^                ReKi                k3         
 typedef   ^                     ^                ReKi                k1_hat      -  -  - "" =
 typedef   ^                     ^                ReKi                x_cp_bar    -  -  - "" =
 # The following derived type stores data for an airfoil at a single combination of Re and control setting.
-typedef	AirfoilInfo/AFI	AFI_Table_Type	SiKi	Alpha   	{:}	-	-	"Angle-of-attack vector that matches the Coefs matrix"
+typedef	AirfoilInfo/AFI	AFI_Table_Type	ReKi	Alpha   	{:}	-	-	"Angle-of-attack vector that matches the Coefs matrix"
 typedef	^	^	ReKi	Coefs	{:}{:}	-	-	"Airfoil coefficients for Cd, Cl,  and maybe Cm and/or Cpmin"	-
 typedef	^	^	ReKi	SplineCoefs	{:}{:}{:}	-	-	"Spline coefficients for Cd, Cl,  and maybe Cm and/or Cpmin"	-
 typedef	^	^	ReKi	BEMT_Spline	{:}{:}{:}{:}	-	-	"Spline coefficients for Cd, Cl for the two bounding Re when doing BEM"	-
@@ -62,20 +62,20 @@ typedef	^	^	AFI_UA_BL_Type	UA_BL	-	-	-	"The tables of Leishman-Beddoes unsteady-
 
 # The following derived type stores data for an airfoil for all combinations of Re and control setting.
 typedef	AirfoilInfo/AFI	AFInfoType	ReKi	NonDimArea	-	-	-	"The non-dimensional area of the airfoil (area/chord^2)"	-
-typedef	^	^	SiKi	CdAoAknots	{:}	-	-	"Spline knots for the angle of attack for Cd"	-
-typedef	^	^	SiKi	CdReKnots	{:}	-	-	"Spline knots for the Re for Cd"	-
-typedef	^	^	SiKi	ClAoAknots	{:}	-	-	"Spline knots for the angle of attack for Cl"	-
-typedef	^	^	SiKi	ClReKnots	{:}	-	-	"Spline knots for the Re for Cl"	-
-typedef	^	^	SiKi	CmAoAknots	{:}	-	-	"Spline knots for the angle of attack for Cm"	-
-typedef	^	^	SiKi	CmReKnots	{:}	-	-	"Spline knots for the Re for Cm"	-
-typedef	^	^	SiKi	CpminAoAknots	{:}	-	-	"Spline knots for the angle of attack for Cpmin"	-
-typedef	^	^	SiKi	CpminReKnots	{:}	-	-	"Spline knots for the Re for Cpmin"	-
-typedef	^	^	SiKi	LogRe	{:}	-	-	"An array storing the LN(Re) for all the tables in a file"	-
-typedef	^	^	SiKi	ReKnots	{:}{:}	-	-	"Spline knots for the logs of the Reynolds numbers"	-
-typedef	^	^	SiKi	CdSpCoef2D	{:}	-	-	"The spline coefficients for bicubic-spline interpolation of Cd data"	-
-typedef	^	^	SiKi	ClSpCoef2D	{:}	-	-	"The spline coefficients for bicubic-spline interpolation of Cl data"	-
-typedef	^	^	SiKi	CmSpCoef2D	{:}	-	-	"The spline coefficients for bicubic-spline interpolation of Cm data"	-
-typedef	^	^	SiKi	CpminSpCoef2D	{:}	-	-	"The spline coefficients for bicubic-spline interpolation of Cpmin data"	-
+typedef	^	^	ReKi	CdAoAknots	{:}	-	-	"Spline knots for the angle of attack for Cd"	-
+typedef	^	^	ReKi	CdReKnots	{:}	-	-	"Spline knots for the Re for Cd"	-
+typedef	^	^	ReKi	ClAoAknots	{:}	-	-	"Spline knots for the angle of attack for Cl"	-
+typedef	^	^	ReKi	ClReKnots	{:}	-	-	"Spline knots for the Re for Cl"	-
+typedef	^	^	ReKi	CmAoAknots	{:}	-	-	"Spline knots for the angle of attack for Cm"	-
+typedef	^	^	ReKi	CmReKnots	{:}	-	-	"Spline knots for the Re for Cm"	-
+typedef	^	^	ReKi	CpminAoAknots	{:}	-	-	"Spline knots for the angle of attack for Cpmin"	-
+typedef	^	^	ReKi	CpminReKnots	{:}	-	-	"Spline knots for the Re for Cpmin"	-
+typedef	^	^	ReKi	LogRe	{:}	-	-	"An array storing the LN(Re) for all the tables in a file"	-
+typedef	^	^	ReKi	ReKnots	{:}{:}	-	-	"Spline knots for the logs of the Reynolds numbers"	-
+typedef	^	^	ReKi	CdSpCoef2D	{:}	-	-	"The spline coefficients for bicubic-spline interpolation of Cd data"	-
+typedef	^	^	ReKi	ClSpCoef2D	{:}	-	-	"The spline coefficients for bicubic-spline interpolation of Cl data"	-
+typedef	^	^	ReKi	CmSpCoef2D	{:}	-	-	"The spline coefficients for bicubic-spline interpolation of Cm data"	-
+typedef	^	^	ReKi	CpminSpCoef2D	{:}	-	-	"The spline coefficients for bicubic-spline interpolation of Cpmin data"	-
 typedef	^	^	ReKi	X_Coord	{:}	-	-	"X-coordinate for the airfoil shape"	-
 typedef	^	^	ReKi	Y_Coord	{:}	-	-	"Y-coordinate for the airfoil shape"	-
 typedef	^	^	INTEGER	MaxAoAknots	{:}	-	-	"The maximum number of angle-of-attack knots for 2D splines; essentially the dimension of the array"	-

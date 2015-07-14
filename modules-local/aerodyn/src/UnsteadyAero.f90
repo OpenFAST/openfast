@@ -74,7 +74,7 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
       return
    end if
    Cd0 =   AFInfo%Table(1)%UA_BL%Cd0
-   IntAFCoefs(1:s1) = CubicSplineInterpM( 1.0*real( AOA*180.0/PI ) &
+   IntAFCoefs(1:s1) = CubicSplineInterpM( 1.0_ReKi*real( AOA*180.0/PI, ReKi ) &
                                              , AFInfo%Table(1)%Alpha &
                                              , AFInfo%Table(1)%Coefs &
                                              , AFInfo%Table(1)%SplineCoefs &
@@ -328,7 +328,7 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, alpha, alpha0, C_nalpha, AFInf
    character(*),     intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
    
    !real                            :: IntAFCoefs(4)         ! The interpolated airfoil coefficients.
-   real                            :: Cn, Cl, Cd, Cm, Cd0
+   real(ReKi)                       :: Cn, Cl, Cd, Cm, Cd0
    !integer                         :: s1                    ! Number of columns in the AFInfo structure
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -395,7 +395,7 @@ real(ReKi) function Get_f_c_from_Lookup( Re, alpha, alpha0, C_nalpha, AFInfo, Er
    character(*),     intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
    
    !real                            :: IntAFCoefs(4)         ! The interpolated airfoil coefficients.
-   real                            :: Cc, Cl, Cd, Cm, Cd0
+   real(ReKi)                      :: Cc, Cl, Cd, Cm, Cd0
    !integer                         :: s1                    ! Number of columns in the AFInfo structure
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -850,10 +850,10 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    Kq_minus1       = Get_Kupper( p%dt, q_minus1, q_minus2     )
    
       ! Compute Kprime_alpha using Eqn 1.18c
-   Kprime_alpha = Get_ExpEqn( real(p%dt), T_alpha, xd%Kprime_alpha_minus1(i,j), Kalpha, Kalpha_minus1 )
+   Kprime_alpha = Get_ExpEqn( real(p%dt,ReKi), T_alpha, xd%Kprime_alpha_minus1(i,j), Kalpha, Kalpha_minus1 )
    
       ! Compute Kprime_q using Eqn 1.19c    
-   Kprime_q     = Get_ExpEqn( real(p%dt), T_q    , xd%Kprime_q_minus1(i,j)    ,  Kq   , Kq_minus1     )
+   Kprime_q     = Get_ExpEqn( real(p%dt,ReKi), T_q    , xd%Kprime_q_minus1(i,j)    ,  Kq   , Kq_minus1     )
    
       ! Compute Cn_alpha_nc using Eqn 1.18a
       ! Depends on T_alpha, M, alpha (1.18b), Kprime_alpha (1.18c), xd%alpha_minus1, xd%Kprime_alpha_minus1
@@ -902,7 +902,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    k_mq            = 7.0/(15.0*(1.0-M)+1.5*C_nalpha*A5*b5*beta_M*M**2)
    
       ! Eqn 1.25d
-   Kprimeprime_q   = Get_ExpEqn( real(p%dt), k_mq**2*T_I   , xd%Kprimeprime_q_minus1(i,j)    ,  Kq   , Kq_minus1     )
+   Kprimeprime_q   = Get_ExpEqn( real(p%dt,ReKi), k_mq**2*T_I   , xd%Kprimeprime_q_minus1(i,j)    ,  Kq   , Kq_minus1     )
    
       ! Compute Cm_q_nc using eqn 1.25a
    Cm_q_nc         = Get_Cm_q_nc( p%UAMod, M, k_mq, T_I, Cn_q_nc, k_alpha, Kq, Kprimeprime_q )

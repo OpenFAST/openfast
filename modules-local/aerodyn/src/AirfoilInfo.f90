@@ -72,7 +72,7 @@ CONTAINS
 
          ! Local declarations.
 
-      REAL(SiKi), ALLOCATABLE                :: Coef          (:)             ! The coefficients to send to the regrid routine for 2D splines.
+      REAL(ReKi), ALLOCATABLE                :: Coef          (:)             ! The coefficients to send to the regrid routine for 2D splines.
 
       INTEGER                                :: Co                            ! The index into the coefficients array.
       INTEGER                                :: CoefSiz                       ! The size of the Coef array.
@@ -469,8 +469,8 @@ CONTAINS
 
          ! Local declarations.
 
-      REAL(SiKi)                              :: Coords   (2)                  ! An array to hold data from the airfoil-shape table.
-      REAL(SiKi), ALLOCATABLE                 :: SiAry    (:)                  ! A temporary array to hold data from a table.
+      REAL(ReKi)                              :: Coords   (2)                  ! An array to hold data from the airfoil-shape table.
+      REAL(ReKi), ALLOCATABLE                 :: SiAry    (:)                  ! A temporary array to hold data from a table.
                                               
       INTEGER                                 :: Coef                          ! A DO index that points into the coefficient array.
       INTEGER                                 :: Cols2Parse                    ! The number of columns that must be read from the coefficient tables.
@@ -791,11 +791,11 @@ CONTAINS
             NumAlf  = AFInfo%Table(Table)%NumAlf
             BadVals = .FALSE.
   !mlb: testing          IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(1), -Pi ) )  THEN
-            IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(1), -180.0 ) )  THEN
+            IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(1), -180.0_ReKi ) )  THEN
                BadVals = .TRUE.
             ENDIF
   !mlb: testing          IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(NumAlf), Pi ) )  THEN
-            IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(NumAlf), 180.0 ) )  THEN
+            IF ( .NOT. EqualRealNos( AFInfo%Table(Table)%Alpha(NumAlf), 180.0_ReKi ) )  THEN
                BadVals = .TRUE.
             ENDIF
             DO Coef=1,NumCoefs
