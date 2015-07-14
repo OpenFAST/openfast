@@ -2985,7 +2985,7 @@ END SUBROUTINE InterpStpReal3D
    INTEGER                      :: NumCrvs                                    ! Number of curves to be interpolated.
    INTEGER                      :: NumPts                                     ! Number of points in each curve.
 
-   CHARACTER(*), PARAMETER      :: RoutineName = 'CubicSplineInitM'
+   CHARACTER(*), PARAMETER      :: RoutineName = 'RegCubicSplineInitM'
 
       ! How big are the arrays?
 
