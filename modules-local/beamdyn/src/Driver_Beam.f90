@@ -101,7 +101,7 @@ PROGRAM MAIN
 
     OPEN(unit = QiTipDisp, file = 'Qi_Tip_Disp_Single.out', status = 'REPLACE',ACTION = 'WRITE')
     OPEN(unit = QiTipVel, file = 'Qi_Tip_Vel_Single.out', status = 'REPLACE',ACTION = 'WRITE')
-!    OPEN(unit = QiMidDisp, file = 'Qi_Mid_Disp.out', status = 'REPLACE',ACTION = 'WRITE')
+    OPEN(unit = QiMidDisp, file = 'Qi_Mid_Disp.out', status = 'REPLACE',ACTION = 'WRITE')
 !    OPEN(unit = QiMidForce, file = 'Qi_Mid_Force.out', status = 'REPLACE',ACTION = 'WRITE')
 !    OPEN(unit = QiMidAcc, file = 'Qi_Mid_Acc_Single.out', status = 'REPLACE',ACTION = 'WRITE')
 !    OPEN(unit = QiMidVel, file = 'Qi_Mid_Vel.out', status = 'REPLACE',ACTION = 'WRITE')
@@ -154,6 +154,9 @@ WRITE(*,*) "Time Step: ", n_t_global
       WRITE(QiReacUnit,6000) t_global,&
                            &BD_OutPut(1)%ReactionForce%Force(1:3,1),&
                            &BD_OutPut(1)%ReactionForce%Moment(1:3,1)
+      WRITE(QiMidDisp,6000) t_global,&
+                           &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,1),&
+                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,1)
 !      WRITE(QiMidAcc,6000) t_global,&
 !                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_elem),&
 !                           &BD_OutPut(1)%BldMotion%RotationAcc(1:3,BD_Parameter%node_elem)
@@ -194,7 +197,7 @@ WRITE(*,*) 'Time: ', finish-start
    CLOSE (QiTipVel)
    CLOSE (QiRootUnit)
    CLOSE (QiReacUnit)
-!   CLOSE (QiMidDisp)
+   CLOSE (QiMidDisp)
 !   CLOSE (QiMidForce)
 !   CLOSE (QiMidAcc)
 

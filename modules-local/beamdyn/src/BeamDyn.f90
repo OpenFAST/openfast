@@ -1578,8 +1578,8 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
 !WRITE(*,*) Fc
 !WRITE(*,*) 'Fd'
 !WRITE(*,*) Fd
-!WRITE(*,*) 'Fi'
-!WRITE(*,*) Fi
+!WRITE(*,*) 'Fg'
+!WRITE(*,*) Fg
 
        DO i=1,node_elem
            DO j=1,node_elem
@@ -5736,8 +5736,12 @@ SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
        DO j=k,p%node_elem
            temp_id = (j-1)*p%dof_node
            temp3(:) = p%GlbPos(:) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
-           temp3(:) = MATMUL(p%GlbRot,u%RootMotion%TranslationVel(:,1)) + &
-                        MATMUL(BD_Tilde(MATMUL(p%GlbRot,u%RootMotion%RotationVel(:,1))),temp3)
+           IF(i .EQ. 1 .AND. j .EQ. 1) THEN
+               temp3(:) = MATMUL(BD_Tilde(MATMUL(p%GlbRot,u%RootMotion%RotationVel(:,1))),temp3)
+           ELSE
+               temp3(:) = MATMUL(p%GlbRot,u%RootMotion%TranslationVel(:,1)) + &
+                            MATMUL(BD_Tilde(MATMUL(p%GlbRot,u%RootMotion%RotationVel(:,1))),temp3)
+           ENDIF
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
            x%dqdt(temp_id+1:temp_id+3) = MATMUL(TRANSPOSE(p%GlbRot),temp3(:))
            x%dqdt(temp_id+4:temp_id+6) = u%RootMotion%RotationVel(1:3,1)
