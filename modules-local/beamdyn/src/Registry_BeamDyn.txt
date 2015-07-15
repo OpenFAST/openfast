@@ -66,11 +66,11 @@ typedef      ^            ^       ^     dof_total  - - -  "Total number of dofs"
 typedef      ^            ^       ^     ngp  - - -  "Number of Gauss points" -
 typedef      ^            ^       ^     analysis_type  - - -  "analysis_type flag" -
 typedef      ^            ^       ^     damp_flag  - - -  "damping flag" -
-typedef      ^            ^       ^     niter  - - -  "analysis_type flag" -
-typedef      ^            ^       ^     NRMax  - - -  "Maximum number of iterations in Newton-Ralphson algorithm" -
+typedef      ^            ^       ^     niter  - - -  "Maximum number of iterations in Newton-Ralphson algorithm"  -
+#typedef      ^            ^       ^     NRMax  - - -  "Maximum number of iterations in Newton-Ralphson algorithm" -
 typedef      ^            ^      DbKi   dt     - - -  "module dt" s
 typedef      ^            ^      ReKi   beta   {:} - -  "Damping Coefficient" -
-typedef      ^            ^      ReKi   tol    - - -  "Tolerance used in stoppoing criterion" -
+typedef      ^            ^      ReKi   tol    - - -  "Tolerance used in stopping criterion" -
 typedef      ^            ^      DbKi   coef   {:} - -  "GA2 Coefficient" -
 typedef BeamDyn/BD ParameterType DbKi   rhoinf - - -  "Numerical Damping Coefficient for GA2"  
 typedef      ^            ^      ReKi   GlbPos {:} - -  "Initial Position Vector between origins of Global and blade frames" -

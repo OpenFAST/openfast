@@ -405,11 +405,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          call cleanup()
          return
       end if
-   p%beta(:)  = 0.0D0
    p%beta(:)  = InputFileData%InpBl%beta(:)
    IF( ErrStat >= AbortErrLev ) RETURN
 
-   WRITE(*,*) "Finished Read Input"
+   CALL WrScr( "Finished reading input" )
    ! Allocate continuous states
    CALL AllocAry(x%q,p%dof_total,'x%q',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -904,7 +903,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    REAL(ReKi)                                   :: temp_R(3,3)
    REAL(ReKi)                                   :: temp6(6)
    REAL(ReKi)                                   :: temp_Force(p%dof_total)
-   REAL(ReKi)                                   :: temp_ReactionForce(6)
+   !REAL(ReKi)                                   :: temp_ReactionForce(6)
    INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_CalcOutput'
@@ -1698,7 +1697,7 @@ SUBROUTINE BD_ComputeJacobian(rr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx
 ! For details, see
 ! Bauchau, O.A., "Flexible Multibody Dynamics", Springer, pp. 643
 !-------------------------------------------------------------------------------------------------
-   REAL(ReKi),    INTENT(IN   )::  rr            ! rr^{th} Gauss point location
+   REAL(ReKi),    INTENT(IN   )::  rr            ! rr^{th} Gauss point location ! bjj: NOT USED
    REAL(ReKi),    INTENT(IN   )::  Nuu0(:)       ! Element nodal initial position
    REAL(ReKi),    INTENT(IN   )::  gp(:)         ! Gauss point location
    REAL(ReKi),    INTENT(IN   )::  GLL_temp(:)   ! Gauss-Lobatto-Legendre point location
@@ -2055,7 +2054,7 @@ SUBROUTINE BD_GaussPointDataMass(hhx,hpx,Nvvv,Naaa,RR0,node_elem,dof_node,&
    REAL(ReKi),     INTENT(  OUT):: vvv(:)
    REAL(ReKi),     INTENT(  OUT):: vvp(:)
    REAL(ReKi),     INTENT(  OUT):: aaa(:)
-   REAL(ReKi),     INTENT(INOUT):: mmm
+   REAL(ReKi),     INTENT(INOUT):: mmm  ! bjj: NOT USED
    REAL(ReKi),     INTENT(INOUT):: mEta(:)
    REAL(ReKi),     INTENT(INOUT):: rho(:,:)
    INTEGER(IntKi), INTENT(  OUT):: ErrStat       ! Error status of the operation
@@ -2444,7 +2443,7 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
    REAL(ReKi),        INTENT(IN   ):: beta(:)
    INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Degrees of freedom per node
+   INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Degrees of freedom per node  ! bjj: NOT USED
    INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
    INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
    REAL(ReKi),        INTENT(  OUT):: MassM(:,:) ! Mass matrix
@@ -2797,7 +2796,7 @@ SUBROUTINE BD_GyroForce(mEta,rho,uuu,vvv,Fb,ErrStat,ErrMsg)
 !----------------------------------------------------------------------------------------
    REAL(ReKi),    INTENT(IN   ):: mEta(:) ! m\Eta resolved in inertia frame at Gauss point
    REAL(ReKi),    INTENT(IN   ):: rho(:,:) ! Tensor of inertia resolved in inertia frame at Gauss point
-   REAL(ReKi),    INTENT(IN   ):: uuu(:) ! Displacement(and rotation)  array at Gauss point
+   REAL(ReKi),    INTENT(IN   ):: uuu(:) ! Displacement(and rotation)  array at Gauss point ! bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: vvv(:) ! Velocities at Gauss point (including linear and angular velocities)
    REAL(ReKi),    INTENT(  OUT):: Fb(:) ! Gyroscopic forces
    INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
@@ -2906,7 +2905,7 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
    INTEGER(IntKi)               :: i
    INTEGER(IntKi)               :: j
    INTEGER(IntKi)               :: temp_id1
-   INTEGER(IntKi)               :: allo_stat
+!   INTEGER(IntKi)               :: allo_stat
    INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)         :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER      :: RoutineName = 'BD_ElememntMatrixForce'
@@ -3018,7 +3017,7 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN0,uuN,vvN,aaN,     &
    REAL(ReKi),         INTENT(IN   ):: aaN(:) ! Velocity of Mass 1: m/s
    REAL(ReKi),         INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),         INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   REAL(ReKi),         INTENT(IN   ):: gravity(:) ! Velocity of Mass 1: m/s
+   REAL(ReKi),         INTENT(IN   ):: gravity(:) ! Velocity of Mass 1: m/s    ! bjj: NOT USED
    TYPE(BD_InputType), INTENT(IN   ):: u           ! Inputs at t
    INTEGER(IntKi),     INTENT(IN   ):: damp_flag ! Number of Gauss points
    REAL(ReKi),         INTENT(IN   ):: beta(:)
@@ -3045,7 +3044,7 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN0,uuN,vvN,aaN,     &
    INTEGER(IntKi)                   :: nelem ! number of elements
    INTEGER(IntKi)                   :: j ! Index counter
    INTEGER(IntKi)                   :: temp_id ! Index counter
-   INTEGER(IntKi)                   :: allo_stat ! Allows for an error code return
+!   INTEGER(IntKi)                   :: allo_stat ! Allows for an error code return
    INTEGER(IntKi)                   :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)             :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_GenerateDynamicElementForce'
@@ -3169,10 +3168,10 @@ SUBROUTINE BD_DynamicSolutionForce(uuN0,uuN,vvN,aaN,                            
    REAL(ReKi),         INTENT(IN   ):: beta(:)
    TYPE(BD_InputType), INTENT(IN   ):: u           ! Inputs at t
    INTEGER(IntKi),     INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),     INTENT(IN   ):: dof_node ! Degrees of freedom per element
+   INTEGER(IntKi),     INTENT(IN   ):: dof_node ! Degrees of freedom per element ! bjj: NOT USED
    INTEGER(IntKi),     INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),     INTENT(IN   ):: dof_total ! Total number of degrees of freedom
-   INTEGER(IntKi),     INTENT(IN   ):: node_total ! Total number of nodes
+   INTEGER(IntKi),     INTENT(IN   ):: node_total ! Total number of nodes  ! bjj: NOT USED
    INTEGER(IntKi),     INTENT(IN   ):: ngp ! Number of Gauss points
    REAL(ReKi),         INTENT(  OUT):: Force(:)
    INTEGER(IntKi),     INTENT(  OUT):: ErrStat       ! Error status of the operation
@@ -3212,7 +3211,7 @@ SUBROUTINE BD_ReadInput(InputFileName,InputFileData,OutFileRoot, Default_DT,ErrS
    ! Local variables:
    INTEGER(IntKi)                               :: UnEcho
    INTEGER(IntKi)                               :: ErrStat2
-   CHARACTER(LEN(ErrMsg))                       :: ErrMsg2
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2
    character(*), parameter                      :: RoutineName = 'BD_ReadInput'
 
 
@@ -3455,7 +3454,7 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
    ! Local variables:
    INTEGER(IntKi)             :: UnIn                                            ! Unit number for reading file
    INTEGER(IntKi)             :: ErrStat2                                        ! Temporary Error status
-   CHARACTER(LEN(ErrMsg))     :: ErrMsg2                                         ! Temporary Err msg
+   CHARACTER(ErrMsgLen)       :: ErrMsg2                                         ! Temporary Err msg
    character(*), parameter    :: RoutineName = 'BD_ReadBladeFile'
    INTEGER(IntKi)             :: i
    INTEGER(IntKi)             :: j
@@ -3615,7 +3614,11 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
    IF(InputFileData%InpBl%station_eta(InputFileData%InpBl%station_total) .NE. 1.0 ) &
        CALL SetErrStat ( ErrID_Fatal, 'The last station_eta must be equal to 1.0 (tip)', ErrStat, ErrMsg, RoutineName )
    
-         
+   IF (InputFileData%NRMax < 2) CALL SetErrStat ( ErrID_Fatal, 'Maximum number of iterations in Newton-Raphson (NRMax) must be greater than 1.', ErrStat, ErrMsg, RoutineName )
+   IF (InputFileData%stop_tol < EPSILON(InputFileData%stop_tol) ) &
+      CALL SetErrStat ( ErrID_Fatal, 'Tolerance for stopping (stop_tol) must be larger than machine precision ('//trim(num2lstr(EPSILON(InputFileData%stop_tol)))//').', ErrStat, ErrMsg, RoutineName )
+       
+   
 END SUBROUTINE BD_ValidateInputData
 
 SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx,ErrStat,ErrMsg)
@@ -4175,7 +4178,7 @@ SUBROUTINE BD_StaticSolution(uuN0,uuNf,Mass0,Stif0,gravity,u,&
    REAL(ReKi),          ALLOCATABLE:: ui(:)
    REAL(ReKi)                      :: Eref
    REAL(ReKi)                      :: Enorm
-   REAL(ReKi)                      :: temp
+!   REAL(ReKi)                      :: temp
    INTEGER(IntKi),      ALLOCATABLE:: indx(:)
    INTEGER(IntKi)                  :: i
    INTEGER(IntKi)                  :: j
@@ -4206,7 +4209,6 @@ SUBROUTINE BD_StaticSolution(uuN0,uuNf,Mass0,Stif0,gravity,u,&
    end if
 
    Eref = 0.0D0
-   Enorm = 0.0D0
    DO i=1,niter
        piter=i 
        CALL BD_GenerateStaticElement(uuN0,uuNf,Mass0,Stif0,gravity,u,&
@@ -4243,15 +4245,15 @@ SUBROUTINE BD_StaticSolution(uuN0,uuNf,Mass0,Stif0,gravity,u,&
 
        CALL BD_StaticUpdateConfiguration(ui,uuNf,node_total,dof_node,&
                                          ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       
        IF(i .EQ. 1) THEN
            Eref = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))*tol
            IF(Eref .LE. tol) THEN
                CALL Cleanup()
                RETURN
            ENDIF
-       ENDIF
-       IF(i .GT. 1) THEN
-           Enorm = 0.0D0
+       ELSE  !IF(i .GT. 1) THEN
            Enorm = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))
            IF(Enorm .LE. Eref) THEN
                CALL Cleanup()
@@ -4259,11 +4261,9 @@ SUBROUTINE BD_StaticSolution(uuN0,uuNf,Mass0,Stif0,gravity,u,&
            ENDIF
        ENDIF
 
-       IF(i .EQ. niter) THEN
-           CALL Cleanup
-           RETURN
-       ENDIF
    ENDDO
+   CALL Cleanup()
+   RETURN
 
 contains
       subroutine Cleanup()
@@ -4308,7 +4308,7 @@ SUBROUTINE BD_GenerateStaticElement(uuN0,uuNf,Mass0,Stif0,gravity,u,&
    INTEGER(IntKi)                  :: nelem
    INTEGER(IntKi)                  :: j
    INTEGER(IntKi)                  :: temp_id
-   INTEGER(IntKi)                  :: allo_stat
+!   INTEGER(IntKi)                  :: allo_stat
    INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)            :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER         :: RoutineName = 'BD_GenerateStaticElement'
@@ -4614,7 +4614,7 @@ SUBROUTINE BD_StaticSolutionForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per element
    INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
-   INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Total number of degrees of freedom
+   INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Total number of degrees of freedom ! bjj: NOT USED
    INTEGER(IntKi),    INTENT(IN   ):: node_total ! Total number of nodes
    INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
    REAL(ReKi),        INTENT(  OUT):: Force(:)
@@ -4680,7 +4680,7 @@ SUBROUTINE BD_GenerateStaticElementForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
    INTEGER(IntKi)                :: nelem ! number of elements
    INTEGER(IntKi)                :: j ! Index counter
    INTEGER(IntKi)                :: temp_id ! Index counter
-   INTEGER(IntKi)                :: allo_stat ! Allows for an error code return
+!   INTEGER(IntKi)                :: allo_stat ! Allows for an error code return
    INTEGER(IntKi)                :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)          :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*),        PARAMETER:: RoutineName = 'BD_GenerateStaticElementForce'
@@ -4785,11 +4785,11 @@ SUBROUTINE BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0
    REAL(ReKi),    INTENT(IN   ):: Nuuu(:) ! Nodal displacement of Mass 1 for each element
    REAL(ReKi),    INTENT(IN   ):: Nrr0(:) ! Nodal rotation parameters for initial position
    REAL(ReKi),    INTENT(IN   ):: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
-   REAL(ReKi),    INTENT(IN   ):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
+   REAL(ReKi),    INTENT(IN   ):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element ! bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: EStif0_GL(:,:,:) ! Nodal material properties for each element
-   REAL(ReKi),    INTENT(IN   ):: EMass0_GL(:,:,:) ! Nodal material properties for each element
-   REAL(ReKi),    INTENT(IN   ):: gravity(:) !
-   REAL(ReKi),    INTENT(IN   ):: DistrLoad_GL(:,:) ! Nodal material properties for each element
+   REAL(ReKi),    INTENT(IN   ):: EMass0_GL(:,:,:) ! Nodal material properties for each element ! bjj: NOT USED
+   REAL(ReKi),    INTENT(IN   ):: gravity(:) ! bjj: NOT USED
+   REAL(ReKi),    INTENT(IN   ):: DistrLoad_GL(:,:) ! Nodal material properties for each element ! bjj: NOT USED
    INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
    INTEGER(IntKi),INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
@@ -4803,7 +4803,7 @@ SUBROUTINE BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0
    REAL(ReKi),      ALLOCATABLE:: hpx(:) ! Derivative of shape function
    REAL(ReKi),      ALLOCATABLE:: GLL_temp(:) ! Temp Gauss-Lobatto-Legendre points
    REAL(ReKi),      ALLOCATABLE:: w_temp(:) ! Temp GLL weights
-   REAL(ReKi),      ALLOCATABLE:: temp_Naaa(:)
+!   REAL(ReKi),      ALLOCATABLE:: temp_Naaa(:)
    REAL(ReKi)                  :: uu0(6)
    REAL(ReKi)                  :: E10(3)
    REAL(ReKi)                  :: RR0(3,3)
@@ -4820,18 +4820,18 @@ SUBROUTINE BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0
    REAL(ReKi)                  :: Oe(6,6)
    REAL(ReKi)                  :: Pe(6,6)
    REAL(ReKi)                  :: Qe(6,6)
-   REAL(ReKi)                  :: Fg(6)
-   REAL(ReKi)                  :: vvv(6)
-   REAL(ReKi)                  :: vvp(6)
-   REAL(ReKi)                  :: mmm
-   REAL(ReKi)                  :: mEta(3)
-   REAL(ReKi)                  :: rho(3,3)
-   REAL(ReKi)                  :: temp_aaa(6)
+!   REAL(ReKi)                  :: Fg(6)
+!   REAL(ReKi)                  :: vvv(6)
+!   REAL(ReKi)                  :: vvp(6)
+!   REAL(ReKi)                  :: mmm
+!   REAL(ReKi)                  :: mEta(3)
+!   REAL(ReKi)                  :: rho(3,3)
+!   REAL(ReKi)                  :: temp_aaa(6)
    INTEGER(IntKi)              :: igp
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: j
    INTEGER(IntKi)              :: temp_id1
-   INTEGER(IntKi)              :: allo_stat
+!   INTEGER(IntKi)              :: allo_stat
    INTEGER(IntKi)              :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)        :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_StaticElementMatrixForce'
@@ -4941,7 +4941,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    INTEGER(IntKi)                                     :: ErrStat2   ! Temporary Error status
    CHARACTER(ErrMsgLen)                               :: ErrMsg2    ! Temporary Error message
    CHARACTER(*), PARAMETER                            :: RoutineName = 'BD_GA2'
-   INTEGER(IntKi)                                     :: i
+!   INTEGER(IntKi)                                     :: i
 
    ! Initialize ErrStat
 
@@ -5138,7 +5138,7 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
 !------------------------------------------------------------
 
    TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-   REAL(DbKi),                   INTENT(IN   )  :: t           ! Inputs at t
+   REAL(DbKi),                   INTENT(IN   )  :: t           ! time (s) ! bjj: NOT USED
    TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Inputs at t
    TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Continuous states at t
@@ -5150,7 +5150,7 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
    REAL(ReKi)                                   :: temp3(3)
    REAL(ReKi)                                   :: temp_Rb(3,3)
    REAL(ReKi)                                   :: temp_ref(3)
-   REAL(ReKi)                                   :: temp_root(3)
+!   REAL(ReKi)                                   :: temp_root(3)
    INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_BoundaryGA2'
@@ -5225,7 +5225,7 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
    INTEGER(IntKi)                   :: ErrStat2    ! Temporary Error status
    CHARACTER(ErrMsgLen)             :: ErrMsg2     ! Temporary Error message
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_DynamicSolutionGA2'         
-   REAL(ReKi)                       :: errf
+!   REAL(ReKi)                       :: errf
    REAL(ReKi),           ALLOCATABLE:: StifK(:,:)
    REAL(ReKi),           ALLOCATABLE:: StifK_LU(:,:)
    REAL(ReKi),           ALLOCATABLE:: RHS(:)
@@ -5234,8 +5234,8 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
    REAL(ReKi),           ALLOCATABLE:: DampG(:,:)
    REAL(ReKi),           ALLOCATABLE:: F_PointLoad(:)
    REAL(ReKi),           ALLOCATABLE:: ai(:)
-   REAL(ReKi)                       :: Eref
-   REAL(ReKi)                       :: Enorm
+   REAL(DbKi)                       :: Eref
+   REAL(DbKi)                       :: Enorm
    INTEGER(IntKi),       ALLOCATABLE:: indx(:)
    INTEGER(IntKi)                   :: i
    INTEGER(IntKi)                   :: j
@@ -5338,33 +5338,36 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
 !WRITE(*,*) ai
        CALL BD_UpdateDynamicGA2(ai,uuNf,vvNf,aaNf,xxNf,coef,node_total,dof_node,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          
+          
+       Enorm = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))
+!WRITE(*,*) 'Enorm: ',Enorm
+          
        IF(i==1) THEN
-           Eref = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))*tol
-!WRITE(*,*) 'Eref: ',Eref
-!WRITE(*,*) 'tol: ',tol
-           IF(Eref .LE. tol) THEN
+           Eref = Enorm*tol
+!WRITE(*,*) 'Eref:  ',Eref
+!WRITE(*,*) 'tol:   ',tol
+           !IF(Eref .LE. tol) THEN
+           IF(Enorm .LE. 1.0_DbKi) THEN
                CALL Cleanup()
                RETURN
            ENDIF
-       ENDIF
-       IF(i .GT. 1) THEN
-           Enorm = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))
-!WRITE(*,*) 'Enorm: ',Enorm
+       ELSE !IF(i .GT. 1) THEN
            IF(Enorm .LE. Eref) THEN
                CALL Cleanup()
                RETURN
            ENDIF
        ENDIF
 
-       IF(i==niter) THEN
-          CALL setErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of iterations", ErrStat, ErrMsg, RoutineName)
-          CALL Cleanup()
-          RETURN
-       ENDIF
    ENDDO
+   
+   CALL setErrStat( ErrID_Fatal, "Solution does not converge after the maximum number of iterations", ErrStat, ErrMsg, RoutineName)
+   CALL Cleanup()
+   RETURN
 
 contains
       subroutine Cleanup()
+!WRITE(*,*) '--------------'
 
          if (allocated(StifK      )) deallocate(StifK      )
          if (allocated(StifK_LU   )) deallocate(StifK_LU   )
@@ -5656,8 +5659,8 @@ SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
    INTEGER(IntKi)                             :: temp_id
    REAL(ReKi)                                 :: temp3(3)
    REAL(ReKi)                                 :: temp_p0(3)
-   REAL(ReKi)                                 :: temp_ref(3)
-   REAL(ReKi)                                 :: temp_root(3)
+!   REAL(ReKi)                                 :: temp_ref(3)
+!   REAL(ReKi)                                 :: temp_root(3)
    REAL(ReKi)                                 :: temp_glb(3)
    REAL(ReKi)                                 :: temp_rv(3)
    REAL(ReKi)                                 :: temp_R(3,3)
@@ -5910,7 +5913,6 @@ SUBROUTINE BD_IniAcc( u, y, p, OtherState,ErrStat,ErrMsg)
            temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
            temp_id2= (i-1)*p%node_elem+j
            IF(i .EQ. 1 .AND. j .EQ. 1) THEN
-               temp6(:) = 0.0D0
                temp6(1) = u%RootMotion%TranslationAcc(3,1)
                temp6(2) = u%RootMotion%TranslationAcc(1,1)
                temp6(3) = u%RootMotion%TranslationAcc(2,1)
@@ -5918,7 +5920,6 @@ SUBROUTINE BD_IniAcc( u, y, p, OtherState,ErrStat,ErrMsg)
                temp6(5) = u%RootMotion%RotationAcc(1,1)
                temp6(6) = u%RootMotion%RotationAcc(2,1)
            ELSE
-               temp6(:) = 0.0D0
                temp6(1) = y%BldMotion%TranslationAcc(3,temp_id2)
                temp6(2) = y%BldMotion%TranslationAcc(1,temp_id2)
                temp6(3) = y%BldMotion%TranslationAcc(2,temp_id2)
@@ -5926,8 +5927,8 @@ SUBROUTINE BD_IniAcc( u, y, p, OtherState,ErrStat,ErrMsg)
                temp6(5) = y%BldMotion%RotationAcc(2,temp_id2)
                temp6(6) = y%BldMotion%RotationAcc(3,temp_id2)
            ENDIF
-           temp6(1:3) = MATMUL(TRANSPOSE(p%GlbRot),temp6(1:3))
-           temp6(4:6) = MATMUL(TRANSPOSE(p%GlbRot),temp6(4:6))
+           temp6(1:3) = MATMUL(TRANSPOSE(p%GlbRot),temp6(1:3)) !bjj: = MATMUL(temp6(1:3), p%GlbRot)
+           temp6(4:6) = MATMUL(TRANSPOSE(p%GlbRot),temp6(4:6)) !bjj: = MATMUL(temp6(4:6), p%GlbRot)
            OtherState%Acc(temp_id+1:temp_id+6) = temp6(1:6)
        ENDDO
    ENDDO
