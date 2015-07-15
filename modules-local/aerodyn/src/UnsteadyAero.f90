@@ -1687,6 +1687,14 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
          ! Eqn 1.55
          ! Compute Cn_FS using Eqn 1.35 or 1.36 depending on option selected
       if ( p%UAMod == 2 ) then
+         if (abs(alpha_f-alpha0) < .01) then
+            if (alpha_f < alpha0) then
+               alpha_f = alpha_f - .01
+            else
+               alpha_f = alpha_f + .01
+            end if
+         end if
+         
          call GetSteadyOutputs(AFInfo, alpha_f, Cl_static, Cd_static, Cm_static, Cd0, ErrStat, ErrMsg)
          Cn_static = Cl_static*cos(alpha_f) + (Cd_static-Cd0)*sin(alpha_f)
          ! TODO: What about when Cn = 0  GJH 5/22/2015
