@@ -152,6 +152,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%gravity(2) = temp_POS(1)
    p%gravity(3) = temp_POS(2)
 
+!WRITE(*,*) 'p%gravity'
+!WRITE(*,*) p%gravity
    ! Analysis type: 1 Static 2 Dynamic
    p%analysis_type  = InputFileData%analysis_type
    ! Numerical damping coefficient: [0,1].
