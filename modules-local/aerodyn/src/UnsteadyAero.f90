@@ -797,6 +797,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    real(ReKi)                :: alphaf_minus1
    
    
+   !bjj: TODO: fprimeprime_m wasn't set, so I just initialized it to zero.
+   fprimeprime_m = 0
 
    M           = u%U / p%a_s
    beta_M_Sqrd = Get_Beta_M_Sqrd(M)
@@ -1159,7 +1161,7 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
 
 
       ! Local variables
-   character(len(ErrMsg))                       :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)                         :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                               :: errStat2    ! temporary Error status of the operation
    integer(IntKi)                               :: i,j, iNode, iOffset
    character(64)                                :: chanPrefix
@@ -1509,7 +1511,7 @@ subroutine UA_UpdateStates( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg 
    
    
    integer(IntKi)                               :: errStat2        ! Error status of the operation (secondary error)
-   character(len(ErrMsg))                       :: errMsg2         ! Error message if ErrStat2 /= ErrID_None
+   character(ErrMsgLen)                         :: errMsg2         ! Error message if ErrStat2 /= ErrID_None
    
       ! Initialize variables
 
@@ -1551,7 +1553,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
 
    
    integer(IntKi)                                         :: errStat2        ! Error status of the operation (secondary error)
-   character(len(ErrMsg))                                 :: errMsg2         ! Error message if ErrStat2 /= ErrID_None
+   character(ErrMsgLen)                                   :: errMsg2         ! Error message if ErrStat2 /= ErrID_None
    real(ReKi)                                             :: Cn_prime
    real(ReKi)                                             :: Cn1             ! critical value of Cn_prime at LE separation for alpha >= alpha0    
    real(ReKi)                                             :: Cn2             ! critical value of Cn_prime at LE separation for alpha < alpha0
