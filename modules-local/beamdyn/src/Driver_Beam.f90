@@ -126,6 +126,8 @@ PROGRAM MAIN
    BD_InputTimes(1) = t_initial 
    BD_OutputTimes(1) = t_initial
 
+   CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, ErrStat, ErrMsg)
+
 CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final
 WRITE(*,*) "Time Step: ", n_t_global
@@ -255,11 +257,11 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
    DO i=1,3
        u%RootMotion%Orientation(i,i,1) = 1.0D0
    ENDDO
-   CALL BD_CrvMatrixR(temp_vec,u%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
-   temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
-   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
-   u%RootMotion%TranslationDisp(:,:)  = 0.0D0
-   u%RootMotion%TranslationDisp(:,1) = temp_rr(:) - temp_r0(:)
+!   CALL BD_CrvMatrixR(temp_vec,u%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
+!   temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
+!   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
+!   u%RootMotion%TranslationDisp(:,:)  = 0.0D0
+!   u%RootMotion%TranslationDisp(:,1) = temp_rr(:) - temp_r0(:)
    ! END Calculate root displacements and rotations
 
    ! Calculate root translational and angular velocities
