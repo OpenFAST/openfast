@@ -129,7 +129,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
 
 
       ! Local variables
-   character(len(errMsg))                        :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)                          :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
    integer(IntKi)                                :: i, j
    INTEGER(IntKi)                                :: i1
@@ -228,7 +228,7 @@ subroutine BEMT_InitContraintStates( z, p, errStat, errMsg )
 
 
       ! Local variables
-   character(len(errMsg))                        :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)                          :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
    
       ! Initialize variables for this routine
@@ -281,7 +281,7 @@ end subroutine BEMT_InitContraintStates
 !
 !
 !      ! Local variables
-!   character(len(errMsg))                        :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+!   character(ErrMsgLen)                          :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
 !   integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
 !
 !      ! Initialize variables for this routine
@@ -378,7 +378,7 @@ subroutine BEMT_AllocInput( u, p, errStat, errMsg )
 
 
       ! Local variables
-   character(len(errMsg))                        :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)                          :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
 
       ! Initialize variables for this routine
@@ -1194,7 +1194,7 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
       ! Local variables
    type(fmin_fcnArgs)                   :: fcnArgs
    
-   character(len(errMsg))                        :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   character(ErrMsgLen)                          :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
 
    INTEGER    :: i,j, niter
