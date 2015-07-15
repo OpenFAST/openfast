@@ -27,7 +27,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v0.9.01-mth', '30-Mar-2015' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v1.00.00F-mth', '22-Jun-2015' )
 
 
    PUBLIC :: MD_Init
@@ -69,6 +69,10 @@ CONTAINS
       CHARACTER(20)                                :: TempString     ! temporary string for incidental use
       INTEGER(IntKi)                               :: ErrStat2       ! Error status of the operation
       CHARACTER(ErrMsgLen)                         :: ErrMsg2        ! Error message if ErrStat2 /= ErrID_None
+      
+      TYPE(MD_InputType)    :: uArray(1)    ! a size-one array for u to make call to TimeStep happy
+      REAL(DbKi)            :: utimes(1)    ! a size-one array saying time is 0 to make call to TimeStep happy  
+
 
 
 
@@ -102,7 +106,6 @@ CONTAINS
       CALL MDIO_ReadInput(InitInp, p, other, ErrStat2, ErrMsg2)
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
-
 
       ! process the OutList array and set up the index arrays for the requested output quantities
       CALL MDIO_ProcessOutList(InitInp%OutList, p, other, y, InitOut, ErrStat2, ErrMsg2 )
@@ -248,18 +251,18 @@ CONTAINS
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
 
-         ! modified below to subtract Pos
-         u%PtFairleadDisplacement%TranslationDisp(1,i) = InitInp%PtfmInit(1) + Transmat(1,1)*Pos(1) + Transmat(1,2)*Pos(2) + TransMat(1,3)*Pos(3) - Pos(1)
-         u%PtFairleadDisplacement%TranslationDisp(2,i) = InitInp%PtfmInit(2) + Transmat(2,1)*Pos(1) + Transmat(2,2)*Pos(2) + TransMat(2,3)*Pos(3) - Pos(2)
-         u%PtFairleadDisplacement%TranslationDisp(3,i) = InitInp%PtfmInit(3) + Transmat(3,1)*Pos(1) + Transmat(3,2)*Pos(2) + TransMat(3,3)*Pos(3) - Pos(3)
-         ! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-         !mth:      Bonnie, is the above correct?
-         ! ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+         ! Apply initial platform rotations and translations (fixed Jun 19, 2015)
+         u%PtFairleadDisplacement%TranslationDisp(1,i) = InitInp%PtfmInit(1) + Transmat(1,1)*Pos(1) + Transmat(2,1)*Pos(2) + TransMat(3,1)*Pos(3) - Pos(1)
+         u%PtFairleadDisplacement%TranslationDisp(2,i) = InitInp%PtfmInit(2) + Transmat(1,2)*Pos(1) + Transmat(2,2)*Pos(2) + TransMat(3,2)*Pos(3) - Pos(2)
+         u%PtFairleadDisplacement%TranslationDisp(3,i) = InitInp%PtfmInit(3) + Transmat(1,3)*Pos(1) + Transmat(2,3)*Pos(2) + TransMat(3,3)*Pos(3) - Pos(3)
 
          ! set velocity of each node to zero
          u%PtFairleadDisplacement%TranslationVel(1,i) = 0.0_ReKi
          u%PtFairleadDisplacement%TranslationVel(2,i) = 0.0_ReKi
          u%PtFairleadDisplacement%TranslationVel(3,i) = 0.0_ReKi
+         
+         !print *, 'Fairlead ', i, ' z TranslationDisp at start is ', u%PtFairleadDisplacement%TranslationDisp(3,i)
+         !print *, 'Fairlead ', i, ' z Position at start is ', u%PtFairleadDisplacement%Position(3,i)
 
 
          ! set each node as a point element
@@ -389,12 +392,14 @@ CONTAINS
 
       t = 0.0_ReKi     ! start time at zero
 
+      ! because TimeStep wants an array...
+      uArray(1) = u
 
 
       DO I = 1, ceiling(InitInp%TMaxIC/InitInp%DTIC)   ! loop through IC gen time steps, up to maximum
 
          ! integrate the EOMs one DTIC s time step
-         CALL TimeStep ( t, InitInp%DTIC, u, p, x, xd, z, other, ErrStat, ErrMsg )
+         CALL TimeStep ( t, InitInp%DTIC, uArray, utimes, p, x, xd, z, other, ErrStat, ErrMsg )
 
 
          ! store new fairlead tension (and previous fairlead tensions for comparison)
@@ -484,8 +489,8 @@ CONTAINS
 
       REAL(DbKi)                      , INTENT(IN   ) :: t
       INTEGER(IntKi)                  , INTENT(IN   ) :: n
-      REAL(DbKi)                      , INTENT(IN   ) :: utimes(:)
       TYPE(MD_InputType)              , INTENT(INOUT) :: u(:)       ! INTENT(INOUT) ! had to change this to INOUT
+      REAL(DbKi)                      , INTENT(IN   ) :: utimes(:)
       TYPE(MD_ParameterType)          , INTENT(IN   ) :: p          ! INTENT(IN   )
       TYPE(MD_ContinuousStateType)    , INTENT(INOUT) :: x          ! INTENT(INOUT)
       TYPE(MD_DiscreteStateType)      , INTENT(INOUT) :: xd         ! INTENT(INOUT)
@@ -501,7 +506,7 @@ CONTAINS
       INTEGER(IntKi)                                  :: ErrStat2   ! Error status of the operation
       CHARACTER(ErrMsgLen)                            :: ErrMsg2    ! Error message if ErrStat2 /= ErrID_None
 
-      TYPE(MD_InputType)                              :: u_interp   !
+! moved to TimeStep      TYPE(MD_InputType)                              :: u_interp   !
       INTEGER(IntKi)                                  :: nTime
 
       REAL(ReKi)                                      :: t2         ! should work out a consistent data type for time...
@@ -511,35 +516,35 @@ CONTAINS
 
       t2 = real(t, ReKi)
 
-
-      ! create space for arrays/meshes in u_interp
-      CALL MD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
-
-      ! interpolate input mesh to correct time
-      CALL MD_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat2, ErrMsg2)
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
-
-
-      ! go through fairleads and apply motions from driver
-      DO I = 1, p%NFairs
-         DO J = 1,3
-            other%ConnectList(other%FairIdList(I))%r(J)  = u_interp%PtFairleadDisplacement%Position(J,I) + u_interp%PtFairleadDisplacement%TranslationDisp(J,I)
-            other%ConnectList(other%FairIdList(I))%rd(J) = u_interp%PtFairleadDisplacement%TranslationVel(J,I)  ! is this right? <<<
-         END DO
-      END DO
-
+! >>> removing this section and putting it inside loop of TimeStep (to be done at every time step) <<<
+!      ! create space for arrays/meshes in u_interp
+!      CALL MD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+!         CALL CheckError( ErrStat2, ErrMsg2 )
+!         IF (ErrStat >= AbortErrLev) RETURN
+!
+!      ! interpolate input mesh to correct time
+!      CALL MD_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat2, ErrMsg2)
+!         CALL CheckError( ErrStat2, ErrMsg2 )
+!         IF (ErrStat >= AbortErrLev) RETURN
+!
+!
+!      ! go through fairleads and apply motions from driver
+!      DO I = 1, p%NFairs
+!         DO J = 1,3
+!            other%ConnectList(other%FairIdList(I))%r(J)  = u_interp%PtFairleadDisplacement%Position(J,I) + u_interp%PtFairleadDisplacement%TranslationDisp(J,I)
+!            other%ConnectList(other%FairIdList(I))%rd(J) = u_interp%PtFairleadDisplacement%TranslationVel(J,I)  ! is this right? <<<
+!         END DO
+!      END DO
+!
 
       ! call function that loops through mooring model time steps
-      CALL TimeStep ( t2, p%dtCoupling, u_interp, p, x, xd, z, other, ErrStat2, ErrMsg2 )
+      CALL TimeStep ( t2, p%dtCoupling, u, utimes, p, x, xd, z, other, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
 
 
       ! clean up input interpolation stuff
-      CALL MD_DestroyInput(u_interp, ErrStat, ErrMsg)
+  ! moved to TimeStep    CALL MD_DestroyInput(u_interp, ErrStat, ErrMsg)
 
 
    CONTAINS
@@ -560,7 +565,7 @@ CONTAINS
             CALL WrScr( ErrMsg )  ! do this always or only if warning level?
 
             IF( ErrStat > ErrID_Warn ) THEN
-                CALL MD_DestroyInput( u_interp, ErrStat, ErrMsg )
+       !         CALL MD_DestroyInput( u_interp, ErrStat, ErrMsg )
                 RETURN
             END IF
          END IF
@@ -707,6 +712,14 @@ CONTAINS
           END DO
         END DO
       END DO
+      
+      ! update fairlead positions for instantaneous values (fixed 2015-06-22)    
+      DO K = 1, p%NFairs
+         DO J = 1,3
+            other%ConnectList(other%FairIdList(K))%r(J)  = u%PtFairleadDisplacement%Position(J,K) + u%PtFairleadDisplacement%TranslationDisp(J,K)
+            other%ConnectList(other%FairIdList(K))%rd(J) = u%PtFairleadDisplacement%TranslationVel(J,K)  ! is this right? <<<
+         END DO
+      END DO
 
 
       ! do Line force and acceleration calculations, also add end masses/forces to respective Connects
@@ -720,7 +733,7 @@ CONTAINS
       END DO
 
 
-      ! perform connection force and mass calculations
+      ! perform connection force and mass calculations (done to all connects for sake of calculating fairlead/anchor loads)
       DO L = 1, p%NConnects
          ! add Connect's own forces including buoyancy and weight
          other%ConnectList(L)%Ftot(1) =other%ConnectList(L)%Ftot(1) + other%ConnectList(L)%conFX
@@ -870,9 +883,9 @@ CONTAINS
                END DO
             END if
 
-            ! line internal damping force
+            ! line internal damping force  (this now uses a line-specific BA value (Line%BA vs. LineProp%BA), to support calculation of individual line BAs based on desired damping ratio)
             DO J = 1, 3
-               Line%Td(J,I) = LineProp%BA* ( Line%lstrd(I) / Line%l(I) ) * (Line%r(J,I)-Line%r(J,I-1)) / Line%lstr(I)  ! note new form of damping coefficient, BA rather than Cint
+               Line%Td(J,I) = Line%BA* ( Line%lstrd(I) / Line%l(I) ) * (Line%r(J,I)-Line%r(J,I-1)) / Line%lstr(I)  ! note new form of damping coefficient, BA rather than Cint
             END DO
          END DO
 
@@ -993,6 +1006,8 @@ CONTAINS
       !======================================================================
       SUBROUTINE DoConnectRHS (X, Xd, t, Connect)
 
+         ! This subroutine is for the "Connect" type of Connections only.  Other types don't have their own state variables.
+      
          Real(ReKi),       INTENT( IN )    :: X(:)           ! state vector for this connect, provided
          Real(ReKi),       INTENT( OUT )   :: Xd(:)          ! derivative of state vector for this connect, returned
          Real(ReKi),       INTENT (IN)     :: t              ! instantaneous time
@@ -1004,68 +1019,46 @@ CONTAINS
          INTEGER(IntKi)             :: K         ! index
          Real(ReKi)                 :: Sum1      ! for adding things
 
-         ! below now handled it calling sub
+         ! When this sub is called, the force and mass contributions from the attached Lines should already have been added to
+         ! Fto and Mtot by the Line RHS function.  Also, any self weight, buoyancy, or external forcing should have already been
+         ! added by the calling subroutine.  The only thing left is any added mass or drag forces from the connection (e.g. float)
+         ! itself, which will be added below.
 
-!         ! the force and mass contributions from the attached Lines should already have been added to
-!         ! Fto and Mtot by the Line RHS function
-!
-!         ! add Connect's own forces including buoyancy and weight  (should this only be done for Connect type Connects?)
-!         Connect%Ftot(1) = Connect%Ftot(1) + Connect%conFX
-!         Connect%Ftot(2) = Connect%Ftot(2) + Connect%conFY
-!         Connect%Ftot(3) = Connect%Ftot(3) + Connect%conFZ + Connect%conV*p%rhoW*p%g - Connect%conM*p%g
-!
-!         ! add Connect's own mass
-!         DO J = 1,3
-!            Connect%Mtot(J,J) = Connect%Mtot(J,J) + Connect%conM
-!         END DO
 
-         ! below comments to tentatively try only connect types being handled (no anchors or fairleads)
-
- !        ! ------ behavior dependant on connect type -------
-!
-!         IF (Connect%TypeNum==0)  THEN ! fixed type
-!            Connect%r(1) = Connect%conX
-!            Connect%r(2) = Connect%conY
-!            Connect%r(3) = Connect%conZ
-!            DO J = 1,3
-!               Connect%rd(J) = 0.0_ReKi
-!            END DO
-!         ELSE IF (Connect%TypeNum==1)  THEN ! vessel type (moves with platform)
-!
-!           ! fairlead positions are updated from the previous value by integrating the velocity (assumed constant during the driver time step)
-!           ! this is done in subroutine TimeStep
-!
-!         ELSE IF (Connect%TypeNum==2)  THEN ! "connect" type
-
-            IF (EqualRealNos(t, 0.0)) THEN  ! this is old: with current IC gen approach, we skip the first call to the line objects, because they're set AFTER the call to the connects
-
-               DO J = 1,3
-                  Xd(3+I) = X(I)        ! velocities - these are unused in integration
-                  Xd(I) = 0.0_ReKi           ! accelerations - these are unused in integration
-               END DO
-            ELSE
-               ! from state values, get r and rdot values
-               DO J = 1,3
-                  Connect%r(J)  = X(3 + J)   ! get positions
-                  Connect%rd(J) = X(J)       ! get velocities
-               END DO
-            END IF
-
-            ! invert node mass matrix
-            CALL Inverse3by3(Connect%S, Connect%Mtot)
+         IF (EqualRealNos(t, 0.0_ReKi)) THEN  ! this is old: with current IC gen approach, we skip the first call to the line objects, because they're set AFTER the call to the connects
 
             DO J = 1,3
-               ! RHS constant - (premultiplying force vector by inverse of mass matrix  ... i.e. rhs = S*Forces
-               Sum1 = 0.0_ReKi   ! reset accumulator
-               DO K = 1, 3
-                  Sum1 = Sum1 + Connect%S(K,J) * Connect%Ftot(K)   !  matrix multiplication [S i]{Forces i}
-               END DO
-
-               ! update states
-               Xd(3 + J) = X(J)          ! dxdt = V    (velocities)
-               Xd(I) = Sum1              ! dVdt = RHS * A  (accelerations)
+               Xd(3+I) = X(I)        ! velocities - these are unused in integration
+               Xd(I) = 0.0_ReKi           ! accelerations - these are unused in integration
             END DO
-!         END IF
+         ELSE
+            ! from state values, get r and rdot values
+            DO J = 1,3
+               Connect%r(J)  = X(3 + J)   ! get positions
+               Connect%rd(J) = X(J)       ! get velocities
+            END DO
+         END IF
+
+         ! add any added mass and drag forces from the Connect body itself
+         DO J = 1,3
+            Connect%Ftot(J) = Connect%Ftot(J) - 0.5 * p%rhoW * Connect%r(J) * abs(Connect%r(J)) * Connect%conCdA;  ! add drag forces
+            Connect%Mtot(J,J) = Connect%Mtot(J,J) + Connect%conV*p%rhoW*Connect%conCa;                             ! add added mass
+         END DO
+                     
+         ! invert node mass matrix
+         CALL Inverse3by3(Connect%S, Connect%Mtot)
+
+         DO J = 1,3
+            ! RHS constant - (premultiplying force vector by inverse of mass matrix  ... i.e. rhs = S*Forces
+            Sum1 = 0.0_ReKi   ! reset accumulator
+            DO K = 1, 3
+               Sum1 = Sum1 + Connect%S(K,J) * Connect%Ftot(K)   !  matrix multiplication [S i]{Forces i}
+            END DO
+
+            ! update states
+            Xd(3 + J) = X(J)          ! dxdt = V    (velocities)
+            Xd(I) = Sum1              ! dVdt = RHS * A  (accelerations)
+         END DO
 
       END SUBROUTINE DoConnectRHS
       !=====================================================================
@@ -1119,11 +1112,11 @@ CONTAINS
          CALL CheckError( ErrStat2, ErrMsg2 )
 
 
-      IF ( ErrStat==ErrID_None) THEN
-         CALL WrScr('MoorDyn closed without errors')
-      ELSE
-         CALL WrScr('MoorDyn closed with errors')
-      END IF
+ !     IF ( ErrStat==ErrID_None) THEN
+ !        CALL WrScr('MoorDyn closed without errors')
+ !     ELSE
+ !        CALL WrScr('MoorDyn closed with errors')
+ !     END IF
 
 
    CONTAINS
@@ -1167,10 +1160,11 @@ CONTAINS
 
 
    !========================================================================================================
-   SUBROUTINE TimeStep ( t, dtStep, u, p, x, xd, z, other, ErrStat, ErrMsg )
+   SUBROUTINE TimeStep ( t, dtStep, u, utimes, p, x, xd, z, other, ErrStat, ErrMsg )
       REAL(ReKi)                     , INTENT(INOUT)      :: t
       REAL(ReKi)                     , INTENT(IN   )      :: dtStep     ! how long to advance the time for
-      TYPE( MD_InputType )           , INTENT(IN   )      :: u          ! INTENT(IN   )
+      TYPE( MD_InputType )           , INTENT(INOUT)      :: u(:)       ! INTENT(IN   )
+      REAL(DbKi)                     , INTENT(IN   )      :: utimes(:)  ! times corresponding to elements of u(:)?
       TYPE( MD_ParameterType )       , INTENT(IN   )      :: p          ! INTENT(IN   )
       TYPE( MD_ContinuousStateType ) , INTENT(INOUT)      :: x
       TYPE( MD_DiscreteStateType )   , INTENT(IN   )      :: xd         ! INTENT(IN   )
@@ -1188,10 +1182,17 @@ CONTAINS
       INTEGER(IntKi)                                      :: I          ! counter
       INTEGER(IntKi)                                      :: J          ! counter
       INTEGER(IntKi)                                      :: K          ! counter
+      TYPE(MD_InputType)                                  :: u_interp   ! interpolated instantaneous input values to be calculated for each mooring time step
 
-
+      Real(DbKi)                                          :: tDbKi   ! double version because that's what MD_Input_ExtrapInterp needs.
+      
+      
       ! allocate space for x2
-      CALL MD_CopyContState( x, x2, 0, ErrStat, ErrMsg )
+      CALL MD_CopyContState( x, x2, 0, ErrStat, ErrMsg)
+         
+      ! create space for arrays/meshes in u_interp   ... is it efficient to do this every time step???
+      CALL MD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg)
+         
 
       Nx = size(x%states)
 
@@ -1202,18 +1203,30 @@ CONTAINS
 
 
       !loop through line integration time steps
-      DO I = 1, NdtM                                 !for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
-
+      DO I = 1, NdtM                                 ! for (double ts=t; ts<=t+ICdt-dts; ts+=dts)
+      
+      
+         tDbKi = t        ! get DbKi version of current time (why does ExtrapInterp except different time type than UpdateStates?)
+         
+      
          ! -------------------------------------------------------------------------------
          !       RK2 integrator written here, now calling CalcContStateDeriv
          !--------------------------------------------------------------------------------
 
-         CALL MD_CalcContStateDeriv( t, u, p, x, xd, z, other, dxdt, ErrStat, ErrMsg )
+         ! step 1
+
+         CALL MD_Input_ExtrapInterp(u, utimes, u_interp, tDbKi          , ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t)
+      
+         CALL MD_CalcContStateDeriv( t, u_interp, p, x, xd, z, other, dxdt, ErrStat, ErrMsg )
          DO J = 1, Nx
             x2%states(J) = x%states(J) + 0.5*dtM*dxdt%states(J)                                           !x1 = x0 + dt*f0/2.0;
          END DO
 
-         CALL MD_CalcContStateDeriv( (t + 0.5*dtM), u, p, x2, xd, z, other, dxdt, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
+         ! step 2
+   
+         CALL MD_Input_ExtrapInterp(u, utimes, u_interp, tDbKi + 0.5*dtM, ErrStat, ErrMsg)   ! interpolate input mesh to correct time (t+0.5*dtM)
+            
+         CALL MD_CalcContStateDeriv( (t + 0.5*dtM), u_interp, p, x2, xd, z, other, dxdt, ErrStat, ErrMsg )       !called with updated states x2 and time = t + dt/2.0
          DO J = 1, Nx
             x%states(J) = x%states(J) + dtM*dxdt%states(J)
          END DO
@@ -1222,19 +1235,22 @@ CONTAINS
 
          !----------------------------------------------------------------------------------
 
-         ! update Fairlead positions by integrating velocity and last position (do this AFTER the processing of the time step rather than before)
-         DO J = 1, p%NFairs
-            DO K = 1, 3
-             other%ConnectList(other%FairIdList(J))%r(K) = other%ConnectList(other%FairIdList(J))%r(K) + other%ConnectList(other%FairIdList(J))%rd(K)*dtM
-            END DO
-         END DO
-
+   ! >>> below should no longer be necessary thanks to using ExtrapInterp of u(:) within the mooring time stepping loop.. <<<
+   !      ! update Fairlead positions by integrating velocity and last position (do this AFTER the processing of the time step rather than before)
+   !      DO J = 1, p%NFairs
+   !         DO K = 1, 3
+   !          other%ConnectList(other%FairIdList(J))%r(K) = other%ConnectList(other%FairIdList(J))%r(K) + other%ConnectList(other%FairIdList(J))%rd(K)*dtM
+   !         END DO
+   !      END DO
+      
+   
       END DO  ! I  time steps
 
 
-      ! destroy dxdt and x2
+      ! destroy dxdt and x2, and u_interp
       CALL MD_DestroyContState( dxdt, ErrStat, ErrMsg)
       CALL MD_DestroyContState( x2, ErrStat, ErrMsg)
+      CALL MD_DestroyInput(u_interp, ErrStat, ErrMsg)
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error destroying dxdt or x2.'
       END IF
@@ -1260,7 +1276,7 @@ CONTAINS
       INTEGER(4)                         :: J             ! Generic index
       INTEGER(4)                         :: K             ! Generic index
       INTEGER(IntKi)                     :: N
-
+      REAL(ReKi)                         :: temp  
 
       N = Line%N  ! number of segments in this line (for code readability)
 
@@ -1326,8 +1342,29 @@ CONTAINS
          !CALL CleanUp()
          RETURN
       END IF
-
-
+      
+      ! Specify specific internal damping coefficient (BA) for this line.
+      ! Will be equal to inputted BA of LineType if input value is positive.
+      ! If input value is negative, it is considered to be desired damping ratio (zeta)
+      ! from which the line's BA can be calculated based on the segment natural frequency.
+      IF (LineProp%BA < 0) THEN
+         ! - we assume desired damping coefficient is zeta = -LineProp%BA
+         ! - highest axial vibration mode of a segment is wn = sqrt(k/m) = 2N/UnstrLen*sqrt(EA/w)
+         Line%BA = -LineProp%BA * Line%UnstrLen / Line%N * SQRT(LineProp%EA * LineProp%w)
+      !  print *, 'Based on zeta, BA set to ', Line%BA
+         
+      !  print *, 'Negative BA input detected, treating as -zeta.  For zeta = ', -LineProp%BA, ', setting BA to ', Line%BA
+         
+      ELSE
+         Line%BA = LineProp%BA
+      !  temp = Line%N * Line%BA / Line%UnstrLen * SQRT(1.0/(LineProp%EA * LineProp%w))
+      !  print *, 'BA set as input to ', Line%BA, '. Corresponding zeta is ', temp
+      END IF
+      
+      !temp = 2*Line%N / Line%UnstrLen * sqrt( LineProp%EA / LineProp%w) / TwoPi
+      !print *, 'Segment natural frequency is ', temp, ' Hz'
+      
+      
       ! need to add cleanup sub <<<
 
 

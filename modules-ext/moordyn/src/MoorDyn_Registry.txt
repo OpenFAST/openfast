@@ -1,4 +1,4 @@
-##################   Draft Registry   for Matt's (@MH) lumped mass model    ###############                              
+##################   Registry for MoorDyn   (Matthew Hall 2015)  ###############                              
 #   column   1   <keyword>                                                                                                                               
 #   column   2   ModuleName/ModName or ^ to use the value from the previous line (SD is nickname for ModuleName)                                    
 #   column   3   Derived data type (without "ModName_" prefix)                                                                                           
@@ -55,7 +55,9 @@ typedef  ^            ^                ReKi              conM           -       
 typedef  ^            ^                ReKi              conV           -       -  -   ""                                                                     
 typedef  ^            ^                ReKi              conFX          -       -  -   ""                                                                     
 typedef  ^            ^                ReKi              conFY          -       -  -   ""                                                                     
-typedef  ^            ^                ReKi              conFZ          -       -  -   ""                                                                     
+typedef  ^            ^                ReKi              conFZ          -       -  -   ""                                                                    
+typedef  ^            ^                ReKi              conCa          -       -  -   "added mass coefficient of connection point" "-"                                                                    
+typedef  ^            ^                ReKi              conCdA         -       -  -   "product of drag force and frontal area of connection point" "[m^2]"                                                                     
 typedef  ^            ^                ReKi              Ftot           {3}     -  -   "total force on node"                                                                     
 typedef  ^            ^                ReKi              Mtot           {3}{3}  -  -   "node mass matrix, from attached lines"  
 typedef  ^            ^                ReKi              S              {3}{3}  -  -   "inverse mass matrix"  "[kg]"                                                                   
@@ -65,12 +67,13 @@ typedef  ^            ^                ReKi              rd             {3}     
 # this is the Line type, which holds data for each line object                                                                                     
 typedef  ^            MD_Line          IntKi             IdNum         -        -  -   "integer identifier of this Line"   
 typedef  ^            ^                CHARACTER(10)     type          -        -  -   "type of line.  should match one of LineProp names"
-typedef  ^            ^                CHARACTER(20)     OutFlags      -        -  -   "string specifying output options and other flags"                                                                
+typedef  ^            ^                IntKi             OutFlagList   {20}     -  -   "array specifying what line quantities should be output (1 vs 0)"   -                                                               
 typedef  ^            ^                IntKi             FairConnect   -        -  -   "IdNum of Connection at fairlead"                                                                 
 typedef  ^            ^                IntKi             AnchConnect   -        -  -   "IdNum of Connection at anchor"                                                                     
 typedef  ^            ^                IntKi             PropsIdNum    -        -  -   "the IdNum of the associated line properties"     -
 typedef  ^            ^                IntKi             N             -        -  -   "The number of elements in the line"              -
-typedef  ^            ^                ReKi              UnstrLen      -        -  -   "unstretched length of the line"   -                                                                  
+typedef  ^            ^                ReKi              UnstrLen      -        -  -   "unstretched length of the line"   -                   
+typedef  ^            ^                ReKi              BA            -        -  -   "internal damping coefficient times area for this line only"  "[N-s]"                                                             
 typedef  ^            ^                ReKi              r            {:}{:}    -  -   "node positions"    -                                                                 
 typedef  ^            ^                ReKi              rd           {:}{:}    -  -   "node velocities"  -                                                               
 typedef  ^            ^                ReKi              q            {:}{:}    -  -   "node tangent vectors"  -

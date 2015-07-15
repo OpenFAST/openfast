@@ -943,6 +943,7 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
    INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
    INTEGER(IntKi)                :: UnEc                                      ! I/O unit for echo file. If > 0, file is open for writing.
 
+   INTEGER(IntKi)                :: IOS                                       ! Temporary Error status
    INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
    INTEGER(IntKi)                :: FmtWidth                                  ! width of the field returned by the specified OutFmt
    INTEGER(IntKi)                :: OutFileFmt                                ! An integer that indicates what kind of tabular output should be generated (1=text, 2=binary, 3=both)
@@ -952,6 +953,7 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
    CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
 
    CHARACTER(10)                 :: AbortLevel                                ! String that indicates which error level should be used to abort the program: WARNING, SEVERE, or FATAL
+   CHARACTER(30)                 :: Line                                      ! string for default entry in input file
 
 
       ! Initialize some variables:
@@ -1284,7 +1286,13 @@ END DO
       ! SttsTime - Amount of time between screen status messages (s):
    CALL ReadVar( UnIn, InputFile, TmpTime, "SttsTime", "Amount of time between screen status messages (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN           
+      IF ( ErrStat >= AbortErrLev ) RETURN   
+      IF (TmpTime > p%TMax) THEN
+         p%n_SttsTime = HUGE(p%n_SttsTime)
+      ELSE         
+         p%n_SttsTime = NINT( TmpTime / p%DT )
+      END IF
+      
       p%n_SttsTime = NINT( TmpTime / p%DT )
 
       ! ChkptTime - Amount of time between creating checkpoint files for potential restart (s):
@@ -1298,10 +1306,22 @@ END DO
       END IF
 
       ! DT_Out - Time step for tabular output (s):
-   CALL ReadVar( UnIn, InputFile, p%DT_Out, "DT_Out", "Time step for tabular output (s)", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, Line, "DT_Out", "Time step for tabular output (s)", ErrStat2, ErrMsg2, UnEc)
+   !CALL ReadVar( UnIn, InputFile, p%DT_Out, "DT_Out", "Time step for tabular output (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) == 1 ) THEN 
+         p%DT_Out = p%DT
+      ELSE
+         ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTBeam
+         READ( Line, *, IOSTAT=IOS) p%DT_Out
+            CALL CheckIOS ( IOS, InputFile, 'DT_Out', NumType, ErrStat2, ErrMsg2 )
+            CALL CheckError( ErrStat2, ErrMsg2 )
+      END IF
 
+      
+      
       ! TStart - Time to begin tabular output (s):
    CALL ReadVar( UnIn, InputFile, p%TStart, "TStart", "Time to begin tabular output (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
@@ -6346,7 +6366,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       ! Get the current time
    CALL DATE_AND_TIME ( Values=m_FAST%StrtTime )                        ! Let's time the whole simulation
    CALL CPU_TIME ( m_FAST%UsrTime1 )                                    ! Initial time (this zeros the start time when used as a MATLAB function)
-   m_FAST%UsrTime1 = MAX( 0.0, m_FAST%UsrTime1 )                        ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
+   m_FAST%UsrTime1 = MAX( 0.0_ReKi, m_FAST%UsrTime1 )                   ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
    
 
    AbortErrLev            = ErrID_Fatal                                 ! Until we read otherwise from the FAST input file, we abort only on FATAL errors
