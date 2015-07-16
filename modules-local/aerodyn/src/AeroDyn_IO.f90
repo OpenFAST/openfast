@@ -1378,6 +1378,85 @@ MODULE AeroDyn_IO
       
 contains
    
+   
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE Calc_WriteDbgOutput( p, u, OtherState, y, ErrStat, ErrMsg )
+   
+   TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
+   TYPE(AD_InputType),        INTENT(IN   )  :: u                                 ! inputs
+   TYPE(AD_OtherStateType),   INTENT(INOUT)  :: OtherState                        ! other states
+   TYPE(AD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
+
+      ! local variables
+   CHARACTER(*), PARAMETER                   :: RoutineName = 'Calc_WriteOutput'
+   INTEGER(intKi)                            :: ErrStat2
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2
+   
+   INTEGER(IntKi)                            :: j,k,i
+   REAL(ReKi)                                :: tmp(3)
+   REAL(ReKi)                                :: force(3)
+   REAL(ReKi)                                :: moment(3)
+   REAL(ReKi)                                :: denom, rmax
+   REAL(ReKi)                                :: ct, st ! cosine, sine of theta
+   REAL(ReKi)                                :: cp, sp ! cosine, sine of phi
+   
+   
+   
+      ! start routine:
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   
+   
+      ! blade outputs
+   do k=1,p%numBlades
+      
+    ! OtherState%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
+      
+      do j=1,p%NumBlNds
+         
+         i = (k-1)*p%NumBlNds*23 + (j-1)*23 + 1
+
+         OtherState%AllOuts( i    ) =  OtherState%BEMT_u%theta(j,k)*R2D     
+         OtherState%AllOuts( i+1  ) =  OtherState%BEMT_u%psi(k)*R2D 
+         OtherState%AllOuts( i+2  ) = -OtherState%BEMT_u%Vx(j,k) 
+         OtherState%AllOuts( i+3  ) =  OtherState%BEMT_u%Vy(j,k) 
+                                 
+         OtherState%AllOuts( i+4  ) =  OtherState%BEMT_y%axInduction(j,k)
+         OtherState%AllOuts( i+5  ) =  OtherState%BEMT_y%tanInduction(j,k)
+         OtherState%AllOuts( i+6  ) =  OtherState%BEMT_y%inducedVel(j,k)
+         OtherState%AllOuts( i+7  ) =  OtherState%BEMT_y%phi(j,k)*R2D   
+         OtherState%AllOuts( i+8  ) =  (OtherState%BEMT_y%phi(j,k) - OtherState%BEMT_u%theta(j,k))*R2D         
+                                      
+                                      
+         OtherState%AllOuts( i+9  ) =  OtherState%BEMT_y%Cl(j,k)         
+         OtherState%AllOuts( i+10 ) =  OtherState%BEMT_y%Cd(j,k)         
+         OtherState%AllOuts( i+11 ) =  OtherState%BEMT_y%Cm(j,k)  
+         OtherState%AllOuts( i+12 ) =  OtherState%BEMT_y%Cx(j,k)  
+         OtherState%AllOuts( i+13 ) =  OtherState%BEMT_y%Cy(j,k)  
+         
+         ct=cos(OtherState%BEMT_u%theta(j,k))
+         st=sin(OtherState%BEMT_u%theta(j,k))
+         OtherState%AllOuts( i+14 ) =  OtherState%BEMT_y%Cx(j,k)*ct + OtherState%BEMT_y%Cy(j,k)*st
+         OtherState%AllOuts( i+15 ) = -OtherState%BEMT_y%Cx(j,k)*st + OtherState%BEMT_y%Cy(j,k)*ct
+         
+         cp=cos(OtherState%BEMT_y%phi(j,k))
+         sp=sin(OtherState%BEMT_y%phi(j,k))
+         OtherState%AllOuts( i+16 ) =  OtherState%X(j,k)*cp - OtherState%Y(j,k)*sp
+         OtherState%AllOuts( i+17 ) =  OtherState%X(j,k)*sp + OtherState%Y(j,k)*cp
+         OtherState%AllOuts( i+18 ) =  OtherState%M(j,k)
+         OtherState%AllOuts( i+19 ) =  OtherState%X(j,k)
+         OtherState%AllOuts( i+20 ) = -OtherState%Y(j,k)
+         OtherState%AllOuts( i+21 ) =  OtherState%X(j,k)*ct - OtherState%Y(j,k)*st
+         OtherState%AllOuts( i+22 ) = -OtherState%X(j,k)*st - OtherState%Y(j,k)*ct
+                  
+      end do ! nodes
+   end do ! blades 
+   
+END SUBROUTINE Calc_WriteDbgOutput
+
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Calc_WriteOutput( p, u, OtherState, y, ErrStat, ErrMsg )
    
