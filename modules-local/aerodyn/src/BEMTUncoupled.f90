@@ -310,7 +310,7 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, azimuth, chi0, cn, c
     
    real(ReKi) ::  sigma_p, sphi, cphi, lambda_r, saz !, pi
    real(ReKi) :: factortip, Ftip, factorhub, Fhub
-   real(ReKi) :: k, kp,  F   !cn, ct,
+   real(ReKi) :: k, kp,  F , ayaw  !cn, ct,
    real(ReKi) :: g1, g2, g3
    real(ReKi) :: Fsphi, sigma_pcn
    real(ReKi) :: phitemp
@@ -410,7 +410,7 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, azimuth, chi0, cn, c
         ! update axial induction factor
       if (k <= 2.0_ReKi/3.0_ReKi) then  ! momentum state
          if ( EqualRealNos( k, -1.0_ReKi) ) then
-            k = k - 0.1_ReKi
+            k = k - 0.1_ReKi   ! Need to bump k to avoid singularities
          end if
       
          a = k/(1.0_ReKi+k)
@@ -452,14 +452,23 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, azimuth, chi0, cn, c
          
    if ( skewWakeMod == SkewMod_PittPeters ) then
       if ( abs(saz) > 0.005_ReKi ) then
-      chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
+         chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
       
       !if (chi0 < 40.0*d2r .and. chi > 0.0 ) then
          ! TODO: Add check on chi to make sure it is < pi/2 and (positive check should be outside solve)  GJH 5/20/2015
          !yawCorr = max(0.0,chi0-0.5236)
          !yawCorr = min(0.785,yawCorr)
          yawCorr = (15.0_ReKi*pi/64.0_ReKi*tan(chi/2.0_ReKi) * (r/Rtip) * saz)
+               
          a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
+         !if ((a > 1.0 .AND. ayaw < 1.0) .OR. (a < 1.0 .AND. ayaw > 1.0 )) then
+         !   call WrScr('Yaw correction crossed over 1.0.')
+         !   !a = max(1.0, ayaw)
+         !else if ((a < -1.0 .AND. ayaw > -1.0) .OR. (a > -1.0 .AND. ayaw < -1.0 )) then
+         !   call WrScr('Yaw correction crossed over -1.0.')
+         !
+         !end if
+         
       !else
      !    call WrScr('Warning: high yaw angle.  Not applying Pitt-Peters correction.')
       end if
@@ -468,6 +477,10 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, azimuth, chi0, cn, c
    
     ! compute tangential induction factor
    kp = sigma_p*ct/4.0_ReKi/F/sphi/cphi
+   !if (EqualRealNos(kp, 1.0_ReKi)) then
+   !   kp = kp+.1_ReKi
+   !end if
+   
    ap = kp/(1.0_ReKi-kp)
 !bjj: 3-jun-2015: TODO: was able to trigger divide-by-zero here using ccBlade_UAE.dvr without tiploss or hubloss
     
