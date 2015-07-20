@@ -4117,6 +4117,7 @@ SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
                                   p%node_elem,p%dof_node,p%elem_total,&
                                   p%dof_total,p%node_total,p%ngp,p%niter,p%tol,piter, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
+!WRITE(*,*) 'piter',piter
            IF(p%niter .EQ. piter) EXIT
        ENDDO
        IF(piter .LT. p%niter) THEN
@@ -4637,11 +4638,6 @@ SUBROUTINE BD_StaticSolutionForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                       Force,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    IF(ErrStat >= AbortErrLev) RETURN
-   DO j=1,node_total
-       temp_id = (j-1)*dof_node
-       Force(temp_id+1:temp_id+3) = u%PointLoad%Force(1:3,j)
-       Force(temp_id+4:temp_id+6) = u%PointLoad%Moment(1:3,j)
-   ENDDO
 
 END SUBROUTINE BD_StaticSolutionForce
 
@@ -4725,6 +4721,7 @@ SUBROUTINE BD_GenerateStaticElementForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
    EStif0_GL(:,:,:)  = 0.0D0
    EMass0_GL(:,:,:)  = 0.0D0
    DistrLoad_GL(:,:) = 0.0D0
+
 
    DO nelem=1,elem_total
        Nuu0(:) = uuN0(:,nelem)
