@@ -285,7 +285,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
 
    u%PointLoad%Force(:,:)  = 0.0D0
    u%PointLoad%Moment(:,:) = 0.0D0
-   u%PointLoad%Force(2,p%node_total)  = 150.0D0 !5.0D+04
+   u%PointLoad%Force(1,p%node_total)  = 5.0D+04
    
 !   u%RootMotion%TranslationAcc(3,1) = 1.76991032448401212D-02
 !   u%PointLoad%Force(1,p%node_total) = 1.0D+02*SIN(2.0*t)
