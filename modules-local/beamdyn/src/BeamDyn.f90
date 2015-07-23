@@ -1146,8 +1146,6 @@ SUBROUTINE BD_GenerateGLL(N, x, w, ErrStat, ErrMsg)
    x(1) = -1.0D+00
    x(N1) = 1.0D+00
 
-   pi = ACOS(-1.0D+00)  ! perhaps use NWTC library value, but does not matter here; just used to guess at solution
-
    DO i = 1, N1
       x_it = -COS(pi * FLOAT(i-1) / N) ! initial guess - chebyshev points
       DO j = 1, maxit
