@@ -4458,7 +4458,6 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_ED, MeshMapData, ErrStat, ErrMsg
    INTEGER(IntKi)                               :: K           ! Loops through blades
    INTEGER(IntKi)                               :: NodeNum     ! Node number for blade/node on mesh
    INTEGER(IntKi)                               :: NumBl
-   INTEGER(IntKi)                               :: NNodes
    INTEGER(IntKi)                               :: node
    INTEGER(IntKi)                               :: ErrStat2
    CHARACTER(ErrMsgLen)                         :: ErrMsg2 
@@ -4497,9 +4496,11 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_ED, MeshMapData, ErrStat, ErrMsg
       ! blades
    IF (p_FAST%CompElast == Module_ED ) THEN
       
+!debug_print2 = .true.
       DO k=1,size(y_ED%BladeLn2Mesh)
          CALL Transfer_Line2_to_Line2( y_ED%BladeLn2Mesh(k), u_AD%BladeMotion(k), MeshMapData%ED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%BladeMotion('//trim(num2lstr(k))//')' )      
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%BladeMotion('//trim(num2lstr(k))//')' )   
+!debug_print2 = .false.            
       END DO
       
    ELSEIF (p_FAST%CompElast == Module_BD ) THEN
@@ -5892,8 +5893,10 @@ end do
          
    ELSEIF ( p_FAST%CompAero == Module_AD ) THEN
       
+!debug_print2_unit = 92   
       CALL AD_InputSolve_NoIfW( p_FAST, AD%Input(1), ED%Output(1), MeshMapData, ErrStat2, ErrMsg2 )   
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )        
+!debug_print2_unit = 90      
 
          ! because we're not calling InflowWind_CalcOutput, this probably can be skipped; 
          ! TODO: alternatively, we could call InflowWind_CalcOutput, too.
@@ -6166,8 +6169,10 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD14, AD, Srv
       
    ELSE IF ( p_FAST%CompAero == Module_AD ) THEN 
                         
+!debug_print2_unit = 91      
       CALL AD_InputSolve_NoIfW( p_FAST, AD%Input(1), ED%Output(1), MeshMapData, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+!debug_print2_unit = 90      
          
    END IF
    
@@ -6480,7 +6485,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       
       InitInData_BD%RootName     = p_FAST%OutFileRoot     
       InitInData_BD%gravity      = (/ 0.0_ReKi, 0.0_ReKi, -InitOutData_ED%Gravity /)       ! "Gravitational acceleration" m/s^2
-                     
+      InitInData_BD%GlbPosHub    = ED%Output(1)%HubPtMotion%Position(:,1)                  ! "Initial Position Vector of the hub (center of rotation)" 
+      
          ! now initialize IceD for additional legs (if necessary)
       dt_BD = p_FAST%dt_module( MODULE_BD )
                         
