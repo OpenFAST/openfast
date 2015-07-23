@@ -129,16 +129,12 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    !1 Global position vector
    !2 Global rotation tensor
    !3 Gravity vector
-   CALL AllocAry(p%GlbPos,3,'Global position vector',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%GlbRot,3,3,'Global rotation tensor',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%gravity,3,'Gravity vector in Blade frame',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF( ErrStat >= AbortErrLev ) RETURN
    p%GlbPos(1)     = InitInp%GlbPos(3)
    p%GlbPos(2)     = InitInp%GlbPos(1)
    p%GlbPos(3)     = InitInp%GlbPos(2)
+   p%GlbPosHub(1)     = InitInp%GlbPosHub(3)
+   p%GlbPosHub(2)     = InitInp%GlbPosHub(1)
+   p%GlbPosHub(3)     = InitInp%GlbPosHub(2)
    p%GlbRot(1:3,1:3) = TRANSPOSE(InitInp%GlbRot(1:3,1:3))
    CALL BD_CrvExtractCrv(p%GlbRot,TmpPos,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -162,9 +158,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ! Time step size
    p%dt = InputFileData%DTBeam
    ! Compute generalized-alpha time integrator coefficients given rhoinf
-   CALL AllocAry(p%coef,9,'GA2 coefficient',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF( ErrStat >= AbortErrLev ) RETURN
    p%coef(:) = 0.0D0
    CALL BD_TiSchmComputeCoefficients(p%rhoinf,p%dt,p%coef, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -403,14 +396,11 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    DEALLOCATE(temp_ratio)
    ! Physical damping flag and 6 damping coefficients
    p%damp_flag  = InputFileData%InpBl%damp_flag
-   CALL AllocAry(p%beta,6,'Damping coefficient',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
    p%beta(:)  = InputFileData%InpBl%beta(:)
-   IF( ErrStat >= AbortErrLev ) RETURN
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
 
    CALL WrScr( "Finished reading input" )
    ! Allocate continuous states
@@ -706,14 +696,14 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    CALL BD_CalcIC(u_tmp,p,x,OtherState,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-WRITE(*,*) 'x%q' 
-WRITE(*,*) x%q 
-WRITE(*,*) 'x%dqdt' 
-WRITE(*,*) x%dqdt 
-WRITE(*,*) 'OtherState%Acc' 
-WRITE(*,*) OtherState%Acc
-WRITE(*,*) 'OtherState%Xcc' 
-WRITE(*,*) OtherState%Xcc
+!WRITE(*,*) 'x%q' 
+!WRITE(*,*) x%q 
+!WRITE(*,*) 'x%dqdt' 
+!WRITE(*,*) x%dqdt 
+!WRITE(*,*) 'OtherState%Acc' 
+!WRITE(*,*) OtherState%Acc
+!WRITE(*,*) 'OtherState%Xcc' 
+!WRITE(*,*) OtherState%Xcc
    ! Define initial guess for the system outputs here:
 
    y%BldForce%Force(:,:)    = 0.0D0
@@ -5751,7 +5741,7 @@ SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
        ENDIF
        DO j=k,p%node_elem
            temp_id = (j-1)*p%dof_node
-           temp3(:) = p%GlbPos(:) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+           temp3(:) = (p%GlbPos(:) - p%GlbPosHub(:)) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
            IF(i .EQ. 1 .AND. j .EQ. 1) THEN
                temp3(:) = MATMUL(BD_Tilde(MATMUL(p%GlbRot,u%RootMotion%RotationVel(:,1))),temp3)
            ELSE
