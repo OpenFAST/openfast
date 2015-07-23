@@ -332,6 +332,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    temp_L2(4:6,p%ngp*p%elem_total+2) = p%uuN0(temp_int-2:temp_int,p%elem_total)
    DEALLOCATE(temp_GLL)
    DEALLOCATE(SP_Coef)
+!WRITE(*,*) 'uuN0'
+!WRITE(*,*) p%uuN0(:,1)
 
    ! Compute sectional propertities ( 6 by 6 stiffness and mass matrices)
    ! at Gauss points
@@ -704,6 +706,14 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    CALL BD_CalcIC(u_tmp,p,x,OtherState,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+WRITE(*,*) 'x%q' 
+WRITE(*,*) x%q 
+WRITE(*,*) 'x%dqdt' 
+WRITE(*,*) x%dqdt 
+WRITE(*,*) 'OtherState%Acc' 
+WRITE(*,*) OtherState%Acc
+WRITE(*,*) 'OtherState%Xcc' 
+WRITE(*,*) OtherState%Xcc
    ! Define initial guess for the system outputs here:
 
    y%BldForce%Force(:,:)    = 0.0D0
@@ -1145,8 +1155,6 @@ SUBROUTINE BD_GenerateGLL(N, x, w, ErrStat, ErrMsg)
    ! enter known endpoints  [-1.0, 1.0]
    x(1) = -1.0D+00
    x(N1) = 1.0D+00
-
-   pi = ACOS(-1.0D+00)  ! perhaps use NWTC library value, but does not matter here; just used to guess at solution
 
    DO i = 1, N1
       x_it = -COS(pi * FLOAT(i-1) / N) ! initial guess - chebyshev points
@@ -4940,6 +4948,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    INTEGER(IntKi)                                     :: ErrStat2   ! Temporary Error status
    CHARACTER(ErrMsgLen)                               :: ErrMsg2    ! Temporary Error message
    CHARACTER(*), PARAMETER                            :: RoutineName = 'BD_GA2'
+   REAL(ReKi):: temp_3(3)
 !   INTEGER(IntKi)                                     :: i
 
    ! Initialize ErrStat
@@ -4966,7 +4975,11 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 !DO i=1,3
 !WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
 !ENDDO
+!WRITE(*,*) u_interp%RootMotion%TranslationDisp(:,1)
 !WRITE(*,*) 'END u_interp'
+!CALL BD_CrvExtractCrv(TRANSPOSE(u_interp%RootMotion%Orientation(:,:,1)),temp_3,ErrStat2,ErrMsg2)
+!WRITE(*,*) temp_3(:)
+!WRITE(*,*) u_interp%RootMotion%RotationAcc(:,1)
                  
    ! GA2: prediction        
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
