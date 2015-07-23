@@ -1,7 +1,8 @@
 @ECHO OFF
 
-@SET ARCHROOT=AD
-@SET PROGNAME=AeroDyn
+@SET PROGNAME=AeroDyn_Driver
+@SET ARCHNAME=AD_Driver_v%1
+@SET ARCHPATH=Archive
 
 ::=======================================================================================================
 IF "%COMPUTERNAME%"=="APLATT-21846S" GOTO APLATT-21846S
@@ -41,8 +42,8 @@ GOTO CheckSyntax
 :DeleteOld
 @IF EXIST ARCHTMP.zip DEL ARCHTMP.zip
 @IF EXIST ARCHTMP.exe DEL ARCHTMP.exe
-@IF EXIST ARCHTMP.tar DEL ARCHTMP.tar
-@IF EXIST ARCHTMP.tar.gz DEL ARCHTMP.tar.gz
+@IF EXIST %PROGNAME%.tar DEL %PROGNAME%.tar
+@IF EXIST %PROGNAME%.tar.gz DEL %PROGNAME%.tar.gz
 
 
 :DoIt
@@ -51,36 +52,26 @@ GOTO CheckSyntax
 @ECHO Archiving %PROGNAME% for general Windows distribution.
 @ECHO -------------------------------------------------------------------------
 @ECHO.
-@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @SourceFiles.txt
+@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcWin.txt
 @%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
-@COPY ARCHTMP.exe Archive\%ARCHROOT%_v%1.exe
+@COPY ARCHTMP.exe %ARCHPATH%\%ARCHNAME%.exe
 @DEL ARCHTMP.zip, ARCHTMP.exe
 
-:: @ECHO.
-:: @ECHO -------------------------------------------------------------------------
-:: @ECHO Archiving %PROGNAME% for maintenance.
-:: @ECHO -------------------------------------------------------------------------
-:: @ECHO.
-:: @%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcMaint.txt @SourceFiles.txt
-:: @%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
-:: @COPY ARCHTMP.exe Archive\%ARCHROOT%_v%1_Maint.exe
-:: @DEL ARCHTMP.zip, ARCHTMP.exe
 
-@ECHO.
-@ECHO -------------------------------------------------------------------------
+@ECHO --------------------------------------------------------------------------------------
 @ECHO Archiving %PROGNAME% for general distribution (tar.gz).
-@ECHO -------------------------------------------------------------------------
+@ECHO --------------------------------------------------------------------------------------
 @ECHO.
 @rem first create a tar file, then compress it (gzip allows only one file)
-@%SEVENZIP% a -ttar ARCHTMP @ArcFiles.txt @SourceFiles.txt
-@%SEVENZIP% a -tgzip ARCHTMP.tar.gz ARCHTMP.tar
-@COPY ARCHTMP.tar.gz Archive\%ARCHROOT%_v%1.tar.gz
-@DEL ARCHTMP.tar, ARCHTMP.tar.gz
-
+@%SEVENZIP% a -ttar %PROGNAME% @ArcFiles.txt
+@%SEVENZIP% a -tgzip %PROGNAME%.tar.gz %PROGNAME%.tar
+@COPY %PROGNAME%.tar.gz %ARCHPATH%\%ARCHNAME%.tar.gz
+@DEL %PROGNAME%.tar, %PROGNAME%.tar.gz
 
 
 :Done
-@SET ARCHROOT=
+@SET ARCHNAME=
+@SET ARCHPATH=
 @SET PROGNAME=
 @SET WINZIP=
 @SET WINZIPSE=

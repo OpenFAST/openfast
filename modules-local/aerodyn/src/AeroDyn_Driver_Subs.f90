@@ -28,7 +28,7 @@ module AeroDyn_Driver_Subs
     
    implicit none   
    
-   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'AeroDyn_driver', 'v1.00.00-bjj', '28-May-2015' )  ! The version number of this program.
+   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'AeroDyn_driver', 'v1.00.00-bjj', '21-Jul-2015' )  ! The version number of this program.
                                                     
    contains
 
