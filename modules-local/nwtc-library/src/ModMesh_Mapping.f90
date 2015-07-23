@@ -35,6 +35,8 @@ MODULE ModMesh_Mapping
 
    PRIVATE
 
+   !logical,public :: debug_print2 = .false.
+   !integer,public :: debug_print2_unit = 90
    !bjj: these types require the use of ModMesh.f90, thus they cannot be part of NWTC_Library_Types.f90 (though they are auto_generated with that code):
 
    TYPE, PUBLIC :: MapType
@@ -595,10 +597,13 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    INTEGER(IntKi)            :: n, n1, n2                      ! temporary space for node numbers
    REAL(ReKi)                :: FieldValueN1(3)                ! Temporary variable to store field values on element nodes
    REAL(ReKi)                :: FieldValueN2(3)                ! Temporary variable to store field values on element nodes
-   REAL(ReKi)                :: FieldValue(3,2)                ! Temporary variable to store values for DCM interpolation
    REAL(ReKi)                :: TmpVec(3)
    REAL(ReKi)                :: RotationMatrix(3,3)
 
+   REAL(DbKi)                :: FieldValue(3,2)                ! Temporary variable to store values for DCM interpolation
+   REAL(DbKi)                :: RotationMatrixD(3,3)
+   REAL(DbKi)                :: tensor_interp(3)
+   
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -712,28 +717,59 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 #else         
 !this should be equivalent, with one less matrix multiply
          
+         ! bjj: because of numerical issues when the angle of rotation is pi, (where 
+         ! DCM_exp( DCM_logmap (x) ) isn't quite x
+      if ( EqualRealNos( MeshMap%MapMotions(i)%shape_fn(1), 1.0_ReKi ) ) then
+         RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n1) ), Src%Orientation(:,:,n1) )
+
+      elseif ( EqualRealNos( MeshMap%MapMotions(i)%shape_fn(2), 1.0_ReKi ) ) then
+         RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n2) ), Src%Orientation(:,:,n2) )
+
+      else
+         
             ! calculate Rotation matrix for FieldValueN1 and convert to tensor:
-         RotationMatrix = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n1) ), Src%Orientation(:,:,n1) )
+         RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n1) ), Src%Orientation(:,:,n1) )
          
-         CALL DCM_logmap( RotationMatrix, FieldValue(:,1), ErrStat, ErrMsg )
+         CALL DCM_logmap( RotationMatrixD, FieldValue(:,1), ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev) RETURN
-         
+            
+!if (debug_print2 .and. i==7) then
+!      CALL WrFileNR( debug_print2_unit, num2lstr(i)//" " )
+!      CALL WrFileNR( debug_print2_unit, num2lstr(n1)//" " )
+!      CALL WrFileNR( debug_print2_unit, num2lstr(n2) )
+!      CALL WrReAryFileNR ( debug_print2_unit, FieldValue(:,1),'1x,ES15.6E2', ErrStat, ErrMsg )
+!      CALL WrReAryFileNR ( debug_print2_unit, RotationMatrix(:,1),'1x,ES15.6E2', ErrStat, ErrMsg )
+!      CALL WrReAryFileNR ( debug_print2_unit, RotationMatrix(:,2),'1x,ES15.6E2', ErrStat, ErrMsg )
+!      CALL WrReAryFileNR ( debug_print2_unit, RotationMatrix(:,3),'1x,ES15.6E2', ErrStat, ErrMsg )
+!end if         
             ! calculate Rotation matrix for FieldValueN2 and convert to tensor:
-         RotationMatrix = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n2) ), Src%Orientation(:,:,n2) )
+         RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n2) ), Src%Orientation(:,:,n2) )
          
-         CALL DCM_logmap( RotationMatrix, FieldValue(:,2), ErrStat, ErrMsg )                  
+         CALL DCM_logmap( RotationMatrixD, FieldValue(:,2), ErrStat, ErrMsg )                  
          IF (ErrStat >= AbortErrLev) RETURN
-         
-         CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
-         
+            
+         CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary         
          
             ! interpolate tensors: 
-         TmpVec =   MeshMap%MapMotions(i)%shape_fn(1)*FieldValue(:,1)  &
-                  + MeshMap%MapMotions(i)%shape_fn(2)*FieldValue(:,2)    
+         tensor_interp =   MeshMap%MapMotions(i)%shape_fn(1)*FieldValue(:,1)  &
+                         + MeshMap%MapMotions(i)%shape_fn(2)*FieldValue(:,2)    
                   
             ! convert back to DCM:
-         Dest%Orientation(:,:,i) = MATMUL( Dest%RefOrientation(:,:,i), DCM_exp( TmpVec )  )
+         RotationMatrixD = DCM_exp( tensor_interp )
+            
+!if (debug_print2 .and. i==7) then
+!      CALL WrReAryFileNR ( debug_print2_unit, tensor_interp,'1x,ES15.6E2', ErrStat, ErrMsg )
+!      CALL WrReAryFileNR ( debug_print2_unit, RotationMatrix(:,1),'1x,ES15.6E2', ErrStat, ErrMsg )
+!      CALL WrReAryFileNR ( debug_print2_unit, RotationMatrix(:,2),'1x,ES15.6E2', ErrStat, ErrMsg )
+!      CALL WrReAryFileNR ( debug_print2_unit, RotationMatrix(:,3),'1x,ES15.6E2', ErrStat, ErrMsg )
+!      write(debug_print2_unit,'()')
+!end if         
          
+      end if
+      
+      RotationMatrix = REAL( RotationMatrixD, ReKi )
+      Dest%Orientation(:,:,i) = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrix  )
+                  
 #endif         
 #endif
          
@@ -1856,7 +1892,7 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
    REAL(ReKi)                            :: LoadsScaleFactor  ! Scaling factor for loads (to help with numerical issues)
    INTEGER(IntKi)                        :: ErrStat2
    CHARACTER(ErrMsgLen)                  :: ErrMsg2
-      
+   CHARACTER(*), PARAMETER               :: RoutineName = 'Transfer_Line2_to_Line2'   
    
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -1865,12 +1901,12 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
    ! Check to ensure that both the source and destination meshes are composed of Line2 elements
    !.................   
    if (Src%ElemTable(ELEMENT_LINE2)%nelem .eq. 0) then
-      CALL SetErrStat( ErrID_Fatal, 'Source mesh must have one or more Line2 elements.', ErrStat, ErrMsg, 'Transfer_Line2_to_Line2')
+      CALL SetErrStat( ErrID_Fatal, 'Source mesh must have one or more Line2 elements.', ErrStat, ErrMsg, RoutineName)
       RETURN
    endif
 
    if (Dest%ElemTable(ELEMENT_LINE2)%nelem .eq. 0) then
-      CALL SetErrStat( ErrID_Fatal, 'Destination mesh must have one or more Line2 elements.', ErrStat, ErrMsg, 'Transfer_Line2_to_Line2')
+      CALL SetErrStat( ErrID_Fatal, 'Destination mesh must have one or more Line2 elements.', ErrStat, ErrMsg, RoutineName)
       RETURN
    endif
    
@@ -1888,7 +1924,7 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
       if (Src%RemapFlag .or. Dest%RemapFlag ) then
 
          CALL CreateMotionMap_L2_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Transfer_Line2_to_Line2')
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
 
       endif !remapping
@@ -1898,7 +1934,7 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
       !........................
          
       CALL Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Transfer_Line2_to_Line2')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
 
    endif !algorithm for motions/scalars
@@ -1910,7 +1946,7 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
    if ( HasLoadFields(Src) ) then
 
       IF (.not. PRESENT(SrcDisp) .OR. .NOT. PRESENT(DestDisp) ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer.', ErrStat, ErrMsg, 'Transfer_Line2_to_Line2')
+         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer.', ErrStat, ErrMsg, RoutineName)
          RETURN
       END IF
             
@@ -1926,7 +1962,7 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
       if (Src%RemapFlag .or. Dest%RemapFlag ) then
                   
          CALL CreateLoadMap_L2_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Transfer_Line2_to_Line2')
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN         
             
       end if
@@ -1940,16 +1976,16 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
       ! first, we take the source fields and transfer them to fields on the augmented source mesh:
       !  (we're also taking the SrcDisp field and putting it on our augmented mesh)
       CALL Transfer_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat2, ErrMsg2, SrcDisp, LoadsScaleFactor ) 
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Transfer_Line2_to_Line2')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
       
       ! then we lump the loads from the augmented source mesh:
       CALL Lump_Line2_to_Point( MeshMap%Augmented_Ln2_Src,  MeshMap%Lumped_Points_Src,  ErrStat2, ErrMsg2, LoadsScaleFactor=LoadsScaleFactor  ) 
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Transfer_Line2_to_Line2')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
       
       CALL Transfer_Loads_Point_to_Line2( MeshMap%Lumped_Points_Src, Dest, MeshMap, ErrStat2, ErrMsg2, MeshMap%Augmented_Ln2_Src, DestDisp, LoadsScaleFactor )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Transfer_Line2_to_Line2')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
 
 
@@ -2210,7 +2246,8 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
    INTEGER(IntKi)                                 :: Aug_NElem, curr_Aug_NElem
    INTEGER(IntKi)                                 :: n, n1, n2
    REAL(ReKi)                                     :: p_ED(3), p_ES(3), n1S_nD_vector(3), position(3)
-   REAL(ReKi)                                     :: TmpVec(3), RefOrientation(3,3), FieldValue(3,2)   ! values for interpolating direction cosine matrices
+   REAL(ReKi)                                     :: RefOrientation(3,3)
+   REAL(DbKi)                                     :: TmpVec(3), RefOrientationD(3,3), FieldValue(3,2)   ! values for interpolating direction cosine matrices
    REAL(ReKi)                                     :: denom, elem_position
    REAL(ReKi), PARAMETER                          :: TOL = sqrt(epsilon(elem_position))  ! we're not using EqualRealNos here because we don't want elements of zero length (EqualRealNos produces elements of zero length)
    REAL(ReKi)                                     :: L         ! length of newly created element(s)
@@ -2405,20 +2442,26 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
 #else
                         
                            ! convert DCMs to tensors: 
-                        CALL DCM_logmap( Src%RefOrientation(:, :, n1), FieldValue(:,1), ErrStat, ErrMsg )
-                        IF (ErrStat >= AbortErrLev) RETURN
+
+                           RefOrientationD = Src%RefOrientation(:, :, n1)
+                           CALL DCM_logmap( RefOrientationD, FieldValue(:,1), ErrStat, ErrMsg )
+                           IF (ErrStat >= AbortErrLev) RETURN
                   
-                        CALL DCM_logmap( Src%RefOrientation(:, :, n2), FieldValue(:,2), ErrStat, ErrMsg )                  
-                        IF (ErrStat >= AbortErrLev) RETURN
+                           RefOrientationD = Src%RefOrientation(:, :, n1)
+                           CALL DCM_logmap( RefOrientationD, FieldValue(:,2), ErrStat, ErrMsg )                  
+                           IF (ErrStat >= AbortErrLev) RETURN
          
-                        CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
+                           CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
                   
-                           ! interpolate tensors: 
-                        TmpVec = (1.0_ReKi - shape_fn2(Aug_Nnodes)) * FieldValue(:, 1) &
-                                           + shape_fn2(Aug_Nnodes)  * FieldValue(:, 2) 
+                              ! interpolate tensors: 
+                           TmpVec = (1.0_ReKi - shape_fn2(Aug_Nnodes)) * FieldValue(:, 1) &
+                                              + shape_fn2(Aug_Nnodes)  * FieldValue(:, 2) 
                               
-                           ! convert back to DCM:
-                        RefOrientation = DCM_exp( TmpVec )
+                              ! convert back to DCM:
+                           RefOrientationD = DCM_exp( TmpVec )
+                           RefOrientation  = REAL(RefOrientationD, ReKi)
+
+                        
 
 #endif
                         

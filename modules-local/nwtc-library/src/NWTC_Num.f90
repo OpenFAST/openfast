@@ -151,11 +151,47 @@ MODULE NWTC_Num
       MODULE PROCEDURE EqualRealNos16
    END INTERFACE
 
+   
+      ! Create interface for a generic TwoNorm that uses specific routines.
 
+   INTERFACE TwoNorm
+      MODULE PROCEDURE TwoNormR4
+      MODULE PROCEDURE TwoNormR8
+      MODULE PROCEDURE TwoNormR16
+   END INTERFACE
+   
+      ! Create interface for a generic Trace that uses specific routines.
+
+   INTERFACE trace
+      MODULE PROCEDURE traceR4
+      MODULE PROCEDURE traceR8
+      MODULE PROCEDURE traceR16
+   END INTERFACE
+   
+   
+      ! Create interface for a generic DCM log/exp interfaces that use specific routines.
+
+   INTERFACE DCM_exp
+      MODULE PROCEDURE DCM_expR
+      MODULE PROCEDURE DCM_expD
+   END INTERFACE
+   
+   INTERFACE DCM_logMap
+      MODULE PROCEDURE DCM_logMapR
+      MODULE PROCEDURE DCM_logMapD
+   END INTERFACE
+
+   INTERFACE DCM_SetLogMapForInterp
+      MODULE PROCEDURE DCM_SetLogMapForInterpR
+      MODULE PROCEDURE DCM_SetLogMapForInterpD
+   END INTERFACE
+   
+   
       ! Create interface for a generic Eye that uses specific routines.
 
    INTERFACE Eye
       MODULE PROCEDURE Eye2   ! matrix of two dimensions
+      MODULE PROCEDURE Eye2D  ! matrix of two dimensions (double precision)
       MODULE PROCEDURE Eye3   ! matrix of three dimensions
    END INTERFACE
 
@@ -568,7 +604,17 @@ CONTAINS
       Coef(I,:,3) = ( ZHi(:) - ZLo(:) )/( 6.0_ReKi*DelX(I) )                     ! bjj: already checked for DelX(I) == 0
       ZHi(:)      = ZLo(:)
    END DO ! I
-
+   
+#ifdef LINEAR_INTERP   
+!---------------------
+!  try this with linear interpolation instead of cubic
+!---------------------
+   DO I=NumPts-1,1,-1
+      Coef(I,:,1) = (YAry(I+1,: ) - YAry(I,:  )) / DelX(I)
+      Coef(I,:,2) = 0.0_ReKi
+      Coef(I,:,3) = 0.0_ReKi
+   END DO ! I
+#endif
 
    CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
 
@@ -752,17 +798,266 @@ CONTAINS
 
    END FUNCTION CubicSplineInterpM ! ( X, XAry, YAry, Coef, ErrStat, ErrMsg )
 !=======================================================================         
-   FUNCTION DCM_exp(lambda)
+   FUNCTION DCM_expD(lambda)
+   
+      ! This function computes a matrix exponential.
+      !
+      ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 31-33
+      
+   REAL(DbKi), INTENT(IN)  :: lambda(3)
+   REAL(DbKi)              :: DCM_expD(3,3)
+   
+      ! local variables
+   REAL(DbKi)              :: stheta         ! sine of angle of rotation   
+   REAL(DbKi)              :: theta          ! angle of rotation   
+   REAL(DbKi)              :: theta2         ! angle of rotation squared
+   REAL(DbKi)              :: tmp_Mat(3,3)
+   
+   INTEGER(IntKi)          :: ErrStat
+   CHARACTER(30)           :: ErrMsg  
+   
+   
+   theta = TwoNorm(lambda)                   ! Eq. 32
+   theta2 = theta**2
+
+   IF ( EqualRealNos(theta,   0.0_DbKi)   .or. &
+        EqualRealNos(theta2,  0.0_DbKi) ) THEN  !
+      
+      CALL eye(DCM_expD, ErrStat, ErrMsg)    ! Eq. 33a
+      
+   ELSE   
+      
+         ! convert lambda to skew-symmetric matrix:
+      tmp_mat(1,1) =  0.0_DbKi                                            
+      tmp_mat(2,1) = -lambda(3)                                           
+      tmp_mat(3,1) =  lambda(2)                                           
+      tmp_mat(1,2) =              lambda(3)                               
+      tmp_mat(2,2) =              0.0_DbKi                                
+      tmp_mat(3,2) =             -lambda(1)                               
+      tmp_mat(1,3) =                               -lambda(2)             
+      tmp_mat(2,3) =                                lambda(1)             
+      tmp_mat(3,3) =                                0.0_DbKi            
+      
+      
+         ! Eq. 33b
+      !DCM_exp = I + sin(theta)/theta*tmp_mat + (1-cos(theta))/theta**2)*matmul(tmp_mat,tmp_mat)
+      
+         ! one method:
+      !CALL eye(DCM_exp, ErrStat, ErrMsg)                  
+      !DCM_exp = DCM_exp + sin(theta)/theta*tmp_mat 
+      !DCM_exp = DCM_exp + (1-cos(theta))/theta2 * MATMUL(tmp_mat, tmp_mat) 
+      
+         ! hopefully this order of calculations gives better numerical results:
+      stheta = sin(theta)
+      DCM_expD      = (1-cos(theta))/theta * tmp_mat      
+      DCM_expD(1,1) = DCM_expD(1,1) + stheta
+      DCM_expD(2,2) = DCM_expD(2,2) + stheta
+      DCM_expD(3,3) = DCM_expD(3,3) + stheta
+      
+      DCM_expD = matmul( DCM_expD, tmp_mat )
+      DCM_expD = DCM_expD / theta
+      DCM_expD(1,1) = DCM_expD(1,1) + 1.0_DbKi ! add identity
+      DCM_expD(2,2) = DCM_expD(2,2) + 1.0_DbKi
+      DCM_expD(3,3) = DCM_expD(3,3) + 1.0_DbKi
+            
+   END IF
+
+   
+      
+   END FUNCTION DCM_expD
+!=======================================================================  
+   SUBROUTINE DCM_logMapD(DCM, logMap, ErrStat, ErrMsg)
+
+      ! This function computes the logarithmic map for a direction 
+      ! cosine matrix.
+      !
+      ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 24-30
+      ! with eigenvector equations updated to account for numerics
+   
+   REAL(DbKi),       INTENT(IN)    :: DCM(3,3)
+   REAL(DbKi),       INTENT(  OUT) :: logMap(3)
+   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat                   ! Error status of the operation
+   CHARACTER(*),     INTENT(  OUT) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
+   
+      ! local variables
+   REAL(DbKi)                      :: temp
+   REAL(DbKi)                      :: theta
+   REAL(DbKi)                      :: stheta
+   REAL(DbKi)                      :: v(3)
+   REAL(DbKi)                      :: skewSym(3,3) ! an anti-symmetric matrix
+      
+         ! initialization
+      ErrStat = ErrID_None
+      ErrMsg  = ""   
+   
+   
+      temp  = 0.5_DbKi*( trace(DCM) - 1.0_DbKi )
+      temp  = min( max(temp,-1.0_DbKi), 1.0_DbKi ) !make sure it's in a valid range (to avoid cases where this is slightly outside the +/-1 range)
+      theta = ACOS( temp )                                                   ! Eq. 25 ( 0<=theta<=pi )
+      
+      stheta = sin(theta)
+      
+      IF ( EqualRealNos( pi_D, theta ) .or. &
+          (theta > 3.0_DbKi .and. EqualRealNos( stheta, 0.0_DbKi) ) ) THEN
+      
+         ! calculate the eigenvector of DCM associated with eigenvalue +1:
+      
+         temp = -1.0_DbKi + DCM(2,2) + DCM(2,3)*DCM(3,2) + DCM(3,3) - DCM(2,2)*DCM(3,3)
+         if ( .NOT. EqualRealNos(temp, 0.0_DbKi) ) then
+
+            v(1) = 1.0_DbKi
+            v(2) = -(DCM(2,1) + DCM(2,3)*DCM(3,1) - DCM(2,1)*DCM(3,3))/temp
+            v(3) = -(DCM(3,1) - DCM(2,2)*DCM(3,1) + DCM(2,1)*DCM(3,2))/temp
+
+         else 
+            temp = -1.0_DbKi + DCM(1,1) + DCM(1,3)*DCM(3,1) + DCM(3,3) - DCM(1,1)*DCM(3,3)
+            if ( .NOT. EqualRealNos(temp, 0.0_DbKi) ) then
+
+               v(1) = -(DCM(1,2) + DCM(1,3)*DCM(3,2) - DCM(1,2)*DCM(3,3))/temp
+               v(2) =  1.0_DbKi
+               v(3) = -(DCM(3,2) + DCM(1,2)*DCM(3,1) - DCM(1,1)*DCM(3,2))/temp
+
+            else 
+               temp = -1.0_DbKi + DCM(1,1) + DCM(1,2)*DCM(2,1) + DCM(2,2) - DCM(1,1)*DCM(2,2)
+               if ( .NOT. EqualRealNos(temp, 0.0_DbKi) ) then
+
+                  v(1) = -(DCM(1,3) - DCM(1,3)*DCM(2,2) + DCM(1,2)*DCM(2,3))/temp
+                  v(2) = -(DCM(1,3)*DCM(2,1) + DCM(2,3) - DCM(1,1)*DCM(2,3))/temp
+                  v(3) = 1.0_DbKi
+            
+               else
+                     ! break with error
+                  ErrStat = ErrID_Fatal
+                  WRITE( ErrMsg, '("DCM_logMap:invalid DCM matrix",3("'//Newline//'",4x,3(ES10.3E2,1x)))') DCM(1,:),DCM(2,:),DCM(3,:)               
+                  RETURN
+               end if         
+            end if         
+         endif
+                         
+            ! normalize the eigenvector:
+         v = v / TwoNorm(v)                                                       ! Eq. 27                  
+      
+            ! calculate the skew-symmetric tensor (note we could change sign here for continuity)
+            ! also note that we make v skew-symmetric in the inverse routine (DCM_exp), 
+            ! so we don't need to change the sign of v(2) here
+         logMap =  pi*v                                                           ! Eq. 26c  
+                     
+      ELSE
+         
+         IF ( EqualRealNos(0.0_DbKi, theta) .or. EqualRealNos( 0.0_DbKi, stheta ) ) THEN
+         
+            !skewSym = DCM - TRANSPOSE(DCM)
+            !
+            !logMap(1) = -skewSym(3,2)
+            !logMap(2) =  skewSym(3,1)
+            !logMap(3) = -skewSym(2,1)
+            !
+            !logMap = 0.5_DbKi * logMap   ! Eq. 26b with limit as x approaches 0 of (x/sin(x)) = 1
+         
+         
+            logMap = 0.0_DbKi                                                   ! Eq. 26a
+                  
+         ELSE ! 0 < theta < pi 
+      
+            skewSym = DCM - TRANSPOSE(DCM)
+      
+            logMap(1) = -skewSym(3,2)
+            logMap(2) =  skewSym(3,1)
+            logMap(3) = -skewSym(2,1)
+      
+            logMap    = 0.5_DbKi * theta / stheta * logMap   ! Eq. 26b
+         END IF
+         
+      END IF
+   
+   END SUBROUTINE DCM_logMapD
+!=======================================================================
+   SUBROUTINE DCM_SetLogMapForInterpD( tensor )
+
+   ! this routine sets the rotation parameters (tensors from DCM_logMap)
+   ! so that they can be appropriately interpolated, based on
+   ! continunity of the neighborhood. The tensor input matrix has columns
+   ! of rotational parameters; one column for each set of values to be 
+   ! interpolated
+   !
+   ! This is based on the 2pi periodicity of rotations:
+   ! if tensor is one solution to DCM_logMap( DCM ), then so is
+   !  tensor*( 1 + TwoPi*k/TwoNorm(tensor) ) for any integer k
+      
+   
+   REAL(DbKi),     INTENT(INOUT) :: tensor(:,:)
+
+   REAL(DbKi)                    :: diff1, diff2      ! magnitude-squared of difference between two adjacent values
+   REAL(DbKi)                    :: temp(3), temp1(3) ! difference between two tensors
+   REAL(DbKi)                    :: period(3)         ! the period to add to the rotational parameters
+   INTEGER(IntKi)                :: nc                ! size of the tensors matrix
+   INTEGER(IntKi)                :: ic                ! loop counters for each array dimension
+   
+   nc = size(tensor,2)
+          
+      ! 
+   do ic=2,nc      
+      
+      diff1 = TwoNorm( tensor(:,ic) )
+      
+      if ( .NOT. EqualRealNos( diff1, 0.0_DbKi) ) then
+            ! check if we're going around a 2pi boundary:
+      
+         period = tensor(:,ic) * ( Twopi/diff1 )
+      
+         temp1 = tensor(:,ic-1) - tensor(:,ic)
+         diff1 = DOT_PRODUCT( temp1, temp1 )
+                            
+            ! try for k < 0
+         temp = temp1 + period !k=-1; 
+         diff2 = DOT_PRODUCT( temp, temp )
+      
+         if (diff2 < diff1) then
+         
+            do while (diff2 < diff1)
+               tensor(:,ic) = tensor(:,ic) - period  !k=k-1
+                              
+               diff1 = diff2
+               temp  = temp1 + period !k=k-1; 
+               diff2 = DOT_PRODUCT( temp, temp )
+            end do
+         
+         else
+            ! try for k > 0
+         
+               ! check if the new value is too small:
+            temp = temp1 - period !k=+1; 
+            diff2 = DOT_PRODUCT( temp, temp )
+            
+            do while (diff2 < diff1)
+               tensor(:,ic) = tensor(:,ic) + period  !k=k+1
+
+               diff1 = diff2
+               temp  = temp1 + period !k=k-1; 
+               diff2 = DOT_PRODUCT( temp, temp )
+            end do
+   
+         end if
+      
+      end if ! tensor vector isn't zero=length
+            
+   end do
+                 
+   END SUBROUTINE DCM_SetLogMapForInterpD
+!=======================================================================         
+   FUNCTION DCM_expR(lambda)
    
       ! This function computes a matrix exponential.
       !
       ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 31-33
       
    REAL(ReKi), INTENT(IN)  :: lambda(3)
-   REAL(ReKi)              :: DCM_exp(3,3)
+   REAL(ReKi)              :: DCM_expR(3,3)
    
       ! local variables
+   REAL(ReKi)              :: stheta         ! sine of angle of rotation   
    REAL(ReKi)              :: theta          ! angle of rotation   
+   REAL(ReKi)              :: theta2         ! angle of rotation squared
    REAL(ReKi)              :: tmp_Mat(3,3)
    
    INTEGER(IntKi)          :: ErrStat
@@ -770,10 +1065,13 @@ CONTAINS
    
    
    theta = TwoNorm(lambda)                   ! Eq. 32
-   
+   theta2 = theta**2
 
-   IF (EqualRealNos(theta, 0.0_ReKi) ) THEN    
-      CALL eye(DCM_exp, ErrStat, ErrMsg)    ! Eq. 33a
+   IF ( EqualRealNos(theta,   0.0_ReKi)   .or. &
+        EqualRealNos(theta2,  0.0_ReKi) ) THEN  !
+      
+      CALL eye(DCM_expR, ErrStat, ErrMsg)    ! Eq. 33a
+      
    ELSE   
       
          ! convert lambda to skew-symmetric matrix:
@@ -787,17 +1085,35 @@ CONTAINS
       tmp_mat(2,3) =                                lambda(1)             
       tmp_mat(3,3) =                                0.0_ReKi            
       
-         ! Eq. 33b
-      CALL eye(DCM_exp, ErrStat, ErrMsg)                  
-      DCM_exp = DCM_exp + sin(theta)/theta*tmp_mat + (1-cos(theta))/theta**2 * MATMUL(tmp_mat, tmp_mat) 
       
+         ! Eq. 33b
+      !DCM_exp = I + sin(theta)/theta*tmp_mat + (1-cos(theta))/theta**2)*matmul(tmp_mat,tmp_mat)
+      
+         ! one method:
+      !CALL eye(DCM_exp, ErrStat, ErrMsg)                  
+      !DCM_exp = DCM_exp + sin(theta)/theta*tmp_mat 
+      !DCM_exp = DCM_exp + (1-cos(theta))/theta2 * MATMUL(tmp_mat, tmp_mat) 
+      
+         ! hopefully this order of calculations gives better numerical results:
+      stheta = sin(theta)
+      DCM_expR      = (1-cos(theta))/theta * tmp_mat      
+      DCM_expR(1,1) = DCM_expR(1,1) + stheta
+      DCM_expR(2,2) = DCM_expR(2,2) + stheta
+      DCM_expR(3,3) = DCM_expR(3,3) + stheta
+      
+      DCM_expR = matmul( DCM_expR, tmp_mat )
+      DCM_expR = DCM_expR / theta
+      DCM_expR(1,1) = DCM_expR(1,1) + 1.0_ReKi ! add identity
+      DCM_expR(2,2) = DCM_expR(2,2) + 1.0_ReKi
+      DCM_expR(3,3) = DCM_expR(3,3) + 1.0_ReKi
+            
    END IF
 
    
       
-   END FUNCTION DCM_exp
+   END FUNCTION DCM_expR
 !=======================================================================  
-   SUBROUTINE DCM_logMap(DCM, logMap, ErrStat, ErrMsg)
+   SUBROUTINE DCM_logMapR(DCM, logMap, ErrStat, ErrMsg)
 
       ! This function computes the logarithmic map for a direction 
       ! cosine matrix.
@@ -806,13 +1122,14 @@ CONTAINS
       ! with eigenvector equations updated to account for numerics
    
    REAL(ReKi),       INTENT(IN)    :: DCM(3,3)
-   REAL(ReKi),       INTENT(   OUT):: logMap(3)
+   REAL(ReKi),       INTENT(  OUT) :: logMap(3)
    INTEGER(IntKi),   INTENT(  OUT) :: ErrStat                   ! Error status of the operation
    CHARACTER(*),     INTENT(  OUT) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    
       ! local variables
    REAL(ReKi)                      :: temp
    REAL(ReKi)                      :: theta
+   REAL(ReKi)                      :: stheta
    REAL(ReKi)                      :: v(3)
    REAL(ReKi)                      :: skewSym(3,3) ! an anti-symmetric matrix
       
@@ -823,11 +1140,12 @@ CONTAINS
    
       temp  = 0.5_ReKi*( trace(DCM) - 1.0_ReKi )
       temp  = min( max(temp,-1.0_ReKi), 1.0_ReKi ) !make sure it's in a valid range (to avoid cases where this is slightly outside the +/-1 range)
-      theta = ACOS( temp )                                                      ! Eq. 25
-   
-      IF ( EqualRealNos(0.0_ReKi, theta) ) THEN
-         logMap = 0.0_ReKi                                                   ! Eq. 26a
-      ELSEIF ( EqualRealNos( pi, theta ) ) THEN
+      theta = ACOS( temp )                                                   ! Eq. 25 ( 0<=theta<=pi )
+      
+      stheta = sin(theta)
+      
+      IF ( EqualRealNos( pi, theta ) .or. &
+          (theta > 3.0_ReKi .and. EqualRealNos( stheta, 0.0_ReKi) ) ) THEN
       
          ! calculate the eigenvector of DCM associated with eigenvalue +1:
       
@@ -867,26 +1185,41 @@ CONTAINS
          v = v / TwoNorm(v)                                                       ! Eq. 27                  
       
             ! calculate the skew-symmetric tensor (note we could change sign here for continuity)
-         v =  pi*v                                                                ! Eq. 26c  
+            ! also note that we make v skew-symmetric in the inverse routine (DCM_exp), 
+            ! so we don't need to change the sign of v(2) here
+         logMap =  pi*v                                                           ! Eq. 26c  
+                     
+      ELSE
+         
+         IF ( EqualRealNos(0.0_ReKi, theta) .or. EqualRealNos( 0.0_ReKi, stheta ) ) THEN
+         
+            !skewSym = DCM - TRANSPOSE(DCM)
+            !
+            !logMap(1) = -skewSym(3,2)
+            !logMap(2) =  skewSym(3,1)
+            !logMap(3) = -skewSym(2,1)
+            !
+            !logMap = 0.5_ReKi * logMap   ! Eq. 26b with limit as x approaches 0 of (x/sin(x)) = 1
+         
+         
+            logMap = 0.0_ReKi                                                   ! Eq. 26a
+                  
+         ELSE ! 0 < theta < pi 
       
-         logMap(1) = -v(1)
-         logMap(2) =  v(2)
-         logMap(3) = -v(3)
+            skewSym = DCM - TRANSPOSE(DCM)
       
-      ELSE ! 0 < theta < pi 
+            logMap(1) = -skewSym(3,2)
+            logMap(2) =  skewSym(3,1)
+            logMap(3) = -skewSym(2,1)
       
-         skewSym = DCM - TRANSPOSE(DCM)
-      
-         logMap(1) = -skewSym(3,2)
-         logMap(2) =  skewSym(3,1)
-         logMap(3) = -skewSym(2,1)
-      
-         logMap = 0.5_ReKi * theta / sin(theta) * logMap   ! Eq. 26b
+            logMap    = 0.5_ReKi * theta / stheta * logMap   ! Eq. 26b
+         END IF
+         
       END IF
    
-   END SUBROUTINE DCM_logMap   
+   END SUBROUTINE DCM_logMapR  
 !=======================================================================
-SUBROUTINE DCM_SetLogMapForInterp( tensor )
+   SUBROUTINE DCM_SetLogMapForInterpR( tensor )
 
    ! this routine sets the rotation parameters (tensors from DCM_logMap)
    ! so that they can be appropriately interpolated, based on
@@ -957,7 +1290,7 @@ SUBROUTINE DCM_SetLogMapForInterp( tensor )
             
    end do
                  
-END SUBROUTINE DCM_SetLogMapForInterp
+   END SUBROUTINE DCM_SetLogMapForInterpR
 !=======================================================================     
    FUNCTION EqualRealNos4 ( ReNum1, ReNum2 )
 
@@ -1146,8 +1479,9 @@ END SUBROUTINE DCM_SetLogMapForInterp
       REAL(ReKi)             :: cz        ! cos(theta_z)
       REAL(ReKi)             :: sz        ! sin(theta_z)
    
-         ! use trig identity sx**2 + cx**2 = 1 to get cy:
+         ! use trig identity sz**2 + cz**2 = 1 to get abs(cy):
       cy = sqrt( m(1,1)**2 + m(2,1)**2 ) 
+!      cy = sqrt( m(3,3)**2 + m(3,2)**2 ) 
             
       if ( EqualRealNos(cy,0.0_ReKi) ) then
       !if ( cy < 16*epsilon(0.0_ReKi) ) then
@@ -1168,8 +1502,9 @@ END SUBROUTINE DCM_SetLogMapForInterp
          !      |+/-1    0       0 ]
          
          theta(1) = atan2(  m(2,3), m(2,2) )          ! theta_x
+         
       else
-
+         ! atan2( cy*sz, cy*cz )
          theta(3) = atan2( -m(2,1), m(1,1) )          ! theta_z         
          cz       = cos( theta(3) )
          sz       = sin( theta(3) )
@@ -1248,6 +1583,44 @@ END SUBROUTINE DCM_SetLogMapForInterp
    END DO
 
    END SUBROUTINE Eye2
+!=======================================================================
+   SUBROUTINE Eye2D( A, ErrStat, ErrMsg )
+
+      ! This routine sets the matrix A(:,:) to the identity
+      ! matrix (all zeros, with ones on the diagonal)
+      ! Note that this also returns the "pseudo-identity" when A(:,:)
+      ! is not square (i.e., nr/=nc).
+
+   REAL(DbKi),     INTENT(INOUT) :: A (:,:)                        ! Array to matricies to set to the identity matrix (nr,nc,n)
+   INTEGER(IntKi), INTENT(OUT)   :: ErrStat                        ! Error level
+   CHARACTER(*),   INTENT(OUT)   :: ErrMsg                         ! ErrMsg corresponding to ErrStat
+
+      ! local variables
+   INTEGER                       :: j                              ! loop counter
+   INTEGER                       :: nr                             ! number of rows
+   INTEGER                       :: nc                             ! number of columns
+
+
+   nr = SIZE(A,1)
+   nc = SIZE(A,2)
+
+   IF (nr /= nc) THEN
+      ErrStat = ErrID_Info
+      ErrMsg  = 'NWTC Library, Eye(): Matrix is not square.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg = ''
+   END IF
+
+      ! initialize to zero:
+   A = 0._DbKi
+
+      ! set the diagonals to one:
+   DO j = 1, MIN(nr,nc) ! the diagonal of the matrix
+      A(j,j) = 1._DbKi
+   END DO
+
+   END SUBROUTINE Eye2D
 !=======================================================================
    SUBROUTINE Eye3( A, ErrStat, ErrMsg )
 
@@ -3363,33 +3736,33 @@ END SUBROUTINE InterpStpReal3D
 
          ! Passed variables
 
-      INTEGER   , INTENT(IN)       :: StrtTime (8)                                    ! Start time of simulation (including initialization)
-      INTEGER   , INTENT(IN)       :: SimStrtTime (8)                                 ! Start time of simulation (after initialization)
-      REAL      , INTENT(IN)       :: UsrTime1                                        ! User CPU time for simulation initialization.
-      REAL,       INTENT(IN)       :: UsrTime2                                        ! User CPU time for simulation (without intialization)
-      REAL(DbKi), INTENT(IN)       :: ZTime                                           ! The final simulation time (not necessarially TMax)
-      REAL,OPTIONAL, INTENT(OUT)   :: UsrTime_out                                     ! User CPU time for entire run - optional value returned to calling routine
+      INTEGER   ,INTENT(IN)          :: StrtTime (8)                                    ! Start time of simulation (including initialization)
+      INTEGER   ,INTENT(IN)          :: SimStrtTime (8)                                 ! Start time of simulation (after initialization)
+      REAL(ReKi),INTENT(IN)          :: UsrTime1                                        ! User CPU time for simulation initialization.
+      REAL(ReKi),INTENT(IN)          :: UsrTime2                                        ! User CPU time for simulation (without intialization)
+      REAL(DbKi),INTENT(IN)          :: ZTime                                           ! The final simulation time (not necessarially TMax)
+      REAL(ReKi),INTENT(OUT),OPTIONAL:: UsrTime_out                                     ! User CPU time for entire run - optional value returned to calling routine
 
          ! Local variables
 
-      REAL                         :: ClckTime                                        ! Elapsed clock time for the entire run.
-      REAL                         :: ClckTimeSim                                     ! Elapsed clock time for the simulation phase of the run.
-      REAL                         :: Factor                                          ! Ratio of seconds to a specified time period.
-      REAL                         :: TRatio                                          ! Ratio of simulation time to elapsed clock time.
-      REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     ! Number of seconds per day
-
-      REAL                         :: UsrTime                                         ! User CPU time for entire run.
-      REAL                         :: UsrTimeSim                                      ! User CPU time for simulation (not including initialization).
-      INTEGER                      :: EndTimes (8)                                    ! An array holding the ending clock time of the simulation.
-
-      CHARACTER( 8)                :: TimePer
-      CHARACTER(MaxWrScrLen)       :: BlankLine
+      REAL(ReKi)                      :: ClckTime                                        ! Elapsed clock time for the entire run.
+      REAL(ReKi)                      :: ClckTimeSim                                     ! Elapsed clock time for the simulation phase of the run.
+      REAL(ReKi)                      :: Factor                                          ! Ratio of seconds to a specified time period.
+      REAL(ReKi)                      :: TRatio                                          ! Ratio of simulation time to elapsed clock time.
+      REAL(ReKi), PARAMETER           :: SecPerDay = 24*60*60.0_ReKi                     ! Number of seconds per day
+                                      
+      REAL(ReKi)                      :: UsrTime                                         ! User CPU time for entire run.
+      REAL(ReKi)                      :: UsrTimeSim                                      ! User CPU time for simulation (not including initialization).
+      INTEGER                         :: EndTimes (8)                                    ! An array holding the ending clock time of the simulation.
+                                      
+      CHARACTER( 8)                   :: TimePer
+      CHARACTER(MaxWrScrLen)          :: BlankLine
 
          ! Get the end times to compare with start times.
 
       CALL DATE_AND_TIME ( VALUES=EndTimes )
       CALL CPU_TIME ( UsrTime )
-      UsrTime = MAX( 0.0, UsrTime )  ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
+      UsrTime = MAX( 0.0_ReKi, UsrTime )  ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
    
 
       ! Calculate the elapsed wall-clock time in seconds.
@@ -3400,25 +3773,25 @@ END SUBROUTINE InterpStpReal3D
 
          ! Calculate CPU times.
 
-      UsrTime    = MAX( 0.0, UsrTime - UsrTime1 )
-      UsrTimeSim = MAX( 0.0, UsrTime - UsrTime2 )
+      UsrTime    = MAX( 0.0_ReKi, UsrTime - UsrTime1 )
+      UsrTimeSim = MAX( 0.0_ReKi, UsrTime - UsrTime2 )
 
 
-      IF ( .NOT. EqualRealNos( UsrTimeSim, 0.0 ) .AND. ZTime > 0.0_DbKi )  THEN
+      IF ( .NOT. EqualRealNos( UsrTimeSim, 0.0_ReKi ) .AND. ZTime > 0.0_DbKi )  THEN
 
-         TRatio = REAL(ZTime) / UsrTimeSim
+         TRatio = REAL(ZTime,ReKi) / UsrTimeSim
 
          IF     ( UsrTime > SecPerDay )  THEN
-            Factor = 1.0/SecPerDay
+            Factor = 1.0_ReKi/SecPerDay
             TimePer = ' days'
-         ELSEIF ( UsrTime >  3600.0 )  THEN
-            Factor = 1.0/3600.0
+         ELSEIF ( UsrTime >  3600.0_ReKi )  THEN
+            Factor = 1.0_ReKi/3600.0_ReKi
             TimePer = ' hours'
-         ELSEIF ( UsrTime >    60.0 )  THEN
-            Factor = 1.0/60.0
+         ELSEIF ( UsrTime >    60.0_ReKi )  THEN
+            Factor = 1.0_ReKi/60.0_ReKi
             TimePer = ' minutes'
          ELSE
-            Factor = 1.0
+            Factor = 1.0_ReKi
             TimePer = ' seconds'
          ENDIF
 
@@ -3541,7 +3914,7 @@ END SUBROUTINE InterpStpReal3D
       REAL(DbKi), INTENT(  OUT)    :: PrevSimTime                                     ! Previous time message was written to screen (s > 0)
       REAL(ReKi), INTENT(  OUT)    :: PrevClockTime                                   ! Previous clock time in seconds past midnight
       INTEGER,    INTENT(  OUT)    :: SimStrtTime (8)                                 ! An array containing the elements of the start time.
-      REAL,       INTENT(  OUT)    :: UsrTimeSim                                      ! User CPU time for simulation (without intialization)
+      REAL(ReKi), INTENT(  OUT)    :: UsrTimeSim                                      ! User CPU time for simulation (without intialization)
 
          ! Local variables.
 
@@ -3552,7 +3925,7 @@ END SUBROUTINE InterpStpReal3D
 
       CALL DATE_AND_TIME ( Values=SimStrtTime )
       CALL CPU_TIME ( UsrTimeSim )                                                    ! Initial CPU time   
-      UsrTimeSim = MAX( 0.0, UsrTimeSim )  ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
+      UsrTimeSim = MAX( 0.0_ReKi, UsrTimeSim )  ! CPU_TIME: If a meaningful time cannot be returned, a processor-dependent negative value is returned
 
       CurrClockTime = TimeValues2Seconds( SimStrtTime )
 
@@ -3892,38 +4265,105 @@ END SUBROUTINE InterpStpReal3D
 
    END FUNCTION TimeValues2Seconds
 !=======================================================================
-   FUNCTION trace(A)
+   FUNCTION traceR4(A)
    
       ! This function computes the trace of a square matrix:
       ! SUM ( A(i,i) ) for i=1, min( SIZE(A,1), SIZE(A,2) )
       
-   REAL(ReKi), INTENT(IN)  :: A(:,:)
-   REAL(ReKi)              :: trace
+   REAL(SiKi), INTENT(IN)  :: A(:,:)
+   REAL(SiKi)              :: traceR4
    
    INTEGER(IntKi)          :: n     ! rows/cols in A
    INTEGER(IntKi)          :: i     ! loop counter
    
    n = min( SIZE(A,1), SIZE(A,2) )
 
-   trace = 0.0_ReKi
+   traceR4 = 0.0_ReKi
    do i=1,n
-      trace = trace + A(i,i)
+      traceR4 = traceR4 + A(i,i)
    end do
    
-   END FUNCTION trace
+   END FUNCTION traceR4
 !=======================================================================
-   FUNCTION TwoNorm(v)
+   FUNCTION traceR8(A)
+   
+      ! This function computes the trace of a square matrix:
+      ! SUM ( A(i,i) ) for i=1, min( SIZE(A,1), SIZE(A,2) )
+      
+   REAL(R8Ki), INTENT(IN)  :: A(:,:)
+   REAL(R8Ki)              :: traceR8
+   
+   INTEGER(IntKi)          :: n     ! rows/cols in A
+   INTEGER(IntKi)          :: i     ! loop counter
+   
+   n = min( SIZE(A,1), SIZE(A,2) )
+
+   traceR8 = 0.0_ReKi
+   do i=1,n
+      traceR8 = traceR8 + A(i,i)
+   end do
+   
+   END FUNCTION traceR8
+!=======================================================================
+   FUNCTION traceR16(A)
+   
+      ! This function computes the trace of a square matrix:
+      ! SUM ( A(i,i) ) for i=1, min( SIZE(A,1), SIZE(A,2) )
+      
+   REAL(QuKi), INTENT(IN)  :: A(:,:)
+   REAL(QuKi)              :: traceR16
+   
+   INTEGER(IntKi)          :: n     ! rows/cols in A
+   INTEGER(IntKi)          :: i     ! loop counter
+   
+   n = min( SIZE(A,1), SIZE(A,2) )
+
+   traceR16 = 0.0_ReKi
+   do i=1,n
+      traceR16 = traceR16 + A(i,i)
+   end do
+   
+   END FUNCTION traceR16
+!=======================================================================
+   FUNCTION TwoNormR4(v)
    
       ! this function returns the 2-norm of a vector v
       ! fortran 2008 has Norm2() built in
       
-      REAL(ReKi), INTENT(IN)  :: v(:)      
-      REAL(ReKi)              :: TwoNorm      
+      REAL(SiKi), INTENT(IN)  :: v(:)      
+      REAL(SiKi)              :: TwoNormR4      
       
-      TwoNorm = SQRT( DOT_PRODUCT(v, v) )
+      TwoNormR4 = SQRT( DOT_PRODUCT(v, v) )
       
       
    END FUNCTION
+!=======================================================================
+   FUNCTION TwoNormR8(v)
+   
+      ! this function returns the 2-norm of a vector v
+      ! fortran 2008 has Norm2() built in
+      
+      REAL(R8Ki), INTENT(IN)  :: v(:)      
+      REAL(R8Ki)              :: TwoNormR8      
+      
+      TwoNormR8 = SQRT( DOT_PRODUCT(v, v) )
+      
+      
+   END FUNCTION
+!=======================================================================
+   FUNCTION TwoNormR16(v)
+   
+      ! this function returns the 2-norm of a vector v
+      ! fortran 2008 has Norm2() built in
+      
+      REAL(QuKi), INTENT(IN)  :: v(:)      
+      REAL(QuKi)              :: TwoNormR16      
+      
+      TwoNormR16 = SQRT( DOT_PRODUCT(v, v) )
+      
+      
+   END FUNCTION
+
 !=======================================================================  
    SUBROUTINE Zero2TwoPi ( Angle )
 
