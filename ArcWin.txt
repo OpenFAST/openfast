@@ -1,0 +1,2 @@
+bin\Registry_win32.exe
+bin\AeroDyn_Driver.exe

@@ -31,11 +31,12 @@ module AeroDyn
    use BladeElement, only : SkewMod_Uncoupled, SkewMod_PittPeters, SkewMod_Coupled
    use NWTC_LAPACK
    
+   
    implicit none
 
    private
          
-   
+
    ! ..... Public Subroutines ...................................................................................................
 
    public :: AD_Init                           ! Initialization routine
@@ -65,8 +66,9 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
    
    
    
-   integer(IntKi)                                :: i, j, k, m
+   integer(IntKi)                               :: i
 #ifdef DBG_OUTS
+   integer(IntKi)                               :: j, k, m
    character(5)                                 ::chanPrefix
 #endif   
       ! Initialize variables for this routine
@@ -771,6 +773,8 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
   !p%AFI     ! set in call to AFI_Init() [called early because it wants to use the same echo file as AD]
   !p%BEMT    ! set in call to BEMT_Init()
       
+  !p%RootName       = TRIM(InitInp%RootName)//'.AD'   ! set earlier to it could be used   
+   
 #ifdef DBG_OUTS
    p%NBlOuts          = 23  
    p%numOuts          = p%NumBlNds*p%NumBlades*p%NBlOuts
@@ -778,16 +782,8 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
       
 #else
    p%numOuts          = InputFileData%NumOuts  
-
-  !p%RootName       = TRIM(InitInp%RootName)//'.AD'   ! set earlier to it could be used   
-
-
-   call SetOutParam(InputFileData%OutList, p, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, p%numBlades, p%NumBlNds, p%NumTwrNds; sets: p%OutParam.
-      call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat >= AbortErrLev) return  
-
-   p%NBlOuts = InputFileData%NBlOuts      
-   p%BlOutNd = InputFileData%BlOutNd
+   p%NBlOuts          = InputFileData%NBlOuts      
+   p%BlOutNd          = InputFileData%BlOutNd
    
    if (p%NumTwrNds > 0) then
       p%NTwOuts = InputFileData%NTwOuts
@@ -795,6 +791,11 @@ subroutine SetParameters( InitInp, InputFileData, p, ErrStat, ErrMsg )
    else
       p%NTwOuts = 0
    end if
+   
+   call SetOutParam(InputFileData%OutList, p, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, p%numBlades, p%NumBlNds, p%NumTwrNds; sets: p%OutParam.
+      call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return  
+   
 #endif  
    
 end subroutine SetParameters
@@ -896,7 +897,6 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, errStat, e
    call AD_Input_ExtrapInterp(u,utimes,uInterp,t, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-         
    call SetInputs(p, uInterp, OtherState, errStat2, errMsg2)      
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
@@ -1141,7 +1141,11 @@ subroutine SetInputsForBEMT(p, u, OtherState, errStat, errMsg)
    if ( EqualRealNos( tmp_sz, 0.0_ReKi ) ) then
       OtherState%BEMT_u%chi0 = 0.0_ReKi
    else
-      OtherState%BEMT_u%chi0 = acos( OtherState%V_dot_x / tmp_sz)      
+         ! make sure we don't have numerical issues that make the ratio outside +/-1
+      tmp_sz_y = min(  1.0_ReKi, OtherState%V_dot_x / tmp_sz )
+      tmp_sz_y = max( -1.0_ReKi, tmp_sz_y )
+      
+      OtherState%BEMT_u%chi0 = acos( tmp_sz_y )      
    end if
    
       ! "Azimuth angle" rad
@@ -1163,17 +1167,17 @@ subroutine SetInputsForBEMT(p, u, OtherState, errStat, errMsg)
       
          ! construct system equivalent to u%BladeRootMotion(k)%Orientation, but without the blade-pitch angle:
       
-      ! orientation = matmul( u%BladeRootMotion(k)%Orientation, transpose(u%HubMotion%Orientation(:,:,1)) )
+      !orientation = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), transpose(u%HubMotion%Orientation(:,:,1)) )
       call LAPACK_gemm( 'n', 't', 1.0_ReKi, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_ReKi, orientation, errStat2, errMsg2)
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       theta = EulerExtract( orientation ) !hub_theta_root(k)
 #ifndef DBG_OUTS
       OtherState%AllOuts( BPitch(  k) ) = -theta(3)*R2D ! save this value of pitch for potential output
 #endif
-      theta(3) = 0.0_ReKi         
-      orientation_nopitch = matmul( EulerConstruct( theta ), u%HubMotion%Orientation(:,:,1) ) ! withoutPitch_theta_Root(k)
-      
-      
+      theta(3) = 0.0_ReKi  
+      orientation = EulerConstruct( theta )
+      orientation_nopitch = matmul( orientation, u%HubMotion%Orientation(:,:,1) ) ! withoutPitch_theta_Root(k)
+            
       do j=1,p%NumBlNds         
          
             ! form coordinate system equivalent to u%BladeMotion(k)%Orientation(:,:,j) but without live sweep (due to in-plane
@@ -1185,6 +1189,7 @@ subroutine SetInputsForBEMT(p, u, OtherState, errStat, errMsg)
          theta = EulerExtract( orientation ) !root(k)WithoutPitch_theta(j)_blade(k)
          
          OtherState%BEMT_u%theta(j,k) = -theta(3) ! local pitch + twist (aerodyanmic + elastic) angle of the jth node in the kth blade
+         
          
          theta(1) = 0.0_ReKi
          theta(3) = 0.0_ReKi
