@@ -12,14 +12,15 @@ include Registry_NWTC_Library.txt
 # .......................................................................................................
 # Define inputs that the initialization routine may need here:
 # e.g., the name of the input file, the file root name, etc.
-typedef BeamDyn/BD InitInputType CHARACTER(1024) InputFile - - - "Name of the input file; remove if there is no file" -
-typedef BeamDyn/BD InitInputType CHARACTER(1024) RootName  - - - "RootName for writing output files" -
-typedef BeamDyn/BD InitInputType ReKi            gravity  {3} - - "Gravitational acceleration" m/s^2
-typedef BeamDyn/BD InitInputType ReKi            GlbPos   {3} - - "Initial Position Vector of the local blade coordinate system"
-typedef BeamDyn/BD InitInputType ReKi            GlbRot   {3}{3} - - "Initial direction cosine matrix of the loacl blade coordinate system"
-typedef BeamDyn/BD InitInputType ReKi            RootDisp {3} - - "Initial root displacement"
-typedef BeamDyn/BD InitInputType ReKi            RootOri  {3}{3} - - "Initial root orientation"
-typedef BeamDyn/BD InitInputType ReKi            RootVel  {6} - - "Initial root velocities and angular veolcities"
+typedef BeamDyn/BD InitInputType CHARACTER(1024) InputFile  - - - "Name of the input file; remove if there is no file" -
+typedef BeamDyn/BD InitInputType CHARACTER(1024) RootName   - - - "RootName for writing output files" -
+typedef BeamDyn/BD InitInputType ReKi            gravity   {3} - - "Gravitational acceleration" m/s^2
+typedef BeamDyn/BD InitInputType ReKi            GlbPos    {3} - - "Initial Position Vector of the local blade coordinate system"
+typedef BeamDyn/BD InitInputType ReKi            GlbRot    {3}{3} - - "Initial direction cosine matrix of the loacl blade coordinate system"
+typedef BeamDyn/BD InitInputType ReKi            GlbPosHub {3} - - "Initial Position Vector of the hub (center of rotation)"
+typedef BeamDyn/BD InitInputType ReKi            RootDisp  {3} - - "Initial root displacement"
+typedef BeamDyn/BD InitInputType ReKi            RootOri   {3}{3} - - "Initial root orientation"
+typedef BeamDyn/BD InitInputType ReKi            RootVel   {6} - - "Initial root velocities and angular veolcities"
 
 # Define outputs that the initialization routine may need here:
 # e.g., the name of the input file, the file root name, etc.
@@ -44,7 +45,7 @@ typedef BeamDyn/BD ConstraintStateType ReKi DummyConstrState - - - "A variable, 
 # e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 # at a given time, etc.)
 typedef BeamDyn/BD OtherStateType ReKi  acc        {:} - - "Accerleration in GA2"
-typedef BeamDyn/BD OtherStateType ReKi  xcc        {:} - - "Algorithm accerleration in GA2" 
+typedef BeamDyn/BD OtherStateType ReKi  xcc        {:} - - "Algorithm accerleration in GA2"
 
 # ..... Parameters
 # ................................................................................................................
@@ -54,7 +55,7 @@ typedef BeamDyn/BD OtherStateType ReKi  xcc        {:} - - "Algorithm accerlerat
 typedef BeamDyn/BD ParameterType ReKi   uuN0      {:}{:} - -  "Initial Postion Vector" -
 typedef      ^            ^       ^     Stif0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
 typedef      ^            ^       ^     Mass0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
-typedef BeamDyn/BD ParameterType ReKi   gravity   {:} - -  "Gravitational acceleration" m/s^2 
+typedef BeamDyn/BD ParameterType ReKi   gravity   {:} - -  "Gravitational acceleration" m/s^2
 typedef      ^            ^       ^     segment_length   {:}{:} - -  "Array stored length of each segment" -
 typedef      ^            ^       ^     member_length   {:}{:} - -  "Array stored length of each member" -
 typedef      ^            ^       ^     blade_length     - - -  "Blade Length" -
@@ -72,7 +73,7 @@ typedef      ^            ^      DbKi   dt     - - -  "module dt" s
 typedef      ^            ^      ReKi   beta   {:} - -  "Damping Coefficient" -
 typedef      ^            ^      ReKi   tol    - - -  "Tolerance used in stopping criterion" -
 typedef      ^            ^      DbKi   coef   {:} - -  "GA2 Coefficient" -
-typedef BeamDyn/BD ParameterType DbKi   rhoinf - - -  "Numerical Damping Coefficient for GA2"  
+typedef BeamDyn/BD ParameterType DbKi   rhoinf - - -  "Numerical Damping Coefficient for GA2"
 typedef      ^            ^      ReKi   GlbPos {:} - -  "Initial Position Vector between origins of Global and blade frames" -
 typedef      ^            ^      ReKi   GlbRot {:}{:} - -  "Initial Rotation Tensor between Global and Blade frames" -
 typedef      ^            ^      IntKi  NumOuts - - -  "Number of parameters in the output list (number of outputs requested)" -
@@ -98,8 +99,8 @@ typedef  ^           OutputType  ReKi      WriteOutput  {:}  -  -  "Data to be w
 typedef BeamDyn/BD    BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"
 typedef BeamDyn/BD    BladeInputData    IntKi    format_index     -     -     -    "Number of blade input stations"
 typedef BeamDyn/BD    BladeInputData    ReKi     station_eta     {:}    -     -    "Station location in eta [0,1]"
-typedef BeamDyn/BD    BladeInputData    ReKi     stiff0       {:}{:}{:} -     -    "C/S stiffness matrix arrays"   
-typedef BeamDyn/BD    BladeInputData    ReKi     mass0        {:}{:}{:} -     -    "C/S mass matrix arrays"   
+typedef BeamDyn/BD    BladeInputData    ReKi     stiff0       {:}{:}{:} -     -    "C/S stiffness matrix arrays"
+typedef BeamDyn/BD    BladeInputData    ReKi     mass0        {:}{:}{:} -     -    "C/S mass matrix arrays"
 typedef BeamDyn/BD    BladeInputData    ReKi     beta             {:} - - "Damping Coefficient" -
 typedef BeamDyn/BD    BladeInputData    IntKi    damp_flag    - - - "Damping Flag: 0-No Damping, 1-Damped"
 # ..... Input file data..............................................................................
@@ -115,6 +116,6 @@ typedef BeamDyn/BD    BD_InputFile    ReKi     stop_tol   - - - "Key point coord
 typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate   {:}{:} - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    DbKi     rhoinf          - - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    DbKi     DTBeam          - - - "Time interval for BeamDyn  calculations {or default} (s)" -
-typedef BeamDyn/BD    BD_InputFile    BladeInputData    InpBl   - - - "Input data for individual blades"   "see BladeInputData Type" 
+typedef BeamDyn/BD    BD_InputFile    BladeInputData    InpBl   - - - "Input data for individual blades"   "see BladeInputData Type"
 typedef BeamDyn/BD    BD_InputFile    CHARACTER(1024) BldFile   - - -  "Name of blade input file"
 typedef BeamDyn/BD    BD_InputFile    Logical  Echo             - - -  "Echo"
