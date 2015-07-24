@@ -59,6 +59,7 @@ typedef BeamDyn/BD ParameterType ReKi   gravity   {3} - -  "Gravitational accele
 typedef      ^            ^       ^     segment_length   {:}{:} - -  "Array stored length of each segment" -
 typedef      ^            ^       ^     member_length   {:}{:} - -  "Array stored length of each member" -
 typedef      ^            ^       ^     blade_length     - - -  "Blade Length" -
+typedef      ^            ^       ^     blade_mass     - - -  "Blade Length" -
 typedef      ^            ^     IntKi   node_elem - - -  "Node per element" -
 typedef      ^            ^       ^     dof_node  - - -  "dof per node" -
 typedef      ^            ^       ^     elem_total  - - -  "Total number of elements" -

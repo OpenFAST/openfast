@@ -683,8 +683,18 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        u%DistrLoad%Moment(:,k) = 0.0D0
    ENDDO
 
+
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   CALL BD_ComputeBladeMass(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u_tmp,&
+                            p%damp_flag,p%beta,                                     &
+                            p%node_elem,p%dof_node,p%elem_total,                    &
+                            p%dof_total,p%node_total,p%ngp,                         &
+                            p%blade_mass,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+WRITE(*,*) 'blade mass'
+WRITE(*,*) p%blade_mass
 !WRITE(*,*) 'u_Inic'
 !DO k=1,3
 !WRITE(*,*) u%RootMotion%Orientation(k,:,1)
@@ -4968,10 +4978,10 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-WRITE(*,*) 'OS%Acc'
-WRITE(*,*) OtherState%Acc(:)
-WRITE(*,*) 'OS%Xcc'
-WRITE(*,*) OtherState%Xcc(:)
+!WRITE(*,*) 'OS%Acc'
+!WRITE(*,*) OtherState%Acc(:)
+!WRITE(*,*) 'OS%Xcc'
+!WRITE(*,*) OtherState%Xcc(:)
       OtherState%InitAcc = .true. 
    end if
 
@@ -5968,6 +5978,87 @@ contains
       CALL BD_DestroyOtherState(OS_tmp, ErrStat2, ErrMsg2 )
    end subroutine cleanup 
 END SUBROUTINE BD_InitAcc
+
+SUBROUTINE BD_ComputeBladeMass(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,                    &
+                               damp_flag,beta,                                        &
+                               node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
+                               BladeMass,ErrStat,ErrMsg)
+!***************************************************************************************
+! This subroutine calls other subroutines to apply the force, build the beam element
+! stiffness and mass matrices, build nodal force vector.  The output of this subroutine
+! is the second time derivative of state "q".
+!***************************************************************************************
+   REAL(ReKi),                   INTENT(IN   ):: uuN0(:,:) ! Initial position vector
+   REAL(ReKi),                   INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
+   REAL(ReKi),                   INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
+   REAL(ReKi),                   INTENT(IN   ):: gravity(:) !
+   TYPE(BD_InputType),           INTENT(IN   ):: u           ! Inputs at t
+   REAL(ReKi),                   INTENT(IN   ):: uuN(:) ! Displacement of Mass 1: m
+   REAL(ReKi),                   INTENT(IN   ):: vvN(:) ! Velocity of Mass 1: m/s
+   INTEGER(IntKi),               INTENT(IN   ):: damp_flag ! Total number of elements
+   REAL(ReKi),                   INTENT(IN   ):: beta(:)
+   INTEGER(IntKi),               INTENT(IN   ):: node_elem ! Node per element
+   INTEGER(IntKi),               INTENT(IN   ):: dof_node ! Degrees of freedom per element
+   INTEGER(IntKi),               INTENT(IN   ):: elem_total ! Total number of elements
+   INTEGER(IntKi),               INTENT(IN   ):: dof_total ! Total number of degrees of freedom
+   INTEGER(IntKi),               INTENT(IN   ):: node_total ! Total number of nodes
+   INTEGER(IntKi),               INTENT(IN   ):: ngp ! Number of Gauss points
+   REAL(ReKi),                   INTENT(  OUT):: BladeMass
+   INTEGER(IntKi),               INTENT(  OUT):: ErrStat       ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+
+   REAL(ReKi),                     ALLOCATABLE:: MassM(:,:)
+   REAL(ReKi),                     ALLOCATABLE:: RHS(:)
+   REAL(ReKi),                     ALLOCATABLE:: temp_vec(:)
+   INTEGER(IntKi)                             :: j
+   INTEGER(IntKi)                             :: temp_id
+   INTEGER(IntKi)                             :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(*), PARAMETER                    :: RoutineName = 'BD_ComputeBladeMass'
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   CALL AllocAry(MassM,dof_total,dof_total,'Mass Matrix',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(RHS,dof_total,'Right-hand-side vector',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(temp_vec,dof_total,'temp vector',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+       call Cleanup()
+       return
+   end if
+
+   CALL BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
+                                     damp_flag,beta,&
+                                     elem_total,node_elem,dof_total,dof_node,ngp,&
+                                     RHS,MassM,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      end if
+      
+   DO j=1,node_total
+       temp_id = (j-1)*dof_node
+       temp_vec(temp_id+1) = 1.0D0
+   ENDDO
+   
+   BladeMass = 0.0D0
+   BladeMass = DOT_PRODUCT(temp_vec,MATMUL(MassM,temp_vec))
+
+   CALL Cleanup()
+   RETURN
+contains
+      subroutine Cleanup()
+
+         if (allocated(MassM      )) deallocate(MassM      )
+         if (allocated(RHS        )) deallocate(RHS        )
+         if (allocated(temp_vec   )) deallocate(temp_vec   )
+
+      end subroutine Cleanup
+END SUBROUTINE BD_ComputeBladeMass
 
 
 END MODULE BeamDyn
