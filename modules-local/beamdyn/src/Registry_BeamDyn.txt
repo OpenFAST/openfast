@@ -17,7 +17,6 @@ typedef BeamDyn/BD InitInputType CHARACTER(1024) RootName   - - - "RootName for 
 typedef BeamDyn/BD InitInputType ReKi            gravity   {3} - - "Gravitational acceleration" m/s^2
 typedef BeamDyn/BD InitInputType ReKi            GlbPos    {3} - - "Initial Position Vector of the local blade coordinate system"
 typedef BeamDyn/BD InitInputType ReKi            GlbRot    {3}{3} - - "Initial direction cosine matrix of the loacl blade coordinate system"
-typedef BeamDyn/BD InitInputType ReKi            GlbPosHub {3} - - "Initial Position Vector of the hub (center of rotation)"
 typedef BeamDyn/BD InitInputType ReKi            RootDisp  {3} - - "Initial root displacement"
 typedef BeamDyn/BD InitInputType ReKi            RootOri   {3}{3} - - "Initial root orientation"
 typedef BeamDyn/BD InitInputType ReKi            RootVel   {6} - - "Initial root velocities and angular veolcities"
@@ -46,6 +45,7 @@ typedef BeamDyn/BD ConstraintStateType ReKi DummyConstrState - - - "A variable, 
 # at a given time, etc.)
 typedef BeamDyn/BD OtherStateType ReKi  acc        {:} - - "Accerleration in GA2"
 typedef BeamDyn/BD OtherStateType ReKi  xcc        {:} - - "Algorithm accerleration in GA2"
+typedef BeamDyn/BD OtherStateType Logical  InitAcc  -  - - "flag to determine if accerlerations have been initialized in updateStates"
 
 # ..... Parameters
 # ................................................................................................................
@@ -75,7 +75,6 @@ typedef      ^            ^      ReKi   tol    - - -  "Tolerance used in stoppin
 typedef      ^            ^      DbKi   coef   {9} - -  "GA2 Coefficient" -
 typedef BeamDyn/BD ParameterType DbKi   rhoinf - - -  "Numerical Damping Coefficient for GA2"
 typedef      ^            ^      ReKi   GlbPos {3} - -  "Initial Position Vector between origins of Global and blade frames" -
-typedef      ^            ^      ReKi   GlbPosHub {3} - -  "Initial Position Vector between origins of Global and blade frames" -
 typedef      ^            ^      ReKi   GlbRot {3}{3} - -  "Initial Rotation Tensor between Global and Blade frames" -
 typedef      ^            ^      IntKi  NumOuts - - -  "Number of parameters in the output list (number of outputs requested)" -
 
