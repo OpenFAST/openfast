@@ -1690,7 +1690,7 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD
       ELSEIF ( p_FAST%CompAero == Module_AD ) THEN
          
          DO K = 1,SIZE(u_ED%BladeLn2Mesh,1) ! Loop through all blades (p_ED%NumBl)
-            CALL Transfer_Line2_to_Line2( y_AD%BladeLoad(k), u_ED%BladeLn2Mesh(k), MeshMapData%AD_L_2_ED_L_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), y_ED%BladeLn2Mesh(k) )
+            CALL Transfer_Line2_to_Line2( y_AD%BladeLoad(k), u_ED%BladeLn2Mesh(k), MeshMapData%AD_L_2_BDED_L_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), y_ED%BladeLn2Mesh(k) )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          END DO
                   
@@ -4498,7 +4498,7 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_ED, MeshMapData, ErrStat, ErrMsg
       
 !debug_print2 = .true.
       DO k=1,size(y_ED%BladeLn2Mesh)
-         CALL Transfer_Line2_to_Line2( y_ED%BladeLn2Mesh(k), u_AD%BladeMotion(k), MeshMapData%ED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
+         CALL Transfer_Line2_to_Line2( y_ED%BladeLn2Mesh(k), u_AD%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%BladeMotion('//trim(num2lstr(k))//')' )   
 !debug_print2 = .false.            
       END DO
@@ -4592,7 +4592,7 @@ SUBROUTINE AD14_InputSolve_NoIfW( p_FAST, u_AD14, y_ED, MeshMapData, ErrStat, Er
    IF (p_FAST%CompElast == Module_ED) THEN
       DO K = 1,NumBl !p%NumBl ! Loop through all blades
       
-         !CALL Transfer_Line2_to_Line2( y_ED%BladeLn2Mesh(K), u_AD%InputMarkers(K), MeshMapData%ED_L_2_AD_L_B(K), ErrStat, ErrMsg )
+         !CALL Transfer_Line2_to_Line2( y_ED%BladeLn2Mesh(K), u_AD%InputMarkers(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat, ErrMsg )
          !   IF (ErrStat >= AbortErrLev ) RETURN
          
          u_AD14%InputMarkers(K)%RotationVel = 0.0_ReKi ! bjj: we don't need this field
@@ -5349,18 +5349,18 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
    IF ( p_FAST%CompAero == Module_AD14 ) THEN ! ED-AD14
          
       ! Blade meshes: (allocate two mapping data structures to number of blades, then allocate data inside the structures)
-      ALLOCATE( MeshMapData%ED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_ED_L_B(NumBl), STAT=ErrStat2 )
+      ALLOCATE( MeshMapData%BDED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_BDED_L_B(NumBl), STAT=ErrStat2 )
          IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%ED_L_2_AD_L_B and MeshMapData%AD_L_2_ED_L_B.', &
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%BDED_L_2_AD_L_B and MeshMapData%AD_L_2_BDED_L_B.', &
                             ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
          
       DO K=1,NumBl         
-         CALL MeshMapCreate( ED%Output(1)%BladeLn2Mesh(K), AD14%Input(1)%InputMarkers(K), MeshMapData%ED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_L_2_AD_L_B('//TRIM(Num2LStr(K))//')' )
-         CALL MeshMapCreate( AD14%y%OutputLoads(K), ED%Input(1)%BladeLn2Mesh(K),  MeshMapData%AD_L_2_ED_L_B(K), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_ED_L_B('//TRIM(Num2LStr(K))//')' )
+         CALL MeshMapCreate( ED%Output(1)%BladeLn2Mesh(K), AD14%Input(1)%InputMarkers(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BDED_L_2_AD_L_B('//TRIM(Num2LStr(K))//')' )
+         CALL MeshMapCreate( AD14%y%OutputLoads(K), ED%Input(1)%BladeLn2Mesh(K),  MeshMapData%AD_L_2_BDED_L_B(K), ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_BDED_L_B('//TRIM(Num2LStr(K))//')' )
       END DO
          
       ! Tower mesh:
@@ -5396,9 +5396,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
       
       
       ! Blade meshes: (allocate two mapping data structures to number of blades, then allocate data inside the structures)                  
-      ALLOCATE( MeshMapData%ED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_ED_L_B(NumBl), STAT=ErrStat2 )
+      ALLOCATE( MeshMapData%BDED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_BDED_L_B(NumBl), STAT=ErrStat2 )
          IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%ED_L_2_AD_L_B and MeshMapData%AD_L_2_ED_L_B.', &
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%BDED_L_2_AD_L_B and MeshMapData%AD_L_2_BDED_L_B.', &
                             ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
@@ -5406,15 +5406,21 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
       IF ( p_FAST%CompElast == Module_ED ) then
          
          DO K=1,NumBl         
-            CALL MeshMapCreate( ED%Output(1)%BladeLn2Mesh(K), AD%Input(1)%BladeMotion(K), MeshMapData%ED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_L_2_AD_L_B('//TRIM(Num2LStr(K))//')' )
-            CALL MeshMapCreate( AD%y%BladeLoad(K), ED%Input(1)%BladeLn2Mesh(K),  MeshMapData%AD_L_2_ED_L_B(K), ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_ED_L_B('//TRIM(Num2LStr(K))//')' )
+            CALL MeshMapCreate( ED%Output(1)%BladeLn2Mesh(K), AD%Input(1)%BladeMotion(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BDED_L_2_AD_L_B('//TRIM(Num2LStr(K))//')' )
+            CALL MeshMapCreate( AD%y%BladeLoad(K), ED%Input(1)%BladeLn2Mesh(K),  MeshMapData%AD_L_2_BDED_L_B(K), ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_BDED_L_B('//TRIM(Num2LStr(K))//')' )
          END DO
          
-      ELSE
+      ELSEIF ( p_FAST%CompElast == Module_BD ) then
          
-         ! connect AD mesh with beamdyn
+         ! connect AD mesh with BeamDyn
+         DO K=1,NumBl         
+            CALL MeshMapCreate( BD%y(k)%BldMotion, AD%Input(1)%BladeMotion(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BDED_L_2_AD_L_B('//TRIM(Num2LStr(K))//')' )
+            CALL MeshMapCreate( AD%y%BladeLoad(K), BD%Input(1,k)%DistrLoad,  MeshMapData%AD_L_2_BDED_L_B(K), ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_BDED_L_B('//TRIM(Num2LStr(K))//')' )
+         END DO
          
       END IF
       
@@ -6028,15 +6034,15 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
    IF ( p_FAST%CompSub == Module_SD .OR. p_FAST%CompElast == Module_BD ) THEN !.OR. p_FAST%CompHydro == Module_HD ) THEN
                                  
       CALL ED_SD_HD_BD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
-                                    , ED%Input(1),   ED%p, ED%x(  this_state), ED%xd(  this_state), ED%z(  this_state), ED%OtherSt, ED%Output(1) &
-                                    , SD%Input(1),   SD%p, SD%x(  this_state), SD%xd(  this_state), SD%z(  this_state), SD%OtherSt, SD%y & 
-                                    , HD%Input(1),   HD%p, HD%x(  this_state), HD%xd(  this_state), HD%z(  this_state), HD%OtherSt, HD%y & 
-                                    , BD%Input(1,:), BD%p, BD%x(:,this_state), BD%xd(:,this_state), BD%z(:,this_state), BD%OtherSt, BD%y & 
+                                    , ED%Input(1),   ED%p, ED%x(  this_state), ED%xd(  this_state), ED%z(  this_state), ED%OtherSt,               ED%Output(1) &
+                                    , SD%Input(1),   SD%p, SD%x(  this_state), SD%xd(  this_state), SD%z(  this_state), SD%OtherSt,               SD%y & 
+                                    , HD%Input(1),   HD%p, HD%x(  this_state), HD%xd(  this_state), HD%z(  this_state), HD%OtherSt,               HD%y & 
+                                    , BD%Input(1,:), BD%p, BD%x(:,this_state), BD%xd(:,this_state), BD%z(:,this_state), BD%OtherSt(:,this_state), BD%y & 
                                     , MAPp%Input(1),   MAPp%y &
                                     , FEAM%Input(1),   FEAM%y &   
                                     , MD%Input(1),     MD%y   &   
                                     , IceF%Input(1),   IceF%y &
-                                    , IceD%Input(1,:), IceD%y &    ! bjj: I don't really want to make temp copies of input types. perhaps we should pass the whole Input() structure?...
+                                    , IceD%Input(1,:), IceD%y &    ! bjj: I don't really want to make temp copies of input types. perhaps we should pass the whole Input() structure? (likewise for BD)...
                                     , MeshMapData , ErrStat2, ErrMsg2 )         
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                         
@@ -6467,11 +6473,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ALLOCATE( BD%x(           p_FAST%nBeams,2), &
              BD%xd(          p_FAST%nBeams,2), &
              BD%z(           p_FAST%nBeams,2), &
-             BD%OtherSt(     p_FAST%nBeams  ), &
+             BD%OtherSt(     p_FAST%nBeams,2), &
              BD%p(           p_FAST%nBeams  ), &
              BD%u(           p_FAST%nBeams  ), &
              BD%y(           p_FAST%nBeams  ), &
-             BD%OtherSt_old( p_FAST%nBeams  ), &
              InitOutData_BD( p_FAST%nBeams  ), &
                                              STAT = ErrStat2 )                                                  
       IF (ErrStat2 /= 0) THEN
@@ -6485,7 +6490,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       
       InitInData_BD%RootName     = p_FAST%OutFileRoot     
       InitInData_BD%gravity      = (/ 0.0_ReKi, 0.0_ReKi, -InitOutData_ED%Gravity /)       ! "Gravitational acceleration" m/s^2
-      InitInData_BD%GlbPosHub    = ED%Output(1)%HubPtMotion%Position(:,1)                  ! "Initial Position Vector of the hub (center of rotation)" 
       
          ! now initialize IceD for additional legs (if necessary)
       dt_BD = p_FAST%dt_module( MODULE_BD )
@@ -6503,7 +6507,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          InitInData_BD%RootVel(4:6) = ED%Output(1)%BladeRootMotion(k)%RotationVel(:,1)       ! {:}    - - "Initial root velocities and angular veolcities"                  
                            
          CALL BD_Init( InitInData_BD, BD%Input(1,k), BD%p(k),  BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), &
-                            BD%OtherSt(k), BD%y(k), dt_BD, InitOutData_BD(k), ErrStat2, ErrMsg2 )
+                           BD%OtherSt(k,STATE_CURR), BD%y(k), dt_BD, InitOutData_BD(k), ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)                        
             
          !bjj: we're going to force this to have the same timestep because I don't want to have to deal with n BD modules with n timesteps.
@@ -7683,10 +7687,8 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, A
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          CALL BD_CopyConstrState (BD%z( k,STATE_CURR), BD%z( k,STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF ( p_FAST%n_substeps( MODULE_BD ) > 1 ) THEN
-            CALL BD_CopyOtherState( BD%OtherSt_old(k), BD%OtherSt(k), MESH_NEWCOPY, Errstat2, ErrMsg2)
-               CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-         END IF       
+         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_CURR), BD%OtherSt( k,STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
       END DO ! nBeams
       
@@ -8107,18 +8109,15 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          CALL BD_CopyConstrState (BD%z( k,STATE_CURR),BD%z( k,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-         IF ( p_FAST%n_substeps( Module_BD ) > 1 ) THEN
-            CALL BD_CopyOtherState( BD%OtherSt(k), BD%OtherSt_old(k), MESH_UPDATECOPY, Errstat2, ErrMsg2)
-               CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         END IF
+         CALL BD_CopyOtherState (BD%OtherSt( k,STATE_CURR),BD%OtherSt( k,STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
          DO j_ss = 1, p_FAST%n_substeps( Module_BD )
             n_t_module = n_t_global*p_FAST%n_substeps( Module_BD ) + j_ss - 1
             t_module   = n_t_module*p_FAST%dt_module( Module_BD ) + t_initial
                            
             CALL BD_UpdateStates( t_module, n_t_module, BD%Input(:,k), BD%InputTimes(:,k), BD%p(k), BD%x(k,STATE_PRED), &
-                                       BD%xd(k,STATE_PRED), BD%z(k,STATE_PRED), BD%OtherSt(k), ErrStat2, ErrMsg2 )
+                                       BD%xd(k,STATE_PRED), BD%z(k,STATE_PRED), BD%OtherSt(k,STATE_PRED), ErrStat2, ErrMsg2 )
                CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO !j_ss
       END DO !nBeams
@@ -8438,7 +8437,7 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD
          
       DO k=1,p_FAST%nBeams                     
          CALL BD_End(BD%Input(1,k),  BD%p(k),  BD%x(k,STATE_CURR),  BD%xd(k,STATE_CURR),  BD%z(k,STATE_CURR), &
-                        BD%OtherSt(k),  BD%y(k),  ErrStat2, ErrMsg2)
+                        BD%OtherSt(k,STATE_CURR),  BD%y(k),  ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)            
       END DO
          
@@ -8958,13 +8957,8 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END IF
             
-         IF ( p_FAST%n_substeps( Module_BD ) > 1 ) THEN
-            DO k=1,p_FAST%nBeams
-               CALL BD_CopyOtherState( BD%OtherSt_old(k), BD%OtherSt(k), MESH_UPDATECOPY, Errstat2, ErrMsg2)
-               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            END DO
-         END IF
-                  
+         ! BD treats "OtherStates" as actual "other states", which are copied like the rest of the states (done now to avoid changing later when we add MiscVars)
+         
          IF ( p_FAST%n_substeps( Module_AD14 ) > 1 ) THEN
             CALL AD14_CopyOtherState( AD14%OtherSt_old, AD14%OtherSt, MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )

@@ -143,11 +143,10 @@ typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Arr
 typedef	FAST	BeamDyn_Data	BD_ContinuousStateType	x	{:}{:}	-	-	"Continuous states"
 typedef	^	^	BD_DiscreteStateType	xd	{:}{:}	-	-	"Discrete states"
 typedef	^	^	BD_ConstraintStateType	z	{:}{:}	-	-	"Constraint states"
-typedef	^	^	BD_OtherStateType	OtherSt	{:}	-	-	"Other/optimization states"
+typedef	^	^	BD_OtherStateType	OtherSt	{:}{:}	-	-	"Other/optimization states"
 typedef	^	^	BD_ParameterType	p	{:}	-	-	"Parameters"
 typedef	^	^	BD_InputType	u	{:}	-	-	"System inputs"
 typedef	^	^	BD_OutputType	y	{:}	-	-	"System outputs"
-typedef	^	^	BD_OtherStateType	OtherSt_old	{:}	-	-	"Other/optimization states (copied for the case of subcycling)"
 typedef	^	^	BD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
 
@@ -312,9 +311,10 @@ typedef	^	FAST_ModuleMapType	MeshMapType	HD_M_L_2_SD_P	-	-	-	"Map HydroDyn Moris
 # ED <-> SrvD/NTMD
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_SrvD_P_N	-	-	-	"Map ElastoDyn Nacelle point mesh to ServoDyn/TMD point mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	SrvD_P_2_ED_P_N	-	-	-	"Map ServoDyn nacelle point mesh to ElastoDyn point mesh on the nacelle"
-# ED <-> AD
-typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_AD_L_B	{:}	-	-	"Map ElastoDyn BladeLn2Mesh line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes"
-typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_ED_L_B	{:}	-	-	"Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladeLn2Mesh line2 meshes"
+# ED/BD <-> AD (blades)
+typedef	^	FAST_ModuleMapType	MeshMapType	BDED_L_2_AD_L_B	{:}	-	-	"Map ElastoDyn BladeLn2Mesh line2 meshes to AeroDyn14 InputMarkers OR AeroDyn BladeMotion line2 meshes"
+typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_BDED_L_B	{:}	-	-	"Map AeroDyn14 InputMarkers or AeroDyn BladeLoad line2 meshes to ElastoDyn BladeLn2Mesh line2 meshes"
+# ED <-> AD (tower, hub, blade root)
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_L_2_AD_L_T	-	-	-	"Map ElastoDyn TowerLn2Mesh line2 mesh to AeroDyn14 Twr_InputMarkers or AeroDyn TowerMotion line2 mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	AD_L_2_ED_L_T	-	-	-	"Map AeroDyn14 Twr_InputMarkers or AeroDyn TowerLoad line2 mesh to ElastoDyn TowerLn2Mesh line2 mesh"
 typedef	^	FAST_ModuleMapType	MeshMapType	ED_P_2_AD_P_R	{:}	-	-	"Map ElastoDyn BladeRootMotion point meshes to AeroDyn BladeRootMotion point meshes"
@@ -388,3 +388,6 @@ typedef	^	FAST_TurbineType	FEAMooring_Data	FEAM	-	-	-	"Data for the FEAMooring m
 typedef	^	FAST_TurbineType	MoorDyn_Data	MD	-	-	-	"Data for the MoorDyn module"	-
 typedef	^	FAST_TurbineType	IceFloe_Data	IceF	-	-	-	"Data for the IceFloe module"	-
 typedef	^	FAST_TurbineType	IceDyn_Data	IceD	-	-	-	"Data for the IceDyn module"	-
+
+
+
