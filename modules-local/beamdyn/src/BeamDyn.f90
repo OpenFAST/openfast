@@ -42,7 +42,7 @@ MODULE BeamDyn
    PUBLIC :: BD_Tilde
    PUBLIC :: BD_MotionTensor
    PUBLIC :: BD_CalcIC
-   PUBLIC :: BD_IniAcc
+   PUBLIC :: BD_InitAcc
 
 CONTAINS
 
@@ -857,11 +857,6 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   ! initialize accelerations here:
-   if ( .not. OtherState%InitAcc) then
-      !Qi, call something to initialize
-      OtherState%InitAcc = .true. 
-   end if
    
    
    IF(p%analysis_type == 2) THEN
@@ -4966,6 +4961,20 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
          return
       end if
 
+   ! initialize accelerations here:
+   if ( .not. OtherState%InitAcc) then
+      !Qi, call something to initialize
+      call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
+          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
+          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+WRITE(*,*) 'OS%Acc'
+WRITE(*,*) OtherState%Acc(:)
+WRITE(*,*) 'OS%Xcc'
+WRITE(*,*) OtherState%Xcc(:)
+      OtherState%InitAcc = .true. 
+   end if
+
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 !WRITE(*,*) 'u_interp'
@@ -5901,51 +5910,64 @@ contains
       end subroutine Cleanup
 END SUBROUTINE BD_SolutionForceAcc
 
-SUBROUTINE BD_IniAcc( u, y, p, OtherState,ErrStat,ErrMsg)
 
-   TYPE(BD_InputType),           INTENT(IN   ):: u           ! Inputs at t
-   TYPE(BD_OutputType),          INTENT(IN   ):: y           ! Inputs at t
-   TYPE(BD_ParameterType),       INTENT(IN   ):: p           ! Parameters
-   TYPE(BD_OtherStateType),      INTENT(INOUT):: OtherState  ! Other/optimization states
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+SUBROUTINE BD_InitAcc( t, u, p, x, OtherState, ErrStat, ErrMsg )
+   !
+   ! Routine for computing outputs, used in both loose and tight coupling.
+   !..................................................................................................................................
 
-   REAL(ReKi)                                 :: temp6(6)
-   INTEGER(IntKi)                             :: i
-   INTEGER(IntKi)                             :: j
-   INTEGER(IntKi)                             :: temp_id
-   INTEGER(IntKi)                             :: temp_id2
+   REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
+   TYPE(BD_InputType),           INTENT(INOUT)  :: u           ! Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   TYPE(BD_OtherStateType)                      :: OS_tmp
+   TYPE(BD_ContinuousStateType)                 :: x_tmp
+   TYPE(BD_InputType)                           :: u_tmp
+   INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_InitAcc'
+   
+   ! Initialize ErrStat
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   DO i=1,p%elem_total
-       DO j=1,p%node_elem
-           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-           temp_id2= (i-1)*p%node_elem+j
-           IF(i .EQ. 1 .AND. j .EQ. 1) THEN
-               temp6(1) = u%RootMotion%TranslationAcc(3,1)
-               temp6(2) = u%RootMotion%TranslationAcc(1,1)
-               temp6(3) = u%RootMotion%TranslationAcc(2,1)
-               temp6(4) = u%RootMotion%RotationAcc(3,1)
-               temp6(5) = u%RootMotion%RotationAcc(1,1)
-               temp6(6) = u%RootMotion%RotationAcc(2,1)
-           ELSE
-               temp6(1) = y%BldMotion%TranslationAcc(3,temp_id2)
-               temp6(2) = y%BldMotion%TranslationAcc(1,temp_id2)
-               temp6(3) = y%BldMotion%TranslationAcc(2,temp_id2)
-               temp6(4) = y%BldMotion%RotationAcc(1,temp_id2)
-               temp6(5) = y%BldMotion%RotationAcc(2,temp_id2)
-               temp6(6) = y%BldMotion%RotationAcc(3,temp_id2)
-           ENDIF
-           temp6(1:3) = MATMUL(TRANSPOSE(p%GlbRot),temp6(1:3)) !bjj: = MATMUL(temp6(1:3), p%GlbRot)
-           temp6(4:6) = MATMUL(TRANSPOSE(p%GlbRot),temp6(4:6)) !bjj: = MATMUL(temp6(4:6), p%GlbRot)
-           OtherState%Acc(temp_id+1:temp_id+6) = temp6(1:6)
-       ENDDO
-   ENDDO
-   OtherState%Xcc(:) = OtherState%Acc(:)
+   CALL BD_CopyContState(x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+   CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      
+   CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_BoundaryGA2(x_tmp,p,u_tmp,t,OS_tmp,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-END SUBROUTINE BD_IniAcc
+   CALL BD_CalcForceAcc(u_tmp,p,x_tmp,OS_tmp,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       
+   OtherState%Acc(:) = OS_tmp%Acc(:)
+   OtherState%Xcc(:) = OS_tmp%Acc(:)
+
+   call cleanup()
+   return
+   
+contains
+   subroutine cleanup()
+      CALL BD_DestroyInput(u_tmp, ErrStat2, ErrMsg2)
+      CALL BD_DestroyContState(x_tmp, ErrStat2, ErrMsg2 )
+      CALL BD_DestroyOtherState(OS_tmp, ErrStat2, ErrMsg2 )
+   end subroutine cleanup 
+END SUBROUTINE BD_InitAcc
 
 
 END MODULE BeamDyn
