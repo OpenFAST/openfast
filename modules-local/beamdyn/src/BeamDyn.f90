@@ -117,7 +117,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ! Display the module information
 
    CALL DispNVD( BeamDyn_Ver )
-
+      
    CALL BD_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,Interval,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF( ErrStat >= AbortErrLev ) RETURN
@@ -125,6 +125,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF( ErrStat >= AbortErrLev ) RETURN
 
+   OtherState%InitAcc = .false. ! accelerations have not been initialized, yet
+   
    !Read inputs from Driver/Glue code
    !1 Global position vector
    !2 Global rotation tensor
@@ -132,9 +134,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%GlbPos(1)     = InitInp%GlbPos(3)
    p%GlbPos(2)     = InitInp%GlbPos(1)
    p%GlbPos(3)     = InitInp%GlbPos(2)
-   p%GlbPosHub(1)     = InitInp%GlbPosHub(3)
-   p%GlbPosHub(2)     = InitInp%GlbPosHub(1)
-   p%GlbPosHub(3)     = InitInp%GlbPosHub(2)
    p%GlbRot(1:3,1:3) = TRANSPOSE(InitInp%GlbRot(1:3,1:3))
    CALL BD_CrvExtractCrv(p%GlbRot,TmpPos,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -857,6 +856,14 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
 
    ErrStat = ErrID_None
    ErrMsg  = ""
+   
+   ! initialize accelerations here:
+   if ( .not. OtherState%InitAcc) then
+      !Qi, call something to initialize
+      OtherState%InitAcc = .true. 
+   end if
+   
+   
    IF(p%analysis_type == 2) THEN
 !       IF(n .EQ. 0) THEN
 !           CALL BD_CopyInput(u(2), u_tmp, MESH_NEWCOPY, ErrStat, ErrMsg)
@@ -3948,7 +3955,7 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc,ErrStat,ErrMsg)
    ENDDO
 
    e2 = 0.0D0
-   temp = phi*ACOS(-1.0D0)/180.0D0
+   temp = phi*D2R_D  ! convert to radians
    temp2 = ((e1(2)*COS(temp) + e1(3)*SIN(temp))/e1(1))
    Delta = SQRT(1.0D0 + temp2*temp2)
    e2(1) = -(e1(2)*COS(temp)+e1(3)*SIN(temp))/e1(1)
