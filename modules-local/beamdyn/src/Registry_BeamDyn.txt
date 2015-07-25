@@ -78,6 +78,9 @@ typedef BeamDyn/BD ParameterType DbKi   rhoinf - - -  "Numerical Damping Coeffic
 typedef      ^            ^      ReKi   GlbPos {3} - -  "Initial Position Vector between origins of Global and blade frames" -
 typedef      ^            ^      ReKi   GlbRot {3}{3} - -  "Initial Rotation Tensor between Global and Blade frames" -
 typedef      ^            ^      IntKi  NumOuts - - -  "Number of parameters in the output list (number of outputs requested)" -
+typedef      ^     ParameterType OutParmType OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
+typedef      ^     ParameterType IntKi  NNodeOuts - - - "Number of nodes to output data to a file[0 - 9]"	-
+typedef      ^     ParameterType IntKi  OutNd   {9} - - "Nodes whose values will be output"	-
 
 
 # ..... Inputs
@@ -120,3 +123,7 @@ typedef BeamDyn/BD    BD_InputFile    DbKi     DTBeam          - - - "Time inter
 typedef BeamDyn/BD    BD_InputFile    BladeInputData    InpBl   - - - "Input data for individual blades"   "see BladeInputData Type"
 typedef BeamDyn/BD    BD_InputFile    CHARACTER(1024) BldFile   - - -  "Name of blade input file"
 typedef BeamDyn/BD    BD_InputFile    Logical  Echo             - - -  "Echo"
+typedef ^             BD_InputFile    IntKi    NNodeOuts - - - "Number of node outputs [0 - 9]"	-
+typedef ^             BD_InputFile    IntKi    OutNd   {9} - - "Nodes whose values will be output"	-
+typedef ^             BD_InputFile    IntKi    NumOuts  -  - - "Number of parameters in the output list (number of outputs requested)"	-
+typedef ^             BD_InputFile    CHARACTER(ChanLen)	OutList	{:}	-	-	"List of user-requested output channels"	-

@@ -162,7 +162,7 @@ CALL BD_CrvExtractCrv(TRANSPOSE(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Pa
 !                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_elem),&
 !                           &BD_OutPut(1)%BldMotion%RotationAcc(1:3,BD_Parameter%node_elem)
 
-     IF(BD_Parameter%analysis_type .EQ. 1 .AND. n_t_global .EQ. 1) RETURN
+     IF(BD_Parameter%analysis_type .EQ. 1 .AND. n_t_global .EQ. 1) EXIT !RETURN
 
      CALL BD_InputSolve( t_global + dt_global, BD_Input(1), BD_Parameter, ErrStat, ErrMsg)
 
