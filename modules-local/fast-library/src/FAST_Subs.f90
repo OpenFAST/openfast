@@ -569,7 +569,7 @@ end do
       do i=1,p_FAST%nBeams
          if ( allocated(InitOutData_BD(i)%WriteOutputHdr) ) then            
             do j=1,size(InitOutData_BD(i)%WriteOutputHdr) 
-               y_FAST%ChannelNames(indxNext) = trim(InitOutData_BD(i)%WriteOutputHdr(j))//'B'//TRIM(Num2Lstr(i)) !bjj: do we want this "bx" at the end?
+               y_FAST%ChannelNames(indxNext) = 'B'//TRIM(Num2Lstr(i))//trim(InitOutData_BD(i)%WriteOutputHdr(j))
                y_FAST%ChannelUnits(indxNext) = InitOutData_BD(i)%WriteOutputUnt(j)
                indxNext = indxNext + 1
             end do ! j            
@@ -1623,6 +1623,64 @@ SUBROUTINE FillOutputAry(p_FAST, y_FAST, IfWOutput, EDOutput, ADOutput, SrvDOutp
          
 END SUBROUTINE FillOutputAry
 !----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE BD_InputSolve( p_FAST, BD, y_AD, u_AD, MeshMapData, ErrStat, ErrMsg )
+! This routine sets the inputs required for BD--using the Option 2 solve method; currently the only inputs solved in this routine
+! are the blade distributed loads from AD15; other inputs are solved in option 1.
+!..................................................................................................................................
+
+   TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST                   ! Glue-code simulation parameters
+   TYPE(BeamDyn_Data),             INTENT(INOUT)  :: BD                       ! BD Inputs at t
+   TYPE(AD_OutputType),            INTENT(IN   )  :: y_AD                     ! AeroDyn outputs
+   TYPE(AD_InputType),             INTENT(INOUT)  :: u_AD                     ! AD inputs (for AD-BD load transfer)
+   
+   TYPE(FAST_ModuleMapType),       INTENT(INOUT)  :: MeshMapData              ! Data for mapping between modules
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                  ! Error status
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                   ! Error message
+   
+      ! local variables
+   INTEGER(IntKi)                                 :: J                        ! Loops through nodes / elements
+   INTEGER(IntKi)                                 :: K                        ! Loops through blades
+   INTEGER(IntKi)                                 :: ErrStat2                 ! temporary Error status of the operation
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2                  ! temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(*), PARAMETER                        :: RoutineName = 'BD_InputSolve' 
+
+      ! Initialize error status
+      
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+            
+      ! BD inputs on blade from AeroDyn
+   IF (p_FAST%CompElast == Module_BD) THEN 
+      
+      IF ( p_FAST%CompAero == Module_AD ) THEN
+         
+         DO K = 1,p_FAST%nBeams ! Loop through all blades
+            
+            ! need to transfer the BD output blade motions to nodes on a sibling of the BD blade motion mesh:
+            CALL Transfer_Line2_to_Line2( BD%y(k)%BldMotion, MeshMapData%y_BD_BldMotion_4Loads(k), MeshMapData%BD_L_2_BD_L(k), ErrStat2, ErrMsg2 )
+               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                        
+            CALL Transfer_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_L_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
+               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               
+         END DO
+                  
+      ELSE
+
+         DO K = 1,p_FAST%nBeams ! Loop through all blades
+            BD%Input(1,k)%DistrLoad%Force  = 0.0_ReKi
+            BD%Input(1,k)%DistrLoad%Moment = 0.0_ReKi
+         END DO         
+         
+      END IF
+      
+   END IF
+      
+                  
+     
+END SUBROUTINE BD_InputSolve
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD, MeshMapData, ErrStat, ErrMsg )
 ! This routine sets the inputs required for ED--using the Option 2 solve method; currently the only input not solved in this routine
 ! are the fields on PlatformPtMesh and HubPtLoad,  which are solved in option 1.
@@ -1703,8 +1761,6 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD
          
       END IF
       
-   ELSE 
-      ! get blade root loads from BeamDyn
    END IF
       
                   
@@ -4442,12 +4498,13 @@ SUBROUTINE AD_InputSolve_IfW( p_FAST, u_AD, y_IfW, ErrStat, ErrMsg )
    
 END SUBROUTINE AD_InputSolve_IfW
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_ED, MeshMapData, ErrStat, ErrMsg )
+SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_ED, BD, MeshMapData, ErrStat, ErrMsg )
 
       ! Passed variables
    TYPE(FAST_ParameterType),    INTENT(IN   )   :: p_FAST      ! parameter FAST data    
    TYPE(AD_InputType),          INTENT(INOUT)   :: u_AD        ! The inputs to AeroDyn14
    TYPE(ED_OutputType),         INTENT(IN)      :: y_ED        ! The outputs from the structural dynamics module
+   TYPE(BeamDyn_Data),          INTENT(IN)      :: BD          ! The data from BeamDyn (want the outputs only, but it's in an array)
    TYPE(FAST_ModuleMapType),    INTENT(INOUT)   :: MeshMapData ! Data for mapping between modules
    
    INTEGER(IntKi)                               :: ErrStat     ! Error status of the operation
@@ -4504,7 +4561,14 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_ED, MeshMapData, ErrStat, ErrMsg
       END DO
       
    ELSEIF (p_FAST%CompElast == Module_BD ) THEN
-      ! get them from BeamDyn
+      
+         ! get them from BeamDyn
+      DO k=1,size(u_AD%BladeMotion)
+         CALL Transfer_Line2_to_Line2( BD%y(k)%BldMotion, u_AD%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%BladeMotion('//trim(num2lstr(k))//')' )   
+      END DO
+      
+            
    END IF
    
    
@@ -5422,6 +5486,36 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_BDED_L_B('//TRIM(Num2LStr(K))//')' )
          END DO
          
+         ! Blade meshes for load transfer: (allocate meshes at BD input locations for motions transferred from BD output locations)                  
+         ALLOCATE( MeshMapData%BD_L_2_BD_L(NumBl), MeshMapData%y_BD_BldMotion_4Loads(NumBl), STAT=ErrStat2 )
+            IF ( ErrStat2 /= 0 ) THEN
+               CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%BD_L_2_BD_L and MeshMapData%y_BD_BldMotion_4Loads.', &
+                               ErrStat, ErrMsg, RoutineName )
+               RETURN
+            END IF
+         
+         DO K=1,NumBl         
+               ! create the new mesh:
+            CALL MeshCopy ( SrcMesh  = BD%Input(1,k)%DistrLoad &
+                          , DestMesh = MeshMapData%y_BD_BldMotion_4Loads(k) &
+                          , CtrlCode = MESH_SIBLING     &
+                          , IOS      = COMPONENT_OUTPUT &
+                          , TranslationDisp = .TRUE.    &
+                          , Orientation     = .TRUE.    &
+                          , RotationVel     = .TRUE.    &
+                          , TranslationVel  = .TRUE.    &
+                          , RotationAcc     = .TRUE.    &
+                          , TranslationAcc  = .TRUE.    &
+                          , ErrStat  = ErrStat2         &
+                          , ErrMess  = ErrMsg2          ) 
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
+               IF (ErrStat >= AbortErrLev) RETURN
+                                    
+               ! create the mapping:
+            CALL MeshMapCreate( BD%y(k)%BldMotion, MeshMapData%y_BD_BldMotion_4Loads(k), MeshMapData%BD_L_2_BD_L(K), ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BD_L_2_BD_L('//TRIM(Num2LStr(K))//')' )         
+         END DO
+         
       END IF
       
          
@@ -5836,7 +5930,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
       
    CALL SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD, SD, MAPp, FEAM, MD, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD14, AD, SrvD, IfW, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0)
+   CALL SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
                   
 #else
@@ -5854,7 +5948,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    CALL ED_CalcOutput( this_time, ED%Input(1), ED%p, ED%x(this_state), ED%xd(this_state), ED%z(this_state), ED%OtherSt, ED%Output(1), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
          
-   CALL SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD14, AD, SrvD, IfW, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0)
+   CALL SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
          
 #ifdef DEBUG_BEAMDYN
@@ -5900,7 +5994,7 @@ end do
    ELSEIF ( p_FAST%CompAero == Module_AD ) THEN
       
 !debug_print2_unit = 92   
-      CALL AD_InputSolve_NoIfW( p_FAST, AD%Input(1), ED%Output(1), MeshMapData, ErrStat2, ErrMsg2 )   
+      CALL AD_InputSolve_NoIfW( p_FAST, AD%Input(1), ED%Output(1), BD, MeshMapData, ErrStat2, ErrMsg2 )   
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )        
 !debug_print2_unit = 90      
 
@@ -6129,7 +6223,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
                   
 END SUBROUTINE SolveOption1
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD14, AD, SrvD, IfW, MeshMapData, ErrStat, ErrMsg, firstCall)
+SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, MeshMapData, ErrStat, ErrMsg, firstCall)
 ! This routine implements the "option 2" solve for all inputs without direct links to HD, SD, MAP, or the ED platform reference 
 ! point
 !...............................................................................................................................
@@ -6141,6 +6235,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD14, AD, Srv
    TYPE(FAST_MiscVarType),   INTENT(IN   ) :: m_FAST              ! Misc variables for the glue code (including external inputs)
 
    TYPE(ElastoDyn_Data),     INTENT(INOUT) :: ED                  ! ElastoDyn data
+   TYPE(BeamDyn_Data),       INTENT(INOUT) :: BD                  ! BeamDyn data
    TYPE(ServoDyn_Data),      INTENT(INOUT) :: SrvD                ! ServoDyn data
    TYPE(AeroDyn14_Data),     INTENT(INOUT) :: AD14                ! AeroDyn14 data
    TYPE(AeroDyn_Data),       INTENT(INOUT) :: AD                  ! AeroDyn data
@@ -6176,7 +6271,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD14, AD, Srv
    ELSE IF ( p_FAST%CompAero == Module_AD ) THEN 
                         
 !debug_print2_unit = 91      
-      CALL AD_InputSolve_NoIfW( p_FAST, AD%Input(1), ED%Output(1), MeshMapData, ErrStat2, ErrMsg2 )
+      CALL AD_InputSolve_NoIfW( p_FAST, AD%Input(1), ED%Output(1), BD, MeshMapData, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
 !debug_print2_unit = 90      
          
@@ -6241,7 +6336,10 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, AD14, AD, Srv
    CALL ED_InputSolve( p_FAST, ED%Input(1), ED%Output(1), AD14%y, AD%y, SrvD%y, AD%Input(1), SrvD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
+   CALL BD_InputSolve( p_FAST, BD, AD%y, AD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
+            
 END SUBROUTINE SolveOption2
 !----------------------------------------------------------------------------------------------------------------------------------  
 SUBROUTINE FAST_InitializeAll_T( t_initial, TurbID, Turbine, ErrStat, ErrMsg, InFile, ExternInitData )
