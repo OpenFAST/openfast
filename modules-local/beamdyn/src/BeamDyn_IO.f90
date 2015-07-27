@@ -17,6 +17,7 @@
 MODULE BeamDyn_IO
 
    USE BeamDyn_Types
+   USE BeamDyn_Subs
    USE NWTC_Library
 
    IMPLICIT NONE
@@ -1283,6 +1284,9 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
 
       ! local variables
    CHARACTER(*), PARAMETER                   :: RoutineName = 'Calc_WriteOutput'
+   INTEGER(IntKi)                            :: ErrStat2
+   CHARACTER(ErrMsgLen)                      :: ErrMsg2
+   
    
    INTEGER(IntKi)                            :: j,beta
    REAL(ReKi)                                :: temp_glb(3)
@@ -1331,7 +1335,7 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    temp_glbp(1) = p%GlbPos(2)
    temp_glbp(2) = p%GlbPos(3)
    temp_glbp(3) = p%GlbPos(1)
-   temp_vec(1:3) = MATMUL(p%GlbRot, p%uuN0(p%node_elem*p%dof_node-5:p%node_elem*p%dof_node-3,p%elem_total)
+   temp_vec(1:3) = MATMUL(p%GlbRot, p%uuN0( (p%node_elem*p%dof_node-5):(p%node_elem*p%dof_node-3),p%elem_total) )
    temp_tip0(1) = temp_vec(2)
    temp_tip0(2) = temp_vec(3)
    temp_tip0(3) = temp_vec(1)
