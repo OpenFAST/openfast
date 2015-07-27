@@ -1285,25 +1285,72 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    CHARACTER(*), PARAMETER                   :: RoutineName = 'Calc_WriteOutput'
    
    INTEGER(IntKi)                            :: j,beta
+   REAL(ReKi)                                :: temp_glb(3)
+   REAL(ReKi)                                :: temp_vec(3)
+   REAL(ReKi)                                :: temp_glbp(3)
+   REAL(ReKi)                                :: temp_roott(3)
+   REAL(ReKi)                                :: temp_tip0(3)
+   REAL(ReKi)                                :: temp_ini(3)
+   REAL(ReKi)                                :: temp_cur(3)
+   REAL(ReKi)                                :: temp_cc(3)
+   REAL(ReKi)                                :: temp_R(3,3)
    
    
       ! start routine:
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_vec(:) = temp_glb(:)
+   temp_glb(1) = temp_vec(2)
+   temp_glb(2) = temp_vec(3)
+   temp_glb(3) = temp_vec(1)
    !bjj: I don't these are the correct outputs, but you get the idea
-   AllOuts( RootFxr ) = y%ReactionForce%Force(1,1)
-   AllOuts( RootFyr ) = y%ReactionForce%Force(2,1)
-   AllOuts( RootFzr ) = y%ReactionForce%Force(3,1)
+   temp_vec(:) = 0.0D0
+   temp_vec(:) = y%ReactionForce%Force(:,1)
+   temp_vec(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_vec)
+!   AllOuts( RootFxr ) = y%ReactionForce%Force(1,1)
+!   AllOuts( RootFyr ) = y%ReactionForce%Force(2,1)
+!   AllOuts( RootFzr ) = y%ReactionForce%Force(3,1)
+   AllOuts( RootFxr ) = temp_vec(1)
+   AllOuts( RootFyr ) = temp_vec(2)
+   AllOuts( RootFzr ) = temp_vec(3) 
 
-   AllOuts( RootMxr ) = y%ReactionForce%Moment(1,1)
-   AllOuts( RootMyr ) = y%ReactionForce%Moment(2,1)
-   AllOuts( RootMzr ) = y%ReactionForce%Moment(3,1)
+   temp_vec(:) = 0.0D0
+   temp_vec(:) = y%ReactionForce%Moment(:,1)
+   temp_vec(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_vec)
+!   AllOuts( RootMxr ) = y%ReactionForce%Moment(1,1)
+!   AllOuts( RootMyr ) = y%ReactionForce%Moment(2,1)
+!   AllOuts( RootMzr ) = y%ReactionForce%Moment(3,1)
+   AllOuts( RootMxr ) = temp_vec(1)
+   AllOuts( RootMyr ) = temp_vec(2)
+   AllOuts( RootMzr ) = temp_vec(3) 
 
       ! tip motions:   
-   !AllOuts( TipTDxr ) =
-   !AllOuts( TipTDyr ) =
-   !AllOuts( TipTDzr ) =
+   temp_glbp(1) = p%GlbPos(2)
+   temp_glbp(2) = p%GlbPos(3)
+   temp_glbp(3) = p%GlbPos(1)
+   temp_vec(1:3) = MATMUL(p%GlbRot, p%uuN0(p%node_elem*p%dof_node-5:p%node_elem*p%dof_node-3,p%elem_total)
+   temp_tip0(1) = temp_vec(2)
+   temp_tip0(2) = temp_vec(3)
+   temp_tip0(3) = temp_vec(1)
+   temp_ini(:) = temp_glbp(:) + temp_tip0(:)
+   temp_roott(:) = temp_glbp(:) + u%RootMotion%TranslationDisp(:,1)
+   CALL BD_CrvExtractCrv(TRANSPOSE(u%RootMotion%Orientation(1:3,1:3,1)),temp_vec,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CrvCompose(temp_cc,temp_vec,temp_glb,2,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CrvMatrixR(temp_cc,temp_R,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_vec(:) = MATMUL(temp_R,temp_tip0)
+   temp_cur(:) = temp_roott(:) + temp_vec(:)
+   temp_vec(:) = y%BldMotion%TranslationDisp(1:3,p%node_elem*p%elem_total) - &
+                 (temp_cur(:) - temp_ini(:))
+   temp_vec(:) = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec)
+   AllOuts( TipTDxr ) = temp_vec(1)
+   AllOuts( TipTDyr ) = temp_vec(2)
+   AllOuts( TipTDzr ) = temp_vec(3)
    !
    !AllOuts( TipRDxr ) =
    !AllOuts( TipRDyr ) =
