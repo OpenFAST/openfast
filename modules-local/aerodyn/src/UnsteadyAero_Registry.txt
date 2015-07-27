@@ -34,10 +34,10 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             LOGICAL                  Flookup                         -             -         -        "Use table lookup for f' and f'' "    -
 #typedef   ^                            ^                             INTEGER                  AFIndx                          {:}{:}        -         -        "Airfoil index for given blade node" -
 #typedef   ^                            ^                             AFI_ParameterType        AFI_Params                      -             -         -        "Airfoil Info parameter data structure" -
-typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -             -         -        "Output format for numerical results"    -
-typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -             -         -        "Output format for header strings"    -
+#typedef   ^                            ^                             CHARACTER(20)            OutFmt                          -             -         -        "Output format for numerical results"    -
+#typedef   ^                            ^                             CHARACTER(20)            OutSFmt                         -             -         -        "Output format for header strings"    -
 typedef   ^                            ^                             INTEGER                  NumOuts                         -             -         -        "The number of outputs for this module as requested in the input file"    -
-typedef   ^                            ^                             CHARACTER(10)            OutList                         {199}         -         -        "The user-requested output channel labels for this module. This should really be dimensioned with MaxOutPts"    -
+#typedef   ^                            ^                             CHARACTER(10)            OutList                         {199}         -         -        "The user-requested output channel labels for this module. This should really be dimensioned with MaxOutPts"    -
 #                                                                                                                                         
 #                                                                                                                                         
 # Define outputs from the initialization routine here:                                                                                    

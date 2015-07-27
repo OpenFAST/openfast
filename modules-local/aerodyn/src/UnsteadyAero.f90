@@ -60,9 +60,7 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
    ErrMsg  = ''
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
    
-      ! TODO: Extend this to use the UnsteadyAero module to determine the Cl, Cd, Cm info, as needed.  We may need to be tracking whether this call is
-      ! part of an UpdateStates action or a CalcOutput action, because the calculation chain differs for the two.
-      
+   
       
       ! NOTE: we use Table(1) because the right now we can only interpolate with AOA and not Re or other variables.  If we had multiple tables stored
       ! for changes in other variables (Re, Mach #, etc) then then we would need to interpolate across tables.
@@ -333,28 +331,7 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, alpha, alpha0, C_nalpha, AFInf
    ErrStat = ErrID_None
    ErrMsg  = ''
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
-   
-      ! TODO: Extend this to use the AFInfo tables to directly look up f based on either Cn or Cc (or Cm?).
-      
-      
-      ! NOTE: we use Table(1) because the right now we can only interpolate with AOA and not Re or other variables.  If we had multiple tables stored
-      ! for changes in other variables (Re, Mach #, etc) then then we would need to interpolate across tables.
-      !
-   !s1 = size(AFInfo%Table(1)%Coefs,2)
-   !if (s1 < 4) then
-   !   ErrMsg  = 'The Airfoil info table must contains columns for lift, drag, and pitching moment, and f'
-   !   ErrStat = ErrID_Fatal
-   !   return
-   !end if
-   !
-   !IntAFCoefs(1:s1) = CubicSplineInterpM( 1.0*real( alpha*180.0/PI ) &
-   !                                          , AFInfo%Table(1)%Alpha &
-   !                                          , AFInfo%Table(1)%Coefs &
-   !                                          , AFInfo%Table(1)%SplineCoefs &
-   !                                          , ErrStat, ErrMsg )
-   !if (ErrStat > ErrID_None) return
-  
-   !Get_f_from_Lookup = IntAFCoefs(4)   
+    
    
    if (abs(alpha-alpha0) < .01) then
       Get_f_from_Lookup = 1.0_ReKi
@@ -401,27 +378,7 @@ real(ReKi) function Get_f_c_from_Lookup( Re, alpha, alpha0, C_nalpha, AFInfo, Er
    ErrMsg  = ''
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
    
-      ! TODO: Extend this to use the AFInfo tables to directly look up f based on either Cn or Cc (or Cm?).
-      
-      
-      ! NOTE: we use Table(1) because the right now we can only interpolate with AOA and not Re or other variables.  If we had multiple tables stored
-      ! for changes in other variables (Re, Mach #, etc) then then we would need to interpolate across tables.
-      !
-   !s1 = size(AFInfo%Table(1)%Coefs,2)
-   !if (s1 < 4) then
-   !   ErrMsg  = 'The Airfoil info table must contains columns for lift, drag, and pitching moment, and f'
-   !   ErrStat = ErrID_Fatal
-   !   return
-   !end if
-   !
-   !IntAFCoefs(1:s1) = CubicSplineInterpM( 1.0*real( alpha*180.0/PI ) &
-   !                                          , AFInfo%Table(1)%Alpha &
-   !                                          , AFInfo%Table(1)%Coefs &
-   !                                          , AFInfo%Table(1)%SplineCoefs &
-   !                                          , ErrStat, ErrMsg )
-   !if (ErrStat > ErrID_None) return
   
-   !Get_f_from_Lookup = IntAFCoefs(4)   
    
    call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
       if (ErrStat > ErrID_None) return
@@ -647,7 +604,7 @@ real(ReKi) function Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime
       Get_Cm_FS = Cm + Cm_common
       
    else ! UAMod == 2
-         ! TODO: Incomplete because we are not computing fprimeprime_m yet. GJH 5/21/2015
+         
       Get_Cm_FS = Cm0 + Cn_FS*fprimeprime_m + Cm_common
    end if
    
@@ -797,7 +754,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    real(ReKi)                :: alphaf_minus1
    
    
-   !bjj: TODO: fprimeprime_m wasn't set, so I just initialized it to zero.
+
    fprimeprime_m = 0
 
    M           = u%U / p%a_s
@@ -1185,13 +1142,13 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
    call UA_InitStates( p, xd, OtherState, ErrStat, ErrMsg )     ! initialize the continuous states
    if (ErrStat >= AbortErrLev) return    
    
+! TODO: Wrap all of this output handling in a  #ifdef block to avoid allocating arrays when coupled to FAST
+   
       ! Allocate and set the InitOut data
    p%NumOuts = 30
-   p%Delim   = ''
-   p%OutFmt  = 'ES15.4e2'
-   p%OutSFmt = 'A15'
-   allocate(InitOut%WriteOutputHdr(p%NumOuts*p%numBlades*p%nNodesPerBlade))
    
+   
+   allocate(InitOut%WriteOutputHdr(p%NumOuts*p%numBlades*p%nNodesPerBlade))   
    allocate(InitOut%WriteOutputUnt(p%NumOuts*p%numBlades*p%nNodesPerBlade))
    
    iNode = 0

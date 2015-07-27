@@ -42,7 +42,6 @@ module BEMT
    
    type(ProgDesc), parameter  :: BEMT_Ver = ProgDesc( 'BEM', 'v0.01.00a-gjh', '10-July-2014' )
    character(*),   parameter  :: BEMT_Nickname = 'BEM'
-   integer(IntKi), parameter  :: BEMT_numChanPerNode = 13  ! TODO This needs to be set dynamically ?? 9/18/14 GJH
    
    ! ..... Public Subroutines ...................................................................................................
 
@@ -105,11 +104,8 @@ subroutine BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMs
                
    Init_UA_Data%numBlades       = InitInp%numBlades 
    Init_UA_Data%nNodesPerBlade  = InitInp%numBladeNodes
-                                
-   !Init_UA_Data%OutFmt          = 
-   !Init_UA_Data%OutSFmt         =
+                                  
    Init_UA_Data%NumOuts         = 0
-   !Init_UA_Data%OutList         = 
    Init_UA_Data%UAMod           = InitInp%UAMod  
    Init_UA_Data%Flookup         = InitInp%Flookup
    Init_UA_Data%a_s             = InitInp%a_s ! m/s  
@@ -187,7 +183,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    
    p%AFindx = InitInp%AFindx 
    
-      ! Compute the tip and hub loss constants using the distances along the blade (provided as input for now) TODO: See how this really needs to be handled. GJH 
+      ! Compute the tip and hub loss constants using the distances along the blade (provided as input for now) 
    do j=1,p%numBlades
       p%zHub(j) = InitInp%zHub(j)
       do i=1,p%numBladeNodes
@@ -211,7 +207,6 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    p%numReIterations  = InitInp%numReIterations  
    p%maxIndIterations = InitInp%maxIndIterations 
    p%aTol             = InitInp%aTol
-   !p%NumOuts          = 2 + p%numBlades*p%numBladeNodes*BEMT_numChanPerNode  ! TODO This needs to be computed some other way 9/18/14 GJH   
    
 end subroutine BEMT_SetParameters
 
@@ -755,7 +750,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
       integer(IntKi),                      intent(in   ) :: n          ! Current simulation time step n = 0,1,...
       type(BEMT_InputType),                intent(inout) :: u          ! Input at t 
       !real(DbKi),                         intent(in   ) :: utime      ! Times associated with u(:), in seconds
-      type(BEMT_ParameterType),            intent(in   ) :: p          ! Parameters   TODO: this should only be in, but is needed because of a copy of AFInfo in a called subroutine. GJH 1/5/2015
+      type(BEMT_ParameterType),            intent(in   ) :: p          ! Parameters   
       type(BEMT_ContinuousStateType),      intent(inout) :: x          ! Input: Continuous states at t;
                                                                        !   Output: Continuous states at t + Interval
       type(BEMT_DiscreteStateType),        intent(inout) :: xd         ! Input: Discrete states at t;
@@ -770,11 +765,17 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
       
       integer(IntKi)                                    :: i,j
       type(UA_InputType)                                :: u_UA
-      real(ReKi)                                        :: phi, chi
+      real(ReKi)                                        :: phi, chi, Rtip
       
       if ( p%useInduction ) then
          
          do j = 1,p%numBlades
+            
+               ! Locate the maximum rlocal value for this time step and this blade.  This is passed to the solve as Rtip
+            Rtip = 0.0_ReKi
+            do i = 1,p%numBladeNodes
+               Rtip = max( Rtip, u%rlocal(i,j) ) 
+            end do
             
             do i = 1,p%numBladeNodes 
             
@@ -783,8 +784,8 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                OtherState%UA%iBlade     = j
                
                if ( p%SkewWakeMod < SkewMod_Coupled ) then
-                  ! TODO: Need to find the rtip location by finding the maximum u%rlocal for each timestep then pass that in to the Solve GJH
-                  call BEMT_UnCoupledSolve(z%phi(i,j), p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j), u%theta(i,j),  &
+                  
+                  call BEMT_UnCoupledSolve(z%phi(i,j), p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), Rtip, p%chord(i,j), u%theta(i,j),  &
                               u%Vx(i,j), u%Vy(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
                               .FALSE., p%UA, xd%UA, OtherState%UA, &  !p%UA_Flag
                               p%numReIterations, p%maxIndIterations, p%aTol,  &
@@ -793,7 +794,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                   
                else if ( p%SkewWakeMod == SkewMod_Coupled ) then
          
-                  CALL BEMT_CoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j), u%theta(i,j), &
+                  CALL BEMT_CoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), Rtip, p%chord(i,j), u%theta(i,j), &
                               u%Vx(i,j), u%Vy(i,j), u%Vinf(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
                               .FALSE., p%UA, xd%UA, OtherState%UA, & !p%UA_Flag
                               p%maxIndIterations, p%aTol, z%axInduction(i,j), z%tanInduction(i,j), errStat, errMsg)       
@@ -1144,7 +1145,7 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_res
    
 END SUBROUTINE BEMT_CalcConstrStateResidual
 
-subroutine DeterminePhiBounds(numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
+logical function DeterminePhiBounds(numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
                            Vx, Vy, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
                            UA_Flag, p_UA, xd_UA, OtherState_UA, &
                            numReIterations, maxIndIterations, aTol, &
@@ -1201,16 +1202,23 @@ subroutine DeterminePhiBounds(numBlades, numBladeNodes, airDens, mu, AFInfo, rlo
    ErrStat2 = ErrID_None
    ErrMsg2  = ""
    epsilon2 =  sqrt(epsilon(1.0_ReKi)) ! 1e-6 !
+   DeterminePhiBounds = .false.
    
    
-   
-! TODO: Should the induction factors be reset to zero!!!!!! GJH
+
    f1 = UncoupledErrFn(epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
                         Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
                         UA_Flag, p_UA, xd_UA, OtherState_UA, &
                         errStat2, errMsg2)
    if (errStat2 >= AbortErrLev) then
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
+      return
+   end if
+   
+   
+      ! If epsilon satisfies the residual equation, set phi to epsilon and return 
+   if ( abs(f1) < aTol ) then 
+      DeterminePhiBounds = .true.
       return
    end if
    
@@ -1272,7 +1280,9 @@ subroutine DeterminePhiBounds(numBlades, numBladeNodes, airDens, mu, AFInfo, rlo
 
             errStat2 = 4
             errMsg2  = 'There is no valid value of phi for these operating conditions!  psi = '//TRIM(Num2Lstr(psi))//', Vx = '//TRIM(Num2Lstr(Vx))//', Vy = '//TRIM(Num2Lstr(Vy))//', rlocal = '//TRIM(Num2Lstr(rLocal))//', theta = '//TRIM(Num2Lstr(theta))
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' )          
+            call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' )     
+            
+            
             return
          end if
          
@@ -1280,7 +1290,7 @@ subroutine DeterminePhiBounds(numBlades, numBladeNodes, airDens, mu, AFInfo, rlo
                
    end if
    
-end subroutine DeterminePhiBounds
+end function DeterminePhiBounds
 
 subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
                            Vx, Vy, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
@@ -1337,7 +1347,7 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
    integer    :: i,j, niter
    real(ReKi) :: f1, f2, axInduction, tanInduction, phiStar2, phiStar3, residual, fmin1,fmin2, testPhi
    real(ReKi) :: phi_lower, phi_upper, fzero, epsilon2         ! wake skew angle (rad)
-   !logical    :: turnOffSkewWake
+   logical    :: isEpsilon
    integer    :: tmpSkewWakeMod
    real(ReKi) :: AOA, Re, Cl, Cd, Cx, Cy, Cm, chi
    
@@ -1380,28 +1390,17 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
          return
       end if
-    
+
       if ( abs(f1) < aTol ) then
          phiStar =  phiIn
          return
       end if
    end if
    
-   f1 = UncoupledErrFn(epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
-                        errStat2, errMsg2)
-   if (errStat2 >= AbortErrLev) then
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-      return
-   end if
-    
-   if ( abs(f1) < aTol ) then 
-      phiStar =  epsilon2
-      return
-   end if
    
-   call DeterminePhiBounds(numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
+      
+      ! Find out what bracketed region we are going to look for the solution to the residual equation
+   isEpsilon =  DeterminePhiBounds(numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
                            Vx, Vy, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
                            UA_Flag, p_UA, xd_UA, OtherState_UA, &
                            numReIterations, maxIndIterations, aTol, &
@@ -1427,6 +1426,9 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
          return
      ! end if
       
+   else if ( isEpsilon ) then ! espilon satisfies the residual equation
+      phiStar = epsilon2
+      return
    end if
    
    
