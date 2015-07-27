@@ -22,6 +22,7 @@
 PROGRAM MAIN
 
    USE BeamDyn
+   USE BeamDyn_Subs  ! for crv extract routines
    USE BeamDyn_Types
    USE NWTC_Library
 
