@@ -128,8 +128,14 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%GlbPos(2)     = InitInp%GlbPos(1)
    p%GlbPos(3)     = InitInp%GlbPos(2)
    p%GlbRot(1:3,1:3) = TRANSPOSE(InitInp%GlbRot(1:3,1:3))
+WRITE(*,*) 'GlbRot'
+DO i=1,3
+WRITE(*,*) InitInp%GlbRot(i,:)
+ENDDO
    CALL BD_CrvExtractCrv(p%GlbRot,TmpPos,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+WRITE(*,*) 'temp_glb'
+WRITE(*,*) TmpPos
    temp_glb(1) = TmpPos(3)
    temp_glb(2) = TmpPos(1)
    temp_glb(3) = TmpPos(2)
@@ -4146,7 +4152,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    INTEGER(IntKi)                                     :: ErrStat2   ! Temporary Error status
    CHARACTER(ErrMsgLen)                               :: ErrMsg2    ! Temporary Error message
    CHARACTER(*), PARAMETER                            :: RoutineName = 'BD_GA2'
-!   REAL(ReKi):: temp_3(3)
+   REAL(ReKi):: temp_3(3)
 !   INTEGER(IntKi)                                     :: i
 
    ! Initialize ErrStat
@@ -4183,15 +4189,16 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!WRITE(*,*) 'u_interp'
+WRITE(*,*) 't+p%dt:',t+p%dt
+WRITE(*,*) 'u_interp'
 !DO i=1,3
 !WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
 !ENDDO
 !WRITE(*,*) u_interp%RootMotion%TranslationDisp(:,1)
-!WRITE(*,*) 'END u_interp'
-!CALL BD_CrvExtractCrv(TRANSPOSE(u_interp%RootMotion%Orientation(:,:,1)),temp_3,ErrStat2,ErrMsg2)
-!WRITE(*,*) temp_3(:)
+CALL BD_CrvExtractCrv(TRANSPOSE(u_interp%RootMotion%Orientation(:,:,1)),temp_3,ErrStat2,ErrMsg2)
+WRITE(*,*) temp_3(:)
 !WRITE(*,*) u_interp%RootMotion%RotationAcc(:,1)
+WRITE(*,*) 'END u_interp'
                  
    ! GA2: prediction        
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &

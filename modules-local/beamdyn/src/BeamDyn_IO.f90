@@ -1314,6 +1314,9 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    temp_vec(:) = 0.0D0
    temp_vec(:) = y%ReactionForce%Force(:,1)
    temp_vec(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_vec)
+ WRITE(*,*) 'Force'
+ WRITE(*,*) temp_vec
+! WRITE(*,*) y%ReactionForce%Force(:,1)
 !   AllOuts( RootFxr ) = y%ReactionForce%Force(1,1)
 !   AllOuts( RootFyr ) = y%ReactionForce%Force(2,1)
 !   AllOuts( RootFzr ) = y%ReactionForce%Force(3,1)
@@ -1324,6 +1327,13 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    temp_vec(:) = 0.0D0
    temp_vec(:) = y%ReactionForce%Moment(:,1)
    temp_vec(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_vec)
+ !WRITE(*,*) 'u%RootMotion%Orientation'
+ !WRITE(*,*) u%RootMotion%Orientation(1,:,1)
+ !WRITE(*,*) u%RootMotion%Orientation(2,:,1)
+ !WRITE(*,*) u%RootMotion%Orientation(3,:,1)
+ WRITE(*,*) 'Moment'
+ !WRITE(*,*) y%ReactionForce%Moment(:,1)
+ WRITE(*,*) temp_vec
 !   AllOuts( RootMxr ) = y%ReactionForce%Moment(1,1)
 !   AllOuts( RootMyr ) = y%ReactionForce%Moment(2,1)
 !   AllOuts( RootMzr ) = y%ReactionForce%Moment(3,1)
@@ -1352,6 +1362,8 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    temp_vec(:) = y%BldMotion%TranslationDisp(1:3,p%node_elem*p%elem_total) - &
                  (temp_cur(:) - temp_ini(:))
    temp_vec(:) = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec)
+ WRITE(*,*) 'TipDisp'
+ WRITE(*,*) temp_vec
    AllOuts( TipTDxr ) = temp_vec(1)
    AllOuts( TipTDyr ) = temp_vec(2)
    AllOuts( TipTDzr ) = temp_vec(3)
