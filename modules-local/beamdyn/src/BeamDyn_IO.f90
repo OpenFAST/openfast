@@ -1277,7 +1277,7 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
 
    TYPE(BD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
    TYPE(BD_InputType),        INTENT(IN   )  :: u                                 ! inputs
-   REAL(ReKi),                INTENT(INOUT)  :: AllOuts(:)                        ! array of values to potentially write to file
+   REAL(ReKi),                INTENT(INOUT)  :: AllOuts(0:)                        ! array of values to potentially write to file
    TYPE(BD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
