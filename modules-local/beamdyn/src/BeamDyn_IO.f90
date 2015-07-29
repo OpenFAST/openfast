@@ -1291,6 +1291,7 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    INTEGER(IntKi)                            :: j,beta
    REAL(ReKi)                                :: temp_glb(3)
    REAL(ReKi)                                :: temp_vec(3)
+   REAL(ReKi)                                :: temp_vec2(3)
    REAL(ReKi)                                :: temp_glbp(3)
    REAL(ReKi)                                :: temp_roott(3)
    REAL(ReKi)                                :: temp_tip0(3)
@@ -1314,8 +1315,8 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    temp_vec(:) = 0.0D0
    temp_vec(:) = y%ReactionForce%Force(:,1)
    temp_vec(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_vec)
- WRITE(*,*) 'Force'
- WRITE(*,*) temp_vec
+!WRITE(*,*) 'Force'
+!WRITE(*,*) temp_vec
 ! WRITE(*,*) y%ReactionForce%Force(:,1)
 !   AllOuts( RootFxr ) = y%ReactionForce%Force(1,1)
 !   AllOuts( RootFyr ) = y%ReactionForce%Force(2,1)
@@ -1331,9 +1332,9 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
  !WRITE(*,*) u%RootMotion%Orientation(1,:,1)
  !WRITE(*,*) u%RootMotion%Orientation(2,:,1)
  !WRITE(*,*) u%RootMotion%Orientation(3,:,1)
- WRITE(*,*) 'Moment'
+ !WRITE(*,*) 'Moment'
  !WRITE(*,*) y%ReactionForce%Moment(:,1)
- WRITE(*,*) temp_vec
+ !WRITE(*,*) temp_vec
 !   AllOuts( RootMxr ) = y%ReactionForce%Moment(1,1)
 !   AllOuts( RootMyr ) = y%ReactionForce%Moment(2,1)
 !   AllOuts( RootMzr ) = y%ReactionForce%Moment(3,1)
@@ -1362,31 +1363,46 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    temp_vec(:) = y%BldMotion%TranslationDisp(1:3,p%node_elem*p%elem_total) - &
                  (temp_cur(:) - temp_ini(:))
    temp_vec(:) = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec)
- WRITE(*,*) 'TipDisp'
- WRITE(*,*) temp_vec
+ !WRITE(*,*) 'TipDisp'
+ !WRITE(*,*) temp_vec
    AllOuts( TipTDxr ) = temp_vec(1)
    AllOuts( TipTDyr ) = temp_vec(2)
    AllOuts( TipTDzr ) = temp_vec(3)
    !
-   !AllOuts( TipRDxr ) =
-   !AllOuts( TipRDyr ) =
-   !AllOuts( TipRDzr ) =
+   temp_vec(1:3) = MATMUL(p%GlbRot, p%uuN0( (p%node_elem*p%dof_node-2):(p%node_elem*p%dof_node),p%elem_total) )
+   temp_vec2(:) = temp_vec(:)
+   temp_vec(1) = temp_vec2(2)
+   temp_vec(2) = temp_vec2(3)
+   temp_vec(3) = temp_vec2(1)
+   CALL BD_CrvCompose(temp_vec2,temp_vec,temp_glb,0,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CrvCompose(temp_vec,temp_cc,temp_vec2,0,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_cur(:) = 0.0D0
+   CALL BD_CrvExtractCrv(TRANSPOSE(y%BldMotion%Orientation(1:3,1:3,p%node_elem*p%elem_total)),temp_cur,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CrvCompose(temp_vec2,temp_cur,temp_vec,2,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_vec(:) = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec2)
+   AllOuts( TipRDxr ) = temp_vec(1)
+   AllOuts( TipRDyr ) = temp_vec(2)
+   AllOuts( TipRDzr ) = temp_vec(3)
    !
-   !AllOuts( TipTVXg ) =
-   !AllOuts( TipTVYg ) =
-   !AllOuts( TipTVZg ) =
+   AllOuts( TipTVXg ) = y%BldMotion%TranslationVel(1,p%node_elem*p%elem_total)
+   AllOuts( TipTVYg ) = y%BldMotion%TranslationVel(2,p%node_elem*p%elem_total)
+   AllOuts( TipTVZg ) = y%BldMotion%TranslationVel(3,p%node_elem*p%elem_total)
    !
-   !AllOuts( TipRVXg ) =
-   !AllOuts( TipRVYg ) =
-   !AllOuts( TipRVZg ) =
+   AllOuts( TipRVXg ) = y%BldMotion%RotationVel(1,p%node_elem*p%elem_total)
+   AllOuts( TipRVYg ) = y%BldMotion%RotationVel(2,p%node_elem*p%elem_total)
+   AllOuts( TipRVZg ) = y%BldMotion%RotationVel(3,p%node_elem*p%elem_total)
    !
-   !AllOuts( TipTAXg ) =
-   !AllOuts( TipTAYg ) =
-   !AllOuts( TipTAZg ) =
+   AllOuts( TipTAXg ) = y%BldMotion%TranslationAcc(1,p%node_elem*p%elem_total)
+   AllOuts( TipTAYg ) = y%BldMotion%TranslationAcc(2,p%node_elem*p%elem_total)
+   AllOuts( TipTAZg ) = y%BldMotion%TranslationAcc(3,p%node_elem*p%elem_total)
    !
-   !AllOuts( TipRAXg ) =
-   !AllOuts( TipRAYg ) =
-   !AllOuts( TipRAZg ) =
+   AllOuts( TipRAXg ) = y%BldMotion%RotationAcc(1,p%node_elem*p%elem_total)
+   AllOuts( TipRAYg ) = y%BldMotion%RotationAcc(2,p%node_elem*p%elem_total)
+   AllOuts( TipRAZg ) = y%BldMotion%RotationAcc(3,p%node_elem*p%elem_total)
 
 
       ! outputs on the nodes
