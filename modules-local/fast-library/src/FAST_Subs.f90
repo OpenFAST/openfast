@@ -6586,13 +6586,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    IF (p_FAST%CompElast == Module_BD) THEN
       !bjj: FIX ME: TODO: verify that these are correct
       
-      InitInData_BD%RootName     = p_FAST%OutFileRoot     
       InitInData_BD%gravity      = (/ 0.0_ReKi, 0.0_ReKi, -InitOutData_ED%Gravity /)       ! "Gravitational acceleration" m/s^2
       
          ! now initialize IceD for additional legs (if necessary)
       dt_BD = p_FAST%dt_module( MODULE_BD )
                         
       DO k=1,p_FAST%nBeams  
+         InitInData_BD%RootName     = TRIM(p_FAST%OutFileRoot)//'.BD'//TRIM( Num2LStr(k) )
+         
          
          InitInData_BD%InputFile    = p_FAST%BDBldFile(k)
          
