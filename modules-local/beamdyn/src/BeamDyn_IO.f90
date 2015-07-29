@@ -490,8 +490,8 @@ SUBROUTINE BD_ReadInput(InputFileName,InputFileData,OutFileRoot, Default_DT,ErrS
 
    ! Passed Variables:
    CHARACTER(*),                 INTENT(IN   )  :: InputFileName    ! Name of the input file
-   CHARACTER(*),                 INTENT(IN   )  :: OutFileRoot     ! Name of the input file
-   REAL(DbKi),                   INTENT(IN   )    :: Default_DT      ! The default DT (from glue code)
+   CHARACTER(*),                 INTENT(IN   )  :: OutFileRoot      ! Name of the input file
+   REAL(DbKi),                   INTENT(IN   )  :: Default_DT       ! The default DT (from glue code)
    TYPE(BD_InputFile),           INTENT(  OUT)  :: InputFileData    ! Data stored in the module's input file
    INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat          ! The error status code
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg           ! The error message, if an error occurred
@@ -506,14 +506,22 @@ SUBROUTINE BD_ReadInput(InputFileName,InputFileData,OutFileRoot, Default_DT,ErrS
 
    ErrStat = ErrID_None
    ErrMsg = ''
+   UnEcho = -1
 
    InputFileData%DTBeam = Default_DT
    CALL BD_ReadPrimaryFile(InputFileName,InputFileData,OutFileRoot,UnEcho,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      IF(ErrStat >= AbortErrLev) THEN
+         IF (UnEcho > 0) CLOSE (UnEcho)
+         RETURN
+      END IF
+      
    CALL BD_ReadBladeFile(InputFileData%BldFile,InputFileData%InpBl,UnEcho,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-
-   IF(ErrStat >= AbortErrLev) RETURN
+      IF(ErrStat >= AbortErrLev) THEN
+         IF (UnEcho > 0) CLOSE (UnEcho)
+         RETURN
+      END IF
 
 END SUBROUTINE BD_ReadInput
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -567,8 +575,15 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL OpenFInpFile(UnIn,InputFile,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) RETURN
+      IF (ErrStat >= AbortErrLev) then
+         call cleanup()
+         RETURN
+      end if
       
+      
+      
+   I = 1 !set the number of times we've read the file
+   DO    
    !-------------------------- HEADER ---------------------------------------------
    CALL ReadCom(UnIn,InputFile,'File Header: Module Version (line 1)',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -579,22 +594,44 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
          call cleanup()
          return
       end if
-
+   
+   
    !---------------------- SIMULATION CONTROL --------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Simulation Control',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
    CALL ReadVar(UnIn,InputFile,Echo,'Echo','Echo switch',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!   IF(Echo) THEN
-!       CALL OpenEcho(UnEc,OutFileRoot//'.ech',ErrStat2,ErrMsg2)
-!          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!          if (ErrStat >= AbortErrLev) then
-!             call cleanup()
-!             return
-!          end if
-!   ENDIF
-!   IF ( UnEc > 0 )  WRITE(UnEc,*)  'test'
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+   
+   
+      IF (.NOT. Echo .OR. I > 1) EXIT !exit this loop
+   
+         ! Otherwise, open the echo file, then rewind the input file and echo everything we've read
+      
+      I = I + 1         ! make sure we do this only once (increment counter that says how many times we've read this file)
+   
+      CALL OpenEcho ( UnEc, TRIM(OutFileRoot)//'.ech', ErrStat2, ErrMsg2, BeamDyn_Ver )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) then
+            call cleanup()
+            return
+         end if
+   
+      IF ( UnEc > 0 )  WRITE (UnEc,'(/,A,/)')  'Data from '//TRIM(BeamDyn_Ver%Name)//' primary input file "'//TRIM( InputFile )//'":'
+         
+      REWIND( UnIn, IOSTAT=ErrStat2 )  
+         IF (ErrStat2 /= 0_IntKi ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(InputFile)//'".', ErrStat, ErrMsg, RoutineName )
+            call cleanup()
+            RETURN
+         END IF         
+      
+   END DO          
+      
    CALL ReadVar(UnIn,InputFile,InputFileData%analysis_type,"analysis_type", "Analysis type",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
@@ -718,7 +755,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
    !---------------------- BEAM SECTIONAL PARAMETER ----------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Blade Parameter',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ReadVar ( UnIn, InputFile, InputFileData%BldFile, 'MatFile', 'Name of the file containing properties for beam', ErrStat2, ErrMsg2, UnEc )
+   CALL ReadVar ( UnIn, InputFile, InputFileData%BldFile, 'BldFile', 'Name of the file containing properties for beam', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( PathIsRelative( InputFileData%BldFile ) ) InputFileData%BldFile = TRIM(PriPath)//TRIM(InputFileData%BldFile)
 
@@ -726,6 +763,10 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
    !----------- OUTPUTS  -----------------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Outputs', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      ! SumPrint - Print summary data to <RootName>.BD.sum (flag):
+   CALL ReadVar( UnIn, InputFile, InputFileData%SumPrint, "SumPrint", "Print summary data to <RootName>.BD.sum (flag)", ErrStat2, ErrMsg2, UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )           
       
       ! NNodeOuts - Number of node outputs [0 - 9] (-):
    CALL ReadVar( UnIn, InputFile, InputFileData%NNodeOuts, "NNodeOuts", "Number of node outputs [0 - 9] (-)", ErrStat2, ErrMsg2, UnEc)
@@ -764,8 +805,8 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
       
 contains
    subroutine cleanup() 
-      close(UnIn)
-      return
+      if (UnIn > 0) close(UnIn)
+      ! don't close the echo file here
    end subroutine cleanup         
 END SUBROUTINE BD_ReadPrimaryFile
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1257,8 +1298,7 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
    else 
 
    ! Check to see if all OutNd(:) analysis points are existing analysis points:
-   !bjj: FIX ME: I don't know if this is the correct maximum number:
-      nNodes = (InputFileData%order_elem + 1)*InputFileData%member_total
+      nNodes = InputFileData%member_total*InputFileData%order_elem + 1  ! = p%node_total
       do j=1,InputFileData%NNodeOuts
          if ( InputFileData%OutNd(j) < 1_IntKi .OR. InputFileData%OutNd(j) > nNodes ) then
             call SetErrStat( ErrID_Fatal, ' All OutNd values must be between 1 and '//&
@@ -1463,5 +1503,81 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
          
 END SUBROUTINE Calc_WriteOutput
 !----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
+! This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
 
+      ! passed variables
+   TYPE(BD_ParameterType),    INTENT(IN)  :: p                                    ! Parameters of the structural dynamics module
+   TYPE(BD_InputType),        INTENT(IN)  :: u                                    ! inputs 
+   TYPE(BD_OutputType),       INTENT(IN)  :: y                                    ! outputs
+   TYPE(BD_OtherStateType),   INTENT(IN)  :: OtherState                           ! Other/optimization states of the structural dynamics module 
+   CHARACTER(*),              INTENT(IN)  :: RootName
+   INTEGER(IntKi),            INTENT(OUT) :: ErrStat
+   CHARACTER(*),              INTENT(OUT) :: ErrMsg
+
+
+      ! Local variables.
+
+   INTEGER(IntKi)               :: I                                               ! Index for the nodes.
+   INTEGER(IntKi)               :: K                                               ! Generic index (also for the blade number).
+   INTEGER(IntKi)               :: UnSu                                            ! I/O unit number for the summary output file
+
+   CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T35,1(:,F13.3))'                ! Format for outputting mass and modal data.
+   CHARACTER(*), PARAMETER      :: FmtDatT   = '(A,T35,1(:,F13.8))'                ! Format for outputting time steps.
+
+   CHARACTER(30)                :: OutPFmt                                         ! Format to print list of selected output channels to summary file
+
+   ! Open the summary file and give it a heading.
+      
+   CALL GetNewUnit( UnSu, ErrStat, ErrMsg )
+   CALL OpenFOutFile ( UnSu, TRIM( RootName )//'.sum', ErrStat, ErrMsg )
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
+   
+      ! Heading:
+   WRITE (UnSu,'(/,A)')  'This summary information was generated by '//TRIM( GetNVD(BeamDyn_Ver) )// &
+                         ' on '//CurDate()//' at '//CurTime()//'.'
+
+
+
+      ! Some calculated parameters.
+
+   !WRITE (UnSu,'(//,A,/)')  'Some calculated parameters:'
+   !WRITE (UnSu,FmtDat ) '    Flexible Blade Length (m)     ', p%BldFlexL
+
+   WRITE (UnSu,'(//,A,/)')  'Beam mass properties:'
+
+   WRITE (UnSu,FmtDat ) '    Mass                  (kg)    ', p%blade_mass
+   !WRITE (UnSu,FmtDat ) '    Second Mass Moment    (kg-m^2)', p%SecondMom 
+   !WRITE (UnSu,FmtDat ) '    First Mass Moment     (kg-m)  ', p%FirstMom  
+   !WRITE (UnSu,FmtDat ) '    Center of Mass        (m)     ', p%BldCG     
+
+
+      ! Interpolated blade properties.
+
+
+      !WRITE (UnSu,'(//,A,I1,A,/)')  'Interpolated beam properties:'
+      !
+      !WRITE (UnSu,'(A)')  'Node  BlFract   RNodes  DRNodes PitchAxis  StrcTwst  BMassDen    FlpStff    EdgStff'
+      !WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)       (-)     (deg)    (kg/m)     (Nm^2)     (Nm^2)'
+      !
+      !DO I=1,p%BldNodes
+      !   WRITE(UnSu,'(I4,3F9.3,3F10.3,2ES11.3)')  I, p%RNodesNorm(I), p%RNodes(I) + p%HubRad, p%DRNodes(I), &
+      !                                                p%PitchAxis(K,I),p%ThetaS(K,I)*R2D, p%MassB(K,I), &
+      !                                                p%StiffBF(K,I), p%StiffBE(K,I)
+      !ENDDO ! I
+
+
+   OutPFmt = '( I4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
+   WRITE (UnSu,'(//,A,/)')  'Requested Outputs:'
+   WRITE (UnSu,"(/, '  Col  Parameter  Units', /, '  ---  ---------  -----')")
+   DO I = 0,p%NumOuts
+      WRITE (UnSu,OutPFmt)  I, p%OutParam(I)%Name, p%OutParam(I)%Units
+   END DO             
+
+   CLOSE(UnSu)
+
+RETURN
+END SUBROUTINE BD_PrintSum
+!----------------------------------------------------------------------------------------------------------------------------------
 END MODULE BeamDyn_IO
