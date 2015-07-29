@@ -128,26 +128,29 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%GlbPos(2)     = InitInp%GlbPos(1)
    p%GlbPos(3)     = InitInp%GlbPos(2)
    p%GlbRot(1:3,1:3) = TRANSPOSE(InitInp%GlbRot(1:3,1:3))
-WRITE(*,*) 'GlbRot'
-DO i=1,3
-WRITE(*,*) InitInp%GlbRot(i,:)
-ENDDO
+!WRITE(*,*) 'GlbRot'
+!DO i=1,3
+!WRITE(*,*) InitInp%GlbRot(i,:)
+!ENDDO
    CALL BD_CrvExtractCrv(p%GlbRot,TmpPos,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-WRITE(*,*) 'temp_glb'
-WRITE(*,*) TmpPos
+!WRITE(*,*) 'temp_glb'
+!WRITE(*,*) TmpPos
    temp_glb(1) = TmpPos(3)
    temp_glb(2) = TmpPos(1)
    temp_glb(3) = TmpPos(2)
    CALL BD_CrvMatrixR(temp_glb,p%GlbRot,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   temp_POS(:) = MATMUL(TRANSPOSE(p%GlbRot),InitInp%gravity(:))
-   p%gravity(1) = temp_POS(3)
-   p%gravity(2) = temp_POS(1)
-   p%gravity(3) = temp_POS(2)
+   temp_POS(1) = InitInp%gravity(3)
+   temp_POS(2) = InitInp%gravity(1)
+   temp_POS(3) = InitInp%gravity(2)
+   p%gravity(:) = MATMUL(TRANSPOSE(p%GlbRot),temp_POS)
+!   p%gravity(1) = temp_POS(3)
+!   p%gravity(2) = temp_POS(1)
+!   p%gravity(3) = temp_POS(2)
 
-!WRITE(*,*) 'p%gravity'
-!WRITE(*,*) p%gravity
+WRITE(*,*) 'p%gravity'
+WRITE(*,*) p%gravity
    ! Analysis type: 1 Static 2 Dynamic
    p%analysis_type  = InputFileData%analysis_type
    ! Numerical damping coefficient: [0,1].
@@ -194,6 +197,14 @@ WRITE(*,*) TmpPos
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        temp_id = temp_id2
    ENDDO
+!WRITE(*,*) 'SP_Coef'
+!DO i=1,4
+!WRITE(*,*) SP_Coef(1,i,:)
+!ENDDO
+!WRITE(*,*) 'SP_Coef'
+!DO i=1,4
+!WRITE(*,*) SP_Coef(2,i,:)
+!ENDDO
    ! Compute blade/member/segment lengths and the ratios between member/segment and blade lengths
    CALL AllocAry(p%member_length,InputFileData%member_total,2,'member length array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -291,6 +302,10 @@ WRITE(*,*) TmpPos
                    temp_id2 = (j-1)*p%dof_node
                    p%uuN0(temp_id2+1:temp_id2+3,i) = temp_POS(1:3)
                    p%uuN0(temp_id2+4:temp_id2+6,i) = temp_CRV(1:3)
+!WRITE(*,*) 'temp_POS'
+!WRITE(*,*) temp_POS
+!WRITE(*,*) 'temp_CRV'
+!WRITE(*,*) temp_CRV
                    EXIT
                ENDIF
            ENDDO
@@ -686,14 +701,19 @@ WRITE(*,*) TmpPos
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   CALL BD_ComputeBladeMass(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u_tmp,&
-                            p%damp_flag,p%beta,                                     &
-                            p%node_elem,p%dof_node,p%elem_total,                    &
-                            p%dof_total,p%node_total,p%ngp,                         &
-                            p%blade_mass,ErrStat2,ErrMsg2)
+!   CALL BD_ComputeBladeMass(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u_tmp,&
+!                            p%damp_flag,p%beta,                                     &
+!                            p%node_elem,p%dof_node,p%elem_total,                    &
+!                            p%dof_total,p%node_total,p%ngp,                         &
+!                            p%blade_mass,ErrStat2,ErrMsg2)
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_ComputeBladeMassNew(p%uuN0,p%Mass0_GL,p%elem_total,p%node_elem,p%dof_total,&
+                               p%dof_node,p%ngp,p%blade_mass,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 WRITE(*,*) 'blade mass'
 WRITE(*,*) p%blade_mass
+WRITE(*,*) 'blade length'
+WRITE(*,*) p%blade_length
 !WRITE(*,*) 'u_Inic'
 !DO k=1,3
 !WRITE(*,*) u%RootMotion%Orientation(k,:,1)
@@ -3246,6 +3266,8 @@ SUBROUTINE BD_ComputeIniCoef(kp_member,kp_coord,Coef,ErrStat,ErrMsg)
        RHS(temp_id1+2) = kp_coord(kp_member-1,i)
        RHS(temp_id1+3) = kp_coord(kp_member,i)
        RHS(temp_id1+4) = 0.0D0
+!WRITE(*,*) 'RHS'
+!WRITE(*,*) RHS
        CALL LAPACK_getrf( 4*(kp_member-1), 4*(kp_member-1), K,indx,&
                           ErrStat2, ErrMsg2) 
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4189,16 +4211,16 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-WRITE(*,*) 't+p%dt:',t+p%dt
-WRITE(*,*) 'u_interp'
+!WRITE(*,*) 't+p%dt:',t+p%dt
+!WRITE(*,*) 'u_interp'
 !DO i=1,3
 !WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
 !ENDDO
 !WRITE(*,*) u_interp%RootMotion%TranslationDisp(:,1)
-CALL BD_CrvExtractCrv(TRANSPOSE(u_interp%RootMotion%Orientation(:,:,1)),temp_3,ErrStat2,ErrMsg2)
-WRITE(*,*) temp_3(:)
+!CALL BD_CrvExtractCrv(TRANSPOSE(u_interp%RootMotion%Orientation(:,:,1)),temp_3,ErrStat2,ErrMsg2)
+!WRITE(*,*) temp_3(:)
 !WRITE(*,*) u_interp%RootMotion%RotationAcc(:,1)
-WRITE(*,*) 'END u_interp'
+!WRITE(*,*) 'END u_interp'
                  
    ! GA2: prediction        
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
@@ -5262,4 +5284,173 @@ contains
       end subroutine Cleanup
 END SUBROUTINE BD_ComputeBladeMass
 !-----------------------------------------------------------------------------------------------------------------------------------
+
+SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,         &
+                                  elem_total,node_elem,dof_total,dof_node,ngp,&
+                                  blade_mass,ErrStat,ErrMsg)
+!----------------------------------------------------------------------------------------
+! This subroutine computes Global mass matrix and force vector for the beam.
+!----------------------------------------------------------------------------------------
+   REAL(ReKi),        INTENT(IN   ):: uuN0(:,:) ! Initial position vector
+   REAL(ReKi),        INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
+   INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
+   INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
+   INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Degrees of freedom per node  ! bjj: NOT USED
+   INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
+   INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
+   REAL(ReKi),        INTENT(  OUT):: blade_mass ! Mass matrix
+   INTEGER(IntKi),    INTENT(  OUT):: ErrStat       ! Error status of the operation
+   CHARACTER(*),      INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+
+   REAL(ReKi),          ALLOCATABLE:: Nuu0(:)
+   REAL(ReKi)                      :: elem_mass
+   REAL(ReKi),          ALLOCATABLE:: EMass0_GL(:,:,:)
+   INTEGER(IntKi)                  :: dof_elem ! Degree of freedom per node
+   INTEGER(IntKi)                  :: nelem ! number of elements
+   INTEGER(IntKi)                  :: j ! Index counter
+   INTEGER(IntKi)                  :: temp_id ! Index counter
+   INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)            :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(*), PARAMETER         :: RoutineName = 'BD_ComputeBladeMassNew'
+
+   ErrStat    = ErrID_None
+   ErrMsg     = ""
+   blade_mass = 0.0D0
+
+   dof_elem = dof_node * node_elem
+
+   CALL AllocAry(Nuu0,dof_elem,'Nuu0',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(EMass0_GL,6,6,ngp,'EMass0_GL',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+       call Cleanup()
+       return
+   end if
+   Nuu0(:)  = 0.0D0
+   elem_mass= 0.0D0
+   EMass0_GL(:,:,:)  = 0.0D0
+
+   DO nelem=1,elem_total
+       Nuu0(:) = uuN0(:,nelem)
+       temp_id = (nelem-1)*ngp
+       DO j=1,ngp
+           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+       ENDDO
+
+       CALL BD_ComputeElementMass(Nuu0,EMass0_GL,&
+                                  ngp,node_elem,dof_node,&
+                                  elem_mass,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+       blade_mass = blade_mass + elem_mass
+
+       if (ErrStat >= AbortErrLev) then
+           call Cleanup()
+           return
+       end if
+
+   ENDDO
+
+   CALL Cleanup()
+   RETURN
+
+contains
+      subroutine Cleanup()
+
+         if (allocated(Nuu0        )) deallocate(Nuu0        )
+         if (allocated(EMass0_GL   )) deallocate(EMass0_GL   )
+
+      end subroutine Cleanup
+
+END SUBROUTINE BD_ComputeBladeMassNew
+
+SUBROUTINE BD_ComputeElementMass(Nuu0,EMass0_GL,&
+                                 ngp,node_elem,dof_node,&
+                                 elem_mass,ErrStat,ErrMsg)
+
+!-------------------------------------------------------------------------------
+! This subroutine total element forces and mass matrices
+!-------------------------------------------------------------------------------
+
+   REAL(ReKi),INTENT(IN   )    :: Nuu0(:) ! Nodal initial position for each element
+   REAL(ReKi),INTENT(IN   )    :: EMass0_GL(:,:,:) ! Nodal material properties for each element
+   REAL(ReKi),INTENT(  OUT)    :: elem_mass  ! Total element force (Fd, Fc, Fb)
+   INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),INTENT(IN   ):: node_elem ! Node per element
+   INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+
+   REAL(ReKi),      ALLOCATABLE:: gp(:)
+   REAL(ReKi),      ALLOCATABLE:: gw(:)
+   REAL(ReKi),      ALLOCATABLE:: hhx(:)
+   REAL(ReKi),      ALLOCATABLE:: hpx(:)
+   REAL(ReKi),      ALLOCATABLE:: GLL_temp(:)
+   REAL(ReKi),      ALLOCATABLE:: w_temp(:)
+   REAL(ReKi)                  :: Jacobian
+   REAL(ReKi)                  :: gpr
+   REAL(ReKi)                  :: mmm
+   INTEGER(IntKi)              :: igp
+   INTEGER(IntKi)              :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)        :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ComputeElementMass'
+
+   ErrStat  = ErrID_None
+   ErrMsg   = ""
+   elem_mass= 0.0D0
+
+   CALL AllocAry(gp,ngp,'Gauss piont array',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(gw,ngp,'Gauss piont weight function array',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(hhx,node_elem,'Shape function array',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(hpx,node_elem,'Derivative of shape function array',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(GLL_temp,node_elem,'Gauss-Lobatto-Legendre (GLL) point array',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(w_temp,node_elem,'GLL weight function array',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call Cleanup()
+      return
+   end if
+
+
+   CALL BD_GenerateGLL(node_elem-1,GLL_temp,w_temp,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   DO igp=1,ngp
+       gpr=gp(igp)
+
+       CALL BD_ComputeJacobian(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       mmm  = 0.0D0
+       mmm  = EMass0_GL(1,1,igp)
+       
+       elem_mass = elem_mass + gw(igp) * Jacobian * mmm
+
+       if (ErrStat >= AbortErrLev) then
+          call Cleanup()
+          return
+       end if
+
+   ENDDO
+
+   CALL Cleanup()
+   RETURN
+
+CONTAINS
+   SUBROUTINE Cleanup()
+      IF(ALLOCATED(gp       ))  DEALLOCATE(gp       )
+      IF(ALLOCATED(gw       ))  DEALLOCATE(gw       )
+      IF(ALLOCATED(hhx      ))  DEALLOCATE(hhx      )
+      IF(ALLOCATED(hpx      ))  DEALLOCATE(hpx      )
+      IF(ALLOCATED(GLL_temp ))  DEALLOCATE(GLL_temp )
+      IF(ALLOCATED(w_temp   ))  DEALLOCATE(w_temp   )
+   END SUBROUTINE Cleanup
+END SUBROUTINE BD_ComputeElementMass
 END MODULE BeamDyn
