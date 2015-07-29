@@ -178,6 +178,10 @@ WRITE(*,*) p%gravity
    p%node_total  = p%elem_total*(p%node_elem-1) + 1         
    ! Total number of (finite element) dofs
    p%dof_total   = p%node_total*p%dof_node   
+   
+      ! allocate arry for mapping PointLoad to BldMotion (for writeOutput)
+   CALL AllocAry(p%NdIndx,p%node_total,'p%NdIndx',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Compute coefficients for cubic spline fit, clamped at two ends
    CALL AllocAry(SP_Coef,InputFileData%kp_total-1,4,4,'Spline coefficient matrix',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -710,8 +714,8 @@ WRITE(*,*) p%gravity
    CALL BD_ComputeBladeMassNew(p%uuN0,p%Mass0_GL,p%elem_total,p%node_elem,p%dof_total,&
                                p%dof_node,p%ngp,p%blade_mass,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-WRITE(*,*) 'blade mass'
-WRITE(*,*) p%blade_mass
+!WRITE(*,*) 'blade mass'
+!WRITE(*,*) p%blade_mass
 WRITE(*,*) 'blade length'
 WRITE(*,*) p%blade_length
 !WRITE(*,*) 'u_Inic'
@@ -771,6 +775,17 @@ WRITE(*,*) p%blade_length
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !...............................................
       
+       ! Print the summary file if requested:
+   if (InputFileData%SumPrint) then
+      call BD_PrintSum( p, u, y, OtherState, InitInp%RootName, ErrStat2, ErrMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   end if
+      
+   !...............................................
+   
+   xd%DummyDiscState = 0.0_ReKi
+   z%DummyConstrState = 0.0_ReKi
+   
    call Cleanup()
       
    return
@@ -784,6 +799,9 @@ contains
          if (allocated(temp_L2   )) deallocate(temp_L2   )
          if (allocated(SP_Coef   )) deallocate(SP_Coef   )
       
+         call BD_DestroyInputFile( InputFileData, ErrStat2, ErrMsg2)
+         call BD_DestroyInput( u_tmp, ErrStat2, ErrMsg2)
+         
       end subroutine Cleanup            
 END SUBROUTINE BD_Init
 !-----------------------------------------------------------------------------------------------------------------------------------

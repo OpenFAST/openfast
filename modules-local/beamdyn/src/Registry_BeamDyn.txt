@@ -81,6 +81,7 @@ typedef      ^            ^      IntKi  NumOuts - - -  "Number of parameters in 
 typedef      ^     ParameterType OutParmType OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
 typedef      ^     ParameterType IntKi  NNodeOuts - - - "Number of nodes to output data to a file[0 - 9]"	-
 typedef      ^     ParameterType IntKi  OutNd   {9} - - "Nodes whose values will be output"	-
+typedef      ^     ParameterType IntKi  NdIndx  {:} - - "Index into BldMotion mesh (to number the nodes for output without using collocated nodes)"	-
 
 
 # ..... Inputs
@@ -127,3 +128,4 @@ typedef ^             BD_InputFile    IntKi    NNodeOuts - - - "Number of node o
 typedef ^             BD_InputFile    IntKi    OutNd   {9} - - "Nodes whose values will be output"	-
 typedef ^             BD_InputFile    IntKi    NumOuts  -  - - "Number of parameters in the output list (number of outputs requested)"	-
 typedef ^             BD_InputFile    CHARACTER(ChanLen)	OutList	{:}	-	-	"List of user-requested output channels"	-
+typedef ^             BD_InputFile    LOGICAL  SumPrint  -  -  -  "Print summary data to file? (.sum)"	-
