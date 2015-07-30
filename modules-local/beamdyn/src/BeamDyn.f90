@@ -714,8 +714,8 @@ WRITE(*,*) p%gravity
    CALL BD_ComputeBladeMassNew(p%uuN0,p%Mass0_GL,p%elem_total,p%node_elem,p%dof_total,&
                                p%dof_node,p%ngp,p%blade_mass,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!WRITE(*,*) 'blade mass'
-!WRITE(*,*) p%blade_mass
+WRITE(*,*) 'blade mass'
+WRITE(*,*) p%blade_mass
 WRITE(*,*) 'blade length'
 WRITE(*,*) p%blade_length
 !WRITE(*,*) 'u_Inic'
@@ -4193,7 +4193,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    CHARACTER(ErrMsgLen)                               :: ErrMsg2    ! Temporary Error message
    CHARACTER(*), PARAMETER                            :: RoutineName = 'BD_GA2'
    REAL(ReKi):: temp_3(3)
-!   INTEGER(IntKi)                                     :: i
+   INTEGER(IntKi)                                     :: i
 
    ! Initialize ErrStat
 

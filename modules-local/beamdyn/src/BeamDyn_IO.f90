@@ -1329,6 +1329,9 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    
    
    INTEGER(IntKi)                            :: j,beta
+   INTEGER(IntKi)                            :: elem_no
+   INTEGER(IntKi)                            :: node_no
+   INTEGER(IntKi)                            :: temp_id
    REAL(ReKi)                                :: temp_glb(3)
    REAL(ReKi)                                :: temp_vec(3)
    REAL(ReKi)                                :: temp_vec2(3)
@@ -1339,6 +1342,7 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    REAL(ReKi)                                :: temp_cur(3)
    REAL(ReKi)                                :: temp_cc(3)
    REAL(ReKi)                                :: temp_R(3,3)
+   REAL(ReKi)                                :: temp33(3,3)
    
    
       ! start routine:
@@ -1449,22 +1453,58 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    do beta=1,p%NNodeOuts
          
       j=p%OutNd(beta)
-                           
-      !AllOuts( NFl( beta,1 ) ) =
-      !AllOuts( NFl( beta,2 ) ) =
-      !AllOuts( NFl( beta,3 ) ) =
+      IF(j .LE. p%node_elem) THEN
+          elem_no = 1
+          node_no = j
+      ELSE
+          elem_no = INT((j+1)/(p%node_elem-1))
+          node_no = j - (elem_no - 1)*(p%node_elem-1)
+      ENDIF
+      temp_id = (elem_no-1)*p%node_elem+node_no
+      temp33(:,:) = y%BldMotion%Orientation(1:3,1:3,temp_id)
+
+      temp_vec(:) = MATMUL(temp33,y%BldForce%Force(:,j))
+      AllOuts( NFl( beta,1 ) ) = temp_vec(1) 
+      AllOuts( NFl( beta,2 ) ) = temp_vec(2)
+      AllOuts( NFl( beta,3 ) ) = temp_vec(3)
       !
-      !AllOuts( NMl( beta,1 ) ) =
-      !AllOuts( NMl( beta,2 ) ) =
-      !AllOuts( NMl( beta,3 ) ) =
+      temp_vec(:) = MATMUL(temp33,y%BldForce%Moment(:,j))
+      AllOuts( NMl( beta,1 ) ) = temp_vec(1) 
+      AllOuts( NMl( beta,2 ) ) = temp_vec(2)
+      AllOuts( NMl( beta,3 ) ) = temp_vec(3)
       !
-      AllOuts( NTDr( beta,1 ) ) = y%BldMotion%TranslationDisp(1,j)
-      AllOuts( NTDr( beta,2 ) ) = y%BldMotion%TranslationDisp(2,j)
-      AllOuts( NTDr( beta,3 ) ) = y%BldMotion%TranslationDisp(3,j)
+      temp_vec(1:3) = MATMUL(p%GlbRot, p%uuN0( (node_no*p%dof_node-5):(node_no*p%dof_node-3),elem_no) )
+      temp_tip0(1) = temp_vec(2)
+      temp_tip0(2) = temp_vec(3)
+      temp_tip0(3) = temp_vec(1)
+      temp_ini(:) = temp_glbp(:) + temp_tip0(:)
+      temp_vec(:) = MATMUL(temp_R,temp_tip0)
+      temp_cur(:) = temp_roott(:) + temp_vec(:)
+      temp_vec(:) = y%BldMotion%TranslationDisp(1:3,p%node_elem*(elem_no-1)+node_no) - &
+                    (temp_cur(:) - temp_ini(:))
+      temp_vec(:) = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec)
+      AllOuts( NTDr( beta,1 ) ) = temp_vec(1) 
+      AllOuts( NTDr( beta,2 ) ) = temp_vec(2)
+      AllOuts( NTDr( beta,3 ) ) = temp_vec(3)
       !
-      !AllOuts( NRDr( beta,1 ) ) =
-      !AllOuts( NRDr( beta,2 ) ) =
-      !AllOuts( NRDr( beta,3 ) ) =
+      temp_vec(1:3) = MATMUL(p%GlbRot, p%uuN0( (node_no*p%dof_node-2):(node_no*p%dof_node),elem_no) )
+      temp_vec2(:) = temp_vec(:)
+      temp_vec(1) = temp_vec2(2)
+      temp_vec(2) = temp_vec2(3)
+      temp_vec(3) = temp_vec2(1)
+      CALL BD_CrvCompose(temp_vec2,temp_vec,temp_glb,0,ErrStat2,ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL BD_CrvCompose(temp_vec,temp_cc,temp_vec2,0,ErrStat2,ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      temp_cur(:) = 0.0D0
+      CALL BD_CrvExtractCrv(TRANSPOSE(y%BldMotion%Orientation(1:3,1:3,temp_id)),temp_cur,ErrStat2,ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL BD_CrvCompose(temp_vec2,temp_cur,temp_vec,2,ErrStat2,ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      temp_vec(:) = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec2)
+      AllOuts( NRDr( beta,1 ) ) = temp_vec(1)
+      AllOuts( NRDr( beta,2 ) ) = temp_vec(2) 
+      AllOuts( NRDr( beta,3 ) ) = temp_vec(3)
             
       AllOuts( NTVg( beta,1 ) ) = y%BldMotion%TranslationVel(1,j)
       AllOuts( NTVg( beta,2 ) ) = y%BldMotion%TranslationVel(2,j)
@@ -1483,13 +1523,15 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
       AllOuts( NRAg( beta,3 ) ) = y%BldMotion%RotationAcc(3,j)*R2D
             
       !
-      !AllOuts( NPFl( beta,1 ) ) = 
-      !AllOuts( NPFl( beta,2 ) ) = 
-      !AllOuts( NPFl( beta,3 ) ) =     
+      temp_vec(:) = MATMUL(temp33,u%PointLoad%Force(:,j))
+      AllOuts( NPFl( beta,1 ) ) = temp_vec(1) 
+      AllOuts( NPFl( beta,2 ) ) = temp_vec(2) 
+      AllOuts( NPFl( beta,3 ) ) = temp_vec(3)     
       !
-      !AllOuts( NPMl( beta,1 ) ) = 
-      !AllOuts( NPMl( beta,2 ) ) = 
-      !AllOuts( NPMl( beta,3 ) ) = 
+      temp_vec(:) = MATMUL(temp33,u%PointLoad%Moment(:,j))
+      AllOuts( NPMl( beta,1 ) ) = temp_vec(1) 
+      AllOuts( NPMl( beta,2 ) ) = temp_vec(2) 
+      AllOuts( NPMl( beta,3 ) ) = temp_vec(3) 
       !
       !AllOuts( NDFl( beta,1 ) ) = 
       !AllOuts( NDFl( beta,2 ) ) = 
