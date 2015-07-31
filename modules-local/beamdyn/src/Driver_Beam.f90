@@ -213,6 +213,7 @@ END PROGRAM MAIN
 SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
  
    USE BeamDyn
+   USE BeamDyn_Subs
    USE BeamDyn_Types
 
    REAL(DbKi),                     INTENT(IN   ):: t
@@ -258,17 +259,17 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
    DO i=1,3
        u%RootMotion%Orientation(i,i,1) = 1.0D0
    ENDDO
-!   CALL BD_CrvMatrixR(temp_vec,u%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
+   CALL BD_CrvMatrixR(temp_vec,u%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
 !   temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
-!   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
+   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
 !   u%RootMotion%TranslationDisp(:,1) = temp_rr(:) - temp_r0(:)
    ! END Calculate root displacements and rotations
 
    ! Calculate root translational and angular velocities
-   u%RootMotion%RotationVel(:,:) = 0.0D0
+!   u%RootMotion%RotationVel(:,:) = 0.0D0
 !   u%RootMotion%RotationVel(2,1) = 1.0006D0
-!   u%RootMotion%RotationVel(1,1) = 1.0006D0
+   u%RootMotion%RotationVel(1,1) = 1.0006D0
    u%RootMotion%TranslationVel(:,:) = 0.0D0
 !   u%RootMotion%TranslationVel(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr)
    ! END Calculate root translational and angular velocities
@@ -276,7 +277,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
 
    ! Calculate root translational and angular accelerations
    u%RootMotion%TranslationAcc(:,:) = 0.0D0
-!   u%RootMotion%RotationAcc(:,:) = 0.0D0
+   u%RootMotion%RotationAcc(:,:) = 0.0D0
 !   u%RootMotion%TranslationAcc(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)), &
 !               MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr))
    ! END Calculate root translational and angular accelerations
@@ -299,7 +300,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
    u%DistrLoad%Moment(:,:) = 0.0D0
 
 !   DO i=1,p%ngp*p%elem_total+2
-!       u%DistrLoad%Force(1,i) = 2.0*0.314159
+!       u%DistrLoad%Force(1,i) = 1.0D+04
 !   ENDDO
 
 END SUBROUTINE BD_InputSolve
