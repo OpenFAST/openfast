@@ -149,8 +149,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 !   p%gravity(2) = temp_POS(1)
 !   p%gravity(3) = temp_POS(2)
 
-WRITE(*,*) 'p%gravity'
-WRITE(*,*) p%gravity
+!WRITE(*,*) 'p%gravity'
+!WRITE(*,*) p%gravity
    ! Analysis type: 1 Static 2 Dynamic
    p%analysis_type  = InputFileData%analysis_type
    ! Numerical damping coefficient: [0,1].
@@ -344,6 +344,7 @@ WRITE(*,*) p%gravity
    DEALLOCATE(SP_Coef)
 !WRITE(*,*) 'uuN0'
 !WRITE(*,*) p%uuN0(:,1)
+!STOP
 
    ! Compute sectional propertities ( 6 by 6 stiffness and mass matrices)
    ! at Gauss points
@@ -714,10 +715,10 @@ WRITE(*,*) p%gravity
    CALL BD_ComputeBladeMassNew(p%uuN0,p%Mass0_GL,p%elem_total,p%node_elem,p%dof_total,&
                                p%dof_node,p%ngp,p%blade_mass,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-WRITE(*,*) 'blade mass'
-WRITE(*,*) p%blade_mass
-WRITE(*,*) 'blade length'
-WRITE(*,*) p%blade_length
+!WRITE(*,*) 'blade mass'
+!WRITE(*,*) p%blade_mass
+!WRITE(*,*) 'blade length'
+!WRITE(*,*) p%blade_length
 !WRITE(*,*) 'u_Inic'
 !DO k=1,3
 !WRITE(*,*) u%RootMotion%Orientation(k,:,1)
@@ -3162,7 +3163,7 @@ SUBROUTINE BD_ComputeIniNodalPosition(Coef,eta,PosiVec,e1,Twist_Angle,ErrStat,Er
        PosiVec(i) = Coef(i,1) + Coef(i,2)*eta + Coef(i,3)*eta*eta + Coef(i,4)*eta*eta*eta
        e1(i) = Coef(i,2) + 2.0D0*Coef(i,3)*eta + 3.0D0*Coef(i,4)*eta*eta
    ENDDO
-   e1(:) = e1(:)/TwoNorm(e1)
+   e1(:) = ABS(e1(:)/TwoNorm(e1))
    Twist_Angle = 0.0D0
    Twist_Angle = Coef(4,1) + Coef(4,2)*eta + Coef(4,3)*eta*eta + Coef(4,4)*eta*eta*eta
 

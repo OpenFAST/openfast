@@ -1562,6 +1562,8 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
 
    INTEGER(IntKi)               :: I                                               ! Index for the nodes.
    INTEGER(IntKi)               :: K                                               ! Generic index (also for the blade number).
+   INTEGER(IntKi)               :: j                                               ! Generic index (also for the blade number).
+   INTEGER(IntKi)               :: temp_id                                               ! Generic index (also for the blade number).
    INTEGER(IntKi)               :: UnSu                                            ! I/O unit number for the summary output file
 
    CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T35,1(:,F13.3))'                ! Format for outputting mass and modal data.
@@ -1587,14 +1589,51 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
    !WRITE (UnSu,'(//,A,/)')  'Some calculated parameters:'
    !WRITE (UnSu,FmtDat ) '    Flexible Blade Length (m)     ', p%BldFlexL
 
-   WRITE (UnSu,'(//,A,/)')  'Beam mass properties:'
+!   WRITE (UnSu,'(//,A,/)')  'Beam mass properties:'
 
-   WRITE (UnSu,FmtDat ) '    Mass                  (kg)    ', p%blade_mass
+   WRITE (UnSu,'(A,F13.3)') 'Blade mass                  (kg)    ', p%blade_mass
    !WRITE (UnSu,FmtDat ) '    Second Mass Moment    (kg-m^2)', p%SecondMom 
    !WRITE (UnSu,FmtDat ) '    First Mass Moment     (kg-m)  ', p%FirstMom  
    !WRITE (UnSu,FmtDat ) '    Center of Mass        (m)     ', p%BldCG     
 
+   WRITE (UnSu,'(A,F13.3)' ) 'Blade length                  (m)    ', p%blade_length
 
+   WRITE (UnSu,'(A)')  'Gravity vector (m/s^2):'
+
+   WRITE (UnSu,'(3ES18.5)' ) p%gravity(:)
+
+   WRITE (UnSu,'(A,I4)' ) '# of elements    ', p%elem_total
+
+   WRITE (UnSu,'(A,I4)' ) '# of nodes       ', p%node_total
+
+   WRITE (UnSu,'(/,A)')  'Initial position vectors'
+   DO i=1,p%elem_total
+       WRITE (UnSu,'(A,I4)')  'Element number: ',i
+       DO j = 1, p%node_elem
+           temp_id = (j-1)*p%dof_node
+           WRITE(UnSu,'(I4,3ES18.5)') j,p%uuN0(temp_id+1:temp_id+3,i)
+       ENDDO
+   ENDDO
+   WRITE (UnSu,'(/,A)')  'Initial rotation vectors'
+   DO i=1,p%elem_total
+       WRITE (UnSu,'(A,I4)')  'Element number: ',i
+       DO j = 1, p%node_elem
+           temp_id = (j-1)*p%dof_node
+           WRITE(UnSu,'(I4,3ES18.5)') j,p%uuN0(temp_id+4:temp_id+6,i)
+       ENDDO
+   ENDDO
+
+   WRITE (UnSu,'(/,A)')  'Sectional stiffness and mass matrices at Gauss points'
+   DO i=1,p%ngp*p%elem_total
+       WRITE (UnSu,'(/,A,I4)')  'Gauss point number: ',i
+       DO j=1,6
+           WRITE(UnSu,'(6ES15.5)') p%Stif0_GL(j,1:6,i)
+       ENDDO
+       WRITE(UnSu,'(A)') 
+       DO j=1,6
+           WRITE(UnSu,'(6ES15.5)') p%Mass0_GL(j,1:6,i)
+       ENDDO
+   ENDDO
       ! Interpolated blade properties.
 
 
