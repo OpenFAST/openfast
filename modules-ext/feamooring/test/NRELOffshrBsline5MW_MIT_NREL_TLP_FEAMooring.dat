@@ -14,7 +14,7 @@ False             Echo         - Echo input data to <RootName>.ech (flag)
   116.027         LMassDen     - Mass per unit length of the element
    12.984         LDMassDen    - Displaced mass per unit length of the element
     0             LineCI       - The inertia force per unit length / unit accel.
- 1106.4875        LineCD       - The draf force per unit length / unit relative vel squared.
+ 1106.4875        LineCD       - The drag force per unit length / unit relative vel squared.
 152.11  LStrLen (m) 151.730         LUnstrLen    - Unstretched length
     1.0E4         BottmStiff   - Seabed stiffness
    27.00          LRadAnch       (m)
@@ -32,7 +32,7 @@ False             Echo         - Echo input data to <RootName>.ech (flag)
   116.027         LMassDen     - Mass per unit length of the element
    12.984         LDMassDen    - Displaced mass per unit length of the element
     0             LineCI       - The inertia force per unit length / unit accel.
- 1106.4875        LineCD       - The draf force per unit length / unit relative vel squared.
+ 1106.4875        LineCD       - The drag force per unit length / unit relative vel squared.
 152.11  LStrLen (m) 151.730         LUnstrLen    - Unstretched length
     1.0E4         BottmStiff   - Seabed stiffness
    27.00          LRadAnch       (m)
@@ -50,7 +50,7 @@ False             Echo         - Echo input data to <RootName>.ech (flag)
   116.027         LMassDen     - Mass per unit length of the element
    12.984         LDMassDen    - Displaced mass per unit length of the element
     0             LineCI       - The inertia force per unit length / unit accel.
- 1106.4875        LineCD       - The draf force per unit length / unit relative vel squared.
+ 1106.4875        LineCD       - The drag force per unit length / unit relative vel squared.
 152.11  LStrLen (m) 151.730         LUnstrLen    - Unstretched length
     1.0E4         BottmStiff   - Seabed stiffness
    27.00          LRadAnch       (m)
@@ -68,7 +68,7 @@ False             Echo         - Echo input data to <RootName>.ech (flag)
   116.027         LMassDen     - Mass per unit length of the element
    12.984         LDMassDen    - Displaced mass per unit length of the element
     0             LineCI       - The inertia force per unit length / unit accel.
- 1106.4875        LineCD       - The draf force per unit length / unit relative vel squared.
+ 1106.4875        LineCD       - The drag force per unit length / unit relative vel squared.
 152.11  LStrLen (m) 151.730         LUnstrLen    - Unstretched length
     1.0E4         BottmStiff   - Seabed stiffness
    27.00          LRadAnch       (m)
@@ -86,7 +86,7 @@ False             Echo         - Echo input data to <RootName>.ech (flag)
   116.027         LMassDen     - Mass per unit length of the element
    12.984         LDMassDen    - Displaced mass per unit length of the element
     0             LineCI       - The inertia force per unit length / unit accel.
- 1106.4875        LineCD       - The draf force per unit length / unit relative vel squared.
+ 1106.4875        LineCD       - The drag force per unit length / unit relative vel squared.
 152.11  LStrLen (m) 151.730         LUnstrLen    - Unstretched length
     1.0E4         BottmStiff   - Seabed stiffness
    27.00          LRadAnch       (m)
@@ -104,7 +104,7 @@ False             Echo         - Echo input data to <RootName>.ech (flag)
   116.027         LMassDen     - Mass per unit length of the element
    12.984         LDMassDen    - Displaced mass per unit length of the element
     0             LineCI       - The inertia force per unit length / unit accel.
- 1106.4875        LineCD       - The draf force per unit length / unit relative vel squared.
+ 1106.4875        LineCD       - The drag force per unit length / unit relative vel squared.
 152.11  LStrLen (m) 151.730         LUnstrLen    - Unstretched length
     1.0E4         BottmStiff   - Seabed stiffness
    27.00          LRadAnch       (m)
@@ -122,7 +122,7 @@ False             Echo         - Echo input data to <RootName>.ech (flag)
   116.027         LMassDen     - Mass per unit length of the element
    12.984         LDMassDen    - Displaced mass per unit length of the element
     0             LineCI       - The inertia force per unit length / unit accel.
- 1106.4875        LineCD       - The draf force per unit length / unit relative vel squared.
+ 1106.4875        LineCD       - The drag force per unit length / unit relative vel squared.
 152.11  LStrLen (m) 151.730         LUnstrLen    - Unstretched length
     1.0E4         BottmStiff   - Seabed stiffness
    27.00          LRadAnch       (m)
@@ -140,7 +140,7 @@ False             Echo         - Echo input data to <RootName>.ech (flag)
   116.027         LMassDen     - Mass per unit length of the element
    12.984         LDMassDen    - Displaced mass per unit length of the element
     0             LineCI       - The inertia force per unit length / unit accel.
- 1106.4875        LineCD       - The draf force per unit length / unit relative vel squared.
+ 1106.4875        LineCD       - The drag force per unit length / unit relative vel squared.
 152.11  LStrLen (m) 151.730         LUnstrLen    - Unstretched length
     1.0E4         BottmStiff   - Seabed stiffness
    27.00          LRadAnch       (m)

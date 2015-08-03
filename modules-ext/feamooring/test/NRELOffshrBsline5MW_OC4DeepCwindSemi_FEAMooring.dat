@@ -14,7 +14,7 @@ default       WtrDens      - Water density (kg/m^3)
   113.35          LMassDen     - Mass per unit length of the element
     4.72          LDMassDen    - Displaced mass per unit length of the element
     0             LineCI       - The inertia force per unit length / unit accel.
-    6.67377       LineCD       - The draf force per unit length / unit relative vel. squared
+    6.67377       LineCD       - The drag force per unit length / unit relative vel. squared
   835.35          LUnstrLen    - Unstretched length
     1.0E4         BottmStiff   - Seabed stiffness
   837.6           LRadAnch       (m)
@@ -32,7 +32,7 @@ default       WtrDens      - Water density (kg/m^3)
   113.35          LMassDen     - Mass per unit length of the element
     4.72          LDMassDen    - Displaced mass per unit length of the element
     0             LineCI       - The inertia force per unit length / unit accel.
-    6.67377       LineCD       - The draf force per unit length / unit relative vel. squared
+    6.67377       LineCD       - The drag force per unit length / unit relative vel. squared
   835.35          LUnstrLen    - Unstretched length
     1.0E4         BottmStiff   - Seabed stiffness
   837.6           LRadAnch       (m)
@@ -50,7 +50,7 @@ default       WtrDens      - Water density (kg/m^3)
   113.35          LMassDen     - Mass per unit length of the element
     4.72          LDMassDen    - Displaced mass per unit length of the element
     0             LineCI       - The inertia force per unit length / unit accel.
-    6.67377       LineCD       - The draf force per unit length / unit relative vel. squared
+    6.67377       LineCD       - The drag force per unit length / unit relative vel. squared
   835.35          LUnstrLen    - Unstretched length
     1.0E4         BottmStiff   - Seabed stiffness
   837.6           LRadAnch       (m)
