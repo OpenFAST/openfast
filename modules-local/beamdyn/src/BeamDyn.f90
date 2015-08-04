@@ -1295,6 +1295,7 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
    REAL(ReKi)                   :: uu0(6)
    REAL(ReKi)                   :: E10(3)
    REAL(ReKi)                   :: RR0(3,3)
+   REAL(ReKi)                   :: grav(3)
    REAL(ReKi)                   :: kapa(3)
    REAL(ReKi)                   :: E1(3)
    REAL(ReKi)                   :: Stif(6,6)
@@ -1345,6 +1346,7 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
    elg(:,:) = 0.0D0
    elm(:,:) = 0.0D0
 
+   grav(:) = gravity(:)
    CALL AllocAry(gp,ngp,'Gauss piont array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(gw,ngp,'Gauss piont weight function array',ErrStat2,ErrMsg2)
@@ -1416,6 +1418,8 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
                                     betaC,Gd,Xd,Yd,ErrStat2,ErrMsg2)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDIF
+!WRITE(*,*) 'grav'
+!WRITE(*,*) grav
        CALL BD_GravityForce(mmm,mEta,gravity,Fg,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
           if (ErrStat >= AbortErrLev) then
@@ -2382,6 +2386,7 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
    REAL(ReKi)                  :: uu0(6)
    REAL(ReKi)                  :: E10(3)
    REAL(ReKi)                  :: RR0(3,3)
+   REAL(ReKi)                  :: grav(3)
    REAL(ReKi)                  :: kapa(3)
    REAL(ReKi)                  :: E1(3)
    REAL(ReKi)                  :: Stif(6,6)
@@ -2447,6 +2452,7 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
       return
    end if
    temp_Naaa(:)  = 0.0D0
+   grav(:) = gravity(:)
 
    CALL BD_GenerateGLL(node_elem-1,GLL_temp,w_temp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2644,6 +2650,7 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
    REAL(ReKi)                   :: uu0(6)
    REAL(ReKi)                   :: E10(3)
    REAL(ReKi)                   :: RR0(3,3)
+   REAL(ReKi)                   :: grav(3)
    REAL(ReKi)                   :: kapa(3)
    REAL(ReKi)                   :: E1(3)
    REAL(ReKi)                   :: Stif(6,6)
@@ -2684,6 +2691,8 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
    ErrStat = ErrID_None
    ErrMsg  = ""
    elf(:)  = 0.0D0
+   
+   grav(:) = 0.0D0
 
    CALL AllocAry(gp,ngp,'Gauss piont array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3163,7 +3172,7 @@ SUBROUTINE BD_ComputeIniNodalPosition(Coef,eta,PosiVec,e1,Twist_Angle,ErrStat,Er
        PosiVec(i) = Coef(i,1) + Coef(i,2)*eta + Coef(i,3)*eta*eta + Coef(i,4)*eta*eta*eta
        e1(i) = Coef(i,2) + 2.0D0*Coef(i,3)*eta + 3.0D0*Coef(i,4)*eta*eta
    ENDDO
-   e1(:) = ABS(e1(:)/TwoNorm(e1))
+   e1(:) = e1(:)/TwoNorm(e1)
    Twist_Angle = 0.0D0
    Twist_Angle = Coef(4,1) + Coef(4,2)*eta + Coef(4,3)*eta*eta + Coef(4,4)*eta*eta*eta
 
@@ -3678,6 +3687,7 @@ SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
    REAL(ReKi)                  :: uu0(6)
    REAL(ReKi)                  :: E10(3)
    REAL(ReKi)                  :: RR0(3,3)
+   REAL(ReKi)                  :: grav(3)
    REAL(ReKi)                  :: kapa(3)
    REAL(ReKi)                  :: E1(3)
    REAL(ReKi)                  :: Stif(6,6)
@@ -3737,6 +3747,7 @@ SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
 
    temp_Nvvv(:)  = 0.0D0
    temp_Naaa(:)  = 0.0D0
+   grav(:) = gravity(:)
 
    CALL BD_GenerateGLL(node_elem-1,GLL_temp,w_temp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -5208,8 +5219,8 @@ SUBROUTINE BD_InitAcc( t, u, p, x, OtherState, ErrStat, ErrMsg )
    CALL BD_CalcForceAcc(u_tmp,p,x_tmp,OS_tmp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        
-   OtherState%Acc(:) = OS_tmp%Acc(:)
-   OtherState%Xcc(:) = OS_tmp%Acc(:)
+   OtherState%Acc(:) =  OS_tmp%Acc(:)
+   OtherState%Xcc(:) =  OS_tmp%Acc(:)
 
    call cleanup()
    return
