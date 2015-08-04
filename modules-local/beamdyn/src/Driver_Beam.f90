@@ -131,7 +131,7 @@ PROGRAM MAIN
 CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final
 WRITE(*,*) "Time Step: ", n_t_global
-!IF(n_t_global == 1) STOP 
+IF(n_t_global == 0) STOP 
 
 
      CALL BD_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
@@ -156,9 +156,12 @@ CALL BD_CrvExtractCrv(TRANSPOSE(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Pa
       WRITE(QiReacUnit,6000) t_global,&
                            &BD_OutPut(1)%ReactionForce%Force(1:3,1),&
                            &BD_OutPut(1)%ReactionForce%Moment(1:3,1)
+CALL BD_CrvExtractCrv(TRANSPOSE(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,1)),temp_cc,&
+                      ErrStat,ErrMsg)
       WRITE(QiMidDisp,6000) t_global,&
                            &BD_OutPut(1)%BldMotion%TranslationDisp(1:3,1),&
-                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,1)
+                           &temp_cc(1:3)
+!                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,1)
 !      WRITE(QiMidAcc,6000) t_global,&
 !                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,BD_Parameter%node_elem),&
 !                           &BD_OutPut(1)%BldMotion%RotationAcc(1:3,BD_Parameter%node_elem)
@@ -260,10 +263,10 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
        u%RootMotion%Orientation(i,i,1) = 1.0D0
    ENDDO
    CALL BD_CrvMatrixR(temp_vec,u%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
-   temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
+!   temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
    u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
-   u%RootMotion%TranslationDisp(:,1) = temp_rr(:) - temp_r0(:)
+!   u%RootMotion%TranslationDisp(:,1) = temp_rr(:) - temp_r0(:)
    ! END Calculate root displacements and rotations
 
    ! Calculate root translational and angular velocities
@@ -271,15 +274,15 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
 !   u%RootMotion%RotationVel(2,1) = 1.0006D0
    u%RootMotion%RotationVel(1,1) = 1.0006D0
    u%RootMotion%TranslationVel(:,:) = 0.0D0
-   u%RootMotion%TranslationVel(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr)
+!   u%RootMotion%TranslationVel(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr)
    ! END Calculate root translational and angular velocities
 
 
    ! Calculate root translational and angular accelerations
    u%RootMotion%TranslationAcc(:,:) = 0.0D0
    u%RootMotion%RotationAcc(:,:) = 0.0D0
-   u%RootMotion%TranslationAcc(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)), &
-               MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr))
+!   u%RootMotion%TranslationAcc(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)), &
+!               MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr))
    ! END Calculate root translational and angular accelerations
 !------------------
 ! End rotating beam
