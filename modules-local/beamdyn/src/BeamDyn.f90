@@ -72,6 +72,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    INTEGER(IntKi)          :: j                ! do-loop counter
    INTEGER(IntKi)          :: k                ! do-loop counter
    INTEGER(IntKi)          :: m                ! do-loop counter
+   INTEGER(IntKi)          :: id0
+   INTEGER(IntKi)          :: id1
    INTEGER(IntKi)          :: temp_int
    INTEGER(IntKi)          :: temp_id
    INTEGER(IntKi)          :: temp_id2
@@ -201,6 +203,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        temp_id = temp_id2
    ENDDO
+!STOP
 !WRITE(*,*) 'SP_Coef'
 !DO i=1,4
 !WRITE(*,*) SP_Coef(1,i,:)
@@ -222,7 +225,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       
    p%member_length(:,:) = 0.0D0
    p%segment_length(:,:) = 0.0D0
-   CALL BD_ComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,SP_Coef,&
+   CALL BD_ComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,&
+                               InputFileData%kp_coordinate,SP_Coef,&
                                p%segment_length,p%member_length,p%blade_length,&
                                ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -283,19 +287,23 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    DO i=1,p%elem_total
        IF(i .EQ. 1) THEN
            temp_id = 0
+           id0 = 1
+           id1 = InputFileData%kp_member(i)
        ELSE
            temp_id = temp_id + InputFileData%kp_member(i-1) - 1
+           id0 = id1
+           id1 = id0 + InputFileData%kp_member(i) - 1
        ENDIF
        DO j=1,p%node_elem
            eta = (temp_GLL(j) + 1.0D0)/2.0D0
            DO k=1,InputFileData%kp_member(i)-1
                temp_id2 = temp_id + k
+WRITE(*,*) 'temp_id2',temp_id2
                IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN !bjj: would it be better to use equalRealNos and compare with 0? 1D-10 stored in single precision scares me as a limit
                    DO m=1,4
                        temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
                    ENDDO
-                   eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) &
-                              - p%segment_length(temp_id2,2)))
+                   eta = eta * (InputFileData%kp_coordinate(id1,1) - InputFileData%kp_coordinate(id0,1))
                    ! Compute GLL point physical coordinates in blade frame
                    CALL BD_ComputeIniNodalPosition(temp_Coef,eta,temp_POS,temp_e1,temp_twist,&
                                                    ErrStat2, ErrMsg2)
@@ -323,6 +331,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                        temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
                    ENDDO
                    eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
+                   eta = eta * (InputFileData%kp_coordinate(id1,1) - InputFileData%kp_coordinate(id0,1))
                    CALL BD_ComputeIniNodalPosition(temp_Coef,eta,temp_POS,temp_e1,temp_twist,&
                                                    ErrStat2, ErrMsg2)
                       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1002,8 +1011,13 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
            y%BldMotion%TranslationDisp(2,temp_id2) = temp_cc(3)
            y%BldMotion%TranslationDisp(3,temp_id2) = temp_cc(1)
            cc(1:3) = x%q(temp_id+4:temp_id+6)
+!WRITE(*,*) 'cc'
+!WRITE(*,*) cc
            temp_id = (j-1)*p%dof_node
            cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
+!WRITE(*,*) 'temp_id',temp_id
+!WRITE(*,*) 'cc0'
+!WRITE(*,*) cc0
            CALL BD_CrvCompose(temp_cc,cc0,cc,0,ErrStat2,ErrMsg2)
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            temp_cc = MATMUL(p%GlbRot,temp_cc)
@@ -3072,7 +3086,8 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx,ErrStat,ErrMsg)
 
  END SUBROUTINE BD_diffmtc
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_ComputeMemberLength(member_total,kp_member,Coef,seg_length,member_length,total_length,&
+SUBROUTINE BD_ComputeMemberLength(member_total,kp_member,kp_coordinate,&
+                                  Coef,seg_length,member_length,total_length,&
                                   ErrStat,ErrMsg)
 !----------------------------------------------------------------------------------------
 ! This subroutine computes the segment length, member length, and total length of a beam.
@@ -3082,6 +3097,7 @@ SUBROUTINE BD_ComputeMemberLength(member_total,kp_member,Coef,seg_length,member_
    INTEGER(IntKi),INTENT(IN   ):: member_total
    INTEGER(IntKi),INTENT(IN   ):: kp_member(:)
    REAL(ReKi),    INTENT(IN   ):: Coef(:,:,:)
+   REAL(ReKi),    INTENT(IN   ):: kp_coordinate(:,:)
    REAL(ReKi),    INTENT(  OUT):: seg_length(:,:)
    REAL(ReKi),    INTENT(  OUT):: member_length(:,:)
    REAL(ReKi),    INTENT(  OUT):: total_length
@@ -3100,20 +3116,29 @@ SUBROUTINE BD_ComputeMemberLength(member_total,kp_member,Coef,seg_length,member_
    INTEGER(IntKi)              :: k
    INTEGER(IntKi)              :: m
    INTEGER(IntKi)              :: temp_id
+   INTEGER(IntKi)              :: id0
+   INTEGER(IntKi)              :: id1
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   sample_total = 1001
-   sample_step = 1.0D0/(sample_total-1)
+   sample_total = 3 !1001
 
    temp_id = 0
    DO i=1,member_total
+       IF(i .EQ. 1) THEN
+           id0 = 1
+           id1 = kp_member(i)
+       ELSE
+           id0 = id1
+           id1 = id0 + kp_member(i) - 1
+       ENDIF
        DO m=1,kp_member(i)-1
            temp_id = temp_id + 1
+           sample_step = (kp_coordinate(id0+m,1) - kp_coordinate(id0+m-1,1))/(sample_total-1)
            DO j=1,sample_total-1
-               eta0 = (j-1)*sample_step
-               eta1 = j*sample_step
+               eta0 = kp_coordinate(temp_id,1) + (j-1)*sample_step
+               eta1 = kp_coordinate(temp_id,1) + j*sample_step
                DO k=1,3
                    temp_pos0(k) = Coef(temp_id,1,k) + Coef(temp_id,2,k)*eta0 + Coef(temp_id,3,k)*eta0*eta0 + Coef(temp_id,4,k)*eta0*eta0*eta0
                    temp_pos1(k) = Coef(temp_id,1,k) + Coef(temp_id,2,k)*eta1 + Coef(temp_id,3,k)*eta1*eta1 + Coef(temp_id,4,k)*eta1*eta1*eta1
@@ -3271,31 +3296,50 @@ SUBROUTINE BD_ComputeIniCoef(kp_member,kp_coord,Coef,ErrStat,ErrMsg)
        RHS(:) = 0.0D0
 
        K(1,3) = 2.0D0
+       K(1,4) = 6.0D0*kp_coord(1,1)
        RHS(1) = 0.0D0
        DO j=1,kp_member-2
            temp_id1 = (j-1)*4
            K(temp_id1+2,temp_id1+1) = 1.0D0
-           K(temp_id1+3,temp_id1+1:temp_id1+4) = 1.0D0
+           K(temp_id1+2,temp_id1+2) = kp_coord(j,1)
+           K(temp_id1+2,temp_id1+3) = kp_coord(j,1)**2
+           K(temp_id1+2,temp_id1+4) = kp_coord(j,1)**3
+           K(temp_id1+3,temp_id1+1) = 1.0D0
+           K(temp_id1+3,temp_id1+2) = kp_coord(j+1,1)
+           K(temp_id1+3,temp_id1+3) = kp_coord(j+1,1)**2
+           K(temp_id1+3,temp_id1+4) = kp_coord(j+1,1)**3
            K(temp_id1+4,temp_id1+2) = 1.0D0
-           K(temp_id1+4,temp_id1+3) = 2.0D0
-           K(temp_id1+4,temp_id1+4) = 3.0D0
+           K(temp_id1+4,temp_id1+3) = 2.0D0*kp_coord(j+1,1)
+           K(temp_id1+4,temp_id1+4) = 3.0D0*kp_coord(j+1,1)**2
            K(temp_id1+4,temp_id1+6) = -1.0D0
+           K(temp_id1+4,temp_id1+7) = -2.0D0*kp_coord(j+1,1)
+           K(temp_id1+4,temp_id1+8) = -3.0D0*kp_coord(j+1,1)**2
            K(temp_id1+5,temp_id1+3) = 2.0D0
-           K(temp_id1+5,temp_id1+4) = 6.0D0
+           K(temp_id1+5,temp_id1+4) = 6.0D0*kp_coord(j+1,1)
            K(temp_id1+5,temp_id1+7) = -2.0D0
+           K(temp_id1+5,temp_id1+8) = -6.0D0*kp_coord(j+1,1)
            RHS(temp_id1+2) = kp_coord(j,i)
            RHS(temp_id1+3) = kp_coord(j+1,i)
        ENDDO
        temp_id1 = (kp_member-2)*4
        K(temp_id1+2,temp_id1+1) = 1.0D0
-       K(temp_id1+3,temp_id1+1:temp_id1+4) = 1.0D0
+       K(temp_id1+2,temp_id1+2) = kp_coord(kp_member-1,1)
+       K(temp_id1+2,temp_id1+3) = kp_coord(kp_member-1,1)**2
+       K(temp_id1+2,temp_id1+4) = kp_coord(kp_member-1,1)**3
+       K(temp_id1+3,temp_id1+1) = 1.0D0
+       K(temp_id1+3,temp_id1+2) = kp_coord(kp_member,1)
+       K(temp_id1+3,temp_id1+3) = kp_coord(kp_member,1)**2
+       K(temp_id1+3,temp_id1+4) = kp_coord(kp_member,1)**3
        K(temp_id1+4,temp_id1+3) = 2.0D0
-       K(temp_id1+4,temp_id1+4) = 6.0D0
+       K(temp_id1+4,temp_id1+4) = 6.0D0*kp_coord(kp_member,1)
        RHS(temp_id1+2) = kp_coord(kp_member-1,i)
        RHS(temp_id1+3) = kp_coord(kp_member,i)
        RHS(temp_id1+4) = 0.0D0
-!WRITE(*,*) 'RHS'
-!WRITE(*,*) RHS
+!WRITE(*,*) 'K'
+!DO j=1,12
+!WRITE(*,*) 'j = ',j
+!WRITE(*,*) K(j,:)
+!ENDDO
        CALL LAPACK_getrf( 4*(kp_member-1), 4*(kp_member-1), K,indx,&
                           ErrStat2, ErrMsg2) 
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4434,6 +4478,7 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
    REAL(ReKi)                                   :: temp_Rb(3,3)
    REAL(ReKi)                                   :: temp_ref(3)
 !   REAL(ReKi)                                   :: temp_root(3)
+   INTEGER(IntKi)                               :: i
    INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_BoundaryGA2'
@@ -4454,6 +4499,13 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
    CALL BD_CrvMatrixR(temp_ref,temp_Rb,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    temp_cc(:) = MATMUL(temp_Rb,temp_cc)
+
+   CALL BD_CrvMatrixR(temp_cc,temp_Rb,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!WRITE(*,*) 'TEST R'
+!DO i=1,3
+!WRITE(*,*) temp_Rb(i,:)
+!ENDDO
 !WRITE(*,*) 'temp_u0'
 !WRITE(*,*) temp_cc
 !WRITE(*,*) 'temp_glb'
