@@ -53,6 +53,7 @@ typedef BeamDyn/BD OtherStateType Logical  InitAcc  -  - - "flag to determine if
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 
 typedef BeamDyn/BD ParameterType ReKi   uuN0      {:}{:} - -  "Initial Postion Vector" -
+typedef BeamDyn/BD ParameterType ReKi   Gauss     {:}{:} - -  "Gauss point postion vector" -
 typedef      ^            ^       ^     Stif0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
 typedef      ^            ^       ^     Mass0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
 typedef BeamDyn/BD ParameterType ReKi   gravity   {3} - -  "Gravitational acceleration" m/s^2
