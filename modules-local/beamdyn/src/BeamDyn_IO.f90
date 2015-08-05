@@ -745,6 +745,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
        InputFileData%kp_coordinate(i,1) =  TmpReAry(3)
        InputFileData%kp_coordinate(i,4) = -TmpReAry(4)
    ENDDO
+   InputFileData%kp_coordinate(1,4) = 0.0D0 !-TmpReAry(4)
    
    !---------------------- MESH PARAMETER -----------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Mesh Parameter',ErrStat2,ErrMsg2,UnEc)
@@ -1623,6 +1624,10 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
        ENDDO
    ENDDO
 
+   WRITE (UnSu,'(/,A)')  'Gauss point position vectors'
+   DO i=2,p%ngp*p%elem_total + 1
+       WRITE(UnSu,'(I4,3ES18.5)') i-1,p%Gauss(1:3,i)
+   ENDDO
    WRITE (UnSu,'(/,A)')  'Sectional stiffness and mass matrices at Gauss points'
    DO i=1,p%ngp*p%elem_total
        WRITE (UnSu,'(/,A,I4)')  'Gauss point number: ',i

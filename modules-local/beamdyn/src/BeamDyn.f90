@@ -263,6 +263,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ! temp_L2: physical coordinates of Gauss points and two end points
    CALL AllocAry(temp_L2,6,p%ngp*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%Gauss,6,p%ngp*p%elem_total+2,'p%Gauss',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Temporary Gauss point intrinsic coordinates array
    CALL AllocAry(temp_GL,p%ngp,'temp_GL',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -298,12 +300,12 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            eta = (temp_GLL(j) + 1.0D0)/2.0D0
            DO k=1,InputFileData%kp_member(i)-1
                temp_id2 = temp_id + k
-WRITE(*,*) 'temp_id2',temp_id2
                IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN !bjj: would it be better to use equalRealNos and compare with 0? 1D-10 stored in single precision scares me as a limit
                    DO m=1,4
                        temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
                    ENDDO
-                   eta = eta * (InputFileData%kp_coordinate(id1,1) - InputFileData%kp_coordinate(id0,1))
+                   eta = InputFileData%kp_coordinate(id0,1) + &
+                         eta * (InputFileData%kp_coordinate(id1,1) - InputFileData%kp_coordinate(id0,1))
                    ! Compute GLL point physical coordinates in blade frame
                    CALL BD_ComputeIniNodalPosition(temp_Coef,eta,temp_POS,temp_e1,temp_twist,&
                                                    ErrStat2, ErrMsg2)
@@ -330,8 +332,8 @@ WRITE(*,*) 'temp_id2',temp_id2
                    DO m=1,4
                        temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
                    ENDDO
-                   eta = ABS((eta - p%segment_length(temp_id2,2))/(p%segment_length(temp_id2,3) - p%segment_length(temp_id2,2)))
-                   eta = eta * (InputFileData%kp_coordinate(id1,1) - InputFileData%kp_coordinate(id0,1))
+                   eta = InputFileData%kp_coordinate(id0,1) + &
+                         eta * (InputFileData%kp_coordinate(id1,1) - InputFileData%kp_coordinate(id0,1))
                    CALL BD_ComputeIniNodalPosition(temp_Coef,eta,temp_POS,temp_e1,temp_twist,&
                                                    ErrStat2, ErrMsg2)
                       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -349,6 +351,9 @@ WRITE(*,*) 'temp_id2',temp_id2
    temp_L2(4:6,1) = p%uuN0(4:6,1)
    temp_L2(1:3,p%ngp*p%elem_total+2) = p%uuN0(temp_int-5:temp_int-3,p%elem_total)
    temp_L2(4:6,p%ngp*p%elem_total+2) = p%uuN0(temp_int-2:temp_int,p%elem_total)
+   DO i = 1, p%ngp*p%elem_total+2
+       p%Gauss(:,i) = temp_L2(:,i)
+   ENDDO
    DEALLOCATE(temp_GLL)
    DEALLOCATE(SP_Coef)
 !WRITE(*,*) 'uuN0'
