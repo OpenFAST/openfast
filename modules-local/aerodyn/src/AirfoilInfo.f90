@@ -372,7 +372,25 @@ CONTAINS
                RETURN
             ENDIF
 
+            
+#ifdef LINEAR_INTERP
 
+            ! use this for linear interpolation (sets the higher order coeffs to zero):
+
+               ! Compute the one set of coefficients of the piecewise polynomials for the irregularly-spaced data.
+               ! Unlike the 2-D interpolation in which we use diffent knots for each airfoil coefficient, we can do
+               ! the 1-D stuff all at once.
+
+            CALL CubicLinSplineInitM ( p%AFInfo(File)%Table(1)%Alpha &
+                                  , p%AFInfo(File)%Table(1)%Coefs &
+                                  , p%AFInfo(File)%Table(1)%SplineCoefs &
+                                  , ErrStat2, ErrMsg2 )
+               CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+#else
+
+          ! use this for cubic splines:
+      
                ! Compute the one set of coefficients of the piecewise polynomials for the irregularly-spaced data.
                ! Unlike the 2-D interpolation in which we use diffent knots for each airfoil coefficient, we can do
                ! the 1-D stuff all at once.
@@ -382,7 +400,10 @@ CONTAINS
                                   , p%AFInfo(File)%Table(1)%SplineCoefs &
                                   , ErrStat2, ErrMsg2 )
                CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
+               
+#endif
+               
+               
          ENDIF ! ( p%AFInfo(File)%NumTabs > 1 )
 
 
