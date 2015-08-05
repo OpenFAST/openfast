@@ -1585,18 +1585,16 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
        WRITE (UnSu,'(A)')  'Analysis type: DYNAMIC' 
    ENDIF
 
-   WRITE (UnSu,'(A)')  'Numerical damping parameter:' 
-   WRITE (UnSu,'(1ES18.5)' ) p%rhoinf
+   WRITE (UnSu,'(A,1ES18.5)')  'Numerical damping parameter:',p%rhoinf
 
-   WRITE (UnSu,'(A)')  'Time increment:' 
-   WRITE (UnSu,'(1ES18.5)' ) p%dt
+   WRITE (UnSu,'(A,1ES18.5)')  'Time increment:',p%dt 
 
-   WRITE (UnSu,'(A,I4)' ) 'Maximum # of iterations in Newton-Ralphson solution', p%niter
-   WRITE (UnSu,'(A,1ES18.5)' ) 'Convergence parameter', p%tol
+   WRITE (UnSu,'(A,I4)' ) 'Maximum number of iterations in Newton-Ralphson solution:', p%niter
+   WRITE (UnSu,'(A,1ES18.5)' ) 'Convergence parameter:', p%tol
 
-   WRITE (UnSu,'(A,I4)' ) '# of elements    ', p%elem_total
+   WRITE (UnSu,'(A,I4)' ) 'Number of elements:    ', p%elem_total
 
-   WRITE (UnSu,'(A,I4)' ) '# of nodes       ', p%node_total
+   WRITE (UnSu,'(A,I4)' ) 'Number of nodes:       ', p%node_total
 
    WRITE (UnSu,'(/,A)')  'Initial position vectors'
    DO i=1,p%elem_total
