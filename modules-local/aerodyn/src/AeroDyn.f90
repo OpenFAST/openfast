@@ -1145,7 +1145,7 @@ subroutine SetInputsForBEMT(p, u, OtherState, errStat, errMsg)
       tmp_sz_y = min(  1.0_ReKi, OtherState%V_dot_x / tmp_sz )
       tmp_sz_y = max( -1.0_ReKi, tmp_sz_y )
       
-      OtherState%BEMT_u%chi0 = acos( tmp_sz_y )      
+      OtherState%BEMT_u%chi0 = acos( tmp_sz_y )
    end if
    
       ! "Azimuth angle" rad
@@ -1262,7 +1262,7 @@ subroutine SetOutputsFromBEMT(p, OtherState, y )
          q = 0.5 * p%airDens * OtherState%BEMT_y%inducedVel(j,k)**2        ! dynamic pressure of the jth node in the kth blade
          force(1) =  OtherState%BEMT_y%cx(j,k) * q * p%BEMT%chord(j,k)     ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
          force(2) = -OtherState%BEMT_y%cy(j,k) * q * p%BEMT%chord(j,k)     ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
-         moment(3)= -OtherState%BEMT_y%cm(j,k) * q * p%BEMT%chord(j,k)**2  ! M = pitching moment per unit length of the jth node in the kth blade
+         moment(3)=  OtherState%BEMT_y%cm(j,k) * q * p%BEMT%chord(j,k)**2  ! M = pitching moment per unit length of the jth node in the kth blade
          
             ! save these values for possible output later:
          OtherState%X(j,k) = force(1)
