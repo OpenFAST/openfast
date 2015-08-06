@@ -703,6 +703,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
 
       ! Local error handling
+   INTEGER(IntKi)                                     :: ios                  !< I/O status
    INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
    CHARACTER(1024)                                    :: ErrMsgTmp            !< Temporary error messages for calls
 
@@ -713,7 +714,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    FileName = TRIM(DvrFileName)
 
    CALL GetNewUnit( UnIn )
-   CALL OpenFInpFile( UnIn, FileName, ErrStatTmp )
+   CALL OpenFInpFile( UnIn, FileName, ErrStatTmp, ErrMsgTmp )
    IF ( ErrStatTmp /= ErrID_None ) THEN
       CALL SetErrStat(ErrID_Fatal,' Failed to open InflowWind Driver input file: '//FileName,   &
          ErrStat,ErrMsg,'ReadDvrIptFile')
@@ -851,9 +852,9 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    ELSE
          !  We probably have a number if it isn't 'DEFAULT', so do an internal read and check to
          !  make sure that it was appropriately interpretted.
-      READ (NumTimeStepsChr,*,IOSTAT=ErrStatTmp)   DvrSettings%NumTimeSteps
-      IF ( ErrStatTmp /= ErrID_None )  THEN  ! problem in the read, so parse the error.
-         CALL CheckIOS ( ErrStatTmp, '', 'NumTimeSteps',NumType, .TRUE., ErrMsgTmp )
+      READ (NumTimeStepsChr,*,IOSTAT=IOS)   DvrSettings%NumTimeSteps
+      IF ( IOS /= 0 )  THEN  ! problem in the read, so parse the error.
+         CALL CheckIOS ( IOS, '', 'NumTimeSteps',NumType, ErrStatTmp, ErrMsgTmp )
          RETURN
       ELSE     ! Was ok, so set the flags
          DvrFlags%NumTimeSteps         =  .TRUE.
@@ -933,9 +934,9 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    ELSE
          !  We probably have a number if it isn't 'DEFAULT', so do an internal read and check to
          !  make sure that it was appropriately interpretted.
-      READ (DTChr,*,IOSTAT=ErrStatTmp)   DvrSettings%DT
-      IF ( ErrStatTmp /= ErrID_None )  THEN  ! problem in the read, so parse the error.
-         CALL CheckIOS ( ErrStatTmp, '', 'DT',NumType, .TRUE., ErrMsgTmp )
+      READ (DTChr,*,IOSTAT=IOS)   DvrSettings%DT
+      IF ( IOS /= 0 )  THEN  ! problem in the read, so parse the error.
+         CALL CheckIOS ( IOS, '', 'DT',NumType, ErrStatTmp, ErrMsgTmp )
          RETURN
       ELSE     ! Was ok, so set the flags
          DvrFlags%DT         =  .TRUE.

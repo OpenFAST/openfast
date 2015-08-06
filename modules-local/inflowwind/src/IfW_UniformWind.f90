@@ -405,7 +405,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OtherStates, O
 
       DO I=3,ParamData%NumDataLines
 
-         IF ( .NOT. EqualRealNos( (ParamData%Tdata(I  ) - ParamData%Tdata(I-1) ), REAL(InitOutData%WindFileDT )) ) THEN
+         IF ( .NOT. EqualRealNos( (ParamData%Tdata(I  ) - ParamData%Tdata(I-1) ), REAL(InitOutData%WindFileDT,ReKi )) ) THEN
             InitOutData%WindFileConstantDT  =  .FALSE.
             EXIT
          END IF
