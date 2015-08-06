@@ -29,7 +29,6 @@ typedef  ^                       ^                 ProgDesc         Ver         
 #   e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 #   at a given time, etc.)
 typedef  ^                       OtherStateType    IntKi             TimeIndex         -     0     -     "An Index into the TData array"                             -
-typedef  ^                       ^                 ReKi              HAWCData          ::::  -     -     "Array of HAWC data"                                        -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -41,10 +40,11 @@ typedef  ^                       ^                 CHARACTER(1024)   FileName_w 
 typedef  ^                       ^                 IntKi             nx                -     0     -     "Number of grids in the x direction (in the 3 files above)" -
 typedef  ^                       ^                 IntKi             ny                -     0     -     "Number of grids in the y direction (in the 3 files above)" -
 typedef  ^                       ^                 IntKi             nz                -     0     -     "Number of grids in the z direction (in the 3 files above)" -
-typedef  ^                       ^                 ReKi              dx                -     0     -     "Number of grids in the x direction (in the 3 files above)" -
-typedef  ^                       ^                 ReKi              dy                -     0     -     "Number of grids in the y direction (in the 3 files above)" -
-typedef  ^                       ^                 ReKi              dz                -     0     -     "Number of grids in the z direction (in the 3 files above)" -
+typedef  ^                       ^                 ReKi              dx                -     0     -     "size of grids in the x direction (in the 3 files above)" -
+typedef  ^                       ^                 ReKi              dy                -     0     -     "size of grids in the y direction (in the 3 files above)" -
+typedef  ^                       ^                 ReKi              dz                -     0     -     "size of grids in the z direction (in the 3 files above)" -
 typedef  ^                       ^                 ReKi              RefHt             -     0     -     "Reference (hub) height of the grid"                        meters
+typedef  ^                       ^                 SiKi              HAWCData          ::::  -     -     "Array of HAWC data"                                        -
 
 typedef  ^                       ^                 IntKi             ScaleMethod       -     0     -     "Turbulence scaling method [0=none, 1=direct scaling, 2= calculate scaling factor based on a desired standard deviation]"  -
 typedef  ^                       ^                 ReKi              SFx               -     0     -     "Turbulence scaling factor for the x direction [ScaleMethod=1]"   -

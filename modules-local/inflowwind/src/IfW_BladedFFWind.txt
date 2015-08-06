@@ -41,8 +41,8 @@ typedef  ^                       ^                       Logical  Linearize     
 typedef  ^                       ^                       Logical  TowerDataExist    -  .FALSE.  -     "If true, we specified a tower file"                           -
 typedef  ^                       ^                       DbKi     DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
 
-typedef  ^                       ^                       ReKi     FFData            ::::  -     -     "Array of FF data"                                             -
-typedef  ^                       ^                       ReKi     FFTower           :::   -     -     "Array of data along tower, below FF array"                    -
+typedef  ^                       ^                       SiKi     FFData            ::::  -     -     "Array of FF data"                                             -
+typedef  ^                       ^                       SiKi     FFTower           :::   -     -     "Array of data along tower, below FF array"                    -
 typedef  ^                       ^                       ReKi     FFDTime           -     0     -     "Delta time"                                                   seconds
 typedef  ^                       ^                       ReKi     FFRate            -     0     -     "Data rate (1/FFTime)"                                         Hertz
 typedef  ^                       ^                       ReKi     FFYHWid           -     0     -     "Half the grid width"                                          meters
