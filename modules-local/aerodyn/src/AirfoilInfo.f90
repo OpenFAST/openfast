@@ -507,10 +507,12 @@ CONTAINS
       INTEGER(IntKi)                          :: ErrStat2                      ! Error status local to this routine.
       CHARACTER(ErrMsgLen)                    :: ErrMsg2
       CHARACTER(*), PARAMETER                 :: RoutineName = 'ReadAFfile'
+      CHARACTER(10)                           :: defaultStr
       
       ErrStat = ErrID_None
       ErrMsg  = ""
-
+      defaultStr = ""
+      
          ! Process the (possibly) nested set of files.  This copies the decommented contents of
          ! AFI_FileInfo%FileName and the files it includes (both directly and indirectly) into
          ! the FileInfo structure that we can then parse.
@@ -655,35 +657,35 @@ CONTAINS
 
                CALL ParseVar ( FileInfo, CurLine, 'C_nalpha', AFInfo%Table(Table)%UA_BL%C_nalpha, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-               CALL ParseVar ( FileInfo, CurLine, 'T_f0', AFInfo%Table(Table)%UA_BL%T_f0, ErrStat2, ErrMsg2, UnEc )
+            
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'T_f0', AFInfo%Table(Table)%UA_BL%T_f0, 3.0_ReKi, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'T_V0', AFInfo%Table(Table)%UA_BL%T_V0, 6.0_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                
-               CALL ParseVar ( FileInfo, CurLine, 'T_V0', AFInfo%Table(Table)%UA_BL%T_V0, ErrStat2, ErrMsg2, UnEc )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               
-               CALL ParseVar ( FileInfo, CurLine, 'T_p', AFInfo%Table(Table)%UA_BL%T_p, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'T_p', AFInfo%Table(Table)%UA_BL%T_p, 1.7_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'T_VL', AFInfo%Table(Table)%UA_BL%T_VL, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'T_VL', AFInfo%Table(Table)%UA_BL%T_VL, 11.0_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'b1', AFInfo%Table(Table)%UA_BL%b1, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'b1', AFInfo%Table(Table)%UA_BL%b1, .14_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'b2', AFInfo%Table(Table)%UA_BL%b2, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'b2', AFInfo%Table(Table)%UA_BL%b2, .53_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'b5', AFInfo%Table(Table)%UA_BL%b5, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'b5', AFInfo%Table(Table)%UA_BL%b5, 5.0_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'A1', AFInfo%Table(Table)%UA_BL%A1, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'A1', AFInfo%Table(Table)%UA_BL%A1, .3_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'A2', AFInfo%Table(Table)%UA_BL%A2, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'A2', AFInfo%Table(Table)%UA_BL%A2, .7_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'A5', AFInfo%Table(Table)%UA_BL%A5, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'A5', AFInfo%Table(Table)%UA_BL%A5, 1.0_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
                CALL ParseVar ( FileInfo, CurLine, 'S1', AFInfo%Table(Table)%UA_BL%S1, ErrStat2, ErrMsg2, UnEc )
@@ -704,7 +706,7 @@ CONTAINS
                CALL ParseVar ( FileInfo, CurLine, 'Cn2', AFInfo%Table(Table)%UA_BL%Cn2, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'St_sh', AFInfo%Table(Table)%UA_BL%St_sh, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'St_sh', AFInfo%Table(Table)%UA_BL%St_sh, .19_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
                CALL ParseVar ( FileInfo, CurLine, 'Cd0', AFInfo%Table(Table)%UA_BL%Cd0, ErrStat2, ErrMsg2, UnEc )
@@ -728,7 +730,7 @@ CONTAINS
                CALL ParseVar ( FileInfo, CurLine, 'k1_hat', AFInfo%Table(Table)%UA_BL%k1_hat, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVar ( FileInfo, CurLine, 'x_cp_bar', AFInfo%Table(Table)%UA_BL%x_cp_bar, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'x_cp_bar', AFInfo%Table(Table)%UA_BL%x_cp_bar, .2_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
                IF (ErrStat >= AbortErrLev) THEN
@@ -842,6 +844,7 @@ CONTAINS
       !=======================================================================
       CONTAINS
       !=======================================================================
+                  
          SUBROUTINE Cleanup ()
 
             ! This subroutine cleans up all the allocatable arrays, sets the error status/message and closes the binary file
