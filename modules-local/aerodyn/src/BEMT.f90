@@ -814,7 +814,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                      phi = ComputePhiWithInduction(u%Vx(i,j), u%Vy(i,j), z%axInduction(i,j), z%tanInduction(i,j), errStat, errMsg)
                      u_UA%U = BEMTC_Wind(z%axInduction(i,j), z%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u%chi0, u%psi(j), phi, u_UA%alpha, u_UA%Re, chi)
                   end if
-!bjj: u_UA%U is zero, which is causing division-by-zero errors later      
+
                   if ( abs(u_UA%alpha) > 40.0*D2R ) then
                      OtherState%UA_Flag(i,j) = .FALSE.
                      call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to high angle-of-attack.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
