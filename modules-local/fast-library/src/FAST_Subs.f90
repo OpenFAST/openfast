@@ -4851,8 +4851,9 @@ SUBROUTINE AD_SetInitInput(InitInData_AD14, InitOutData_ED, y_ED, p_FAST, ErrSta
    RETURN
 END SUBROUTINE AD_SetInitInput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, u_BD, FileName, ErrStat, ErrMsg) 
+SUBROUTINE WriteInputMeshesToFile(u_ED, u_AD, u_SD, u_HD, u_MAP, u_BD, FileName, ErrStat, ErrMsg) 
    TYPE(ED_InputType),        INTENT(IN)  :: u_ED         
+   TYPE(AD_InputType),        INTENT(IN)  :: u_AD  
    TYPE(SD_InputType),        INTENT(IN)  :: u_SD         
    TYPE(HydroDyn_InputType),  INTENT(IN)  :: u_HD         
    TYPE(MAP_InputType),       INTENT(IN)  :: u_MAP         
@@ -4869,7 +4870,7 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, u_BD, FileName, ErrSt
    INTEGER(IntKi)           :: unOut
    !!!INTEGER(IntKi)           :: unOut2
    INTEGER(IntKi)           :: K_local
-   INTEGER(B4Ki), PARAMETER :: File_ID = 2
+   INTEGER(B4Ki), PARAMETER :: File_ID = 3
    INTEGER(B4Ki)            :: NumBl
       
 
@@ -4894,7 +4895,7 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, u_BD, FileName, ErrSt
    WRITE( unOut, IOSTAT=ErrStat )   NumBl
       
       ! Add all of the input meshes:
-   DO K_local = 1,SIZE(u_ED%BladeLn2Mesh,1)
+   DO K_local = 1,NumBl
       CALL MeshWrBin( unOut, u_ED%BladeLn2Mesh(K_local), ErrStat, ErrMsg )
       
       !!!write(unOut2,'(A)') '_____________________________________________________________________________'
@@ -4915,11 +4916,18 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_SD, u_HD, u_MAP, u_BD, FileName, ErrSt
    NumBl =  SIZE(u_BD,1)   ! Note that NumBl is B4Ki 
    WRITE( unOut, IOSTAT=ErrStat )   NumBl
    
-   DO K_local = 1,SIZE(u_BD,1)
+   DO K_local = 1,NumBl
       CALL MeshWrBin( unOut, u_BD(K_local)%RootMotion, ErrStat, ErrMsg )
       CALL MeshWrBin( unOut, u_BD(K_local)%DistrLoad, ErrStat, ErrMsg )
    END DO            
       
+      ! Add how many AD blade meshes there are:
+   NumBl =  SIZE(u_AD%BladeMotion,1)   ! Note that NumBl is B4Ki 
+   WRITE( unOut, IOSTAT=ErrStat )   NumBl
+   
+   DO K_local = 1,NumBl
+      CALL MeshWrBin( unOut, u_AD%BladeMotion(k_local), ErrStat, ErrMsg )
+   END DO    
       
       ! Close the file
    CLOSE(unOut)
@@ -8920,7 +8928,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, H
       
 ! output some graphics. For now, WrGraphics is hard-coded to .FALSE.      
    IF (p_FAST%WrGraphics) THEN
-      CALL WriteInputMeshesToFile( ED%Input(1), SD%Input(1), HD%Input(1), MAPp%Input(1), BD%Input(1,:), TRIM(p_FAST%OutFileRoot)//'.InputMeshes.bin', ErrStat2, ErrMsg2)
+      CALL WriteInputMeshesToFile( ED%Input(1), AD%Input(1), SD%Input(1), HD%Input(1), MAPp%Input(1), BD%Input(1,:), TRIM(p_FAST%OutFileRoot)//'.InputMeshes.bin', ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF 
 
