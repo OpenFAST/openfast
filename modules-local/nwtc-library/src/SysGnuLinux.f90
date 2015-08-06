@@ -524,15 +524,11 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
    INTEGER(C_INT), PARAMETER :: RTLD_LOCAL=0           ! "This is the converse of RTLD_GLOBAL, and the default if neither flag is specified. Symbols defined in this library are not made available to resolve references in subsequently loaded libraries."
 
 
-   ErrStat = ErrID_Fatal
-   ErrMsg = ' LoadDynamicLib: Not implemented for '//TRIM(OS_Desc)
-   
-   
-#if 0           
+#ifdef USE_DLL_INTERFACE           
 !bjj: note that this is not tested:
    INTERFACE !linux API routines
       !bjj see http://linux.die.net/man/3/dlopen
-      ! also: https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man3/dlopen.3.html
+      !    and https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man3/dlopen.3.html
 
       FUNCTION dlOpen(filename,mode) BIND(C,NAME="dlopen")
       ! void *dlopen(const char *filename, int mode);
@@ -543,6 +539,9 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
          INTEGER(C_INT), VALUE         :: mode
       END FUNCTION
 
+      !bjj see http://linux.die.net/man/3/dlsym
+      !    and https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man3/dlsym.3.html
+      
       FUNCTION dlSym(handle,name) BIND(C,NAME="dlsym")
       ! void *dlsym(void *handle, const char *name);
          USE ISO_C_BINDING
@@ -581,7 +580,11 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
       ErrMsg  = 'The procedure '//TRIM(DLL%ProcName)//' in file '//TRIM(DLL%FileName)//' could not be loaded.'
       RETURN
    END IF
+#else
 
+   ErrStat = ErrID_Fatal
+   ErrMsg = ' LoadDynamicLib: Not implemented for '//TRIM(OS_Desc)
+      
 #endif
    
    RETURN
@@ -602,14 +605,12 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
    INTEGER(C_INT), PARAMETER                 :: TRUE  = 0
 
 
-   ErrStat = ErrID_Fatal
-   ErrMsg = ' FreeDynamicLib: Not implemented for '//TRIM(OS_Desc)
-   
-   
-#if 0   
+#ifdef USE_DLL_INTERFACE           
 !bjj: note that this is not tested.
+
    INTERFACE !linux API routine
-      !bjj see http://linux.die.net/man/3/dlopen
+      !bjj see http://linux.die.net/man/3/dlclose
+      !    and https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man3/dlclose.3.html
 
       FUNCTION dlClose(handle) BIND(C,NAME="dlclose")
       ! int dlclose(void *handle);
@@ -620,7 +621,6 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
       END FUNCTION
 
    END INTERFACE
-
 
 
       ! Close the library:
@@ -635,6 +635,12 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
       ErrStat = ErrID_None
       ErrMsg = ''
    END IF
+   
+#else
+
+   ErrStat = ErrID_Fatal
+   ErrMsg = ' FreeDynamicLib: Not implemented for '//TRIM(OS_Desc)
+         
 #endif
    
    RETURN

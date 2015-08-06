@@ -35,7 +35,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.06.02a-bjj', '23-Jul-2015')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.06.03a-bjj', '6-Aug-2015')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -132,6 +132,16 @@ MODULE NWTC_IO
       MODULE PROCEDURE ParseSiVar                                             ! Parses a single-precision REAL from a string.
    END INTERFACE
 
+      ! Create interface for a generic ParseVarWDefault that actually uses specific routines.
+
+   INTERFACE ParseVarWDefault                                                 ! Parses a character variable name and value from a string, potentially sets to a default value if "Default" is parsed.
+      MODULE PROCEDURE ParseChVarWDefault                                     ! Parses a character string from a string, potentially sets to a default value if "Default" is parsed.
+      MODULE PROCEDURE ParseDbVarWDefault                                     ! Parses a double-precision REAL from a string, potentially sets to a default value if "Default" is parsed.
+      MODULE PROCEDURE ParseInVarWDefault                                     ! Parses an INTEGER from a string, potentially sets to a default value if "Default" is parsed.
+      MODULE PROCEDURE ParseLoVarWDefault                                     ! Parses an LOGICAL from a string, potentially sets to a default value if "Default" is parsed.
+      MODULE PROCEDURE ParseSiVarWDefault                                     ! Parses a single-precision REAL from a string, potentially sets to a default value if "Default" is parsed.
+   END INTERFACE
+
 
       ! Create interface for a generic ParseAry that actually uses specific routines.
 
@@ -203,6 +213,12 @@ MODULE NWTC_IO
       MODULE PROCEDURE WrMatrix2R8     ! Two dimension matrix of R8Ki
    END INTERFACE
 
+      ! Create interface for writing matrix and array values (useful for debugging)
+   INTERFACE WrNumAryFileNR
+      MODULE PROCEDURE WrReAryFileNR
+      MODULE PROCEDURE WrDbAryFileNR
+   END INTERFACE
+   
 
 CONTAINS
 
@@ -2935,6 +2951,58 @@ CONTAINS
       RETURN
    END SUBROUTINE ParseChVar
 !=======================================================================
+   SUBROUTINE ParseChVarWDefault ( FileInfo, LineNum, ExpVarName, ChVar, ChDefault, ErrStat, ErrMsg, UnEc )
+
+      ! This subroutine parses the specified line of text for two words.  One should be a
+      ! the name of a character variable and the other a string.
+      ! Generate an error message if the value is the wrong type or if only one "word" is found.
+
+      ! WARNING: This routine assumes the "words" containing the variable name and value are <= 20 characters.
+
+
+         ! Arguments declarations.
+
+
+      INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
+      INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
+
+      CHARACTER(*),   INTENT(OUT)            :: ChVar                         ! The CHARACTER variable to receive the input value.
+      CHARACTER(*),   INTENT(IN)             :: ChDefault                     ! The CHARACTER variable to receive the input value.
+      CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
+      CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
+
+      TYPE (FileInfoType), INTENT(IN)        :: FileInfo                      ! The derived type for holding the file information.
+
+
+         ! Local declarations.
+
+      INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
+      INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
+
+      CHARACTER(20)                          :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseChVarDefault'
+      CHARACTER(20)                          :: defaultStr
+      
+      ErrStat=ErrID_None
+      ErrMsg = ""
+
+         ! First parse this as a string
+      CALL ParseVar ( FileInfo, LineNum, ExpVarName, defaultStr, ErrStatLcl, ErrMsg2, UnEc )
+         CALL SetErrStat(ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) RETURN
+      CALL Conv2UC( defaultStr )
+      IF ( INDEX(defaultStr, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable
+         ChVar = defaultStr
+      ELSE
+         ChVar = ChDefault  ! "DEFAULT" value
+      END IF             
+      
+      RETURN
+   END SUBROUTINE ParseChVarWDefault
+!=======================================================================
    SUBROUTINE ParseDbAry ( FileInfo, LineNum, AryName, DbAry, AryLen, ErrStat, ErrMsg, UnEc )
 
       ! This subroutine parses the specified line of text for AryLen REAL values.
@@ -3091,6 +3159,60 @@ CONTAINS
 
       RETURN
    END SUBROUTINE ParseDbVar
+!=======================================================================
+   SUBROUTINE ParseDbVarWDefault ( FileInfo, LineNum, ExpVarName, DbVar, DbDefault, ErrStat, ErrMsg, UnEc )
+
+      ! This subroutine parses the specified line of text for two words.  One should be a
+      ! the name of a double-precision variable and the other a REAL value.
+      ! Generate an error message if the value is the wrong type.
+
+      ! WARNING: This routine assumes the "words" containing the variable name and value are <= 20 characters.
+
+
+         ! Arguments declarations.
+
+
+      INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
+      INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
+
+      REAL(DbKi), INTENT(OUT)                :: DbVar                         ! The double-precision REAL variable to receive the input value.
+      REAL(DbKi),    INTENT(IN)             :: DbDefault                     ! The double-precision REAL used as the default.
+      CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
+      CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
+
+      TYPE (FileInfoType), INTENT(IN)        :: FileInfo                      ! The derived type for holding the file information.
+
+
+         ! Local declarations.
+
+      INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
+      INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
+
+      CHARACTER(20)                          :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseDbVarDefault'
+      CHARACTER(20)                          :: defaultStr
+      
+      ErrStat=ErrID_None
+      ErrMsg = ""
+
+         ! First parse this as a string
+      CALL ParseVar ( FileInfo, LineNum, ExpVarName, defaultStr, ErrStatLcl, ErrMsg2, UnEc )
+         CALL SetErrStat(ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) RETURN
+      CALL Conv2UC( defaultStr )
+      IF ( INDEX(defaultStr, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable
+         LineNum = LineNum - 1  ! back up a line
+         CALL ParseVar ( FileInfo, LineNum, ExpVarName, DbVar, ErrStatLcl, ErrMsg2, UnEc )
+            CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ELSE
+         DbVar = DbDefault  ! "DEFAULT" value
+      END IF             
+      
+      RETURN
+   END SUBROUTINE ParseDbVarWDefault
 !=======================================================================
    SUBROUTINE ParseInAry ( FileInfo, LineNum, AryName, InAry, AryLen, ErrStat, ErrMsg, UnEc )
 
@@ -3363,6 +3485,60 @@ CONTAINS
 
    END SUBROUTINE ParseInVar
 !=======================================================================
+   SUBROUTINE ParseInVarWDefault ( FileInfo, LineNum, ExpVarName, InVar, InDefault, ErrStat, ErrMsg, UnEc )
+
+      ! This subroutine parses the specified line of text for two words.  One should be a
+      ! the name of a integer variable and the other an integer value.
+      ! Generate an error message if the value is the wrong type.
+
+      ! WARNING: This routine assumes the "words" containing the variable name and value are <= 20 characters.
+
+
+         ! Arguments declarations.
+
+
+      INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
+      INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
+
+      INTEGER(IntKi), INTENT(OUT)            :: InVar                         ! The INTEGER variable to receive the input value.
+      INTEGER(IntKi),   INTENT(IN)           :: InDefault                     ! The INTEGER used as the default.
+      CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
+      CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
+
+      TYPE (FileInfoType), INTENT(IN)        :: FileInfo                      ! The derived type for holding the file information.
+
+
+         ! Local declarations.
+
+      INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
+      INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
+
+      CHARACTER(20)                          :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseInVarDefault'
+      CHARACTER(20)                          :: defaultStr
+      
+      ErrStat=ErrID_None
+      ErrMsg = ""
+
+         ! First parse this as a string
+      CALL ParseVar ( FileInfo, LineNum, ExpVarName, defaultStr, ErrStatLcl, ErrMsg2, UnEc )
+         CALL SetErrStat(ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) RETURN
+      CALL Conv2UC( defaultStr )
+      IF ( INDEX(defaultStr, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable
+         LineNum = LineNum - 1  ! back up a line
+         CALL ParseVar ( FileInfo, LineNum, ExpVarName, InVar, ErrStatLcl, ErrMsg2, UnEc )
+            CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ELSE
+         InVar = InDefault  ! "DEFAULT" value
+      END IF             
+      
+      RETURN
+   END SUBROUTINE ParseInVarWDefault
+!=======================================================================
    SUBROUTINE ParseLoAry ( FileInfo, LineNum, AryName, LoAry, AryLen, ErrStat, ErrMsg, UnEc )
 
       ! This subroutine parses the specified line of text for AryLen LOGICAL values.
@@ -3521,6 +3697,60 @@ CONTAINS
 
    END SUBROUTINE ParseLoVar
 !=======================================================================
+   SUBROUTINE ParseLoVarWDefault ( FileInfo, LineNum, ExpVarName, LoVar, LoDefault, ErrStat, ErrMsg, UnEc )
+
+      ! This subroutine parses the specified line of text for two words.  One should be a
+      ! the name of a logical variable and the other an logical value.
+      ! Generate an error message if the value is the wrong type.
+
+      ! WARNING: This routine assumes the "words" containing the variable name and value are <= 20 characters.
+
+
+         ! Arguments declarations.
+
+
+      INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
+      INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
+
+      LOGICAL, INTENT(OUT)                   :: LoVar                         ! The LOGICAL variable to receive the input value.
+      LOGICAL,   INTENT(IN)                  :: LoDefault                     ! The LOGICAL used as the default.
+      CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
+      CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
+
+      TYPE (FileInfoType), INTENT(IN)        :: FileInfo                      ! The derived type for holding the file information.
+
+
+         ! Local declarations.
+
+      INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
+      INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
+
+      CHARACTER(20)                          :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseLoVarDefault'
+      CHARACTER(20)                          :: defaultStr
+      
+      ErrStat=ErrID_None
+      ErrMsg = ""
+
+         ! First parse this as a string
+      CALL ParseVar ( FileInfo, LineNum, ExpVarName, defaultStr, ErrStatLcl, ErrMsg2, UnEc )
+         CALL SetErrStat(ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) RETURN
+      CALL Conv2UC( defaultStr )
+      IF ( INDEX(defaultStr, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable
+         LineNum = LineNum - 1  ! back up a line
+         CALL ParseVar ( FileInfo, LineNum, ExpVarName, LoVar, ErrStatLcl, ErrMsg2, UnEc )
+            CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ELSE
+         LoVar = LoDefault  ! "DEFAULT" value
+      END IF             
+      
+      RETURN
+   END SUBROUTINE ParseLoVarWDefault
+!=======================================================================
    SUBROUTINE ParseSiAry ( FileInfo, LineNum, AryName, SiAry, AryLen, ErrStat, ErrMsg, UnEc )
 
       ! This subroutine parses the specified line of text for two words.  One should be a
@@ -3676,6 +3906,60 @@ CONTAINS
       RETURN
 
    END SUBROUTINE ParseSiVar
+!=======================================================================
+   SUBROUTINE ParseSiVarWDefault ( FileInfo, LineNum, ExpVarName, SiVar, SiDefault, ErrStat, ErrMsg, UnEc )
+
+      ! This subroutine parses the specified line of text for two words.  One should be a
+      ! the name of a single-precision REAL variable and the other an single-precision REAL value.
+      ! Generate an error message if the value is the wrong type.
+
+      ! WARNING: This routine assumes the "words" containing the variable name and value are <= 20 characters.
+
+
+         ! Arguments declarations.
+
+
+      INTEGER(IntKi), INTENT(OUT)            :: ErrStat                       ! The error status.
+      INTEGER(IntKi), INTENT(INOUT)          :: LineNum                       ! The number of the line to parse.
+
+      INTEGER,        INTENT(IN), OPTIONAL   :: UnEc                          ! I/O unit for echo file. If present and > 0, write to UnEc.
+
+      REAL(ReKi), INTENT(OUT)                :: SiVar                         ! The single-precision REAL variable to receive the input value.
+      REAL(ReKi),   INTENT(IN)               :: SiDefault                     ! The single-precision REAL used as the default.
+      CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        ! The error message, if ErrStat /= 0.
+      CHARACTER(*),   INTENT(IN)             :: ExpVarName                    ! The expected variable name.
+
+      TYPE (FileInfoType), INTENT(IN)        :: FileInfo                      ! The derived type for holding the file information.
+
+
+         ! Local declarations.
+
+      INTEGER(IntKi)                         :: ErrStatLcl                    ! Error status local to this routine.
+      INTEGER(IntKi)                         :: NameIndx                      ! The index into the Words array that points to the variable name.
+
+      CHARACTER(20)                          :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(ErrMsgLen)                   :: ErrMsg2
+      CHARACTER(*), PARAMETER                :: RoutineName = 'ParseSiVarDefault'
+      CHARACTER(20)                          :: defaultStr
+      
+      ErrStat=ErrID_None
+      ErrMsg = ""
+
+         ! First parse this as a string
+      CALL ParseVar ( FileInfo, LineNum, ExpVarName, defaultStr, ErrStatLcl, ErrMsg2, UnEc )
+         CALL SetErrStat(ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) RETURN
+      CALL Conv2UC( defaultStr )
+      IF ( INDEX(defaultStr, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable
+         LineNum = LineNum - 1  ! back up a line
+         CALL ParseVar ( FileInfo, LineNum, ExpVarName, SiVar, ErrStatLcl, ErrMsg2, UnEc )
+            CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ELSE
+         SiVar = SiDefault  ! "DEFAULT" value
+      END IF             
+      
+      RETURN
+   END SUBROUTINE ParseSiVarWDefault
 !=======================================================================
    FUNCTION PathIsRelative ( GivenFil )
 
@@ -6616,6 +6900,49 @@ SUBROUTINE ReadLine ( UnIn, CommChars, Line, LineLen, IOStat )
 
    RETURN
    END SUBROUTINE WrReAryFileNR
+!=======================================================================
+   SUBROUTINE WrDbAryFileNR ( Unit, Ary, Fmt, ErrStat, ErrMsg  )
+
+
+      ! This routine writes out a real array to the file connected to Unit without following it with a new line.
+
+
+      ! Argument declarations.
+
+   INTEGER,      INTENT(IN)     :: Unit                                         ! I/O unit for input file.
+   REAL(DbKi),   INTENT(IN)     :: Ary (:)                                      ! Array to be written without a newline at the end.
+   CHARACTER(*), INTENT(IN)     :: Fmt                                          ! Fmt of one element to be written.
+
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                      ! Error status
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                       ! Error message associated with ErrStat
+
+      ! Local variables:
+   CHARACTER(50)                :: Fmt2                                         ! Fmt of entire array to be written (will be copied).
+
+
+
+   IF ( SIZE(Ary) == 0 ) THEN
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+      RETURN
+   END IF
+   
+
+   WRITE(Fmt2,*) SIZE(Ary)
+   Fmt2 = '('//TRIM(Fmt2)//'('//TRIM(Fmt)//'))'
+
+   WRITE (Unit,Fmt2,ADVANCE='NO',IOSTAT=ErrStat)  Ary
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'WrDbAryFileNR:Error '//TRIM(Num2LStr(ErrStat))//' occurred while writing to file using this format: '//TRIM(Fmt2)
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+
+
+   RETURN
+   END SUBROUTINE WrDbAryFileNR
 !=======================================================================
    RECURSIVE SUBROUTINE WrScr ( InStr )
 

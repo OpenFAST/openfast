@@ -88,6 +88,8 @@ MODULE NWTC_Num
    IMPLICIT NONE
 
 !=======================================================================
+   logical,public :: debug_print2 = .false.
+   integer,public :: debug_print2_unit = 90
 
 
       ! Global numeric-related variables.
@@ -605,17 +607,6 @@ CONTAINS
       ZHi(:)      = ZLo(:)
    END DO ! I
    
-#ifdef LINEAR_INTERP   
-!---------------------
-!  try this with linear interpolation instead of cubic
-!---------------------
-   DO I=NumPts-1,1,-1
-      Coef(I,:,1) = (YAry(I+1,: ) - YAry(I,:  )) / DelX(I)
-      Coef(I,:,2) = 0.0_ReKi
-      Coef(I,:,3) = 0.0_ReKi
-   END DO ! I
-#endif
-
    CALL ExitThisRoutine ( ErrID_None, 'No Problemo' )
 
    RETURN
@@ -659,6 +650,63 @@ CONTAINS
       END SUBROUTINE ExitThisRoutine ! ( ErrID, Msg )
 
    END SUBROUTINE CubicSplineInitM ! ( XAry, YAry, Coef, ErrStat, ErrMsg )
+!=======================================================================
+   SUBROUTINE CubicLinSplineInitM ( XAry, YAry, Coef, ErrStat, ErrMsg )
+
+
+      ! This routine calculates the parameters needed to compute a irregularly-spaced natural linear spline.      
+      ! This routine does not require that the XAry be regularly spaced.
+
+
+      ! Argument declarations:
+
+   REAL(ReKi), INTENT(OUT)      :: Coef  (:,:,0:)                             ! The coefficients for the cubic polynomials.
+   REAL(ReKi), INTENT(IN)       :: XAry  (:)                                  ! Input array of x values.
+   REAL(ReKi), INTENT(IN)       :: YAry  (:,:)                                ! Input array of y values with multiple curves.
+
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
+
+   CHARACTER(*), INTENT(OUT)    :: ErrMsg                                     ! Error message.
+
+
+      ! Local declarations.
+
+   REAL(ReKi)                   :: DelX                                       ! The distances between the randomly spaced points.
+
+   INTEGER                      :: I                                          ! The index into the arrays.
+   INTEGER                      :: NumPts                                     ! Number of points in each curve.
+   CHARACTER(*), PARAMETER      :: RoutineName = 'CubicLinSplineInitM'
+
+
+      ! How big are the arrays?
+
+   NumPts  = SIZE( XAry )
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+      ! Determine the coefficients of the polynomials.
+
+   
+   DO I=NumPts-1,1,-1
+      DelX =   XAry(I+1  ) - XAry(I  )
+      
+      if ( equalRealNos( DelX, 0.0_ReKi ) ) then
+         CALL SetErrStat ( ErrID_Fatal, 'XAry must have unique values.',ErrStat,ErrMsg,RoutineName )
+         RETURN
+      ENDIF
+      
+            
+      Coef(I,:,0) = YAry(I,:)
+      Coef(I,:,1) = (YAry(I+1,: ) - YAry(I,:  )) / DelX
+      Coef(I,:,2) = 0.0_ReKi
+      Coef(I,:,3) = 0.0_ReKi
+   END DO ! I
+
+
+   RETURN
+
+
+   END SUBROUTINE CubicLinSplineInitM ! ( XAry, YAry, Coef, ErrStat, ErrMsg )
 !=======================================================================
    FUNCTION CubicSplineInterp ( X, AryLen, XAry, YAry, Coef, ErrStat, ErrMsg )
 
@@ -866,7 +914,75 @@ CONTAINS
       
    END FUNCTION DCM_expD
 !=======================================================================  
-   SUBROUTINE DCM_logMapD(DCM, logMap, ErrStat, ErrMsg)
+   FUNCTION DCM_expR(lambda)
+   
+      ! This function computes a matrix exponential.
+      !
+      ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 31-33
+      
+   REAL(ReKi), INTENT(IN)  :: lambda(3)
+   REAL(ReKi)              :: DCM_expR(3,3)
+   
+      ! local variables
+   REAL(ReKi)              :: stheta         ! sine of angle of rotation   
+   REAL(ReKi)              :: theta          ! angle of rotation   
+   REAL(ReKi)              :: theta2         ! angle of rotation squared
+   REAL(ReKi)              :: tmp_Mat(3,3)
+   
+   INTEGER(IntKi)          :: ErrStat
+   CHARACTER(30)           :: ErrMsg  
+   
+   
+   theta = TwoNorm(lambda)                   ! Eq. 32
+   theta2 = theta**2
+
+   IF ( EqualRealNos(theta,   0.0_ReKi)   .or. &
+        EqualRealNos(theta2,  0.0_ReKi) ) THEN  !
+      
+      CALL eye(DCM_expR, ErrStat, ErrMsg)    ! Eq. 33a
+      
+   ELSE   
+      
+         ! convert lambda to skew-symmetric matrix:
+      tmp_mat(1,1) =  0.0_ReKi                                            
+      tmp_mat(2,1) = -lambda(3)                                           
+      tmp_mat(3,1) =  lambda(2)                                           
+      tmp_mat(1,2) =              lambda(3)                               
+      tmp_mat(2,2) =              0.0_ReKi                                
+      tmp_mat(3,2) =             -lambda(1)                               
+      tmp_mat(1,3) =                               -lambda(2)             
+      tmp_mat(2,3) =                                lambda(1)             
+      tmp_mat(3,3) =                                0.0_ReKi            
+      
+      
+         ! Eq. 33b
+      !DCM_exp = I + sin(theta)/theta*tmp_mat + (1-cos(theta))/theta**2)*matmul(tmp_mat,tmp_mat)
+      
+         ! one method:
+      !CALL eye(DCM_exp, ErrStat, ErrMsg)                  
+      !DCM_exp = DCM_exp + sin(theta)/theta*tmp_mat 
+      !DCM_exp = DCM_exp + (1-cos(theta))/theta2 * MATMUL(tmp_mat, tmp_mat) 
+      
+         ! hopefully this order of calculations gives better numerical results:
+      stheta = sin(theta)
+      DCM_expR      = (1-cos(theta))/theta * tmp_mat      
+      DCM_expR(1,1) = DCM_expR(1,1) + stheta
+      DCM_expR(2,2) = DCM_expR(2,2) + stheta
+      DCM_expR(3,3) = DCM_expR(3,3) + stheta
+      
+      DCM_expR = matmul( DCM_expR, tmp_mat )
+      DCM_expR = DCM_expR / theta
+      DCM_expR(1,1) = DCM_expR(1,1) + 1.0_ReKi ! add identity
+      DCM_expR(2,2) = DCM_expR(2,2) + 1.0_ReKi
+      DCM_expR(3,3) = DCM_expR(3,3) + 1.0_ReKi
+            
+   END IF
+
+   
+      
+   END FUNCTION DCM_expR
+!=======================================================================  
+   SUBROUTINE DCM_logMapD(DCM, logMap, ErrStat, ErrMsg, thetaOut)
 
       ! This function computes the logarithmic map for a direction 
       ! cosine matrix.
@@ -874,17 +990,19 @@ CONTAINS
       ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 24-30
       ! with eigenvector equations updated to account for numerics
    
-   REAL(DbKi),       INTENT(IN)    :: DCM(3,3)
-   REAL(DbKi),       INTENT(  OUT) :: logMap(3)
-   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat                   ! Error status of the operation
-   CHARACTER(*),     INTENT(  OUT) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),         INTENT(IN)    :: DCM(3,3)
+   REAL(DbKi),         INTENT(  OUT) :: logMap(3)
+   REAL(DbKi),OPTIONAL,INTENT(  OUT) :: thetaOut
+   INTEGER(IntKi),     INTENT(  OUT) :: ErrStat                   ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    
       ! local variables
-   REAL(DbKi)                      :: temp
-   REAL(DbKi)                      :: theta
-   REAL(DbKi)                      :: stheta
-   REAL(DbKi)                      :: v(3)
-   REAL(DbKi)                      :: skewSym(3,3) ! an anti-symmetric matrix
+   REAL(DbKi)                        :: temp
+   REAL(DbKi)                        :: theta
+   REAL(DbKi)                        :: TwoSinTheta
+   REAL(DbKi)                        :: v(3)
+   REAL(DbKi)                        :: skewSym(3,3)        ! an anti-symmetric matrix
+   REAL(DbKi)                        :: tol = 0.01_DbKi     ! doesn't need to be that small
       
          ! initialization
       ErrStat = ErrID_None
@@ -895,15 +1013,14 @@ CONTAINS
       temp  = min( max(temp,-1.0_DbKi), 1.0_DbKi ) !make sure it's in a valid range (to avoid cases where this is slightly outside the +/-1 range)
       theta = ACOS( temp )                                                   ! Eq. 25 ( 0<=theta<=pi )
       
-      stheta = sin(theta)
+      TwoSinTheta = 2.0_DbKi*sin(theta)
       
-      IF ( EqualRealNos( pi_D, theta ) .or. &
-          (theta > 3.0_DbKi .and. EqualRealNos( stheta, 0.0_DbKi) ) ) THEN
+      IF ( EqualRealNos( pi_D, theta )  ) THEN
       
          ! calculate the eigenvector of DCM associated with eigenvalue +1:
       
          temp = -1.0_DbKi + DCM(2,2) + DCM(2,3)*DCM(3,2) + DCM(3,3) - DCM(2,2)*DCM(3,3)
-         if ( .NOT. EqualRealNos(temp, 0.0_DbKi) ) then
+         if ( abs(temp) > tol ) then
 
             v(1) = 1.0_DbKi
             v(2) = -(DCM(2,1) + DCM(2,3)*DCM(3,1) - DCM(2,1)*DCM(3,3))/temp
@@ -911,7 +1028,7 @@ CONTAINS
 
          else 
             temp = -1.0_DbKi + DCM(1,1) + DCM(1,3)*DCM(3,1) + DCM(3,3) - DCM(1,1)*DCM(3,3)
-            if ( .NOT. EqualRealNos(temp, 0.0_DbKi) ) then
+            if ( abs(temp) > tol ) then
 
                v(1) = -(DCM(1,2) + DCM(1,3)*DCM(3,2) - DCM(1,2)*DCM(3,3))/temp
                v(2) =  1.0_DbKi
@@ -940,11 +1057,11 @@ CONTAINS
             ! calculate the skew-symmetric tensor (note we could change sign here for continuity)
             ! also note that we make v skew-symmetric in the inverse routine (DCM_exp), 
             ! so we don't need to change the sign of v(2) here
-         logMap =  pi*v                                                           ! Eq. 26c  
+         logMap =  pi_D*v                                                           ! Eq. 26c  
                      
       ELSE
          
-         IF ( EqualRealNos(0.0_DbKi, theta) .or. EqualRealNos( 0.0_DbKi, stheta ) ) THEN
+         IF ( EqualRealNos(0.0_DbKi, theta) .or. EqualRealNos( 0.0_DbKi, TwoSinTheta ) ) THEN
          
             !skewSym = DCM - TRANSPOSE(DCM)
             !
@@ -965,13 +1082,128 @@ CONTAINS
             logMap(2) =  skewSym(3,1)
             logMap(3) = -skewSym(2,1)
       
-            logMap    = 0.5_DbKi * theta / stheta * logMap   ! Eq. 26b
+            logMap    = theta / TwoSinTheta * logMap   ! Eq. 26b
          END IF
          
       END IF
    
+      IF ( PRESENT( thetaOut ) ) THEN
+         thetaOut = theta
+      END IF
+      
    END SUBROUTINE DCM_logMapD
 !=======================================================================
+   SUBROUTINE DCM_logMapR(DCM, logMap, ErrStat, ErrMsg, thetaOut)
+
+      ! This function computes the logarithmic map for a direction 
+      ! cosine matrix.
+      !
+      ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 24-30
+      ! with eigenvector equations updated to account for numerics
+   
+   REAL(ReKi),         INTENT(IN)    :: DCM(3,3)
+   REAL(ReKi),         INTENT(  OUT) :: logMap(3)
+   REAL(DbKi),OPTIONAL,INTENT(  OUT) :: thetaOut
+   INTEGER(IntKi),     INTENT(  OUT) :: ErrStat                   ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
+   
+      ! local variables
+   REAL(ReKi)                        :: temp
+   REAL(ReKi)                        :: theta
+   REAL(ReKi)                        :: TwoSinTheta
+   REAL(ReKi)                        :: v(3)
+   REAL(ReKi)                        :: skewSym(3,3) ! an anti-symmetric matrix
+   REAL(ReKi)                        :: tol = 0.01_ReKi     ! doesn't need to be that small
+      
+         ! initialization
+      ErrStat = ErrID_None
+      ErrMsg  = ""   
+   
+   
+      temp  = 0.5_ReKi*( trace(DCM) - 1.0_ReKi )
+      temp  = min( max(temp,-1.0_ReKi), 1.0_ReKi ) !make sure it's in a valid range (to avoid cases where this is slightly outside the +/-1 range)
+      theta = ACOS( temp )                                                   ! Eq. 25 ( 0<=theta<=pi )
+      
+      TwoSinTheta = 2.0_ReKi*sin(theta)
+      
+      IF ( EqualRealNos( pi, theta )  ) THEN
+      
+         ! calculate the eigenvector of DCM associated with eigenvalue +1:
+      
+         temp = -1.0_ReKi + DCM(2,2) + DCM(2,3)*DCM(3,2) + DCM(3,3) - DCM(2,2)*DCM(3,3)
+         if ( abs(temp) > tol ) then
+
+            v(1) = 1.0_ReKi
+            v(2) = -(DCM(2,1) + DCM(2,3)*DCM(3,1) - DCM(2,1)*DCM(3,3))/temp
+            v(3) = -(DCM(3,1) - DCM(2,2)*DCM(3,1) + DCM(2,1)*DCM(3,2))/temp
+
+         else 
+            temp = -1.0_ReKi + DCM(1,1) + DCM(1,3)*DCM(3,1) + DCM(3,3) - DCM(1,1)*DCM(3,3)
+            if ( abs(temp) > tol ) then
+
+               v(1) = -(DCM(1,2) + DCM(1,3)*DCM(3,2) - DCM(1,2)*DCM(3,3))/temp
+               v(2) =  1.0_ReKi
+               v(3) = -(DCM(3,2) + DCM(1,2)*DCM(3,1) - DCM(1,1)*DCM(3,2))/temp
+
+            else 
+               temp = -1.0_ReKi + DCM(1,1) + DCM(1,2)*DCM(2,1) + DCM(2,2) - DCM(1,1)*DCM(2,2)
+               if ( .NOT. EqualRealNos(temp, 0.0_ReKi) ) then
+
+                  v(1) = -(DCM(1,3) - DCM(1,3)*DCM(2,2) + DCM(1,2)*DCM(2,3))/temp
+                  v(2) = -(DCM(1,3)*DCM(2,1) + DCM(2,3) - DCM(1,1)*DCM(2,3))/temp
+                  v(3) = 1.0_ReKi
+            
+               else
+                     ! break with error
+                  ErrStat = ErrID_Fatal
+                  WRITE( ErrMsg, '("DCM_logMap:invalid DCM matrix",3("'//Newline//'",4x,3(ES10.3E2,1x)))') DCM(1,:),DCM(2,:),DCM(3,:)               
+                  RETURN
+               end if         
+            end if         
+         endif
+                         
+            ! normalize the eigenvector:
+         v = v / TwoNorm(v)                                                       ! Eq. 27                  
+      
+            ! calculate the skew-symmetric tensor (note we could change sign here for continuity)
+            ! also note that we make v skew-symmetric in the inverse routine (DCM_exp), 
+            ! so we don't need to change the sign of v(2) here
+         logMap =  pi*v                                                           ! Eq. 26c  
+                     
+      ELSE
+         
+         IF ( EqualRealNos(0.0_ReKi, theta) .or. EqualRealNos( 0.0_ReKi, TwoSinTheta ) ) THEN
+         
+            !skewSym = DCM - TRANSPOSE(DCM)
+            !
+            !logMap(1) = -skewSym(3,2)
+            !logMap(2) =  skewSym(3,1)
+            !logMap(3) = -skewSym(2,1)
+            !
+            !logMap = 0.5_ReKi * logMap   ! Eq. 26b with limit as x approaches 0 of (x/sin(x)) = 1
+         
+         
+            logMap = 0.0_ReKi                                                   ! Eq. 26a
+                  
+         ELSE ! 0 < theta < pi 
+      
+            skewSym = DCM - TRANSPOSE(DCM)
+      
+            logMap(1) = -skewSym(3,2)
+            logMap(2) =  skewSym(3,1)
+            logMap(3) = -skewSym(2,1)
+      
+            logMap    = theta / TwoSinTheta * logMap   ! Eq. 26b
+         END IF
+         
+      END IF
+      
+      IF ( PRESENT( thetaOut ) ) THEN
+         thetaOut = theta
+      END IF      
+      
+   END SUBROUTINE DCM_logMapR  
+!=======================================================================  
    SUBROUTINE DCM_SetLogMapForInterpD( tensor )
 
    ! this routine sets the rotation parameters (tensors from DCM_logMap)
@@ -1045,180 +1277,6 @@ CONTAINS
                  
    END SUBROUTINE DCM_SetLogMapForInterpD
 !=======================================================================         
-   FUNCTION DCM_expR(lambda)
-   
-      ! This function computes a matrix exponential.
-      !
-      ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 31-33
-      
-   REAL(ReKi), INTENT(IN)  :: lambda(3)
-   REAL(ReKi)              :: DCM_expR(3,3)
-   
-      ! local variables
-   REAL(ReKi)              :: stheta         ! sine of angle of rotation   
-   REAL(ReKi)              :: theta          ! angle of rotation   
-   REAL(ReKi)              :: theta2         ! angle of rotation squared
-   REAL(ReKi)              :: tmp_Mat(3,3)
-   
-   INTEGER(IntKi)          :: ErrStat
-   CHARACTER(30)           :: ErrMsg  
-   
-   
-   theta = TwoNorm(lambda)                   ! Eq. 32
-   theta2 = theta**2
-
-   IF ( EqualRealNos(theta,   0.0_ReKi)   .or. &
-        EqualRealNos(theta2,  0.0_ReKi) ) THEN  !
-      
-      CALL eye(DCM_expR, ErrStat, ErrMsg)    ! Eq. 33a
-      
-   ELSE   
-      
-         ! convert lambda to skew-symmetric matrix:
-      tmp_mat(1,1) =  0.0_ReKi                                            
-      tmp_mat(2,1) = -lambda(3)                                           
-      tmp_mat(3,1) =  lambda(2)                                           
-      tmp_mat(1,2) =              lambda(3)                               
-      tmp_mat(2,2) =              0.0_ReKi                                
-      tmp_mat(3,2) =             -lambda(1)                               
-      tmp_mat(1,3) =                               -lambda(2)             
-      tmp_mat(2,3) =                                lambda(1)             
-      tmp_mat(3,3) =                                0.0_ReKi            
-      
-      
-         ! Eq. 33b
-      !DCM_exp = I + sin(theta)/theta*tmp_mat + (1-cos(theta))/theta**2)*matmul(tmp_mat,tmp_mat)
-      
-         ! one method:
-      !CALL eye(DCM_exp, ErrStat, ErrMsg)                  
-      !DCM_exp = DCM_exp + sin(theta)/theta*tmp_mat 
-      !DCM_exp = DCM_exp + (1-cos(theta))/theta2 * MATMUL(tmp_mat, tmp_mat) 
-      
-         ! hopefully this order of calculations gives better numerical results:
-      stheta = sin(theta)
-      DCM_expR      = (1-cos(theta))/theta * tmp_mat      
-      DCM_expR(1,1) = DCM_expR(1,1) + stheta
-      DCM_expR(2,2) = DCM_expR(2,2) + stheta
-      DCM_expR(3,3) = DCM_expR(3,3) + stheta
-      
-      DCM_expR = matmul( DCM_expR, tmp_mat )
-      DCM_expR = DCM_expR / theta
-      DCM_expR(1,1) = DCM_expR(1,1) + 1.0_ReKi ! add identity
-      DCM_expR(2,2) = DCM_expR(2,2) + 1.0_ReKi
-      DCM_expR(3,3) = DCM_expR(3,3) + 1.0_ReKi
-            
-   END IF
-
-   
-      
-   END FUNCTION DCM_expR
-!=======================================================================  
-   SUBROUTINE DCM_logMapR(DCM, logMap, ErrStat, ErrMsg)
-
-      ! This function computes the logarithmic map for a direction 
-      ! cosine matrix.
-      !
-      ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 24-30
-      ! with eigenvector equations updated to account for numerics
-   
-   REAL(ReKi),       INTENT(IN)    :: DCM(3,3)
-   REAL(ReKi),       INTENT(  OUT) :: logMap(3)
-   INTEGER(IntKi),   INTENT(  OUT) :: ErrStat                   ! Error status of the operation
-   CHARACTER(*),     INTENT(  OUT) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
-   
-      ! local variables
-   REAL(ReKi)                      :: temp
-   REAL(ReKi)                      :: theta
-   REAL(ReKi)                      :: stheta
-   REAL(ReKi)                      :: v(3)
-   REAL(ReKi)                      :: skewSym(3,3) ! an anti-symmetric matrix
-      
-         ! initialization
-      ErrStat = ErrID_None
-      ErrMsg  = ""   
-   
-   
-      temp  = 0.5_ReKi*( trace(DCM) - 1.0_ReKi )
-      temp  = min( max(temp,-1.0_ReKi), 1.0_ReKi ) !make sure it's in a valid range (to avoid cases where this is slightly outside the +/-1 range)
-      theta = ACOS( temp )                                                   ! Eq. 25 ( 0<=theta<=pi )
-      
-      stheta = sin(theta)
-      
-      IF ( EqualRealNos( pi, theta ) .or. &
-          (theta > 3.0_ReKi .and. EqualRealNos( stheta, 0.0_ReKi) ) ) THEN
-      
-         ! calculate the eigenvector of DCM associated with eigenvalue +1:
-      
-         temp = -1.0_ReKi + DCM(2,2) + DCM(2,3)*DCM(3,2) + DCM(3,3) - DCM(2,2)*DCM(3,3)
-         if ( .NOT. EqualRealNos(temp, 0.0_ReKi) ) then
-
-            v(1) = 1.0_ReKi
-            v(2) = -(DCM(2,1) + DCM(2,3)*DCM(3,1) - DCM(2,1)*DCM(3,3))/temp
-            v(3) = -(DCM(3,1) - DCM(2,2)*DCM(3,1) + DCM(2,1)*DCM(3,2))/temp
-
-         else 
-            temp = -1.0_ReKi + DCM(1,1) + DCM(1,3)*DCM(3,1) + DCM(3,3) - DCM(1,1)*DCM(3,3)
-            if ( .NOT. EqualRealNos(temp, 0.0_ReKi) ) then
-
-               v(1) = -(DCM(1,2) + DCM(1,3)*DCM(3,2) - DCM(1,2)*DCM(3,3))/temp
-               v(2) =  1.0_ReKi
-               v(3) = -(DCM(3,2) + DCM(1,2)*DCM(3,1) - DCM(1,1)*DCM(3,2))/temp
-
-            else 
-               temp = -1.0_ReKi + DCM(1,1) + DCM(1,2)*DCM(2,1) + DCM(2,2) - DCM(1,1)*DCM(2,2)
-               if ( .NOT. EqualRealNos(temp, 0.0_ReKi) ) then
-
-                  v(1) = -(DCM(1,3) - DCM(1,3)*DCM(2,2) + DCM(1,2)*DCM(2,3))/temp
-                  v(2) = -(DCM(1,3)*DCM(2,1) + DCM(2,3) - DCM(1,1)*DCM(2,3))/temp
-                  v(3) = 1.0_ReKi
-            
-               else
-                     ! break with error
-                  ErrStat = ErrID_Fatal
-                  WRITE( ErrMsg, '("DCM_logMap:invalid DCM matrix",3("'//Newline//'",4x,3(ES10.3E2,1x)))') DCM(1,:),DCM(2,:),DCM(3,:)               
-                  RETURN
-               end if         
-            end if         
-         endif
-                         
-            ! normalize the eigenvector:
-         v = v / TwoNorm(v)                                                       ! Eq. 27                  
-      
-            ! calculate the skew-symmetric tensor (note we could change sign here for continuity)
-            ! also note that we make v skew-symmetric in the inverse routine (DCM_exp), 
-            ! so we don't need to change the sign of v(2) here
-         logMap =  pi*v                                                           ! Eq. 26c  
-                     
-      ELSE
-         
-         IF ( EqualRealNos(0.0_ReKi, theta) .or. EqualRealNos( 0.0_ReKi, stheta ) ) THEN
-         
-            !skewSym = DCM - TRANSPOSE(DCM)
-            !
-            !logMap(1) = -skewSym(3,2)
-            !logMap(2) =  skewSym(3,1)
-            !logMap(3) = -skewSym(2,1)
-            !
-            !logMap = 0.5_ReKi * logMap   ! Eq. 26b with limit as x approaches 0 of (x/sin(x)) = 1
-         
-         
-            logMap = 0.0_ReKi                                                   ! Eq. 26a
-                  
-         ELSE ! 0 < theta < pi 
-      
-            skewSym = DCM - TRANSPOSE(DCM)
-      
-            logMap(1) = -skewSym(3,2)
-            logMap(2) =  skewSym(3,1)
-            logMap(3) = -skewSym(2,1)
-      
-            logMap    = 0.5_ReKi * theta / stheta * logMap   ! Eq. 26b
-         END IF
-         
-      END IF
-   
-   END SUBROUTINE DCM_logMapR  
-!=======================================================================
    SUBROUTINE DCM_SetLogMapForInterpR( tensor )
 
    ! this routine sets the rotation parameters (tensors from DCM_logMap)
@@ -1468,6 +1526,8 @@ CONTAINS
       !     |-cy*sz   cx*cz-sx*sy*sz    sx*cz+cx*sy*sz |
       !     | sy           -sx*cy             cx*cy    ]
       ! where cz = cos(theta_z), sz = sin(theta_z), cy = cos(theta_y), etc.
+      ! 
+      ! returned angles are in the range [-pi, pi]
    
       REAL(ReKi), INTENT(IN) :: M(3,3)    ! rotation matrix M 
       REAL(ReKi)             :: theta(3)  ! the 3 rotation angles: theta_x, theta_y, theta_z
@@ -1475,7 +1535,7 @@ CONTAINS
       REAL(ReKi)             :: cx        ! cos(theta_x)
       REAL(ReKi)             :: sx        ! sin(theta_x)
       REAL(ReKi)             :: cy        ! cos(theta_y)
-      REAL(ReKi)             :: sy        ! sin(theta_y)
+!     REAL(ReKi)             :: sy        ! sin(theta_y)
       REAL(ReKi)             :: cz        ! cos(theta_z)
       REAL(ReKi)             :: sz        ! sin(theta_z)
    
