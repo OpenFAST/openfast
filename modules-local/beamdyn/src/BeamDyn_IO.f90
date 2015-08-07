@@ -1568,6 +1568,9 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
 
    WRITE (UnSu,'(A,F13.3)' ) 'Blade length                  (m)    ', p%blade_length
 
+   WRITE (UnSu,'(A)')  'Blade center of mass: '
+   WRITE (UnSu,'(3ES18.5)' ) p%blade_CG(:)
+
    WRITE (UnSu,'(A)')  'Global position vector:' 
    WRITE (UnSu,'(3ES18.5)' ) p%GlbPos(:)
 
