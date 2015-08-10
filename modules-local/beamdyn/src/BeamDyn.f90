@@ -430,6 +430,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    OtherState%acc(:) = 0.0D0
    OtherState%xcc(:) = 0.0D0
 
+
    ! Define system output initializations (set up mesh) here:
    CALL MeshCreate( BlankMesh        = u%RootMotion            &
                    ,IOS              = COMPONENT_INPUT        &
@@ -693,19 +694,19 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
 
 
-
-!   CALL BD_ComputeBladeMass(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u_tmp,&
-!                            p%damp_flag,p%beta,                                     &
-!                            p%node_elem,p%dof_node,p%elem_total,                    &
-!                            p%dof_total,p%node_total,p%ngp,                         &
-!                            p%blade_mass,ErrStat2,ErrMsg2)
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_ComputeBladeMassNew(p%uuN0,p%Mass0_GL,p%Gauss,p%elem_total,p%node_elem,p%dof_total,&
-                               p%dof_node,p%ngp,p%blade_mass,p%blade_CG,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   CALL BD_ComputeBladeMass(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u_tmp,&
+                            p%damp_flag,p%beta,                                     &
+                            p%node_elem,p%dof_node,p%elem_total,                    &
+                            p%dof_total,p%node_total,p%ngp,                         &
+                            p%blade_mass,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_ComputeBladeMassNew(p%uuN0,p%Mass0_GL,p%Gauss,p%elem_total,p%node_elem,p%dof_total,&
+                               p%dof_node,p%ngp,p%blade_mass,p%blade_CG,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CalcIC(u_tmp,p,x,OtherState,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2176,6 +2177,7 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
    INTEGER(IntKi)                  :: dof_elem ! Degree of freedom per node
    INTEGER(IntKi)                  :: rot_elem ! Rotational degrees of freedom
    INTEGER(IntKi)                  :: nelem ! number of elements
+   INTEGER(IntKi)                  :: i ! Index counter
    INTEGER(IntKi)                  :: j ! Index counter
    INTEGER(IntKi)                  :: temp_id ! Index counter
    INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
@@ -5106,6 +5108,7 @@ SUBROUTINE BD_ComputeBladeMass(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,              
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(temp_vec,dof_total,'temp vector',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_vec(:) = 0.0D0
    if (ErrStat >= AbortErrLev) then
        call Cleanup()
        return
