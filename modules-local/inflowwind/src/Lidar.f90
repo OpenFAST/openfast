@@ -201,16 +201,6 @@ SUBROUTINE Lidar_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
       !............................................................................................
       ! Define initialization-routine output here:
       !............................................................................................
-   !CALL AllocAry( InitOut%WriteOutputHdr, p%NumOuts, 'WriteOutputHdr', ErrStat2, ErrMsg2 )
-   !   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   !CALL AllocAry( InitOut%WriteOutputUnt, p%NumOuts, 'WriteOutputUnt', ErrStat2, ErrMsg2 )
-   !   CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   !   
-   !IF (ErrStat >= AbortErrLev) RETURN
-   
-   !InitOut%WriteOutputHdr = p%OutParam(1:p%NumOuts)%Name
-   !InitOut%WriteOutputUnt = p%OutParam(1:p%NumOuts)%Units     
-   !InitOut%Ver = Lidar_Ver            
    
                   
    RETURN

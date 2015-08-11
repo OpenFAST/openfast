@@ -14,7 +14,7 @@
 usefrom IfW_UniformWind.txt
 usefrom IfW_TSFFWind.txt
 usefrom IfW_BladedFFWind.txt
-#usefrom IfW_HAWCWind.txt
+usefrom IfW_HAWCWind.txt
 usefrom IfW_UserWind.txt
 usefrom Lidar.txt
 
@@ -98,7 +98,7 @@ typedef  ^                       ^                 ReKi              HAWC_SigmaF
 typedef  ^                       ^                 ReKi              HAWC_TStart       -     -     -     "HAWC -- start time for turbulence scaling"              seconds
 typedef  ^                       ^                 ReKi              HAWC_TEnd         -     -     -     "HAWC -- end time for turbulence scaling"                seconds
 typedef  ^                       ^                 ReKi              HAWC_URef         -     -     -     "HAWC -- Mean u-component wind speed at the reference height" meters
-typedef  ^                       ^                 CHARACTER(1024)   HAWC_ProfileType  -     -     -     "HAWC -- Wind profile type ('LOG'=logarithmic, 'PL'=power law, or 'UD'=user defined)" -
+typedef  ^                       ^                 IntKi             HAWC_ProfileType  -     -     -     "HAWC -- Wind profile type (0=constant;1=logarithmic;2=power law)" -
 typedef  ^                       ^                 ReKi              HAWC_PLExp        -     -     -     "HAWC -- Power law exponent (used for PL wind profile type only)"   -
 typedef  ^                       ^                 ReKi              HAWC_Z0           -     -     -     "HAWC -- Surface roughness length (used for LOG wind profile type only)"  -
 typedef  ^                       ^                 LOGICAL           SumPrint          -     -     -     "Write summary info to a file <ROOTNAME>.IfW.Sum"        -
@@ -134,6 +134,7 @@ typedef  ^                       ^                 WindFileMetaData  WindFileInf
 typedef  ^                       OtherStateType    IntKi             TimeIndex         -     0     -     "An Index into the TData array"                          -
 typedef  ^                       ^   IfW_UniformWind_OtherStateType  UniformWind       -     -     -     "OtherStates from UniformWind"                 -
 typedef  ^                       ^      IfW_TSFFWind_OtherStateType  TSFFWind          -     -     -     "OtherStates from TSFFWind"                              -
+typedef  ^                       ^      IfW_HAWCWind_OtherStateType  HAWCWind          -     -     -     "OtherStates from HAWCWind"                              -
 typedef  ^                       ^  IfW_BladedFFWind_OtherStateType  BladedFFWind      -     -     -     "OtherStates from BladedFFWind"                          -
 typedef  ^                       ^      IfW_UserWind_OtherStateType  UserWind          -     -     -     "OtherStates from UserWind"                              -
 typedef  ^                       ^                 ReKi              AllOuts           :     -     -     "An array holding the value of all of the calculated (not only selected) output channels" "see OutListParameters.xlsx spreadsheet"
@@ -168,7 +169,7 @@ typedef  ^                       ^                 ReKi              WindViXYZ  
 typedef  ^                       ^     IfW_UniformWind_ParameterType UniformWind       -     -     -     "Parameters from UniformWind"                            -
 typedef  ^                       ^        IfW_TSFFWind_ParameterType TSFFWind          -     -     -     "Parameters from TSFFWind -- TurbSim full-field format"  -
 typedef  ^                       ^    IfW_BladedFFWind_ParameterType BladedFFWind      -     -     -     "Parameters from BladedFFWind -- Bladed-style full-field format"  -
-#typedef  ^                       ^        IfW_HAWCWind_ParameterType HAWCWind          -     -     -     "Parameters from HAWCWind"                               -
+typedef  ^                       ^        IfW_HAWCWind_ParameterType HAWCWind          -     -     -     "Parameters from HAWCWind"                               -
 typedef  ^                       ^        IfW_UserWind_ParameterType UserWind          -     -     -     "Parameters from UserWind"                               -
 #typedef  ^                       ^          IfW_CTWind_ParameterType CTWind            -     -     -     "Parameters from CTWind"                                 -
 typedef  ^                       ^                 IntKi             NumOuts           -     0     -     "Number of parameters in the output list (number of outputs requested)" -
