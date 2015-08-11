@@ -54,8 +54,8 @@ MODULE InflowWind_Subs
    USE                              IfW_TSFFWind               ! TurbSim style full-field binary wind files
    USE                              IfW_BladedFFWind           ! Bladed style full-field binary wind files
    USE                              IfW_UserWind               ! User-defined wind module
-
-!!!   USE                              HAWCWind                   ! full-field binary wind files in HAWC format
+   USE                              IfW_HAWCWind               ! full-field binary wind files in HAWC format
+   
 !!!   USE                              FDWind                     ! 4-D binary wind files
 !!!   USE                              CTWind                     ! coherent turbulence from KH billow - binary file superimposed on another wind type
 
@@ -566,7 +566,9 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    ENDIF
    IF ( PathIsRelative( InputFileData%CTTS_Path ) ) InputFileData%CTTS_Path = TRIM(PriPath)//TRIM(InputFileData%CTTS_Path)
 
-
+#else
+   InputFileData%CTTS_CoherentTurb = .FALSE.
+#endif
 
    !-------------------------------------------------------------------------------------------------
    !> Read the _Parameters for HAWC-formatted binary files [used only for WindType = 5]_ section
@@ -751,6 +753,8 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       RETURN
    END IF
 
+#ifdef UNUSED_INPUTFILE_LINES
+
 !FIXME:  TStart has no comment
       ! Read HAWC_TStart
    CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_TStart, 'HAWC_TStart', &
@@ -770,7 +774,8 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       CALL Cleanup()
       RETURN
    END IF
-
+   
+#endif
 
       !----------------------------------------------------------------------------------------------
       !> Read the _Mean wind profile paramters (added to HAWC-format files) [used only for WindType = 5]_ subsection
@@ -795,7 +800,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
       ! Read HAWC_ProfileType
    CALL ReadVar( UnitInput, InputFileName, InputFileData%HAWC_ProfileType, 'HAWC_ProfileType', &
-               'Wind profile type ("LOG"=logarithmic, "PL"=power law, or "UD"=user defined)', TmpErrStat, TmpErrMsg, UnitEcho )
+               'Wind profile type (0=constant;1=logarithmic;2=power law)', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
@@ -820,9 +825,6 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
       RETURN
    END IF
 
-#else
-   InputFileData%CTTS_CoherentTurb = .FALSE.
-#endif
 
    !---------------------- OUTPUT --------------------------------------------------         
    CALL ReadCom( UnitInput, InputFileName, 'Section Header: Output', TmpErrStat, TmpErrMsg, UnitEcho )
@@ -1260,27 +1262,27 @@ CONTAINS
          ! Start and end times of the scaling, but only if ScaleMethod is set.
       IF ( ( InputFileData%HAWC_ScaleMethod == 1_IntKi ) .OR. (InputFileData%HAWC_ScaleMethod == 2_IntKi ) ) THEN
             ! Check that the start time is >= 0.  NOTE: this may be an invalid test.
-         IF ( InputFileData%HAWC_TStart < 0.0_ReKi ) THEN
-            CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling TStart must be zero or positive.',  &
-                  ErrStat,ErrMsg,RoutineName)
-         ENDIF
+         !IF ( InputFileData%HAWC_TStart < 0.0_ReKi ) THEN
+         !   CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling TStart must be zero or positive.',  &
+         !         ErrStat,ErrMsg,RoutineName)
+         !ENDIF
 
-         IF ( InputFileData%HAWC_TStart < 0.0_ReKi ) THEN
-            CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling TStart must be zero or positive.',  &
-                  ErrStat,ErrMsg,RoutineName)
-         ENDIF
+         !IF ( InputFileData%HAWC_TStart < 0.0_ReKi ) THEN
+         !   CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling TStart must be zero or positive.',  &
+         !         ErrStat,ErrMsg,RoutineName)
+         !ENDIF
 
-         IF ( InputFileData%HAWC_TStart > InputFileData%HAWC_TEnd ) THEN
-            CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling start time must occur before the end time.',   &
-                  ErrStat,ErrMsg,RoutineName)
-         ENDIF
+         !IF ( InputFileData%HAWC_TStart > InputFileData%HAWC_TEnd ) THEN
+         !   CALL SetErrStat( ErrID_Fatal,' HAWC wind scaling start time must occur before the end time.',   &
+         !         ErrStat,ErrMsg,RoutineName)
+         !ENDIF
 
 !FIXME:  How do we want to handle having the start and end times both being exactly zero?  Is that a do not apply, or apply for all time?
 !FIXME:  What about TStart == TEnd ?
-         IF ( EqualRealNos( InputFileData%HAWC_TStart, InputFileData%HAWC_TEnd ) ) THEN
-            CALL SetErrStat( ErrID_Severe,' Start and end time for HAWC wind scaling are identical.  No time elapses.', &
-                  ErrStat,ErrMsg,RoutineName)
-         ENDIF
+         !IF ( EqualRealNos( InputFileData%HAWC_TStart, InputFileData%HAWC_TEnd ) ) THEN
+         !   CALL SetErrStat( ErrID_Severe,' Start and end time for HAWC wind scaling are identical.  No time elapses.', &
+         !         ErrStat,ErrMsg,RoutineName)
+         !ENDIF
 
       ENDIF
 
@@ -1749,6 +1751,7 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
 
       TYPE(IfW_UniformWind_OutputType)                         :: Uniform_OutData     !< output velocities
       TYPE(IfW_TSFFWind_OutputType)                            :: TSFF_OutData        !< output velocities
+      TYPE(IfW_HAWCWind_OutputType)                            :: HAWC_OutData        !< output velocities
       TYPE(IfW_BladedFFWind_OutputType)                        :: BladedFF_OutData    !< output velocities
       TYPE(IfW_UserWind_OutputType)                            :: User_OutData        !< output velocities
 
@@ -1998,11 +2001,44 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
                CALL MOVE_ALLOC( User_OutData%Velocity, OtherStates%WindViUVW )
             ENDIF
 
+         CASE ( HAWC_WindNumber )
+            
+               ! Move the arrays for the Position and Velocity information
+            CALL MOVE_ALLOC( OutputData%VelocityUVW,  HAWC_OutData%Velocity )
 
 
+               ! InputData only contains the Position array, so we can pass that directly.
+            CALL  IfW_HAWCWind_CalcOutput(  Time, PositionXYZprime, ParamData%HAWCWind, OtherStates%HAWCWind, &
+                                          HAWC_OutData, TmpErrStat, TmpErrMsg)
+
+               ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
+            CALL MOVE_ALLOC( HAWC_OutData%Velocity,   OutputData%VelocityUVW )
+
+            CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+            IF ( ErrStat >= AbortErrLev ) RETURN
 
 
+               ! Call IfW_TSFFWind_CalcOutput again in order to get the values needed for the OutList
+            IF ( ParamData%NWindVel >= 1_IntKi  .AND. FillWrOut ) THEN
+                  ! Move the arrays for the Velocity information
+               CALL MOVE_ALLOC( OtherStates%WindViUVW,  HAWC_OutData%Velocity )
+               CALL  IfW_HAWCWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%HAWCWind, &
+                                             OtherStates%HAWCWind, &
+                                             HAWC_OutData, TmpErrStat, TmpErrMsg)
 
+                  ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
+               IF ( TmpErrStat >= ErrID_Fatal ) THEN
+                  CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
+                  RETURN
+               ELSE
+                  TmpErrStat  =  ErrID_None
+                  TmpErrMsg   =  ''
+               ENDIF
+
+                  ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
+               CALL MOVE_ALLOC( HAWC_OutData%Velocity, OtherStates%WindViUVW )
+            ENDIF
+            
 
 
 
@@ -2087,7 +2123,10 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
 
          CASE (BladedFF_WindNumber)
                OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, BladedFF_OutData%DiskVel )
-
+               
+         CASE (HAWC_WindNumber)
+               OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, HAWC_OutData%DiskVel )
+               
          CASE (User_WindNumber)
                !OutputData%DiskVel   =  MATMUL( ParamData%RotFromWind, User_OutData%DiskVel )
 

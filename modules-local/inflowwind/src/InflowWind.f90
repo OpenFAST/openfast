@@ -58,8 +58,8 @@ MODULE InflowWind
    USE                              IfW_TSFFWind               ! TurbSim style full-field binary wind files
    USE                              IfW_BladedFFWind           ! Bladed style full-field binary wind files
    USE                              IfW_UserWind               ! User-defined wind module
-
-!!!   USE                              HAWCWind                   ! full-field binary wind files in HAWC format
+   USE                              IfW_HAWCWind               ! full-field binary wind files in HAWC format
+   
 !!!   USE                              FDWind                     ! 4-D binary wind files
 !!!   USE                              CTWind                     ! coherent turbulence from KH billow - binary file superimposed on another wind type
 
@@ -67,7 +67,7 @@ MODULE InflowWind
    IMPLICIT NONE
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v3.00.01a-adp', '27-Apr-2015' )
+   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v3.01.00a-adp', '10-Aug-2015' )
 
 
 
@@ -136,6 +136,9 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       TYPE(IfW_TSFFWind_InitOutputType)                     :: TSFF_InitOutData     !< initialization output info
       TYPE(IfW_TSFFWind_OutputType)                         :: TSFF_OutData         !< output velocities
 
+      TYPE(IfW_HAWCWind_InitInputType)                      :: HAWC_InitData        !< initialization info
+      TYPE(IfW_HAWCWind_InitOutputType)                     :: HAWC_InitOutData     !< initialization output info
+      TYPE(IfW_HAWCWind_OutputType)                         :: HAWC_OutData         !< output velocities
 
       TYPE(IfW_BladedFFWind_InitInputType)                  :: BladedFF_InitData    !< initialization info
       TYPE(IfW_BladedFFWind_InitOutputType)                 :: BladedFF_InitOutData !< initialization output info
@@ -605,12 +608,64 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
 
          CASE ( HAWC_WindNumber )
+            
+               ! Set InitData information
+            HAWC_InitData%WindFileName(1)    = InputFileData%HAWC_FileName_u
+            HAWC_InitData%WindFileName(2)    = InputFileData%HAWC_FileName_v
+            HAWC_InitData%WindFileName(3)    = InputFileData%HAWC_FileName_w
+            HAWC_InitData%SumFileUnit        = SumFileUnit
+            HAWC_InitData%nx                 = InputFileData%HAWC_nx
+            HAWC_InitData%ny                 = InputFileData%HAWC_ny
+            HAWC_InitData%nz                 = InputFileData%HAWC_nz
+            HAWC_InitData%ScaleMethod        = InputFileData%HAWC_ScaleMethod
+            HAWC_InitData%SF(1)              = InputFileData%HAWC_SFx           
+            HAWC_InitData%SF(2)              = InputFileData%HAWC_SFy          
+            HAWC_InitData%SF(3)              = InputFileData%HAWC_SFz           
+            HAWC_InitData%SigmaF(1)          = InputFileData%HAWC_SigmaFx 
+            HAWC_InitData%SigmaF(2)          = InputFileData%HAWC_SigmaFy
+            HAWC_InitData%SigmaF(3)          = InputFileData%HAWC_SigmaFz 
+            !HAWC_InitData%TStart             = InputFileData%HAWC_TStart      
+            !HAWC_InitData%TEnd               = InputFileData%HAWC_TEnd
+            HAWC_InitData%dx                 = InputFileData%HAWC_dx
+            HAWC_InitData%dy                 = InputFileData%HAWC_dy
+            HAWC_InitData%dz                 = InputFileData%HAWC_dz
+            HAWC_InitData%WindProfileType    = InputFileData%HAWC_ProfileType
+            HAWC_InitData%RefHt              = InputFileData%HAWC_RefHt
+            HAWC_InitData%URef               = InputFileData%HAWC_URef 
+            HAWC_InitData%PLExp              = InputFileData%HAWC_PLExp
+            HAWC_InitData%Z0                 = InputFileData%HAWC_Z0   
+                   
+            
                ! Initialize the HAWCWind module
-            CALL SetErrStat( ErrID_Fatal,' HAWC winds not supported yet.',ErrStat,ErrMsg,RoutineName )
+            CALL IfW_HAWCWind_Init(HAWC_InitData, InputGuess%PositionXYZ, ParamData%HAWCWind, OtherStates%HAWCWind, &
+                        HAWC_OutData,    TimeInterval,  HAWC_InitOutData,  TmpErrStat,          TmpErrMsg)
+            CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
+            IF ( ErrStat >= AbortErrLev ) RETURN
 
 
-
-
+               ! Store wind file metadata
+            InitOutData%WindFileInfo%FileName            =  InputFileData%HAWC_FileName_u
+            InitOutData%WindFileInfo%WindType            =  HAWC_WindNumber
+            InitOutData%WindFileInfo%RefHt               =  ParamData%HAWCWind%RefHt
+            InitOutData%WindFileInfo%RefHt_Set           =  .TRUE.
+            InitOutData%WindFileInfo%DT                  =  ParamData%HAWCWind%deltaXInv / ParamData%HAWCWind%URef
+            InitOutData%WindFileInfo%NumTSteps           =  ParamData%HAWCWind%nx
+            InitOutData%WindFileInfo%ConstantDT          =  .TRUE.
+            InitOutData%WindFileInfo%TRange              =  ParamData%HAWCWind%LengthX / ParamData%HAWCWind%URef
+            InitOutData%WindFileInfo%TRange_Limited      =  .FALSE.
+            InitOutData%WindFileInfo%YRange              =  (/ -ParamData%HAWCWind%LengthYHalf, ParamData%HAWCWind%LengthYHalf /)
+            InitOutData%WindFileInfo%YRange_Limited      =  .TRUE.      ! Hard boundaries enforced in y-direction
+            InitOutData%WindFileInfo%ZRange              =  (/ ParamData%HAWCWind%GridBase,    &
+                                                            ParamData%HAWCWind%GridBase + ParamData%HAWCWind%nz / ParamData%HAWCWind%deltaZInv /)
+            InitOutData%WindFileInfo%ZRange_Limited      =  .TRUE.
+            InitOutData%WindFileInfo%BinaryFormat        =  -1_IntKi
+            InitOutData%WindFileInfo%IsBinary            =  .TRUE.
+            InitOutData%WindFileInfo%TI                  =  BladedFF_InitOutData%TI
+            InitOutData%WindFileInfo%TI_listed           =  .FALSE.   ! This must be listed in the file someplace
+            InitOutData%WindFileInfo%MWS                 = ParamData%HAWCWind%URef
+            
+            
+            
          CASE (User_WindNumber)
 
                ! Initialize the UserWind module
@@ -717,9 +772,6 @@ CONTAINS
    SUBROUTINE CleanUp()
 
       ! add in stuff that we need to dispose of here
-      CALL InflowWind_DestroyInputFile( InputFileData, TmpErrsTat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-
       CALL InflowWind_DestroyInputFile( InputFileData,  TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
 
@@ -779,17 +831,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
 
          ! Local variables
-
-      TYPE(IfW_UniformWind_OutputType)                         :: Uniform_OutData     !< output velocities
-      TYPE(IfW_TSFFWind_OutputType)                            :: TSFF_OutData        !< output velocities
-      TYPE(IfW_BladedFFWind_OutputType)                        :: BladedFF_OutData    !< output velocities
-      TYPE(IfW_UserWind_OutputType)                            :: User_OutData        !< output velocities
-
-      REAL(ReKi), ALLOCATABLE                                  :: PositionXYZprime(:,:)   !< PositionXYZ array in the prime (wind) coordinates
-
-      INTEGER(IntKi)                                           :: I                   !< Generic counters
-
-
+      INTEGER(IntKi)                                           :: i
          ! Temporary variables for error handling
       INTEGER(IntKi)                                           :: TmpErrStat
       CHARACTER(ErrMsgLen)                                     :: TmpErrMsg            ! temporary error message
@@ -886,6 +928,7 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
       TYPE(IfW_UniformWind_OutputType)                         :: Uniform_OutData        !< output velocities
 
       TYPE(IfW_TSFFWind_OutputType)                            :: TSFF_OutData        !< output velocities
+      TYPE(IfW_HAWCWind_OutputType)                            :: HAWC_OutData        !< output velocities
 
       TYPE(IfW_BladedFFWind_OutputType)                        :: BladedFF_OutData        !< output velocities
 
@@ -915,8 +958,9 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
             CALL IfW_BladedFFWind_End( InputData%PositionXYZ, ParamData%BladedFFWind, &
                                  OtherStates%BladedFFWind, BladedFF_OutData, ErrStat, ErrMsg )
 
-!!!         CASE (HAWC_WindNumber)
-!!!            CALL HW_Terminate(     ErrStat )
+         CASE (HAWC_WindNumber)
+            CALL IfW_HAWCWind_End( InputData%PositionXYZ, ParamData%HAWCWind, &
+                                 OtherStates%HAWCWind, HAWC_OutData, ErrStat, ErrMsg )
 
          CASE (User_WindNumber)
             CALL IfW_UserWind_End( InputData%PositionXYZ, ParamData%UserWind, &

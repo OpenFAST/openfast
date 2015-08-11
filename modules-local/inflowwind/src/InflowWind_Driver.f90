@@ -449,7 +449,11 @@ PROGRAM InflowWind_Driver
    InflowWind_InitInp%InputFileName    =  Settings%IfWIptFileName       ! For now, IfW cannot work without an input file.
    !InflowWind_InitInp%DT               =  Settings%DT
    InflowWind_InitInp%UseInputFile     =  .TRUE.
-   InflowWind_InitInp%RootName = ""
+   IF ( SettingsFlags%DvrIptFile )  THEN
+      CALL GetRoot( Settings%DvrIptFileName, InflowWind_InitInp%RootName )
+   ELSE
+      InflowWind_InitInp%RootName = ""
+   END IF
    !CALL GetRoot( InflowWind_InitInp%InputFileName, InflowWind_InitInp%RootName )
 
    IF ( IfWDriver_Verbose >= 5_IntKi ) CALL WrScr('Calling InflowWind_Init...')
@@ -552,8 +556,8 @@ PROGRAM InflowWind_Driver
          ! Setup the actual grid points -- scan order, Y,Z,X
       Counter  =  1_IntKi
       DO I = 1,Settings%GridN(1)          ! Slowest scan over X
-         DO K = 1,Settings%GridN(2)       ! Single Z row
-            DO J = 1,Settings%GridN(3)    ! Step through Y fastest
+         DO K = 1,Settings%GridN(3)       ! Single Z row
+            DO J = 1,Settings%GridN(2)    ! Step through Y fastest
                InflowWind_u1%PositionXYZ(1,Counter)   =  Settings%XRange(1) + Settings%GridDelta(1)*( I - 1 )
                InflowWind_u1%PositionXYZ(2,Counter)   =  Settings%YRange(1) + Settings%GridDelta(2)*( J - 1 )
                InflowWind_u1%PositionXYZ(3,Counter)   =  Settings%ZRange(1) + Settings%GridDelta(3)*( K - 1 )

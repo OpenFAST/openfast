@@ -1,5 +1,7 @@
 Source\IfW_TSFFWind_Types.f90
 Source\IfW_TSFFWind.f90
+Source\IfW_HAWCWind_Types.f90
+Source\IfW_HAWCWind.f90
 Source\IfW_BladedFFWind_Types.f90
 Source\IfW_BladedFFWind.f90
 Source\IfW_UniformWind_Types.f90
@@ -12,6 +14,7 @@ Source\InflowWind_Types.f90
 Source\Lidar_Types.f90
 Source\Lidar.f90
 Source\Registry\IfW_TSFFWind.txt
+Source\Registry\IfW_HAWCWind.txt
 Source\Registry\IfW_BladedFFWind.txt
 Source\Registry\IfW_UniformWind.txt
 Source\Registry\IfW_UserWind.txt
