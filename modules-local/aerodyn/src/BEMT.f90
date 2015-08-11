@@ -31,6 +31,7 @@ module BEMT
    use Brent
    use UnsteadyAero
    !USE AeroDyn_Types
+   use AirfoilInfo
    use BladeElement
 
    implicit none
@@ -514,7 +515,7 @@ end subroutine BEMT_MapOutputs
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
+subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, Interval, InitOut, ErrStat, ErrMsg )
 ! This routine is called at the start of the simulation to perform initialization steps.
 ! The parameters are set here and not changed during the simulation.
 ! The initial states and initial guess for the input are defined.
@@ -527,6 +528,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    type(BEMT_DiscreteStateType),   intent(  out)  :: xd          ! Initial discrete states
    type(BEMT_ConstraintStateType), intent(  out)  :: z           ! Initial guess of the constraint states
    type(BEMT_OtherStateType),      intent(  out)  :: OtherState  ! Initial other/optimization states
+   type(AFInfoType),               intent(in   )  :: AFInfo(:)   ! The airfoil parameter data
    type(BEMT_OutputType),          intent(  out)  :: y           ! Initial system outputs (outputs are not calculated;
                                                                  !   only the output mesh is initialized)
    real(DbKi),                     intent(inout)  :: interval    ! Coupling interval in seconds: the rate that
@@ -547,6 +549,22 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    type(UA_InitInputType)                         :: Init_UA_Data
    type(UA_InitOutputType)                        :: InitOutData_UA
    type(UA_OutputType)                            :: y_UA
+   integer(IntKi)                                 :: i,j
+   real(ReKi)                                             :: Cn1             ! critical value of Cn_prime at LE separation for alpha >= alpha0    
+   real(ReKi)                                             :: Cn2             ! critical value of Cn_prime at LE separation for alpha < alpha0
+   real(ReKi)                                             :: Cd0
+   real(ReKi)                                             :: Cm0
+   real(ReKi)                                             :: k0
+   real(ReKi)                                             :: k1
+   real(ReKi)                                             :: k2
+   real(ReKi)                                             :: k3
+   real(ReKi)                                             :: T_VL
+   real(ReKi)                                             :: x_cp_bar 
+   real(ReKi)                                             :: alpha0              ! zero lift angle of attack (radians)
+   real(ReKi)                                             :: eta_e
+   real(ReKi)                                             :: St_sh
+
+   real(ReKi)                                     :: M, alpha1, alpha2, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, b1,b2,b5,A1,A2,A5,S1,S2,S3,S4,k1_hat,f, k2_hat
    
       ! Initialize variables for this routine
    errStat = ErrID_None
@@ -594,6 +612,23 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       
       call UA_Init( Init_UA_Data, u_UA, p%UA, xd%UA, OtherState%UA, y_UA, interval, InitOutData_UA, errStat, errMsg )       
       if (errStat >= AbortErrLev) return
+      
+      ! TODO: Disable Unsteady Aero for any node which has C_nalpha = 0.0!  GJH 8/11/2015
+      do j = 1,p%numBlades
+         do i = 1,p%numBladeNodes ! Loop over blades and nodes
+      
+            M           = u_UA%U / p%UA%a_s
+            call AFI_GetAirfoilParams( AFInfo(p%AFindx(i,j)), M, u_UA%Re, u_UA%alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
+                                    T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, errMsg, errStat )           
+   
+            if ( EqualRealNos(C_nalpha, 0.0_ReKi) ) then
+               OtherState%UA_Flag(i,j) = .false.
+            end if
+            
+         end do
+      end do
+      
+   
    end if
       !............................................................................................
       ! Define initial guess for the system inputs here:

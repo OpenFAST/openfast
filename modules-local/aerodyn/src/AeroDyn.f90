@@ -1635,7 +1635,7 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    InitInp%a_s     = InputFileData%SpdSound
    
    
-   call BEMT_Init(InitInp, u, p%BEMT,  x, xd, z, OtherState, y, Interval, InitOut, ErrStat2, ErrMsg2 )
+   call BEMT_Init(InitInp, u, p%BEMT,  x, xd, z, OtherState, p%AFI%AFInfo, y, Interval, InitOut, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
          
    if (.not. equalRealNos(Interval, p%DT) ) &
