@@ -4165,13 +4165,16 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       end if
 
    ! initialize accelerations here:
-   if ( .not. OtherState%InitAcc) then
+!   if ( .not. OtherState%InitAcc) then
+   if ( n .EQ. 0) then
       !Qi, call something to initialize
       call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       OtherState%InitAcc = .true. 
+!      WRITE(*,*) 'Initial Acc'
+!      WRITE(*,*) OtherState%acc(:)
    end if
 
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
@@ -5061,7 +5064,9 @@ SUBROUTINE BD_InitAcc( t, u, p, x, OtherState, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        
    OtherState%Acc(:) =  OS_tmp%Acc(:)
-   OtherState%Xcc(:) =  OS_tmp%Acc(:)
+   OtherState%Acc(1:3) = u_tmp%RootMotion%TranslationAcc(1:3,1)
+   OtherState%Acc(4:6) = u_tmp%RootMotion%RotationAcc(1:3,1)
+   OtherState%Xcc(:) =  OtherState%Acc(:)
 
    call cleanup()
    return
