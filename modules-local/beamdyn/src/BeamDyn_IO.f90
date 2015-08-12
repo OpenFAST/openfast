@@ -1631,6 +1631,31 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
            WRITE(UnSu,'(6ES15.5)') p%Mass0_GL(j,1:6,i)
        ENDDO
    ENDDO
+
+   WRITE (UnSu,'(/,A)')  'Initial displacement'
+   DO i=1,p%node_total
+       temp_id = (i - 1)*p%dof_node
+       WRITE(UnSu,'(I4,3ES18.5)') i,p%IniDisp(temp_id+1:temp_id+3)
+   ENDDO
+
+   WRITE (UnSu,'(/,A)')  'Initial rotation'
+   DO i=1,p%node_total
+       temp_id = (i - 1)*p%dof_node
+       WRITE(UnSu,'(I4,3ES18.5)') i,p%IniDisp(temp_id+4:temp_id+6)
+   ENDDO
+
+   WRITE (UnSu,'(/,A)')  'Initial velocity'
+   DO i=1,p%node_total
+       temp_id = (i - 1)*p%dof_node
+       WRITE(UnSu,'(I4,3ES18.5)') i,p%IniVelo(temp_id+1:temp_id+3)
+   ENDDO
+
+   WRITE (UnSu,'(/,A)')  'Initial angular velocity'
+   DO i=1,p%node_total
+       temp_id = (i - 1)*p%dof_node
+       WRITE(UnSu,'(I4,3ES18.5)') i,p%IniVelo(temp_id+4:temp_id+6)
+   ENDDO
+
       ! Interpolated blade properties.
 
 
