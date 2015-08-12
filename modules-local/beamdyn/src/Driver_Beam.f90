@@ -70,6 +70,9 @@ PROGRAM MAIN
    INTEGER(IntKi),PARAMETER:: QiMidVel = 24
    INTEGER(IntKi),PARAMETER:: QiRootUnit = 30
    INTEGER(IntKi),PARAMETER:: QiReacUnit = 40
+   INTEGER(IntKi),PARAMETER:: QiRootDispUnit = 50
+   INTEGER(IntKi),PARAMETER:: QiRootVelUnit = 60
+   INTEGER(IntKi),PARAMETER:: QiRootAccUnit = 70
 
    REAL(ReKi):: temp_cc(3)
    REAL(ReKi):: temp_R(3,3)
@@ -108,6 +111,9 @@ PROGRAM MAIN
 !    OPEN(unit = QiMidVel, file = 'Qi_Mid_Vel.out', status = 'REPLACE',ACTION = 'WRITE')
     OPEN(unit = QiRootUnit,file = 'QiRoot_Single.out', status = 'REPLACE',ACTION = 'WRITE')
     OPEN(unit = QiReacUnit,file = 'QiReac_Single.out', status = 'REPLACE',ACTION = 'WRITE')
+    OPEN(unit = QiRootDispUnit,file = 'Qi_Root_Disp.out', status = 'REPLACE',ACTION = 'WRITE')
+    OPEN(unit = QiRootVelUnit,file = 'Qi_Root_Vel.out', status = 'REPLACE',ACTION = 'WRITE')
+    OPEN(unit = QiRootAccUnit,file = 'Qi_Root_Acc.out', status = 'REPLACE',ACTION = 'WRITE')
 
 
    CALL BD_Init(BD_InitInput        &
@@ -131,16 +137,12 @@ PROGRAM MAIN
 CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final
 WRITE(*,*) "Time Step: ", n_t_global
-IF(n_t_global == 0) STOP 
+!IF(n_t_global == 0) STOP 
 
 
      CALL BD_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
                              BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
-!     IF(BD_Parameter%analysis_type .EQ. 2 .AND. n_t_global .EQ. 0) THEN
-!         CALL BD_IniAcc( BD_Input(1), BD_Output(1), BD_Parameter, &
-!               BD_OtherState,ErrStat,ErrMsg)
-!     ENDIF
 
 CALL BD_CrvExtractCrv(TRANSPOSE(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Parameter%node_elem*BD_Parameter%elem_total)),temp_cc,&
                       ErrStat,ErrMsg)
@@ -150,6 +152,12 @@ CALL BD_CrvExtractCrv(TRANSPOSE(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,BD_Pa
       WRITE(QiTipVel,6000) t_global,&
                            &BD_OutPut(1)%BldMotion%TranslationVel(1:3,BD_Parameter%node_elem*BD_Parameter%elem_total),&
                            &BD_OutPut(1)%BldMotion%RotationVel(1:3,BD_Parameter%node_elem*BD_Parameter%elem_total)
+      WRITE(QiRootVelUnit,6000) t_global,&
+                           &BD_OutPut(1)%BldMotion%TranslationVel(1:3,1),&
+                           &BD_OutPut(1)%BldMotion%RotationVel(1:3,1)
+      WRITE(QiRootAccUnit,6000) t_global,&
+                           &BD_OutPut(1)%BldMotion%TranslationAcc(1:3,1),&
+                           &BD_OutPut(1)%BldMotion%RotationAcc(1:3,1)
       WRITE(QiRootUnit,6000) t_global,&
                            &BD_OutPut(1)%BldForce%Force(1:3,1),&
                            &BD_OutPut(1)%BldForce%Moment(1:3,1)
@@ -205,6 +213,9 @@ WRITE(*,*) 'Time: ', finish-start
    CLOSE (QiMidDisp)
 !   CLOSE (QiMidForce)
 !   CLOSE (QiMidAcc)
+   CLOSE (QiRootDispUnit)
+   CLOSE (QiRootVelUnit)
+   CLOSE (QiRootAccUnit)
 
 7000 FORMAT (ES12.5,9ES21.12)
 !CLOSE (QiHUnit)
@@ -246,7 +257,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
    temp_qq(:)     = 0.0D0
    temp_R(:,:)    = 0.0D0
    temp_r0(:) = 0.0D0 
-   temp_r0(3) = 1.0D0
+   temp_r0(3) = 1.5D0
    temp_theta = 1.0006D0*t
    temp_vec(:) = 0.0D0
 !   temp_vec(2) = 4.0D0*TAN(temp_theta/4.0D0)
@@ -271,10 +282,10 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
 
    ! Calculate root translational and angular velocities
    u%RootMotion%RotationVel(:,:) = 0.0D0
-!   u%RootMotion%RotationVel(2,1) = 1.0006D0
    u%RootMotion%RotationVel(1,1) = 1.0006D0
+!   u%RootMotion%RotationVel(1,1) = 1.0006D0
    u%RootMotion%TranslationVel(:,:) = 0.0D0
-!   u%RootMotion%TranslationVel(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr)
+   u%RootMotion%TranslationVel(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr)
    ! END Calculate root translational and angular velocities
 
 
