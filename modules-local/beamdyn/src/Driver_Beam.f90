@@ -73,6 +73,7 @@ PROGRAM MAIN
    INTEGER(IntKi),PARAMETER:: QiRootDispUnit = 50
    INTEGER(IntKi),PARAMETER:: QiRootVelUnit = 60
    INTEGER(IntKi),PARAMETER:: QiRootAccUnit = 70
+   INTEGER(IntKi),PARAMETER:: QiInputUnit = 80
 
    REAL(ReKi):: temp_cc(3)
    REAL(ReKi):: temp_R(3,3)
@@ -114,6 +115,7 @@ PROGRAM MAIN
     OPEN(unit = QiRootDispUnit,file = 'Qi_Root_Disp.out', status = 'REPLACE',ACTION = 'WRITE')
     OPEN(unit = QiRootVelUnit,file = 'Qi_Root_Vel.out', status = 'REPLACE',ACTION = 'WRITE')
     OPEN(unit = QiRootAccUnit,file = 'Qi_Root_Acc.out', status = 'REPLACE',ACTION = 'WRITE')
+    OPEN(unit = QiInputUnit,file = 'BD_Input_File.dat', status = 'REPLACE',ACTION = 'WRITE')
 
 
    CALL BD_Init(BD_InitInput        &
@@ -134,10 +136,17 @@ PROGRAM MAIN
    BD_OutputTimes(1) = t_initial
 
    CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, ErrStat, ErrMsg)
+   WRITE(QiInputUnit,9000) BD_InputTimes(1),&
+                        &BD_Input(1)%RootMotion%Orientation(:,:,1),&
+                        &BD_Input(1)%RootMotion%TranslationDisp(1:3,1),&
+                        &BD_Input(1)%RootMotion%TranslationVel(1:3,1),&
+                        &BD_Input(1)%RootMotion%RotationVel(1:3,1),&
+                        &BD_Input(1)%RootMotion%TranslationAcc(1:3,1),&
+                        &BD_Input(1)%RootMotion%RotationAcc(1:3,1)
 CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final
 WRITE(*,*) "Time Step: ", n_t_global
-!IF(n_t_global == 0) STOP 
+IF(n_t_global == 1) STOP 
 
 
      CALL BD_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
@@ -178,6 +187,14 @@ CALL BD_CrvExtractCrv(TRANSPOSE(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,1)),t
 
      CALL BD_InputSolve( t_global + dt_global, BD_Input(1), BD_Parameter, ErrStat, ErrMsg)
 
+   WRITE(QiInputUnit,9000) t_global+dt_global,&
+                        &BD_Input(1)%RootMotion%Orientation(:,:,1),&
+                        &BD_Input(1)%RootMotion%TranslationDisp(1:3,1),&
+                        &BD_Input(1)%RootMotion%TranslationVel(1:3,1),&
+                        &BD_Input(1)%RootMotion%RotationVel(1:3,1),&
+                        &BD_Input(1)%RootMotion%TranslationAcc(1:3,1),&
+                        &BD_Input(1)%RootMotion%RotationAcc(1:3,1)
+
      CALL BD_UpdateStates( t_global, n_t_global, BD_Input, BD_InputTimes, BD_Parameter, &
                                BD_ContinuousState, &
                                BD_DiscreteState, BD_ConstraintState, &
@@ -206,6 +223,7 @@ WRITE(*,*) 'Time: ', finish-start
    DEALLOCATE(BD_OutputTimes)
 
    6000 FORMAT (ES12.5,6ES21.12)
+   9000 FORMAT (ES12.5,24ES21.12)
    CLOSE (QiTipDisp)
    CLOSE (QiTipVel)
    CLOSE (QiRootUnit)
@@ -216,6 +234,7 @@ WRITE(*,*) 'Time: ', finish-start
    CLOSE (QiRootDispUnit)
    CLOSE (QiRootVelUnit)
    CLOSE (QiRootAccUnit)
+   CLOSE (QiInputUnit)
 
 7000 FORMAT (ES12.5,9ES21.12)
 !CLOSE (QiHUnit)
