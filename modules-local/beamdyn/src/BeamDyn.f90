@@ -711,6 +711,18 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    CALL BD_CalcIC(u_tmp,p,x,OtherState,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+   CALL AllocAry(p%IniDisp,p%dof_total,'p%IniDisp',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%IniVelo,p%dof_total,'p%IniVelo',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+   p%IniDisp(:) = 0.0D0
+   p%IniVelo(:) = 0.0D0
+   p%IniDisp(:) = x%q(:)
+   p%IniVelo(:) = x%dqdt(:)
    ! Define initial guess for the system outputs here:
 
    y%BldForce%Force(:,:)    = 0.0D0

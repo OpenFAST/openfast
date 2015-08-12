@@ -79,6 +79,8 @@ typedef      ^            ^      DbKi   coef   {9} - -  "GA2 Coefficient" -
 typedef BeamDyn/BD ParameterType DbKi   rhoinf - - -  "Numerical Damping Coefficient for GA2"
 typedef      ^            ^      ReKi   GlbPos {3} - -  "Initial Position Vector between origins of Global and blade frames" -
 typedef      ^            ^      ReKi   GlbRot {3}{3} - -  "Initial Rotation Tensor between Global and Blade frames" -
+typedef      ^            ^      ReKi   IniDisp {:} - -  "Initial Position Vector between origins of Global and blade frames" -
+typedef      ^            ^      ReKi   IniVelo {:} - -  "Initial Position Vector between origins of Global and blade frames" -
 typedef      ^            ^      IntKi  NumOuts - - -  "Number of parameters in the output list (number of outputs requested)" -
 typedef      ^     ParameterType OutParmType OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
 typedef      ^     ParameterType IntKi  NNodeOuts - - - "Number of nodes to output data to a file[0 - 9]"	-
