@@ -137,8 +137,10 @@ is_pointer( node_t * r )
    if ( sw_ccode && r->ndims > 0  && r->dims[0]->deferred ){
       if ( !strncmp( make_lower_temp(r-> name), "writeoutput", 11) ) { // this covers WriteOutput, WriteOutputHdr, and WriteOutputUnt
          return( 0 ); // we're going to use these in the glue code, so these will be a special case
+      } else if (r->type->type_type == DERIVED){
+         return(0); // derived types aren't passed through the c-interface, so don't make them pointers
       } else {
-         return( 1 );
+         return(1);
       }
    } else {
       return( 0 );
