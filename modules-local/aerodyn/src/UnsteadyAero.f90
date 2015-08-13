@@ -66,11 +66,11 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
       ! for changes in other variables (Re, Mach #, etc) then then we would need to interpolate across tables.
       !
    s1 = size(AFInfo%Table(1)%Coefs,2)
-   if (s1 < 3) then
-      ErrMsg  = 'The Airfoil info table must contains columns for lift, drag, and pitching moment'
-      ErrStat = ErrID_Fatal
-      return
-   end if
+   !if (s1 < 3) then
+   !   ErrMsg  = 'The Airfoil info table must contains columns for lift, drag, and pitching moment'
+   !   ErrStat = ErrID_Fatal
+   !   return
+   !end if
    Cd0 =   AFInfo%Table(1)%UA_BL%Cd0
    IntAFCoefs(1:s1) = CubicSplineInterpM( 1.0_ReKi*real( AOA*180.0/PI, ReKi ) &
                                              , AFInfo%Table(1)%Alpha &
@@ -326,27 +326,33 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, alpha, alpha0, C_nalpha, AFInf
    character(*),     intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
    
    !real                            :: IntAFCoefs(4)         ! The interpolated airfoil coefficients.
-   real(ReKi)                       :: Cn, Cl, Cd, Cm, Cd0
+   real(ReKi)                       :: Cn, Cl, Cd, Cm, Cd0, tmpRoot
    !integer                         :: s1                    ! Number of columns in the AFInfo structure
    ErrStat = ErrID_None
    ErrMsg  = ''
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
     
    
-   if (abs(alpha-alpha0) < .01) then
-      Get_f_from_Lookup = 1.0_ReKi
-      return
-   end if
+   !if (abs(alpha-alpha0) < .01) then
+   !   Get_f_from_Lookup = 1.0_ReKi
+   !   return
+   !end if
    
    call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
       if (ErrStat > ErrID_None) return
    
    Cn =  Cl*cos(alpha) + (Cd-Cd0)*sin(alpha)
    
+   tmpRoot  = Cn/(C_nalpha*(alpha-alpha0))
+   if (tmpRoot < 0.0_ReKi) then
+      Get_f_from_Lookup = 1.0_ReKi
+      return
+   end if
+   
    if (UAMod == 2) then
-      Get_f_from_Lookup = ((3*sqrt(Cn/(C_nalpha*(alpha-alpha0)))-1)/2.0)**2
+      Get_f_from_Lookup = ((3*sqrt(tmpRoot)-1)/2.0)**2
    else
-      Get_f_from_Lookup = ( 2 * sqrt( Cn / ( C_nalpha*( alpha-alpha0 ) ) ) - 1 ) **2 
+      Get_f_from_Lookup = ( 2 * sqrt( tmpRoot ) - 1 ) **2 
    end if
       
    if ( Get_f_from_Lookup > 1.0 ) then
@@ -372,7 +378,7 @@ real(ReKi) function Get_f_c_from_Lookup( Re, alpha, alpha0, C_nalpha, AFInfo, Er
    character(*),     intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
    
    !real                            :: IntAFCoefs(4)         ! The interpolated airfoil coefficients.
-   real(ReKi)                      :: Cc, Cl, Cd, Cm, Cd0
+   real(ReKi)                      :: Cc, Cl, Cd, Cm, Cd0, denom
    !integer                         :: s1                    ! Number of columns in the AFInfo structure
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -383,11 +389,17 @@ real(ReKi) function Get_f_c_from_Lookup( Re, alpha, alpha0, C_nalpha, AFInfo, Er
    call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
       if (ErrStat > ErrID_None) return
    
+   denom = ( alpha-alpha0 )  ! NOTE: We removed the tan(alpha) term from the equation, per Rick's suggestion 8/13/2015.    *tan(alpha)
+   if (abs(denom) < .015 ) then
+      Get_f_c_from_Lookup = 1.0_ReKi
+      return
+   end if
+   denom = C_nalpha*denom
    Cc =  Cl*sin(alpha) - (Cd-Cd0)*cos(alpha)
       ! Apply an offset of 0.2 to fix cases where f_c should be negative, but we are using **2 so can only return positive values
       ! Note: because we include this offset, it must be accounted for in the final value of Cc, eqn 1.38.  This will be applied
       ! For both UA_Mod = 1,2, and 3 when using Flookup = T
-   Get_f_c_from_Lookup = (  Cc / ( C_nalpha*( alpha-alpha0 )*tan(alpha) )  + 0.2 ) **2 
+   Get_f_c_from_Lookup = (  Cc / ( denom )  + 0.2 ) **2 
    
    !Get_f_c_from_Lookup = (  Cc / ( C_nalpha*( alpha-alpha0 )*tan(alpha) )  ) **2 
    !if ( Cc < 0.0_ReKi ) then
