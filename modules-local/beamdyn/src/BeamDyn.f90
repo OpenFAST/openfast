@@ -4157,6 +4157,18 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    CALL BD_CopyContState(x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
       
+
+   ! initialize accelerations here:
+!   if ( .not. OtherState%InitAcc) then
+   if ( n .EQ. 0) then
+      !Qi, call something to initialize
+      call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
+          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
+          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      OtherState%InitAcc = .true. 
+   end if
+
    CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) then
@@ -4164,58 +4176,9 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
          return
       end if
 
-   ! initialize accelerations here:
-!   if ( .not. OtherState%InitAcc) then
-   if ( n .EQ. 0) then
-      !Qi, call something to initialize
-      call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
-          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      WRITE(*,*) 't',t
-      WRITE(*,*) 'u_interp%Orientation'
-DO i=1,3
-WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
-enddo
-WRITE(*,*) 'u_interp%TranslationDisp'
-WRITE(*,*) u_interp%RootMotion%TranslationDisp(:,1)
-WRITE(*,*) 'u_interp%TranslationVel'
-WRITE(*,*) u_interp%RootMotion%TranslationVel(:,1)
-WRITE(*,*) 'u_interp%RotationVel'
-WRITE(*,*) u_interp%RootMotion%RotationVel(:,1)
-WRITE(*,*) 'u_interp%TranslationAcc'
-WRITE(*,*) u_interp%RootMotion%TranslationAcc(:,1)
-WRITE(*,*) 'u_interp%RotationAcc'
-WRITE(*,*) u_interp%RootMotion%RotationAcc(:,1)
-WRITE(*,*) 'x_tmp%q'
-WRITE(*,*) x_tmp%q
-WRITE(*,*) 'x_tmp%dqdt'
-WRITE(*,*) x_tmp%dqdt
-      CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
-          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      OtherState%InitAcc = .true. 
-      WRITE(*,*) 'Initial Acc'
-      WRITE(*,*) OtherState%acc(:)
-   end if
-
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                  
-!DO i=1,3
-!WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
-!enddo
-!WRITE(*,*) 'u_interp%TranslationDisp'
-!WRITE(*,*) u_interp%RootMotion%TranslationDisp(:,1)
-!WRITE(*,*) 'u_interp%TranslationVel'
-!WRITE(*,*) u_interp%RootMotion%TranslationVel(:,1)
-!WRITE(*,*) 'u_interp%RotationVel'
-!WRITE(*,*) u_interp%RootMotion%RotationVel(:,1)
-!WRITE(*,*) 'u_interp%TranslationAcc'
-!WRITE(*,*) u_interp%RootMotion%TranslationAcc(:,1)
-!WRITE(*,*) 'u_interp%RotationAcc'
-!WRITE(*,*) u_interp%RootMotion%RotationAcc(:,1)
-!WRITE(*,*) 'x_tmp%q'
-!WRITE(*,*) x_tmp%q
-!WRITE(*,*) 'x_tmp%dqdt'
-!WRITE(*,*) x_tmp%dqdt
    ! GA2: prediction        
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
                                 p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
