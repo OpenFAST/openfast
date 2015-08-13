@@ -905,9 +905,9 @@ CONTAINS
         
    
       ! These coefs are stored in the AFInfo data structures based on Re
-   alpha0         =  AFInfo%Table(1)%UA_BL%alpha0        !-0.35_ReKi*pi/180.0
-   alpha1         =  AFInfo%Table(1)%UA_BL%alpha1        !11.0_ReKi*pi/180.0
-   alpha2         =  AFInfo%Table(1)%UA_BL%alpha2        !-11.0_ReKi*pi/180.0
+   alpha0         =  AFInfo%Table(1)%UA_BL%alpha0   * D2R   ! Convert to radians
+   alpha1         =  AFInfo%Table(1)%UA_BL%alpha1   * D2R   ! Convert to radians
+   alpha2         =  AFInfo%Table(1)%UA_BL%alpha2   * D2R   ! Convert to radians
    eta_e          =  AFInfo%Table(1)%UA_BL%eta_e         !0.90               ! Recovery factor in the range [0.85 - 0.95]
    C_nalpha       =  AFInfo%Table(1)%UA_BL%C_nalpha      !2*pi  
    T_f0           =  AFInfo%Table(1)%UA_BL%T_f0          !3.0_ReKi  ! seconds
