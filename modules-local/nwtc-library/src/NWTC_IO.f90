@@ -35,7 +35,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.06.03a-bjj', '6-Aug-2015')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.06.03a-bjj', '14-Aug-2015')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -108,14 +108,21 @@ MODULE NWTC_IO
       MODULE PROCEDURE AllR8Ary2       ! 2-dimensional array of R8Ki reals
       MODULE PROCEDURE AllR16Ary2      ! 2-dimensional array of QuKi reals
 
-      MODULE PROCEDURE AllRAry3
-      MODULE PROCEDURE AllRAry4
-      MODULE PROCEDURE AllRAry5
+      MODULE PROCEDURE AllR4Ary3       ! 3-dimensional array of SiKi reals
+      MODULE PROCEDURE AllR8Ary3       ! 3-dimensional array of R8Ki reals
+      MODULE PROCEDURE AllR16Ary3      ! 3-dimensional array of QuKi reals
+      MODULE PROCEDURE AllR4Ary4       ! 4-dimensional array of SiKi reals
+      MODULE PROCEDURE AllR8Ary4       ! 4-dimensional array of R8Ki reals
+      MODULE PROCEDURE AllR16Ary4      ! 4-dimensional array of QuKi reals
+      MODULE PROCEDURE AllR4Ary5       ! 5-dimensional array of SiKi reals
+      MODULE PROCEDURE AllR8Ary5       ! 5-dimensional array of R8Ki reals
+      MODULE PROCEDURE AllR16Ary5      ! 5-dimensional array of QuKi reals
    END INTERFACE
 
    INTERFACE AllocPAry
       MODULE PROCEDURE AllIPAry1
       MODULE PROCEDURE AllIPAry2
+      MODULE PROCEDURE AllFPAry1
       MODULE PROCEDURE AllRPAry2
       MODULE PROCEDURE AllRPAry3
 !      MODULE PROCEDURE AllRPAry4   !not yet coded
@@ -244,9 +251,15 @@ CONTAINS
    !     SUBROUTINE AllR4Ary2     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 4-Byte REAL array.
    !     SUBROUTINE AllR8Ary2     ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 8-Byte REAL array.
    !     SUBROUTINE AllR16Ary2    ( Ary, AryDim, Descr, ErrStat, ErrMsg )                                            ! Allocate a 2-D 16-Byte REAL array.
-   !     SUBROUTINE AllRAry3      ( Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )                         ! Allocate a 3-D REAL array.
-   !     SUBROUTINE AllRAry4      ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat, ErrMsg )                ! Allocate a 4-D REAL array.
-   !     SUBROUTINE AllRAry5      ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )       ! Allocate a 5-D REAL array.
+   !     SUBROUTINE AllR4Ary3     ( Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )                         ! Allocate a 3-D 4-Byte REAL array.
+   !     SUBROUTINE AllR8Ary3     ( Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )                         ! Allocate a 3-D 8-Byte REAL array.
+   !     SUBROUTINE All16RAry3    ( Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )                         ! Allocate a 3-D 16-Byte REAL array.
+   !     SUBROUTINE AllR4Ary4     ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat, ErrMsg )                ! Allocate a 4-D 4-Byte REAL array.
+   !     SUBROUTINE AllR8Ary4     ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat, ErrMsg )                ! Allocate a 4-D 8-Byte REAL array.
+   !     SUBROUTINE AllR16Ary4    ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat, ErrMsg )                ! Allocate a 4-D 16-Byte REAL array.
+   !     SUBROUTINE AllR4Ary5     ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )       ! Allocate a 4-Byte REAL array.
+   !     SUBROUTINE AllR8Ary5     ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )       ! Allocate a 8-Byte REAL array.
+   !     SUBROUTINE AllR16Ary5    ( Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )       ! Allocate a 16-Byte REAL array.
    !     SUBROUTINE CheckArgs     ( InputFile [, ErrStat] )
    !     SUBROUTINE CheckIOS      ( IOS, Fil, Variable, VarType [,ErrStat, ErrMsg] [,TrapErrors] )
    !     SUBROUTINE ChkParseData  ( Words, ExpVarName, FileName, FileLineNum, NameIndx, ErrStat, ErrMsg )             ! Checks data to be parsed to ensure it has the right variable name and a value to go with it.
@@ -726,6 +739,38 @@ CONTAINS
    RETURN
    END SUBROUTINE AllIPAry2 
 !=======================================================================
+   SUBROUTINE AllFPAry1 (  Ary, AryDim1, Descr, ErrStat, ErrMsg )
+
+      ! This routine allocates a 1-D REAL array.
+      ! Argument declarations.
+
+   REAL(C_FLOAT), POINTER            :: Ary    (:)                                 ! Array to be allocated
+   INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
+   CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
+
+
+   IF ( ASSOCIATED(Ary) ) THEN
+      DEALLOCATE(Ary)
+      !ErrStat = ErrID_Warn
+      !ErrMsg = " AllRPAry2: Ary already allocated."
+   END IF
+
+   ALLOCATE ( Ary(AryDim1) , STAT=ErrStat )
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*BYTES_IN_REAL))//&
+                  ' bytes of memory for the '//TRIM( Descr )//' array.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+   
+   Ary = 0
+   RETURN
+   END SUBROUTINE AllFPAry1
+!=======================================================================
    SUBROUTINE AllRPAry2 (  Ary, AryDim1, AryDim2, Descr, ErrStat, ErrMsg )
 
       ! This routine allocates a 2-D REAL array.
@@ -1113,15 +1158,15 @@ CONTAINS
    RETURN
    END SUBROUTINE AllR16Ary2
 !=======================================================================
-   SUBROUTINE AllRAry3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
+   SUBROUTINE AllR4Ary3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
 
 
-      ! This routine allocates a 3-D REAL array.
+      ! This routine allocates a 3-D 4-byte REAL array.
 
 
       ! Argument declarations.
 
-   REAL(ReKi), ALLOCATABLE           :: Ary    (:,:,:)                             ! Array to be allocated
+   REAL(SiKi), ALLOCATABLE           :: Ary    (:,:,:)                             ! Array to be allocated
 
    INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
@@ -1147,17 +1192,89 @@ CONTAINS
    END IF
 
    RETURN
-   END SUBROUTINE AllRAry3
+   END SUBROUTINE AllR4Ary3
 !=======================================================================
-   SUBROUTINE AllRAry4 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat, ErrMsg )
+   SUBROUTINE AllR8Ary3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
 
 
-      ! This routine allocates a 4-D REAL array.
+      ! This routine allocates a 3-D 8-byte REAL array.
 
 
       ! Argument declarations.
 
-   REAL(ReKi),      ALLOCATABLE      :: Ary    (:,:,:,:)                           ! Array to be allocated
+   REAL(R8Ki), ALLOCATABLE           :: Ary    (:,:,:)                             ! Array to be allocated
+
+   INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim3                                    ! The size of the third dimension of the array.
+   CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status; if present, program does not abort on error
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
+
+
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
+
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+      ELSE
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
+                  ' bytes of memory for the '//TRIM( Descr )//' array.'
+      END IF
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+
+   RETURN
+   END SUBROUTINE AllR8Ary3
+!=======================================================================
+   SUBROUTINE AllR16Ary3 (  Ary, AryDim1, AryDim2, AryDim3, Descr, ErrStat, ErrMsg )
+
+
+      ! This routine allocates a 3-D 16-byte REAL array.
+
+
+      ! Argument declarations.
+
+   REAL(QuKi), ALLOCATABLE           :: Ary    (:,:,:)                             ! Array to be allocated
+
+   INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim3                                    ! The size of the third dimension of the array.
+   CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status; if present, program does not abort on error
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
+
+
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3) , STAT=ErrStat )
+
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+      ELSE
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*BYTES_IN_REAL))//&
+                  ' bytes of memory for the '//TRIM( Descr )//' array.'
+      END IF
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+
+   RETURN
+   END SUBROUTINE AllR16Ary3
+!=======================================================================
+   SUBROUTINE AllR4Ary4 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat, ErrMsg )
+
+
+      ! This routine allocates a 4-D 4-byte REAL array.
+
+
+      ! Argument declarations.
+
+   REAL(SiKi),      ALLOCATABLE      :: Ary    (:,:,:,:)                           ! Array to be allocated
 
    INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
@@ -1184,17 +1301,91 @@ CONTAINS
    END IF
 
    RETURN
-   END SUBROUTINE AllRAry4
+   END SUBROUTINE AllR4Ary4
 !=======================================================================
-   SUBROUTINE AllRAry5 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )
+   SUBROUTINE AllR8Ary4 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat, ErrMsg )
 
 
-      ! This routine allocates a 5-D REAL array.
+      ! This routine allocates a 4-D 8-byte REAL array.
 
 
       ! Argument declarations.
 
-   REAL(ReKi),      ALLOCATABLE      :: Ary    (:,:,:,:,:)                         ! Array to be allocated
+   REAL(R8Ki),      ALLOCATABLE      :: Ary    (:,:,:,:)                           ! Array to be allocated
+
+   INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim3                                    ! The size of the third dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim4                                    ! The size of the fourth dimension of the array.
+   CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status; if present, program does not abort on error
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
+
+
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4) , STAT=ErrStat )
+
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+      ELSE
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_REAL))//&
+                  ' bytes of memory for the '//TRIM( Descr )//' array.'
+      END IF
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+
+   RETURN
+   END SUBROUTINE AllR8Ary4
+!=======================================================================
+   SUBROUTINE AllR16Ary4 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, Descr, ErrStat, ErrMsg )
+
+
+      ! This routine allocates a 4-D 16-byte REAL array.
+
+
+      ! Argument declarations.
+
+   REAL(QuKi),      ALLOCATABLE      :: Ary    (:,:,:,:)                           ! Array to be allocated
+
+   INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim3                                    ! The size of the third dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim4                                    ! The size of the fourth dimension of the array.
+   CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status; if present, program does not abort on error
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
+
+
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4) , STAT=ErrStat )
+
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+      ELSE
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*BYTES_IN_REAL))//&
+                  ' bytes of memory for the '//TRIM( Descr )//' array.'
+      END IF
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+
+   RETURN
+   END SUBROUTINE AllR16Ary4
+!=======================================================================
+   SUBROUTINE AllR4Ary5 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )
+
+
+      ! This routine allocates a 5-D 4-byte REAL array.
+
+
+      ! Argument declarations.
+
+   REAL(SiKi),      ALLOCATABLE      :: Ary    (:,:,:,:,:)                         ! Array to be allocated
 
    INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
    INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
@@ -1224,7 +1415,87 @@ CONTAINS
 
 
    RETURN
-   END SUBROUTINE AllRAry5
+   END SUBROUTINE AllR4Ary5
+!=======================================================================
+   SUBROUTINE AllR8Ary5 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )
+
+
+      ! This routine allocates a 5-D 8-byte REAL array.
+
+
+      ! Argument declarations.
+
+   REAL(R8Ki),      ALLOCATABLE      :: Ary    (:,:,:,:,:)                         ! Array to be allocated
+
+   INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim3                                    ! The size of the third dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim4                                    ! The size of the fourth dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim5                                    ! The size of the fourth dimension of the array.
+   CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status; if present, program does not abort on error
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
+
+
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4,AryDim5) , STAT=ErrStat )
+
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+      ELSE
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_REAL))//&
+                  ' bytes of memory for the '//TRIM( Descr )//' array.'
+      END IF
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+
+
+
+   RETURN
+   END SUBROUTINE AllR8Ary5
+!=======================================================================
+   SUBROUTINE AllR16Ary5 (  Ary, AryDim1, AryDim2, AryDim3, AryDim4, AryDim5, Descr, ErrStat, ErrMsg )
+
+
+      ! This routine allocates a 5-D 16-byte REAL array.
+
+
+      ! Argument declarations.
+
+   REAL(QuKi),      ALLOCATABLE      :: Ary    (:,:,:,:,:)                         ! Array to be allocated
+
+   INTEGER,      INTENT(IN)          :: AryDim1                                    ! The size of the first dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim2                                    ! The size of the second dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim3                                    ! The size of the third dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim4                                    ! The size of the fourth dimension of the array.
+   INTEGER,      INTENT(IN)          :: AryDim5                                    ! The size of the fourth dimension of the array.
+   CHARACTER(*), INTENT(IN)          :: Descr                                      ! Brief array description.
+   INTEGER,      INTENT(OUT)         :: ErrStat                                    ! Error status; if present, program does not abort on error
+   CHARACTER(*), INTENT(OUT)         :: ErrMsg                                     ! Error message corresponding to ErrStat
+
+
+   ALLOCATE ( Ary(AryDim1,AryDim2,AryDim3,AryDim4,AryDim5) , STAT=ErrStat )
+
+   IF ( ErrStat /= 0 ) THEN
+      ErrStat = ErrID_Fatal
+      IF ( ALLOCATED(Ary) ) THEN ! or Sttus=151 on IVF
+         ErrMsg = 'Error allocating memory for the '//TRIM( Descr )//' array; array was already allocated.'
+      ELSE
+         ErrMsg = 'Error allocating '//TRIM(Num2LStr(AryDim1*AryDim2*AryDim3*AryDim4*AryDim5*BYTES_IN_REAL))//&
+                  ' bytes of memory for the '//TRIM( Descr )//' array.'
+      END IF
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg  = ''
+   END IF
+
+
+
+   RETURN
+   END SUBROUTINE AllR16Ary5
 !=======================================================================
    SUBROUTINE CheckArgs ( InputFile, ErrStat, Arg2, Flag )
 

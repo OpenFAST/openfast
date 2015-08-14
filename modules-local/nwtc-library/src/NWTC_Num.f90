@@ -4029,6 +4029,7 @@ END SUBROUTINE InterpStpReal3D
       INTEGER(4)                   :: EndSec                               ! The second when the simulations is expected to complete.
       INTEGER(4)                   :: TimeAry  (8)                         ! An array containing the elements of the start time.
 
+      CHARACTER(MaxWrScrLen)       :: BlankLine
       CHARACTER( 8)                :: ETimeStr                             ! String containing the end time.
 
 
@@ -4063,8 +4064,10 @@ END SUBROUTINE InterpStpReal3D
 
       WRITE (ETimeStr,"(I2.2,2(':',I2.2))")  EndHour, EndMin, EndSec
 
+      BlankLine = ""
+      CALL WrOver( BlankLine )  ! BlankLine contains MaxWrScrLen spaces
       CALL WrOver ( ' Timestep: '//TRIM( Num2LStr( NINT( ZTime ) ) )//' of '//TRIM( Num2LStr( TMax ) )// &
-                    ' seconds.  Estimated final completion at '//ETimeStr//'.'                             )
+                    ' seconds. Estimated final completion at '//ETimeStr//'.'                             )
 
          ! Let's save this time as the previous time for the next call to the routine
       PrevClockTime = CurrClockTime
