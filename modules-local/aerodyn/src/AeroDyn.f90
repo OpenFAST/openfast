@@ -76,6 +76,8 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
    errStat = ErrID_None
    errMsg  = ""
    
+   InitOut%AirDens = p%AirDens
+   
    call AllocAry( InitOut%WriteOutputHdr, p%numOuts, 'WriteOutputHdr', errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
    
@@ -1145,7 +1147,7 @@ subroutine SetInputsForBEMT(p, u, OtherState, errStat, errMsg)
       tmp_sz_y = min(  1.0_ReKi, OtherState%V_dot_x / tmp_sz )
       tmp_sz_y = max( -1.0_ReKi, tmp_sz_y )
       
-      OtherState%BEMT_u%chi0 = acos( tmp_sz_y )      
+      OtherState%BEMT_u%chi0 = acos( tmp_sz_y )
    end if
    
       ! "Azimuth angle" rad
@@ -1262,7 +1264,7 @@ subroutine SetOutputsFromBEMT(p, OtherState, y )
          q = 0.5 * p%airDens * OtherState%BEMT_y%inducedVel(j,k)**2        ! dynamic pressure of the jth node in the kth blade
          force(1) =  OtherState%BEMT_y%cx(j,k) * q * p%BEMT%chord(j,k)     ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
          force(2) = -OtherState%BEMT_y%cy(j,k) * q * p%BEMT%chord(j,k)     ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
-         moment(3)= -OtherState%BEMT_y%cm(j,k) * q * p%BEMT%chord(j,k)**2  ! M = pitching moment per unit length of the jth node in the kth blade
+         moment(3)=  OtherState%BEMT_y%cm(j,k) * q * p%BEMT%chord(j,k)**2  ! M = pitching moment per unit length of the jth node in the kth blade
          
             ! save these values for possible output later:
          OtherState%X(j,k) = force(1)
@@ -1335,7 +1337,7 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
          "In this version, UAMod must be 2 (Gonzalez's variant) or 3 (Minemma/Pierce variant).", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
    end if
    
-   if (InputFileData%FLookUp /= .TRUE.) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
+   if (.not. InputFileData%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
    
          ! validate the AFI input data because it doesn't appear to be done in AFI
    if (InputFileData%NumAFfiles < 1) call SetErrStat( ErrID_Fatal, 'The number of unique airfoil tables (NumAFfiles) must be greater than zero.', ErrStat, ErrMsg, RoutineName )   
@@ -2081,6 +2083,10 @@ SUBROUTINE TwrInfl_NearestPoint(p, u, BladeNodePosition, r_TowerBlade, theta_tow
       !.................
       ! calculate the values to be returned:  
       !..................
+   if (node_with_min_distance == 0) then
+      node_with_min_distance = 1
+      if (NWTC_VerboseLevel == NWTC_Verbose) call WrScr( 'AD:TwrInfl_NearestPoint:Error finding minimum distance. Positions may be invalid.' )
+   end if
    
    n1 = node_with_min_distance
    
