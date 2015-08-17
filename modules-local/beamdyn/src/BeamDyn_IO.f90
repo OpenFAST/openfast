@@ -1617,11 +1617,11 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Gauss point position vectors'
-   DO i=2,p%ngp*p%elem_total + 1
+   DO i=2,p%ngp(1)*p%elem_total + 1
        WRITE(UnSu,'(I4,3ES18.5)') i-1,p%Gauss(1:3,i)
    ENDDO
    WRITE (UnSu,'(/,A)')  'Sectional stiffness and mass matrices at Gauss points'
-   DO i=1,p%ngp*p%elem_total
+   DO i=1,p%ngp(1)*p%elem_total
        WRITE (UnSu,'(/,A,I4)')  'Gauss point number: ',i
        DO j=1,6
            WRITE(UnSu,'(6ES15.5)') p%Stif0_GL(j,1:6,i)
