@@ -54,23 +54,26 @@ typedef BeamDyn/BD OtherStateType Logical  InitAcc  -  - - "flag to determine if
 
 typedef BeamDyn/BD ParameterType ReKi   uuN0      {:}{:} - -  "Initial Postion Vector" -
 typedef BeamDyn/BD ParameterType ReKi   Gauss     {:}{:} - -  "Gauss point postion vector" -
-typedef      ^            ^       ^     Stif0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
-typedef      ^            ^       ^     Mass0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
+typedef      ^            ^       ^     Stif0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at Gauss point" -
+typedef      ^            ^       ^     Mass0_GL     {:}{:}{:}  - -  "Sectional Mass Properties at Gauss point" -
 typedef BeamDyn/BD ParameterType ReKi   gravity   {3} - -  "Gravitational acceleration" m/s^2
 typedef      ^            ^       ^     segment_length   {:}{:} - -  "Array stored length of each segment" -
 typedef      ^            ^       ^     member_length   {:}{:} - -  "Array stored length of each member" -
 typedef      ^            ^       ^     blade_length     - - -  "Blade Length" -
 typedef      ^            ^       ^     blade_mass     - - -  "Blade Length" -
 typedef      ^            ^       ^     blade_CG    {3} - -  "Blade Length" -
+typedef      ^            ^       ^     station_eta   {:} - -  "Array stored length of each segment" -
 typedef      ^            ^     IntKi   node_elem - - -  "Node per element" -
+typedef      ^            ^       ^     kp_total  - - -  "Total number of dofs" -
 typedef      ^            ^       ^     dof_node  - - -  "dof per node" -
 typedef      ^            ^       ^     elem_total  - - -  "Total number of elements" -
 typedef      ^            ^       ^     node_total  - - -  "Total number of nodes" -
 typedef      ^            ^       ^     dof_total  - - -  "Total number of dofs" -
-typedef      ^            ^       ^     ngp  - - -  "Number of Gauss points" -
+typedef      ^            ^       ^     ngp  {:} - -  "Number of Gauss points" -
 typedef      ^            ^       ^     analysis_type  - - -  "analysis_type flag" -
 typedef      ^            ^       ^     damp_flag  - - -  "damping flag" -
 typedef      ^            ^       ^     niter  - - -  "Maximum number of iterations in Newton-Ralphson algorithm"  -
+typedef      ^            ^       ^     quadrature  - - -  "Quadrature method: 1 Gauss 2 Trapezoidal" -
 #typedef      ^            ^       ^     NRMax  - - -  "Maximum number of iterations in Newton-Ralphson algorithm" -
 typedef      ^            ^      DbKi   dt     - - -  "module dt" s
 typedef      ^            ^      ReKi   beta   {6} - -  "Damping Coefficient" -
