@@ -1595,6 +1595,12 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
    WRITE (UnSu,'(A,I4)' ) 'Maximum number of iterations in Newton-Ralphson solution:', p%niter
    WRITE (UnSu,'(A,1ES18.5)' ) 'Convergence parameter:', p%tol
 
+   IF(p%quadrature .EQ. 1) THEN
+       WRITE (UnSu,'(A)')  'Quadrature method: Gauss quadrature' 
+   ELSEIF(p%quadrature .EQ. 2) THEN
+       WRITE (UnSu,'(A)')  'Quadrature method: Trapezoidal quadrature' 
+   ENDIF
+
    WRITE (UnSu,'(A,I4)' ) 'Number of elements:    ', p%elem_total
 
    WRITE (UnSu,'(A,I4)' ) 'Number of nodes:       ', p%node_total
@@ -1616,21 +1622,40 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
        ENDDO
    ENDDO
 
-   WRITE (UnSu,'(/,A)')  'Gauss point position vectors'
-   DO i=2,p%ngp(1)*p%elem_total + 1
-       WRITE(UnSu,'(I4,3ES18.5)') i-1,p%Gauss(1:3,i)
-   ENDDO
-   WRITE (UnSu,'(/,A)')  'Sectional stiffness and mass matrices at Gauss points'
-   DO i=1,p%ngp(1)*p%elem_total
-       WRITE (UnSu,'(/,A,I4)')  'Gauss point number: ',i
-       DO j=1,6
-           WRITE(UnSu,'(6ES15.5)') p%Stif0_GL(j,1:6,i)
+   WRITE (UnSu,'(/,A)')  'Quadrature point position vectors'
+   IF(p%quadrature .EQ. 1) THEN
+       DO i=2,p%ngp(1)*p%elem_total + 1
+           WRITE(UnSu,'(I4,3ES18.5)') i-1,p%Gauss(1:3,i)
        ENDDO
-       WRITE(UnSu,'(A)') 
-       DO j=1,6
-           WRITE(UnSu,'(6ES15.5)') p%Mass0_GL(j,1:6,i)
+   ELSEIF(p%quadrature .EQ. 2) THEN
+       DO i=1,p%kp_total
+           WRITE(UnSu,'(I4,3ES18.5)') i,p%kp_coordinate(i,1:3)
        ENDDO
-   ENDDO
+   ENDIF
+   WRITE (UnSu,'(/,A)')  'Sectional stiffness and mass matrices at quadrature points'
+   IF(p%quadrature .EQ. 1) THEN
+       DO i=1,p%ngp(1)*p%elem_total
+           WRITE (UnSu,'(/,A,I4)')  'Gauss point number: ',i
+           DO j=1,6
+               WRITE(UnSu,'(6ES15.5)') p%Stif0_GL(j,1:6,i)
+           ENDDO
+           WRITE(UnSu,'(A)') 
+           DO j=1,6
+               WRITE(UnSu,'(6ES15.5)') p%Mass0_GL(j,1:6,i)
+           ENDDO
+       ENDDO
+   ELSEIF(p%quadrature .EQ. 2) THEN
+       DO i=1,p%kp_total
+           WRITE (UnSu,'(/,A,I4)')  'Quadrature point number: ',i
+           DO j=1,6
+               WRITE(UnSu,'(6ES15.5)') p%Stif0_GL(j,1:6,i)
+           ENDDO
+           WRITE(UnSu,'(A)') 
+           DO j=1,6
+               WRITE(UnSu,'(6ES15.5)') p%Mass0_GL(j,1:6,i)
+           ENDDO
+       ENDDO
+   ENDIF
 
    WRITE (UnSu,'(/,A)')  'Initial displacement'
    DO i=1,p%node_total

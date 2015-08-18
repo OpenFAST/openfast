@@ -147,7 +147,7 @@ PROGRAM MAIN
 CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final
 WRITE(*,*) "Time Step: ", n_t_global
-IF(n_t_global == 3) STOP 
+IF(n_t_global == 0) STOP 
 
 
      CALL BD_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
