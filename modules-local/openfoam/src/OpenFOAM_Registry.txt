@@ -1,0 +1,48 @@
+###################################################################################################################################
+# Registry for OpenFOAM - CFD interface types in the FAST Modularization Framework
+# Entries are of the form
+# <keyword>	<ModuleName/ModName>	<TypeName>	<FieldType>	<FieldName>	<Dims>	<IO>	<DNAME>	<DESCRIP>	<UNITS>
+#
+# Use ^ as a shortcut for the value in the same column from the previous line.
+###################################################################################################################################
+# File last committed $Date$
+# (File) Revision #: $Rev$
+# URL: $HeadURL$
+###################################################################################################################################
+# ...... Include files (definitions from NWTC Library) ............................................................................
+include	Registry_NWTC_Library.txt
+
+
+
+# ..... OpenFOAM_InitInputType data .......................................................................................................
+#typedef	OpenFOAM/OpFM	InitInputType	ReKi	MeanWS	{3}	-	-	"initial wind speed (assumed constant for first step)"	m/s
+
+# ..... OpenFOAM_InitOutputType data .......................................................................................................
+# Define outputs from the initialization routine here:
+typedef	OpenFOAM/OpFM	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
+typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputUnt	{:}	-	-	"Units of the output-to-file channels"	-
+typedef	^	InitOutputType	ProgDesc	Ver	-	-	-	"This module's name, version, and date"	-
+
+# ..... MiscVars ................................................................................................................
+typedef	OpenFOAM/OpFM	OpFM_MiscVarType	MeshType	AeroLoads	{:}	-	-	"point mesh for transferring AeroDyn distributed loads to OpenFOAM"	-
+typedef	^	^	MeshType	AeroMotions	{:}	-	-	"point mesh for transferring AeroDyn distributed loads to OpenFOAM (needs translationDisp)"	-
+typedef	^	^	MeshMapType	Line2_to_Point_Loads	{:}	-	-	"mapping data structure to convert line2 loads to point loads"	-
+typedef	^	^	MeshMapType	Line2_to_Point_Motions	{:}	-	-	"mapping data structure to convert line2 loads to point loads"	-
+
+# ..... Parameters ................................................................................................................
+typedef	OpenFOAM/OpFM	ParameterType	ReKi	AirDens	-	-	-	"Air density for normalization of loads sent to OpenFOAM"	kg/m^3
+typedef	OpenFOAM/OpFM	ParameterType	IntKi	Nnodes	-	-	-	"number of nodes on FAST v8-OpenFOAM interface"	-
+
+# ..... OpenFOAM_InputType data .......................................................................................................
+typedef	^	InputType	ReKi	px	{:}	-	-	"x position of interface nodes"	"m"
+typedef	^	InputType	ReKi	py	{:}	-	-	"y position of interface nodes"	"m"
+typedef	^	InputType	ReKi	pz	{:}	-	-	"z position of interface nodes"	"m"
+typedef	^	InputType	ReKi	fx	{:}	-	-	"normalized x force of interface nodes"	"N/kg/m^3"
+typedef	^	InputType	ReKi	fy	{:}	-	-	"normalized y force of interface nodes"	"N/kg/m^3"
+typedef	^	InputType	ReKi	fz	{:}	-	-	"normalized z force of interface nodes"	"N/kg/m^3"
+
+# ..... OpenFOAM_OutputType data .......................................................................................................
+typedef	OpenFOAM/OpFM	OutputType	ReKi	u	{:}	-	-	"U-component wind speed (in the X-direction) at interface nodes"	m/s
+typedef	^	OutputType	ReKi	v	{:}	-	-	"V-component wind speed (in the Y-direction) at interface nodes"	m/s
+typedef	^	OutputType	ReKi	w	{:}	-	-	"W-component wind speed (in the Z-direction) at interface nodes"	m/s
+typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"

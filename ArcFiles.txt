@@ -16,6 +16,9 @@ Source\FAST_Registry.txt
 Source\FAST_Prog.f90
 Source\FAST_Library.f90
 
+Source\FAST_Library.h
+Source\FAST_Prog.c
+
 Source\dependencies\NWTC_Library\*
 Source\dependencies\NetLib\*
 Source\dependencies\ElastoDyn\*
@@ -23,6 +26,7 @@ Source\dependencies\BeamDyn\*
 Source\dependencies\AeroDyn\*
 Source\dependencies\AeroDyn14\*
 Source\dependencies\InflowWind\*
+Source\dependencies\OpenFOAM\*
 Source\dependencies\ServoDyn\*
 Source\dependencies\HydroDyn\*
 Source\dependencies\SubDyn\*
@@ -37,7 +41,7 @@ Source\dependencies\Registry\*
 
 OutListParameters.xlsx
 
-Simulink\Source\FAST_Library.h
+
 Simulink\Source\FAST_SFunc.c
 Simulink\Source\create_FAST_SFunc.m
 
