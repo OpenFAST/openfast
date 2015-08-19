@@ -147,7 +147,7 @@ PROGRAM MAIN
 CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final
 WRITE(*,*) "Time Step: ", n_t_global
-IF(n_t_global == 0) STOP 
+!IF(n_t_global == 1) STOP 
 
 
      CALL BD_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
@@ -293,7 +293,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
    temp_qq(:)     = 0.0D0
    temp_R(:,:)    = 0.0D0
    temp_r0(:) = 0.0D0 
-   temp_r0(3) = 1.5D0
+   temp_r0(3) = 1.0D0
    temp_theta = 1.0006D0*t
    temp_vec(:) = 0.0D0
 !   temp_vec(2) = 4.0D0*TAN(temp_theta/4.0D0)
