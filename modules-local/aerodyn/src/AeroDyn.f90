@@ -1886,7 +1886,7 @@ SUBROUTINE getLocalTowerProps(p, u, BladeNodePosition, theta_tower_trans, W_towe
    end if
    
    if ( TwoNorm(r_TowerBlade) < 0.5_ReKi*TwrDiam ) then
-      call SetErrStat(ErrID_Severe, "Tower strike.", ErrStat, ErrMsg, RoutineName) ! bjj: fatal error? FIX ME? TODO
+      call SetErrStat(ErrID_Severe, "Tower strike.", ErrStat, ErrMsg, RoutineName)
    end if
    
    
