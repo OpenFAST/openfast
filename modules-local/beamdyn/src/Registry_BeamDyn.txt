@@ -62,6 +62,7 @@ typedef      ^            ^       ^     member_length   {:}{:} - -  "Array store
 typedef      ^            ^       ^     blade_length     - - -  "Blade Length" -
 typedef      ^            ^       ^     blade_mass     - - -  "Blade Length" -
 typedef      ^            ^       ^     blade_CG    {3} - -  "Blade Length" -
+typedef      ^            ^       ^     blade_IN    {3}{3} - -  "Blade Length" -
 typedef      ^            ^       ^     station_eta   {:} - -  "Array stored length of each segment" -
 typedef      ^            ^       ^     kp_coordinate  {:}{:} - -  "Total number of dofs" -
 typedef      ^            ^     IntKi   node_elem - - -  "Node per element" -
