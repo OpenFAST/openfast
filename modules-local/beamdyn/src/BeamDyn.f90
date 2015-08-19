@@ -180,7 +180,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ! Number of nodes per elelemt
    p%node_elem  = InputFileData%order_elem + 1   
    ! Quadrature method: 1 Gauss 2 Trapezoidal
-   p%quadrature = 2
+   p%quadrature = 1
    IF(p%quadrature .EQ. 1) THEN
        ! Number of Gauss points
        CALL AllocAry(p%ngp,1,'Number of Gauss point array (1)',ErrStat2,ErrMsg2)
@@ -2339,6 +2339,8 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
    INTEGER(IntKi)                  :: nelem ! number of elements
    INTEGER(IntKi)                  :: i ! Index counter
    INTEGER(IntKi)                  :: j ! Index counter
+   INTEGER(IntKi)                  :: id0 
+   INTEGER(IntKi)                  :: id1
    INTEGER(IntKi)                  :: nqp
    INTEGER(IntKi)                  :: temp_id ! Index counter
    INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
@@ -2465,7 +2467,7 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
 
        CALL BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                                 EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
-                                ngp,quadrature,trapezoidal_pos,trapezoidal_w,&
+                                nqp,quadrature,trapezoidal_pos,trapezoidal_w,&
                                 node_elem,dof_node,damp_flag,beta,&
                                 elf,elm,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2516,7 +2518,8 @@ END SUBROUTINE BD_GenerateDynamicElementAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                                EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
-                               ngp,node_elem,dof_node,damp_flag,beta,&
+                               ngp,quadrature,trap_pos,trap_w,   &
+                               node_elem,dof_node,damp_flag,beta,&
                                elf,elm,ErrStat,ErrMsg)
 
 !-------------------------------------------------------------------------------
@@ -2535,6 +2538,9 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
    REAL(ReKi),INTENT(  OUT)    :: elf(:)  ! Total element force (Fd, Fc, Fb)
    REAL(ReKi),INTENT(  OUT)    :: elm(:,:) ! Total element mass matrix
    INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi), INTENT(IN   ):: quadrature
+   REAL(ReKi),     INTENT(IN   ):: trap_pos(:)
+   REAL(ReKi),     INTENT(IN   ):: trap_w(:)
    INTEGER(IntKi),INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
    INTEGER(IntKi),INTENT(IN   ):: damp_flag ! Degrees of freedom per node
@@ -2620,8 +2626,13 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
 
    CALL BD_GenerateGLL(node_elem-1,GLL_temp,w_temp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(quadrature .EQ. 1) THEN
+       CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ELSEIF(quadrature .EQ. 2) THEN
+       gp(:) = trap_pos(:)
+       gw(:) = trap_w(:)
+   ENDIF
 
    DO igp=1,ngp
        gpr=gp(igp)
@@ -4375,14 +4386,14 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 
    ! initialize accelerations here:
 !   if ( .not. OtherState%InitAcc) then
-   if ( n .EQ. 0) then
-      !Qi, call something to initialize
-      call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
-          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
-          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      OtherState%InitAcc = .true. 
-   end if
+!   if ( n .EQ. 0) then
+!      !Qi, call something to initialize
+!      call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
+!          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!      CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
+!          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+!      OtherState%InitAcc = .true. 
+!   end if
 
    CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -5375,6 +5386,7 @@ END SUBROUTINE BD_InitAcc
 SUBROUTINE BD_ComputeBladeMass(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,                    &
                                damp_flag,beta,                                        &
                                node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
+                               quadrature,station_eta,                                &
                                BladeMass,ErrStat,ErrMsg)
 !***************************************************************************************
 ! This subroutine calls other subroutines to apply the force, build the beam element
@@ -5395,7 +5407,9 @@ SUBROUTINE BD_ComputeBladeMass(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,              
    INTEGER(IntKi),               INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),               INTENT(IN   ):: dof_total ! Total number of degrees of freedom
    INTEGER(IntKi),               INTENT(IN   ):: node_total ! Total number of nodes
-   INTEGER(IntKi),               INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),               INTENT(IN   ):: ngp(:) ! Number of Gauss points
+   INTEGER(IntKi),               INTENT(IN   ):: quadrature
+   REAL(ReKi),                   INTENT(IN   ):: station_eta(:)
    REAL(ReKi),                   INTENT(  OUT):: BladeMass
    INTEGER(IntKi),               INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
@@ -5427,6 +5441,7 @@ SUBROUTINE BD_ComputeBladeMass(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,              
    CALL BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                      damp_flag,beta,&
                                      elem_total,node_elem,dof_total,dof_node,ngp,&
+                                     quadrature,station_eta,&
                                      RHS,MassM,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
