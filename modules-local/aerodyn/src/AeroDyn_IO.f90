@@ -28,7 +28,7 @@ MODULE AeroDyn_IO
 
    implicit none
    
-   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.00.00a-bjj-prerelease', '4-Aug-2015' )
+   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.00.00a-bjj-prerelease', '18-Aug-2015' )
    character(*),   parameter  :: AD_Nickname = 'AD'
       
 ! ===================================================================================================
@@ -1545,8 +1545,12 @@ SUBROUTINE Calc_WriteOutput( p, u, OtherState, y, ErrStat, ErrMsg )
          OtherState%AllOuts( BNPhi(  beta,k) ) = OtherState%BEMT_y%phi(j,k)*R2D         
          OtherState%AllOuts( BNCurve(beta,k) ) = OtherState%Curve(j,k)*R2D         
          
-         OtherState%AllOuts( BNCl(   beta,k) ) = OtherState%BEMT_y%Cl(j,k)         
-         OtherState%AllOuts( BNCd(   beta,k) ) = OtherState%BEMT_y%Cd(j,k)         
+         !OtherState%AllOuts( BNCl(   beta,k) ) = OtherState%BEMT_y%Cl(j,k)         
+         !OtherState%AllOuts( BNCd(   beta,k) ) = OtherState%BEMT_y%Cd(j,k)   
+         cp=cos(OtherState%BEMT_y%phi(j,k))
+         sp=sin(OtherState%BEMT_y%phi(j,k))
+         OtherState%AllOuts( BNCl(   beta,k) ) = OtherState%BEMT_y%Cx(j,k)*cp + OtherState%BEMT_y%Cy(j,k)*sp         
+         OtherState%AllOuts( BNCd(   beta,k) ) = OtherState%BEMT_y%Cx(j,k)*sp - OtherState%BEMT_y%Cy(j,k)*cp           
          OtherState%AllOuts( BNCm(   beta,k) ) = OtherState%BEMT_y%Cm(j,k)  
          OtherState%AllOuts( BNCx(   beta,k) ) = OtherState%BEMT_y%Cx(j,k)  
          OtherState%AllOuts( BNCy(   beta,k) ) = OtherState%BEMT_y%Cy(j,k)  
@@ -1556,8 +1560,6 @@ SUBROUTINE Calc_WriteOutput( p, u, OtherState, y, ErrStat, ErrMsg )
          OtherState%AllOuts( BNCn(   beta,k) ) = OtherState%BEMT_y%Cx(j,k)*ct + OtherState%BEMT_y%Cy(j,k)*st
          OtherState%AllOuts( BNCt(   beta,k) ) =-OtherState%BEMT_y%Cx(j,k)*st + OtherState%BEMT_y%Cy(j,k)*ct
          
-         cp=cos(OtherState%BEMT_y%phi(j,k))
-         sp=sin(OtherState%BEMT_y%phi(j,k))
          OtherState%AllOuts( BNFl(   beta,k) ) =  OtherState%X(j,k)*cp - OtherState%Y(j,k)*sp
          OtherState%AllOuts( BNFd(   beta,k) ) =  OtherState%X(j,k)*sp + OtherState%Y(j,k)*cp
          OtherState%AllOuts( BNMm(   beta,k) ) =  OtherState%M(j,k)
