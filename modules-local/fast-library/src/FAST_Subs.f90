@@ -1906,10 +1906,12 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, MeshMap
    u_SrvD%YawBrTAyp = y_ED%YawBrTAyp
    u_SrvD%LSSTipPxa = y_ED%LSSTipPxa
 
+   u_SrvD%LSSTipMxa = y_ED%LSSTipMxa
    u_SrvD%LSSTipMya = y_ED%LSSTipMya
    u_SrvD%LSSTipMza = y_ED%LSSTipMza
    u_SrvD%LSSTipMys = y_ED%LSSTipMys
    u_SrvD%LSSTipMzs = y_ED%LSSTipMzs
+   
    u_SrvD%YawBrMyn  = y_ED%YawBrMyn
    u_SrvD%YawBrMzn  = y_ED%YawBrMzn
    u_SrvD%NcIMURAxs = y_ED%NcIMURAxs
@@ -6711,49 +6713,6 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       
    END IF         
       
-   ! ........................
-   ! initialize ServoDyn 
-   ! ........................
-   ALLOCATE( SrvD%Input( p_FAST%InterpOrder+1 ), SrvD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
-      IF (ErrStat2 /= 0) THEN
-         CALL SetErrStat(ErrID_Fatal,"Error allocating SrvD%Input and SrvD%InputTimes.",ErrStat,ErrMsg,RoutineName)
-         CALL Cleanup()
-         RETURN
-      END IF
-      
-   IF ( p_FAST%CompServo == Module_SrvD ) THEN
-      InitInData_SrvD%InputFile     = p_FAST%ServoFile
-      InitInData_SrvD%RootName      = p_FAST%OutFileRoot
-      InitInData_SrvD%NumBl         = InitOutData_ED%NumBl
-      InitInData_SrvD%gravity       = InitOutData_ED%gravity
-      InitInData_SrvD%r_N_O_G       = ED%Input(1)%NacelleLoads%Position(:,1) !bjj: check this!
-      InitInData_SrvD%TMax          = p_FAST%TMax
-      
-      CALL AllocAry(InitInData_SrvD%BlPitchInit, InitOutData_ED%NumBl, 'BlPitchInit', ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-      InitInData_SrvD%BlPitchInit   = InitOutData_ED%BlPitch
-      CALL SrvD_Init( InitInData_SrvD, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
-                      SrvD%OtherSt, SrvD%y, p_FAST%dt_module( MODULE_SrvD ), InitOutData_SrvD, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      p_FAST%ModuleInitialized(Module_SrvD) = .TRUE.
-
-      !IF ( InitOutData_SrvD%CouplingScheme == ExplicitLoose ) THEN ...  bjj: abort if we're doing anything else!
-
-      CALL SetModuleSubstepTime(Module_SrvD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
-      !! initialize y%ElecPwr and y%GenTq because they are one timestep different (used as input for the next step)
-      !!bjj: perhaps this will require some better thought so that these two fields of y_SrvD_prev don't get set here in the glue code
-      !CALL SrvD_CopyOutput( SrvD%y, SrvD%y_prev, MESH_NEWCOPY, ErrStat, ErrMsg)               
-      !   
-                  
-      IF (ErrStat >= AbortErrLev) THEN
-         CALL Cleanup()
-         RETURN
-      END IF          
-   END IF
-
 
    ! ........................
    ! initialize AeroDyn 
@@ -6953,6 +6912,54 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          END IF
       END IF      
    END IF
+   
+   
+   ! ........................
+   ! initialize ServoDyn 
+   ! ........................
+   ALLOCATE( SrvD%Input( p_FAST%InterpOrder+1 ), SrvD%InputTimes( p_FAST%InterpOrder+1 ), STAT = ErrStat2 )
+      IF (ErrStat2 /= 0) THEN
+         CALL SetErrStat(ErrID_Fatal,"Error allocating SrvD%Input and SrvD%InputTimes.",ErrStat,ErrMsg,RoutineName)
+         CALL Cleanup()
+         RETURN
+      END IF
+      
+   IF ( p_FAST%CompServo == Module_SrvD ) THEN
+      InitInData_SrvD%InputFile     = p_FAST%ServoFile
+      InitInData_SrvD%RootName      = p_FAST%OutFileRoot
+      InitInData_SrvD%NumBl         = InitOutData_ED%NumBl
+      InitInData_SrvD%gravity       = InitOutData_ED%gravity
+      InitInData_SrvD%r_N_O_G       = ED%Input(1)%NacelleLoads%Position(:,1) !bjj: check this!
+      InitInData_SrvD%TMax          = p_FAST%TMax
+      InitInData_SrvD%AirDens       = AirDens
+      InitInData_SrvD%AvgWindSpeed  = InitOutData_IfW%WindFileInfo%MWS
+      
+      CALL AllocAry(InitInData_SrvD%BlPitchInit, InitOutData_ED%NumBl, 'BlPitchInit', ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      InitInData_SrvD%BlPitchInit   = InitOutData_ED%BlPitch
+      CALL SrvD_Init( InitInData_SrvD, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
+                      SrvD%OtherSt, SrvD%y, p_FAST%dt_module( MODULE_SrvD ), InitOutData_SrvD, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      p_FAST%ModuleInitialized(Module_SrvD) = .TRUE.
+
+      !IF ( InitOutData_SrvD%CouplingScheme == ExplicitLoose ) THEN ...  bjj: abort if we're doing anything else!
+
+      CALL SetModuleSubstepTime(Module_SrvD, p_FAST, y_FAST, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      !! initialize y%ElecPwr and y%GenTq because they are one timestep different (used as input for the next step)
+      !!bjj: perhaps this will require some better thought so that these two fields of y_SrvD_prev don't get set here in the glue code
+      !CALL SrvD_CopyOutput( SrvD%y, SrvD%y_prev, MESH_NEWCOPY, ErrStat, ErrMsg)               
+      !   
+                  
+      IF (ErrStat >= AbortErrLev) THEN
+         CALL Cleanup()
+         RETURN
+      END IF          
+   END IF
+
+   
    
    ! ........................
    ! initialize HydroDyn 

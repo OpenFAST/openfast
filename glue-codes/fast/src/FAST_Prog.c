@@ -72,6 +72,8 @@ main(int argc, char *argv[], char *env[])
 
    }
 
+   // determine subcycling number
+
    /* ******************************
    call FAST once per time step
    ********************************* */
@@ -121,6 +123,7 @@ main(int argc, char *argv[], char *env[])
 
    FAST_End();
 
+   // deallocate
 
    return 0;
 }
