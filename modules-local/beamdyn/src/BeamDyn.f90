@@ -3789,6 +3789,8 @@ SUBROUTINE BD_StaticSolution( uuN0,uuNf,Mass0,Stif0,gravity,u,&
            RHS(temp_id+1:temp_id+3) = RHS(temp_id+1:temp_id+3) + u%Pointload%Force(1:3,j)
            RHS(temp_id+4:temp_id+6) = RHS(temp_id+4:temp_id+6) + u%Pointload%Moment(1:3,j)
        ENDDO
+!WRITE(*,*) 'RHS'
+!WRITE(*,*) RHS
 
        RHS_LU(:)     = 0.0D0
        StifK_LU(:,:) = 0.0D0
@@ -3817,12 +3819,14 @@ SUBROUTINE BD_StaticSolution( uuN0,uuNf,Mass0,Stif0,gravity,u,&
        
        IF(i .EQ. 1) THEN
            Eref = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))*tol
+!WRITE(*,*) 'Eref',Eref
            IF(Eref .LE. tol) THEN
                CALL Cleanup()
                RETURN
            ENDIF
        ELSE  !IF(i .GT. 1) THEN
            Enorm = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))
+!WRITE(*,*) 'Enorm',Enorm
            IF(Enorm .LE. Eref) THEN
                CALL Cleanup()
                RETURN

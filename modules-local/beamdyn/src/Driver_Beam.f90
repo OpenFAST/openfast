@@ -154,10 +154,10 @@ WRITE(*,*) "Time Step: ", n_t_global
      IF(BD_Parameter%analysis_type .EQ. 2 .AND. n_t_global .EQ. 0) THEN
          CALL BD_InitAcc( t_global, BD_Input(1), BD_Parameter, &
                BD_ContinuousState,BD_OtherState,ErrStat,ErrMsg)
-      WRITE(*,*) 'Initial Acc'
-      WRITE(*,*) BD_OtherState%acc(:)
-      WRITE(*,*) 'Initial Xcc'
-      WRITE(*,*) BD_OtherState%xcc(:)
+!      WRITE(*,*) 'Initial Acc'
+!      WRITE(*,*) BD_OtherState%acc(:)
+!      WRITE(*,*) 'Initial Xcc'
+!      WRITE(*,*) BD_OtherState%xcc(:)
      ENDIF
 
 
