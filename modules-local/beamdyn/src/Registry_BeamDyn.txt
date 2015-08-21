@@ -20,6 +20,9 @@ typedef BeamDyn/BD InitInputType ReKi            GlbRot    {3}{3} - - "Initial d
 typedef BeamDyn/BD InitInputType ReKi            RootDisp  {3} - - "Initial root displacement"
 typedef BeamDyn/BD InitInputType ReKi            RootOri   {3}{3} - - "Initial root orientation"
 typedef BeamDyn/BD InitInputType ReKi            RootVel   {6} - - "Initial root velocities and angular veolcities"
+typedef BeamDyn/BD InitInputType ReKi            DistrLoad {6} - - "Constant distributed load along beam axis, 3 forces and 3 moments" 
+typedef BeamDyn/BD InitInputType ReKi            TipLoad   {6} - - "Constant point load applied at tip, 3 forces and 3 moments" 
+
 
 # Define outputs that the initialization routine may need here:
 # e.g., the name of the input file, the file root name, etc.
@@ -125,8 +128,9 @@ typedef BeamDyn/BD    BD_InputFile    IntKi    member_total     - - - "Total num
 typedef BeamDyn/BD    BD_InputFile    IntKi    kp_total         - - - "Total number of key point" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    kp_member       {:} - - "Total number of key point" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    order_elem       - - - "Order of interpolation (basis) function" -
-typedef BeamDyn/BD    BD_InputFile    IntKi    NRMax       - - - "Total number of key point" -
-typedef BeamDyn/BD    BD_InputFile    ReKi     stop_tol   - - - "Key point coordinates array" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    NRMax            - - - "Total number of key point" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    quadrature       - - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
+typedef BeamDyn/BD    BD_InputFile    ReKi     stop_tol         - - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate   {:}{:} - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    DbKi     rhoinf          - - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    DbKi     DTBeam          - - - "Time interval for BeamDyn  calculations {or default} (s)" -

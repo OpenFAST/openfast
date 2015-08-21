@@ -136,7 +136,7 @@ PROGRAM MAIN
    BD_InputTimes(1) = t_initial 
    BD_OutputTimes(1) = t_initial
 
-   CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, ErrStat, ErrMsg)
+   CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_InitInput,ErrStat, ErrMsg)
    WRITE(QiInputUnit,9000) BD_InputTimes(1),&
                         &BD_Input(1)%RootMotion%Orientation(:,:,1),&
                         &BD_Input(1)%RootMotion%TranslationDisp(1:3,1),&
@@ -147,7 +147,7 @@ PROGRAM MAIN
 CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final
 WRITE(*,*) "Time Step: ", n_t_global
-IF(n_t_global == 1) STOP 
+!IF(n_t_global == 0) STOP 
      CALL BD_CalcOutput( t_global, BD_Input(1), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
                              BD_OtherState,  BD_Output(1), ErrStat, ErrMsg)
@@ -193,7 +193,7 @@ CALL BD_CrvExtractCrv(TRANSPOSE(BD_OutPut(1)%BldMotion%Orientation(1:3,1:3,1)),t
 
      IF(BD_Parameter%analysis_type .EQ. 1 .AND. n_t_global .EQ. 1) EXIT !RETURN
 
-     CALL BD_InputSolve( t_global + dt_global, BD_Input(1), BD_Parameter, ErrStat, ErrMsg)
+     CALL BD_InputSolve( t_global + dt_global, BD_Input(1), BD_Parameter, BD_InitInput, ErrStat, ErrMsg)
      WRITE(QiInputUnit,9000) t_global+dt_global,&
                         &BD_Input(1)%RootMotion%Orientation(:,:,1),&
                         &BD_Input(1)%RootMotion%TranslationDisp(1:3,1),&
@@ -258,7 +258,7 @@ END PROGRAM MAIN
 
 
 
-SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
+SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
  
    USE BeamDyn
    USE BeamDyn_Subs
@@ -267,6 +267,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
    REAL(DbKi),                     INTENT(IN   ):: t
    TYPE(BD_InputType),             INTENT(INOUT):: u
    TYPE(BD_ParameterType),         INTENT(IN   ):: p
+   TYPE(BD_InitInputType),         INTENT(IN   ):: InitInput
    INTEGER(IntKi),                 INTENT(  OUT):: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
@@ -274,28 +275,26 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
    REAL(ReKi)              :: temp_vec(3)
    REAL(ReKi)              :: temp_vec2(3)
    REAL(ReKi)              :: temp_rr(3)
-   REAL(ReKi)              :: temp_pp(3)
-   REAL(ReKi)              :: temp_qq(3)
    REAL(ReKi)              :: temp_R(3,3)
    REAL(ReKi)              :: temp_r0(3)
-   REAL(ReKi)              :: pai
-   REAL(ReKi)              :: omega
+   REAL(ReKi)              :: temp_theta(3)
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   pai = ACOS(-1.0D0)
-   omega = pai/5.0D0
-   temp_rr(:)     = 0.0D0
-   temp_pp(:)     = 0.0D0
-   temp_qq(:)     = 0.0D0
-   temp_R(:,:)    = 0.0D0
    temp_r0(:) = 0.0D0 
-   temp_r0(3) = 1.0D0
-   temp_theta = 1.0006D0*t
+   temp_rr(:)     = 0.0D0
+   temp_R(:,:)    = 0.0D0
+
+   temp_r0(1) = p%GlbPos(2)
+   temp_r0(2) = p%GlbPos(3)
+   temp_r0(3) = p%GlbPos(1)
+
+   temp_theta(1) = p%IniVelo(5)*t
+   temp_theta(2) = p%IniVelo(6)*t
+   temp_theta(3) = p%IniVelo(4)*t
    temp_vec(:) = 0.0D0
-!   temp_vec(2) = 4.0D0*TAN(temp_theta/4.0D0)
-   temp_vec(1) = 4.0D0*TAN(temp_theta/4.0D0)
+   temp_vec(:) = 4.0D0*TAN(temp_theta(:)/4.0D0)
    ! gather point forces and line forces
 
 !------------------
@@ -316,8 +315,9 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
 
    ! Calculate root translational and angular velocities
    u%RootMotion%RotationVel(:,:) = 0.0D0
-   u%RootMotion%RotationVel(1,1) = 1.0006D0
-!   u%RootMotion%RotationVel(1,1) = 1.0006D0
+   u%RootMotion%RotationVel(1,1) = p%IniVelo(5)
+   u%RootMotion%RotationVel(2,1) = p%IniVelo(6)
+   u%RootMotion%RotationVel(3,1) = p%IniVelo(1)
    u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%TranslationVel(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr)
    ! END Calculate root translational and angular velocities
@@ -336,6 +336,8 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
    u%PointLoad%Force(:,:)  = 0.0D0
    u%PointLoad%Moment(:,:) = 0.0D0
 !   u%PointLoad%Force(1,p%node_total)  = 5.0D+04
+   u%PointLoad%Force(1:3,p%node_total)  = InitInput%TipLoad(1:3)
+   u%PointLoad%Moment(1:3,p%node_total) = InitInput%TipLoad(4:6)
    
 !   u%RootMotion%TranslationAcc(3,1) = 1.76991032448401212D-02
 !   u%PointLoad%Force(1,p%node_total) = 1.0D+02*SIN(2.0*t)
@@ -347,9 +349,17 @@ SUBROUTINE BD_InputSolve( t, u,  p, ErrStat, ErrMsg)
    u%DistrLoad%Force(:,:)  = 0.0D0
    u%DistrLoad%Moment(:,:) = 0.0D0
 
-!   DO i=1,p%ngp*p%elem_total+2
-!       u%DistrLoad%Force(1,i) = 1.0D+04
-!   ENDDO
+   IF(p%quadrature .EQ. 1) THEN
+       DO i=1,p%ngp(1)*p%elem_total+2
+           u%DistrLoad%Force(1:3,i) = InitInput%DistrLoad(1:3)
+           u%DistrLoad%Moment(1:3,i)= InitInput%DistrLoad(4:6)
+       ENDDO
+   ELSEIF(p%quadrature .EQ. 2) THEN
+       DO i=1,p%kp_total
+           u%DistrLoad%Force(1:3,i) = InitInput%DistrLoad(1:3)
+           u%DistrLoad%Moment(1:3,i)= InitInput%DistrLoad(4:6)
+       ENDDO
+   ENDIF
 
 END SUBROUTINE BD_InputSolve
 
@@ -480,6 +490,39 @@ SUBROUTINE BD_ReadDvrFile(DvrInputFile,t_ini,t_f,dt,InitInputData,&
        return
    end if
   
+   !---------------------- APPLIED FORCE --------------------------------
+   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Applied Force',ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   InitInputData%DistrLoad(:)   = 0.0D0
+   InitInputData%TipLoad(:)     = 0.0D0
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(1),"InitInputData%DistrLoad(1)", "Distributed load vector X",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(2),"InitInputData%DistrLoad(2)", "Distributed load vector Y",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(3),"InitInputData%DistrLoad(3)", "Distributed load vector Z",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(4),"InitInputData%DistrLoad(4)", "Distributed load vector X",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(5),"InitInputData%DistrLoad(5)", "Distributed load vector Y",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(6),"InitInputData%DistrLoad(6)", "Distributed load vector Z",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(1),"InitInputData%TipLoad(1)", "Tip load vector X",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(2),"InitInputData%TipLoad(2)", "Tip load vector Y",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(3),"InitInputData%TipLoad(3)", "Tip load vector Z",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(4),"InitInputData%TipLoad(4)", "Tip load vector X",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(5),"InitInputData%TipLoad(5)", "Tip load vector Y",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(6),"InitInputData%TipLoad(6)", "Tip load vector Z",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+   if (ErrStat >= AbortErrLev) then
+       call cleanup()
+       return
+   end if
    !---------------------- BEAM SECTIONAL PARAMETER ----------------------------------------
    CALL ReadCom(UnIn,DvrInputFile,'Section Header: Primary input file',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )

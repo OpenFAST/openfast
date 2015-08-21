@@ -638,6 +638,9 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
    CALL ReadVar(UnIn,InputFile,InputFileData%rhoinf,"rhoinf", "Coefficient for GA2",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
+   CALL ReadVar(UnIn,InputFile,InputFileData%quadrature,"quadrature", "Quadrature type",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
    Line = ""
    CALL ReadVar( UnIn, InputFile, Line, "DTBeam", "Time interval for BeamDyn  calculations {or default} (s)", ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1556,9 +1559,7 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
    ! Open the summary file and give it a heading.
       
    CALL GetNewUnit( UnSu, ErrStat, ErrMsg )
-WRITE(*,*) 'UnSu',UnSu 
    CALL OpenFOutFile ( UnSu, TRIM( RootName )//'.sum', ErrStat, ErrMsg )
-WRITE(*,*) 'test_IO' 
    IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! Heading:
