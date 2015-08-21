@@ -15,7 +15,8 @@ include	Registry_NWTC_Library.txt
 
 
 # ..... OpenFOAM_InitInputType data .......................................................................................................
-#typedef	OpenFOAM/OpFM	InitInputType	ReKi	MeanWS	{3}	-	-	"initial wind speed (assumed constant for first step)"	m/s
+typedef	OpenFOAM/OpFM	InitInputType	IntKi	NumSCin	-	-	-	"number of controller inputs [from supercontroller]"	-
+typedef	^	^	IntKi	NumSCout	-	-	-	"number of controller outputs [to supercontroller]"	-
 
 # ..... OpenFOAM_InitOutputType data .......................................................................................................
 # Define outputs from the initialization routine here:
@@ -40,9 +41,11 @@ typedef	^	InputType	ReKi	pz	{:}	-	-	"z position of interface nodes"	"m"
 typedef	^	InputType	ReKi	fx	{:}	-	-	"normalized x force of interface nodes"	"N/kg/m^3"
 typedef	^	InputType	ReKi	fy	{:}	-	-	"normalized y force of interface nodes"	"N/kg/m^3"
 typedef	^	InputType	ReKi	fz	{:}	-	-	"normalized z force of interface nodes"	"N/kg/m^3"
+typedef	^	InputType	ReKi	SuperController	{:}	-	-	"inputs to the super controller (from the turbine controller)"	-
 
 # ..... OpenFOAM_OutputType data .......................................................................................................
 typedef	OpenFOAM/OpFM	OutputType	ReKi	u	{:}	-	-	"U-component wind speed (in the X-direction) at interface nodes"	m/s
 typedef	^	OutputType	ReKi	v	{:}	-	-	"V-component wind speed (in the Y-direction) at interface nodes"	m/s
 typedef	^	OutputType	ReKi	w	{:}	-	-	"W-component wind speed (in the Z-direction) at interface nodes"	m/s
+typedef	^	OutputType	ReKi	SuperController	{:}	-	-	"outputs of the super controller (to the turbine controller)"	-
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"

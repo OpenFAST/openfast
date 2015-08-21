@@ -157,7 +157,7 @@ SUBROUTINE FAST_EndOutput( p_FAST, y_FAST, ErrStat, ErrMsg )
 
 END SUBROUTINE FAST_EndOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax  )
+SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax, TurbID  )
 ! This subroutine checks for command-line arguments, gets the root name of the input files
 ! (including full path name), and creates the names of the output files.
 !..................................................................................................................................
@@ -173,6 +173,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax  )
    CHARACTER(*),             INTENT(OUT)           :: ErrMsg            ! Error message
    CHARACTER(*),             INTENT(IN), OPTIONAL  :: InFile            ! A CHARACTER string containing the name of the primary FAST input file (if not present, we'll get it from the command line)
    REAL(DbKi),               INTENT(IN), OPTIONAL  :: TMax              ! the length of the simulation (from Simulink)
+   INTEGER(IntKi),           INTENT(IN), OPTIONAL  :: TurbID            ! an ID for naming the tubine output file
       ! Local variables
 
    REAL(DbKi)                   :: TmpTime                              ! A temporary variable for error checking
@@ -240,6 +241,13 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax  )
       ! Determine the root name of the primary file (will be used for output files)
    CALL GetRoot( InputFile, p%OutFileRoot )
    IF ( Cmpl4SFun )  p%OutFileRoot = TRIM( p%OutFileRoot )//'.SFunc'
+   IF ( PRESENT(TurbID) ) THEN
+      IF ( TurbID > 0 ) THEN
+         p%OutFileRoot = TRIM( p%OutFileRoot )//'.T'//TRIM(Num2LStr(TurbID))
+      END IF
+   END IF
+   
+      
    
    !...............................................................................................................................
    ! Initialize the module name/date/version info:
@@ -1867,6 +1875,11 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, MeshMap
       u_SrvD%WindDir  = ATAN2( y_OpFM%v(1), y_OpFM%u(1) )
       u_SrvD%YawErr   = u_SrvD%WindDir - y_ED%YawAngle
       u_SrvD%HorWindV = SQRT( y_OpFM%u(1)**2 + y_OpFM%v(1)**2 )
+      
+      if ( allocated(u_SrvD%SuperController) ) then
+         u_SrvD%SuperController = y_OpFM%SuperController
+      end if
+      
       
    ELSE  ! No wind inflow
 
@@ -4760,9 +4773,9 @@ SUBROUTINE AD14_InputSolve_NoIfW( p_FAST, u_AD14, y_ED, MeshMapData, ErrStat, Er
    ! Hub positions, orientations, and velocities:
    !  (note that these may have to be adjusted in ElastoDyn as AeroDyn gets rewritten)
    !-------------------------------------------------------------------------------------------------
-   u_AD14%TurbineComponents%Hub%Position    = y_ED%HubPtMotion%TranslationDisp(:,1) +  y_ED%HubPtMotion%Position(:,1)
-   u_AD14%TurbineComponents%Hub%Orientation = y_ED%HubPtMotion%Orientation(:,:,1)   
-   u_AD14%TurbineComponents%Hub%RotationVel = y_ED%HubPtMotion%RotationVel(:,1)
+   u_AD14%TurbineComponents%Hub%Position    = y_ED%HubPtMotion14%TranslationDisp(:,1) +  y_ED%HubPtMotion14%Position(:,1)
+   u_AD14%TurbineComponents%Hub%Orientation = y_ED%HubPtMotion14%Orientation(:,:,1)   
+   u_AD14%TurbineComponents%Hub%RotationVel = y_ED%HubPtMotion14%RotationVel(:,1)
    
    u_AD14%TurbineComponents%Hub%TranslationVel = 0.0_ReKi !bjj we don't need this field
    !-------------------------------------------------------------------------------------------------
@@ -4866,8 +4879,8 @@ SUBROUTINE AD_SetInitInput(InitInData_AD14, InitOutData_ED, y_ED, p_FAST, ErrSta
    
       ! Hub position and orientation (relative here, but does not need to be)
 
-   InitInData_AD14%TurbineComponents%Hub%Position(:)      = y_ED%HubPtMotion%Position(:,1) - y_ED%HubPtMotion%Position(:,1)  ! bjj: was 0; mesh was changed by adding p_ED%HubHt to 3rd component
-   InitInData_AD14%TurbineComponents%Hub%Orientation(:,:) = y_ED%HubPtMotion%RefOrientation(:,:,1)
+   InitInData_AD14%TurbineComponents%Hub%Position(:)      = y_ED%HubPtMotion14%Position(:,1) - y_ED%HubPtMotion14%Position(:,1)  ! bjj: was 0; mesh was changed by adding p_ED%HubHt to 3rd component
+   InitInData_AD14%TurbineComponents%Hub%Orientation(:,:) = y_ED%HubPtMotion14%RefOrientation(:,:,1)
    InitInData_AD14%TurbineComponents%Hub%TranslationVel   = 0.0_ReKi ! bjj: we don't need this field
    InitInData_AD14%TurbineComponents%Hub%RotationVel      = 0.0_ReKi ! bjj: we don't need this field
 
@@ -4893,10 +4906,8 @@ SUBROUTINE AD_SetInitInput(InitInData_AD14, InitOutData_ED, y_ED, p_FAST, ErrSta
   
 
       ! Blade length
-   IF (p_FAST%CompElast == Module_ED) THEN
+   IF (p_FAST%CompElast == Module_ED) THEN  ! note, we can't get here if we're using BeamDyn....
       InitInData_AD14%TurbineComponents%BladeLength = InitOutData_ED%BladeLength
-   ELSE
-      InitInData_AD14%TurbineComponents%BladeLength = 12.573 !13.75700  ! FIX THIS!!!!! GET THIS FROM BEAMDYN (right now is value from Test01)
    END IF
    
    
@@ -6077,7 +6088,7 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    ! OpenFOAM is the driver and it sets these inputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
    !   in this scenario until OpenFOAM takes another step  **this is a source of error, but it is the way the OpenFOAM-FAST7 coupling
    !   works, so I'm not going to spend time that I don't have now to fix it**
-      CALL OpFM_SetInputs( p_FAST, AD14%p, AD14%Input(1), AD14%y, AD%Input(1), AD%y, ED%Output(1), OpFM, ErrStat2, ErrMsg2 )
+      CALL OpFM_SetInputs( p_FAST, AD14%p, AD14%Input(1), AD14%y, AD%Input(1), AD%y, ED%Output(1), SrvD%y, OpFM, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )        
    END IF
    
@@ -6358,13 +6369,13 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
       CALL InflowWind_CalcOutput( this_time, IfW%Input(1), IfW%p, IfW%x(this_state), IfW%xd(this_state), IfW%z(this_state), &
                                   IfW%OtherSt, IfW%y, ErrStat2, ErrMsg2 )         
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
-   ELSE IF ( p_FAST%CompInflow == Module_OpFM ) THEN
-   ! OpenFOAM is the driver and it computes outputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
-   !   in this scenario until OpenFOAM takes another step  **this is a source of error, but it is the way the OpenFOAM-FAST7 coupling
-   !   works, so I'm not going to spend time that I don't have now to fix it**
-      CALL OpFM_SetInputs( p_FAST, AD14%p, AD14%Input(1), AD14%y, AD%Input(1), AD%y, ED%Output(1), OpFM, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-      CALL OpFM_SetWriteOutput(OpFM)
+   !ELSE IF ( p_FAST%CompInflow == Module_OpFM ) THEN
+   !! OpenFOAM is the driver and it computes outputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
+   !!   in this scenario until OpenFOAM takes another step  **this is a source of error, but it is the way the OpenFOAM-FAST7 coupling
+   !!   works, so I'm not going to spend time that I don't have now to fix it**
+   !   CALL OpFM_SetInputs( p_FAST, AD14%p, AD14%Input(1), AD14%y, AD%Input(1), AD%y, ED%Output(1), SrvD%y, OpFM, ErrStat2, ErrMsg2 )
+   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+   !   CALL OpFM_SetWriteOutput(OpFM)
       
    END IF
    
@@ -6404,6 +6415,16 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
 
    END IF
       
+   IF ( p_FAST%CompInflow == Module_OpFM ) THEN
+   ! OpenFOAM is the driver and it computes outputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
+   !   in this scenario until OpenFOAM takes another step  **this is a source of error, but it is the way the OpenFOAM-FAST7 coupling
+   !   works, so I'm not going to spend time that I don't have now to fix it** 
+   ! note that I'm setting these inputs AFTER the call to ServoDyn so OpenFOAM gets all the inputs updated at the same step
+      CALL OpFM_SetInputs( p_FAST, AD14%p, AD14%Input(1), AD14%y, AD%Input(1), AD%y, ED%Output(1), SrvD%y, OpFM, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+      CALL OpFM_SetWriteOutput(OpFM)
+      
+   END IF   
       
       ! User Tower Loading
    IF ( p_FAST%CompUserTwrLd ) THEN !bjj: array below won't work... routine needs to be converted to UsrTwr_CalcOutput()
@@ -6509,6 +6530,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    TYPE(InflowWind_InitInputType)          :: InitInData_IfW      ! Initialization input data
    TYPE(InflowWind_InitOutputType)         :: InitOutData_IfW     ! Initialization output data
    
+   TYPE(OpFM_InitInputType)                :: InitInData_OpFM     ! Initialization input data
    TYPE(OpFM_InitOutputType)               :: InitOutData_OpFM    ! Initialization output data
       
    TYPE(HydroDyn_InitInputType)            :: InitInData_HD       ! Initialization input data
@@ -6575,7 +6597,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       ! ... Open and read input files, initialize global parameters. ...
    IF (PRESENT(InFile)) THEN
       IF (PRESENT(ExternInitData)) THEN
-         CALL FAST_Init( p_FAST, y_FAST, t_initial, ErrStat2, ErrMsg2, InFile, ExternInitData%TMax )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)         
+         CALL FAST_Init( p_FAST, y_FAST, t_initial, ErrStat2, ErrMsg2, InFile, ExternInitData%TMax, ExternInitData%TurbineID )  ! We have the name of the input file and the simulation length from somewhere else (e.g. Simulink)         
       ELSE         
          CALL FAST_Init( p_FAST, y_FAST, t_initial, ErrStat2, ErrMsg2, InFile )                       ! We have the name of the input file from somewhere else (e.g. Simulink)
       END IF
@@ -6858,8 +6880,17 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       
    ELSEIF ( p_FAST%CompInflow == Module_OpFM ) THEN
       
+      IF ( PRESENT(ExternInitData) ) THEN
+         InitInData_OpFM%NumSCin = ExternInitData%NumSCin
+         InitInData_OpFM%NumSCout = ExternInitData%NumSCout  
+      ELSE
+         CALL SetErrStat( ErrID_Fatal, 'OpenFOAM integration can be used only with external input data (not the stand-alone executable).', ErrStat, ErrMsg, RoutineName )
+         CALL Cleanup()
+         RETURN         
+      END IF
+      
          ! set up the data structures for integration with OpenFOAM
-      CALL Init_OpFM( p_FAST, AirDens, AD14%Input(1), AD%Input(1), AD%y, ED%Output(1), OpFM, InitOutData_OpFM, ErrStat2, ErrMsg2 )
+      CALL Init_OpFM( InitInData_OpFM, p_FAST, AirDens, AD14%Input(1), AD%Input(1), AD%y, ED%Output(1), OpFM, InitOutData_OpFM, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
       IF (ErrStat >= AbortErrLev) THEN
@@ -6934,6 +6965,14 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_SrvD%AirDens       = AirDens
       InitInData_SrvD%AvgWindSpeed  = InitOutData_IfW%WindFileInfo%MWS
       
+      IF ( PRESENT(ExternInitData) ) THEN
+         InitInData_SrvD%NumSCin = ExternInitData%NumSCin
+         InitInData_SrvD%NumSCout = ExternInitData%NumSCout  
+      ELSE
+         InitInData_SrvD%NumSCin = 0
+         InitInData_SrvD%NumSCout = 0
+      END IF      
+            
       CALL AllocAry(InitInData_SrvD%BlPitchInit, InitOutData_ED%NumBl, 'BlPitchInit', ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
@@ -7358,6 +7397,8 @@ CONTAINS
       CALL InflowWind_DestroyInitOutput( InitOutData_IfW, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
+      CALL OpFM_DestroyInitInput(  InitInData_OpFM,  ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       CALL OpFM_DestroyInitOutput( InitOutData_OpFM, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)         
          
@@ -9536,7 +9577,7 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
       Turbine%SrvD%p%DLL_InFile = DLLFileName
       Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
       Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = -8
-      CALL CallBladedDLL(Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%OtherSt%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+      CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt, Turbine%SrvD%OtherSt%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
          ! put values back:
@@ -9718,7 +9759,7 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
       Turbine%SrvD%p%DLL_InFile = DLLFileName
       Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
       Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = -9
-      CALL CallBladedDLL(Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%OtherSt%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+      CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%OtherSt%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                           
          ! put values back:
       Turbine%SrvD%p%DLL_InFile = FileName

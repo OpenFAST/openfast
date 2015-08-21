@@ -45,16 +45,16 @@ MODULE OpenFOAM
    
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Init_OpFM( p_FAST, AirDens, u_AD14, u_AD, y_AD, y_ED, OpFM, InitOut, ErrStat, ErrMsg )
+SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD14, u_AD, y_AD, y_ED, OpFM, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
+   TYPE(OpFM_InitInputType),        INTENT(IN   )  :: InitInp     ! Input data for initialization routine
    TYPE(FAST_ParameterType),        INTENT(IN   )  :: p_FAST      ! Parameters for the glue code
    REAL(ReKi),                      INTENT(IN   )  :: AirDens     ! Air Density kg/m^3
    TYPE(AD14_InputType),            INTENT(IN   )  :: u_AD14      ! AeroDyn14 input data
    TYPE(AD_InputType),              INTENT(IN   )  :: u_AD        ! AeroDyn input data
    TYPE(AD_OutputType),             INTENT(IN   )  :: y_AD        ! AeroDyn output data (for mesh mapping)
    TYPE(ED_OutputType),             INTENT(IN)     :: y_ED        ! The outputs of the structural dynamics module
-   !TYPE(OpFM_InitInputType),        INTENT(IN   )  :: InitInp     ! Input data for initialization routine
    TYPE(OpenFOAM_Data),             INTENT(INOUT)  :: OpFM        ! data for the OpenFOAM integration module
    TYPE(OpFM_InitOutputType),       INTENT(INOUT)  :: InitOut     ! Output for initialization routine
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
@@ -115,6 +115,11 @@ SUBROUTINE Init_OpFM( p_FAST, AirDens, u_AD14, u_AD, y_AD, y_ED, OpFM, InitOut, 
    CALL AllocPAry( OpFM%u%fy, OpFM%p%Nnodes, 'fy', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocPAry( OpFM%u%fz, OpFM%p%Nnodes, 'fz', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+   IF (InitInp%NumSCin > 0) THEN
+      CALL AllocPAry( OpFM%u%SuperController, InitInp%NumSCin, 'u%SuperController', ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   END IF
+   
    IF (ErrStat >= AbortErrLev) RETURN
    
       ! make sure the C versions are synced with these arrays
@@ -123,7 +128,12 @@ SUBROUTINE Init_OpFM( p_FAST, AirDens, u_AD14, u_AD, y_AD, y_ED, OpFM, InitOut, 
    OpFM%u%c_obj%pz_Len = OpFM%p%Nnodes; OpFM%u%c_obj%pz = C_LOC( OpFM%u%pz(1) )
    OpFM%u%c_obj%fx_Len = OpFM%p%Nnodes; OpFM%u%c_obj%fx = C_LOC( OpFM%u%fx(1) )
    OpFM%u%c_obj%fy_Len = OpFM%p%Nnodes; OpFM%u%c_obj%fy = C_LOC( OpFM%u%fy(1) )
-   OpFM%u%c_obj%fz_Len = OpFM%p%Nnodes; OpFM%u%c_obj%fz = C_LOC( OpFM%u%fz(1) )   
+   OpFM%u%c_obj%fz_Len = OpFM%p%Nnodes; OpFM%u%c_obj%fz = C_LOC( OpFM%u%fz(1) ) 
+   if (InitInp%NumSCin > 0) then
+      OpFM%u%c_obj%SuperController_Len = InitInp%NumSCin
+      OpFM%u%c_obj%SuperController     = C_LOC( OpFM%u%SuperController(1) )
+      OpFM%u%SuperController = 0.0_ReKi
+   end if
       
       ! initialize the arrays:
    call SetOpFMPositions(p_FAST, u_AD14, u_AD, y_ED, OpFM)
@@ -251,12 +261,23 @@ SUBROUTINE Init_OpFM( p_FAST, AirDens, u_AD14, u_AD, y_AD, y_ED, OpFM, InitOut, 
    CALL AllocPAry( OpFM%y%u, OpFM%p%Nnodes, 'u', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocPAry( OpFM%y%v, OpFM%p%Nnodes, 'v', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocPAry( OpFM%y%w, OpFM%p%Nnodes, 'w', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (InitInp%NumSCout > 0) then
+      CALL AllocPAry( OpFM%y%SuperController, InitInp%NumSCout, 'y%SuperController', ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   end if
+   
    IF (ErrStat >= AbortErrLev) RETURN
                         
       ! make sure the C versions are synced with these arrays
    OpFM%y%c_obj%u_Len = OpFM%p%Nnodes; OpFM%y%c_obj%u = C_LOC( OpFM%y%u(1) )
    OpFM%y%c_obj%v_Len = OpFM%p%Nnodes; OpFM%y%c_obj%v = C_LOC( OpFM%y%v(1) )
    OpFM%y%c_obj%w_Len = OpFM%p%Nnodes; OpFM%y%c_obj%w = C_LOC( OpFM%y%w(1) )
+   
+   if (InitInp%NumSCout > 0) then
+      OpFM%u%c_obj%SuperController_Len = InitInp%NumSCout
+      OpFM%y%c_obj%SuperController     = C_LOC( OpFM%y%SuperController(1) )
+   end if
+   
    
    
       !............................................................................................
@@ -282,7 +303,7 @@ SUBROUTINE Init_OpFM( p_FAST, AirDens, u_AD14, u_AD, y_AD, y_ED, OpFM, InitOut, 
    
 END SUBROUTINE Init_OpFM
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE OpFM_SetInputs( p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, OpFM, ErrStat, ErrMsg )
+SUBROUTINE OpFM_SetInputs( p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, y_SrvD, OpFM, ErrStat, ErrMsg )
 !..................................................................................................................................
 
    TYPE(FAST_ParameterType),       INTENT(IN    )  :: p_FAST      ! Parameters for the glue code
@@ -292,6 +313,7 @@ SUBROUTINE OpFM_SetInputs( p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, OpF
    TYPE(AD_InputType),             INTENT(IN)      :: u_AD        ! The input meshes (already calculated) from AeroDyn
    TYPE(AD_OutputType),            INTENT(IN)      :: y_AD        ! The output meshes (already calculated) from AeroDyn
    TYPE(ED_OutputType),            INTENT(IN)      :: y_ED        ! The outputs of the structural dynamics module
+   TYPE(SrvD_OutputType),          INTENT(IN)      :: y_SrvD      ! The outputs of the ServoDyn module (control)
    TYPE(OpenFOAM_Data),            INTENT(INOUT)   :: OpFM        ! data for the OpenFOAM integration module
    INTEGER(IntKi),                 INTENT(  OUT)   :: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)   :: ErrMsg      ! Error message if ErrStat /= ErrID_None
@@ -313,6 +335,12 @@ SUBROUTINE OpFM_SetInputs( p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, OpF
    call SetOpFMForces(p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, OpFM, ErrStat2, ErrMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
+      ! set SuperController inputs
+   if (p_FAST%CompServo == Module_SrvD) then
+      OpFM%u%SuperController = y_SrvD%SuperController      
+   end if
+   
+      
 END SUBROUTINE OpFM_SetInputs
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SetOpFMPositions(p_FAST, u_AD14, u_AD, y_ED, OpFM)

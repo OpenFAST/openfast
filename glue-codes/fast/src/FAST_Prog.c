@@ -7,11 +7,16 @@
 #include <malloc.h>
 
 int checkError(const int ErrStat, const char * ErrMsg);
+void setOutputsToFAST(OpFM_InputType_t* OpFM_Input_from_FAST, OpFM_OutputType_t* OpFM_Output_to_FAST);
+
 
 int 
 main(int argc, char *argv[], char *env[])
 {
    double dt;
+   double TMax;
+   float TurbinePos[3];
+   int TurbID;
    int ErrStat = 0;
    char ErrMsg[INTERFACE_STRING_LENGTH];        // make sure this is the same size as IntfStrLen in FAST_Library.f90
    char InputFileName[INTERFACE_STRING_LENGTH]; // make sure this is the same size as IntfStrLen in FAST_Library.f90
@@ -26,6 +31,8 @@ main(int argc, char *argv[], char *env[])
    int k = 0;
    int n_t_global_start = 0;
    int n_checkpoint = 10;
+   int NumScOutputs = 0; // 5;  // # outputs from the supercontroller == # inputs to the controller
+   int NumScInputs = 0; // 2;   // # inputs to the supercontroller == # outputs from the controller
 
    OpFM_Input_from_FAST = malloc(sizeof(OpFM_InputType_t));
    OpFM_Output_to_FAST = malloc(sizeof(OpFM_OutputType_t));
@@ -44,10 +51,9 @@ main(int argc, char *argv[], char *env[])
       /* note that this will set n_t_global inside the FAST library; so the loop below would need to be changed. I can easily return the
       current value of n_t_global if you need it. */
       strcpy(CheckpointFileRoot, "../../../CertTest/Test18.1200");
-      FAST_OpFM_Restart(CheckpointFileRoot, &AbortErrLev, &dt, OpFM_Input_from_FAST, OpFM_Output_to_FAST, &ErrStat, ErrMsg);
+      FAST_OpFM_Restart(CheckpointFileRoot, &AbortErrLev, &dt, &n_t_global_start, OpFM_Input_from_FAST, OpFM_Output_to_FAST, &ErrStat, ErrMsg);
       if (checkError(ErrStat, ErrMsg)) return 1;
 
-      //n_t_global_start = 1200;  // we could return this from the checkpoint file, too
    }
    else{
       /* ******************************
@@ -56,16 +62,16 @@ main(int argc, char *argv[], char *env[])
 
       // this calls the Init() routines of each module
       strcpy(InputFileName, "../../../CertTest/Test18.fst");
+      TurbID = 1;
+      TurbinePos[0] = 0.0;  // x location of turbine
+      TurbinePos[1] = 0.0;  // y location of turbine
+      TurbinePos[2] = 0.0;  // z location of turbine
 
-      FAST_OpFM_Init(InputFileName, &AbortErrLev, &dt, OpFM_Input_from_FAST, OpFM_Output_to_FAST, &ErrStat, ErrMsg);
+      FAST_OpFM_Init(&TMax, InputFileName, &TurbID, &NumScOutputs, &NumScInputs, TurbinePos, &AbortErrLev, &dt, OpFM_Input_from_FAST, OpFM_Output_to_FAST, &ErrStat, ErrMsg);
       if (checkError(ErrStat, ErrMsg)) return 1;
 
-      // set wind speeds at original locations (likely make this a subroutine)
-      for (j = 0; j < OpFM_Input_from_FAST->pz_Len ; j++){
-         OpFM_Output_to_FAST->u[j] = (float) 10.0*pow((OpFM_Input_from_FAST->pz[j] / 90.0), 0.2); // 0.2 power law wind profile using reference 10 m/s at 90 meters
-         OpFM_Output_to_FAST->v[j] = 0.0;
-         OpFM_Output_to_FAST->w[j] = 0.0;
-      }
+      // set wind speeds at initial locations
+      setOutputsToFAST(OpFM_Input_from_FAST, OpFM_Output_to_FAST);
 
       FAST_OpFM_Solution0(&ErrStat, ErrMsg);
       if (checkError(ErrStat, ErrMsg)) return 1;
@@ -95,12 +101,8 @@ main(int argc, char *argv[], char *env[])
       set inputs from this code and call FAST:
       ********************************* */
 
-      // set wind speeds at original locations (likely make this a subroutine)
-      for (j = 0; j < OpFM_Input_from_FAST->pz_Len; j++){
-         OpFM_Output_to_FAST->u[j] = (float) 10.0*pow((OpFM_Input_from_FAST->pz[j] / 90.0), 0.2); // 0.2 power law wind profile using reference 10 m/s at 90 meters
-         OpFM_Output_to_FAST->v[j] = n_t_global*0.2;
-         OpFM_Output_to_FAST->w[j] = 0.0;
-      }
+      // set wind speeds at original locations 
+      setOutputsToFAST(OpFM_Input_from_FAST, OpFM_Output_to_FAST);
 
 
       // this advances the states, calls CalcOutput, and solves for next inputs. Predictor-corrector loop is imbeded here:
@@ -115,6 +117,7 @@ main(int argc, char *argv[], char *env[])
             //OpFM_Input_from_FAST->fx[j]
             //OpFM_Input_from_FAST->fy[j]
             //OpFM_Input_from_FAST->fz[j]
+            //OpFM_Input_from_FAST->SuperController[j]
    }
    
    /* ******************************
@@ -123,9 +126,16 @@ main(int argc, char *argv[], char *env[])
 
    FAST_End();
 
-   // deallocate
+   // deallocate types we allocated earlier
+   if (OpFM_Input_from_FAST != NULL) {
+      free(OpFM_Input_from_FAST);
+      OpFM_Input_from_FAST = NULL;
+   }
+   if (OpFM_Output_to_FAST != NULL) {
+      free(OpFM_Output_to_FAST);
+      OpFM_Output_to_FAST = NULL;
+   }
 
-   return 0;
 }
 
 int
@@ -143,4 +153,22 @@ checkError(const int ErrStat, const char * ErrMsg){
 
    return 0;
 
+}
+
+void
+setOutputsToFAST(OpFM_InputType_t* OpFM_Input_from_FAST, OpFM_OutputType_t* OpFM_Output_to_FAST){
+
+   // routine sets the u-v-w wind speeds used in FAST and the SuperController inputs
+
+   for (int j = 0; j < OpFM_Output_to_FAST->u_Len; j++){
+      OpFM_Output_to_FAST->u[j] = (float) 10.0*pow((OpFM_Input_from_FAST->pz[j] / 90.0), 0.2); // 0.2 power law wind profile using reference 10 m/s at 90 meters
+      OpFM_Output_to_FAST->v[j] = 0.0;
+      OpFM_Output_to_FAST->w[j] = 0.0;
+   }
+
+   for (int j = 0; j < OpFM_Output_to_FAST->SuperController_Len; j++){
+      OpFM_Output_to_FAST->SuperController[j] = (float) j; // set it somehow....
+   }
+
+   return;
 }
