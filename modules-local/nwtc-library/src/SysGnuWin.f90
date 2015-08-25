@@ -462,6 +462,7 @@ CONTAINS
 
    IF ( NChars > 0 ) THEN
 
+      ! bjj: note that this will produce an error if NChars > 999
       WRITE (Fmt(5:7),'(I3)')  NChars
 
       WRITE (CU,Fmt,ADVANCE='NO')  CR, Str
@@ -532,17 +533,7 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
          CHARACTER(KIND=C_CHAR)     :: lpFileName(*)
       END FUNCTION LoadLibrary
 
-      FUNCTION GetProcAddress(hModule, lpProcName) BIND(C, NAME='GetProcAddress')
-         USE, INTRINSIC :: ISO_C_BINDING
-         IMPLICIT NONE
-         !GCC$ ATTRIBUTES STDCALL :: GetProcAddress
-         TYPE(C_FUNPTR)             :: GetProcAddress
-         INTEGER(C_INTPTR_T),VALUE  :: hModule
-         CHARACTER(KIND=C_CHAR)     :: lpProcName(*)
-      END FUNCTION GetProcAddress
-
    END INTERFACE
-
 
 
    ErrStat = ErrID_None
@@ -563,6 +554,51 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
 
       ! Get the procedure address:
 
+   CALL LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
+
+
+   RETURN
+END SUBROUTINE LoadDynamicLib
+!==================================================================================================================================
+SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
+
+      ! This SUBROUTINE is used to dynamically load a procedure from a DLL.
+
+      ! Passed Variables:
+
+   TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be loaded.
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+   INTERFACE  ! Definitions of Windows API routines
+
+      !...........................
+      !bjj: I have been unable to find a solution that works with both IVF and gfortran...
+      !bjj: note that "Intel Fortran does not support use of STDCALL with BIND(C) at this time"
+      !     See this link: http://software.intel.com/en-us/articles/replacing-intel-fortran-attributes-with-c-interoperability-features
+      !bjj: Until this is fixed, Intel uses kernel32.f90 definitions instead of the interface below:
+      !...........................
+
+      FUNCTION GetProcAddress(hModule, lpProcName) BIND(C, NAME='GetProcAddress')
+         USE, INTRINSIC :: ISO_C_BINDING
+         IMPLICIT NONE
+         !GCC$ ATTRIBUTES STDCALL :: GetProcAddress
+         TYPE(C_FUNPTR)             :: GetProcAddress
+         INTEGER(C_INTPTR_T),VALUE  :: hModule
+         CHARACTER(KIND=C_CHAR)     :: lpProcName(*)
+      END FUNCTION GetProcAddress
+
+   END INTERFACE
+
+
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+
+
+      ! Get the procedure address:
+
    DLL%ProcAddr = GetProcAddress( DLL%FileAddr, TRIM(DLL%ProcName)//C_NULL_CHAR )  !the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
 
    IF(.NOT. C_ASSOCIATED(DLL%ProcAddr)) THEN
@@ -573,7 +609,7 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
 
 
    RETURN
-END SUBROUTINE LoadDynamicLib
+END SUBROUTINE LoadDynamicLibProc
 !==================================================================================================================================
 SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
 

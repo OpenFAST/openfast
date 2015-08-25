@@ -40,7 +40,7 @@ MODULE SysSubs
    !     FUNCTION    Is_NaN( DblNum )                                         ! Please use IEEE_IS_NAN() instead
    !     FUNCTION    NWTC_Gamma( x )                                          ! Returns the gamma value of its argument.   
    ! per MLB, this can be removed, but only if CU is OUTPUT_UNIT:
-   !     SUBROUTINE  OpenCon     ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
+   !     SUBROUTINE  OpenCon                                                  ! Actually, it can't be removed until we get Intel's FLUSH working. (mlb)
    !     SUBROUTINE  OpenUnfInpBEFile ( Un, InFile, RecLen, Error )
    !     SUBROUTINE  ProgExit ( StatCode )
    !     SUBROUTINE  Set_IEEE_Constants( NaN_D, Inf_D, NaN, Inf )   
@@ -75,7 +75,7 @@ MODULE SysSubs
 
 
    INTEGER, PARAMETER            :: ConRecL     = 120                               ! The record length for console output.
-   INTEGER, PARAMETER            :: CU          = 7                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
+   INTEGER, PARAMETER            :: CU          = 6                                 ! The I/O unit for the console.  Unit 6 causes ADAMS to crash.
    INTEGER, PARAMETER            :: MaxWrScrLen = 98                                ! The maximum number of characters allowed to be written to a line in WrScr
 
    LOGICAL, PARAMETER            :: KBInputOK   = .TRUE.                            ! A flag to tell the program that keyboard input is allowed in the environment.
@@ -288,10 +288,11 @@ CONTAINS
    USE                             IFPORT
 
 
-
-   OPEN ( CU , FILE='/dev/stdout' , STATUS='UNKNOWN' , CARRIAGECONTROL='FORTRAN', RECL=ConRecL )
+!bjj: Because CU = 6 now, this statement is not necessary
+!   OPEN ( CU , FILE='/dev/stdout' , STATUS='UNKNOWN' , CARRIAGECONTROL='FORTRAN', RECL=ConRecL )
 
    CALL FlushOut ( CU )
+
 
    RETURN
    END SUBROUTINE OpenCon
@@ -330,8 +331,8 @@ CONTAINS
    ! NOTE: using RecLen in bytes requires using the /assume:byterecl compiler option!
 
    OPEN ( Un, FILE=TRIM( InFile ), STATUS='OLD', FORM='UNFORMATTED', ACCESS='DIRECT', RECL=RecLen, IOSTAT=IOS, &
-                  ACTION='READ'  )                                              ! Use this for UNIX systems.
-!                 ACTION='READ', CONVERT='BIG_ENDIAN' )                         ! Use this for PC systems.
+                   ACTION='READ'  )                                              ! Use this for UNIX systems.
+!                  ACTION='READ', CONVERT='BIG_ENDIAN' )                         ! Use this for PC systems.
 
 
    IF ( IOS /= 0 )  THEN
@@ -460,10 +461,10 @@ CONTAINS
 
       ! Argument declarations.
 
-   CHARACTER(*), INTENT(IN)     :: Str                                          ! The input string to write to the screen.
-   CHARACTER(*), INTENT(IN)     :: Frm                                          ! Format specifier for the output.
+   CHARACTER(*), INTENT(IN)     :: Str                                         ! The input string to write to the screen.
+   CHARACTER(*), INTENT(IN)     :: Frm                                         ! Format specifier for the output.
 
-   INTEGER                      :: ErrStat                                      ! Error status of write operation (so code doesn't crash)
+   INTEGER                      :: ErrStat                                     ! Error status of write operation (so code doesn't crash)
 
 
    IF ( LEN_TRIM(Str)  < 1 ) THEN
@@ -472,11 +473,12 @@ CONTAINS
       WRITE ( CU, Frm, IOSTAT=ErrStat ) TRIM(Str)
    END IF
 
+   IF ( ErrStat /= 0 ) &
+      print *, ' WriteScr produced an error. Please inform the programmer.'
+
 
    END SUBROUTINE WriteScr ! ( Str )
-
 !=======================================================================
-
 
 !==================================================================================================================================
 SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
@@ -489,15 +491,115 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
+#ifdef USE_DLL_INTERFACE         
 
+!bjj: these are values I found on the web; I have no idea if they actually work...
+!bjj: hopefully we can find them pre-defined in a header somewhere
+   INTEGER(C_INT), PARAMETER :: RTLD_LAZY=1            ! "Perform lazy binding. Only resolve symbols as the code that references them is executed. If the symbol is never referenced, then it is never resolved. (Lazy binding is only performed for function references; references to variables are always immediately bound when the library is loaded.) "
+   INTEGER(C_INT), PARAMETER :: RTLD_NOW=2             ! "If this value is specified, or the environment variable LD_BIND_NOW is set to a nonempty string, all undefined symbols in the library are resolved before dlopen() returns. If this cannot be done, an error is returned."
+   INTEGER(C_INT), PARAMETER :: RTLD_GLOBAL=256        ! "The symbols defined by this library will be made available for symbol resolution of subsequently loaded libraries"
+   INTEGER(C_INT), PARAMETER :: RTLD_LOCAL=0           ! "This is the converse of RTLD_GLOBAL, and the default if neither flag is specified. Symbols defined in this library are not made available to resolve references in subsequently loaded libraries."
+
+
+
+   INTERFACE !linux API routines
+      !bjj see http://linux.die.net/man/3/dlopen
+      !    and https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man3/dlopen.3.html
+
+      FUNCTION dlOpen(filename,mode) BIND(C,NAME="dlopen")
+      ! void *dlopen(const char *filename, int mode);
+         USE ISO_C_BINDING
+         IMPLICIT NONE
+         TYPE(C_PTR)                   :: dlOpen
+         CHARACTER(C_CHAR), INTENT(IN) :: filename(*)
+         INTEGER(C_INT), VALUE         :: mode
+      END FUNCTION
+
+   END INTERFACE
+
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+
+      ! Load the DLL and get the file address:
+
+   DLL%FileAddrX = dlOpen( TRIM(DLL%FileName)//C_NULL_CHAR, RTLD_LAZY )  !the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
+
+   IF( .NOT. C_ASSOCIATED(DLL%FileAddrX) ) THEN
+      ErrStat = ErrID_Fatal
+      WRITE(ErrMsg,'(I2)') BITS_IN_ADDR
+      ErrMsg  = 'The dynamic library '//TRIM(DLL%FileName)//' could not be loaded. Check that the file '// &
+                'exists in the specified location and that it is compiled for '//TRIM(ErrMsg)//'-bit applications.'
+      RETURN
+   END IF
+
+
+      ! Get the procedure address:
+
+   CALL LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
+#else
 
    ErrStat = ErrID_Fatal
    ErrMsg = ' LoadDynamicLib: Not implemented for '//TRIM(OS_Desc)
-
-
-
+      
+#endif
+   
    RETURN
 END SUBROUTINE LoadDynamicLib
+!==================================================================================================================================
+SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
+
+      ! This SUBROUTINE is used to dynamically load a procedure from a DLL.
+
+      ! Passed Variables:
+
+   TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be loaded.
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+
+#ifdef USE_DLL_INTERFACE           
+
+   INTERFACE !linux API routines
+
+      !bjj see http://linux.die.net/man/3/dlsym
+      !    and https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man3/dlsym.3.html
+      
+      FUNCTION dlSym(handle,name) BIND(C,NAME="dlsym")
+      ! void *dlsym(void *handle, const char *name);
+         USE ISO_C_BINDING
+         IMPLICIT NONE
+         TYPE(C_FUNPTR)                :: dlSym ! A function pointer
+         TYPE(C_PTR), VALUE            :: handle
+         CHARACTER(C_CHAR), INTENT(IN) :: name(*)
+      END FUNCTION
+
+   END INTERFACE
+
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
+
+
+      ! Get the procedure address:
+
+   DLL%ProcAddr = dlSym( DLL%FileAddrX, TRIM(DLL%ProcName)//C_NULL_CHAR )  !the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
+
+   IF(.NOT. C_ASSOCIATED(DLL%ProcAddr)) THEN
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'The procedure '//TRIM(DLL%ProcName)//' in file '//TRIM(DLL%FileName)//' could not be loaded.'
+      RETURN
+   END IF
+#else
+
+   ErrStat = ErrID_Fatal
+   ErrMsg = ' LoadDynamicLibProc: Not implemented for '//TRIM(OS_Desc)
+      
+#endif
+   
+   RETURN
+END SUBROUTINE LoadDynamicLibProc
 !==================================================================================================================================
 SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
 
@@ -509,13 +611,52 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
+      ! Local variable:
+   INTEGER(C_INT)                            :: Success     ! Whether or not the call to dlClose was successful
+   INTEGER(C_INT), PARAMETER                 :: TRUE  = 0
+
+
+#ifdef USE_DLL_INTERFACE           
+!bjj: note that this is not tested.
+
+   INTERFACE !linux API routine
+      !bjj see http://linux.die.net/man/3/dlclose
+      !    and https://developer.apple.com/library/mac/documentation/Darwin/Reference/ManPages/man3/dlclose.3.html
+
+      FUNCTION dlClose(handle) BIND(C,NAME="dlclose")
+      ! int dlclose(void *handle);
+         USE ISO_C_BINDING
+         IMPLICIT NONE
+         INTEGER(C_INT)       :: dlClose
+         TYPE(C_PTR), VALUE   :: handle
+      END FUNCTION
+
+   END INTERFACE
+
+
+      ! Close the library:
+
+   Success = dlClose( DLL%FileAddrX ) !The function dlclose() returns 0 on success, and nonzero on error.
+
+   IF ( Success /= TRUE ) THEN !bjj: note that this is not the same as LOGICAL .TRUE.
+      ErrStat = ErrID_Fatal
+      ErrMsg  = 'The dynamic library could not be freed.'
+      RETURN
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg = ''
+   END IF
+   
+#else
 
    ErrStat = ErrID_Fatal
    ErrMsg = ' FreeDynamicLib: Not implemented for '//TRIM(OS_Desc)
-
-
+         
+#endif
+   
    RETURN
 END SUBROUTINE FreeDynamicLib
 !==================================================================================================================================
+
 
 END MODULE SysSubs

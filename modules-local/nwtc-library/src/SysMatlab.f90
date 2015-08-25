@@ -87,7 +87,7 @@ MODULE SysSubs
    CHARACTER(*),  PARAMETER      :: OS_Desc     = 'Intel Visual Fortran for Windows/Matlab' ! Description of the language/OS
    CHARACTER( 1), PARAMETER      :: PathSep     = '\'                               ! The path separator.
    CHARACTER( 1), PARAMETER      :: SwChar      = '/'                               ! The switch character for command-line options.
-   CHARACTER(11), PARAMETER      :: UnfForm     = 'UNFORMATTED'                     ! The string to specify unformatted I/O files.
+   CHARACTER(11), PARAMETER      :: UnfForm     = 'BINARY'                          ! The string to specify unformatted I/O files. (used in OpenUOutFile and OpenUInpFile [see TurbSim's .bin files])
 
 CONTAINS
 
@@ -508,8 +508,8 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
 
       ! This SUBROUTINE is used to dynamically load a DLL.
 
-   USE               IFWINTY,  ONLY : HANDLE, LPVOID
-   USE               kernel32, ONLY : LoadLibrary, GetProcAddress
+   USE               IFWINTY,  ONLY : HANDLE
+   USE               kernel32, ONLY : LoadLibrary
 
       ! Passed Variables:
 
@@ -520,7 +520,6 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
 
       ! local variables
    INTEGER(HANDLE)                           :: FileAddr    ! The address of file FileName.         (RETURN value from LoadLibrary in kernel32.f90)
-   INTEGER(LPVOID)                           :: ProcAddr    ! The address of procedure ProcName.    (RETURN value from GetProcAddress in kernel32.f90)
 
 
    ErrStat = ErrID_None
@@ -540,6 +539,32 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
       RETURN
    END IF
 
+   CALL LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
+
+
+   RETURN
+END SUBROUTINE LoadDynamicLib
+!==================================================================================================================================
+SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
+
+      ! This SUBROUTINE is used to dynamically load a procedure in a DLL.
+
+   USE               IFWINTY,  ONLY : LPVOID
+   USE               kernel32, ONLY : GetProcAddress
+
+      ! Passed Variables:
+
+   TYPE (DLL_Type),           INTENT(INOUT)  :: DLL         ! The DLL to be loaded.
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+
+
+      ! local variables
+   INTEGER(LPVOID)                           :: ProcAddr    ! The address of procedure ProcName.    (RETURN value from GetProcAddress in kernel32.f90)
+
+
+   ErrStat = ErrID_None
+   ErrMsg = ''
 
       ! Get the procedure address:
 
@@ -551,10 +576,9 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
       ErrMsg  = 'The procedure '//TRIM(DLL%ProcName)//' in file '//TRIM(DLL%FileName)//' could not be loaded.'
       RETURN
    END IF
-
-
-   RETURN
-END SUBROUTINE LoadDynamicLib
+   
+   
+END SUBROUTINE LoadDynamicLibProc
 !==================================================================================================================================
 SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
 
