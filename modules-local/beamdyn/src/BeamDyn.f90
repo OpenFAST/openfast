@@ -3819,14 +3819,12 @@ SUBROUTINE BD_StaticSolution( uuN0,uuNf,Mass0,Stif0,gravity,u,&
        
        IF(i .EQ. 1) THEN
            Eref = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))*tol
-!WRITE(*,*) 'Eref',Eref
            IF(Eref .LE. tol) THEN
                CALL Cleanup()
                RETURN
            ENDIF
        ELSE  !IF(i .GT. 1) THEN
            Enorm = SQRT(abs(DOT_PRODUCT(RHS_LU,RHS(7:dof_total))))
-!WRITE(*,*) 'Enorm',Enorm
            IF(Enorm .LE. Eref) THEN
                CALL Cleanup()
                RETURN
@@ -4688,14 +4686,14 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 
    ! initialize accelerations here:
 !   if ( .not. OtherState%InitAcc) then
-!   if ( n .EQ. 0) then
-!      !Qi, call something to initialize
-!      call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
-!          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!      CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
-!          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!      OtherState%InitAcc = .true. 
-!   end if
+   if ( n .EQ. 0) then
+      !Qi, call something to initialize
+      call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
+          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
+          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      OtherState%InitAcc = .true. 
+   end if
 
    CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
