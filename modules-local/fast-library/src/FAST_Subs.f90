@@ -309,9 +309,6 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax, TurbI
          
     
     p%WrGraphics = .FALSE. !.TRUE.
-#ifdef DEBUG_BEAMDYN
-    p%WrGraphics = .TRUE.
-#endif
 
     p%n_TMax_m1  = CEILING( ( (p%TMax - t_initial) / p%DT ) ) - 1 ! We're going to go from step 0 to n_TMax (thus the -1 here)
 
@@ -6000,6 +5997,11 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    
    integer :: k
    
+#ifdef OUTPUT_MASS_MATRIX   
+   INTEGER                                 :: UnMM
+#endif
+   
+   
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    ! Option 1: solve for consistent inputs and outputs, which is required when Y has direct feedthrough in 
    !           modules coupled together
@@ -6043,6 +6045,19 @@ SUBROUTINE CalcOutputs_And_SolveForInputs( n_t_global, this_time, this_state, ca
    CALL ED_CalcOutput( this_time, ED%Input(1), ED%p, ED%x(this_state), ED%xd(this_state), ED%z(this_state), ED%OtherSt, ED%Output(1), ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
          
+#ifdef OUTPUT_MASS_MATRIX      
+if (n_t_global == 0) then   
+   UnMM = -1
+   CALL GetNewUnit( UnMM, ErrStat2, ErrMsg2 )
+   CALL OpenFOutFile( UnMM, TRIM(p_FAST%OutFileRoot)//'.EDMassMatrix', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
+      IF ( ErrStat >= AbortErrLev ) RETURN                  
+   CALL WrMatrix(ED%OtherSt%AugMat,UnMM, p_FAST%OutFmt)
+   CLOSE( UnMM )      
+end if
+#endif
+
+      
    CALL SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD, SrvD, IfW, OpFM, MeshMapData, ErrStat2, ErrMsg2, n_t_global < 0)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
                
