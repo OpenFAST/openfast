@@ -35,7 +35,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
-                                    ProgDesc( 'NWTC Subroutine Library', 'v2.06.03a-bjj', '14-Aug-2015')
+                                    ProgDesc( 'NWTC Subroutine Library', 'v2.06.04a-bjj', '26-Aug-2015')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
       CHARACTER(1024)                        :: FileName                      ! A file name.
@@ -2062,12 +2062,13 @@ CONTAINS
       
          ! Local variable
       INTEGER(IntKi)                               :: Int_BufSz
+      INTEGER(IntKi)                               :: i,buf_start
       
       ErrStat = ErrID_None
       ErrMsg  = ""
 
          ! get size of buffer:
-      Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName) + 1
+      Int_BufSz = LEN(InData%FileName) + LEN(InData%ProcName(1))*NWTC_MAX_DLL_PROC + 1
       
       ALLOCATE( IntKiBuf(Int_BufSz), STAT=ErrStat )
       IF (ErrStat /= 0 ) THEN
@@ -2085,7 +2086,7 @@ CONTAINS
       !..............
       
          ! has the DLL procedure been loaded?
-      IF ( C_ASSOCIATED(InData%ProcAddr)) THEN
+      IF ( C_ASSOCIATED(InData%ProcAddr(1))) THEN
          IntKiBuf(1) = 1
       ELSE
          IntKiBuf(1) = 0         
@@ -2093,7 +2094,11 @@ CONTAINS
       
          ! Put an ascii representation of the strings in the integer array
       CALL Str2IntAry( InData%FileName, IntKiBuf(2:), ErrStat, ErrMsg )
-      CALL Str2IntAry( InData%ProcName, IntKiBuf((LEN(InData%FileName)+2):) , ErrStat, ErrMsg )
+      buf_start=LEN(InData%FileName)+2
+      DO i=1,NWTC_MAX_DLL_PROC
+         CALL Str2IntAry( InData%ProcName(i), IntKiBuf(buf_start:), ErrStat, ErrMsg )
+         buf_start = buf_start + LEN(InData%ProcName(i))
+      END DO
       
       
    END SUBROUTINE DLLTypePack
@@ -2112,6 +2117,7 @@ CONTAINS
       
          ! Local variable
       INTEGER(IntKi)                               :: Int_BufSz
+      INTEGER(IntKi)                               :: i, Int_BufEnd
       
       ErrStat = ErrID_None
       ErrMsg  = ""
@@ -2126,11 +2132,15 @@ CONTAINS
       CALL IntAry2Str( IntKiBuf(2:(Int_BufSz)), OutData%FileName, ErrStat, ErrMsg )
       IF (ErrStat >= AbortErrLev) RETURN
       Int_BufSz = Int_BufSz + 1
-      CALL IntAry2Str( IntKiBuf(Int_BufSz: ), OutData%ProcName, ErrStat, ErrMsg )
-      IF (ErrStat >= AbortErrLev) RETURN
-
+      do i=1,NWTC_MAX_DLL_PROC
+         Int_BufEnd=Int_BufSz+LEN(OutData%ProcName(i))-1
+         CALL IntAry2Str( IntKiBuf(Int_BufSz:Int_BufEnd), OutData%ProcName(i), ErrStat, ErrMsg )
+         IF (ErrStat >= AbortErrLev) RETURN
+         Int_BufSz = Int_BufSz+LEN(OutData%ProcName(i))
+      end do
       
-      IF ( IntKiBuf(1) == 1 .AND. LEN_TRIM(OutData%FileName) > 0 .AND. LEN_TRIM(OutData%ProcName) > 0 ) THEN
+      
+      IF ( IntKiBuf(1) == 1 .AND. LEN_TRIM(OutData%FileName) > 0 .AND. LEN_TRIM(OutData%ProcName(1)) > 0 ) THEN
          CALL LoadDynamicLib( OutData, ErrStat, ErrMsg )
       END IF
       

@@ -584,6 +584,8 @@ SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
+      ! local variables
+   INTEGER(IntKi)                            :: i
 
 #ifdef USE_DLL_INTERFACE           
 
@@ -609,15 +611,22 @@ SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
 
    !IF( .NOT. C_ASSOCIATED(DLL%FileAddrX) ) RETURN
 
-      ! Get the procedure address:
+      ! Get the procedure addresses:
 
-   DLL%ProcAddr = dlSym( DLL%FileAddrX, TRIM(DLL%ProcName)//C_NULL_CHAR )  !the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
+   do i=1,NWTC_MAX_DLL_PROC
+      if ( len_trim( DLL%ProcName(i) ) > 0 ) then
+   
+         DLL%ProcAddr(i) = dlSym( DLL%FileAddrX, TRIM(DLL%ProcName(i))//C_NULL_CHAR )  !the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
 
-   IF(.NOT. C_ASSOCIATED(DLL%ProcAddr)) THEN
-      ErrStat = ErrID_Fatal
-      ErrMsg  = 'The procedure '//TRIM(DLL%ProcName)//' in file '//TRIM(DLL%FileName)//' could not be loaded.'
-      RETURN
-   END IF
+         IF(.NOT. C_ASSOCIATED(DLL%ProcAddr(i))) THEN
+            ErrStat = ErrID_Fatal
+            ErrMsg  = 'The procedure '//TRIM(DLL%ProcName(i))//' in file '//TRIM(DLL%FileName)//' could not be loaded.'
+            RETURN
+         END IF
+         
+      end if
+   end do
+      
 #else
 
    ErrStat = ErrID_Fatal
