@@ -618,6 +618,7 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
    ELSE
       ErrStat = ErrID_None
       ErrMsg = ''
+      DLL%FileAddr = INT(0,C_INTPTR_T)
    END IF
 
    RETURN

@@ -673,6 +673,7 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
    ELSE
       ErrStat = ErrID_None
       ErrMsg = ''
+      DLL%FileAddrX = C_NULL_PTR
    END IF
    
 #else
