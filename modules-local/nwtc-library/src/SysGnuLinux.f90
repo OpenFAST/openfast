@@ -607,6 +607,7 @@ SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg = ''
 
+   !IF( .NOT. C_ASSOCIATED(DLL%FileAddrX) ) RETURN
 
       ! Get the procedure address:
 
@@ -662,6 +663,7 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
 
       ! Close the library:
 
+   IF( .NOT. C_ASSOCIATED(DLL%FileAddrX) ) RETURN
    Success = dlClose( DLL%FileAddrX ) !The function dlclose() returns 0 on success, and nonzero on error.
 
    IF ( Success /= TRUE ) THEN !bjj: note that this is not the same as LOGICAL .TRUE.

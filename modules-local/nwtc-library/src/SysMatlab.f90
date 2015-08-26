@@ -32,6 +32,7 @@ MODULE SysSubs
    !      otherwise, use preprocessor definition CONSOLE_FILE to output everything to a file named CONSOLE.TXT
    
 
+
    ! It contains the following routines:
 
    !     FUNCTION    FileSize( Unit )                                         ! Returns the size (in bytes) of an open file.
@@ -565,7 +566,9 @@ SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
 
    ErrStat = ErrID_None
    ErrMsg = ''
+   !IF ( DLL%FileAddr == INT(0,C_INTPTR_T) ) RETURN
 
+   
       ! Get the procedure address:
 
    ProcAddr = GetProcAddress( DLL%FileAddr, TRIM(DLL%ProcName)//C_NULL_CHAR )  !the "C_NULL_CHAR" converts the Fortran string to a C-type string (i.e., adds //CHAR(0) to the end)
@@ -599,7 +602,9 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
    INTEGER(BOOL)                             :: Success     ! Whether or not the call to FreeLibrary was successful
 
 
+   IF ( DLL%FileAddr == INT(0,C_INTPTR_T) ) RETURN
 
+   
    FileAddr = TRANSFER(DLL%FileAddr, FileAddr) !convert INTEGER(C_INTPTR_T) to INTEGER(HANDLE) [used only for compatibility with gfortran]
 
       ! Free the DLL:

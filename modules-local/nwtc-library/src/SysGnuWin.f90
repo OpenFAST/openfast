@@ -595,6 +595,7 @@ SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg = ''
 
+   !IF ( DLL%FileAddr == INT(0,C_INTPTR_T) ) RETURN
 
 
       ! Get the procedure address:
@@ -639,6 +640,7 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
 
 
       ! Free the DLL:
+   IF ( DLL%FileAddr == INT(0,C_INTPTR_T) ) RETURN
 
    Success = FreeLibrary( DLL%FileAddr ) !If the function succeeds, the return value is nonzero. If the function fails, the return value is zero.
 
