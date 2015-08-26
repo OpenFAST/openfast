@@ -35,8 +35,6 @@ MODULE ModMesh_Mapping
 
    PRIVATE
 
-   !logical,public :: debug_print2 = .false.
-   !integer,public :: debug_print2_unit = 90
    !bjj: these types require the use of ModMesh.f90, thus they cannot be part of NWTC_Library_Types.f90 (though they are auto_generated with that code):
 
    TYPE, PUBLIC :: MapType
@@ -603,6 +601,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    REAL(DbKi)                :: FieldValue(3,2)                ! Temporary variable to store values for DCM interpolation
    REAL(DbKi)                :: RotationMatrixD(3,3)
    REAL(DbKi)                :: tensor_interp(3)
+   REAL(DbKi)                :: theta
    
 
    ErrStat = ErrID_None
@@ -730,22 +729,23 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
             ! calculate Rotation matrix for FieldValueN1 and convert to tensor:
          RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n1) ), Src%Orientation(:,:,n1) )
          
-         CALL DCM_logmap( RotationMatrixD, FieldValue(:,1), ErrStat, ErrMsg )
+         CALL DCM_logmap( RotationMatrixD, FieldValue(:,1), ErrStat, ErrMsg, theta )
          IF (ErrStat >= AbortErrLev) RETURN
             
-!if (debug_print2 .and. i==7) then
-!      CALL WrFileNR( debug_print2_unit, num2lstr(i)//" " )
-!      CALL WrFileNR( debug_print2_unit, num2lstr(n1)//" " )
-!      CALL WrFileNR( debug_print2_unit, num2lstr(n2) )
-!      CALL WrReAryFileNR ( debug_print2_unit, FieldValue(:,1),'1x,ES15.6E2', ErrStat, ErrMsg )
-!      CALL WrReAryFileNR ( debug_print2_unit, RotationMatrix(:,1),'1x,ES15.6E2', ErrStat, ErrMsg )
-!      CALL WrReAryFileNR ( debug_print2_unit, RotationMatrix(:,2),'1x,ES15.6E2', ErrStat, ErrMsg )
-!      CALL WrReAryFileNR ( debug_print2_unit, RotationMatrix(:,3),'1x,ES15.6E2', ErrStat, ErrMsg )
-!end if         
+if (debug_print2) then
+      CALL WrFileNR( debug_print2_unit, num2lstr(i)//" " )
+      CALL WrFileNR( debug_print2_unit, num2lstr(n1)//" " )
+      CALL WrFileNR( debug_print2_unit, num2lstr(n2)//" " )
+      CALL WrFileNR( debug_print2_unit, num2lstr(theta) )
+      CALL WrNumAryFileNR ( debug_print2_unit, FieldValue(:,1),'1x,ES15.6E2', ErrStat, ErrMsg )
+      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,1),'1x,ES15.6E2', ErrStat, ErrMsg )
+      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,2),'1x,ES15.6E2', ErrStat, ErrMsg )
+      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,3),'1x,ES15.6E2', ErrStat, ErrMsg )
+end if         
             ! calculate Rotation matrix for FieldValueN2 and convert to tensor:
          RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n2) ), Src%Orientation(:,:,n2) )
          
-         CALL DCM_logmap( RotationMatrixD, FieldValue(:,2), ErrStat, ErrMsg )                  
+         CALL DCM_logmap( RotationMatrixD, FieldValue(:,2), ErrStat, ErrMsg, theta )                  
          IF (ErrStat >= AbortErrLev) RETURN
             
          CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary         
@@ -757,13 +757,14 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
             ! convert back to DCM:
          RotationMatrixD = DCM_exp( tensor_interp )
             
-!if (debug_print2 .and. i==7) then
-!      CALL WrReAryFileNR ( debug_print2_unit, tensor_interp,'1x,ES15.6E2', ErrStat, ErrMsg )
-!      CALL WrReAryFileNR ( debug_print2_unit, RotationMatrix(:,1),'1x,ES15.6E2', ErrStat, ErrMsg )
-!      CALL WrReAryFileNR ( debug_print2_unit, RotationMatrix(:,2),'1x,ES15.6E2', ErrStat, ErrMsg )
-!      CALL WrReAryFileNR ( debug_print2_unit, RotationMatrix(:,3),'1x,ES15.6E2', ErrStat, ErrMsg )
-!      write(debug_print2_unit,'()')
-!end if         
+if (debug_print2) then
+      CALL WrFileNR( debug_print2_unit, " "//num2lstr(theta) )
+      CALL WrNumAryFileNR ( debug_print2_unit, tensor_interp,'1x,ES15.6E2', ErrStat, ErrMsg )
+      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,1),'1x,ES15.6E2', ErrStat, ErrMsg )
+      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,2),'1x,ES15.6E2', ErrStat, ErrMsg )
+      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,3),'1x,ES15.6E2', ErrStat, ErrMsg )
+      write(debug_print2_unit,'()')
+end if         
          
       end if
       

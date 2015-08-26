@@ -1016,48 +1016,39 @@ CONTAINS
       TwoSinTheta = 2.0_DbKi*sin(theta)
       
       IF ( EqualRealNos( pi_D, theta )  ) THEN
-      
-         ! calculate the eigenvector of DCM associated with eigenvalue +1:
-      
-         temp = -1.0_DbKi + DCM(2,2) + DCM(2,3)*DCM(3,2) + DCM(3,3) - DCM(2,2)*DCM(3,3)
-         if ( abs(temp) > tol ) then
-
-            v(1) = 1.0_DbKi
-            v(2) = -(DCM(2,1) + DCM(2,3)*DCM(3,1) - DCM(2,1)*DCM(3,3))/temp
-            v(3) = -(DCM(3,1) - DCM(2,2)*DCM(3,1) + DCM(2,1)*DCM(3,2))/temp
-
-         else 
-            temp = -1.0_DbKi + DCM(1,1) + DCM(1,3)*DCM(3,1) + DCM(3,3) - DCM(1,1)*DCM(3,3)
-            if ( abs(temp) > tol ) then
-
-               v(1) = -(DCM(1,2) + DCM(1,3)*DCM(3,2) - DCM(1,2)*DCM(3,3))/temp
-               v(2) =  1.0_DbKi
-               v(3) = -(DCM(3,2) + DCM(1,2)*DCM(3,1) - DCM(1,1)*DCM(3,2))/temp
-
-            else 
-               temp = -1.0_DbKi + DCM(1,1) + DCM(1,2)*DCM(2,1) + DCM(2,2) - DCM(1,1)*DCM(2,2)
-               if ( .NOT. EqualRealNos(temp, 0.0_DbKi) ) then
-
-                  v(1) = -(DCM(1,3) - DCM(1,3)*DCM(2,2) + DCM(1,2)*DCM(2,3))/temp
-                  v(2) = -(DCM(1,3)*DCM(2,1) + DCM(2,3) - DCM(1,1)*DCM(2,3))/temp
-                  v(3) = 1.0_DbKi
             
-               else
-                     ! break with error
-                  ErrStat = ErrID_Fatal
-                  WRITE( ErrMsg, '("DCM_logMap:invalid DCM matrix",3("'//Newline//'",4x,3(ES10.3E2,1x)))') DCM(1,:),DCM(2,:),DCM(3,:)               
-                  RETURN
-               end if         
-            end if         
-         endif
-                         
+         ! calculate the normalized eigenvector of DCM associated with eigenvalue +1:
+         
+         !d11 = 1 -2/pi^2* (-v3^2 - v2^2)*pi^2
+         !d22 = 1 -2/pi^2* (-v3^2 - v1^2)*pi^2
+         !d33 = 1 -2/pi^2* (-v2^2 - v1^2)*pi^2
+         
+         v(1) = sqrt( 0.5_DbKi * abs( (DCM(1,1) + 1) ) )
+         v(2) = sqrt( 0.5_DbKi * abs( (DCM(2,2) + 1) ) )
+         v(3) = sqrt( 0.5_DbKi * abs( (DCM(3,3) + 1) ) )
+               
+         ! we choose v1 positive then we get the signs for v2 and v3:
+         if ( .not. EqualRealNos( v(1), 0.0_DbKi ) ) then
+            !d12=2*v(1)*v(2); 2*v(1)>0 so v(2) is sign(v(2),d12)
+            !d13=2*v(1)*v(3); 2*v(1)>0 so v(3) is sign(v(3),d13)
+            
+            v(2) = sign( v(2), DCM(1,2) )
+            v(3) = sign( v(3), DCM(1,3) )            
+         else
+            ! because v1 is zero, we can choose v2 positive:
+            
+            !d23=d32=2*v(2)*v(3); 2*v(2)>0 so v(3) is sign(v(3),d23)
+            v(3) = sign( v(3), DCM(2,3) )            
+            
+         end if
+                                              
             ! normalize the eigenvector:
-         v = v / TwoNorm(v)                                                       ! Eq. 27                  
+         !v = v / TwoNorm(v)                                                       ! Eq. 27                  
       
             ! calculate the skew-symmetric tensor (note we could change sign here for continuity)
             ! also note that we make v skew-symmetric in the inverse routine (DCM_exp), 
             ! so we don't need to change the sign of v(2) here
-         logMap =  pi_D*v                                                           ! Eq. 26c  
+         logMap =  pi_D*v                                                         ! Eq. 26c  
                      
       ELSE
          
@@ -1128,42 +1119,33 @@ CONTAINS
       
       IF ( EqualRealNos( pi, theta )  ) THEN
       
-         ! calculate the eigenvector of DCM associated with eigenvalue +1:
-      
-         temp = -1.0_ReKi + DCM(2,2) + DCM(2,3)*DCM(3,2) + DCM(3,3) - DCM(2,2)*DCM(3,3)
-         if ( abs(temp) > tol ) then
-
-            v(1) = 1.0_ReKi
-            v(2) = -(DCM(2,1) + DCM(2,3)*DCM(3,1) - DCM(2,1)*DCM(3,3))/temp
-            v(3) = -(DCM(3,1) - DCM(2,2)*DCM(3,1) + DCM(2,1)*DCM(3,2))/temp
-
-         else 
-            temp = -1.0_ReKi + DCM(1,1) + DCM(1,3)*DCM(3,1) + DCM(3,3) - DCM(1,1)*DCM(3,3)
-            if ( abs(temp) > tol ) then
-
-               v(1) = -(DCM(1,2) + DCM(1,3)*DCM(3,2) - DCM(1,2)*DCM(3,3))/temp
-               v(2) =  1.0_ReKi
-               v(3) = -(DCM(3,2) + DCM(1,2)*DCM(3,1) - DCM(1,1)*DCM(3,2))/temp
-
-            else 
-               temp = -1.0_ReKi + DCM(1,1) + DCM(1,2)*DCM(2,1) + DCM(2,2) - DCM(1,1)*DCM(2,2)
-               if ( .NOT. EqualRealNos(temp, 0.0_ReKi) ) then
-
-                  v(1) = -(DCM(1,3) - DCM(1,3)*DCM(2,2) + DCM(1,2)*DCM(2,3))/temp
-                  v(2) = -(DCM(1,3)*DCM(2,1) + DCM(2,3) - DCM(1,1)*DCM(2,3))/temp
-                  v(3) = 1.0_ReKi
+         ! calculate the normalized eigenvector of DCM associated with eigenvalue +1:
+         
+         !d11 = 1 -2/pi^2* (-v3^2 - v2^2)*pi^2
+         !d22 = 1 -2/pi^2* (-v3^2 - v1^2)*pi^2
+         !d33 = 1 -2/pi^2* (-v2^2 - v1^2)*pi^2
+         
+         v(1) = sqrt( 0.5_ReKi * abs( (DCM(1,1) + 1) ) )
+         v(2) = sqrt( 0.5_ReKi * abs( (DCM(2,2) + 1) ) )
+         v(3) = sqrt( 0.5_ReKi * abs( (DCM(3,3) + 1) ) )
+               
+         ! we choose v1 positive then we get the signs for v2 and v3:
+         if ( .not. EqualRealNos( v(1), 0.0_ReKi ) ) then
+            !d12=2*v(1)*v(2); 2*v(1)>0 so v(2) is sign(v(2),d12)
+            !d13=2*v(1)*v(3); 2*v(1)>0 so v(3) is sign(v(3),d13)
             
-               else
-                     ! break with error
-                  ErrStat = ErrID_Fatal
-                  WRITE( ErrMsg, '("DCM_logMap:invalid DCM matrix",3("'//Newline//'",4x,3(ES10.3E2,1x)))') DCM(1,:),DCM(2,:),DCM(3,:)               
-                  RETURN
-               end if         
-            end if         
-         endif
-                         
+            v(2) = sign( v(2), DCM(1,2) )
+            v(3) = sign( v(3), DCM(1,3) )            
+         else
+            ! because v1 is zero, we can choose v2 positive:
+            
+            !d23=d32=2*v(2)*v(3); 2*v(2)>0 so v(3) is sign(v(3),d23)
+            v(3) = sign( v(3), DCM(2,3) )            
+            
+         end if
+                                              
             ! normalize the eigenvector:
-         v = v / TwoNorm(v)                                                       ! Eq. 27                  
+         !v = v / TwoNorm(v)                                                       ! Eq. 27                  
       
             ! calculate the skew-symmetric tensor (note we could change sign here for continuity)
             ! also note that we make v skew-symmetric in the inverse routine (DCM_exp), 
@@ -1235,7 +1217,7 @@ CONTAINS
       if ( .NOT. EqualRealNos( diff1, 0.0_DbKi) ) then
             ! check if we're going around a 2pi boundary:
       
-         period = tensor(:,ic) * ( Twopi/diff1 )
+         period = tensor(:,ic) * ( Twopi_D/diff1 )
       
          temp1 = tensor(:,ic-1) - tensor(:,ic)
          diff1 = DOT_PRODUCT( temp1, temp1 )
@@ -1250,7 +1232,7 @@ CONTAINS
                tensor(:,ic) = tensor(:,ic) - period  !k=k-1
                               
                diff1 = diff2
-               temp  = temp1 + period !k=k-1; 
+               temp  = temp + period !k=k-1; % = tensor(:,ic-1) - tensor(:,ic)
                diff2 = DOT_PRODUCT( temp, temp )
             end do
          
@@ -1265,7 +1247,7 @@ CONTAINS
                tensor(:,ic) = tensor(:,ic) + period  !k=k+1
 
                diff1 = diff2
-               temp  = temp1 + period !k=k-1; 
+               temp  = temp - period !k=k+1; % = tensor(:,ic-1) - tensor(:,ic)
                diff2 = DOT_PRODUCT( temp, temp )
             end do
    
@@ -1323,7 +1305,7 @@ CONTAINS
                tensor(:,ic) = tensor(:,ic) - period  !k=k-1
                               
                diff1 = diff2
-               temp  = temp1 + period !k=k-1; 
+               temp  = temp + period !k=k-1; % = tensor(:,ic-1) - tensor(:,ic)
                diff2 = DOT_PRODUCT( temp, temp )
             end do
          
@@ -1338,7 +1320,7 @@ CONTAINS
                tensor(:,ic) = tensor(:,ic) + period  !k=k+1
 
                diff1 = diff2
-               temp  = temp1 + period !k=k-1; 
+               temp  = temp - period !k=k+1; % = tensor(:,ic-1) - tensor(:,ic)
                diff2 = DOT_PRODUCT( temp, temp )
             end do
    
