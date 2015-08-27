@@ -3789,8 +3789,6 @@ SUBROUTINE BD_StaticSolution( uuN0,uuNf,Mass0,Stif0,gravity,u,&
            RHS(temp_id+1:temp_id+3) = RHS(temp_id+1:temp_id+3) + u%Pointload%Force(1:3,j)
            RHS(temp_id+4:temp_id+6) = RHS(temp_id+4:temp_id+6) + u%Pointload%Moment(1:3,j)
        ENDDO
-!WRITE(*,*) 'RHS'
-!WRITE(*,*) RHS
 
        RHS_LU(:)     = 0.0D0
        StifK_LU(:,:) = 0.0D0
@@ -4690,12 +4688,12 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       !Qi, call something to initialize
       call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-WRITE(*,*) 'InitAcc'
-WRITE(*,*) 'u%Orientation'
-DO i=1,3
-WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
-ENDDO
-WRITE(*,*) 'END InitAcc'
+!WRITE(*,*) 'InitAcc'
+!WRITE(*,*) 'u%Orientation'
+!DO i=1,3
+!WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
+!ENDDO
+!WRITE(*,*) 'END InitAcc'
       CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       OtherState%InitAcc = .true. 
@@ -4711,12 +4709,12 @@ WRITE(*,*) 'END InitAcc'
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                  
-WRITE(*,*) 'UpdateStates'
-WRITE(*,*) 'u%Orientation'
-DO i=1,3
-WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
-ENDDO
-WRITE(*,*) 'END UpdateStates'
+!WRITE(*,*) 'UpdateStates'
+!WRITE(*,*) 'u%Orientation'
+!DO i=1,3
+!WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
+!ENDDO
+!WRITE(*,*) 'END UpdateStates'
    ! GA2: prediction        
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
                                 p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
