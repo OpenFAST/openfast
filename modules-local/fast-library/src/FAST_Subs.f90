@@ -321,8 +321,11 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax, TurbI
       CALL SetErrStat( ErrID_Fatal, 'TMax must not be less than TStart.', ErrStat, ErrMsg, RoutineName )
    END IF
 
-   IF ( p%n_ChkptTime < p%n_TMax_m1 .AND. .NOT. p%WrBinOutFile) THEN
-      CALL SetErrStat( ErrID_Severe, 'It is highly recommended that time-marching output files be generated in binary format when generating checkpoint files.', ErrStat, ErrMsg, RoutineName )
+   IF ( p%n_ChkptTime < p%n_TMax_m1 ) THEN
+      if (.NOT. p%WrBinOutFile) then
+         CALL SetErrStat( ErrID_Severe, 'It is highly recommended that time-marching output files be generated in binary format when generating checkpoint files.', ErrStat, ErrMsg, RoutineName )
+      end if
+         ! also check for features that aren't supported with restart (like ServoDyn's user-defined control routines)
    END IF
       
    IF ( p%DT <= 0.0_DbKi )  THEN
@@ -9584,21 +9587,23 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
    IF (PRESENT(Unit)) Unit = unOut
       
       ! A hack to pack Bladed-style DLL data
-   IF (Turbine%SrvD%p%UseBladedInterface .AND. Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) > 0   ) THEN
-         ! store value to be overwritten
-      old_avrSwap1 = Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) 
-      FileName     = Turbine%SrvD%p%DLL_InFile
-         ! overwrite values:
-      Turbine%SrvD%p%DLL_InFile = DLLFileName
-      Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
-      Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = -8
-      CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt, Turbine%SrvD%OtherSt%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF (Turbine%SrvD%p%UseBladedInterface) THEN
+      if (Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) > 0   ) then
+            ! store value to be overwritten
+         old_avrSwap1 = Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) 
+         FileName     = Turbine%SrvD%p%DLL_InFile
+            ! overwrite values:
+         Turbine%SrvD%p%DLL_InFile = DLLFileName
+         Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
+         Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = -8
+         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt, Turbine%SrvD%OtherSt%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-         ! put values back:
-      Turbine%SrvD%p%DLL_InFile = FileName
-      Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(FileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
-      Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = old_avrSwap1
+            ! put values back:
+         Turbine%SrvD%p%DLL_InFile = FileName
+         Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(FileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
+         Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = old_avrSwap1
+      end if      
    END IF
    
    
@@ -9766,23 +9771,27 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    
    
       ! A hack to restore Bladed-style DLL data
-   IF (Turbine%SrvD%p%UseBladedInterface .AND. Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) > 0   ) THEN
-         ! store value to be overwritten
-      old_avrSwap1 = Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) 
-      FileName     = Turbine%SrvD%p%DLL_InFile
-         ! overwrite values before calling DLL:
-      Turbine%SrvD%p%DLL_InFile = DLLFileName
-      Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
-      Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = -9
-      CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%OtherSt%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                           
-         ! put values back:
-      Turbine%SrvD%p%DLL_InFile = FileName
-      Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(FileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
-      Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = old_avrSwap1            
-   END IF   
+   if (Turbine%SrvD%p%UseBladedInterface) then
+      if (Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) > 0   ) then ! this isn't allocated if UseBladedInterface is FALSE
+            ! store value to be overwritten
+         old_avrSwap1 = Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) 
+         FileName     = Turbine%SrvD%p%DLL_InFile
+            ! overwrite values before calling DLL:
+         Turbine%SrvD%p%DLL_InFile = DLLFileName
+         Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
+         Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = -9
+         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%OtherSt%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                           
+            ! put values back:
+         Turbine%SrvD%p%DLL_InFile = FileName
+         Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(FileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
+         Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = old_avrSwap1      
+      end if      
+   end if   
    
       ! deal with sibling meshes here:
+   
+      ! deal with files that were open:
       
 
 END SUBROUTINE FAST_RestoreFromCheckpoint_T
