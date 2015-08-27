@@ -3639,9 +3639,9 @@ SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    ErrMsg  = ""
 
       ! allocate space for input type (mainly for meshes)
-   CALL BD_CopyInput(u(1),u_interp,MESH_NEWCOPY,ErrStat2,ErrMsg2)
+   CALL BD_CopyInput(u(2),u_interp,MESH_NEWCOPY,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
-   CALL BD_CopyInput(u(1),u_temp,MESH_NEWCOPY,ErrStat2,ErrMsg2)
+   CALL BD_CopyInput(u(2),u_temp,MESH_NEWCOPY,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
    
    if (ErrStat >= AbortErrLev) then
@@ -3649,7 +3649,7 @@ SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       return
    end if
          
-   call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
+   call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
    CALL BD_InputGlobalLocal(p,u_interp,ErrStat2,ErrMsg2)
@@ -4690,6 +4690,12 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       !Qi, call something to initialize
       call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+WRITE(*,*) 'InitAcc'
+WRITE(*,*) 'u%Orientation'
+DO i=1,3
+WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
+ENDDO
+WRITE(*,*) 'END InitAcc'
       CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       OtherState%InitAcc = .true. 
@@ -4705,6 +4711,12 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                  
+WRITE(*,*) 'UpdateStates'
+WRITE(*,*) 'u%Orientation'
+DO i=1,3
+WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
+ENDDO
+WRITE(*,*) 'END UpdateStates'
    ! GA2: prediction        
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
                                 p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
