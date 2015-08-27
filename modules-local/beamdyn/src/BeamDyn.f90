@@ -72,6 +72,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    INTEGER(IntKi)          :: j                ! do-loop counter
    INTEGER(IntKi)          :: k                ! do-loop counter
    INTEGER(IntKi)          :: m                ! do-loop counter
+   INTEGER(IntKi)          :: n                ! do-loop counter
    INTEGER(IntKi)          :: id0
    INTEGER(IntKi)          :: id1
    INTEGER(IntKi)          :: temp_int
@@ -143,7 +144,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    temp_POS(3) = InitInp%gravity(2)
    p%gravity(:) = MATMUL(TRANSPOSE(p%GlbRot),temp_POS)
 
-
    ! Analysis type: 1 Static 2 Dynamic
    p%analysis_type  = InputFileData%analysis_type
    ! Numerical damping coefficient: [0,1].
@@ -161,10 +161,36 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%tol = InputFileData%stop_tol
    ! Total number of elements
    p%elem_total = InputFileData%member_total      
+   ! Total number of key points
+   p%kp_total = InputFileData%kp_total
+   ! Total number of key points
+   CALL AllocAry(p%station_eta,InputFileData%InpBl%station_total,'Number of sectional stations',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%station_eta(:) = 0.0D0
+   p%station_eta(:) = InputFileData%InpBl%station_eta(:)
+   p%station_eta(:) = 2.0D0 * p%station_eta(:) - 1.0D0
+   ! Key point coordinates
+   CALL AllocAry(p%kp_coordinate,p%kp_total,3,'Key point coordinates array',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%kp_coordinate(:,:) = 0.0D0
+   DO i = 1, p%kp_total
+       p%kp_coordinate(i,1:3) = InputFileData%kp_coordinate(i,1:3)
+   ENDDO
    ! Number of nodes per elelemt
    p%node_elem  = InputFileData%order_elem + 1   
-   ! Number of Gauss points
-   p%ngp        = p%node_elem
+   ! Quadrature method: 1 Gauss 2 Trapezoidal
+   p%quadrature = InputFileData%quadrature
+   IF(p%quadrature .EQ. 1) THEN
+       ! Number of Gauss points
+       CALL AllocAry(p%ngp,1,'Number of Gauss point array (1)',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       p%ngp(1)        = p%node_elem - 1
+   ELSEIF(p%quadrature .EQ. 2) THEN 
+       CALL AllocAry(p%ngp,InputFileData%member_total,'Number of trapezoidal point array',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       p%ngp(:) = 0
+       p%ngp(:) = InputFileData%kp_member(:)
+   ENDIF
    ! Degree-of-freedom (DoF) per node
    p%dof_node   = 6
    ! Total number of (finite element) nodes
@@ -241,32 +267,41 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          return
       end if
    DEALLOCATE(temp_w)
-   ! temp_L2: the DistrLoad mesh node location
-   ! temp_L2: physical coordinates of Gauss points and two end points
-   CALL AllocAry(temp_L2,6,p%ngp*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%Gauss,6,p%ngp*p%elem_total+2,'p%Gauss',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ! Temporary Gauss point intrinsic coordinates array
-   CALL AllocAry(temp_GL,p%ngp,'temp_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ! Temporary Gauss weight function array
-   CALL AllocAry(temp_w,p%ngp,'GL weight array',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-   temp_L2(:,:) = 0.0D0
-   temp_GL(:) = 0.0D0
-   temp_w(:) = 0.0D0
-   CALL BD_GaussPointWeight(p%ngp,temp_GL,temp_w,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-   DEALLOCATE(temp_w)
+   IF(p%quadrature .EQ. 1) THEN
+       ! temp_L2: the DistrLoad mesh node location
+       ! temp_L2: physical coordinates of Gauss points and two end points
+       CALL AllocAry(temp_L2,6,p%ngp(1)*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(p%Gauss,6,p%ngp(1)*p%elem_total+2,'p%Gauss',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       ! Temporary Gauss point intrinsic coordinates array
+       CALL AllocAry(temp_GL,p%ngp(1),'temp_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       ! Temporary Gauss weight function array
+       CALL AllocAry(temp_w,p%ngp(1),'GL weight array',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          if (ErrStat >= AbortErrLev) then
+             call cleanup()
+             return
+          end if
+       temp_L2(:,:) = 0.0D0
+       temp_GL(:) = 0.0D0
+       temp_w(:) = 0.0D0
+       CALL BD_GaussPointWeight(p%ngp(1),temp_GL,temp_w,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          if (ErrStat >= AbortErrLev) then
+             call cleanup()
+             return
+          end if
+       DEALLOCATE(temp_w)
+   ELSEIF(p%quadrature .EQ. 2) THEN
+       CALL AllocAry(temp_L2,6,InputFileData%kp_total,'temp_L2',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(p%Gauss,6,InputFileData%kp_total,'p%Trapezoidal',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       ! Temporary Gauss point intrinsic coordinates array
+       temp_L2(:,:) = 0.0D0
+   ENDIF
 
    DO i=1,p%elem_total
        IF(i .EQ. 1) THEN
@@ -302,105 +337,156 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                ENDIF
            ENDDO
        ENDDO
-       DO j=1,p%ngp
-           eta = (temp_GL(j) + 1.0D0)/2.0D0
-           DO k=1,InputFileData%kp_member(i)-1
-               temp_id2 = temp_id + k
-               IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN
+       IF(p%quadrature .EQ. 1) THEN
+           DO j=1,p%ngp(1)
+               eta = (temp_GL(j) + 1.0D0)/2.0D0
+               DO k=1,InputFileData%kp_member(i)-1
+                   temp_id2 = temp_id + k
+                   IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN
+                       DO m=1,4
+                           temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
+                       ENDDO
+                       eta = InputFileData%kp_coordinate(id0,1) + &
+                             eta * (InputFileData%kp_coordinate(id1,1) - InputFileData%kp_coordinate(id0,1))
+                       CALL BD_ComputeIniNodalPosition(temp_Coef,eta,temp_POS,temp_e1,temp_twist,&
+                                                       ErrStat2, ErrMsg2)
+                          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                       CALL BD_ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV,ErrStat2,ErrMsg2)
+                          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                       temp_id2 = (i-1)*p%ngp(1)+j+1
+                       temp_L2(1:3,temp_id2) = temp_POS(1:3)
+                       temp_L2(4:6,temp_id2) = temp_CRV(1:3)
+                       EXIT
+                   ENDIF
+               ENDDO
+           ENDDO
+       ELSEIF(p%quadrature .EQ. 2) THEN
+           IF(i .EQ. 1) THEN
+               n = 1
+           ELSE
+               n = 2
+           ENDIF
+           DO j = n,InputFileData%kp_member(i)
+               IF(i .EQ. 1 .AND. j .EQ. 1) THEN
                    DO m=1,4
-                       temp_Coef(m,1:4) = SP_Coef(temp_id2,1:4,m)
+                       temp_Coef(m,1:4) = SP_Coef(1,1:4,m)
                    ENDDO
-                   eta = InputFileData%kp_coordinate(id0,1) + &
-                         eta * (InputFileData%kp_coordinate(id1,1) - InputFileData%kp_coordinate(id0,1))
-                   CALL BD_ComputeIniNodalPosition(temp_Coef,eta,temp_POS,temp_e1,temp_twist,&
-                                                   ErrStat2, ErrMsg2)
-                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                   CALL BD_ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV,ErrStat2,ErrMsg2)
-                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                   temp_id2 = (i-1)*p%ngp+j+1
-                   temp_L2(1:3,temp_id2) = temp_POS(1:3)
-                   temp_L2(4:6,temp_id2) = temp_CRV(1:3)
-                   EXIT
+                   eta = InputFileData%kp_coordinate(id0,1)
+               ELSE
+                   DO m=1,4
+                       temp_Coef(m,1:4) = SP_Coef(temp_id+j-1,1:4,m)
+                   ENDDO
+                   eta = InputFileData%kp_coordinate(id0+j-1,1)
                ENDIF
-           ENDDO
-       ENDDO
-   ENDDO
-   temp_L2(1:3,1) = p%uuN0(1:3,1)
-   temp_L2(4:6,1) = p%uuN0(4:6,1)
-   temp_L2(1:3,p%ngp*p%elem_total+2) = p%uuN0(temp_int-5:temp_int-3,p%elem_total)
-   temp_L2(4:6,p%ngp*p%elem_total+2) = p%uuN0(temp_int-2:temp_int,p%elem_total)
-   DO i = 1, p%ngp*p%elem_total+2
-       p%Gauss(:,i) = temp_L2(:,i)
-   ENDDO
-   DEALLOCATE(temp_GLL)
-   DEALLOCATE(SP_Coef)
-
-   ! Compute sectional propertities ( 6 by 6 stiffness and mass matrices)
-   ! at Gauss points
-   CALL AllocAry(temp_ratio,p%ngp,p%elem_total,'temp_ratio',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-   temp_ratio(:,:) = 0.0D0
-   DO i=1,p%ngp
-       temp_GL(i) = (temp_GL(i) + 1.0D0)/2.0D0
-   ENDDO
-   DO i=1,p%elem_total
-       IF(i .EQ. 1) THEN
-           DO j=1,p%ngp
-               temp_ratio(j,i) = temp_GL(j)*p%member_length(i,2)
-           ENDDO
-       ELSE
-           DO j=1,i-1
-               temp_ratio(:,i) = temp_ratio(:,i) + p%member_length(j,2)
-           ENDDO
-           DO j=1,p%ngp
-               temp_ratio(j,i) = temp_ratio(j,i) + temp_GL(j)*p%member_length(i,2)
+               CALL BD_ComputeIniNodalPosition(temp_Coef,eta,temp_POS,temp_e1,temp_twist,&
+                                               ErrStat2, ErrMsg2)
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               CALL BD_ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV,ErrStat2,ErrMsg2)
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               temp_L2(1:3,id0+j-1) = InputFileData%kp_coordinate(id0+j-1,1:3)
+               temp_L2(4:6,id0+j-1) = temp_CRV(1:3)
            ENDDO
        ENDIF
    ENDDO
+   IF(p%quadrature .EQ. 1) THEN
+       temp_L2(1:3,1) = p%uuN0(1:3,1)
+       temp_L2(4:6,1) = p%uuN0(4:6,1)
+       temp_L2(1:3,p%ngp(1)*p%elem_total+2) = p%uuN0(temp_int-5:temp_int-3,p%elem_total)
+       temp_L2(4:6,p%ngp(1)*p%elem_total+2) = p%uuN0(temp_int-2:temp_int,p%elem_total)
+       DO i = 1, p%ngp(1)*p%elem_total+2
+           p%Gauss(:,i) = temp_L2(:,i)
+       ENDDO
+   ELSEIF(p%quadrature .EQ. 2) THEN
+       DO i = 1, InputFileData%kp_total 
+           p%Gauss(:,i) = temp_L2(:,i)
+       ENDDO
+   ENDIF
+   DEALLOCATE(temp_GLL)
+   DEALLOCATE(SP_Coef)
 
-   CALL AllocAry(p%Stif0_GL,6,6,p%ngp*p%elem_total,'Stif0_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%Mass0_GL,6,6,p%ngp*p%elem_total,'Mass0_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-   p%Stif0_GL(:,:,:) = 0.0D0
-   p%Mass0_GL(:,:,:) = 0.0D0
-   DO i=1,p%elem_total
-       DO j=1,p%ngp
-           temp_id = (i-1)*p%ngp+j
-           DO k=1,InputFileData%InpBl%station_total
-               IF(temp_ratio(j,i) - InputFileData%InpBl%station_eta(k) <= EPS) THEN
-                   IF(ABS(temp_ratio(j,i) - InputFileData%InpBl%station_eta(k)) <= EPS) THEN
-                       p%Stif0_GL(1:6,1:6,temp_id) = InputFileData%InpBl%stiff0(1:6,1:6,k)
-                       p%Mass0_GL(1:6,1:6,temp_id) = InputFileData%InpBl%mass0(1:6,1:6,k)
-                   ELSE
-                       temp66(:,:) = 0.0D0
-                       temp66(1:6,1:6) = (InputFileData%InpBl%stiff0(1:6,1:6,k)-InputFileData%InpBl%stiff0(1:6,1:6,k-1)) / &
-                                         (InputFileData%InpBl%station_eta(k) - InputFileData%InpBl%station_eta(k-1))
-                       p%Stif0_GL(1:6,1:6,temp_id) = temp66(1:6,1:6) * temp_ratio(j,i) + &
-                                                     InputFileData%InpBl%stiff0(1:6,1:6,k-1) - &
-                                                     temp66(1:6,1:6) * InputFileData%InpBl%station_eta(k-1)
-                       temp66(:,:) = 0.0D0
-                       temp66(1:6,1:6) = (InputFileData%InpBl%mass0(1:6,1:6,k)-InputFileData%InpBl%mass0(1:6,1:6,k-1)) / &
-                                         (InputFileData%InpBl%station_eta(k) - InputFileData%InpBl%station_eta(k-1))
-                       p%Mass0_GL(1:6,1:6,temp_id) = temp66(1:6,1:6) * temp_ratio(j,i) + &
-                                                     InputFileData%InpBl%mass0(1:6,1:6,k-1) - &
-                                                     temp66(1:6,1:6) * InputFileData%InpBl%station_eta(k-1)
+   IF(p%quadrature .EQ. 1) THEN
+       ! Compute sectional propertities ( 6 by 6 stiffness and mass matrices)
+       ! at Gauss points
+       CALL AllocAry(temp_ratio,p%ngp(1),p%elem_total,'temp_ratio',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          if (ErrStat >= AbortErrLev) then
+             call cleanup()
+             return
+          end if
+       temp_ratio(:,:) = 0.0D0
+       DO i=1,p%ngp(1)
+           temp_GL(i) = (temp_GL(i) + 1.0D0)/2.0D0
+       ENDDO
+       DO i=1,p%elem_total
+           IF(i .EQ. 1) THEN
+               DO j=1,p%ngp(1)
+                   temp_ratio(j,i) = temp_GL(j)*p%member_length(i,2)
+               ENDDO
+           ELSE
+               DO j=1,i-1
+                   temp_ratio(:,i) = temp_ratio(:,i) + p%member_length(j,2)
+               ENDDO
+               DO j=1,p%ngp(1)
+                   temp_ratio(j,i) = temp_ratio(j,i) + temp_GL(j)*p%member_length(i,2)
+               ENDDO
+           ENDIF
+       ENDDO
+
+       CALL AllocAry(p%Stif0_GL,6,6,p%ngp(1)*p%elem_total,'Stif0_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(p%Mass0_GL,6,6,p%ngp(1)*p%elem_total,'Mass0_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          if (ErrStat >= AbortErrLev) then
+             call cleanup()
+             return
+          end if
+       p%Stif0_GL(:,:,:) = 0.0D0
+       p%Mass0_GL(:,:,:) = 0.0D0
+       DO i=1,p%elem_total
+           DO j=1,p%ngp(1)
+               temp_id = (i-1)*p%ngp(1)+j
+               DO k=1,InputFileData%InpBl%station_total
+                   IF(temp_ratio(j,i) - InputFileData%InpBl%station_eta(k) <= EPS) THEN
+                       IF(ABS(temp_ratio(j,i) - InputFileData%InpBl%station_eta(k)) <= EPS) THEN
+                           p%Stif0_GL(1:6,1:6,temp_id) = InputFileData%InpBl%stiff0(1:6,1:6,k)
+                           p%Mass0_GL(1:6,1:6,temp_id) = InputFileData%InpBl%mass0(1:6,1:6,k)
+                       ELSE
+                           temp66(:,:) = 0.0D0
+                           temp66(1:6,1:6) = (InputFileData%InpBl%stiff0(1:6,1:6,k)-InputFileData%InpBl%stiff0(1:6,1:6,k-1)) / &
+                                             (InputFileData%InpBl%station_eta(k) - InputFileData%InpBl%station_eta(k-1))
+                           p%Stif0_GL(1:6,1:6,temp_id) = temp66(1:6,1:6) * temp_ratio(j,i) + &
+                                                         InputFileData%InpBl%stiff0(1:6,1:6,k-1) - &
+                                                         temp66(1:6,1:6) * InputFileData%InpBl%station_eta(k-1)
+                           temp66(:,:) = 0.0D0
+                           temp66(1:6,1:6) = (InputFileData%InpBl%mass0(1:6,1:6,k)-InputFileData%InpBl%mass0(1:6,1:6,k-1)) / &
+                                             (InputFileData%InpBl%station_eta(k) - InputFileData%InpBl%station_eta(k-1))
+                           p%Mass0_GL(1:6,1:6,temp_id) = temp66(1:6,1:6) * temp_ratio(j,i) + &
+                                                         InputFileData%InpBl%mass0(1:6,1:6,k-1) - &
+                                                         temp66(1:6,1:6) * InputFileData%InpBl%station_eta(k-1)
+                       ENDIF
+                       EXIT
                    ENDIF
-                   EXIT
-               ENDIF
+               ENDDO
            ENDDO
        ENDDO
-   ENDDO
-   DEALLOCATE(temp_GL)
-   DEALLOCATE(temp_ratio)
+       DEALLOCATE(temp_GL)
+       DEALLOCATE(temp_ratio)
+   ELSEIF(p%quadrature .EQ. 2) THEN
+       CALL AllocAry(p%Stif0_GL,6,6,InputFileData%InpBl%station_total,'Stif0_TZ',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(p%Mass0_GL,6,6,InputFileData%InpBl%station_total,'Mass0_TZ',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+          if (ErrStat >= AbortErrLev) then
+             call cleanup()
+             return
+          end if
+       p%Stif0_GL(:,:,:) = 0.0D0
+       p%Mass0_GL(:,:,:) = 0.0D0
+       DO i = 1, InputFileData%InpBl%station_total
+           p%Stif0_GL(:,:,i) = InputFileData%InpBl%stiff0(1:6,1:6,i)
+           p%Mass0_GL(:,:,i) = InputFileData%InpBl%mass0(1:6,1:6,i)
+       ENDDO
+   ENDIF
    ! Physical damping flag and 6 damping coefficients
    p%damp_flag  = InputFileData%InpBl%damp_flag
    p%beta(:)  = InputFileData%InpBl%beta(:)
@@ -454,15 +540,26 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                    ,ErrMess         = ErrMsg2                )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   temp_int = p%ngp * p%elem_total + 2
-   CALL MeshCreate( BlankMesh        = u%DistrLoad          &
-                   ,IOS              = COMPONENT_INPUT      &
-                   ,NNodes           = temp_int             &
-                   ,Force            = .TRUE. &
-                   ,Moment           = .TRUE. &
-                   ,ErrStat         = ErrStat2               &
-                   ,ErrMess         = ErrMsg2                )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(p%quadrature .EQ. 1) THEN
+       temp_int = p%ngp(1) * p%elem_total + 2
+       CALL MeshCreate( BlankMesh        = u%DistrLoad          &
+                       ,IOS              = COMPONENT_INPUT      &
+                       ,NNodes           = temp_int             &
+                       ,Force            = .TRUE. &
+                       ,Moment           = .TRUE. &
+                       ,ErrStat         = ErrStat2               &
+                       ,ErrMess         = ErrMsg2                )
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ELSEIF(p%quadrature .EQ. 2) THEN
+       CALL MeshCreate( BlankMesh        = u%DistrLoad          &
+                       ,IOS              = COMPONENT_INPUT      &
+                       ,NNodes           = p%kp_total           &
+                       ,Force            = .TRUE. &
+                       ,Moment           = .TRUE. &
+                       ,ErrStat         = ErrStat2               &
+                       ,ErrMess         = ErrMsg2                )
+       
+   ENDIF
 
    temp_int = p%node_elem*p%elem_total
    CALL MeshCreate( BlankMesh        = y%BldMotion        &
@@ -495,16 +592,28 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        
    ENDDO
 
-   temp_int = p%ngp * p%elem_total + 2
-   DO i=1,temp_int-1
-       CALL MeshConstructElement( Mesh     = u%DistrLoad      &
-                                 ,Xelement = ELEMENT_LINE2    &
-                                 ,P1       = i                &
-                                 ,P2       = i+1              &
-                                 ,ErrStat  = ErrStat2          &
-                                 ,ErrMess  = ErrMsg2           )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ENDDO
+   IF(p%quadrature .EQ. 1) THEN
+       temp_int = p%ngp(1) * p%elem_total + 2
+       DO i=1,temp_int-1
+           CALL MeshConstructElement( Mesh     = u%DistrLoad      &
+                                     ,Xelement = ELEMENT_LINE2    &
+                                     ,P1       = i                &
+                                     ,P2       = i+1              &
+                                     ,ErrStat  = ErrStat2          &
+                                     ,ErrMess  = ErrMsg2           )
+             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       ENDDO
+   ELSEIF(p%quadrature .EQ. 2) THEN
+       DO i=1,p%kp_total - 1
+           CALL MeshConstructElement( Mesh     = u%DistrLoad      &
+                                     ,Xelement = ELEMENT_LINE2    &
+                                     ,P1       = i                &
+                                     ,P2       = i+1              &
+                                     ,ErrStat  = ErrStat2          &
+                                     ,ErrMess  = ErrMsg2           )
+             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       ENDDO
+   ENDIF
 
    ! place single node at origin; position affects mapping/coupling with other modules
    temp_POS(:) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1))
@@ -598,29 +707,53 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ENDDO
    
 
-   DO i=1,p%ngp*p%elem_total+2
-       temp_POS(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
-       TmpPos(1) = temp_POS(2)
-       TmpPos(2) = temp_POS(3)
-       TmpPos(3) = temp_POS(1)
-       temp_CRV(:) = MATMUL(p%GlbRot,temp_L2(4:6,i))
-       CALL BD_CrvCompose(temp_POS,temp_glb,temp_CRV,0,ErrStat2,ErrMsg2)
+   IF(p%quadrature .EQ. 1) THEN
+       DO i=1,p%ngp(1)*p%elem_total+2
+           temp_POS(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
+           TmpPos(1) = temp_POS(2)
+           TmpPos(2) = temp_POS(3)
+           TmpPos(3) = temp_POS(1)
+           temp_CRV(:) = MATMUL(p%GlbRot,temp_L2(4:6,i))
+           CALL BD_CrvCompose(temp_POS,temp_glb,temp_CRV,0,ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           temp_CRV(1) = temp_POS(2)
+           temp_CRV(2) = temp_POS(3)
+           temp_CRV(3) = temp_POS(1)
+           CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           TmpDCM(:,:) = TRANSPOSE(TmpDCM)
+           CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
+                                  ,INode   = i            &
+                                  ,Pos     = TmpPos       &
+                                  ,ErrStat = ErrStat2      &
+                                  ,ErrMess = ErrMsg2      &
+                                  , Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       temp_CRV(1) = temp_POS(2)
-       temp_CRV(2) = temp_POS(3)
-       temp_CRV(3) = temp_POS(1)
-       CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
+       ENDDO
+   ELSEIF(p%quadrature .EQ. 2) THEN
+       DO i=1,p%kp_total
+           temp_POS(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
+           TmpPos(1) = temp_POS(2)
+           TmpPos(2) = temp_POS(3)
+           TmpPos(3) = temp_POS(1)
+           temp_CRV(:) = MATMUL(p%GlbRot,temp_L2(4:6,i))
+           CALL BD_CrvCompose(temp_POS,temp_glb,temp_CRV,0,ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           temp_CRV(1) = temp_POS(2)
+           temp_CRV(2) = temp_POS(3)
+           temp_CRV(3) = temp_POS(1)
+           CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           TmpDCM(:,:) = TRANSPOSE(TmpDCM)
+           CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
+                                  ,INode   = i            &
+                                  ,Pos     = TmpPos       &
+                                  ,ErrStat = ErrStat2      &
+                                  ,ErrMess = ErrMsg2      &
+                                  , Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       TmpDCM(:,:) = TRANSPOSE(TmpDCM)
-       CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
-                              ,INode   = i            &
-                              ,Pos     = TmpPos       &
-                              ,ErrStat = ErrStat2      &
-                              ,ErrMess = ErrMsg2      &
-                              , Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       
-   ENDDO
+       ENDDO
+   ENDIF
 
    CALL MeshCommit ( Mesh    = u%RootMotion    &
                     ,ErrStat = ErrStat2         &
@@ -702,11 +835,12 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 !   CALL BD_ComputeBladeMass(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u_tmp,&
 !                            p%damp_flag,p%beta,                                     &
 !                            p%node_elem,p%dof_node,p%elem_total,                    &
-!                            p%dof_total,p%node_total,p%ngp,                         &
+!                            p%dof_total,p%node_total,p%ngp(1),                         &
 !                            p%blade_mass,ErrStat2,ErrMsg2)
 !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_ComputeBladeMassNew(p%uuN0,p%Mass0_GL,p%Gauss,p%elem_total,p%node_elem,p%dof_total,&
-                               p%dof_node,p%ngp,p%blade_mass,p%blade_CG,ErrStat2,ErrMsg2)
+                               p%dof_node,p%ngp,p%quadrature,p%station_eta,&
+                               p%blade_mass,p%blade_CG,p%blade_IN,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CalcIC(u_tmp,p,x,OtherState,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -750,7 +884,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%numOuts   = InputFileData%NumOuts  
    p%NNodeOuts = InputFileData%NNodeOuts      
    p%OutNd     = InputFileData%OutNd
-      
+
    call SetOutParam(InputFileData%OutList, p, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, p%NumBlNds, sets: p%OutParam.
       call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return  
@@ -1036,15 +1170,17 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
                    y%BldMotion%RotationAcc(3,temp_id2) = temp_cc(1)
            ENDDO
        ENDDO
-       CALL BD_DynamicSolutionForce(p%uuN0,x_tmp%q,x_tmp%dqdt,OS_tmp%Acc,                              &
-                                    p%Stif0_GL,p%Mass0_GL,p%gravity,u_tmp,                             &
-                                    p%damp_flag,p%beta,                                                &
-                                    p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+       CALL BD_DynamicSolutionForce(p%uuN0,x_tmp%q,x_tmp%dqdt,OS_tmp%Acc,                        &
+                                    p%Stif0_GL,p%Mass0_GL,p%gravity,u_tmp,                       &
+                                    p%damp_flag,p%beta,                                          &
+                                    p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,&
+                                    p%ngp,p%quadrature,p%station_eta,&
                                     temp_Force,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ELSEIF(p%analysis_type .EQ. 1) THEN
        CALL BD_StaticSolutionForce( p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u_tmp,           &
-                                    p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+                                    p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,&
+                                    p%ngp,p%quadrature,p%station_eta,&
                                     temp_Force,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ENDIF
@@ -1239,7 +1375,8 @@ END SUBROUTINE BD_NodalRelRot
 SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
                                EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                                damp_flag,beta,                          &
-                               ngp,node_elem,dof_node,elk,elf,elm,elg,  &
+                               ngp,quadrature,trap_pos,trap_w,          &
+                               node_elem,dof_node,elk,elf,elm,elg,  &
                                ErrStat,ErrMsg)
 
    REAL(ReKi),     INTENT(IN   ):: Nuu0(:)
@@ -1255,6 +1392,9 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
    INTEGER(IntKi), INTENT(IN   ):: damp_flag
    REAL(ReKi),     INTENT(IN   ):: beta(:)
    INTEGER(IntKi), INTENT(IN   ):: ngp
+   INTEGER(IntKi), INTENT(IN   ):: quadrature
+   REAL(ReKi),     INTENT(IN   ):: trap_pos(:)
+   REAL(ReKi),     INTENT(IN   ):: trap_w(:)
    INTEGER(IntKi), INTENT(IN   ):: node_elem
    INTEGER(IntKi), INTENT(IN   ):: dof_node
    REAL(ReKi),     INTENT(  OUT):: elk(:,:)
@@ -1349,8 +1489,13 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
 
    CALL BD_GenerateGLL(node_elem-1,GLL_temp,w_temp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(quadrature .EQ. 1) THEN
+       CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ELSEIF(quadrature .EQ. 2) THEN
+       gp(:) = trap_pos(:)
+       gw(:) = trap_w(:)
+   ENDIF
    DO igp=1,ngp
        gpr = gp(igp)
        CALL BD_ComputeJacobian(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,&
@@ -2153,6 +2298,7 @@ END SUBROUTINE BD_UpdateDynamicGA2
 SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,         &
                                         damp_flag,beta,                             &
                                         elem_total,node_elem,dof_total,dof_node,ngp,&
+                                        quadrature,station_eta,                     &
                                         RHS,MassM,ErrStat,ErrMsg)
 !----------------------------------------------------------------------------------------
 ! This subroutine computes Global mass matrix and force vector for the beam.
@@ -2170,7 +2316,9 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Degrees of freedom per node  ! bjj: NOT USED
    INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
-   INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),    INTENT(IN   ):: ngp(:) ! Number of Gauss points
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature
+   REAL(ReKi),        INTENT(IN   ):: station_eta(:)
    REAL(ReKi),        INTENT(  OUT):: MassM(:,:) ! Mass matrix
    REAL(ReKi),        INTENT(  OUT):: RHS(:) ! Right hand side of the equation Ax=B
    INTEGER(IntKi),    INTENT(  OUT):: ErrStat       ! Error status of the operation
@@ -2186,11 +2334,18 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
    REAL(ReKi),          ALLOCATABLE:: EStif0_GL(:,:,:)
    REAL(ReKi),          ALLOCATABLE:: EMass0_GL(:,:,:)
    REAL(ReKi),          ALLOCATABLE:: DistrLoad_GL(:,:)
+   REAL(ReKi),          ALLOCATABLE:: trapezoidal_pos(:)
+   REAL(ReKi),          ALLOCATABLE:: trapezoidal_w(:)
    INTEGER(IntKi)                  :: dof_elem ! Degree of freedom per node
    INTEGER(IntKi)                  :: rot_elem ! Rotational degrees of freedom
    INTEGER(IntKi)                  :: nelem ! number of elements
    INTEGER(IntKi)                  :: i ! Index counter
    INTEGER(IntKi)                  :: j ! Index counter
+   INTEGER(IntKi)                  :: id0 
+   INTEGER(IntKi)                  :: id1
+   INTEGER(IntKi)                  :: nqp
+   REAL(ReKi)                      :: temp1
+   REAL(ReKi)                      :: temp2
    INTEGER(IntKi)                  :: temp_id ! Index counter
    INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)            :: ErrMsg2                      ! Temporary Error message
@@ -2218,12 +2373,18 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(elm,dof_elem,dof_elem,'elm',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(EStif0_GL,6,6,ngp,'EStif0_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(EMass0_GL,6,6,ngp,'EMass0_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(DistrLoad_GL,6,ngp,'DistrLoad_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(quadrature .EQ. 1) THEN
+       CALL AllocAry(EStif0_GL,6,6,ngp(1),'EStif0_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(EMass0_GL,6,6,ngp(1),'EMass0_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(DistrLoad_GL,6,ngp(1),'DistrLoad_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(trapezoidal_pos,ngp(1),'trapezoidal_pos',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(trapezoidal_w,ngp(1),'trapezoidal_w',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDIF
    if (ErrStat >= AbortErrLev) then
        call Cleanup()
        return
@@ -2235,22 +2396,18 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
    Nvvv(:)  = 0.0D0
    elf(:)   = 0.0D0
    elm(:,:) = 0.0D0
-   EStif0_GL(:,:,:)  = 0.0D0
-   EMass0_GL(:,:,:)  = 0.0D0
-   DistrLoad_GL(:,:) = 0.0D0
+   IF(quadrature .EQ. 1) THEN
+       EStif0_GL(:,:,:)  = 0.0D0
+       EMass0_GL(:,:,:)  = 0.0D0
+       DistrLoad_GL(:,:) = 0.0D0
+       trapezoidal_pos(:) = 0.0D0
+       trapezoidal_w(:)   = 0.0D0
+   ENDIF
 
    DO nelem=1,elem_total
        Nuu0(:) = uuN0(:,nelem)
        CALL BD_ElemNodalDisp(uuN,node_elem,dof_node,nelem,Nuuu,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       temp_id = (nelem-1)*ngp
-       DO j=1,ngp
-           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
-           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
-           DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j+1)
-           DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j+1)
-       ENDDO
-
        CALL BD_NodalRelRot(Nuu0,node_elem,dof_node,Nrr0,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_NodalRelRot(Nuuu,node_elem,dof_node,Nrrr,ErrStat2,ErrMsg2)
@@ -2258,11 +2415,79 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
        CALL BD_ElemNodalDisp(vvN,node_elem,dof_node,nelem,Nvvv,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+       IF(quadrature .EQ. 1) THEN
+           nqp = ngp(1)
+           temp_id = (nelem-1)*ngp(1)
+           DO j=1,ngp(1)
+               EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
+               EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+               DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j+1)
+               DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j+1)
+           ENDDO
+       ELSEIF(quadrature .EQ. 2) THEN
+           nqp = ngp(nelem)
+           CALL AllocAry(EStif0_GL,6,6,ngp(nelem),'EStif0_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(EMass0_GL,6,6,ngp(nelem),'EMass0_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(DistrLoad_GL,6,ngp(nelem),'DistrLoad_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(trapezoidal_pos,ngp(nelem),'trapezoidal_pos',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(trapezoidal_w,ngp(nelem),'trapezoidal_w',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           if (ErrStat >= AbortErrLev) then
+               call Cleanup()
+               return
+           end if
+           EStif0_GL(:,:,:)  = 0.0D0
+           EMass0_GL(:,:,:)  = 0.0D0
+           DistrLoad_GL(:,:) = 0.0D0
+           trapezoidal_pos(:) = 0.0D0
+           trapezoidal_w(:)   = 0.0D0
+
+           IF(nelem .EQ. 1) THEN
+               id0 = 1
+               id1 = ngp(nelem)
+           ELSE
+               id0 = id1
+               id1 = id0 + ngp(nelem) - 1
+           ENDIF
+           DO j=1,ngp(nelem)
+               EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,id0+j-1)
+               EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,id0+j-1)
+               DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,id0+j-1)
+               DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,id0+j-1)
+               trapezoidal_pos(j) = -1.0D0 + (station_eta(id0+j-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+               IF(j .EQ. 1) THEN
+                   temp1 = -1.0D0 + (station_eta(id0+j-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id0+j) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ELSEIF(j .EQ. ngp(nelem)) THEN
+                   temp1 = -1.0D0 + (station_eta(id1-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ELSE 
+                   temp1 = -1.0D0 + (station_eta(id0+j-2) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id0+j) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ENDIF
+           ENDDO
+       ENDIF
+
        CALL BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                                 EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
-                                ngp,node_elem,dof_node,damp_flag,beta,&
+                                nqp,quadrature,trapezoidal_pos,trapezoidal_w,&
+                                node_elem,dof_node,damp_flag,beta,&
                                 elf,elm,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       IF(quadrature .EQ. 2) THEN
+           DEALLOCATE(EStif0_GL)
+           DEALLOCATE(EMass0_GL)
+           DEALLOCATE(DistrLoad_GL)
+           DEALLOCATE(trapezoidal_pos)
+           DEALLOCATE(trapezoidal_w)
+       ENDIF
 
 
        CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,&
@@ -2294,6 +2519,8 @@ contains
          if (allocated(EStif0_GL   )) deallocate(EStif0_GL   )
          if (allocated(EMass0_GL   )) deallocate(EMass0_GL   )
          if (allocated(DistrLoad_GL)) deallocate(DistrLoad_GL)
+         if (allocated(trapezoidal_pos)) deallocate(trapezoidal_pos)
+         if (allocated(trapezoidal_w  )) deallocate(trapezoidal_w  )
 
       end subroutine Cleanup
 
@@ -2301,7 +2528,8 @@ END SUBROUTINE BD_GenerateDynamicElementAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                                EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
-                               ngp,node_elem,dof_node,damp_flag,beta,&
+                               ngp,quadrature,trap_pos,trap_w,   &
+                               node_elem,dof_node,damp_flag,beta,&
                                elf,elm,ErrStat,ErrMsg)
 
 !-------------------------------------------------------------------------------
@@ -2320,6 +2548,9 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
    REAL(ReKi),INTENT(  OUT)    :: elf(:)  ! Total element force (Fd, Fc, Fb)
    REAL(ReKi),INTENT(  OUT)    :: elm(:,:) ! Total element mass matrix
    INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi), INTENT(IN   ):: quadrature
+   REAL(ReKi),     INTENT(IN   ):: trap_pos(:)
+   REAL(ReKi),     INTENT(IN   ):: trap_w(:)
    INTEGER(IntKi),INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
    INTEGER(IntKi),INTENT(IN   ):: damp_flag ! Degrees of freedom per node
@@ -2405,8 +2636,13 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
 
    CALL BD_GenerateGLL(node_elem-1,GLL_temp,w_temp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(quadrature .EQ. 1) THEN
+       CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ELSEIF(quadrature .EQ. 2) THEN
+       gp(:) = trap_pos(:)
+       gw(:) = trap_w(:)
+   ENDIF
 
    DO igp=1,ngp
        gpr=gp(igp)
@@ -2567,7 +2803,8 @@ END SUBROUTINE BD_GyroForce
 SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                                  EStif0_GL,EMass0_GL,     &
                                  damp_flag,beta,          &
-                                 ngp,node_elem,dof_node,elf,&
+                                 ngp,quadrature,trap_pos,trap_w,&
+                                 node_elem,dof_node,elf,&
                                  ErrStat,ErrMsg)
 !------------------------------------------------------------
 ! This subroutine calculates elemetal internal forces
@@ -2583,6 +2820,9 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
    INTEGER(IntKi), INTENT(IN   ):: damp_flag ! Number of Gauss points
    REAL(ReKi),     INTENT(IN   ):: beta(:)
    INTEGER(IntKi), INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi), INTENT(IN   ):: quadrature
+   REAL(ReKi),     INTENT(IN   ):: trap_pos(:)
+   REAL(ReKi),     INTENT(IN   ):: trap_w(:)
    INTEGER(IntKi), INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi), INTENT(IN   ):: dof_node ! Degrees of freedom per node
    REAL(ReKi),     INTENT(  OUT):: elf(:)  ! Total element force (Fd, Fc, Fb)
@@ -2662,8 +2902,13 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
 
    CALL BD_GenerateGLL(node_elem-1,GLL_temp,w_temp,ErrStat2,ErrMsg2)
        CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
-       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(quadrature .EQ. 1) THEN
+       CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ELSEIF(quadrature .EQ. 2) THEN
+       gp(:) = trap_pos(:)
+       gw(:) = trap_w(:)
+   ENDIF
 
    DO igp=1,ngp
        gpr=gp(igp)
@@ -2731,7 +2976,8 @@ END SUBROUTINE BD_ElementMatrixForce
 SUBROUTINE BD_GenerateDynamicElementForce(uuN0,uuN,vvN,aaN,     &
                                           Stif0,Mass0,gravity,u,&
                                           damp_flag,beta,       &
-                                          elem_total,node_elem,dof_node,ngp,RHS,&
+                                          elem_total,node_elem,dof_node,ngp,&
+                                          quadrature,station_eta,RHS,&
                                           ErrStat,ErrMsg)
 !----------------------------------------------------------------------------------------
 ! This subroutine computes Global mass matrix and force vector to 
@@ -2750,7 +2996,9 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN0,uuN,vvN,aaN,     &
    INTEGER(IntKi),     INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),     INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),     INTENT(IN   ):: dof_node ! Degrees of freedom per node
-   INTEGER(IntKi),     INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),     INTENT(IN   ):: ngp(:) ! Number of Gauss points
+   INTEGER(IntKi),     INTENT(IN   ):: quadrature
+   REAL(ReKi),         INTENT(IN   ):: station_eta(:)
    REAL(ReKi),         INTENT(  OUT):: RHS(:) ! Right hand side of the equation Ax=B
    INTEGER(IntKi),     INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),       INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
@@ -2764,11 +3012,18 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN0,uuN,vvN,aaN,     &
    REAL(ReKi),           ALLOCATABLE:: EStif0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),           ALLOCATABLE:: EMass0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),           ALLOCATABLE:: DistrLoad_GL(:,:) ! Nodal material properties for each element
+   REAL(ReKi),           ALLOCATABLE:: trapezoidal_pos(:)
+   REAL(ReKi),           ALLOCATABLE:: trapezoidal_w(:)
    REAL(ReKi),           ALLOCATABLE:: elf(:) ! Total element force (Fc, Fd, Fb)
    INTEGER(IntKi)                   :: dof_elem ! Degree of freedom per node
    INTEGER(IntKi)                   :: rot_elem ! Rotational degrees of freedom
    INTEGER(IntKi)                   :: nelem ! number of elements
    INTEGER(IntKi)                   :: j ! Index counter
+   INTEGER(IntKi)                   :: id0
+   INTEGER(IntKi)                   :: id1
+   INTEGER(IntKi)                   :: nqp
+   REAL(ReKi)                      :: temp1
+   REAL(ReKi)                      :: temp2
    INTEGER(IntKi)                   :: temp_id ! Index counter
    INTEGER(IntKi)                   :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)             :: ErrMsg2                      ! Temporary Error message
@@ -2795,12 +3050,18 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN0,uuN,vvN,aaN,     &
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(elf,dof_elem,'elf',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(EStif0_GL,6,6,ngp,'EStif0_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(EMass0_GL,6,6,ngp,'EMass0_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(DistrLoad_GL,6,ngp,'DistrLoad_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(quadrature .EQ. 1) THEN
+       CALL AllocAry(EStif0_GL,6,6,ngp(1),'EStif0_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(EMass0_GL,6,6,ngp(1),'EMass0_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(DistrLoad_GL,6,ngp(1),'DistrLoad_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(trapezoidal_pos,ngp(1),'trapezoidal_pos',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(trapezoidal_w,ngp(1),'trapezoidal_w',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDIF
    if (ErrStat >= AbortErrLev) then
        call Cleanup()
        return
@@ -2812,9 +3073,13 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN0,uuN,vvN,aaN,     &
    Nvvv(:)  = 0.0D0
    Naaa(:)  = 0.0D0
    elf(:)   = 0.0D0
-   EStif0_GL(:,:,:)  = 0.0D0
-   EMass0_GL(:,:,:)  = 0.0D0
-   DistrLoad_GL(:,:) = 0.0D0
+   IF(quadrature .EQ. 1) THEN
+       EStif0_GL(:,:,:)  = 0.0D0
+       EMass0_GL(:,:,:)  = 0.0D0
+       DistrLoad_GL(:,:) = 0.0D0
+       trapezoidal_pos(:) = 0.0D0
+       trapezoidal_w(:)   = 0.0D0
+   ENDIF
 
    DO nelem=1,elem_total
        Nuu0(:) = uuN0(:,nelem)
@@ -2828,20 +3093,76 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN0,uuN,vvN,aaN,     &
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_ElemNodalDisp(aaN,node_elem,dof_node,nelem,Naaa,ErrStat2,ErrMsg2)
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       temp_id = (nelem-1)*ngp
-       DO j=1,ngp
-           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
-           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
-           DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j+1)
-           DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j+1)
-       ENDDO
+       IF(quadrature .EQ. 1) THEN
+           nqp = ngp(1)
+           temp_id = (nelem-1)*ngp(1)
+           DO j=1,ngp(1)
+               EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
+               EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+               DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j+1)
+               DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j+1)
+           ENDDO
+       ELSEIF(quadrature .EQ. 2) THEN
+           nqp = ngp(nelem)
+           CALL AllocAry(EStif0_GL,6,6,ngp(nelem),'EStif0_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(EMass0_GL,6,6,ngp(nelem),'EMass0_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(DistrLoad_GL,6,ngp(nelem),'DistrLoad_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(trapezoidal_pos,ngp(nelem),'trapezoidal_pos',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(trapezoidal_w,ngp(nelem),'trapezoidal_w',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           trapezoidal_pos(:) = 0.0D0
+           trapezoidal_w(:)   = 0.0D0
+           if (ErrStat >= AbortErrLev) then
+               call Cleanup()
+               return
+           end if
+           IF(nelem .EQ. 1) THEN
+               id0 = 1
+               id1 = ngp(nelem)
+           ELSE
+               id0 = id1
+               id1 = id0 + ngp(nelem) - 1
+           ENDIF
+           DO j=1,ngp(nelem)
+               EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,id0+j-1)
+               EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,id0+j-1)
+               DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,id0+j-1)
+               DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,id0+j-1)
+               trapezoidal_pos(j) = -1.0D0 + (station_eta(id0+j-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+               IF(j .EQ. 1) THEN
+                   temp1 = -1.0D0 + (station_eta(id0+j-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id0+j) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ELSEIF(j .EQ. ngp(nelem)) THEN
+                   temp1 = -1.0D0 + (station_eta(id1-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ELSE 
+                   temp1 = -1.0D0 + (station_eta(id0+j-2) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id0+j) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ENDIF
+           ENDDO
+       ENDIF
 
        CALL BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                                   EStif0_GL,EMass0_GL,     &
                                   damp_flag,beta,          &
-                                  ngp,node_elem,dof_node,elf,&
+                                  nqp,quadrature,trapezoidal_pos,trapezoidal_w,&
+                                  node_elem,dof_node,elf,&
                                   ErrStat2,ErrMsg2)
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       IF(quadrature .EQ. 2) THEN
+           DEALLOCATE(EStif0_GL)
+           DEALLOCATE(EMass0_GL)
+           DEALLOCATE(DistrLoad_GL)
+           DEALLOCATE(trapezoidal_pos)
+           DEALLOCATE(trapezoidal_w)
+       ENDIF
 
        CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS,ErrStat2,ErrMsg2)
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2868,6 +3189,8 @@ contains
          if (allocated(EStif0_GL   )) deallocate(EStif0_GL   )
          if (allocated(EMass0_GL   )) deallocate(EMass0_GL   )
          if (allocated(DistrLoad_GL)) deallocate(DistrLoad_GL)
+         if (allocated(trapezoidal_pos)) deallocate(trapezoidal_pos)
+         if (allocated(trapezoidal_w  )) deallocate(trapezoidal_w  )
 
       end subroutine Cleanup
 
@@ -2877,6 +3200,7 @@ SUBROUTINE BD_DynamicSolutionForce(uuN0,uuN,vvN,aaN,                            
                                    Stif0,Mass0,gravity,u,                                 &
                                    damp_flag,beta,                                        &
                                    node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
+                                   quadrature,station_eta,                                &
                                    Force,ErrStat,ErrMsg)
 !***************************************************************************************
 ! This subroutine calculates the finite-element nodal forces along the beam
@@ -2897,7 +3221,9 @@ SUBROUTINE BD_DynamicSolutionForce(uuN0,uuN,vvN,aaN,                            
    INTEGER(IntKi),     INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),     INTENT(IN   ):: dof_total ! Total number of degrees of freedom
    INTEGER(IntKi),     INTENT(IN   ):: node_total ! Total number of nodes  ! bjj: NOT USED
-   INTEGER(IntKi),     INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),     INTENT(IN   ):: ngp(:) ! Number of Gauss points
+   INTEGER(IntKi),     INTENT(IN   ):: quadrature
+   REAL(ReKi),         INTENT(IN   ):: station_eta(:)
    REAL(ReKi),         INTENT(  OUT):: Force(:)
    INTEGER(IntKi),     INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),       INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
@@ -2913,7 +3239,8 @@ SUBROUTINE BD_DynamicSolutionForce(uuN0,uuN,vvN,aaN,                            
    CALL BD_GenerateDynamicElementForce(uuN0,uuN,vvN,aaN,     &
                                        Stif0,Mass0,gravity,u,&
                                        damp_flag,beta,&
-                                       elem_total,node_elem,dof_node,ngp,Force,&
+                                       elem_total,node_elem,dof_node,ngp,&
+                                       quadrature,station_eta,Force,&
                                        ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -3312,9 +3639,9 @@ SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    ErrMsg  = ""
 
       ! allocate space for input type (mainly for meshes)
-   CALL BD_CopyInput(u(1),u_interp,MESH_NEWCOPY,ErrStat2,ErrMsg2)
+   CALL BD_CopyInput(u(2),u_interp,MESH_NEWCOPY,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
-   CALL BD_CopyInput(u(1),u_temp,MESH_NEWCOPY,ErrStat2,ErrMsg2)
+   CALL BD_CopyInput(u(2),u_temp,MESH_NEWCOPY,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
    
    if (ErrStat >= AbortErrLev) then
@@ -3322,7 +3649,7 @@ SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       return
    end if
          
-   call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
+   call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
    CALL BD_InputGlobalLocal(p,u_interp,ErrStat2,ErrMsg2)
@@ -3347,7 +3674,9 @@ SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
            gravity_temp(:) = p%gravity(:)/i*j
            CALL BD_StaticSolution(p%uuN0,x%q,p%Mass0_GL,p%Stif0_GL,gravity_temp,u_temp,&
                                   p%node_elem,p%dof_node,p%elem_total,&
-                                  p%dof_total,p%node_total,p%ngp,p%niter,p%tol,piter, ErrStat2, ErrMsg2)
+                                  p%dof_total,p%node_total,&
+                                  p%ngp,p%quadrature,p%station_eta,&
+                                  p%niter,p%tol,piter, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
            IF(p%niter .EQ. piter) EXIT
        ENDDO
@@ -3382,9 +3711,11 @@ contains
    end subroutine cleanup
 END SUBROUTINE BD_Static
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_StaticSolution(uuN0,uuNf,Mass0,Stif0,gravity,u,&
-                             node_elem,dof_node,elem_total,&
-                             dof_total,node_total,ngp,niter,tol,piter, ErrStat,ErrMsg)
+SUBROUTINE BD_StaticSolution( uuN0,uuNf,Mass0,Stif0,gravity,u,&
+                              node_elem,dof_node,elem_total,&
+                              dof_total,node_total,ngp,&
+                              quadrature,station_eta,&
+                              niter,tol,piter, ErrStat,ErrMsg)
 
    REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),        INTENT(IN   ):: Mass0(:,:,:)
@@ -3396,7 +3727,9 @@ SUBROUTINE BD_StaticSolution(uuN0,uuNf,Mass0,Stif0,gravity,u,&
    INTEGER(IntKi),    INTENT(IN   ):: elem_total
    INTEGER(IntKi),    INTENT(IN   ):: node_elem
    INTEGER(IntKi),    INTENT(IN   ):: dof_node
-   INTEGER(IntKi),    INTENT(IN   ):: ngp
+   INTEGER(IntKi),    INTENT(IN   ):: ngp(:)
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature
+   REAL(ReKi),        INTENT(IN   ):: station_eta(:)
    INTEGER(IntKi),    INTENT(IN   ):: dof_total
    INTEGER(IntKi),    INTENT(IN   ):: node_total
    REAL(ReKi),        INTENT(INOUT):: uuNf(:)
@@ -3445,7 +3778,9 @@ SUBROUTINE BD_StaticSolution(uuN0,uuNf,Mass0,Stif0,gravity,u,&
    DO i=1,niter
        piter=i 
        CALL BD_GenerateStaticElement(uuN0,uuNf,Mass0,Stif0,gravity,u,&
-                                     elem_total,node_elem,dof_node,ngp,StifK,RHS,&
+                                     elem_total,node_elem,dof_node,ngp,&
+                                     quadrature,station_eta,&
+                                     StifK,RHS,&
                                      ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -3454,6 +3789,8 @@ SUBROUTINE BD_StaticSolution(uuN0,uuNf,Mass0,Stif0,gravity,u,&
            RHS(temp_id+1:temp_id+3) = RHS(temp_id+1:temp_id+3) + u%Pointload%Force(1:3,j)
            RHS(temp_id+4:temp_id+6) = RHS(temp_id+4:temp_id+6) + u%Pointload%Moment(1:3,j)
        ENDDO
+!WRITE(*,*) 'RHS'
+!WRITE(*,*) RHS
 
        RHS_LU(:)     = 0.0D0
        StifK_LU(:,:) = 0.0D0
@@ -3511,9 +3848,11 @@ contains
       end subroutine Cleanup
 END SUBROUTINE BD_StaticSolution
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_GenerateStaticElement(uuN0,uuNf,Mass0,Stif0,gravity,u,&
-                                    elem_total,node_elem,dof_node,ngp,StifK,RHS,&
-                                    ErrStat,ErrMsg)
+SUBROUTINE BD_GenerateStaticElement( uuN0,uuNf,Mass0,Stif0,gravity,u,&
+                                     elem_total,node_elem,dof_node,&
+                                     ngp,quadrature,station_eta,&
+                                     StifK,RHS,&
+                                     ErrStat,ErrMsg)
 
    REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
    REAL(ReKi),        INTENT(IN   ):: uuNf(:)
@@ -3524,7 +3863,9 @@ SUBROUTINE BD_GenerateStaticElement(uuN0,uuNf,Mass0,Stif0,gravity,u,&
    INTEGER(IntKi),    INTENT(IN   ):: elem_total
    INTEGER(IntKi),    INTENT(IN   ):: node_elem
    INTEGER(IntKi),    INTENT(IN   ):: dof_node
-   INTEGER(IntKi),    INTENT(IN   ):: ngp
+   INTEGER(IntKi),    INTENT(IN   ):: ngp(:)
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature
+   REAL(ReKi),        INTENT(IN   ):: station_eta(:)
    REAL(ReKi),        INTENT(  OUT):: StifK(:,:)
    REAL(ReKi),        INTENT(  OUT):: RHS(:)
    INTEGER(IntKi),    INTENT(  OUT):: ErrStat       ! Error status of the operation
@@ -3535,11 +3876,20 @@ SUBROUTINE BD_GenerateStaticElement(uuN0,uuNf,Mass0,Stif0,gravity,u,&
    REAL(ReKi),          ALLOCATABLE:: Nrrr(:)
    REAL(ReKi),          ALLOCATABLE:: elk(:,:)
    REAL(ReKi),          ALLOCATABLE:: elf(:)
+   REAL(ReKi),          ALLOCATABLE:: EStif0_GL(:,:,:)
+   REAL(ReKi),          ALLOCATABLE:: EMass0_GL(:,:,:)
    REAL(ReKi),          ALLOCATABLE:: DistrLoad_GL(:,:)
+   REAL(ReKi),          ALLOCATABLE:: trapezoidal_pos(:)
+   REAL(ReKi),          ALLOCATABLE:: trapezoidal_w(:)
    INTEGER(IntKi)                  :: dof_elem
    INTEGER(IntKi)                  :: rot_elem
    INTEGER(IntKi)                  :: nelem
    INTEGER(IntKi)                  :: j
+   INTEGER(IntKi)                  :: id0
+   INTEGER(IntKi)                  :: id1
+   INTEGER(IntKi)                  :: nqp
+   REAL(ReKi)                      :: temp1
+   REAL(ReKi)                      :: temp2
    INTEGER(IntKi)                  :: temp_id
    INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)            :: ErrMsg2                      ! Temporary Error message
@@ -3563,8 +3913,18 @@ SUBROUTINE BD_GenerateStaticElement(uuN0,uuNf,Mass0,Stif0,gravity,u,&
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(elk,dof_elem,dof_elem,'elk',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(DistrLoad_GL,6,ngp,'DistrLoad_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(quadrature .EQ. 1) THEN
+       CALL AllocAry(EStif0_GL,6,6,ngp(1),'EStif0_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(EMass0_GL,6,6,ngp(1),'EMass0_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(DistrLoad_GL,6,ngp(1),'DistrLoad_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(trapezoidal_pos,ngp(1),'trapezoidal_pos',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(trapezoidal_w,ngp(1),'trapezoidal_w',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDIF
    if (ErrStat >= AbortErrLev) then
        call Cleanup()
        return
@@ -3575,7 +3935,13 @@ SUBROUTINE BD_GenerateStaticElement(uuN0,uuNf,Mass0,Stif0,gravity,u,&
    Nrrr(:)  = 0.0D0
    elf(:)   = 0.0D0
    elk(:,:) = 0.0D0
-   DistrLoad_GL(:,:) = 0.0D0
+   IF(quadrature .EQ. 1) THEN
+       EStif0_GL(:,:,:)   = 0.0D0
+       EMass0_GL(:,:,:)   = 0.0D0
+       DistrLoad_GL(:,:)  = 0.0D0
+       trapezoidal_pos(:) = 0.0D0
+       trapezoidal_w(:)   = 0.0D0
+   ENDIF
 
    DO nelem=1,elem_total
        CALL BD_ElemNodalDisp(uuNf,node_elem,dof_node,nelem,Nuuu,ErrStat2,ErrMsg2)
@@ -3584,18 +3950,74 @@ SUBROUTINE BD_GenerateStaticElement(uuN0,uuNf,Mass0,Stif0,gravity,u,&
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_NodalRelRot(Nuuu,node_elem,dof_node,Nrrr,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       IF(quadrature .EQ. 1) THEN
+           nqp = ngp(1)
+           temp_id = (nelem-1)*ngp(1)
+           DO j=1,ngp(1)
+               EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
+               EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+               DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,temp_id+j+1)
+               DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
+           ENDDO
+       ELSEIF(quadrature .EQ. 2) THEN
+           nqp = ngp(nelem)
+           CALL AllocAry(EStif0_GL,6,6,ngp(nelem),'EStif0_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(EMass0_GL,6,6,ngp(nelem),'EMass0_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(DistrLoad_GL,6,ngp(nelem),'DistrLoad_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(trapezoidal_pos,ngp(nelem),'trapezoidal_pos',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(trapezoidal_w,ngp(nelem),'trapezoidal_w',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           trapezoidal_pos(:) = 0.0D0
+           trapezoidal_w(:)   = 0.0D0
+           if (ErrStat >= AbortErrLev) then
+               call Cleanup()
+               return
+           end if
+           IF(nelem .EQ. 1) THEN
+               id0 = 1
+               id1 = ngp(nelem)
+           ELSE
+               id0 = id1
+               id1 = id0 + ngp(nelem) - 1
+           ENDIF
+           DO j=1,ngp(nelem)
+               EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,id0+j-1)
+               EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,id0+j-1)
+               DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,id0+j-1)
+               DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,id0+j-1)
+               trapezoidal_pos(j) = -1.0D0 + (station_eta(id0+j-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+               IF(j .EQ. 1) THEN
+                   temp1 = -1.0D0 + (station_eta(id0+j-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id0+j) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ELSEIF(j .EQ. ngp(nelem)) THEN
+                   temp1 = -1.0D0 + (station_eta(id1-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ELSE 
+                   temp1 = -1.0D0 + (station_eta(id0+j-2) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id0+j) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ENDIF
+           ENDDO
+       ENDIF
 
-       elk = 0.0D0
-       elf = 0.0D0
-       temp_id = (nelem-1)*ngp
-       DO j=1,ngp
-           DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,temp_id+j+1)
-           DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
-       ENDDO
        CALL BD_StaticElementMatrix(uuN0(:,nelem),Nuuu,Nrr0,Nrrr,DistrLoad_GL,gravity,&
-                                   Mass0(:,:,temp_id+1:temp_id+ngp),Stif0(:,:,temp_id+1:temp_id+ngp),&
-                                   ngp,node_elem,dof_node,elk,elf,ErrStat2,ErrMsg2)
+                                   EMass0_GL,EStif0_GL,&
+                                   nqp,quadrature,trapezoidal_pos,trapezoidal_w,&
+                                   node_elem,dof_node,elk,elf,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       IF(quadrature .EQ. 2) THEN
+           DEALLOCATE(EStif0_GL)
+           DEALLOCATE(EMass0_GL)
+           DEALLOCATE(DistrLoad_GL)
+           DEALLOCATE(trapezoidal_pos)
+           DEALLOCATE(trapezoidal_w)
+       ENDIF
 
        CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elk,StifK,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3617,14 +4039,20 @@ contains
          if (allocated(Nrrr        )) deallocate(Nrrr        )
          if (allocated(elf         )) deallocate(elf         )
          if (allocated(elk         )) deallocate(elk         )
-         if (allocated(DistrLoad_GL)) deallocate(DistrLoad_GL)
+         if (allocated(EStif0_GL      )) deallocate(EStif0_GL      )
+         if (allocated(EMass0_GL      )) deallocate(EMass0_GL      )
+         if (allocated(DistrLoad_GL   )) deallocate(DistrLoad_GL   )
+         if (allocated(trapezoidal_pos)) deallocate(trapezoidal_pos)
+         if (allocated(trapezoidal_w  )) deallocate(trapezoidal_w  )
 
       end subroutine Cleanup
 
 END SUBROUTINE BD_GenerateStaticElement
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
-                                  EMass0_GL,EStif0_GL,ngp,node_elem,dof_node,elk,elf,&
+                                  EMass0_GL,EStif0_GL,&
+                                  ngp,quadrature,trap_pos,trap_w,&
+                                  node_elem,dof_node,elk,elf,&
                                   ErrStat,ErrMsg)
 
    REAL(ReKi),    INTENT(IN   ):: Nuu0(:)
@@ -3636,6 +4064,9 @@ SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
    REAL(ReKi),    INTENT(IN   ):: EMass0_GL(:,:,:)
    REAL(ReKi),    INTENT(IN   ):: EStif0_GL(:,:,:)
    INTEGER(IntKi),INTENT(IN   ):: ngp
+   INTEGER(IntKi), INTENT(IN   ):: quadrature
+   REAL(ReKi),     INTENT(IN   ):: trap_pos(:)
+   REAL(ReKi),     INTENT(IN   ):: trap_w(:)
    INTEGER(IntKi),INTENT(IN   ):: node_elem
    INTEGER(IntKi),INTENT(IN   ):: dof_node
    REAL(ReKi),    INTENT(  OUT):: elk(:,:)
@@ -3716,8 +4147,13 @@ SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
 
    CALL BD_GenerateGLL(node_elem-1,GLL_temp,w_temp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(quadrature .EQ. 1) THEN
+       CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ELSEIF(quadrature .EQ. 2) THEN
+       gp(:) = trap_pos(:)
+       gw(:) = trap_w(:)
+   ENDIF
    DO igp=1,ngp
        gpr = gp(igp)
        CALL BD_ComputeJacobian(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian,ErrStat2,ErrMsg2)
@@ -3829,7 +4265,8 @@ SUBROUTINE BD_StaticUpdateConfiguration(uinc,uf,node_total,dof_node,ErrStat,ErrM
 END SUBROUTINE BD_StaticUpdateConfiguration
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_StaticSolutionForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
-                                  node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
+                                  node_elem,dof_node,elem_total,dof_total,node_total,&
+                                  ngp,quadrature,station_eta,&
                                   Force, ErrStat,ErrMsg)
 !***************************************************************************************
 ! This subroutine calculates the internal nodal forces at each finite-element 
@@ -3848,7 +4285,9 @@ SUBROUTINE BD_StaticSolutionForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
    INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Total number of degrees of freedom ! bjj: NOT USED
    INTEGER(IntKi),    INTENT(IN   ):: node_total ! Total number of nodes
-   INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),    INTENT(IN   ):: ngp(:)
+   INTEGER(IntKi),     INTENT(IN   ):: quadrature
+   REAL(ReKi),         INTENT(IN   ):: station_eta(:) 
    REAL(ReKi),        INTENT(  OUT):: Force(:)
    INTEGER(IntKi),    INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),      INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
@@ -3863,7 +4302,8 @@ SUBROUTINE BD_StaticSolutionForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
    ErrMsg  = ""
 
    CALL BD_GenerateStaticElementForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
-                                      elem_total,node_elem,dof_node,ngp, &
+                                      elem_total,node_elem,dof_node,&
+                                      ngp,quadrature,station_eta, &
                                       Force,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    IF(ErrStat >= AbortErrLev) RETURN
@@ -3871,8 +4311,10 @@ SUBROUTINE BD_StaticSolutionForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
 END SUBROUTINE BD_StaticSolutionForce
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_GenerateStaticElementForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
-                                         elem_total,node_elem,dof_node,ngp,RHS,&
-                                         ErrStat,ErrMsg)
+                                         elem_total,node_elem,dof_node,&
+                                         ngp,quadrature,station_eta,&
+                                         RHS,ErrStat,ErrMsg)
+                                         
 !***************************************************************************************
 ! This subroutine calculates the internal nodal forces at each finite-element 
 ! nodes along beam axis
@@ -3888,7 +4330,9 @@ SUBROUTINE BD_GenerateStaticElementForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
    INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
-   INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),    INTENT(IN   ):: ngp(:)
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature
+   REAL(ReKi),        INTENT(IN   ):: station_eta(:) 
    REAL(ReKi),        INTENT(  OUT):: RHS(:) ! Right hand side of the equation Ax=B
    INTEGER(IntKi),    INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),      INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
@@ -3901,11 +4345,18 @@ SUBROUTINE BD_GenerateStaticElementForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
    REAL(ReKi),        ALLOCATABLE:: EStif0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),        ALLOCATABLE:: EMass0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),        ALLOCATABLE:: DistrLoad_GL(:,:) ! Nodal material properties for each element
+   REAL(ReKi),          ALLOCATABLE:: trapezoidal_pos(:)
+   REAL(ReKi),          ALLOCATABLE:: trapezoidal_w(:)
    REAL(ReKi),        ALLOCATABLE:: elf(:) ! Total element force (Fc, Fd, Fb)
    INTEGER(IntKi)                :: dof_elem ! Degree of freedom per node
    INTEGER(IntKi)                :: rot_elem ! Rotational degrees of freedom
    INTEGER(IntKi)                :: nelem ! number of elements
    INTEGER(IntKi)                :: j ! Index counter
+   INTEGER(IntKi)                  :: id0
+   INTEGER(IntKi)                  :: id1
+   INTEGER(IntKi)                  :: nqp
+   REAL(ReKi)                      :: temp1
+   REAL(ReKi)                      :: temp2
    INTEGER(IntKi)                :: temp_id ! Index counter
 !   INTEGER(IntKi)                :: allo_stat ! Allows for an error code return
    INTEGER(IntKi)                :: ErrStat2                     ! Temporary Error status
@@ -3931,12 +4382,18 @@ SUBROUTINE BD_GenerateStaticElementForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(elf,dof_elem,'elf',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(EStif0_GL,6,6,ngp,'EStif0_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(EMass0_GL,6,6,ngp,'EMass0_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(DistrLoad_GL,6,ngp,'DistrLoad_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(quadrature .EQ. 1) THEN
+       CALL AllocAry(EStif0_GL,6,6,ngp(1),'EStif0_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(EMass0_GL,6,6,ngp(1),'EMass0_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(DistrLoad_GL,6,ngp(1),'DistrLoad_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(trapezoidal_pos,ngp(1),'trapezoidal_pos',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(trapezoidal_w,ngp(1),'trapezoidal_w',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDIF
    if (ErrStat >= AbortErrLev) then
        call Cleanup()
        return
@@ -3947,33 +4404,91 @@ SUBROUTINE BD_GenerateStaticElementForce(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
    Nrrr(:)  = 0.0D0
    Nvvv(:)  = 0.0D0
    elf(:)   = 0.0D0
-   EStif0_GL(:,:,:)  = 0.0D0
-   EMass0_GL(:,:,:)  = 0.0D0
-   DistrLoad_GL(:,:) = 0.0D0
-
+   IF(quadrature .EQ. 1) THEN
+       EStif0_GL(:,:,:)   = 0.0D0
+       EMass0_GL(:,:,:)   = 0.0D0
+       DistrLoad_GL(:,:)  = 0.0D0
+       trapezoidal_pos(:) = 0.0D0
+       trapezoidal_w(:)   = 0.0D0
+   ENDIF
 
    DO nelem=1,elem_total
        Nuu0(:) = uuN0(:,nelem)
        CALL BD_ElemNodalDisp(uuN,node_elem,dof_node,nelem,Nuuu,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       temp_id = (nelem-1)*ngp
-       DO j=1,ngp
-           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
-           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
-           DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,temp_id+j+1)
-           DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
-       ENDDO
-
        CALL BD_NodalRelRot(Nuu0,node_elem,dof_node,Nrr0,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_NodalRelRot(Nuuu,node_elem,dof_node,Nrrr,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_ElemNodalDisp(vvN,node_elem,dof_node,nelem,Nvvv,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       IF(quadrature .EQ. 1) THEN
+           nqp = ngp(1)
+           temp_id = (nelem-1)*ngp(1)
+           DO j=1,ngp(1)
+               EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
+               EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+               DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,temp_id+j+1)
+               DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
+           ENDDO
+       ELSEIF(quadrature .EQ. 2) THEN
+           nqp = ngp(nelem)
+           CALL AllocAry(EStif0_GL,6,6,ngp(nelem),'EStif0_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(EMass0_GL,6,6,ngp(nelem),'EMass0_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(DistrLoad_GL,6,ngp(nelem),'DistrLoad_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(trapezoidal_pos,ngp(nelem),'trapezoidal_pos',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(trapezoidal_w,ngp(nelem),'trapezoidal_w',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           trapezoidal_pos(:) = 0.0D0
+           trapezoidal_w(:)   = 0.0D0
+           if (ErrStat >= AbortErrLev) then
+               call Cleanup()
+               return
+           end if
+           IF(nelem .EQ. 1) THEN
+               id0 = 1
+               id1 = ngp(nelem)
+           ELSE
+               id0 = id1
+               id1 = id0 + ngp(nelem) - 1
+           ENDIF
+           DO j=1,ngp(nelem)
+               EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,id0+j-1)
+               EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,id0+j-1)
+               DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,id0+j-1)
+               DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,id0+j-1)
+               trapezoidal_pos(j) = -1.0D0 + (station_eta(id0+j-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+               IF(j .EQ. 1) THEN
+                   temp1 = -1.0D0 + (station_eta(id0+j-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id0+j) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ELSEIF(j .EQ. ngp(nelem)) THEN
+                   temp1 = -1.0D0 + (station_eta(id1-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ELSE 
+                   temp1 = -1.0D0 + (station_eta(id0+j-2) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id0+j) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ENDIF
+           ENDDO
+       ENDIF
 
        CALL BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
-                                        ngp,node_elem,dof_node,elf,ErrStat2,ErrMsg2)
+                                        nqp,quadrature,trapezoidal_pos,trapezoidal_w,&
+                                        node_elem,dof_node,elf,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       IF(quadrature .EQ. 2) THEN
+           DEALLOCATE(EStif0_GL)
+           DEALLOCATE(EMass0_GL)
+           DEALLOCATE(DistrLoad_GL)
+           DEALLOCATE(trapezoidal_pos)
+           DEALLOCATE(trapezoidal_w)
+       ENDIF
 
        CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3999,13 +4514,16 @@ contains
          if (allocated(EStif0_GL   )) deallocate(EStif0_GL   )
          if (allocated(EMass0_GL   )) deallocate(EMass0_GL   )
          if (allocated(DistrLoad_GL)) deallocate(DistrLoad_GL)
+         if (allocated(trapezoidal_pos)) deallocate(trapezoidal_pos)
+         if (allocated(trapezoidal_w  )) deallocate(trapezoidal_w  )
 
       end subroutine Cleanup
 
 END SUBROUTINE BD_GenerateStaticElementForce
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
-                                       ngp,node_elem,dof_node,elf,ErrStat,ErrMsg)
+                                       ngp,quadrature,trap_pos,trap_w,          &
+                                       node_elem,dof_node,elf,ErrStat,ErrMsg)
 !-------------------------------------------------------------------------------
 ! This subroutine calculates elemental internal node force for static analysis
 !-------------------------------------------------------------------------------
@@ -4019,6 +4537,9 @@ SUBROUTINE BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0
    REAL(ReKi),    INTENT(IN   ):: gravity(:) ! bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: DistrLoad_GL(:,:) ! Nodal material properties for each element ! bjj: NOT USED
    INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi), INTENT(IN   ):: quadrature
+   REAL(ReKi),     INTENT(IN   ):: trap_pos(:)
+   REAL(ReKi),     INTENT(IN   ):: trap_w(:)
    INTEGER(IntKi),INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
    REAL(ReKi),    INTENT(  OUT):: elf(:)  ! Total element force (Fd, Fc, Fb)
@@ -4078,8 +4599,13 @@ SUBROUTINE BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0
 
    CALL BD_GenerateGLL(node_elem-1,GLL_temp,w_temp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(quadrature .EQ. 1) THEN
+       CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ELSEIF(quadrature .EQ. 2) THEN
+       gp(:) = trap_pos(:)
+       gw(:) = trap_w(:)
+   ENDIF
 
    DO igp=1,ngp
        gpr=gp(igp)
@@ -4164,6 +4690,12 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       !Qi, call something to initialize
       call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+WRITE(*,*) 'InitAcc'
+WRITE(*,*) 'u%Orientation'
+DO i=1,3
+WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
+ENDDO
+WRITE(*,*) 'END InitAcc'
       CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       OtherState%InitAcc = .true. 
@@ -4179,6 +4711,12 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                  
+WRITE(*,*) 'UpdateStates'
+WRITE(*,*) 'u%Orientation'
+DO i=1,3
+WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
+ENDDO
+WRITE(*,*) 'END UpdateStates'
    ! GA2: prediction        
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
                                 p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
@@ -4197,6 +4735,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
                                p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,       &
                                p%damp_flag,p%beta,                             &
                                p%node_elem,p%dof_node,p%elem_total,p%dof_total,&
+                               p%quadrature,p%station_eta,                     &
                                p%node_total,p%niter,p%tol,p%ngp,p%coef, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
@@ -4380,9 +4919,10 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
 END SUBROUTINE BD_BoundaryGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
-                                     Stif0,Mass0,gravity,u,damp_flag,beta,   &
-                                     node_elem,dof_node,elem_total,dof_total,&
-                                     node_total,niter,tol,ngp,coef, ErrStat, ErrMsg)
+                                  Stif0,Mass0,gravity,u,damp_flag,beta,   &
+                                  node_elem,dof_node,elem_total,dof_total,&
+                                  quadrature,station_eta,                 &
+                                  node_total,niter,tol,ngp,coef, ErrStat, ErrMsg)
 !------------------------------------------------------------------------------------
 ! This subroutine perform time-marching in one interval
 ! Given states (u,v) and accelerations (acc,xcc) at the initial of a time step (t_i),
@@ -4401,7 +4941,9 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
    INTEGER(IntKi),     INTENT(IN   ):: elem_total
    INTEGER(IntKi),     INTENT(IN   ):: dof_total
    INTEGER(IntKi),     INTENT(IN   ):: node_total
-   INTEGER(IntKi),     INTENT(IN   ):: ngp
+   INTEGER(IntKi),     INTENT(IN   ):: ngp(:)
+   INTEGER(IntKi),     INTENT(IN   ):: quadrature
+   REAL(ReKi),         INTENT(IN   ):: station_eta(:)
    INTEGER(IntKi),     INTENT(IN   ):: niter
    REAL(ReKi),         INTENT(IN   ):: tol
    REAL(ReKi),         INTENT(INOUT):: uuNf(:)
@@ -4461,6 +5003,7 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
        CALL BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
                                          Stif0,Mass0,gravity,u,damp_flag,beta,&
                                          elem_total,node_elem,dof_node,ngp,   &
+                                         quadrature,station_eta,              &
                                          StifK,RHS,MassM,DampG,&
                                          ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4537,7 +5080,8 @@ END SUBROUTINE BD_DynamicSolutionGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
                                         Stif0,Mass0,gravity,u,damp_flag,beta,&
-                                        elem_total,node_elem,dof_node,ngp,   &
+                                        elem_total,node_elem,dof_node,ngp,&
+                                        quadrature,station_eta,&
                                         StifK,RHS,MassM,DampG,&
                                         ErrStat,ErrMsg)
 
@@ -4554,7 +5098,9 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
    INTEGER(IntKi),    INTENT(IN   ):: elem_total
    INTEGER(IntKi),    INTENT(IN   ):: node_elem
    INTEGER(IntKi),    INTENT(IN   ):: dof_node
-   INTEGER(IntKi),    INTENT(IN   ):: ngp
+   INTEGER(IntKi),    INTENT(IN   ):: ngp(:)
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature
+   REAL(ReKi),        INTENT(IN   ):: station_eta(:)
    REAL(ReKi),        INTENT(  OUT):: StifK(:,:)
    REAL(ReKi),        INTENT(  OUT):: RHS(:)
    REAL(ReKi),        INTENT(  OUT):: MassM(:,:)
@@ -4575,10 +5121,17 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
    REAL(ReKi),          ALLOCATABLE:: EStif0_GL(:,:,:)
    REAL(ReKi),          ALLOCATABLE:: EMass0_GL(:,:,:)
    REAL(ReKi),          ALLOCATABLE:: DistrLoad_GL(:,:)
+   REAL(ReKi),          ALLOCATABLE:: trapezoidal_pos(:)
+   REAL(ReKi),          ALLOCATABLE:: trapezoidal_w(:)
    INTEGER(IntKi)                  :: dof_elem
    INTEGER(IntKi)                  :: rot_elem
    INTEGER(IntKi)                  :: nelem
    INTEGER(IntKi)                  :: j
+   INTEGER(IntKi)                  :: id0
+   INTEGER(IntKi)                  :: id1
+   INTEGER(IntKi)                  :: nqp
+   REAL(ReKi)                      :: temp1
+   REAL(ReKi)                      :: temp2
    INTEGER(IntKi)                  :: temp_id
    INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)            :: ErrMsg2                      ! Temporary Error message
@@ -4614,12 +5167,18 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(elg,dof_elem,dof_elem,'elg',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(EStif0_GL,6,6,ngp,'EStif0_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(EMass0_GL,6,6,ngp,'EMass0_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(DistrLoad_GL,6,ngp,'DistrLoad_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(quadrature .EQ. 1) THEN
+       CALL AllocAry(EStif0_GL,6,6,ngp(1),'EStif0_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(EMass0_GL,6,6,ngp(1),'EMass0_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(DistrLoad_GL,6,ngp(1),'DistrLoad_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(trapezoidal_pos,ngp(1),'trapezoidal_pos',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(trapezoidal_w,ngp(1),'trapezoidal_w',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDIF
    if (ErrStat >= AbortErrLev) then
        call Cleanup()
        return
@@ -4634,21 +5193,73 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
    elk(:,:) = 0.0D0
    elm(:,:) = 0.0D0
    elg(:,:) = 0.0D0
-   EStif0_GL(:,:,:)  = 0.0D0
-   EMass0_GL(:,:,:)  = 0.0D0
-   DistrLoad_GL(:,:) = 0.0D0
+   IF(quadrature .EQ. 1) THEN
+       EStif0_GL(:,:,:)   = 0.0D0
+       EMass0_GL(:,:,:)   = 0.0D0
+       DistrLoad_GL(:,:)  = 0.0D0
+       trapezoidal_pos(:) = 0.0D0
+       trapezoidal_w(:)   = 0.0D0
+   ENDIF
 
    DO nelem=1,elem_total
        Nuu0(:) = uuN0(:,nelem)
        CALL BD_ElemNodalDisp(uuNf,node_elem,dof_node,nelem,Nuuu,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       temp_id = (nelem-1)*ngp
-       DO j=1,ngp
-           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
-           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
-           DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,temp_id+j+1)
-           DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
-       ENDDO
+       IF(quadrature .EQ. 1) THEN
+           nqp = ngp(1)
+           temp_id = (nelem-1)*ngp(1)
+           DO j=1,ngp(1)
+               EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
+               EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+               DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,temp_id+j+1)
+               DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
+           ENDDO
+       ELSEIF(quadrature .EQ. 2) THEN
+           nqp = ngp(nelem)
+           CALL AllocAry(EStif0_GL,6,6,ngp(nelem),'EStif0_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(EMass0_GL,6,6,ngp(nelem),'EMass0_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(DistrLoad_GL,6,ngp(nelem),'DistrLoad_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(trapezoidal_pos,ngp(nelem),'trapezoidal_pos',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(trapezoidal_w,ngp(nelem),'trapezoidal_w',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           trapezoidal_pos(:) = 0.0D0
+           trapezoidal_w(:)   = 0.0D0
+           if (ErrStat >= AbortErrLev) then
+               call Cleanup()
+               return
+           end if
+           IF(nelem .EQ. 1) THEN
+               id0 = 1
+               id1 = ngp(nelem)
+           ELSE
+               id0 = id1
+               id1 = id0 + ngp(nelem) - 1
+           ENDIF
+           DO j=1,ngp(nelem)
+               EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,id0+j-1)
+               EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,id0+j-1)
+               DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,id0+j-1)
+               DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,id0+j-1)
+               trapezoidal_pos(j) = -1.0D0 + (station_eta(id0+j-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+               IF(j .EQ. 1) THEN
+                   temp1 = -1.0D0 + (station_eta(id0+j-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id0+j) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ELSEIF(j .EQ. ngp(nelem)) THEN
+                   temp1 = -1.0D0 + (station_eta(id1-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ELSE 
+                   temp1 = -1.0D0 + (station_eta(id0+j-2) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id0+j) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ENDIF
+           ENDDO
+       ENDIF
        CALL BD_NodalRelRot(Nuu0,node_elem,dof_node,Nrr0,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_NodalRelRot(Nuuu,node_elem,dof_node,Nrrr,ErrStat2,ErrMsg2)
@@ -4658,13 +5269,20 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
        CALL BD_ElemNodalDisp(aaNf,node_elem,dof_node,nelem,Naaa,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-       CALL BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,         &
-                              EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
-                              damp_flag,beta,                          &
-                              ngp,node_elem,dof_node,elk,elf,elm,elg,  &
+       CALL BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,             &
+                              EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,    &
+                              damp_flag,beta,                              &
+                              nqp,quadrature,trapezoidal_pos,trapezoidal_w,&
+                              node_elem,dof_node,elk,elf,elm,elg,          &
                               ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
+       IF(quadrature .EQ. 2) THEN
+           DEALLOCATE(EStif0_GL)
+           DEALLOCATE(EMass0_GL)
+           DEALLOCATE(DistrLoad_GL)
+           DEALLOCATE(trapezoidal_pos)
+           DEALLOCATE(trapezoidal_w)
+       ENDIF
        CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elk,StifK,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elm,MassM,ErrStat2,ErrMsg2)
@@ -4684,19 +5302,21 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
 contains
       subroutine Cleanup()
 
-         if (allocated(Nuu0        )) deallocate(Nuu0        )
-         if (allocated(Nuuu        )) deallocate(Nuuu        )
-         if (allocated(Nrr0        )) deallocate(Nrr0        )
-         if (allocated(Nrrr        )) deallocate(Nrrr        )
-         if (allocated(Nvvv        )) deallocate(Nvvv        )
-         if (allocated(Naaa        )) deallocate(Naaa        )
-         if (allocated(elf         )) deallocate(elf         )
-         if (allocated(elk         )) deallocate(elk         )
-         if (allocated(elm         )) deallocate(elm         )
-         if (allocated(elg         )) deallocate(elg         )
-         if (allocated(EStif0_GL   )) deallocate(EStif0_GL   )
-         if (allocated(EMass0_GL   )) deallocate(EMass0_GL   )
-         if (allocated(DistrLoad_GL)) deallocate(DistrLoad_GL)
+         if (allocated(Nuu0           )) deallocate(Nuu0           )
+         if (allocated(Nuuu           )) deallocate(Nuuu           )
+         if (allocated(Nrr0           )) deallocate(Nrr0           )
+         if (allocated(Nrrr           )) deallocate(Nrrr           )
+         if (allocated(Nvvv           )) deallocate(Nvvv           )
+         if (allocated(Naaa           )) deallocate(Naaa           )
+         if (allocated(elf            )) deallocate(elf            )
+         if (allocated(elk            )) deallocate(elk            )
+         if (allocated(elm            )) deallocate(elm            )
+         if (allocated(elg            )) deallocate(elg            )
+         if (allocated(EStif0_GL      )) deallocate(EStif0_GL      )
+         if (allocated(EMass0_GL      )) deallocate(EMass0_GL      )
+         if (allocated(DistrLoad_GL   )) deallocate(DistrLoad_GL   )
+         if (allocated(trapezoidal_pos)) deallocate(trapezoidal_pos)
+         if (allocated(trapezoidal_w  )) deallocate(trapezoidal_w  )
 
       end subroutine Cleanup
 
@@ -4775,18 +5395,33 @@ SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
        u%PointLoad%Moment(3,i) = temp_v(2)
        u%PointLoad%Moment(1:3,i) = MATMUL(TRANSPOSE(RotTen),u%PointLoad%Moment(:,i))
    ENDDO
-   DO i=1,p%ngp * p%elem_total + 2
-       temp_v(:) = u%DistrLoad%Force(1:3,i)
-       u%DistrLoad%Force(1,i) = temp_v(3)
-       u%DistrLoad%Force(2,i) = temp_v(1)
-       u%DistrLoad%Force(3,i) = temp_v(2)
-       u%DistrLoad%Force(1:3,i)  = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Force(:,i))
-       temp_v(:) = u%DistrLoad%Moment(1:3,i)
-       u%DistrLoad%Moment(1,i) = temp_v(3)
-       u%DistrLoad%Moment(2,i) = temp_v(1)
-       u%DistrLoad%Moment(3,i) = temp_v(2)
-       u%DistrLoad%Moment(1:3,i) = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Moment(:,i))
-   ENDDO
+   IF(p%quadrature .EQ. 1) THEN
+       DO i=1,p%ngp(1) * p%elem_total + 2
+           temp_v(:) = u%DistrLoad%Force(1:3,i)
+           u%DistrLoad%Force(1,i) = temp_v(3)
+           u%DistrLoad%Force(2,i) = temp_v(1)
+           u%DistrLoad%Force(3,i) = temp_v(2)
+           u%DistrLoad%Force(1:3,i)  = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Force(:,i))
+           temp_v(:) = u%DistrLoad%Moment(1:3,i)
+           u%DistrLoad%Moment(1,i) = temp_v(3)
+           u%DistrLoad%Moment(2,i) = temp_v(1)
+           u%DistrLoad%Moment(3,i) = temp_v(2)
+           u%DistrLoad%Moment(1:3,i) = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Moment(:,i))
+       ENDDO
+   ELSEIF(p%quadrature .EQ. 2) THEN
+       DO i=1,p%kp_total
+           temp_v(:) = u%DistrLoad%Force(1:3,i)
+           u%DistrLoad%Force(1,i) = temp_v(3)
+           u%DistrLoad%Force(2,i) = temp_v(1)
+           u%DistrLoad%Force(3,i) = temp_v(2)
+           u%DistrLoad%Force(1:3,i)  = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Force(:,i))
+           temp_v(:) = u%DistrLoad%Moment(1:3,i)
+           u%DistrLoad%Moment(1,i) = temp_v(3)
+           u%DistrLoad%Moment(2,i) = temp_v(1)
+           u%DistrLoad%Moment(3,i) = temp_v(2)
+           u%DistrLoad%Moment(1:3,i) = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Moment(:,i))
+       ENDDO
+   ENDIF
 
 END SUBROUTINE BD_InputGlobalLocal
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -4904,6 +5539,7 @@ SUBROUTINE BD_CalcForceAcc( u, p, x, OtherState, ErrStat, ErrMsg)
    CALL BD_SolutionForceAcc(p%uuN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
                             p%damp_flag,p%beta,&
                             p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
+                            p%quadrature,p%station_eta, &
                             OtherState%Acc,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -4914,6 +5550,7 @@ END SUBROUTINE BD_CalcForceAcc
 SUBROUTINE BD_SolutionForceAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,                    &
                                damp_flag,beta,                                        &
                                node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
+                               quadrature,station_eta,                                &
                                Acc,ErrStat,ErrMsg)
 !***************************************************************************************
 ! This subroutine calls other subroutines to apply the force, build the beam element
@@ -4934,7 +5571,9 @@ SUBROUTINE BD_SolutionForceAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,              
    INTEGER(IntKi),               INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),               INTENT(IN   ):: dof_total ! Total number of degrees of freedom
    INTEGER(IntKi),               INTENT(IN   ):: node_total ! Total number of nodes
-   INTEGER(IntKi),               INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),               INTENT(IN   ):: ngp(:) ! Number of Gauss points
+   INTEGER(IntKi),               INTENT(IN   ):: quadrature
+   REAL(ReKi),                   INTENT(IN   ):: station_eta(:)
    REAL(ReKi),                   INTENT(  OUT):: Acc(:)
    INTEGER(IntKi),               INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
@@ -4970,6 +5609,7 @@ SUBROUTINE BD_SolutionForceAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,              
    CALL BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                      damp_flag,beta,&
                                      elem_total,node_elem,dof_total,dof_node,ngp,&
+                                     quadrature,station_eta,&
                                      RHS,MassM,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    DO j=1,node_total
@@ -5081,6 +5721,7 @@ END SUBROUTINE BD_InitAcc
 SUBROUTINE BD_ComputeBladeMass(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,                    &
                                damp_flag,beta,                                        &
                                node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
+                               quadrature,station_eta,                                &
                                BladeMass,ErrStat,ErrMsg)
 !***************************************************************************************
 ! This subroutine calls other subroutines to apply the force, build the beam element
@@ -5101,7 +5742,9 @@ SUBROUTINE BD_ComputeBladeMass(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,              
    INTEGER(IntKi),               INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),               INTENT(IN   ):: dof_total ! Total number of degrees of freedom
    INTEGER(IntKi),               INTENT(IN   ):: node_total ! Total number of nodes
-   INTEGER(IntKi),               INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),               INTENT(IN   ):: ngp(:) ! Number of Gauss points
+   INTEGER(IntKi),               INTENT(IN   ):: quadrature
+   REAL(ReKi),                   INTENT(IN   ):: station_eta(:)
    REAL(ReKi),                   INTENT(  OUT):: BladeMass
    INTEGER(IntKi),               INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
@@ -5133,6 +5776,7 @@ SUBROUTINE BD_ComputeBladeMass(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,              
    CALL BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                      damp_flag,beta,&
                                      elem_total,node_elem,dof_total,dof_node,ngp,&
+                                     quadrature,station_eta,&
                                      RHS,MassM,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
@@ -5162,8 +5806,9 @@ END SUBROUTINE BD_ComputeBladeMass
 !-----------------------------------------------------------------------------------------------------------------------------------
 
 SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
-                                  elem_total,node_elem,dof_total,dof_node,ngp,&
-                                  blade_mass,blade_CG,ErrStat,ErrMsg)
+                                  elem_total,node_elem,dof_total,dof_node,&
+                                  ngp,quadrature,station_eta,&
+                                  blade_mass,blade_CG,blade_IN,ErrStat,ErrMsg)
 !----------------------------------------------------------------------------------------
 ! This subroutine computes Global mass matrix and force vector for the beam.
 !----------------------------------------------------------------------------------------
@@ -5174,9 +5819,12 @@ SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Degrees of freedom per node  ! bjj: NOT USED
    INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
-   INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),    INTENT(IN   ):: ngp(:) ! Number of Gauss points
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature
+   REAL(ReKi),        INTENT(IN   ):: station_eta(:)
    REAL(ReKi),        INTENT(  OUT):: blade_mass ! Mass matrix
    REAL(ReKi),        INTENT(  OUT):: blade_CG(:) ! Mass matrix
+   REAL(ReKi),        INTENT(  OUT):: blade_IN(:,:) ! Mass matrix
    INTEGER(IntKi),    INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),      INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
@@ -5184,10 +5832,18 @@ SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
    REAL(ReKi),          ALLOCATABLE:: NGPpos(:,:)
    REAL(ReKi)                      :: elem_mass
    REAL(ReKi)                      :: elem_CG(3)
+   REAL(ReKi)                      :: elem_IN(3,3)
    REAL(ReKi),          ALLOCATABLE:: EMass0_GL(:,:,:)
+   REAL(ReKi),          ALLOCATABLE:: trapezoidal_pos(:)
+   REAL(ReKi),          ALLOCATABLE:: trapezoidal_w(:)
    INTEGER(IntKi)                  :: dof_elem ! Degree of freedom per node
    INTEGER(IntKi)                  :: nelem ! number of elements
    INTEGER(IntKi)                  :: j ! Index counter
+   INTEGER(IntKi)                  :: id0
+   INTEGER(IntKi)                  :: id1
+   INTEGER(IntKi)                  :: nqp
+   REAL(ReKi)                      :: temp1
+   REAL(ReKi)                      :: temp2
    INTEGER(IntKi)                  :: temp_id ! Index counter
    INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)            :: ErrMsg2                      ! Temporary Error message
@@ -5201,34 +5857,100 @@ SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
 
    CALL AllocAry(Nuu0,dof_elem,'Nuu0',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(NGPpos,3,ngp,'NGPpos',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(EMass0_GL,6,6,ngp,'EMass0_GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(quadrature .EQ. 1) THEN
+       CALL AllocAry(NGPpos,3,ngp(1),'NGPpos',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(EMass0_GL,6,6,ngp(1),'EMass0_GL',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(trapezoidal_pos,ngp(1),'trapezoidal_pos',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(trapezoidal_w,ngp(1),'trapezoidal_w',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDIF
    if (ErrStat >= AbortErrLev) then
        call Cleanup()
        return
    end if
    Nuu0(:)  = 0.0D0
-   NGPpos(:,:)  = 0.0D0
    elem_mass= 0.0D0
    elem_CG(:)= 0.0D0
-   EMass0_GL(:,:,:)  = 0.0D0
+   elem_IN(:,:)= 0.0D0
+   IF(quadrature .EQ. 1) THEN
+       NGPpos(:,:)  = 0.0D0
+       EMass0_GL(:,:,:)  = 0.0D0
+       trapezoidal_pos(:) = 0.0D0
+       trapezoidal_w(:)   = 0.0D0
+   ENDIF
 
    DO nelem=1,elem_total
        Nuu0(:) = uuN0(:,nelem)
-       temp_id = (nelem-1)*ngp
-       DO j=1,ngp
-           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
-           NGPpos(1:3,j) = GaussPos(1:3,temp_id+j+1)
-       ENDDO
+       IF(quadrature .EQ. 1) THEN
+           nqp = ngp(1)
+           temp_id = (nelem-1)*ngp(1)
+           DO j=1,ngp(1)
+               EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+               NGPpos(1:3,j) = GaussPos(1:3,temp_id+j+1)
+           ENDDO
+       ELSEIF(quadrature .EQ. 2) THEN
+           nqp = ngp(nelem)
+           CALL AllocAry(EMass0_GL,6,6,ngp(nelem),'EMass0_GL',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(NGPpos,3,ngp(nelem),'NGPpos',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(trapezoidal_pos,ngp(nelem),'trapezoidal_pos',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL AllocAry(trapezoidal_w,ngp(nelem),'trapezoidal_w',ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           EMass0_GL(:,:,:) = 0.0D0
+           NGPpos(:,:) = 0.0D0
+           trapezoidal_pos(:) = 0.0D0
+           trapezoidal_w(:)   = 0.0D0
+           if (ErrStat >= AbortErrLev) then
+               call Cleanup()
+               return
+           end if
+           IF(nelem .EQ. 1) THEN
+               id0 = 1
+               id1 = ngp(nelem)
+           ELSE
+               id0 = id1
+               id1 = id0 + ngp(nelem) - 1
+           ENDIF
+           DO j=1,ngp(nelem)
+               NGPpos(1:3,j) = GaussPos(1:3,id0+j-1)
+               EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,id0+j-1)
+               trapezoidal_pos(j) = -1.0D0 + (station_eta(id0+j-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+               IF(j .EQ. 1) THEN
+                   temp1 = -1.0D0 + (station_eta(id0+j-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id0+j) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ELSEIF(j .EQ. ngp(nelem)) THEN
+                   temp1 = -1.0D0 + (station_eta(id1-1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id1) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ELSE 
+                   temp1 = -1.0D0 + (station_eta(id0+j-2) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   temp2 = -1.0D0 + (station_eta(id0+j) - station_eta(id0))*2.0D0/(station_eta(id1) - station_eta(id0))
+                   trapezoidal_w(j) = 0.5D0 * (temp2 - temp1)
+               ENDIF
+           ENDDO
+       ENDIF
+
        CALL BD_ComputeElementMass(Nuu0,NGPpos,EMass0_GL,&
-                                  ngp,node_elem,dof_node,&
-                                  elem_mass,elem_CG,ErrStat2,ErrMsg2)
+                                  nqp,quadrature,trapezoidal_pos,trapezoidal_w,&
+                                  node_elem,dof_node,&
+                                  elem_mass,elem_CG,elem_IN,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       IF(quadrature .EQ. 2) THEN
+           DEALLOCATE(EMass0_GL)
+           DEALLOCATE(NGPpos)
+           DEALLOCATE(trapezoidal_pos)
+           DEALLOCATE(trapezoidal_w)
+       ENDIF
 
        blade_mass = blade_mass + elem_mass
        blade_CG(:) = blade_CG(:) + elem_CG(:)
+       blade_IN(:,:) = blade_IN(:,:) + elem_IN(:,:)
 
        if (ErrStat >= AbortErrLev) then
            call Cleanup()
@@ -5248,14 +5970,17 @@ contains
          if (allocated(Nuu0        )) deallocate(Nuu0        )
          if (allocated(NGPpos      )) deallocate(NGPpos      )
          if (allocated(EMass0_GL   )) deallocate(EMass0_GL   )
+         if (allocated(trapezoidal_pos)) deallocate(trapezoidal_pos)
+         if (allocated(trapezoidal_w  )) deallocate(trapezoidal_w  )
 
       end subroutine Cleanup
 
 END SUBROUTINE BD_ComputeBladeMassNew
 
 SUBROUTINE BD_ComputeElementMass(Nuu0,NGPpos,EMass0_GL,&
-                                 ngp,node_elem,dof_node,&
-                                 elem_mass,elem_CG,ErrStat,ErrMsg)
+                                 ngp,quadrature,trap_pos,trap_w,&
+                                 node_elem,dof_node,&
+                                 elem_mass,elem_CG,elem_IN,ErrStat,ErrMsg)
 
 !-------------------------------------------------------------------------------
 ! This subroutine total element forces and mass matrices
@@ -5266,7 +5991,11 @@ SUBROUTINE BD_ComputeElementMass(Nuu0,NGPpos,EMass0_GL,&
    REAL(ReKi),INTENT(IN   )    :: EMass0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),INTENT(  OUT)    :: elem_mass  ! Total element force (Fd, Fc, Fb)
    REAL(ReKi),INTENT(  OUT)    :: elem_CG(:)
+   REAL(ReKi),INTENT(  OUT)    :: elem_IN(:,:)
    INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi), INTENT(IN   ):: quadrature
+   REAL(ReKi),     INTENT(IN   ):: trap_pos(:)
+   REAL(ReKi),     INTENT(IN   ):: trap_w(:)
    INTEGER(IntKi),INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
    INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
@@ -5281,6 +6010,8 @@ SUBROUTINE BD_ComputeElementMass(Nuu0,NGPpos,EMass0_GL,&
    REAL(ReKi)                  :: Jacobian
    REAL(ReKi)                  :: gpr
    REAL(ReKi)                  :: mmm
+   REAL(ReKi)                   :: uu0(6)
+   REAL(ReKi)                   :: E10(3)
    INTEGER(IntKi)              :: igp
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: temp_id
@@ -5292,6 +6023,7 @@ SUBROUTINE BD_ComputeElementMass(Nuu0,NGPpos,EMass0_GL,&
    ErrMsg   = ""
    elem_mass  = 0.0D0
    elem_CG(:) = 0.0D0
+   elem_IN(:,:) = 0.0D0
 
    CALL AllocAry(gp,ngp,'Gauss piont array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -5313,19 +6045,27 @@ SUBROUTINE BD_ComputeElementMass(Nuu0,NGPpos,EMass0_GL,&
 
    CALL BD_GenerateGLL(node_elem-1,GLL_temp,w_temp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   IF(quadrature .EQ. 1) THEN
+       CALL BD_GaussPointWeight(ngp,gp,gw,ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ELSEIF(quadrature .EQ. 2) THEN
+       gp(:) = trap_pos(:)
+       gw(:) = trap_w(:)
+   ENDIF
 
    DO igp=1,ngp
        gpr=gp(igp)
 
        CALL BD_ComputeJacobian(gpr,Nuu0,node_elem,dof_node,gp,GLL_temp,ngp,igp,hhx,hpx,Jacobian,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
        mmm  = 0.0D0
        mmm  = EMass0_GL(1,1,igp)
-       
+
        elem_mass = elem_mass + gw(igp) * Jacobian * mmm
        elem_CG(1:3) = elem_CG(1:3) + gw(igp) * Jacobian * mmm * NGPpos(1:3,igp)
+       elem_IN(1:3,1:3) = elem_IN(1:3,1:3) + gw(igp) * Jacobian * mmm * &
+                          MATMUL(BD_Tilde(NGPpos(1:3,igp)),TRANSPOSE(BD_Tilde(NGPpos(1:3,igp))))
 
        if (ErrStat >= AbortErrLev) then
           call Cleanup()

@@ -20,6 +20,9 @@ typedef BeamDyn/BD InitInputType ReKi            GlbRot    {3}{3} - - "Initial d
 typedef BeamDyn/BD InitInputType ReKi            RootDisp  {3} - - "Initial root displacement"
 typedef BeamDyn/BD InitInputType ReKi            RootOri   {3}{3} - - "Initial root orientation"
 typedef BeamDyn/BD InitInputType ReKi            RootVel   {6} - - "Initial root velocities and angular veolcities"
+typedef BeamDyn/BD InitInputType ReKi            DistrLoad {6} - - "Constant distributed load along beam axis, 3 forces and 3 moments" 
+typedef BeamDyn/BD InitInputType ReKi            TipLoad   {6} - - "Constant point load applied at tip, 3 forces and 3 moments" 
+
 
 # Define outputs that the initialization routine may need here:
 # e.g., the name of the input file, the file root name, etc.
@@ -54,23 +57,28 @@ typedef BeamDyn/BD OtherStateType Logical  InitAcc  -  - - "flag to determine if
 
 typedef BeamDyn/BD ParameterType ReKi   uuN0      {:}{:} - -  "Initial Postion Vector" -
 typedef BeamDyn/BD ParameterType ReKi   Gauss     {:}{:} - -  "Gauss point postion vector" -
-typedef      ^            ^       ^     Stif0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
-typedef      ^            ^       ^     Mass0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at each node" -
+typedef      ^            ^       ^     Stif0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at Gauss point" -
+typedef      ^            ^       ^     Mass0_GL     {:}{:}{:}  - -  "Sectional Mass Properties at Gauss point" -
 typedef BeamDyn/BD ParameterType ReKi   gravity   {3} - -  "Gravitational acceleration" m/s^2
 typedef      ^            ^       ^     segment_length   {:}{:} - -  "Array stored length of each segment" -
 typedef      ^            ^       ^     member_length   {:}{:} - -  "Array stored length of each member" -
 typedef      ^            ^       ^     blade_length     - - -  "Blade Length" -
 typedef      ^            ^       ^     blade_mass     - - -  "Blade Length" -
 typedef      ^            ^       ^     blade_CG    {3} - -  "Blade Length" -
+typedef      ^            ^       ^     blade_IN    {3}{3} - -  "Blade Length" -
+typedef      ^            ^       ^     station_eta   {:} - -  "Array stored length of each segment" -
+typedef      ^            ^       ^     kp_coordinate  {:}{:} - -  "Total number of dofs" -
 typedef      ^            ^     IntKi   node_elem - - -  "Node per element" -
+typedef      ^            ^       ^     kp_total  - - -  "Total number of dofs" -
 typedef      ^            ^       ^     dof_node  - - -  "dof per node" -
 typedef      ^            ^       ^     elem_total  - - -  "Total number of elements" -
 typedef      ^            ^       ^     node_total  - - -  "Total number of nodes" -
 typedef      ^            ^       ^     dof_total  - - -  "Total number of dofs" -
-typedef      ^            ^       ^     ngp  - - -  "Number of Gauss points" -
+typedef      ^            ^       ^     ngp  {:} - -  "Number of Gauss points" -
 typedef      ^            ^       ^     analysis_type  - - -  "analysis_type flag" -
 typedef      ^            ^       ^     damp_flag  - - -  "damping flag" -
 typedef      ^            ^       ^     niter  - - -  "Maximum number of iterations in Newton-Ralphson algorithm"  -
+typedef      ^            ^       ^     quadrature  - - -  "Quadrature method: 1 Gauss 2 Trapezoidal" -
 #typedef      ^            ^       ^     NRMax  - - -  "Maximum number of iterations in Newton-Ralphson algorithm" -
 typedef      ^            ^      DbKi   dt     - - -  "module dt" s
 typedef      ^            ^      ReKi   beta   {6} - -  "Damping Coefficient" -
@@ -120,8 +128,9 @@ typedef BeamDyn/BD    BD_InputFile    IntKi    member_total     - - - "Total num
 typedef BeamDyn/BD    BD_InputFile    IntKi    kp_total         - - - "Total number of key point" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    kp_member       {:} - - "Total number of key point" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    order_elem       - - - "Order of interpolation (basis) function" -
-typedef BeamDyn/BD    BD_InputFile    IntKi    NRMax       - - - "Total number of key point" -
-typedef BeamDyn/BD    BD_InputFile    ReKi     stop_tol   - - - "Key point coordinates array" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    NRMax            - - - "Total number of key point" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    quadrature       - - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
+typedef BeamDyn/BD    BD_InputFile    ReKi     stop_tol         - - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate   {:}{:} - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    DbKi     rhoinf          - - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    DbKi     DTBeam          - - - "Time interval for BeamDyn  calculations {or default} (s)" -
