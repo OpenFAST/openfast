@@ -1835,7 +1835,7 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD
                
 END SUBROUTINE ED_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, MeshMapData, ErrStat, ErrMsg, y_SrvD_prev )
+SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, MeshMapData, ErrStat, ErrMsg, y_SrvD_prev )
 ! This routine sets the inputs required for ServoDyn
 !..................................................................................................................................
 
@@ -1845,13 +1845,14 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, MeshMap
    TYPE(ED_OutputType),              INTENT(IN)     :: y_ED         ! ElastoDyn outputs
    TYPE(InflowWind_OutputType),      INTENT(IN)     :: y_IfW        ! InflowWind outputs
    TYPE(OpFM_OutputType),            INTENT(IN)     :: y_OpFM       ! InflowWind outputs
+   TYPE(BD_OutputType),              INTENT(IN)     :: y_BD(:)      ! BD Outputs
    TYPE(SrvD_OutputType), OPTIONAL,  INTENT(IN)     :: y_SrvD_prev  ! ServoDyn outputs from t - dt
    TYPE(FAST_ModuleMapType),         INTENT(INOUT)  :: MeshMapData  ! Data for mapping between modules
    INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat      ! Error status
    CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg       ! Error message
 !  TYPE(AD_OutputType),              INTENT(IN)     :: y_AD         ! AeroDyn outputs
 
-
+   INTEGER(IntKi)                                   :: k            ! blade loop counter
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1906,9 +1907,13 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, MeshMap
    u_SrvD%RotSpeed  = y_ED%RotSpeed
    
    IF ( p_FAST%CompElast == Module_BD )  THEN    
-   !bjj: FIX ME! TODO: need to get this from BeamDyn!!!!
-      u_SrvD%RootMxc(:) = 0.0_ReKi
-      u_SrvD%RootMyc(:) = 0.0_ReKi
+
+         ! translate "b" system output from BD into "c" system for SrvD
+      do k=1,p_FAST%nBeams
+         u_SrvD%RootMxc(k) =  y_BD(k)%RootMxr*COS(y_ED%BlPitch(k)) + y_BD(k)%RootMyr*SIN(y_ED%BlPitch(k))
+         u_SrvD%RootMyc(k) = -y_BD(k)%RootMxr*SIN(y_ED%BlPitch(k)) + y_BD(k)%RootMyr*COS(y_ED%BlPitch(k))      
+      end do
+      
    ELSE
       u_SrvD%RootMxc = y_ED%RootMxc
       u_SrvD%RootMyc = y_ED%RootMyc
@@ -6112,7 +6117,7 @@ end if
    
    
    IF ( p_FAST%CompServo == Module_SrvD  ) THEN         
-      CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, OpFM%y, MeshmapData, ErrStat2, ErrMsg2 )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
+      CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, OpFM%y, BD%y, MeshmapData, ErrStat2, ErrMsg2 )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
    END IF         
                      
@@ -6422,9 +6427,9 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
          
          ! note that the inputs at step(n) for ServoDyn include the outputs from step(n-1)
       IF ( firstCall ) THEN
-         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, OpFM%y, MeshMapData, ErrStat2, ErrMsg2 )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
+         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, OpFM%y, BD%y, MeshMapData, ErrStat2, ErrMsg2 )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
       ELSE
-         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, OpFM%y, MeshMapData, ErrStat2, ErrMsg2, SrvD%y_prev   ) 
+         CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, OpFM%y, BD%y, MeshMapData, ErrStat2, ErrMsg2, SrvD%y_prev   ) 
       END IF
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
