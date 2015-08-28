@@ -109,6 +109,8 @@ typedef BeamDyn/BD   OutputType  MeshType  ReactionForce - - - "contains force a
 typedef BeamDyn/BD   OutputType  MeshType  BldForce - - - "contains force and moments" -
 typedef BeamDyn/BD   OutputType  MeshType  BldMotion - - - "Motion (disp,rot,vel) along beam axis" -
 # Define outputs that are not on this mesh here:
+typedef  ^           OutputType  ReKi      RootMxr - - - "x-component of the root reaction moment expressed in r (used for ServoDyn Bladed DLL Interface)" "Nm"
+typedef  ^           OutputType  ReKi      RootMyr - - - "y-component of the root reaction moment expressed in r (used for ServoDyn Bladed DLL Interface)" "Nm"
 typedef  ^           OutputType  ReKi      WriteOutput  {:}  -  -  "Data to be written to an output file: see WriteOutputHdr for names of each variable"	"see WriteOutputUnt"
 
 

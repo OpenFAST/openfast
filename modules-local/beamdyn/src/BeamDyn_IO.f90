@@ -1331,7 +1331,7 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
    
    
-   INTEGER(IntKi)                            :: j,beta
+   INTEGER(IntKi)                            :: j,beta,j_BldMotion
    INTEGER(IntKi)                            :: elem_no
    INTEGER(IntKi)                            :: node_no
    INTEGER(IntKi)                            :: temp_id
@@ -1358,21 +1358,23 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    temp_glb(1) = temp_vec(2)
    temp_glb(2) = temp_vec(3)
    temp_glb(3) = temp_vec(1)
-   !bjj: I don't these are the correct outputs, but you get the idea
-   temp_vec(:) = 0.0D0
    temp_vec(:) = y%ReactionForce%Force(:,1)
    temp_vec(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_vec)
    AllOuts( RootFxr ) = temp_vec(1)
    AllOuts( RootFyr ) = temp_vec(2)
    AllOuts( RootFzr ) = temp_vec(3) 
 
-   temp_vec(:) = 0.0D0
    temp_vec(:) = y%ReactionForce%Moment(:,1)
    temp_vec(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_vec)
    AllOuts( RootMxr ) = temp_vec(1)
    AllOuts( RootMyr ) = temp_vec(2)
    AllOuts( RootMzr ) = temp_vec(3) 
 
+   
+      ! we don't need to calculate the rest of these values if we don't ask for WriteOutput channels
+   ! (but we did need RootMxr and RootMyr)
+   if ( p%NumOuts <= 0 ) RETURN
+   
       ! tip motions:   
    temp_glbp(1) = p%GlbPos(2)
    temp_glbp(2) = p%GlbPos(3)
@@ -1438,6 +1440,9 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    do beta=1,p%NNodeOuts
          
       j=p%OutNd(beta)
+      j_BldMotion = p%NdIndx(j)      
+      
+      !bjj: if we have a zero-length element, we probably need to use j_BldMotion in the following "if" statement
       IF(j .LE. p%node_elem) THEN
           elem_no = 1
           node_no = j
