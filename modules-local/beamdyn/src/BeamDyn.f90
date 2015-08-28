@@ -67,7 +67,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    ! local variables
    TYPE(BD_InputFile)      :: InputFileData    ! Data stored in the module's input file
-   TYPE(BD_InputType)      :: u_tmp           ! An initial guess for the input; input mesh must be defined
+   TYPE(BD_InputType)      :: u_tmp            ! An initial guess for the input; input mesh must be defined
    INTEGER(IntKi)          :: i                ! do-loop counter
    INTEGER(IntKi)          :: j                ! do-loop counter
    INTEGER(IntKi)          :: k                ! do-loop counter
@@ -75,6 +75,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    INTEGER(IntKi)          :: n                ! do-loop counter
    INTEGER(IntKi)          :: id0
    INTEGER(IntKi)          :: id1
+   INTEGER(IntKi)          :: indx             ! do-loop counter
    INTEGER(IntKi)          :: temp_int
    INTEGER(IntKi)          :: temp_id
    INTEGER(IntKi)          :: temp_id2
@@ -691,15 +692,19 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ENDDO
    
    temp_int = p%node_elem*p%elem_total
+   p%NdIndx(1) = 1
+   indx = 2
    DO i=1,temp_int-1
       
       if (.not. equalRealNos( TwoNorm( y%BldMotion%Position(:,i)-y%BldMotion%Position(:,i+1) ), 0.0_ReKi ) ) then
+         p%NdIndx(indx) = i + 1
+         indx = indx + 1;
          ! do not connect nodes that are collocated
           CALL MeshConstructElement( Mesh     = y%BldMotion      &
                                     ,Xelement = ELEMENT_LINE2    &
                                     ,P1       = i                &
                                     ,P2       = i+1              &
-                                    ,ErrStat  = ErrStat2          &
+                                    ,ErrStat  = ErrStat2         &
                                     ,ErrMess  = ErrMsg2           )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       end if
@@ -1212,20 +1217,22 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    ENDDO
 
    !-------------------------------------------------------   
-   !     get values to output to file:  
+   !  compute RootMxr and RootMyr for ServoDyn and
+   !  get values to output to file:  
    !-------------------------------------------------------   
-   if (p%NumOuts > 0) then
-      call Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )   
+   call Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )   
+    
+   y%RootMxr = AllOuts( RootMxr )
+   y%RootMyr = AllOuts( RootMyr )
    
-      !...............................................................................................................................   
-      ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
-      !...............................................................................................................................   
+   !...............................................................................................................................   
+   ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
+   !...............................................................................................................................   
 
-      do i = 1,p%NumOuts  ! Loop through all selected output channels
-         y%WriteOutput(i) = p%OutParam(i)%SignM * AllOuts( p%OutParam(i)%Indx )
-      end do             ! i - All selected output channels
+   do i = 1,p%NumOuts  ! Loop through all selected output channels
+      y%WriteOutput(i) = p%OutParam(i)%SignM * AllOuts( p%OutParam(i)%Indx )
+   end do             ! i - All selected output channels
       
-   end if   
    
    call cleanup()
    return
@@ -4681,10 +4688,13 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    CALL BD_CopyContState(x, x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
       
-
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
    ! initialize accelerations here:
 !   if ( .not. OtherState%InitAcc) then
-   if ( n .EQ. 0) then
+   if ( n .EQ. 0 .or. .not. OtherState%InitAcc) then
       !Qi, call something to initialize
       call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
