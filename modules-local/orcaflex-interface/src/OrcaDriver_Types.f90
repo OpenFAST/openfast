@@ -55,6 +55,7 @@ MODULE OrcaDriver_Types
 
       LOGICAL                 :: PtfmCoord            = .FALSE.      !< (x,y,z,R1,R2,R3) coordinate specified
       LOGICAL                 :: PtfmVeloc            = .FALSE.      !< (x,y,z,R1,R2,R3) coordinate specified
+      LOGICAL                 :: PtfmAccel            = .FALSE.      !< (x,y,z,R1,R2,R3) coordinate specified
 
 
       LOGICAL                 :: PointsFile           = .FALSE.      !< points filename to read in
@@ -82,6 +83,7 @@ MODULE OrcaDriver_Types
 
       REAL(ReKi)              :: PtfmCoord(1:6)                !< (x,y,z,R1,R2,R3) coordinate and rotations to calculate at
       REAL(ReKi)              :: PtfmVeloc(1:6)                !< instantaneous velocities corresponding to the PtfmCoord
+      REAL(ReKi)              :: PtfmAccel(1:6)                !< instantaneous velocities corresponding to the PtfmCoord
 
       TYPE(ProgDesc)          :: ProgInfo                      !< Program info
       TYPE(ProgDesc)          :: OrcaProgInfo                  !< Program info for OrcaFlexInterface

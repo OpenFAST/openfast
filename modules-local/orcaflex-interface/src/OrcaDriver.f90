@@ -62,11 +62,13 @@ PROGRAM OrcaDriver
    INTEGER(IntKi)                                     :: NumTotalPoints          ! Number of points for this iteration
    LOGICAL                                            :: TempFileExist           ! Flag for inquiring file existence
    CHARACTER(11)                                      :: TmpNumString            ! Temporary string for holding a number
+   REAL(ReKi)                                         :: CosineMatrix(3,3)       ! Cosine matrix for rotations in the mesh
 
 
       ! Local variables for storing the arrays
-   REAL(ReKi),ALLOCATABLE                             :: PointsXYZ(:,:)          !< (X,Y,Z,R1,R2,R3) coordinates read from Points input file.
-   REAL(ReKi),ALLOCATABLE                             :: VelocXYZ(:,:)           !< Translational and rotational time derivatives at each point in PointsXYZ
+   REAL(ReKi),ALLOCATABLE                             :: PointsList(:,:)         !< (X,Y,Z,R1,R2,R3) coordinates read from Points input file.
+   REAL(ReKi),ALLOCATABLE                             :: VelocList(:,:)          !< Translational and rotational time derivatives at each point in PointsList
+   REAL(ReKi),ALLOCATABLE                             :: AccelList(:,:)          !< Translational and rotational 2nd time derivatives at each point in PointsList
    INTEGER(IntKi)                                     :: I,J,K,Counter           !< Generic counters/indices
 
       ! Temporary variables
@@ -108,6 +110,7 @@ PROGRAM OrcaDriver
    CLSettings%DT                       =  0.0_DbKi
    CLSettings%PtfmCoord                =  0.0_ReKi       ! Set to origin
    CLSettings%PtfmVeloc                =  0.0_ReKi       ! Set to origin
+   CLSettings%PtfmAccel                =  0.0_ReKi       ! Set to origin
    CLSettings%PointsFileName           =  ""             ! No points file name until set
    CLSettings%PointsOutputName         =  ""             ! No points file name until set
    CLSettings%PointsOutputUnit         =  -1_IntKi       ! No Points file output unit set
@@ -124,6 +127,7 @@ PROGRAM OrcaDriver
    CLSettingsFlags%DTDefault           =  .FALSE.        ! specified 'DEFAULT' for resolution in time
    CLSettingsFlags%PtfmCoord           =  .FALSE.        ! PtfmCoord specified
    CLSettingsFlags%PtfmVeloc           =  .FALSE.        ! PtfmVeloc specified
+   CLSettingsFlags%PtfmAccel           =  .FALSE.        ! PtfmAccel specified
    CLSettingsFlags%PointsFile          =  .FALSE.        ! points filename to read in  -- command line option only
    CLSettingsFlags%PointsOutputInit    =  .FALSE.        ! Points output file not started
    CLSettingsFlags%Verbose             =  .FALSE.        ! Turn on verbose error reporting?
@@ -144,6 +148,7 @@ PROGRAM OrcaDriver
    ELSEIF ( ErrStat /= 0 ) THEN
       CALL WrScr( NewLine//ErrMsg )
       ErrStat  =  ErrID_None
+      ErrMsg   =  ''
    ENDIF
 
 
@@ -198,6 +203,7 @@ PROGRAM OrcaDriver
       ELSEIF ( ErrStat /= 0 ) THEN
          CALL WrScr( NewLine//ErrMsg )
          ErrStat  =  ErrID_None
+         ErrMsg   =  ''
       ENDIF
 
 
@@ -222,6 +228,7 @@ PROGRAM OrcaDriver
       ELSEIF ( ErrStat /= ErrID_None ) THEN
          CALL WrScr( NewLine//ErrMsg )
          ErrStat  =  ErrID_None
+         ErrMsg   =  ''
       ENDIF
 
          ! Verbose error reporting
@@ -248,6 +255,7 @@ PROGRAM OrcaDriver
       ELSEIF ( ErrStat /= ErrID_None ) THEN
          CALL WrScr( NewLine//ErrMsg )
          ErrStat  =  ErrID_None
+         ErrMsg   =  ''
       ENDIF
 
          ! Verbose error reporting
@@ -268,19 +276,20 @@ PROGRAM OrcaDriver
       IF ( TempFileExist .eqv. .FALSE. ) CALL ProgAbort( "Cannot find the points file "//TRIM(Settings%PointsFileName))
 
          ! Now read the file in and save the points
-      CALL ReadPointsFile( Settings%PointsFileName, SettingsFlags%PointsDegrees, PointsXYZ, VelocXYZ, ErrStat,ErrMsg )
+      CALL ReadPointsFile( Settings%PointsFileName, SettingsFlags%PointsDegrees, PointsList, VelocList, AccelList, ErrStat,ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL ProgAbort( ErrMsg )
       ELSEIF ( ErrStat /= 0 ) THEN
          CALL WrScr( NewLine//ErrMsg )
          ErrStat  =  ErrID_None
+         ErrMsg   =  ''
       ENDIF
 
          ! Make name for output
       CALL GetRoot( Settings%PointsFileName, Settings%PointsOutputName )
       Settings%PointsOutputName  =  TRIM(Settings%PointsOutputName)//'.Forces.dat'
 
-      CALL WrScr(NewLine//"Read "//TRIM(Num2LStr(SIZE(PointsXYZ,DIM=2)))//" points from '"//TRIM(Settings%PointsFileName)//   &
+      CALL WrScr(NewLine//"Read "//TRIM(Num2LStr(SIZE(PointsList,DIM=2)))//" points from '"//TRIM(Settings%PointsFileName)//   &
          "'.  Results output to '"//TRIM(Settings%PointsOutputName)//"'.")
 
          ! If the output file already exists, warn that it will be overwritten
@@ -318,7 +327,7 @@ PROGRAM OrcaDriver
 
       ! Set the TMax value (this is a made up number just so that we have something we can pass to OrcaFlex
    IF ( SettingsFlags%PointsFile ) THEN
-      Settings%TMax  =  SIZE(PointsXYZ,DIM=2)*Settings%DT
+      Settings%TMax  =  SIZE(PointsList,DIM=2)*Settings%DT
    ELSE
       Settings%TMax=100_ReKi
    ENDIF
@@ -337,13 +346,14 @@ PROGRAM OrcaDriver
    Orca_InitInp%TMax             =  Settings%TMax
 
 
+
       ! Set all the DOF flags to true.
-   InitInp%PtfmSgF   =  .TRUE.
-   InitInp%PtfmSwF   =  .TRUE.
-   InitInp%PtfmHvF   =  .TRUE.
-   InitInp%PtfmRF    =  .TRUE.
-   InitInp%PtfmPF    =  .TRUE.
-   InitInp%PtfmYF    =  .TRUE.
+   Orca_InitInp%PtfmSgF =  .TRUE.
+   Orca_InitInp%PtfmSwF =  .TRUE.
+   Orca_InitInp%PtfmHvF =  .TRUE.
+   Orca_InitInp%PtfmRF  =  .TRUE.
+   Orca_InitInp%PtfmPF  =  .TRUE.
+   Orca_InitInp%PtfmYF  =  .TRUE.
 
 
 
@@ -362,8 +372,12 @@ PROGRAM OrcaDriver
    ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( OrcaDriver_Verbose >= 7_IntKi ) ) THEN
       CALL WrScr(NewLine//' Orca_Init returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
                  NewLine//'                     ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+      ErrStat  =  ErrID_None
+      ErrMsg   =  ''
    ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( OrcaDriver_Verbose < 7_IntKi ) ) THEN
       CALL ProgWarn( ErrMsg )
+      ErrStat  =  ErrID_None
+      ErrMsg   =  ''
    ENDIF
 
 
@@ -404,12 +418,30 @@ PROGRAM OrcaDriver
 
 
    IF ( SettingsFlags%PointsFile ) THEN
-      DO I=1,SIZE(PointsXYZ,DIM=2)
+      DO I=1,SIZE(PointsList,DIM=2)
 
-            ! Calculate results for this points and write them out
+            ! Setup the mesh coordinates
+         Orca_u%PtfmMesh%TranslationDisp(:,1)   = PointsList(1:3,I)
+
+            ! Compute direction cosine matrix from the rotation angles
+         CALL SmllRotTrans( 'InputRotation', PointsList(4,I), PointsList(5,I), PointsList(6,I), CosineMatrix, 'CosineMatrix calc', ErrStat, ErrMsg )
+         Orca_u%PtfmMesh%Orientation(:,:,1)     = CosineMatrix
+
+
+#ifdef MESH_DEBUG
+         CALL MeshPrintInfo( 77, Orca_u%PtfmMesh )
+#endif
+
+
+!         u(1)%Mesh%TranslationVel(:,1)    = drvrInitInp%uDotWAMITInSteady(1:3)
+!         u(1)%Mesh%RotationVel(:,1)       = drvrInitInp%uDotWAMITInSteady(4:6)
+!         u(1)%Mesh%TranslationAcc(:,1)    = drvrInitInp%uDotDotWAMITInSteady(1:3)
+!         u(1)%Mesh%RotationAcc(:,1)       = drvrInitInp%uDotDotWAMITInSteady(4:6)
+
+
 !TODO: Convert to using the mesh
-         !Orca_u%PtfmPosition  =  PointsXYZ(:,I)
-         !Orca_u%PtfmVelocity  =  VelocXYZ(:,I)
+         !Orca_u%PtfmPosition  =  PointsList(:,I)
+         !Orca_u%PtfmVelocity  =  VelocList(:,I)
          !
          TimeNow  =  Settings%DT*I
 
@@ -417,10 +449,32 @@ PROGRAM OrcaDriver
          CALL Orca_CalcOutput( TimeNow,  Orca_u, Orca_p, &
                   Orca_x, Orca_xd, Orca_z, Orca_OtherState, &
                   Orca_y, ErrStat, ErrMsg)
-         
+
+
+#ifdef MESH_DEBUG
+!         CALL MeshPrintInfo( 77, Orca_y%PtfmMesh )
+#endif
+
+
+              ! Make sure no errors occured that give us reason to terminate now.
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL DriverCleanup()
+            CALL ProgAbort( ErrMsg )
+         ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( OrcaDriver_Verbose >= 7_IntKi ) ) THEN
+            CALL WrScr(NewLine//' Orca_Calc returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
+                       NewLine//'                      ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+            ErrStat  =  ErrID_None
+            ErrMsg   =  ''
+         ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( OrcaDriver_Verbose < 7_IntKi ) ) THEN
+            CALL ProgWarn( ErrMsg )
+            ErrStat  =  ErrID_None
+            ErrMsg   =  ''
+         ENDIF
+
+
          !   ! Output the Points results for this timestep
          !CALL PointsForce_OutputWrite( Settings%ProgInfo, Settings%PointsOutputUnit, Settings%PointsOutputName, Settings%PointsFileName,  &
-         !            SettingsFlags%PointsOutputInit, SettingsFlags%PointsDegrees, SIZE(PointsXYZ,DIM=2),                                  &
+         !            SettingsFlags%PointsOutputInit, SettingsFlags%PointsDegrees, SIZE(PointsList,DIM=2),                                  &
          !            Orca_u%PtfmMesh, Orca_y%, ErrStat, ErrMsg )
          !
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -431,7 +485,7 @@ PROGRAM OrcaDriver
 
       ENDDO
    ENDIF
-   
+
 
    IF ( SettingsFlags%PtfmCoord ) THEN
 
@@ -446,11 +500,28 @@ PROGRAM OrcaDriver
          CALL Orca_CalcOutput( TimeNow,  Orca_u, Orca_p, &
                   Orca_x, Orca_xd, Orca_z, Orca_OtherState, &
                   Orca_y, ErrStat, ErrMsg)
-         
-         
 
 
-            ! write the output file.  This is a bit of a hack here to use the same routine as used for the points file output 
+            ! Make sure no errors occured that give us reason to terminate now.
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL DriverCleanup()
+            CALL ProgAbort( ErrMsg )
+         ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( OrcaDriver_Verbose >= 7_IntKi ) ) THEN
+            CALL WrScr(NewLine//' Orca_Calc returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
+                       NewLine//'                      ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+            ErrStat  =  ErrID_None
+            ErrMsg   =  ''
+         ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( OrcaDriver_Verbose < 7_IntKi ) ) THEN
+            CALL ProgWarn( ErrMsg )
+            ErrStat  =  ErrID_None
+            ErrMsg   =  ''
+         ENDIF
+
+
+
+
+
+            ! write the output file.  This is a bit of a hack here to use the same routine as used for the points file output
          TmpFlag  =  .FALSE.                                      ! Tell the subroutine that it has not initialized the file before
          TmpUnit  =  -1                                           ! Temporary unit number to pass
          CALL GetRoot( Settings%DvrIptFileName, TmpChar )         ! Get the root name
@@ -467,10 +538,14 @@ PROGRAM OrcaDriver
             CALL DriverCleanup()
             CALL ProgAbort( ErrMsg )
          ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( OrcaDriver_Verbose >= 7_IntKi ) ) THEN
-            CALL WrScr(NewLine//' Orca_Calc returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
-                       NewLine//'                      ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+            CALL WrScr(NewLine//' PointsForce_OutputWrite: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
+                       NewLine//'                          ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+            ErrStat  =  ErrID_None
+            ErrMsg   =  ''
          ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( OrcaDriver_Verbose < 7_IntKi ) ) THEN
             CALL ProgWarn( ErrMsg )
+            ErrStat  =  ErrID_None
+            ErrMsg   =  ''
          ENDIF
 
    ENDIF
@@ -505,7 +580,7 @@ PROGRAM OrcaDriver
       ! AddedMass output to file
    IF ( SettingsFlags%AddedMassFile ) THEN
       CALL AddedMass_OutputWrite( Settings, SettingsFlags%AddedMassOutputInit, &
-            Orca_OtherState%PtfmAM, ErrStatTmp, ErrMsgTmp )
+            Orca_OtherState%PtfmAM, ErrStat, ErrMsg )
          ! Make sure no errors occured that give us reason to terminate now.
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL DriverCleanup()
@@ -513,11 +588,14 @@ PROGRAM OrcaDriver
       ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( OrcaDriver_Verbose >= 7_IntKi ) ) THEN
          CALL WrScr(NewLine//' AddedMass_OutputWrite ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
                     NewLine//'                       ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+         ErrStat  =  ErrID_None
+         ErrMsg   =  ''
       ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( OrcaDriver_Verbose < 7_IntKi ) ) THEN
          CALL ProgWarn( ErrMsg )
+         ErrStat  =  ErrID_None
+         ErrMsg   =  ''
       ENDIF
    ENDIF
-
 
 
 
@@ -526,11 +604,11 @@ PROGRAM OrcaDriver
    !--------------------------------------------------------------------------------------------------------------------------------
 
    CALL Orca_DestroyInitOutput( Orca_InitOut,    ErrStat, ErrMsg )
-  
+
    CALL Orca_End( Orca_u, Orca_p, &
                   Orca_x, Orca_xd, Orca_z, Orca_OtherState, &
                   Orca_y,    ErrStat, ErrMsg )
-   
+
       ! Make sure no errors occured that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN
       CALL DriverCleanup()
@@ -538,12 +616,16 @@ PROGRAM OrcaDriver
    ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( OrcaDriver_Verbose >= 7_IntKi ) ) THEN
       CALL WrScr(NewLine//' Orca_End returned: ErrStat: '//TRIM(Num2LStr(ErrStat))//  &
                  NewLine//'                     ErrMsg:  '//TRIM(ErrMsg)//NewLine)
+      ErrStat  =  ErrID_None
+      ErrMsg   =  ''
    ELSEIF ( ( ErrStat /= ErrID_None ) .AND. ( OrcaDriver_Verbose < 7_IntKi ) ) THEN
       CALL ProgWarn( ErrMsg )
+      ErrStat  =  ErrID_None
+      ErrMsg   =  ''
    ELSEIF ( OrcaDriver_Verbose >= 7_IntKi ) THEN
       CALL WrScr(NewLine//' Orca_End call:    ok')
    ENDIF
-   
+
 
    CALL DriverCleanup()
 

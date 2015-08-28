@@ -37,7 +37,7 @@ MODULE OrcaFlexInterface_Parameters
 
    TYPE(ProgDesc), PARAMETER  :: Orca_Ver = ProgDesc( 'OrcaFlexInterface', 'v1.00.00a-adp', '30-Sep-2015' )
    CHARACTER(*),   PARAMETER  :: Orca_Nickname = 'Orca'
-   
+
 
 
 END MODULE OrcaFlexInterface_Parameters
@@ -56,7 +56,7 @@ MODULE OrcaFlexInterface
 
    IMPLICIT NONE
 
-   
+
 
    ABSTRACT INTERFACE      ! These are interfaces to the DLL
 
@@ -82,7 +82,7 @@ MODULE OrcaFlexInterface
       END SUBROUTINE OrcaFlexUserPtfmLdFinalise
 
    END INTERFACE
-   
+
 
       ! ..... Public Subroutines ...................................................................................................
 
@@ -160,7 +160,7 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    ErrMsg                  = ""
    ErrStatTmp              = ErrID_None
    ErrMsgTmp               = ""
-   OtherState%Initialized  =  .TRUE.
+   OtherState%Initialized  =  .FALSE.     ! Set to true when we finish the _Init routine
 
 
       ! Set some things for the DLL
@@ -180,6 +180,9 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    p%DLL_Orca%ProcName(2)  = InputFileData%DLL_CalcProcName
    p%DLL_Orca%ProcName(3)  = InputFileData%DLL_EndProcName
 
+#ifdef NO_LibLoad
+   CALL SetErrStat( ErrID_Warn,'   -->  Skipping LoadDynamicLib call',ErrStat,ErrMsg,RoutineName )
+#else
    CALL LoadDynamicLib ( p%DLL_Orca, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
    IF ( ErrStat >= AbortErrLev ) THEN
@@ -188,17 +191,21 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    END IF
 
    CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(1), OrcaDLL_Init )
+#endif
 
 
-   
 
 
       ! Set the values to pass to OrcaDLL_Init
    DLL_DT      =  Interval
    DLL_TMax    =  InitInp%TMax
 
+#ifdef NO_LibLoad
+   CALL SetErrStat( ErrID_Warn,'   -->  Skipping OrcaDLL_Init call',ErrStat,ErrMsg,RoutineName )
+#else
    CALL OrcaDLL_Init ( DLL_DT, DLL_TMax )
    ! Unfortunately, we don't get any error reporting back from OrcaDLL_Init, so we can't really check anything.
+#endif
 
 
       ! Copy relevant information into parameters.
@@ -321,6 +328,9 @@ SUBROUTINE Orca_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
 
 
+#ifdef NO_LibLoad
+   CALL SetErrStat( ErrID_Warn,'   -->  Skipping OrcaDLL_End call',ErrStat,ErrMsg,RoutineName )
+#else
       ! Release the DLL
    CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(3), OrcaDLL_End )
    CALL OrcaDLL_End        ! No error handling here.  Just have to assume it worked.
@@ -328,7 +338,7 @@ SUBROUTINE Orca_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
    CALL FreeDynamicLib( p%DLL_Orca, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName )
-
+#endif
 
 
       ! Destroy the input data:
@@ -338,7 +348,10 @@ SUBROUTINE Orca_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
       ! Destroy the parameter data:
    CALL Orca_DestroyParam( p, ErrStatTmp, ErrMsgTmp )
+#ifdef NO_LibLoad
+#else
    CALL SetErrStat( ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName )
+#endif
 
 
       ! Destroy the state data:
@@ -371,68 +384,141 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
 
-   REAL(DbKi),                      INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(Orca_InputType),            INTENT(IN   )  :: u           ! Inputs at Time t
-   TYPE(Orca_ParameterType),        INTENT(IN   )  :: p           ! Parameters
-   TYPE(Orca_ContinuousStateType),  INTENT(IN   )  :: x           ! Continuous states at t
-   TYPE(Orca_DiscreteStateType),    INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(Orca_ConstraintStateType),  INTENT(IN   )  :: z           ! Constraint states at t
-   TYPE(Orca_OtherStateType),       INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(Orca_OutputType),           INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
-                                                               !   nectivity information does not have to be recalculated)
-   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                      INTENT(IN   )  :: t                 !< Current simulation time in seconds
+   TYPE(Orca_InputType),            INTENT(IN   )  :: u                 !< Inputs at Time t
+   TYPE(Orca_ParameterType),        INTENT(IN   )  :: p                 !< Parameters
+   TYPE(Orca_ContinuousStateType),  INTENT(IN   )  :: x                 !< Continuous states at t
+   TYPE(Orca_DiscreteStateType),    INTENT(IN   )  :: xd                !< Discrete states at t
+   TYPE(Orca_ConstraintStateType),  INTENT(IN   )  :: z                 !< Constraint states at t
+   TYPE(Orca_OtherStateType),       INTENT(INOUT)  :: OtherState        !< Other/optimization states
+   TYPE(Orca_OutputType),           INTENT(INOUT)  :: y                 !< Outputs computed at t (Input only so that mesh con-
+                                                                        !!   nectivity information does not have to be recalculated)
+   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat           !< Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
    PROCEDURE(OrcaFlexUserPtfmLd),   POINTER        :: OrcaDLL_Calc
 
 
-      ! Local variables
-   REAL(ReKi)                                      :: qdotdot(6)
+      ! Local variables copied from the mesh
+   REAL(ReKi)                                      :: rotdisp(3)        !< Rotation angles from the mesh
+   REAL(ReKi)                                      :: q(6)              !< Position from the mesh
+   REAL(ReKi)                                      :: qdot(6)           !< Time derivative of position (velocity) from mesh
+   REAL(ReKi)                                      :: qdotdot(6)        !< 2nd time derivative of position (acceleration) from mesh
+
+
+      ! Local variables for data manipulation
+   INTEGER(IntKi)                                  :: I,J               !< Generic counters
+
+
 
       ! Local variables for the getting the types correct to pass to the DLL
    CHARACTER(LEN=p%SimNamePathLen)                 :: DLL_DirRootName   !< Path and simulation name without extension
    REAL(C_FLOAT)                                   :: DLL_X(6)          !< Translational and rotational displacement (m, radians) relative to inertial frame.
-   REAL(C_FLOAT)                                   :: DLL_XD(6)         !< Translational and rotational velocity (m/s, radians/s) relative to inertial frame.
+   REAL(C_FLOAT)                                   :: DLL_Xdot(6)       !< Translational and rotational velocity (m/s, radians/s) relative to inertial frame.
    REAL(C_FLOAT)                                   :: DLL_ZTime         !< Current time in seconds
    REAL(C_FLOAT)                                   :: DLL_PtfmAM(6,6)   !< Added mass matrix (kg, kg-m, kg-m^2)
    REAL(C_FLOAT)                                   :: DLL_PtfmFt(6)     !< Platform forces -- [3 translation (N), 3 moments (N-m)] at reference point.
 
 
-      ! Error Handling
-   INTEGER(IntKi)                                  :: ErrStatTmp        ! temporary Error status of the operation
-   CHARACTER(ErrMsgLen)                            :: ErrMsgTmp         ! temporary Error message if ErrStat /= ErrID_None
-   CHARACTER(*),   PARAMETER                       :: RoutineName='Orca_Calc'
+      ! Error Handling and data checking
+   INTEGER(IntKi)                                  :: ErrStatTmp        !< Temporary Error status of the operation
+   CHARACTER(ErrMsgLen)                            :: ErrMsgTmp         !< Temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(*),     PARAMETER                     :: RoutineName='Orca_Calc'
+   REAL(ReKi),       PARAMETER                     :: SymmetryTol =  9.999E-4_ReKi  !< Tolerance used to determine if the PtfmAM is symmetric
 
 
+
+      ! Check that we actually initialized things
+   IF ( .NOT. OtherState%Initialized ) THEN
+      CALL SetErrStat( ErrID_Fatal, ' Programming error.  Call Orca_Init before calling Orca_CalcOutput.',ErrStat,ErrMsg,RoutineName )
+      RETURN
+   ENDIF
+
+
+#ifdef NO_LibLoad
+#else
       ! Setup the pointer to the DLL procedure
    CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(2), OrcaDLL_Calc )
-
+#endif
 
       ! Copy over time and name to pass to OrcaFlex DLL
    DLL_DirRootName   =  TRIM(p%SimNamePath)//C_NULL_CHAR    ! Path and name of the simulation file without extension.  Null character added to convert from Fortran string to C-type string.
    DLL_ZTime = t                                            ! Current time
 
 
-      ! Copy position and motion information over from Mesh
-   !DLL_X    =  
-   !DLL_XD   =
+      ! Determine the rotational angles from the direction-cosine matrix
+   rotdisp = GetSmllRotAngs ( u%PtfmMesh%Orientation(:,:,1), ErrStatTmp, ErrMsgTmp )
+   CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
+   IF ( ErrStat >= ErrID_Fatal) RETURN
 
-      ! Get accelerations from Mesh
-!FIXME: update with correct mesh info
-!   qdotdot  =  reshape((/u%PtfmMesh%TranslationAcc(:),u%PtfmMesh%RotationAcc(:)/),(/6/))
+   q         = reshape((/u%PtfmMesh%TranslationDisp(:,1),rotdisp(:)/),(/6/))
+   qdot      = reshape((/u%PtfmMesh%TranslationVel(:,1),u%PtfmMesh%RotationVel(:,1)/),(/6/))
+   qdotdot   = reshape((/u%PtfmMesh%TranslationAcc(:,1),u%PtfmMesh%RotationAcc(:,1)/),(/6/))
 
+
+      ! Copy position and motion information over to pass to the DLL
+   DO I=1,6
+      DLL_X(I)    =  q(I)
+      DLL_Xdot(I) =  qdot(I)
+   ENDDO
+
+
+
+#ifdef NO_LibLoad
+   CALL SetErrStat( ErrID_Warn,'   -->  Skipping OrcaDLL_Calc call',ErrStat,ErrMsg,RoutineName )
+   DLL_PtfmAM  =  0.0_C_FLOAT
+   DLL_PtfmFt  =  0.0_C_FLOAT
+#else
       ! Call OrcaFlex to run the calculation.  There is no error trapping on the OrcaFlex side, so we will have to do some checks on what receive back
-   CALL OrcaDLL_Calc( DLL_X, DLL_XD, DLL_ZTime, DLL_DirRootName, DLL_PtfmAM, DLL_PtfmFt )
+   CALL OrcaDLL_Calc( DLL_X, DLL_Xdot, DLL_ZTime, DLL_DirRootName, DLL_PtfmAM, DLL_PtfmFt )
+#endif
 
-      ! Perform some quick QA/QC on the DLL results.  
-!TODO: FAST7 checked that DLL_PtfmAM was symmetric.  Do I need to do that here?
+
+      ! Copy data over from the DLL output to the OtherState
+   DO I=1,6
+      OtherState%PtfmFT(I) =  DLL_PtfmFT(I)
+      DO J=1,6
+         OtherState%PtfmAM(J,I)  =  DLL_PtfmAM(J,I)
+      ENDDO
+   ENDDO
+
+
+
+      ! Perform some quick QA/QC on the DLL results.  There isn't much we can check, so just check that things are symmetric within some tolerance
+   DO I = 1,5        ! Loop through the 1st 5 rows (columns) of PtfmAM
+      DO J = (I+1),6 ! Loop through all columns (rows) passed I
+         IF ( ABS( OtherState%PtfmAM(I,J) - OtherState%PtfmAM(J,I) ) > SymmetryTol )  &
+            ErrStatTmp  =  ErrID_Fatal
+            ErrMsgTmp   =  ' The platform added mass matrix returned from OrcaFlex is unsymmetric.'// &
+                           '  There may be issues with the OrcaFlex calculations.'
+      ENDDO          ! J - All columns (rows) passed I
+   ENDDO             ! I - The 1st 5 rows (columns) of PtfmAM
+   CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
+   IF ( ErrStat >= ErrID_Fatal) RETURN
+
+
+
+      ! Now calculate the forces with what OrcaFlex returned
+   OtherState%F_PtfmAM     =  -matmul(OtherState%PtfmAM, qdotdot)
+
+
+      ! We may have turned off certain degrees of freedom, so we need to zero out those dimensions
+   DO I=1,6
+      IF ( .NOT. p%PtfmDOF(I) ) THEN
+         OtherState%PtfmFT(I)    =  0.0_ReKi
+         OtherState%F_PtfmAM(I)  =  0.0_ReKi
+      ENDIF
+   ENDDO
 
 
       ! Update the Mesh with values from OrcaFlex
+   DO I=1,6
+      y%PtfmMesh%Force(I,1)  =  OtherState%F_PtfmAM(I)  +  OtherState%PtfmFT(I)
+   ENDDO
 
 
    RETURN
-   
+
 
 END SUBROUTINE Orca_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -456,12 +542,12 @@ SUBROUTINE Orca_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
       INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    ! Error status of the operation
       CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
 
-      
+
          ! Initialize ErrStat
 
       ErrStat = ErrID_None
-      ErrMsg  = ""            
-      
+      ErrMsg  = ""
+
 
 END SUBROUTINE Orca_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -480,8 +566,8 @@ SUBROUTINE Orca_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-   
-   
+
+
 END SUBROUTINE Orca_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Orca_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )

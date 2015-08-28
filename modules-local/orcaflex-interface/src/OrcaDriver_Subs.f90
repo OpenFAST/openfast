@@ -110,6 +110,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
 
    INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status (for calls)
    CHARACTER(1024)                                    :: ErrMsgTmp            !< Temporary error message (for calls)
+   CHARACTER(*),              PARAMETER               :: RoutineName = 'RetrieveArgs'
 
 
       ! initialize some things
@@ -127,7 +128,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
       ! exit if we don't have enough
    IF (NumInputArgs == 0) THEN
       CALL SetErrStat(ErrID_Fatal," Insufficient Arguments. Use option "//SwChar//"help for help menu.",  &
-         ErrStat,ErrMsg,'RetrieveArgs')
+         ErrStat,ErrMsg,RoutineName)
       RETURN
    ENDIF
 
@@ -155,7 +156,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             ! Check the argument and put it where it belongs
             ! chop the SwChar off before passing the argument
          CALL ParseArg( CLSettings, CLFlags, ArgUC(2:), Arg(2:), ifwFlag, ErrStatTmp, ErrMsgTmp )
-         CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'RetrieveArgs')
+         CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          IF (ErrStat>AbortErrLev) RETURN
 
       ELSE
@@ -163,7 +164,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             ! since there is no switch character, assume it is the filename, unless we already set one
          IF ( FileNameGiven ) THEN
             CALL SetErrStat(ErrID_Fatal," Multiple driver input filenames given: "//TRIM(FileName)//", "//TRIM(Arg),   &
-               ErrStat,ErrMsg,'RetrieveArgs')
+               ErrStat,ErrMsg,RoutineName)
             RETURN
          ELSE
             FileName       = TRIM(Arg)
@@ -176,7 +177,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
 
       ! Was a filename given?
    IF ( .NOT. FileNameGiven ) THEN
-      CALL SetErrStat( ErrID_Fatal, " No filename given.", ErrStat, ErrMsg, 'RetrieveArgs' )
+      CALL SetErrStat( ErrID_Fatal, " No filename given.", ErrStat, ErrMsg, RoutineName )
       RETURN
    ELSE
       CLSettings%DvrIptFileName  =  TRIM(FileName)
@@ -256,6 +257,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
       REAL(ReKi)                                         :: TempReal             ! temp variable to hold a real
 
       INTEGER(IntKi)                                     :: ErrStatTmp           ! Temporary error status for calls
+      CHARACTER(*),              PARAMETER               :: RoutineName = 'ParseArg'
 
 
 
@@ -273,14 +275,14 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
          ! check that if there is an opening bracket, then there is a closing one
       IF ( (Delim1 > 0_IntKi ) .and. (Delim2 < Delim1) ) THEN
          CALL SetErrStat(ErrID_Warn," Syntax error in option: '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
-            ErrStat,ErrMsg,'ParseArg')
+            ErrStat,ErrMsg,RoutineName)
          RETURN
       ENDIF
 
          ! check that if there is a colon, then there are brackets
       IF ( (DelimSep > 0_IntKi) .and. (Delim1 == 0_IntKi) ) THEN
          CALL SetErrStat(ErrID_Warn," Syntax error in option: '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",   &
-            ErrStat,ErrMsg,'ParseArg')
+            ErrStat,ErrMsg,RoutineName)
          RETURN
       ENDIF
 
@@ -308,7 +310,7 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             RETURN
          ELSE
             CALL SetErrStat( ErrID_Warn," Unrecognized option '"//SwChar//TRIM(ThisArg)//"'. Ignoring. Use option "//SwChar//"help for list of options.",  &
-               ErrStat,ErrMsg,'ParseArg')
+               ErrStat,ErrMsg,RoutineName)
          ENDIF
 
       ENDIF
@@ -321,31 +323,31 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
          DelimSep2= INDEX(ThisArgUC(DelimSep+1:),',') + DelimSep
          IF ( DelimSep2 <= DelimSep ) THEN
             CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
-               ErrStat,ErrMsg,'ParseArg')
+               ErrStat,ErrMsg,RoutineName)
             RETURN
          ENDIF
          DelimSep3= INDEX(ThisArgUC(DelimSep2+1:),',') + DelimSep
          IF ( DelimSep3 <= DelimSep2 ) THEN
             CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
-               ErrStat,ErrMsg,'ParseArg')
+               ErrStat,ErrMsg,RoutineName)
             RETURN
          ENDIF
          DelimSep4= INDEX(ThisArgUC(DelimSep3+1:),',') + DelimSep
          IF ( DelimSep4 <= DelimSep3 ) THEN
             CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
-               ErrStat,ErrMsg,'ParseArg')
+               ErrStat,ErrMsg,RoutineName)
             RETURN
          ENDIF
          DelimSep5= INDEX(ThisArgUC(DelimSep4+1:),',') + DelimSep
          IF ( DelimSep5 <= DelimSep4 ) THEN
             CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
-               ErrStat,ErrMsg,'ParseArg')
+               ErrStat,ErrMsg,RoutineName)
             RETURN
          ENDIF
          DelimSep5= INDEX(ThisArgUC(DelimSep5+1:),',') + DelimSep
          IF ( DelimSep5 <= DelimSep5 ) THEN
             CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
-               ErrStat,ErrMsg,'ParseArg')
+               ErrStat,ErrMsg,RoutineName)
             RETURN
          ENDIF
 
@@ -358,10 +360,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             CLFlags%PtfmVeloc            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",  &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ELSE
                CALL SetErrStat(ErrID_FATAL," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ENDIF
             RETURN
          ENDIF
@@ -375,10 +377,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             CLFlags%PtfmVeloc            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",  &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ELSE
                CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ENDIF
             RETURN
          ENDIF
@@ -392,10 +394,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             CLFlags%PtfmVeloc            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat( ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ELSE
                CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ENDIF
             RETURN
          ENDIF
@@ -409,10 +411,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             CLFlags%PtfmVeloc            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat( ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ELSE
                CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ENDIF
             RETURN
          ENDIF
@@ -426,10 +428,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             CLFlags%PtfmVeloc            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat( ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ELSE
                CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ENDIF
             RETURN
          ENDIF
@@ -443,14 +445,151 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             CLFlags%PtfmVeloc            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat( ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ELSE
                CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ENDIF
             RETURN
          ENDIF
 
+
+
+          ! "Accel[X,Y,Z,R1,R2,R3]"
+      ELSEIF ( ThisArgUC(1:Delim1) == "Accel["  ) THEN
+         DelimSep = INDEX(ThisArgUC,',')
+         DelimSep2= INDEX(ThisArgUC(DelimSep+1:),',') + DelimSep
+         IF ( DelimSep2 <= DelimSep ) THEN
+            CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
+               ErrStat,ErrMsg,RoutineName)
+            RETURN
+         ENDIF
+         DelimSep3= INDEX(ThisArgUC(DelimSep2+1:),',') + DelimSep
+         IF ( DelimSep3 <= DelimSep2 ) THEN
+            CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
+               ErrStat,ErrMsg,RoutineName)
+            RETURN
+         ENDIF
+         DelimSep4= INDEX(ThisArgUC(DelimSep3+1:),',') + DelimSep
+         IF ( DelimSep4 <= DelimSep3 ) THEN
+            CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
+               ErrStat,ErrMsg,RoutineName)
+            RETURN
+         ENDIF
+         DelimSep5= INDEX(ThisArgUC(DelimSep4+1:),',') + DelimSep
+         IF ( DelimSep5 <= DelimSep4 ) THEN
+            CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
+               ErrStat,ErrMsg,RoutineName)
+            RETURN
+         ENDIF
+         DelimSep5= INDEX(ThisArgUC(DelimSep5+1:),',') + DelimSep
+         IF ( DelimSep5 <= DelimSep5 ) THEN
+            CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
+               ErrStat,ErrMsg,RoutineName)
+            RETURN
+         ENDIF
+
+            ! First Value
+         TempReal = StringToReal( ThisArgUC(Delim1+1:DelimSep-1), ErrStatTmp )
+         IF ( ErrStatTmp == ErrID_None ) THEN
+            CLFlags%PtfmAccel            = .TRUE.
+            CLSettings%PtfmAccel(1)     = TempReal
+         ELSE
+            CLFlags%PtfmAccel            = .FALSE.
+            IF ( ErrStatTmp == ErrID_Warn ) THEN
+               CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",  &
+                  ErrStat, ErrMsg, RoutineName)
+            ELSE
+               CALL SetErrStat(ErrID_FATAL," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
+                  ErrStat, ErrMsg, RoutineName)
+            ENDIF
+            RETURN
+         ENDIF
+
+            ! Second Value
+         TempReal = StringToReal( ThisArgUC(DelimSep+1:DelimSep2-1), ErrStatTmp )
+         IF ( ErrStatTmp == ErrID_None ) THEN
+            CLFlags%PtfmAccel            = .TRUE.
+            CLSettings%PtfmAccel(2)     = TempReal
+         ELSE
+            CLFlags%PtfmAccel            = .FALSE.
+            IF ( ErrStatTmp == ErrID_Warn ) THEN
+               CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",  &
+                  ErrStat, ErrMsg, RoutineName)
+            ELSE
+               CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
+                  ErrStat, ErrMsg, RoutineName)
+            ENDIF
+            RETURN
+         ENDIF
+
+            ! Third Value
+         TempReal = StringToReal( ThisArgUC(DelimSep2+1:DelimSep3-1), ErrStatTmp )
+         IF ( ErrStatTmp == ErrID_None ) THEN
+            CLFlags%PtfmAccel            = .TRUE.
+            CLSettings%PtfmAccel(3)     = TempReal
+         ELSE
+            CLFlags%PtfmAccel            = .FALSE.
+            IF ( ErrStatTmp == ErrID_Warn ) THEN
+               CALL SetErrStat( ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.", &
+                  ErrStat, ErrMsg, RoutineName)
+            ELSE
+               CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
+                  ErrStat, ErrMsg, RoutineName)
+            ENDIF
+            RETURN
+         ENDIF
+
+            ! Fourth Value
+         TempReal = StringToReal( ThisArgUC(DelimSep3+1:DelimSep4-1), ErrStatTmp )
+         IF ( ErrStatTmp == ErrID_None ) THEN
+            CLFlags%PtfmAccel            = .TRUE.
+            CLSettings%PtfmAccel(4)     = TempReal
+         ELSE
+            CLFlags%PtfmAccel            = .FALSE.
+            IF ( ErrStatTmp == ErrID_Warn ) THEN
+               CALL SetErrStat( ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.", &
+                  ErrStat, ErrMsg, RoutineName)
+            ELSE
+               CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
+                  ErrStat, ErrMsg, RoutineName)
+            ENDIF
+            RETURN
+         ENDIF
+
+            ! Fifth Value
+         TempReal = StringToReal( ThisArgUC(DelimSep4+1:DelimSep5-1), ErrStatTmp )
+         IF ( ErrStatTmp == ErrID_None ) THEN
+            CLFlags%PtfmAccel            = .TRUE.
+            CLSettings%PtfmAccel(5)     = TempReal
+         ELSE
+            CLFlags%PtfmAccel            = .FALSE.
+            IF ( ErrStatTmp == ErrID_Warn ) THEN
+               CALL SetErrStat( ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.", &
+                  ErrStat, ErrMsg, RoutineName)
+            ELSE
+               CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
+                  ErrStat, ErrMsg, RoutineName)
+            ENDIF
+            RETURN
+         ENDIF
+
+            ! Sixth Value
+         TempReal = StringToReal( ThisArgUC(DelimSep5+1:Delim2-1), ErrStatTmp )
+         IF ( ErrStatTmp == ErrID_None ) THEN
+            CLFlags%PtfmAccel            = .TRUE.
+            CLSettings%PtfmAccel(6)     = TempReal
+         ELSE
+            CLFlags%PtfmAccel            = .FALSE.
+            IF ( ErrStatTmp == ErrID_Warn ) THEN
+               CALL SetErrStat( ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.", &
+                  ErrStat, ErrMsg, RoutineName)
+            ELSE
+               CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
+                  ErrStat, ErrMsg, RoutineName)
+            ENDIF
+            RETURN
+         ENDIF
 
           ! "Coord[X,Y,Z,R1,R2,R3]"
       ELSEIF ( ThisArgUC(1:Delim1) == "Coord["  ) THEN
@@ -458,31 +597,31 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
          DelimSep2= INDEX(ThisArgUC(DelimSep+1:),',') + DelimSep
          IF ( DelimSep2 <= DelimSep ) THEN
             CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
-               ErrStat,ErrMsg,'ParseArg')
+               ErrStat,ErrMsg,RoutineName)
             RETURN
          ENDIF
          DelimSep3= INDEX(ThisArgUC(DelimSep2+1:),',') + DelimSep
          IF ( DelimSep3 <= DelimSep2 ) THEN
             CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
-               ErrStat,ErrMsg,'ParseArg')
+               ErrStat,ErrMsg,RoutineName)
             RETURN
          ENDIF
          DelimSep4= INDEX(ThisArgUC(DelimSep3+1:),',') + DelimSep
          IF ( DelimSep4 <= DelimSep3 ) THEN
             CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
-               ErrStat,ErrMsg,'ParseArg')
+               ErrStat,ErrMsg,RoutineName)
             RETURN
          ENDIF
          DelimSep5= INDEX(ThisArgUC(DelimSep4+1:),',') + DelimSep
          IF ( DelimSep5 <= DelimSep4 ) THEN
             CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
-               ErrStat,ErrMsg,'ParseArg')
+               ErrStat,ErrMsg,RoutineName)
             RETURN
          ENDIF
          DelimSep5= INDEX(ThisArgUC(DelimSep5+1:),',') + DelimSep
          IF ( DelimSep5 <= DelimSep5 ) THEN
             CALL SetErrStat(ErrID_Warn," Unrecognized coordinate in '"//SwChar//TRIM(ThisArg)//"'.  Ignoring.", &
-               ErrStat,ErrMsg,'ParseArg')
+               ErrStat,ErrMsg,RoutineName)
             RETURN
          ENDIF
 
@@ -495,10 +634,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             CLFlags%PtfmCoord            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",  &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ELSE
                CALL SetErrStat(ErrID_FATAL," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ENDIF
             RETURN
          ENDIF
@@ -512,10 +651,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             CLFlags%PtfmCoord            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat(ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.",  &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ELSE
                CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ENDIF
             RETURN
          ENDIF
@@ -529,10 +668,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             CLFlags%PtfmCoord            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat( ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ELSE
                CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ENDIF
             RETURN
          ENDIF
@@ -546,10 +685,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             CLFlags%PtfmCoord            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat( ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ELSE
                CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ENDIF
             RETURN
          ENDIF
@@ -563,10 +702,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             CLFlags%PtfmCoord            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat( ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ELSE
                CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ENDIF
             RETURN
          ENDIF
@@ -580,10 +719,10 @@ SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
             CLFlags%PtfmCoord            = .FALSE.
             IF ( ErrStatTmp == ErrID_Warn ) THEN
                CALL SetErrStat( ErrStatTmp," Invalid number in option '"//SwChar//TRIM(ThisArg)//"'. Ignoring.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ELSE
                CALL SetErrStat( ErrID_Fatal," Something failed in parsing option '"//SwChar//TRIM(ThisArg)//"'.", &
-                  ErrStat, ErrMsg, 'ParseArg')
+                  ErrStat, ErrMsg, RoutineName)
             ENDIF
             RETURN
          ENDIF
@@ -636,7 +775,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
    INTEGER(IntKi)                                     :: ErrStatTmp2          !< Temporary error status for IO checks
    CHARACTER(1024)                                    :: ErrMsgTmp            !< Temporary error messages for calls
-
+   CHARACTER(*),              PARAMETER               :: RoutineName = 'ReadDvrIptFile'
 
       ! Initialize the echo file unit to -1 which is the default to prevent echoing, we will alter this based on user input
    UnEchoLocal = -1
@@ -645,7 +784,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
    CALL GetNewUnit( UnIn )
    CALL OpenFInpFile( UnIn, FileName, ErrStatTmp, ErrMsgTmp )
-   CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+   CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
    IF ( ErrStatTmp >= AbortErrLev ) THEN
       CLOSE( UnIn )
       RETURN
@@ -661,7 +800,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
    CALL ReadCom( UnIn, FileName,' OrcaFlexInterface Driver input file header line 1', ErrStatTmp, ErrMsgTmp )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CLOSE( UnIn )
       RETURN
    ENDIF
@@ -669,7 +808,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
    CALL ReadCom( UnIn, FileName, 'OrcaFlexInterface Driver input file header line 2', ErrStatTmp, ErrMsgTmp )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CLOSE( UnIn )
       RETURN
    ENDIF
@@ -678,7 +817,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
      ! Echo Input Files.
    CALL ReadVar ( UnIn, FileName, EchoFileContents, 'Echo', 'Echo Input', ErrStatTmp, ErrMsgTmp )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CLOSE( UnIn )
       RETURN
    ENDIF
@@ -694,7 +833,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL GetNewUnit( UnEchoLocal )
       CALL OpenEcho ( UnEchoLocal, EchoFileName, ErrStatTmp, ErrMsgTmp, ProgInfo )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CLOSE( UnIn )
          RETURN
       ENDIF
@@ -706,7 +845,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
          ! Reread and echo
       CALL ReadCom( UnIn, FileName,' OrcaFlexInterface Driver input file header line 1', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -715,7 +854,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
       CALL ReadCom( UnIn, FileName, 'OrcaFlexInterface Driver input file header line 2', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -725,7 +864,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
         ! Echo Input Files.
       CALL ReadVar ( UnIn, FileName, EchoFileContents, 'Echo', 'Echo Input', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -737,32 +876,13 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
 
 
    !-------------------------------------------------------------------------------------------------
-   !  Driver setup section
-   !-------------------------------------------------------------------------------------------------
-
-
-      ! OrcaFlexInterface input file
-   CALL ReadVar( UnIn, FileName,DvrSettings%OrcaIptFileName,'OrcaIptFileName',' OrcaFlexInterface input filename',   &
-      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
-   IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
-      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
-      CLOSE( UnIn )
-      RETURN
-   ELSE
-      DvrFlags%OrcaIptFile  =  .TRUE.
-   ENDIF
-
-
-
-   !-------------------------------------------------------------------------------------------------
    !  OrcaFlexInterface setup section
    !-------------------------------------------------------------------------------------------------
 
       ! Header
    CALL ReadCom( UnIn, FileName,' OrcaFlexInterface setup section, comment line', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -773,7 +893,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    CALL ReadVar( UnIn, FileName,DTChr,'DTChr',' Character string for Timestep size for the driver to take (or DEFAULT for what the file contains).',  &
       ErrStatTmp,ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -798,6 +918,20 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    ENDIF
 
 
+      ! OrcaFlexInterface input file
+   CALL ReadVar( UnIn, FileName,DvrSettings%OrcaIptFileName,'OrcaIptFileName',' OrcaFlexInterface input filename',   &
+      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+   IF ( ErrStatTmp /= ErrID_None ) THEN
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   ELSE
+      DvrFlags%OrcaIptFile  =  .TRUE.
+   ENDIF
+
+
+
    !-------------------------------------------------------------------------------------------------
    !  PtfmCoordinates
    !-------------------------------------------------------------------------------------------------
@@ -805,7 +939,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ! Header
    CALL ReadCom( UnIn, FileName,' Coordinates, comment line', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -816,8 +950,9 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    CALL ReadVar( UnIn, FileName,DvrFlags%PtfmCoord,'PtfmCoord',' Use a set of coordinates?',   &
       ErrStatTmp,ErrMsgTmp, UnEchoLocal )
    DvrFlags%PtfmVeloc   =  DvrFlags%PtfmCoord
+   DvrFlags%PtfmAccel   =  DvrFlags%PtfmCoord
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -831,7 +966,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL ReadVar( UnIn, FileName,DvrFlags%Degrees,'Degrees',' Angles specified in degrees?',   &
          ErrStatTmp,ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -841,7 +976,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL ReadAry ( UnIn, FileName, DvrSettings%PtfmCoord(1:6), 6, 'PtfmCoord(1:6)', &
          'platform coordinate', ErrStatTmp, ErrMsgTmp, UnEchoLocal)
       IF ( ErrStat /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -851,7 +986,17 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL ReadAry ( UnIn, FileName, DvrSettings%PtfmVeloc(1:6), 6, 'PtfmVeloc(1:6)', &
          'platform coordinate', ErrStatTmp, ErrMsgTmp, UnEchoLocal)
       IF ( ErrStat /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+         CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+         CLOSE( UnIn )
+         RETURN
+      ENDIF
+   
+         ! PtfmAccel     -- The coordinates to pass to the DLL
+      CALL ReadAry ( UnIn, FileName, DvrSettings%PtfmAccel(1:6), 6, 'PtfmAccel(1:6)', &
+         'platform coordinate', ErrStatTmp, ErrMsgTmp, UnEchoLocal)
+      IF ( ErrStat /= ErrID_None ) THEN
+         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -861,7 +1006,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL ReadVar( UnIn, FileName,DvrFlags%AddedMass,'AddedMass',' Write table of added mass to screen.', &
          ErrStatTmp,ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -873,7 +1018,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL ReadVar( UnIn, FileName,DvrFlags%AddedMassFile,'AddedMassFile',' Write added Mass matrix to file.', &
          ErrStatTmp,ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -884,35 +1029,35 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    ELSE
       CALL ReadCom( UnIn, FileName,' Skipping the degrees flag since not calculating anything.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
         RETURN
       ENDIF
       CALL ReadCom( UnIn, FileName,' Skipping the platform coordinate since not calculating anything.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
         RETURN
       ENDIF
       CALL ReadCom( UnIn, FileName,' Skipping the platform velocity since not calculating anything.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
         RETURN
       ENDIF
       CALL ReadCom( UnIn, FileName,' Skipping the Added mass matrix output since not calculating anything.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
         RETURN
       ENDIF
       CALL ReadCom( UnIn, FileName,' Skipping the added mass matrix file output since not calculating anything.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
         RETURN
@@ -929,7 +1074,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       ! Header line
    CALL ReadCom( UnIn, FileName,' Points file input, comment line', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -940,7 +1085,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    CALL ReadVar( UnIn, FileName,DvrFlags%PointsFile,'PointsFile',' Read a points file?',   &
       ErrStatTmp,ErrMsgTmp, UnEchoLocal )
    IF ( ErrStatTmp /= ErrID_None ) THEN
-      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
       CLOSE( UnIn )
       RETURN
@@ -952,7 +1097,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL ReadVar( UnIn, FileName,DvrFlags%PointsDegrees,'PointsDegrees',' Angles in points file given in degrees?',   &
          ErrStatTmp,ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -961,7 +1106,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
       CALL ReadVar( UnIn, FileName,DvrSettings%PointsFileName,'PointsFileName',' Points file input filename',   &
          ErrStatTmp,ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -970,7 +1115,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
          ! Skip the next entry points file section.
       CALL ReadCom( UnIn, FileName,' Skipping the degreespoints flag since not using it.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -978,7 +1123,7 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
          ! Skip the next entry points file section.
       CALL ReadCom( UnIn, FileName,' Skipping the points filename since not using it.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadDvrIptFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
          CLOSE( UnIn )
          RETURN
@@ -1015,10 +1160,10 @@ END SUBROUTINE ReadDvrIptFile
 !! issued if anything is changed from what the driver input file requested.
 SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVRIPT, ErrStat, ErrMsg )
 
-   TYPE(OrcaDriver_Flags),              INTENT(INOUT)  :: DvrFlags
-   TYPE(OrcaDriver_Settings),           INTENT(INOUT)  :: DvrSettings
-   TYPE(OrcaDriver_Flags),              INTENT(IN   )  :: CLFlags
-   TYPE(OrcaDriver_Settings),           INTENT(IN   )  :: CLSettings
+   TYPE(OrcaDriver_Flags),             INTENT(INOUT)  :: DvrFlags
+   TYPE(OrcaDriver_Settings),          INTENT(INOUT)  :: DvrSettings
+   TYPE(OrcaDriver_Flags),             INTENT(IN   )  :: CLFlags
+   TYPE(OrcaDriver_Settings),          INTENT(IN   )  :: CLSettings
    LOGICAL,                            INTENT(IN   )  :: DVRIPT
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
@@ -1027,6 +1172,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
       ! Local variables
    INTEGER(IntKi)                                     :: ErrStatTmp        !< Temporary error status for calls
    CHARACTER(1024)                                    :: ErrMsgTmp         !< Temporary error status for calls
+   CHARACTER(*),              PARAMETER               :: RoutineName = 'UpdateSettingsWithCL'
    LOGICAL                                            :: WindGridModify    !< Did we modify any of the WindGrid related settings?
 
    INTEGER(IntKi)                                     :: I                 !< local counter
@@ -1050,7 +1196,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
    IF ( CLFlags%DT ) THEN
       IF ( DvrFlags%DT .AND. ( .NOT. EqualRealNos(DvrSettings%DT, CLSettings%DT) ) )   THEN
          CALL SetErrStat( ErrID_Warn, ' Overriding driver input value for DT with '//TRIM(Num2LStr(CLSettings%DT))//'.',  &
-            ErrStat,ErrMsg,'UpdateSettingsWithCL')
+            ErrStat,ErrMsg,RoutineName)
       ELSE
          DvrFlags%DT   =  .TRUE.
       ENDIF
@@ -1066,7 +1212,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
         ! If we are overriding driver input file settings, tell user
       IF ( DvrFlags%PtfmCoord ) THEN
          CALL SetErrStat( ErrID_Warn,' Overriding driver input file settings for platform coordinate.',   &
-            ErrStat,ErrMsg,'UpdateSettingsWithCL' )
+            ErrStat,ErrMsg,RoutineName )
       ENDIF
       DvrSettings%PtfmCoord =  CLSettings%PtfmCoord
       DvrFlags%PtfmCoord     =  .TRUE.
@@ -1076,16 +1222,27 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
         ! If we are overriding driver input file settings, tell user
       IF ( DvrFlags%PtfmVeloc ) THEN
          CALL SetErrStat( ErrID_Warn,' Overriding driver input file settings for platform velocities.',   &
-            ErrStat,ErrMsg,'UpdateSettingsWithCL' )
+            ErrStat,ErrMsg,RoutineName )
       ENDIF
       DvrSettings%PtfmVeloc =  CLSettings%PtfmVeloc
       DvrFlags%PtfmVeloc     =  .TRUE.
    ENDIF
 
-      ! If only one of the PtfmCoord or PtfmVeloc flags is set to true, the other should be set also
-   IF ( DvrFlags%PtfmCoord .OR. DvrFlags%PtfmVeloc ) THEN
+   IF ( CLFlags%PtfmAccel ) THEN
+        ! If we are overriding driver input file settings, tell user
+      IF ( DvrFlags%PtfmAccel ) THEN
+         CALL SetErrStat( ErrID_Warn,' Overriding driver input file settings for platform velocities.',   &
+            ErrStat,ErrMsg,RoutineName )
+      ENDIF
+      DvrSettings%PtfmAccel =  CLSettings%PtfmAccel
+      DvrFlags%PtfmAccel     =  .TRUE.
+   ENDIF
+
+      ! If only one of the PtfmCoord, PtfmVeloc, or PtfmAccel flags is set to true, the other should be set also
+   IF ( DvrFlags%PtfmCoord .OR. DvrFlags%PtfmVeloc .OR. DvrFlags%PtfmAccel ) THEN
       DvrFlags%PtfmCoord   =  .TRUE.
       DvrFlags%PtfmVeloc   =  .TRUE.
+      DvrFlags%PtfmAccel   =  .TRUE.
    ENDIF
 
 
@@ -1105,26 +1262,28 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
       !--------------------------------------------
 
    IF ( CLFlags%AddedMass ) THEN
-      IF ( DvrFlags%PtfmCoord .AND. DvrFlags%PtfmVeloc ) THEN
+      IF ( DvrFlags%PtfmCoord .AND. DvrFlags%PtfmVeloc .AND. DvrFlags%PtfmAccel ) THEN
          DvrFlags%AddedMass   =  .TRUE.
       ELSE  ! give a warning and set the flags.  The coordinate is already initialized to (0,0,0,0,0,0)
          CALL SetErrStat( ErrID_Warn,' Added mass matrix requested, but no platform location specified.  Setting location to (0,0,0,0,0,0).',  &
-            ErrStat,ErrMsg,'UpdateSettingsWithCL')
+            ErrStat,ErrMsg,RoutineName)
          DvrFlags%AddedMass      =  .FALSE.
          DvrFlags%PtfmCoord      =  .TRUE.
          DvrFlags%PtfmVeloc      =  .TRUE.
+         DvrFlags%PtfmAccel      =  .TRUE.
       ENDIF
    ENDIF
 
    IF ( CLFlags%AddedMassFile ) THEN
-      IF ( DvrFlags%PtfmCoord .AND. DvrFlags%PtfmVeloc ) THEN
+      IF ( DvrFlags%PtfmCoord .AND. DvrFlags%PtfmVeloc .AND. DvrFlags%PtfmAccel ) THEN
          DvrFlags%AddedMassFile   =  .TRUE.
       ELSE  ! give a warning and set the flags.  The coordinate is already initialized to (0,0,0,0,0,0)
          CALL SetErrStat( ErrID_Warn,' Added mass matrix file requested, but no platform location specified.  Setting location to (0,0,0,0,0,0).',  &
-            ErrStat,ErrMsg,'UpdateSettingsWithCL')
+            ErrStat,ErrMsg,RoutineName)
          DvrFlags%AddedMassFile  =  .TRUE.
          DvrFlags%PtfmCoord      =  .TRUE.
          DvrFlags%PtfmVeloc      =  .TRUE.
+         DvrFlags%PtfmAccel      =  .TRUE.
       ENDIF
    ENDIF
 
@@ -1138,7 +1297,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
          ! If a name was given in the driver input file, then warn the user.
       IF ( DvrFlags%PointsFile ) THEN
          CALL SetErrStat( ErrID_Warn,' Overriding driver input file settings for Points file.',  &
-            ErrStat,ErrMsg,'UpdateSettingsWithCL' )
+            ErrStat,ErrMsg,RoutineName )
       ENDIF
       DvrFlags%PointsFile        =  .TRUE.
       DvrSettings%PointsFileName =  CLSettings%PointsFileName
@@ -1149,7 +1308,7 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
       IF ( CLFlags%PointsDegrees ) THEN
          DvrFlags%PointsDegrees = .TRUE.
          CALL SetErrStat( ErrID_Warn,' Overriding driver input file points file angles in degrees.',   &
-            ErrStat,ErrMsg,'UpdateSettingsWithCL' )
+            ErrStat,ErrMsg,RoutineName )
       ENDIF
    ENDIF
 
@@ -1161,11 +1320,12 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
    ENDIF
 
 
-      ! If the angles for PtfmCoord and PtfmVeloc are in degrees, then convert them into radians now
+      ! If the angles for PtfmCoord, PtfmVeloc, and PtfmAccel are in degrees, then convert them into radians now
    IF ( DvrFlags%Degrees ) THEN
       DO I=4,6
          DvrSettings%PtfmCoord(I)   =  DvrSettings%PtfmCoord(I)   *  D2R      ! D2R is from the library
          DvrSettings%PtfmVeloc(I)   =  DvrSettings%PtfmVeloc(I)   *  D2R      ! D2R is from the library
+         DvrSettings%PtfmAccel(I)   =  DvrSettings%PtfmAccel(I)   *  D2R      ! D2R is from the library
       ENDDO
    ENDIF
 
@@ -1173,18 +1333,20 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
 END SUBROUTINE UpdateSettingsWithCL
 
 
-SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList, ErrStat, ErrMsg )
+SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList, AccelList, ErrStat, ErrMsg )
 
    CHARACTER(1024),                    INTENT(IN   )  :: PointsFileName       !< Name of the points file to read
    LOGICAL,                            INTENT(IN   )  :: AnglesInDegrees      !< Are the angles specified in degrees?
    REAL(ReKi), ALLOCATABLE,            INTENT(  OUT)  :: CoordList(:,:)       !< The coordinates we read in
-   REAL(ReKi), ALLOCATABLE,            INTENT(  OUT)  :: VelocList(:,:)       !< The coordinates we read in
+   REAL(ReKi), ALLOCATABLE,            INTENT(  OUT)  :: VelocList(:,:)       !< The velocities we read in
+   REAL(ReKi), ALLOCATABLE,            INTENT(  OUT)  :: AccelList(:,:)       !< The accelerations we read in
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< The error status
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< The message for the status
 
       ! Local variables
    CHARACTER(1024)                                    :: ErrMsgTmp            !< Temporary error message for calls
    INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
+   CHARACTER(*),              PARAMETER               :: RoutineName = 'ReadPointsFile'
    INTEGER(IntKi)                                     :: FiUnitPoints         !< Unit number for points file to open
 
    INTEGER(IntKi)                                     :: NumDataColumns       !< Number of data columns
@@ -1193,7 +1355,7 @@ SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList
 
    INTEGER(IntKi)                                     :: I                    !< Generic counter
 
-   REAL(ReKi)                                         :: TmpArray(12)         !< Temporary array to hold one line of data from the points file
+   REAL(ReKi)                                         :: TmpArray(18)         !< Temporary array to hold one line of data from the points file
    REAL(ReKi)                                         :: ConvToRadians        !< Conversion to radians multiplier
 
       ! Initialization of subroutine
@@ -1215,7 +1377,7 @@ SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList
    CALL GetNewUnit(    FiUnitPoints )
    CALL OpenFInpFile(   FiUnitPoints,  TRIM(PointsFileName), ErrStatTmp, ErrMsgTmp )   ! Unformatted input file
    IF ( ErrStatTmp >= AbortErrLev ) THEN
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'ReadPointsFile')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       CLOSE( FiUnitPoints )
       RETURN
    ENDIF
@@ -1223,15 +1385,16 @@ SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList
       ! Find out how long the file is
    CALL GetFileLength( FiUnitPoints, PointsFileName, NumDataColumns, NumDataPoints, NumHeaderLines, ErrMsgTmp, ErrStatTmp )
    IF ( ErrStatTmp >= AbortErrLev ) THEN
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'ReadPointsFile')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       CLOSE( FiUnitPoints )
       RETURN
    ENDIF
-   IF ( NumDataColumns /= 12 ) THEN
-      CALL SetErrStat( ErrID_Fatal,' Expecting 12 columns in '//TRIM(PointsFileName)//' corresponding to '//   &
-         '3 translation coordinates, 3 rotation angles, 3 translational velocities, and 3 rotational velocities.  '// &
+   IF ( NumDataColumns /= 18 ) THEN
+      CALL SetErrStat( ErrID_Fatal,' Expecting 18 columns in '//TRIM(PointsFileName)//' corresponding to '//   &
+         '3 translation coordinates, 3 rotation angles, 3 translational velocities, 3 rotational velocities, and '// &
+         '3 translational velocities, 3 rotational velocities.  '//&
          'Instead found '//TRIM(Num2LStr(NumDataColumns))//' columns.', &
-         ErrStat, ErrMsg, 'ReadPointsFile')
+         ErrStat, ErrMsg, RoutineName)
       CLOSE( FiUnitPoints )
       RETURN
    ENDIF
@@ -1240,7 +1403,7 @@ SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList
       ! Allocate the storage for the data
    CALL AllocAry( CoordList, 6, NumDataPoints, "Array of Points and rotation data", ErrStatTmp, ErrMsgTmp )
    IF ( ErrStatTmp >= AbortErrLev ) THEN
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'ReadPointsFile')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       CLOSE( FiUnitPoints )
       RETURN
    ENDIF
@@ -1250,7 +1413,17 @@ SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList
       ! Allocate the storage for the data
    CALL AllocAry( VelocList, 6, NumDataPoints, "Array of translation and rotation derivative data", ErrStatTmp, ErrMsgTmp )
    IF ( ErrStatTmp >= AbortErrLev ) THEN
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'ReadPointsFile')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
+      CLOSE( FiUnitPoints )
+      RETURN
+   ENDIF
+
+
+      ! Read in the headers and throw them away
+      ! Allocate the storage for the data
+   CALL AllocAry( AccelList, 6, NumDataPoints, "Array of translation and rotation 2nd derivative data", ErrStatTmp, ErrMsgTmp )
+   IF ( ErrStatTmp >= AbortErrLev ) THEN
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       CLOSE( FiUnitPoints )
       RETURN
    ENDIF
@@ -1260,7 +1433,7 @@ SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList
    DO I=1,NumHeaderLines
       CALL ReadCom( FiUnitPoints, PointsFileName,' Points file header line', ErrStatTmp, ErrMsgTmp )
       IF ( ErrStatTmp /= ErrID_None ) THEN
-         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadPointsFile')
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CLOSE( FiUnitPoints )
          RETURN
       ENDIF
@@ -1268,10 +1441,10 @@ SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList
 
       ! Read in the datapoints
    DO I=1,NumDataPoints
-      CALL ReadAry ( FiUnitPoints, PointsFileName, TmpArray(:), 12, 'Temporary coordinate', &
+      CALL ReadAry ( FiUnitPoints, PointsFileName, TmpArray(:), 18, 'Temporary coordinate', &
          'Coordinate point from Points file', ErrStatTmp, ErrMsgTmp)
       IF ( ErrStat /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,'ReadPointsFile')
+         CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CLOSE( FiUnitPoints )
          RETURN
       ENDIF
@@ -1279,6 +1452,8 @@ SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList
       CoordList(4:6,I) =  TmpArray(4:6)   * ConvToRadians
       VelocList(1:3,I) =  TmpArray(7:9)
       VelocList(4:6,I) =  TmpArray(10:12) * ConvToRadians
+      AccelList(1:3,I) =  TmpArray(13:15)
+      AccelList(4:6,I) =  TmpArray(16:18) * ConvToRadians
    ENDDO
 
    CLOSE( FiUnitPoints )
@@ -1316,6 +1491,7 @@ CONTAINS
          ! Local Variables
       CHARACTER(2048)                                    :: ErrMsgTmp         !< Temporary message variable.  Used in calls.
       INTEGER(IntKi)                                     :: ErrStatTmp        !< Temporary error status.  Used in calls.
+      CHARACTER(*),              PARAMETER               :: RoutineName = 'GetFileLength'
       INTEGER(IntKi)                                     :: LclErrStat        !< Temporary error status.  Used locally to indicate when we have reached the end of the file.
       INTEGER(IntKi)                                     :: TmpIOErrStat      !< Temporary error status for the internal read of the first word to a real number
       LOGICAL                                            :: IsRealNum         !< Flag indicating if the first word on the line was a real number
@@ -1405,7 +1581,7 @@ CONTAINS
             IF ( HaveReadData ) THEN      ! Uh oh, we have already read a line of data before now, so there is a problem
                CALL SetErrStat( ErrID_Fatal, ' Found text on line '//TRIM(Num2LStr(LineNumber))//' of '//TRIM(DataFileName)// &
                            ' when real numbers were expected.  There may be a problem with format of the file: '// &
-                           TRIM(DataFileName)//'.', ErrStat, ErrMsg, 'GetFileLength')
+                           TRIM(DataFileName)//'.', ErrStat, ErrMsg, RoutineName)
                IF ( ErrStat >= AbortErrLev ) THEN
                   RETURN
                ENDIF
@@ -1427,7 +1603,7 @@ CONTAINS
                            ' The number of data columns on line '//TRIM(Num2LStr(LineNumber))// &
                            '('//TRIM(Num2LStr(NumWords))//' columns) is different than the number of columns on first row of data '// &
                            ' (line: '//TRIM(Num2LStr(FirstDataLineNum))//', '//TRIM(Num2LStr(NumDataColumns))//' columns).', &
-                           ErrStat, ErrMsg, 'GetFileLength')
+                           ErrStat, ErrMsg, RoutineName)
                   IF ( ErrStat >= AbortErrLev ) THEN
                      RETURN
                   ENDIF
@@ -1652,6 +1828,7 @@ SUBROUTINE AddedMass_OutputWrite (DvrSettings, Initialized, PtfmAM, ErrStat, Err
          ! Temporary local variables
    INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary variable for the status of error message
    CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary variable for the error message
+   CHARACTER(*),              PARAMETER               :: RoutineName = 'AddedMass_OutputWrite'
    INTEGER(IntKi)                                     :: LenErrMsgTmp         !< Length of ErrMsgTmp (for getting WindGrid info)
 
    CHARACTER(52)                                      :: AMfmt                !< Format specifier for the output file for wave elevation series
@@ -1671,7 +1848,7 @@ SUBROUTINE AddedMass_OutputWrite (DvrSettings, Initialized, PtfmAM, ErrStat, Err
 
       CALL GetNewUnit( DvrSettings%AddedMassOutputUnit )
       CALL OpenFOutFile( DvrSettings%AddedMassOutputUnit, TRIM(DvrSettings%AddedMassFileName), ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'AddedMass_OutputWrite' )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
       Initialized =  .TRUE.
@@ -1712,6 +1889,7 @@ END SUBROUTINE AddedMass_OutputWrite
 !
 !         ! Temporary local variables
 !   INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary variable for the status of error message
+!CHARACTER(*),              PARAMETER               :: RoutineName = 'AddedMass_OutputWrite'
 !   CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary variable for the error message
 !   INTEGER(IntKi)                                     :: LenErrMsgTmp         !< Length of ErrMsgTmp (for getting WindGrid info)
 !
@@ -1786,8 +1964,8 @@ END SUBROUTINE AddedMass_OutputWrite
 !
 !
 !END SUBROUTINE PointsForce_OutputWrite
-
-
+!
+!
 
 
 !> This routine exists only to support the development of the module.  It will not be needed after the module is complete.
@@ -1820,6 +1998,12 @@ SUBROUTINE  printSettings( DvrFlags, DvrSettings )
                                                                                       //TRIM(Num2LStr(DvrSettings%PtfmVeloc(4)*R2D))//', '&
                                                                                       //TRIM(Num2LStr(DvrSettings%PtfmVeloc(5)*R2D))//', '&
                                                                                       //TRIM(Num2LStr(DvrSettings%PtfmVeloc(6)*R2D))//']')
+      CALL WrScr(' PtfmAccel:           '//FLAG(DvrFlags%PtfmAccel)//         '     ['//TRIM(Num2LStr(DvrSettings%PtfmAccel(1)))//', '&
+                                                                                      //TRIM(Num2LStr(DvrSettings%PtfmAccel(2)))//', '&
+                                                                                      //TRIM(Num2LStr(DvrSettings%PtfmAccel(3)))//', '&
+                                                                                      //TRIM(Num2LStr(DvrSettings%PtfmAccel(4)*R2D))//', '&
+                                                                                      //TRIM(Num2LStr(DvrSettings%PtfmAccel(5)*R2D))//', '&
+                                                                                      //TRIM(Num2LStr(DvrSettings%PtfmAccel(6)*R2D))//']')
    ELSE
       CALL WrScr(' PtfmCoord:           '//FLAG(DvrFlags%PtfmCoord)//         '     ['//TRIM(Num2LStr(DvrSettings%PtfmCoord(1)))//', '&
                                                                                       //TRIM(Num2LStr(DvrSettings%PtfmCoord(2)))//', '&
@@ -1833,8 +2017,14 @@ SUBROUTINE  printSettings( DvrFlags, DvrSettings )
                                                                                       //TRIM(Num2LStr(DvrSettings%PtfmVeloc(4)))//', '&
                                                                                       //TRIM(Num2LStr(DvrSettings%PtfmVeloc(5)))//', '&
                                                                                       //TRIM(Num2LStr(DvrSettings%PtfmVeloc(6)))//']')
+      CALL WrScr(' PtfmAccel:           '//FLAG(DvrFlags%PtfmAccel)//         '     ['//TRIM(Num2LStr(DvrSettings%PtfmAccel(1)))//', '&
+                                                                                      //TRIM(Num2LStr(DvrSettings%PtfmAccel(2)))//', '&
+                                                                                      //TRIM(Num2LStr(DvrSettings%PtfmAccel(3)))//', '&
+                                                                                      //TRIM(Num2LStr(DvrSettings%PtfmAccel(4)))//', '&
+                                                                                      //TRIM(Num2LStr(DvrSettings%PtfmAccel(5)))//', '&
+                                                                                      //TRIM(Num2LStr(DvrSettings%PtfmAccel(6)))//']')
    ENDIF
-   CALL WrScr(' Degrees:             '//FLAG(DvrFlags%Degrees)//           '     PtfmCoord and PtfmVeloc angles in degrees')
+   CALL WrScr(' Degrees:             '//FLAG(DvrFlags%Degrees)//           '     PtfmCoord, PtfmVeloc, and PtfmAccelo angles in degrees')
    CALL WrScr(' PointsDegrees:       '//FLAG(DvrFlags%PointsDegrees)//     '     PointsFile angles in degrees')
    CALL WrScr(' PointsOutputInit:    '//FLAG(DvrFlags%PointsOutputInit)//  '      Unit #:  '//TRIM(Num2LStr(DvrSettings%PointsOutputUnit)))
    RETURN
