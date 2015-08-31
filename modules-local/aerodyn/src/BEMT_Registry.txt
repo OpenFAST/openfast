@@ -50,6 +50,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     zLocal                          {:}{:}     -         -        "Distance to blade node, measured along the blade" m
 typedef   ^                            ^                             ReKi                     zTip                            {:}        -         -        "Distance to blade tip, measured along the blade" m
 typedef   ^                            ^                             INTEGER                  UAMod                           -          -         -        "Model for the dynamic stall equations [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]"    -
+typedef   ^                            ^                             ReKi                     UACutout                        -          -         -        "Angle-of-attach beyond which unsteady aerodynamics are disabled" (deg)
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         -          -         -        "logical flag indicating whether to use UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  Flookup                         -          -         -        "Use table lookup for f' and f'' "    -
 typedef   ^                            ^                             ReKi                     a_s                             -          -         -        "speed of sound"        m/s
@@ -112,6 +113,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     zHub                            {:}           -         -        "Distance to hub for each blade" m
 typedef   ^                            ^                             UA_ParameterType         UA                              -             -         -        "parameters for UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         -             -         -        "logical flag indicating whether to use UnsteadyAero"        -
+typedef   ^                            ^                             ReKi                     UACutout                        -             -         -        "Angle-of-attach beyond which unsteady aerodynamics are disabled" (deg)
 #
 
 #

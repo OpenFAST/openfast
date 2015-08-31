@@ -1337,6 +1337,11 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
          "In this version, UAMod must be 2 (Gonzalez's variant) or 3 (Minemma/Pierce variant).", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
    end if
    
+   
+   if (InputFileData%UACutout < 0.0_ReKi .or. InputFileData%UACutout > 90.0_ReKi ) call SetErrStat( ErrID_Fatal, &
+         "UACutout must be between 0.0 and 90.0 degrees.", ErrStat, ErrMsg, RoutineName )  
+   
+   
    if (.not. InputFileData%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
    
          ! validate the AFI input data because it doesn't appear to be done in AFI
@@ -1631,11 +1636,11 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
      end do
   end do
    
-   InitInp%UA_Flag = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
-   InitInp%UAMod   = InputFileData%UAMod
-   InitInp%Flookup = InputFileData%Flookup
-   InitInp%a_s     = InputFileData%SpdSound
-   
+   InitInp%UA_Flag  = InputFileData%AFAeroMod == AFAeroMod_BL_unsteady
+   InitInp%UAMod    = InputFileData%UAMod
+   InitInp%Flookup  = InputFileData%Flookup
+   InitInp%a_s      = InputFileData%SpdSound
+   InitInp%UACutout = InputFileData%UACutout
    
    call BEMT_Init(InitInp, u, p%BEMT,  x, xd, z, OtherState, p%AFI%AFInfo, y, Interval, InitOut, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
