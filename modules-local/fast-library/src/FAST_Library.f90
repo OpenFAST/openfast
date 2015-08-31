@@ -83,7 +83,8 @@ subroutine FAST_Sizes(TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_
    dt_c          = Turbine%p_FAST%dt
 
    ErrStat_c     = ErrStat
-   ErrMsg_c      = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+   ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
+   ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    
 #ifdef CONSOLE_FILE   
    if (ErrStat /= ErrID_None) call wrscr1(trim(ErrMsg))
@@ -154,7 +155,8 @@ subroutine FAST_Start(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c,
    END IF
    
    ErrStat_c     = ErrStat
-   ErrMsg_c      = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+   ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
+   ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    
 #ifdef CONSOLE_FILE   
    if (ErrStat /= ErrID_None) call wrscr1(trim(ErrMsg))
@@ -185,19 +187,23 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       IF (n_t_global == Turbine%p_FAST%n_TMax_m1 + 1) THEN  ! we call update an extra time in Simulink, which we can ignore until the time shift with outputs is solved
          n_t_global = n_t_global + 1
          ErrStat_c = ErrID_None
-         ErrMsg_c = TRANSFER( C_NULL_CHAR, ErrMsg_c )
+         ErrMsg = C_NULL_CHAR
+         ErrMsg_c = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
       ELSE     
          ErrStat_c = ErrID_Info
-         ErrMsg_c  = TRANSFER( "Simulation completed."//C_NULL_CHAR, ErrMsg_c )
+         ErrMsg = "Simulation completed."//C_NULL_CHAR
+         ErrMsg_c = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
       END IF
       
    ELSEIF(NumOutputs_c /= SIZE(Turbine%y_FAST%ChannelNames) ) THEN
       ErrStat_c = ErrID_Fatal
-      ErrMsg_c  = TRANSFER( "FAST_Update:size of OutputAry is invalid or FAST has too many outputs."//C_NULL_CHAR, ErrMsg_c )
+      ErrMsg    = "FAST_Update:size of OutputAry is invalid or FAST has too many outputs."//C_NULL_CHAR
+      ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
       RETURN
    ELSEIF(  NumInputs_c /= NumFixedInputs .AND. NumInputs_c /= NumFixedInputs+3 ) THEN
       ErrStat_c = ErrID_Fatal
-      ErrMsg_c  = TRANSFER( "FAST_Update:size of InputAry is invalid."//C_NULL_CHAR, ErrMsg_c )
+      ErrMsg    = "FAST_Update:size of InputAry is invalid."//C_NULL_CHAR
+      ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
       RETURN
    ELSE
 
@@ -210,8 +216,9 @@ subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c
       ! set the outputs for external code here...
       ! return y_FAST%ChannelNames
       
-      ErrStat_c = ErrStat
-      ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+      ErrStat_c     = ErrStat
+      ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
+      ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    END IF
    
    CALL FillOutputAry_T(Turbine, Outputs)   
@@ -291,8 +298,9 @@ subroutine FAST_CreateCheckpoint(CheckpointRootName_c, ErrStat_c, ErrMsg_c) BIND
    CALL FAST_CreateCheckpoint_T(t_initial, n_t_global, 1, Turbine, CheckpointRootName, ErrStat, ErrMsg, Unit )
 
       ! transfer Fortran variables to C:      
-   ErrStat_c = ErrStat
-   ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+   ErrStat_c     = ErrStat
+   ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
+   ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
 
 
 #ifdef CONSOLE_FILE   
@@ -341,8 +349,9 @@ subroutine FAST_Restart(CheckpointRootName_c, AbortErrLev_c, NumOuts_c, dt_c, n_
    NumOuts_c     = min(MAXOUTPUTS, 1 + SUM( Turbine%y_FAST%numOuts )) ! includes time
    dt_c          = Turbine%p_FAST%dt      
       
-   ErrStat_c = ErrStat
-   ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+   ErrStat_c     = ErrStat
+   ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
+   ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
 
 #ifdef CONSOLE_FILE   
    if (ErrStat /= ErrID_None) call wrscr1(trim(ErrMsg))
@@ -396,7 +405,8 @@ subroutine FAST_OpFM_Init(TMax, InputFileName_c, TurbID, NumSCin, NumSCout, Turb
    AbortErrLev_c = AbortErrLev   
    dt_c          = Turbine%p_FAST%dt
    ErrStat_c     = ErrStat
-   ErrMsg_c      = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+   ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
+   ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    
    call SetOpenFOAM_pointers(OpFM_Input_from_FAST, OpFM_Output_to_FAST)
                         
@@ -414,7 +424,8 @@ subroutine FAST_OpFM_Solution0(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Sol
    
       ! set values for return to OpenFOAM
    ErrStat_c     = ErrStat
-   ErrMsg_c      = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+   ErrMsg        = TRIM(ErrMsg)//C_NULL_CHAR
+   ErrMsg_c      = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    
                         
 end subroutine FAST_OpFM_Solution0
@@ -482,10 +493,12 @@ subroutine FAST_OpFM_Step(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Step')
       IF (n_t_global == Turbine%p_FAST%n_TMax_m1 + 1) THEN  ! we call update an extra time in Simulink, which we can ignore until the time shift with outputs is solved
          n_t_global = n_t_global + 1
          ErrStat_c = ErrID_None
-         ErrMsg_c = TRANSFER( C_NULL_CHAR, ErrMsg_c )
+         ErrMsg = C_NULL_CHAR
+         ErrMsg_c = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
       ELSE     
          ErrStat_c = ErrID_Info
-         ErrMsg_c  = TRANSFER( "Simulation completed."//C_NULL_CHAR, ErrMsg_c )
+         ErrMsg = "Simulation completed."//C_NULL_CHAR
+         ErrMsg_c = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
       END IF
       
    ELSE
@@ -494,7 +507,8 @@ subroutine FAST_OpFM_Step(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Step')
       n_t_global = n_t_global + 1
             
       ErrStat_c = ErrStat
-      ErrMsg_c  = TRANSFER( TRIM(ErrMsg)//C_NULL_CHAR, ErrMsg_c )
+      ErrMsg = TRIM(ErrMsg)//C_NULL_CHAR
+      ErrMsg_c  = TRANSFER( ErrMsg//C_NULL_CHAR, ErrMsg_c )
    END IF
    
       
