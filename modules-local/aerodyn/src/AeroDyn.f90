@@ -1922,6 +1922,7 @@ SUBROUTINE TwrInfl_NearestLine2Element(p, u, BladeNodePosition, r_TowerBlade, th
    REAL(ReKi)      :: dist
    REAL(ReKi)      :: min_dist
    REAL(ReKi)      :: elem_position, elem_position2
+   REAL(SiKi)      :: elem_position_SiKi
 
    REAL(ReKi)      :: p1(3), p2(3)        ! position vectors for nodes on tower line 2 element
    
@@ -1962,12 +1963,18 @@ SUBROUTINE TwrInfl_NearestLine2Element(p, u, BladeNodePosition, r_TowerBlade, th
             ! note: i forumlated it this way because Fortran doesn't necessarially do shortcutting and I don't want to call EqualRealNos if we don't need it:
       if ( elem_position .ge. 0.0_ReKi .and. elem_position .le. 1.0_ReKi ) then !we're ON the element (between the two nodes)
          on_element = .true.
-      elseif (EqualRealNos( elem_position, 1.0_ReKi )) then !we're ON the element (at a node)
-         on_element = .true.
-      elseif (EqualRealNos( elem_position,  0.0_ReKi )) then !we're ON the element (at a node)
-         on_element = .true.
-      else !we're not on the element
-         on_element = .false.
+      else
+         elem_position_SiKi = REAL( elem_position, SiKi )
+         if (EqualRealNos( elem_position_SiKi, 1.0_SiKi )) then !we're ON the element (at a node)
+            on_element = .true.
+            elem_position = 1.0_ReKi
+         elseif (EqualRealNos( elem_position_SiKi,  0.0_SiKi )) then !we're ON the element (at a node)
+            on_element = .true.
+            elem_position = 0.0_ReKi
+         else !we're not on the element
+            on_element = .false.
+         end if
+         
       end if
 
       if (on_element) then
