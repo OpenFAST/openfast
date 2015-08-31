@@ -94,7 +94,7 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
          m = (k-1)*p%NumBlNds*23 + (j-1)*23 
          
          chanPrefix = "B"//trim(num2lstr(k))//"N"//trim(num2lstr(j))
-         InitOut%WriteOutputHdr( m + 1 ) = trim(chanPrefix)//"Theta"
+         InitOut%WriteOutputHdr( m + 1 ) = trim(chanPrefix)//"Twst"
          InitOut%WriteOutputUnt( m + 1 ) = '  (deg)  '
          InitOut%WriteOutputHdr( m + 2 ) = trim(chanPrefix)//"Psi"
          InitOut%WriteOutputUnt( m + 2 ) = '  (deg)  '
@@ -102,11 +102,11 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
          InitOut%WriteOutputUnt( m + 3 ) = '  (m/s)  '
          InitOut%WriteOutputHdr( m + 4 ) = trim(chanPrefix)//"Vy"
          InitOut%WriteOutputUnt( m + 4 ) = '  (m/s)  '
-         InitOut%WriteOutputHdr( m + 5 ) = ' '//trim(chanPrefix)//"AxInd"
+         InitOut%WriteOutputHdr( m + 5 ) = ' '//trim(chanPrefix)//"AIn"
          InitOut%WriteOutputUnt( m + 5 ) = '  (deg)  '
-         InitOut%WriteOutputHdr( m + 6 ) = ' '//trim(chanPrefix)//"TanInd"
+         InitOut%WriteOutputHdr( m + 6 ) = ' '//trim(chanPrefix)//"ApIn"
          InitOut%WriteOutputUnt( m + 6 ) = '  (deg)  '
-         InitOut%WriteOutputHdr( m + 7 ) = trim(chanPrefix)//"IndVel"
+         InitOut%WriteOutputHdr( m + 7 ) = trim(chanPrefix)//"Vrel"
          InitOut%WriteOutputUnt( m + 7 ) = '  (m/s)  '
          InitOut%WriteOutputHdr( m + 8 ) = ' '//trim(chanPrefix)//"Phi"
          InitOut%WriteOutputUnt( m + 8 ) = '  (deg)  '

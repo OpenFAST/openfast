@@ -37,6 +37,7 @@ module BEMTUnCoupled
    public :: ComputeAirfoilCoefs
    public :: UncoupledErrFn
    public :: BEMTU_InductionWithResidual
+   public :: ApplySkewedWakeCorrection
    
    public :: BEMTU_Wind
    contains
@@ -67,11 +68,11 @@ module BEMTUnCoupled
     !else if ( abs(tanInduction) > 10 ) then
     !    W = Vx*(1-axInduction)/sin(phi)
     !else
-        W = sqrt((Vx*(1-axInduction))**2 + (Vy)**2 ) !*(1+tanInduction))**2)
+        W = sqrt((Vx*(1-axInduction))**2 + (Vy*(1+tanInduction))**2)
     !end if
 
     Re = airDens * W * chord / mu
-
+    if ( EqualRealNos(Re, 0.0_ReKi) ) Re = 0.001  ! Do this to avoid a singularity when we take log(Re) in the airfoil lookup.
 
 end subroutine BEMTU_Wind
 
@@ -179,7 +180,7 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, psi, chi0, numReIterations,
    !do I = 1,numReIterations
       
       call ComputeAirfoilCoefs( phi, axInduction, tanInduction, Vx, Vy, chord, theta, airDens, mu, useAIDrag, useTIDrag, AFInfo, &
-                                UA_Flag, p_UA, xd_UA, OtherState_UA, &
+                                .FALSE. , p_UA, xd_UA, OtherState_UA, &    ! Never use unsteady aero for this version of the airfoil coefs
                                 AOA, Re, Cl, Cd, Cx, Cy, Cm, errStat, errMsg )       
       if (errStat >= AbortErrLev) then
          call SetErrStat( errStat, errMsg, errStat, errMsg, 'BEMTU_InductionWithResidual' ) 
@@ -270,7 +271,68 @@ real(ReKi) function UncoupledErrFn(phi, psi, chi0, numReIterations, airDens, mu,
 end function UncoupledErrFn
 
                               
-                              
+subroutine ApplySkewedWakeCorrection( Vx, Vy, azimuth, chi0, a, ap, tipRatio, phi, chi, ErrStat, ErrMsg )
+   
+   real(ReKi),                intent(in   ) :: Vx
+   real(ReKi),                intent(in   ) :: Vy
+   real(ReKi),                intent(in   ) :: azimuth
+   real(ReKi),                intent(in   ) :: chi0 
+   real(ReKi),                intent(inout) :: a 
+   real(ReKi),                intent(inout) :: ap 
+   real(ReKi),                intent(in   ) :: tipRatio            ! r/Rtip 
+   real(ReKi),                intent(  out) :: phi
+   real(ReKi),                intent(  out) :: chi
+   integer(IntKi),            intent(  out) :: ErrStat       ! Error status of the operation
+   character(*),              intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None   
+   
+      ! Local variables      
+   real(ReKi)                               :: yawCorr, saz, x, y
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   ! Skewed wake correction
+   
+   saz = sin(azimuth)
+   chi = chi0
+   
+   if ( abs(saz) > 0.005_ReKi ) then
+      chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
+      
+   !if (chi0 < 40.0*d2r .and. chi > 0.0 ) then
+      ! TODO: Add check on chi to make sure it is < pi/2 and (positive check should be outside solve)  GJH 5/20/2015
+      !yawCorr = max(0.0,chi0-0.5236)
+      !yawCorr = min(0.785,yawCorr)
+      yawCorr = (15.0_ReKi*pi/64.0_ReKi*tan(chi/2.0_ReKi) * (tipRatio) * saz)
+               
+      a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
+      !if ((a > 1.0 .AND. ayaw < 1.0) .OR. (a < 1.0 .AND. ayaw > 1.0 )) then
+      !   call WrScr('Yaw correction crossed over 1.0.')
+      !   !a = max(1.0, ayaw)
+      !else if ((a < -1.0 .AND. ayaw > -1.0) .OR. (a > -1.0 .AND. ayaw < -1.0 )) then
+      !   call WrScr('Yaw correction crossed over -1.0.')
+      !
+      !end if
+         
+   else
+      chi = chi0
+       !call WrScr('Warning: high yaw angle.  Not applying Pitt-Peters correction.')
+   end if
+      
+   y = (1-a )*Vx
+   x = (1+ap)*Vy
+   
+   if ( EqualRealNos(y, 0.0_ReKi) .OR. EqualRealNos(x, 0.0_ReKi) ) then
+      a     = 0.0_ReKi
+      ap    = 0.0_ReKi
+      phi   = 0.0_ReKi
+   else
+      phi   = atan2(y,x)
+   end if
+   
+   
+end subroutine ApplySkewedWakeCorrection
                               
 recursive subroutine inductionFactors(r , Rtip, chord, phi, azimuth, chi0, cn, ct, B, &
                               Vx, Vy, wakerotation, hubLoss, tipLoss, hubLossConst, tipLossConst, skewWakeMod, &
@@ -447,32 +509,7 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, azimuth, chi0, cn, c
     !    a = min(a, 0.999999)
     !end if
 
-       ! Skewed wake correction
-         
-   if ( skewWakeMod == SkewMod_PittPeters ) then
-      if ( abs(saz) > 0.005_ReKi ) then
-         chi = (0.6_ReKi*a + 1.0_ReKi)*chi0
-      
-      !if (chi0 < 40.0*d2r .and. chi > 0.0 ) then
-         ! TODO: Add check on chi to make sure it is < pi/2 and (positive check should be outside solve)  GJH 5/20/2015
-         !yawCorr = max(0.0,chi0-0.5236)
-         !yawCorr = min(0.785,yawCorr)
-         yawCorr = (15.0_ReKi*pi/64.0_ReKi*tan(chi/2.0_ReKi) * (r/Rtip) * saz)
-               
-         a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
-         !if ((a > 1.0 .AND. ayaw < 1.0) .OR. (a < 1.0 .AND. ayaw > 1.0 )) then
-         !   call WrScr('Yaw correction crossed over 1.0.')
-         !   !a = max(1.0, ayaw)
-         !else if ((a < -1.0 .AND. ayaw > -1.0) .OR. (a > -1.0 .AND. ayaw < -1.0 )) then
-         !   call WrScr('Yaw correction crossed over -1.0.')
-         !
-         !end if
-         
-      !else
-     !    call WrScr('Warning: high yaw angle.  Not applying Pitt-Peters correction.')
-      end if
-      
-   end if
+    
    
     ! compute tangential induction factor
    kp = sigma_p*ct/4.0_ReKi/F/sphi/cphi
