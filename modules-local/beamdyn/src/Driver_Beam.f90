@@ -58,6 +58,7 @@ PROGRAM MAIN
    INTEGER(IntKi)                     :: DvrOut 
 
    CHARACTER(256)    :: DvrInputFile
+   CHARACTER(256)    :: RootName
 
 
    ! local variables
@@ -71,6 +72,7 @@ PROGRAM MAIN
    ! Initialization of glue-code time-step variables
    ! -------------------------------------------------------------------------
    CALL GET_COMMAND_ARGUMENT(1,DvrInputFile)
+   CALL GetRoot(DvrInputFile,RootName)
    CALL BD_ReadDvrFile(DvrInputFile,t_initial,t_final,dt_global,BD_InitInput,&
                           ErrStat,ErrMsg)
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
@@ -108,6 +110,8 @@ PROGRAM MAIN
                    , ErrStat               &
                    , ErrMsg )
 
+   CALL Dvr_InitializeOutputFile(DvrOut,BD_InitOutput,RootName,ErrStat,ErrMsg)
+
    BD_InputTimes(1) = t_initial
    BD_InputTimes(2) = t_initial 
    BD_OutputTimes(1) = t_initial
@@ -132,15 +136,7 @@ IF(n_t_global == 3) STOP
      CALL BD_CalcOutput( t_global, BD_Input(2), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
                              BD_OtherState,  BD_Output(2), ErrStat, ErrMsg)
-!     IF(BD_Parameter%analysis_type .EQ. 2 .AND. n_t_global .EQ. 0) THEN
-!         CALL BD_InitAcc( t_global, BD_Input(1), BD_Parameter, &
-!               BD_ContinuousState,BD_OtherState,ErrStat,ErrMsg)
-!!      WRITE(*,*) 'Initial Acc'
-!!      WRITE(*,*) BD_OtherState%acc(:)
-!!      WRITE(*,*) 'Initial Xcc'
-!!      WRITE(*,*) BD_OtherState%xcc(:)
-!     ENDIF
-WRITE(*,*) 'TEST'
+
      IF(BD_Parameter%analysis_type .EQ. 1 .AND. n_t_global .EQ. 1) EXIT 
 
      CALL BD_UpdateStates( t_global, n_t_global, BD_Input, BD_InputTimes, BD_Parameter, &
@@ -314,6 +310,7 @@ SUBROUTINE BD_ReadDvrFile(DvrInputFile,t_ini,t_f,dt,InitInputData,&
    ! Initialize some variables:
    ErrStat = ErrID_None
    ErrMsg  = ""
+   UnEc = -1
    
    CALL GetNewUnit(UnIn,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -455,3 +452,57 @@ contains
       return
    end subroutine cleanup         
 END SUBROUTINE BD_ReadDvrFile
+
+SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
+
+   USE BeamDyn
+   USE BeamDyn_Types
+   USE NWTC_Library
+
+   INTEGER(IntKi),                    INTENT(  OUT):: OutUnit
+   TYPE(BD_InitOutputType),           INTENT(IN   ):: IntOutput     ! Output for initialization routine
+   INTEGER(IntKi),                    INTENT(  OUT):: ErrStat     ! Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   CHARACTER(*),                      INTENT(IN   ):: RootName
+
+   integer(IntKi)                            ::  i      
+   integer(IntKi)                            :: numOuts
+   INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
+   character(*), parameter :: RoutineName = 'Dvr_InitializeOutputFile'
+
+   CALL GetNewUnit(OutUnit,ErrStat2,ErrMsg2)
+   CALL OpenFOutFile ( OutUnit, trim(RootName)//'.out', ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) return
+
+   write (OutUnit,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using'//trim(GetNVD(IntOutput%Ver))
+   write (OutUnit,'()' )    !print a blank line
+   
+   numOuts = size(IntOutput%WriteOutputHdr)
+   !......................................................
+   ! Write the names of the output parameters on one line:
+   !......................................................
+
+   call WrFileNR ( OutUnit, '     Time           ' )
+
+   do i=1,NumOuts
+      call WrFileNR ( OutUnit, tab//IntOutput%WriteOutputHdr(i) )
+   end do ! i
+
+   write (OutUnit,'()')
+
+      !......................................................
+      ! Write the units of the output parameters on one line:
+      !......................................................
+
+   call WrFileNR ( OutUnit, '      (s)           ' )
+
+   do i=1,NumOuts
+      call WrFileNR ( Outunit, tab//IntOutput%WriteOutputUnt(i) )
+   end do ! i
+
+   write (OutUnit,'()')  
+
+
+END SUBROUTINE Dvr_InitializeOutputFile
