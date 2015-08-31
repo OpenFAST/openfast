@@ -1941,7 +1941,11 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
 
       ! FLookup - Flag to indicate whether a lookup for f’ will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag):
    CALL ReadVar( UnIn, InputFile, InputFileData%FLookup, "FLookup", "Flag to indicate whether a lookup for f’ will be calculated (TRUE) or whether best-fit exponential equations will be used (FALSE); if FALSE S1-S4 must be provided in airfoil input files [used only when AFAreoMod=2] (flag)", ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )     
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+   
+      ! UACutout - Angle-of-attach beyond which unsteady aerodynamics are disabled (deg)
+!   CALL ReadVar( UnIn, InputFile, InputFileData%UACutout, "FLookup", "Angle-of-attach beyond which unsteady aerodynamics are disabled (deg)", ErrStat2, ErrMsg2, UnEc)
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
       
       ! Return on error at end of section
    IF ( ErrStat >= AbortErrLev ) THEN

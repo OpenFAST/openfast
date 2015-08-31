@@ -864,7 +864,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                      u_UA%U = BEMTC_Wind(z%axInduction(i,j), z%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u%chi0, u%psi(j), phi, u_UA%alpha, u_UA%Re, chi)
                   end if
 
-                  if ( abs(u_UA%alpha) > 40.0*D2R ) then
+                  if ( abs(u_UA%alpha) > 40*D2R ) then ! p%UACutout ) then
                      OtherState%UA_Flag(i,j) = .FALSE.
                      call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to high angle-of-attack.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
                   elseif (EqualRealNos(u_UA%U, 0.0_ReKi) ) then
@@ -895,7 +895,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                      ! Uncoupled wind for determining alpha, and U, and Re
                   call BEMTU_Wind(z%phi(i,j), 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u_UA%alpha,  u_UA%U, u_UA%Re)
                       
-                  if ( abs(u_UA%alpha) > 40.0*D2R ) then
+                  if ( abs(u_UA%alpha) > 40*D2R ) then ! p%UACutout ) 
                      OtherState%UA_Flag(i,j) = .FALSE.
                      !write( tmpStr, '(F15.4)' ) t
                      call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to high angle-of-attack.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
@@ -1222,7 +1222,125 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_res
    
 END SUBROUTINE BEMT_CalcConstrStateResidual
 
-logical function DeterminePhiBounds(numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
+
+subroutine GetSolveRegionOrdering(epsilon2, phiIn, test_lower, test_upper)
+   real(ReKi),             intent(in   ) :: epsilon2
+   real(ReKi),             intent(in   ) :: phiIn
+   real(ReKi),             intent(  out) :: test_lower(3)
+   real(ReKi),             intent(  out) :: test_upper(3)
+
+   if ( phiIn >= 0.0 .and. phiIn <= pi/2.0 ) then
+      test_lower(1) = epsilon2
+      test_upper(1) = pi/2.0
+      if (phiIn < pi/4.0 ) then
+         test_lower(2) = -pi/4.0
+         test_upper(2) = -epsilon2
+         test_lower(3) = pi/2.0
+         test_upper(3) = pi - epsilon2
+      else
+         test_lower(3) = -pi/4.0
+         test_upper(3) = -epsilon2
+         test_lower(2) = pi/2.0
+         test_upper(2) = pi - epsilon2
+      end if
+   else if (phiIn < 0.0  ) then
+      test_lower(1) = -pi/4.0
+      test_upper(1) = -epsilon2
+      test_lower(2) = epsilon2
+      test_upper(2) = pi/2.0
+      test_lower(3) = pi/2.0
+      test_upper(3) = pi - epsilon2
+   else
+      test_lower(3) = -pi/4.0
+      test_upper(3) = -epsilon2
+      test_lower(2) = epsilon2
+      test_upper(2) = pi/2.0
+      test_lower(1) = pi/2.0
+      test_upper(1) = pi - epsilon2
+   end if
+   
+      
+end subroutine GetSolveRegionOrdering
+   
+integer function TestRegion(epsilon2, phiLower, phiUpper, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
+                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
+                        errStat, errMsg)
+   real(ReKi),             intent(in   ) :: epsilon2
+   real(ReKi),             intent(in   ) :: phiLower
+   real(ReKi),             intent(in   ) :: phiUpper
+   integer,                intent(in   ) :: numBlades
+   !integer,                intent(in   ) :: numBladeNodes
+   real(ReKi),             intent(in   ) :: airDens
+   real(ReKi),             intent(in   ) :: mu
+   type(AFInfoType),       intent(in   ) :: AFInfo
+   real(ReKi),             intent(in   ) :: rlocal         
+   real(ReKi),             intent(in   ) :: rtip           
+   real(ReKi),             intent(in   ) :: chord          
+   real(ReKi),             intent(in   ) :: theta           
+   real(ReKi),             intent(in   ) :: Vx             
+   real(ReKi),             intent(in   ) :: Vy             
+   !real(ReKi),             intent(in   ) :: omega
+   real(ReKi),             intent(in   ) :: chi0
+   real(ReKi),             intent(in   ) :: psi            
+   logical,                intent(in   ) :: useTanInd 
+   logical,                intent(in   ) :: useAIDrag
+   logical,                intent(in   ) :: useTIDrag
+   logical,                intent(in   ) :: useHubLoss
+   logical,                intent(in   ) :: useTipLoss
+   real(ReKi),             intent(in   ) :: hubLossConst
+   real(ReKi),             intent(in   ) :: tipLossConst
+   integer,                intent(in   ) :: SkewWakeMod   ! Skewed wake model
+   logical,                intent(in   ) :: UA_Flag
+   type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
+   type(UA_DiscreteStateType),   intent(in   ) :: xd_UA          ! Discrete states at Time
+   type(UA_OtherStateType),      intent(in   ) :: OtherState_UA  ! Other/optimization states
+   integer,                intent(in   ) :: numReIterations
+   integer(IntKi),         intent(  out) :: ErrStat       ! Error status of the operation
+   character(*),           intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   
+      ! Local variables  
+   character(len(errMsg))                        :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
+   integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
+   real(ReKi) :: f1, f2
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   ErrStat2 = ErrID_None
+   ErrMsg2  = ""
+   
+   f1 = UncoupledErrFn(phiLower, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
+                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
+                        errStat2, errMsg2)
+   
+   if (errStat2 >= AbortErrLev) then
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'TestRegion' ) 
+      return
+   end if                  
+   f2 = UncoupledErrFn(phiUpper, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
+                     UA_Flag, p_UA, xd_UA, OtherState_UA, &
+                     errStat2, errMsg2)
+   if (errStat2 >= AbortErrLev) then
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'TestRegion' ) 
+      return
+   end if   
+   
+      ! Look for zero-crossing
+   if ( EqualRealNos(f1, 0.0_ReKi) .and. EqualRealNos(f2, 0.0_ReKi) ) then
+      TestRegion = 0  ! all solutions yield zero -- special case
+      return
+   end if
+   
+   if  (f1*f2  < 0.0_ReKi) then
+      TestRegion = 1
+   else
+      TestRegion = 2  ! No zero
+   end if
+   
+end function TestRegion
+      
+logical function DeterminePhiBounds(epsilon2, phiIn, numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
                            Vx, Vy, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
                            UA_Flag, p_UA, xd_UA, OtherState_UA, &
                            numReIterations, maxIndIterations, aTol, &
@@ -1230,7 +1348,8 @@ logical function DeterminePhiBounds(numBlades, numBladeNodes, airDens, mu, AFInf
 
    use fminfcn
    use mod_root1dim
-
+   real(ReKi),             intent(in   ) :: epsilon2
+   real(ReKi),             intent(in   ) :: phiIn
    integer,                intent(in   ) :: numBlades
    integer,                intent(in   ) :: numBladeNodes
    real(ReKi),             intent(in   ) :: airDens
@@ -1268,104 +1387,127 @@ logical function DeterminePhiBounds(numBlades, numBladeNodes, airDens, mu, AFInf
    
    character(len(errMsg))                        :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
-
-   
+   integer(IntKi)                                :: i
+   integer                 :: result
    REAL(ReKi) :: f1, f2
-   REAL(ReKi) :: fzero, epsilon2         ! wake skew angle (rad)
-
+   REAL(ReKi) :: fzero        ! wake skew angle (rad)
+   real(ReKi) :: test_lower(3), test_upper(3)
    
    ErrStat = ErrID_None
    ErrMsg  = ""
    ErrStat2 = ErrID_None
    ErrMsg2  = ""
-   epsilon2 =  sqrt(epsilon(1.0_ReKi)) ! 1e-6 !
-   DeterminePhiBounds = .false.
    
+   DeterminePhiBounds = .false.  ! TRUE if found phiStar is epsilon2 
    
-
-   f1 = UncoupledErrFn(epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+      ! Get the ordering for the region tests based on the current value of phiIn
+   call GetSolveRegionOrdering(epsilon2, phiIn, test_lower, test_upper)
+   
+   do i = 1,3   ! Need to potentially test 3 regions
+      result = TestRegion(epsilon2, test_lower(i), test_upper(i), psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
                         Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
                         UA_Flag, p_UA, xd_UA, OtherState_UA, &
                         errStat2, errMsg2)
-   if (errStat2 >= AbortErrLev) then
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-      return
-   end if
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'DeterminePhiBounds' )   
+      if ( result == 0 ) then
+         DeterminePhiBounds = .true.  ! Special case and return epsilon as the solution
+         return       
+      else if ( result == 1 ) then
+         phi_lower = test_lower(i)
+         phi_upper = test_upper(i)
+         return 
+      end if     
+   end do
+      
+   errStat2 = 4
+   errMsg2  = 'There is no valid value of phi for these operating conditions!  psi = '//TRIM(Num2Lstr(psi))//', Vx = '//TRIM(Num2Lstr(Vx))//', Vy = '//TRIM(Num2Lstr(Vy))//', rlocal = '//TRIM(Num2Lstr(rLocal))//', theta = '//TRIM(Num2Lstr(theta))
+   call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'DeterminePhiBounds' )            
+   return 
    
    
-      ! If epsilon satisfies the residual equation, set phi to epsilon and return 
-   if ( abs(f1) < aTol ) then 
-      DeterminePhiBounds = .true.
-      return
-   end if
-   
-   f2 = UncoupledErrFn(pi/2.0, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta,  AFInfo, &
-                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
-                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
-                        errStat2, errMsg2)
-   if (errStat2 >= AbortErrLev) then
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-      return
-   end if
-         
-   if (f1*f2 < 0.0_ReKi) then  !# an uncommon but possible case
-      phi_lower = epsilon2
-      phi_upper = pi/2.0
-   else 
-         
-      f1 = UncoupledErrFn(-pi/4.0, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
-                        errStat2, errMsg2)
-      if (errStat2 >= AbortErrLev) then
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-         return
-      end if                  
-      f2 = UncoupledErrFn(-epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
-                        errStat2, errMsg2)
-      if (errStat2 >= AbortErrLev) then
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-         return
-      end if                  
-      if  (f1*f2  < 0.0_ReKi) then
-         phi_lower = -pi/4.0
-         phi_upper = -epsilon2
-      else
-         
-         f1 = UncoupledErrFn(pi/2.0, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
-                        errStat2, errMsg2)
-         if (errStat2 >= AbortErrLev) then
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-            return
-         end if                  
-         f2 = UncoupledErrFn(pi - epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-                           Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-                           UA_Flag, p_UA, xd_UA, OtherState_UA, &
-                           errStat2, errMsg2)
-         if (errStat2 >= AbortErrLev) then
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-            return
-         end if 
-         if  (f1*f2  < 0.0_ReKi) then
-            phi_lower = pi/2.0
-            phi_upper = pi - epsilon2
-         else
-
-            errStat2 = 4
-            errMsg2  = 'There is no valid value of phi for these operating conditions!  psi = '//TRIM(Num2Lstr(psi))//', Vx = '//TRIM(Num2Lstr(Vx))//', Vy = '//TRIM(Num2Lstr(Vy))//', rlocal = '//TRIM(Num2Lstr(rLocal))//', theta = '//TRIM(Num2Lstr(theta))
-            call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' )     
-            
-            
-            return
-         end if
-         
-      end if
-               
-   end if
+   !f1 = UncoupledErrFn(epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+   !                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
+   !                     UA_Flag, p_UA, xd_UA, OtherState_UA, &
+   !                     errStat2, errMsg2)
+   !if (errStat2 >= AbortErrLev) then
+   !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
+   !   return
+   !end if
+   !
+   !
+   !   ! If epsilon satisfies the residual equation, set phi to epsilon and return 
+   !if ( abs(f1) < aTol ) then 
+   !   DeterminePhiBounds = .true.
+   !   return
+   !end if
+   !
+   !f2 = UncoupledErrFn(pi/2.0, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta,  AFInfo, &
+   !                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
+   !                     UA_Flag, p_UA, xd_UA, OtherState_UA, &
+   !                     errStat2, errMsg2)
+   !if (errStat2 >= AbortErrLev) then
+   !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
+   !   return
+   !end if
+   !      
+   !if (f1*f2 < 0.0_ReKi) then  !# an uncommon but possible case
+   !   phi_lower = epsilon2
+   !   phi_upper = pi/2.0
+   !else 
+   !      
+   !   f1 = UncoupledErrFn(-pi/4.0, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+   !                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
+   !                     UA_Flag, p_UA, xd_UA, OtherState_UA, &
+   !                     errStat2, errMsg2)
+   !   if (errStat2 >= AbortErrLev) then
+   !      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
+   !      return
+   !   end if                  
+   !   f2 = UncoupledErrFn(-epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+   !                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
+   !                     UA_Flag, p_UA, xd_UA, OtherState_UA, &
+   !                     errStat2, errMsg2)
+   !   if (errStat2 >= AbortErrLev) then
+   !      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
+   !      return
+   !   end if                  
+   !   if  (f1*f2  < 0.0_ReKi) then
+   !      phi_lower = -pi/4.0
+   !      phi_upper = -epsilon2
+   !   else
+   !      
+   !      f1 = UncoupledErrFn(pi/2.0, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+   !                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
+   !                     UA_Flag, p_UA, xd_UA, OtherState_UA, &
+   !                     errStat2, errMsg2)
+   !      if (errStat2 >= AbortErrLev) then
+   !         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
+   !         return
+   !      end if                  
+   !      f2 = UncoupledErrFn(pi - epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+   !                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
+   !                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
+   !                        errStat2, errMsg2)
+   !      if (errStat2 >= AbortErrLev) then
+   !         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
+   !         return
+   !      end if 
+   !      if  (f1*f2  < 0.0_ReKi) then
+   !         phi_lower = pi/2.0
+   !         phi_upper = pi - epsilon2
+   !      else
+   !
+   !         errStat2 = 4
+   !         errMsg2  = 'There is no valid value of phi for these operating conditions!  psi = '//TRIM(Num2Lstr(psi))//', Vx = '//TRIM(Num2Lstr(Vx))//', Vy = '//TRIM(Num2Lstr(Vy))//', rlocal = '//TRIM(Num2Lstr(rLocal))//', theta = '//TRIM(Num2Lstr(theta))
+   !         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' )     
+   !         
+   !         
+   !         return
+   !      end if
+   !      
+   !   end if
+   !            
+   !end if
    
 end function DeterminePhiBounds
 
@@ -1477,7 +1619,7 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
    
       
       ! Find out what bracketed region we are going to look for the solution to the residual equation
-   isEpsilon =  DeterminePhiBounds(numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
+   isEpsilon =  DeterminePhiBounds(epsilon2, phiIn, numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
                            Vx, Vy, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
                            UA_Flag, p_UA, xd_UA, OtherState_UA, &
                            numReIterations, maxIndIterations, aTol, &

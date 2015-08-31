@@ -386,7 +386,7 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, azimuth, chi0, cn, c
       fzero =  0.0_ReKi
       a     =  0.0_ReKi
       ap    =  0.0_ReKi
-      chi   =  0.0_ReKi
+      chi   =  0.0_ReKi  ! TODO: eliminate legacy return value
       return
    end if
     
