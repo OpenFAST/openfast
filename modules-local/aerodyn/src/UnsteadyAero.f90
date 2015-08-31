@@ -389,7 +389,7 @@ real(ReKi) function Get_f_c_from_Lookup( Re, alpha, alpha0, C_nalpha, AFInfo, Er
    call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
       if (ErrStat > ErrID_None) return
    
-   denom = ( alpha-alpha0 )  ! NOTE: We removed the tan(alpha) term from the equation, per Rick's suggestion 8/13/2015.    *tan(alpha)
+   denom = ( alpha-alpha0 )*tan(alpha)  !NOTE,NOTE: On 8/27/15 GJH Added back tan(alpha) because results for Fy did not match steady state without it. ! NOTE: We removed the tan(alpha) term from the equation and repace with another (alpha-alpha0) term, per Rick's suggestion 8/13/2015.    *tan(alpha)
    if (abs(denom) < .015 ) then
       Get_f_c_from_Lookup = 1.0_ReKi
       return
