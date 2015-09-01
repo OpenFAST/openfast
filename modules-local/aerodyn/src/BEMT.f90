@@ -864,7 +864,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                      u_UA%U = BEMTC_Wind(z%axInduction(i,j), z%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u%chi0, u%psi(j), phi, u_UA%alpha, u_UA%Re, chi)
                   end if
 
-                  if ( abs(u_UA%alpha) > 40*D2R ) then ! p%UACutout ) then
+                  if ( abs(u_UA%alpha) > AFInfo(p%AFIndx(i,j))%Table(1)%UA_BL%UACutout*D2R ) then ! p%UACutout ) then
                      OtherState%UA_Flag(i,j) = .FALSE.
                      call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to high angle-of-attack.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
                   elseif (EqualRealNos(u_UA%U, 0.0_ReKi) ) then
@@ -895,7 +895,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                      ! Uncoupled wind for determining alpha, and U, and Re
                   call BEMTU_Wind(z%phi(i,j), 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u_UA%alpha,  u_UA%U, u_UA%Re)
                       
-                  if ( abs(u_UA%alpha) > 40*D2R ) then ! p%UACutout ) 
+                  if ( abs(u_UA%alpha) > AFInfo(p%AFIndx(i,j))%Table(1)%UA_BL%UACutout*D2R ) then ! p%UACutout ) 
                      OtherState%UA_Flag(i,j) = .FALSE.
                      !write( tmpStr, '(F15.4)' ) t
                      call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to high angle-of-attack.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )

@@ -732,6 +732,9 @@ CONTAINS
 
                CALL ParseVarWDefault ( FileInfo, CurLine, 'x_cp_bar', AFInfo%Table(Table)%UA_BL%x_cp_bar, .2_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'UACutout', AFInfo%Table(Table)%UA_BL%UACutout, 90.0_ReKi, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
                IF (ErrStat >= AbortErrLev) THEN
                   CALL Cleanup()
