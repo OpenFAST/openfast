@@ -125,7 +125,7 @@ PROGRAM MAIN
 CALL CPU_TIME(start)
    DO n_t_global = 0, n_t_final
 WRITE(*,*) "Time Step: ", n_t_global
-IF(n_t_global == 3) STOP 
+!IF(n_t_global == 3) STOP 
      BD_InputTimes(2) = BD_InputTimes(1) 
      BD_InputTimes(1) = t_global + dt_global
      BD_OutputTimes(2) = BD_OutputTimes(1) 
@@ -136,6 +136,8 @@ IF(n_t_global == 3) STOP
      CALL BD_CalcOutput( t_global, BD_Input(2), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
                              BD_OtherState,  BD_Output(2), ErrStat, ErrMsg)
+
+     CALL Dvr_WriteOutputLine(t_global,DvrOut,BD_Parameter%OutFmt,BD_Output(2),ErrStat,ErrMsg)
 
      IF(BD_Parameter%analysis_type .EQ. 1 .AND. n_t_global .EQ. 1) EXIT 
 
@@ -484,7 +486,11 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
    ! Write the names of the output parameters on one line:
    !......................................................
 
-   call WrFileNR ( OutUnit, '     Time           ' )
+   write (OutUnit,'()')
+   write (OutUnit,'()')
+   write (OutUnit,'()')
+
+   call WrFileNR ( OutUnit, 'Time        ' )
 
    do i=1,NumOuts
       call WrFileNR ( OutUnit, tab//IntOutput%WriteOutputHdr(i) )
@@ -496,7 +502,7 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
       ! Write the units of the output parameters on one line:
       !......................................................
 
-   call WrFileNR ( OutUnit, '      (s)           ' )
+   call WrFileNR ( OutUnit, ' (s)            ' )
 
    do i=1,NumOuts
       call WrFileNR ( Outunit, tab//IntOutput%WriteOutputUnt(i) )
@@ -506,3 +512,41 @@ SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
 
 
 END SUBROUTINE Dvr_InitializeOutputFile
+
+
+SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output, errStat, errMsg)
+
+   USE BeamDyn_Types
+   USE NWTC_Library
+
+   real(DbKi)             ,  intent(in   )   :: t                    ! simulation time (s)
+   INTEGER(IntKi)         ,  intent(in   )   :: OutUnit              ! Status of error message
+   CHARACTER(*)           ,  intent(in   )   :: OutFmt
+!   real(ReKi)             ,  intent(in   )   :: output(:)            ! Rootname for the output file
+   TYPE(BD_OutputType),      INTENT(IN   )   :: Output
+   integer(IntKi)         ,  intent(inout)   :: errStat              ! Status of error message
+   character(*)           ,  intent(inout)   :: errMsg               ! Error message if ErrStat /= ErrID_None
+      
+   ! Local variables.
+
+   character(200)                   :: frmt                                      ! A string to hold a format specifier
+   character(15)                    :: tmpStr                                    ! temporary string to print the time output as text
+
+   integer :: numOuts
+   
+   errStat = ErrID_None
+   errMsg  = ''
+
+   numOuts = size(Output%WriteOutput,1)
+   frmt = '"'//tab//'"'//trim(OutFmt)      ! format for array elements from individual modules
+   
+      ! time
+   write( tmpStr, '(F15.6)' ) t
+   call WrFileNR( OutUnit, tmpStr )
+   call WrReAryFileNR ( OutUnit, Output%WriteOutput,  frmt, errStat, errMsg )
+   if ( errStat >= AbortErrLev ) return
+   
+     ! write a new line (advance to the next line)
+   write (OutUnit,'()')
+      
+end subroutine Dvr_WriteOutputLine
