@@ -641,6 +641,9 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
    CALL ReadVar(UnIn,InputFile,InputFileData%quadrature,"quadrature", "Quadrature type",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+   CALL ReadVar(UnIn,InputFile,InputFileData%n_fact,"n_fact", "Factorization frequency",ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
    Line = ""
    CALL ReadVar( UnIn, InputFile, Line, "DTBeam", "Time interval for BeamDyn  calculations {or default} (s)", ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -771,6 +774,9 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
    CALL ReadVar( UnIn, InputFile, InputFileData%SumPrint, "SumPrint", "Print summary data to <RootName>.BD.sum (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )           
       
+   call ReadVar( UnIn, InputFile, InputFileData%OutFmt, "OutFmt", "Format used for text tabular output (except time).  Resulting field should be 10 characters. (-)",ErrStat2, ErrMsg2, UnEc)
+      call setErrStat( errStat2, ErrMsg2 , errStat, ErrMsg , RoutineName )
+
       ! NNodeOuts - Number of node outputs [0 - 9] (-):
    CALL ReadVar( UnIn, InputFile, InputFileData%NNodeOuts, "NNodeOuts", "Number of node outputs [0 - 9] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1606,6 +1612,7 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
 
    WRITE (UnSu,'(A,I4)' ) 'Maximum number of iterations in Newton-Ralphson solution:', p%niter
    WRITE (UnSu,'(A,1ES18.5)' ) 'Convergence parameter:', p%tol
+   WRITE (UnSu,'(A,I4)' ) 'Factorization frequency in Newton-Ralphson solution:', p%n_fact
 
    IF(p%quadrature .EQ. 1) THEN
        WRITE (UnSu,'(A)')  'Quadrature method: Gauss quadrature' 

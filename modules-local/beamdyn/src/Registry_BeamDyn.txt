@@ -79,6 +79,7 @@ typedef      ^            ^       ^     analysis_type  - - -  "analysis_type fla
 typedef      ^            ^       ^     damp_flag  - - -  "damping flag" -
 typedef      ^            ^       ^     niter  - - -  "Maximum number of iterations in Newton-Ralphson algorithm"  -
 typedef      ^            ^       ^     quadrature  - - -  "Quadrature method: 1 Gauss 2 Trapezoidal" -
+typedef      ^            ^       ^     n_fact  - - -  "Factorization frequency" -
 #typedef      ^            ^       ^     NRMax  - - -  "Maximum number of iterations in Newton-Ralphson algorithm" -
 typedef      ^            ^      DbKi   dt     - - -  "module dt" s
 typedef      ^            ^      ReKi   beta   {6} - -  "Damping Coefficient" -
@@ -94,6 +95,7 @@ typedef      ^     ParameterType OutParmType OutParam	{:}	-	-	"Names and units (
 typedef      ^     ParameterType IntKi  NNodeOuts - - - "Number of nodes to output data to a file[0 - 9]"	-
 typedef      ^     ParameterType IntKi  OutNd   {9} - - "Nodes whose values will be output"	-
 typedef      ^     ParameterType IntKi  NdIndx  {:} - - "Index into BldMotion mesh (to number the nodes for output without using collocated nodes)"	-
+typedef      ^     ParameterType CHARACTER(20)  OutFmt   - - - "Format specifier" -
 
 
 # ..... Inputs
@@ -132,6 +134,7 @@ typedef BeamDyn/BD    BD_InputFile    IntKi    kp_member       {:} - - "Total nu
 typedef BeamDyn/BD    BD_InputFile    IntKi    order_elem       - - - "Order of interpolation (basis) function" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    NRMax            - - - "Total number of key point" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    quadrature       - - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    n_fact           - - - "Factorization frequency" -
 typedef BeamDyn/BD    BD_InputFile    ReKi     stop_tol         - - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate   {:}{:} - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    DbKi     rhoinf          - - - "Key point coordinates array" -
@@ -144,3 +147,4 @@ typedef ^             BD_InputFile    IntKi    OutNd   {9} - - "Nodes whose valu
 typedef ^             BD_InputFile    IntKi    NumOuts  -  - - "Number of parameters in the output list (number of outputs requested)"	-
 typedef ^             BD_InputFile    CHARACTER(ChanLen)	OutList	{:}	-	-	"List of user-requested output channels"	-
 typedef ^             BD_InputFile    LOGICAL  SumPrint  -  -  -  "Print summary data to file? (.sum)"	-
+typedef BeamDyn/BD    BD_InputFile    CHARACTER(20) OutFmt   - - -  "Format specifier" -

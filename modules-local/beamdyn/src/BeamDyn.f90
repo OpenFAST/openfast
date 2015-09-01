@@ -124,6 +124,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       
    OtherState%InitAcc = .false. ! accelerations have not been initialized, yet
    
+   p%OutFmt = InputFileData%OutFmt
    !Read inputs from Driver/Glue code
    !1 Global position vector
    !2 Global rotation tensor
@@ -179,6 +180,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ENDDO
    ! Number of nodes per elelemt
    p%node_elem  = InputFileData%order_elem + 1   
+   ! Factorization frequency
+   p%n_fact = InputFileData%n_fact
    ! Quadrature method: 1 Gauss 2 Trapezoidal
    p%quadrature = InputFileData%quadrature
    IF(p%quadrature .EQ. 1) THEN
@@ -1383,7 +1386,7 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
                                EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                                damp_flag,beta,                          &
                                ngp,quadrature,trap_pos,trap_w,          &
-                               node_elem,dof_node,elk,elf,elm,elg,  &
+                               node_elem,dof_node,fact,elk,elf,elm,elg, &
                                ErrStat,ErrMsg)
 
    REAL(ReKi),     INTENT(IN   ):: Nuu0(:)
@@ -1404,6 +1407,7 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
    REAL(ReKi),     INTENT(IN   ):: trap_w(:)
    INTEGER(IntKi), INTENT(IN   ):: node_elem
    INTEGER(IntKi), INTENT(IN   ):: dof_node
+   LOGICAL,        INTENT(IN   ):: fact
    REAL(ReKi),     INTENT(  OUT):: elk(:,:)
    REAL(ReKi),     INTENT(  OUT):: elf(:)
    REAL(ReKi),     INTENT(  OUT):: elm(:,:)
@@ -1516,7 +1520,7 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
        CALL BD_GaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
                               uuu,uup,E1,RR0,kapa,Stif,cet,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe,ErrStat2,ErrMsg2)
+       CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
        mmm  = 0.0D0
@@ -1529,10 +1533,10 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
        CALL BD_GaussPointDataMass(hhx,hpx,Nvvv,Naaa,RR0,node_elem,dof_node,&
                                   vvv,aaa,vvp,mmm,mEta,rho,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL BD_InertialForce(mmm,mEta,rho,vvv,aaa,Fi,Mi,Gi,Ki,ErrStat2,ErrMsg2)
+       CALL BD_InertialForce(mmm,mEta,rho,vvv,aaa,fact,Fi,Mi,Gi,Ki,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        IF(damp_flag .NE. 0) THEN
-           CALL BD_DissipativeForce(beta,Stif,vvv,vvp,E1,Fc,Fd,Sd,Od,Pd,Qd,&
+           CALL BD_DissipativeForce(beta,Stif,vvv,vvp,E1,fact,Fc,Fd,Sd,Od,Pd,Qd,&
                                     betaC,Gd,Xd,Yd,ErrStat2,ErrMsg2)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDIF
@@ -1544,33 +1548,35 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
           end if
        Fd(:) = Fd(:) - Fg(:) - DistrLoad_GL(:,igp)
 
-       DO i=1,node_elem
-           DO j=1,node_elem
-               DO m=1,dof_node
-                   temp_id1 = (i-1)*dof_node+m
-                   DO n=1,dof_node
-                       temp_id2 = (j-1)*dof_node+n
-                       elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hhx(i)*Qe(m,n)*hhx(j)*Jacobian*gw(igp)
-                       elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hhx(i)*Pe(m,n)*hpx(j)*Jacobian*gw(igp)
-                       elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hpx(i)*Oe(m,n)*hhx(j)*Jacobian*gw(igp)
-                       elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hpx(i)*Stif(m,n)*hpx(j)*Jacobian*gw(igp)
-                       elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hhx(i)*Ki(m,n)*hhx(j)*Jacobian*gw(igp)
-                       elm(temp_id1,temp_id2) = elm(temp_id1,temp_id2) + hhx(i)*Mi(m,n)*hhx(j)*Jacobian*gw(igp)
-                       elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + hhx(i)*Gi(m,n)*hhx(j)*Jacobian*gw(igp)
-                       IF(damp_flag .NE. 0) THEN
-                           elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hhx(i)*Qd(m,n)*hhx(j)*Jacobian*gw(igp)
-                           elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hhx(i)*Pd(m,n)*hpx(j)*Jacobian*gw(igp)
-                           elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hpx(i)*Od(m,n)*hhx(j)*Jacobian*gw(igp)
-                           elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hpx(i)*Sd(m,n)*hpx(j)*Jacobian*gw(igp)
-                           elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + hhx(i)*Xd(m,n)*hhx(j)*Jacobian*gw(igp)
-                           elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + hhx(i)*Yd(m,n)*hpx(j)*Jacobian*gw(igp)
-                           elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + hpx(i)*Gd(m,n)*hhx(j)*Jacobian*gw(igp)
-                           elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + hpx(i)*betaC(m,n)*hpx(j)*Jacobian*gw(igp)
-                       ENDIF
+       IF(fact) THEN
+           DO i=1,node_elem
+               DO j=1,node_elem
+                   DO m=1,dof_node
+                       temp_id1 = (i-1)*dof_node+m
+                       DO n=1,dof_node
+                           temp_id2 = (j-1)*dof_node+n
+                           elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hhx(i)*Qe(m,n)*hhx(j)*Jacobian*gw(igp)
+                           elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hhx(i)*Pe(m,n)*hpx(j)*Jacobian*gw(igp)
+                           elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hpx(i)*Oe(m,n)*hhx(j)*Jacobian*gw(igp)
+                           elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hpx(i)*Stif(m,n)*hpx(j)*Jacobian*gw(igp)
+                           elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hhx(i)*Ki(m,n)*hhx(j)*Jacobian*gw(igp)
+                           elm(temp_id1,temp_id2) = elm(temp_id1,temp_id2) + hhx(i)*Mi(m,n)*hhx(j)*Jacobian*gw(igp)
+                           elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + hhx(i)*Gi(m,n)*hhx(j)*Jacobian*gw(igp)
+                           IF(damp_flag .NE. 0) THEN
+                               elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hhx(i)*Qd(m,n)*hhx(j)*Jacobian*gw(igp)
+                               elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hhx(i)*Pd(m,n)*hpx(j)*Jacobian*gw(igp)
+                               elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hpx(i)*Od(m,n)*hhx(j)*Jacobian*gw(igp)
+                               elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hpx(i)*Sd(m,n)*hpx(j)*Jacobian*gw(igp)
+                               elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + hhx(i)*Xd(m,n)*hhx(j)*Jacobian*gw(igp)
+                               elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + hhx(i)*Yd(m,n)*hpx(j)*Jacobian*gw(igp)
+                               elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + hpx(i)*Gd(m,n)*hhx(j)*Jacobian*gw(igp)
+                               elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + hpx(i)*betaC(m,n)*hpx(j)*Jacobian*gw(igp)
+                           ENDIF
+                       ENDDO
                    ENDDO
                ENDDO
            ENDDO
-       ENDDO
+       ENDIF
 
        DO i=1,node_elem
            DO j=1,dof_node
@@ -1816,7 +1822,7 @@ SUBROUTINE BD_GaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
 
 END SUBROUTINE BD_GaussPointData
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe,ErrStat,ErrMsg)
+SUBROUTINE BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat,ErrMsg)
 !---------------------------------------------------------------------------
 ! This subroutine calculates the elastic forces Fc and Fd
 ! It also calcuates the linearized matrices Oe, Pe, and Qe for N-R algorithm
@@ -1826,6 +1832,7 @@ SUBROUTINE BD_ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe,ErrStat,ErrMsg)
    REAL(ReKi),    INTENT(IN   ):: kapa(:)
    REAL(ReKi),    INTENT(IN   ):: Stif(:,:)
    REAL(ReKi),    INTENT(IN   ):: cet
+   LOGICAL,       INTENT(IN   ):: fact
    REAL(ReKi),    INTENT(  OUT):: Fc(:)
    REAL(ReKi),    INTENT(  OUT):: Fd(:)
    REAL(ReKi),    INTENT(  OUT):: Oe(:,:)
@@ -1887,51 +1894,53 @@ SUBROUTINE BD_ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe,ErrStat,ErrMsg)
    Fd(:)    = 0.0D0
    Fd(4:6)  = MATMUL(TRANSPOSE(BD_Tilde(E1)),Wrk)
 
-   C11(:,:) = 0.0D0
-   C12(:,:) = 0.0D0
-   C21(:,:) = 0.0D0
-   C22(:,:) = 0.0D0
-   C11(1:3,1:3) = Stif(1:3,1:3)
-   C12(1:3,1:3) = Stif(1:3,4:6)
-   C21(1:3,1:3) = Stif(4:6,1:3)
-   C22(1:3,1:3) = Stif(4:6,4:6)
+   IF(fact) THEN
+       C11(:,:) = 0.0D0
+       C12(:,:) = 0.0D0
+       C21(:,:) = 0.0D0
+       C22(:,:) = 0.0D0
+       C11(1:3,1:3) = Stif(1:3,1:3)
+       C12(1:3,1:3) = Stif(1:3,4:6)
+       C21(1:3,1:3) = Stif(4:6,1:3)
+       C22(1:3,1:3) = Stif(4:6,4:6)
 
-   Wrk = 0.0D0
-   DO i=1,3
-       Wrk(i) = RR0(i,1)
-   ENDDO
-   Wrk33(:,:) = 0.0D0
-   Wrk33(:,:) = OuterProduct(Wrk,Wrk)
-   C12(:,:) = C12(:,:) + cet*k1s*Wrk33(:,:) 
-   C21(:,:) = C21(:,:) + cet*k1s*Wrk33(:,:)
-   C22(:,:) = C22(:,:) + cet*e1s*Wrk33(:,:)
+       Wrk = 0.0D0
+       DO i=1,3
+           Wrk(i) = RR0(i,1)
+       ENDDO
+       Wrk33(:,:) = 0.0D0
+       Wrk33(:,:) = OuterProduct(Wrk,Wrk)
+       C12(:,:) = C12(:,:) + cet*k1s*Wrk33(:,:) 
+       C21(:,:) = C21(:,:) + cet*k1s*Wrk33(:,:)
+       C22(:,:) = C22(:,:) + cet*e1s*Wrk33(:,:)
 
-   epsi(:,:) = 0.0D0
-   mu(:,:)   = 0.0D0
-   epsi(:,:) = MATMUL(C11,BD_Tilde(E1))
-   mu(:,:)   = MATMUL(C21,BD_Tilde(E1))
+       epsi(:,:) = 0.0D0
+       mu(:,:)   = 0.0D0
+       epsi(:,:) = MATMUL(C11,BD_Tilde(E1))
+       mu(:,:)   = MATMUL(C21,BD_Tilde(E1))
 
-   Wrk(:) = 0.0D0
-   Oe(:,:)     = 0.0D0
-   Oe(1:3,4:6) = epsi(1:3,1:3)
-   Oe(4:6,4:6) = mu(1:3,1:3)
+       Wrk(:) = 0.0D0
+       Oe(:,:)     = 0.0D0
+       Oe(1:3,4:6) = epsi(1:3,1:3)
+       Oe(4:6,4:6) = mu(1:3,1:3)
 
-   Wrk(1:3) = fff(1:3)
-   Oe(1:3,4:6) = Oe(1:3,4:6) - BD_Tilde(Wrk)
-   Wrk(:) = 0.0D0
-   Wrk(1:3) = fff(4:6)
-   Oe(4:6,4:6) = Oe(4:6,4:6) - BD_Tilde(Wrk)
+       Wrk(1:3) = fff(1:3)
+       Oe(1:3,4:6) = Oe(1:3,4:6) - BD_Tilde(Wrk)
+       Wrk(:) = 0.0D0
+       Wrk(1:3) = fff(4:6)
+       Oe(4:6,4:6) = Oe(4:6,4:6) - BD_Tilde(Wrk)
 
-   Wrk(: ) = 0.0D0
-   Pe(:,:) = 0.0D0
-   Wrk(1:3) = fff(1:3)
-   Pe(4:6,1:3) = BD_Tilde(Wrk) + TRANSPOSE(epsi)
-   Pe(4:6,4:6) = TRANSPOSE(mu)
+       Wrk(: ) = 0.0D0
+       Pe(:,:) = 0.0D0
+       Wrk(1:3) = fff(1:3)
+       Pe(4:6,1:3) = BD_Tilde(Wrk) + TRANSPOSE(epsi)
+       Pe(4:6,4:6) = TRANSPOSE(mu)
 
-   Wrk33(:,:) = 0.0D0
-   Qe(:,:)    = 0.0D0
-   Wrk33(1:3,1:3) = Oe(1:3,4:6)
-   Qe(4:6,4:6) = MATMUL(TRANSPOSE(BD_Tilde(E1)),Wrk33)
+       Wrk33(:,:) = 0.0D0
+       Qe(:,:)    = 0.0D0
+       Wrk33(1:3,1:3) = Oe(1:3,4:6)
+       Qe(4:6,4:6) = MATMUL(TRANSPOSE(BD_Tilde(E1)),Wrk33)
+   ENDIF
 
 END SUBROUTINE BD_ElasticForce
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -1986,7 +1995,7 @@ SUBROUTINE BD_GaussPointDataMass(hhx,hpx,Nvvv,Naaa,RR0,node_elem,dof_node,&
 
 END SUBROUTINE BD_GaussPointDataMass
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_InertialForce(m00,mEta,rho,vvv,aaa,Fi,Mi,Gi,Ki,ErrStat,ErrMsg)
+SUBROUTINE BD_InertialForce(m00,mEta,rho,vvv,aaa,fact,Fi,Mi,Gi,Ki,ErrStat,ErrMsg)
 !---------------------------------------------------------------------------
 ! This subroutine calculates the inertial force Fi
 ! It also calcuates the linearized matrices Mi, Gi, and Ki for N-R algorithm
@@ -1997,6 +2006,7 @@ SUBROUTINE BD_InertialForce(m00,mEta,rho,vvv,aaa,Fi,Mi,Gi,Ki,ErrStat,ErrMsg)
    REAL(ReKi),    INTENT(IN   ):: rho(:,:)
    REAL(ReKi),    INTENT(IN   ):: vvv(:)
    REAL(ReKi),    INTENT(IN   ):: aaa(:)
+   LOGICAL,       INTENT(IN   ):: fact
    REAL(ReKi),    INTENT(  OUT):: Fi(6)
    REAL(ReKi),    INTENT(  OUT):: Mi(6,6)
    REAL(ReKi),    INTENT(  OUT):: Gi(6,6)
@@ -2035,34 +2045,36 @@ SUBROUTINE BD_InertialForce(m00,mEta,rho,vvv,aaa,Fi,Mi,Gi,Ki,ErrStat,ErrMsg)
    Fi(1:3)= m00*tempA+MATMUL(BD_Tilde(omd),mEta)+MATMUL(BD_Tilde(ome),beta)
    Fi(4:6) = MATMUL(BD_Tilde(mEta),tempA) + nu + MATMUL(BD_Tilde(ome),gama)
 
-   !Mass Matrix
-   Mi = 0.0D0
-   DO i=1,3
-       Mi(i,i) = m00
-   ENDDO
-   Mi(1:3,4:6) = TRANSPOSE(BD_Tilde(mEta))
-   Mi(4:6,1:3) = BD_Tilde(mEta)
-   Mi(4:6,4:6) = rho
+   IF(fact) THEN
+       !Mass Matrix
+       Mi = 0.0D0
+       DO i=1,3
+           Mi(i,i) = m00
+       ENDDO
+       Mi(1:3,4:6) = TRANSPOSE(BD_Tilde(mEta))
+       Mi(4:6,1:3) = BD_Tilde(mEta)
+       Mi(4:6,4:6) = rho
 
-   !Gyroscopic Matrix
-   Gi = 0.0D0
-   epsi = MATMUL(BD_Tilde(ome),rho)
-   mu = MATMUL(BD_Tilde(ome),TRANSPOSE(BD_Tilde(mEta)))
-   Gi(1:3,4:6) = TRANSPOSE(BD_Tilde(beta)) + mu
-   Gi(4:6,4:6) = epsi - BD_Tilde(gama)
+       !Gyroscopic Matrix
+       Gi = 0.0D0
+       epsi = MATMUL(BD_Tilde(ome),rho)
+       mu = MATMUL(BD_Tilde(ome),TRANSPOSE(BD_Tilde(mEta)))
+       Gi(1:3,4:6) = TRANSPOSE(BD_Tilde(beta)) + mu
+       Gi(4:6,4:6) = epsi - BD_Tilde(gama)
 
-   !Stiffness Matrix
-   Ki = 0.0D0
-   Ki(1:3,4:6) = MATMUL(BD_Tilde(omd),TRANSPOSE(BD_Tilde(mEta))) +&
-                &MATMUL(BD_Tilde(ome),mu)
-   Ki(4:6,4:6) = MATMUL(BD_Tilde(tempA),BD_Tilde(mEta)) + &
-                &MATMUL(rho,BD_Tilde(omd)) - BD_Tilde(nu) +&
-                &MATMUL(epsi,BD_Tilde(ome)) - &
-                &MATMUL(BD_Tilde(ome),BD_Tilde(gama))
+       !Stiffness Matrix
+       Ki = 0.0D0
+       Ki(1:3,4:6) = MATMUL(BD_Tilde(omd),TRANSPOSE(BD_Tilde(mEta))) +&
+                    &MATMUL(BD_Tilde(ome),mu)
+       Ki(4:6,4:6) = MATMUL(BD_Tilde(tempA),BD_Tilde(mEta)) + &
+                    &MATMUL(rho,BD_Tilde(omd)) - BD_Tilde(nu) +&
+                    &MATMUL(epsi,BD_Tilde(ome)) - &
+                    &MATMUL(BD_Tilde(ome),BD_Tilde(gama))
+   ENDIF
 
 END SUBROUTINE BD_InertialForce
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_DissipativeForce(beta,Stiff,vvv,vvp,E1,Fc,Fd,&
+SUBROUTINE BD_DissipativeForce(beta,Stiff,vvv,vvp,E1,fact,Fc,Fd,&
                                   Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd, &
                                   ErrStat,ErrMsg)
 !---------------------------------------------------------------------------
@@ -2075,6 +2087,7 @@ SUBROUTINE BD_DissipativeForce(beta,Stiff,vvv,vvp,E1,Fc,Fd,&
    REAL(ReKi),    INTENT(IN   ):: vvv(:)
    REAL(ReKi),    INTENT(IN   ):: vvp(:)
    REAL(ReKi),    INTENT(IN   ):: E1(:)
+   LOGICAL,       INTENT(IN   ):: fact
    REAL(ReKi),    INTENT(INOUT):: Fc(:)
    REAL(ReKi),    INTENT(INOUT):: Fd(:)
    REAL(ReKi),    INTENT(  OUT):: Sd(:,:)
@@ -2133,37 +2146,39 @@ SUBROUTINE BD_DissipativeForce(beta,Stiff,vvv,vvp,E1,Fc,Fd,&
    Fc(1:6) = Fc(1:6) + ffd(1:6)
    Fd(4:6) = Fd(4:6) + MATMUL(BD_Tilde(ffd(1:3)),E1)
 
-   ! Compute stiffness matrix Sd
-   Sd(1:3,1:3) = MATMUL(D11,TRANSPOSE(BD_Tilde(ome)))
-   Sd(1:3,4:6) = MATMUL(D12,TRANSPOSE(BD_Tilde(ome)))
-   Sd(4:6,1:3) = MATMUL(D21,TRANSPOSE(BD_Tilde(ome)))
-   Sd(4:6,4:6) = MATMUL(D22,TRANSPOSE(BD_Tilde(ome)))
+   IF(fact) THEN
+       ! Compute stiffness matrix Sd
+       Sd(1:3,1:3) = MATMUL(D11,TRANSPOSE(BD_Tilde(ome)))
+       Sd(1:3,4:6) = MATMUL(D12,TRANSPOSE(BD_Tilde(ome)))
+       Sd(4:6,1:3) = MATMUL(D21,TRANSPOSE(BD_Tilde(ome)))
+       Sd(4:6,4:6) = MATMUL(D22,TRANSPOSE(BD_Tilde(ome)))
 
-   ! Compute stiffness matrix Pd
-   Pd(:,:) = 0.0D0
-   b11(1:3,1:3) = MATMUL(TRANSPOSE(BD_Tilde(E1)),D11)
-   b12(1:3,1:3) = MATMUL(TRANSPOSE(BD_Tilde(E1)),D12)
-   Pd(4:6,1:3) = BD_Tilde(ffd(1:3)) + MATMUL(b11,TRANSPOSE(BD_Tilde(ome)))
-   Pd(4:6,1:3) = MATMUL(b12,TRANSPOSE(BD_Tilde(ome)))
+       ! Compute stiffness matrix Pd
+       Pd(:,:) = 0.0D0
+       b11(1:3,1:3) = MATMUL(TRANSPOSE(BD_Tilde(E1)),D11)
+       b12(1:3,1:3) = MATMUL(TRANSPOSE(BD_Tilde(E1)),D12)
+       Pd(4:6,1:3) = BD_Tilde(ffd(1:3)) + MATMUL(b11,TRANSPOSE(BD_Tilde(ome)))
+       Pd(4:6,1:3) = MATMUL(b12,TRANSPOSE(BD_Tilde(ome)))
 
-   ! Compute stiffness matrix Od
-   alpha(1:3,1:3) = BD_Tilde(vvp(1:3)) - MATMUL(BD_Tilde(ome),BD_Tilde(E1))
-   Od(1:3,4:6) = MATMUL(D11,alpha) - BD_Tilde(ffd(1:3))
-   Od(4:6,4:6) = MATMUL(D21,alpha) - BD_Tilde(ffd(4:6))
+       ! Compute stiffness matrix Od
+       alpha(1:3,1:3) = BD_Tilde(vvp(1:3)) - MATMUL(BD_Tilde(ome),BD_Tilde(E1))
+       Od(1:3,4:6) = MATMUL(D11,alpha) - BD_Tilde(ffd(1:3))
+       Od(4:6,4:6) = MATMUL(D21,alpha) - BD_Tilde(ffd(4:6))
 
-   ! Compute stiffness matrix Qd
-   Qd(4:6,4:6) = MATMUL(TRANSPOSE(BD_Tilde(E1)),Od(1:3,4:6))
+       ! Compute stiffness matrix Qd
+       Qd(4:6,4:6) = MATMUL(TRANSPOSE(BD_Tilde(E1)),Od(1:3,4:6))
 
-   ! Compute gyroscopic matrix Gd
-   Gd(1:3,4:6) = TRANSPOSE(b11)
-   Gd(4:6,4:6) = TRANSPOSE(b12)
+       ! Compute gyroscopic matrix Gd
+       Gd(1:3,4:6) = TRANSPOSE(b11)
+       Gd(4:6,4:6) = TRANSPOSE(b12)
 
-   ! Compute gyroscopic matrix Xd
-   Xd(4:6,4:6) = MATMUL(TRANSPOSE(BD_Tilde(E1)),Gd(1:3,4:6))
+       ! Compute gyroscopic matrix Xd
+       Xd(4:6,4:6) = MATMUL(TRANSPOSE(BD_Tilde(E1)),Gd(1:3,4:6))
 
-   ! Compute gyroscopic matrix Yd
-   Yd(4:6,1:3) = b11
-   Yd(4:6,4:6) = b12
+       ! Compute gyroscopic matrix Yd
+       Yd(4:6,1:3) = b11
+       Yd(4:6,4:6) = b12
+   ENDIF
 
 END SUBROUTINE BD_DissipativeForce
 !-----------------------------------------------------------------------------------------------------------------------------------
@@ -2605,6 +2620,7 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
    REAL(ReKi)                  :: Xd(6,6)
    REAL(ReKi)                  :: Yd(6,6)
    REAL(ReKi)                  :: temp_aaa(6)
+   LOGICAL                     :: fact
    INTEGER(IntKi)              :: igp
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: j
@@ -2620,6 +2636,8 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
    ErrMsg   = ""
    elf(:)   = 0.0D0
    elm(:,:) = 0.0D0
+
+   fact = .FALSE.
 
    CALL AllocAry(gp,ngp,'Gauss piont array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2679,10 +2697,10 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_GravityForce(mmm,mEta,gravity,Fg,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe,ErrStat2,ErrMsg2)
+       CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        IF(damp_flag .NE. 0) THEN
-           CALL BD_DissipativeForce(beta,Stif,vvv,vvp,E1,Fc,Fd,Sd,Od,Pd,Qd,&
+           CALL BD_DissipativeForce(beta,Stif,vvv,vvp,E1,fact,Fc,Fd,Sd,Od,Pd,Qd,&
                                     betaC,Gd,Xd,Yd,ErrStat2,ErrMsg2)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDIF
@@ -2874,6 +2892,7 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
    REAL(ReKi)                   :: Xd(6,6)
    REAL(ReKi)                   :: Yd(6,6)
    REAL(ReKi)                   :: temp_aaa(6)
+   LOGICAL                      :: fact
    INTEGER(IntKi)               :: igp
    INTEGER(IntKi)               :: i
    INTEGER(IntKi)               :: j
@@ -2887,6 +2906,8 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
    ErrMsg  = ""
    elf(:)  = 0.0D0
    
+   fact = .FALSE.
+
    CALL AllocAry(gp,ngp,'Gauss piont array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(gw,ngp,'Gauss piont weight function array',ErrStat2,ErrMsg2)
@@ -2938,10 +2959,10 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
        CALL BD_GaussPointDataMass(hhx,hpx,Nvvv,temp_Naaa,RR0,node_elem,dof_node,&
                                   vvv,temp_aaa,vvp,mmm,mEta,rho,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe,ErrStat2,ErrMsg2)
+       CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        IF(damp_flag .EQ. 1) THEN
-           CALL BD_DissipativeForce(beta,Stif,vvv,vvp,E1,Fc,Fd,Sd,Od,Pd,Qd,&
+           CALL BD_DissipativeForce(beta,Stif,vvv,vvp,E1,fact,Fc,Fd,Sd,Od,Pd,Qd,&
                                     betaC,Gd,Xd,Yd,ErrStat2,ErrMsg2)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDIF
@@ -4110,6 +4131,7 @@ SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
    REAL(ReKi)                  :: Pe(6,6)
    REAL(ReKi)                  :: Qe(6,6)
    REAL(ReKi)                  :: aaa(6)
+   LOGICAL                     :: fact
    INTEGER(IntKi)              :: igp
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: j
@@ -4125,6 +4147,8 @@ SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
    ErrMsg   = ""
    elk(:,:) = 0.0D0
    elf(:)   = 0.0D0
+
+   fact = .TRUE.
 
    CALL AllocAry(gp,ngp,'Gauss piont array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4169,7 +4193,7 @@ SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
        CALL BD_GaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
                               uuu,uup,E1,RR0,kapa,Stif,cet,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe,ErrStat2,ErrMsg2)
+       CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        mmm          = EMass0_GL(1,1,igp)
        mEta(2)      =-EMass0_GL(1,6,igp)
@@ -4573,6 +4597,7 @@ SUBROUTINE BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0
    REAL(ReKi)                  :: Oe(6,6)
    REAL(ReKi)                  :: Pe(6,6)
    REAL(ReKi)                  :: Qe(6,6)
+   LOGICAL                     :: fact
    INTEGER(IntKi)              :: igp
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: j
@@ -4584,6 +4609,8 @@ SUBROUTINE BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0
    ErrStat  = ErrID_None
    ErrMsg   = ""
    elf(:)   = 0.0D0
+
+   fact = .FALSE.
 
    CALL AllocAry(gp,ngp,'Gauss piont array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4623,7 +4650,7 @@ SUBROUTINE BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0
        CALL BD_GaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
                               uuu,uup,E1,RR0,kapa,Stif,cet,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,Fc,Fd,Oe,Pe,Qe,ErrStat2,ErrMsg2)
+       CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
        DO i=1,node_elem
@@ -4698,12 +4725,6 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       !Qi, call something to initialize
       call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!WRITE(*,*) 'InitAcc'
-!WRITE(*,*) 'u%Orientation'
-!DO i=1,3
-!WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
-!ENDDO
-!WRITE(*,*) 'END InitAcc'
       CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       OtherState%InitAcc = .true. 
@@ -4719,12 +4740,6 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
                  
-!WRITE(*,*) 'UpdateStates'
-!WRITE(*,*) 'u%Orientation'
-!DO i=1,3
-!WRITE(*,*) u_interp%RootMotion%Orientation(i,:,1)
-!ENDDO
-!WRITE(*,*) 'END UpdateStates'
    ! GA2: prediction        
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
                                 p%coef,p%dt,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
@@ -4739,12 +4754,13 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    ! find x, acc, and xcc at t+dt
-   CALL BD_DynamicSolutionGA2( p%uuN0,x%q,x%dqdt,OtherState%acc,OtherState%xcc,&
-                               p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,       &
-                               p%damp_flag,p%beta,                             &
-                               p%node_elem,p%dof_node,p%elem_total,p%dof_total,&
-                               p%quadrature,p%station_eta,                     &
-                               p%node_total,p%niter,p%tol,p%ngp,p%coef, ErrStat2, ErrMsg2)
+   CALL BD_DynamicSolutionGA2( p%uuN0,x%q,x%dqdt,OtherState%acc,OtherState%xcc, &
+                               p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,        &
+                               p%damp_flag,p%beta,                              &
+                               p%node_elem,p%dof_node,p%elem_total,p%dof_total, &
+                               p%quadrature,p%station_eta,                      &
+                               p%node_total,p%niter,p%tol,p%ngp,p%coef,p%n_fact,&
+                               ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    call cleanup()
@@ -4930,7 +4946,8 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
                                   Stif0,Mass0,gravity,u,damp_flag,beta,   &
                                   node_elem,dof_node,elem_total,dof_total,&
                                   quadrature,station_eta,                 &
-                                  node_total,niter,tol,ngp,coef, ErrStat, ErrMsg)
+                                  node_total,niter,tol,ngp,coef, n_fact,  &
+                                  ErrStat, ErrMsg)
 !------------------------------------------------------------------------------------
 ! This subroutine perform time-marching in one interval
 ! Given states (u,v) and accelerations (acc,xcc) at the initial of a time step (t_i),
@@ -4953,6 +4970,7 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
    INTEGER(IntKi),     INTENT(IN   ):: quadrature
    REAL(ReKi),         INTENT(IN   ):: station_eta(:)
    INTEGER(IntKi),     INTENT(IN   ):: niter
+   INTEGER(IntKi),     INTENT(IN   ):: n_fact
    REAL(ReKi),         INTENT(IN   ):: tol
    REAL(ReKi),         INTENT(INOUT):: uuNf(:)
    REAL(ReKi),         INTENT(INOUT):: vvNf(:)
@@ -4979,6 +4997,7 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
    INTEGER(IntKi)                   :: j
    INTEGER(IntKi)                   :: k
    INTEGER(IntKi)                   :: temp_id
+   LOGICAL                          :: fact
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -5008,10 +5027,17 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
 
    Eref = 0.0D0
    DO i=1,niter
+
+       IF(MOD(i-1,n_fact) .EQ. 0) THEN
+           fact = .TRUE.
+       ELSE
+           fact = .FALSE.
+       ENDIF
+!WRITE(*,*) 'fact: ',fact
        CALL BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
                                          Stif0,Mass0,gravity,u,damp_flag,beta,&
                                          elem_total,node_elem,dof_node,ngp,   &
-                                         quadrature,station_eta,              &
+                                         quadrature,station_eta,fact,         &
                                          StifK,RHS,MassM,DampG,&
                                          ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -5019,7 +5045,7 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
               call Cleanup()
               return
           end if
-       StifK = MassM + coef(7) * DampG + coef(8) * StifK
+       IF(fact) StifK = MassM + coef(7) * DampG + coef(8) * StifK
        DO j=1,node_total
            temp_id = (j-1)*dof_node
            F_PointLoad(temp_id+1:temp_id+3) = u%PointLoad%Force(1:3,j)
@@ -5028,14 +5054,18 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
        RHS(:) = RHS(:) + F_PointLoad(:)
        DO j=1,dof_total-6
            RHS_LU(j) = RHS(j+6)
-           DO k=1,dof_total-6
-               StifK_LU(j,k) = StifK(j+6,k+6)
-           ENDDO
+           IF(fact) THEN
+               DO k=1,dof_total-6
+                   StifK_LU(j,k) = StifK(j+6,k+6)
+               ENDDO
+           ENDIF
        ENDDO
-    
-       CALL LAPACK_getrf( dof_total-6, dof_total-6, StifK_LU,indx,&
-                          ErrStat2, ErrMsg2) 
+   
+       IF(fact) THEN
+           CALL LAPACK_getrf( dof_total-6, dof_total-6, StifK_LU,indx,&
+                              ErrStat2, ErrMsg2) 
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       ENDIF
        CALL LAPACK_getrs( 'N',dof_total-6, StifK_LU,indx,RHS_LU,&
                           ErrStat2, ErrMsg2) 
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -5054,7 +5084,7 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,uuNf,vvNf,aaNf,xxNf,               &
                CALL Cleanup()
                RETURN
            ENDIF
-       ELSE !IF(i .GT. 1) THEN
+       ELSE 
            IF(Enorm .LE. Eref) THEN
                CALL Cleanup()
                RETURN
@@ -5088,8 +5118,8 @@ END SUBROUTINE BD_DynamicSolutionGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
                                         Stif0,Mass0,gravity,u,damp_flag,beta,&
-                                        elem_total,node_elem,dof_node,ngp,&
-                                        quadrature,station_eta,&
+                                        elem_total,node_elem,dof_node,ngp,   &
+                                        quadrature,station_eta,fact,         &
                                         StifK,RHS,MassM,DampG,&
                                         ErrStat,ErrMsg)
 
@@ -5109,6 +5139,7 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
    INTEGER(IntKi),    INTENT(IN   ):: ngp(:)
    INTEGER(IntKi),    INTENT(IN   ):: quadrature
    REAL(ReKi),        INTENT(IN   ):: station_eta(:)
+   LOGICAL,           INTENT(IN   ):: fact
    REAL(ReKi),        INTENT(  OUT):: StifK(:,:)
    REAL(ReKi),        INTENT(  OUT):: RHS(:)
    REAL(ReKi),        INTENT(  OUT):: MassM(:,:)
@@ -5281,7 +5312,7 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
                               EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,    &
                               damp_flag,beta,                              &
                               nqp,quadrature,trapezoidal_pos,trapezoidal_w,&
-                              node_elem,dof_node,elk,elf,elm,elg,          &
+                              node_elem,dof_node,fact,elk,elf,elm,elg,     &
                               ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        IF(quadrature .EQ. 2) THEN
@@ -5291,12 +5322,15 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,uuNf,vvNf,aaNf,                 &
            DEALLOCATE(trapezoidal_pos)
            DEALLOCATE(trapezoidal_w)
        ENDIF
-       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elk,StifK,ErrStat2,ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elm,MassM,ErrStat2,ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elg,DampG,ErrStat2,ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+       IF(fact) THEN
+           CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elk,StifK,ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elm,MassM,ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,elg,DampG,ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       ENDIF
        CALL BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,elf,RHS,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        if (ErrStat >= AbortErrLev) then
