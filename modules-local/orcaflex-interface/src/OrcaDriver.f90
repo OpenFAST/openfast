@@ -24,7 +24,7 @@
 !**********************************************************************************************************************************
 ! File last committed: $Date: 2014-07-29 13:30:04 -0600 (Tue, 29 Jul 2014) $
 ! (File) Revision #: $Rev: 173 $
-! URL: $HeadURL: https://windsvn.nrel.gov/Orca/branches/modularization2/Source/Driver/Orca_Driver.f90 $
+! URL: $HeadURL: https://wind-dev.nrel.gov/svn/OrcaFlexInterface/Trunk/Source/Driver/OrcaDriver.f90 $
 !**********************************************************************************************************************************
 
 PROGRAM OrcaDriver
@@ -340,20 +340,14 @@ PROGRAM OrcaDriver
 
 
       ! Some initialization settings
-   CALL GetPath( Settings%OrcaIptFileName, Orca_InitInp%DLLPathName )
-   CALL GetRoot( Settings%OrcaIptFileName, Orca_InitInp%DirRoot )
+   CALL GetPath( Settings%OrcaIptFileName, Orca_InitInp%DLLPathFileName )
+   Orca_InitInp%DLLPathFileName  =  TRIM(Orca_InitInp%DLLPathFileName)//'FASTlinkDLL.dll'
+   CALL GetPath( Settings%OrcaIptFileName, Orca_InitInp%DirRoot )
+   CALL GetRoot( Settings%OrcaIptFileName, TmpChar )
+   Orca_InitInp%DirRoot =  TRIM(Orca_InitInp%DirRoot)//TRIM(TmpChar)
    Orca_InitInp%DT               =  Settings%DT
    Orca_InitInp%TMax             =  Settings%TMax
 
-
-
-      ! Set all the DOF flags to true.
-   Orca_InitInp%PtfmSgF =  .TRUE.
-   Orca_InitInp%PtfmSwF =  .TRUE.
-   Orca_InitInp%PtfmHvF =  .TRUE.
-   Orca_InitInp%PtfmRF  =  .TRUE.
-   Orca_InitInp%PtfmPF  =  .TRUE.
-   Orca_InitInp%PtfmYF  =  .TRUE.
 
 
 
@@ -420,30 +414,30 @@ PROGRAM OrcaDriver
    IF ( SettingsFlags%PointsFile ) THEN
       DO I=1,SIZE(PointsList,DIM=2)
 
-            ! Setup the mesh coordinates
-         Orca_u%PtfmMesh%TranslationDisp(:,1)   = PointsList(1:3,I)
+            ! Setup the mesh coordinates (columns 1-6)
+         Orca_u%PtfmMesh%TranslationDisp(:,1)   =  PointsList(1:3,I)
 
             ! Compute direction cosine matrix from the rotation angles
          CALL SmllRotTrans( 'InputRotation', PointsList(4,I), PointsList(5,I), PointsList(6,I), CosineMatrix, 'CosineMatrix calc', ErrStat, ErrMsg )
-         Orca_u%PtfmMesh%Orientation(:,:,1)     = CosineMatrix
+         Orca_u%PtfmMesh%Orientation(:,:,1)     =  CosineMatrix
 
 
-#ifdef MESH_DEBUG
-         CALL MeshPrintInfo( 77, Orca_u%PtfmMesh )
-#endif
+            ! Setup the velocity terms of the mesh (columns 7:12) 
+         Orca_u%PtfmMesh%TranslationVel(:,1)    =  VelocList(1:3,I)
+         Orca_u%PtfmMesh%RotationVel(:,1)       =  VelocList(4:6,I)
 
 
-!         u(1)%Mesh%TranslationVel(:,1)    = drvrInitInp%uDotWAMITInSteady(1:3)
-!         u(1)%Mesh%RotationVel(:,1)       = drvrInitInp%uDotWAMITInSteady(4:6)
-!         u(1)%Mesh%TranslationAcc(:,1)    = drvrInitInp%uDotDotWAMITInSteady(1:3)
-!         u(1)%Mesh%RotationAcc(:,1)       = drvrInitInp%uDotDotWAMITInSteady(4:6)
+            ! Setup the Acceleration terms of the mesh (columns 13:18)
+         Orca_u%PtfmMesh%TranslationAcc(:,1)    =  AccelList(1:3,I)
+         Orca_u%PtfmMesh%RotationAcc(:,1)       =  AccelList(4:6,I)
 
 
-!TODO: Convert to using the mesh
-         !Orca_u%PtfmPosition  =  PointsList(:,I)
-         !Orca_u%PtfmVelocity  =  VelocList(:,I)
-         !
          TimeNow  =  Settings%DT*I
+
+
+
+
+
 
             ! Get results for Points data from Orca
          CALL Orca_CalcOutput( TimeNow,  Orca_u, Orca_p, &
@@ -451,9 +445,6 @@ PROGRAM OrcaDriver
                   Orca_y, ErrStat, ErrMsg)
 
 
-#ifdef MESH_DEBUG
-!         CALL MeshPrintInfo( 77, Orca_y%PtfmMesh )
-#endif
 
 
               ! Make sure no errors occured that give us reason to terminate now.
@@ -472,11 +463,11 @@ PROGRAM OrcaDriver
          ENDIF
 
 
-         !   ! Output the Points results for this timestep
-         !CALL PointsForce_OutputWrite( Settings%ProgInfo, Settings%PointsOutputUnit, Settings%PointsOutputName, Settings%PointsFileName,  &
-         !            SettingsFlags%PointsOutputInit, SettingsFlags%PointsDegrees, SIZE(PointsList,DIM=2),                                  &
-         !            Orca_u%PtfmMesh, Orca_y%, ErrStat, ErrMsg )
-         !
+            ! Output the Points results for this timestep
+         CALL PointsForce_OutputWrite( Settings%ProgInfo, Settings%PointsOutputUnit, Settings%PointsOutputName, Settings%PointsFileName,  &
+                     SettingsFlags%PointsOutputInit, SettingsFlags%PointsDegrees, SIZE(PointsList,DIM=2),                                  &
+                     Orca_u%PtfmMesh, Orca_y%PtfmMesh, ErrStat, ErrMsg )
+         
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL DriverCleanup()
             CALL ProgAbort( ErrMsg )
@@ -489,10 +480,22 @@ PROGRAM OrcaDriver
 
    IF ( SettingsFlags%PtfmCoord ) THEN
 
-            ! Calculate results for this points and write them out
-!TODO: Convert to using the mesh
-!         Orca_u%PtfmPosition  =  Settings%PtfmCoord
-!         Orca_u%PtfmVelocity  =  Settings%PtfmVeloc
+            ! Setup the mesh coordinates (columns 1-6) for the coordinate specified
+         Orca_u%PtfmMesh%TranslationDisp(:,1)   =  Settings%PtfmCoord(1:3)
+
+            ! Compute direction cosine matrix from the rotation angles
+         CALL SmllRotTrans( 'InputRotation', Settings%PtfmCoord(4), Settings%PtfmCoord(5), Settings%PtfmCoord(6), CosineMatrix, 'CosineMatrix calc', ErrStat, ErrMsg )
+         Orca_u%PtfmMesh%Orientation(:,:,1)     =  CosineMatrix
+
+
+            ! Setup the velocity terms of the mesh (columns 7:12) 
+         Orca_u%PtfmMesh%TranslationVel(:,1)    =  Settings%PtfmVeloc(1:3)
+         Orca_u%PtfmMesh%RotationVel(:,1)       =  Settings%PtfmVeloc(4:6)
+
+
+            ! Setup the Acceleration terms of the mesh (columns 13:18)
+         Orca_u%PtfmMesh%TranslationAcc(:,1)    =  Settings%PtfmAccel(1:3)
+         Orca_u%PtfmMesh%RotationAcc(:,1)       =  Settings%PtfmAccel(4:6)
 
          TimeNow  =  Settings%DT
 
@@ -528,9 +531,8 @@ PROGRAM OrcaDriver
          TmpChar=TRIM(TmpChar)//'.out'
 
             ! Call routine to write the output file for this one point
-!TODO: Convert to using the mesh
-!         CALL PointsForce_OutputWrite( Settings%ProgInfo, TmpUnit, TmpChar, TmpChar, TmpFlag, SettingsFlags%Degrees, 0,   &
-!                     Orca_u%PtfmPosition, Orca_u%PtfmVelocity, Orca_y%PtfmForces, ErrStat, ErrMsg )
+         CALL PointsForce_OutputWrite( Settings%ProgInfo, TmpUnit, TmpChar, TmpChar, TmpFlag, SettingsFlags%Degrees, 0,   &
+                     Orca_u%PtfmMesh, Orca_y%PtfmMesh, ErrStat, ErrMsg )
          CLOSE(TmpUnit)
 
             ! Make sure no errors occured that give us reason to terminate now.

@@ -164,7 +164,7 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
 
       ! Set some things for the DLL
-   InputFileData%DLL_FileName       = TRIM(InitInp%DLLPathName)//'FASTlinkDLL.dll'
+   InputFileData%DLL_FileName       = TRIM(InitInp%DLLPathFileName)
    InputFileData%DLL_InitProcName   = 'OrcaFlexUserPtfmLdInitialise'
    InputFileData%DLL_CalcProcName   = 'OrcaFlexUserPtfmLd'
    InputFileData%DLL_EndProcName    = 'OrcaFlexUserPtfmLdFinalise'
@@ -181,7 +181,7 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    p%DLL_Orca%ProcName(3)  = InputFileData%DLL_EndProcName
 
 #ifdef NO_LibLoad
-   CALL SetErrStat( ErrID_Warn,'   -->  Skipping LoadDynamicLib call',ErrStat,ErrMsg,RoutineName )
+   CALL SetErrStat( ErrID_Warn,'   -->  Skipping LoadDynamicLib call for '//TRIM(p%DLL_Orca%FileName),ErrStat,ErrMsg,RoutineName )
 #else
    CALL LoadDynamicLib ( p%DLL_Orca, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
@@ -263,17 +263,6 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
 
 
-
-
-      ! Copy the degrees of freedom flags over to the parameters.
-   p%PtfmDOF(1)   =  InitInp%PtfmSgF
-   p%PtfmDOF(2)   =  InitInp%PtfmSwF
-   p%PtfmDOF(3)   =  InitInp%PtfmHvF
-   p%PtfmDOF(4)   =  InitInp%PtfmRF
-   p%PtfmDOF(5)   =  InitInp%PtfmPF
-   p%PtfmDOF(6)   =  InitInp%PtfmYF
-
-
       ! Set zero values for the OtherState arrays
    OtherState%PtfmAM       =  0.0_ReKi
    OtherState%PtfmFt       =  0.0_ReKi
@@ -347,9 +336,9 @@ SUBROUTINE Orca_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
 
       ! Destroy the parameter data:
-   CALL Orca_DestroyParam( p, ErrStatTmp, ErrMsgTmp )
 #ifdef NO_LibLoad
 #else
+   CALL Orca_DestroyParam( p, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName )
 #endif
 
@@ -445,6 +434,7 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    DLL_DirRootName   =  TRIM(p%SimNamePath)//C_NULL_CHAR    ! Path and name of the simulation file without extension.  Null character added to convert from Fortran string to C-type string.
    DLL_ZTime = t                                            ! Current time
 
+print*,'DLL_DirRootName: ',DLL_DirRootName
 
       ! Determine the rotational angles from the direction-cosine matrix
    rotdisp = GetSmllRotAngs ( u%PtfmMesh%Orientation(:,:,1), ErrStatTmp, ErrMsgTmp )
@@ -501,14 +491,6 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       ! Now calculate the forces with what OrcaFlex returned
    OtherState%F_PtfmAM     =  -matmul(OtherState%PtfmAM, qdotdot)
 
-
-      ! We may have turned off certain degrees of freedom, so we need to zero out those dimensions
-   DO I=1,6
-      IF ( .NOT. p%PtfmDOF(I) ) THEN
-         OtherState%PtfmFT(I)    =  0.0_ReKi
-         OtherState%F_PtfmAM(I)  =  0.0_ReKi
-      ENDIF
-   ENDDO
 
 
       ! Update the Mesh with values from OrcaFlex
