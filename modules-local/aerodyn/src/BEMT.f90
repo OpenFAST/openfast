@@ -1229,37 +1229,22 @@ subroutine GetSolveRegionOrdering(epsilon2, phiIn, test_lower, test_upper)
    real(ReKi),             intent(  out) :: test_lower(3)
    real(ReKi),             intent(  out) :: test_upper(3)
 
-   if ( phiIn >= 0.0 .and. phiIn <= pi/2.0 ) then
-      test_lower(1) = epsilon2
-      test_upper(1) = pi/2.0
-      if (phiIn < pi/4.0 ) then
-         test_lower(2) = -pi/4.0
-         test_upper(2) = -epsilon2
-         test_lower(3) = pi/2.0
-         test_upper(3) = pi - epsilon2
-      else
-         test_lower(3) = -pi/4.0
-         test_upper(3) = -epsilon2
-         test_lower(2) = pi/2.0
-         test_upper(2) = pi - epsilon2
-      end if
-   else if (phiIn < 0.0  ) then
-      test_lower(1) = -pi/4.0
-      test_upper(1) = -epsilon2
-      test_lower(2) = epsilon2
-      test_upper(2) = pi/2.0
+
+   test_lower(1) = epsilon2
+   test_upper(1) = pi/2.0 
+   
+   if (phiIn < pi/4.0 ) then
+      test_lower(2) = -pi/4.0
+      test_upper(2) = -epsilon2
       test_lower(3) = pi/2.0
       test_upper(3) = pi - epsilon2
    else
       test_lower(3) = -pi/4.0
       test_upper(3) = -epsilon2
-      test_lower(2) = epsilon2
-      test_upper(2) = pi/2.0
-      test_lower(1) = pi/2.0
-      test_upper(1) = pi - epsilon2
+      test_lower(2) = pi/2.0
+      test_upper(2) = pi - epsilon2
    end if
    
-      
 end subroutine GetSolveRegionOrdering
    
 integer function TestRegion(epsilon2, phiLower, phiUpper, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
