@@ -16,12 +16,12 @@ PROGRAM Test_TestMeshMapping
    TYPE(MeshMapType) :: Map_Mod2_Mod1        ! Data for mapping meshes from mod1 to mod2
    TYPE(MeshMapType) :: Map_Mod2_O_1PT, Map_Mod1_I_1PT
    
-   REAL(ReKi)     :: Orientation(3,3)
+   REAL(ReKi)     :: Orientation(3,3), dcm(3,3)
    REAL(ReKi)     :: position(3)
    REAL(ReKi)     :: Angle
    !REAL(DbKi)     :: AngleD
    !
-   INTEGER :: NNodes, I,J, n1, n2
+   INTEGER :: NNodes, I,J,k, n1, n2
    
    INTEGER :: un_out        ! UNITS for File I/O
    
@@ -43,6 +43,12 @@ PROGRAM Test_TestMeshMapping
    CHARACTER(7) :: TESTME(2)
    CHARACTER(1024)                       :: CheckpointRoot                          ! Rootname of the checkpoint file
    CHARACTER(20)                         :: FlagArg                                 ! flag argument from command line
+   
+   
+   real(reki) :: angles(9) = (/ -180.0, -150.0, -120.0, -45.0, 0.0, 15.0, 75.0, 90.0, 180.0/)
+   real(reki) :: theta(3), theta2(3)
+   
+   
 logical :: LtestAry(3,2) = .false.
 LOGICAL :: LPary(6), mask2(3,2)
 integer :: IPary(6), itestary(3,2)
@@ -53,53 +59,75 @@ mask2=.true.
 
    CALL NWTC_Init()
    
-   TESTME(1) = "TRY THIS"
-   tESTME(2) = "NaN"
-   
-   PRINT *, SIZE(TESTME), LEN(TESTME), LEN(TestMe(1))
-
-   PRINT *, testmE
-   
-   read(TestME(2),*), tmpR4
-   print *, 'real number = ', tmpR4
-   
-   do j=1,2
-   do i=1,len(TestMe)
-      print *, TestMe(j)(i:i)
-   end do   
-   end do
    
    Ver    = ProgDesc( 'Test Program', 'v8.11.00a-bjj', '15-Apr-2015' ) ! The version number of this module
 
-   call DispCopyrightLicense( Ver, "This is another comment. I'm going to see that it's really long, hopefuly more than 98 chraacters, so it prints on two lines." )
+!.......................................
+   dcm(1,1)= 0.9612699
+   dcm(2,1)=-0.2755210
+   dcm(3,1)=-0.0069816
+   dcm(1,2)=-0.2755206
+   dcm(2,2)=-0.9612947
+   dcm(3,2)= 0.0010476
+   dcm(1,3)=-0.0070000	
+   dcm(2,3)= 0.0009166
+   dcm(3,3)=-0.9999752
    
-   PRINT *,'-------------'   
-   PRINT *, PACK(LtestAry,.true.)
-   LPARY = PACK(LtestAry,.true.)
-   PRINT *, PACK(LPARY,.true.)
-   IPary = transfer(lpary,ipary)
-   PRINT *, PACK(IPary,.true.)
-   
-   
-   ltestary = unpack( TRANSFER( iPary, LPary ), mask2, .true. )
-  print *, ltestary
-  
-   itestary = UNPACK( IPary, mask2, 0 )
-   PRINT *, PACK(itestary,.true.)
-   !LtestAry = TRANSFER( iary, LtestAry)
-   
-   PRINT *, LtestAry
+do i=1,2
 
+   print *, '-----------------------------'
+   call wrmatrix(dcm,cu,'F15.6','DCM')
+   call DCM_LogMap(dcm, theta, ErrStat,ErrMsg)
+
+   print *, ''
+   print *,'log map of DCM:'
+   print *, theta
+   
+   print *, ''
+   dcm = DCM_exp(theta)
+   call wrmatrix(dcm,cu,'F15.6','DCM of log map:')
+
+
+!dcm = reshape( (/ 0.96127,-0.27552,-0.00683,-0.27552,-0.96129,0.00161,-0.00701,0.00033,-0.99998/), (/3,3/) )   
+dcm = reshape( (/ 0.96128  ,-0.27552  ,-0.00465  ,-0.27551  ,-0.96130  ,0.00221  ,-0.00508  ,-0.00085  ,-0.99999  /), (/3,3/) )   
+dcm = reshape( (/ 0.9612845,-0.2755184,-0.0046458,-0.2755108,-0.9612955,0.0022143,-0.0050761,-0.0008486,-0.9999868/), (/3,3/) )
+
+   !dcm(1,1)=  0.9613009
+   !dcm(2,1)= -0.2754988
+   !dcm(3,1)= -0.0010420
+   !dcm(1,2)= -0.2754033
+   !dcm(2,2)= -0.9610544
+   !dcm(3,2)=  0.0229664
+   !dcm(1,3)= -0.0073287
+   !dcm(2,3)= -0.0217907
+   !dcm(3,3)= -0.9997358
+
+end do
+!.......................................
+
+
+stop
    
    
-   PRINT *,'-------------'   
-   ProgName = 'FAST'
-   CheckpointRoot = ""
-   CALL CheckArgs( CheckpointRoot, ErrStat, Flag=FlagArg )  ! if ErrStat /= ErrID_None, we'll ignore and deal with the problem when we try to read the input file
-   print *, 'FlagArg       =', TRIM(FlagArg)
-   print *, 'CheckpointRoot=', TRIM(CheckpointRoot)
-   PRINT *,'-------------'
+   do i=1,size(angles)
+      theta(1) = angles(i)*D2R
+      do j=1,size(angles)
+         theta(2) = angles(j)*D2R
+         do k=1,size(angles)
+            theta(3) = angles(k)*D2R
+            print *, ''
+            print *, 'orig theta = ', theta*R2D
+            Orientation = EulerConstruct(theta)
+            call wrmatrix(Orientation,cu,'f10.5')
+            theta2      = EulerExtract(Orientation)
+            Orientation = EulerConstruct(theta2)
+            print *, ' new theta = ', theta2*R2D
+            call wrmatrix(Orientation,cu,'f10.5')
+         end do
+      end do
+   end do
    
+            
    
    STOP
    
