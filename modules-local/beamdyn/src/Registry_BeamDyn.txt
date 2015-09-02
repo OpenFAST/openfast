@@ -70,6 +70,8 @@ typedef      ^            ^       ^     station_eta   {:} - -  "Array stored len
 typedef      ^            ^       ^     kp_coordinate  {:}{:} - -  "Total number of dofs" -
 typedef      ^            ^     IntKi   node_elem - - -  "Node per element" -
 typedef      ^            ^       ^     kp_total  - - -  "Total number of dofs" -
+typedef      ^            ^       ^     kp_member {:} - -  "Total number of dofs" -
+typedef      ^            ^       ^     refine   - - -  "FE mesh refinement factor for trapezoidal quadrature" -
 typedef      ^            ^       ^     dof_node  - - -  "dof per node" -
 typedef      ^            ^       ^     elem_total  - - -  "Total number of elements" -
 typedef      ^            ^       ^     node_total  - - -  "Total number of nodes" -
@@ -130,11 +132,12 @@ typedef BeamDyn/BD    BladeInputData    IntKi    damp_flag    - - - "Damping Fla
 typedef BeamDyn/BD    BD_InputFile    IntKi    analysis_type    - - - "Analysis Type: 0-Rigid, 1-Static, 2-Dynamic" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    member_total     - - - "Total number of members" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    kp_total         - - - "Total number of key point" -
-typedef BeamDyn/BD    BD_InputFile    IntKi    kp_member       {:} - - "Total number of key point" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    kp_member       {:} - - "Number of key points in each member" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    order_elem       - - - "Order of interpolation (basis) function" -
-typedef BeamDyn/BD    BD_InputFile    IntKi    NRMax            - - - "Total number of key point" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    NRMax            - - - "Max number of iterations in Newton Ralphson algorithm" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    quadrature       - - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
 typedef BeamDyn/BD    BD_InputFile    IntKi    n_fact           - - - "Factorization frequency" -
+typedef BeamDyn/BD    BD_InputFile    IntKi    refine           - - - "FE mesh refinement factor for trapezoidal quadrature" -
 typedef BeamDyn/BD    BD_InputFile    ReKi     stop_tol         - - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate   {:}{:} - - "Key point coordinates array" -
 typedef BeamDyn/BD    BD_InputFile    DbKi     rhoinf          - - - "Key point coordinates array" -

@@ -641,8 +641,29 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
    CALL ReadVar(UnIn,InputFile,InputFileData%quadrature,"quadrature", "Quadrature type",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   CALL ReadVar(UnIn,InputFile,InputFileData%n_fact,"n_fact", "Factorization frequency",ErrStat2,ErrMsg2,UnEc)
+   Line = ""
+   CALL ReadVar( UnIn, InputFile, Line, "refine", "Refinement parameter for trapezoidal quadrature {or default} ", ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+          InputFileData%refine = 1
+      ELSE ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTBeam
+         READ( Line, *, IOSTAT=IOS) InputFileData%refine
+            CALL CheckIOS ( IOS, InputFile, 'refine', NumType, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
+
+   Line = ""
+   CALL ReadVar( UnIn, InputFile, Line, "n_fact", "Factorization frequency {or default}", ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) .EQ. 1) THEN
+          InputFileData%n_fact = 5
+      ELSE ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DTBeam
+         READ( Line, *, IOSTAT=IOS) InputFileData%n_fact
+            CALL CheckIOS ( IOS, InputFile, 'n_fact', NumType, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      END IF
 
    Line = ""
    CALL ReadVar( UnIn, InputFile, Line, "DTBeam", "Time interval for BeamDyn  calculations {or default} (s)", ErrStat2,ErrMsg2,UnEc)
@@ -654,6 +675,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
 
+   Line = ""
    CALL ReadVar( UnIn, InputFile, Line, "NRMax", "Max number of interations in Newton-Raphson algorithm", ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
