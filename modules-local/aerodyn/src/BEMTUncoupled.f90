@@ -512,7 +512,12 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, azimuth, chi0, cn, c
     
    
     ! compute tangential induction factor
-   kp = sigma_p*ct/4.0_ReKi/F/sphi/cphi
+   if ( cphi==0.0_ReKi ) then ! We don't want NaN here
+      kp = HUGE(kp)
+   else
+      kp = sigma_p*ct/4.0_ReKi/F/sphi/cphi
+   end if
+   
       ! Per conversation with Rick, we should only trigger this if phi = 0 , so we will return predefined values as if phi=0.0
    if (EqualRealNos(kp, 1.0_ReKi)) then
       fzero =  0.0_ReKi
@@ -523,6 +528,11 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, azimuth, chi0, cn, c
    end if
    
    ap = kp/(1.0_ReKi-kp)
+   ! tangential induction is blowing up, so we're putting a band-aid here. GJH, JMJ, BJJ 1-Sep-2015
+   if ( abs(ap) > 10.0_ReKi ) then
+      ap = sign( 10.0_ReKi, ap )
+   end if
+   
 !bjj: 3-jun-2015: TODO: was able to trigger divide-by-zero here using ccBlade_UAE.dvr without tiploss or hubloss
     
    if (.not. wakerotation) then
