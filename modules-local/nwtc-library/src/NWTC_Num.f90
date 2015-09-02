@@ -997,60 +997,72 @@ CONTAINS
    CHARACTER(*),       INTENT(  OUT) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    
       ! local variables
-   REAL(DbKi)                        :: temp
    REAL(DbKi)                        :: theta
+   REAL(DbKi)                        :: cosTheta
    REAL(DbKi)                        :: TwoSinTheta
    REAL(DbKi)                        :: v(3)
-   REAL(DbKi)                        :: skewSym(3,3)        ! an anti-symmetric matrix
-   REAL(DbKi)                        :: tol = 0.01_DbKi     ! doesn't need to be that small
+   INTEGER(IntKi)                    :: indx_max, i
       
          ! initialization
       ErrStat = ErrID_None
       ErrMsg  = ""   
    
    
-      temp  = 0.5_DbKi*( trace(DCM) - 1.0_DbKi )
-      temp  = min( max(temp,-1.0_DbKi), 1.0_DbKi ) !make sure it's in a valid range (to avoid cases where this is slightly outside the +/-1 range)
-      theta = ACOS( temp )                                                   ! Eq. 25 ( 0<=theta<=pi )
+      cosTheta = 0.5_DbKi*( trace(DCM) - 1.0_DbKi )
+      cosTheta = min( max(cosTheta,-1.0_DbKi), 1.0_DbKi ) !make sure it's in a valid range (to avoid cases where this is slightly outside the +/-1 range)
+      theta    = ACOS( cosTheta )                                                   ! Eq. 25 ( 0<=theta<=pi )
+
+      IF ( PRESENT( thetaOut ) ) THEN
+         thetaOut = theta
+      END IF      
       
-      TwoSinTheta = 2.0_DbKi*sin(theta)
       
-      IF ( EqualRealNos( pi_D, theta )  ) THEN
-            
-         ! calculate the normalized eigenvector of DCM associated with eigenvalue +1:
-         
-         !d11 = 1 -2/pi^2* (-v3^2 - v2^2)*pi^2
-         !d22 = 1 -2/pi^2* (-v3^2 - v1^2)*pi^2
-         !d33 = 1 -2/pi^2* (-v2^2 - v1^2)*pi^2
-         
-         v(1) = sqrt( 0.5_DbKi * abs( (DCM(1,1) + 1) ) )
-         v(2) = sqrt( 0.5_DbKi * abs( (DCM(2,2) + 1) ) )
-         v(3) = sqrt( 0.5_DbKi * abs( (DCM(3,3) + 1) ) )
+      !IF ( EqualRealNos( pi_D, theta )  ) THEN
+      IF ( theta > 3.1_DbKi ) THEN  ! theta/(2*sin(theta)) blows up quickly as theta approaches pi, 
+         ! so I'm putting a pretty large tolerance on pi here, and using a different equation to find the solution near pi
+                     
+         !d11 = 1 - (1-cos(theta))/theta^2 * (logMap3^2 + logMap2^2)
+         !d22 = 1 - (1-cos(theta))/theta^2 * (logMap3^2 + logMap1^2)
+         !d33 = 1 - (1-cos(theta))/theta^2 * (logMap2^2 + logMap1^2)
+                  
+         logMap(1) = theta * sqrt(abs( 0.5_DbKi * ( 1.0_DbKi + DCM(1,1) - DCM(2,2) - DCM(3,3) ) / (1.0_DbKi-cosTheta) ))
+         logMap(2) = theta * sqrt(abs( 0.5_DbKi * ( 1.0_DbKi - DCM(1,1) + DCM(2,2) - DCM(3,3) ) / (1.0_DbKi-cosTheta) ))
+         logMap(3) = theta * sqrt(abs( 0.5_DbKi * ( 1.0_DbKi - DCM(1,1) - DCM(2,2) + DCM(3,3) ) / (1.0_DbKi-cosTheta) ))
                
-         ! we choose v1 positive then we get the signs for v2 and v3:
-         if ( .not. EqualRealNos( v(1), 0.0_DbKi ) ) then
-            !d12=2*v(1)*v(2); 2*v(1)>0 so v(2) is sign(v(2),d12)
-            !d13=2*v(1)*v(3); 2*v(1)>0 so v(3) is sign(v(3),d13)
+         ! we choose logMap1 positive then we get the signs for logMap2 and logMap3:
+         if ( .not. EqualRealNos( logMap(1), 0.0_DbKi ) ) then
+            !d12+d21=2*(1-cos(theta))/theta**2 * logMap(1)*logMap(2); 2*(1-cos(theta))/theta**2 * logMap(1)>0 so logMap(2) is sign(logMap(2),d12+d21)
+            !d13+d31=2*(1-cos(theta))/theta**2 * logMap(1)*logMap(3); 2*(1-cos(theta))/theta**2 * logMap(1)>0 so logMap(3) is sign(logMap(3),d13+d31)
             
-            v(2) = sign( v(2), DCM(1,2) )
-            v(3) = sign( v(3), DCM(1,3) )            
+            logMap(2) = sign( logMap(2), DCM(1,2)+DCM(2,1) )
+            logMap(3) = sign( logMap(3), DCM(1,3)+DCM(3,1) )            
          else
-            ! because v1 is zero, we can choose v2 positive:
+            ! because logMap1 is zero, we can choose logMap2 positive:
             
-            !d23=d32=2*v(2)*v(3); 2*v(2)>0 so v(3) is sign(v(3),d23)
-            v(3) = sign( v(3), DCM(2,3) )            
+            !d23+d32=2*(1-cos(theta))/theta**2 * logMap(2)*logMap(3); 2*(1-cos(theta))/theta**2 * logMap(2)>0 so logMap(3) is sign(logMap(3),d23+d32)
+            logMap(3) = sign( logMap(3), DCM(2,3)+DCM(3,2) )            
             
          end if
-                                              
-            ! normalize the eigenvector:
-         !v = v / TwoNorm(v)                                                       ! Eq. 27                  
-      
-            ! calculate the skew-symmetric tensor (note we could change sign here for continuity)
-            ! also note that we make v skew-symmetric in the inverse routine (DCM_exp), 
-            ! so we don't need to change the sign of v(2) here
-         logMap =  pi_D*v                                                         ! Eq. 26c  
-                     
+                    
+         ! at this point we may have the wrong sign for logMap (though if theta==pi, it doesn't matter because we can change it in the DCM_setLogMapforInterp() routines)
+         ! we'll do a little checking to see if we should change the sign:
+         
+         IF ( EqualRealNos( pi_D, theta )  ) RETURN
+         
+         v(1) = -DCM(3,2) + DCM(2,3) !-skewSym(3,2)
+         v(2) =  DCM(3,1) - DCM(1,3) ! skewSym(3,1)
+         v(3) = -DCM(2,1) + DCM(1,2) !-skewSym(2,1)
+ 
+         indx_max = 1
+         do i=2,3
+            if ( abs(v(i)) > abs(v(indx_max)) ) indx_max = i
+         end do
+         
+         if ( .not. EqualRealNos( sign(1.0_DbKi,v(indx_max)), sign(1.0_DbKi,logMap(indx_max)) )) logMap = -logMap
+         
       ELSE
+         
+         TwoSinTheta = 2.0_DbKi*sin(theta)
          
          IF ( EqualRealNos(0.0_DbKi, theta) .or. EqualRealNos( 0.0_DbKi, TwoSinTheta ) ) THEN
          
@@ -1067,20 +1079,17 @@ CONTAINS
                   
          ELSE ! 0 < theta < pi 
       
-            skewSym = DCM - TRANSPOSE(DCM)
+            !skewSym = DCM - TRANSPOSE(DCM)
       
-            logMap(1) = -skewSym(3,2)
-            logMap(2) =  skewSym(3,1)
-            logMap(3) = -skewSym(2,1)
+            logMap(1) = -DCM(3,2) + DCM(2,3) !-skewSym(3,2)
+            logMap(2) =  DCM(3,1) - DCM(1,3) ! skewSym(3,1)
+            logMap(3) = -DCM(2,1) + DCM(1,2) !-skewSym(2,1)
       
             logMap    = theta / TwoSinTheta * logMap   ! Eq. 26b
          END IF
          
       END IF
-   
-      IF ( PRESENT( thetaOut ) ) THEN
-         thetaOut = theta
-      END IF
+
       
    END SUBROUTINE DCM_logMapD
 !=======================================================================
@@ -1094,65 +1103,74 @@ CONTAINS
    
    REAL(ReKi),         INTENT(IN)    :: DCM(3,3)
    REAL(ReKi),         INTENT(  OUT) :: logMap(3)
-   REAL(DbKi),OPTIONAL,INTENT(  OUT) :: thetaOut
+   REAL(ReKi),OPTIONAL,INTENT(  OUT) :: thetaOut
    INTEGER(IntKi),     INTENT(  OUT) :: ErrStat                   ! Error status of the operation
    CHARACTER(*),       INTENT(  OUT) :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
    
       ! local variables
-   REAL(ReKi)                        :: temp
+   REAL(ReKi)                        :: cosTheta
    REAL(ReKi)                        :: theta
    REAL(ReKi)                        :: TwoSinTheta
    REAL(ReKi)                        :: v(3)
    REAL(ReKi)                        :: skewSym(3,3) ! an anti-symmetric matrix
-   REAL(ReKi)                        :: tol = 0.01_ReKi     ! doesn't need to be that small
+   INTEGER(IntKi)                    :: indx_max, i
       
          ! initialization
       ErrStat = ErrID_None
       ErrMsg  = ""   
    
    
-      temp  = 0.5_ReKi*( trace(DCM) - 1.0_ReKi )
-      temp  = min( max(temp,-1.0_ReKi), 1.0_ReKi ) !make sure it's in a valid range (to avoid cases where this is slightly outside the +/-1 range)
-      theta = ACOS( temp )                                                   ! Eq. 25 ( 0<=theta<=pi )
+      cosTheta  = 0.5_ReKi*( trace(DCM) - 1.0_ReKi )
+      cosTheta  = min( max(cosTheta,-1.0_ReKi), 1.0_ReKi ) !make sure it's in a valid range (to avoid cases where this is slightly outside the +/-1 range)
+      theta     = ACOS( cosTheta )                         ! Eq. 25 ( 0<=theta<=pi )
       
-      TwoSinTheta = 2.0_ReKi*sin(theta)
       
-      IF ( EqualRealNos( pi, theta )  ) THEN
-      
-         ! calculate the normalized eigenvector of DCM associated with eigenvalue +1:
+      !IF ( EqualRealNos( pi, theta )  ) THEN
+      IF ( theta > 3.1_ReKi ) THEN  ! theta/(2*sin(theta)) blows up quickly as theta approaches pi, 
+         ! so I'm putting a pretty large tolerance on pi here, and using a different equation to find the solution near pi
+                     
+         !d11 = 1 - (1-cos(theta))/theta^2 * (logMap3^2 + logMap2^2)
+         !d22 = 1 - (1-cos(theta))/theta^2 * (logMap3^2 + logMap1^2)
+         !d33 = 1 - (1-cos(theta))/theta^2 * (logMap2^2 + logMap1^2)
          
-         !d11 = 1 -2/pi^2* (-v3^2 - v2^2)*pi^2
-         !d22 = 1 -2/pi^2* (-v3^2 - v1^2)*pi^2
-         !d33 = 1 -2/pi^2* (-v2^2 - v1^2)*pi^2
-         
-         v(1) = sqrt( 0.5_ReKi * abs( (DCM(1,1) + 1) ) )
-         v(2) = sqrt( 0.5_ReKi * abs( (DCM(2,2) + 1) ) )
-         v(3) = sqrt( 0.5_ReKi * abs( (DCM(3,3) + 1) ) )
+         logMap(1) = theta * sqrt(abs( 0.5_ReKi * ( 1.0_ReKi + DCM(1,1) - DCM(2,2) - DCM(3,3) ) / (1.0_ReKi-cosTheta) ))
+         logMap(2) = theta * sqrt(abs( 0.5_ReKi * ( 1.0_ReKi - DCM(1,1) + DCM(2,2) - DCM(3,3) ) / (1.0_ReKi-cosTheta) ))
+         logMap(3) = theta * sqrt(abs( 0.5_ReKi * ( 1.0_ReKi - DCM(1,1) - DCM(2,2) + DCM(3,3) ) / (1.0_ReKi-cosTheta) ))
                
-         ! we choose v1 positive then we get the signs for v2 and v3:
-         if ( .not. EqualRealNos( v(1), 0.0_ReKi ) ) then
-            !d12=2*v(1)*v(2); 2*v(1)>0 so v(2) is sign(v(2),d12)
-            !d13=2*v(1)*v(3); 2*v(1)>0 so v(3) is sign(v(3),d13)
+         ! we choose logMap1 positive then we get the signs for logMap2 and logMap3:
+         if ( .not. EqualRealNos( logMap(1), 0.0_ReKi ) ) then
+            !d12+d21=2*(1-cos(theta))/theta**2 * logMap(1)*logMap(2); 2*(1-cos(theta))/theta**2 * logMap(1)>0 so logMap(2) is sign(logMap(2),d12+d21)
+            !d13+d31=2*(1-cos(theta))/theta**2 * logMap(1)*logMap(3); 2*(1-cos(theta))/theta**2 * logMap(1)>0 so logMap(3) is sign(logMap(3),d13+d31)
             
-            v(2) = sign( v(2), DCM(1,2) )
-            v(3) = sign( v(3), DCM(1,3) )            
+            logMap(2) = sign( logMap(2), DCM(1,2)+DCM(2,1) )
+            logMap(3) = sign( logMap(3), DCM(1,3)+DCM(3,1) )            
          else
-            ! because v1 is zero, we can choose v2 positive:
+            ! because logMap1 is zero, we can choose logMap2 positive:
             
-            !d23=d32=2*v(2)*v(3); 2*v(2)>0 so v(3) is sign(v(3),d23)
-            v(3) = sign( v(3), DCM(2,3) )            
+            !d23+d32=2*(1-cos(theta))/theta**2 * logMap(2)*logMap(3); 2*(1-cos(theta))/theta**2 * logMap(2)>0 so logMap(3) is sign(logMap(3),d23+d32)
+            logMap(3) = sign( logMap(3), DCM(2,3)+DCM(3,2) )            
             
          end if
-                                              
-            ! normalize the eigenvector:
-         !v = v / TwoNorm(v)                                                       ! Eq. 27                  
-      
-            ! calculate the skew-symmetric tensor (note we could change sign here for continuity)
-            ! also note that we make v skew-symmetric in the inverse routine (DCM_exp), 
-            ! so we don't need to change the sign of v(2) here
-         logMap =  pi*v                                                           ! Eq. 26c  
-                     
+                    
+         ! at this point we may have the wrong sign for logMap (though if theta==pi, it doesn't matter because we can change it in the DCM_setLogMapforInterp() routines)
+         ! we'll do a little checking to see if we should change the sign:
+         
+         IF ( EqualRealNos( pi, theta )  ) RETURN
+         
+         v(1) = -DCM(3,2) + DCM(2,3) !-skewSym(3,2)
+         v(2) =  DCM(3,1) - DCM(1,3) ! skewSym(3,1)
+         v(3) = -DCM(2,1) + DCM(1,2) !-skewSym(2,1)
+ 
+         indx_max = 1
+         do i=2,3
+            if ( abs(v(i)) > abs(v(indx_max)) ) indx_max = i
+         end do
+         
+         if ( .not. EqualRealNos( sign(1.0_ReKi,v(indx_max)), sign(1.0_ReKi,logMap(indx_max)) )) logMap = -logMap
+         
       ELSE
+         
+         TwoSinTheta = 2.0_ReKi*sin(theta)
          
          IF ( EqualRealNos(0.0_ReKi, theta) .or. EqualRealNos( 0.0_ReKi, TwoSinTheta ) ) THEN
          
@@ -1169,11 +1187,9 @@ CONTAINS
                   
          ELSE ! 0 < theta < pi 
       
-            skewSym = DCM - TRANSPOSE(DCM)
-      
-            logMap(1) = -skewSym(3,2)
-            logMap(2) =  skewSym(3,1)
-            logMap(3) = -skewSym(2,1)
+            logMap(1) = -DCM(3,2) + DCM(2,3) !-skewSym(3,2)
+            logMap(2) =  DCM(3,1) - DCM(1,3) ! skewSym(3,1)
+            logMap(3) = -DCM(2,1) + DCM(1,2) !-skewSym(2,1)
       
             logMap    = theta / TwoSinTheta * logMap   ! Eq. 26b
          END IF
