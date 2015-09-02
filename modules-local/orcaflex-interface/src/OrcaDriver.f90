@@ -106,6 +106,7 @@ PROGRAM OrcaDriver
       ! Set some CLSettings to null/default values
    CLSettings%DvrIptFileName           =  ""             ! No input name name until set
    CLSettings%OrcaIptFileName          =  ""             ! No Orca input file name until set
+   CLSettings%DLLPathFileName          =  ""             ! No DLL file name until set
    CLSettings%AddedMassFileName        =  ""             ! No summary file name until set
    CLSettings%DT                       =  0.0_DbKi
    CLSettings%PtfmCoord                =  0.0_ReKi       ! Set to origin
@@ -119,6 +120,7 @@ PROGRAM OrcaDriver
       ! Set some CLSettingsFlags to null/default values
    CLSettingsFlags%DvrIptFile          =  .FALSE.        ! Driver     input filename given as command line argument
    CLSettingsFlags%OrcaIptFile         =  .FALSE.        ! Orca input filename given as command line argument
+   CLSettingsFlags%DLLPathFileName     =  .FALSE.        ! Orca input filename given as command line argument
    CLSettingsFlags%AddedMass           =  .FALSE.        ! create a summary at command line? (data extents in the wind file)
    CLSettingsFlags%Degrees             =  .FALSE.        ! Angles specified in degrees for PtfmCoord and PtfmVeloc
    CLSettingsFlags%PointsDegrees       =  .FALSE.        ! Angles specified in degrees in the points file
@@ -340,8 +342,7 @@ PROGRAM OrcaDriver
 
 
       ! Some initialization settings
-   CALL GetPath( Settings%OrcaIptFileName, Orca_InitInp%DLLPathFileName )
-   Orca_InitInp%DLLPathFileName  =  TRIM(Orca_InitInp%DLLPathFileName)//'FASTlinkDLL.dll'
+   Orca_InitInp%DLLPathFileName  =  TRIM(Settings%DLLPathFileName)
    CALL GetPath( Settings%OrcaIptFileName, Orca_InitInp%DirRoot )
    CALL GetRoot( Settings%OrcaIptFileName, TmpChar )
    Orca_InitInp%DirRoot =  TRIM(Orca_InitInp%DirRoot)//TRIM(TmpChar)

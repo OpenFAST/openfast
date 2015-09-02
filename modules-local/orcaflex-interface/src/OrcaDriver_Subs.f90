@@ -931,6 +931,18 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
    ENDIF
 
 
+      ! OrcaFlex DLL file
+   CALL ReadVar( UnIn, FileName,DvrSettings%DLLPathFileName,'DLLPathFileName',' OrcaFlex DLL filename and path',   &
+      ErrStatTmp,ErrMsgTmp, UnEchoLocal )
+   IF ( ErrStatTmp /= ErrID_None ) THEN
+      CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+      CLOSE( UnIn )
+      RETURN
+   ELSE
+      DvrFlags%DLLPathFileName  =  .TRUE.
+   ENDIF
+
 
    !-------------------------------------------------------------------------------------------------
    !  PtfmCoordinates
@@ -1982,6 +1994,7 @@ SUBROUTINE  printSettings( DvrFlags, DvrSettings )
    CALL WrsCr(TRIM(GetNVD(DvrSettings%ProgInfo)))
    CALL WrScr(' DvrIptFile:          '//FLAG(DvrFlags%DvrIptFile)//        '      '//TRIM(DvrSettings%DvrIptFileName))
    CALL WrScr(' OrcaIptFile:         '//FLAG(DvrFlags%OrcaIptFile)//       '      '//TRIM(DvrSettings%OrcaIptFileName))
+   CALL WrScr(' DLLPathFileName:     '//FLAG(DvrFlags%DLLPathFileName)//   '      '//TRIM(DvrSettings%DLLPathFileName))
    CALL WrScr(' PointsFile:          '//FLAG(DvrFlags%PointsFile)//        '      '//TRIM(DvrSettings%PointsFileName))
    CALL WrScr(' AddedMass:           '//FLAG(DvrFlags%AddedMass))
    CALL WrScr(' AddedMassFile:       '//FLAG(DvrFlags%AddedMassFile)//     '      '//TRIM(DvrSettings%AddedMassFileName))
