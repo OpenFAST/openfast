@@ -539,7 +539,6 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    DLL_DirRootName   =  TRIM(p%SimNamePath)//C_NULL_CHAR    ! Path and name of the simulation file without extension.  Null character added to convert from Fortran string to C-type string.
    DLL_ZTime = t                                            ! Current time
 
-print*,'DLL_DirRootName: ',DLL_DirRootName
 
       ! Determine the rotational angles from the direction-cosine matrix
    rotdisp = GetSmllRotAngs ( u%PtfmMesh%Orientation(:,:,1), ErrStatTmp, ErrMsgTmp )
@@ -606,7 +605,6 @@ print*,'DLL_DirRootName: ',DLL_DirRootName
 
 
       ! Set all the outputs
-   OtherState%AllOuts(Time)   =  REAL( t, ReKi )
    CALL SetAllOuts( p, y, OtherState, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
    IF ( ErrStat >= ErrID_Fatal) RETURN
@@ -910,9 +908,9 @@ SUBROUTINE SetAllOuts( ParamData, OutData, OtherState, ErrStat, ErrMsg )
    OtherState%AllOuts(  OrcaFxi  )  =  OutData%PtfmMesh%Force(1,1)
    OtherState%AllOuts(  OrcaFyi  )  =  OutData%PtfmMesh%Force(2,1)
    OtherState%AllOuts(  OrcaFzi  )  =  OutData%PtfmMesh%Force(3,1)
-   OtherState%AllOuts(  OrcaMxi  )  =  OutData%PtfmMesh%Force(4,1)
-   OtherState%AllOuts(  OrcaMyi  )  =  OutData%PtfmMesh%Force(5,1)
-   OtherState%AllOuts(  OrcaMzi  )  =  OutData%PtfmMesh%Force(6,1)
+   OtherState%AllOuts(  OrcaMxi  )  =  OutData%PtfmMesh%Moment(1,1)
+   OtherState%AllOuts(  OrcaMyi  )  =  OutData%PtfmMesh%Moment(2,1)
+   OtherState%AllOuts(  OrcaMzi  )  =  OutData%PtfmMesh%Moment(3,1)
 
    OtherState%AllOuts(  OrcaFHFxi  )  =  OtherState%PtfmFT(1)
    OtherState%AllOuts(  OrcaFHFyi  )  =  OtherState%PtfmFT(2)

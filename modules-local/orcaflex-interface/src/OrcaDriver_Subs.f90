@@ -1765,7 +1765,7 @@ SUBROUTINE AddedMassMessage( AM, ToFile, Msg, MsgLen )
    INTEGER(IntKi),                     INTENT(  OUT)  :: MsgLen
 
       ! Local Variables
-   CHARACTER(11)                                      :: TmpNumString
+   CHARACTER(15)                                      :: TmpNumString
    INTEGER(IntKi)                                     :: ErrStatTmp
    INTEGER(IntKi)                                     :: I              !< Simple counter
 
@@ -1780,19 +1780,19 @@ SUBROUTINE AddedMassMessage( AM, ToFile, Msg, MsgLen )
    ! Header info:
    Msg   =  TRIM(Msg)
    IF ( ToFile ) Msg=TRIM(Msg)//'#'
-   Msg   =           TRIM(Msg)//"    Dimension     TDxi        TDyi        TDzi        RDxi        RDyi        RDzi  "//NewLine
+   Msg   =           TRIM(Msg)//"  Dim      TDxi        TDyi        TDzi        RDxi        RDyi        RDzi    "//NewLine
    IF ( ToFile ) Msg=TRIM(Msg)//'#'
-   Msg   =           TRIM(Msg)//"   ---------------------------------------------------------------------------------"//NewLine
+   Msg   =           TRIM(Msg)//" ------------------------------------------------------------------------------"//NewLine
 
    MsgLen=  LEN_TRIM(Msg)-1         ! Not sure why an extra count exists here.
 
 
-   CALL printDirection("   TDxi",1)
-   CALL printDirection("   TDyi",2)
-   CALL printDirection("   TDzi",3)
-   CALL printDirection("   RDxi",4)
-   CALL printDirection("   RDyi",5)
-   CALL printDirection("   RDzi",6)
+   CALL printDirection(" TDxi",1)
+   CALL printDirection(" TDyi",2)
+   CALL printDirection(" TDzi",3)
+   CALL printDirection(" RDxi",4)
+   CALL printDirection(" RDyi",5)
+   CALL printDirection(" RDzi",6)
 
 
 
@@ -1809,11 +1809,11 @@ SUBROUTINE AddedMassMessage( AM, ToFile, Msg, MsgLen )
       ELSE
          Msg=  TRIM(Msg)//" "//TRIM(NameIn)
       ENDIF
-      MsgLen=  MsgLen+9
-      Msg   =  Msg(1:MsgLen)//"       "
-      MsgLen=  MsgLen+7
+      MsgLen=  MsgLen+8
+      Msg   =  Msg(1:MsgLen)//" "
+      MsgLen=  MsgLen+1
       DO I=1,6
-         WRITE(TmpNumString,'(f7.2)',IOSTAT=ErrStatTmp)           AM(6,I)
+         WRITE(TmpNumString,'(ES10.3E2)',IOSTAT=ErrStatTmp)           AM(IndexNum,I)
          Msg   =  Msg(1:MsgLen)//TmpNumString(1:10)
          MsgLen=  MsgLen+2+10
       ENDDO
@@ -1843,11 +1843,11 @@ SUBROUTINE AddedMass_OutputWrite (DvrSettings, Initialized, PtfmAM, ErrStat, Err
    CHARACTER(*),              PARAMETER               :: RoutineName = 'AddedMass_OutputWrite'
    INTEGER(IntKi)                                     :: LenErrMsgTmp         !< Length of ErrMsgTmp (for getting WindGrid info)
 
-   CHARACTER(52)                                      :: AMfmt                !< Format specifier for the output file for wave elevation series
+   CHARACTER(25)                                      :: AMfmt                !< Format specifier for the output file for wave elevation series
    INTEGER(IntKi)                                     :: I                    !< generic counter
 
 
-   AMfmt = "(F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7,3x,F14.7)"
+   AMfmt = "(ES10.3E2,5(3x,ES10.3E2))"
 
    ErrMsg      = ''
    ErrStat     = ErrID_None
@@ -1903,10 +1903,10 @@ SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName
    INTEGER(IntKi)                                     :: LenErrMsgTmp         !< Length of ErrMsgTmp (for getting WindGrid info)
    REAL(ReKi)                                         :: rotdisp(3)           !< Rotational displacement (euler angles)
 
-   CHARACTER(20)                                      :: PointsOutputFmt      !< Format specifier for the output file for wave elevation series
+   CHARACTER(47)                                      :: PointsOutputFmt      !< Format specifier for the output file for wave elevation series
    CHARACTER(3)                                       :: AngleUnit            !< Units for the angle
 
-   PointsOutputFmt = "(F14.7,17(3x,F14.7))"
+   PointsOutputFmt = "(ES10.3E2,17(3x,ES10.3E2))"
 
    ErrMsg      = ''
    ErrStat     = ErrID_None
@@ -1940,19 +1940,19 @@ SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName
       ENDIF
       WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
       WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp  )  '#'//  &
-                                                   '       TDxi             TDyi             TDzi      '       //  &
-                                                   '       RDxi             RDyi             RDzi      '       //  &
-                                                   '       TVxi             TVyi             TVzi      '       //  &
-                                                   '       RVxi             RVyi             RVzi      '       //  &
-                                                   '       Fxi              Fyi              Fzi       '       //  &
-                                                   '       Mxi              Myi              Mzi'
+                                                   '   TDxi         TDyi         TDzi      '       //  &
+                                                   '   RDxi         RDyi         RDzi      '       //  &
+                                                   '   TVxi         TVyi         TVzi      '       //  &
+                                                   '   RVxi         RVyi         RVzi      '       //  &
+                                                   '   Fxi          Fyi          Fzi       '       //  &
+                                                   '   Mxi          Myi          Mzi'
       WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp  )  '#'//  &
-                                                   '       (m)              (m)              (m)       '       //  &
-                                                   '       ('//AngleUnit//')            ('//AngleUnit//')            ('//AngleUnit//')     '//  &
-                                                   '       (m/s)            (m/s)            (m/s)     '       //  &
-                                                   '       ('//AngleUnit//'/s)          ('//AngleUnit//'/s)          ('//AngleUnit//'/s)   '//  &
-                                                   '       (kN)             (kN)             (kN)     '        //  &
-                                                   '       (kN m)           (kN m)           (kN m)'
+                                                   '   (m)          (m)          (m)       '       //  &
+                                                   '   ('//AngleUnit//')        ('//AngleUnit//')        ('//AngleUnit//')     '//  &
+                                                   '   (m/s)        (m/s)        (m/s)     '       //  &
+                                                   '   ('//AngleUnit//'/s)      ('//AngleUnit//'/s)      ('//AngleUnit//'/s)   '//  &
+                                                   '   (kN)         (kN)         (kN)     '        //  &
+                                                   '   (kN m)       (kN m)       (kN m)'
    ENDIF
 
 
