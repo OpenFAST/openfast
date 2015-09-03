@@ -420,14 +420,13 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                          ((InputFileData%kp_coordinate(id0+(j-2)/p%refine + 1,1) - &
                            InputFileData%kp_coordinate(id0+(j-2)/p%refine,1))/p%refine) * &
                          (MOD(j-2,p%refine) + 1)
-!                   eta = InputFileData%kp_coordinate(id0+j-1,1)
                ENDIF
                CALL BD_ComputeIniNodalPosition(temp_Coef,eta,temp_POS,temp_e1,temp_twist,&
                                                ErrStat2, ErrMsg2)
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                CALL BD_ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV,ErrStat2,ErrMsg2)
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               temp_L2(1:3,temp_id*p%refine + j) = temp_POS(1:3)  !InputFileData%kp_coordinate(id0+j-1,1:3)
+               temp_L2(1:3,temp_id*p%refine + j) = temp_POS(1:3)  
                temp_L2(4:6,temp_id*p%refine + j) = temp_CRV(1:3)
            ENDDO
        ENDIF
@@ -542,7 +541,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            temp_int = (InputFileData%kp_member(i) - 1) * p%refine + 1
            DO j = n,temp_int
                IF(i .EQ. 1 .AND. j .EQ. 1) THEN
-                   eta = InputFileData%kp_coordinate(id0,1)
                    p%Stif0_GL(1:6,1:6,temp_id*p%refine + j) = InputFileData%InpBl%stiff0(1:6,1:6,temp_id*p%refine + j)
                    p%Mass0_GL(1:6,1:6,temp_id*p%refine + j) = InputFileData%InpBl%mass0(1:6,1:6,temp_id*p%refine + j)
                ELSE
