@@ -76,8 +76,6 @@ PROGRAM MAIN
    CALL BD_ReadDvrFile(DvrInputFile,t_initial,t_final,dt_global,BD_InitInput,&
                           ErrStat,ErrMsg)
    BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
-   CALL BD_CrvMatrixR(BD_InitInput%GlbRot(:,1),temp_R,ErrStat,ErrMsg)
-   BD_InitInput%GlbRot(1:3,1:3) = TRANSPOSE(temp_R(1:3,1:3))
    BD_InitInput%RootDisp(:) = 0.0D+00
    BD_InitInput%RootOri(:,:) = 0.0D0
    BD_InitInput%RootOri(1:3,1:3) = BD_InitInput%GlbRot(1:3,1:3)
@@ -94,9 +92,6 @@ PROGRAM MAIN
    ALLOCATE(BD_Output(BD_interp_order + 1)) 
    ALLOCATE(BD_OutputTimes(BD_interp_order + 1)) 
 
-
-
-
    CALL BD_Init(BD_InitInput        &
                    , BD_Input(1)         &
                    , BD_Parameter        &
@@ -109,8 +104,10 @@ PROGRAM MAIN
                    , BD_InitOutput       &
                    , ErrStat               &
                    , ErrMsg )
+      CALL CheckError()
 
    CALL Dvr_InitializeOutputFile(DvrOut,BD_InitOutput,RootName,ErrStat,ErrMsg)
+      CALL CheckError()
 
    BD_InputTimes(1) = t_initial
    BD_InputTimes(2) = t_initial 
@@ -121,23 +118,28 @@ PROGRAM MAIN
    CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_InitInput,ErrStat, ErrMsg)
    CALL BD_CopyInput(BD_Input(1), BD_Input(2), MESH_NEWCOPY, ErrStat, ErrMsg)
    CALL BD_CopyOutput(BD_Output(1), BD_Output(2), MESH_NEWCOPY, ErrStat, ErrMsg)
+      CALL CheckError()
 
-CALL CPU_TIME(start)
+   CALL CPU_TIME(start)
+
    DO n_t_global = 0, n_t_final
-WRITE(*,*) "Time Step: ", n_t_global
-!IF(n_t_global == 3) STOP 
+
+     WRITE(*,*) "Time Step: ", n_t_global
      BD_InputTimes(2) = BD_InputTimes(1) 
      BD_InputTimes(1) = t_global + dt_global
      BD_OutputTimes(2) = BD_OutputTimes(1) 
      BD_OutputTimes(1) = t_global + dt_global
      CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_InitInput, ErrStat, ErrMsg)
      CALL BD_InputSolve( BD_InputTimes(2), BD_Input(2), BD_Parameter, BD_InitInput, ErrStat, ErrMsg)
+        CALL CheckError()
 
      CALL BD_CalcOutput( t_global, BD_Input(2), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
                              BD_OtherState,  BD_Output(2), ErrStat, ErrMsg)
+        CALL CheckError()
 
      CALL Dvr_WriteOutputLine(t_global,DvrOut,BD_Parameter%OutFmt,BD_Output(2),ErrStat,ErrMsg)
+        CALL CheckError()
 
      IF(BD_Parameter%analysis_type .EQ. 1 .AND. n_t_global .EQ. 1) EXIT 
 
@@ -145,26 +147,58 @@ WRITE(*,*) "Time Step: ", n_t_global
                                BD_ContinuousState, &
                                BD_DiscreteState, BD_ConstraintState, &
                                BD_OtherState, ErrStat, ErrMsg )
+        CALL CheckError()
 
       t_global = REAL(n_t_global+1,DbKi) * dt_global + t_initial
 
    ENDDO
 
-CALL CPU_TIME(finish)
+   CALL CPU_TIME(finish)
+   
+   WRITE(*,*) 'Start: ', start
+   WRITE(*,*) 'Finish: ', finish
+   WRITE(*,*) 'Time: ', finish-start
 
-WRITE(*,*) 'Start: ', start
-WRITE(*,*) 'Finish: ', finish
-WRITE(*,*) 'Time: ', finish-start
+   CALL Dvr_End()
 
-   DO i=1,BD_interp_order + 1
-       CALL BD_End( BD_Input(i), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
-                        BD_ConstraintState, BD_OtherState, BD_Output(i), ErrStat, ErrMsg )
-   ENDDO 
+CONTAINS
 
-   DEALLOCATE(BD_Input)
-   DEALLOCATE(BD_InputTimes)
-   DEALLOCATE(BD_Output)
-   DEALLOCATE(BD_OutputTimes)
+   SUBROUTINE Dvr_End()
+
+      character(ErrMsgLen)                          :: errMsg2                 ! temporary Error message if ErrStat /=
+      integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
+      character(*), parameter                       :: RoutineName = 'Dvr_End'
+
+      IF(DvrOut >0) CLOSE(DvrOut)
+
+      DO i=1,BD_interp_order + 1
+          CALL BD_End( BD_Input(i), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
+                           BD_ConstraintState, BD_OtherState, BD_Output(i), ErrStat2, ErrMsg2 )
+      ENDDO 
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
+
+      IF(ALLOCATED(BD_InputTimes )) DEALLOCATE(BD_InputTimes )
+      IF(ALLOCATED(BD_OutputTimes)) DEALLOCATE(BD_OutputTimes)
+
+      if (ErrStat >= AbortErrLev) then      
+         CALL ProgAbort( 'BeamDyn Driver encountered simulation error level: '&
+             //TRIM(GetErrStr(ErrStat)), TrapErrors=.FALSE., TimeWait=3._ReKi )  ! wait 3 seconds (in case they double-clicked and got an error)
+      else
+         call NormStop()
+      end if
+   END SUBROUTINE Dvr_End
+
+   subroutine CheckError()
+   
+      if (ErrStat /= ErrID_None) then
+         call WrScr(TRIM(ErrMsg))
+         
+         if (ErrStat >= AbortErrLev) then
+            call Dvr_End()
+         end if
+      end if
+         
+   end subroutine CheckError
 
 END PROGRAM MAIN
 
@@ -208,9 +242,6 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
    temp_vec(:) = 4.0D0*TAN(temp_theta(:)/4.0D0)
    ! gather point forces and line forces
 
-!------------------
-!  Rotating beam
-!------------------
    ! Point mesh: RootMotion 
    ! Calculate root displacements and rotations
    u%RootMotion%Orientation(:,:,:) = 0.0D0
@@ -240,22 +271,12 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
    u%RootMotion%TranslationAcc(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)), &
                MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr))
    ! END Calculate root translational and angular accelerations
-!------------------
-! End rotating beam
-!------------------
 
    u%PointLoad%Force(:,:)  = 0.0D0
    u%PointLoad%Moment(:,:) = 0.0D0
-!   u%PointLoad%Force(1,p%node_total)  = 5.0D+04
    u%PointLoad%Force(1:3,p%node_total)  = InitInput%TipLoad(1:3)
    u%PointLoad%Moment(1:3,p%node_total) = InitInput%TipLoad(4:6)
    
-!   u%RootMotion%TranslationAcc(3,1) = 1.76991032448401212D-02
-!   u%PointLoad%Force(1,p%node_total) = 1.0D+02*SIN(2.0*t)
-!   u%PointLoad%Force(1,p%node_total) = 2.0
-!   u%PointLoad%Force(3,p%node_total) = 1.0D+03*0.5*(1.0D0-COS(0.2*t))
-!   u%PointLoad%Force(3,3) = 1.0D+00
-
    ! LINE2 mesh: DistrLoad
    u%DistrLoad%Force(:,:)  = 0.0D0
    u%DistrLoad%Moment(:,:) = 0.0D0
@@ -266,7 +287,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
            u%DistrLoad%Moment(1:3,i)= InitInput%DistrLoad(4:6)
        ENDDO
    ELSEIF(p%quadrature .EQ. 2) THEN
-       DO i=1,p%kp_total
+       DO i=1,SUM(p%ngp) - (p%elem_total - 1)
            u%DistrLoad%Force(1:3,i) = InitInput%DistrLoad(1:3)
            u%DistrLoad%Moment(1:3,i)= InitInput%DistrLoad(4:6)
        ENDDO
@@ -371,12 +392,11 @@ SUBROUTINE BD_ReadDvrFile(DvrInputFile,t_ini,t_f,dt,InitInputData,&
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
    CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(3),"InitInputData%GlbPos(3)", "position vector Z",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbRot(1,1),"InitInputData%GlbPos(1,1)", "rotation angle X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbRot(2,1),"InitInputData%GlbPos(2,1)", "rotation angle Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbRot(3,1),"InitInputData%GlbPos(3,1)", "rotation angle Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   DO i=1,3
+       CALL ReadAry(UnIn,DvrInputFile,InitInputData%GlbRot(i,:),3,"InitInputData%GlbPos",&
+               "Global DCM",ErrStat2,ErrMsg2,UnEc)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDDO
    if (ErrStat >= AbortErrLev) then
        call cleanup()
        return

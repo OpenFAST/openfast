@@ -1640,6 +1640,7 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
        WRITE (UnSu,'(A)')  'Quadrature method: Gauss quadrature' 
    ELSEIF(p%quadrature .EQ. 2) THEN
        WRITE (UnSu,'(A)')  'Quadrature method: Trapezoidal quadrature' 
+       WRITE (UnSu,'(A,I4)' ) 'FE mesh refinement factor:', p%refine
    ENDIF
 
    WRITE (UnSu,'(A,I4)' ) 'Number of elements:    ', p%elem_total
@@ -1669,8 +1670,8 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
            WRITE(UnSu,'(I4,3ES18.5)') i-1,p%Gauss(1:3,i)
        ENDDO
    ELSEIF(p%quadrature .EQ. 2) THEN
-       DO i=1,p%kp_total
-           WRITE(UnSu,'(I4,3ES18.5)') i,p%kp_coordinate(i,1:3)
+       DO i=1,SUM(p%ngp) - (p%elem_total - 1)
+           WRITE(UnSu,'(I4,3ES18.5)') i,p%Gauss(1:3,i)
        ENDDO
    ENDIF
    WRITE (UnSu,'(/,A)')  'Sectional stiffness and mass matrices at quadrature points'
@@ -1686,7 +1687,7 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
            ENDDO
        ENDDO
    ELSEIF(p%quadrature .EQ. 2) THEN
-       DO i=1,p%kp_total
+       DO i=1,SUM(p%ngp) - (p%elem_total - 1)
            WRITE (UnSu,'(/,A,I4)')  'Quadrature point number: ',i
            DO j=1,6
                WRITE(UnSu,'(6ES15.5)') p%Stif0_GL(j,1:6,i)
