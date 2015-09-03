@@ -718,7 +718,7 @@ end do
    IF (p_FAST%WrBinOutFile) THEN
 
          ! calculate the size of the array of outputs we need to store
-      y_FAST%NOutSteps = NINT ( (p_FAST%TMax - p_FAST%TStart) / p_FAST%DT_OUT ) + 1
+      y_FAST%NOutSteps = CEILING ( (p_FAST%TMax - p_FAST%TStart) / p_FAST%DT_OUT ) + 1
 
       CALL AllocAry( y_FAST%AllOutData, NumOuts-1, y_FAST%NOutSteps, 'AllOutData', ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
@@ -1499,7 +1499,7 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADO
       CALL WrFileNR( y_FAST%UnOu, TmpStr )
 
          ! write the individual module output
-      CALL WrReAryFileNR ( y_FAST%UnOu, OutputAry,   Frmt, ErrStat, ErrMsg )
+      CALL WrNumAryFileNR ( y_FAST%UnOu, OutputAry,   Frmt, ErrStat, ErrMsg )
          !IF ( ErrStat >= AbortErrLev ) RETURN
       
          ! write a new line (advance to the next line)
@@ -4640,11 +4640,9 @@ SUBROUTINE AD_InputSolve_NoIfW( p_FAST, u_AD, y_ED, BD, MeshMapData, ErrStat, Er
       ! blades
    IF (p_FAST%CompElast == Module_ED ) THEN
       
-!debug_print2 = .true.
       DO k=1,size(y_ED%BladeLn2Mesh)
          CALL Transfer_Line2_to_Line2( y_ED%BladeLn2Mesh(k), u_AD%BladeMotion(k), MeshMapData%BDED_L_2_AD_L_B(k), ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//':u_AD%BladeMotion('//trim(num2lstr(k))//')' )   
-!debug_print2 = .false.            
       END DO
       
    ELSEIF (p_FAST%CompElast == Module_BD ) THEN
@@ -6091,10 +6089,8 @@ end if
          
    ELSEIF ( p_FAST%CompAero == Module_AD ) THEN
       
-!debug_print2_unit = 92   
       CALL AD_InputSolve_NoIfW( p_FAST, AD%Input(1), ED%Output(1), BD, MeshMapData, ErrStat2, ErrMsg2 )   
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )        
-!debug_print2_unit = 90      
 
          ! because we're not calling InflowWind_CalcOutput or getting new values from OpenFOAM, 
          ! this probably can be skipped; 
@@ -6376,10 +6372,8 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
       
    ELSE IF ( p_FAST%CompAero == Module_AD ) THEN 
                         
-!debug_print2_unit = 91      
       CALL AD_InputSolve_NoIfW( p_FAST, AD%Input(1), ED%Output(1), BD, MeshMapData, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-!debug_print2_unit = 90      
          
    END IF
    
