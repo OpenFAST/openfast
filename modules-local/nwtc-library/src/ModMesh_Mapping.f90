@@ -678,16 +678,6 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
 
-#ifdef __NN_ORIENTATIONS         
-         IF ( NINT( MeshMap%MapMotions(i)%shape_fn(2) ) == 0 ) THEN
-            n = n1
-         ELSE
-            n = n2
-         END IF
-         
-         Dest%Orientation(:,:,i) = MATMUL( MATMUL( Dest%RefOrientation(:,:,i), TRANSPOSE( Src%RefOrientation(:,:,n) ) )&
-                                          , Src%Orientation(:,:,n) )
-#else         
 #ifdef __ORIGINAL_LOGMAP    
             ! calculate Rotation matrix for FieldValueN1 and convert to tensor:
          RotationMatrix = MATMUL( MATMUL( Dest%RefOrientation(:,:,i), TRANSPOSE( Src%RefOrientation(:,:,n1) ) )&
@@ -733,31 +723,12 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
          CALL DCM_logmap( RotationMatrixD, FieldValue(:,1), ErrStat, ErrMsg, theta(1) )
          IF (ErrStat >= AbortErrLev) RETURN
             
-if (debug_print2 .and. i==8) then
-      CALL WrFileNR( debug_print2_unit, num2lstr(i)//" " )
-      CALL WrFileNR( debug_print2_unit, num2lstr(n1)//" " )
-      CALL WrFileNR( debug_print2_unit, num2lstr(n2)//" " )
-      CALL WrNumAryFileNR ( debug_print2_unit, theta,'1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, FieldValue(:,1),'1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,1),'1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,2),'1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,3),'1x,ES15.6E2', ErrStat, ErrMsg )
-end if         
             ! calculate Rotation matrix for FieldValueN2 and convert to tensor:
          RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n2) ), Src%Orientation(:,:,n2) )
          
          CALL DCM_logmap( RotationMatrixD, FieldValue(:,2), ErrStat, ErrMsg, theta(1) )                  
          IF (ErrStat >= AbortErrLev) RETURN
-            
-if (debug_print2 .and. i==8) then
-      CALL WrNumAryFileNR ( debug_print2_unit, theta,               '1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, FieldValue(:,2),     '1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,1),'1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,2),'1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,3),'1x,ES15.6E2', ErrStat, ErrMsg )
-end if         
-         
-         
+                              
          CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary         
          
             ! interpolate tensors: 
@@ -766,25 +737,13 @@ end if
                   
             ! convert back to DCM:
          RotationMatrixD = DCM_exp( tensor_interp )
-            
-if (debug_print2 .and. i==8) then
-      CALL WrNumAryFileNR ( debug_print2_unit, FieldValue(:,1),     '1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, FieldValue(:,2),     '1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, MeshMap%MapMotions(i)%shape_fn,'1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, tensor_interp,       '1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,1),'1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,2),'1x,ES15.6E2', ErrStat, ErrMsg )
-      CALL WrNumAryFileNR ( debug_print2_unit, RotationMatrixD(:,3),'1x,ES15.6E2', ErrStat, ErrMsg )
-      write(debug_print2_unit,'()')
-end if         
-         
+                     
       end if
       
       RotationMatrix = REAL( RotationMatrixD, ReKi )
       Dest%Orientation(:,:,i) = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrix  )
                   
 #endif         
-#endif
          
       end do
 

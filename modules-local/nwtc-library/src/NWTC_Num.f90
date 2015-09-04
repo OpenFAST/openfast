@@ -88,9 +88,6 @@ MODULE NWTC_Num
    IMPLICIT NONE
 
 !=======================================================================
-   logical,public :: debug_print2 = .false.
-   integer,public :: debug_print2_unit = 90
-
 
       ! Global numeric-related variables.
 
