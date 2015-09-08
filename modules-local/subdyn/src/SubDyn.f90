@@ -3523,7 +3523,7 @@ CONTAINS
       ! deallocate any local variables:
       
       IF (ALLOCATED(Work)  ) DEALLOCATE(Work)
-      IF (ALLOCATED(Omega2)) DEALLOCATE(Omega2)
+      IF (ALLOCATED(Omega2)) DEALLOCATE(Omega2)  !bjj: break in Debug_Doub
       IF (ALLOCATED(ALPHAR)) DEALLOCATE(ALPHAR)
       IF (ALLOCATED(ALPHAI)) DEALLOCATE(ALPHAI)
       IF (ALLOCATED(BETA)  ) DEALLOCATE(BETA)
