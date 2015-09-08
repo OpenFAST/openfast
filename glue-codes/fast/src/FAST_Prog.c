@@ -30,6 +30,8 @@ main(int argc, char *argv[], char *env[])
    int j = 0;
    int k = 0;
    int n_t_global_start = 0;
+   int NumBlades = 0;
+   int NumElementsPerBlade = 0;
    int n_checkpoint = 10;
    int NumScOutputs = 0; // 5;  // # outputs from the supercontroller == # inputs to the controller
    int NumScInputs = 0; // 2;   // # inputs to the supercontroller == # outputs from the controller
@@ -48,10 +50,9 @@ main(int argc, char *argv[], char *env[])
       /* ******************************
       restart
       ********************************* */
-      /* note that this will set n_t_global inside the FAST library; so the loop below would need to be changed. I can easily return the
-      current value of n_t_global if you need it. */
+      /* note that this will set n_t_global inside the FAST library */
       strcpy(CheckpointFileRoot, "../../../CertTest/Test18.1200");
-      FAST_OpFM_Restart(CheckpointFileRoot, &AbortErrLev, &dt, &n_t_global_start, OpFM_Input_from_FAST, OpFM_Output_to_FAST, &ErrStat, ErrMsg);
+      FAST_OpFM_Restart(CheckpointFileRoot, &AbortErrLev, &dt, &NumBlades, &NumElementsPerBlade, &n_t_global_start, OpFM_Input_from_FAST, OpFM_Output_to_FAST, &ErrStat, ErrMsg);
       if (checkError(ErrStat, ErrMsg)) return 1;
 
    }
@@ -67,7 +68,8 @@ main(int argc, char *argv[], char *env[])
       TurbinePos[1] = 0.0;  // y location of turbine
       TurbinePos[2] = 0.0;  // z location of turbine
 
-      FAST_OpFM_Init(&TMax, InputFileName, &TurbID, &NumScOutputs, &NumScInputs, TurbinePos, &AbortErrLev, &dt, OpFM_Input_from_FAST, OpFM_Output_to_FAST, &ErrStat, ErrMsg);
+      FAST_OpFM_Init(&TMax, InputFileName, &TurbID, &NumScOutputs, &NumScInputs, TurbinePos, &AbortErrLev, &dt, &NumBlades, &NumElementsPerBlade,
+                     OpFM_Input_from_FAST, OpFM_Output_to_FAST, &ErrStat, ErrMsg);
       if (checkError(ErrStat, ErrMsg)) return 1;
 
       // set wind speeds at initial locations
@@ -106,6 +108,7 @@ main(int argc, char *argv[], char *env[])
 
 
       // this advances the states, calls CalcOutput, and solves for next inputs. Predictor-corrector loop is imbeded here:
+      // (note OpenFOAM could do subcycling around this step)
       FAST_OpFM_Step(&ErrStat, ErrMsg);
       if (checkError(ErrStat, ErrMsg)) return 1;
 
@@ -167,7 +170,7 @@ setOutputsToFAST(OpFM_InputType_t* OpFM_Input_from_FAST, OpFM_OutputType_t* OpFM
    }
 
    for (int j = 0; j < OpFM_Output_to_FAST->SuperController_Len; j++){
-      OpFM_Output_to_FAST->SuperController[j] = (float) j; // set it somehow....
+      OpFM_Output_to_FAST->SuperController[j] = (float) j; // set it somehow.... (would be set from the SuperController outputs)
    }
 
    return;

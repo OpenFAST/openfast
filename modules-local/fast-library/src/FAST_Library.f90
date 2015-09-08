@@ -359,7 +359,7 @@ subroutine FAST_Restart(CheckpointRootName_c, AbortErrLev_c, NumOuts_c, dt_c, n_
       
 end subroutine FAST_Restart 
 !==================================================================================================================================
-subroutine FAST_OpFM_Init(TMax, InputFileName_c, TurbID, NumSCin, NumSCout, TurbPosn, AbortErrLev_c, dt_c, &
+subroutine FAST_OpFM_Init(TMax, InputFileName_c, TurbID, NumSCin, NumSCout, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, &
                           OpFM_Input_from_FAST, OpFM_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Init')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_OpFM_Init
    IMPLICIT NONE 
@@ -372,6 +372,8 @@ subroutine FAST_OpFM_Init(TMax, InputFileName_c, TurbID, NumSCin, NumSCout, Turb
    REAL(C_FLOAT),          INTENT(IN   ) :: TurbPosn(3)      
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
+   INTEGER(C_INT),         INTENT(  OUT) :: NumBl_c      
+   INTEGER(C_INT),         INTENT(  OUT) :: NumBlElem_c      
    TYPE(OpFM_InputType_C), INTENT(  OUT) :: OpFM_Input_from_FAST
    TYPE(OpFM_OutputType_C),INTENT(  OUT) :: OpFM_Output_to_FAST
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
@@ -410,6 +412,19 @@ subroutine FAST_OpFM_Init(TMax, InputFileName_c, TurbID, NumSCin, NumSCout, Turb
    
    call SetOpenFOAM_pointers(OpFM_Input_from_FAST, OpFM_Output_to_FAST)
                         
+   ! 7-Sep-2015: Sang wants these integers for the OpenFOAM mapping, which is tied to the AeroDyn nodes. FAST doesn't restrict the number of nodes on each 
+   ! blade mesh to be the same, so if this DOES ever change, we'll need to make OpenFOAM less tied to the AeroDyn mapping.
+   IF (Turbine%p_FAST%CompAero == MODULE_AD14) THEN   
+      NumBl_c     = SIZE(Turbine%AD14%Input(1)%InputMarkers)
+      NumBlElem_c = Turbine%AD14%Input(1)%InputMarkers(1)%Nnodes
+   ELSEIF (Turbine%p_FAST%CompAero == MODULE_AD) THEN  
+      NumBl_c     = SIZE(Turbine%AD%Input(1)%BladeMotion)
+      NumBlElem_c = Turbine%AD%Input(1)%BladeMotion(1)%Nnodes
+   ELSE
+      NumBl_c     = 0
+      NumBlElem_c = 0
+   END IF   
+   
 end subroutine   
 !==================================================================================================================================
 subroutine FAST_OpFM_Solution0(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Solution0')
