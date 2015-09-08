@@ -32,6 +32,7 @@ main(int argc, char *argv[], char *env[])
    int n_t_global_start = 0;
    int NumBlades = 0;
    int NumElementsPerBlade = 0;
+   int NumTwrElements = 0;
    int n_checkpoint = 10;
    int NumScOutputs = 0; // 5;  // # outputs from the supercontroller == # inputs to the controller
    int NumScInputs = 0; // 2;   // # inputs to the supercontroller == # outputs from the controller
@@ -71,6 +72,8 @@ main(int argc, char *argv[], char *env[])
       FAST_OpFM_Init(&TMax, InputFileName, &TurbID, &NumScOutputs, &NumScInputs, TurbinePos, &AbortErrLev, &dt, &NumBlades, &NumElementsPerBlade,
                      OpFM_Input_from_FAST, OpFM_Output_to_FAST, &ErrStat, ErrMsg);
       if (checkError(ErrStat, ErrMsg)) return 1;
+
+      NumTwrElements = OpFM_Output_to_FAST->u_Len - NumBlades*NumElementsPerBlade - 1;
 
       // set wind speeds at initial locations
       setOutputsToFAST(OpFM_Input_from_FAST, OpFM_Output_to_FAST);
