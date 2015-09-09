@@ -184,6 +184,20 @@ SET list_of_files=%src_folder%\FAST_SourceFiles.txt
 @CALL :CopyFileList
 IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
+
+
+:OrcaFlex
+ECHO OrcaFlex Integration
+SET src_folder=%Orca_Loc%\..
+SET dst_folder=%depend_dir%\OrcaFlex
+SET list_of_files=%src_folder%\FAST_SourceFiles.txt
+
+@CALL :CopyFileList
+IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
+
+
+REM -------------------------------------
+
 goto ClearVars
 
 REM -------------------------------------
