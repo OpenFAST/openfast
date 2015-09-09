@@ -44,7 +44,6 @@ MODULE OrcaDriver_Types
       !! NOTE: The wind direction is specified by the OrcaFlexInterface input file.
    TYPE     :: OrcaDriver_Flags
       LOGICAL                 :: DvrIptFile           = .FALSE.      !< Was an input file name given on the command line?
-      LOGICAL                 :: DLLPathFileName      = .FALSE.      !< DLL specified
       LOGICAL                 :: OrcaIptFile          = .FALSE.      !< Was an OrcaFlexInterface input file requested?
       LOGICAL                 :: AddedMass            = .FALSE.      !< create an added mass table at command line?
       LOGICAL                 :: AddedMassFile        = .FALSE.      !< create an added mass file?
@@ -72,7 +71,6 @@ MODULE OrcaDriver_Types
       ! This contains all the settings (possible passed in arguments).
    TYPE     :: OrcaDriver_Settings
       CHARACTER(1024)         :: DvrIptFileName                !< Driver input file name
-      CHARACTER(1024)         :: DLLPathFileName               !< Path and Filename for the DLL to use
       CHARACTER(1024)         :: OrcaIptFileName               !< Filename of OrcaFlexInterface input file to read (if no driver input file)
       CHARACTER(1024)         :: AddedMassFileName             !< Filename for the added mass matrix output
 
