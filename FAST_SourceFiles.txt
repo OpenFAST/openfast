@@ -1,3 +1,3 @@
-Source\OrcaFlexInterfaceBeamDyn.f90
+Source\OrcaFlexInterface.f90
 Source\OrcaFlexInterface_Types.f90
 Source\Registry\OrcaFlexInterface.txt
