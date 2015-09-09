@@ -96,8 +96,7 @@ MODULE OrcaFlexInterface
 
    USE NWTC_Library
    USE NWTC_LAPACK
-
-
+   
    USE OrcaFlexInterface_Parameters
    USE OrcaFlexInterface_Types
 
@@ -106,6 +105,7 @@ MODULE OrcaFlexInterface
 
    IMPLICIT NONE
 
+   PRIVATE
 
 
    ABSTRACT INTERFACE      ! These are interfaces to the DLL
@@ -215,7 +215,6 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
 
       ! Set some things for the DLL
-   InputFileData%DLL_FileName       = TRIM(InitInp%DLLPathFileName)
    InputFileData%DLL_InitProcName   = 'OrcaFlexUserPtfmLdInitialise'
    InputFileData%DLL_CalcProcName   = 'OrcaFlexUserPtfmLd'
    InputFileData%DLL_EndProcName    = 'OrcaFlexUserPtfmLdFinalise'
@@ -224,6 +223,9 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       ! Display the module information
    CALL DispNVD( Orca_Ver )
 
+   
+   CALL ReadPrimaryFile( InitInp%InputFile, InputFileData, TRIM(InitInp%RootName)//'.Orca', ErrStatTmp, ErrMsgTmp )   
+      CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
 
 
       ! We are going to output all the possible outlist variables, so pass in to SetOutParam the full list
@@ -314,8 +316,8 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
 
       ! Copy relevant information into parameters.
-   p%SimNamePathLen  =  LEN_TRIM(InitInp%DirRoot)+1
-   p%SimNamePath     =  TRIM(InitInp%DirRoot)//CHAR(0)
+   p%SimNamePathLen  =  LEN_TRIM(InputFileData%DirRoot)+1
+   p%SimNamePath     =  TRIM(InputFileData%DirRoot)//CHAR(0)
 
 
       ! Create the input and output meshes associated with lumped loads
@@ -389,6 +391,203 @@ CONTAINS
 
 END SUBROUTINE Orca_Init
 
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, ErrStat, ErrMsg )
+! This routine reads in the primary OrcaFlex Interface input file and places the values it reads in the InputFileData structure.
+!   It opens an echo file if requested.
+!..................................................................................................................................
+
+
+   IMPLICIT                        NONE
+
+      ! Passed variables
+   INTEGER(IntKi),       INTENT(OUT)    :: ErrStat                             ! Error status
+                         
+   CHARACTER(*),         INTENT(IN)     :: InputFile                           ! Name of the file containing the primary input data
+   CHARACTER(*),         INTENT(OUT)    :: ErrMsg                              ! Error message
+   CHARACTER(*),         INTENT(IN)     :: OutFileRoot                         ! The rootname of the echo file, possibly opened in this routine
+                         
+   TYPE(Orca_InputFile), INTENT(INOUT)  :: InputFileData                     ! All the data in the OrcaFlex Interface input file
+
+      ! Local variables:
+   INTEGER(IntKi)               :: I                                         ! loop counter
+!   INTEGER(IntKi)               :: NumOuts                                  ! Number of output channel names read from the file
+   INTEGER(IntKi)               :: UnEc                                      ! I/O unit for echo file. If > 0, file is open for writing.
+   INTEGER(IntKi)               :: UnIn                                      ! Unit number for reading file
+   INTEGER(IntKi)               :: IOS
+   INTEGER(IntKi)               :: ErrStat2                                  ! Temporary Error status
+   LOGICAL                      :: Echo                                      ! Determines if an echo file should be written
+   CHARACTER(ErrMsgLen)         :: ErrMsg2                                   ! Temporary Error message
+   CHARACTER(1024)              :: PriPath                                   ! Path name of the primary file
+   CHARACTER(1024)              :: CWD                                       ! Path name of the current working directory
+   CHARACTER(1024)              :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
+   CHARACTER(200)               :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
+   CHARACTER(*), PARAMETER      :: RoutineName = 'ReadPrimaryFile' 
+   
+      ! Initialize some variables:
+   Echo = .FALSE.
+   UnEc = -1                             ! Echo file not opened, yet
+   CALL GetPath( InputFile, PriPath )    ! Input files will be relative to the path where the primary input file is located.
+
+      ! OrcaFlex doesn't like relative path names, so we're going to make it absolute
+   IF ( PathIsRelative( PriPath ) ) THEN
+       CALL GET_CWD(CWD, ErrStat2)
+       PriPath = TRIM(CWD)//TRIM(PriPath)
+   END IF
+         
+
+      ! Get an available unit number for the file.
+
+   CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+      ! Open the Primary input file.
+
+   CALL OpenFInpFile ( UnIn, InputFile, ErrStat2, ErrMsg2 )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+   !CALL AllocAry( InputFileData%OutList, MaxOutPts, "OrcaFlex Interface Input File's Outlist", ErrStat2, ErrMsg2 )
+   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !   IF ( ErrStat >= AbortErrLev ) RETURN
+
+
+   ! Read the lines up/including to the "Echo" simulation control variable
+   ! If echo is FALSE, don't write these lines to the echo file.
+   ! If Echo is TRUE, rewind and write on the second try.
+
+   I    = 1 ! the number of times we've read the file (used for the Echo variable)
+   DO
+   !-------------------------- HEADER ---------------------------------------------
+      CALL ReadCom( UnIn, InputFile, 'File Header: Module Version (line 1)', ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+
+      CALL ReadStr( UnIn, InputFile, FTitle, 'FTitle', 'File Header: File Description (line 2)', ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+
+   !---------------------- SIMULATION DATA --------------------------------------
+      CALL ReadCom( UnIn, InputFile, 'Section Header: Simulation Control', ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+
+         ! Echo - Echo input to "<RootName>.ech".
+
+      CALL ReadVar( UnIn, InputFile, Echo, 'Echo',   'Echo switch', ErrStat2, ErrMsg2, UnEc )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+
+
+      IF (.NOT. Echo .OR. I > 1) EXIT !exit this loop
+
+         ! Otherwise, open the echo file, then rewind the input file and echo everything we've read
+
+      I = I + 1         ! make sure we do this only once (increment counter that says how many times we've read this file)
+
+      CALL OpenEcho ( UnEc, TRIM(OutFileRoot)//'.ech', ErrStat2, ErrMsg2, Orca_Ver )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF ( ErrStat >= AbortErrLev ) THEN
+            CALL Cleanup()
+            RETURN
+         END IF
+
+      IF ( UnEc > 0 )  WRITE (UnEc,'(/,A,/)')  'Data from '//TRIM(Orca_Ver%Name)//' primary input file "'//TRIM( InputFile )//'":'
+
+      REWIND( UnIn, IOSTAT=ErrStat2 )
+         IF (ErrStat2 /= 0_IntKi ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(InputFile)//'".', ErrStat, ErrMsg, RoutineName )
+            CALL Cleanup()
+            RETURN
+         END IF
+
+   END DO
+
+   IF (NWTC_VerboseLevel == NWTC_Verbose) THEN
+      CALL WrScr( ' Heading of the '//TRIM(Orca_Ver%Name)//' input file: ' )
+      CALL WrScr( '   '//TRIM( FTitle ) )
+   END IF
+
+
+      ! InputFileData%DirRoot - Name of the file containing OrcaFlex simulation inputs:
+   CALL ReadVar ( UnIn, InputFile, InputFileData%DirRoot, 'DirRoot', 'Name of the OrcaFlex simulation input file', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+   IF ( PathIsRelative( InputFileData%DirRoot ) ) InputFileData%DirRoot = TRIM(PriPath)//TRIM(InputFileData%DirRoot)
+
+   
+      ! InputFileData%DLLPathFileName - Name of the file containing OrcaFlex simulation inputs:
+   CALL ReadVar ( UnIn, InputFile, InputFileData%DLL_FileName, 'DLL_FileName', 'Name of the OrcaFlex DLL', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
+      END IF
+   IF ( PathIsRelative( InputFileData%DLL_FileName ) ) InputFileData%DLL_FileName = TRIM(PriPath)//TRIM(InputFileData%DLL_FileName)
+   
+         
+   !   ! DT - Requested integration time for OrcaFlex (seconds):
+   !CALL ReadVar( UnIn, InputFile, Line, "DT", "Requested integration time for OrcaFlex (seconds)", ErrStat2, ErrMsg2, UnEc)
+   !   CALL CheckError( ErrStat2, ErrMsg2 )
+   !   IF ( ErrStat >= AbortErrLev ) RETURN
+   !   CALL Conv2UC( Line )
+   !   IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise use the value already stored in InputFileData%DT
+   !      READ( Line, *, IOSTAT=IOS) InputFileData%DT
+   !      IF ( IOS /= 0 ) THEN
+   !         CALL CheckIOS ( IOS, InputFile, "DT", NumType, ErrStat2, ErrMsg2 )
+   !         CALL CheckError( ErrStat2, ErrMsg2 )
+   !         RETURN
+   !      END IF
+   !   END IF
+   
+   
+   !!---------------------- OUTLIST  --------------------------------------------
+   !CALL ReadCom( UnIn, InputFile, 'Section Header: OutList', ErrStat2, ErrMsg2, UnEc )
+   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !   IF ( ErrStat >= AbortErrLev ) THEN
+   !      CALL Cleanup()
+   !      RETURN
+   !   END IF
+   !
+   !   ! OutList - List of user-requested output channels (-):
+   !CALL ReadOutputList ( UnIn, InputFile, InputFileData%OutList, InputFileData%NumOuts, 'OutList', "List of user-requested output channels", ErrStat2, ErrMsg2, UnEc  )     ! Routine in NWTC Subroutine Library
+   !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !   IF ( ErrStat >= AbortErrLev ) THEN
+   !      CALL Cleanup()
+   !      RETURN
+   !   END IF
+
+   !---------------------- END OF FILE -----------------------------------------
+
+   CALL Cleanup()
+   RETURN
+
+CONTAINS
+   SUBROUTINE Cleanup()
+   
+      CLOSE(UnIn)
+      IF (UnEc > 0) CLOSE(UnEc)
+      
+   END SUBROUTINE Cleanup    
+END SUBROUTINE ReadPrimaryFile
+!----------------------------------------------------------------------------------------------------------------------------------
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -662,6 +861,8 @@ SUBROUTINE Orca_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
 
+   ErrStat = ErrID_None
+   ErrMsg = ""
 
 END SUBROUTINE Orca_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------

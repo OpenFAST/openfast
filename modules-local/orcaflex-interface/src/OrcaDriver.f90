@@ -341,15 +341,21 @@ PROGRAM OrcaDriver
 
 
       ! Some initialization settings
-   Orca_InitInp%DLLPathFileName  =  TRIM(Settings%DLLPathFileName)
-   CALL GetPath( Settings%OrcaIptFileName, Orca_InitInp%DirRoot )
-   CALL GetRoot( Settings%OrcaIptFileName, TmpChar )
-   Orca_InitInp%DirRoot =  TRIM(Orca_InitInp%DirRoot)//TRIM(TmpChar)
-   Orca_InitInp%DT               =  Settings%DT
+   !bjj: FIX THIS!!!!!
+   
+   Orca_InitInp%InputFile = Settings%DLLPathFileName
+   if (len_trim(CLSettings%DvrIptFileName) >0) then
+      CALL GetRoot( CLSettings%DvrIptFileName, Orca_InitInp%RootName )
+   else
+      CALL GetRoot( Orca_InitInp%InputFile, Orca_InitInp%RootName )      
+   end if
+   
+   !Orca_InitInp%DLLPathFileName  =  TRIM(Settings%DLLPathFileName)
+   !CALL GetPath( Settings%OrcaIptFileName, Orca_InitInp%DirRoot )
+   !CALL GetRoot( Settings%OrcaIptFileName, TmpChar )
+   !Orca_InitInp%DirRoot =  TRIM(Orca_InitInp%DirRoot)//TRIM(TmpChar)
    Orca_InitInp%TMax             =  Settings%TMax
-
-
-
+  
 
    IF ( OrcaDriver_Verbose >= 5_IntKi ) CALL WrScr('Calling Orca_Init...')
 
