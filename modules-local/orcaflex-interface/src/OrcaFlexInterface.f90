@@ -432,7 +432,8 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, ErrStat, ErrM
       ! OrcaFlex doesn't like relative path names, so we're going to make it absolute
    IF ( PathIsRelative( PriPath ) ) THEN
        CALL GET_CWD(CWD, ErrStat2)
-       PriPath = TRIM(CWD)//PathSep//TRIM(PriPath)
+!       PriPath = TRIM(CWD)//PathSep//TRIM(PriPath)
+       PriPath = TRIM(CWD)//TRIM(PriPath(2:))
    END IF
          
 
@@ -531,7 +532,6 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, ErrStat, ErrM
          RETURN
       END IF
    IF ( PathIsRelative( InputFileData%DirRoot ) ) InputFileData%DirRoot = TRIM(PriPath)//TRIM(InputFileData%DirRoot)
-
    
       ! InputFileData%DLLPathFileName - Name of the file containing OrcaFlex simulation inputs:
    CALL ReadVar ( UnIn, InputFile, InputFileData%DLL_FileName, 'DLL_FileName', 'Name of the OrcaFlex DLL', ErrStat2, ErrMsg2, UnEc )
@@ -737,7 +737,6 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       ! Copy over time and name to pass to OrcaFlex DLL
    DLL_DirRootName   =  TRIM(p%SimNamePath)//C_NULL_CHAR    ! Path and name of the simulation file without extension.  Null character added to convert from Fortran string to C-type string.
    DLL_ZTime = t                                            ! Current time
-
 
       ! Determine the rotational angles from the direction-cosine matrix
    rotdisp = GetSmllRotAngs ( u%PtfmMesh%Orientation(:,:,1), ErrStatTmp, ErrMsgTmp )
