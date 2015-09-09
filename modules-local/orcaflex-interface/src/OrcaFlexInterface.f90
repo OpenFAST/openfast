@@ -432,7 +432,7 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, ErrStat, ErrM
       ! OrcaFlex doesn't like relative path names, so we're going to make it absolute
    IF ( PathIsRelative( PriPath ) ) THEN
        CALL GET_CWD(CWD, ErrStat2)
-       PriPath = TRIM(CWD)//TRIM(PriPath)
+       PriPath = TRIM(CWD)//PathSep//TRIM(PriPath)
    END IF
          
 
