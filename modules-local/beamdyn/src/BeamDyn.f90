@@ -902,8 +902,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        u%DistrLoad%Moment(:,k) = 0.0D0
    ENDDO
 
-
-
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
