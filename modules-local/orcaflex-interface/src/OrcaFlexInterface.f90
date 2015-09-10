@@ -1089,7 +1089,7 @@ SUBROUTINE SetAllOuts( ParamData, OutData, OtherState, ErrStat, ErrMsg )
 
 
    TYPE(Orca_ParameterType),           INTENT(IN   )  :: ParamData            !< The parameters for Orca
-   TYPE(Orca_OutputType),              INTENT(IN   )  :: OutData              !< Outputs
+   TYPE(Orca_OutputType),              INTENT(INOUT)  :: OutData              !< Outputs
    TYPE(Orca_OtherStateType),          INTENT(INOUT)  :: OtherState           !< The OtherStates info for Orca
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status  from this subroutine
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message from this subroutine
@@ -1125,6 +1125,28 @@ SUBROUTINE SetAllOuts( ParamData, OutData, OtherState, ErrStat, ErrMsg )
    OtherState%AllOuts(  OrcaAMMxi  )  =  OtherState%F_PtfmAM(4)
    OtherState%AllOuts(  OrcaAMMyi  )  =  OtherState%F_PtfmAM(5)
    OtherState%AllOuts(  OrcaAMMzi  )  =  OtherState%F_PtfmAM(6)
+
+      ! Set the values for the WriteOutput array
+   OutData%WriteOutput(  OrcaFxi  )  =  OutData%PtfmMesh%Force(1,1)
+   OutData%WriteOutput(  OrcaFyi  )  =  OutData%PtfmMesh%Force(2,1)
+   OutData%WriteOutput(  OrcaFzi  )  =  OutData%PtfmMesh%Force(3,1)
+   OutData%WriteOutput(  OrcaMxi  )  =  OutData%PtfmMesh%Moment(1,1)
+   OutData%WriteOutput(  OrcaMyi  )  =  OutData%PtfmMesh%Moment(2,1)
+   OutData%WriteOutput(  OrcaMzi  )  =  OutData%PtfmMesh%Moment(3,1)
+
+   OutData%WriteOutput(  OrcaFHFxi  )  =  OtherState%PtfmFT(1)
+   OutData%WriteOutput(  OrcaFHFyi  )  =  OtherState%PtfmFT(2)
+   OutData%WriteOutput(  OrcaFHFzi  )  =  OtherState%PtfmFT(3)
+   OutData%WriteOutput(  OrcaFHMxi  )  =  OtherState%PtfmFT(4)
+   OutData%WriteOutput(  OrcaFHMyi  )  =  OtherState%PtfmFT(5)
+   OutData%WriteOutput(  OrcaFHMzi  )  =  OtherState%PtfmFT(6)
+
+   OutData%WriteOutput(  OrcaAMFxi  )  =  OtherState%F_PtfmAM(1)
+   OutData%WriteOutput(  OrcaAMFyi  )  =  OtherState%F_PtfmAM(2)
+   OutData%WriteOutput(  OrcaAMFzi  )  =  OtherState%F_PtfmAM(3)
+   OutData%WriteOutput(  OrcaAMMxi  )  =  OtherState%F_PtfmAM(4)
+   OutData%WriteOutput(  OrcaAMMyi  )  =  OtherState%F_PtfmAM(5)
+   OutData%WriteOutput(  OrcaAMMzi  )  =  OtherState%F_PtfmAM(6)
 
 
 END SUBROUTINE SetAllOuts
