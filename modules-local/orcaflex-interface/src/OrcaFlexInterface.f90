@@ -230,9 +230,9 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
       ! We are going to output all the possible outlist variables, so pass in to SetOutParam the full list
    TmpOutList  =  (/    &
-                     "OrcaFxi  ","OrcaFyi  ","OrcaFyi  ","OrcaMxi  ","OrcaMyi  ","OrcaMyi  ",   &     ! Total forces / moments
-                     "OrcaFHFxi","OrcaFHFyi","OrcaFHFyi","OrcaFHMxi","OrcaFHMyi","OrcaFHMyi",   &     ! hydrodynamic contributions
-                     "OrcaAMFxi","OrcaAMFyi","OrcaAMFyi","OrcaAMMxi","OrcaAMMyi","OrcaAMMyi"    &     ! Added mass contributions
+                     "OrcaFxi  ","OrcaFyi  ","OrcaFzi  ","OrcaMxi  ","OrcaMyi  ","OrcaMzi  ",   &     ! Total forces / moments
+                     "OrcaFHFxi","OrcaFHFyi","OrcaFHFzi","OrcaFHMxi","OrcaFHMyi","OrcaFHMzi",   &     ! hydrodynamic contributions
+                     "OrcaAMFxi","OrcaAMFyi","OrcaAMFzi","OrcaAMMxi","OrcaAMMyi","OrcaAMMzi"    &     ! Added mass contributions
                   /)
    p%NumOuts   =  MaxOutPts
    CALL SetOutParam( TmpOutList, p, ErrStatTmp, ErrMsgTmp )
