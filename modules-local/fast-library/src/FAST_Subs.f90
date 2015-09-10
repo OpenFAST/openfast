@@ -2132,22 +2132,22 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_MAP, u_F
    IF ( p_FAST%CompMooring == Module_MAP ) THEN
       
          ! motions:
-      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat, ErrMsg )
+      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_MAP%PtFairDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MAP%PtFairDisplacement' )
                                  
    ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
          ! motions:
-      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_MD%PtFairleadDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat, ErrMsg )
+      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_MD%PtFairleadDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_MD%PtFairleadDisplacement' )
                         
    ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
          ! motions:
-      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_FEAM%PtFairleadDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat, ErrMsg )
+      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_FEAM%PtFairleadDisplacement, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_FEAM%PtFairleadDisplacement' )
                         
    ELSEIF ( p_FAST%CompMooring == Module_Orca ) THEN
          ! motions:
-      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_Orca%PtfmMesh, MeshMapData%ED_P_2_Mooring_P, ErrStat, ErrMsg )
+      CALL Transfer_Point_to_Point( y_ED%PlatformPtMesh, u_Orca%PtfmMesh, MeshMapData%ED_P_2_Mooring_P, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//'u_Orca%PtfmMesh' )
    END IF
    
