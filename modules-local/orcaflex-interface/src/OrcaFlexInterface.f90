@@ -364,8 +364,8 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    END IF
 
 
-   u%PtfmMesh%RemapFlag  = .TRUE.
-   y%PtfmMesh%RemapFlag  = .TRUE.
+   u%PtfmMesh%RemapFlag    = .TRUE.
+   y%PtfmMesh%RemapFlag    = .TRUE.
 
 
 
@@ -373,6 +373,7 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       ! Set zero values for the OtherState arrays
    OtherState%PtfmAM       =  0.0_ReKi
    OtherState%PtfmFt       =  0.0_ReKi
+   OtherState%LastTimeStep =  -1.0_DbKi
    OtherState%Initialized  =  .TRUE.
 
 
@@ -761,8 +762,14 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    DLL_PtfmAM  =  0.0_C_FLOAT
    DLL_PtfmFt  =  0.0_C_FLOAT
 #else
-      ! Call OrcaFlex to run the calculation.  There is no error trapping on the OrcaFlex side, so we will have to do some checks on what receive back
-   CALL OrcaDLL_Calc( DLL_X, DLL_Xdot, DLL_ZTime, DLL_DirRootName, DLL_PtfmAM, DLL_PtfmFt )
+
+      ! We do not want to call OrcaDLL twice in one timestep.  If _CalcOutput is called twice in a timestep, the second
+      ! call is different from the first only with the accelerations, which OrcaFlex does not do anything with.
+   IF ( t > OtherState%LastTimeStep )
+         ! Call OrcaFlex to run the calculation.  There is no error trapping on the OrcaFlex side, so we will have to do some checks on what receive back
+      CALL OrcaDLL_Calc( DLL_X, DLL_Xdot, DLL_ZTime, DLL_DirRootName, DLL_PtfmAM, DLL_PtfmFt )
+      OtherState%LastTimeStep =  t
+   ENDIF
 #endif
 
 
