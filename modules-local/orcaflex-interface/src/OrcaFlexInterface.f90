@@ -765,7 +765,7 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
       ! We do not want to call OrcaDLL twice in one timestep.  If _CalcOutput is called twice in a timestep, the second
       ! call is different from the first only with the accelerations, which OrcaFlex does not do anything with.
-   IF ( t > OtherState%LastTimeStep )
+   IF ( t > OtherState%LastTimeStep ) THEN
          ! Call OrcaFlex to run the calculation.  There is no error trapping on the OrcaFlex side, so we will have to do some checks on what receive back
       CALL OrcaDLL_Calc( DLL_X, DLL_Xdot, DLL_ZTime, DLL_DirRootName, DLL_PtfmAM, DLL_PtfmFt )
       OtherState%LastTimeStep =  t
