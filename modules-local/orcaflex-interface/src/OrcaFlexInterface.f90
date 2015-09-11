@@ -376,7 +376,7 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    OtherState%LastTimeStep =  -1.0_DbKi
    OtherState%Initialized  =  .TRUE.
 
-
+   InitOut%Ver =  Orca_Ver
 
 
 CONTAINS
@@ -769,32 +769,31 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          ! Call OrcaFlex to run the calculation.  There is no error trapping on the OrcaFlex side, so we will have to do some checks on what receive back
       CALL OrcaDLL_Calc( DLL_X, DLL_Xdot, DLL_ZTime, DLL_DirRootName, DLL_PtfmAM, DLL_PtfmFt )
       OtherState%LastTimeStep =  t
+
+         ! Copy data over from the DLL output to the OtherState
+      DO I=1,6
+         OtherState%PtfmFT(I) =  DLL_PtfmFT(I)
+         DO J=1,6
+            OtherState%PtfmAM(J,I)  =  DLL_PtfmAM(J,I)
+         ENDDO
+      ENDDO
+
+
+
+         ! Perform some quick QA/QC on the DLL results.  There isn't much we can check, so just check that things are symmetric within some tolerance
+      DO I = 1,5        ! Loop through the 1st 5 rows (columns) of PtfmAM
+         DO J = (I+1),6 ! Loop through all columns (rows) passed I
+            IF ( ABS( OtherState%PtfmAM(I,J) - OtherState%PtfmAM(J,I) ) > SymmetryTol )  &
+               ErrStatTmp  =  ErrID_Fatal
+               ErrMsgTmp   =  ' The platform added mass matrix returned from OrcaFlex is unsymmetric.'// &
+                              '  There may be issues with the OrcaFlex calculations.'
+         ENDDO          ! J - All columns (rows) passed I
+      ENDDO             ! I - The 1st 5 rows (columns) of PtfmAM
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
+      IF ( ErrStat >= ErrID_Fatal) RETURN
+
    ENDIF
 #endif
-
-
-      ! Copy data over from the DLL output to the OtherState
-   DO I=1,6
-      OtherState%PtfmFT(I) =  DLL_PtfmFT(I)
-      DO J=1,6
-         OtherState%PtfmAM(J,I)  =  DLL_PtfmAM(J,I)
-      ENDDO
-   ENDDO
-
-
-
-      ! Perform some quick QA/QC on the DLL results.  There isn't much we can check, so just check that things are symmetric within some tolerance
-   DO I = 1,5        ! Loop through the 1st 5 rows (columns) of PtfmAM
-      DO J = (I+1),6 ! Loop through all columns (rows) passed I
-         IF ( ABS( OtherState%PtfmAM(I,J) - OtherState%PtfmAM(J,I) ) > SymmetryTol )  &
-            ErrStatTmp  =  ErrID_Fatal
-            ErrMsgTmp   =  ' The platform added mass matrix returned from OrcaFlex is unsymmetric.'// &
-                           '  There may be issues with the OrcaFlex calculations.'
-      ENDDO          ! J - All columns (rows) passed I
-   ENDDO             ! I - The 1st 5 rows (columns) of PtfmAM
-   CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
-   IF ( ErrStat >= ErrID_Fatal) RETURN
-
 
 
       ! Now calculate the forces with what OrcaFlex returned
@@ -813,7 +812,6 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    CALL SetAllOuts( p, y, OtherState, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
    IF ( ErrStat >= ErrID_Fatal) RETURN
-
 
 
 
