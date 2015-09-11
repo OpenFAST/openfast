@@ -4367,6 +4367,7 @@ CONTAINS
       NULLIFY ( LastFile%Next )
       LastFile%Filename = TopFileName
       CurrFile => LastFile
+      FileInfo%NumLines = 0
 
       CALL ScanComFile ( FirstFile, CurrFile, LastFile, 1, 0, FileInfo%NumLines, ErrStatLcl, ErrMsg2 )
          CALL SetErrStat( ErrStatLcl, ErrMsg2, ErrStat, ErrMsg, RoutineName )
