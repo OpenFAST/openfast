@@ -3412,7 +3412,7 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx,ErrStat,ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   do j = igp,igp !1,ns
+   do j = igp,igp !1,ns  !bjj: we're returning only column igp, so let's not waste time calculating the rest of them
       do l = 1,np+1
          
        if ((abs(spts(j)-1.).LE.eps).AND.(l.EQ.np+1)) then
@@ -3443,7 +3443,7 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx,ErrStat,ErrMsg)
      enddo
    enddo
 
-   do j = igp,igp !1,ns
+   do j = igp,igp !1,ns  !bjj: we're returning only column igp, so let's not waste time calculating the rest of them
       do l = 1,np+1
          
        if(abs(spts(j)-npts(l)).LE.eps) then
