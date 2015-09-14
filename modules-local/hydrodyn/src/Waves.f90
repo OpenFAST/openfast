@@ -1647,6 +1647,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             CALL CleanUp()
             RETURN
          END IF
+         InitOut%WaveDirArr(InitOut%NStepWave2) = 0.0_ReKi
 
             !  We are done with the indexing array, so deallocate it
          IF(ALLOCATED( WvSpreadThetaIdx ))   DEALLOCATE( WvSpreadThetaIdx )

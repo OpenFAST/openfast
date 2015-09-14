@@ -4674,7 +4674,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
          
             ! Lumped added mass loads
          qdotdot                 = reshape((/u%LumpedMesh%TranslationAcc(:,J),u%LumpedMesh%RotationAcc(:,J)/),(/6/))   
-         accel_fluid             = reshape((/OtherState%L_FA(:,J),[0.0,0.0,0.0]/),(/6/))  ! Add rotational accelerations of fluid which are zero 
+         accel_fluid             = reshape((/OtherState%L_FA(:,J),[0.0_ReKi,0.0_ReKi,0.0_ReKi]/),(/6/))  ! Add rotational accelerations of fluid which are zero 
          OtherState%L_F_AM(:,J)  = matmul( p%L_AM_M(:,:,J) , ( - qdotdot) )
          
          
