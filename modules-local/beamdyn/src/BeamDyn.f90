@@ -1612,10 +1612,10 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
        IF(fact) THEN
            DO i=1,node_elem
                DO j=1,node_elem
-                   DO m=1,dof_node
-                       temp_id1 = (i-1)*dof_node+m
-                       DO n=1,dof_node
-                           temp_id2 = (j-1)*dof_node+n
+                  DO n=1,dof_node
+                     temp_id2 = (j-1)*dof_node+n
+                        DO m=1,dof_node
+                           temp_id1 = (i-1)*dof_node+m
                            elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hhx(i)*Qe(m,n)*hhx(j)*Jacobian*gw(igp)
                            elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hhx(i)*Pe(m,n)*hpx(j)*Jacobian*gw(igp)
                            elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + hpx(i)*Oe(m,n)*hhx(j)*Jacobian*gw(igp)
@@ -3412,10 +3412,9 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx,ErrStat,ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   do l = 1,np+1
-     do j = 1,ns
-       dPhis(l,j) = 0.
-       den = 1.
+   do j = igp,igp !1,ns
+      do l = 1,np+1
+         
        if ((abs(spts(j)-1.).LE.eps).AND.(l.EQ.np+1)) then
          dPhis(l,j) = float((np+1)*np)/4.
        elseif ((abs(spts(j)+1.).LE.eps).AND.(l.EQ.1)) then
@@ -3423,6 +3422,8 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx,ErrStat,ErrMsg)
        elseif (abs(spts(j)-npts(l)).LE.eps) then
          dPhis(l,j) = 0.
        else
+         dPhis(l,j) = 0.
+         den = 1.          
          do i = 1,np+1
            if (i.NE.l) then
              den = den*(npts(l)-npts(i))
@@ -3442,14 +3443,14 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,igp,hhx,hpx,ErrStat,ErrMsg)
      enddo
    enddo
 
-   do l = 1,np+1
-     do j = 1,ns
-       Ps(l,j) = 0.
-       dnum = 1.
-       den = 1.
+   do j = igp,igp !1,ns
+      do l = 1,np+1
+         
        if(abs(spts(j)-npts(l)).LE.eps) then
          Ps(l,j) = 1.
        else
+         dnum = 1.
+         den = 1.
          do k = 1,np+1
            if (k.NE.l) then
              den = den*(npts(l) - npts(k))
