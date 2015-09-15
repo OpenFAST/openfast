@@ -76,7 +76,7 @@ typedef      ^            ^       ^     dof_node  - - -  "dof per node" -
 typedef      ^            ^       ^     elem_total  - - -  "Total number of elements" -
 typedef      ^            ^       ^     node_total  - - -  "Total number of nodes" -
 typedef      ^            ^       ^     dof_total  - - -  "Total number of dofs" -
-typedef      ^            ^       ^     ngp  {:} - -  "Number of Gauss points" -
+typedef      ^            ^       ^     ngp  - - -  "Number of Gauss points" -
 typedef      ^            ^       ^     analysis_type  - - -  "analysis_type flag" -
 typedef      ^            ^       ^     damp_flag  - - -  "damping flag" -
 typedef      ^            ^       ^     niter  - - -  "Maximum number of iterations in Newton-Ralphson algorithm"  -
@@ -98,6 +98,9 @@ typedef      ^     ParameterType IntKi  NNodeOuts - - - "Number of nodes to outp
 typedef      ^     ParameterType IntKi  OutNd   {9} - - "Nodes whose values will be output"	-
 typedef      ^     ParameterType IntKi  NdIndx  {:} - - "Index into BldMotion mesh (to number the nodes for output without using collocated nodes)"	-
 typedef      ^     ParameterType CHARACTER(20)  OutFmt   - - - "Format specifier" -
+typedef      ^            ^      ReKi   GLL {:} - -  "GLL point locations in natural frame" -
+typedef      ^            ^      ReKi   GL {:} - -  "GL(Gauss) point locations in natural frame" -
+typedef      ^            ^      ReKi   GLw {:} - -  "Weights at each GL(Gauss) point" -
 
 
 # ..... Inputs
