@@ -186,46 +186,29 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%quadrature = InputFileData%quadrature
    IF(p%quadrature .EQ. 1) THEN
        ! Number of Gauss points
-       CALL AllocAry(p%ngp,1,'Number of Gauss point array (1)',ErrStat2,ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       p%ngp(1)        = p%node_elem - 1
+       p%ngp = p%node_elem - 1
    ELSEIF(p%quadrature .EQ. 2) THEN 
        p%refine = InputFileData%refine
-       CALL AllocAry(p%ngp,InputFileData%member_total,'Number of trapezoidal point array',ErrStat2,ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       p%ngp(:) = 0
-       DO i = 1, InputFileData%member_total
-           p%ngp(i) = (InputFileData%kp_member(i) - 1)*p%refine + 1
-       ENDDO
+       p%ngp = (InputFileData%kp_member(1) - 1)*p%refine + 1
    ENDIF
-   temp_int = SUM(p%ngp) - (p%elem_total - 1)
-   CALL AllocAry(p%station_eta,temp_int,'p%station_eta',ErrStat2,ErrMsg2)
+
+   CALL AllocAry(p%station_eta,p%ngp,'p%station_eta',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    p%station_eta(:) = 0.0D0
-   DO i=1,p%elem_total
-       IF(i .EQ. 1) THEN
-           temp_id = 0
-           id0 = 1
-           id1 = InputFileData%kp_member(i)
-           n = 1
-       ELSE
-           temp_id = temp_id + InputFileData%kp_member(i-1) - 1
-           id0 = id1
-           id1 = id0 + InputFileData%kp_member(i) - 1
-           n = 2
-       ENDIF
-       temp_int = (InputFileData%kp_member(i) - 1) * p%refine + 1
-       DO j = n,temp_int
-           IF(i .EQ. 1 .AND. j .EQ. 1) THEN
-               p%station_eta(temp_id*p%refine + j) = InputFileData%InpBl%station_eta(id0)
+   IF(p%quadrature .EQ. 2) THEN
+       id0 = 1
+       id1 = InputFileData%kp_member(1)
+       DO j = 1,p%ngp
+           IF( j .EQ. 1) THEN
+               p%station_eta(j) = InputFileData%InpBl%station_eta(id0)
            ELSE
-               p%station_eta(temp_id*p%refine + j) = InputFileData%InpBl%station_eta(id0+(j-2)/p%refine) + &
+               p%station_eta(j) = InputFileData%InpBl%station_eta(id0+(j-2)/p%refine) + &
                  ((InputFileData%InpBl%station_eta(id0+(j-2)/p%refine + 1) - &
                   InputFileData%InpBl%station_eta(id0+(j-2)/p%refine))/p%refine) * &
                   (MOD(j-2,p%refine) + 1)
            ENDIF
        ENDDO
-   ENDDO
+   ENDIF
    p%station_eta(:) = 2.0D0 * p%station_eta(:) - 1.0D0
    ! Degree-of-freedom (DoF) per node
    p%dof_node   = 6
@@ -284,7 +267,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    CALL AllocAry(p%uuN0,temp_int,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Temporary GLL point intrinsic coordinates array
-   CALL AllocAry(temp_GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
+   CALL AllocAry(p%GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Temporary GLL weight function array
    CALL AllocAry(temp_w,p%node_elem,'GLL weight array',ErrStat2,ErrMsg2)
@@ -294,9 +277,9 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          return
       end if
    p%uuN0(:,:) = 0.0D0
-   temp_GLL(:) = 0.0D0
+   p%GLL(:) = 0.0D0
    temp_w(:) = 0.0D0
-   CALL BD_GenerateGLL(p%node_elem-1,temp_GLL,temp_w,ErrStat2,ErrMsg2)
+   CALL BD_GenerateGLL(p%node_elem-1,p%GLL,temp_w,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
          call cleanup()
@@ -306,15 +289,15 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    IF(p%quadrature .EQ. 1) THEN
        ! temp_L2: the DistrLoad mesh node location
        ! temp_L2: physical coordinates of Gauss points and two end points
-       CALL AllocAry(temp_L2,6,p%ngp(1)*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2)
+       CALL AllocAry(temp_L2,6,p%ngp*p%elem_total+2,'temp_L2',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL AllocAry(p%Gauss,6,p%ngp(1)*p%elem_total+2,'p%Gauss',ErrStat2,ErrMsg2)
+       CALL AllocAry(p%Gauss,6,p%ngp*p%elem_total+2,'p%Gauss',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ! Temporary Gauss point intrinsic coordinates array
-       CALL AllocAry(temp_GL,p%ngp(1),'temp_GL',ErrStat2,ErrMsg2)
+       CALL AllocAry(p%GL,p%ngp,'p%GL',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ! Temporary Gauss weight function array
-       CALL AllocAry(temp_w,p%ngp(1),'GL weight array',ErrStat2,ErrMsg2)
+       CALL AllocAry(p%GLw,p%ngp,'p%GLw weight array',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
           if (ErrStat >= AbortErrLev) then
              call cleanup()
@@ -322,20 +305,18 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
           end if
        temp_L2(:,:) = 0.0D0
        p%Gauss(:,:) = 0.0D0
-       temp_GL(:) = 0.0D0
-       temp_w(:) = 0.0D0
-       CALL BD_GaussPointWeight(p%ngp(1),temp_GL,temp_w,ErrStat2,ErrMsg2)
+       p%GL(:) = 0.0D0
+       p%GLw(:) = 0.0D0
+       CALL BD_GaussPointWeight(p%ngp,p%GL,p%GLw,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
           if (ErrStat >= AbortErrLev) then
              call cleanup()
              return
           end if
-       DEALLOCATE(temp_w)
    ELSEIF(p%quadrature .EQ. 2) THEN
-       temp_int = SUM(p%ngp) - (p%elem_total - 1)
-       CALL AllocAry(temp_L2,6,temp_int,'temp_L2',ErrStat2,ErrMsg2)
+       CALL AllocAry(temp_L2,6,p%ngp,'temp_L2',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL AllocAry(p%Gauss,6,temp_int,'p%Trapezoidal',ErrStat2,ErrMsg2)
+       CALL AllocAry(p%Gauss,6,p%ngp,'p%Trapezoidal',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ! Temporary Gauss point intrinsic coordinates array
        temp_L2(:,:) = 0.0D0
@@ -353,7 +334,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            id1 = id0 + InputFileData%kp_member(i) - 1
        ENDIF
        DO j=1,p%node_elem
-           eta = (temp_GLL(j) + 1.0D0)/2.0D0
+           eta = (p%GLL(j) + 1.0D0)/2.0D0
            DO k=1,InputFileData%kp_member(i)-1
                temp_id2 = temp_id + k
                IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN !bjj: would it be better to use equalRealNos and compare with 0? 1D-10 stored in single precision scares me as a limit
@@ -377,8 +358,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            ENDDO
        ENDDO
        IF(p%quadrature .EQ. 1) THEN
-           DO j=1,p%ngp(1)
-               eta = (temp_GL(j) + 1.0D0)/2.0D0
+           DO j=1,p%ngp
+               eta = (p%GL(j) + 1.0D0)/2.0D0
                DO k=1,InputFileData%kp_member(i)-1
                    temp_id2 = temp_id + k
                    IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN
@@ -400,21 +381,15 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                ENDDO
            ENDDO
        ELSEIF(p%quadrature .EQ. 2) THEN
-           IF(i .EQ. 1) THEN
-               n = 1
-           ELSE
-               n = 2
-           ENDIF
-           temp_int = (InputFileData%kp_member(i) - 1) * p%refine + 1
-           DO j = n,temp_int
-               IF(i .EQ. 1 .AND. j .EQ. 1) THEN
+           DO j = 1,p%ngp
+               IF( j .EQ. 1) THEN
                    DO m=1,4
                        temp_Coef(m,1:4) = SP_Coef(1,1:4,m)
                    ENDDO
                    eta = InputFileData%kp_coordinate(id0,1)
                ELSE
                    DO m=1,4
-                       temp_Coef(m,1:4) = SP_Coef(temp_id + (j-2)/p%refine + 1,1:4,m)
+                       temp_Coef(m,1:4) = SP_Coef( (j-2)/p%refine + 1,1:4,m)
                    ENDDO
                    eta = InputFileData%kp_coordinate(id0+(j-2)/p%refine,1) + &
                          ((InputFileData%kp_coordinate(id0+(j-2)/p%refine + 1,1) - &
@@ -426,39 +401,41 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                CALL BD_ComputeIniNodalCrv(temp_e1,temp_twist,temp_CRV,ErrStat2,ErrMsg2)
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               temp_L2(1:3,temp_id*p%refine + j) = temp_POS(1:3)  
-               temp_L2(4:6,temp_id*p%refine + j) = temp_CRV(1:3)
+               temp_L2(1:3,j) = temp_POS(1:3)  
+               temp_L2(4:6,j) = temp_CRV(1:3)
            ENDDO
        ENDIF
    ENDDO
    IF(p%quadrature .EQ. 1) THEN
        temp_L2(1:3,1) = p%uuN0(1:3,1)
        temp_L2(4:6,1) = p%uuN0(4:6,1)
-       temp_L2(1:3,p%ngp(1)*p%elem_total+2) = p%uuN0(temp_int-5:temp_int-3,p%elem_total)
-       temp_L2(4:6,p%ngp(1)*p%elem_total+2) = p%uuN0(temp_int-2:temp_int,p%elem_total)
+       temp_L2(1:3,p%ngp*p%elem_total+2) = p%uuN0(temp_int-5:temp_int-3,p%elem_total)
+       temp_L2(4:6,p%ngp*p%elem_total+2) = p%uuN0(temp_int-2:temp_int,p%elem_total)
        DO i = 1, p%ngp(1)*p%elem_total+2
            p%Gauss(:,i) = temp_L2(:,i)
        ENDDO
    ELSEIF(p%quadrature .EQ. 2) THEN
-       DO i = 1, SUM(p%ngp) - (p%elem_total - 1)
+       DO i = 1, p%ngp
            p%Gauss(:,i) = temp_L2(:,i)
        ENDDO
    ENDIF
-   DEALLOCATE(temp_GLL)
    DEALLOCATE(SP_Coef)
 
    IF(p%quadrature .EQ. 1) THEN
        ! Compute sectional propertities ( 6 by 6 stiffness and mass matrices)
        ! at Gauss points
-       CALL AllocAry(temp_ratio,p%ngp(1),p%elem_total,'temp_ratio',ErrStat2,ErrMsg2)
+       CALL AllocAry(temp_ratio,p%ngp,p%elem_total,'temp_ratio',ErrStat2,ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL AllocAry(temp_GL,p%ngp,p%elem_total,'temp_GL',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
           if (ErrStat >= AbortErrLev) then
              call cleanup()
              return
           end if
        temp_ratio(:,:) = 0.0D0
-       DO i=1,p%ngp(1)
-           temp_GL(i) = (temp_GL(i) + 1.0D0)/2.0D0
+       temp_GL(:) = 0.0D0
+       DO i=1,p%ngp
+           temp_GL(i) = (p%GL(i) + 1.0D0)/2.0D0
        ENDDO
        DO i=1,p%elem_total
            IF(i .EQ. 1) THEN
@@ -475,9 +452,9 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            ENDIF
        ENDDO
 
-       CALL AllocAry(p%Stif0_GL,6,6,p%ngp(1)*p%elem_total,'Stif0_GL',ErrStat2,ErrMsg2)
+       CALL AllocAry(p%Stif0_GL,6,6,p%ngp*p%elem_total,'Stif0_GL',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL AllocAry(p%Mass0_GL,6,6,p%ngp(1)*p%elem_total,'Mass0_GL',ErrStat2,ErrMsg2)
+       CALL AllocAry(p%Mass0_GL,6,6,p%ngp*p%elem_total,'Mass0_GL',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
           if (ErrStat >= AbortErrLev) then
              call cleanup()
@@ -486,7 +463,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        p%Stif0_GL(:,:,:) = 0.0D0
        p%Mass0_GL(:,:,:) = 0.0D0
        DO i=1,p%elem_total
-           DO j=1,p%ngp(1)
+           DO j=1,p%ngp
                temp_id = (i-1)*p%ngp(1)+j
                DO k=1,InputFileData%InpBl%station_total
                    IF(temp_ratio(j,i) - InputFileData%InpBl%station_eta(k) <= EPS) THEN
@@ -515,9 +492,9 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        DEALLOCATE(temp_GL)
        DEALLOCATE(temp_ratio)
    ELSEIF(p%quadrature .EQ. 2) THEN
-       CALL AllocAry(p%Stif0_GL,6,6,SUM(p%ngp) - (p%elem_total - 1),'Stif0_TZ',ErrStat2,ErrMsg2)
+       CALL AllocAry(p%Stif0_GL,6,6,p%ngp,'Stif0_TZ',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL AllocAry(p%Mass0_GL,6,6,SUM(p%ngp) - (p%elem_total - 1),'Mass0_TZ',ErrStat2,ErrMsg2)
+       CALL AllocAry(p%Mass0_GL,6,6,p%ngp,'Mass0_TZ',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
           if (ErrStat >= AbortErrLev) then
              call cleanup()
@@ -525,36 +502,26 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
           end if
        p%Stif0_GL(:,:,:) = 0.0D0
        p%Mass0_GL(:,:,:) = 0.0D0
-       DO i=1,p%elem_total
-           IF(i .EQ. 1) THEN
-               temp_id = 0
-               id0 = 1
-               id1 = InputFileData%kp_member(i)
-               n = 1
-           ELSE
-               temp_id = temp_id + InputFileData%kp_member(i-1) - 1
-               id0 = id1
-               id1 = id0 + InputFileData%kp_member(i) - 1
-               n = 2
-           ENDIF
+
+       temp_id = 0
+       id0 = 1
+       id1 = InputFileData%kp_member(1)
            
-           temp_int = (InputFileData%kp_member(i) - 1) * p%refine + 1
-           DO j = n,temp_int
-               IF(i .EQ. 1 .AND. j .EQ. 1) THEN
-                   p%Stif0_GL(1:6,1:6,temp_id*p%refine + j) = InputFileData%InpBl%stiff0(1:6,1:6,temp_id*p%refine + j)
-                   p%Mass0_GL(1:6,1:6,temp_id*p%refine + j) = InputFileData%InpBl%mass0(1:6,1:6,temp_id*p%refine + j)
-               ELSE
-                   p%Stif0_GL(1:6,1:6,temp_id*p%refine + j) = InputFileData%InpBl%stiff0(1:6,1:6,id0+(j-2)/p%refine) + &
-                       ((InputFileData%InpBl%stiff0(1:6,1:6,id0+(j-2)/p%refine + 1) - &
-                        InputFileData%InpBl%stiff0(1:6,1:6,id0+(j-2)/p%refine))/p%refine) * &
-                       (MOD(j-2,p%refine) + 1)
-                       
-                   p%Mass0_GL(1:6,1:6,temp_id*p%refine + j) = InputFileData%InpBl%mass0(1:6,1:6,id0+(j-2)/p%refine) + &
-                       ((InputFileData%InpBl%mass0(1:6,1:6,id0+(j-2)/p%refine + 1) - &
-                        InputFileData%InpBl%mass0(1:6,1:6,id0+(j-2)/p%refine))/p%refine) * &
-                       (MOD(j-2,p%refine) + 1)
-               ENDIF
-           ENDDO
+       DO j = 1,p%ngp
+           IF( j .EQ. 1) THEN
+               p%Stif0_GL(1:6,1:6,temp_id*p%refine + j) = InputFileData%InpBl%stiff0(1:6,1:6,temp_id*p%refine + j)
+               p%Mass0_GL(1:6,1:6,temp_id*p%refine + j) = InputFileData%InpBl%mass0(1:6,1:6,temp_id*p%refine + j)
+           ELSE
+               p%Stif0_GL(1:6,1:6,temp_id*p%refine + j) = InputFileData%InpBl%stiff0(1:6,1:6,id0+(j-2)/p%refine) + &
+                   ((InputFileData%InpBl%stiff0(1:6,1:6,id0+(j-2)/p%refine + 1) - &
+                    InputFileData%InpBl%stiff0(1:6,1:6,id0+(j-2)/p%refine))/p%refine) * &
+                   (MOD(j-2,p%refine) + 1)
+                   
+               p%Mass0_GL(1:6,1:6,temp_id*p%refine + j) = InputFileData%InpBl%mass0(1:6,1:6,id0+(j-2)/p%refine) + &
+                   ((InputFileData%InpBl%mass0(1:6,1:6,id0+(j-2)/p%refine + 1) - &
+                    InputFileData%InpBl%mass0(1:6,1:6,id0+(j-2)/p%refine))/p%refine) * &
+                   (MOD(j-2,p%refine) + 1)
+           ENDIF
        ENDDO
    ENDIF
    ! Physical damping flag and 6 damping coefficients
