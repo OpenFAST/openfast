@@ -188,7 +188,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        ! Number of Gauss points
        CALL AllocAry(p%ngp,1,'Number of Gauss point array (1)',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       p%ngp(1)        = p%node_elem - 1
+       p%ngp(1)        = p%node_elem !- 1
    ELSEIF(p%quadrature .EQ. 2) THEN 
        p%refine = InputFileData%refine
        CALL AllocAry(p%ngp,InputFileData%member_total,'Number of trapezoidal point array',ErrStat2,ErrMsg2)
