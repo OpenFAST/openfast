@@ -101,6 +101,10 @@ typedef      ^     ParameterType CHARACTER(20)  OutFmt   - - - "Format specifier
 typedef      ^            ^      ReKi   GLL {:} - -  "GLL point locations in natural frame" -
 typedef      ^            ^      ReKi   GL {:} - -  "GL(Gauss) point locations in natural frame" -
 typedef      ^            ^      ReKi   GLw {:} - -  "Weights at each GL(Gauss) point" -
+typedef      ^            ^      ReKi   Shp {:}{:} - -  "Shape function matrix" -
+typedef      ^            ^      ReKi   Der {:}{:} - -  "Derivative of shape function matrix" -
+typedef      ^            ^      ReKi   Jacobian {:}{:} - -  "Jacobian value at each quadrature point" -
+typedef      ^            ^      ReKi   TZw {:} - -  "Weights at each TZ point" -
 
 
 # ..... Inputs
