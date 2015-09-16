@@ -193,9 +193,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ENDIF
 
    CALL AllocAry(p%station_eta,p%ngp,'p%station_eta',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    p%station_eta(:) = 0.0D0
    IF(p%quadrature .EQ. 2) THEN
+       
        id0 = 1
        id1 = InputFileData%kp_member(1)
        DO j = 1,p%ngp
@@ -208,8 +209,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                   (MOD(j-2,p%refine) + 1)
            ENDIF
        ENDDO
-   ENDIF
-   p%station_eta(:) = 2.0D0 * p%station_eta(:) - 1.0D0
+       p%station_eta(:) = 2.0D0 * p%station_eta(:) - 1.0D0
+   ENDIF   
    ! Degree-of-freedom (DoF) per node
    p%dof_node   = 6
    ! Total number of (finite element) nodes
@@ -248,8 +249,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
-      end if
-      
+      end if     
    p%member_length(:,:) = 0.0D0
    p%segment_length(:,:) = 0.0D0
    CALL BD_ComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,&
@@ -532,6 +532,29 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       return
    end if
 
+   
+   CALL AllocAry(p%Shp,p%node_elem,p%ngp,'p%Shp',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%Der,p%node_elem,p%ngp,'p%Der',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%Jacobian,p%elem_total,p%ngp,'p%Jacobian',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%TZw,p%ngp,'p%TZw',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   p%Shp(:,:) = 0.0D0
+   p%Der(:,:) = 0.0D0
+   p%Jacobian(:,:) = 0.0D0
+   p%TZw(:) = 0.0D0
+
+   CALL BD_InitShpDerJaco(p%quadrature,p%GL,p%GLL,p%uuN0,&
+           p%node_elem,p%elem_total,p%ngp,               &
+           p%station_eta,p%refine,p%kp_member,           &
+           p%Shp,p%Der,p%TZw,p%Jacobian,                 &
+           ErrStat2,ErrMsg2)
    !CALL WrScr( "Finished reading input" )
    ! Allocate continuous states
    CALL AllocAry(x%q,p%dof_total,'x%q',ErrStat2,ErrMsg2)
@@ -578,7 +601,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    IF(p%quadrature .EQ. 1) THEN
-       temp_int = p%ngp(1) * p%elem_total + 2
+       temp_int = p%ngp * p%elem_total + 2
        CALL MeshCreate( BlankMesh        = u%DistrLoad          &
                        ,IOS              = COMPONENT_INPUT      &
                        ,NNodes           = temp_int             &
@@ -588,7 +611,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                        ,ErrMess         = ErrMsg2                )
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ELSEIF(p%quadrature .EQ. 2) THEN
-       temp_int = SUM(p%ngp) - (p%elem_total - 1)
+       temp_int = p%ngp
        CALL MeshCreate( BlankMesh        = u%DistrLoad          &
                        ,IOS              = COMPONENT_INPUT      &
                        ,NNodes           = temp_int             &
@@ -631,7 +654,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ENDDO
 
    IF(p%quadrature .EQ. 1) THEN
-       temp_int = p%ngp(1) * p%elem_total + 2
+       temp_int = p%ngp * p%elem_total + 2
        DO i=1,temp_int-1
            CALL MeshConstructElement( Mesh     = u%DistrLoad      &
                                      ,Xelement = ELEMENT_LINE2    &
@@ -642,7 +665,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDDO
    ELSEIF(p%quadrature .EQ. 2) THEN
-       temp_int = SUM(p%ngp) - (p%elem_total - 1)
+       temp_int = p%ngp
        DO i=1,temp_int - 1
            CALL MeshConstructElement( Mesh     = u%DistrLoad      &
                                      ,Xelement = ELEMENT_LINE2    &
@@ -751,7 +774,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    
 
    IF(p%quadrature .EQ. 1) THEN
-       DO i=1,p%ngp(1)*p%elem_total+2
+       DO i=1,p%ngp*p%elem_total+2
            temp_POS(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
            TmpPos(1) = temp_POS(2)
            TmpPos(2) = temp_POS(3)
@@ -774,7 +797,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDDO
    ELSEIF(p%quadrature .EQ. 2) THEN
-       temp_int = SUM(p%ngp) - (p%elem_total - 1)
+       temp_int = p%ngp
        DO i=1,temp_int
            temp_POS(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
            TmpPos(1) = temp_POS(2)
@@ -6185,4 +6208,103 @@ CONTAINS
       IF(ALLOCATED(w_temp   ))  DEALLOCATE(w_temp   )
    END SUBROUTINE Cleanup
 END SUBROUTINE BD_ComputeElementMass
+
+SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
+               node_elem,elem_total,ngp,&
+               station_eta,refine,kp_member,&
+               hhx,hpx,TZw,Jacobian,&
+               ErrStat,ErrMsg)
+
+   REAL(ReKi),         INTENT(IN   ):: GL(:)     ! GL(Gauss) point locations
+   REAL(ReKi),         INTENT(IN   ):: GLL(:)     ! GLL point locations
+   REAL(ReKi),         INTENT(IN   ):: uuN0(:,:) ! Initial position vector
+   REAL(ReKi),         INTENT(IN   ):: station_eta(:) ! TZ quadrature point locations
+   INTEGER(IntKi),     INTENT(IN   ):: quadrature ! Quadrature method
+   INTEGER(IntKi),     INTENT(IN   ):: node_elem  ! Nodes per element
+   INTEGER(IntKi),     INTENT(IN   ):: elem_total ! Total number of elements
+   INTEGER(IntKi),     INTENT(IN   ):: ngp        ! Number of quadrature points
+   INTEGER(IntKi),     INTENT(IN   ):: refine     ! TZ refinement parameter
+   INTEGER(IntKi),     INTENT(IN   ):: kp_member(:) !Number of key points in each member
+   REAL(ReKi),         INTENT(  OUT):: hhx(:,:)   ! Shape function matrix
+   REAL(ReKi),         INTENT(  OUT):: hpx(:,:)   ! Derivative of shape function matrix
+   REAL(ReKi),         INTENT(  OUT):: TZw(:)     ! TZ weight functions 
+   REAL(ReKi),         INTENT(  OUT):: Jacobian(:,:) ! Jacobians at each quadrature point
+   INTEGER(IntKi),     INTENT(  OUT):: ErrStat       ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+
+   REAL(ReKi)                       :: qpts(ngp)  ! Quadrature point locations
+   REAL(ReKi)                       :: temp1
+   REAL(ReKi)                       :: temp2
+   REAL(ReKi)                       :: Gup0(3)
+   INTEGER(IntKi)                   :: temp_id
+   INTEGER(IntKi)                   :: temp_id0
+   INTEGER(IntKi)                   :: temp_id1
+   INTEGER(IntKi)                   :: id0
+   INTEGER(IntKi)                   :: id1
+   INTEGER(IntKi)                   :: inode
+   INTEGER(IntKi)                   :: i
+   INTEGER(IntKi)                   :: j
+   INTEGER(IntKi)                   :: m
+
+   INTEGER(IntKi)                   :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)             :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(*), PARAMETER          :: RoutineName = 'BD_InitShpDerJaco'
+
+   qpts(:) = 0.0D0
+
+   IF(quadrature .EQ. 1) THEN
+       qpts(:) = GL(:)
+   ELSEIF(quadrature .EQ. 2) THEN
+       qpts(:) = station_eta(:)
+       DO j=1,ngp
+           temp_id = 0
+           id0 = 1
+           id1 = kp_member(1)
+           temp_id0 = (id0 - 1)*refine + 1
+           temp_id1 = (id1 - 1)*refine + 1
+           IF(j .EQ. 1) THEN
+               temp1 = -1.0D0 + (station_eta(temp_id0+j-1) - station_eta(temp_id0))*2.0D0/ &
+                 (station_eta(temp_id1) - station_eta(temp_id0))
+               temp2 = -1.0D0 + (station_eta(temp_id0+j) - station_eta(temp_id0))*2.0D0/ &
+                 (station_eta(temp_id1) - station_eta(temp_id0))
+               TZw(j) = 0.5D0 * (temp2 - temp1)
+           ELSEIF(j .EQ. ngp) THEN
+               temp1 = -1.0D0 + (station_eta(temp_id1-1) - station_eta(temp_id0))*2.0D0/ &
+                 (station_eta(temp_id1) - station_eta(temp_id0))
+               temp2 = -1.0D0 + (station_eta(temp_id1) - station_eta(temp_id0))*2.0D0/ &
+                 (station_eta(temp_id1) - station_eta(temp_id0))
+               TZw(j) = 0.5D0 * (temp2 - temp1)
+           ELSE 
+               temp1 = -1.0D0 + (station_eta(temp_id0+j-2) - station_eta(temp_id0))*2.0D0/ &
+                 (station_eta(temp_id1) - station_eta(temp_id0))
+               temp2 = -1.0D0 + (station_eta(temp_id0+j) - station_eta(temp_id0))*2.0D0/ &
+                 (station_eta(temp_id1) - station_eta(temp_id0))
+               TZw(j) = 0.5D0 * (temp2 - temp1)
+           ENDIF
+       ENDDO
+   ENDIF
+
+   CALL BD_diffmtc(node_elem-1,ngq,qpts,GLL,hhx,hpx,ErrStat2,ErrMsg2)
+
+   DO i = 1,elem_total
+       DO j = 1, ngp
+           Gup0(:) = 0.0D0
+           DO inode=1,node_elem
+               temp_id = (inode-1)*dof_node
+               DO m=1,3
+                   Gup0(m) = Gup0(m) + hpx(inode,j)*uuN0(temp_id+m,i)
+               ENDDO
+           ENDDO
+
+           Jacobian(i,j) = SQRT(DOT_PRODUCT(Gup0,Gup0))
+
+           DO inode=1,node_elem
+               hpx(inode,j) = hpx(inode,j)/Jacobian(i,j)
+           ENDDO
+       ENDDO
+   ENDDO
+
+END SUBROUTINE BD_InitshpDerJaco
+
+
 END MODULE BeamDyn
