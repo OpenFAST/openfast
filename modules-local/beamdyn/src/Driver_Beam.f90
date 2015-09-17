@@ -57,6 +57,11 @@ PROGRAM MAIN
    REAL(DbKi),ALLOCATABLE           :: BD_OutputTimes(:)
    INTEGER(IntKi)                     :: DvrOut 
 
+   TYPE(BD_InputType),ALLOCATABLE  :: BD_InputTmp(:)
+   REAL(ReKi) ::temp_cc0(3)
+   REAL(ReKi) ::temp_cc(3)
+   REAL(ReKi) ::alpha
+
    CHARACTER(256)    :: DvrInputFile
    CHARACTER(256)    :: RootName
 
@@ -64,10 +69,17 @@ PROGRAM MAIN
    ! local variables
    Integer(IntKi)                     :: i               ! counter for various loops
    Integer(IntKi)                     :: j               ! counter for various loops
+   Integer(IntKi)                     :: InUn = 10               ! counter for various loops
+   REAL(ReKi):: FilteredInput(400,3)
 
    REAL(ReKi):: temp_R(3,3)
    REAL(DbKi):: start, finish
 
+   OPEN(unit = InUn, file = 'Filter_15.dat', status = 'OLD',ACTION = 'READ')
+   DO i=1,400
+       READ(InUn,*) FilteredInput(i,1:3)
+   ENDDO
+   CLOSE(InUn)
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
    ! -------------------------------------------------------------------------
@@ -91,6 +103,8 @@ PROGRAM MAIN
    ALLOCATE(BD_InputTimes(BD_interp_order + 1)) 
    ALLOCATE(BD_Output(BD_interp_order + 1)) 
    ALLOCATE(BD_OutputTimes(BD_interp_order + 1)) 
+
+   ALLOCATE(BD_InputTmp(BD_interp_order + 1)) 
 
    CALL BD_Init(BD_InitInput        &
                    , BD_Input(1)         &
@@ -120,20 +134,35 @@ PROGRAM MAIN
    CALL BD_CopyOutput(BD_Output(1), BD_Output(2), MESH_NEWCOPY, ErrStat, ErrMsg)
       CALL CheckError()
 
+
    CALL CPU_TIME(start)
 
    DO n_t_global = 0, n_t_final
-
+!IF(n_t_global .EQ. 210) STOP
      WRITE(*,*) "Time Step: ", n_t_global
      BD_InputTimes(2) = BD_InputTimes(1) 
      BD_InputTimes(1) = t_global + dt_global
      BD_OutputTimes(2) = BD_OutputTimes(1) 
      BD_OutputTimes(1) = t_global + dt_global
      CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_InitInput, ErrStat, ErrMsg)
+!temp_cc(1:3) = FilteredInput(n_t_global + 2, 1:3)
+!CALL BD_CrvMatrixR(temp_cc,BD_Input(1)%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
+
+!WRITE(*,*) 'Input(1)'
+!DO i=1,3
+!WRITE(*,*) BD_Input(1)%RootMotion%Orientation(i,:,1) 
+!ENDDO
      CALL BD_InputSolve( BD_InputTimes(2), BD_Input(2), BD_Parameter, BD_InitInput, ErrStat, ErrMsg)
+!temp_cc(1:3) = FilteredInput(n_t_global + 1, 1:3)
+!CALL BD_CrvMatrixR(temp_cc,BD_Input(2)%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
+!WRITE(*,*) 'Input(2)'
+!DO i=1,3
+!WRITE(*,*) BD_Input(2)%RootMotion%Orientation(i,:,1) 
+!ENDDO
         CALL CheckError()
 
      CALL BD_CalcOutput( t_global, BD_Input(2), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
+!     CALL BD_CalcOutput( t_global, BD_InputTmp(2), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
                              BD_OtherState,  BD_Output(2), ErrStat, ErrMsg)
         CALL CheckError()
@@ -144,6 +173,7 @@ PROGRAM MAIN
      IF(BD_Parameter%analysis_type .EQ. 1 .AND. n_t_global .EQ. 1) EXIT 
 
      CALL BD_UpdateStates( t_global, n_t_global, BD_Input, BD_InputTimes, BD_Parameter, &
+!     CALL BD_UpdateStates( t_global, n_t_global, BD_InputTmp, BD_InputTimes, BD_Parameter, &
                                BD_ContinuousState, &
                                BD_DiscreteState, BD_ConstraintState, &
                                BD_OtherState, ErrStat, ErrMsg )
@@ -251,6 +281,29 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
    CALL BD_CrvMatrixR(temp_vec,u%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
    temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
    u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
+IF( t .LT. 0.199D0) THEN
+   u%RootMotion%Orientation(1,1,1) = 0.999089
+   u%RootMotion%Orientation(1,2,1) =-0.035618
+   u%RootMotion%Orientation(1,3,1) =-0.023508
+   u%RootMotion%Orientation(2,1,1) = 0.042103
+   u%RootMotion%Orientation(2,2,1) = 0.912655
+   u%RootMotion%Orientation(2,3,1) = 0.406556
+   u%RootMotion%Orientation(3,1,1) = 0.006973
+   u%RootMotion%Orientation(3,2,1) =-0.407176
+   u%RootMotion%Orientation(3,3,1) = 0.913323
+ELSE
+   u%RootMotion%Orientation(1,1,1) = 0.998998
+   u%RootMotion%Orientation(1,2,1) =-0.037533
+   u%RootMotion%Orientation(1,3,1) =-0.024363
+   u%RootMotion%Orientation(2,1,1) = 0.044200
+   u%RootMotion%Orientation(2,2,1) = 0.912561
+   u%RootMotion%Orientation(2,3,1) = 0.406545
+   u%RootMotion%Orientation(3,1,1) = 0.006973
+   u%RootMotion%Orientation(3,2,1) =-0.407215
+   u%RootMotion%Orientation(3,3,1) = 0.913306
+ENDIF
+
+
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%TranslationDisp(:,1) = temp_rr(:) - temp_r0(:)
    ! END Calculate root displacements and rotations
@@ -563,7 +616,7 @@ SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output, errStat, errMsg)
       ! time
    write( tmpStr, '(F15.6)' ) t
    call WrFileNR( OutUnit, tmpStr )
-   call WrReAryFileNR ( OutUnit, Output%WriteOutput,  frmt, errStat, errMsg )
+   call WrNumAryFileNR ( OutUnit, Output%WriteOutput,  frmt, errStat, errMsg )
    if ( errStat >= AbortErrLev ) return
    
      ! write a new line (advance to the next line)
