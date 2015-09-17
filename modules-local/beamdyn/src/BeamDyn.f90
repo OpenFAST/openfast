@@ -1451,12 +1451,11 @@ SUBROUTINE BD_NodalRelRot(Nu,node_elem,dof_node,Nr,ErrStat,ErrMsg)
 
    Nr = 0.0D0
    Nu_temp1 = 0.0D0
-   Nu_temp1(1:3) = Nu(10:12)
+   Nu_temp1(1:3) = Nu(4:6)
    DO i=1,node_elem
        temp_id = (i - 1) * dof_node
        Nu_temp = 0.0D0
        DO k=1,3
-!           IF(i==1) Nu_temp1(k) = Nu(temp_id+k+3)
            Nu_temp(k) = Nu(temp_id+k+3)
        ENDDO
        Nr_temp = 0.0D0
@@ -1792,7 +1791,7 @@ SUBROUTINE BD_GaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10,Err
    rot0_temp = 0.0D0
    rotu_temp = 0.0D0
    DO i=1,3
-       rot0_temp(i) = Nuu0(i+6+3)
+       rot0_temp(i) = Nuu0(i+3)
        rotu_temp(i) = uu0(i+3)
    ENDDO
    rot_temp = 0.0D0
@@ -1871,7 +1870,7 @@ SUBROUTINE BD_GaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
    rotu_temp = 0.0D0
    DO i=1,3
        E1(i) = E10(i) + uup(i)
-       rotu_temp(i) = Nuuu(i+6+3)
+       rotu_temp(i) = Nuuu(i+3)
    ENDDO
    rot_temp(:)  = 0.0D0
    rot0_temp(:) = 0.0D0
