@@ -57,10 +57,7 @@ PROGRAM MAIN
    REAL(DbKi),ALLOCATABLE           :: BD_OutputTimes(:)
    INTEGER(IntKi)                     :: DvrOut 
 
-   TYPE(BD_InputType),ALLOCATABLE  :: BD_InputTmp(:)
-   REAL(ReKi) ::temp_cc0(3)
    REAL(ReKi) ::temp_cc(3)
-   REAL(ReKi) ::alpha
 
    CHARACTER(256)    :: DvrInputFile
    CHARACTER(256)    :: RootName
