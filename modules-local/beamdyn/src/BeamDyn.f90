@@ -192,10 +192,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        p%ngp = (InputFileData%kp_member(1) - 1)*p%refine + 1
    ENDIF
 
-   CALL AllocAry(p%station_eta,p%ngp,'p%station_eta',ErrStat2,ErrMsg2)
-           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   p%station_eta(:) = 0.0D0
    IF(p%quadrature .EQ. 2) THEN
+       CALL AllocAry(p%station_eta,p%ngp,'p%station_eta',ErrStat2,ErrMsg2)
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       p%station_eta(:) = 0.0D0
        
        id0 = 1
        id1 = InputFileData%kp_member(1)
