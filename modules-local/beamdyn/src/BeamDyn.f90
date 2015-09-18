@@ -192,25 +192,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        p%ngp = (InputFileData%kp_member(1) - 1)*p%refine + 1
    ENDIF
 
-   IF(p%quadrature .EQ. 2) THEN
-       CALL AllocAry(p%station_eta,p%ngp,'p%station_eta',ErrStat2,ErrMsg2)
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       p%station_eta(:) = 0.0D0
-       
-       id0 = 1
-       id1 = InputFileData%kp_member(1)
-       DO j = 1,p%ngp
-           IF( j .EQ. 1) THEN
-               p%station_eta(j) = InputFileData%InpBl%station_eta(id0)
-           ELSE
-               p%station_eta(j) = InputFileData%InpBl%station_eta(id0+(j-2)/p%refine) + &
-                 ((InputFileData%InpBl%station_eta(id0+(j-2)/p%refine + 1) - &
-                  InputFileData%InpBl%station_eta(id0+(j-2)/p%refine))/p%refine) * &
-                  (MOD(j-2,p%refine) + 1)
-           ENDIF
-       ENDDO
-       p%station_eta(:) = 2.0D0 * p%station_eta(:) - 1.0D0
-   ENDIF   
    ! Degree-of-freedom (DoF) per node
    p%dof_node   = 6
    ! Total number of (finite element) nodes
@@ -286,6 +267,20 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          return
       end if
    DEALLOCATE(temp_w)
+   ! Quadrature point array in natural frame
+   ! If Gauss: Gauss points and weights
+   ! If Trapezoidal: quadrature points and weights
+   CALL AllocAry(p%GL,p%ngp,'p%GL',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ! Quadrature weight array
+   CALL AllocAry(p%GLw,p%ngp,'p%GLw weight array',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   p%GL(:) = 0.0D0
+   p%GLw(:) = 0.0D0
    IF(p%quadrature .EQ. 1) THEN
        ! temp_L2: the DistrLoad mesh node location
        ! temp_L2: physical coordinates of Gauss points and two end points
@@ -293,20 +288,12 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL AllocAry(p%Gauss,6,p%ngp*p%elem_total+2,'p%Gauss',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       ! Temporary Gauss point intrinsic coordinates array
-       CALL AllocAry(p%GL,p%ngp,'p%GL',ErrStat2,ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       ! Temporary Gauss weight function array
-       CALL AllocAry(p%GLw,p%ngp,'p%GLw weight array',ErrStat2,ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
           if (ErrStat >= AbortErrLev) then
              call cleanup()
              return
           end if
        temp_L2(:,:) = 0.0D0
        p%Gauss(:,:) = 0.0D0
-       p%GL(:) = 0.0D0
-       p%GLw(:) = 0.0D0
        CALL BD_GaussPointWeight(p%ngp,p%GL,p%GLw,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
           if (ErrStat >= AbortErrLev) then
@@ -321,6 +308,20 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        ! Temporary Gauss point intrinsic coordinates array
        temp_L2(:,:) = 0.0D0
        p%Gauss(:,:) = 0.0D0
+
+       id0 = 1
+       id1 = InputFileData%kp_member(1)
+       DO j = 1,p%ngp
+           IF( j .EQ. 1) THEN
+               p%GL(j) = InputFileData%InpBl%station_eta(id0)
+           ELSE
+               p%GL(j) = InputFileData%InpBl%station_eta(id0+(j-2)/p%refine) + &
+                 ((InputFileData%InpBl%station_eta(id0+(j-2)/p%refine + 1) - &
+                  InputFileData%InpBl%station_eta(id0+(j-2)/p%refine))/p%refine) * &
+                  (MOD(j-2,p%refine) + 1)
+           ENDIF
+       ENDDO
+       p%GL(:) = 2.0D0 * p%GL(:) - 1.0D0
    ENDIF
 
    DO i=1,p%elem_total
@@ -539,8 +540,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%Jacobian,p%elem_total,p%ngp,'p%Jacobian',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%TZw,p%ngp,'p%TZw',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    if (ErrStat >= AbortErrLev) then
       call cleanup()
       return
@@ -548,12 +547,11 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%Shp(:,:) = 0.0D0
    p%Der(:,:) = 0.0D0
    p%Jacobian(:,:) = 0.0D0
-   p%TZw(:) = 0.0D0
 
    CALL BD_InitShpDerJaco(p%quadrature,p%GL,p%GLL,p%uuN0,&
            p%node_elem,p%elem_total,p%ngp,               &
-           p%station_eta,p%refine,p%kp_member,           &
-           p%Shp,p%Der,p%TZw,p%Jacobian,                 &
+           p%refine,p%kp_member,                         &
+           p%Shp,p%Der,p%GLw,p%Jacobian,                 &
            ErrStat2,ErrMsg2)
    !CALL WrScr( "Finished reading input" )
    ! Allocate continuous states
@@ -6211,14 +6209,13 @@ END SUBROUTINE BD_ComputeElementMass
 
 SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
                node_elem,elem_total,ngp,&
-               station_eta,refine,kp_member,&
+               refine,kp_member,&
                hhx,hpx,TZw,Jacobian,&
                ErrStat,ErrMsg)
 
    REAL(ReKi),         INTENT(IN   ):: GL(:)     ! GL(Gauss) point locations
    REAL(ReKi),         INTENT(IN   ):: GLL(:)     ! GLL point locations
    REAL(ReKi),         INTENT(IN   ):: uuN0(:,:) ! Initial position vector
-   REAL(ReKi),         INTENT(IN   ):: station_eta(:) ! TZ quadrature point locations
    INTEGER(IntKi),     INTENT(IN   ):: quadrature ! Quadrature method
    INTEGER(IntKi),     INTENT(IN   ):: node_elem  ! Nodes per element
    INTEGER(IntKi),     INTENT(IN   ):: elem_total ! Total number of elements
@@ -6232,7 +6229,6 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
    INTEGER(IntKi),     INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),       INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
-   REAL(ReKi)                       :: qpts(ngp)  ! Quadrature point locations
    REAL(ReKi)                       :: temp1
    REAL(ReKi)                       :: temp2
    REAL(ReKi)                       :: Gup0(3)
@@ -6250,12 +6246,8 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
    CHARACTER(ErrMsgLen)             :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_InitShpDerJaco'
 
-   qpts(:) = 0.0D0
 
-   IF(quadrature .EQ. 1) THEN
-       qpts(:) = GL(:)
-   ELSEIF(quadrature .EQ. 2) THEN
-       qpts(:) = station_eta(:)
+   IF(quadrature .EQ. 2) THEN
        DO j=1,ngp
            temp_id = 0
            id0 = 1
@@ -6263,28 +6255,28 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
            temp_id0 = (id0 - 1)*refine + 1
            temp_id1 = (id1 - 1)*refine + 1
            IF(j .EQ. 1) THEN
-               temp1 = -1.0D0 + (station_eta(temp_id0+j-1) - station_eta(temp_id0))*2.0D0/ &
-                 (station_eta(temp_id1) - station_eta(temp_id0))
-               temp2 = -1.0D0 + (station_eta(temp_id0+j) - station_eta(temp_id0))*2.0D0/ &
-                 (station_eta(temp_id1) - station_eta(temp_id0))
+               temp1 = -1.0D0 + (GL(temp_id0+j-1) - GL(temp_id0))*2.0D0/ &
+                 (GL(temp_id1) - GL(temp_id0))
+               temp2 = -1.0D0 + (GL(temp_id0+j) - GL(temp_id0))*2.0D0/ &
+                 (GL(temp_id1) - GL(temp_id0))
                TZw(j) = 0.5D0 * (temp2 - temp1)
            ELSEIF(j .EQ. ngp) THEN
-               temp1 = -1.0D0 + (station_eta(temp_id1-1) - station_eta(temp_id0))*2.0D0/ &
-                 (station_eta(temp_id1) - station_eta(temp_id0))
-               temp2 = -1.0D0 + (station_eta(temp_id1) - station_eta(temp_id0))*2.0D0/ &
-                 (station_eta(temp_id1) - station_eta(temp_id0))
+               temp1 = -1.0D0 + (GL(temp_id1-1) - GL(temp_id0))*2.0D0/ &
+                 (GL(temp_id1) - GL(temp_id0))
+               temp2 = -1.0D0 + (GL(temp_id1) - GL(temp_id0))*2.0D0/ &
+                 (GL(temp_id1) - GL(temp_id0))
                TZw(j) = 0.5D0 * (temp2 - temp1)
            ELSE 
-               temp1 = -1.0D0 + (station_eta(temp_id0+j-2) - station_eta(temp_id0))*2.0D0/ &
-                 (station_eta(temp_id1) - station_eta(temp_id0))
-               temp2 = -1.0D0 + (station_eta(temp_id0+j) - station_eta(temp_id0))*2.0D0/ &
-                 (station_eta(temp_id1) - station_eta(temp_id0))
+               temp1 = -1.0D0 + (GL(temp_id0+j-2) - GL(temp_id0))*2.0D0/ &
+                 (GL(temp_id1) - GL(temp_id0))
+               temp2 = -1.0D0 + (GL(temp_id0+j) - GL(temp_id0))*2.0D0/ &
+                 (GL(temp_id1) - GL(temp_id0))
                TZw(j) = 0.5D0 * (temp2 - temp1)
            ENDIF
        ENDDO
    ENDIF
 
-   CALL BD_diffmtc(node_elem-1,ngq,qpts,GLL,hhx,hpx,ErrStat2,ErrMsg2)
+   CALL BD_diffmtc(node_elem-1,ngq,GL,GLL,hhx,hpx,ErrStat2,ErrMsg2)
 
    DO i = 1,elem_total
        DO j = 1, ngp
