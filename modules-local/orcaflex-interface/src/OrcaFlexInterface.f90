@@ -312,6 +312,7 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 #else
    CALL OrcaDLL_Init ( DLL_DT, DLL_TMax )
    ! Unfortunately, we don't get any error reporting back from OrcaDLL_Init, so we can't really check anything.
+   !bjj: we should be warning people to use text output files instead of binary in case OrcaFlex crashes...
 #endif
 
 
@@ -765,7 +766,7 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
       ! We do not want to call OrcaDLL twice in one timestep.  If _CalcOutput is called twice in a timestep, the second
       ! call is different from the first only with the accelerations, which OrcaFlex does not do anything with.
-   IF ( t > OtherState%LastTimeStep ) THEN
+   IF ( t > OtherState%LastTimeStep .and. .not. EqualRealNos(t,OtherState%LastTimeStep) ) THEN
          ! Call OrcaFlex to run the calculation.  There is no error trapping on the OrcaFlex side, so we will have to do some checks on what receive back
       CALL OrcaDLL_Calc( DLL_X, DLL_Xdot, DLL_ZTime, DLL_DirRootName, DLL_PtfmAM, DLL_PtfmFt )
       OtherState%LastTimeStep =  t
@@ -807,6 +808,11 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       y%PtfmMesh%Moment(I,1) =  OtherState%F_PtfmAM(I+3) +  OtherState%PtfmFT(I+3)
    ENDDO
 
+!#ifdef NO_LibLoad
+!   y%PtfmMesh%Force  =  6.0E6
+!   y%PtfmMesh%Moment =  2.0E6
+!#endif
+   
 
       ! Set all the outputs
    CALL SetAllOuts( p, y, OtherState, ErrStatTmp, ErrMsgTmp )
