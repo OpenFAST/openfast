@@ -2882,7 +2882,7 @@ CONTAINS
    !...............................................................................................................................
 END SUBROUTINE ED_HD_InputOutputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_SD_HD_BD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
+SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                      , u_ED,  p_ED,  x_ED,  xd_ED,  z_ED,  OtherSt_ED,  y_ED   &
                                      , u_SD,  p_SD,  x_SD,  xd_SD,  z_SD,  OtherSt_SD,  y_SD   & 
                                      , u_HD,  p_HD,  x_HD,  xd_HD,  z_HD,  OtherSt_HD,  y_HD   & 
@@ -2976,12 +2976,12 @@ SUBROUTINE ED_SD_HD_BD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
    REAL(ReKi),                             PARAMETER :: TOL_Squared = (1.0E-4)**2 !not currently used because KMax = 1
    REAL(ReKi)                                        :: ThisPerturb               ! an arbitrary perturbation (these are linear, so it shouldn't matter)
    
-   CHARACTER(*),                           PARAMETER :: RoutineName = 'ED_SD_HD_BD_InputOutputSolve'
+   CHARACTER(*),                           PARAMETER :: RoutineName = 'ED_SD_HD_BD_Orca_InputOutputSolve'
    
 !bjj: store these so that we don't reallocate every time?   
-   REAL(ReKi)                                        :: u(           p_FAST%SizeJac_ED_SD_HD_BD_Orca(1))   ! size of loads/accelerations passed between the 4 modules
-   REAL(ReKi)                                        :: u_perturb(   p_FAST%SizeJac_ED_SD_HD_BD_Orca(1))   ! size of loads/accelerations passed between the 4 modules
-   REAL(ReKi)                                        :: u_delta(     p_FAST%SizeJac_ED_SD_HD_BD_Orca(1))   ! size of loads/accelerations passed between the 4 modules
+   REAL(ReKi)                                        :: u(           p_FAST%SizeJac_ED_SD_HD_BD_Orca(1))   ! size of loads/accelerations passed between the 5 modules
+   REAL(ReKi)                                        :: u_perturb(   p_FAST%SizeJac_ED_SD_HD_BD_Orca(1))   ! size of loads/accelerations passed between the 5 modules
+   REAL(ReKi)                                        :: u_delta(     p_FAST%SizeJac_ED_SD_HD_BD_Orca(1))   ! size of loads/accelerations passed between the 5 modules
    REAL(ReKi)                                        :: Fn_U_perturb(p_FAST%SizeJac_ED_SD_HD_BD_Orca(1))   ! value of U with perturbations
    REAL(ReKi)                                        :: Fn_U_Resid(  p_FAST%SizeJac_ED_SD_HD_BD_Orca(1))   ! Residual of U
                                                                                            
@@ -3114,10 +3114,12 @@ SUBROUTINE ED_SD_HD_BD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
          END IF
          
          IF ( p_FAST%CompElast == Module_BD ) THEN 
+!if (k==p_FAST%KMax) debug_print = .true.
+!debug_print_unit = 70
             do nb=1,p_FAST%nBeams
                CALL BD_CalcOutput( this_time, u_BD(nb), p_BD(nb), x_BD(nb), xd_BD(nb), z_BD(nb), OtherSt_BD(nb), y_BD(nb), ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
-                  
+!debug_print = .false.
             end do            
          END IF
          
@@ -3131,7 +3133,7 @@ SUBROUTINE ED_SD_HD_BD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
             CALL CleanUp()
             RETURN      
          END IF
-                  
+               
          
          IF ( K >= p_FAST%KMax ) EXIT
          
@@ -3891,13 +3893,18 @@ CONTAINS
             end do
             deallocate(y_BD_perturb)
          end if
-                        
+             
+         CALL Orca_DestroyInput( u_Orca_perturb, ErrStat3, ErrMsg3 )
+            IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
+         CALL Orca_DestroyOutput(y_Orca_perturb, ErrStat3, ErrMsg3 )
+            IF (ErrStat3 /= ErrID_None) CALL WrScr(' '//RoutineName//TRIM(ErrMsg3) )
+         
       END IF
       
    
    END SUBROUTINE CleanUp
    !...............................................................................................................................
-END SUBROUTINE ED_SD_HD_BD_InputOutputSolve
+END SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Init_ED_SD_HD_BD_Orca_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMesh, SD_TPMesh, SD_LMesh, HD_M_LumpedMesh, HD_M_DistribMesh, &
                                    HD_WAMIT_Mesh, ED_HubPtLoad, u_BD, Orca_PtfmMesh, ErrStat, ErrMsg)
@@ -3929,7 +3936,7 @@ SUBROUTINE Init_ED_SD_HD_BD_Orca_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMes
    
       ! determine how many inputs there are between the 4 modules (ED, SD, HD, BD)
    
-   if (p_FAST%CompHydro == Module_HD .or. p_FAST%CompSub == Module_SD) then
+   if (p_FAST%CompHydro == Module_HD .or. p_FAST%CompSub == Module_SD .or. p_FAST%CompMooring == Module_Orca) then
       p_FAST%SizeJac_ED_SD_HD_BD_Orca(2) = ED_PlatformPtMesh%NNodes*6        ! ED inputs: 3 forces and 3 moments per node (only 1 node)
    else
       p_FAST%SizeJac_ED_SD_HD_BD_Orca(2) = 0
@@ -3991,7 +3998,7 @@ SUBROUTINE Init_ED_SD_HD_BD_Orca_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMes
    !...............
    
    index = 1
-   if (p_FAST%CompHydro == Module_HD .or. p_FAST%CompSub == Module_SD) then
+   if (p_FAST%CompHydro == Module_HD .or. p_FAST%CompSub == Module_SD .or. p_FAST%CompMooring == Module_Orca) then
    
       do i=1,ED_PlatformPtMesh%NNodes
          do j=1,3
@@ -6401,7 +6408,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
    
    IF ( p_FAST%CompSub == Module_SD .OR. p_FAST%CompElast == Module_BD .OR. p_FAST%CompMooring == Module_Orca ) THEN !.OR. p_FAST%CompHydro == Module_HD ) THEN
                                  
-      CALL ED_SD_HD_BD_InputOutputSolve(  this_time, p_FAST, calcJacobian &
+      CALL ED_SD_HD_BD_Orca_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                     , ED%Input(1),   ED%p,   ED%x(  this_state),  ED%xd(  this_state),  ED%z(  this_state),  ED%OtherSt,               ED%Output(1) &
                                     , SD%Input(1),   SD%p,   SD%x(  this_state),  SD%xd(  this_state),  SD%z(  this_state),  SD%OtherSt,               SD%y & 
                                     , HD%Input(1),   HD%p,   HD%x(  this_state),  HD%xd(  this_state),  HD%z(  this_state),  HD%OtherSt,               HD%y & 
@@ -7746,6 +7753,10 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD,
             CALL BD_Input_ExtrapInterp(BD%Input(:,k), BD%InputTimes(:,k), BD%u(k), t_global_next, ErrStat2, ErrMsg2)
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
                         
+!bjj: TEST THIS >>>>>>>>>>>>>>>               
+!don't extrapolate these inputs:               
+!            BD%u(k)%RootMotion%Orientation = BD%Input(1,k)%RootMotion%Orientation
+!end bjj TEST <<<<<<<<<<<<<<<<<<
             
             ! Shift "window" of BD%Input 
   
@@ -8642,8 +8653,31 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
                                        BD%xd(k,STATE_PRED), BD%z(k,STATE_PRED), BD%OtherSt(k,STATE_PRED), ErrStat2, ErrMsg2 )
                CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO !j_ss
+               
       END DO !nBeams
-         
+      
+!debug_print_unit = 77
+!call WrNumAryFileNR(debug_print_unit,(/real(n_t_module,DbKi), t_module/), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%TranslationDisp(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%TranslationVel(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%TranslationAcc(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%Orientation(1,:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%Orientation(2,:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%Orientation(3,:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%RotationVel(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%RotationAcc(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!do k=1,BD%Input(1,1)%DistrLoad%nnodes
+!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%DistrLoad%Force(:,k), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%DistrLoad%Moment(:,k), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!end do
+!write(debug_print_unit,'()')
+!         
+!debug_print_unit = 78
+!call WrNumAryFileNR(debug_print_unit,(/real(n_t_module,DbKi), t_module/), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,BD%x(1,STATE_PRED)%q, "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,BD%x(1,STATE_PRED)%dqdt, "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!write(debug_print_unit,'()')         
+!      
    END IF !CompElast
    
    
