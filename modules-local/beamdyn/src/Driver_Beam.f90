@@ -67,13 +67,14 @@ PROGRAM MAIN
    Integer(IntKi)                     :: i               ! counter for various loops
    Integer(IntKi)                     :: j               ! counter for various loops
    Integer(IntKi)                     :: InUn = 10               ! counter for various loops
-   REAL(ReKi):: FilteredInput(400,3)
+   REAL(ReKi):: FilteredInput(210,3)
 
    REAL(ReKi):: temp_R(3,3)
    REAL(DbKi):: start, finish
 
-   OPEN(unit = InUn, file = 'Filter_15.dat', status = 'OLD',ACTION = 'READ')
-   DO i=1,400
+!   OPEN(unit = InUn, file = 'Filter_15.dat', status = 'OLD',ACTION = 'READ')
+   OPEN(unit = InUn, file = 'fort.70', status = 'OLD',ACTION = 'READ')
+   DO i=1,209
        READ(InUn,*) FilteredInput(i,1:3)
    ENDDO
    CLOSE(InUn)
@@ -100,8 +101,6 @@ PROGRAM MAIN
    ALLOCATE(BD_InputTimes(BD_interp_order + 1)) 
    ALLOCATE(BD_Output(BD_interp_order + 1)) 
    ALLOCATE(BD_OutputTimes(BD_interp_order + 1)) 
-
-   ALLOCATE(BD_InputTmp(BD_interp_order + 1)) 
 
    CALL BD_Init(BD_InitInput        &
                    , BD_Input(1)         &
@@ -135,31 +134,21 @@ PROGRAM MAIN
    CALL CPU_TIME(start)
 
    DO n_t_global = 0, n_t_final
-!IF(n_t_global .EQ. 210) STOP
+IF(n_t_global .EQ. 209) STOP
      WRITE(*,*) "Time Step: ", n_t_global
      BD_InputTimes(2) = BD_InputTimes(1) 
      BD_InputTimes(1) = t_global + dt_global
      BD_OutputTimes(2) = BD_OutputTimes(1) 
      BD_OutputTimes(1) = t_global + dt_global
      CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_InitInput, ErrStat, ErrMsg)
-!temp_cc(1:3) = FilteredInput(n_t_global + 2, 1:3)
-!CALL BD_CrvMatrixR(temp_cc,BD_Input(1)%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
-
-!WRITE(*,*) 'Input(1)'
-!DO i=1,3
-!WRITE(*,*) BD_Input(1)%RootMotion%Orientation(i,:,1) 
-!ENDDO
+temp_cc(1:3) = FilteredInput(n_t_global + 2, 1:3)
+CALL BD_CrvMatrixR(temp_cc,BD_Input(1)%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
      CALL BD_InputSolve( BD_InputTimes(2), BD_Input(2), BD_Parameter, BD_InitInput, ErrStat, ErrMsg)
-!temp_cc(1:3) = FilteredInput(n_t_global + 1, 1:3)
-!CALL BD_CrvMatrixR(temp_cc,BD_Input(2)%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
-!WRITE(*,*) 'Input(2)'
-!DO i=1,3
-!WRITE(*,*) BD_Input(2)%RootMotion%Orientation(i,:,1) 
-!ENDDO
+temp_cc(1:3) = FilteredInput(n_t_global + 1, 1:3)
+CALL BD_CrvMatrixR(temp_cc,BD_Input(2)%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
         CALL CheckError()
 
      CALL BD_CalcOutput( t_global, BD_Input(2), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
-!     CALL BD_CalcOutput( t_global, BD_InputTmp(2), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
                              BD_OtherState,  BD_Output(2), ErrStat, ErrMsg)
         CALL CheckError()
@@ -170,7 +159,6 @@ PROGRAM MAIN
      IF(BD_Parameter%analysis_type .EQ. 1 .AND. n_t_global .EQ. 1) EXIT 
 
      CALL BD_UpdateStates( t_global, n_t_global, BD_Input, BD_InputTimes, BD_Parameter, &
-!     CALL BD_UpdateStates( t_global, n_t_global, BD_InputTmp, BD_InputTimes, BD_Parameter, &
                                BD_ContinuousState, &
                                BD_DiscreteState, BD_ConstraintState, &
                                BD_OtherState, ErrStat, ErrMsg )
