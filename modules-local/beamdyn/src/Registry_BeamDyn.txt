@@ -66,7 +66,6 @@ typedef      ^            ^       ^     blade_length     - - -  "Blade Length" -
 typedef      ^            ^       ^     blade_mass     - - -  "Blade Length" -
 typedef      ^            ^       ^     blade_CG    {3} - -  "Blade Length" -
 typedef      ^            ^       ^     blade_IN    {3}{3} - -  "Blade Length" -
-typedef      ^            ^       ^     station_eta   {:} - -  "Array stored length of each segment" -
 typedef      ^            ^       ^     kp_coordinate  {:}{:} - -  "Total number of dofs" -
 typedef      ^            ^     IntKi   node_elem - - -  "Node per element" -
 typedef      ^            ^       ^     kp_total  - - -  "Total number of dofs" -
@@ -104,7 +103,6 @@ typedef      ^            ^      ReKi   GLw {:} - -  "Weights at each GL(Gauss) 
 typedef      ^            ^      ReKi   Shp {:}{:} - -  "Shape function matrix" -
 typedef      ^            ^      ReKi   Der {:}{:} - -  "Derivative of shape function matrix" -
 typedef      ^            ^      ReKi   Jacobian {:}{:} - -  "Jacobian value at each quadrature point" -
-typedef      ^            ^      ReKi   TZw {:} - -  "Weights at each TZ point" -
 
 
 # ..... Inputs
