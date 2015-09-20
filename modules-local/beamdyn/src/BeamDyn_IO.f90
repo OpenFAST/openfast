@@ -1666,17 +1666,17 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
 
    WRITE (UnSu,'(/,A)')  'Quadrature point position vectors'
    IF(p%quadrature .EQ. 1) THEN
-       DO i=2,p%ngp(1)*p%elem_total + 1
+       DO i=2,p%ngp*p%elem_total + 1
            WRITE(UnSu,'(I4,3ES18.5)') i-1,p%Gauss(1:3,i)
        ENDDO
    ELSEIF(p%quadrature .EQ. 2) THEN
-       DO i=1,SUM(p%ngp) - (p%elem_total - 1)
+       DO i=1,p%ngp
            WRITE(UnSu,'(I4,3ES18.5)') i,p%Gauss(1:3,i)
        ENDDO
    ENDIF
    WRITE (UnSu,'(/,A)')  'Sectional stiffness and mass matrices at quadrature points'
    IF(p%quadrature .EQ. 1) THEN
-       DO i=1,p%ngp(1)*p%elem_total
+       DO i=1,p%ngp*p%elem_total
            WRITE (UnSu,'(/,A,I4)')  'Gauss point number: ',i
            DO j=1,6
                WRITE(UnSu,'(6ES15.5)') p%Stif0_GL(j,1:6,i)
@@ -1687,7 +1687,7 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
            ENDDO
        ENDDO
    ELSEIF(p%quadrature .EQ. 2) THEN
-       DO i=1,SUM(p%ngp) - (p%elem_total - 1)
+       DO i=1,p%ngp
            WRITE (UnSu,'(/,A,I4)')  'Quadrature point number: ',i
            DO j=1,6
                WRITE(UnSu,'(6ES15.5)') p%Stif0_GL(j,1:6,i)
