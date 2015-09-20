@@ -123,7 +123,7 @@ PROGRAM MAIN
    CALL CPU_TIME(start)
 
    DO n_t_global = 0, n_t_final
-
+IF(n_t_global .EQ. 1) STOP
      WRITE(*,*) "Time Step: ", n_t_global
      BD_InputTimes(2) = BD_InputTimes(1) 
      BD_InputTimes(1) = t_global + dt_global
@@ -282,12 +282,12 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
    u%DistrLoad%Moment(:,:) = 0.0D0
 
    IF(p%quadrature .EQ. 1) THEN
-       DO i=1,p%ngp(1)*p%elem_total+2
+       DO i=1,p%ngp*p%elem_total+2
            u%DistrLoad%Force(1:3,i) = InitInput%DistrLoad(1:3)
            u%DistrLoad%Moment(1:3,i)= InitInput%DistrLoad(4:6)
        ENDDO
    ELSEIF(p%quadrature .EQ. 2) THEN
-       DO i=1,SUM(p%ngp) - (p%elem_total - 1)
+       DO i=1,p%ngp
            u%DistrLoad%Force(1:3,i) = InitInput%DistrLoad(1:3)
            u%DistrLoad%Moment(1:3,i)= InitInput%DistrLoad(4:6)
        ENDDO

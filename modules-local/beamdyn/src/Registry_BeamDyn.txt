@@ -103,6 +103,9 @@ typedef      ^            ^      ReKi   GLw {:} - -  "Weights at each GL(Gauss) 
 typedef      ^            ^      ReKi   Shp {:}{:} - -  "Shape function matrix" -
 typedef      ^            ^      ReKi   Der {:}{:} - -  "Derivative of shape function matrix" -
 typedef      ^            ^      ReKi   Jacobian {:}{:} - -  "Jacobian value at each quadrature point" -
+typedef      ^            ^      ReKi   rrN0  {:}{:} - -  "Initial relative rotation array" -
+typedef      ^            ^      ReKi   uu0  {:}{:} - -  "Initial Disp/Rot value at quadrature point " -
+typedef      ^            ^      ReKi   E10  {:}{:} - -  "Initial E10 at quadrature point" -
 
 
 # ..... Inputs
