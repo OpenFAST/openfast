@@ -3114,12 +3114,9 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve(  this_time, p_FAST, calcJacobian &
          END IF
          
          IF ( p_FAST%CompElast == Module_BD ) THEN 
-!if (k==p_FAST%KMax) debug_print = .true.
-!debug_print_unit = 70
             do nb=1,p_FAST%nBeams
                CALL BD_CalcOutput( this_time, u_BD(nb), p_BD(nb), x_BD(nb), xd_BD(nb), z_BD(nb), OtherSt_BD(nb), y_BD(nb), ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
-!debug_print = .false.
             end do            
          END IF
          
@@ -3127,6 +3124,24 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve(  this_time, p_FAST, calcJacobian &
             CALL Orca_CalcOutput( this_time, u_Orca, p_Orca, x_Orca, xd_Orca, z_Orca, OtherSt_Orca, y_Orca, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          END IF
+         
+!debug_print_unit = 77
+!call WrNumAryFileNR(debug_print_unit,(/real(k,DbKi), this_time/), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%TranslationDisp(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%TranslationVel(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%TranslationAcc(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%Orientation(1,:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%Orientation(2,:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%Orientation(3,:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%RotationVel(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%RotationAcc(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!write(debug_print_unit,'()')
+!         
+!debug_print_unit = 78
+!call WrNumAryFileNR(debug_print_unit,(/real(k,DbKi), this_time/), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,y_Orca%PtfmMesh%Force(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!call WrNumAryFileNR(debug_print_unit,y_Orca%PtfmMesh%Moment(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!write(debug_print_unit,'()')
          
          
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -3812,7 +3827,13 @@ CONTAINS
             ! we're mapping loads, so we also need the sibling meshes' displacements:
          CALL Transfer_Point_to_Point( y_HD2%AllHdroOrigin, MeshMapData%u_ED_PlatformPtMesh, MeshMapData%HD_W_P_2_ED_P, ErrStat2, ErrMsg2, MeshMapData%u_HD_Mesh, y_ED2%PlatformPtMesh) !u_HD and u_mapped_positions contain the displaced positions for load calculations
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                                                                           
+                                      
+      ELSE
+         
+            ! When using OrcaFlex, we need to zero this out
+         MeshMapData%u_ED_PlatformPtMesh%Force  = 0.0_ReKi         
+         MeshMapData%u_ED_PlatformPtMesh%Moment = 0.0_ReKi
+         
       END IF
       
    !..................
