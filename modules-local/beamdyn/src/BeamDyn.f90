@@ -321,6 +321,9 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                   (MOD(j-2,p%refine) + 1)
            ENDIF
        ENDDO
+       DO j=1,p%ngp
+           p%GL(j) = 2.0D0 * p%GL(j) - 1.0D0
+       ENDDO
    ENDIF
 
    DO i=1,p%elem_total
@@ -553,9 +556,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            p%Shp,p%Der,p%GLw,p%Jacobian,                 &
            ErrStat2,ErrMsg2)
 
-   DO j=1,p%ngp
-       p%GL(j) = 2.0D0 * p%GL(j) - 1.0D0
-   ENDDO
 
 !WRITE(*,*) 'p%GL'
 !WRITE(*,*) p%GL
@@ -2454,9 +2454,6 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,
                                 elf,elm,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-WRITE(*,*) 'elf'
-WRITE(*,*) elf
-
        CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,&
                               elm,MassM,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2620,15 +2617,11 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                ENDDO
            ENDDO
        ENDDO
-WRITE(90,*) 'igp',igp
-WRITE(90,*) 'Fc',Fc
        DO i=1,node_elem
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
                elf(temp_id1) = elf(temp_id1) - hpx(i,igp)*Fc(j)*gw(igp)
-WRITE(90,*) 'temp1',hpx(i,igp)*Fc(j)*gw(igp)
                elf(temp_id1) = elf(temp_id1) - hhx(i,igp)*Fd(j)*Jaco(igp)*gw(igp)
-WRITE(90,*) 'temp2',hhx(i,igp)*Fd(j)*Jaco(igp)*gw(igp)
            ENDDO
        ENDDO
 
@@ -4266,8 +4259,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       OtherState%InitAcc = .true. 
 WRITE(*,*) 'OS%acc'
-WRITE(*,*) OtherState%acc(:)
-STOP
+WRITE(*,*) OtherState%acc
    end if
 
    CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
