@@ -2832,6 +2832,8 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
            ENDDO
        ENDDO
 
+WRITE(101,*) 'Fc',igp,Fc
+WRITE(101,*) 'Fd',igp,Fd
        DO i=1,node_elem
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
