@@ -2599,6 +2599,8 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
                                 node_elem,dof_node,damp_flag,beta,&
                                 elf,elm,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+WRITE(*,*) 'elf'
+WRITE(*,*) elf
        IF(quadrature .EQ. 2) THEN
            DEALLOCATE(EStif0_GL)
            DEALLOCATE(EMass0_GL)
