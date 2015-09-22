@@ -2592,6 +2592,12 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
            ENDDO
        ENDIF
 
+WRITE(*,*) 'Trapezoidal_pos'
+WRITE(*,*) trapezoidal_pos
+WRITE(*,*) 'Trapezoidal_w'
+WRITE(*,*) trapezoidal_w
+STOP
+
        CALL BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                                 EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                                 nqp,quadrature,trapezoidal_pos,trapezoidal_w,&
@@ -6104,7 +6110,6 @@ SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
            ENDDO
        ENDIF
 
-WRITE(*,*) 'nelem:',nelem
        CALL BD_ComputeElementMass(Nuu0,NGPpos,EMass0_GL,&
                                   nqp,quadrature,trapezoidal_pos,trapezoidal_w,&
                                   node_elem,dof_node,&
@@ -6117,11 +6122,6 @@ WRITE(*,*) 'nelem:',nelem
            DEALLOCATE(trapezoidal_w)
        ENDIF
 
-WRITE(*,*) 'elem_mass:',elem_mass
-WRITE(*,*) 'elem_CG:',elem_CG
-DO j=1,3
-WRITE(*,*) 'elem_IN:',elem_IN(j,:)
-ENDDO
        blade_mass = blade_mass + elem_mass
        blade_CG(:) = blade_CG(:) + elem_CG(:)
        blade_IN(:,:) = blade_IN(:,:) + elem_IN(:,:)
@@ -6132,7 +6132,6 @@ ENDDO
        end if
 
    ENDDO
-STOP
    blade_CG(:) = blade_CG(:) / blade_mass
 
    CALL Cleanup()
@@ -6236,10 +6235,6 @@ SUBROUTINE BD_ComputeElementMass(Nuu0,NGPpos,EMass0_GL,&
        mmm  = 0.0D0
        mmm  = EMass0_GL(1,1,igp)
 
-WRITE(*,*) 'igp',igp
-WRITE(*,*) 'gw',gw(igp)
-WRITE(*,*) 'Jaco',Jacobian
-WRITE(*,*) 'mmm',mmm
        elem_mass = elem_mass + gw(igp) * Jacobian * mmm
        elem_CG(1:3) = elem_CG(1:3) + gw(igp) * Jacobian * mmm * NGPpos(1:3,igp)
        elem_IN(1:3,1:3) = elem_IN(1:3,1:3) + gw(igp) * Jacobian * mmm * &
