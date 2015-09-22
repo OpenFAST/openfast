@@ -569,9 +569,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        DO j = 1,p%ngp
            temp_id = (j-1)*p%dof_node
            temp_id2= (j-1)*(p%dof_node/2)
-           CALL BD_GaussPointDataAt0(p%Shp(:,j),p%Der(:,j),p%uuN0(:,i),p%rrN0(:,i),&
-                 p%node_elem,p%dof_node,p%uu0(temp_id+1:temp_id+6,i),&
-                 p%E10(temp_id2+1:temp_id2+3,i),ErrStat2,ErrMsg2)
+           CALL BD_GaussPointDataAt0(p%Shp(:,j),p%Der(:,j),p%Jacobian(j,i),&
+                   p%uuN0(:,i),p%rrN0(:,i),&
+                   p%node_elem,p%dof_node,p%uu0(temp_id+1:temp_id+6,i),&
+                   p%E10(temp_id2+1:temp_id2+3,i),ErrStat2,ErrMsg2)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDDO
    ENDDO
@@ -587,6 +588,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 !DO i=1,p%elem_total
 !WRITE(*,*) p%Jacobian(:,i)
 !ENDDO
+!STOP
    !CALL WrScr( "Finished reading input" )
    ! Allocate continuous states
    CALL AllocAry(x%q,p%dof_total,'x%q',ErrStat2,ErrMsg2)
@@ -1556,7 +1558,7 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
        temp_id2 = (igp-1)*dof_node/2
        Stif(:,:) = 0.0D0
        Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
-       CALL BD_GaussPointData(hhx(:,igp),hpx(:,igp),Nuuu,Nrrr,&
+       CALL BD_GaussPointData(hhx(:,igp),hpx(:,igp),Jaco(igp),Nuuu,Nrrr,&
              uu0(temp_id1+1:temp_id1+6),E10(temp_id2+1:temp_id2+3),node_elem,dof_node,&
              uuu,uup,E1,RR0,kapa,Stif,cet,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1570,7 +1572,7 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
        mEta(2)      = -EMass0_GL(1,6,igp)
        mEta(3)      =  EMass0_GL(1,5,igp)
        rho(1:3,1:3) =  EMass0_GL(4:6,4:6,igp)
-       CALL BD_GaussPointDataMass(hhx(:,igp),hpx(:,igp),Nvvv,Naaa,RR0,node_elem,dof_node,&
+       CALL BD_GaussPointDataMass(hhx(:,igp),hpx(:,igp),Jaco(igp),Nvvv,Naaa,RR0,node_elem,dof_node,&
                                   vvv,aaa,vvp,mmm,mEta,rho,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_InertialForce(mmm,mEta,rho,vvv,aaa,fact,Fi,Mi,Gi,Ki,ErrStat2,ErrMsg2)
@@ -1595,11 +1597,11 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
                            elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + &
                               hhx(i,igp)*Qe(m,n)*hhx(j,igp)*Jaco(igp)*gw(igp)
                            elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + &
-                              hhx(i,igp)*Pe(m,n)*hpx(j,igp)*Jaco(igp)*gw(igp)
+                              hhx(i,igp)*Pe(m,n)*hpx(j,igp)*gw(igp)
                            elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + &
-                              hpx(i,igp)*Oe(m,n)*hhx(j,igp)*Jaco(igp)*gw(igp)
+                              hpx(i,igp)*Oe(m,n)*hhx(j,igp)*gw(igp)
                            elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + &
-                              hpx(i,igp)*Stif(m,n)*hpx(j,igp)*Jaco(igp)*gw(igp)
+                              hpx(i,igp)*Stif(m,n)*hpx(j,igp)*gw(igp)/Jaco(igp)
                            elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + &
                               hhx(i,igp)*Ki(m,n)*hhx(j,igp)*Jaco(igp)*gw(igp)
                            elm(temp_id1,temp_id2) = elm(temp_id1,temp_id2) + &
@@ -1621,19 +1623,19 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
                                    elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + &
                                       hhx(i,igp)*Qd(m,n)*hhx(j,igp)*Jaco(igp)*gw(igp)
                                    elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + &
-                                      hhx(i,igp)*Pd(m,n)*hpx(j,igp)*Jaco(igp)*gw(igp)
+                                      hhx(i,igp)*Pd(m,n)*hpx(j,igp)*gw(igp)
                                    elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + &
-                                      hpx(i,igp)*Od(m,n)*hhx(j,igp)*Jaco(igp)*gw(igp)
+                                      hpx(i,igp)*Od(m,n)*hhx(j,igp)*gw(igp)
                                    elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + &
-                                      hpx(i,igp)*Sd(m,n)*hpx(j,igp)*Jaco(igp)*gw(igp)
+                                      hpx(i,igp)*Sd(m,n)*hpx(j,igp)*gw(igp)/Jaco(igp)
                                    elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + &
                                       hhx(i,igp)*Xd(m,n)*hhx(j,igp)*Jaco(igp)*gw(igp)
                                    elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + &
-                                      hhx(i,igp)*Yd(m,n)*hpx(j,igp)*Jaco(igp)*gw(igp)
+                                      hhx(i,igp)*Yd(m,n)*hpx(j,igp)*gw(igp)
                                    elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + &
-                                      hpx(i,igp)*Gd(m,n)*hhx(j,igp)*Jaco(igp)*gw(igp)
+                                      hpx(i,igp)*Gd(m,n)*hhx(j,igp)*gw(igp)
                                    elg(temp_id1,temp_id2) = elg(temp_id1,temp_id2) + &
-                                      hpx(i,igp)*betaC(m,n)*hpx(j,igp)*Jaco(igp)*gw(igp)
+                                      hpx(i,igp)*betaC(m,n)*hpx(j,igp)*gw(igp)/Jaco(igp)
                            ENDDO
                        ENDDO
                    ENDDO
@@ -1646,7 +1648,7 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
                elf(temp_id1) = elf(temp_id1) - hhx(i,igp)*Fd(j)*Jaco(igp)*gw(igp)
-               elf(temp_id1) = elf(temp_id1) - hpx(i,igp)*Fc(j)*Jaco(igp)*gw(igp)
+               elf(temp_id1) = elf(temp_id1) - hpx(i,igp)*Fc(j)*gw(igp)
                elf(temp_id1) = elf(temp_id1) - hhx(i,igp)*Fi(j)*Jaco(igp)*gw(igp)
            ENDDO
        ENDDO
@@ -1662,12 +1664,13 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
 
 END SUBROUTINE BD_ElementMatrixGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_GaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10,ErrStat,ErrMsg)
+SUBROUTINE BD_GaussPointDataAt0(hhx,hpx,Jaco,Nuu0,Nrr0,node_elem,dof_node,uu0,E10,ErrStat,ErrMsg)
    !----------------------------------------------------------------------------------------
    ! This subroutine computes initial Gauss point values: uu0, E10, and Stif
    !----------------------------------------------------------------------------------------
    REAL(ReKi),    INTENT(IN   ):: hhx(:)         ! Shape function
    REAL(ReKi),    INTENT(IN   ):: hpx(:)         ! Derivative of shape function
+   REAL(ReKi),    INTENT(IN   ):: Jaco           ! Jacobian value
    REAL(ReKi),    INTENT(IN   ):: Nuu0(:)        ! Element initial nodal position array
    REAL(ReKi),    INTENT(IN   ):: Nrr0(:)        ! Element initial nodal relative rotation array
    INTEGER(IntKi),INTENT(IN   ):: node_elem      ! Number of node in one element
@@ -1697,7 +1700,7 @@ SUBROUTINE BD_GaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10,Err
    E10(:) = 0.0D0
    DO inode=1,node_elem
        hhi = hhx(inode)
-       hpi = hpx(inode)
+       hpi = hpx(inode)/Jaco
        temp_id = (inode-1)*dof_node
        temp_id2 = (inode-1)*dof_node/2
        DO i=1,3
@@ -1722,7 +1725,7 @@ SUBROUTINE BD_GaussPointDataAt0(hhx,hpx,Nuu0,Nrr0,node_elem,dof_node,uu0,E10,Err
 
 END SUBROUTINE BD_GaussPointDataAt0
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_GaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
+SUBROUTINE BD_GaussPointData(hhx,hpx,Jaco,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
                              uuu,uup,E1,RR0,kapa,Stif,cet,ErrStat,ErrMsg)
 !--------------------------------------------------------------------------
 ! This subroutine computes Gauss point values: 1) uuu, 2) uup, 3) E1
@@ -1730,6 +1733,7 @@ SUBROUTINE BD_GaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
 !--------------------------------------------------------------------------
    REAL(ReKi),    INTENT(IN   ):: hhx(:)      ! Shape function
    REAL(ReKi),    INTENT(IN   ):: hpx(:)      ! Derivative of shape function
+   REAL(ReKi),    INTENT(IN   ):: Jaco        ! Jacobian
    REAL(ReKi),    INTENT(IN   ):: Nuuu(:)     ! Element nodal displacement array
    REAL(ReKi),    INTENT(IN   ):: Nrrr(:)     ! Element nodal relative rotation array
    REAL(ReKi),    INTENT(IN   ):: uu0(:)      ! Initial position array at Gauss point
@@ -1774,7 +1778,7 @@ SUBROUTINE BD_GaussPointData(hhx,hpx,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
    rrp = 0.0D0
    DO inode=1,node_elem
        hhi = hhx(inode)
-       hpi = hpx(inode)
+       hpi = hpx(inode)/Jaco
        temp_id = (inode-1)*dof_node
        temp_id2 = (inode-1)*dof_node/2
        DO i=1,3
@@ -1950,7 +1954,7 @@ SUBROUTINE BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat,ErrM
 
 END SUBROUTINE BD_ElasticForce
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_GaussPointDataMass(hhx,hpx,Nvvv,Naaa,RR0,node_elem,dof_node,&
+SUBROUTINE BD_GaussPointDataMass(hhx,hpx,Jaco,Nvvv,Naaa,RR0,node_elem,dof_node,&
                                  vvv,aaa,vvp,mmm,mEta,rho,ErrStat,ErrMsg)
 !------------------------------------------------------------------
 ! This subroutine calculates the mass quantities at the Gauss point
@@ -1959,6 +1963,7 @@ SUBROUTINE BD_GaussPointDataMass(hhx,hpx,Nvvv,Naaa,RR0,node_elem,dof_node,&
 !------------------------------------------------------------------
    REAL(ReKi),     INTENT(IN   ):: hhx(:)
    REAL(ReKi),     INTENT(IN   ):: hpx(:)
+   REAL(ReKi),     INTENT(IN   ):: Jaco
    REAL(ReKi),     INTENT(IN   ):: Nvvv(:)
    REAL(ReKi),     INTENT(IN   ):: Naaa(:)
    REAL(ReKi),     INTENT(IN   ):: RR0(:,:)
@@ -1987,7 +1992,7 @@ SUBROUTINE BD_GaussPointDataMass(hhx,hpx,Nvvv,Naaa,RR0,node_elem,dof_node,&
 
    DO inode=1,node_elem
        hhi = hhx(inode)
-       hpi = hpx(inode)
+       hpi = hpx(inode)/Jaco
        temp_id = (inode-1)*dof_node
        DO i=1,dof_node
            vvv(i) = vvv(i) + hhi * Nvvv(temp_id+i)
@@ -2562,7 +2567,7 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
        temp_id2 = (igp-1)*dof_node/2
        Stif(:,:) = 0.0D0
        Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
-       CALL BD_GaussPointData(hhx(:,igp),hpx(:,igp),Nuuu,Nrrr,&
+       CALL BD_GaussPointData(hhx(:,igp),hpx(:,igp),Jaco(igp),Nuuu,Nrrr,&
              uu0(temp_id1+1:temp_id1+6),E10(temp_id2+1:temp_id2+3),node_elem,dof_node,&
              uuu,uup,E1,RR0,kapa,Stif,cet,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2573,7 +2578,7 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
        mEta(2)      = -EMass0_GL(1,6,igp)
        mEta(3)      =  EMass0_GL(1,5,igp)
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
-       CALL BD_GaussPointDataMass(hhx(:,igp),hpx(:,igp),Nvvv,temp_Naaa,RR0,&
+       CALL BD_GaussPointDataMass(hhx(:,igp),hpx(:,igp),Jaco(igp),Nvvv,temp_Naaa,RR0,&
              node_elem,dof_node, vvv,temp_aaa,vvp,mmm,mEta,rho,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_MassMatrix(mmm,mEta,rho,Mi,ErrStat2,ErrMsg2)
@@ -2607,7 +2612,7 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
        DO i=1,node_elem
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
-               elf(temp_id1) = elf(temp_id1) - hpx(i,igp)*Fc(j)*Jaco(igp)*gw(igp)
+               elf(temp_id1) = elf(temp_id1) - hpx(i,igp)*Fc(j)*gw(igp)
                elf(temp_id1) = elf(temp_id1) - hhx(i,igp)*Fd(j)*Jaco(igp)*gw(igp)
            ENDDO
        ENDDO
@@ -2780,7 +2785,7 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
        temp_id2 = (igp-1)*dof_node/2
        Stif(:,:) = 0.0D0
        Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
-       CALL BD_GaussPointData(hhx(:,igp),hpx(:,igp),Nuuu,Nrrr,&
+       CALL BD_GaussPointData(hhx(:,igp),hpx(:,igp),Jaco(igp),Nuuu,Nrrr,&
                uu0(temp_id1+1:temp_id1+6),E10(temp_id2+1:temp_id2+3),node_elem,dof_node,&
                uuu,uup,E1,RR0,kapa,Stif,cet,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2791,7 +2796,7 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
        mEta(2)      = -EMass0_GL(1,6,igp)
        mEta(3)      =  EMass0_GL(1,5,igp)
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
-       CALL BD_GaussPointDataMass(hhx(:,igp),hpx(:,igp),Nvvv,temp_Naaa,RR0,&
+       CALL BD_GaussPointDataMass(hhx(:,igp),hpx(:,igp),Jaco(igp),Nvvv,temp_Naaa,RR0,&
              node_elem,dof_node, vvv,temp_aaa,vvp,mmm,mEta,rho,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat2,ErrMsg2)
@@ -2809,7 +2814,7 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                temp_id1 = (i-1) * dof_node+j
                elf(temp_id1) = elf(temp_id1) + hhx(i,igp)*Fb(j)*Jaco(igp)*gw(igp)
                elf(temp_id1) = elf(temp_id1) + hhx(i,igp)*Fd(j)*Jaco(igp)*gw(igp)
-               elf(temp_id1) = elf(temp_id1) + hpx(i,igp)*Fc(j)*Jaco(igp)*gw(igp)
+               elf(temp_id1) = elf(temp_id1) + hpx(i,igp)*Fc(j)*gw(igp)
            ENDDO
        ENDDO
 
@@ -3830,7 +3835,7 @@ SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
        temp_id1 = (igp-1)*dof_node
        temp_id2 = (igp-1)*dof_node/2
        Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
-       CALL BD_GaussPointData(hhx(:,igp),hpx(:,igp),Nuuu,Nrrr,&
+       CALL BD_GaussPointData(hhx(:,igp),hpx(:,igp),Jaco(igp),Nuuu,Nrrr,&
              uu0(temp_id1+1:temp_id1+6),E10(temp_id2+1:temp_id2+3),node_elem,dof_node,&
              uuu,uup,E1,RR0,kapa,Stif,cet,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3840,7 +3845,7 @@ SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
        mEta(2)      =-EMass0_GL(1,6,igp)
        mEta(3)      = EMass0_GL(1,5,igp)
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
-       CALL BD_GaussPointDataMass(hhx(:,igp),hpx(:,igp),temp_Nvvv,temp_Naaa,RR0,&
+       CALL BD_GaussPointDataMass(hhx(:,igp),hpx(:,igp),Jaco(igp),temp_Nvvv,temp_Naaa,RR0,&
              node_elem,dof_node,vvv,aaa,vvp,mmm,mEta,rho,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_GravityForce(mmm,mEta,gravity,Fg,ErrStat2,ErrMsg2)
@@ -3856,11 +3861,11 @@ SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
                        elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + &
                           hhx(i,igp)*Qe(m,n)*hhx(j,igp)*Jaco(igp)*gw(igp)
                        elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + &
-                          hhx(i,igp)*Pe(m,n)*hpx(j,igp)*Jaco(igp)*gw(igp)
+                          hhx(i,igp)*Pe(m,n)*hpx(j,igp)*gw(igp)
                        elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + &
-                          hpx(i,igp)*Oe(m,n)*hhx(j,igp)*Jaco(igp)*gw(igp)
+                          hpx(i,igp)*Oe(m,n)*hhx(j,igp)*gw(igp)
                        elk(temp_id1,temp_id2) = elk(temp_id1,temp_id2) + &
-                          hpx(i,igp)*Stif(m,n)*hpx(j,igp)*Jaco(igp)*gw(igp)
+                          hpx(i,igp)*Stif(m,n)*hpx(j,igp)*gw(igp)/Jaco(igp)
                    ENDDO
                ENDDO
            ENDDO
@@ -3871,7 +3876,7 @@ SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
                elf(temp_id1) = elf(temp_id1) - hhx(i,igp)*Fd(j)*Jaco(igp)*gw(igp)
-               elf(temp_id1) = elf(temp_id1) - hpx(i,igp)*Fc(j)*Jaco(igp)*gw(igp)
+               elf(temp_id1) = elf(temp_id1) - hpx(i,igp)*Fc(j)*gw(igp)
            ENDDO
        ENDDO
 
@@ -4171,7 +4176,7 @@ SUBROUTINE BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0
        temp_id2 = (igp - 1) * (dof_node/2)
        Stif(:,:) = 0.0D0
        Stif(1:6,1:6) = EStif0_GL(1:6,1:6,igp)
-       CALL BD_GaussPointData(hhx(:,igp),hpx(:,igp),Nuuu,Nrrr,&
+       CALL BD_GaussPointData(hhx(:,igp),hpx(:,igp),Jaco(igp),Nuuu,Nrrr,&
              uu0(temp_id1+1:temp_id1+6),E10(temp_id2+1:temp_id2+3),node_elem,dof_node,&
              uuu,uup,E1,RR0,kapa,Stif,cet,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4182,7 +4187,7 @@ SUBROUTINE BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
                elf(temp_id1) = elf(temp_id1) + hhx(i,igp)*Fd(j)*Jaco(igp)*gw(igp)
-               elf(temp_id1) = elf(temp_id1) + hpx(i,igp)*Fc(j)*Jaco(igp)*gw(igp)
+               elf(temp_id1) = elf(temp_id1) + hpx(i,igp)*Fc(j)*gw(igp)
            ENDDO
        ENDDO
    ENDDO
@@ -5281,18 +5286,12 @@ SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
                                   elem_mass,elem_CG,elem_IN,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-WRITE(*,*) 'nelem:',nelem
-WRITE(*,*) 'elem_mass:',elem_mass
-WRITE(*,*) 'elem_CG:',elem_CG
-DO j=1,3
-WRITE(*,*) 'elem_IN:',elem_IN(j,:)
-ENDDO
        blade_mass = blade_mass + elem_mass
        blade_CG(:) = blade_CG(:) + elem_CG(:)
        blade_IN(:,:) = blade_IN(:,:) + elem_IN(:,:)
 
    ENDDO
-STOP
+
    if (ErrStat >= AbortErrLev) then
        call Cleanup()
        return
@@ -5457,9 +5456,6 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
 
            Jacobian(j,i) = SQRT(DOT_PRODUCT(Gup0,Gup0))
 
-           DO inode=1,node_elem
-               hpx(inode,j) = hpx(inode,j)/Jacobian(j,i)
-           ENDDO
        ENDDO
    ENDDO
 
