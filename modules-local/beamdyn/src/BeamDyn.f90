@@ -2609,9 +2609,13 @@ WRITE(100,*) Nvvv
                                 elf,elm,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 WRITE(101,*) 'elm'
-WRITE(101,*) elm
+DO i=1,dof_total
+WRITE(101,*) i,elm(i,:)
+ENDDO
 WRITE(101,*) 'elf'
-WRITE(101,*) elf
+DO i=1,dof_total
+WRITE(101,*) i,elf(i)
+ENDDO
        IF(quadrature .EQ. 2) THEN
            DEALLOCATE(EStif0_GL)
            DEALLOCATE(EMass0_GL)
