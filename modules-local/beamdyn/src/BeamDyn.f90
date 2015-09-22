@@ -5281,12 +5281,18 @@ SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
                                   elem_mass,elem_CG,elem_IN,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+WRITE(*,*) 'nelem:',nelem
+WRITE(*,*) 'elem_mass:',elem_mass
+WRITE(*,*) 'elem_CG:',elem_CG
+DO j=1,3
+WRITE(*,*) 'elem_IN:',elem_IN(j,:)
+ENDDO
        blade_mass = blade_mass + elem_mass
        blade_CG(:) = blade_CG(:) + elem_CG(:)
        blade_IN(:,:) = blade_IN(:,:) + elem_IN(:,:)
 
    ENDDO
-
+STOP
    if (ErrStat >= AbortErrLev) then
        call Cleanup()
        return
