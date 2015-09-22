@@ -66,18 +66,10 @@ PROGRAM MAIN
    ! local variables
    Integer(IntKi)                     :: i               ! counter for various loops
    Integer(IntKi)                     :: j               ! counter for various loops
-   Integer(IntKi)                     :: InUn = 10               ! counter for various loops
-   REAL(ReKi):: FilteredInput(210,3)
 
    REAL(ReKi):: temp_R(3,3)
    REAL(DbKi):: start, finish
 
-!   OPEN(unit = InUn, file = 'Filter_15.dat', status = 'OLD',ACTION = 'READ')
-   OPEN(unit = InUn, file = 'fort.70', status = 'OLD',ACTION = 'READ')
-   DO i=1,209
-       READ(InUn,*) FilteredInput(i,1:3)
-   ENDDO
-   CLOSE(InUn)
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
    ! -------------------------------------------------------------------------
@@ -134,18 +126,13 @@ PROGRAM MAIN
    CALL CPU_TIME(start)
 
    DO n_t_global = 0, n_t_final
-IF(n_t_global .EQ. 209) STOP
      WRITE(*,*) "Time Step: ", n_t_global
      BD_InputTimes(2) = BD_InputTimes(1) 
      BD_InputTimes(1) = t_global + dt_global
      BD_OutputTimes(2) = BD_OutputTimes(1) 
      BD_OutputTimes(1) = t_global + dt_global
      CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_InitInput, ErrStat, ErrMsg)
-temp_cc(1:3) = FilteredInput(n_t_global + 2, 1:3)
-CALL BD_CrvMatrixR(temp_cc,BD_Input(1)%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
      CALL BD_InputSolve( BD_InputTimes(2), BD_Input(2), BD_Parameter, BD_InitInput, ErrStat, ErrMsg)
-temp_cc(1:3) = FilteredInput(n_t_global + 1, 1:3)
-CALL BD_CrvMatrixR(temp_cc,BD_Input(2)%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
         CALL CheckError()
 
      CALL BD_CalcOutput( t_global, BD_Input(2), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
@@ -266,28 +253,6 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
    CALL BD_CrvMatrixR(temp_vec,u%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
    temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
    u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
-IF( t .LT. 0.199D0) THEN
-   u%RootMotion%Orientation(1,1,1) = 0.999089
-   u%RootMotion%Orientation(1,2,1) =-0.035618
-   u%RootMotion%Orientation(1,3,1) =-0.023508
-   u%RootMotion%Orientation(2,1,1) = 0.042103
-   u%RootMotion%Orientation(2,2,1) = 0.912655
-   u%RootMotion%Orientation(2,3,1) = 0.406556
-   u%RootMotion%Orientation(3,1,1) = 0.006973
-   u%RootMotion%Orientation(3,2,1) =-0.407176
-   u%RootMotion%Orientation(3,3,1) = 0.913323
-ELSE
-   u%RootMotion%Orientation(1,1,1) = 0.998998
-   u%RootMotion%Orientation(1,2,1) =-0.037533
-   u%RootMotion%Orientation(1,3,1) =-0.024363
-   u%RootMotion%Orientation(2,1,1) = 0.044200
-   u%RootMotion%Orientation(2,2,1) = 0.912561
-   u%RootMotion%Orientation(2,3,1) = 0.406545
-   u%RootMotion%Orientation(3,1,1) = 0.006973
-   u%RootMotion%Orientation(3,2,1) =-0.407215
-   u%RootMotion%Orientation(3,3,1) = 0.913306
-ENDIF
-
 
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%TranslationDisp(:,1) = temp_rr(:) - temp_r0(:)
