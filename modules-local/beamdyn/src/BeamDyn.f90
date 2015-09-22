@@ -2817,11 +2817,15 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
            ENDDO
        ENDDO
 
+WRITE(100,*) 'igp',igp
+!WRITE(100,*) 'Fc',Fc
        DO i=1,node_elem
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
                elf(temp_id1) = elf(temp_id1) - hpx(i)*Fc(j)*Jacobian*gw(igp)
+WRITE(100,*) 'temp1',hpx(i)*Fc(j)*Jacobian*gw(igp)
                elf(temp_id1) = elf(temp_id1) - hhx(i)*Fd(j)*Jacobian*gw(igp)
+WRITE(100,*) 'temp2',hhx(i)*Fd(j)*Jacobian*gw(igp)
            ENDDO
        ENDDO
 
