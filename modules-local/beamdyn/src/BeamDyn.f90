@@ -321,9 +321,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                   (MOD(j-2,p%refine) + 1)
            ENDIF
        ENDDO
-       DO j=1,p%ngp
-           p%GL(j) = 2.0D0 * p%GL(j) - 1.0D0
-       ENDDO
    ENDIF
 
    DO i=1,p%elem_total
@@ -2447,6 +2444,28 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,
            DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j+1)
        ENDDO
 
+WRITE(90,*) 'uuN0'
+WRITE(90,*) uuN0(:,nelem)
+WRITE(90,*) 'Nuuu'
+WRITE(90,*) Nuuu
+WRITE(90,*) 'rrN0'
+WRITE(90,*) rrN0(:,nelem)
+WRITE(90,*) 'Nrrr'
+WRITE(90,*) Nrrr
+WRITE(90,*) 'Nvvv'
+WRITE(90,*) Nvvv
+WRITE(90,*) 'gw'
+WRITE(90,*) gw
+WRITE(90,*) 'hhx'
+WRITE(90,*) hhx 
+WRITE(90,*) 'hpx'
+WRITE(90,*) hpx 
+WRITE(90,*) 'Jacobian'
+WRITE(90,*) Jacobian(:,nelem)
+WRITE(90,*) 'uu0'
+WRITE(90,*) uu0(:,nelem)
+WRITE(90,*) 'E10'
+WRITE(90,*) E10(:,nelem)
        CALL BD_ElementMatrixAcc(uuN0(:,nelem),Nuuu,rrN0(:,nelem),Nrrr,Nvvv,&
                                 EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                                 ngp,gw,hhx,hpx,Jacobian(:,nelem),uu0(:,nelem),E10(:,nelem),&
@@ -4286,6 +4305,10 @@ WRITE(*,*) OtherState%acc
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    ! find x, acc, and xcc at t+dt
+WRITE(91,*) 'x%q'
+WRITE(91,*) x%q
+WRITE(91,*) 'x%dqdt'
+WRITE(91,*) x%dqdt
    CALL BD_DynamicSolutionGA2( p%uuN0,p%rrN0,x%q,x%dqdt,OtherState%acc,OtherState%xcc,&
                                p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,              &
                                p%damp_flag,p%beta,                                    &
@@ -5388,7 +5411,7 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
                hhx,hpx,TZw,Jacobian,&
                ErrStat,ErrMsg)
 
-   REAL(ReKi),         INTENT(IN   ):: GL(:)     ! GL(Gauss) point locations
+   REAL(ReKi),         INTENT(INOUT):: GL(:)     ! GL(Gauss) point locations
    REAL(ReKi),         INTENT(IN   ):: GLL(:)     ! GLL point locations
    REAL(ReKi),         INTENT(IN   ):: uuN0(:,:) ! Initial position vector
    INTEGER(IntKi),     INTENT(IN   ):: quadrature ! Quadrature method
@@ -5450,6 +5473,7 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
                TZw(j) = 0.5D0 * (temp2 - temp1)
            ENDIF
        ENDDO
+       GL(:) = 2.0D0*GL(:) - 1.0D0
    ENDIF
 
    CALL BD_diffmtc(node_elem-1,ngp,GL,GLL,hhx,hpx,ErrStat2,ErrMsg2)
