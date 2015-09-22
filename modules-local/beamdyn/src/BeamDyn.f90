@@ -2473,6 +2473,14 @@ WRITE(90,*) E10(:,nelem)
                                 elf,elm,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+WRITE(91,*) 'elm'
+DO i=1,dof_total
+WRITE(91,*) i,elm(i,:)
+ENDDO
+WRITE(91,*) 'elf'
+DO i=1,dof_total
+WRITE(91,*) i,elf(i)
+ENDDO
        CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,&
                               elm,MassM,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4305,10 +4313,6 @@ WRITE(*,*) OtherState%acc
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    ! find x, acc, and xcc at t+dt
-WRITE(91,*) 'x%q'
-WRITE(91,*) x%q
-WRITE(91,*) 'x%dqdt'
-WRITE(91,*) x%dqdt
    CALL BD_DynamicSolutionGA2( p%uuN0,p%rrN0,x%q,x%dqdt,OtherState%acc,OtherState%xcc,&
                                p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,              &
                                p%damp_flag,p%beta,                                    &
