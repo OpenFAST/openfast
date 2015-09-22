@@ -123,7 +123,7 @@ PROGRAM MAIN
    CALL CPU_TIME(start)
 
    DO n_t_global = 0, n_t_final
-IF(n_t_global .EQ. 1) STOP
+!IF(n_t_global .EQ. 1) STOP
      WRITE(*,*) "Time Step: ", n_t_global
      BD_InputTimes(2) = BD_InputTimes(1) 
      BD_InputTimes(1) = t_global + dt_global
@@ -563,7 +563,7 @@ SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output, errStat, errMsg)
       ! time
    write( tmpStr, '(F15.6)' ) t
    call WrFileNR( OutUnit, tmpStr )
-   call WrReAryFileNR ( OutUnit, Output%WriteOutput,  frmt, errStat, errMsg )
+   call WrNumAryFileNR ( OutUnit, Output%WriteOutput,  frmt, errStat, errMsg )
    if ( errStat >= AbortErrLev ) return
    
      ! write a new line (advance to the next line)

@@ -575,18 +575,18 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDDO
    ENDDO
-WRITE(*,*) 'Shape'
-DO i=1,p%node_elem
-WRITE(*,*) p%Shp(i,:)
-ENDDO
-WRITE(*,*) 'Derivative'
-DO i=1,p%node_elem
-WRITE(*,*) p%Der(i,:)
-ENDDO
-WRITE(*,*) 'Jacobian'
-DO i=1,p%elem_total
-WRITE(*,*) p%Jacobian(:,i)
-ENDDO
+!WRITE(*,*) 'Shape'
+!DO i=1,p%node_elem
+!WRITE(*,*) p%Shp(i,:)
+!ENDDO
+!WRITE(*,*) 'Derivative'
+!DO i=1,p%node_elem
+!WRITE(*,*) p%Der(i,:)
+!ENDDO
+!WRITE(*,*) 'Jacobian'
+!DO i=1,p%elem_total
+!WRITE(*,*) p%Jacobian(:,i)
+!ENDDO
    !CALL WrScr( "Finished reading input" )
    ! Allocate continuous states
    CALL AllocAry(x%q,p%dof_total,'x%q',ErrStat2,ErrMsg2)
@@ -929,9 +929,9 @@ ENDDO
    CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-!   CALL BD_ComputeBladeMassNew(p%uuN0,p%Mass0_GL,p%Gauss,p%elem_total,p%node_elem,p%dof_total,&
-!                               p%dof_node,p%ngp,p%quadrature,p%station_eta,p%kp_member,p%refine,&
-!                               p%blade_mass,p%blade_CG,p%blade_IN,ErrStat2,ErrMsg2)
+   CALL BD_ComputeBladeMassNew(p%uuN0,p%Mass0_GL,p%Gauss,p%elem_total,p%node_elem,p%dof_total,&
+                               p%dof_node,p%ngp,p%GLw,p%Shp,p%Der,p%Jacobian,&
+                               p%blade_mass,p%blade_CG,p%blade_IN,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CalcIC(u_tmp,p,x,OtherState,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
