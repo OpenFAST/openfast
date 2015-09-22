@@ -557,13 +557,13 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        p%GL(j) = 2.0D0 * p%GL(j) - 1.0D0
    ENDDO
 
-WRITE(*,*) 'p%GL'
-WRITE(*,*) p%GL
-WRITE(*,*) 'p%GLw'
-WRITE(*,*) p%GLw
-WRITE(*,*) 'p%Jacobian'
-WRITE(*,*) p%Jacobian(:,1)
-STOP
+!WRITE(*,*) 'p%GL'
+!WRITE(*,*) p%GL
+!WRITE(*,*) 'p%GLw'
+!WRITE(*,*) p%GLw
+!WRITE(*,*) 'p%Jacobian'
+!WRITE(*,*) p%Jacobian(:,1)
+!STOP
    CALL AllocAry(p%rrN0,(p%dof_node*p%node_elem)/2,p%elem_total,'p%Nrr0',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%uu0,p%dof_node*p%ngp,p%elem_total,'p%uu0',ErrStat2,ErrMsg2)
@@ -2454,6 +2454,8 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,
                                 elf,elm,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+WRITE(*,*) 'elf'
+WRITE(*,*) elf
 
        CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,&
                               elm,MassM,ErrStat2,ErrMsg2)
@@ -2618,12 +2620,15 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                ENDDO
            ENDDO
        ENDDO
-
+WRITE(90,*) 'igp',igp
+WRITE(90,*) 'Fc',Fc
        DO i=1,node_elem
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
                elf(temp_id1) = elf(temp_id1) - hpx(i,igp)*Fc(j)*gw(igp)
+WRITE(90,*) 'temp1',hpx(i,igp)*Fc(j)*gw(igp)
                elf(temp_id1) = elf(temp_id1) - hhx(i,igp)*Fd(j)*Jaco(igp)*gw(igp)
+WRITE(90,*) 'temp2',hhx(i,igp)*Fd(j)*Jaco(igp)*gw(igp)
            ENDDO
        ENDDO
 
