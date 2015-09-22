@@ -2592,13 +2592,26 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
            ENDDO
        ENDIF
 
-
+WRITE(100,*) 'uuN0'
+WRITE(100,*) Nuu0
+WRITE(100,*) 'Nuuu'
+WRITE(100,*) Nuuu
+WRITE(100,*) 'rrN0'
+WRITE(100,*) Nrr0
+WRITE(100,*) 'Nrrr'
+WRITE(100,*) Nrrr
+WRITE(100,*) 'Nvvv'
+WRITE(100,*) Nvvv
        CALL BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                                 EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                                 nqp,quadrature,trapezoidal_pos,trapezoidal_w,&
                                 node_elem,dof_node,damp_flag,beta,&
                                 elf,elm,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+WRITE(101,*) 'elm'
+WRITE(101,*) elm
+WRITE(101,*) 'elf'
+WRITE(101,*) elf
        IF(quadrature .EQ. 2) THEN
            DEALLOCATE(EStif0_GL)
            DEALLOCATE(EMass0_GL)
