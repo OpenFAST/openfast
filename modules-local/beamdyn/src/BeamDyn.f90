@@ -321,7 +321,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                   (MOD(j-2,p%refine) + 1)
            ENDIF
        ENDDO
-       p%GL(:) = 2.0D0 * p%GL(:) - 1.0D0
    ENDIF
 
    DO i=1,p%elem_total
@@ -553,6 +552,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            p%refine,p%kp_member,                         &
            p%Shp,p%Der,p%GLw,p%Jacobian,                 &
            ErrStat2,ErrMsg2)
+
+   DO j=1,p%ngp
+       p%GL(j) = 2.0D0 * p%GL(j) - 1.0D0
+   ENDDO
 
    CALL AllocAry(p%rrN0,(p%dof_node*p%node_elem)/2,p%elem_total,'p%Nrr0',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4250,6 +4253,9 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       OtherState%InitAcc = .true. 
+WRITE(*,*) 'OS%acc'
+WRITE(*,*) OtherState%acc(:)
+STOP
    end if
 
    CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
