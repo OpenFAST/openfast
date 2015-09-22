@@ -2599,8 +2599,6 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
                                 node_elem,dof_node,damp_flag,beta,&
                                 elf,elm,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-WRITE(*,*) 'elf'
-WRITE(*,*) elf
        IF(quadrature .EQ. 2) THEN
            DEALLOCATE(EStif0_GL)
            DEALLOCATE(EMass0_GL)
@@ -2817,15 +2815,11 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
            ENDDO
        ENDDO
 
-WRITE(100,*) 'igp',igp
-!WRITE(100,*) 'Fc',Fc
        DO i=1,node_elem
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
                elf(temp_id1) = elf(temp_id1) - hpx(i)*Fc(j)*Jacobian*gw(igp)
-WRITE(100,*) 'temp1',hpx(i)*Fc(j)*Jacobian*gw(igp)
                elf(temp_id1) = elf(temp_id1) - hhx(i)*Fd(j)*Jacobian*gw(igp)
-WRITE(100,*) 'temp2',hhx(i)*Fd(j)*Jacobian*gw(igp)
            ENDDO
        ENDDO
 
@@ -4892,7 +4886,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       OtherState%InitAcc = .true. 
 WRITE(*,*) 'OS%acc'
 WRITE(*,*) OtherState%acc(:)
-STOP
+!STOP
    end if
 
    CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -4947,6 +4941,10 @@ STOP
                                ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
+WRITE(*,*) 'x%q'
+WRITE(*,*) x%q
+WRITE(*,*) 'x%dqdt'
+WRITE(*,*) x%dqdt
    call cleanup()
    return
    
