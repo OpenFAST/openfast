@@ -2634,8 +2634,10 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
 WRITE(91,*) 'Fc',igp,Fc
 WRITE(91,*) 'Fd',igp,Fd
 WRITE(91,*) 'Fb',igp,Fb
+WRITE(91,*) 'Distr',igp,DistrLoad_GL(:,igp)
 WRITE(91,*) 'Fg',igp,Fg
        Fd(:) = Fd(:) + Fb(:) - DistrLoad_GL(:,igp) - Fg(:)
+WRITE(91,*) 'Fd',igp,Fd
 
        DO i=1,node_elem
            DO j=1,node_elem
