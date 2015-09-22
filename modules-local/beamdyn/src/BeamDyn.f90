@@ -2592,11 +2592,6 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
            ENDDO
        ENDIF
 
-WRITE(*,*) 'Trapezoidal_pos'
-WRITE(*,*) trapezoidal_pos
-WRITE(*,*) 'Trapezoidal_w'
-WRITE(*,*) trapezoidal_w
-STOP
 
        CALL BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                                 EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
@@ -4889,6 +4884,9 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       OtherState%InitAcc = .true. 
+WRITE(*,*) 'OS%acc'
+WRITE(*,*) OtherState%acc(:)
+STOP
    end if
 
    CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
