@@ -2631,6 +2631,10 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDIF
 
+WRITE(91,*) 'Fc',igp,Fc
+WRITE(91,*) 'Fd',igp,Fd
+WRITE(91,*) 'Fb',igp,Fb
+WRITE(91,*) 'Fg',igp,Fg
        Fd(:) = Fd(:) + Fb(:) - DistrLoad_GL(:,igp) - Fg(:)
 
        DO i=1,node_elem
@@ -2644,15 +2648,11 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                ENDDO
            ENDDO
        ENDDO
-WRITE(91,*) 'Fc',Fc
-WRITE(91,*) 'Fd',Fd
        DO i=1,node_elem
            DO j=1,dof_node
                temp_id1 = (i-1) * dof_node+j
                elf(temp_id1) = elf(temp_id1) - hpx(i,igp)*Fc(j)*gw(igp)
-WRITE(91,*) 'temp1',hpx(i,igp)*Fc(j)*gw(igp)
                elf(temp_id1) = elf(temp_id1) - hhx(i,igp)*Fd(j)*Jaco(igp)*gw(igp)
-WRITE(91,*) 'temp2',hhx(i,igp)*Fd(j)*Jaco(igp)*gw(igp)
            ENDDO
        ENDDO
 
