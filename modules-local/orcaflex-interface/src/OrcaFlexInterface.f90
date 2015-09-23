@@ -1136,48 +1136,48 @@ SUBROUTINE SetAllOuts( ParamData, OutData, OtherState, ErrStat, ErrMsg )
 
 
       ! Set the values
-   OtherState%AllOuts(  OrcaFxi  )  =  OutData%PtfmMesh%Force(1,1)
-   OtherState%AllOuts(  OrcaFyi  )  =  OutData%PtfmMesh%Force(2,1)
-   OtherState%AllOuts(  OrcaFzi  )  =  OutData%PtfmMesh%Force(3,1)
-   OtherState%AllOuts(  OrcaMxi  )  =  OutData%PtfmMesh%Moment(1,1)
-   OtherState%AllOuts(  OrcaMyi  )  =  OutData%PtfmMesh%Moment(2,1)
-   OtherState%AllOuts(  OrcaMzi  )  =  OutData%PtfmMesh%Moment(3,1)
+   OtherState%AllOuts(  OrcaFxi  )  =  OutData%PtfmMesh%Force(1,1)/1000_ReKi
+   OtherState%AllOuts(  OrcaFyi  )  =  OutData%PtfmMesh%Force(2,1)/1000_ReKi
+   OtherState%AllOuts(  OrcaFzi  )  =  OutData%PtfmMesh%Force(3,1)/1000_ReKi
+   OtherState%AllOuts(  OrcaMxi  )  =  OutData%PtfmMesh%Moment(1,1)/1000_ReKi
+   OtherState%AllOuts(  OrcaMyi  )  =  OutData%PtfmMesh%Moment(2,1)/1000_ReKi
+   OtherState%AllOuts(  OrcaMzi  )  =  OutData%PtfmMesh%Moment(3,1)/1000_ReKi
 
-   OtherState%AllOuts(  OrcaFHFxi  )  =  OtherState%PtfmFT(1)
-   OtherState%AllOuts(  OrcaFHFyi  )  =  OtherState%PtfmFT(2)
-   OtherState%AllOuts(  OrcaFHFzi  )  =  OtherState%PtfmFT(3)
-   OtherState%AllOuts(  OrcaFHMxi  )  =  OtherState%PtfmFT(4)
-   OtherState%AllOuts(  OrcaFHMyi  )  =  OtherState%PtfmFT(5)
-   OtherState%AllOuts(  OrcaFHMzi  )  =  OtherState%PtfmFT(6)
+   OtherState%AllOuts(  OrcaFHFxi  )  =  OtherState%PtfmFT(1)/1000_ReKi
+   OtherState%AllOuts(  OrcaFHFyi  )  =  OtherState%PtfmFT(2)/1000_ReKi
+   OtherState%AllOuts(  OrcaFHFzi  )  =  OtherState%PtfmFT(3)/1000_ReKi
+   OtherState%AllOuts(  OrcaFHMxi  )  =  OtherState%PtfmFT(4)/1000_ReKi
+   OtherState%AllOuts(  OrcaFHMyi  )  =  OtherState%PtfmFT(5)/1000_ReKi
+   OtherState%AllOuts(  OrcaFHMzi  )  =  OtherState%PtfmFT(6)/1000_ReKi
 
-   OtherState%AllOuts(  OrcaAMFxi  )  =  OtherState%F_PtfmAM(1)
-   OtherState%AllOuts(  OrcaAMFyi  )  =  OtherState%F_PtfmAM(2)
-   OtherState%AllOuts(  OrcaAMFzi  )  =  OtherState%F_PtfmAM(3)
-   OtherState%AllOuts(  OrcaAMMxi  )  =  OtherState%F_PtfmAM(4)
-   OtherState%AllOuts(  OrcaAMMyi  )  =  OtherState%F_PtfmAM(5)
-   OtherState%AllOuts(  OrcaAMMzi  )  =  OtherState%F_PtfmAM(6)
+   OtherState%AllOuts(  OrcaAMFxi  )  =  OtherState%F_PtfmAM(1)/1000_ReKi
+   OtherState%AllOuts(  OrcaAMFyi  )  =  OtherState%F_PtfmAM(2)/1000_ReKi
+   OtherState%AllOuts(  OrcaAMFzi  )  =  OtherState%F_PtfmAM(3)/1000_ReKi
+   OtherState%AllOuts(  OrcaAMMxi  )  =  OtherState%F_PtfmAM(4)/1000_ReKi
+   OtherState%AllOuts(  OrcaAMMyi  )  =  OtherState%F_PtfmAM(5)/1000_ReKi
+   OtherState%AllOuts(  OrcaAMMzi  )  =  OtherState%F_PtfmAM(6)/1000_ReKi
 
       ! Set the values for the WriteOutput array
-   OutData%WriteOutput(  OrcaFxi  )  =  OutData%PtfmMesh%Force(1,1)
-   OutData%WriteOutput(  OrcaFyi  )  =  OutData%PtfmMesh%Force(2,1)
-   OutData%WriteOutput(  OrcaFzi  )  =  OutData%PtfmMesh%Force(3,1)
-   OutData%WriteOutput(  OrcaMxi  )  =  OutData%PtfmMesh%Moment(1,1)
-   OutData%WriteOutput(  OrcaMyi  )  =  OutData%PtfmMesh%Moment(2,1)
-   OutData%WriteOutput(  OrcaMzi  )  =  OutData%PtfmMesh%Moment(3,1)
+   OutData%WriteOutput(  OrcaFxi  )  =  OutData%PtfmMesh%Force(1,1)/1000_ReKi
+   OutData%WriteOutput(  OrcaFyi  )  =  OutData%PtfmMesh%Force(2,1)/1000_ReKi
+   OutData%WriteOutput(  OrcaFzi  )  =  OutData%PtfmMesh%Force(3,1)/1000_ReKi
+   OutData%WriteOutput(  OrcaMxi  )  =  OutData%PtfmMesh%Moment(1,1)/1000_ReKi
+   OutData%WriteOutput(  OrcaMyi  )  =  OutData%PtfmMesh%Moment(2,1)/1000_ReKi
+   OutData%WriteOutput(  OrcaMzi  )  =  OutData%PtfmMesh%Moment(3,1)/1000_ReKi
 
-   OutData%WriteOutput(  OrcaFHFxi  )  =  OtherState%PtfmFT(1)
-   OutData%WriteOutput(  OrcaFHFyi  )  =  OtherState%PtfmFT(2)
-   OutData%WriteOutput(  OrcaFHFzi  )  =  OtherState%PtfmFT(3)
-   OutData%WriteOutput(  OrcaFHMxi  )  =  OtherState%PtfmFT(4)
-   OutData%WriteOutput(  OrcaFHMyi  )  =  OtherState%PtfmFT(5)
-   OutData%WriteOutput(  OrcaFHMzi  )  =  OtherState%PtfmFT(6)
+   OutData%WriteOutput(  OrcaFHFxi  )  =  OtherState%PtfmFT(1)/1000_ReKi
+   OutData%WriteOutput(  OrcaFHFyi  )  =  OtherState%PtfmFT(2)/1000_ReKi
+   OutData%WriteOutput(  OrcaFHFzi  )  =  OtherState%PtfmFT(3)/1000_ReKi
+   OutData%WriteOutput(  OrcaFHMxi  )  =  OtherState%PtfmFT(4)/1000_ReKi
+   OutData%WriteOutput(  OrcaFHMyi  )  =  OtherState%PtfmFT(5)/1000_ReKi
+   OutData%WriteOutput(  OrcaFHMzi  )  =  OtherState%PtfmFT(6)/1000_ReKi
 
-   OutData%WriteOutput(  OrcaAMFxi  )  =  OtherState%F_PtfmAM(1)
-   OutData%WriteOutput(  OrcaAMFyi  )  =  OtherState%F_PtfmAM(2)
-   OutData%WriteOutput(  OrcaAMFzi  )  =  OtherState%F_PtfmAM(3)
-   OutData%WriteOutput(  OrcaAMMxi  )  =  OtherState%F_PtfmAM(4)
-   OutData%WriteOutput(  OrcaAMMyi  )  =  OtherState%F_PtfmAM(5)
-   OutData%WriteOutput(  OrcaAMMzi  )  =  OtherState%F_PtfmAM(6)
+   OutData%WriteOutput(  OrcaAMFxi  )  =  OtherState%F_PtfmAM(1)/1000_ReKi
+   OutData%WriteOutput(  OrcaAMFyi  )  =  OtherState%F_PtfmAM(2)/1000_ReKi
+   OutData%WriteOutput(  OrcaAMFzi  )  =  OtherState%F_PtfmAM(3)/1000_ReKi
+   OutData%WriteOutput(  OrcaAMMxi  )  =  OtherState%F_PtfmAM(4)/1000_ReKi
+   OutData%WriteOutput(  OrcaAMMyi  )  =  OtherState%F_PtfmAM(5)/1000_ReKi
+   OutData%WriteOutput(  OrcaAMMzi  )  =  OtherState%F_PtfmAM(6)/1000_ReKi
 
 
 END SUBROUTINE SetAllOuts
