@@ -38,7 +38,7 @@ Module SubDyn
    !       this will add additional matrices to the SubDyn summary file.
    !............................
 
-   TYPE(ProgDesc), PARAMETER  :: SD_ProgDesc = ProgDesc( 'SubDyn', 'v1.01.02a-rrd', '27-Feb-2015' )
+   TYPE(ProgDesc), PARAMETER  :: SD_ProgDesc = ProgDesc( 'SubDyn', 'v1.02.00a-rrd', '23-Sep-2015' )
       
    ! ..... Public Subroutines ...................................................................................................
 
@@ -941,7 +941,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
             y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
             IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
                OtherState%SDWrOutput(I) = y%WriteOutput(I)            
-                  END IF                        
+            END IF                        
          END DO
          
          OtherState%LastOutTime   = t
