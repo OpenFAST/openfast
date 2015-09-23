@@ -1313,7 +1313,7 @@ ELSE   !CBMOD=FALSE  : all modes are retained, not sure how many they are yet
 
 ENDIF
 
-IF (p%Nmodes > 0) THEN
+IF ((p%Nmodes > 0) .OR. (.NOT.(Init%CBMod))) THEN !This if should not be at all, dampings should be divided by 100 regardless, also if CBmod=false p%Nmodes is undefined, but if Nmodes=0 then JDampings does not exist
    Init%JDampings = Init%JDampings/100.0_ReKi   !now the 20 is .20 as it should in all cases for 1 or Nmodes JDampings
 END IF
 
