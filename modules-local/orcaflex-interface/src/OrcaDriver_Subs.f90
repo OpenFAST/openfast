@@ -1888,7 +1888,7 @@ END SUBROUTINE AddedMass_OutputWrite
 
 
 SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName, Initialized, AnglesInDegrees, TotalPoints, &
-                     Time, u_PtfmMesh, y_PtfmMesh,  ErrStat, ErrMsg)
+                     Time, InitOutData, p, u, y, ErrStat, ErrMsg)
 
    TYPE(ProgDesc),                     INTENT(IN   )  :: ProgInfo             !< Program info
    INTEGER(IntKi),                     INTENT(INOUT)  :: OutUnit              !< Output Unit number
@@ -1898,8 +1898,10 @@ SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName
    LOGICAL,                            INTENT(IN   )  :: AnglesInDegrees      !< The angles are in degrees.
    INTEGER(IntKi),                     INTENT(IN   )  :: TotalPoints          !< The total number of points in the points file
    REAL(DbKi),                         INTENT(IN   )  :: Time                 !< Current time
-   TYPE(MeshType),                     INTENT(IN   )  :: u_PtfmMesh           !< u%PtfmMesh
-   TYPE(MeshType),                     INTENT(IN   )  :: y_PtfmMesh           !< y%PtfmMesh
+   TYPE(Orca_InitOutputType),          INTENT(IN   )  :: InitOutData          !< InitOutData -- need the header info
+   TYPE(Orca_ParameterType),           INTENT(IN   )  :: p                    !< p
+   TYPE(Orca_InputType),               INTENT(IN   )  :: u                    !< u
+   TYPE(Orca_OutputType),              INTENT(IN   )  :: y                    !< y
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< returns a non-zero value when an error occurs
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message if ErrStat /= ErrID_None
 
@@ -1909,6 +1911,7 @@ SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName
    CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary variable for the error message
    INTEGER(IntKi)                                     :: LenErrMsgTmp         !< Length of ErrMsgTmp (for getting WindGrid info)
    REAL(ReKi)                                         :: rotdisp(3)           !< Rotational displacement (euler angles)
+   INTEGER(IntKi)                                     :: I                    !< Generic counter
 
    CHARACTER(47)                                      :: PointsOutputFmt      !< Format specifier for the output file for wave elevation series
    CHARACTER(3)                                       :: AngleUnit            !< Units for the angle
@@ -1946,43 +1949,52 @@ SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName
                                                       'file '//TRIM(InputFileName)//'.'
       ENDIF
       WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
-      WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp  )  '#   Time   '//  &
+      CALL WrFileNR( OutUnit,                      '#   Time     '//  &
                                                    '   TDxi         TDyi         TDzi      '       //  &
                                                    '   RDxi         RDyi         RDzi      '       //  &
                                                    '   TVxi         TVyi         TVzi      '       //  &
-                                                   '   RVxi         RVyi         RVzi      '       //  &
-                                                   '   Fxi          Fyi          Fzi       '       //  &
-                                                   '   Mxi          Myi          Mzi'
-      WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp  )  '#   (s)    '//  &
+                                                   '   RVxi         RVyi         RVzi      '          )
+      DO I=1,SIZE(InitOutData%WriteOutputHdr)
+         CALL WrFileNR ( OutUnit, '   '//InitOutData%WriteOutputHdr(I) )
+      ENDDO ! I
+      WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp ) ''
+
+
+
+      CALL WrFileNR( OutUnit,                      '#   (s)      '//  &
                                                    '   (m)          (m)          (m)       '       //  &
                                                    '   ('//AngleUnit//')        ('//AngleUnit//')        ('//AngleUnit//')     '//  &
                                                    '   (m/s)        (m/s)        (m/s)     '       //  &
-                                                   '   ('//AngleUnit//'/s)      ('//AngleUnit//'/s)      ('//AngleUnit//'/s)   '//  &
-                                                   '   (kN)         (kN)         (kN)     '        //  &
-                                                   '   (kN m)       (kN m)       (kN m)'
+                                                   '   ('//AngleUnit//'/s)      ('//AngleUnit//'/s)      ('//AngleUnit//'/s)   ' )
+      DO I=1,SIZE(InitOutData%WriteOutputHdr)
+         CALL WrFileNR ( OutUnit, '   '//InitOutData%WriteOutputUnt(I) )
+      ENDDO ! I
+      WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp ) ''
    ENDIF
 
 
-   rotdisp = GetSmllRotAngs ( u_PtfmMesh%Orientation(:,:,1), ErrStatTmp, ErrMsgTmp )
+   rotdisp = GetSmllRotAngs ( u%PtfmMesh%Orientation(:,:,1), ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
 
 
    IF ( AnglesInDegrees ) THEN
-      WRITE (OutUnit,PointsOutputFmt, IOSTAT=ErrStatTmp )      Time,                                                    &
-                     u_PtfmMesh%TranslationDisp(1,1), u_PtfmMesh%TranslationDisp(2,1), u_PtfmMesh%TranslationDisp(3,1), &
-                     rotdisp(1)*R2D,                  rotdisp(2)*R2D,                  rotdisp(3)*R2D,                  &
-                     u_PtfmMesh%TranslationVel(1,1),  u_PtfmMesh%TranslationVel(2,1),  u_PtfmMesh%TranslationVel(3,1),  &
-                     u_PtfmMesh%RotationVel(1,1)*R2D, u_PtfmMesh%RotationVel(2,1)*R2D, u_PtfmMesh%RotationVel(3,1)*R2D, &
-                     y_PtfmMesh%Force(1,1)/1000_ReKi, y_PtfmMesh%Force(2,1)/1000_ReKi, y_PtfmMesh%Force(3,1)/1000_ReKi, &
-                     y_PtfmMesh%Moment(1,1)/1000_ReKi,y_PtfmMesh%Moment(2,1)/1000_ReKi,y_PtfmMesh%Moment(3,1)/1000_ReKi
+      CALL WrNumAryFileNR( OutUnit,   (/ REAL(Time, ReKi),                                                                    &
+                     u%PtfmMesh%TranslationDisp(1,1), u%PtfmMesh%TranslationDisp(2,1), u%PtfmMesh%TranslationDisp(3,1),       &
+                     rotdisp(1)*R2D,                  rotdisp(2)*R2D,                  rotdisp(3)*R2D,                        &
+                     u%PtfmMesh%TranslationVel(1,1),  u%PtfmMesh%TranslationVel(2,1),  u%PtfmMesh%TranslationVel(3,1),        &
+                     u%PtfmMesh%RotationVel(1,1)*R2D, u%PtfmMesh%RotationVel(2,1)*R2D, u%PtfmMesh%RotationVel(3,1)*R2D  /),   &
+                     '3x,ES10.3E2', ErrStatTmp, ErrMsgTmp )
+      CALL WrNumAryFileNR( OutUnit, y%WriteOutput, '3x,ES10.3E2', ErrStatTmp, ErrMsgTmp )
+      WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp ) ''
    ELSE
-      WRITE (OutUnit,PointsOutputFmt, IOSTAT=ErrStatTmp )      Time,                                                    &
-                     u_PtfmMesh%TranslationDisp(1,1), u_PtfmMesh%TranslationDisp(2,1), u_PtfmMesh%TranslationDisp(3,1), &
-                     rotdisp(1),                      rotdisp(2),                      rotdisp(3),                      &
-                     u_PtfmMesh%TranslationVel(1,1),  u_PtfmMesh%TranslationVel(2,1),  u_PtfmMesh%TranslationVel(3,1),  &
-                     u_PtfmMesh%RotationVel(1,1),     u_PtfmMesh%RotationVel(2,1),     u_PtfmMesh%RotationVel(3,1),     &
-                     y_PtfmMesh%Force(1,1)/1000_ReKi, y_PtfmMesh%Force(2,1)/1000_ReKi, y_PtfmMesh%Force(3,1)/1000_ReKi, &
-                     y_PtfmMesh%Moment(1,1)/1000_ReKi,y_PtfmMesh%Moment(2,1)/1000_ReKi,y_PtfmMesh%Moment(3,1)/1000_ReKi
+      CALL WrNumAryFileNR( OutUnit,   (/ REAL(Time, ReKi),                                                                    &
+                     u%PtfmMesh%TranslationDisp(1,1), u%PtfmMesh%TranslationDisp(2,1), u%PtfmMesh%TranslationDisp(3,1),       &
+                     rotdisp(1),                      rotdisp(2),                      rotdisp(3),                            &
+                     u%PtfmMesh%TranslationVel(1,1),  u%PtfmMesh%TranslationVel(2,1),  u%PtfmMesh%TranslationVel(3,1),        &
+                     u%PtfmMesh%RotationVel(1,1),     u%PtfmMesh%RotationVel(2,1),     u%PtfmMesh%RotationVel(3,1)      /),   &
+                     '3x,ES10.3E2', ErrStatTmp, ErrMsgTmp )
+      CALL WrNumAryFileNR( OutUnit, y%WriteOutput, '3x,ES10.3E2', ErrStatTmp, ErrMsgTmp )
+      WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp ) ''
    ENDIF
 
 

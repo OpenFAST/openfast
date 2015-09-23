@@ -118,7 +118,7 @@ MODULE OrcaFlexInterface
          USE, INTRINSIC :: ISO_C_BINDING, ONLY: C_FLOAT
          !DEC$ ATTRIBUTES STDCALL::OrcaFlexUserPtfmLdInitialise
          !DEC$ ATTRIBUTES ALIAS:'_OrcaFlexUserPtfmLdInitialise@8'::OrcaFlexUserPtfmLdInitialise
-         !GCC$ ATRIBUTES STDCALL :: OrcaFlexUserPtfmInitialise
+         !GCC$ ATTRIBUTES STDCALL :: OrcaFlexUserPtfmInitialise
          REAL(C_FLOAT),             INTENT(IN   )  :: DT
          REAL(C_FLOAT),             INTENT(IN   )  :: TMax
       END SUBROUTINE OrcaFlexUserPtfmLdInitialise
@@ -132,7 +132,7 @@ MODULE OrcaFlexInterface
          USE, INTRINSIC :: ISO_C_Binding, ONLY: C_FLOAT, C_CHAR
          !DEC$ ATTRIBUTES STDCALL::OrcaFlexUserPtfmLd
          !DEC$ ATTRIBUTES ALIAS:'_OrcaFlexUserPtfmLd@24'::OrcaFlexUserPtfmLd
-         !GCC$ ATRIBUTES STDCALL :: OrcaFlexUserPtfmLd
+         !GCC$ ATTRIBUTES STDCALL :: OrcaFlexUserPtfmLd
          CHARACTER(KIND=C_CHAR),    INTENT(IN   )  :: DirRoot
          REAL(C_FLOAT),             INTENT(IN   )  :: X(6)           !< Translational and rotational displacement (m, radians) relative to inertial frame.
          REAL(C_FLOAT),             INTENT(IN   )  :: XD(6)          !< Translational and rotational velocity (m/s, radians/s) relative to inertial frame.
@@ -150,7 +150,7 @@ MODULE OrcaFlexInterface
 #endif
          USE, INTRINSIC :: ISO_C_BINDING
          !DEC$ ATTRIBUTES DEFAULT, STDCALL, DECORATE, ALIAS: 'OrcaFlexUserPtfmLdFinalise'::OrcaFlexUserPtfmLdFinalise
-         !GCC$ ATRIBUTES STDCALL :: OrcaFlexUserPtfmLdFinalise
+         !GCC$ ATTRIBUTES STDCALL :: OrcaFlexUserPtfmLdFinalise
          ! There is no data to pass.
       END SUBROUTINE OrcaFlexUserPtfmLdFinalise
 

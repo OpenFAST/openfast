@@ -465,7 +465,7 @@ PROGRAM OrcaDriver
             ! Output the Points results for this timestep
          CALL PointsForce_OutputWrite( Settings%ProgInfo, Settings%PointsOutputUnit, Settings%PointsOutputName, Settings%PointsFileName,  &
                      SettingsFlags%PointsOutputInit, SettingsFlags%PointsDegrees, SIZE(PointsList,DIM=2),                                  &
-                     TimeNow, Orca_u%PtfmMesh, Orca_y%PtfmMesh, ErrStat, ErrMsg )
+                     TimeNow, Orca_InitOut, Orca_p, Orca_u, Orca_y, ErrStat, ErrMsg )
          
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL DriverCleanup()
@@ -531,7 +531,7 @@ PROGRAM OrcaDriver
 
             ! Call routine to write the output file for this one point
          CALL PointsForce_OutputWrite( Settings%ProgInfo, TmpUnit, TmpChar, TmpChar, TmpFlag, SettingsFlags%Degrees, 0,   &
-                     TimeNow, Orca_u%PtfmMesh, Orca_y%PtfmMesh, ErrStat, ErrMsg )
+                     TimeNow, Orca_InitOut, Orca_p, Orca_u, Orca_y, ErrStat, ErrMsg )
          CLOSE(TmpUnit)
 
             ! Make sure no errors occured that give us reason to terminate now.
