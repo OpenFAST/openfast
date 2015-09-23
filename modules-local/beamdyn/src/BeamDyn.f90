@@ -554,13 +554,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            ErrStat2,ErrMsg2)
 
 
-!WRITE(*,*) 'p%GL'
-!WRITE(*,*) p%GL
-!WRITE(*,*) 'p%GLw'
-!WRITE(*,*) p%GLw
-!WRITE(*,*) 'p%Jacobian'
-!WRITE(*,*) p%Jacobian(:,1)
-!STOP
    CALL AllocAry(p%rrN0,(p%dof_node*p%node_elem)/2,p%elem_total,'p%Nrr0',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%uu0,p%dof_node*p%ngp,p%elem_total,'p%uu0',ErrStat2,ErrMsg2)
@@ -583,19 +576,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDDO
    ENDDO
-!WRITE(*,*) 'Shape'
-!DO i=1,p%node_elem
-!WRITE(*,*) p%Shp(i,:)
-!ENDDO
-!WRITE(*,*) 'Derivative'
-!DO i=1,p%node_elem
-!WRITE(*,*) p%Der(i,:)
-!ENDDO
-!WRITE(*,*) 'Jacobian'
-!DO i=1,p%elem_total
-!WRITE(*,*) p%Jacobian(:,i)
-!ENDDO
-!STOP
    !CALL WrScr( "Finished reading input" )
    ! Allocate continuous states
    CALL AllocAry(x%q,p%dof_total,'x%q',ErrStat2,ErrMsg2)
@@ -1274,13 +1254,13 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
                                     p%Stif0_GL,p%Mass0_GL,p%gravity,u_tmp,                       &
                                     p%damp_flag,p%beta,                                          &
                                     p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,&
-                                    p%ngp,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
+                                    p%ngp,p%quadrature,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
                                     temp_Force,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ELSEIF(p%analysis_type .EQ. 1) THEN
        CALL BD_StaticSolutionForce( p%uuN0,p%rrN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,&
                p%gravity,u_tmp,p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,&
-               p%ngp,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
+               p%ngp,p%quadrature,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
                temp_Force,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ENDIF
@@ -2337,7 +2317,7 @@ END SUBROUTINE BD_UpdateDynamicGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,    &
                                         damp_flag,beta,                             &
-                                        gw,hhx,hpx,Jacobian,uu0,E10,               &
+                                        quadrature,gw,hhx,hpx,Jacobian,uu0,E10,     &
                                         elem_total,node_elem,dof_total,dof_node,ngp,&
                                         RHS,MassM,ErrStat,ErrMsg)
 !----------------------------------------------------------------------------------------
@@ -2353,6 +2333,7 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,
    TYPE(BD_InputType),INTENT(IN   ):: u           ! Inputs at t
    INTEGER(IntKi),    INTENT(IN   ):: damp_flag ! Total number of elements
    REAL(ReKi),        INTENT(IN   ):: beta(:)
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature ! Number of Gauss points
    REAL(ReKi),        INTENT(IN   ):: gw(:)
    REAL(ReKi),        INTENT(IN   ):: hhx(:,:)
    REAL(ReKi),        INTENT(IN   ):: hpx(:,:)
@@ -2436,36 +2417,19 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,
            return
        end if
 
-       temp_id = (nelem-1)*ngp
+       IF(quadrature .EQ. 1) THEN
+           temp_id = (nelem-1)*ngp + 1
+       ELSEIF(quadrature .EQ. 2) THEN
+           temp_id = (nelem-1)*ngp
+       ENDIF
+
        DO j=1,ngp
            EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
            EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
-           DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j+1)
-           DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j+1)
+           DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j)
+           DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
 
-WRITE(90,*) 'uuN0'
-WRITE(90,*) uuN0(:,nelem)
-WRITE(90,*) 'Nuuu'
-WRITE(90,*) Nuuu
-WRITE(90,*) 'rrN0'
-WRITE(90,*) rrN0(:,nelem)
-WRITE(90,*) 'Nrrr'
-WRITE(90,*) Nrrr
-WRITE(90,*) 'Nvvv'
-WRITE(90,*) Nvvv
-WRITE(90,*) 'gw'
-WRITE(90,*) gw
-WRITE(90,*) 'hhx'
-WRITE(90,*) hhx 
-WRITE(90,*) 'hpx'
-WRITE(90,*) hpx 
-WRITE(90,*) 'Jacobian'
-WRITE(90,*) Jacobian(:,nelem)
-WRITE(90,*) 'uu0'
-WRITE(90,*) uu0(:,nelem)
-WRITE(90,*) 'E10'
-WRITE(90,*) E10(:,nelem)
        CALL BD_ElementMatrixAcc(uuN0(:,nelem),Nuuu,rrN0(:,nelem),Nrrr,Nvvv,&
                                 EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                                 ngp,gw,hhx,hpx,Jacobian(:,nelem),uu0(:,nelem),E10(:,nelem),&
@@ -2473,14 +2437,6 @@ WRITE(90,*) E10(:,nelem)
                                 elf,elm,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-WRITE(91,*) 'elm'
-DO i=1,dof_total
-WRITE(91,*) i,elm(i,:)
-ENDDO
-WRITE(91,*) 'elf'
-DO i=1,dof_total
-WRITE(91,*) i,elf(i)
-ENDDO
        CALL BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,&
                               elm,MassM,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2631,13 +2587,7 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDIF
 
-WRITE(91,*) 'Fc',igp,Fc
-WRITE(91,*) 'Fd',igp,Fd
-WRITE(91,*) 'Fb',igp,Fb
-WRITE(91,*) 'Distr',igp,DistrLoad_GL(:,igp)
-WRITE(91,*) 'Fg',igp,Fg
        Fd(:) = Fd(:) + Fb(:) - DistrLoad_GL(:,igp) - Fg(:)
-WRITE(91,*) 'Fd',igp,Fd
 
        DO i=1,node_elem
            DO j=1,node_elem
@@ -2873,7 +2823,7 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN0,rrN0,uuN,vvN,aaN,     &
                                           Stif0,Mass0,gravity,u,&
                                           damp_flag,beta,       &
                                           elem_total,node_elem,dof_node,ngp,&
-                                          gw,hhx,hpx,Jaco,uu0,E10,&
+                                          quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                           RHS,ErrStat,ErrMsg)
 !----------------------------------------------------------------------------------------
 ! This subroutine computes Global mass matrix and force vector to 
@@ -2894,6 +2844,7 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN0,rrN0,uuN,vvN,aaN,     &
    INTEGER(IntKi),     INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),     INTENT(IN   ):: dof_node ! Degrees of freedom per node
    INTEGER(IntKi),     INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),     INTENT(IN   ):: quadrature ! Number of Gauss points
    REAL(ReKi),        INTENT(IN   ):: gw(:)
    REAL(ReKi),        INTENT(IN   ):: hhx(:,:)
    REAL(ReKi),        INTENT(IN   ):: hpx(:,:)
@@ -2966,12 +2917,17 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN0,rrN0,uuN,vvN,aaN,     &
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_ElemNodalDisp(aaN,node_elem,dof_node,nelem,Naaa,ErrStat2,ErrMsg2)
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       temp_id = (nelem-1)*ngp
+       IF(quadrature .EQ. 1) THEN
+           temp_id = (nelem-1)*ngp + 1
+       ELSEIF(quadrature .EQ. 2) THEN
+           temp_id = (nelem-1)*ngp
+       ENDIF
+
        DO j=1,ngp
            EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
            EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
-           DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j+1)
-           DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j+1)
+           DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j)
+           DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
 
        CALL BD_ElementMatrixForce(uuN0(:,nelem),Nuuu,rrN0(:,nelem),Nrrr,Nvvv,&
@@ -3014,7 +2970,7 @@ SUBROUTINE BD_DynamicSolutionForce(uuN0,rrN0,uuN,vvN,aaN,                       
                                    Stif0,Mass0,gravity,u,                                 &
                                    damp_flag,beta,                                        &
                                    node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
-                                   gw,hhx,hpx,Jaco,uu0,E10,&
+                                   quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                    Force,ErrStat,ErrMsg)
 !***************************************************************************************
 ! This subroutine calculates the finite-element nodal forces along the beam
@@ -3037,6 +2993,7 @@ SUBROUTINE BD_DynamicSolutionForce(uuN0,rrN0,uuN,vvN,aaN,                       
    INTEGER(IntKi),     INTENT(IN   ):: dof_total ! Total number of degrees of freedom
    INTEGER(IntKi),     INTENT(IN   ):: node_total ! Total number of nodes  ! bjj: NOT USED
    INTEGER(IntKi),     INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),     INTENT(IN   ):: quadrature
    REAL(ReKi),         INTENT(IN   ):: gw(:)
    REAL(ReKi),         INTENT(IN   ):: hhx(:,:)
    REAL(ReKi),         INTENT(IN   ):: hpx(:,:)
@@ -3059,7 +3016,7 @@ SUBROUTINE BD_DynamicSolutionForce(uuN0,rrN0,uuN,vvN,aaN,                       
                                        Stif0,Mass0,gravity,u,&
                                        damp_flag,beta,&
                                        elem_total,node_elem,dof_node,ngp,&
-                                       gw,hhx,hpx,Jaco,uu0,E10,&
+                                       quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                        Force,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -3492,7 +3449,7 @@ SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
            CALL BD_StaticSolution(p%uuN0,p%rrN0,x%q,p%Mass0_GL,p%Stif0_GL,&
                    gravity_temp,u_temp,p%node_elem,p%dof_node,p%elem_total,&
                    p%dof_total,p%node_total,&
-                   p%ngp,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
+                   p%ngp,p%quadrature,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
                    p%niter,p%tol,piter, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
            IF(p%niter .EQ. piter) EXIT
@@ -3531,7 +3488,7 @@ END SUBROUTINE BD_Static
 SUBROUTINE BD_StaticSolution( uuN0,rrN0,uuNf,Mass0,Stif0,gravity,u,&
                               node_elem,dof_node,elem_total,&
                               dof_total,node_total,ngp,&
-                              gw,hhx,hpx,Jaco,uu0,E10,            &
+                              quadrature,gw,hhx,hpx,Jaco,uu0,E10,            &
                               niter,tol,piter, ErrStat,ErrMsg)
 
    REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
@@ -3546,6 +3503,7 @@ SUBROUTINE BD_StaticSolution( uuN0,rrN0,uuNf,Mass0,Stif0,gravity,u,&
    INTEGER(IntKi),    INTENT(IN   ):: node_elem
    INTEGER(IntKi),    INTENT(IN   ):: dof_node
    INTEGER(IntKi),    INTENT(IN   ):: ngp
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature
    REAL(ReKi),        INTENT(IN   ):: gw(:)
    REAL(ReKi),        INTENT(IN   ):: hhx(:,:)
    REAL(ReKi),        INTENT(IN   ):: hpx(:,:)
@@ -3601,7 +3559,7 @@ SUBROUTINE BD_StaticSolution( uuN0,rrN0,uuNf,Mass0,Stif0,gravity,u,&
        piter=i 
        CALL BD_GenerateStaticElement(uuN0,rrN0,uuNf,Mass0,Stif0,gravity,u,&
                                      elem_total,node_elem,dof_node,ngp,&
-                                     gw,hhx,hpx,Jaco,uu0,E10,&
+                                     quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                      StifK,RHS,&
                                      ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3676,7 +3634,7 @@ END SUBROUTINE BD_StaticSolution
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_GenerateStaticElement( uuN0,rrN0,uuNf,Mass0,Stif0,gravity,u,&
                                      elem_total,node_elem,dof_node,&
-                                     ngp,gw,hhx,hpx,Jaco,uu0,E10,&
+                                     ngp,quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                      StifK,RHS,&
                                      ErrStat,ErrMsg)
 
@@ -3691,6 +3649,7 @@ SUBROUTINE BD_GenerateStaticElement( uuN0,rrN0,uuNf,Mass0,Stif0,gravity,u,&
    INTEGER(IntKi),    INTENT(IN   ):: node_elem
    INTEGER(IntKi),    INTENT(IN   ):: dof_node
    INTEGER(IntKi),    INTENT(IN   ):: ngp
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature
    REAL(ReKi),        INTENT(IN   ):: gw(:)
    REAL(ReKi),        INTENT(IN   ):: hhx(:,:)
    REAL(ReKi),        INTENT(IN   ):: hpx(:,:)
@@ -3759,14 +3718,18 @@ SUBROUTINE BD_GenerateStaticElement( uuN0,rrN0,uuNf,Mass0,Stif0,gravity,u,&
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_NodalRelRot(Nuuu,node_elem,dof_node,Nrrr,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       temp_id = (nelem-1)*ngp
+       IF(quadrature .EQ. 1) THEN
+           temp_id = (nelem-1)*ngp + 1
+       ELSEIF(quadrature .EQ. 2) THEN
+           temp_id = (nelem-1)*ngp
+       ENDIF
+
        DO j=1,ngp
            EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
            EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
-           DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,temp_id+j+1)
-           DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
+           DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j)
+           DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
-
        CALL BD_StaticElementMatrix(uuN0(:,nelem),Nuuu,rrN0(:,nelem),Nrrr,&
                DistrLoad_GL,gravity,EMass0_GL,EStif0_GL,&
                ngp,gw,hhx,hpx,Jaco(:,nelem),uu0(:,nelem),E10(:,nelem),&
@@ -3977,7 +3940,7 @@ END SUBROUTINE BD_StaticUpdateConfiguration
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_StaticSolutionForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                   node_elem,dof_node,elem_total,dof_total,node_total,&
-                                  ngp,gw,hhx,hpx,Jaco,uu0,E10,&
+                                  ngp,quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                   Force, ErrStat,ErrMsg)
 !***************************************************************************************
 ! This subroutine calculates the internal nodal forces at each finite-element 
@@ -3998,6 +3961,7 @@ SUBROUTINE BD_StaticSolutionForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
    INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Total number of degrees of freedom ! bjj: NOT USED
    INTEGER(IntKi),    INTENT(IN   ):: node_total ! Total number of nodes
    INTEGER(IntKi),    INTENT(IN   ):: ngp
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature
    REAL(ReKi),        INTENT(IN   ):: gw(:)
    REAL(ReKi),        INTENT(IN   ):: hhx(:,:)
    REAL(ReKi),        INTENT(IN   ):: hpx(:,:)
@@ -4018,7 +3982,7 @@ SUBROUTINE BD_StaticSolutionForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
 
    CALL BD_GenerateStaticElementForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                       elem_total,node_elem,dof_node,&
-                                      ngp,gw,hhx,hpx,Jaco,uu0,E10,&
+                                      ngp,quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                       Force,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    IF(ErrStat >= AbortErrLev) RETURN
@@ -4027,7 +3991,7 @@ END SUBROUTINE BD_StaticSolutionForce
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_GenerateStaticElementForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                          elem_total,node_elem,dof_node,&
-                                         ngp,gw,hhx,hpx,Jaco,uu0,E10,&
+                                         ngp,quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                          RHS,ErrStat,ErrMsg)
                                          
 !***************************************************************************************
@@ -4047,6 +4011,7 @@ SUBROUTINE BD_GenerateStaticElementForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
    INTEGER(IntKi),    INTENT(IN   ):: ngp
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature
    REAL(ReKi),        INTENT(IN   ):: gw(:)
    REAL(ReKi),        INTENT(IN   ):: hhx(:,:)
    REAL(ReKi),        INTENT(IN   ):: hpx(:,:)
@@ -4113,14 +4078,18 @@ SUBROUTINE BD_GenerateStaticElementForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_ElemNodalDisp(vvN,node_elem,dof_node,nelem,Nvvv,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       temp_id = (nelem-1)*ngp
+       IF(quadrature .EQ. 1) THEN
+           temp_id = (nelem-1)*ngp + 1
+       ELSEIF(quadrature .EQ. 2) THEN
+           temp_id = (nelem-1)*ngp
+       ENDIF
+
        DO j=1,ngp
            EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
            EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
-           DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,temp_id+j+1)
-           DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
+           DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j)
+           DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
-
        CALL BD_StaticElementMatrixForce(uuN0(:,nelem),Nuuu,rrN0(:,nelem),Nrrr,Nvvv,&
                EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                ngp,gw,hhx,hpx,Jaco(:,nelem),uu0(:,nelem),E10(:,nelem),&
@@ -4291,8 +4260,6 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       OtherState%InitAcc = .true. 
-WRITE(*,*) 'OS%acc'
-WRITE(*,*) OtherState%acc
    end if
 
    CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -4323,7 +4290,7 @@ WRITE(*,*) OtherState%acc
                                p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,              &
                                p%damp_flag,p%beta,                                    &
                                p%node_elem,p%dof_node,p%elem_total,p%dof_total,       &
-                               p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,              &
+                               p%quadrature,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10, &
                                p%node_total,p%niter,p%tol,p%ngp,p%coef,p%n_fact,      &
                                ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -4510,7 +4477,7 @@ END SUBROUTINE BD_BoundaryGA2
 SUBROUTINE BD_DynamicSolutionGA2( uuN0,rrN0,uuNf,vvNf,aaNf,xxNf,          &
                                   Stif0,Mass0,gravity,u,damp_flag,beta,   &
                                   node_elem,dof_node,elem_total,dof_total,&
-                                  gw,hhx,hpx,Jaco,uu0,E10,            &
+                                  quadrature,gw,hhx,hpx,Jaco,uu0,E10,            &
                                   node_total,niter,tol,ngp,coef, n_fact,  &
                                   ErrStat, ErrMsg)
 !------------------------------------------------------------------------------------
@@ -4533,6 +4500,7 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,rrN0,uuNf,vvNf,aaNf,xxNf,          &
    INTEGER(IntKi),     INTENT(IN   ):: dof_total
    INTEGER(IntKi),     INTENT(IN   ):: node_total
    INTEGER(IntKi),     INTENT(IN   ):: ngp
+   INTEGER(IntKi),     INTENT(IN   ):: quadrature
    REAL(ReKi),         INTENT(IN   ):: gw(:)
    REAL(ReKi),         INTENT(IN   ):: hhx(:,:)
    REAL(ReKi),         INTENT(IN   ):: hpx(:,:)
@@ -4607,7 +4575,7 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,rrN0,uuNf,vvNf,aaNf,xxNf,          &
        CALL BD_GenerateDynamicElementGA2(uuN0,rrN0,uuNf,vvNf,aaNf,            &
                                          Stif0,Mass0,gravity,u,damp_flag,beta,&
                                          elem_total,node_elem,dof_node,ngp,   &
-                                         gw,hhx,hpx,Jaco,uu0,E10,fact,&
+                                         quadrature,gw,hhx,hpx,Jaco,uu0,E10,fact,&
                                          StifK,RHS,MassM,DampG,&
                                          ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4689,7 +4657,7 @@ END SUBROUTINE BD_DynamicSolutionGA2
 SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,rrN0,uuNf,vvNf,aaNf,            &
                                         Stif0,Mass0,gravity,u,damp_flag,beta,&
                                         elem_total,node_elem,dof_node,ngp,   &
-                                        gw,hhx,hpx,Jaco,uu0,E10,fact,&
+                                        quadrature,gw,hhx,hpx,Jaco,uu0,E10,fact,&
                                         StifK,RHS,MassM,DampG,&
                                         ErrStat,ErrMsg)
 
@@ -4708,6 +4676,7 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,rrN0,uuNf,vvNf,aaNf,            &
    INTEGER(IntKi),    INTENT(IN   ):: node_elem
    INTEGER(IntKi),    INTENT(IN   ):: dof_node
    INTEGER(IntKi),    INTENT(IN   ):: ngp
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature
    REAL(ReKi),        INTENT(IN   ):: gw(:)
    REAL(ReKi),        INTENT(IN   ):: hhx(:,:)
    REAL(ReKi),        INTENT(IN   ):: hpx(:,:)
@@ -4800,12 +4769,17 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,rrN0,uuNf,vvNf,aaNf,            &
        CALL BD_ElemNodalDisp(aaNf,node_elem,dof_node,nelem,Naaa,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-       temp_id = (nelem-1)*ngp
+       IF(quadrature .EQ. 1) THEN
+           temp_id = (nelem-1)*ngp + 1
+       ELSEIF(quadrature .EQ. 2) THEN
+           temp_id = (nelem-1)*ngp
+       ENDIF
+
        DO j=1,ngp
            EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
            EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
-           DistrLoad_GL(1:3,j)  = u%DistrLoad%Force(1:3,temp_id+j+1)
-           DistrLoad_GL(4:6,j)  = u%DistrLoad%Moment(1:3,temp_id+j+1)
+           DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j)
+           DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
 
        CALL BD_ElementMatrixGA2(uuN0(:,nelem),Nuuu,rrN0(:,nelem),Nrrr,Nvvv,Naaa,&
@@ -5071,7 +5045,7 @@ SUBROUTINE BD_CalcForceAcc( u, p, x, OtherState, ErrStat, ErrMsg)
 
    CALL BD_SolutionForceAcc(p%uuN0,p%rrN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
                             p%damp_flag,p%beta,&
-                            p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
+                            p%quadrature,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
                             p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
                             OtherState%Acc,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -5082,7 +5056,7 @@ END SUBROUTINE BD_CalcForceAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_SolutionForceAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,               &
                                damp_flag,beta,                                        &
-                               gw,hhx,hpx,Jacobian,uu0,E10,                           &
+                               quadrature,gw,hhx,hpx,Jacobian,uu0,E10,                           &
                                node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
                                Acc,ErrStat,ErrMsg)
 !***************************************************************************************
@@ -5106,6 +5080,7 @@ SUBROUTINE BD_SolutionForceAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,         
    INTEGER(IntKi),               INTENT(IN   ):: dof_total ! Total number of degrees of freedom
    INTEGER(IntKi),               INTENT(IN   ):: node_total ! Total number of nodes
    INTEGER(IntKi),               INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),               INTENT(IN   ):: quadrature ! Number of Gauss points
    REAL(ReKi),                   INTENT(IN   ):: gw(:)
    REAL(ReKi),                   INTENT(IN   ):: hhx(:,:)
    REAL(ReKi),                   INTENT(IN   ):: hpx(:,:)
@@ -5146,7 +5121,7 @@ SUBROUTINE BD_SolutionForceAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,         
 
    CALL BD_GenerateDynamicElementAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
                                      damp_flag,beta,&
-                                     gw,hhx,hpx,Jacobian,uu0,E10,                &
+                                     quadrature,gw,hhx,hpx,Jacobian,uu0,E10,                &
                                      elem_total,node_elem,dof_total,dof_node,ngp,&
                                      RHS,MassM,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
