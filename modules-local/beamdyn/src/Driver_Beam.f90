@@ -126,7 +126,6 @@ PROGRAM MAIN
    CALL CPU_TIME(start)
 
    DO n_t_global = 0, n_t_final
-IF(n_t_global .EQ. 1) STOP
      WRITE(*,*) "Time Step: ", n_t_global
      BD_InputTimes(2) = BD_InputTimes(1) 
      BD_InputTimes(1) = t_global + dt_global

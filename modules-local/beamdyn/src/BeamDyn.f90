@@ -2592,30 +2592,12 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,uuN,vvN,Stif0,Mass0,gravity,u,     
            ENDDO
        ENDIF
 
-WRITE(100,*) 'uuN0'
-WRITE(100,*) Nuu0
-WRITE(100,*) 'Nuuu'
-WRITE(100,*) Nuuu
-WRITE(100,*) 'rrN0'
-WRITE(100,*) Nrr0
-WRITE(100,*) 'Nrrr'
-WRITE(100,*) Nrrr
-WRITE(100,*) 'Nvvv'
-WRITE(100,*) Nvvv
        CALL BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                                 EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                                 nqp,quadrature,trapezoidal_pos,trapezoidal_w,&
                                 node_elem,dof_node,damp_flag,beta,&
                                 elf,elm,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-WRITE(101,*) 'elm'
-DO i=1,dof_total
-WRITE(101,*) i,elm(i,:)
-ENDDO
-WRITE(101,*) 'elf'
-DO i=1,dof_total
-WRITE(101,*) i,elf(i)
-ENDDO
        IF(quadrature .EQ. 2) THEN
            DEALLOCATE(EStif0_GL)
            DEALLOCATE(EMass0_GL)
@@ -2818,13 +2800,7 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDIF
 
-WRITE(101,*) 'Fc',igp,Fc(1:6)
-WRITE(101,*) 'Fd',igp,Fd(1:6)
-WRITE(101,*) 'Fb',igp,Fb(1:6)
-WRITE(101,*) 'Di',igp,DistrLoad_GL(1:6,igp)
-WRITE(101,*) 'Fg',igp,Fg(1:6)
        Fd(:) = Fd(:) + Fb(:) - DistrLoad_GL(:,igp) - Fg(:)
-WRITE(101,*) 'Fd',igp,Fd(1:6)
 
        DO i=1,node_elem
            DO j=1,node_elem
@@ -4907,9 +4883,6 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       OtherState%InitAcc = .true. 
-WRITE(*,*) 'OS%acc'
-WRITE(*,*) OtherState%acc(:)
-!STOP
    end if
 
    CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -4964,10 +4937,6 @@ WRITE(*,*) OtherState%acc(:)
                                ErrStat2, ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-WRITE(*,*) 'x%q'
-WRITE(*,*) x%q
-WRITE(*,*) 'x%dqdt'
-WRITE(*,*) x%dqdt
    call cleanup()
    return
    
