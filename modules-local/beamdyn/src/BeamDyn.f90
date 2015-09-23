@@ -1454,13 +1454,8 @@ SUBROUTINE BD_NodalRelRot(Nu,node_elem,dof_node,Nr,ErrStat,ErrMsg)
    ErrMsg  = ""
 
    Nr = 0.0D0
-<<<<<<< HEAD
-   Nu_temp1 = 0.0D0
-   Nu_temp1(1:3) = Nu(4:6)
-=======
    Nu_temp1(:) = 0.0D0
    Nu_temp1(:) = Nu(4:6)
->>>>>>> BDImprove
    DO i=1,node_elem
        temp_id = (i - 1) * dof_node
        Nu_temp = 0.0D0
@@ -5352,15 +5347,12 @@ SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
        blade_IN(:,:) = blade_IN(:,:) + elem_IN(:,:)
 
    ENDDO
-<<<<<<< HEAD
-=======
 
    if (ErrStat >= AbortErrLev) then
        call Cleanup()
        return
    end if
 
->>>>>>> BDImprove
    blade_CG(:) = blade_CG(:) / blade_mass
 
    CALL Cleanup()
