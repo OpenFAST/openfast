@@ -110,7 +110,7 @@ MODULE OrcaFlexInterface
 
    ABSTRACT INTERFACE      ! These are interfaces to the DLL
 
-#ifdef gfortran
+#ifdef __GFORTRAN__
       SUBROUTINE OrcaFlexUserPtfmLdInitialise(DT,TMax)   BIND(C)
 #else
       SUBROUTINE OrcaFlexUserPtfmLdInitialise(DT,TMax)   !!!BIND(C)
@@ -124,7 +124,7 @@ MODULE OrcaFlexInterface
       END SUBROUTINE OrcaFlexUserPtfmLdInitialise
 
 
-#ifdef gfortran
+#ifdef __GFORTRAN__
       SUBROUTINE OrcaFlexUserPtfmLd( X, XD, ZTime, DirRoot, PtfmAM, PtfmFt) BIND(C)
 #else
       SUBROUTINE OrcaFlexUserPtfmLd( X, XD, ZTime, DirRoot, PtfmAM, PtfmFt) !!!BIND(C)
@@ -143,7 +143,7 @@ MODULE OrcaFlexInterface
 
 
 
-#ifdef gfortran
+#ifdef __GFORTRAN__
       SUBROUTINE OrcaFlexUserPtfmLdFinalise()  BIND(C)
 #else
       SUBROUTINE OrcaFlexUserPtfmLdFinalise()  !!!BIND(C)
