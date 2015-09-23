@@ -66,6 +66,7 @@ PROGRAM OrcaDriver
 
 
       ! Local variables for storing the arrays
+   REAL(ReKi),ALLOCATABLE                             :: TimeList(:)             !< Timestamp data
    REAL(ReKi),ALLOCATABLE                             :: PointsList(:,:)         !< (X,Y,Z,R1,R2,R3) coordinates read from Points input file.
    REAL(ReKi),ALLOCATABLE                             :: VelocList(:,:)          !< Translational and rotational time derivatives at each point in PointsList
    REAL(ReKi),ALLOCATABLE                             :: AccelList(:,:)          !< Translational and rotational 2nd time derivatives at each point in PointsList
@@ -75,6 +76,7 @@ PROGRAM OrcaDriver
    CHARACTER(1024)                                    :: TmpChar                 ! Temporary character variable
    LOGICAL                                            :: TmpFlag                 ! Temporary flag
    INTEGER(IntKi)                                     :: TmpUnit                 ! Temporary unit for quick I/O operation
+   INTEGER(IntKi)                                     :: debug_print_unit
 
       ! Local Error Handling
    INTEGER(IntKi)                                     :: ErrStat
@@ -276,7 +278,7 @@ PROGRAM OrcaDriver
       IF ( TempFileExist .eqv. .FALSE. ) CALL ProgAbort( "Cannot find the points file "//TRIM(Settings%PointsFileName))
 
          ! Now read the file in and save the points
-      CALL ReadPointsFile( Settings%PointsFileName, SettingsFlags%PointsDegrees, PointsList, VelocList, AccelList, ErrStat,ErrMsg )
+      CALL ReadPointsFile( Settings%PointsFileName, SettingsFlags%PointsDegrees, TimeList, PointsList, VelocList, AccelList, ErrStat,ErrMsg )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL ProgAbort( ErrMsg )
       ELSEIF ( ErrStat /= 0 ) THEN
@@ -425,7 +427,7 @@ PROGRAM OrcaDriver
          Orca_u%PtfmMesh%RotationAcc(:,1)       =  AccelList(4:6,I)
 
 
-         TimeNow  =  Settings%DT*I
+         TimeNow  =  TimeList(I)
 
 
 
@@ -437,6 +439,10 @@ PROGRAM OrcaDriver
                   Orca_x, Orca_xd, Orca_z, Orca_OtherState, &
                   Orca_y, ErrStat, ErrMsg)
 
+!debug_print_unit = 80
+!call WrNumAryFileNR(debug_print_unit,(/TimeNow/), "1x,ES15.5E3", ErrStat, ErrMsg  )
+!call WrNumAryFileNR(debug_print_unit,Orca_y%WriteOutput, "1x,ES15.5E3", ErrStat, ErrMsg  ) 
+!write(debug_print_unit,'()')
 
 
 
@@ -459,7 +465,7 @@ PROGRAM OrcaDriver
             ! Output the Points results for this timestep
          CALL PointsForce_OutputWrite( Settings%ProgInfo, Settings%PointsOutputUnit, Settings%PointsOutputName, Settings%PointsFileName,  &
                      SettingsFlags%PointsOutputInit, SettingsFlags%PointsDegrees, SIZE(PointsList,DIM=2),                                  &
-                     Orca_u%PtfmMesh, Orca_y%PtfmMesh, ErrStat, ErrMsg )
+                     TimeNow, Orca_u%PtfmMesh, Orca_y%PtfmMesh, ErrStat, ErrMsg )
          
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL DriverCleanup()
@@ -525,7 +531,7 @@ PROGRAM OrcaDriver
 
             ! Call routine to write the output file for this one point
          CALL PointsForce_OutputWrite( Settings%ProgInfo, TmpUnit, TmpChar, TmpChar, TmpFlag, SettingsFlags%Degrees, 0,   &
-                     Orca_u%PtfmMesh, Orca_y%PtfmMesh, ErrStat, ErrMsg )
+                     TimeNow, Orca_u%PtfmMesh, Orca_y%PtfmMesh, ErrStat, ErrMsg )
          CLOSE(TmpUnit)
 
             ! Make sure no errors occured that give us reason to terminate now.

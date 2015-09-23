@@ -110,14 +110,29 @@ MODULE OrcaFlexInterface
 
    ABSTRACT INTERFACE      ! These are interfaces to the DLL
 
+#ifdef gfortran
       SUBROUTINE OrcaFlexUserPtfmLdInitialise(DT,TMax)   BIND(C)
-         USE, INTRINSIC :: ISO_C_BINDING
+#else
+      SUBROUTINE OrcaFlexUserPtfmLdInitialise(DT,TMax)   !!!BIND(C)
+#endif
+         USE, INTRINSIC :: ISO_C_BINDING, ONLY: C_FLOAT
+         !DEC$ ATTRIBUTES STDCALL::OrcaFlexUserPtfmLdInitialise
+         !DEC$ ATTRIBUTES ALIAS:'_OrcaFlexUserPtfmLdInitialise@8'::OrcaFlexUserPtfmLdInitialise
+         !GCC$ ATRIBUTES STDCALL :: OrcaFlexUserPtfmInitialise
          REAL(C_FLOAT),             INTENT(IN   )  :: DT
-         REAL(C_FLOAT),             INtENT(IN   )  :: TMax
+         REAL(C_FLOAT),             INTENT(IN   )  :: TMax
       END SUBROUTINE OrcaFlexUserPtfmLdInitialise
 
+
+#ifdef gfortran
       SUBROUTINE OrcaFlexUserPtfmLd( X, XD, ZTime, DirRoot, PtfmAM, PtfmFt) BIND(C)
-         USE, INTRINSIC :: ISO_C_Binding
+#else
+      SUBROUTINE OrcaFlexUserPtfmLd( X, XD, ZTime, DirRoot, PtfmAM, PtfmFt) !!!BIND(C)
+#endif
+         USE, INTRINSIC :: ISO_C_Binding, ONLY: C_FLOAT, C_CHAR
+         !DEC$ ATTRIBUTES STDCALL::OrcaFlexUserPtfmLd
+         !DEC$ ATTRIBUTES ALIAS:'_OrcaFlexUserPtfmLd@24'::OrcaFlexUserPtfmLd
+         !GCC$ ATRIBUTES STDCALL :: OrcaFlexUserPtfmLd
          CHARACTER(KIND=C_CHAR),    INTENT(IN   )  :: DirRoot
          REAL(C_FLOAT),             INTENT(IN   )  :: X(6)           !< Translational and rotational displacement (m, radians) relative to inertial frame.
          REAL(C_FLOAT),             INTENT(IN   )  :: XD(6)          !< Translational and rotational velocity (m/s, radians/s) relative to inertial frame.
@@ -126,8 +141,16 @@ MODULE OrcaFlexInterface
          REAL(C_FLOAT),             INTENT(  OUT)  :: PtfmFt(6)      !< Platform forces -- [3 translation (N), 3 moments (N-m)] at reference point.
       END SUBROUTINE OrcaFlexUserPtfmLd
 
+
+
+#ifdef gfortran
       SUBROUTINE OrcaFlexUserPtfmLdFinalise()  BIND(C)
+#else
+      SUBROUTINE OrcaFlexUserPtfmLdFinalise()  !!!BIND(C)
+#endif
          USE, INTRINSIC :: ISO_C_BINDING
+         !DEC$ ATTRIBUTES DEFAULT, STDCALL, DECORATE, ALIAS: 'OrcaFlexUserPtfmLdFinalise'::OrcaFlexUserPtfmLdFinalise
+         !GCC$ ATRIBUTES STDCALL :: OrcaFlexUserPtfmLdFinalise
          ! There is no data to pass.
       END SUBROUTINE OrcaFlexUserPtfmLdFinalise
 
@@ -730,11 +753,6 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    ENDIF
 
 
-#ifdef NO_LibLoad
-#else
-      ! Setup the pointer to the DLL procedure
-   CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(2), OrcaDLL_Calc )
-#endif
 
       ! Copy over time and name to pass to OrcaFlex DLL
    DLL_DirRootName   =  TRIM(p%SimNamePath)//C_NULL_CHAR    ! Path and name of the simulation file without extension.  Null character added to convert from Fortran string to C-type string.
@@ -767,6 +785,8 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       ! We do not want to call OrcaDLL twice in one timestep.  If _CalcOutput is called twice in a timestep, the second
       ! call is different from the first only with the accelerations, which OrcaFlex does not do anything with.
    IF ( t > OtherState%LastTimeStep .and. .not. EqualRealNos(t,OtherState%LastTimeStep) ) THEN
+         ! Setup the pointer to the DLL procedure
+      CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(2), OrcaDLL_Calc )
          ! Call OrcaFlex to run the calculation.  There is no error trapping on the OrcaFlex side, so we will have to do some checks on what receive back
       CALL OrcaDLL_Calc( DLL_X, DLL_Xdot, DLL_ZTime, DLL_DirRootName, DLL_PtfmAM, DLL_PtfmFt )
       OtherState%LastTimeStep =  t

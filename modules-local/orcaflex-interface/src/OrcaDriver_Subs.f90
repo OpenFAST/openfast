@@ -1048,6 +1048,13 @@ SUBROUTINE ReadDvrIptFile( DvrFileName, DvrFlags, DvrSettings, ProgInfo, ErrStat
          CLOSE( UnIn )
         RETURN
       ENDIF
+      CALL ReadCom( UnIn, FileName,' Skipping the platform acceleration since not calculating anything.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
+      IF ( ErrStatTmp /= ErrID_None ) THEN
+         CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+         CALL CleanupEchoFile( EchoFileContents, UnEchoLocal )
+         CLOSE( UnIn )
+        RETURN
+      ENDIF
       CALL ReadCom( UnIn, FileName,' Skipping the Added mass matrix output since not calculating anything.', ErrStatTmp, ErrMsgTmp, UnEchoLocal )
       IF ( ErrStatTmp /= ErrID_None ) THEN
          CALL SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
@@ -1333,10 +1340,11 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
 END SUBROUTINE UpdateSettingsWithCL
 
 
-SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList, AccelList, ErrStat, ErrMsg )
+SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, TimeList, CoordList, VelocList, AccelList, ErrStat, ErrMsg )
 
    CHARACTER(1024),                    INTENT(IN   )  :: PointsFileName       !< Name of the points file to read
    LOGICAL,                            INTENT(IN   )  :: AnglesInDegrees      !< Are the angles specified in degrees?
+   REAL(ReKi), ALLOCATABLE,            INTENT(  OUT)  :: TimeList(:)          !< TimeStamps
    REAL(ReKi), ALLOCATABLE,            INTENT(  OUT)  :: CoordList(:,:)       !< The coordinates we read in
    REAL(ReKi), ALLOCATABLE,            INTENT(  OUT)  :: VelocList(:,:)       !< The velocities we read in
    REAL(ReKi), ALLOCATABLE,            INTENT(  OUT)  :: AccelList(:,:)       !< The accelerations we read in
@@ -1355,7 +1363,7 @@ SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList
 
    INTEGER(IntKi)                                     :: I                    !< Generic counter
 
-   REAL(ReKi)                                         :: TmpArray(18)         !< Temporary array to hold one line of data from the points file
+   REAL(ReKi)                                         :: TmpArray(19)         !< Temporary array to hold one line of data from the points file
    REAL(ReKi)                                         :: ConvToRadians        !< Conversion to radians multiplier
 
       ! Initialization of subroutine
@@ -1389,12 +1397,21 @@ SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList
       CLOSE( FiUnitPoints )
       RETURN
    ENDIF
-   IF ( NumDataColumns /= 18 ) THEN
-      CALL SetErrStat( ErrID_Fatal,' Expecting 18 columns in '//TRIM(PointsFileName)//' corresponding to '//   &
-         '3 translation coordinates, 3 rotation angles, 3 translational velocities, 3 rotational velocities, and '// &
+   IF ( NumDataColumns /= 19 ) THEN
+      CALL SetErrStat( ErrID_Fatal,' Expecting 19 columns in '//TRIM(PointsFileName)//' corresponding to '//   &
+         'timestamp, 3 translation coordinates, 3 rotation angles, 3 translational velocities, 3 rotational velocities, and '// &
          '3 translational velocities, 3 rotational velocities.  '//&
          'Instead found '//TRIM(Num2LStr(NumDataColumns))//' columns.', &
          ErrStat, ErrMsg, RoutineName)
+      CLOSE( FiUnitPoints )
+      RETURN
+   ENDIF
+
+
+      ! Allocate the storage for the data
+   CALL AllocAry( TimeList, NumDataPoints, "Array of timestamp data", ErrStatTmp, ErrMsgTmp )
+   IF ( ErrStatTmp >= AbortErrLev ) THEN
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       CLOSE( FiUnitPoints )
       RETURN
    ENDIF
@@ -1441,19 +1458,20 @@ SUBROUTINE ReadPointsFile( PointsFileName, AnglesInDegrees, CoordList, VelocList
 
       ! Read in the datapoints
    DO I=1,NumDataPoints
-      CALL ReadAry ( FiUnitPoints, PointsFileName, TmpArray(:), 18, 'Temporary coordinate', &
+      CALL ReadAry ( FiUnitPoints, PointsFileName, TmpArray(:), 19, 'Temporary coordinate', &
          'Coordinate point from Points file', ErrStatTmp, ErrMsgTmp)
       IF ( ErrStat /= ErrID_None ) THEN
          CALL SetErrStat( ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
          CLOSE( FiUnitPoints )
          RETURN
       ENDIF
-      CoordList(1:3,I) =  TmpArray(1:3)
-      CoordList(4:6,I) =  TmpArray(4:6)   * ConvToRadians
-      VelocList(1:3,I) =  TmpArray(7:9)
-      VelocList(4:6,I) =  TmpArray(10:12) * ConvToRadians
-      AccelList(1:3,I) =  TmpArray(13:15)
-      AccelList(4:6,I) =  TmpArray(16:18) * ConvToRadians
+      TimeList(I)      =  TmpArray(1)
+      CoordList(1:3,I) =  TmpArray(2:4)
+      CoordList(4:6,I) =  TmpArray(5:7)   * ConvToRadians
+      VelocList(1:3,I) =  TmpArray(8:10)
+      VelocList(4:6,I) =  TmpArray(11:13) * ConvToRadians
+      AccelList(1:3,I) =  TmpArray(14:16)
+      AccelList(4:6,I) =  TmpArray(17:19) * ConvToRadians
    ENDDO
 
    CLOSE( FiUnitPoints )
@@ -1870,7 +1888,7 @@ END SUBROUTINE AddedMass_OutputWrite
 
 
 SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName, Initialized, AnglesInDegrees, TotalPoints, &
-                     u_PtfmMesh, y_PtfmMesh,  ErrStat, ErrMsg)
+                     Time, u_PtfmMesh, y_PtfmMesh,  ErrStat, ErrMsg)
 
    TYPE(ProgDesc),                     INTENT(IN   )  :: ProgInfo             !< Program info
    INTEGER(IntKi),                     INTENT(INOUT)  :: OutUnit              !< Output Unit number
@@ -1879,6 +1897,7 @@ SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName
    LOGICAL,                            INTENT(INOUT)  :: Initialized          !< Is the file initialized
    LOGICAL,                            INTENT(IN   )  :: AnglesInDegrees      !< The angles are in degrees.
    INTEGER(IntKi),                     INTENT(IN   )  :: TotalPoints          !< The total number of points in the points file
+   REAL(DbKi),                         INTENT(IN   )  :: Time                 !< Current time
    TYPE(MeshType),                     INTENT(IN   )  :: u_PtfmMesh           !< u%PtfmMesh
    TYPE(MeshType),                     INTENT(IN   )  :: y_PtfmMesh           !< y%PtfmMesh
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< returns a non-zero value when an error occurs
@@ -1894,7 +1913,7 @@ SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName
    CHARACTER(47)                                      :: PointsOutputFmt      !< Format specifier for the output file for wave elevation series
    CHARACTER(3)                                       :: AngleUnit            !< Units for the angle
 
-   PointsOutputFmt = "(ES10.3E2,17(3x,ES10.3E2))"
+   PointsOutputFmt = "(ES10.3E2,18(3x,ES10.3E2))"
 
    ErrMsg      = ''
    ErrStat     = ErrID_None
@@ -1927,14 +1946,14 @@ SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName
                                                       'file '//TRIM(InputFileName)//'.'
       ENDIF
       WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp  )  '# '
-      WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp  )  '#'//  &
+      WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp  )  '#   Time   '//  &
                                                    '   TDxi         TDyi         TDzi      '       //  &
                                                    '   RDxi         RDyi         RDzi      '       //  &
                                                    '   TVxi         TVyi         TVzi      '       //  &
                                                    '   RVxi         RVyi         RVzi      '       //  &
                                                    '   Fxi          Fyi          Fzi       '       //  &
                                                    '   Mxi          Myi          Mzi'
-      WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp  )  '#'//  &
+      WRITE (OutUnit,'(A)', IOSTAT=ErrStatTmp  )  '#   (s)    '//  &
                                                    '   (m)          (m)          (m)       '       //  &
                                                    '   ('//AngleUnit//')        ('//AngleUnit//')        ('//AngleUnit//')     '//  &
                                                    '   (m/s)        (m/s)        (m/s)     '       //  &
@@ -1949,7 +1968,7 @@ SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName
 
 
    IF ( AnglesInDegrees ) THEN
-      WRITE (OutUnit,PointsOutputFmt, IOSTAT=ErrStatTmp )                                                               &
+      WRITE (OutUnit,PointsOutputFmt, IOSTAT=ErrStatTmp )      Time,                                                    &
                      u_PtfmMesh%TranslationDisp(1,1), u_PtfmMesh%TranslationDisp(2,1), u_PtfmMesh%TranslationDisp(3,1), &
                      rotdisp(1)*R2D,                  rotdisp(2)*R2D,                  rotdisp(3)*R2D,                  &
                      u_PtfmMesh%TranslationVel(1,1),  u_PtfmMesh%TranslationVel(2,1),  u_PtfmMesh%TranslationVel(3,1),  &
@@ -1957,7 +1976,7 @@ SUBROUTINE PointsForce_OutputWrite(ProgInfo, OutUnit, OutFileName, InputFileName
                      y_PtfmMesh%Force(1,1)/1000_ReKi, y_PtfmMesh%Force(2,1)/1000_ReKi, y_PtfmMesh%Force(3,1)/1000_ReKi, &
                      y_PtfmMesh%Moment(1,1)/1000_ReKi,y_PtfmMesh%Moment(2,1)/1000_ReKi,y_PtfmMesh%Moment(3,1)/1000_ReKi
    ELSE
-      WRITE (OutUnit,PointsOutputFmt, IOSTAT=ErrStatTmp )                                                               &
+      WRITE (OutUnit,PointsOutputFmt, IOSTAT=ErrStatTmp )      Time,                                                    &
                      u_PtfmMesh%TranslationDisp(1,1), u_PtfmMesh%TranslationDisp(2,1), u_PtfmMesh%TranslationDisp(3,1), &
                      rotdisp(1),                      rotdisp(2),                      rotdisp(3),                      &
                      u_PtfmMesh%TranslationVel(1,1),  u_PtfmMesh%TranslationVel(2,1),  u_PtfmMesh%TranslationVel(3,1),  &
