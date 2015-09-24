@@ -42,6 +42,8 @@ typedef      ^              ^             ^   dqdt     {:} - -  "dqdt - velocity
 # Define discrete (nondifferentiable) states here:
 typedef BeamDyn/BD BD_DiscreteStateType ReKi DummyDiscState - - - "A variable, Replace if you have discrete states" -
 #typedef BeamDyn/BD BD_DiscreteStateType ReKi rot  {3} - - "For filter" -
+typedef BeamDyn/BD BD_DiscreteStateType ReKi thetaP  - - - "Pitch angle state" -
+typedef BeamDyn/BD BD_DiscreteStateType ReKi thetaPD  - - - "Pitch rate state" -
 
 # Define constraint states here:
 typedef BeamDyn/BD ConstraintStateType ReKi DummyConstrState - - - "A variable, Replace if you have constraint states" -
@@ -101,6 +103,9 @@ typedef      ^     ParameterType IntKi  OutNd   {9} - - "Nodes whose values will
 typedef      ^     ParameterType IntKi  NdIndx  {:} - - "Index into BldMotion mesh (to number the nodes for output without using collocated nodes)"	-
 typedef      ^     ParameterType CHARACTER(20)  OutFmt   - - - "Format specifier" -
 #typedef      ^            ^      ReKi   alpha - - -  "Coefficient for filter" - 
+typedef      ^            ^      ReKi   pitchK - - -  "Pitch actuator stiffness" - 
+typedef      ^            ^      ReKi   pitchC - - -  "Pitch actuator damping" - 
+typedef      ^            ^      ReKi   pitchJ - - -  "Pitch actuator inertia" - 
 typedef      ^            ^      ReKi   GLL {:} - -  "GLL point locations in natural frame" -
 typedef      ^            ^      ReKi   GL {:} - -  "GL(Gauss) point locations in natural frame" -
 typedef      ^            ^      ReKi   GLw {:} - -  "Weights at each GL(Gauss) point" -
