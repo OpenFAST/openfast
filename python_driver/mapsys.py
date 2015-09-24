@@ -1,24 +1,24 @@
 '''
-  Copyright (C) 2014 mdm                                      
-  marco[dot]masciola[at]gmail                                 
-                                                              
-Licensed to the Apache Software Foundation (ASF) under one    
-or more contributor license agreements.  See the NOTICE file  
-distributed with this work for additional information         
-regarding copyright ownership.  The ASF licenses this file    
-to you under the Apache License, Version 2.0 (the             
-"License"); you may not use this file except in compliance    
-with the License.  You may obtain a copy of the License at    
-                                                              
-  http://www.apache.org/licenses/LICENSE-2.0                  
-                                                              
-Unless required by applicable law or agreed to in writing,    
-software distributed under the License is distributed on an   
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY        
-KIND, either express or implied.  See the License for the     
-specific language governing permissions and limitations             
-under the License.                                              
-'''
+  Copyright (C) 2014 mdm                                     
+  map[dot]plus[dot]plus[dot]help[at]gmail                     
+                                                             
+Licensed to the Apache Software Foundation (ASF) under one   
+or more contributor license agreements.  See the NOTICE file 
+distributed with this work for additional information        
+regarding copyright ownership.  The ASF licenses this file   
+to you under the Apache License, Version 2.0 (the            
+"License"); you may not use this file except in compliance   
+with the License.  You may obtain a copy of the License at   
+                                                             
+  http://www.apache.org/licenses/LICENSE-2.0                 
+                                                             
+Unless required by applicable law or agreed to in writing,   
+software distributed under the License is distributed on an  
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY       
+KIND, either express or implied.  See the License for the    
+specific language governing permissions and limitations            
+under the License.                                             
+'''  
 
 
 import sys
@@ -26,7 +26,6 @@ from ctypes import *
 import os
 
 class Map(object):
-    # lib = cdll.LoadLibrary('/Users/marcom/Dropbox/cemats/src/map.so')
     lib = cdll.LoadLibrary('../src/libmap-1.10.00.so')
 
     '''
@@ -291,7 +290,7 @@ class Map(object):
 
 
     def update_states(self, t, interval):
-        Map.lib.map_update_states(c_float(t), interval, self.f_type_u, self.f_type_p, self.f_type_x, None, self.f_type_z, self.f_type_d, pointer(self.ierr), self.status )
+        Map.lib.map_update_states(c_float(t), c_int(interval), self.f_type_u, self.f_type_p, self.f_type_x, None, self.f_type_z, self.f_type_d, pointer(self.ierr), self.status )
         if self.ierr.value != 0 :
             print self.status.value        
 

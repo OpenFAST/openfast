@@ -155,6 +155,7 @@ const char MAP_ERROR_STRING[][256] = {
   /* MAP_WARNING_12 */  "Line option 'KRYLOV_ACCELERATOR' does not trail with a valid integer. Defaulting to initialized MMAX value",
   /* MAP_WARNING_13 */  "Line options 'KRYLOV_ACCELERATOR' and 'PG_COOKED' are not compatible together. Disabling Krylov acceleration",
   /* MAP_WARNING_14 */  "Conflicting options. Cannot use Powell's method in conjuction with KRYLOV_ACCELERATOR or PG_COOKED",
+  /* MAP_WARNING_15 */  "Failed to free a variable",
 };
 
 
@@ -234,10 +235,10 @@ void set_universal_error_with_message(char* map_msg, MAP_ERROR_CODE* ierr, const
 #     if !defined(_MSC_VER)
       r = vsnprintf((char*)user_msg->data, n+1, in_string, arglist); /* this is a copy of exvsnprintf in bstring library */
 #     else
-	  r = vsnprintf_s((char*)user_msg->data, n, _TRUNCATE, in_string, arglist); /* windows way (or ISO C11 Annex K) way of doing things */
-	  /* This function works, but you need to specify the _CRT_SECURE_NO_WARNINGS compiler flag. Visual Studio hates this: 
-	   * r = vsnprintf((char*)user_msg->data, n + 1, in_string, arglist);
-	   */
+      r = vsnprintf_s((char*)user_msg->data, n, _TRUNCATE, in_string, arglist); /* windows way (or ISO C11 Annex K) way of doing things */
+      /* This function works, but you need to specify the _CRT_SECURE_NO_WARNINGS compiler flag. Visual Studio hates this: 
+       * r = vsnprintf((char*)user_msg->data, n + 1, in_string, arglist);
+       */
 #     endif
       va_end(arglist);
       user_msg->data[n] = (unsigned char)'\0';

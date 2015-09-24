@@ -104,7 +104,7 @@ MAP_ERROR_CODE forward_difference_jacobian(MAP_OtherStateType_t* other_type, MAP
   double original_displacement = 0.0;
   const int THREE = 3;
   const int z_size = z_type->z_Len; 
-  const int m = THREE*(other_type->Fz_connect_Len); // rows
+  // const int m = THREE*(other_type->Fz_connect_Len); // rows
   const int n = THREE*(z_type->z_Len);              // columns
   int i = 0;
   int j = 0;
@@ -191,7 +191,7 @@ MAP_ERROR_CODE backward_difference_jacobian(MAP_OtherStateType_t* other_type, MA
   double original_displacement = 0.0;
   const int THREE = 3;
   const int z_size = z_type->z_Len; // N
-  const int m = THREE*(other_type->Fz_connect_Len); // rows
+  // const int m = THREE*(other_type->Fz_connect_Len); // rows
   const int n = THREE*(z_type->z_Len);              // columns
   int i = 0;
   int j = 0;
@@ -278,8 +278,8 @@ MAP_ERROR_CODE central_difference_jacobian(MAP_OtherStateType_t* other_type, MAP
   double original_displacement = 0.0;
   const int THREE = 3;
   const int z_size = z_type->z_Len; //M
-  const int m = THREE*(other_type->Fz_connect_Len); // rows
-  const int n = THREE*(z_type->z_Len);              // columns
+  // const int m = THREE*(other_type->Fz_connect_Len); // rows
+  // const int n = THREE*(z_type->z_Len);              // columns
   int i = 0;
   int j = 0;
   

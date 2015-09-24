@@ -176,7 +176,7 @@ MAP_EXTERNCALL void map_update_states(float t,
    Domain* domain = other_type->object;
    MAP_ERROR_CODE success = MAP_SAFE;
    ReferencePoint* point_iter = NULL;
-   Node* node_iter = NULL;
+   // Node* node_iter = NULL;
    int i = 0;
 
    map_reset_universal_error(map_msg, ierr);
@@ -234,7 +234,7 @@ MAP_EXTERNCALL void map_calc_output(float t,
    Domain* domain = other_type->object;
    MAP_ERROR_CODE success = MAP_SAFE;
    ReferencePoint* point_iter = NULL;
-   Node* node_iter = NULL;
+   // Node* node_iter = NULL;
    int i = 0;
 
    map_reset_universal_error(map_msg, ierr);
@@ -290,8 +290,8 @@ MAP_EXTERNCALL void map_end(MAP_InputType_t* u_type,
                             MAP_OutputType_t* y_type,                                                                           
                             MAP_ERROR_CODE* ierr,
                             char* map_msg ) {  
-  Node* iterNode = NULL;
-  CableLibrary* iterCableLibrary = NULL;
+  // Node* iterNode = NULL;
+  // CableLibrary* iterCableLibrary = NULL;
   Domain* domain = other_type->object;
   MAP_ERROR_CODE success = MAP_SAFE;
 
@@ -377,7 +377,7 @@ MAP_EXTERNCALL double** map_linearize_matrix(MAP_InputType_t* u_type, MAP_Parame
   const int n = u_type->x_Len;
   const int SIX = 6;
   int i = 0;
-  int j = 0;
+  // int j = 0;
   int k = 0;
   Fd force;
   double** K;
@@ -501,7 +501,7 @@ MAP_EXTERNCALL double* map_plot_x_array(MAP_OtherStateType_t* other_type, int i,
   double cb = 0.0;
   double lambda = 0.0;
   double* array_x = NULL;
-  int ret = 0;
+  // int ret = 0;
   int s = 0;
 
   map_reset_universal_error(map_msg, ierr);
@@ -580,7 +580,7 @@ MAP_EXTERNCALL double* map_plot_y_array(MAP_OtherStateType_t* other_type, int i,
   double lambda = 0.0;
   double* array_y = NULL;
   int s = 0;
-  int ret = 0;
+  // int ret = 0;
 
   map_reset_universal_error(map_msg, ierr);  
   line = (Line*)list_get_at(&data->line, i);
@@ -646,7 +646,7 @@ MAP_EXTERNCALL double* map_plot_z_array(MAP_OtherStateType_t* other_type, int i,
   Line* line = NULL;
   double H = 0.0;
   double V = 0.0;
-  double Va = 0.0;
+  // double Va = 0.0;
   double EA = 0.0;
   double Lu = 0.0;
   double Lb = 0.0;
@@ -656,7 +656,7 @@ MAP_EXTERNCALL double* map_plot_z_array(MAP_OtherStateType_t* other_type, int i,
   double fairlead_z = 0.0;
   double anchor_z = 0.0;
   double* array_z = NULL;
-  int ret = 0;
+  // int ret = 0;
   int s = 0;
 
   map_reset_universal_error(map_msg, ierr);  
@@ -1009,7 +1009,7 @@ MAP_EXTERNCALL void map_get_header_string(int* n, char** str_array, MAP_OtherSta
   list_iterator_start(&domain->y_list->out_list_ptr);
   while (list_iterator_hasnext(&domain->y_list->out_list_ptr)) { 
     vartype_ptr = (VarTypePtr*)list_iterator_next(&domain->y_list->out_list_ptr);
-    MAP_STRCPY(str_array[count], 16, vartype_ptr->name->data);
+    MAP_STRCPY(str_array[count], 16, (char *)vartype_ptr->name->data);
     count++;
   };
   list_iterator_stop(&domain->y_list->out_list_ptr);     
@@ -1017,7 +1017,7 @@ MAP_EXTERNCALL void map_get_header_string(int* n, char** str_array, MAP_OtherSta
   list_iterator_start(&domain->y_list->out_list);
   while (list_iterator_hasnext(&domain->y_list->out_list)) { 
     vartype = (VarType*)list_iterator_next(&domain->y_list->out_list);
-    MAP_STRCPY(str_array[count], 16, vartype->name->data);
+    MAP_STRCPY(str_array[count], 16, (char *)vartype->name->data);
     count++;
   };
   list_iterator_stop(&domain->y_list->out_list);     
@@ -1031,11 +1031,11 @@ MAP_EXTERNCALL void map_get_unit_string(int* n, char** str_array, MAP_OtherState
   Domain* domain = other_type->object;
   VarTypePtr* vartype_ptr = NULL;
   VarType* vartype = NULL;
-
+  
   list_iterator_start(&domain->y_list->out_list_ptr);
   while (list_iterator_hasnext(&domain->y_list->out_list_ptr)) { 
     vartype_ptr = (VarTypePtr*)list_iterator_next(&domain->y_list->out_list_ptr );
-    MAP_STRCPY(str_array[count], 15, vartype_ptr->units->data);
+    MAP_STRCPY(str_array[count], 15, (char *)vartype_ptr->units->data);
     count++;
   };
   list_iterator_stop(&domain->y_list->out_list_ptr);     
@@ -1043,7 +1043,7 @@ MAP_EXTERNCALL void map_get_unit_string(int* n, char** str_array, MAP_OtherState
   list_iterator_start(&domain->y_list->out_list);
   while (list_iterator_hasnext(&domain->y_list->out_list)) { 
     vartype = (VarType*)list_iterator_next(&domain->y_list->out_list );
-    MAP_STRCPY(str_array[count], 15, vartype->units->data);
+    MAP_STRCPY(str_array[count], 15, (char *)vartype->units->data);
     count++;
   };
   list_iterator_stop(&domain->y_list->out_list);     
@@ -1284,15 +1284,19 @@ MAP_EXTERNCALL MAP_ContinuousStateType_t* map_create_continuous_type(char* map_m
 
 MAP_EXTERNCALL int free_init_data(InitializationData* init_data, char* map_msg, MAP_ERROR_CODE* ierr) 
 {
-  int ret = 0;
+  int success = MAP_SAFE;
 
-  ret = bdestroy(init_data->summary_file_name);
-  ret = bstrListDestroy(init_data->expanded_node_input_string);
-  ret = bstrListDestroy(init_data->expanded_line_input_string);
-  ret = bstrListDestroy(init_data->library_input_string);  
-  ret = bstrListDestroy(init_data->node_input_string);
-  ret = bstrListDestroy(init_data->line_input_string);
-  ret = bstrListDestroy(init_data->solver_options_string);
+  MAP_BEGIN_ERROR_LOG;
+
+  success = bdestroy(init_data->summary_file_name); CHECKERRK(MAP_WARNING_15);
+  success = bstrListDestroy(init_data->expanded_node_input_string); CHECKERRK(MAP_WARNING_15);
+  success = bstrListDestroy(init_data->expanded_line_input_string); CHECKERRK(MAP_WARNING_15);
+  success = bstrListDestroy(init_data->library_input_string); CHECKERRK(MAP_WARNING_15);
+  success = bstrListDestroy(init_data->node_input_string); CHECKERRK(MAP_WARNING_15);
+  success = bstrListDestroy(init_data->line_input_string); CHECKERRK(MAP_WARNING_15);
+  success = bstrListDestroy(init_data->solver_options_string); CHECKERRK(MAP_WARNING_15);
+
+  MAP_END_ERROR_LOG;
 
   return MAP_SAFE;
 };

@@ -1,4 +1,4 @@
-/****************************************************************
+/*---------------------------------------------------------------
  *   Copyright (C) 2014 mdm                                     *
  *   map[dot]plus[dot]plus[dot]help[at]gmail                    *
  *                                                              *
@@ -18,7 +18,7 @@
  * KIND, either express or implied.  See the License for the    *
  * specific language governing permissions and limitations      *      
  * under the License.                                           *  
- ****************************************************************/
+ ---------------------------------------------------------------*/
 
 
 #include "mapinit.h"
@@ -267,6 +267,10 @@ void initialize_vessel_to_null(Vessel* floater)
   floater->orientation.phi.units = NULL;
   floater->orientation.the.units = NULL;
   floater->orientation.psi.units = NULL;
+
+  floater->ref_origin.x.value = 0.0;
+  floater->ref_origin.y.value = 0.0;
+  floater->ref_origin.z.value = 0.0;
 };
 
 
@@ -283,10 +287,13 @@ MAP_ERROR_CODE set_vessel(Vessel* floater, const MAP_InputType_t* u_type, char* 
   success = set_vartype_float("[m]", "Vessel_Y", -999, &floater->displacement.y, 0.0); CHECKERRQ(MAP_FATAL_68);
   success = set_vartype_float("[m]", "Vessel_Z", -999, &floater->displacement.z, 0.0); CHECKERRQ(MAP_FATAL_68);
      
-  /* vessel reference origin. When ==[0.0, 0.0, 0.0], then the reference origin is aligned with the SWL */
-  success = set_vartype_float("[m]", "Vessel_Xref", -999, &floater->ref_origin.x, 0.0); CHECKERRQ(MAP_FATAL_68);
-  success = set_vartype_float("[m]", "Vessel_Yref", -999, &floater->ref_origin.y, 0.0); CHECKERRQ(MAP_FATAL_68);
-  success = set_vartype_float("[m]", "Vessel_Zref", -999, &floater->ref_origin.z, 0.0); CHECKERRQ(MAP_FATAL_68);
+  /* vessel reference origin. When ==[0.0, 0.0, 0.0], then the reference origin is aligned with the SWL 
+   * Note: this is commented because it over rides the run-time option 'REF_POSITION'. Instead, the ref position is 
+   * initialized to zero in function void initialize_vessel_to_null(Vessel* floater)
+   */
+  //success = set_vartype_float("[m]", "Vessel_Xref", -999, &floater->ref_origin.x, 0.0); CHECKERRQ(MAP_FATAL_68);
+  //success = set_vartype_float("[m]", "Vessel_Yref", -999, &floater->ref_origin.y, 0.0); CHECKERRQ(MAP_FATAL_68);
+  //success = set_vartype_float("[m]", "Vessel_Zref", -999, &floater->ref_origin.z, 0.0); CHECKERRQ(MAP_FATAL_68);
     
   /* sum force of all fairleads connecte to the vessel */
   success = set_vartype_float("[N]", "Vessel_fx", -999, &floater->line_sum_force.fx, 0.0); CHECKERRQ(MAP_FATAL_68);
@@ -333,7 +340,7 @@ MAP_ERROR_CODE first_solve(Domain* domain, MAP_ParameterType_t* p_type, MAP_Inpu
 
 MAP_ERROR_CODE allocate_outer_solve_data(OuterSolveAttributes* ns, const int size, char* map_msg, MAP_ERROR_CODE* ierr)
 {
-  int ret = 0;
+  // int ret = 0;
   int i = 0;
   int j = 0;
   const int THREE = 3;  
@@ -488,7 +495,7 @@ MAP_ERROR_CODE check_inner_f_tol_flag(struct bstrList* list, double* ftol)
   } else if (success) { 
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        word = list->entry[n+1]->data;
+        word = (char*)list->entry[n+1]->data;
         if (is_numeric(word)) { 
           *ftol = (double)atof(word);
           return MAP_SAFE;
@@ -516,7 +523,7 @@ MAP_ERROR_CODE check_inner_g_tol_flag(struct bstrList* list, double* gtol)
   } else if (success) { 
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        word = list->entry[n+1]->data;
+        word = (char*)list->entry[n+1]->data;
         if (is_numeric(word)) { 
           *gtol = (double)atof(word);
           return MAP_SAFE;
@@ -544,7 +551,7 @@ MAP_ERROR_CODE check_inner_x_tol_flag(struct bstrList* list, double* xtol)
   } else if (success) { 
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        word = list->entry[n+1]->data;
+        word = (char*)list->entry[n+1]->data;
         if (is_numeric(word)) { 
           *xtol = (double)atof(word);
           return MAP_SAFE;
@@ -573,7 +580,7 @@ MAP_ERROR_CODE check_inner_max_its_flag(struct bstrList* list, int* max_its)
   } else if (success) { 
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        word = list->entry[n+1]->data;
+        word = (char*)list->entry[n+1]->data;
         if (is_numeric(word)) { 
           *max_its = (int)atof(word);
           return MAP_SAFE;
@@ -601,7 +608,7 @@ MAP_ERROR_CODE check_outer_max_its_flag(struct bstrList* list, int* max_its)
   } else if (success) { 
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        word = list->entry[n+1]->data;
+        word = (char*)list->entry[n+1]->data;
         if (is_numeric(word)) { 
           *max_its = (int)atof(word);
           return MAP_SAFE;
@@ -629,7 +636,7 @@ MAP_ERROR_CODE check_outer_tol_flag(struct bstrList* list, double* outer_tol)
   } else if (success) { 
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        word = list->entry[n+1]->data;
+        word = (char*)list->entry[n+1]->data;
         if (is_numeric(word)) { 
           *outer_tol = (double)atof(word);
           return MAP_SAFE;
@@ -657,7 +664,7 @@ MAP_ERROR_CODE check_outer_epsilon_flag(struct bstrList* list, double* epsilon)
   } else if (success) { 
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        word = list->entry[n+1]->data;
+        word = (char*)list->entry[n+1]->data;
         if (is_numeric(word)) { 
           *epsilon = (double)atof(word);
           return MAP_SAFE;
@@ -678,13 +685,14 @@ MAP_ERROR_CODE check_integration_dt_flag(struct bstrList* list, double* dt)
   int success = 0;
   int n = 0;
   const char* word = NULL;
+
   success = biseqcstrcaseless(list->entry[0],"INTEGRATION_DT"); /* string compare */
   if (success==BSTR_ERR) {
     return MAP_FATAL;
   } else if (success) { 
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        word = list->entry[n+1]->data;
+        word = (char*)list->entry[n+1]->data;
         if (is_numeric(word)) { 
           *dt = (double)atof(word);
           return MAP_WARNING;
@@ -712,7 +720,7 @@ MAP_ERROR_CODE check_kb_default_flag(struct bstrList* list, double* kb)
   } else if (success) { 
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        word = list->entry[n+1]->data;
+        word = (char*)list->entry[n+1]->data;
         if (is_numeric(word)) { 
           *kb = (double)atof(word);
           return MAP_WARNING;
@@ -732,7 +740,7 @@ MAP_ERROR_CODE check_krylov_accelerator_flag(struct bstrList* list, OuterSolveAt
 {
   int n = 0;
   int success = 0;
-  int next = 0; 
+  // int next = 0; 
   const char* word = NULL;
 
   success = biseqcstrcaseless(list->entry[0],"KRYLOV_ACCELERATOR"); /* string compare */
@@ -742,7 +750,7 @@ MAP_ERROR_CODE check_krylov_accelerator_flag(struct bstrList* list, OuterSolveAt
     solver->krylov_accelerator = true;
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        word = list->entry[n+1]->data;
+        word = (char*)list->entry[n+1]->data;
         if (is_numeric(word)) {         
           solver->max_krylov_its = (int)atoi(word);          
           word = NULL;
@@ -784,7 +792,7 @@ MAP_ERROR_CODE check_cb_default_flag(struct bstrList* list, double* cb)
   } else if (success) { 
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        word = list->entry[n+1]->data;
+        word = (char*)list->entry[n+1]->data;
         if (is_numeric(word)) { 
           *cb = (double)atof(word);
           return MAP_WARNING;
@@ -875,7 +883,7 @@ MAP_ERROR_CODE check_pg_cooked_flag(struct bstrList* list, OuterSolveAttributes*
   } else if (success) {
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        word = list->entry[n+1]->data;
+        word = (char*)list->entry[n+1]->data;
         if (is_numeric(word)) {         
           if (!next) {
             solver->d = (double)atof(word);
@@ -915,7 +923,7 @@ MAP_ERROR_CODE check_repeat_flag(struct bstrList* list, DomainOptions* options)
   } else if (success) {
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        current = list->entry[n+1]->data;
+        current = (char*)list->entry[n+1]->data;
         i = options->repeat_angle_size;
         more_angles = realloc(options->repeat_angle, (i+1)*sizeof(double));
         if (more_angles) {
@@ -952,7 +960,7 @@ MAP_ERROR_CODE check_ref_position_flag(struct bstrList* list, Point* ref_positio
   } else if (success) {
     while (n<list->qty-1) { /* iterating through all strings */      
       if (list->entry[n+1]->slen) { /* if the string length is not 0 */
-        word = list->entry[n+1]->data;
+        word = (char*)list->entry[n+1]->data;
         if (is_numeric(word)) {         
           if (!next) {
             ref_position->x.value = (double)atof(word);
@@ -961,6 +969,8 @@ MAP_ERROR_CODE check_ref_position_flag(struct bstrList* list, Point* ref_positio
             ref_position->y.value = (double)atof(word);
             next++;
           } else {
+            checkpoint();
+            printf("%s\n",word);
             ref_position->z.value = (double)atof(word);
             return MAP_SAFE;
           };
@@ -977,8 +987,6 @@ MAP_ERROR_CODE check_ref_position_flag(struct bstrList* list, Point* ref_positio
 
 MAP_ERROR_CODE check_uncaught_flag(struct bstrList* list)
 {
-  int success = 0;  
-
   if (biseqcstrcaseless(list->entry[0],"")) {
     return MAP_SAFE;
   } else if (biseqcstrcaseless(list->entry[0],"HELP")) {
@@ -1030,8 +1038,8 @@ MAP_ERROR_CODE check_uncaught_flag(struct bstrList* list)
 
 MAP_ERROR_CODE set_library_diameter(bstring word, CableLibrary* library_ptr)
 {
-  if (is_numeric(word->data)) { 
-    library_ptr->diam = (double)atof(word->data);
+  if (is_numeric((char*)word->data)) { 
+    library_ptr->diam = (double)atof((char*)word->data);
   } else { 
     return MAP_FATAL;
   };  
@@ -1041,8 +1049,8 @@ MAP_ERROR_CODE set_library_diameter(bstring word, CableLibrary* library_ptr)
 
 MAP_ERROR_CODE set_library_mass_density(bstring word, CableLibrary* library_ptr)
 {  
-  if (is_numeric(word->data)) { 
-    library_ptr->mass_density = (double)atof(word->data);
+  if (is_numeric((char*)word->data)) { 
+    library_ptr->mass_density = (double)atof((char*)word->data);
   } else { 
     return MAP_FATAL;
   };  
@@ -1052,8 +1060,8 @@ MAP_ERROR_CODE set_library_mass_density(bstring word, CableLibrary* library_ptr)
 
 MAP_ERROR_CODE set_library_ea(bstring word, CableLibrary* library_ptr)
 {
-  if (is_numeric(word->data)) { 
-    library_ptr->EA = (double)atof(word->data);
+  if (is_numeric((char*)word->data)) { 
+    library_ptr->EA = (double)atof((char*)word->data);
   } else { 
     return MAP_FATAL;
   };  
@@ -1063,8 +1071,8 @@ MAP_ERROR_CODE set_library_ea(bstring word, CableLibrary* library_ptr)
 
 MAP_ERROR_CODE set_library_cb(bstring word, CableLibrary* library_ptr)
 {
-  if (is_numeric(word->data)) { 
-    library_ptr->cb = (double)atof(word->data);
+  if (is_numeric((char*)word->data)) { 
+    library_ptr->cb = (double)atof((char*)word->data);
   } else { 
     return MAP_FATAL;
   };  
@@ -1074,8 +1082,8 @@ MAP_ERROR_CODE set_library_cb(bstring word, CableLibrary* library_ptr)
 
 MAP_ERROR_CODE set_library_internal_damping(bstring word, CableLibrary* library_ptr)
 {
-  if (is_numeric(word->data)) { 
-    library_ptr->cd_i = (double)atof(word->data);
+  if (is_numeric((char*)word->data)) { 
+    library_ptr->cd_i = (double)atof((char*)word->data);
   } else { 
     return MAP_FATAL;
   };  
@@ -1085,8 +1093,8 @@ MAP_ERROR_CODE set_library_internal_damping(bstring word, CableLibrary* library_
 
 MAP_ERROR_CODE set_library_added_mass_coefficient(bstring word, CableLibrary* library_ptr)
 {
-  if (is_numeric(word->data)) { 
-    library_ptr->ca = (double)atof(word->data);
+  if (is_numeric((char*)word->data)) { 
+    library_ptr->ca = (double)atof((char*)word->data);
   } else { 
     return MAP_FATAL;
   };  
@@ -1096,8 +1104,8 @@ MAP_ERROR_CODE set_library_added_mass_coefficient(bstring word, CableLibrary* li
 
 MAP_ERROR_CODE set_library_cross_flow_drag_coefficient(bstring word, CableLibrary* library_ptr)
 {
-  if (is_numeric(word->data)) { 
-    library_ptr->cd_n = (double)atof(word->data);
+  if (is_numeric((char*)word->data)) { 
+    library_ptr->cd_n = (double)atof((char*)word->data);
   } else { 
     return MAP_FATAL;
   };  
@@ -1107,8 +1115,8 @@ MAP_ERROR_CODE set_library_cross_flow_drag_coefficient(bstring word, CableLibrar
 
 MAP_ERROR_CODE set_library_tangent_drag_coefficient(bstring word, CableLibrary* library_ptr)
 {
-  if (is_numeric(word->data)) { 
-    library_ptr->cd_t = (double)atof(word->data);
+  if (is_numeric((char*)word->data)) { 
+    library_ptr->cd_t = (double)atof((char*)word->data);
   } else { 
     return MAP_FATAL;
   };  
@@ -1181,8 +1189,6 @@ MAP_ERROR_CODE set_model_options_list(Domain* domain, InitializationData* init_d
 
 MAP_ERROR_CODE reset_cable_library(CableLibrary* library_ptr)
 {
-  MAP_ERROR_CODE success = MAP_SAFE;
-
   library_ptr->diam = 0.0;
   library_ptr->mass_density = 0.0;
   library_ptr->EA = 0.0;          
@@ -1206,7 +1212,6 @@ MAP_ERROR_CODE set_cable_library_list(Domain* domain, InitializationData* init_d
   int i = 0;
   int n = 0;
   int next = 0; 
-  int ret = 0;
   const int n_lines = (init_data->library_input_string->qty)-1;
   struct bstrList* parsed = NULL;
   struct tagbstring tokens; 
@@ -1270,7 +1275,6 @@ MAP_ERROR_CODE set_cable_library_list(Domain* domain, InitializationData* init_d
 
 MAP_ERROR_CODE initialize_cable_library_variables(Domain* domain, MAP_ParameterType_t* p_type, char* map_msg, MAP_ERROR_CODE* ierr)
 {
-  MAP_ERROR_CODE success = MAP_SAFE;
   double radius = 0.0;
   double area = 0.0;
   double mu = 0.0;
@@ -1507,7 +1511,7 @@ MAP_ERROR_CODE repeat_nodes(Domain* domain, InitializationData* init_data, char*
   init_data->expanded_node_input_string->qty = 0;
   
   for(i=0 ; i<num_node ; i++) {     
-    init_data->expanded_node_input_string->entry[i] = bfromcstr(init_data->node_input_string->entry[i]->data);// bstrcpy(init_data->node_input_string->entry[i]);
+    init_data->expanded_node_input_string->entry[i] = bfromcstr((char*)init_data->node_input_string->entry[i]->data);// bstrcpy(init_data->node_input_string->entry[i]);
     init_data->expanded_node_input_string->qty++;
   };
 
@@ -1524,7 +1528,7 @@ MAP_ERROR_CODE repeat_nodes(Domain* domain, InitializationData* init_data, char*
 
       while (i_parsed<parsed->qty-1) { /* iterating through all strings */              
         if (parsed->entry[i_parsed]->slen) { /* if the string length is not 0 */
-          word = parsed->entry[i_parsed]->data;      
+          word = (char*)parsed->entry[i_parsed]->data;      
           if (next==0) {
             success = expand_node_number(n_line+1, line);/* @todo: checkerrq */
             next++;
@@ -1683,7 +1687,7 @@ MAP_ERROR_CODE repeat_lines(Domain* domain, InitializationData* init_data, char*
   init_data->expanded_line_input_string->qty = 0;
   
   for(i=0 ; i<num_line ; i++) {     
-    init_data->expanded_line_input_string->entry[i] = bfromcstr(init_data->line_input_string->entry[i]->data);
+    init_data->expanded_line_input_string->entry[i] = bfromcstr((char*)init_data->line_input_string->entry[i]->data);
     init_data->expanded_line_input_string->qty++;
   };
   
@@ -1701,7 +1705,7 @@ MAP_ERROR_CODE repeat_lines(Domain* domain, InitializationData* init_data, char*
   
       while (i_parsed<parsed->qty-1) { /* iterating through all strings */              
         if (parsed->entry[i_parsed]->slen) { /* if the string length is not 0 */
-          word = parsed->entry[i_parsed]->data;
+          word = (char*)parsed->entry[i_parsed]->data;
           if (next==0) {
             success = expand_line_number(n_line+1, line);
             next++;
@@ -2053,16 +2057,16 @@ MAP_ERROR_CODE set_vartype(const char* unit, bstring alias, const int num, VarTy
       type->is_fixed = false;
       if (property->slen==1) { /* implies that property->data = "#" */
         type->value = -999.9;
-      } else if (is_numeric(remove_first_character(property->data))) {
-        type->value = (double)atof(remove_first_character(property->data));
+      } else if (is_numeric(remove_first_character((char*)property->data))) {
+        type->value = (double)atof(remove_first_character((char*)property->data));
         type->user_initial_guess = true;
       } else {
         return MAP_FATAL;
       };
     } else { /* this variable is constant */    
       type->is_fixed = true;
-      if (is_numeric(property->data)) { 
-        type->value = (double)atof(property->data);
+      if (is_numeric((char*)property->data)) { 
+        type->value = (double)atof((char*)property->data);
       } else {
         return MAP_FATAL;
       };
@@ -2083,15 +2087,15 @@ MAP_ERROR_CODE set_vartype_ptr(const char* unit, bstring alias, const int num, V
     type->is_fixed = false;
     if (property->slen==1) { /* implies that property->data = "#" */
       *type->value = -999.9;
-    } else if (is_numeric(remove_first_character(property->data))) { 
-      *type->value = (double)atof(remove_first_character(property->data));
+    } else if (is_numeric(remove_first_character((char*)property->data))) { 
+      *type->value = (double)atof(remove_first_character((char*)property->data));
     } else {
       return MAP_FATAL;
     };
   } else { /* this variable is constant */    
     type->is_fixed = true;
-    if (is_numeric(property->data)) { 
-      *type->value = (double)atof(property->data);
+    if ((char*)is_numeric((char*)property->data)) { 
+      *type->value = (double)atof((char*)property->data);
     } else {
       return MAP_FATAL;
     };
@@ -2100,9 +2104,93 @@ MAP_ERROR_CODE set_vartype_ptr(const char* unit, bstring alias, const int num, V
 };
 
 
+/**
+  .. c:var:: GX_POS
+
+  global X fairlead position [m]
+
+  .. c:var:: GY_POS
+
+  global X fairlead position [m]
+
+
+  .. c:var:: GZ_POS
+
+  global X fairlead position [m]
+
+  .. c:var:: GX_A_POS 
+
+  global X position of anchor [m]
+  
+  .. c:var:: GY_A_POS 
+  
+  global Y fairlead position [m]
+  
+  .. c:var:: GZ_A_POS 
+  
+  global Z fairlead position [m]
+  
+  .. c:var:: GX_FORCE 
+  
+  global X fairlead force [N]
+  
+  .. c:var:: GY_FORCE 
+
+  global Y fairlead force [N]
+  
+  .. c:var:: GZ_FORCE 
+
+  global Z fairlead force [N]
+  
+  .. c:var:: H_FAIR 
+  
+  horizontal (XY plane) fairlead force [N] 
+  
+  .. c:var:: H_ANCH
+
+  horizontal (XY plane) anchor force [N] 
+  
+  .. c:var:: V_FAIR 
+
+  vertical (Z axis) fairlead force [N]
+  
+  .. c:var:: V_ANCH 
+
+  vertical (Z axis) anchor force [N]
+  
+  .. c:var:: TENSION_FAIR 
+
+  fairlead force magnitude, [N] 
+  
+  .. c:var:: TENSION_ANCH 
+
+  anchor force magnitude, [N] 
+  
+  .. c:var:: X_EXCURSION 
+  
+  .. c:var:: Z_EXCURSION
+  
+  .. c:var:: AZIMUTH
+  
+  .. c:var:: ALTITUDE
+  
+  .. c:var:: ALTITUDE_ANCH
+  
+  .. c:var:: LINE_TENSION
+  
+  .. c:var:: OMIT_CONTACT
+  
+  .. c:var:: LINEAR_SPRING
+  
+  .. c:var:: LAY_LENGTH
+  
+  .. c:var:: DAMAGE_TIME
+ 
+  .. c:var:: DIAGNOSTIC 
+*/
 MAP_ERROR_CODE set_line_option_flags(struct bstrList* words, int* i_parsed, Line* line_ptr, char* map_msg, MAP_ERROR_CODE* ierr)
 {
-  MAP_ERROR_CODE success = MAP_SAFE;
+  // MAP_ERROR_CODE success = MAP_SAFE;
   int index = *i_parsed;
   
   if (biseqcstrcaseless(words->entry[index], "GX_POS")) {
@@ -2158,8 +2246,8 @@ MAP_ERROR_CODE set_line_option_flags(struct bstrList* words, int* i_parsed, Line
         break;
       };
     } while (words->entry[index]->slen<1);
-    if (is_numeric(words->entry[index]->data)) {
-      line_ptr->segment_size = (int)atoi(words->entry[index]->data);
+    if (is_numeric((char*)words->entry[index]->data)) {
+      line_ptr->segment_size = (int)atoi((char*)words->entry[index]->data);
       *i_parsed = index;
     } else { /* should not cancel the simulation; simply ignore it */      
       set_universal_error_with_message(map_msg, ierr, MAP_FATAL_18, "Option <%s>", words->entry[index]->data);
@@ -2173,9 +2261,9 @@ MAP_ERROR_CODE set_line_option_flags(struct bstrList* words, int* i_parsed, Line
         break;
       };
     } while (words->entry[index]->slen<1);
-    if (is_numeric(words->entry[index]->data)) {
+    if (is_numeric((char*)words->entry[index]->data)) {
       line_ptr->options.damage_time_flag = true;
-      line_ptr->damage_time = (double)atof(words->entry[index]->data);
+      line_ptr->damage_time = (double)atof((char*)words->entry[index]->data);
       *i_parsed = index;
     } else { /* should not cancel the simulation; simply ignore it */      
       set_universal_error_with_message(map_msg, ierr, MAP_ERROR_1, "Option <%s>", words->entry[index]->data);
@@ -2187,9 +2275,9 @@ MAP_ERROR_CODE set_line_option_flags(struct bstrList* words, int* i_parsed, Line
         break;
       };
     } while (words->entry[index]->slen<1);
-    if (is_numeric(words->entry[index]->data)) {
+    if (is_numeric((char*)words->entry[index]->data)) {
       line_ptr->options.diagnostics_flag = true;
-      line_ptr->diagnostic_type = (int)atoi(words->entry[index]->data);
+      line_ptr->diagnostic_type = (int)atoi((char*)words->entry[index]->data);
       *i_parsed = index;
     } else { /* should not cancel the simulation; simply ignore it */      
       set_universal_error_with_message(map_msg, ierr, MAP_ERROR_14, "Option <%s>", words->entry[index]->data);
@@ -2257,7 +2345,7 @@ MAP_ERROR_CODE set_line_list(MAP_ConstraintStateType_t* z_type, Domain* domain, 
              
           next++;
         } else if (next==1) {
-          success = associate_line_with_cable_property(line_iter, domain, parsed->entry[i_parsed]->data, map_msg, ierr); CHECKERRQ(MAP_FATAL_32);           
+          success = associate_line_with_cable_property(line_iter, domain, (char*)parsed->entry[i_parsed]->data, map_msg, ierr); CHECKERRQ(MAP_FATAL_32);           
           next++;
         } else if (next==2) { 
           alias = bformat("Lu[%d]", i+1);
@@ -2265,10 +2353,10 @@ MAP_ERROR_CODE set_line_list(MAP_ConstraintStateType_t* z_type, Domain* domain, 
           success = bdestroy(alias);
           next++;
         } else if (next==3) { 
-          success = associate_line_with_anchor_node(line_iter, domain, i+1, parsed->entry[i_parsed]->data,  map_msg, ierr); CHECKERRQ(MAP_FATAL_32);        
+          success = associate_line_with_anchor_node(line_iter, domain, i+1, (char*)parsed->entry[i_parsed]->data,  map_msg, ierr); CHECKERRQ(MAP_FATAL_32);        
           next++;
         } else if (next==4) { 
-          success = associate_line_with_fairlead_node(line_iter, domain, i+1, parsed->entry[i_parsed]->data,  map_msg, ierr); CHECKERRQ(MAP_FATAL_32);        
+          success = associate_line_with_fairlead_node(line_iter, domain, i+1, (char*)parsed->entry[i_parsed]->data,  map_msg, ierr); CHECKERRQ(MAP_FATAL_32);        
           next++;
         } else { /* set the node mass */            
           success = set_line_option_flags(parsed, &i_parsed, line_iter, map_msg, ierr);
@@ -2307,9 +2395,9 @@ MAP_ERROR_CODE set_output_list(Domain* domain, MAP_InitOutputType_t* io_type, ch
   MAP_ERROR_CODE  success = MAP_SAFE;
   Line* line_iter = NULL;
   OutputList* y_list = domain->y_list;
-  int size = 0;
+  // int size = 0;
   int line_num = 1;
-  VarTypePtr* iter_vartype = NULL;
+  // VarTypePtr* iter_vartype = NULL;
 
   list_iterator_start(&domain->line); /* starting an iteration "session" */
   while (list_iterator_hasnext(&domain->line)) { /* tell whether more values available */ 
@@ -2567,7 +2655,7 @@ MAP_ERROR_CODE reset_node(Node* node_ptr)
 
 MAP_ERROR_CODE associate_line_with_cable_property(Line* line_ptr, Domain* domain, const char* word, char* map_msg, MAP_ERROR_CODE* ierr)
 {
-  MAP_ERROR_CODE success = MAP_SAFE;
+  // MAP_ERROR_CODE success = MAP_SAFE;
   CableLibrary* library_iterator = NULL;
 
   library_iterator = NULL;
@@ -2593,7 +2681,7 @@ MAP_ERROR_CODE associate_line_with_cable_property(Line* line_ptr, Domain* domain
 
 MAP_ERROR_CODE associate_line_with_anchor_node(Line* line_ptr, Domain* domain, const int line_num, const char* word, char* map_msg, MAP_ERROR_CODE* ierr)
 {
-  MAP_ERROR_CODE success = MAP_SAFE;
+  // MAP_ERROR_CODE success = MAP_SAFE;
   Node* node_iter = NULL;
   int node_num = 0;
 
@@ -2619,7 +2707,7 @@ MAP_ERROR_CODE associate_line_with_fairlead_node(Line* line_ptr, Domain* domain,
 {
   Node* node_iter = NULL;
   int node_num = 0;
-  MAP_ERROR_CODE success = MAP_SAFE;
+  // MAP_ERROR_CODE success = MAP_SAFE;
 
   line_ptr->fairlead = NULL;
 

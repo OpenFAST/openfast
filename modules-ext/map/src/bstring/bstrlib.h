@@ -80,7 +80,7 @@ typedef struct tagbstring *bstring;
 struct tagbstring {
 	int mlen;
 	int slen;
-	unsigned char *data;
+        unsigned char *data;
 };
 
 /* Copy functions */

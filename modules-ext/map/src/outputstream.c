@@ -165,7 +165,7 @@ MAP_ERROR_CODE write_summary_file(InitializationData* init, MAP_ParameterType_t*
   strftime(time_buffer, TIME_BUFFER_SIZE, "%A %B %d-%Y at %H:%M:%S %p", &tm_info);
 # endif
 
-  err = fopen_s(&file, init->summary_file_name->data, "w");
+  err = fopen_s(&file, (char*)init->summary_file_name->data, "w");
   if (err!=MAP_SAFE) {
     set_universal_error_with_message(map_msg, ierr, MAP_FATAL_95, "File name: <%s>", init->summary_file_name->data);
     return MAP_FATAL;
@@ -887,7 +887,7 @@ MAP_ERROR_CODE write_expanded_input_file_to_summary_file(FILE* file, Initializat
   fprintf(file, "LineType  Diam      MassDenInAir   EA            CB\n");
   fprintf(file, "[-]       [m]       [kg/m]         [N]           [-]\n");  
   for (i=0 ; i<init_data->library_input_string->qty ; i++) {
-    line = init_data->library_input_string->entry[i]->data;
+    line = (char*)init_data->library_input_string->entry[i]->data;
     len = init_data->library_input_string->entry[i]->slen;
     fprintf(file, "%s", line);
     if (line[len-1]!='\n') {
@@ -899,7 +899,7 @@ MAP_ERROR_CODE write_expanded_input_file_to_summary_file(FILE* file, Initializat
   fprintf(file, "Node  Type       X       Y       Z      M     B     FX    FY    FZ\n");
   fprintf(file, "[-]   [-]       [m]     [m]     [m]    [kg]  [mˆ3]  [N]   [N]   [N]\n");
   for (i=0 ; i<init_data->expanded_node_input_string->qty ; i++) {    
-    line = init_data->expanded_node_input_string->entry[i]->data;
+    line = (char*)init_data->expanded_node_input_string->entry[i]->data;
     len = init_data->expanded_node_input_string->entry[i]->slen;
     fprintf(file, "%s", line);
     if (line[len-1]!='\n') {
@@ -911,7 +911,7 @@ MAP_ERROR_CODE write_expanded_input_file_to_summary_file(FILE* file, Initializat
   fprintf(file, "Line  LineType  UnstrLen  NodeAnch  NodeFair  Flags\n");
   fprintf(file, "[-]      [-]       [m]       [-]       [-]       [-]\n");
   for (i=0 ; i<init_data->expanded_line_input_string->qty ; i++) {    
-    line = init_data->expanded_line_input_string->entry[i]->data;
+    line = (char*)init_data->expanded_line_input_string->entry[i]->data;
     len = init_data->expanded_line_input_string->entry[i]->slen;
     fprintf(file, "%s", line);
     if (line[len-1]!='\n') {
@@ -923,7 +923,7 @@ MAP_ERROR_CODE write_expanded_input_file_to_summary_file(FILE* file, Initializat
   fprintf(file, "Option \n");
   fprintf(file, "[-] \n");
   for (i=0 ; i<init_data->solver_options_string->qty ; i++) {    
-    line = init_data->solver_options_string->entry[i]->data;
+    line = (char*)init_data->solver_options_string->entry[i]->data;
     len = init_data->solver_options_string->entry[i]->slen;
     fprintf(file, "%s", line);
     if (line[len-1]!='\n') {

@@ -3,7 +3,7 @@
 
 '''
   Copyright (C) 2014 mdm                                     
-  marco[dot]masciola[at]gmail                                
+  map[dot]plus[dot]plus[dot]help[at]gmail                     
                                                              
 Licensed to the Apache Software Foundation (ASF) under one   
 or more contributor license agreements.  See the NOTICE file 
@@ -34,11 +34,12 @@ if __name__ == '__main__':
 
     mooring_1 = Map( )
     
-    mooring_1.map_set_sea_depth(120)
+    mooring_1.map_set_sea_depth(350)
     mooring_1.map_set_gravity(9.81)
     mooring_1.map_set_sea_density(1025.0)
     
-    mooring_1.read_file("../test/baseline_1.map")                                         # 120 m depth    
+    #mooring_1.read_file("../test/baseline_1.map")                                         # 120 m depth    
+    mooring_1.read_file("../test/baseline_2.map")                                         # 350 m depth    
     # mooring_1.read_file("../test/baseline_5.map")                                       # 80 m depth
     # mooring_1.read_file("../test/NRELOffshrBsline5MW_Platform_OC3Hywind.map")           # 320 m depth
     # mooring_1.read_file("../test/NRELOffshrBsline5MW_Platform_OC3Hywind_segmented.map") # 320 m depth
@@ -52,11 +53,11 @@ if __name__ == '__main__':
     #print "\nHere is the linearized stiffness matrix with zero vessel displacement:"
     #print np.array(K)
 
-    mooring_1.displace_vessel(5,0,0,0,0,0)
-    mooring_1.update_states(0.0,0)
+    #mooring_1.displace_vessel(5,0,0,0,0,0)
+    #mooring_1.update_states(0.0,0)
 
-    mooring_1.displace_vessel(17,0,0,0,0,0)
-    mooring_1.update_states(0.0,0)
+    #mooring_1.displace_vessel(17,0,0,0,0,0)
+    #mooring_1.update_states(0.0,0)
 
     # H,V = mooring_1.get_fairlead_force_2d(0)    
     # print H, "  ", V

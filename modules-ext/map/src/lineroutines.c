@@ -247,8 +247,8 @@ MAP_ERROR_CODE set_psi(Line* line, char* map_msg, MAP_ERROR_CODE* ierr)
     return MAP_WARNING;
   };
   
-  if (norm<=1e-2) { 
-    norm = 1e-2; 
+  if (norm<=1e-2) {
+    norm = 1e-2;
   };
 
   /* find the angle psi line simply finds the angle psi between the local and global reference frames simply by 
@@ -619,7 +619,7 @@ MAP_ERROR_CODE solve_line(Domain* domain, const float time, char* map_msg, MAP_E
 
 MAP_ERROR_CODE solve_linear_spring_cable(Line* line, char* map_msg, MAP_ERROR_CODE* ierr)
 {
-  MAP_ERROR_CODE success = MAP_SAFE;
+  // MAP_ERROR_CODE success = MAP_SAFE;
   double d_norm = 0.0;
   Vector d;  /* r1-r2 */
   Vector r1; /* anchor position */
@@ -674,7 +674,7 @@ MAP_ERROR_CODE solve_linear_spring_cable(Line* line, char* map_msg, MAP_ERROR_CO
 
 MAP_ERROR_CODE check_maximum_line_length(Line* line, const bool contact_flag, char *map_msg, MAP_ERROR_CODE *ierr)
 {
-  MAP_ERROR_CODE success = MAP_SAFE;
+  // MAP_ERROR_CODE success = MAP_SAFE;
   double LMax = 0.0;
   const double l = line->l;
   const double h = line->h;
@@ -1157,29 +1157,29 @@ MAP_ERROR_CODE set_moment_plus_2(const MAP_InputType_t* u_type, const MAP_Output
   double rx = 0.0;
   double ry = 0.0;
   double rz = 0.0;
-  double m1 = 0.0;
-  double m2 = 0.0;
-  double m3 = 0.0;
-  double phi = vessel->orientation.phi.value;
+  // double m1 = 0.0;
+  // double m2 = 0.0;
+  // double m3 = 0.0;
+  // double phi = vessel->orientation.phi.value;
+  // double delta = 1e-4;
 
-  double delta = 1e-4;
   for (i=0 ; i<size ; i++) {    
     /* @todo: forces are in global frame. Make sure everything is consistent. Should also add
-     *        reference origin. This need s to be converted to the global frame to be consistent with
+     *        reference origin. This needs to be converted to the global frame to be consistent with
      *       uType. 
      */
-    rx = u_type->x[i];// (vessel->xi[i] - vessel->ref_origin.x.value);
-    ry = u_type->y[i];// (vessel->yi[i] - vessel->ref_origin.y.value);
-    rz = u_type->z[i];// (vessel->zi[i] - vessel->ref_origin.z.value);    
-    m1 = ((-y_type->Fz[i]*ry) - (-y_type->Fy[i]*rz));
-    m2 = ((-y_type->Fx[i]*rz) - (-y_type->Fz[i]*rx));
-    m3 = ((-y_type->Fy[i]*rx) - (-y_type->Fx[i]*ry));
-    mx[i] += m1;
-    my[i] += m2*cos(phi+delta) - m3*sin(phi+delta);
-    mz[i] += m2*sin(phi+delta) + m3*cos(phi+delta);    
-    // mx[i] += ((-output_type->Fz[i]*ry) - (-output_type->Fy[i]*rz));
-    // my[i] += ((-output_type->Fx[i]*rz) - (-output_type->Fz[i]*rx));
-    // mz[i] += ((-output_type->Fy[i]*rx) - (-output_type->Fx[i]*ry));
+    rx = (vessel->xi[i] - vessel->ref_origin.x.value);
+    ry = (vessel->yi[i] - vessel->ref_origin.y.value);
+    rz = (vessel->zi[i] - vessel->ref_origin.z.value);    
+    // m1 = ((-y_type->Fz[i]*ry) - (-y_type->Fy[i]*rz));
+    // m2 = ((-y_type->Fx[i]*rz) - (-y_type->Fz[i]*rx));
+    // m3 = ((-y_type->Fy[i]*rx) - (-y_type->Fx[i]*ry));
+    // mx[i] += m1;
+    // my[i] += m2*cos(phi+delta) - m3*sin(phi+delta);
+    // mz[i] += m2*sin(phi+delta) + m3*cos(phi+delta);    
+    mx[i] += ((-y_type->Fz[i]*ry) - (-y_type->Fy[i]*rz));
+    my[i] += ((-y_type->Fx[i]*rz) - (-y_type->Fz[i]*rx));
+    mz[i] += ((-y_type->Fy[i]*rx) - (-y_type->Fx[i]*ry));
   };
   return MAP_SAFE;
 };
@@ -1191,25 +1191,25 @@ MAP_ERROR_CODE set_moment_minus_2(const MAP_InputType_t* u_type, const MAP_Outpu
   double rx = 0.0;
   double ry = 0.0;
   double rz = 0.0;
-  double m1 = 0.0;
-  double m2 = 0.0;
-  double m3 = 0.0;
-  double phi = vessel->orientation.phi.value;
+  // double m1 = 0.0;
+  // double m2 = 0.0;
+  // double m3 = 0.0;
+  // double phi = vessel->orientation.phi.value;
+  // double delta = 1e-4;
 
-  double delta = 1e-4;
   for (i=0 ; i<size ; i++) {    
-    rx = u_type->x[i];// (vessel->xi[i] - vessel->ref_origin.x.value);
-    ry = u_type->y[i];// (vessel->yi[i] - vessel->ref_origin.y.value);
-    rz = u_type->z[i];// (vessel->zi[i] - vessel->ref_origin.z.value);    
-    m1 = ((-y_type->Fz[i]*ry) - (-y_type->Fy[i]*rz));
-    m2 = ((-y_type->Fx[i]*rz) - (-y_type->Fz[i]*rx));
-    m3 = ((-y_type->Fy[i]*rx) - (-y_type->Fx[i]*ry));
-    mx[i] -= m1;
-    my[i] -= m2*cos(phi+delta) - m3*sin(phi+delta);
-    mz[i] -= m2*sin(phi+delta) + m3*cos(phi+delta);    
-    // mx[i] -= ((-y_type->Fz[i]*ry) - (-y_type->Fy[i]*rz));
-    // my[i] -= ((-y_type->Fx[i]*rz) - (-y_type->Fz[i]*rx));
-    // mz[i] -= ((-y_type->Fy[i]*rx) - (-y_type->Fx[i]*ry));
+    rx = (vessel->xi[i] - vessel->ref_origin.x.value);
+    ry = (vessel->yi[i] - vessel->ref_origin.y.value);
+    rz = (vessel->zi[i] - vessel->ref_origin.z.value);    
+    // m1 = ((-y_type->Fz[i]*ry) - (-y_type->Fy[i]*rz));
+    // m2 = ((-y_type->Fx[i]*rz) - (-y_type->Fz[i]*rx));
+    // m3 = ((-y_type->Fy[i]*rx) - (-y_type->Fx[i]*ry));
+    // mx[i] -= m1;
+    // my[i] -= m2*cos(phi+delta) - m3*sin(phi+delta);
+    // mz[i] -= m2*sin(phi+delta) + m3*cos(phi+delta);    
+    mx[i] -= ((-y_type->Fz[i]*ry) - (-y_type->Fy[i]*rz));
+    my[i] -= ((-y_type->Fx[i]*rz) - (-y_type->Fz[i]*rx));
+    mz[i] -= ((-y_type->Fy[i]*rx) - (-y_type->Fx[i]*ry));
   };
   return MAP_SAFE;
 };
