@@ -163,16 +163,19 @@ checkError(const int ErrStat, const char * ErrMsg){
 
 void
 setOutputsToFAST(OpFM_InputType_t* OpFM_Input_from_FAST, OpFM_OutputType_t* OpFM_Output_to_FAST){
+   int j;
 
    // routine sets the u-v-w wind speeds used in FAST and the SuperController inputs
 
-   for (int j = 0; j < OpFM_Output_to_FAST->u_Len; j++){
+   for (j = 0; j < OpFM_Output_to_FAST->u_Len; j++){
       OpFM_Output_to_FAST->u[j] = (float) 10.0*pow((OpFM_Input_from_FAST->pz[j] / 90.0), 0.2); // 0.2 power law wind profile using reference 10 m/s at 90 meters
       OpFM_Output_to_FAST->v[j] = 0.0;
       OpFM_Output_to_FAST->w[j] = 0.0;
    }
 
-   for (int j = 0; j < OpFM_Output_to_FAST->SuperController_Len; j++){
+   // call supercontroller
+
+   for (j = 0; j < OpFM_Output_to_FAST->SuperController_Len; j++){
       OpFM_Output_to_FAST->SuperController[j] = (float) j; // set it somehow.... (would be set from the SuperController outputs)
    }
 
