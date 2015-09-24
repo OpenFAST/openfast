@@ -1,4 +1,4 @@
-//!STARTOFREGISTRYGENERATEDFILE './MAP_Types.h'
+//!STARTOFREGISTRYGENERATEDFILE 'MAP_Types.h'
 //!
 //! WARNING This file is generated automatically by the FAST registry
 //! Do not edit.  Your changes to this file will be lost.

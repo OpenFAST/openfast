@@ -1,9 +1,9 @@
-!STARTOFREGISTRYGENERATEDFILE './MAP_Types.f90'
+!STARTOFREGISTRYGENERATEDFILE 'MAP_Types.f90'
 !
 ! WARNING This file is generated automatically by the FAST registry
 ! Do not edit.  Your changes to this file will be lost.
 !
-! FAST Registry (v2.06.01, 21-Apr-2015)
+! FAST Registry (v2.08.02, 12-Aug-2015)
 !*********************************************************************************************************************************
 ! MAP_Types
 !.................................................................................................................................
@@ -251,7 +251,7 @@ CONTAINS
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(1024)                :: ErrMsg2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_CopyInitInput'
 ! 
    ErrStat = ErrID_None
@@ -305,7 +305,7 @@ CONTAINS
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_PackInitInput'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -413,7 +413,7 @@ CONTAINS
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_UnPackInitInput'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -494,7 +494,7 @@ CONTAINS
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(1024)                :: ErrMsg2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_CopyInitOutput'
 ! 
    ErrStat = ErrID_None
@@ -570,7 +570,7 @@ ENDIF
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_PackInitOutput'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -744,7 +744,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_UnPackInitOutput'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -888,7 +888,7 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(1024)                :: ErrMsg2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_CopyContState'
 ! 
    ErrStat = ErrID_None
@@ -926,7 +926,7 @@ ENDIF
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_PackContState'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -997,7 +997,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_UnPackContState'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -1033,7 +1033,7 @@ ENDIF
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(1024)                :: ErrMsg2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_CopyDiscState'
 ! 
    ErrStat = ErrID_None
@@ -1071,7 +1071,7 @@ ENDIF
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_PackDiscState'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -1142,7 +1142,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_UnPackDiscState'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -1179,7 +1179,7 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(1024)                :: ErrMsg2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_CopyOtherState'
 ! 
    ErrStat = ErrID_None
@@ -1551,7 +1551,7 @@ ENDIF
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_PackOtherState'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -1908,7 +1908,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_UnPackOtherState'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -2469,7 +2469,7 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(1024)                :: ErrMsg2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_CopyConstrState'
 ! 
    ErrStat = ErrID_None
@@ -2610,7 +2610,7 @@ ENDIF
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_PackConstrState'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -2769,7 +2769,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_UnPackConstrState'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -2967,7 +2967,7 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(1024)                :: ErrMsg2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_CopyParam'
 ! 
    ErrStat = ErrID_None
@@ -3013,7 +3013,7 @@ ENDIF
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_PackParam'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -3108,7 +3108,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_UnPackParam'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -3187,7 +3187,7 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(1024)                :: ErrMsg2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_CopyInput'
 ! 
    ErrStat = ErrID_None
@@ -3290,7 +3290,7 @@ ENDIF
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_PackInput'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -3459,7 +3459,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_UnPackInput'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -3631,7 +3631,7 @@ ENDIF
    INTEGER(IntKi)                 :: i,j,k
    INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(1024)                :: ErrMsg2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_CopyOutput'
 ! 
    ErrStat = ErrID_None
@@ -3771,7 +3771,7 @@ ENDIF
   INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_PackOutput'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -3976,7 +3976,7 @@ ENDIF
   LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'MAP_UnPackOutput'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -4195,7 +4195,7 @@ ENDIF
  END SUBROUTINE MAP_C2Fary_CopyOutput
 
 
- SUBROUTINE MAP_Input_ExtrapInterp(u, tin, u_out, tin_out, ErrStat, ErrMsg )
+ SUBROUTINE MAP_Input_ExtrapInterp(u, t, u_out, t_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
 ! values of u (which has values associated with times in t).  Order of the interpolation is given by the size of u
@@ -4211,23 +4211,70 @@ ENDIF
 !
 !..................................................................................................................................
 
- TYPE(MAP_inputtype), INTENT(INOUT)  :: u(:)      ! Input at t1 > t2 > t3
- REAL(DbKi),         INTENT(IN   )  :: tin(:)      ! Times associated with the Inputs
- TYPE(MAP_inputtype), INTENT(INOUT)  :: u_out     ! Input at tin_out
- REAL(DbKi),         INTENT(IN   )  :: tin_out     ! time to be extrap/interp'd to
- INTEGER(IntKi),     INTENT(  OUT)  :: ErrStat   ! Error status of the operation
- CHARACTER(*),       INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+ TYPE(MAP_InputType), INTENT(INOUT)  :: u(:) ! Input at t1 > t2 > t3
+ REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Inputs
+ TYPE(MAP_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi) :: t(SIZE(tin))    ! Times associated with the Inputs
- REAL(DbKi) :: t_out           ! Time to which to be extrap/interpd
- INTEGER(IntKi)                 :: order    ! order of polynomial fit (max 2)
- CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_Input_ExtrapInterp'
+ INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
+ INTEGER(IntKi)                             :: ErrStat2        ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
+ CHARACTER(*),    PARAMETER                 :: RoutineName = 'MAP_Input_ExtrapInterp'
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+ if ( size(t) .ne. size(u)) then
+    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(u)',ErrStat,ErrMsg,RoutineName)
+    RETURN
+ endif
+ order = SIZE(u) - 1
+ IF ( order .eq. 0 ) THEN
+   CALL MAP_CopyInput(u(1), u_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 1 ) THEN
+   CALL MAP_Input_ExtrapInterp1(u(1), u(2), t, u_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 2 ) THEN
+   CALL MAP_Input_ExtrapInterp2(u(1), u(2), u(3), t, u_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE 
+   CALL SetErrStat(ErrID_Fatal,'size(u) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
+   RETURN
+ ENDIF 
+ END SUBROUTINE MAP_Input_ExtrapInterp
+
+
+ SUBROUTINE MAP_Input_ExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
+! values of u (which has values associated with times in t).  Order of the interpolation is 1.
+!
+!  f(t) = a + b * t, or
+!
+!  where a and b are determined as the solution to
+!  f(t1) = u1, f(t2) = u2
+!
+!..................................................................................................................................
+
+ TYPE(MAP_InputType), INTENT(INOUT)  :: u1    ! Input at t1 > t2
+ TYPE(MAP_InputType), INTENT(INOUT)  :: u2    ! Input at t2 
+ REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Inputs
+ TYPE(MAP_InputType), INTENT(INOUT)  :: u_out ! Input at tin_out
+ REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+ INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+ CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(2)     ! Times associated with the Inputs
+ REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
+ CHARACTER(*),                    PARAMETER :: RoutineName = 'MAP_Input_ExtrapInterp1'
  REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
  REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
  REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
  REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(1024)                            :: ErrMsg2  ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -4236,118 +4283,123 @@ ENDIF
  t = tin - tin(1)
  t_out = tin_out - tin(1)
 
- if ( size(t) .ne. size(u)) then
-    ErrStat = ErrID_Fatal
-    ErrMsg = ' Error in MAP_Input_ExtrapInterp: size(t) must equal size(u) '
-    RETURN
- endif
- if (size(u) .gt. 3) then
-    ErrStat = ErrID_Fatal
-    ErrMsg  = ' Error in MAP_Input_ExtrapInterp: size(u) must be less than 4 '
-    RETURN
- endif
- order = SIZE(u) - 1
- IF ( order .eq. 0 ) THEN
-IF (ASSOCIATED(u_out%x) .AND. ASSOCIATED(u(1)%x)) THEN
-  u_out%x = u(1)%x
-END IF ! check if allocated
-IF (ASSOCIATED(u_out%y) .AND. ASSOCIATED(u(1)%y)) THEN
-  u_out%y = u(1)%y
-END IF ! check if allocated
-IF (ASSOCIATED(u_out%z) .AND. ASSOCIATED(u(1)%z)) THEN
-  u_out%z = u(1)%z
-END IF ! check if allocated
-  CALL MeshCopy(u(1)%PtFairDisplacement, u_out%PtFairDisplacement, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- ELSE IF ( order .eq. 1 ) THEN
-  IF ( EqualRealNos( t(1), t(2) ) ) THEN
-    ErrStat = ErrID_Fatal
-    ErrMsg  = ' Error in MAP_Input_ExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
-    RETURN
-  END IF
-IF (ASSOCIATED(u_out%x) .AND. ASSOCIATED(u(1)%x)) THEN
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+IF (ASSOCIATED(u_out%x) .AND. ASSOCIATED(u1%x)) THEN
   ALLOCATE(b1(SIZE(u_out%x,1)))
   ALLOCATE(c1(SIZE(u_out%x,1)))
-  b1 = -(u(1)%x - u(2)%x)/t(2)
-  u_out%x = u(1)%x + b1 * t_out
+  b1 = -(u1%x - u2%x)/t(2)
+  u_out%x = u1%x + b1 * t_out
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ASSOCIATED(u_out%y) .AND. ASSOCIATED(u(1)%y)) THEN
+IF (ASSOCIATED(u_out%y) .AND. ASSOCIATED(u1%y)) THEN
   ALLOCATE(b1(SIZE(u_out%y,1)))
   ALLOCATE(c1(SIZE(u_out%y,1)))
-  b1 = -(u(1)%y - u(2)%y)/t(2)
-  u_out%y = u(1)%y + b1 * t_out
+  b1 = -(u1%y - u2%y)/t(2)
+  u_out%y = u1%y + b1 * t_out
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ASSOCIATED(u_out%z) .AND. ASSOCIATED(u(1)%z)) THEN
+IF (ASSOCIATED(u_out%z) .AND. ASSOCIATED(u1%z)) THEN
   ALLOCATE(b1(SIZE(u_out%z,1)))
   ALLOCATE(c1(SIZE(u_out%z,1)))
-  b1 = -(u(1)%z - u(2)%z)/t(2)
-  u_out%z = u(1)%z + b1 * t_out
+  b1 = -(u1%z - u2%z)/t(2)
+  u_out%z = u1%z + b1 * t_out
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-  CALL MeshExtrapInterp1(u(1)%PtFairDisplacement, u(2)%PtFairDisplacement, tin, u_out%PtFairDisplacement, tin_out, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- ELSE IF ( order .eq. 2 ) THEN
-  IF ( EqualRealNos( t(1), t(2) ) ) THEN
-    ErrStat = ErrID_Fatal
-    ErrMsg  = ' Error in MAP_Input_ExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
-    RETURN
-  END IF
-  IF ( EqualRealNos( t(2), t(3) ) ) THEN
-    ErrStat = ErrID_Fatal
-    ErrMsg  = ' Error in MAP_Input_ExtrapInterp: t(2) must not equal t(3) to avoid a division-by-zero error.'
-    RETURN
-  END IF
-  IF ( EqualRealNos( t(1), t(3) ) ) THEN
-    ErrStat = ErrID_Fatal
-    ErrMsg  = ' Error in MAP_Input_ExtrapInterp: t(1) must not equal t(3) to avoid a division-by-zero error.'
-    RETURN
-  END IF
-IF (ASSOCIATED(u_out%x) .AND. ASSOCIATED(u(1)%x)) THEN
+      CALL MeshExtrapInterp1(u1%PtFairDisplacement, u2%PtFairDisplacement, tin, u_out%PtFairDisplacement, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ END SUBROUTINE MAP_Input_ExtrapInterp1
+
+
+ SUBROUTINE MAP_Input_ExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Input u_out at time t_out, from previous/future time
+! values of u (which has values associated with times in t).  Order of the interpolation is 2.
+!
+!  expressions below based on either
+!
+!  f(t) = a + b * t + c * t**2
+!
+!  where a, b and c are determined as the solution to
+!  f(t1) = u1, f(t2) = u2, f(t3) = u3
+!
+!..................................................................................................................................
+
+ TYPE(MAP_InputType), INTENT(INOUT)  :: u1      ! Input at t1 > t2 > t3
+ TYPE(MAP_InputType), INTENT(INOUT)  :: u2      ! Input at t2 > t3
+ TYPE(MAP_InputType), INTENT(INOUT)  :: u3      ! Input at t3
+ REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Inputs
+ TYPE(MAP_InputType), INTENT(INOUT)  :: u_out     ! Input at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(3)      ! Times associated with the Inputs
+ REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
+ INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+ REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
+ REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
+ REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ INTEGER(IntKi)                             :: ErrStat2 ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ CHARACTER(*),            PARAMETER         :: RoutineName = 'MAP_Input_ExtrapInterp2'
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+    ! we'll subtract a constant from the times to resolve some 
+    ! numerical issues when t gets large (and to simplify the equations)
+ t = tin - tin(1)
+ t_out = tin_out - tin(1)
+
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+IF (ASSOCIATED(u_out%x) .AND. ASSOCIATED(u1%x)) THEN
   ALLOCATE(b1(SIZE(u_out%x,1)))
   ALLOCATE(c1(SIZE(u_out%x,1)))
-  b1 = (t(3)**2*(u(1)%x - u(2)%x) + t(2)**2*(-u(1)%x + u(3)%x))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u(1)%x + t(3)*u(2)%x - t(2)*u(3)%x ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%x = u(1)%x + b1 * t_out + c1 * t_out**2
+  b1 = (t(3)**2*(u1%x - u2%x) + t(2)**2*(-u1%x + u3%x))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*u1%x + t(3)*u2%x - t(2)*u3%x ) / (t(2)*t(3)*(t(2) - t(3)))
+  u_out%x = u1%x + b1 * t_out + c1 * t_out**2
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ASSOCIATED(u_out%y) .AND. ASSOCIATED(u(1)%y)) THEN
+IF (ASSOCIATED(u_out%y) .AND. ASSOCIATED(u1%y)) THEN
   ALLOCATE(b1(SIZE(u_out%y,1)))
   ALLOCATE(c1(SIZE(u_out%y,1)))
-  b1 = (t(3)**2*(u(1)%y - u(2)%y) + t(2)**2*(-u(1)%y + u(3)%y))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u(1)%y + t(3)*u(2)%y - t(2)*u(3)%y ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%y = u(1)%y + b1 * t_out + c1 * t_out**2
+  b1 = (t(3)**2*(u1%y - u2%y) + t(2)**2*(-u1%y + u3%y))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*u1%y + t(3)*u2%y - t(2)*u3%y ) / (t(2)*t(3)*(t(2) - t(3)))
+  u_out%y = u1%y + b1 * t_out + c1 * t_out**2
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ASSOCIATED(u_out%z) .AND. ASSOCIATED(u(1)%z)) THEN
+IF (ASSOCIATED(u_out%z) .AND. ASSOCIATED(u1%z)) THEN
   ALLOCATE(b1(SIZE(u_out%z,1)))
   ALLOCATE(c1(SIZE(u_out%z,1)))
-  b1 = (t(3)**2*(u(1)%z - u(2)%z) + t(2)**2*(-u(1)%z + u(3)%z))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*u(1)%z + t(3)*u(2)%z - t(2)*u(3)%z ) / (t(2)*t(3)*(t(2) - t(3)))
-  u_out%z = u(1)%z + b1 * t_out + c1 * t_out**2
+  b1 = (t(3)**2*(u1%z - u2%z) + t(2)**2*(-u1%z + u3%z))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*u1%z + t(3)*u2%z - t(2)*u3%z ) / (t(2)*t(3)*(t(2) - t(3)))
+  u_out%z = u1%z + b1 * t_out + c1 * t_out**2
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-  CALL MeshExtrapInterp2(u(1)%PtFairDisplacement, u(2)%PtFairDisplacement, u(3)%PtFairDisplacement, tin, u_out%PtFairDisplacement, tin_out, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- ELSE 
-   ErrStat = ErrID_Fatal
-   ErrMsg = ' order must be less than 3 in MAP_Input_ExtrapInterp '
-   RETURN
- ENDIF 
- END SUBROUTINE MAP_Input_ExtrapInterp
+      CALL MeshExtrapInterp2(u1%PtFairDisplacement, u2%PtFairDisplacement, u3%PtFairDisplacement, tin, u_out%PtFairDisplacement, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ END SUBROUTINE MAP_Input_ExtrapInterp2
 
 
- SUBROUTINE MAP_Output_ExtrapInterp(y, tin, y_out, tin_out, ErrStat, ErrMsg )
+ SUBROUTINE MAP_Output_ExtrapInterp(y, t, y_out, t_out, ErrStat, ErrMsg )
 !
 ! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
 ! values of y (which has values associated with times in t).  Order of the interpolation is given by the size of y
@@ -4363,23 +4415,70 @@ END IF ! check if allocated
 !
 !..................................................................................................................................
 
- TYPE(MAP_outputtype), INTENT(INOUT)  :: y(:)      ! Output at t1 > t2 > t3
- REAL(DbKi),         INTENT(IN   )  :: tin(:)      ! Times associated with the Outputs
- TYPE(MAP_outputtype), INTENT(INOUT)  :: y_out     ! Output at tin_out
- REAL(DbKi),         INTENT(IN   )  :: tin_out     ! time to be extrap/interp'd to
- INTEGER(IntKi),     INTENT(  OUT)  :: ErrStat   ! Error status of the operation
- CHARACTER(*),       INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+ TYPE(MAP_OutputType), INTENT(INOUT)  :: y(:) ! Output at t1 > t2 > t3
+ REAL(DbKi),                 INTENT(IN   )  :: t(:)           ! Times associated with the Outputs
+ TYPE(MAP_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: t_out           ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat         ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
    ! local variables
- REAL(DbKi) :: t(SIZE(tin))    ! Times associated with the Outputs
- REAL(DbKi) :: t_out           ! Time to which to be extrap/interpd
- INTEGER(IntKi)                 :: order    ! order of polynomial fit (max 2)
- CHARACTER(*),    PARAMETER :: RoutineName = 'MAP_Output_ExtrapInterp'
+ INTEGER(IntKi)                             :: order           ! order of polynomial fit (max 2)
+ INTEGER(IntKi)                             :: ErrStat2        ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2         ! local errors
+ CHARACTER(*),    PARAMETER                 :: RoutineName = 'MAP_Output_ExtrapInterp'
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+ if ( size(t) .ne. size(y)) then
+    CALL SetErrStat(ErrID_Fatal,'size(t) must equal size(y)',ErrStat,ErrMsg,RoutineName)
+    RETURN
+ endif
+ order = SIZE(y) - 1
+ IF ( order .eq. 0 ) THEN
+   CALL MAP_CopyOutput(y(1), y_out, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 1 ) THEN
+   CALL MAP_Output_ExtrapInterp1(y(1), y(2), t, y_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE IF ( order .eq. 2 ) THEN
+   CALL MAP_Output_ExtrapInterp2(y(1), y(2), y(3), t, y_out, t_out, ErrStat2, ErrMsg2 )
+     CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ ELSE 
+   CALL SetErrStat(ErrID_Fatal,'size(y) must be less than 4 (order must be less than 3).',ErrStat,ErrMsg,RoutineName)
+   RETURN
+ ENDIF 
+ END SUBROUTINE MAP_Output_ExtrapInterp
+
+
+ SUBROUTINE MAP_Output_ExtrapInterp1(y1, y2, tin, y_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
+! values of y (which has values associated with times in t).  Order of the interpolation is 1.
+!
+!  f(t) = a + b * t, or
+!
+!  where a and b are determined as the solution to
+!  f(t1) = y1, f(t2) = y2
+!
+!..................................................................................................................................
+
+ TYPE(MAP_OutputType), INTENT(INOUT)  :: y1    ! Output at t1 > t2
+ TYPE(MAP_OutputType), INTENT(INOUT)  :: y2    ! Output at t2 
+ REAL(DbKi),         INTENT(IN   )          :: tin(2)   ! Times associated with the Outputs
+ TYPE(MAP_OutputType), INTENT(INOUT)  :: y_out ! Output at tin_out
+ REAL(DbKi),         INTENT(IN   )          :: tin_out  ! time to be extrap/interp'd to
+ INTEGER(IntKi),     INTENT(  OUT)          :: ErrStat  ! Error status of the operation
+ CHARACTER(*),       INTENT(  OUT)          :: ErrMsg   ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(2)     ! Times associated with the Outputs
+ REAL(DbKi)                                 :: t_out    ! Time to which to be extrap/interpd
+ CHARACTER(*),                    PARAMETER :: RoutineName = 'MAP_Output_ExtrapInterp1'
  REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
  REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
  REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
  REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
  INTEGER(IntKi)                             :: ErrStat2 ! local errors
- CHARACTER(1024)                            :: ErrMsg2  ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
     ! Initialize ErrStat
  ErrStat = ErrID_None
  ErrMsg  = ""
@@ -4388,155 +4487,154 @@ END IF ! check if allocated
  t = tin - tin(1)
  t_out = tin_out - tin(1)
 
- if ( size(t) .ne. size(y)) then
-    ErrStat = ErrID_Fatal
-    ErrMsg = ' Error in MAP_Output_ExtrapInterp: size(t) must equal size(y) '
-    RETURN
- endif
- if (size(y) .gt. 3) then
-    ErrStat = ErrID_Fatal
-    ErrMsg  = ' Error in MAP_Output_ExtrapInterp: size(y) must be less than 4 '
-    RETURN
- endif
- order = SIZE(y) - 1
- IF ( order .eq. 0 ) THEN
-IF (ASSOCIATED(y_out%Fx) .AND. ASSOCIATED(y(1)%Fx)) THEN
-  y_out%Fx = y(1)%Fx
-END IF ! check if allocated
-IF (ASSOCIATED(y_out%Fy) .AND. ASSOCIATED(y(1)%Fy)) THEN
-  y_out%Fy = y(1)%Fy
-END IF ! check if allocated
-IF (ASSOCIATED(y_out%Fz) .AND. ASSOCIATED(y(1)%Fz)) THEN
-  y_out%Fz = y(1)%Fz
-END IF ! check if allocated
-IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y(1)%WriteOutput)) THEN
-  y_out%WriteOutput = y(1)%WriteOutput
-END IF ! check if allocated
-IF (ASSOCIATED(y_out%wrtOutput) .AND. ASSOCIATED(y(1)%wrtOutput)) THEN
-  y_out%wrtOutput = y(1)%wrtOutput
-END IF ! check if allocated
-  CALL MeshCopy(y(1)%ptFairleadLoad, y_out%ptFairleadLoad, MESH_UPDATECOPY, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- ELSE IF ( order .eq. 1 ) THEN
-  IF ( EqualRealNos( t(1), t(2) ) ) THEN
-    ErrStat = ErrID_Fatal
-    ErrMsg  = ' Error in MAP_Output_ExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
-    RETURN
-  END IF
-IF (ASSOCIATED(y_out%Fx) .AND. ASSOCIATED(y(1)%Fx)) THEN
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+IF (ASSOCIATED(y_out%Fx) .AND. ASSOCIATED(y1%Fx)) THEN
   ALLOCATE(b1(SIZE(y_out%Fx,1)))
   ALLOCATE(c1(SIZE(y_out%Fx,1)))
-  b1 = -(y(1)%Fx - y(2)%Fx)/t(2)
-  y_out%Fx = y(1)%Fx + b1 * t_out
+  b1 = -(y1%Fx - y2%Fx)/t(2)
+  y_out%Fx = y1%Fx + b1 * t_out
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ASSOCIATED(y_out%Fy) .AND. ASSOCIATED(y(1)%Fy)) THEN
+IF (ASSOCIATED(y_out%Fy) .AND. ASSOCIATED(y1%Fy)) THEN
   ALLOCATE(b1(SIZE(y_out%Fy,1)))
   ALLOCATE(c1(SIZE(y_out%Fy,1)))
-  b1 = -(y(1)%Fy - y(2)%Fy)/t(2)
-  y_out%Fy = y(1)%Fy + b1 * t_out
+  b1 = -(y1%Fy - y2%Fy)/t(2)
+  y_out%Fy = y1%Fy + b1 * t_out
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ASSOCIATED(y_out%Fz) .AND. ASSOCIATED(y(1)%Fz)) THEN
+IF (ASSOCIATED(y_out%Fz) .AND. ASSOCIATED(y1%Fz)) THEN
   ALLOCATE(b1(SIZE(y_out%Fz,1)))
   ALLOCATE(c1(SIZE(y_out%Fz,1)))
-  b1 = -(y(1)%Fz - y(2)%Fz)/t(2)
-  y_out%Fz = y(1)%Fz + b1 * t_out
+  b1 = -(y1%Fz - y2%Fz)/t(2)
+  y_out%Fz = y1%Fz + b1 * t_out
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y(1)%WriteOutput)) THEN
+IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   ALLOCATE(b1(SIZE(y_out%WriteOutput,1)))
   ALLOCATE(c1(SIZE(y_out%WriteOutput,1)))
-  b1 = -(y(1)%WriteOutput - y(2)%WriteOutput)/t(2)
-  y_out%WriteOutput = y(1)%WriteOutput + b1 * t_out
+  b1 = -(y1%WriteOutput - y2%WriteOutput)/t(2)
+  y_out%WriteOutput = y1%WriteOutput + b1 * t_out
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ASSOCIATED(y_out%wrtOutput) .AND. ASSOCIATED(y(1)%wrtOutput)) THEN
+IF (ASSOCIATED(y_out%wrtOutput) .AND. ASSOCIATED(y1%wrtOutput)) THEN
   ALLOCATE(b1(SIZE(y_out%wrtOutput,1)))
   ALLOCATE(c1(SIZE(y_out%wrtOutput,1)))
-  b1 = -(y(1)%wrtOutput - y(2)%wrtOutput)/t(2)
-  y_out%wrtOutput = y(1)%wrtOutput + b1 * t_out
+  b1 = -(y1%wrtOutput - y2%wrtOutput)/t(2)
+  y_out%wrtOutput = y1%wrtOutput + b1 * t_out
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-  CALL MeshExtrapInterp1(y(1)%ptFairleadLoad, y(2)%ptFairleadLoad, tin, y_out%ptFairleadLoad, tin_out, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- ELSE IF ( order .eq. 2 ) THEN
-  IF ( EqualRealNos( t(1), t(2) ) ) THEN
-    ErrStat = ErrID_Fatal
-    ErrMsg  = ' Error in MAP_Output_ExtrapInterp: t(1) must not equal t(2) to avoid a division-by-zero error.'
-    RETURN
-  END IF
-  IF ( EqualRealNos( t(2), t(3) ) ) THEN
-    ErrStat = ErrID_Fatal
-    ErrMsg  = ' Error in MAP_Output_ExtrapInterp: t(2) must not equal t(3) to avoid a division-by-zero error.'
-    RETURN
-  END IF
-  IF ( EqualRealNos( t(1), t(3) ) ) THEN
-    ErrStat = ErrID_Fatal
-    ErrMsg  = ' Error in MAP_Output_ExtrapInterp: t(1) must not equal t(3) to avoid a division-by-zero error.'
-    RETURN
-  END IF
-IF (ASSOCIATED(y_out%Fx) .AND. ASSOCIATED(y(1)%Fx)) THEN
+      CALL MeshExtrapInterp1(y1%ptFairleadLoad, y2%ptFairleadLoad, tin, y_out%ptFairleadLoad, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ END SUBROUTINE MAP_Output_ExtrapInterp1
+
+
+ SUBROUTINE MAP_Output_ExtrapInterp2(y1, y2, y3, tin, y_out, tin_out, ErrStat, ErrMsg )
+!
+! This subroutine calculates a extrapolated (or interpolated) Output y_out at time t_out, from previous/future time
+! values of y (which has values associated with times in t).  Order of the interpolation is 2.
+!
+!  expressions below based on either
+!
+!  f(t) = a + b * t + c * t**2
+!
+!  where a, b and c are determined as the solution to
+!  f(t1) = y1, f(t2) = y2, f(t3) = y3
+!
+!..................................................................................................................................
+
+ TYPE(MAP_OutputType), INTENT(INOUT)  :: y1      ! Output at t1 > t2 > t3
+ TYPE(MAP_OutputType), INTENT(INOUT)  :: y2      ! Output at t2 > t3
+ TYPE(MAP_OutputType), INTENT(INOUT)  :: y3      ! Output at t3
+ REAL(DbKi),                 INTENT(IN   )  :: tin(3)    ! Times associated with the Outputs
+ TYPE(MAP_OutputType), INTENT(INOUT)  :: y_out     ! Output at tin_out
+ REAL(DbKi),                 INTENT(IN   )  :: tin_out   ! time to be extrap/interp'd to
+ INTEGER(IntKi),             INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+ CHARACTER(*),               INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   ! local variables
+ REAL(DbKi)                                 :: t(3)      ! Times associated with the Outputs
+ REAL(DbKi)                                 :: t_out     ! Time to which to be extrap/interpd
+ INTEGER(IntKi)                             :: order     ! order of polynomial fit (max 2)
+ REAL(DbKi)                                 :: b0       ! temporary for extrapolation/interpolation
+ REAL(DbKi)                                 :: c0       ! temporary for extrapolation/interpolation
+ REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: b1       ! temporary for extrapolation/interpolation
+ REAL(DbKi),ALLOCATABLE,DIMENSION(:)        :: c1       ! temporary for extrapolation/interpolation
+ INTEGER(IntKi)                             :: ErrStat2 ! local errors
+ CHARACTER(ErrMsgLen)                       :: ErrMsg2  ! local errors
+ CHARACTER(*),            PARAMETER         :: RoutineName = 'MAP_Output_ExtrapInterp2'
+    ! Initialize ErrStat
+ ErrStat = ErrID_None
+ ErrMsg  = ""
+    ! we'll subtract a constant from the times to resolve some 
+    ! numerical issues when t gets large (and to simplify the equations)
+ t = tin - tin(1)
+ t_out = tin_out - tin(1)
+
+   IF ( EqualRealNos( t(1), t(2) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(2) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(2), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(2) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   ELSE IF ( EqualRealNos( t(1), t(3) ) ) THEN
+     CALL SetErrStat(ErrID_Fatal, 't(1) must not equal t(3) to avoid a division-by-zero error.', ErrStat, ErrMsg,RoutineName)
+     RETURN
+   END IF
+IF (ASSOCIATED(y_out%Fx) .AND. ASSOCIATED(y1%Fx)) THEN
   ALLOCATE(b1(SIZE(y_out%Fx,1)))
   ALLOCATE(c1(SIZE(y_out%Fx,1)))
-  b1 = (t(3)**2*(y(1)%Fx - y(2)%Fx) + t(2)**2*(-y(1)%Fx + y(3)%Fx))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y(1)%Fx + t(3)*y(2)%Fx - t(2)*y(3)%Fx ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%Fx = y(1)%Fx + b1 * t_out + c1 * t_out**2
+  b1 = (t(3)**2*(y1%Fx - y2%Fx) + t(2)**2*(-y1%Fx + y3%Fx))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*y1%Fx + t(3)*y2%Fx - t(2)*y3%Fx ) / (t(2)*t(3)*(t(2) - t(3)))
+  y_out%Fx = y1%Fx + b1 * t_out + c1 * t_out**2
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ASSOCIATED(y_out%Fy) .AND. ASSOCIATED(y(1)%Fy)) THEN
+IF (ASSOCIATED(y_out%Fy) .AND. ASSOCIATED(y1%Fy)) THEN
   ALLOCATE(b1(SIZE(y_out%Fy,1)))
   ALLOCATE(c1(SIZE(y_out%Fy,1)))
-  b1 = (t(3)**2*(y(1)%Fy - y(2)%Fy) + t(2)**2*(-y(1)%Fy + y(3)%Fy))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y(1)%Fy + t(3)*y(2)%Fy - t(2)*y(3)%Fy ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%Fy = y(1)%Fy + b1 * t_out + c1 * t_out**2
+  b1 = (t(3)**2*(y1%Fy - y2%Fy) + t(2)**2*(-y1%Fy + y3%Fy))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*y1%Fy + t(3)*y2%Fy - t(2)*y3%Fy ) / (t(2)*t(3)*(t(2) - t(3)))
+  y_out%Fy = y1%Fy + b1 * t_out + c1 * t_out**2
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ASSOCIATED(y_out%Fz) .AND. ASSOCIATED(y(1)%Fz)) THEN
+IF (ASSOCIATED(y_out%Fz) .AND. ASSOCIATED(y1%Fz)) THEN
   ALLOCATE(b1(SIZE(y_out%Fz,1)))
   ALLOCATE(c1(SIZE(y_out%Fz,1)))
-  b1 = (t(3)**2*(y(1)%Fz - y(2)%Fz) + t(2)**2*(-y(1)%Fz + y(3)%Fz))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y(1)%Fz + t(3)*y(2)%Fz - t(2)*y(3)%Fz ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%Fz = y(1)%Fz + b1 * t_out + c1 * t_out**2
+  b1 = (t(3)**2*(y1%Fz - y2%Fz) + t(2)**2*(-y1%Fz + y3%Fz))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*y1%Fz + t(3)*y2%Fz - t(2)*y3%Fz ) / (t(2)*t(3)*(t(2) - t(3)))
+  y_out%Fz = y1%Fz + b1 * t_out + c1 * t_out**2
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y(1)%WriteOutput)) THEN
+IF (ALLOCATED(y_out%WriteOutput) .AND. ALLOCATED(y1%WriteOutput)) THEN
   ALLOCATE(b1(SIZE(y_out%WriteOutput,1)))
   ALLOCATE(c1(SIZE(y_out%WriteOutput,1)))
-  b1 = (t(3)**2*(y(1)%WriteOutput - y(2)%WriteOutput) + t(2)**2*(-y(1)%WriteOutput + y(3)%WriteOutput))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y(1)%WriteOutput + t(3)*y(2)%WriteOutput - t(2)*y(3)%WriteOutput ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%WriteOutput = y(1)%WriteOutput + b1 * t_out + c1 * t_out**2
+  b1 = (t(3)**2*(y1%WriteOutput - y2%WriteOutput) + t(2)**2*(-y1%WriteOutput + y3%WriteOutput))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*y1%WriteOutput + t(3)*y2%WriteOutput - t(2)*y3%WriteOutput ) / (t(2)*t(3)*(t(2) - t(3)))
+  y_out%WriteOutput = y1%WriteOutput + b1 * t_out + c1 * t_out**2
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-IF (ASSOCIATED(y_out%wrtOutput) .AND. ASSOCIATED(y(1)%wrtOutput)) THEN
+IF (ASSOCIATED(y_out%wrtOutput) .AND. ASSOCIATED(y1%wrtOutput)) THEN
   ALLOCATE(b1(SIZE(y_out%wrtOutput,1)))
   ALLOCATE(c1(SIZE(y_out%wrtOutput,1)))
-  b1 = (t(3)**2*(y(1)%wrtOutput - y(2)%wrtOutput) + t(2)**2*(-y(1)%wrtOutput + y(3)%wrtOutput))/(t(2)*t(3)*(t(2) - t(3)))
-  c1 = ( (t(2)-t(3))*y(1)%wrtOutput + t(3)*y(2)%wrtOutput - t(2)*y(3)%wrtOutput ) / (t(2)*t(3)*(t(2) - t(3)))
-  y_out%wrtOutput = y(1)%wrtOutput + b1 * t_out + c1 * t_out**2
+  b1 = (t(3)**2*(y1%wrtOutput - y2%wrtOutput) + t(2)**2*(-y1%wrtOutput + y3%wrtOutput))/(t(2)*t(3)*(t(2) - t(3)))
+  c1 = ( (t(2)-t(3))*y1%wrtOutput + t(3)*y2%wrtOutput - t(2)*y3%wrtOutput ) / (t(2)*t(3)*(t(2) - t(3)))
+  y_out%wrtOutput = y1%wrtOutput + b1 * t_out + c1 * t_out**2
   DEALLOCATE(b1)
   DEALLOCATE(c1)
 END IF ! check if allocated
-  CALL MeshExtrapInterp2(y(1)%ptFairleadLoad, y(2)%ptFairleadLoad, y(3)%ptFairleadLoad, tin, y_out%ptFairleadLoad, tin_out, ErrStat2, ErrMsg2 )
-         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
-         IF (ErrStat>=AbortErrLev) RETURN
- ELSE 
-   ErrStat = ErrID_Fatal
-   ErrMsg = ' order must be less than 3 in MAP_Output_ExtrapInterp '
-   RETURN
- ENDIF 
- END SUBROUTINE MAP_Output_ExtrapInterp
+      CALL MeshExtrapInterp2(y1%ptFairleadLoad, y2%ptFairleadLoad, y3%ptFairleadLoad, tin, y_out%ptFairleadLoad, tin_out, ErrStat2, ErrMsg2 )
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+ END SUBROUTINE MAP_Output_ExtrapInterp2
 
 END MODULE MAP_Types
 !ENDOFREGISTRYGENERATEDFILE

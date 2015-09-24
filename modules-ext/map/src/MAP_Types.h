@@ -1,4 +1,4 @@
-//!STARTOFREGISTRYGENERATEDFILE './MAP_Types.h'
+//!STARTOFREGISTRYGENERATEDFILE 'MAP_Types.h'
 //!
 //! WARNING This file is generated automatically by the FAST registry
 //! Do not edit.  Your changes to this file will be lost.
@@ -82,6 +82,8 @@
     double depth ;
     double rho_sea ;
     double dt ;
+
+
   } MAP_ParameterType_t ;
   typedef struct MAP_InputType {
     void * object ;
