@@ -16,12 +16,14 @@ typedef BeamDyn/BD InitInputType CHARACTER(1024) InputFile  - - - "Name of the i
 typedef BeamDyn/BD InitInputType CHARACTER(1024) RootName   - - - "RootName for writing output files" -
 typedef BeamDyn/BD InitInputType ReKi            gravity   {3} - - "Gravitational acceleration" m/s^2
 typedef BeamDyn/BD InitInputType ReKi            GlbPos    {3} - - "Initial Position Vector of the local blade coordinate system"
-typedef BeamDyn/BD InitInputType ReKi            GlbRot    {3}{3} - - "Initial direction cosine matrix of the loacl blade coordinate system"
+typedef BeamDyn/BD InitInputType ReKi            GlbRot    {3}{3} - - "Initial direction cosine matrix of the local blade coordinate system"
 typedef BeamDyn/BD InitInputType ReKi            RootDisp  {3} - - "Initial root displacement"
 typedef BeamDyn/BD InitInputType ReKi            RootOri   {3}{3} - - "Initial root orientation"
 typedef BeamDyn/BD InitInputType ReKi            RootVel   {6} - - "Initial root velocities and angular veolcities"
 typedef BeamDyn/BD InitInputType ReKi            DistrLoad {6} - - "Constant distributed load along beam axis, 3 forces and 3 moments" 
 typedef BeamDyn/BD InitInputType ReKi            TipLoad   {6} - - "Constant point load applied at tip, 3 forces and 3 moments" 
+typedef BeamDyn/BD InitInputType ReKi            HubPos    {3} - - "Initial Hub position vector"
+typedef BeamDyn/BD InitInputType ReKi            HubRot    {3}{3} - - "Initial Hub direction cosine matrix"
 
 
 # Define outputs that the initialization routine may need here:
@@ -116,6 +118,8 @@ typedef      ^            ^      ReKi   E10  {:}{:} - -  "Initial E10 at quadrat
 typedef BeamDyn/BD   InputType  MeshType  RootMotion - - - "contains motion" -
 typedef BeamDyn/BD   InputType  MeshType  PointLoad - - - "Applied point forces along beam axis" -
 typedef BeamDyn/BD   InputType  MeshType  DistrLoad - - - "Applied distributed forces along beam axis" -
+typedef BeamDyn/BD   InputType  MeshType  HubMotion - - - "motion (orientation) at the hub" -
+
 # ..... Outputs
 # ...................................................................................................................
 # Define outputs that are contained on the mesh here:
