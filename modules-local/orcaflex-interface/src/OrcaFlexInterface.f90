@@ -319,6 +319,7 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       CALL CleanUp
       RETURN
    END IF
+   OtherState%Initialized  =  .TRUE.  ! set this flag immediately after the library was successfully loaded
 
    CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(1), OrcaDLL_Init )
 #endif
@@ -398,7 +399,6 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    OtherState%PtfmAM       =  0.0_ReKi
    OtherState%PtfmFt       =  0.0_ReKi
    OtherState%LastTimeStep =  -1.0_DbKi
-   OtherState%Initialized  =  .TRUE.
 
    InitOut%Ver =  Orca_Ver
 
@@ -649,13 +649,16 @@ SUBROUTINE Orca_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 #ifdef NO_LibLoad
    CALL SetErrStat( ErrID_Warn,'   -->  Skipping OrcaDLL_End call',ErrStat,ErrMsg,RoutineName )
 #else
-      ! Release the DLL
-   CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(3), OrcaDLL_End )
-   CALL OrcaDLL_End        ! No error handling here.  Just have to assume it worked.
+   if (OtherState%Initialized) then
+         ! Release the DLL
+      CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(3), OrcaDLL_End )
+      CALL OrcaDLL_End        ! No error handling here.  Just have to assume it worked.
 
 
-   CALL FreeDynamicLib( p%DLL_Orca, ErrStatTmp, ErrMsgTmp )
-   CALL SetErrStat( ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName )
+      CALL FreeDynamicLib( p%DLL_Orca, ErrStatTmp, ErrMsgTmp )
+      CALL SetErrStat( ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName )
+   end if
+   
 #endif
 
 
@@ -687,7 +690,7 @@ SUBROUTINE Orca_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    CALL Orca_DestroyOutput( y, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName )
 
-
+   OtherState%Initialized = .FALSE.
 
 
 END SUBROUTINE Orca_End
