@@ -599,6 +599,30 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
 
    ! Define system output initializations (set up mesh) here:
+   CALL MeshCreate( BlankMesh        = u%HubMotion            &
+                   ,IOS              = COMPONENT_INPUT        &
+                   ,NNodes           = 1                      &
+                   , TranslationDisp = .TRUE. &
+                   , Orientation     = .TRUE. &
+                   ,ErrStat         = ErrStat2               &
+                   ,ErrMess         = ErrMsg2                )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL MeshPositionNode ( Mesh = u%HubMotion       &
+                         , INode = 1                &
+                         , Pos = InitInp%HubPos     &
+                         , ErrStat   = ErrStat2     &
+                         , ErrMess   = ErrMsg2      &
+                         , Orient = InitInp%HubRot )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL MeshConstructElement ( Mesh = u%HubMotion            &
+                             , Xelement = ELEMENT_POINT      &
+                             , P1       = 1                  &
+                             , ErrStat  = ErrStat2            &
+                             , ErrMess  = ErrMsg2            )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+   
+   
    CALL MeshCreate( BlankMesh        = u%RootMotion            &
                    ,IOS              = COMPONENT_INPUT        &
                    ,NNodes           = 1                      &
@@ -890,6 +914,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       end if
       
    ! Define initialization-routine input here:
+   u%HubMotion%TranslationDisp(1:3,1) = 0.0_ReKi
+   u%HubMotion%Orientation(1:3,1:3,1) = InitInp%HubRot
 
    u%RootMotion%TranslationDisp(1:3,1) = InitInp%RootDisp(1:3)
    u%RootMotion%Orientation(1:3,1:3,1) = InitInp%RootOri(1:3,1:3)
@@ -940,7 +966,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    CALL BD_CrvExtractCrv(u%RootMotion%Orientation(:,:,1),xd%rot,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   p%alpha = exp(-2.0D0*pi*Interval*15.0)
+   p%alpha = 0.0 !exp(-2.0D0*pi*Interval*25.0)
    ! Define initial guess for the system outputs here:
 
    y%BldForce%Force(:,:)    = 0.0D0
