@@ -349,64 +349,114 @@ SUBROUTINE BD_CrvExtractCrv(Rr,cc,ErrStat,ErrMsg)
    cc(3) = em*sm3
 
 END SUBROUTINE BD_CrvExtractCrv
-!-----------------------------------------------------------------------------------------------------------------------------------
+
+!------------------------------------------------------------------------------
    SUBROUTINE BD_GaussPointWeight(n, x, w, ErrStat, ErrMsg)
-   !-------------------------------------------------------------------------------
+   !---------------------------------------------------------------------------
    ! This subroutine generates n-point gauss-legendre quadrature points and weights
-   !-------------------------------------------------------------------------------
+   ! 
+   ! Subroutine is based on well-known formulas for generating Legendre polynomials, the 
+   ! roots of which are the Gauss-Legendre quadrature points.  Also used are well-known
+   ! expressions for the quadrature weights associated with the GL quadrature points.  
+   ! The basic idea of the logic is to use the roots of the Chebyshev polynomial as
+   ! an initial guess for the roots of the Legendre polynomial, and to then use Newton
+   ! iteration to find the "exact" roots.
+   !-------------------------------------------------------------------------
 
    INTEGER(IntKi),INTENT(IN   ):: n       ! Number of Gauss point
-   REAL(ReKi),    INTENT(  OUT):: x(:)   ! Gauss point location
-   REAL(ReKi),    INTENT(  OUT):: w(:)   ! Gauss point weight
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   REAL(ReKi),    INTENT(  OUT):: x(:)    ! Gauss point location
+   REAL(ReKi),    INTENT(  OUT):: w(:)    ! Gauss point weight
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat ! Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg  ! Error message if ErrStat /=
 
-   REAL(ReKi)                  :: x1
-   REAL(ReKi)                  :: x2
-   REAL(ReKi),        PARAMETER:: eps = 3.d-07
-   INTEGER(IntKi)              :: i
-   INTEGER(IntKi)              :: j
-   INTEGER(IntKi)              :: m
-   REAL(ReKi)                  :: p1
-   REAL(ReKi)                  :: p2
-   REAL(ReKi)                  :: p3
-   REAL(ReKi)                  :: pp
-   REAL(ReKi)                  :: xl
-   REAL(ReKi)                  :: xm
-   REAL(ReKi)                  :: z
-   REAL(ReKi)                  :: z1
+   ! local variables
 
-   ErrStat = ErrID_None
-   ErrMsg  = ""
+   REAL(ReKi),  PARAMETER:: eps = 1.d-07  ! small number; used to check convergence of Newton iteration
 
-   m=(n+1)/2
+   INTEGER(IntKi) :: n_half 
 
-   x1 = -1.d0
-   x2 = +1.d0
+   REAL(ReKi)     :: n_real  ! real version of loop index
+   INTEGER(IntKi) :: i       ! loop index 
+   REAL(ReKi)     :: i_real  ! real version of loop index
+   INTEGER(IntKi) :: j       ! loop index
+   REAL(ReKi)     :: j_real  ! real version of loop index
 
-   xm=0.5d0*(x2+x1)
-   xl=0.5d0*(x2-x1)
-   DO 12 i=1,m
-       z=COS(3.141592654d0*(i-.25d0)/(n+.5d0))
-1      CONTINUE
-       p1=1.d0
-       p2=0.d0
-       DO 11 j=1,n
-           p3=p2
-           p2=p1
-           p1=((2.d0*j-1.d0)*z*p2-(j-1.d0)*p3)/j
-11         CONTINUE
-           pp=n*(z*p1-p2)/(z*z-1.d0)
-           z1=z
-           z=z1-p1/pp
-           IF(ABS(z-z1).GT.eps) GOTO 1
-           x(i)=xm-xl*z
-           x(n+1-i)=xm+xl*z
-           w(i)=2.d0*xl/((1.d0-z*z)*pp*pp)
-           w(n+1-i)=w(i)
-12         CONTINUE
+   INTEGER(IntKi) :: newton     ! newton-iteration index
+   INTEGER(IntKi) :: newton_max ! maximum number of newton iterations
+
+   REAL(ReKi)     :: p1  ! legendre polynomial j-2
+   REAL(ReKi)     :: p2  ! legendre polynomial j-1
+   REAL(ReKi)     :: p3  ! legendre polynomial j
+
+   REAL(ReKi)     :: dp3  ! derivative of legendre polynomial j
+
+   REAL(ReKi)     :: pi_local  ! value of pi; replace with FAST value
+
+   if (n .lt. 2) then
+      STOP 'add appropriate error message'
+   endif
+
+   n_real = REAL(n,DbKi)
+
+   n_half = (n+1) / 2  ! integer for "half" the points: e.g., n=5 => n_half=3, n=4 => n_half = 2
+
+   newton_max = 10  ! limit on the maximum number of newton iterations; should not need many!
+
+   pi_local = acos(-1.) ! this could be replaced with FAST value:
+
+   ! loop through each of the "half" n points
+   do i = 1, n_half
+
+      i_real = REAL(i,DbKi)
+
+      ! Intial guess for ith root; based on ith root of Chebyshev polynomial
+      x(i) = - cos( ( 2.*i_real - 1.)  * pi_local / (2.* n_real) )
+
+      ! initialize newton iteration counter
+      newton = 0
+
+      p3 = 1. ! some intial big number;  logic will always take at least one newton iteration
+      do while (abs(p3) .gt. eps .and. newton .le. newton_max) 
+
+         newton = newton + 1  ! keep track of number of newton iterations
+
+         ! build the legendre polynomial and its derivative evaluated at current root guess
+         p1 = 1.   ! zeroth order legendre polynomial
+         p2 = x(i) ! first-order legendre polynomial
+ 
+         do j = 2, n
+
+            j_real = REAL(j,DbKi)
+
+            ! recurrence relation for legendre polynomial
+            p3 = ( (2.*j_real - 1.) * x(i) * p2 - (j_real - 1.) * p1 ) / j_real
+
+            ! derivative of legendre polynomial; needed for newton iteration
+            dp3 = j_real * ( - x(i) * p3 + p2 ) / ( 1. - x(i)*x(i) )
+    
+            ! save values for next iteration 
+            p1 = p2
+            p2 = p3
+
+         enddo
+  
+         ! newton iteration: xnew = xold - P_n(xold) / P_n'(xold)
+         x(i) = x(i) - p3 / dp3
+
+      enddo
+     
+      if (abs(x(i)) .lt. eps) x(i) = 0.
+
+      ! fill in the other "side" of the array 
+      x(n-i+1) = - x(i)
+
+      ! calculate weight for this Gauss point location
+      w(i) = 2. / ( ( 1. - x(i)*x(i) ) * dp3 * dp3 )
+      w(n-i+1) = w(i)
+
+   enddo
+
    END SUBROUTINE BD_GaussPointWeight
-!  (c) copr. 1986-92 numerical recipes software +k$<,(5cl.
 !-----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE BD_MotionTensor(RotTen,Pos,MotTen,flag)
 
