@@ -42,8 +42,6 @@ typedef      ^              ^             ^   dqdt     {:} - -  "dqdt - velocity
 # Define discrete (nondifferentiable) states here:
 typedef BeamDyn/BD BD_DiscreteStateType ReKi DummyDiscState - - - "A variable, Replace if you have discrete states" -
 #typedef BeamDyn/BD BD_DiscreteStateType ReKi rot  {3} - - "For filter" -
-typedef BeamDyn/BD BD_DiscreteStateType ReKi thetaP  - - - "Pitch angle state" -
-typedef BeamDyn/BD BD_DiscreteStateType ReKi thetaPD  - - - "Pitch rate state" -
 
 # Define constraint states here:
 typedef BeamDyn/BD ConstraintStateType ReKi DummyConstrState - - - "A variable, Replace if you have constraint states" -
