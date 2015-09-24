@@ -964,9 +964,18 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%IniDisp(:) = x%q(:)
    p%IniVelo(:) = x%dqdt(:)
 
-   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(:,:,1),xd%rot,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+!   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(:,:,1),xd%rot,ErrStat2,ErrMsg2)
+!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 !   p%alpha = 0.0 !exp(-2.0D0*pi*Interval*25.0)
+! Acutator
+!   p%pitchK = 0.0 
+!   p%pitchC = 0.0 
+!   p%pitchJ = 0.0 
+!   TmpDCM(:,:) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
+!   temp_CRV(:) = EulerExtract(TmpDCM)
+!   xd%thetaP = -temp_CRV(3)    
+!   xd%thetaPD = 0.0D0
+! END Actuator
    ! Define initial guess for the system outputs here:
 
    y%BldForce%Force(:,:)    = 0.0D0
@@ -1178,7 +1187,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    TYPE(BD_OtherStateType)                      :: OS_tmp
    TYPE(BD_ContinuousStateType)                 :: x_tmp
    TYPE(BD_InputType)                           :: u_tmp
-!   TYPE(BD_InputType)                           :: u_tmp2 ! Activate with filter
+   TYPE(BD_InputType)                           :: u_tmp2 ! Activate with filter
    INTEGER(IntKi)                               :: i
    INTEGER(IntKi)                               :: j
    INTEGER(IntKi)                               :: temp_id
@@ -1189,6 +1198,9 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    REAL(ReKi)                                   :: temp_glb(3)
    REAL(ReKi)                                   :: temp_R(3,3)
    REAL(ReKi)                                   :: temp6(6)
+   REAL(ReKi)                                   :: temp_thetaP
+   REAL(ReKi)                                   :: temp_omegaP
+   REAL(ReKi)                                   :: temp_alphaP
    REAL(ReKi)                                   :: temp_Force(p%dof_total)
    REAL(ReKi)                                   :: AllOuts(0:MaxOutPts)
    !REAL(ReKi)                                   :: temp_ReactionForce(6)
@@ -1208,15 +1220,25 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ! Lowpass filter added
-!   CALL BD_CrvExtractCrv(u_tmp%RootMotion%Orientation(:,:,1),temp_cc,ErrStat2,ErrMsg2) 
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   temp_cc = p%alpha * xd%rot+(1.0D0 - p%alpha) * temp_cc
-!   CALL BD_CrvMatrixR(temp_cc,u_tmp%RootMotion%Orientation(:,:,1),ErrStat2,ErrMsg2)
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   CALL BD_CopyInput(u_tmp, u_tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ! END lowpass filter
+   ! Actuator
+   IF( .FALSE.) THEN
+       temp_R(:,:) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
+       temp_cc(:) = EulerExtract(temp_R)
+       temp_thetaP = xd%thetaP
+       temp_omegaP = xd%thetaPD
+       temp_alphaP = -(p%pitchK/p%pitchJ) * xd%thetaP - (p%pitchC/p%pitchJ) * xd%thetaPD + &
+          (p%pitchK/p%pitchJ) * (-temp_cc(3))
+       temp_cc(3) = -temp_thetaP
+       temp_R(:,:) = EulerConstruct(temp_cc)
+       u_tmp%RootMotion%Orientation(:,:,1) = MATMUL(temp_R,u%HubMotion%Orientation(:,:,1))
+       u_tmp%RootMotion%RotationVel(:,1) = u%RootMotion%RotationVel(:,1) - &
+         temp_omegaP * u%RootMotion%Orientation(3,1:3,1)
+       u_tmp%RootMotion%RotationAcc(:,1) = u%RootMotion%RotationAcc(:,1) - &
+         temp_alphaP * u%RootMotion%Orientation(3,1:3,1)
+       CALL BD_CopyInput(u_tmp, u_tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDIF
+   ! END Actuator
    CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
@@ -1336,9 +1358,9 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !  compute RootMxr and RootMyr for ServoDyn and
    !  get values to output to file:  
    !-------------------------------------------------------   
-   ! Activate with filter
-!   call Calc_WriteOutput( p, u_tmp2, AllOuts, y, ErrStat, ErrMsg )   
-   call Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )   
+   ! Actuator
+   call Calc_WriteOutput( p, u_tmp2, AllOuts, y, ErrStat, ErrMsg )   
+!   call Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )   
     
    y%RootMxr = AllOuts( RootMxr )
    y%RootMyr = AllOuts( RootMyr )
@@ -1358,8 +1380,8 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 contains
    subroutine cleanup()
       CALL BD_DestroyInput(u_tmp, ErrStat2, ErrMsg2)
-   ! Activate with filter
-!      CALL BD_DestroyInput(u_tmp2, ErrStat2, ErrMsg2)
+   ! Actuator
+      CALL BD_DestroyInput(u_tmp2, ErrStat2, ErrMsg2)
       CALL BD_DestroyContState(x_tmp, ErrStat2, ErrMsg2 )
       CALL BD_DestroyOtherState(OS_tmp, ErrStat2, ErrMsg2 )
    end subroutine cleanup 
