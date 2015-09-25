@@ -96,6 +96,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    REAL(ReKi)              :: TmpPos(3)
    REAL(ReKi)              :: TmpDCM(3,3)
    REAL(ReKi)              :: temp_glb(3)
+   REAL(ReKi)              :: denom
 
    INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
@@ -971,6 +972,12 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%pitchK = 2.0D+07  !kgm^2/s^2
    p%pitchC = 5.0D+05  !kgm^2/s
    p%pitchJ = 2.0D+02  !kgm^2
+   p%torqM(1,1) =  p%pitchJ + p%pitchC*p%dt
+   p%torqM(2,1) = -p%pitchK * p%dt
+   p%torqM(1,2) =  p%pitchJ * p%dt
+   p%torqM(2,2) =  p%pitchJ
+   denom               =  p%pitchJ + p%pitchC*p%dt + p%pitchK*p%dt**2
+   p%torqM(:,:) =  p%torqM / denom
    TmpDCM(:,:) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
    temp_CRV(:) = EulerExtract(TmpDCM)
    xd%thetaP = -temp_CRV(3)    
@@ -1396,7 +1403,6 @@ SUBROUTINE BD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
 
    ! local variables
    REAL(ReKi)                                        :: temp_R(3,3) 
-   REAL(ReKi)                                        :: I_minus_hA_inv(2,2) 
    REAL(ReKi)                                        :: Hub_theta_Root(3) 
    REAL(ReKi)                                        :: u_theta_pitch 
    REAL(ReKi)                                        :: denom 
@@ -1415,18 +1421,12 @@ SUBROUTINE BD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
        u_theta_pitch = -Hub_theta_Root(3)
               
 !bjj: this matrix should be stored as a parameter and calculated only at initialization:>>>>>>
-       I_minus_hA_inv(1,1) =  p%pitchJ + p%pitchC*p%dt
-       I_minus_hA_inv(2,1) = -p%pitchK * p%dt
-       I_minus_hA_inv(1,2) =  p%pitchJ * p%dt
-       I_minus_hA_inv(2,2) =  p%pitchJ
-       denom               =  p%pitchJ + p%pitchC*p%dt + p%pitchK*p%dt**2
-       I_minus_hA_inv      = I_minus_hA_inv / denom
 !<<<<<<<<<<<<<<
        
-       xd%thetaP  = I_minus_hA_inv(1,1)*xd%thetaP + I_minus_hA_inv(1,2)*xd%thetaPD + &
-                                                    I_minus_hA_inv(1,2)*(p%pitchK*p%dt/p%pitchJ)*(-Hub_theta_Root(3))
-       xd%thetaPD = I_minus_hA_inv(2,1)*xd%thetaP + I_minus_hA_inv(2,2)*xd%thetaPD + &
-                                                    I_minus_hA_inv(2,2)*(p%pitchK*p%dt/p%pitchJ)*(-Hub_theta_Root(3))
+       xd%thetaP  = p%torqM(1,1)*xd%thetaP + p%torqM(1,2)*xd%thetaPD + &
+                                           p%torqM(1,2)*(p%pitchK*p%dt/p%pitchJ)*(-Hub_theta_Root(3))
+       xd%thetaPD = p%torqM(2,1)*xd%thetaP + p%torqM(2,2)*xd%thetaPD + &
+                                             p%torqM(2,2)*(p%pitchK*p%dt/p%pitchJ)*(-Hub_theta_Root(3))
        
 
    ENDIF

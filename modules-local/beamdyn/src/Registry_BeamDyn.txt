@@ -107,6 +107,7 @@ typedef      ^            ^      Logical torq - - -  "" -
 typedef      ^            ^      ReKi   pitchK - - -  "Pitch actuator stiffness" - 
 typedef      ^            ^      ReKi   pitchC - - -  "Pitch actuator damping" - 
 typedef      ^            ^      ReKi   pitchJ - - -  "Pitch actuator inertia" - 
+typedef      ^            ^      ReKi   torqM {2}{2} - -  "Pitch actuator inertia" - 
 typedef      ^            ^      ReKi   GLL {:} - -  "GLL point locations in natural frame" -
 typedef      ^            ^      ReKi   GL {:} - -  "GL(Gauss) point locations in natural frame" -
 typedef      ^            ^      ReKi   GLw {:} - -  "Weights at each GL(Gauss) point" -

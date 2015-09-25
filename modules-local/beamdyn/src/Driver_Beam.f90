@@ -256,10 +256,10 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
 !   CALL BD_CrvMatrixR(temp_vec,u%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
 !   temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
 !   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
-   temp3(:) = 0.0D0
-   temp3(2) = 0.17
    IF(t .GT. 0.2) THEN
-       u%RootMotion%Orientation(:,:,i) = EulerConstruct(temp3)
+       temp3(:) = 0.0D0
+       temp3(3) = 0.17
+       u%RootMotion%Orientation(:,:,1) = EulerConstruct(temp3)
    ENDIF
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%TranslationDisp(:,1) = temp_rr(:) - temp_r0(:)
