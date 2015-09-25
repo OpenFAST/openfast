@@ -965,6 +965,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%IniVelo(:) = x%dqdt(:)
 
 ! Acutator
+   p%torq = .TRUE. 
    p%pitchK = 2.0D+07 
    p%pitchC = 5.0D+05
    p%pitchJ = 2.0D+02
@@ -1220,7 +1221,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    CALL BD_CopyInput(u, u_tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Actuator
-   IF( .FALSE.) THEN
+   IF( p%torq ) THEN
        temp_R(:,:) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
        temp_cc(:) = EulerExtract(temp_R)
        temp_thetaP = xd%thetaP
@@ -4350,7 +4351,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 ! Actuator
-   IF( .FALSE.) THEN
+   IF( p%torq ) THEN
        temp_R(:,:) = MATMUL(u_interp%RootMotion%Orientation(:,:,1),TRANSPOSE(u_interp%HubMotion%Orientation(:,:,1)))
        temp_cc(:) = EulerExtract(temp_R)
        temp = 1.0D0/(p%pitchJ + p%pitchC*p%dt + p%pitchK*p%dt*p%dt)

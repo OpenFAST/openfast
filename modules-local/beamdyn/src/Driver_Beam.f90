@@ -211,6 +211,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
    USE BeamDyn
    USE BeamDyn_Subs
    USE BeamDyn_Types
+   USE NWTC_Library
 
    REAL(DbKi),                     INTENT(IN   ):: t
    TYPE(BD_InputType),             INTENT(INOUT):: u
@@ -226,6 +227,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
    REAL(ReKi)              :: temp_R(3,3)
    REAL(ReKi)              :: temp_r0(3)
    REAL(ReKi)              :: temp_theta(3)
+   REAL(ReKi)              :: temp3(3)
 
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -249,11 +251,16 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
    u%RootMotion%Orientation(:,:,:) = 0.0D0
    DO i=1,3
        u%RootMotion%Orientation(i,i,1) = 1.0D0
+       u%HubMotion%Orientation(i,i,1) = 1.0D0
    ENDDO
-   CALL BD_CrvMatrixR(temp_vec,u%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
-   temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
-   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
-
+!   CALL BD_CrvMatrixR(temp_vec,u%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
+!   temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
+!   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
+   temp3(:) = 0.0D0
+   temp3(2) = 0.17
+   IF(t .GT. 0.2) THEN
+       u%RootMotion%Orientation(:,:,i) = EulerConstruct(temp3)
+   ENDIF
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%TranslationDisp(:,1) = temp_rr(:) - temp_r0(:)
    ! END Calculate root displacements and rotations
