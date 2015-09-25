@@ -613,7 +613,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, Interval, 
       call UA_Init( Init_UA_Data, u_UA, p%UA, xd%UA, OtherState%UA, y_UA, interval, InitOutData_UA, errStat, errMsg )       
       if (errStat >= AbortErrLev) return
       
-      ! TODO: Disable Unsteady Aero for any node which has C_nalpha = 0.0!  GJH 8/11/2015
+
       do j = 1,p%numBlades
          do i = 1,p%numBladeNodes ! Loop over blades and nodes
       
@@ -621,8 +621,9 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, Interval, 
             call AFI_GetAirfoilParams( AFInfo(p%AFindx(i,j)), M, u_UA%Re, u_UA%alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
                                     T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, errMsg, errStat )           
    
-            if ( EqualRealNos(C_nalpha, 0.0_ReKi) ) then
+            if ( EqualRealNos(C_nalpha, 0.0_ReKi) .and. OtherState%UA_Flag(i,j) ) then
                OtherState%UA_Flag(i,j) = .false.
+               call WrScr( 'Warning: Turning off Unsteady Aerodynamics because C_nalpha is 0.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
             end if
             
          end do
@@ -1017,7 +1018,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
          if ( p%useInduction ) then
             r = u%rlocal(i,j)
             if (p%skewWakeMod < SkewMod_Coupled) then
-               ! TODO: Need to turn off unsteady to compute inductions, and then call ComputeAirfoilCoefs with UA on for calculating the Cx, Cy, Cl, Cd values
+               ! Turn off unsteady to compute inductions, and then call ComputeAirfoilCoefs with UA on for calculating the Cx, Cy, Cl, Cd values
                fzero = BEMTU_InductionWithResidual(y%phi(i,j), psi, chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), Rtip, p%chord(i,j), u%theta(i,j),  AFInfo(p%AFindx(i,j)), &
                               Vx, Vy, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), SkewMod_Uncoupled, &
                               .FALSE., p%UA, xd%UA, OtherState%UA, &
