@@ -304,7 +304,8 @@ subroutine ApplySkewedWakeCorrection( Vx, Vy, azimuth, chi0, a, ap, tipRatio, ph
       ! TODO: Add check on chi to make sure it is < pi/2 and (positive check should be outside solve)  GJH 5/20/2015
       !yawCorr = max(0.0,chi0-0.5236)
       !yawCorr = min(0.785,yawCorr)
-      yawCorr = (15.0_ReKi*pi/64.0_ReKi*tan(chi/2.0_ReKi) * (tipRatio) * saz)
+      !bjj: modified 22-Sep-2015: RRD recommends 32 instead of 64 in the denominator (like AD14)
+      yawCorr = (15.0_ReKi*pi/32.0_ReKi*tan(chi/2.0_ReKi) * (tipRatio) * saz)
                
       a = a * (1.0 +  yawCorr) ! *(-yawCorr/0.785 + 1) )
       !if ((a > 1.0 .AND. ayaw < 1.0) .OR. (a < 1.0 .AND. ayaw > 1.0 )) then
