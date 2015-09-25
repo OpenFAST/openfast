@@ -2123,9 +2123,10 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_MAP, u_F
    END IF      
    
    IF ( p_FAST%CompElast == Module_BD ) THEN
-      ! map ED root motion outputs to BeamDyn:
+      ! map ED root and hub motion outputs to BeamDyn:
       CALL Transfer_ED_to_BD(y_ED, u_BD, MeshMapData, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
+         
    END IF
       
    
@@ -2294,14 +2295,10 @@ SUBROUTINE Transfer_ED_to_BD(  y_ED, u_BD, MeshMapData, ErrStat, ErrMsg )
       ! motions:
    do k = 1,size(y_ED%BladeRootMotion)
       CALL Transfer_Point_to_Point( y_ED%BladeRootMotion(k), u_BD(k)%RootMotion, MeshMapData%ED_P_2_BD_P(k), ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
-#ifdef DEBUG_BEAMDYN2
-   call meshprintinfo(80+k,y_ED%BladeRootMotion(k))
-   call meshprintinfo(60+k,u_BD(k)%RootMotion)   
-#endif
-      
-      
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+      CALL Transfer_Point_to_Point( y_ED%HubPtMotion, u_BD(k)%HubMotion, MeshMapData%ED_P_2_BD_P_Hub(k), ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)         
    end do
    
 
@@ -2337,7 +2334,8 @@ SUBROUTINE Transfer_ED_to_BD_tmp(  y_ED, MeshMapData, ErrStat, ErrMsg )
       ! motions:
    do k = 1,size(y_ED%BladeRootMotion)
       CALL Transfer_Point_to_Point( y_ED%BladeRootMotion(k), MeshMapData%u_BD_RootMotion(k), MeshMapData%ED_P_2_BD_P(k), ErrStat2, ErrMsg2 )
-      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   
    end do
    
 
@@ -3124,24 +3122,6 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve(  this_time, p_FAST, calcJacobian &
             CALL Orca_CalcOutput( this_time, u_Orca, p_Orca, x_Orca, xd_Orca, z_Orca, OtherSt_Orca, y_Orca, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          END IF
-         
-!debug_print_unit = 77
-!call WrNumAryFileNR(debug_print_unit,(/real(k,DbKi), this_time/), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%TranslationDisp(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%TranslationVel(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%TranslationAcc(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%Orientation(1,:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%Orientation(2,:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%Orientation(3,:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%RotationVel(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,u_Orca%PtfmMesh%RotationAcc(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!write(debug_print_unit,'()')
-!         
-!debug_print_unit = 78
-!call WrNumAryFileNR(debug_print_unit,(/real(k,DbKi), this_time/), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,y_Orca%PtfmMesh%Force(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,y_Orca%PtfmMesh%Moment(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!write(debug_print_unit,'()')
          
          
          IF ( ErrStat >= AbortErrLev ) THEN
@@ -5678,6 +5658,18 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BD_P_2_ED_P('//TRIM(Num2LStr(K))//')' )
       END DO      
       
+      ! Hub meshes:
+      ALLOCATE( MeshMapData%ED_P_2_BD_P_Hub(NumBl), STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%ED_P_2_BD_P_Hub.', ErrStat, ErrMsg, RoutineName )
+            RETURN
+         END IF
+         
+      DO K=1,NumBl         
+         CALL MeshMapCreate( ED%Output(1)%HubPtMotion, BD%Input(1,k)%HubMotion, MeshMapData%ED_P_2_BD_P_Hub(K), ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_P_2_BD_P_Hub('//TRIM(Num2LStr(K))//')' )
+      END DO      
+                  
    END IF
    
    
@@ -6907,13 +6899,15 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       END IF        
    
    IF (p_FAST%CompElast == Module_BD) THEN
-      !bjj: FIX ME: TODO: verify that these are correct
       
       InitInData_BD%gravity      = (/ 0.0_ReKi, 0.0_ReKi, -InitOutData_ED%Gravity /)       ! "Gravitational acceleration" m/s^2
       
          ! now initialize IceD for additional legs (if necessary)
       dt_BD = p_FAST%dt_module( MODULE_BD )
                         
+      InitInData_BD%HubPos = ED%Output(1)%HubPtMotion%Position(:,1)
+      InitInData_BD%HubRot = ED%Output(1)%HubPtMotion%RefOrientation(:,:,1)
+            
       DO k=1,p_FAST%nBeams  
          InitInData_BD%RootName     = TRIM(p_FAST%OutFileRoot)//'.BD'//TRIM( Num2LStr(k) )
          

@@ -393,7 +393,9 @@ CONTAINS
       t = 0.0_ReKi     ! start time at zero
 
       ! because TimeStep wants an array...
-      uArray(1) = u
+!bjj: >> fix potential memory leak (we've got pointers in here!)
+      !uArray(1) = u
+      call MD_CopyInput( u, uArray(1), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
 
 
       DO I = 1, ceiling(InitInp%TMaxIC/InitInp%DTIC)   ! loop through IC gen time steps, up to maximum
@@ -437,6 +439,7 @@ CONTAINS
 
       END DO ! I ... looping through time steps
 
+      CALL MD_DestroyInput( uArray(1), ErrStat2, ErrMsg2 )
 
       ! UNboost drag coefficient of each line type
       DO I = 1, p%NTypes
