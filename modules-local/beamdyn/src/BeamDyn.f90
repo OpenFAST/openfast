@@ -965,11 +965,12 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%IniDisp(:) = x%q(:)
    p%IniVelo(:) = x%dqdt(:)
 
-! Acutator
+! Actuator
+!for S testing: k = 2.0E+7 kgm^2/s^2, c = 5.0E+5 kgm^2/s, and J = 200 kgm^2,    
    p%torq = .TRUE. 
-   p%pitchK = 2.0D+07 
-   p%pitchC = 5.0D+05
-   p%pitchJ = 2.0D+02
+   p%pitchK = 2.0D+07  !kgm^2/s^2
+   p%pitchC = 5.0D+05  !kgm^2/s
+   p%pitchJ = 2.0D+02  !kgm^2
    TmpDCM(:,:) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
    temp_CRV(:) = EulerExtract(TmpDCM)
    xd%thetaP = -temp_CRV(3)    
@@ -1156,8 +1157,7 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   
-   
+         
    IF(p%analysis_type == 2) THEN
        CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
    ELSEIF(p%analysis_type == 1) THEN
@@ -1219,27 +1219,16 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CopyInput(u, u_tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
    ! Actuator
    IF( p%torq ) THEN
-       temp_R(:,:) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
-       temp_cc(:) = EulerExtract(temp_R)
-       temp_thetaP = xd%thetaP
-       temp_omegaP = xd%thetaPD
-       temp_alphaP = -(p%pitchK/p%pitchJ) * xd%thetaP - (p%pitchC/p%pitchJ) * xd%thetaPD + &
-          (p%pitchK/p%pitchJ) * (-temp_cc(3))
-       temp_cc(3) = -temp_thetaP
-       temp_R(:,:) = EulerConstruct(temp_cc)
-       u_tmp%RootMotion%Orientation(:,:,1) = MATMUL(temp_R,u%HubMotion%Orientation(:,:,1))
-       u_tmp%RootMotion%RotationVel(:,1) = u%RootMotion%RotationVel(:,1) - &
-         temp_omegaP * u%RootMotion%Orientation(3,1:3,1)
-       u_tmp%RootMotion%RotationAcc(:,1) = u%RootMotion%RotationAcc(:,1) - &
-         temp_alphaP * u%RootMotion%Orientation(3,1:3,1)
-       CALL BD_CopyInput(u_tmp, u_tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       CALL PitchActuator_SetBC(p, u_tmp, xd)
    ENDIF
    ! END Actuator
+   
+   CALL BD_CopyInput(u_tmp, u_tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
    CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
@@ -1405,15 +1394,44 @@ SUBROUTINE BD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
+   ! local variables
+   REAL(ReKi)                                        :: temp_R(3,3) 
+   REAL(ReKi)                                        :: I_minus_hA_inv(2,2) 
+   REAL(ReKi)                                        :: Hub_theta_Root(3) 
+   REAL(ReKi)                                        :: u_theta_pitch 
+   REAL(ReKi)                                        :: denom 
+   
       ! Initialize ErrStat
 
       ErrStat = ErrID_None
       ErrMsg  = ""
 
       ! Update discrete states here:
+      
+! Actuator
+   IF( p%torq ) THEN
+       temp_R = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
+       Hub_theta_Root = EulerExtract(temp_R)
+       u_theta_pitch = -Hub_theta_Root(3)
+              
+!bjj: this matrix should be stored as a parameter and calculated only at initialization:>>>>>>
+       I_minus_hA_inv(1,1) =  p%pitchJ + p%pitchC*p%dt
+       I_minus_hA_inv(2,1) = -p%pitchK * p%dt
+       I_minus_hA_inv(1,2) =  p%pitchJ * p%dt
+       I_minus_hA_inv(2,2) =  p%pitchJ
+       denom               =  p%pitchJ + p%pitchC*p%dt + p%pitchK*p%dt**2
+       I_minus_hA_inv      = I_minus_hA_inv / denom
+!<<<<<<<<<<<<<<
+       
+       xd%thetaP  = I_minus_hA_inv(1,1)*xd%thetaP + I_minus_hA_inv(1,2)*xd%thetaPD + &
+                                                    I_minus_hA_inv(1,2)*(p%pitchK*p%dt/p%pitchJ)*(-Hub_theta_Root(3))
+       xd%thetaPD = I_minus_hA_inv(2,1)*xd%thetaP + I_minus_hA_inv(2,2)*xd%thetaPD + &
+                                                    I_minus_hA_inv(2,2)*(p%pitchK*p%dt/p%pitchJ)*(-Hub_theta_Root(3))
+       
 
-!      xd%DummyDiscState = 0.0
-
+   ENDIF
+! END Actuator      
+      
 END SUBROUTINE BD_UpdateDiscState
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residual, ErrStat, ErrMsg )
@@ -4298,7 +4316,6 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    TYPE(BD_ContinuousStateType)                       :: x_tmp      ! Holds temporary modification to x
    TYPE(BD_OtherStateType     )                       :: OS_tmp     ! Holds temporary modification to x
    TYPE(BD_InputType)                                 :: u_interp   ! interpolated value of inputs
-   TYPE(BD_InputType)                                 :: u_tmp2
    INTEGER(IntKi)                                     :: ErrStat2   ! Temporary Error status
    CHARACTER(ErrMsgLen)                               :: ErrMsg2    ! Temporary Error message
    CHARACTER(*), PARAMETER                            :: RoutineName = 'BD_GA2'
@@ -4348,40 +4365,12 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-   CALL BD_CopyInput( u_interp,u_tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+   CALL BD_UpdateDiscState( t, n, u_interp, p, x, xd, z, OtherState, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-
+            
 ! Actuator
    IF( p%torq ) THEN
-       temp_R(:,:) = MATMUL(u_interp%RootMotion%Orientation(:,:,1),TRANSPOSE(u_interp%HubMotion%Orientation(:,:,1)))
-       temp_cc(:) = EulerExtract(temp_R)
-       temp = 1.0D0/(p%pitchJ + p%pitchC*p%dt + p%pitchK*p%dt*p%dt)
-       temp22(:,:) = 0.0D0
-       temp22(1,1) = p%pitchJ + p%pitchC*p%dt
-       temp22(1,2) = p%pitchJ * p%dt
-       temp22(2,1) = -p%pitchK * p%dt
-       temp22(2,2) = p%pitchJ
-       temp22(:,:) = temp22(:,:) / temp
-
-       temp2(:) = 0.0D0
-       temp2(1) = temp22(1,1)*xd%thetaP + temp22(1,2)*xd%thetaPD + &
-          temp22(1,2)*(p%pitchK*p%dt/p%pitchJ)*(-temp_cc(3))
-       temp2(2) = temp22(2,1)*xd%thetaP + temp22(2,2)*xd%thetaPD + &
-          temp22(2,2)*(p%pitchK*p%dt/p%pitchJ)*(-temp_cc(3))
-       xd%thetaP = temp2(1)
-       xd%thetaPD= temp2(2)
-
-       temp_thetaP = xd%thetaP
-       temp_omegaP = xd%thetaPD
-       temp_alphaP = -(p%pitchK/p%pitchJ) * xd%thetaP - (p%pitchC/p%pitchJ) * xd%thetaPD + &
-          (p%pitchK/p%pitchJ) * (-temp_cc(3))
-       temp_cc(3) = -temp_thetaP
-       temp_R(:,:) = EulerConstruct(temp_cc)
-       u_interp%RootMotion%Orientation(:,:,1) = MATMUL(temp_R,u_tmp2%HubMotion%Orientation(:,:,1))
-       u_interp%RootMotion%RotationVel(:,1) = u_tmp2%RootMotion%RotationVel(:,1) - &
-         temp_omegaP * u_tmp2%RootMotion%Orientation(3,1:3,1)
-       u_interp%RootMotion%RotationAcc(:,1) = u_tmp2%RootMotion%RotationAcc(:,1) - &
-         temp_alphaP * u_tmp2%RootMotion%Orientation(3,1:3,1)
+      CALL PitchActuator_SetBC(p, u_interp, xd)      
    ENDIF
 ! END Actuator
 
@@ -4414,7 +4403,6 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 contains
    subroutine cleanup()
       CALL BD_DestroyInput(u_interp, ErrStat2, ErrMsg2)
-      CALL BD_DestroyInput(u_tmp2, ErrStat2, ErrMsg2)
       CALL BD_DestroyContState(x_tmp, ErrStat2, ErrMsg2 )
       CALL BD_DestroyOtherState(OS_tmp, ErrStat2, ErrMsg2 )
    end subroutine cleanup   
@@ -5594,5 +5582,40 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
 
 END SUBROUTINE BD_InitshpDerJaco
 
+SUBROUTINE PitchActuator_SetBC(p, u, xd)
+! this routine alters the RootMotion inputs based on the pitch-actuator parameters and discrete states
+
+   TYPE(BD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
+   TYPE(BD_InputType),        INTENT(INOUT)  :: u                                 ! inputs
+   TYPE(BD_DiscreteStateType),INTENT(IN   )  :: xd                                ! The module discrete states
+
+   ! local variables
+   REAL(ReKi)                                :: temp_R(3,3)
+   REAL(ReKi)                                :: temp_cc(3)
+   REAL(ReKi)                                :: u_theta_pitch
+   REAL(ReKi)                                :: thetaP
+   REAL(ReKi)                                :: omegaP
+   REAL(ReKi)                                :: alphaP
+   
+   
+   temp_R = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
+   temp_cc = EulerExtract(temp_R)   != Hub_theta_Root
+   u_theta_pitch = -temp_cc(3)
+       
+   thetaP = xd%thetaP
+   omegaP = xd%thetaPD
+   alphaP = -(p%pitchK/p%pitchJ) * xd%thetaP - (p%pitchC/p%pitchJ) * xd%thetaPD + (p%pitchK/p%pitchJ) * u_theta_pitch
+       
+   ! Calculate new root motions for use as BeamDyn boundary conditions:       
+   !note: we alter the orientation last because we need the input (before actuator) root orientation for the rotational velocity and accelerations
+   u%RootMotion%RotationVel(:,1) = u%RootMotion%RotationVel(:,1) - omegaP * u%RootMotion%Orientation(3,:,1)
+   u%RootMotion%RotationAcc(:,1) = u%RootMotion%RotationAcc(:,1) - alphaP * u%RootMotion%Orientation(3,:,1)
+
+   temp_cc(3) = -thetaP
+   temp_R = EulerConstruct(temp_cc)       
+   u%RootMotion%Orientation(:,:,1) = MATMUL(temp_R,u%HubMotion%Orientation(:,:,1))
+       
+
+END SUBROUTINE PitchActuator_SetBC
 
 END MODULE BeamDyn
