@@ -620,7 +620,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                              , ErrStat  = ErrStat2            &
                              , ErrMess  = ErrMsg2            )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
+   CALL MeshCommit(u%HubMotion, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
    
    CALL MeshCreate( BlankMesh        = u%RootMotion            &
