@@ -964,17 +964,14 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%IniDisp(:) = x%q(:)
    p%IniVelo(:) = x%dqdt(:)
 
-!   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(:,:,1),xd%rot,ErrStat2,ErrMsg2)
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!   p%alpha = 0.0 !exp(-2.0D0*pi*Interval*25.0)
 ! Acutator
-!   p%pitchK = 0.0 
-!   p%pitchC = 0.0 
-!   p%pitchJ = 0.0 
-!   TmpDCM(:,:) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
-!   temp_CRV(:) = EulerExtract(TmpDCM)
-!   xd%thetaP = -temp_CRV(3)    
-!   xd%thetaPD = 0.0D0
+   p%pitchK = 2.0D+07 
+   p%pitchC = 5.0D+05
+   p%pitchJ = 2.0D+02
+   TmpDCM(:,:) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
+   temp_CRV(:) = EulerExtract(TmpDCM)
+   xd%thetaP = -temp_CRV(3)    
+   xd%thetaPD = 0.0D0
 ! END Actuator
    ! Define initial guess for the system outputs here:
 
@@ -1219,6 +1216,8 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL BD_CopyInput(u, u_tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Actuator
    IF( .FALSE.) THEN
@@ -4297,10 +4296,18 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    TYPE(BD_ContinuousStateType)                       :: x_tmp      ! Holds temporary modification to x
    TYPE(BD_OtherStateType     )                       :: OS_tmp     ! Holds temporary modification to x
    TYPE(BD_InputType)                                 :: u_interp   ! interpolated value of inputs
+   TYPE(BD_InputType)                                 :: u_tmp2
    INTEGER(IntKi)                                     :: ErrStat2   ! Temporary Error status
    CHARACTER(ErrMsgLen)                               :: ErrMsg2    ! Temporary Error message
    CHARACTER(*), PARAMETER                            :: RoutineName = 'BD_GA2'
-   REAL(ReKi):: temp_3(3)
+   REAL(ReKi):: temp_R(3,3)
+   REAL(ReKi):: temp_cc(3)
+   REAL(ReKi):: temp22(2,2)
+   REAL(ReKi):: temp2(2)
+   REAL(ReKi):: temp
+   REAL(ReKi):: temp_thetaP
+   REAL(ReKi):: temp_omegaP
+   REAL(ReKi):: temp_alphaP
    INTEGER(IntKi)                                     :: i
 
    ! Initialize ErrStat
@@ -4335,28 +4342,46 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
          call cleanup()
          return
       end if
-!No filter
+
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!END no filter
 
-   ! Lowpass filter added
-!   call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   CALL BD_CrvExtractCrv(u_interp%RootMotion%Orientation(:,:,1),temp_3,ErrStat2,ErrMsg2) 
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   xd%rot(:) = p%alpha * xd%rot(:) + (1.0D0 - p%alpha) * temp_3(:)
-!
-!   call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!                
-!   CALL BD_CrvExtractCrv(u_interp%RootMotion%Orientation(:,:,1),temp_3,ErrStat2,ErrMsg2) 
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   temp_3(:) = p%alpha * xd%rot(:) + (1.0D0 - p%alpha) * temp_3(:)
-!
-!   CALL BD_CrvMatrixR(temp_3,u_interp%RootMotion%Orientation(:,:,1),ErrStat2,ErrMsg2)
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   ! END lowpass filter
+   CALL BD_CopyInput( u_interp,u_tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+! Actuator
+   IF( .FALSE.) THEN
+       temp_R(:,:) = MATMUL(u_interp%RootMotion%Orientation(:,:,1),TRANSPOSE(u_interp%HubMotion%Orientation(:,:,1)))
+       temp_cc(:) = EulerExtract(temp_R)
+       temp = 1.0D0/(p%pitchJ + p%pitchC*p%dt + p%pitchK*p%dt*p%dt)
+       temp22(:,:) = 0.0D0
+       temp22(1,1) = p%pitchJ + p%pitchC*p%dt
+       temp22(1,2) = p%pitchJ * p%dt
+       temp22(2,1) = -p%pitchK * p%dt
+       temp22(2,2) = p%pitchJ
+       temp22(:,:) = temp22(:,:) / temp
+
+       temp2(:) = 0.0D0
+       temp2(1) = temp22(1,1)*xd%thetaP + temp22(1,2)*xd%thetaPD + &
+          temp22(1,2)*(p%pitchK*p%dt/p%pitchJ)*(-temp_cc(3))
+       temp2(2) = temp22(2,1)*xd%thetaP + temp22(2,2)*xd%thetaPD + &
+          temp22(2,2)*(p%pitchK*p%dt/p%pitchJ)*(-temp_cc(3))
+       xd%thetaP = temp2(1)
+       xd%thetaPD= temp2(2)
+
+       temp_thetaP = xd%thetaP
+       temp_omegaP = xd%thetaPD
+       temp_alphaP = -(p%pitchK/p%pitchJ) * xd%thetaP - (p%pitchC/p%pitchJ) * xd%thetaPD + &
+          (p%pitchK/p%pitchJ) * (-temp_cc(3))
+       temp_cc(3) = -temp_thetaP
+       temp_R(:,:) = EulerConstruct(temp_cc)
+       u_interp%RootMotion%Orientation(:,:,1) = MATMUL(temp_R,u_tmp2%HubMotion%Orientation(:,:,1))
+       u_interp%RootMotion%RotationVel(:,1) = u_tmp2%RootMotion%RotationVel(:,1) - &
+         temp_omegaP * u_tmp2%RootMotion%Orientation(3,1:3,1)
+       u_interp%RootMotion%RotationAcc(:,1) = u_tmp2%RootMotion%RotationAcc(:,1) - &
+         temp_alphaP * u_tmp2%RootMotion%Orientation(3,1:3,1)
+   ENDIF
+! END Actuator
 
    ! GA2: prediction        
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
@@ -4387,6 +4412,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 contains
    subroutine cleanup()
       CALL BD_DestroyInput(u_interp, ErrStat2, ErrMsg2)
+      CALL BD_DestroyInput(u_tmp2, ErrStat2, ErrMsg2)
       CALL BD_DestroyContState(x_tmp, ErrStat2, ErrMsg2 )
       CALL BD_DestroyOtherState(OS_tmp, ErrStat2, ErrMsg2 )
    end subroutine cleanup   
