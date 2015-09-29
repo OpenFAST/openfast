@@ -90,16 +90,28 @@ v2.00.01b-bjj, 30-June-2014, B. Jonkman
 + updated types files with latest Registry executable.
 
 
+v3.00.00a-adp through v3.01.00a-adp (10-Aug-2015, A. Platt)
+  - changed all licensing to the Apache2 license
+  - new driver code with input file and command line options, and verbose output options for testing
+  - driver code is capable of extracting a grid of wind data
+  - addition of an input file for control of IfW
+  - addition of summary file output to summarize wind type and parameters used
+  - renaming of hub-height wind type to UniformWind
+  - completed conversion to the FAST modular framework including the full-field, HAWC, user, uniform, and steady wind options and submodules.
+  - split full field wind into TurbSim and Bladed-style submodules
+  - addition of steady wind option that does not require an wind file
+  - added ability to rotate the entire wind field (using meteorological wind direction convention)
+  - added OutList parameters for outputing wind velocities at specified points to the FAST output file
+  - restructured submodules somewhat (they no longer follow the FAST modular framework entirely) for cleaner, more robust code
+  - added a IfW_UserWind.f90 template file for user developed wind files
+  - added lidar module
+  - converted to always use single precision for smaller memory footprint
+
 
 
  To Do:
- - Create new input file for the module
  - remove all *_ADHack_* subroutines (reintroduced for integration with AeroDyn)
- - Split FF wind type into different categories (BLADED, TurbSim, TurbSim's BLADED)
  - add ability to superimpose wind types
- - add user-defined wind profile?
- - add steady wind case (no turbulence, just add the wind profile from HAWC?)
+ - add coherent turbulence back into InflowWind
  - add CTWind capability to test program (?)
- - convert CTWind, FDWind, HAWCWind, and UserWind to the modular framework
- - create driver routines for the above modules
- - create test routines
+ - convert CTWind to the modular framework
