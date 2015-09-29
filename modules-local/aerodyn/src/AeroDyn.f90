@@ -28,7 +28,6 @@ module AeroDyn
    use AeroDyn_IO
    use BEMT
    use AirfoilInfo
-   use BladeElement, only : SkewMod_Uncoupled, SkewMod_PittPeters, SkewMod_Coupled
    use NWTC_LAPACK
    
    
@@ -212,6 +211,7 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    
    
    p%NumBlades = InitInp%NumBlades ! need this before reading the AD input file so that we know how many blade files to read
+   !bjj: note that we haven't validated p%NumBlades before using it below!
    p%RootName  = TRIM(InitInp%RootName)//'.AD'
    
       ! Read the primary AeroDyn input file
@@ -306,6 +306,15 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    call AD_SetInitOut(p, InitOut, errStat2, errMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
    
+      
+      !............................................................................................
+      ! Print the summary file if requested:
+      !............................................................................................
+   if (InputFileData%SumPrint) then
+      call AD_PrintSum( InputFileData, p, u, y, OtherState, ErrStat2, ErrMsg2 )
+         call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   end if
+      
             
    call Cleanup() 
       
@@ -1148,6 +1157,9 @@ subroutine SetInputsForBEMT(p, u, OtherState, errStat, errMsg)
       tmp_sz_y = max( -1.0_ReKi, tmp_sz_y )
       
       OtherState%BEMT_u%chi0 = acos( tmp_sz_y )
+
+!write(debug_print_unit,'(15(1x,ES15.5E2))')  x_hat_disk, OtherState%V_diskAvg, tmp_sz, OtherState%V_dot_x, tmp_sz_y, OtherState%BEMT_u%chi0
+      
    end if
    
       ! "Azimuth angle" rad
@@ -1302,6 +1314,7 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
          
+   if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrSTat, ErrMsg, RoutineName )
    if (InputFileData%DTAero <= 0.0)  call SetErrStat ( ErrID_Fatal, 'DTAero must be greater than zero.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%WakeMod /= WakeMod_None .and. InputFileData%WakeMod /= WakeMod_BEMT) call SetErrStat ( ErrID_Fatal, &
       'WakeMod must '//trim(num2lstr(WakeMod_None))//' (none) or '//trim(num2lstr(WakeMod_BEMT))//' (BEMT).', ErrStat, ErrMsg, RoutineName ) 
@@ -1616,6 +1629,8 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    do k=1,p%numBlades
       
       InitInp%zHub(k) = TwoNorm( u_AD%BladeRootMotion(k)%Position(:,1) - u_AD%HubMotion%Position(:,1) )  
+      if (EqualRealNos(InitInp%zHub(k),0.0_ReKi) ) &
+         call SetErrStat( ErrID_Fatal, "zHub for blade "//trim(num2lstr(k))//" is zero.", ErrStat, ErrMsg, RoutineName)
       
       InitInp%zLocal(1,k) = InitInp%zHub(k) + TwoNorm( u_AD%BladeMotion(k)%Position(:,1) - u_AD%BladeRootMotion(k)%Position(:,1) )
       do j=2,p%NumBlNds
@@ -1638,6 +1653,12 @@ SUBROUTINE Init_BEMTmodule( InputFileData, u_AD, u, p, x, xd, z, OtherState, y, 
    InitInp%UAMod    = InputFileData%UAMod
    InitInp%Flookup  = InputFileData%Flookup
    InitInp%a_s      = InputFileData%SpdSound
+   
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+   
    
    call BEMT_Init(InitInp, u, p%BEMT,  x, xd, z, OtherState, p%AFI%AFInfo, y, Interval, InitOut, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)   
@@ -1836,6 +1857,8 @@ SUBROUTINE TwrInfl( p, u, OtherState, ErrStat, ErrMsg )
             u_TwrShadow = 0.0_ReKi
          end if
             
+!write(debug_print_unit,'(2(1x,i2),15(1x,ES15.5E2))')  k,j, xbar, ybar, zbar, TwrCd, W_tower, u_TwrPotent
+         
          v(1) = (u_TwrPotent + u_TwrShadow)*W_tower
          v(2) = v_TwrPotent*W_tower
          v(3) = 0.0_ReKi
