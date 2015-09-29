@@ -258,7 +258,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
 !   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
    IF(t .GT. 0.2) THEN
        temp3(:) = 0.0D0
-       temp3(3) = 0.17
+       temp3(3) = 0.0175
        u%RootMotion%Orientation(:,:,1) = EulerConstruct(temp3)
    ENDIF
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
