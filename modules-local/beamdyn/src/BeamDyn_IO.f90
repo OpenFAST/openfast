@@ -789,12 +789,29 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
                 ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !---------------------- BEAM SECTIONAL PARAMETER ----------------------------------------
-   CALL ReadCom(UnIn,InputFile,'Section Header: Blade Parameter',ErrStat2,ErrMsg2,UnEc)
+   CALL ReadCom(UnIn,InputFile,'Section Header: Beam Material Parameter',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL ReadVar ( UnIn, InputFile, InputFileData%BldFile, 'BldFile', 'Name of the file containing properties for beam', ErrStat2, ErrMsg2, UnEc )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF ( PathIsRelative( InputFileData%BldFile ) ) InputFileData%BldFile = TRIM(PriPath)//TRIM(InputFileData%BldFile)
 
+      
+   !---------------------- PITCH ACTUATOR PARAMETER ----------------------------------------
+   CALL ReadCom(UnIn,InputFile,'Section Header: Pitch Actuator Parameter',ErrStat2,ErrMsg2,UnEc)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   CALL ReadVar ( UnIn, InputFile, InputFileData%UsePitchAct, 'UsePitchAct', 'Whether a pitch actuator should be used (flag)', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+   CALL ReadVar ( UnIn, InputFile, InputFileData%PitchJ, 'PitchJ', 'Pitch actuator inertia (kg-m^2)', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   CALL ReadVar ( UnIn, InputFile, InputFileData%PitchK, 'PitchK', 'Pitch actuator stiffness (kg-m^2/s^2)', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   CALL ReadVar ( UnIn, InputFile, InputFileData%PitchC, 'PitchC', 'Pitch actuator damping (kg-m^2/s)', ErrStat2, ErrMsg2, UnEc )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
       
    !----------- OUTPUTS  -----------------------------------------------------------
    CALL ReadCom( UnIn, InputFile, 'Section Header: Outputs', ErrStat2, ErrMsg2, UnEc )
@@ -1338,6 +1355,10 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
    IF (InputFileData%stop_tol < EPSILON(InputFileData%stop_tol) ) &
       CALL SetErrStat ( ErrID_Fatal, 'Tolerance for stopping (stop_tol) must be larger than machine precision ('//trim(num2lstr(EPSILON(InputFileData%stop_tol)))//').', ErrStat, ErrMsg, RoutineName )
        
+   if (InputFileData%UsePitchAct) then
+      if ( EqualRealNos(InputFileData%pitchJ, 0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'Pitch actuator inertia must not be 0.',ErrStat,ErrMsg,RoutineName)
+   end if
+   
    
       ! .............................
       ! check outputs:
@@ -1597,10 +1618,9 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
 
       ! Local variables.
 
-   INTEGER(IntKi)               :: I                                               ! Index for the nodes.
-   INTEGER(IntKi)               :: K                                               ! Generic index (also for the blade number).
-   INTEGER(IntKi)               :: j                                               ! Generic index (also for the blade number).
-   INTEGER(IntKi)               :: temp_id                                               ! Generic index (also for the blade number).
+   INTEGER(IntKi)               :: I                                               ! Index for the nodes
+   INTEGER(IntKi)               :: j                                               ! Generic index
+   INTEGER(IntKi)               :: temp_id                                         ! Generic index
    INTEGER(IntKi)               :: UnSu                                            ! I/O unit number for the summary output file
 
    CHARACTER(*), PARAMETER      :: FmtDat    = '(A,T35,1(:,F13.3))'                ! Format for outputting mass and modal data.
