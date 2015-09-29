@@ -136,7 +136,6 @@ subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
    InitInData%HubOrientation = EulerConstruct( theta )
      
    
-      ! bjj: fix this!
    do k=1,InitInData%numBlades
                      
       theta(1) = (k-1)*TwoPi/real(InitInData%numBlades,ReKi)
@@ -529,7 +528,8 @@ subroutine ValidateInputs(DvrData, errStat, errMsg)
    
       ! Turbine Data:
    if ( DvrData%numBlades < 1 ) call SetErrStat( ErrID_Fatal, "There must be at least 1 blade (numBlades).", ErrStat, ErrMsg, RoutineName)
-   if ( DvrData%HubRad < 0.0_ReKi ) call SetErrStat( ErrID_Fatal, "HubRad must be a positive number.", ErrStat, ErrMsg, RoutineName)
+   if ( DvrData%numBlades > 3 ) call SetErrStat( ErrID_Fatal, "There can be no more than 3 blades (numBlades).", ErrStat, ErrMsg, RoutineName)
+   if ( DvrData%HubRad < 0.0_ReKi .or. EqualRealNos(DvrData%HubRad, 0.0_ReKi) ) call SetErrStat( ErrID_Fatal, "HubRad must be a positive number.", ErrStat, ErrMsg, RoutineName)
    if ( DvrData%HubHt < DvrData%HubRad ) call SetErrStat( ErrID_Fatal, "HubHt must be at least HubRad.", ErrStat, ErrMsg, RoutineName)
    
       
