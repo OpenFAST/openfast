@@ -968,7 +968,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
 ! Actuator
 !for S testing: k = 2.0E+7 kgm^2/s^2, c = 5.0E+5 kgm^2/s, and J = 200 kgm^2,    
-   p%torq = .TRUE. 
+   p%UsePitchAct = .TRUE. 
    p%pitchK = 2.0D+07  !kgm^2/s^2
    p%pitchC = 5.0D+05  !kgm^2/s
    p%pitchJ = 2.0D+02  !kgm^2
@@ -1228,8 +1228,8 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
    ! Actuator
-   IF( p%torq ) THEN
-       CALL PitchActuator_SetBC(p, u_tmp, xd)
+   IF( p%UsePitchAct ) THEN
+       CALL PitchActuator_SetBC(p, u_tmp, xd, AllOuts)
    ENDIF
    ! END Actuator
    
@@ -1415,14 +1415,11 @@ SUBROUTINE BD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
       ! Update discrete states here:
       
 ! Actuator
-   IF( p%torq ) THEN
+   IF( p%UsePitchAct ) THEN
        temp_R = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
        Hub_theta_Root = EulerExtract(temp_R)
        u_theta_pitch = -Hub_theta_Root(3)
               
-!bjj: this matrix should be stored as a parameter and calculated only at initialization:>>>>>>
-!<<<<<<<<<<<<<<
-       
        xd%thetaP  = p%torqM(1,1)*xd%thetaP + p%torqM(1,2)*xd%thetaPD + &
                                            p%torqM(1,2)*(p%pitchK*p%dt/p%pitchJ)*(-Hub_theta_Root(3))
        xd%thetaPD = p%torqM(2,1)*xd%thetaP + p%torqM(2,2)*xd%thetaPD + &
@@ -4369,7 +4366,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
 ! Actuator
-   IF( p%torq ) THEN
+   IF( p%UsePitchAct ) THEN
       CALL PitchActuator_SetBC(p, u_interp, xd)      
    ENDIF
 ! END Actuator
@@ -5532,7 +5529,9 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
    CHARACTER(ErrMsgLen)             :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_InitShpDerJaco'
 
-
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
    IF(quadrature .EQ. 2) THEN
        DO j=1,ngp
            temp_id = 0
@@ -5564,6 +5563,7 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
    ENDIF
 
    CALL BD_diffmtc(node_elem-1,ngp,GL,GLL,hhx,hpx,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    DO i = 1,elem_total
        DO j = 1, ngp
@@ -5582,13 +5582,13 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
 
 END SUBROUTINE BD_InitshpDerJaco
 
-SUBROUTINE PitchActuator_SetBC(p, u, xd)
+SUBROUTINE PitchActuator_SetBC(p, u, xd, AllOuts)
 ! this routine alters the RootMotion inputs based on the pitch-actuator parameters and discrete states
 
    TYPE(BD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
    TYPE(BD_InputType),        INTENT(INOUT)  :: u                                 ! inputs
    TYPE(BD_DiscreteStateType),INTENT(IN   )  :: xd                                ! The module discrete states
-
+   REAL(ReKi),       OPTIONAL,INTENT(INOUT)  :: AllOuts(0:)                       ! all output array for writing to file
    ! local variables
    REAL(ReKi)                                :: temp_R(3,3)
    REAL(ReKi)                                :: temp_cc(3)
@@ -5615,7 +5615,15 @@ SUBROUTINE PitchActuator_SetBC(p, u, xd)
    temp_R = EulerConstruct(temp_cc)       
    u%RootMotion%Orientation(:,:,1) = MATMUL(temp_R,u%HubMotion%Orientation(:,:,1))
        
-
+   if (present(AllOuts)) then
+      AllOuts(PAngInp) = u_theta_pitch
+      AllOuts(PAngAct) = thetaP
+      AllOuts(PRatAct) = omegaP
+      AllOuts(PAccAct) = alphaP
+   end if
+   
+   
+   
 END SUBROUTINE PitchActuator_SetBC
 
 END MODULE BeamDyn
