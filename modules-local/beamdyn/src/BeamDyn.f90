@@ -72,7 +72,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    INTEGER(IntKi)          :: j                ! do-loop counter
    INTEGER(IntKi)          :: k                ! do-loop counter
    INTEGER(IntKi)          :: m                ! do-loop counter
-   INTEGER(IntKi)          :: n                ! do-loop counter
+!   INTEGER(IntKi)          :: n                ! do-loop counter
    INTEGER(IntKi)          :: id0
    INTEGER(IntKi)          :: id1
    INTEGER(IntKi)          :: indx             ! do-loop counter
@@ -96,6 +96,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    REAL(ReKi)              :: TmpPos(3)
    REAL(ReKi)              :: TmpDCM(3,3)
    REAL(ReKi)              :: temp_glb(3)
+   REAL(ReKi)              :: denom
 
    INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
@@ -620,7 +621,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                              , ErrStat  = ErrStat2            &
                              , ErrMess  = ErrMsg2            )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
+   CALL MeshCommit(u%HubMotion, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
    
    CALL MeshCreate( BlankMesh        = u%RootMotion            &
@@ -964,10 +966,36 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%IniDisp(:) = x%q(:)
    p%IniVelo(:) = x%dqdt(:)
 
-!   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(:,:,1),xd%rot,ErrStat2,ErrMsg2)
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-!   p%alpha = 0.0 !exp(-2.0D0*pi*Interval*25.0)
-   ! Define initial guess for the system outputs here:
+! Actuator
+   p%UsePitchAct = InputFileData%UsePitchAct
+   
+   if (p%UsePitchAct) then
+   
+      p%pitchK = InputFileData%pitchK 
+      p%pitchC = InputFileData%pitchC 
+      p%pitchJ = InputFileData%pitchJ 
+      
+         ! calculate (I-hA)^-1
+      
+      p%torqM(1,1) =  p%pitchJ + p%pitchC*p%dt
+      p%torqM(2,1) = -p%pitchK * p%dt
+      p%torqM(1,2) =  p%pitchJ * p%dt
+      p%torqM(2,2) =  p%pitchJ
+      denom        =  p%pitchJ + p%pitchC*p%dt + p%pitchK*p%dt**2
+      if (EqualRealNos(denom,0.0_ReKi)) then
+         call SetErrStat(ErrID_Fatal,"Cannot invert matrix for pitch actuator: J+c*dt+k*dt^2 is zero.",ErrStat,ErrMsg,RoutineName)
+      else         
+         p%torqM(:,:) =  p%torqM / denom
+      end if
+               
+      TmpDCM(:,:) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
+      temp_CRV(:) = EulerExtract(TmpDCM)
+      xd%thetaP = -temp_CRV(3)    
+      xd%thetaPD = 0.0D0
+   end if   
+! END Actuator
+   
+! Define initial guess for the system outputs here:
 
    y%BldForce%Force(:,:)    = 0.0D0
    y%BldForce%Moment(:,:)   = 0.0D0
@@ -1148,8 +1176,7 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   
-   
+         
    IF(p%analysis_type == 2) THEN
        CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
    ELSEIF(p%analysis_type == 1) THEN
@@ -1178,7 +1205,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    TYPE(BD_OtherStateType)                      :: OS_tmp
    TYPE(BD_ContinuousStateType)                 :: x_tmp
    TYPE(BD_InputType)                           :: u_tmp
-!   TYPE(BD_InputType)                           :: u_tmp2 ! Activate with filter
+   TYPE(BD_InputType)                           :: u_tmp2 ! Activate with filter
    INTEGER(IntKi)                               :: i
    INTEGER(IntKi)                               :: j
    INTEGER(IntKi)                               :: temp_id
@@ -1208,15 +1235,16 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ! Lowpass filter added
-!   CALL BD_CrvExtractCrv(u_tmp%RootMotion%Orientation(:,:,1),temp_cc,ErrStat2,ErrMsg2) 
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   temp_cc = p%alpha * xd%rot+(1.0D0 - p%alpha) * temp_cc
-!   CALL BD_CrvMatrixR(temp_cc,u_tmp%RootMotion%Orientation(:,:,1),ErrStat2,ErrMsg2)
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   CALL BD_CopyInput(u_tmp, u_tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-!      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ! END lowpass filter
+      
+   ! Actuator
+   IF( p%UsePitchAct ) THEN
+       CALL PitchActuator_SetBC(p, u_tmp, xd, AllOuts)
+   ENDIF
+   ! END Actuator
+   
+   CALL BD_CopyInput(u_tmp, u_tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
    CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
@@ -1336,9 +1364,9 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !  compute RootMxr and RootMyr for ServoDyn and
    !  get values to output to file:  
    !-------------------------------------------------------   
-   ! Activate with filter
-!   call Calc_WriteOutput( p, u_tmp2, AllOuts, y, ErrStat, ErrMsg )   
-   call Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )   
+   ! Actuator
+   call Calc_WriteOutput( p, u_tmp2, AllOuts, y, ErrStat, ErrMsg )   
+!   call Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )   
     
    y%RootMxr = AllOuts( RootMxr )
    y%RootMyr = AllOuts( RootMyr )
@@ -1358,8 +1386,8 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 contains
    subroutine cleanup()
       CALL BD_DestroyInput(u_tmp, ErrStat2, ErrMsg2)
-   ! Activate with filter
-!      CALL BD_DestroyInput(u_tmp2, ErrStat2, ErrMsg2)
+   ! Actuator
+      CALL BD_DestroyInput(u_tmp2, ErrStat2, ErrMsg2)
       CALL BD_DestroyContState(x_tmp, ErrStat2, ErrMsg2 )
       CALL BD_DestroyOtherState(OS_tmp, ErrStat2, ErrMsg2 )
    end subroutine cleanup 
@@ -1382,15 +1410,33 @@ SUBROUTINE BD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
    INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
+   ! local variables
+   REAL(ReKi)                                        :: temp_R(3,3) 
+   REAL(ReKi)                                        :: Hub_theta_Root(3) 
+   REAL(ReKi)                                        :: u_theta_pitch 
+   
       ! Initialize ErrStat
 
       ErrStat = ErrID_None
       ErrMsg  = ""
 
       ! Update discrete states here:
+      
+! Actuator
+   IF( p%UsePitchAct ) THEN
+       temp_R = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
+       Hub_theta_Root = EulerExtract(temp_R)
+       u_theta_pitch = -Hub_theta_Root(3)
+              
+       xd%thetaP  = p%torqM(1,1)*xd%thetaP + p%torqM(1,2)*xd%thetaPD + &
+                                           p%torqM(1,2)*(p%pitchK*p%dt/p%pitchJ)*(-Hub_theta_Root(3))
+       xd%thetaPD = p%torqM(2,1)*xd%thetaP + p%torqM(2,2)*xd%thetaPD + &
+                                             p%torqM(2,2)*(p%pitchK*p%dt/p%pitchJ)*(-Hub_theta_Root(3))
+       
 
-!      xd%DummyDiscState = 0.0
-
+   ENDIF
+! END Actuator      
+      
 END SUBROUTINE BD_UpdateDiscState
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residual, ErrStat, ErrMsg )
@@ -1506,9 +1552,9 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
                                node_elem,dof_node,fact,elk,elf,elm,elg, &
                                ErrStat,ErrMsg)
 
-   REAL(ReKi),     INTENT(IN   ):: Nuu0(:)
+   REAL(ReKi),     INTENT(IN   ):: Nuu0(:) !bjj: NOT USED
    REAL(ReKi),     INTENT(IN   ):: Nuuu(:)
-   REAL(ReKi),     INTENT(IN   ):: Nrr0(:)
+   REAL(ReKi),     INTENT(IN   ):: Nrr0(:) !bjj: NOT USED
    REAL(ReKi),     INTENT(IN   ):: Nrrr(:)
    REAL(ReKi),     INTENT(IN   ):: Nvvv(:)
    REAL(ReKi),     INTENT(IN   ):: Naaa(:)
@@ -2406,7 +2452,7 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,
    INTEGER(IntKi)                  :: dof_elem ! Degree of freedom per node
    INTEGER(IntKi)                  :: rot_elem ! Rotational degrees of freedom
    INTEGER(IntKi)                  :: nelem ! number of elements
-   INTEGER(IntKi)                  :: i ! Index counter
+!   INTEGER(IntKi)                  :: i ! Index counter
    INTEGER(IntKi)                  :: j ! Index counter
    INTEGER(IntKi)                  :: temp_id ! Index counter
    INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
@@ -2524,9 +2570,9 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
 ! This subroutine total element forces and mass matrices
 !-------------------------------------------------------------------------------
 
-   REAL(ReKi),    INTENT(IN   ):: Nuu0(:) ! Nodal initial position for each element
+   REAL(ReKi),    INTENT(IN   ):: Nuu0(:) ! Nodal initial position for each element !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Nuuu(:) ! Nodal displacement of Mass 1 for each element
-   REAL(ReKi),    INTENT(IN   ):: Nrr0(:) ! Nodal rotation parameters for initial position
+   REAL(ReKi),    INTENT(IN   ):: Nrr0(:) ! Nodal rotation parameters for initial position !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
    REAL(ReKi),    INTENT(IN   ):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
    REAL(ReKi),    INTENT(IN   ):: EStif0_GL(:,:,:) ! Nodal material properties for each element
@@ -2749,9 +2795,9 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
 ! This subroutine calculates elemetal internal forces
 !------------------------------------------------------------
 
-   REAL(ReKi),     INTENT(IN   ):: Nuu0(:) ! Nodal initial position for each element
+   REAL(ReKi),     INTENT(IN   ):: Nuu0(:) ! Nodal initial position for each element !bjj: not used
    REAL(ReKi),     INTENT(IN   ):: Nuuu(:) ! Nodal displacement of Mass 1 for each element
-   REAL(ReKi),     INTENT(IN   ):: Nrr0(:) ! Nodal rotation parameters for initial position
+   REAL(ReKi),     INTENT(IN   ):: Nrr0(:) ! Nodal rotation parameters for initial position !bjj: not used
    REAL(ReKi),     INTENT(IN   ):: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
    REAL(ReKi),     INTENT(IN   ):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
    REAL(ReKi),     INTENT(IN   ):: EStif0_GL(:,:,:) ! Nodal material properties for each element
@@ -3816,9 +3862,9 @@ SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
                                   node_elem,dof_node,elk,elf,&
                                   ErrStat,ErrMsg)
 
-   REAL(ReKi),    INTENT(IN   ):: Nuu0(:)
+   REAL(ReKi),    INTENT(IN   ):: Nuu0(:) !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Nuuu(:)
-   REAL(ReKi),    INTENT(IN   ):: Nrr0(:)
+   REAL(ReKi),    INTENT(IN   ):: Nrr0(:) !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Nrrr(:)
    REAL(ReKi),    INTENT(IN   ):: Distr_GL(:,:)
    REAL(ReKi),    INTENT(IN   ):: gravity(:)
@@ -4017,7 +4063,7 @@ SUBROUTINE BD_StaticSolutionForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
    INTEGER(IntKi),    INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),      INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
-   INTEGER(IntKi)                  :: temp_id
+!   INTEGER(IntKi)                  :: temp_id
    INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)            :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*),          PARAMETER:: RoutineName = 'BD_StaticSolutionForce'
@@ -4175,9 +4221,9 @@ SUBROUTINE BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0
 !-------------------------------------------------------------------------------
 ! This subroutine calculates elemental internal node force for static analysis
 !-------------------------------------------------------------------------------
-   REAL(ReKi),    INTENT(IN   ):: Nuu0(:) ! Nodal initial position for each element
+   REAL(ReKi),    INTENT(IN   ):: Nuu0(:) ! Nodal initial position for each element !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Nuuu(:) ! Nodal displacement of Mass 1 for each element
-   REAL(ReKi),    INTENT(IN   ):: Nrr0(:) ! Nodal rotation parameters for initial position
+   REAL(ReKi),    INTENT(IN   ):: Nrr0(:) ! Nodal rotation parameters for initial position !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
    REAL(ReKi),    INTENT(IN   ):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element ! bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: EStif0_GL(:,:,:) ! Nodal material properties for each element
@@ -4278,8 +4324,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    INTEGER(IntKi)                                     :: ErrStat2   ! Temporary Error status
    CHARACTER(ErrMsgLen)                               :: ErrMsg2    ! Temporary Error message
    CHARACTER(*), PARAMETER                            :: RoutineName = 'BD_GA2'
-   REAL(ReKi):: temp_3(3)
-   INTEGER(IntKi)                                     :: i
+!   INTEGER(IntKi)                                     :: i
 
    ! Initialize ErrStat
 
@@ -4313,28 +4358,18 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
          call cleanup()
          return
       end if
-!No filter
+
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!END no filter
 
-   ! Lowpass filter added
-!   call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   CALL BD_CrvExtractCrv(u_interp%RootMotion%Orientation(:,:,1),temp_3,ErrStat2,ErrMsg2) 
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   xd%rot(:) = p%alpha * xd%rot(:) + (1.0D0 - p%alpha) * temp_3(:)
-!
-!   call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!                
-!   CALL BD_CrvExtractCrv(u_interp%RootMotion%Orientation(:,:,1),temp_3,ErrStat2,ErrMsg2) 
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-!   temp_3(:) = p%alpha * xd%rot(:) + (1.0D0 - p%alpha) * temp_3(:)
-!
-!   CALL BD_CrvMatrixR(temp_3,u_interp%RootMotion%Orientation(:,:,1),ErrStat2,ErrMsg2)
-!      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   ! END lowpass filter
+   CALL BD_UpdateDiscState( t, n, u_interp, p, x, xd, z, OtherState, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            
+! Actuator
+   IF( p%UsePitchAct ) THEN
+      CALL PitchActuator_SetBC(p, u_interp, xd)      
+   ENDIF
+! END Actuator
 
    ! GA2: prediction        
    CALL BD_TiSchmPredictorStep( x_tmp%q,x_tmp%dqdt,OS_tmp%acc,OS_tmp%xcc,             &
@@ -4509,10 +4544,10 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
    REAL(ReKi)                                   :: temp_cc(3)
    REAL(ReKi)                                   :: temp_glb(3)
    REAL(ReKi)                                   :: temp3(3)
-   REAL(ReKi)                                   :: temp_Rb(3,3)
-   REAL(ReKi)                                   :: temp_ref(3)
+!   REAL(ReKi)                                   :: temp_Rb(3,3)
+!   REAL(ReKi)                                   :: temp_ref(3)
 !   REAL(ReKi)                                   :: temp_root(3)
-   INTEGER(IntKi)                               :: i
+!   INTEGER(IntKi)                               :: i
    INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_BoundaryGA2'
@@ -5021,7 +5056,7 @@ SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
    REAL(ReKi)                                 :: temp_glb(3)
    REAL(ReKi)                                 :: temp_rv(3)
    REAL(ReKi)                                 :: temp_R(3,3)
-   REAL(ReKi)                                 :: temp_Rb(3,3)
+!   REAL(ReKi)                                 :: temp_Rb(3,3)
    INTEGER(IntKi)                             :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                       :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER                    :: RoutineName = 'BD_CalcIC'
@@ -5403,7 +5438,7 @@ SUBROUTINE BD_ComputeElementMass(Nuu0,NGPpos,EMass0_GL,&
 ! This subroutine total element forces and mass matrices
 !-------------------------------------------------------------------------------
 
-   REAL(ReKi),INTENT(IN   )    :: Nuu0(:) ! Nodal initial position for each element
+   REAL(ReKi),INTENT(IN   )    :: Nuu0(:) ! Nodal initial position for each element !bjj: NOT USED
    REAL(ReKi),INTENT(IN   )    :: NGPpos(:,:)
    REAL(ReKi),INTENT(IN   )    :: EMass0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),INTENT(  OUT)    :: elem_mass  ! Total element force (Fd, Fc, Fb)
@@ -5411,20 +5446,20 @@ SUBROUTINE BD_ComputeElementMass(Nuu0,NGPpos,EMass0_GL,&
    REAL(ReKi),INTENT(  OUT)    :: elem_IN(:,:)
    INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
    REAL(ReKi),    INTENT(IN   ):: gw(:)
-   REAL(ReKi),    INTENT(IN   ):: hhx(:,:)
-   REAL(ReKi),    INTENT(IN   ):: hpx(:,:)
+   REAL(ReKi),    INTENT(IN   ):: hhx(:,:) !bjj: NOT USED
+   REAL(ReKi),    INTENT(IN   ):: hpx(:,:) !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Jaco(:)
-   INTEGER(IntKi),INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
+   INTEGER(IntKi),INTENT(IN   ):: node_elem ! Node per element !bjj: NOT USED
+   INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node !bjj: NOT USED
    INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
    REAL(ReKi)                  :: mmm
    INTEGER(IntKi)              :: igp
-   INTEGER(IntKi)              :: i
-   INTEGER(IntKi)              :: temp_id
-   INTEGER(IntKi)              :: ErrStat2                     ! Temporary Error status
-   CHARACTER(ErrMsgLen)        :: ErrMsg2                      ! Temporary Error message
+!   INTEGER(IntKi)              :: i
+!   INTEGER(IntKi)              :: temp_id
+!   INTEGER(IntKi)              :: ErrStat2                     ! Temporary Error status
+!   CHARACTER(ErrMsgLen)        :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ComputeElementMass'
 
    ErrStat  = ErrID_None
@@ -5446,9 +5481,6 @@ SUBROUTINE BD_ComputeElementMass(Nuu0,NGPpos,EMass0_GL,&
 
    ENDDO
 
-   if (ErrStat >= AbortErrLev) then
-      return
-   end if
 
    RETURN
 
@@ -5494,7 +5526,9 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
    CHARACTER(ErrMsgLen)             :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_InitShpDerJaco'
 
-
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
    IF(quadrature .EQ. 2) THEN
        DO j=1,ngp
            temp_id = 0
@@ -5526,6 +5560,7 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
    ENDIF
 
    CALL BD_diffmtc(node_elem-1,ngp,GL,GLL,hhx,hpx,ErrStat2,ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    DO i = 1,elem_total
        DO j = 1, ngp
@@ -5544,5 +5579,48 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
 
 END SUBROUTINE BD_InitshpDerJaco
 
+SUBROUTINE PitchActuator_SetBC(p, u, xd, AllOuts)
+! this routine alters the RootMotion inputs based on the pitch-actuator parameters and discrete states
+
+   TYPE(BD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
+   TYPE(BD_InputType),        INTENT(INOUT)  :: u                                 ! inputs
+   TYPE(BD_DiscreteStateType),INTENT(IN   )  :: xd                                ! The module discrete states
+   REAL(ReKi),       OPTIONAL,INTENT(INOUT)  :: AllOuts(0:)                       ! all output array for writing to file
+   ! local variables
+   REAL(ReKi)                                :: temp_R(3,3)
+   REAL(ReKi)                                :: temp_cc(3)
+   REAL(ReKi)                                :: u_theta_pitch
+   REAL(ReKi)                                :: thetaP
+   REAL(ReKi)                                :: omegaP
+   REAL(ReKi)                                :: alphaP
+   
+   
+   temp_R = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
+   temp_cc = EulerExtract(temp_R)   != Hub_theta_Root
+   u_theta_pitch = -temp_cc(3)
+       
+   thetaP = xd%thetaP
+   omegaP = xd%thetaPD
+   alphaP = -(p%pitchK/p%pitchJ) * xd%thetaP - (p%pitchC/p%pitchJ) * xd%thetaPD + (p%pitchK/p%pitchJ) * u_theta_pitch
+       
+   ! Calculate new root motions for use as BeamDyn boundary conditions:       
+   !note: we alter the orientation last because we need the input (before actuator) root orientation for the rotational velocity and accelerations
+   u%RootMotion%RotationVel(:,1) = u%RootMotion%RotationVel(:,1) - omegaP * u%RootMotion%Orientation(3,:,1)
+   u%RootMotion%RotationAcc(:,1) = u%RootMotion%RotationAcc(:,1) - alphaP * u%RootMotion%Orientation(3,:,1)
+
+   temp_cc(3) = -thetaP
+   temp_R = EulerConstruct(temp_cc)       
+   u%RootMotion%Orientation(:,:,1) = MATMUL(temp_R,u%HubMotion%Orientation(:,:,1))
+       
+   if (present(AllOuts)) then
+      AllOuts(PAngInp) = u_theta_pitch
+      AllOuts(PAngAct) = thetaP
+      AllOuts(PRatAct) = omegaP
+      AllOuts(PAccAct) = alphaP
+   end if
+   
+   
+   
+END SUBROUTINE PitchActuator_SetBC
 
 END MODULE BeamDyn
