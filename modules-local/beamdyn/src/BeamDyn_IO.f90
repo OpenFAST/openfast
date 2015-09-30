@@ -1360,6 +1360,8 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
 
    IF(InputFileData%order_elem .LT. 1 ) &
        CALL SetErrStat ( ErrID_Fatal, 'order_elem must be greater than 0', ErrStat, ErrMsg, RoutineName )
+   IF(InputFileData%order_elem .LT. 2 .AND. InputFileData%quadrature .EQ. 1) &
+       CALL SetErrStat ( ErrID_Fatal, 'order_elem must be greater than 1 for Gauss quadrature', ErrStat, ErrMsg, RoutineName )
        
    IF(InputFileData%InpBl%station_total .LT. 2 ) &
        CALL SetErrStat ( ErrID_Fatal, 'Number of material stations along blade axis much be greater than 2', ErrStat, ErrMsg, RoutineName )

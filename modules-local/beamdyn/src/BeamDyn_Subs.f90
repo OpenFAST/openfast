@@ -393,7 +393,7 @@ END SUBROUTINE BD_CrvExtractCrv
    REAL(ReKi)     :: pi_local  ! value of pi; replace with FAST value
 
    if (n .lt. 2) then
-      STOP 'add appropriate error message'
+      STOP !'add appropriate error message'
    endif
 
    n_real = REAL(n,DbKi)

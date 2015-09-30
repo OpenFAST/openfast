@@ -946,8 +946,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   CALL BD_ComputeBladeMassNew(p%uuN0,p%Mass0_GL,p%Gauss,p%elem_total,p%node_elem,p%dof_total,&
-                               p%dof_node,p%quadrature,p%ngp,p%GLw,p%Shp,p%Der,p%Jacobian,&
+   CALL BD_ComputeBladeMassNew(p%Mass0_GL,p%Gauss,p%elem_total,p%node_elem,&
+                               p%dof_node,p%quadrature,p%ngp,p%GLw,p%Jacobian,&
                                p%blade_mass,p%blade_CG,p%blade_IN,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CalcIC(u_tmp,p,x,OtherState,ErrStat2,ErrMsg2)
@@ -5280,9 +5280,9 @@ contains
 END SUBROUTINE BD_InitAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
 
-SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
-                                  elem_total,node_elem,dof_total,dof_node,&
-                                  quadrature,ngp,gw,hhx,hpx,Jaco,&
+SUBROUTINE BD_ComputeBladeMassNew(Mass0,GaussPos,         &
+                                  elem_total,node_elem,dof_node,&
+                                  quadrature,ngp,gw,Jaco,&
                                   blade_mass,blade_CG,blade_IN,ErrStat,ErrMsg)
 !----------------------------------------------------------------------------------------
 ! This subroutine computes Global mass matrix and force vector for the beam.
@@ -5347,9 +5347,8 @@ SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
            ENDIF 
        ENDDO
 
-       CALL BD_ComputeElementMass(uuN0(:,nelem),NGPpos,EMass0_GL,&
-                                  ngp,gw,hhx,hpx,Jaco(:,nelem),&
-                                  node_elem,dof_node,&
+       CALL BD_ComputeElementMass(NGPpos,EMass0_GL,&
+                                  ngp,gw,Jaco(:,nelem),&
                                   elem_mass,elem_CG,elem_IN,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
