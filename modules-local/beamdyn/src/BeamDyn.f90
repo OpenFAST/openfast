@@ -4324,7 +4324,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    INTEGER(IntKi)                                     :: ErrStat2   ! Temporary Error status
    CHARACTER(ErrMsgLen)                               :: ErrMsg2    ! Temporary Error message
    CHARACTER(*), PARAMETER                            :: RoutineName = 'BD_GA2'
-!   INTEGER(IntKi)                                     :: i
+   INTEGER(IntKi)                                     :: i
 
    ! Initialize ErrStat
 
@@ -4347,9 +4347,23 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       !Qi, call something to initialize
       call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+WRITE(80,*) t
+WRITE(80,*) u_interp%RootMotion%Orientation(:,:,1)
+WRITE(80,*) u_interp%RootMotion%TranslationDisp(:,1)
+WRITE(80,*) u_interp%RootMotion%TranslationVel(:,1)
+WRITE(80,*) u_interp%RootMotion%TranslationAcc(:,1)
+WRITE(80,*) u_interp%RootMotion%RotationVel(:,1)
+WRITE(80,*) u_interp%RootMotion%RotationAcc(:,1)
+DO i = 1,p%dof_total
+WRITE(80,*) u_interp%RootMotion%RotationAcc(:,1)
+ENDDO
       CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       OtherState%InitAcc = .true. 
+DO i = 1, p%dof_total
+WRITE(80,*) OtherState%acc(i)
+ENDDO
+STOP
    end if
 
    CALL BD_CopyOtherState(OtherState, OS_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
