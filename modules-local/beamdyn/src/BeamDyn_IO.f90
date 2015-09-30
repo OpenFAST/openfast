@@ -1337,10 +1337,18 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
        CALL SetErrStat ( ErrID_Fatal, 'Analysis type must be 1 (static) or 2 (dynamic)', ErrStat, ErrMsg, RoutineName )
    IF(InputFileData%rhoinf .LT. 0.0 .OR. InputFileData%rhoinf .GT. 1.0) &
        CALL SetErrStat ( ErrID_Fatal, 'Numerical damping parameter \rho_{inf} must be in the range of [0.0,1.0]', ErrStat, ErrMsg, RoutineName )
+   IF(InputFileData%quadrature .NE. 1 .AND. InputFileData%quadrature .NE. 2) &
+       CALL SetErrStat ( ErrID_Fatal, 'Quadrature type must be 1 (Gauss) or 2 (Trapezoidal)', ErrStat, ErrMsg, RoutineName )
+   IF(InputFileData%refine .LT. 1 ) &
+       CALL SetErrStat ( ErrID_Fatal, 'Refinement parameter must be greater than or equal to 1', ErrStat, ErrMsg, RoutineName )
+   IF(InputFileData%n_fact .LT. 1 ) &
+       CALL SetErrStat ( ErrID_Fatal, 'Factorization parameter must be greater than or equal to 1', ErrStat, ErrMsg, RoutineName )
    IF(InputFileData%member_total .LT. 1 ) &
        CALL SetErrStat ( ErrID_Fatal, 'member_total must be greater than 0', ErrStat, ErrMsg, RoutineName )
-   IF(InputFileData%kp_total .LT. 1 ) &
-       CALL SetErrStat ( ErrID_Fatal, 'kp_total must be greater than 0', ErrStat, ErrMsg, RoutineName )
+   IF(InputFileData%member_total .NE. 1 .AND. InputFileData%quadrature .EQ. 2) &
+       CALL SetErrStat ( ErrID_Fatal, 'Trapzoidal quadrature only allows one member (element)', ErrStat, ErrMsg, RoutineName )
+   IF(InputFileData%kp_total .LT. 3 ) &
+       CALL SetErrStat ( ErrID_Fatal, 'kp_total must be greater than or equal to 3', ErrStat, ErrMsg, RoutineName )
    DO i=1,InputFileData%member_total
        IF(InputFileData%kp_member(i) .LT. 3) THEN
           CALL SetErrStat(ErrID_Fatal,'There must be at least three key points in '//TRIM(Num2LStr(i))//'th member.', ErrStat, ErrMsg,RoutineName)
@@ -1654,10 +1662,10 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
    WRITE (UnSu,'(A)')  'Blade center of mass: '
    WRITE (UnSu,'(3ES18.5)' ) p%blade_CG(:)
 
-   WRITE (UnSu,'(A)')  'Blade mass moment of inertia: '
-   DO i=1,3
-       WRITE (UnSu,'(3ES18.5)' ) p%blade_IN(i,:)
-   ENDDO
+!   WRITE (UnSu,'(A)')  'Blade mass moment of inertia: '
+!   DO i=1,3
+!       WRITE (UnSu,'(3ES18.5)' ) p%blade_IN(i,:)
+!   ENDDO
 
    WRITE (UnSu,'(A)')  'Global position vector:' 
    WRITE (UnSu,'(3ES18.5)' ) p%GlbPos(:)
