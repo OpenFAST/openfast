@@ -206,12 +206,32 @@ MODULE NWTC_Num
       ! Create interface for a generic InterpStp that actually uses specific routines.
 
    INTERFACE InterpStp
-      MODULE PROCEDURE InterpStpComp
-      MODULE PROCEDURE InterpStpReal
+      MODULE PROCEDURE InterpStpComp4
+      MODULE PROCEDURE InterpStpComp8
+      MODULE PROCEDURE InterpStpComp16
+      MODULE PROCEDURE InterpStpReal4
+      MODULE PROCEDURE InterpStpReal8
+      MODULE PROCEDURE InterpStpReal16
    END INTERFACE
 
 
+   INTERFACE InterpWrappedStpReal
+      MODULE PROCEDURE InterpWrappedStpReal4
+      MODULE PROCEDURE InterpWrappedStpReal8
+      MODULE PROCEDURE InterpWrappedStpReal16
+   END INTERFACE
+   
+   
+   
+      ! Create interface for a generic LocateStp that actually uses specific routines.
 
+   INTERFACE LocateStp
+      MODULE PROCEDURE LocateStpR4
+      MODULE PROCEDURE LocateStpR8
+      MODULE PROCEDURE LocateStpR16
+   END INTERFACE
+
+   
 
 CONTAINS
 
@@ -1459,7 +1479,7 @@ CONTAINS
    FUNCTION EulerConstruct(theta) result(M)
    
       ! this function creates a rotation matrix, M, from a 1-2-3 rotation
-      ! sequence of the 3 Euler angles, theta_x, theta_y, and theta_z.
+      ! sequence of the 3 Euler angles, theta_x, theta_y, and theta_z, in radians.
       ! M represents a change of basis (from global to local coordinates; 
       ! not a physical rotation of the body). it is the inverse of EulerExtract().
       !
@@ -1508,8 +1528,8 @@ CONTAINS
 !=======================================================================
    FUNCTION EulerExtract(M) result(theta)
    
-      ! if M is a rotation matrix from a 1-2-3 rotation sequence, this function
-      ! returns the 3 Euler angles, theta_x, theta_y, and theta_z, that formed 
+      ! if M is a rotation matrix from a 1-2-3 rotation sequence, this function returns 
+      ! the 3 Euler angles, theta_x, theta_y, and theta_z (in radians), that formed 
       ! the matrix. M represents a change of basis (from global to local coordinates; 
       ! not a physical rotation of the body). M is the inverse of EulerConstruct().
       !
@@ -2306,7 +2326,7 @@ CONTAINS
    RETURN
    END FUNCTION InterpBinReal ! ( XVal, XAry, YAry, ILo, AryLen )
 !=======================================================================
-   FUNCTION InterpStpComp( XVal, XAry, YAry, Ind, AryLen )
+   FUNCTION InterpStpComp4( XVal, XAry, YAry, Ind, AryLen )
 
 
       ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
@@ -2321,7 +2341,7 @@ CONTAINS
       ! Function declaration.
 
 
-   COMPLEX(ReKi)                :: InterpStpComp                                   ! This function.
+   COMPLEX(SiKi)                :: InterpStpComp4                                  ! This function.
 
 
       ! Argument declarations.
@@ -2329,22 +2349,22 @@ CONTAINS
    INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
    INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
 
-   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
 
-   COMPLEX(ReKi), INTENT(IN)    :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+   COMPLEX(SiKi), INTENT(IN)    :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
 
 
 
       ! Let's check the limits first.
 
    IF ( XVal <= XAry(1) )  THEN
-      InterpStpComp = YAry(1)
-      Ind           = 1
+      InterpStpComp4 = YAry(1)
+      Ind            = 1
       RETURN
    ELSE IF ( XVal >= XAry(AryLen) )  THEN
-      InterpStpComp = YAry(AryLen)
-      Ind           = MAX(AryLen - 1, 1)
+      InterpStpComp4 = YAry(AryLen)
+      Ind            = MAX(AryLen - 1, 1)
       RETURN
    END IF
 
@@ -2365,7 +2385,7 @@ CONTAINS
 
       ELSE
 
-         InterpStpComp = ( YAry(Ind+1) - YAry(Ind) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + YAry(Ind)
+         InterpStpComp4 = ( YAry(Ind+1) - YAry(Ind) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + YAry(Ind)
          RETURN
 
       END IF
@@ -2374,9 +2394,149 @@ CONTAINS
 
 
    RETURN
-   END FUNCTION InterpStpComp ! ( XVal, XAry, YAry, Ind, AryLen )
+   END FUNCTION InterpStpComp4
 !=======================================================================
-   FUNCTION InterpStpReal( XVal, XAry, YAry, Ind, AryLen )
+   FUNCTION InterpStpComp8( XVal, XAry, YAry, Ind, AryLen )
+
+
+      ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
+      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
+      ! especially useful when the calling routines save the value from the last time this routine was called
+      ! for a given case where XVal does not change much from call to call.  When there is no correlation
+      ! from one interpolation to another, InterpBin() may be a better choice.
+      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
+      ! This routine assumes YAry is COMPLEX.
+
+
+      ! Function declaration.
+
+
+   COMPLEX(R8Ki)                :: InterpStpComp8                                  ! This function.
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+
+   REAL(R8Ki), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+
+   COMPLEX(R8Ki), INTENT(IN)    :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+
+
+
+      ! Let's check the limits first.
+
+   IF ( XVal <= XAry(1) )  THEN
+      InterpStpComp8 = YAry(1)
+      Ind            = 1
+      RETURN
+   ELSE IF ( XVal >= XAry(AryLen) )  THEN
+      InterpStpComp8 = YAry(AryLen)
+      Ind            = MAX(AryLen - 1, 1)
+      RETURN
+   END IF
+
+
+     ! Let's interpolate!
+
+   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
+
+   DO
+
+      IF ( XVal < XAry(Ind) )  THEN
+
+         Ind = Ind - 1
+
+      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
+
+         Ind = Ind + 1
+
+      ELSE
+
+         InterpStpComp8 = ( YAry(Ind+1) - YAry(Ind) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + YAry(Ind)
+         RETURN
+
+      END IF
+
+   END DO
+
+
+   RETURN
+   END FUNCTION InterpStpComp8
+!=======================================================================
+   FUNCTION InterpStpComp16( XVal, XAry, YAry, Ind, AryLen )
+
+
+      ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
+      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
+      ! especially useful when the calling routines save the value from the last time this routine was called
+      ! for a given case where XVal does not change much from call to call.  When there is no correlation
+      ! from one interpolation to another, InterpBin() may be a better choice.
+      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
+      ! This routine assumes YAry is COMPLEX.
+
+
+      ! Function declaration.
+
+
+   COMPLEX(QuKi)                :: InterpStpComp16                                 ! This function.
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+
+   REAL(QuKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(QuKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+
+   COMPLEX(QuKi), INTENT(IN)    :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+
+
+
+      ! Let's check the limits first.
+
+   IF ( XVal <= XAry(1) )  THEN
+      InterpStpComp16 = YAry(1)
+      Ind             = 1
+      RETURN
+   ELSE IF ( XVal >= XAry(AryLen) )  THEN
+      InterpStpComp16 = YAry(AryLen)
+      Ind             = MAX(AryLen - 1, 1)
+      RETURN
+   END IF
+
+
+     ! Let's interpolate!
+
+   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
+
+   DO
+
+      IF ( XVal < XAry(Ind) )  THEN
+
+         Ind = Ind - 1
+
+      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
+
+         Ind = Ind + 1
+
+      ELSE
+
+         InterpStpComp16 = ( YAry(Ind+1) - YAry(Ind) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + YAry(Ind)
+         RETURN
+
+      END IF
+
+   END DO
+
+
+   RETURN
+   END FUNCTION InterpStpComp16
+!=======================================================================
+   FUNCTION InterpStpReal4( XVal, XAry, YAry, Ind, AryLen )
 
 
       ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
@@ -2390,7 +2550,7 @@ CONTAINS
 
       ! Function declaration.
 
-   REAL(ReKi)                   :: InterpStpReal                                   ! This function.
+   REAL(SiKi)                   :: InterpStpReal4                                   ! This function.
 
 
       ! Argument declarations.
@@ -2398,21 +2558,21 @@ CONTAINS
    INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
    INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
 
-   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
 
 
 
       ! Let's check the limits first.
 
    IF ( XVal <= XAry(1) )  THEN
-      InterpStpReal = YAry(1)
-      Ind           = 1
+      InterpStpReal4 = YAry(1)
+      Ind            = 1
       RETURN
    ELSE IF ( XVal >= XAry(AryLen) )  THEN
-      InterpStpReal = YAry(AryLen)
-      Ind           = MAX(AryLen - 1, 1)
+      InterpStpReal4 = YAry(AryLen)
+      Ind            = MAX(AryLen - 1, 1)
       RETURN
    END IF
 
@@ -2433,7 +2593,7 @@ CONTAINS
 
       ELSE
 
-         InterpStpReal = ( YAry(Ind+1) - YAry(Ind) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + YAry(Ind)
+         InterpStpReal4 = ( YAry(Ind+1) - YAry(Ind) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + YAry(Ind)
          RETURN
 
       END IF
@@ -2442,8 +2602,143 @@ CONTAINS
 
 
    RETURN
-   END FUNCTION InterpStpReal ! ( XVal, XAry, YAry, Ind, AryLen )
+   END FUNCTION InterpStpReal4
+!=======================================================================
+   FUNCTION InterpStpReal8( XVal, XAry, YAry, Ind, AryLen )
 
+
+      ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
+      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
+      ! especially useful when the calling routines save the value from the last time this routine was called
+      ! for a given case where XVal does not change much from call to call.  When there is no correlation
+      ! from one interpolation to another, InterpBin() may be a better choice.
+      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
+      ! This routine assumes YAry is REAL.
+
+
+      ! Function declaration.
+
+   REAL(R8Ki)                   :: InterpStpReal8                                  ! This function.
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+
+   REAL(R8Ki), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+
+
+
+      ! Let's check the limits first.
+
+   IF ( XVal <= XAry(1) )  THEN
+      InterpStpReal8 = YAry(1)
+      Ind            = 1
+      RETURN
+   ELSE IF ( XVal >= XAry(AryLen) )  THEN
+      InterpStpReal8 = YAry(AryLen)
+      Ind            = MAX(AryLen - 1, 1)
+      RETURN
+   END IF
+
+
+     ! Let's interpolate!
+
+   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
+
+   DO
+
+      IF ( XVal < XAry(Ind) )  THEN
+
+         Ind = Ind - 1
+
+      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
+
+         Ind = Ind + 1
+
+      ELSE
+
+         InterpStpReal8 = ( YAry(Ind+1) - YAry(Ind) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + YAry(Ind)
+         RETURN
+
+      END IF
+
+   END DO
+
+
+   RETURN
+   END FUNCTION InterpStpReal8 
+!=======================================================================
+   FUNCTION InterpStpReal16( XVal, XAry, YAry, Ind, AryLen )
+
+
+      ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
+      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
+      ! especially useful when the calling routines save the value from the last time this routine was called
+      ! for a given case where XVal does not change much from call to call.  When there is no correlation
+      ! from one interpolation to another, InterpBin() may be a better choice.
+      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
+      ! This routine assumes YAry is REAL.
+
+
+      ! Function declaration.
+
+   REAL(QuKi)                   :: InterpStpReal16                                 ! This function.
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+
+   REAL(QuKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(QuKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(QuKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+
+
+
+      ! Let's check the limits first.
+
+   IF ( XVal <= XAry(1) )  THEN
+      InterpStpReal16 = YAry(1)
+      Ind             = 1
+      RETURN
+   ELSE IF ( XVal >= XAry(AryLen) )  THEN
+      InterpStpReal16 = YAry(AryLen)
+      Ind             = MAX(AryLen - 1, 1)
+      RETURN
+   END IF
+
+
+     ! Let's interpolate!
+
+   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
+
+   DO
+
+      IF ( XVal < XAry(Ind) )  THEN
+
+         Ind = Ind - 1
+
+      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
+
+         Ind = Ind + 1
+
+      ELSE
+
+         InterpStpReal16 = ( YAry(Ind+1) - YAry(Ind) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + YAry(Ind)
+         RETURN
+
+      END IF
+
+   END DO
+
+
+   RETURN
+   END FUNCTION InterpStpReal16
 !=======================================================================
 !< This routine linearly interpolates Dataset. It is
 !! set for a 2-d interpolation on x and y of the input point.
@@ -2645,7 +2940,7 @@ SUBROUTINE InterpStpReal3D( InCoord, Dataset, x, y, z, LastIndex, InterpData )
 
 END SUBROUTINE InterpStpReal3D   
 !=======================================================================
-   FUNCTION InterpWrappedStpReal( XValIn, XAry, YAry, Ind, AryLen )
+   FUNCTION InterpWrappedStpReal4( XValIn, XAry, YAry, Ind, AryLen )
 
 
       ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
@@ -2661,7 +2956,7 @@ END SUBROUTINE InterpStpReal3D
 
       ! Function declaration.
 
-   REAL(ReKi)                   :: InterpWrappedStpReal                                   ! This function.
+   REAL(SiKi)                   :: InterpWrappedStpReal4                           ! This function.
 
 
       ! Argument declarations.
@@ -2669,11 +2964,11 @@ END SUBROUTINE InterpStpReal3D
    INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
    INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
 
-   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: XValIn                                           ! X value to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XValIn                                           ! X value to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
 
-   REAL(ReKi)                   :: XVal                                           ! X value to be interpolated.
+   REAL(SiKi)                   :: XVal                                           ! X value to be interpolated.
    
    
    
@@ -2685,10 +2980,100 @@ END SUBROUTINE InterpStpReal3D
       Ind           = 1
    END IF
    
-   InterpWrappedStpReal = InterpStpReal( XVal, XAry, YAry, Ind, AryLen )
+   InterpWrappedStpReal4 = InterpStp( XVal, XAry, YAry, Ind, AryLen )
    
    
-   END FUNCTION InterpWrappedStpReal ! ( XVal, XAry, YAry, Ind, AryLen )
+   END FUNCTION InterpWrappedStpReal4 ! ( XVal, XAry, YAry, Ind, AryLen )
+!=======================================================================
+   FUNCTION InterpWrappedStpReal8( XValIn, XAry, YAry, Ind, AryLen )
+
+
+      ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
+      ! into the range [0-XAry(AryLen) by interpolating into the arrays.  
+      ! It is assumed that XAry is sorted in ascending order.
+      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
+      ! especially useful when the calling routines save the value from the last time this routine was called
+      ! for a given case where XVal does not change much from call to call.  When there is no correlation
+      ! from one interpolation to another, InterpBin() may be a better choice.
+      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
+      ! This routine assumes YAry is REAL.
+
+
+      ! Function declaration.
+
+   REAL(R8Ki)                   :: InterpWrappedStpReal8                                   ! This function.
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+
+   REAL(R8Ki), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: XValIn                                           ! X value to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+
+   REAL(R8Ki)                   :: XVal                                           ! X value to be interpolated.
+   
+   
+   
+      ! Wrap XValIn into the range XAry(1) to XAry(AryLen)
+   XVal = MOD(XValIn, XAry(AryLen))
+
+      ! Set the Ind to the first index if we are at the beginning of XAry
+   IF ( XVal <= XAry(2) )  THEN  
+      Ind           = 1
+   END IF
+   
+   InterpWrappedStpReal8 = InterpStp( XVal, XAry, YAry, Ind, AryLen )
+   
+   
+   END FUNCTION InterpWrappedStpReal8 ! ( XVal, XAry, YAry, Ind, AryLen )
+!=======================================================================
+   FUNCTION InterpWrappedStpReal16( XValIn, XAry, YAry, Ind, AryLen )
+
+
+      ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
+      ! into the range [0-XAry(AryLen) by interpolating into the arrays.  
+      ! It is assumed that XAry is sorted in ascending order.
+      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
+      ! especially useful when the calling routines save the value from the last time this routine was called
+      ! for a given case where XVal does not change much from call to call.  When there is no correlation
+      ! from one interpolation to another, InterpBin() may be a better choice.
+      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
+      ! This routine assumes YAry is REAL.
+
+
+      ! Function declaration.
+
+   REAL(QuKi)                   :: InterpWrappedStpReal16                                 ! This function.
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+
+   REAL(QuKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(QuKi), INTENT(IN)       :: XValIn                                           ! X value to be interpolated.
+   REAL(QuKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+
+   REAL(QuKi)                   :: XVal                                           ! X value to be interpolated.
+   
+   
+   
+      ! Wrap XValIn into the range XAry(1) to XAry(AryLen)
+   XVal = MOD(XValIn, XAry(AryLen))
+
+      ! Set the Ind to the first index if we are at the beginning of XAry
+   IF ( XVal <= XAry(2) )  THEN  
+      Ind           = 1
+   END IF
+   
+   InterpWrappedStpReal16 = InterpStp( XVal, XAry, YAry, Ind, AryLen )
+   
+   
+   END FUNCTION InterpWrappedStpReal16 ! ( XVal, XAry, YAry, Ind, AryLen )
 !=======================================================================
 !> This subroutine calculates the iosparametric coordinates, isopc, which is a value between -1 and 1 
 !! (for each dimension of a dataset), indicating where InCoord falls between posLo and posHi.
@@ -2828,7 +3213,7 @@ END SUBROUTINE InterpStpReal3D
    RETURN
    END SUBROUTINE LocateBin
 !=======================================================================
-   SUBROUTINE LocateStp( XVal, XAry, Ind, AryLen )
+   SUBROUTINE LocateStpR4( XVal, XAry, Ind, AryLen )
 
       ! This subroutine finds the lower-bound index of an input x-value located in an array.
       ! On return, Ind has a value such that
@@ -2848,8 +3233,8 @@ END SUBROUTINE InterpStpReal3D
    INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the array.
    INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the array.
 
-   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
 
 
 
@@ -2886,7 +3271,127 @@ END SUBROUTINE InterpStpReal3D
 
    RETURN
 
-   END SUBROUTINE LocateStp
+   END SUBROUTINE LocateStpR4
+!=======================================================================
+   SUBROUTINE LocateStpR8( XVal, XAry, Ind, AryLen )
+
+      ! This subroutine finds the lower-bound index of an input x-value located in an array.
+      ! On return, Ind has a value such that
+      !           XAry(Ind) <= XVal < XAry(Ind+1), with the exceptions that
+      !             Ind = 0 when XVal < XAry(1), and
+      !          Ind = AryLen when XAry(AryLen) <= XVal.
+      !
+      ! It uses the passed index as the starting point and does a stepwise search from there.  This is
+      ! especially useful when the calling routines save the value from the last time this routine was called
+      ! for a given case where XVal does not change much from call to call.  When there is no correlation
+      ! from one interpolation to another, a binary search may be a better choice.
+
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the array.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the array.
+
+   REAL(R8Ki), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+
+
+
+      ! Let's check the limits first.
+
+   IF ( XVal < XAry(1) )  THEN
+      Ind = 0
+   ELSE IF ( XVal >= XAry(AryLen) )  THEN
+      Ind = AryLen
+   ELSE
+
+      Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
+
+      DO
+
+         IF ( XVal < XAry(Ind) )  THEN
+
+            Ind = Ind - 1
+
+         ELSE IF ( XVal >= XAry(Ind+1) )  THEN
+
+            Ind = Ind + 1
+
+         ELSE
+
+            RETURN
+
+         END IF
+
+      END DO
+
+
+   END IF
+
+   RETURN
+
+   END SUBROUTINE LocateStpR8
+!=======================================================================
+   SUBROUTINE LocateStpR16( XVal, XAry, Ind, AryLen )
+
+      ! This subroutine finds the lower-bound index of an input x-value located in an array.
+      ! On return, Ind has a value such that
+      !           XAry(Ind) <= XVal < XAry(Ind+1), with the exceptions that
+      !             Ind = 0 when XVal < XAry(1), and
+      !          Ind = AryLen when XAry(AryLen) <= XVal.
+      !
+      ! It uses the passed index as the starting point and does a stepwise search from there.  This is
+      ! especially useful when the calling routines save the value from the last time this routine was called
+      ! for a given case where XVal does not change much from call to call.  When there is no correlation
+      ! from one interpolation to another, a binary search may be a better choice.
+
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the array.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the array.
+
+   REAL(QuKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(QuKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+
+
+
+      ! Let's check the limits first.
+
+   IF ( XVal < XAry(1) )  THEN
+      Ind = 0
+   ELSE IF ( XVal >= XAry(AryLen) )  THEN
+      Ind = AryLen
+   ELSE
+
+      Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
+
+      DO
+
+         IF ( XVal < XAry(Ind) )  THEN
+
+            Ind = Ind - 1
+
+         ELSE IF ( XVal >= XAry(Ind+1) )  THEN
+
+            Ind = Ind + 1
+
+         ELSE
+
+            RETURN
+
+         END IF
+
+      END DO
+
+
+   END IF
+
+   RETURN
+
+   END SUBROUTINE LocateStpR16
 !=======================================================================
    FUNCTION Mean ( Ary, AryLen )
 
