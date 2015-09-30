@@ -2122,7 +2122,7 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_MAP, u_F
             
    END IF      
    
-   IF ( p_FAST%CompElast == Module_BD ) THEN
+   IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN
       ! map ED root and hub motion outputs to BeamDyn:
       CALL Transfer_ED_to_BD(y_ED, u_BD, MeshMapData, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
@@ -3045,7 +3045,7 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                CALL SetErrStat( ErrStat2, 'y_HD_perturb:'//ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          END IF
          
-         IF ( p_FAST%CompElast == Module_BD ) THEN    
+         IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN    
             ALLOCATE( y_BD_perturb(p_FAST%nBeams) , STAT = ErrStat2 )
             if (ErrStat2 /= 0) then
                call SetErrStat( ErrID_Fatal, 'Error allocating y_BD_perturb.', ErrStat, ErrMsg, RoutineName )
@@ -3111,7 +3111,7 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          END IF
          
-         IF ( p_FAST%CompElast == Module_BD ) THEN 
+         IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN 
             do nb=1,p_FAST%nBeams
                CALL BD_CalcOutput( this_time, u_BD(nb), p_BD(nb), x_BD(nb), xd_BD(nb), z_BD(nb), OtherSt_BD(nb), y_BD(nb), ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
@@ -3331,7 +3331,7 @@ END IF
       CALL WrFileNR(UnJac, ' ElastoDyn_Ptfm_Moment_Z') 
    end if
    
-   IF (p_FAST%CompElast == Module_BD) then
+   IF (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) then
       CALL WrFileNR(UnJac, ' ElastoDyn_hub_Force_X') 
       CALL WrFileNR(UnJac, ' ElastoDyn_hub_Force_Y') 
       CALL WrFileNR(UnJac, ' ElastoDyn_hub_Force_Z') 
@@ -3475,7 +3475,7 @@ END IF
       !...............................................
       
       ! BD motion inputs: (from ED)
-      IF (p_FAST%CompElast == Module_BD ) THEN
+      IF (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN
          
             ! Make copies of the accelerations we just solved for (so we don't overwrite them)         
          do nb = 1,p_FAST%nBeams            
@@ -3644,16 +3644,16 @@ CONTAINS
          
       END IF  
       
-      MeshMapData%u_ED_HubPtLoad%Force  = 0.0_ReKi
-      MeshMapData%u_ED_HubPtLoad%Moment = 0.0_ReKi
-      IF ( p_FAST%CompElast == Module_BD ) THEN
+      IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN
          
          ! Transfer ED motions to BD inputs:
          call Transfer_ED_to_BD_tmp( y_ED2, MeshMapData, ErrStat2, ErrMsg2 )   ! sets MeshMapData%u_BD_RootMotion(:)
             CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
          ! Transfer BD loads to ED hub input:
-            ! we're mapping loads, so we also need the sibling meshes' displacements:
+         ! we're mapping loads, so we also need the sibling meshes' displacements:
+         MeshMapData%u_ED_HubPtLoad%Force  = 0.0_ReKi
+         MeshMapData%u_ED_HubPtLoad%Moment = 0.0_ReKi
          do i=1,p_FAST%nBeams            
             CALL Transfer_Point_to_Point( y_BD2(i)%ReactionForce, MeshMapData%u_ED_HubPtLoad_2, MeshMapData%BD_P_2_ED_P(i), ErrStat2, ErrMsg2, MeshMapData%u_BD_RootMotion(i), y_ED2%HubPtMotion) !u_BD_RootMotion and y_ED2%HubPtMotion contain the displaced positions for load calculations
                CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -3662,8 +3662,7 @@ CONTAINS
             MeshMapData%u_ED_HubPtLoad%Moment = MeshMapData%u_ED_HubPtLoad%Moment + MeshMapData%u_ED_HubPtLoad_2%Moment                
          end do
       END IF
-      
-      
+            
       
       IF ( p_FAST%CompSub == Module_SD ) THEN
       
@@ -3954,7 +3953,7 @@ SUBROUTINE Init_ED_SD_HD_BD_Orca_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMes
                                  + HD_M_DistribMesh%NNodes*6 &    ! HD inputs: 6 accelerations per node (on each Morison mesh)
                                  + HD_WAMIT_Mesh%NNodes*6         ! HD inputs: 6 accelerations per node (on the WAMIT mesh)      
    
-   IF ( p_FAST%CompElast == Module_BD ) THEN   
+   IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN   
       p_FAST%SizeJac_ED_SD_HD_BD_Orca(2) = p_FAST%SizeJac_ED_SD_HD_BD_Orca(2) &   
                                      + ED_HubPtLoad%NNodes *6     ! ED inputs: 6 loads per node (size of ED input from BD)
       
@@ -4022,7 +4021,7 @@ SUBROUTINE Init_ED_SD_HD_BD_Orca_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMes
    end if
    
    
-   if (p_FAST%CompElast == Module_BD) then
+   if (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) then
       
       do i=1,ED_HubPtLoad%NNodes
          do j=1,3
@@ -4158,7 +4157,7 @@ SUBROUTINE Init_ED_SD_HD_BD_Orca_Jacobian( p_FAST, MeshMapData, ED_PlatformPtMes
    ! BD inputs:
    !...............
    
-   if (p_FAST%CompElast == Module_BD) then
+   if (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) then
                  
       do k=1,size(u_BD)
          
@@ -4247,7 +4246,7 @@ SUBROUTINE Create_ED_SD_HD_BD_Orca_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_L
    end if
    
    
-   if (p_FAST%CompElast == Module_BD) then
+   if (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) then
       
       do i=1,ED_HubPtLoad%NNodes
          indx_last  = indx_first + 2 
@@ -4338,7 +4337,7 @@ SUBROUTINE Create_ED_SD_HD_BD_Orca_UVector(u, ED_PlatformPtMesh, SD_TPMesh, SD_L
    !...............
    ! BD inputs:
    !...............   
-   if (p_FAST%CompElast == Module_BD) then
+   if (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) then
       
       do k=1,p_FAST%nBeams
          
@@ -5454,6 +5453,7 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM, M
          BD%Input(1,i)%RootMotion%RemapFlag = .FALSE.
          BD%Input(1,i)%PointLoad%RemapFlag  = .FALSE.
          BD%Input(1,i)%DistrLoad%RemapFlag  = .FALSE.
+         BD%Input(1,i)%HubMotion%RemapFlag  = .FALSE.
              
          BD%y(i)%ReactionForce%RemapFlag    = .FALSE.
          BD%y(i)%BldForce%RemapFlag         = .FALSE.
@@ -5998,7 +5998,7 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
    ! Initialize the Jacobian structures:
    !............................................................................................................................
    !IF ( p_FAST%TurbineType == Type_Offshore_Fixed ) THEN ! p_FAST%CompSub == Module_SD .AND. p_FAST%CompHydro == Module_HD 
-   IF ( p_FAST%CompSub == Module_SD .OR. p_FAST%CompElast == Module_BD .or. p_FAST%CompMooring == Module_Orca) THEN  !.OR. p_FAST%CompHydro == Module_HD ) THEN         
+   IF ( p_FAST%CompSub == Module_SD .OR. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) .or. p_FAST%CompMooring == Module_Orca) THEN  !.OR. p_FAST%CompHydro == Module_HD ) THEN         
       CALL Init_ED_SD_HD_BD_Orca_Jacobian( p_FAST, MeshMapData, ED%Input(1)%PlatformPtMesh, SD%Input(1)%TPMesh, SD%Input(1)%LMesh, &
                                     HD%Input(1)%Morison%LumpedMesh, HD%Input(1)%Morison%DistribMesh, HD%Input(1)%Mesh, &
                                     ED%Input(1)%HubPtLoad, BD%Input(1,:), Orca%Input(1)%PtfmMesh, ErrStat2, ErrMsg2)
@@ -6024,7 +6024,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
    ! initialize the temporary input meshes (for input-output solves):
    ! (note that we do this after ResetRemapFlags() so that the copies have remap=false)
    !............................................................................................................................
-   IF ( p_FAST%CompHydro == Module_HD .OR. p_FAST%CompSub == Module_SD .OR. p_FAST%CompElast == Module_BD .or. p_FAST%CompMooring == Module_Orca) THEN
+   IF ( p_FAST%CompHydro == Module_HD .OR. p_FAST%CompSub == Module_SD .OR. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) &
+         .or. p_FAST%CompMooring == Module_Orca) THEN
                   
          ! Temporary meshes for transfering inputs to ED, HD, BD, Orca, and SD
       CALL MeshCopy ( ED%Input(1)%HubPtLoad, MeshMapData%u_ED_HubPtLoad, MESH_NEWCOPY, ErrStat2, ErrMsg2 )      
@@ -6282,7 +6283,7 @@ end if
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
 
       
-      ! use the ElastoDyn outputs from option1 to update the inputs for InflowWind, AeroDyn, and ServoDyn (necessary only if they have states)
+      ! use the ElastoDyn and BD outputs from option1 to update the inputs for InflowWind, AeroDyn, and ServoDyn (necessary only if they have states)
                      
    IF ( p_FAST%CompAero == Module_AD14 ) THEN
       
@@ -6323,7 +6324,13 @@ end if
       CALL SrvD_InputSolve( p_FAST, m_FAST, SrvD%Input(1), ED%Output(1), IfW%y, OpFM%y, BD%y, MeshmapData, ErrStat2, ErrMsg2 )    ! At initialization, we don't have a previous value, so we'll use the guess inputs instead. note that this violates the framework.... (done for the Bladed DLL)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
    END IF         
-                     
+             
+   IF (p_FAST%CompElast == Module_BD .and. .NOT. BD_Solve_Option1) THEN            
+      ! map ED root and hub motion outputs to BeamDyn:
+      CALL Transfer_ED_to_BD(ED%Output(1), BD%Input(1,:), MeshMapData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )      
+   END IF
+   
 #endif
                                                                                                       
    !.....................................................................
@@ -6419,7 +6426,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
             
    IF (ErrStat >= AbortErrLev) RETURN      
    
-   IF ( p_FAST%CompSub == Module_SD .OR. p_FAST%CompElast == Module_BD .OR. p_FAST%CompMooring == Module_Orca ) THEN !.OR. p_FAST%CompHydro == Module_HD ) THEN
+   IF ( p_FAST%CompSub == Module_SD .OR. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) .OR. p_FAST%CompMooring == Module_Orca ) THEN !.OR. p_FAST%CompHydro == Module_HD ) THEN
                                  
       CALL ED_SD_HD_BD_Orca_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                     , ED%Input(1),   ED%p,   ED%x(  this_state),  ED%xd(  this_state),  ED%z(  this_state),  ED%OtherSt,               ED%Output(1) &
@@ -6544,6 +6551,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              ! Error message if ErrStat /= ErrID_None
    
 
+   INTEGER(IntKi)                          :: k
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    
@@ -6557,6 +6565,18 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
    ErrStat = ErrID_None
    ErrMsg  = ""
    
+   
+   IF ( p_FAST%CompElast == Module_BD .and. .NOT. BD_Solve_Option1 ) THEN
+      ! map ED root and hub motion outputs to BeamDyn:
+      CALL Transfer_ED_to_BD(ED%Output(1), BD%Input(1,:), MeshMapData, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName )
+         
+      do k=1,p_FAST%nBeams
+         CALL BD_CalcOutput( this_time, BD%Input(1,k), BD%p(k), BD%x(k,this_state), BD%xd(k,this_state),&
+                              BD%z(k,this_state), BD%OtherSt(k,this_state), BD%y(k), ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      end do
+   END IF   
 
       ! find the positions where we want inflow wind in AeroDyn (i.e., set all the motion inputs to AeroDyn)
    IF ( p_FAST%CompAero == Module_AD14 ) THEN 
@@ -6902,7 +6922,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       
       InitInData_BD%gravity      = (/ 0.0_ReKi, 0.0_ReKi, -InitOutData_ED%Gravity /)       ! "Gravitational acceleration" m/s^2
       
-         ! now initialize IceD for additional legs (if necessary)
+         ! now initialize BeamDyn for all beams
       dt_BD = p_FAST%dt_module( MODULE_BD )
                         
       InitInData_BD%HubPos = ED%Output(1)%HubPtMotion%Position(:,1)
@@ -7767,11 +7787,6 @@ SUBROUTINE FAST_ExtrapInterpMods( t_global_next, p_FAST, y_FAST, m_FAST, ED, BD,
          
             CALL BD_Input_ExtrapInterp(BD%Input(:,k), BD%InputTimes(:,k), BD%u(k), t_global_next, ErrStat2, ErrMsg2)
                CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName )
-                        
-!bjj: TEST THIS >>>>>>>>>>>>>>>               
-!don't extrapolate these inputs:               
-!            BD%u(k)%RootMotion%Orientation = BD%Input(1,k)%RootMotion%Orientation
-!end bjj TEST <<<<<<<<<<<<<<<<<<
             
             ! Shift "window" of BD%Input 
   
@@ -9521,7 +9536,13 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
                        
       ! determine if the Jacobian should be calculated this time
    IF ( m_FAST%calcJacobian ) THEN ! this was true (possibly at initialization), so we'll advance the time for the next calculation of the Jacobian
-      m_FAST%NextJacCalcTime = m_FAST%t_global + p_FAST%DT_UJac         
+      
+      if (p_FAST%CompMooring == Module_Orca .and. n_t_global==0) then
+         m_FAST%NextJacCalcTime = m_FAST%t_global + p_FAST%DT  ! the jacobian calculated with OrcaFlex at t=0 is incorrect, but is okay on the 2nd step
+      else
+         m_FAST%NextJacCalcTime = m_FAST%t_global + p_FAST%DT_UJac
+      end if
+      
    END IF
       
       ! the ServoDyn inputs from Simulink are for t, not t+dt, so we're going to overwrite the inputs from

@@ -29,7 +29,7 @@ MODULE FAST_ModTypes
    USE FAST_Types
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.12.00a-bjj-prerelease', '24-Sep-2015' ) ! The version number of this module
+                                ProgDesc( 'FAST', 'v8.12.00a-bjj-prerelease', '30-Sep-2015' ) ! The version number of this module
          
    !..................................................................
    
@@ -52,6 +52,7 @@ MODULE FAST_ModTypes
 
    LOGICAL,        PARAMETER :: GenerateAdamsModel = .FALSE.
 
+   LOGICAL,        PARAMETER :: BD_Solve_Option1 = .TRUE.
 
 
 END MODULE FAST_ModTypes
