@@ -1319,16 +1319,16 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
                    y%BldMotion%RotationAcc(3,temp_id2) = temp_cc(1)
            ENDDO
        ENDDO
-       CALL BD_DynamicSolutionForce(p%uuN0,p%rrN0,x_tmp%q,x_tmp%dqdt,OS_tmp%Acc,                        &
-                                    p%Stif0_GL,p%Mass0_GL,p%gravity,u_tmp,                       &
+       CALL BD_DynamicSolutionForce(x_tmp%q,x_tmp%dqdt,OS_tmp%Acc,                        &
+                                    p%Stif0_GL,p%Mass0_GL,u_tmp,                       &
                                     p%damp_flag,p%beta,                                          &
-                                    p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,&
+                                    p%node_elem,p%dof_node,p%elem_total,&
                                     p%ngp,p%quadrature,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
                                     temp_Force,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ELSEIF(p%analysis_type .EQ. 1) THEN
-       CALL BD_StaticSolutionForce( p%uuN0,p%rrN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,&
-               p%gravity,u_tmp,p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,&
+       CALL BD_StaticSolutionForce( x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,&
+               u_tmp,p%node_elem,p%dof_node,p%elem_total,&
                p%ngp,p%quadrature,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
                temp_Force,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1545,16 +1545,14 @@ SUBROUTINE BD_NodalRelRot(Nu,node_elem,dof_node,Nr,ErrStat,ErrMsg)
 
 END SUBROUTINE BD_NodalRelRot
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
+SUBROUTINE BD_ElementMatrixGA2(Nuuu,Nrrr,Nvvv,Naaa,           &
                                EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                                damp_flag,beta,                          &
                                ngp,gw,hhx,hpx,Jaco,uu0,E10,             &
                                node_elem,dof_node,fact,elk,elf,elm,elg, &
                                ErrStat,ErrMsg)
 
-   REAL(ReKi),     INTENT(IN   ):: Nuu0(:) !bjj: NOT USED
    REAL(ReKi),     INTENT(IN   ):: Nuuu(:)
-   REAL(ReKi),     INTENT(IN   ):: Nrr0(:) !bjj: NOT USED
    REAL(ReKi),     INTENT(IN   ):: Nrrr(:)
    REAL(ReKi),     INTENT(IN   ):: Nvvv(:)
    REAL(ReKi),     INTENT(IN   ):: Naaa(:)
@@ -1651,7 +1649,7 @@ SUBROUTINE BD_ElementMatrixGA2(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,Naaa,           &
        mEta(3)      =  EMass0_GL(1,5,igp)
        rho(1:3,1:3) =  EMass0_GL(4:6,4:6,igp)
        CALL BD_GaussPointDataMass(hhx(:,igp),hpx(:,igp),Jaco(igp),Nvvv,Naaa,RR0,node_elem,dof_node,&
-                                  vvv,aaa,vvp,mmm,mEta,rho,ErrStat2,ErrMsg2)
+                                  vvv,aaa,vvp,mEta,rho,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_InertialForce(mmm,mEta,rho,vvv,aaa,fact,Fi,Mi,Gi,Ki,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2033,7 +2031,7 @@ SUBROUTINE BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat,ErrM
 END SUBROUTINE BD_ElasticForce
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_GaussPointDataMass(hhx,hpx,Jaco,Nvvv,Naaa,RR0,node_elem,dof_node,&
-                                 vvv,aaa,vvp,mmm,mEta,rho,ErrStat,ErrMsg)
+                                 vvv,aaa,vvp,mEta,rho,ErrStat,ErrMsg)
 !------------------------------------------------------------------
 ! This subroutine calculates the mass quantities at the Gauss point
 ! 1) velocity; 2) acceleration; 3) derivative of velocity wrt axis
@@ -2050,7 +2048,6 @@ SUBROUTINE BD_GaussPointDataMass(hhx,hpx,Jaco,Nvvv,Naaa,RR0,node_elem,dof_node,&
    REAL(ReKi),     INTENT(  OUT):: vvv(:)
    REAL(ReKi),     INTENT(  OUT):: vvp(:)
    REAL(ReKi),     INTENT(  OUT):: aaa(:)
-   REAL(ReKi),     INTENT(INOUT):: mmm  ! bjj: NOT USED
    REAL(ReKi),     INTENT(INOUT):: mEta(:)
    REAL(ReKi),     INTENT(INOUT):: rho(:,:)
    INTEGER(IntKi), INTENT(  OUT):: ErrStat       ! Error status of the operation
@@ -2406,16 +2403,14 @@ SUBROUTINE BD_UpdateDynamicGA2(ainc,uf,vf,af,xf,coef,node_total,dof_node,ErrStat
 
 END SUBROUTINE BD_UpdateDynamicGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,    &
+SUBROUTINE BD_GenerateDynamicElementAcc(uuN,vvN,Stif0,Mass0,gravity,u,    &
                                         damp_flag,beta,                             &
                                         quadrature,gw,hhx,hpx,Jacobian,uu0,E10,     &
-                                        elem_total,node_elem,dof_total,dof_node,ngp,&
+                                        elem_total,node_elem,dof_node,ngp,&
                                         RHS,MassM,ErrStat,ErrMsg)
 !----------------------------------------------------------------------------------------
 ! This subroutine computes Global mass matrix and force vector for the beam.
 !----------------------------------------------------------------------------------------
-   REAL(ReKi),        INTENT(IN   ):: uuN0(:,:) ! Initial position vector
-   REAL(ReKi),        INTENT(IN   ):: rrN0(:,:) ! Initial position vector
    REAL(ReKi),        INTENT(IN   ):: uuN(:) ! Displacement of Mass 1: m
    REAL(ReKi),        INTENT(IN   ):: vvN(:) ! Velocity of Mass 1: m/s
    REAL(ReKi),        INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
@@ -2433,7 +2428,6 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,
    REAL(ReKi),        INTENT(IN   ):: E10(:,:)
    INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Degrees of freedom per node  ! bjj: NOT USED
    INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
    INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
    REAL(ReKi),        INTENT(  OUT):: MassM(:,:) ! Mass matrix
@@ -2521,7 +2515,7 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,
            DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
 
-       CALL BD_ElementMatrixAcc(uuN0(:,nelem),Nuuu,rrN0(:,nelem),Nrrr,Nvvv,&
+       CALL BD_ElementMatrixAcc(Nuuu,Nrrr,Nvvv,&
                                 EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                                 ngp,gw,hhx,hpx,Jacobian(:,nelem),uu0(:,nelem),E10(:,nelem),&
                                 node_elem,dof_node,damp_flag,beta,&
@@ -2560,7 +2554,7 @@ contains
 
 END SUBROUTINE BD_GenerateDynamicElementAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
+SUBROUTINE BD_ElementMatrixAcc(Nuuu,Nrrr,Nvvv,&
                                EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                                ngp,gw,hhx,hpx,Jaco,uu0,E10,   &
                                node_elem,dof_node,damp_flag,beta,&
@@ -2570,9 +2564,7 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
 ! This subroutine total element forces and mass matrices
 !-------------------------------------------------------------------------------
 
-   REAL(ReKi),    INTENT(IN   ):: Nuu0(:) ! Nodal initial position for each element !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Nuuu(:) ! Nodal displacement of Mass 1 for each element
-   REAL(ReKi),    INTENT(IN   ):: Nrr0(:) ! Nodal rotation parameters for initial position !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
    REAL(ReKi),    INTENT(IN   ):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
    REAL(ReKi),    INTENT(IN   ):: EStif0_GL(:,:,:) ! Nodal material properties for each element
@@ -2662,11 +2654,11 @@ SUBROUTINE BD_ElementMatrixAcc(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
        mEta(3)      =  EMass0_GL(1,5,igp)
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
        CALL BD_GaussPointDataMass(hhx(:,igp),hpx(:,igp),Jaco(igp),Nvvv,temp_Naaa,RR0,&
-             node_elem,dof_node, vvv,temp_aaa,vvp,mmm,mEta,rho,ErrStat2,ErrMsg2)
+             node_elem,dof_node, vvv,temp_aaa,vvp,mEta,rho,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_MassMatrix(mmm,mEta,rho,Mi,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       CALL BD_GyroForce(mEta,rho,uuu,vvv,Fb,ErrStat2,ErrMsg2)
+       CALL BD_GyroForce(mEta,rho,vvv,Fb,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_GravityForce(mmm,mEta,gravity,Fg,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2737,13 +2729,12 @@ SUBROUTINE BD_MassMatrix(m00,mEta,rho,Mi,ErrStat,ErrMsg)
 
 END SUBROUTINE BD_MassMatrix
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_GyroForce(mEta,rho,uuu,vvv,Fb,ErrStat,ErrMsg)
+SUBROUTINE BD_GyroForce(mEta,rho,vvv,Fb,ErrStat,ErrMsg)
 !----------------------------------------------------------------------------------------
 ! This subroutine computes gyroscopic forces
 !----------------------------------------------------------------------------------------
    REAL(ReKi),    INTENT(IN   ):: mEta(:) ! m\Eta resolved in inertia frame at Gauss point
    REAL(ReKi),    INTENT(IN   ):: rho(:,:) ! Tensor of inertia resolved in inertia frame at Gauss point
-   REAL(ReKi),    INTENT(IN   ):: uuu(:) ! Displacement(and rotation)  array at Gauss point ! bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: vvv(:) ! Velocities at Gauss point (including linear and angular velocities)
    REAL(ReKi),    INTENT(  OUT):: Fb(:) ! Gyroscopic forces
    INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
@@ -2785,7 +2776,7 @@ SUBROUTINE BD_GyroForce(mEta,rho,uuu,vvv,Fb,ErrStat,ErrMsg)
 
 END SUBROUTINE BD_GyroForce
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
+SUBROUTINE BD_ElementMatrixForce(Nuuu,Nrrr,Nvvv,&
                                  EStif0_GL,EMass0_GL,     &
                                  damp_flag,beta,          &
                                  ngp,gw,hhx,hpx,Jaco,uu0,E10,&
@@ -2795,9 +2786,7 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
 ! This subroutine calculates elemetal internal forces
 !------------------------------------------------------------
 
-   REAL(ReKi),     INTENT(IN   ):: Nuu0(:) ! Nodal initial position for each element !bjj: not used
    REAL(ReKi),     INTENT(IN   ):: Nuuu(:) ! Nodal displacement of Mass 1 for each element
-   REAL(ReKi),     INTENT(IN   ):: Nrr0(:) ! Nodal rotation parameters for initial position !bjj: not used
    REAL(ReKi),     INTENT(IN   ):: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
    REAL(ReKi),     INTENT(IN   ):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
    REAL(ReKi),     INTENT(IN   ):: EStif0_GL(:,:,:) ! Nodal material properties for each element
@@ -2879,7 +2868,7 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
        mEta(3)      =  EMass0_GL(1,5,igp)
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
        CALL BD_GaussPointDataMass(hhx(:,igp),hpx(:,igp),Jaco(igp),Nvvv,temp_Naaa,RR0,&
-             node_elem,dof_node, vvv,temp_aaa,vvp,mmm,mEta,rho,ErrStat2,ErrMsg2)
+             node_elem,dof_node, vvv,temp_aaa,vvp,mEta,rho,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -2888,7 +2877,7 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
                                     betaC,Gd,Xd,Yd,ErrStat2,ErrMsg2)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDIF
-       CALL BD_GyroForce(mEta,rho,uuu,vvv,Fb,ErrStat2,ErrMsg2)
+       CALL BD_GyroForce(mEta,rho,vvv,Fb,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
        DO i=1,node_elem
@@ -2910,8 +2899,8 @@ SUBROUTINE BD_ElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,&
 
 END SUBROUTINE BD_ElementMatrixForce
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_GenerateDynamicElementForce(uuN0,rrN0,uuN,vvN,aaN,     &
-                                          Stif0,Mass0,gravity,u,&
+SUBROUTINE BD_GenerateDynamicElementForce(uuN,vvN,aaN,     &
+                                          Stif0,Mass0,u,&
                                           damp_flag,beta,       &
                                           elem_total,node_elem,dof_node,ngp,&
                                           quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
@@ -2920,14 +2909,11 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN0,rrN0,uuN,vvN,aaN,     &
 ! This subroutine computes Global mass matrix and force vector to 
 ! calculate the forces along the beam
 !----------------------------------------------------------------------------------------
-   REAL(ReKi),         INTENT(IN   ):: uuN0(:,:) ! Initial position vector
-   REAL(ReKi),         INTENT(IN   ):: rrN0(:,:) ! Initial position vector
    REAL(ReKi),         INTENT(IN   ):: uuN(:) ! Displacement of Mass 1: m
    REAL(ReKi),         INTENT(IN   ):: vvN(:) ! Velocity of Mass 1: m/s
    REAL(ReKi),         INTENT(IN   ):: aaN(:) ! Velocity of Mass 1: m/s
    REAL(ReKi),         INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),         INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   REAL(ReKi),         INTENT(IN   ):: gravity(:) ! Velocity of Mass 1: m/s    ! bjj: NOT USED
    TYPE(BD_InputType), INTENT(IN   ):: u           ! Inputs at t
    INTEGER(IntKi),     INTENT(IN   ):: damp_flag ! Number of Gauss points
    REAL(ReKi),         INTENT(IN   ):: beta(:)
@@ -3021,7 +3007,7 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN0,rrN0,uuN,vvN,aaN,     &
            DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
 
-       CALL BD_ElementMatrixForce(uuN0(:,nelem),Nuuu,rrN0(:,nelem),Nrrr,Nvvv,&
+       CALL BD_ElementMatrixForce(Nuuu,Nrrr,Nvvv,&
                                   EStif0_GL,EMass0_GL,     &
                                   damp_flag,beta,          &
                                   ngp,gw,hhx,hpx,Jaco(:,nelem),uu0(:,nelem),E10(:,nelem),&
@@ -3057,32 +3043,27 @@ contains
 
 END SUBROUTINE BD_GenerateDynamicElementForce
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_DynamicSolutionForce(uuN0,rrN0,uuN,vvN,aaN,                                      &
-                                   Stif0,Mass0,gravity,u,                                 &
+SUBROUTINE BD_DynamicSolutionForce(uuN,vvN,aaN,                                      &
+                                   Stif0,Mass0,u,                                 &
                                    damp_flag,beta,                                        &
-                                   node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
+                                   node_elem,dof_node,elem_total,ngp,&
                                    quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                    Force,ErrStat,ErrMsg)
 !***************************************************************************************
 ! This subroutine calculates the finite-element nodal forces along the beam
 ! Nodal forces = C \dot{u} + K u
 !***************************************************************************************
-   REAL(ReKi),         INTENT(IN   ):: uuN0(:,:) ! Initial position vector
-   REAL(ReKi),         INTENT(IN   ):: rrN0(:,:) ! Initial position vector
    REAL(ReKi),         INTENT(IN   ):: uuN(:) ! Displacement of Mass 1: m
    REAL(ReKi),         INTENT(IN   ):: vvN(:) ! Velocity of Mass 1: m/s
    REAL(ReKi),         INTENT(IN   ):: aaN(:) ! Velocity of Mass 1: m/s
    REAL(ReKi),         INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),         INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   REAL(ReKi),         INTENT(IN   ):: gravity(:) !
    INTEGER(IntKi),     INTENT(IN   ):: damp_flag ! Number of Gauss points
    REAL(ReKi),         INTENT(IN   ):: beta(:)
    TYPE(BD_InputType), INTENT(IN   ):: u           ! Inputs at t
    INTEGER(IntKi),     INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),     INTENT(IN   ):: dof_node ! Degrees of freedom per element ! bjj: NOT USED
+   INTEGER(IntKi),     INTENT(IN   ):: dof_node ! Degrees of freedom per element
    INTEGER(IntKi),     INTENT(IN   ):: elem_total ! Total number of elements
-   INTEGER(IntKi),     INTENT(IN   ):: dof_total ! Total number of degrees of freedom
-   INTEGER(IntKi),     INTENT(IN   ):: node_total ! Total number of nodes  ! bjj: NOT USED
    INTEGER(IntKi),     INTENT(IN   ):: ngp ! Number of Gauss points
    INTEGER(IntKi),     INTENT(IN   ):: quadrature
    REAL(ReKi),         INTENT(IN   ):: gw(:)
@@ -3103,8 +3084,8 @@ SUBROUTINE BD_DynamicSolutionForce(uuN0,rrN0,uuN,vvN,aaN,                       
    ErrMsg  = ""
 
 
-   CALL BD_GenerateDynamicElementForce(uuN0,rrN0,uuN,vvN,aaN,     &
-                                       Stif0,Mass0,gravity,u,&
+   CALL BD_GenerateDynamicElementForce(uuN,vvN,aaN,     &
+                                       Stif0,Mass0,u,&
                                        damp_flag,beta,&
                                        elem_total,node_elem,dof_node,ngp,&
                                        quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
@@ -3537,7 +3518,7 @@ SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
            u_temp%DistrLoad%Force(:,:) = u_interp%DistrLoad%Force(:,:)/i*j
            u_temp%DistrLoad%Moment(:,:) = u_interp%DistrLoad%Moment(:,:)/i*j
            gravity_temp(:) = p%gravity(:)/i*j
-           CALL BD_StaticSolution(p%uuN0,p%rrN0,x%q,p%Mass0_GL,p%Stif0_GL,&
+           CALL BD_StaticSolution(x%q,p%Mass0_GL,p%Stif0_GL,&
                    gravity_temp,u_temp,p%node_elem,p%dof_node,p%elem_total,&
                    p%dof_total,p%node_total,&
                    p%ngp,p%quadrature,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
@@ -3576,14 +3557,12 @@ contains
    end subroutine cleanup
 END SUBROUTINE BD_Static
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_StaticSolution( uuN0,rrN0,uuNf,Mass0,Stif0,gravity,u,&
+SUBROUTINE BD_StaticSolution( uuNf,Mass0,Stif0,gravity,u,&
                               node_elem,dof_node,elem_total,&
                               dof_total,node_total,ngp,&
                               quadrature,gw,hhx,hpx,Jaco,uu0,E10,            &
                               niter,tol,piter, ErrStat,ErrMsg)
 
-   REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
-   REAL(ReKi),        INTENT(IN   ):: rrN0(:,:)
    REAL(ReKi),        INTENT(IN   ):: Mass0(:,:,:)
    REAL(ReKi),        INTENT(IN   ):: Stif0(:,:,:)
    REAL(ReKi),        INTENT(IN   ):: gravity(:)
@@ -3648,7 +3627,7 @@ SUBROUTINE BD_StaticSolution( uuN0,rrN0,uuNf,Mass0,Stif0,gravity,u,&
    Eref = 0.0D0
    DO i=1,niter
        piter=i 
-       CALL BD_GenerateStaticElement(uuN0,rrN0,uuNf,Mass0,Stif0,gravity,u,&
+       CALL BD_GenerateStaticElement(uuNf,Mass0,Stif0,gravity,u,&
                                      elem_total,node_elem,dof_node,ngp,&
                                      quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                      StifK,RHS,&
@@ -3723,14 +3702,12 @@ contains
       end subroutine Cleanup
 END SUBROUTINE BD_StaticSolution
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_GenerateStaticElement( uuN0,rrN0,uuNf,Mass0,Stif0,gravity,u,&
+SUBROUTINE BD_GenerateStaticElement( uuNf,Mass0,Stif0,gravity,u,&
                                      elem_total,node_elem,dof_node,&
                                      ngp,quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                      StifK,RHS,&
                                      ErrStat,ErrMsg)
 
-   REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
-   REAL(ReKi),        INTENT(IN   ):: rrN0(:,:)
    REAL(ReKi),        INTENT(IN   ):: uuNf(:)
    REAL(ReKi),        INTENT(IN   ):: Mass0(:,:,:)
    REAL(ReKi),        INTENT(IN   ):: Stif0(:,:,:)
@@ -3821,7 +3798,7 @@ SUBROUTINE BD_GenerateStaticElement( uuN0,rrN0,uuNf,Mass0,Stif0,gravity,u,&
            DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j)
            DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
-       CALL BD_StaticElementMatrix(uuN0(:,nelem),Nuuu,rrN0(:,nelem),Nrrr,&
+       CALL BD_StaticElementMatrix(Nuuu,Nrrr,&
                DistrLoad_GL,gravity,EMass0_GL,EStif0_GL,&
                ngp,gw,hhx,hpx,Jaco(:,nelem),uu0(:,nelem),E10(:,nelem),&
                node_elem,dof_node,elk,elf,ErrStat2,ErrMsg2)
@@ -3856,15 +3833,13 @@ contains
 
 END SUBROUTINE BD_GenerateStaticElement
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
+SUBROUTINE BD_StaticElementMatrix(Nuuu,Nrrr,Distr_GL,gravity,&
                                   EMass0_GL,EStif0_GL,&
                                   ngp,gw,hhx,hpx,Jaco,uu0,E10,&
                                   node_elem,dof_node,elk,elf,&
                                   ErrStat,ErrMsg)
 
-   REAL(ReKi),    INTENT(IN   ):: Nuu0(:) !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Nuuu(:)
-   REAL(ReKi),    INTENT(IN   ):: Nrr0(:) !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Nrrr(:)
    REAL(ReKi),    INTENT(IN   ):: Distr_GL(:,:)
    REAL(ReKi),    INTENT(IN   ):: gravity(:)
@@ -3941,7 +3916,7 @@ SUBROUTINE BD_StaticElementMatrix(Nuu0,Nuuu,Nrr0,Nrrr,Distr_GL,gravity,&
        mEta(3)      = EMass0_GL(1,5,igp)
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
        CALL BD_GaussPointDataMass(hhx(:,igp),hpx(:,igp),Jaco(igp),temp_Nvvv,temp_Naaa,RR0,&
-             node_elem,dof_node,vvv,aaa,vvp,mmm,mEta,rho,ErrStat2,ErrMsg2)
+             node_elem,dof_node,vvv,aaa,vvp,mEta,rho,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        CALL BD_GravityForce(mmm,mEta,gravity,Fg,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4029,8 +4004,8 @@ SUBROUTINE BD_StaticUpdateConfiguration(uinc,uf,node_total,dof_node,ErrStat,ErrM
 
 END SUBROUTINE BD_StaticUpdateConfiguration
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_StaticSolutionForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
-                                  node_elem,dof_node,elem_total,dof_total,node_total,&
+SUBROUTINE BD_StaticSolutionForce(uuN,vvN,Stif0,Mass0,u,&
+                                  node_elem,dof_node,elem_total,&
                                   ngp,quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                   Force, ErrStat,ErrMsg)
 !***************************************************************************************
@@ -4038,19 +4013,14 @@ SUBROUTINE BD_StaticSolutionForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
 ! nodes along beam axis
 ! Nodal forces = K u
 !***************************************************************************************
-   REAL(ReKi),        INTENT(IN   ):: uuN0(:,:) ! Initial position vector
-   REAL(ReKi),        INTENT(IN   ):: rrN0(:,:) ! Initial position vector
    REAL(ReKi),        INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),        INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   REAL(ReKi),        INTENT(IN   ):: gravity(:) !
    TYPE(BD_InputType),INTENT(IN   ):: u           ! Inputs at t
    REAL(ReKi),        INTENT(IN   ):: uuN(:) ! Displacement of Mass 1: m
    REAL(ReKi),        INTENT(IN   ):: vvN(:) ! Displacement of Mass 1: m
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per element
    INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
-   INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Total number of degrees of freedom ! bjj: NOT USED
-   INTEGER(IntKi),    INTENT(IN   ):: node_total ! Total number of nodes
    INTEGER(IntKi),    INTENT(IN   ):: ngp
    INTEGER(IntKi),    INTENT(IN   ):: quadrature
    REAL(ReKi),        INTENT(IN   ):: gw(:)
@@ -4071,7 +4041,7 @@ SUBROUTINE BD_StaticSolutionForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   CALL BD_GenerateStaticElementForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
+   CALL BD_GenerateStaticElementForce(uuN,vvN,Stif0,Mass0,u,&
                                       elem_total,node_elem,dof_node,&
                                       ngp,quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                       Force,ErrStat2,ErrMsg2)
@@ -4080,7 +4050,7 @@ SUBROUTINE BD_StaticSolutionForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
 
 END SUBROUTINE BD_StaticSolutionForce
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_GenerateStaticElementForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
+SUBROUTINE BD_GenerateStaticElementForce(uuN,vvN,Stif0,Mass0,u,&
                                          elem_total,node_elem,dof_node,&
                                          ngp,quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                          RHS,ErrStat,ErrMsg)
@@ -4090,13 +4060,10 @@ SUBROUTINE BD_GenerateStaticElementForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u
 ! nodes along beam axis
 ! Nodal forces = K u
 !***************************************************************************************
-   REAL(ReKi),        INTENT(IN   ):: uuN0(:,:) ! Initial position vector
-   REAL(ReKi),        INTENT(IN   ):: rrN0(:,:) ! Initial position vector
    REAL(ReKi),        INTENT(IN   ):: uuN(:) ! Displacement of Mass 1: m
    REAL(ReKi),        INTENT(IN   ):: vvN(:) ! Displacement of Mass 1: m
    REAL(ReKi),        INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),        INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   REAL(ReKi),        INTENT(IN   ):: gravity(:) ! Velocity of Mass 1: m/s
    TYPE(BD_InputType),INTENT(IN   ):: u           ! Inputs at t
    INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
@@ -4181,9 +4148,8 @@ SUBROUTINE BD_GenerateStaticElementForce(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u
            DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j)
            DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
-       CALL BD_StaticElementMatrixForce(uuN0(:,nelem),Nuuu,rrN0(:,nelem),Nrrr,Nvvv,&
-               EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
-               ngp,gw,hhx,hpx,Jaco(:,nelem),uu0(:,nelem),E10(:,nelem),&
+       CALL BD_StaticElementMatrixForce(Nuuu,Nrrr,&
+               EStif0_GL,ngp,gw,hhx,hpx,Jaco(:,nelem),uu0(:,nelem),E10(:,nelem),&
                node_elem,dof_node,elf,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -4215,21 +4181,15 @@ contains
 
 END SUBROUTINE BD_GenerateStaticElementForce
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_StaticElementMatrixForce(Nuu0,Nuuu,Nrr0,Nrrr,Nvvv,EStif0_GL,EMass0_GL,&
-              gravity,DistrLoad_GL,ngp,gw,hhx,hpx,Jaco,uu0,E10,                     &
+SUBROUTINE BD_StaticElementMatrixForce(Nuuu,Nrrr,EStif0_GL,&
+              ngp,gw,hhx,hpx,Jaco,uu0,E10,                     &
               node_elem,dof_node,elf,ErrStat,ErrMsg)
 !-------------------------------------------------------------------------------
 ! This subroutine calculates elemental internal node force for static analysis
 !-------------------------------------------------------------------------------
-   REAL(ReKi),    INTENT(IN   ):: Nuu0(:) ! Nodal initial position for each element !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Nuuu(:) ! Nodal displacement of Mass 1 for each element
-   REAL(ReKi),    INTENT(IN   ):: Nrr0(:) ! Nodal rotation parameters for initial position !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
-   REAL(ReKi),    INTENT(IN   ):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element ! bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: EStif0_GL(:,:,:) ! Nodal material properties for each element
-   REAL(ReKi),    INTENT(IN   ):: EMass0_GL(:,:,:) ! Nodal material properties for each element ! bjj: NOT USED
-   REAL(ReKi),    INTENT(IN   ):: gravity(:) ! bjj: NOT USED
-   REAL(ReKi),    INTENT(IN   ):: DistrLoad_GL(:,:) ! Nodal material properties for each element ! bjj: NOT USED
    INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
    REAL(ReKi),    INTENT(IN   ):: gw(:)
    REAL(ReKi),    INTENT(IN   ):: hhx(:,:)
@@ -4324,7 +4284,6 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    INTEGER(IntKi)                                     :: ErrStat2   ! Temporary Error status
    CHARACTER(ErrMsgLen)                               :: ErrMsg2    ! Temporary Error message
    CHARACTER(*), PARAMETER                            :: RoutineName = 'BD_GA2'
-   INTEGER(IntKi)                                     :: i
 
    ! Initialize ErrStat
 
@@ -4385,7 +4344,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    ! find x, acc, and xcc at t+dt
-   CALL BD_DynamicSolutionGA2( p%uuN0,p%rrN0,x%q,x%dqdt,OtherState%acc,OtherState%xcc,&
+   CALL BD_DynamicSolutionGA2( x%q,x%dqdt,OtherState%acc,OtherState%xcc,&
                                p%Stif0_GL,p%Mass0_GL,p%gravity,u_interp,              &
                                p%damp_flag,p%beta,                                    &
                                p%node_elem,p%dof_node,p%elem_total,p%dof_total,       &
@@ -4534,7 +4493,7 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
 !------------------------------------------------------------
 
    TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-   REAL(DbKi),                   INTENT(IN   )  :: t           ! time (s) ! bjj: NOT USED
+   REAL(DbKi),                   INTENT(IN   )  :: t           ! time (s)
    TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t
    TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Inputs at t
    TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Continuous states at t
@@ -4544,10 +4503,6 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
    REAL(ReKi)                                   :: temp_cc(3)
    REAL(ReKi)                                   :: temp_glb(3)
    REAL(ReKi)                                   :: temp3(3)
-!   REAL(ReKi)                                   :: temp_Rb(3,3)
-!   REAL(ReKi)                                   :: temp_ref(3)
-!   REAL(ReKi)                                   :: temp_root(3)
-!   INTEGER(IntKi)                               :: i
    INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER                      :: RoutineName = 'BD_BoundaryGA2'
@@ -4573,7 +4528,7 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
 
 END SUBROUTINE BD_BoundaryGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_DynamicSolutionGA2( uuN0,rrN0,uuNf,vvNf,aaNf,xxNf,          &
+SUBROUTINE BD_DynamicSolutionGA2( uuNf,vvNf,aaNf,xxNf,          &
                                   Stif0,Mass0,gravity,u,damp_flag,beta,   &
                                   node_elem,dof_node,elem_total,dof_total,&
                                   quadrature,gw,hhx,hpx,Jaco,uu0,E10,            &
@@ -4584,8 +4539,6 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,rrN0,uuNf,vvNf,aaNf,xxNf,          &
 ! Given states (u,v) and accelerations (acc,xcc) at the initial of a time step (t_i),
 ! it returns the values of states and accelerations at the end of a time step (t_f)
 !------------------------------------------------------------------------------------
-   REAL(ReKi),         INTENT(IN   ):: uuN0(:,:)
-   REAL(ReKi),         INTENT(IN   ):: rrN0(:,:)
    REAL(ReKi),         INTENT(IN   ):: Stif0(:,:,:)
    REAL(ReKi),         INTENT(IN   ):: Mass0(:,:,:)
    REAL(ReKi),         INTENT(IN   ):: gravity(:)
@@ -4671,7 +4624,7 @@ SUBROUTINE BD_DynamicSolutionGA2( uuN0,rrN0,uuNf,vvNf,aaNf,xxNf,          &
            fact = .FALSE.
        ENDIF
 
-       CALL BD_GenerateDynamicElementGA2(uuN0,rrN0,uuNf,vvNf,aaNf,            &
+       CALL BD_GenerateDynamicElementGA2(uuNf,vvNf,aaNf,            &
                                          Stif0,Mass0,gravity,u,damp_flag,beta,&
                                          elem_total,node_elem,dof_node,ngp,   &
                                          quadrature,gw,hhx,hpx,Jaco,uu0,E10,fact,&
@@ -4753,15 +4706,13 @@ contains
       end subroutine Cleanup
 END SUBROUTINE BD_DynamicSolutionGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,rrN0,uuNf,vvNf,aaNf,            &
+SUBROUTINE BD_GenerateDynamicElementGA2(uuNf,vvNf,aaNf,            &
                                         Stif0,Mass0,gravity,u,damp_flag,beta,&
                                         elem_total,node_elem,dof_node,ngp,   &
                                         quadrature,gw,hhx,hpx,Jaco,uu0,E10,fact,&
                                         StifK,RHS,MassM,DampG,&
                                         ErrStat,ErrMsg)
 
-   REAL(ReKi),        INTENT(IN   ):: uuN0(:,:)
-   REAL(ReKi),        INTENT(IN   ):: rrN0(:,:)
    REAL(ReKi),        INTENT(IN   ):: uuNf(:)
    REAL(ReKi),        INTENT(IN   ):: vvNf(:)
    REAL(ReKi),        INTENT(IN   ):: aaNf(:)
@@ -4881,7 +4832,7 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuN0,rrN0,uuNf,vvNf,aaNf,            &
            DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
 
-       CALL BD_ElementMatrixGA2(uuN0(:,nelem),Nuuu,rrN0(:,nelem),Nrrr,Nvvv,Naaa,&
+       CALL BD_ElementMatrixGA2(Nuuu,Nrrr,Nvvv,Naaa,&
                               EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,         &
                               damp_flag,beta,                                   &
                               ngp,gw,hhx,hpx,Jaco(:,nelem),uu0(:,nelem),E10(:,nelem),&
@@ -5142,7 +5093,7 @@ SUBROUTINE BD_CalcForceAcc( u, p, x, OtherState, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   CALL BD_SolutionForceAcc(p%uuN0,p%rrN0,x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
+   CALL BD_SolutionForceAcc(x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,p%gravity,u,&
                             p%damp_flag,p%beta,&
                             p%quadrature,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
                             p%node_elem,p%dof_node,p%elem_total,p%dof_total,p%node_total,p%ngp,&
@@ -5153,7 +5104,7 @@ SUBROUTINE BD_CalcForceAcc( u, p, x, OtherState, ErrStat, ErrMsg)
 
 END SUBROUTINE BD_CalcForceAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_SolutionForceAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,               &
+SUBROUTINE BD_SolutionForceAcc(uuN,vvN,Stif0,Mass0,gravity,u,               &
                                damp_flag,beta,                                        &
                                quadrature,gw,hhx,hpx,Jacobian,uu0,E10,                           &
                                node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
@@ -5163,8 +5114,6 @@ SUBROUTINE BD_SolutionForceAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,         
 ! stiffness and mass matrices, build nodal force vector.  The output of this subroutine
 ! is the second time derivative of state "q".
 !***************************************************************************************
-   REAL(ReKi),                   INTENT(IN   ):: uuN0(:,:) ! Initial position vector
-   REAL(ReKi),                   INTENT(IN   ):: rrN0(:,:) ! Initial position vector
    REAL(ReKi),                   INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),                   INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),                   INTENT(IN   ):: gravity(:) !
@@ -5218,10 +5167,10 @@ SUBROUTINE BD_SolutionForceAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,         
        return
    end if
 
-   CALL BD_GenerateDynamicElementAcc(uuN0,rrN0,uuN,vvN,Stif0,Mass0,gravity,u,&
+   CALL BD_GenerateDynamicElementAcc(uuN,vvN,Stif0,Mass0,gravity,u,&
                                      damp_flag,beta,&
                                      quadrature,gw,hhx,hpx,Jacobian,uu0,E10,                &
-                                     elem_total,node_elem,dof_total,dof_node,ngp,&
+                                     elem_total,node_elem,dof_node,ngp,&
                                      RHS,MassM,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    DO j=1,node_total
@@ -5338,18 +5287,14 @@ SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
 !----------------------------------------------------------------------------------------
 ! This subroutine computes Global mass matrix and force vector for the beam.
 !----------------------------------------------------------------------------------------
-   REAL(ReKi),        INTENT(IN   ):: uuN0(:,:) ! Initial position vector
    REAL(ReKi),        INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
    REAL(ReKi),        INTENT(IN   ):: GaussPos(:,:) ! Initial position vector
    INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Degrees of freedom per node  ! bjj: NOT USED
    INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
    INTEGER(IntKi),    INTENT(IN   ):: quadrature
    INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
    REAL(ReKi),        INTENT(IN   ):: gw(:) 
-   REAL(ReKi),        INTENT(IN   ):: hhx(:,:) 
-   REAL(ReKi),        INTENT(IN   ):: hpx(:,:) 
    REAL(ReKi),        INTENT(IN   ):: Jaco(:,:) 
    REAL(ReKi),        INTENT(  OUT):: blade_mass ! Mass matrix
    REAL(ReKi),        INTENT(  OUT):: blade_CG(:) ! Mass matrix
@@ -5401,6 +5346,7 @@ SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
                NGPpos(1:3,j) = GaussPos(1:3,temp_id+j)
            ENDIF 
        ENDDO
+
        CALL BD_ComputeElementMass(uuN0(:,nelem),NGPpos,EMass0_GL,&
                                   ngp,gw,hhx,hpx,Jaco(:,nelem),&
                                   node_elem,dof_node,&
@@ -5433,16 +5379,14 @@ contains
 
 END SUBROUTINE BD_ComputeBladeMassNew
 
-SUBROUTINE BD_ComputeElementMass(Nuu0,NGPpos,EMass0_GL,&
-                                 ngp,gw,hhx,hpx,Jaco,&
-                                 node_elem,dof_node,&
+SUBROUTINE BD_ComputeElementMass(NGPpos,EMass0_GL,&
+                                 ngp,gw,Jaco,&
                                  elem_mass,elem_CG,elem_IN,ErrStat,ErrMsg)
 
 !-------------------------------------------------------------------------------
 ! This subroutine total element forces and mass matrices
 !-------------------------------------------------------------------------------
 
-   REAL(ReKi),INTENT(IN   )    :: Nuu0(:) ! Nodal initial position for each element !bjj: NOT USED
    REAL(ReKi),INTENT(IN   )    :: NGPpos(:,:)
    REAL(ReKi),INTENT(IN   )    :: EMass0_GL(:,:,:) ! Nodal material properties for each element
    REAL(ReKi),INTENT(  OUT)    :: elem_mass  ! Total element force (Fd, Fc, Fb)
@@ -5450,18 +5394,12 @@ SUBROUTINE BD_ComputeElementMass(Nuu0,NGPpos,EMass0_GL,&
    REAL(ReKi),INTENT(  OUT)    :: elem_IN(:,:)
    INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
    REAL(ReKi),    INTENT(IN   ):: gw(:)
-   REAL(ReKi),    INTENT(IN   ):: hhx(:,:) !bjj: NOT USED
-   REAL(ReKi),    INTENT(IN   ):: hpx(:,:) !bjj: NOT USED
    REAL(ReKi),    INTENT(IN   ):: Jaco(:)
-   INTEGER(IntKi),INTENT(IN   ):: node_elem ! Node per element !bjj: NOT USED
-   INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node !bjj: NOT USED
    INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
    REAL(ReKi)                  :: mmm
    INTEGER(IntKi)              :: igp
-!   INTEGER(IntKi)              :: i
-!   INTEGER(IntKi)              :: temp_id
 !   INTEGER(IntKi)              :: ErrStat2                     ! Temporary Error status
 !   CHARACTER(ErrMsgLen)        :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ComputeElementMass'
