@@ -232,6 +232,7 @@ CONTAINS
       Dest%Xelement   = Src%Xelement
       Dest%Nneighbors = Src%Nneighbors
       Dest%det_jac    = Src%det_jac
+      if (allocated(Src%ElemNodes)) &   ! bjj: 9/12/15 added this because of invalid memory address (harmless?) found with Inspector
       CALL Move_Alloc( Src%ElemNodes,  Dest%ElemNodes )
              
    END SUBROUTINE Mesh_MoveAlloc_ElemRecType
