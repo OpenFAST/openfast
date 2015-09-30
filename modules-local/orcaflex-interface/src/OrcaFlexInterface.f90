@@ -70,12 +70,12 @@ MODULE OrcaFlexInterface_Parameters
    INTEGER(IntKi), PARAMETER      :: OrcaMxi   =  4
    INTEGER(IntKi), PARAMETER      :: OrcaMyi   =  5
    INTEGER(IntKi), PARAMETER      :: OrcaMzi   =  6
-   INTEGER(IntKi), PARAMETER      :: OrcaFHFxi =  7
-   INTEGER(IntKi), PARAMETER      :: OrcaFHFyi =  8
-   INTEGER(IntKi), PARAMETER      :: OrcaFHFzi =  9
-   INTEGER(IntKi), PARAMETER      :: OrcaFHMxi = 10
-   INTEGER(IntKi), PARAMETER      :: OrcaFHMyi = 11
-   INTEGER(IntKi), PARAMETER      :: OrcaFHMzi = 12
+   INTEGER(IntKi), PARAMETER      :: OrcaHMFxi =  7
+   INTEGER(IntKi), PARAMETER      :: OrcaHMFyi =  8
+   INTEGER(IntKi), PARAMETER      :: OrcaHMFzi =  9
+   INTEGER(IntKi), PARAMETER      :: OrcaHMMxi = 10
+   INTEGER(IntKi), PARAMETER      :: OrcaHMMyi = 11
+   INTEGER(IntKi), PARAMETER      :: OrcaHMMzi = 12
    INTEGER(IntKi), PARAMETER      :: OrcaAMFxi = 13
    INTEGER(IntKi), PARAMETER      :: OrcaAMFyi = 14
    INTEGER(IntKi), PARAMETER      :: OrcaAMFzi = 15
@@ -254,7 +254,7 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       ! We are going to output all the possible outlist variables, so pass in to SetOutParam the full list
    TmpOutList  =  (/    &
                      "OrcaFxi  ","OrcaFyi  ","OrcaFzi  ","OrcaMxi  ","OrcaMyi  ","OrcaMzi  ",   &     ! Total forces / moments
-                     "OrcaFHFxi","OrcaFHFyi","OrcaFHFzi","OrcaFHMxi","OrcaFHMyi","OrcaFHMzi",   &     ! hydrodynamic contributions
+                     "OrcaHMFxi","OrcaHMFyi","OrcaHMFzi","OrcaHMMxi","OrcaHMMyi","OrcaHMMzi",   &     ! hydrodynamic contributions
                      "OrcaAMFxi","OrcaAMFyi","OrcaAMFzi","OrcaAMMxi","OrcaAMMyi","OrcaAMMzi"    &     ! Added mass contributions
                   /)
    p%NumOuts   =  MaxOutPts
@@ -999,15 +999,15 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
    CHARACTER(OutStrLenM1), PARAMETER  :: ValidParamAry(18) =  (/ &                  ! This lists the names of the allowed parameters, which must be sorted alphabetically
                                "ORCAAMFXI","ORCAAMFYI","ORCAAMFZI",  &
                                "ORCAAMMXI","ORCAAMMYI","ORCAAMMZI",  &
-                               "ORCAFHFXI","ORCAFHFYI","ORCAFHFZI",  &
-                               "ORCAFHMXI","ORCAFHMYI","ORCAFHMZI",  &
+                               "ORCAHMFXI","ORCAHMFYI","ORCAHMFZI",  &
+                               "ORCAHMMXI","ORCAHMMYI","ORCAHMMZI",  &
                                "ORCAFXI  ","ORCAFYI  ","ORCAFZI  ",  &
                                "ORCAMXI  ","ORCAMYI  ","ORCAMZI  "/)
    INTEGER(IntKi), PARAMETER :: ParamIndxAry(18) =  (/ &                            ! This lists the index into AllOuts(:) of the allowed parameters ValidParamAry(:)
                                 OrcaAMFxi , OrcaAMFyi , OrcaAMFzi ,  &
                                 OrcaAMMxi , OrcaAMMyi , OrcaAMMzi ,  &
-                                OrcaFHFxi , OrcaFHFyi , OrcaFHFzi ,  &
-                                OrcaFHMxi , OrcaFHMyi , OrcaFHMzi ,  &
+                                OrcaHMFxi , OrcaHMFyi , OrcaHMFzi ,  &
+                                OrcaHMMxi , OrcaHMMyi , OrcaHMMzi ,  &
                                   OrcaFxi ,   OrcaFyi ,   OrcaFzi ,  &
                                   OrcaMxi ,   OrcaMyi ,   OrcaMzi /)
    CHARACTER(ChanLen), PARAMETER :: ParamUnitsAry(18) =  (/ &                     ! This lists the units corresponding to the allowed parameters
@@ -1146,12 +1146,12 @@ SUBROUTINE SetAllOuts( ParamData, OutData, OtherState, ErrStat, ErrMsg )
    OtherState%AllOuts(  OrcaMyi  )  =  OutData%PtfmMesh%Moment(2,1)/1000_ReKi
    OtherState%AllOuts(  OrcaMzi  )  =  OutData%PtfmMesh%Moment(3,1)/1000_ReKi
 
-   OtherState%AllOuts(  OrcaFHFxi  )  =  OtherState%PtfmFT(1)/1000_ReKi
-   OtherState%AllOuts(  OrcaFHFyi  )  =  OtherState%PtfmFT(2)/1000_ReKi
-   OtherState%AllOuts(  OrcaFHFzi  )  =  OtherState%PtfmFT(3)/1000_ReKi
-   OtherState%AllOuts(  OrcaFHMxi  )  =  OtherState%PtfmFT(4)/1000_ReKi
-   OtherState%AllOuts(  OrcaFHMyi  )  =  OtherState%PtfmFT(5)/1000_ReKi
-   OtherState%AllOuts(  OrcaFHMzi  )  =  OtherState%PtfmFT(6)/1000_ReKi
+   OtherState%AllOuts(  OrcaHMFxi  )  =  OtherState%PtfmFT(1)/1000_ReKi
+   OtherState%AllOuts(  OrcaHMFyi  )  =  OtherState%PtfmFT(2)/1000_ReKi
+   OtherState%AllOuts(  OrcaHMFzi  )  =  OtherState%PtfmFT(3)/1000_ReKi
+   OtherState%AllOuts(  OrcaHMMxi  )  =  OtherState%PtfmFT(4)/1000_ReKi
+   OtherState%AllOuts(  OrcaHMMyi  )  =  OtherState%PtfmFT(5)/1000_ReKi
+   OtherState%AllOuts(  OrcaHMMzi  )  =  OtherState%PtfmFT(6)/1000_ReKi
 
    OtherState%AllOuts(  OrcaAMFxi  )  =  OtherState%F_PtfmAM(1)/1000_ReKi
    OtherState%AllOuts(  OrcaAMFyi  )  =  OtherState%F_PtfmAM(2)/1000_ReKi
@@ -1168,12 +1168,12 @@ SUBROUTINE SetAllOuts( ParamData, OutData, OtherState, ErrStat, ErrMsg )
    OutData%WriteOutput(  OrcaMyi  )  =  OutData%PtfmMesh%Moment(2,1)/1000_ReKi
    OutData%WriteOutput(  OrcaMzi  )  =  OutData%PtfmMesh%Moment(3,1)/1000_ReKi
 
-   OutData%WriteOutput(  OrcaFHFxi  )  =  OtherState%PtfmFT(1)/1000_ReKi
-   OutData%WriteOutput(  OrcaFHFyi  )  =  OtherState%PtfmFT(2)/1000_ReKi
-   OutData%WriteOutput(  OrcaFHFzi  )  =  OtherState%PtfmFT(3)/1000_ReKi
-   OutData%WriteOutput(  OrcaFHMxi  )  =  OtherState%PtfmFT(4)/1000_ReKi
-   OutData%WriteOutput(  OrcaFHMyi  )  =  OtherState%PtfmFT(5)/1000_ReKi
-   OutData%WriteOutput(  OrcaFHMzi  )  =  OtherState%PtfmFT(6)/1000_ReKi
+   OutData%WriteOutput(  OrcaHMFxi  )  =  OtherState%PtfmFT(1)/1000_ReKi
+   OutData%WriteOutput(  OrcaHMFyi  )  =  OtherState%PtfmFT(2)/1000_ReKi
+   OutData%WriteOutput(  OrcaHMFzi  )  =  OtherState%PtfmFT(3)/1000_ReKi
+   OutData%WriteOutput(  OrcaHMMxi  )  =  OtherState%PtfmFT(4)/1000_ReKi
+   OutData%WriteOutput(  OrcaHMMyi  )  =  OtherState%PtfmFT(5)/1000_ReKi
+   OutData%WriteOutput(  OrcaHMMzi  )  =  OtherState%PtfmFT(6)/1000_ReKi
 
    OutData%WriteOutput(  OrcaAMFxi  )  =  OtherState%F_PtfmAM(1)/1000_ReKi
    OutData%WriteOutput(  OrcaAMFyi  )  =  OtherState%F_PtfmAM(2)/1000_ReKi
