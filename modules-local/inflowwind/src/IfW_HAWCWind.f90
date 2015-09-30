@@ -321,11 +321,11 @@ SUBROUTINE ReadTurbulenceData(p, InitInp, ErrStat, ErrMsg)
          DO IY = p%ny,1,-1
             !DO IZ = 1,p%nz
 
-               READ( UnWind, IOSTAT=ErrStat ) p%HAWCData(:,iy,ix,ic)  ! note that HAWCData is SiKi (4-byte reals, not default kinds)
+               READ( UnWind, IOSTAT=TmpErrStat ) p%HAWCData(:,iy,ix,ic)  ! note that HAWCData is SiKi (4-byte reals, not default kinds)
 
                IF (ErrStat /= 0) THEN
                   TmpErrMsg = ' Error reading binary data from "'//TRIM(InitInp%WindFileName(IC))//'". I/O error ' &
-                                       //TRIM(Num2LStr(ErrStat))//' occurred at IY='//TRIM(Num2LStr(IY))//', IX='//TRIM(Num2LStr(IX))//'.'
+                                       //TRIM(Num2LStr(TmpErrStat))//' occurred at IY='//TRIM(Num2LStr(IY))//', IX='//TRIM(Num2LStr(IX))//'.'
                   CLOSE ( UnWind )
                   CALL SetErrStat(ErrID_Fatal, TmpErrMsg, ErrStat, ErrMsg, RoutineName) 
                   RETURN
@@ -504,6 +504,10 @@ SUBROUTINE AddMeanVelocity(p, InitInp, ErrStat, ErrMsg)
                U = 0.0_ReKi
             ENDIF
 
+      CASE ( WindProfileType_Constant )
+         
+           U = p%URef            
+            
       CASE DEFAULT
          
             U = 0.0_ReKi

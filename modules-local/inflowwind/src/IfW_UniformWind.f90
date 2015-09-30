@@ -718,12 +718,17 @@ CONTAINS
       ! calculate the wind speed at this time
       !-------------------------------------------------------------------------------------------------
 
+      if ( InputPosition(3) < 0.0_ReKi ) then
+         call SetErrStat(ErrID_Fatal,'Height must not be negative.',ErrStat,ErrMsg,'GetWindSpeed')
+      end if
+      
+      
       CosDelta = COS( Delta_tmp )
       SinDelta = SIN( Delta_tmp )
       V1 = V_tmp * ( ( InputPosition(3)/ParamData%RefHt ) ** VShr_tmp &                                  ! power-law wind shear
-           + ( HShr_tmp   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &                ! horizontal linear shear
-           +  VLinShr_tmp * ( InputPosition(3)-ParamData%RefHt ) )/ParamData%RefLength  ) &            ! vertical linear shear
-           + VGust_tmp                                                                                     ! gust speed
+           + ( HShr_tmp   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &              ! horizontal linear shear
+           +  VLinShr_tmp * ( InputPosition(3)-ParamData%RefHt ) )/ParamData%RefLength  ) &              ! vertical linear shear
+           + VGust_tmp                                                                                   ! gust speed
       GetWindSpeed(1) =  V1 * CosDelta
       GetWindSpeed(2) = -V1 * SinDelta
       GetWindSpeed(3) =  VZ_tmp
