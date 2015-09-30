@@ -59,30 +59,31 @@ SUBROUTINE DispHelpText( ErrStat, ErrMsg )
    CALL WrScr("")
    CALL WrScr("       where:     <filename>     -- Name of driver input file to use")
    CALL WrScr("     options:     "//SWChar//"ifw           -- treat <filename> as name of InflowWind input file")
+   CALL WrScr("                                    (no driver input file)")
    CALL WrScr("")
    CALL WrScr("              The following options will overwrite values in the driver input file:")
    CALL WrScr("                  "//SwChar//"DT[#]         -- timestep                                        ")
    CALL WrScr("                  "//SwChar//"TStart[#]     -- start time                                      ")
-   CALL WrScr("                  "//SwChar//"TSteps[#]     -- number of timesteps                             [N/A]")
-   CALL WrScr("                  "//SwChar//"xrange[#:#]   -- range of x (#'s are reals)        (command line only)")
+   CALL WrScr("                  "//SwChar//"TSteps[#]     -- number of timesteps                             ")
+   CALL WrScr("                  "//SwChar//"xrange[#:#]   -- range of x (#'s are reals)                      ")
    CALL WrScr("                  "//SwChar//"yrange[#:#]   -- range of y                                      ")
    CALL WrScr("                  "//SwChar//"zrange[#:#]   -- range in z (ground = 0.0)                       ")
    CALL WrScr("                  "//SwChar//"Dx[#]         -- spacing in x                                    ")
    CALL WrScr("                  "//SwChar//"Dy[#]         -- spacing in y                                    ")
    CALL WrScr("                  "//SwChar//"Dz[#]         -- spacing in z                                    ")
-   CALL WrScr("                  "//SwChar//"sum           -- summarize wind file info                        [N/A]")
-   CALL WrScr("                  "//SwChar//"FFT[X,Y,Z]    -- an fft over all t using specified DT at X,Y,Z   [N/A]")
-   CALL WrScr("                  "//SwChar//"points[FILE]  -- calculates at x,y,z coordinates specified in a  [N/A]")
+!   CALL WrScr("                  "//SwChar//"sum           -- summarize wind file info                        [N/A]")
+!   CALL WrScr("                  "//SwChar//"FFT[X,Y,Z]    -- an fft over all t using specified DT at X,Y,Z   [N/A]")
+   CALL WrScr("                  "//SwChar//"points[FILE]  -- calculates at x,y,z coordinates specified in a  ")
    CALL WrScr("                                    white space delimited FILE")
-   CALL WrScr("                  "//SwChar//"v             -- increase verbose level to 7 ")
-   CALL WrScr("                  "//SwChar//"vv            -- increase verbose level to 10 ")
+   CALL WrScr("                  "//SwChar//"v             -- verbose output ")
+   CALL WrScr("                  "//SwChar//"vv            -- very verbose output ")
    CALL WrScr("                  "//SwChar//"help          -- print this help menu and exit")
    CALL WrScr("")
    CALL WrScr("   Notes:")
    CALL WrScr("   -- Unspecified ranges and resolutions default to what is in the file.")
-   CALL WrScr("   -- Features marked [N/A] have not been implimented in this version.")
-   CALL WrScr("   -- Options are not case sensitive.")
    CALL WrScr("   -- If no XRange is specified, assumed to be only at X=0")
+!   CALL WrScr("   -- Features marked [N/A] have not been implimented in this version.")
+   CALL WrScr("   -- Options are not case sensitive.")
    CALL WrScr("")
 
 
@@ -1313,9 +1314,10 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
          CALL SetErrStat( ErrID_Warn, ' Overriding driver input value for DT with '//TRIM(Num2LStr(CLSettings%DT))//'.',  &
             ErrStat,ErrMsg,'UpdateSettingsWithCL')
       ELSE
-         DvrFlags%DT   =  .TRUE.
+         DvrFlags%DT       =  .TRUE.
       ENDIF
-      DvrSettings%DT   =  CLSettings%DT
+      DvrSettings%DT       =  CLSettings%DT
+      DvrFlags%DTDefault   =  .FALSE.
    ENDIF
 
       ! Check NumTimeSteps
@@ -1325,9 +1327,10 @@ SUBROUTINE UpdateSettingsWithCL( DvrFlags, DvrSettings, CLFlags, CLSettings, DVR
             TRIM(Num2LStr(CLSettings%NumTimeSteps))//'.',&
             ErrStat,ErrMsg,'UpdateSettingsWithCL')
       ELSE
-         DvrFlags%NumTimeSteps   =  .TRUE.
+         DvrFlags%NumTimeSteps      =  .TRUE.
       ENDIF
-      DvrSettings%NumTimeSteps   =  CLSettings%NumTimeSteps
+      DvrSettings%NumTimeSteps      =  CLSettings%NumTimeSteps
+      DvrFlags%NumTimeStepsDefault  =  .FALSE.
    ENDIF
 
       ! Make sure there is at least one timestep
