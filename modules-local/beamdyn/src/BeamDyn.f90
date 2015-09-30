@@ -947,7 +947,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL BD_ComputeBladeMassNew(p%uuN0,p%Mass0_GL,p%Gauss,p%elem_total,p%node_elem,p%dof_total,&
-                               p%dof_node,p%ngp,p%GLw,p%Shp,p%Der,p%Jacobian,&
+                               p%dof_node,p%quadrature,p%ngp,p%GLw,p%Shp,p%Der,p%Jacobian,&
                                p%blade_mass,p%blade_CG,p%blade_IN,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CalcIC(u_tmp,p,x,OtherState,ErrStat2,ErrMsg2)
@@ -5333,7 +5333,7 @@ END SUBROUTINE BD_InitAcc
 
 SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
                                   elem_total,node_elem,dof_total,dof_node,&
-                                  ngp,gw,hhx,hpx,Jaco,&
+                                  quadrature,ngp,gw,hhx,hpx,Jaco,&
                                   blade_mass,blade_CG,blade_IN,ErrStat,ErrMsg)
 !----------------------------------------------------------------------------------------
 ! This subroutine computes Global mass matrix and force vector for the beam.
@@ -5345,6 +5345,7 @@ SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
    INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
    INTEGER(IntKi),    INTENT(IN   ):: dof_total ! Degrees of freedom per node  ! bjj: NOT USED
    INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature
    INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
    REAL(ReKi),        INTENT(IN   ):: gw(:) 
    REAL(ReKi),        INTENT(IN   ):: hhx(:,:) 
@@ -5394,9 +5395,12 @@ SUBROUTINE BD_ComputeBladeMassNew(uuN0,Mass0,GaussPos,         &
        temp_id = (nelem-1)*ngp
        DO j=1,ngp
            EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
-           NGPpos(1:3,j) = GaussPos(1:3,temp_id+j+1)
+           IF(quadrature .EQ. 1) THEN
+               NGPpos(1:3,j) = GaussPos(1:3,temp_id+j+1)
+           ELSEIF(quadrature .EQ. 2) THEN
+               NGPpos(1:3,j) = GaussPos(1:3,temp_id+j)
+           ENDIF 
        ENDDO
-
        CALL BD_ComputeElementMass(uuN0(:,nelem),NGPpos,EMass0_GL,&
                                   ngp,gw,hhx,hpx,Jaco(:,nelem),&
                                   node_elem,dof_node,&
