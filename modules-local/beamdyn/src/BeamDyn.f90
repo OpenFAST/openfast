@@ -47,14 +47,14 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 ! The initial states and initial guess for the input are defined.
 !..................................................................................................................................
 
-   TYPE(BD_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
-   TYPE(BD_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
-   TYPE(BD_ParameterType),       INTENT(  OUT)  :: p           ! Parameters
-   TYPE(BD_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
-   TYPE(BD_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
-   TYPE(BD_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-   TYPE(BD_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states
-   TYPE(BD_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated;
+   TYPE(BD_InitInputType),            INTENT(IN   )  :: InitInp     ! Input data for initialization routine
+   TYPE(BD_InputType),                INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
+   TYPE(BD_ParameterType),            INTENT(  OUT)  :: p           ! Parameters
+   TYPE(BD_ContinuousStateType),      INTENT(  OUT)  :: x           ! Initial continuous states
+   TYPE(BD_DiscreteStateType),        INTENT(  OUT)  :: xd          ! Initial discrete states
+   TYPE(BD_ConstraintStateType),      INTENT(  OUT)  :: z           ! Initial guess of the constraint states
+   TYPE(BD_OtherStateType),           INTENT(  OUT)  :: OtherState  ! Initial other/optimization states
+   TYPE(BD_OutputType),               INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated;
                                                                     !    only the output mesh is initialized)
    REAL(DbKi),                        INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that
                                                                     !   (1) Mod1_UpdateStates() is called in loose coupling &
@@ -72,10 +72,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    INTEGER(IntKi)          :: j                ! do-loop counter
    INTEGER(IntKi)          :: k                ! do-loop counter
    INTEGER(IntKi)          :: m                ! do-loop counter
-!   INTEGER(IntKi)          :: n                ! do-loop counter
    INTEGER(IntKi)          :: id0
    INTEGER(IntKi)          :: id1
-   INTEGER(IntKi)          :: indx             ! do-loop counter
    INTEGER(IntKi)          :: temp_int
    INTEGER(IntKi)          :: temp_id
    INTEGER(IntKi)          :: temp_id2
@@ -95,7 +93,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    REAL(ReKi),ALLOCATABLE  :: SP_Coef(:,:,:)
    REAL(ReKi)              :: TmpPos(3)
    REAL(ReKi)              :: TmpDCM(3,3)
-   REAL(ReKi)              :: temp_glb(3)
+   REAL(ReKi)              :: temp_glb(3)                  ! CRV parameters of p%GlbRot
    REAL(ReKi)              :: denom
 
    INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
@@ -134,18 +132,18 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%GlbPos(2)     = InitInp%GlbPos(1)
    p%GlbPos(3)     = InitInp%GlbPos(2)
 
-   p%GlbRot(1:3,1:3) = TRANSPOSE(InitInp%GlbRot(1:3,1:3))
+   p%GlbRot = TRANSPOSE(InitInp%GlbRot)
    CALL BD_CrvExtractCrv(p%GlbRot,TmpPos,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    temp_glb(1) = TmpPos(3)
    temp_glb(2) = TmpPos(1)
    temp_glb(3) = TmpPos(2)
-   CALL BD_CrvMatrixR(temp_glb,p%GlbRot,ErrStat2,ErrMsg2)
+   CALL BD_CrvMatrixR(temp_glb,p%GlbRot,ErrStat2,ErrMsg2) !given temp_glb, returns p%GlbRot
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    temp_POS(1) = InitInp%gravity(3)
    temp_POS(2) = InitInp%gravity(1)
    temp_POS(3) = InitInp%gravity(2)
-   p%gravity(:) = MATMUL(TRANSPOSE(p%GlbRot),temp_POS)
+   p%gravity = MATMUL(TRANSPOSE(p%GlbRot),temp_POS)
 
    ! Analysis type: 1 Static 2 Dynamic
    p%analysis_type  = InputFileData%analysis_type
@@ -669,19 +667,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        
    ENDIF
 
-   temp_int = p%node_elem*p%elem_total
-   CALL MeshCreate( BlankMesh        = y%BldMotion        &
-                   ,IOS              = COMPONENT_OUTPUT   &
-                   ,NNodes           = temp_int           &
-                   ,TranslationDisp  = .TRUE.             &
-                   ,Orientation      = .TRUE.             &
-                   ,TranslationVel   = .TRUE.             &
-                   ,RotationVel      = .TRUE.             &
-                   ,TranslationAcc   = .TRUE.             &
-                   ,RotationAcc      = .TRUE.             &
-                   ,ErrStat          = ErrStat2            &
-                   ,ErrMess          = ErrMsg2             )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL MeshConstructElement ( Mesh = u%RootMotion            &
                              , Xelement = ELEMENT_POINT      &
@@ -771,54 +756,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDDO
    ENDDO
-   DO i=1,p%elem_total
-       DO j=1,p%node_elem
-           temp_id = (j-1)*p%dof_node
-           temp_POS(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
-           TmpPos(1) = temp_POS(2)
-           TmpPos(2) = temp_POS(3)
-           TmpPos(3) = temp_POS(1)
-           temp_CRV(:) = MATMUL(p%GlbRot,p%uuN0(temp_id+4:temp_id+6,i))
-           CALL BD_CrvCompose(temp_POS,temp_glb,temp_CRV,0,ErrStat2,ErrMsg2)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           temp_CRV(1) = temp_POS(2)
-           temp_CRV(2) = temp_POS(3)
-           temp_CRV(3) = temp_POS(1)
-           CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           TmpDCM(:,:) = TRANSPOSE(TmpDCM)
-           temp_id = (i-1)*p%node_elem+j
-           CALL MeshPositionNode ( Mesh    = y%BldMotion  &
-                                  ,INode   = temp_id      &
-                                  ,Pos     = TmpPos       &
-                                  ,ErrStat = ErrStat2      &
-                                  ,ErrMess = ErrMsg2       &
-                                  ,Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           
-       ENDDO
-   ENDDO
-   
-   temp_int = p%node_elem*p%elem_total
-   p%NdIndx(1) = 1
-   indx = 2
-   DO i=1,temp_int-1
-      
-      if (.not. equalRealNos( TwoNorm( y%BldMotion%Position(:,i)-y%BldMotion%Position(:,i+1) ), 0.0_ReKi ) ) then
-         p%NdIndx(indx) = i + 1
-         indx = indx + 1;
-         ! do not connect nodes that are collocated
-          CALL MeshConstructElement( Mesh     = y%BldMotion      &
-                                    ,Xelement = ELEMENT_LINE2    &
-                                    ,P1       = i                &
-                                    ,P2       = i+1              &
-                                    ,ErrStat  = ErrStat2         &
-                                    ,ErrMess  = ErrMsg2           )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      end if
-      
-   ENDDO
-   
+
 
    IF(p%quadrature .EQ. 1) THEN
        DO i=1,p%ngp*p%elem_total+2
@@ -883,33 +821,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
 
-   CALL MeshCopy ( SrcMesh  = u%PointLoad      &
-                 , DestMesh = y%BldForce       &
-                 , CtrlCode = MESH_SIBLING     &
-                 , IOS      = COMPONENT_OUTPUT &
-                 , Force           = .TRUE.    &
-                 , Moment          = .TRUE.    &
-                 , ErrStat  = ErrStat2          &
-                 , ErrMess  = ErrMsg2           )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL MeshCopy( SrcMesh   = u%RootMotion     &
-                 , DestMesh = y%ReactionForce  &
-                 , CtrlCode = MESH_SIBLING     &
-                 , IOS      = COMPONENT_OUTPUT &
-                 , Force           = .TRUE.    &
-                 , Moment          = .TRUE.    &
-                 , ErrStat  = ErrStat2          &
-                 , ErrMess  = ErrMsg2           )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-   CALL MeshCommit ( Mesh    = y%ReactionForce &
-                    ,ErrStat = ErrStat2         &
-                    ,ErrMess = ErrMsg2          )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL MeshCommit ( Mesh    = y%BldMotion     &
-                    ,ErrStat = ErrStat2         &
-                    ,ErrMess = ErrMsg2          )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
@@ -995,27 +907,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    end if   
 ! END Actuator
    
-! Define initial guess for the system outputs here:
-
-   y%BldForce%Force(:,:)    = 0.0D0
-   y%BldForce%Moment(:,:)   = 0.0D0
-
-   y%ReactionForce%Force(:,:)    = 0.0D0
-   y%ReactionForce%Moment(:,:)   = 0.0D0
-
-   y%BldMotion%TranslationDisp(:,:) = 0.0D0
-   y%BldMotion%Orientation(:,:,:)   = 0.0D0
-
-   y%BldMotion%TranslationVel(:,:)  = 0.0D0
-   y%BldMotion%RotationVel(:,:)     = 0.0D0
-   y%BldMotion%TranslationAcc(:,:)  = 0.0D0
-   y%BldMotion%RotationAcc(:,:)     = 0.0D0
-
-   ! set remap flags to true
-   y%ReactionForce%RemapFlag = .True.
-   y%BldForce%RemapFlag = .True.
-   y%BldMotion%RemapFlag = .True.
-   u%RootMotion%RemapFlag = .True.
 
    ! set data for File I/O data:
    !...............................................
@@ -1027,12 +918,18 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return  
       
-   call AllocAry( y%WriteOutput, p%numOuts, 'WriteOutput', errStat2, errMsg2 )
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
    call SetInitOut(p, InitOut, errStat, errMsg)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
    !...............................................
+   ! initialize outputs
+   !...............................................
+      
+   call Init_y(temp_glb, p, u, y, ErrStat2, ErrMsg2)
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+   !...............................................
+      
       
        ! Print the summary file if requested:
    if (InputFileData%SumPrint) then
@@ -1068,8 +965,8 @@ subroutine SetInitOut(p, InitOut, errStat, errMsg)
 
    type(BD_InitOutputType),       intent(  out)  :: InitOut          ! output data
    type(BD_ParameterType),        intent(in   )  :: p                ! Parameters
-   integer(IntKi),                intent(inout)  :: errStat          ! Error status of the operation
-   character(*),                  intent(inout)  :: errMsg           ! Error message if ErrStat /= ErrID_None
+   integer(IntKi),                intent(  out)  :: errStat          ! Error status of the operation
+   character(*),                  intent(  out)  :: errMsg           ! Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -1102,6 +999,173 @@ subroutine SetInitOut(p, InitOut, errStat, errMsg)
    
 end subroutine SetInitOut
 !-----------------------------------------------------------------------------------------------------------------------------------
+subroutine Init_y(temp_glb, p, u, y, ErrStat, ErrMsg)
+
+   real(BDKi),                   intent(in   )  :: temp_glb(3)       ! CRV parameters of p%GlbRot
+   type(BD_ParameterType),       intent(inout)  :: p                 ! Parameters  ! intent(out) only because it changes p%NdIndx
+   type(BD_InputType),           intent(inout)  :: u                 ! Inputs
+   type(BD_OutputType),          intent(inout)  :: y                 ! Outputs
+   integer(IntKi),               intent(  out)  :: ErrStat           ! Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+
+      ! local variables
+   real(ReKi)                                   :: DCM(3,3)
+   real(BDKi)                                   :: TmpDCM(3,3)
+   real(BDKi)                                   :: TmpPos(3)
+   real(BDKi)                                   :: temp_POS(3)
+   real(BDKi)                                   :: temp_CRV(3)
+   
+   integer(intKi)                               :: temp_id        
+   integer(intKi)                               :: i,j,indx          ! loop counters
+   integer(intKi)                               :: NNodes            ! number of nodes in mesh
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'Init_y'
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   
+   !.................................
+   ! y%BldForce
+   !.................................
+   CALL MeshCopy ( SrcMesh  = u%PointLoad      &
+                 , DestMesh = y%BldForce       &
+                 , CtrlCode = MESH_SIBLING     &
+                 , IOS      = COMPONENT_OUTPUT &
+                 , Force    = .TRUE.           &
+                 , Moment   = .TRUE.           &
+                 , ErrStat  = ErrStat2         &
+                 , ErrMess  = ErrMsg2          )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      ! initialization (not necessary)
+   !y%BldForce%Force(:,:)  = 0.0_BDKi
+   !y%BldForce%Moment(:,:) = 0.0_BDKi
+      
+   !.................................
+   ! y%ReactionForce
+   !.................................
+      
+   CALL MeshCopy( SrcMesh   = u%RootMotion     &
+                 , DestMesh = y%ReactionForce  &
+                 , CtrlCode = MESH_SIBLING     &
+                 , IOS      = COMPONENT_OUTPUT &
+                 , Force    = .TRUE.           &
+                 , Moment   = .TRUE.           &
+                 , ErrStat  = ErrStat2         &
+                 , ErrMess  = ErrMsg2          )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
+      ! initialization (not necessary)
+      
+   !y%ReactionForce%Force(:,:)  = 0.0_BDKi
+   !y%ReactionForce%Moment(:,:) = 0.0_BDKi
+
+      
+   !.................................
+   ! y%BldMotion
+   !.................................
+      
+   NNodes = p%node_elem*p%elem_total
+   CALL MeshCreate( BlankMesh        = y%BldMotion        &
+                   ,IOS              = COMPONENT_OUTPUT   &
+                   ,NNodes           = NNodes             &
+                   ,TranslationDisp  = .TRUE.             &
+                   ,Orientation      = .TRUE.             &
+                   ,TranslationVel   = .TRUE.             &
+                   ,RotationVel      = .TRUE.             &
+                   ,TranslationAcc   = .TRUE.             &
+                   ,RotationAcc      = .TRUE.             &
+                   ,ErrStat          = ErrStat2           &
+                   ,ErrMess          = ErrMsg2             )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   
+      ! position nodes
+   DO i=1,p%elem_total
+      DO j=1,p%node_elem
+         
+           temp_id = (j-1)*p%dof_node
+           
+           temp_POS = p%GlbPos + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+           TmpPos(1) = temp_POS(2)
+           TmpPos(2) = temp_POS(3)
+           TmpPos(3) = temp_POS(1)
+           
+           temp_CRV = MATMUL(p%GlbRot,p%uuN0(temp_id+4:temp_id+6,i))
+           CALL BD_CrvCompose(temp_POS,temp_glb,temp_CRV,0,ErrStat2,ErrMsg2) !given temp_glb and temp_CRV, returns temp_POS
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+              
+           temp_CRV(1) = temp_POS(2)
+           temp_CRV(2) = temp_POS(3)
+           temp_CRV(3) = temp_POS(1)
+           
+           CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )              
+           DCM = TRANSPOSE(TmpDCM)
+           
+           temp_id = (i-1)*p%node_elem+j
+           CALL MeshPositionNode ( Mesh    = y%BldMotion   &
+                                  ,INode   = temp_id       &
+                                  ,Pos     = TmpPos        &
+                                  ,ErrStat = ErrStat2      &
+                                  ,ErrMess = ErrMsg2       &
+                                  ,Orient  = DCM           )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           
+       ENDDO
+   ENDDO
+   
+      ! create elements and create index array
+   
+   !NNodes = p%node_elem*p%elem_total
+   p%NdIndx(1) = 1
+   indx = 2
+   DO i=1,NNodes-1
+      
+      if (.not. equalRealNos( TwoNorm( y%BldMotion%Position(:,i)-y%BldMotion%Position(:,i+1) ), 0.0_ReKi ) ) then
+         p%NdIndx(indx) = i + 1
+         indx = indx + 1;
+         ! do not connect nodes that are collocated
+          CALL MeshConstructElement( Mesh     = y%BldMotion      &
+                                    ,Xelement = ELEMENT_LINE2    &
+                                    ,P1       = i                &
+                                    ,P2       = i+1              &
+                                    ,ErrStat  = ErrStat2         &
+                                    ,ErrMess  = ErrMsg2          )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      end if
+      
+   ENDDO
+         
+            
+   CALL MeshCommit ( Mesh    = y%BldMotion     &
+                    ,ErrStat = ErrStat2        &
+                    ,ErrMess = ErrMsg2         )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+   
+   
+      ! initialization (not necessary)
+
+   !y%BldMotion%TranslationDisp(:,:) = 0.0_BDKi
+   !y%BldMotion%Orientation(:,:,:)   = 0.0_BDKi
+   !y%BldMotion%TranslationVel(:,:)  = 0.0_BDKi
+   !y%BldMotion%RotationVel(:,:)     = 0.0_BDKi
+   !y%BldMotion%TranslationAcc(:,:)  = 0.0_BDKi
+   !y%BldMotion%RotationAcc(:,:)     = 0.0_BDKi
+   
+   
+   !.................................
+   ! y%WriteOutput
+   !.................................
+   
+   call AllocAry( y%WriteOutput, p%numOuts, 'WriteOutput', errStat2, errMsg2 )
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+   
+end subroutine Init_y
+!-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !
    ! This routine is called at the end of the simulation.
@@ -1114,8 +1178,8 @@ SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    TYPE(BD_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
    TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
    TYPE(BD_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    ! Initialize ErrStat
 
