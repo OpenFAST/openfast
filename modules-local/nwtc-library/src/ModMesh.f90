@@ -1637,6 +1637,12 @@ CONTAINS
 
      !TYPE(ElemListType), POINTER :: tmp(:)
 
+     IF (Mesh%Committed) then
+       ErrStat = ErrID_Warn
+       ErrMess = "MeshCommit: mesh was already committed."
+       RETURN  ! Early return
+     ENDIF
+     
      ! Check for spatial constraints -- can't mix 1D with 2D with 3D
      n0d = Mesh%ElemTable(ELEMENT_POINT)%nelem
      n1d = Mesh%ElemTable(ELEMENT_LINE2)%nelem+Mesh%ElemTable(ELEMENT_LINE3)%nelem
