@@ -765,13 +765,13 @@ PROGRAM InflowWind_Driver
       !  used because we don't want linewrapping.
    IF ( IfWDriver_Verbose >= 10_IntKi ) THEN
 
-      print*,NewLine//NewLine//'   DiskVel:  ( '//TRIM(num2lstr(inflowwind_y1%diskvel(1)))//', '//             &
+      write(*,'(A)'),NewLine//NewLine//'   DiskVel:  ( '//TRIM(num2lstr(inflowwind_y1%diskvel(1)))//', '//             &
                   TRIM(num2lstr(inflowwind_y1%diskvel(2)))//', '//TRIM(num2lstr(inflowwind_y1%diskvel(3)))//' )'
-      print*,NewLine//NewLine//'   Requested wind points and writeoutput results at last timestep (t='//       &
+      write(*,'(A)'),NewLine//NewLine//'   Requested wind points and writeoutput results at last timestep (t='//       &
                   TRIM(Num2LStr(TimeNow))//'):'//NewLine
-      print*,'          ------ WindViXYZ ---------    ----- WindViUVW ---------           -- AllOuts --     '//      &
+      write(*,'(A)'),'          ------ WindViXYZ ---------    ----- WindViUVW ---------           -- AllOuts --     '//      &
                   '------------- WriteOutput -------------'
-      print*,' Index,      coord,        name             Vector value                        Value         '//      &
+      write(*,'(A)'),' Index,      coord,        name             Vector value                        Value         '//      &
                   ' Name        Unit   OutIndex     Value'
       DO I = 1,27
          ErrMsgTmp   =  ''
@@ -794,7 +794,7 @@ PROGRAM InflowWind_Driver
                ErrMsgTmp   =  ErrMsgTmp(1:126)//TRIM(Num2LStr(InflowWind_y1%WriteOutput(J)))
             ENDIF 
          ENDDO
-         print*,TRIM(ErrMsgTmp)
+         write(*,'(A)'),TRIM(ErrMsgTmp)
       ENDDO
    ENDIF
    
