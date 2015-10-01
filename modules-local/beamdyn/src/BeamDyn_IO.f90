@@ -1335,7 +1335,7 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
          
    IF(InputFileData%analysis_type .NE. 1 .AND. InputFileData%analysis_type .NE. 2) &
        CALL SetErrStat ( ErrID_Fatal, 'Analysis type must be 1 (static) or 2 (dynamic)', ErrStat, ErrMsg, RoutineName )
-   IF(InputFileData%rhoinf .LT. 0.0 .OR. InputFileData%rhoinf .GT. 1.0) &
+   IF(InputFileData%rhoinf .LT. 0.0_BDKi .OR. InputFileData%rhoinf .GT. 1.0_BDKi) &
        CALL SetErrStat ( ErrID_Fatal, 'Numerical damping parameter \rho_{inf} must be in the range of [0.0,1.0]', ErrStat, ErrMsg, RoutineName )
    IF(InputFileData%quadrature .NE. 1 .AND. InputFileData%quadrature .NE. 2) &
        CALL SetErrStat ( ErrID_Fatal, 'Quadrature type must be 1 (Gauss) or 2 (Trapezoidal)', ErrStat, ErrMsg, RoutineName )
@@ -1365,9 +1365,9 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
        
    IF(InputFileData%InpBl%station_total .LT. 2 ) &
        CALL SetErrStat ( ErrID_Fatal, 'Number of material stations along blade axis much be greater than 2', ErrStat, ErrMsg, RoutineName )
-   IF(InputFileData%InpBl%station_eta(1) .NE. 0.0 ) &
+   IF(InputFileData%InpBl%station_eta(1) .NE. 0.0_BDKi ) &
        CALL SetErrStat ( ErrID_Fatal, 'The first station_eta must be equal to 0.0 (root)', ErrStat, ErrMsg, RoutineName )
-   IF(InputFileData%InpBl%station_eta(InputFileData%InpBl%station_total) .NE. 1.0 ) &
+   IF(InputFileData%InpBl%station_eta(InputFileData%InpBl%station_total) .NE. 1.0_BDKi ) &
        CALL SetErrStat ( ErrID_Fatal, 'The last station_eta must be equal to 1.0 (tip)', ErrStat, ErrMsg, RoutineName )
    
    IF (InputFileData%NRMax < 2) CALL SetErrStat ( ErrID_Fatal, 'Maximum number of iterations in Newton-Raphson (NRMax) must be greater than 1.', ErrStat, ErrMsg, RoutineName )
@@ -1375,7 +1375,7 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
       CALL SetErrStat ( ErrID_Fatal, 'Tolerance for stopping (stop_tol) must be larger than machine precision ('//trim(num2lstr(EPSILON(InputFileData%stop_tol)))//').', ErrStat, ErrMsg, RoutineName )
        
    if (InputFileData%UsePitchAct) then
-      if ( EqualRealNos(InputFileData%pitchJ, 0.0_ReKi) ) call SetErrStat(ErrID_Fatal,'Pitch actuator inertia must not be 0.',ErrStat,ErrMsg,RoutineName)
+      if ( EqualRealNos(InputFileData%pitchJ, 0.0_BDKi) ) call SetErrStat(ErrID_Fatal,'Pitch actuator inertia must not be 0.',ErrStat,ErrMsg,RoutineName)
    end if
    
    
@@ -1422,17 +1422,17 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    INTEGER(IntKi)                            :: elem_no
    INTEGER(IntKi)                            :: node_no
    INTEGER(IntKi)                            :: temp_id
-   REAL(ReKi)                                :: temp_glb(3)
-   REAL(ReKi)                                :: temp_vec(3)
-   REAL(ReKi)                                :: temp_vec2(3)
-   REAL(ReKi)                                :: temp_glbp(3)
-   REAL(ReKi)                                :: temp_roott(3)
-   REAL(ReKi)                                :: temp_tip0(3)
-   REAL(ReKi)                                :: temp_ini(3)
-   REAL(ReKi)                                :: temp_cur(3)
-   REAL(ReKi)                                :: temp_cc(3)
-   REAL(ReKi)                                :: temp_R(3,3)
-   REAL(ReKi)                                :: temp33(3,3)
+   REAL(BDKi)                                :: temp_glb(3)
+   REAL(BDKi)                                :: temp_vec(3)
+   REAL(BDKi)                                :: temp_vec2(3)
+   REAL(BDKi)                                :: temp_glbp(3)
+   REAL(BDKi)                                :: temp_roott(3)
+   REAL(BDKi)                                :: temp_tip0(3)
+   REAL(BDKi)                                :: temp_ini(3)
+   REAL(BDKi)                                :: temp_cur(3)
+   REAL(BDKi)                                :: temp_cc(3)
+   REAL(BDKi)                                :: temp_R(3,3)
+   REAL(BDKi)                                :: temp33(3,3)
    
    
       ! start routine:

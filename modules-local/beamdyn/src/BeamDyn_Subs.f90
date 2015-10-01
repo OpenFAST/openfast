@@ -242,7 +242,7 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag, ErrStat, ErrMsg)
        qq2 = qq(2)
        qq3 = qq(3)
    ENDIF
-   qq0 = 2.0D0 - (qq1 * qq1 + qq2 * qq2 + qq3 * qq3)/8.0_BDKi
+   qq0 = 2.0_BDKi - (qq1 * qq1 + qq2 * qq2 + qq3 * qq3)/8.0_BDKi
 
    tr1 = (4.0_BDKi - pp0) * (4.0_BDKi - qq0)
    tr2 = pp0 * qq0 - pp1 * qq1 - pp2 * qq2 - pp3 * qq3
@@ -452,7 +452,5 @@ SUBROUTINE BD_MotionTensor(RotTen,Pos,MotTen,flag)
 
 END SUBROUTINE BD_MotionTensor
 !-----------------------------------------------------------------------------------------------------------------------------------
-
-
 
 END MODULE BeamDyn_Subs
