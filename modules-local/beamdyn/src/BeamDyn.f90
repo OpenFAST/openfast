@@ -590,268 +590,23 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          call cleanup()
          return
       end if
-   x%q(:) = 0.0D0
-   x%dqdt(:) = 0.0D0
-   OtherState%acc(:) = 0.0D0
-   OtherState%xcc(:) = 0.0D0
+   x%q(:) = 0.0_BDKi
+   x%dqdt(:) = 0.0_BDKi
+   OtherState%acc(:) = 0.0_BDKi
+   OtherState%xcc(:) = 0.0_BDKi
 
 
-   ! Define system output initializations (set up mesh) here:
-   CALL MeshCreate( BlankMesh        = u%HubMotion            &
-                   ,IOS              = COMPONENT_INPUT        &
-                   ,NNodes           = 1                      &
-                   , TranslationDisp = .TRUE. &
-                   , Orientation     = .TRUE. &
-                   ,ErrStat         = ErrStat2               &
-                   ,ErrMess         = ErrMsg2                )
+   ! Define system output initializations (set up and initialize input meshes) here:
+   call Init_u(temp_L2, InitInp, p, u, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL MeshPositionNode ( Mesh = u%HubMotion       &
-                         , INode = 1                &
-                         , Pos = InitInp%HubPos     &
-                         , ErrStat   = ErrStat2     &
-                         , ErrMess   = ErrMsg2      &
-                         , Orient = InitInp%HubRot )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL MeshConstructElement ( Mesh = u%HubMotion            &
-                             , Xelement = ELEMENT_POINT      &
-                             , P1       = 1                  &
-                             , ErrStat  = ErrStat2            &
-                             , ErrMess  = ErrMsg2            )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL MeshCommit(u%HubMotion, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-   
-   CALL MeshCreate( BlankMesh        = u%RootMotion            &
-                   ,IOS              = COMPONENT_INPUT        &
-                   ,NNodes           = 1                      &
-                   , TranslationDisp = .TRUE. &
-                   , TranslationVel  = .TRUE. &
-                   , TranslationAcc  = .TRUE. &
-                   , Orientation     = .TRUE. &
-                   , RotationVel     = .TRUE. &
-                   , RotationAcc     = .TRUE. &
-                   ,ErrStat         = ErrStat2               &
-                   ,ErrMess         = ErrMsg2                )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL MeshCreate( BlankMesh        = u%PointLoad            &
-                   ,IOS              = COMPONENT_INPUT        &
-                   ,NNodes           = p%node_total           &
-                   ,Force            = .TRUE. &
-                   ,Moment           = .TRUE. &
-                   ,ErrStat         = ErrStat2               &
-                   ,ErrMess         = ErrMsg2                )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   IF(p%quadrature .EQ. 1) THEN
-       temp_int = p%ngp * p%elem_total + 2
-       CALL MeshCreate( BlankMesh        = u%DistrLoad          &
-                       ,IOS              = COMPONENT_INPUT      &
-                       ,NNodes           = temp_int             &
-                       ,Force            = .TRUE. &
-                       ,Moment           = .TRUE. &
-                       ,ErrStat         = ErrStat2               &
-                       ,ErrMess         = ErrMsg2                )
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ELSEIF(p%quadrature .EQ. 2) THEN
-       temp_int = p%ngp
-       CALL MeshCreate( BlankMesh        = u%DistrLoad          &
-                       ,IOS              = COMPONENT_INPUT      &
-                       ,NNodes           = temp_int             &
-                       ,Force            = .TRUE. &
-                       ,Moment           = .TRUE. &
-                       ,ErrStat         = ErrStat2               &
-                       ,ErrMess         = ErrMsg2                )
-       
-   ENDIF
-
-
-   CALL MeshConstructElement ( Mesh = u%RootMotion            &
-                             , Xelement = ELEMENT_POINT      &
-                             , P1       = 1                  &
-                             , ErrStat  = ErrStat2            &
-                             , ErrMess  = ErrMsg2            )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   DO i=1,p%node_total
-       CALL MeshConstructElement( Mesh     = u%PointLoad      &
-                                 ,Xelement = ELEMENT_POINT    &
-                                 ,P1       = i                &
-                                 ,ErrStat  = ErrStat2          &
-                                 ,ErrMess  = ErrMsg2           )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       
-   ENDDO
-
-   IF(p%quadrature .EQ. 1) THEN
-       temp_int = p%ngp * p%elem_total + 2
-       DO i=1,temp_int-1
-           CALL MeshConstructElement( Mesh     = u%DistrLoad      &
-                                     ,Xelement = ELEMENT_LINE2    &
-                                     ,P1       = i                &
-                                     ,P2       = i+1              &
-                                     ,ErrStat  = ErrStat2          &
-                                     ,ErrMess  = ErrMsg2           )
-             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       ENDDO
-   ELSEIF(p%quadrature .EQ. 2) THEN
-       temp_int = p%ngp
-       DO i=1,temp_int - 1
-           CALL MeshConstructElement( Mesh     = u%DistrLoad      &
-                                     ,Xelement = ELEMENT_LINE2    &
-                                     ,P1       = i                &
-                                     ,P2       = i+1              &
-                                     ,ErrStat  = ErrStat2          &
-                                     ,ErrMess  = ErrMsg2           )
-             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       ENDDO
-   ENDIF
-
-   ! place single node at origin; position affects mapping/coupling with other modules
-   temp_POS(:) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1))
-   TmpPos(1) = temp_POS(2)
-   TmpPos(2) = temp_POS(3)
-   TmpPos(3) = temp_POS(1)
-
-   temp_CRV(1) = p%Glb_crv(2)
-   temp_CRV(2) = p%Glb_crv(3)
-   temp_CRV(3) = p%Glb_crv(1)
-  CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   TmpDCM(:,:) = TRANSPOSE(TmpDCM)
-   CALL MeshPositionNode ( Mesh = u%RootMotion      &
-                         , INode = 1                &
-                         , Pos = TmpPos             &
-                         , ErrStat   = ErrStat2     &
-                         , ErrMess   = ErrMsg2      &
-                         , Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-
-   DO i=1,p%elem_total
-       DO j=1,p%node_elem
-           temp_id = (j-1) * p%dof_node
-           temp_POS(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
-           TmpPos(1) = temp_POS(2)
-           TmpPos(2) = temp_POS(3)
-           TmpPos(3) = temp_POS(1)
-           temp_CRV(:) = MATMUL(p%GlbRot,p%uuN0(temp_id+4:temp_id+6,i))
-           CALL BD_CrvCompose(temp_POS,p%Glb_crv,temp_CRV,0,ErrStat2,ErrMsg2)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           temp_CRV(1) = temp_POS(2)
-           temp_CRV(2) = temp_POS(3)
-           temp_CRV(3) = temp_POS(1)
-           CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           TmpDCM(:,:) = TRANSPOSE(TmpDCM)
-           temp_id = (i-1)*(p%node_elem-1)+j
-           CALL MeshPositionNode ( Mesh    = u%PointLoad  &
-                                  ,INode   = temp_id      &
-                                  ,Pos     = TmpPos       &
-                                  ,ErrStat = ErrStat2      &
-                                  ,ErrMess = ErrMsg2       &
-                                  , Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       ENDDO
-   ENDDO
-
-
-   IF(p%quadrature .EQ. 1) THEN
-       DO i=1,p%ngp*p%elem_total+2
-           temp_POS(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
-           TmpPos(1) = temp_POS(2)
-           TmpPos(2) = temp_POS(3)
-           TmpPos(3) = temp_POS(1)
-           temp_CRV(:) = MATMUL(p%GlbRot,temp_L2(4:6,i))
-           CALL BD_CrvCompose(temp_POS,p%Glb_crv,temp_CRV,0,ErrStat2,ErrMsg2)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           temp_CRV(1) = temp_POS(2)
-           temp_CRV(2) = temp_POS(3)
-           temp_CRV(3) = temp_POS(1)
-           CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           TmpDCM(:,:) = TRANSPOSE(TmpDCM)
-           CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
-                                  ,INode   = i            &
-                                  ,Pos     = TmpPos       &
-                                  ,ErrStat = ErrStat2      &
-                                  ,ErrMess = ErrMsg2      &
-                                  , Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       ENDDO
-   ELSEIF(p%quadrature .EQ. 2) THEN
-       temp_int = p%ngp
-       DO i=1,temp_int
-           temp_POS(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
-           TmpPos(1) = temp_POS(2)
-           TmpPos(2) = temp_POS(3)
-           TmpPos(3) = temp_POS(1)
-           temp_CRV(:) = MATMUL(p%GlbRot,temp_L2(4:6,i))
-           CALL BD_CrvCompose(temp_POS,p%Glb_crv,temp_CRV,0,ErrStat2,ErrMsg2)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           temp_CRV(1) = temp_POS(2)
-           temp_CRV(2) = temp_POS(3)
-           temp_CRV(3) = temp_POS(1)
-           CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-           TmpDCM(:,:) = TRANSPOSE(TmpDCM)
-           CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
-                                  ,INode   = i            &
-                                  ,Pos     = TmpPos       &
-                                  ,ErrStat = ErrStat2      &
-                                  ,ErrMess = ErrMsg2      &
-                                  , Orient = TmpDCM ) !bjj: add orient=DCM ! Orientation (direction cosine matrix) of node; identity by default
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       ENDDO
-   ENDIF
-
-   CALL MeshCommit ( Mesh    = u%RootMotion    &
-                    ,ErrStat = ErrStat2         &
-                    ,ErrMess = ErrMsg2          )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL MeshCommit ( Mesh    = u%PointLoad     &
-                    ,ErrStat = ErrStat2         &
-                    ,ErrMess = ErrMsg2          )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL MeshCommit ( Mesh    = u%DistrLoad     &
-                    ,ErrStat = ErrStat2         &
-                    ,ErrMess = ErrMsg2          )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-
-
+            
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
       end if
       
-   ! Define initialization-routine input here:
-   u%HubMotion%TranslationDisp(1:3,1) = 0.0_ReKi
-   u%HubMotion%Orientation(1:3,1:3,1) = InitInp%HubRot
 
-   u%RootMotion%TranslationDisp(1:3,1) = InitInp%RootDisp(1:3)
-   u%RootMotion%Orientation(1:3,1:3,1) = InitInp%RootOri(1:3,1:3)
-   u%RootMotion%TranslationVel(1:3,1)  = InitInp%RootVel(1:3)
-   u%RootMotion%RotationVel(1:3,1)     = InitInp%RootVel(4:6)
-   u%RootMotion%TranslationAcc(:,:)  = 0.0D0
-   u%RootMotion%RotationAcc(:,:)     = 0.0D0
-
-   DO i=1,u%PointLoad%ElemTable(ELEMENT_POINT)%nelem
-       j = u%PointLoad%ElemTable(ELEMENT_POINT)%Elements(i)%ElemNodes(1)
-       u%PointLoad%Force(:,j)  = 0.0D0
-       u%PointLoad%Moment(:,j) = 0.0D0
-   ENDDO
-
-   DO i = 1, u%DistrLoad%ElemTable(ELEMENT_LINE2)%nelem
-       j = u%DistrLoad%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
-       k = u%DistrLoad%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
-       u%DistrLoad%Force(:,j)  = 0.0D0
-       u%DistrLoad%Force(:,k)  = 0.0D0
-       u%DistrLoad%Moment(:,j) = 0.0D0
-       u%DistrLoad%Moment(:,k) = 0.0D0
-   ENDDO
-
+      ! create copy of inputs, u, to convert to BeamDyn-internal system inputs, u_tmp
    CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
@@ -861,6 +616,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                                p%dof_node,p%quadrature,p%ngp,p%GLw,p%Jacobian,&
                                p%blade_mass,p%blade_CG,p%blade_IN,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      ! initialize states, given parameters and initial inputs
    CALL BD_CalcIC(u_tmp,p,x,OtherState,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
@@ -872,8 +629,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          call cleanup()
          return
       end if
-   p%IniDisp(:) = 0.0D0
-   p%IniVelo(:) = 0.0D0
    p%IniDisp(:) = x%q(:)
    p%IniVelo(:) = x%dqdt(:)
 
@@ -893,7 +648,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       p%torqM(1,2) =  p%pitchJ * p%dt
       p%torqM(2,2) =  p%pitchJ
       denom        =  p%pitchJ + p%pitchC*p%dt + p%pitchK*p%dt**2
-      if (EqualRealNos(denom,0.0_ReKi)) then
+      if (EqualRealNos(denom,0.0_BDKi)) then
          call SetErrStat(ErrID_Fatal,"Cannot invert matrix for pitch actuator: J+c*dt+k*dt^2 is zero.",ErrStat,ErrMsg,RoutineName)
       else         
          p%torqM(:,:) =  p%torqM / denom
@@ -902,7 +657,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       TmpDCM(:,:) = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
       temp_CRV(:) = EulerExtract(TmpDCM)
       xd%thetaP = -temp_CRV(3)    
-      xd%thetaPD = 0.0D0
+      xd%thetaPD = 0.0_BDKi
    end if   
 ! END Actuator
    
@@ -960,12 +715,12 @@ contains
       end subroutine Cleanup            
 END SUBROUTINE BD_Init
 !-----------------------------------------------------------------------------------------------------------------------------------
-subroutine SetInitOut(p, InitOut, errStat, errMsg)
+subroutine SetInitOut(p, InitOut, ErrStat, ErrMsg)
 
    type(BD_InitOutputType),       intent(  out)  :: InitOut          ! output data
    type(BD_ParameterType),        intent(in   )  :: p                ! Parameters
-   integer(IntKi),                intent(  out)  :: errStat          ! Error status of the operation
-   character(*),                  intent(  out)  :: errMsg           ! Error message if ErrStat /= ErrID_None
+   integer(IntKi),                intent(  out)  :: ErrStat          ! Error status of the operation
+   character(*),                  intent(  out)  :: ErrMsg           ! Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -999,6 +754,7 @@ subroutine SetInitOut(p, InitOut, errStat, errMsg)
 end subroutine SetInitOut
 !-----------------------------------------------------------------------------------------------------------------------------------
 subroutine Init_y( p, u, y, ErrStat, ErrMsg)
+! this routine initializes the outputs, y, that are used in the BeamDyn interface for coupling in the FAST framework.
 
    type(BD_ParameterType),       intent(inout)  :: p                 ! Parameters  ! intent(out) only because it changes p%NdIndx
    type(BD_InputType),           intent(inout)  :: u                 ! Inputs
@@ -1007,9 +763,10 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
    character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
 
       ! local variables
-   real(ReKi)                                   :: DCM(3,3)
+   real(ReKi)                                   :: DCM(3,3)          ! must be same type as mesh orientation fields
+   real(ReKi)                                   :: Pos(3)            ! must be same type as mesh position fields 
+   
    real(BDKi)                                   :: TmpDCM(3,3)
-   real(BDKi)                                   :: TmpPos(3)
    real(BDKi)                                   :: temp_POS(3)
    real(BDKi)                                   :: temp_CRV(3)
    
@@ -1020,12 +777,13 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'Init_y'
    
-   ErrStat = ErrID_None
-   ErrMsg  = ""
    
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""   
    
    !.................................
-   ! y%BldForce
+   ! y%BldForce (used only for WriteOutput)
    !.................................
    CALL MeshCopy ( SrcMesh  = u%PointLoad      &
                  , DestMesh = y%BldForce       &
@@ -1036,13 +794,13 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
                  , ErrStat  = ErrStat2         &
                  , ErrMess  = ErrMsg2          )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
+      if (ErrStat>=AbortErrLev) RETURN
       ! initialization (not necessary)
    !y%BldForce%Force(:,:)  = 0.0_BDKi
    !y%BldForce%Moment(:,:) = 0.0_BDKi
       
    !.................................
-   ! y%ReactionForce
+   ! y%ReactionForce (for coupling with ElastoDyn)
    !.................................
       
    CALL MeshCopy( SrcMesh   = u%RootMotion     &
@@ -1054,6 +812,7 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
                  , ErrStat  = ErrStat2         &
                  , ErrMess  = ErrMsg2          )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat>=AbortErrLev) RETURN
          
       ! initialization (not necessary)
       
@@ -1062,7 +821,7 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
 
       
    !.................................
-   ! y%BldMotion
+   ! y%BldMotion (for coupling with AeroDyn)
    !.................................
       
    NNodes = p%node_elem*p%elem_total
@@ -1078,6 +837,7 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
                    ,ErrStat          = ErrStat2           &
                    ,ErrMess          = ErrMsg2             )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat>=AbortErrLev) RETURN
    
    
       ! position nodes
@@ -1087,9 +847,9 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
            temp_id = (j-1)*p%dof_node
            
            temp_POS = p%GlbPos + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
-           TmpPos(1) = temp_POS(2)
-           TmpPos(2) = temp_POS(3)
-           TmpPos(3) = temp_POS(1)
+           Pos(1) = temp_POS(2)
+           Pos(2) = temp_POS(3)
+           Pos(3) = temp_POS(1)
            
            temp_CRV = MATMUL(p%GlbRot,p%uuN0(temp_id+4:temp_id+6,i))
            CALL BD_CrvCompose(temp_POS,p%Glb_crv,temp_CRV,0,ErrStat2,ErrMsg2) !given p%Glb_crv and temp_CRV, returns temp_POS
@@ -1100,13 +860,15 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
            temp_CRV(3) = temp_POS(1)
            
            CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )              
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
+              
+              ! possible type conversions here:
            DCM = TRANSPOSE(TmpDCM)
            
            temp_id = (i-1)*p%node_elem+j
            CALL MeshPositionNode ( Mesh    = y%BldMotion   &
                                   ,INode   = temp_id       &
-                                  ,Pos     = TmpPos        &
+                                  ,Pos     = Pos           &
                                   ,ErrStat = ErrStat2      &
                                   ,ErrMess = ErrMsg2       &
                                   ,Orient  = DCM           )
@@ -1155,7 +917,7 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
    
    
    !.................................
-   ! y%WriteOutput
+   ! y%WriteOutput (for writing columns to output file)
    !.................................
    
    call AllocAry( y%WriteOutput, p%numOuts, 'WriteOutput', errStat2, errMsg2 )
@@ -1163,6 +925,269 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
       
    
 end subroutine Init_y
+!-----------------------------------------------------------------------------------------------------------------------------------
+subroutine Init_u( temp_L2, InitInp, p, u, ErrStat, ErrMsg )
+! this routine initializes the inputs, u, that are used in the BeamDyn interface for coupling in the FAST framework.
+
+   real(BDKi),                   intent(in   )  :: temp_L2(:,:)      ! 
+   type(BD_InitInputType),       intent(in   )  :: InitInp           ! Input data for initialization routine
+   type(BD_ParameterType),       intent(in   )  :: p                 ! Parameters  ! intent(out) only because it changes p%NdIndx
+   type(BD_InputType),           intent(inout)  :: u                 ! Inputs
+   integer(IntKi),               intent(  out)  :: ErrStat           ! Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+   
+   
+   real(ReKi)                                   :: DCM(3,3)          ! must be same type as mesh orientation fields
+   real(ReKi)                                   :: Pos(3)            ! must be same type as mesh position fields
+
+   real(BDKi)                                   :: TmpDCM(3,3)
+   real(BDKi)                                   :: temp_POS(3)
+   real(BDKi)                                   :: temp_CRV(3)
+   
+   integer(intKi)                               :: temp_id           
+   integer(intKi)                               :: i,j               ! loop counters
+   integer(intKi)                               :: NNodes            ! number of nodes in mesh
+   
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'Init_u'
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   !.................................
+   ! u%HubMotion (from ElastoDyn for pitch actuator)
+   !.................................
+
+   CALL MeshCreate( BlankMesh        = u%HubMotion        &
+                   ,IOS              = COMPONENT_INPUT    &
+                   ,NNodes           = 1                  &
+                   , TranslationDisp = .TRUE.             &
+                   , Orientation     = .TRUE.             &
+                   ,ErrStat          = ErrStat2           &
+                   ,ErrMess          = ErrMsg2            )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat>=AbortErrLev) return
+      
+      ! possible type conversions here:
+   DCM = InitInp%HubRot 
+   Pos = InitInp%HubPos
+   CALL MeshPositionNode ( Mesh    = u%HubMotion          &
+                         , INode   = 1                    &
+                         , Pos     = Pos                  &
+                         , ErrStat = ErrStat2             &
+                         , ErrMess = ErrMsg2              &
+                         , Orient  = InitInp%HubRot       )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+   CALL MeshConstructElement ( Mesh = u%HubMotion         &
+                             , Xelement = ELEMENT_POINT   &
+                             , P1       = 1               &
+                             , ErrStat  = ErrStat2        &
+                             , ErrMess  = ErrMsg2         )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+   CALL MeshCommit(u%HubMotion, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+   
+      ! initial guesses
+   u%HubMotion%TranslationDisp(1:3,1) = 0.0_ReKi
+   u%HubMotion%Orientation(1:3,1:3,1) = InitInp%HubRot
+      
+   !.................................
+   ! u%RootMotion (for coupling with ElastoDyn)
+   !.................................
+
+   CALL MeshCreate( BlankMesh        = u%RootMotion          &
+                   ,IOS              = COMPONENT_INPUT       &
+                   ,NNodes           = 1                     &
+                   , TranslationDisp = .TRUE.                &
+                   , TranslationVel  = .TRUE.                &
+                   , TranslationAcc  = .TRUE.                &
+                   , Orientation     = .TRUE.                &
+                   , RotationVel     = .TRUE.                &
+                   , RotationAcc     = .TRUE.                &
+                   ,ErrStat         = ErrStat2               &
+                   ,ErrMess         = ErrMsg2                )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat>=AbortErrLev) return
+            
+  !! ! place single node at origin; position affects mapping/coupling with other modules
+  !! temp_POS(:) = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(1:3,1))
+  !! Pos(1) = temp_POS(2)
+  !! Pos(2) = temp_POS(3)
+  !! Pos(3) = temp_POS(1)
+  !!
+  !! temp_CRV(1) = p%Glb_crv(2)
+  !! temp_CRV(2) = p%Glb_crv(3)
+  !! temp_CRV(3) = p%Glb_crv(1)
+  !!CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
+  !!    CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+  !! DCM = TRANSPOSE(TmpDCM)
+      
+   DCM = InitInp%GlbRot 
+   Pos = InitInp%GlbPos      
+   CALL MeshPositionNode ( Mesh    = u%RootMotion &
+                         , INode   = 1            &
+                         , Pos     = Pos          &
+                         , ErrStat = ErrStat2     &
+                         , ErrMess = ErrMsg2      &
+                         , Orient  = DCM          ) 
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
+   CALL MeshConstructElement ( Mesh     = u%RootMotion       &
+                             , Xelement = ELEMENT_POINT      &
+                             , P1       = 1                  &
+                             , ErrStat  = ErrStat2           &
+                             , ErrMess  = ErrMsg2            )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   
+   CALL MeshCommit ( Mesh    = u%RootMotion    &
+                    ,ErrStat = ErrStat2        &
+                    ,ErrMess = ErrMsg2         )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      ! initial guesses
+   u%RootMotion%TranslationDisp(1:3,1) = InitInp%RootDisp(1:3)
+   u%RootMotion%Orientation(1:3,1:3,1) = InitInp%RootOri(1:3,1:3)
+   u%RootMotion%TranslationVel(1:3,1)  = InitInp%RootVel(1:3)
+   u%RootMotion%RotationVel(1:3,1)     = InitInp%RootVel(4:6)
+   u%RootMotion%TranslationAcc(:,:)    = 0.0_ReKi
+   u%RootMotion%RotationAcc(:,:)       = 0.0_ReKi
+            
+   !.................................
+   ! u%PointLoad (currently not used in FAST)
+   !.................................
+   
+   CALL MeshCreate( BlankMesh       = u%PointLoad      &
+                   ,IOS             = COMPONENT_INPUT  &
+                   ,NNodes          = p%node_total     &
+                   ,Force           = .TRUE.           &
+                   ,Moment          = .TRUE.           &
+                   ,ErrStat         = ErrStat2         &
+                   ,ErrMess         = ErrMsg2          )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat>=AbortErrLev) return
+
+   DO i=1,p%elem_total
+       DO j=1,p%node_elem
+           temp_id = (j-1) * p%dof_node
+           temp_POS = p%GlbPos(1:3) + MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+           Pos(1) = temp_POS(2)
+           Pos(2) = temp_POS(3)
+           Pos(3) = temp_POS(1)
+           
+           temp_CRV = MATMUL(p%GlbRot,p%uuN0(temp_id+4:temp_id+6,i))
+           CALL BD_CrvCompose(temp_POS,p%Glb_crv,temp_CRV,0,ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           temp_CRV(1) = temp_POS(2)
+           temp_CRV(2) = temp_POS(3)
+           temp_CRV(3) = temp_POS(1)
+           CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
+              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           DCM = TRANSPOSE(TmpDCM)
+           
+           temp_id = (i-1)*(p%node_elem-1)+j           
+           CALL MeshPositionNode ( Mesh    = u%PointLoad  &
+                                  ,INode   = temp_id      &
+                                  ,Pos     = Pos          &
+                                  ,ErrStat = ErrStat2     &
+                                  ,ErrMess = ErrMsg2      &
+                                  , Orient = DCM ) 
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       ENDDO
+   ENDDO      
+      
+   DO i=1,p%node_total
+       CALL MeshConstructElement( Mesh     = u%PointLoad      &
+                                 ,Xelement = ELEMENT_POINT    &
+                                 ,P1       = i                &
+                                 ,ErrStat  = ErrStat2         &
+                                 ,ErrMess  = ErrMsg2          )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+       
+   ENDDO
+      
+   CALL MeshCommit ( Mesh    = u%PointLoad     &
+                    ,ErrStat = ErrStat2        &
+                    ,ErrMess = ErrMsg2         )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+      ! initial guesses
+   u%PointLoad%Force  = 0.0_ReKi
+   u%PointLoad%Moment = 0.0_ReKi      
+      
+   !.................................
+   ! u%DistrLoad (for coupling with AeroDyn)
+   !.................................
+            
+   IF(p%quadrature .EQ. 1) THEN
+       NNodes = p%ngp * p%elem_total + 2
+   ELSEIF(p%quadrature .EQ. 2) THEN
+      NNodes = p%ngp
+   ELSE
+      CALL SetErrStat( ErrID_Fatal, "Invalid quadrature selected.", ErrStat, ErrMsg, RoutineName )
+      RETURN
+   ENDIF
+   
+   CALL MeshCreate( BlankMesh  = u%DistrLoad      &
+                   ,IOS        = COMPONENT_INPUT  &
+                   ,NNodes     = NNodes           &
+                   ,Force      = .TRUE.           &
+                   ,Moment     = .TRUE.           &
+                   ,ErrStat    = ErrStat2         &
+                   ,ErrMess    = ErrMsg2          )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+      if (ErrStat>=AbortErrLev) return
+
+   DO i=1,NNodes
+      temp_POS(1:3) = p%GlbPos(1:3) + MATMUL(p%GlbRot,temp_L2(1:3,i))
+      Pos(1) = temp_POS(2)
+      Pos(2) = temp_POS(3)
+      Pos(3) = temp_POS(1)
+      
+      temp_CRV(:) = MATMUL(p%GlbRot,temp_L2(4:6,i))
+      CALL BD_CrvCompose(temp_POS,p%Glb_crv,temp_CRV,0,ErrStat2,ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      temp_CRV(1) = temp_POS(2)
+      temp_CRV(2) = temp_POS(3)
+      temp_CRV(3) = temp_POS(1)
+      CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      DCM = TRANSPOSE(TmpDCM)
+      
+      CALL MeshPositionNode ( Mesh    = u%DistrLoad  &
+                             ,INode   = i            &
+                             ,Pos     = Pos          &
+                             ,ErrStat = ErrStat2     &
+                             ,ErrMess = ErrMsg2      &
+                             ,Orient  = DCM ) 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDDO   
+   
+   DO i=1,NNodes-1
+      CALL MeshConstructElement( Mesh      = u%DistrLoad      &
+                                 ,Xelement = ELEMENT_LINE2    &
+                                 ,P1       = i                &
+                                 ,P2       = i+1              &
+                                 ,ErrStat  = ErrStat2         &
+                                 ,ErrMess  = ErrMsg2          )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDDO
+
+   
+   CALL MeshCommit ( Mesh    = u%DistrLoad     &
+                    ,ErrStat = ErrStat2        &
+                    ,ErrMess = ErrMsg2         )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+      ! initial guesses
+   u%DistrLoad%Force  = 0.0_ReKi
+   u%DistrLoad%Moment = 0.0_ReKi      
+   
+      
+end subroutine Init_u
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !
@@ -4319,7 +4344,7 @@ SUBROUTINE BD_StaticElementMatrixForce(Nuuu,Nrrr,EStif0_GL,&
    RETURN
 
 END SUBROUTINE BD_StaticElementMatrixForce
-
+!-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
 !-------------------------------------------------------
 ! This subroutine performs time marching from t_i to t_f
@@ -5062,6 +5087,8 @@ SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
    REAL(ReKi)                                 :: temp_p0(3)
    REAL(ReKi)                                 :: temp_rv(3)
    REAL(ReKi)                                 :: temp_R(3,3)
+   REAL(ReKi)                                 :: GlbRot_TransVel(3)           ! = MATMUL(p%GlbRot,u%RootMotion%TranslationVel(:,1))
+   REAL(ReKi)                                 :: GlbRot_RotVel_tilde(3,3)     ! = BD_Tilde(MATMUL(p%GlbRot,u%RootMotion%RotationVel(:,1)))
 !   REAL(ReKi)                                 :: temp_Rb(3,3)
    INTEGER(IntKi)                             :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                       :: ErrMsg2                      ! Temporary Error message
@@ -5070,58 +5097,56 @@ SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),temp3,ErrStat2,ErrMsg2)
+   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),temp3,ErrStat2,ErrMsg2) !returns temp3
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvCompose(temp_rv,temp3,p%Glb_crv,2,ErrStat2,ErrMsg2)
+   CALL BD_CrvCompose(temp_rv,temp3,p%Glb_crv,2,ErrStat2,ErrMsg2)  !returns temp_rv
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvMatrixR(temp_rv,temp_R,ErrStat2,ErrMsg2)
+   CALL BD_CrvMatrixR(temp_rv,temp_R,ErrStat2,ErrMsg2) !returns temp_R
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      
    !Initialize displacements and rotations
+   k = 1 !when i=1, k=1
    DO i=1,p%elem_total
-       IF( i .EQ. 1) THEN
-           k = 1
-       ELSE
-           k = 2
-       ENDIF
-       DO j=k,p%node_elem
-           temp_id = (j-1)*p%dof_node
-           temp_p0(:) = MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
-           temp_p0(:) = MATMUL(temp_R,temp_p0) - temp_p0(:)
-           temp_p0(:) = MATMUL(TRANSPOSE(p%GlbRot),temp_p0)
-           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-           x%q(temp_id+1:temp_id+3) = u%RootMotion%TranslationDisp(1:3,1) + &
-                                      temp_p0(:)
-       ENDDO
+      DO j=k,p%node_elem
+         temp_id = (j-1)*p%dof_node
+         temp_p0 = MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+         temp_p0 = MATMUL(temp_R,temp_p0) - temp_p0
+         temp_p0 = MATMUL(temp_p0,p%GlbRot) != transpose(MATMUL(transpose(temp_p0),p%GlbRot)) = MATMUL(TRANSPOSE(p%GlbRot),temp_p0)  [transpose of a 1-d array temp_p0 is temp_p0]
+         
+         temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+         x%q(temp_id+1:temp_id+3) = u%RootMotion%TranslationDisp(1:3,1) + temp_p0
+      ENDDO
+      k = 2 ! start j loop at k=2 for remaining elements (i>1)
    ENDDO
+   
+   k = 1 !when i=1, k=1
    DO i=1,p%elem_total
-       IF( i .EQ. 1) THEN
-           k = 1
-       ELSE
-           k = 2
-       ENDIF
-       DO j=k,p%node_elem
-           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-           x%q(temp_id+4:temp_id+6) = MATMUL(TRANSPOSE(p%GlbRot),temp_rv)
-       ENDDO
+      DO j=k,p%node_elem
+         temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+         x%q(temp_id+4:temp_id+6) = MATMUL(temp_rv,p%GlbRot) != transpose(MATMUL(TRANSPOSE(temp_rv),p%GlbRot) = MATMUL(TRANSPOSE(p%GlbRot),temp_rv) because temp_rv is 1-dimension
+      ENDDO
+      k = 2 ! start j loop at k=2 for remaining elements (i>1)
    ENDDO
 
    !Initialize velocities and angular velocities
-   x%dqdt(:) = 0.0D0
+   x%dqdt(:) = 0.0_BDKi
+   
+   ! these values don't change in the loop:
+   GlbRot_TransVel     = MATMUL(p%GlbRot,u%RootMotion%TranslationVel(:,1))
+   GlbRot_RotVel_tilde = BD_Tilde(MATMUL(p%GlbRot,u%RootMotion%RotationVel(:,1)))
+   k=1 !when i=1, k=1
    DO i=1,p%elem_total
-       IF( i .EQ. 1) THEN
-           k = 1
-       ELSE
-           k = 2
-       ENDIF
-       DO j=k,p%node_elem
-           temp_id = (j-1)*p%dof_node
-           temp3(:) = MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
-           temp3(:) = MATMUL(p%GlbRot,u%RootMotion%TranslationVel(:,1)) + &
-                        MATMUL(BD_Tilde(MATMUL(p%GlbRot,u%RootMotion%RotationVel(:,1))),temp3)
-           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
-           x%dqdt(temp_id+1:temp_id+3) = MATMUL(TRANSPOSE(p%GlbRot),temp3(:))
-           x%dqdt(temp_id+4:temp_id+6) = u%RootMotion%RotationVel(1:3,1)
-       ENDDO
+      DO j=k,p%node_elem
+         temp_id = (j-1)*p%dof_node
+         temp3 = MATMUL(p%GlbRot,p%uuN0(temp_id+1:temp_id+3,i))
+         temp3 = GlbRot_TransVel + MATMUL(GlbRot_RotVel_tilde,temp3)
+         
+         temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+         x%dqdt(temp_id+1:temp_id+3) = MATMUL(temp3,p%GlbRot) ! = transpose(MATMUL(transpose(temp3),p%GlbRot)) = MATMUL(TRANSPOSE(p%GlbRot),temp3)  because temp3 is 1-dimension
+         x%dqdt(temp_id+4:temp_id+6) = u%RootMotion%RotationVel(1:3,1)
+      ENDDO
+      k = 2 ! start j loop at k=2 for remaining elements (i>1)
    ENDDO
 
 END SUBROUTINE BD_CalcIC
