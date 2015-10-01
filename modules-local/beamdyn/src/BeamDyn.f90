@@ -93,7 +93,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    REAL(ReKi),ALLOCATABLE  :: SP_Coef(:,:,:)
    REAL(ReKi)              :: TmpPos(3)
    REAL(ReKi)              :: TmpDCM(3,3)
-   REAL(ReKi)              :: temp_glb(3)                  ! CRV parameters of p%GlbRot
    REAL(ReKi)              :: denom
 
    INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
@@ -135,10 +134,10 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%GlbRot = TRANSPOSE(InitInp%GlbRot)
    CALL BD_CrvExtractCrv(p%GlbRot,TmpPos,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   temp_glb(1) = TmpPos(3)
-   temp_glb(2) = TmpPos(1)
-   temp_glb(3) = TmpPos(2)
-   CALL BD_CrvMatrixR(temp_glb,p%GlbRot,ErrStat2,ErrMsg2) !given temp_glb, returns p%GlbRot
+   p%Glb_crv(1) = TmpPos(3)
+   p%Glb_crv(2) = TmpPos(1)
+   p%Glb_crv(3) = TmpPos(2)
+   CALL BD_CrvMatrixR(p%Glb_crv,p%GlbRot,ErrStat2,ErrMsg2) !given p%Glb_crv, returns p%GlbRot
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    temp_POS(1) = InitInp%gravity(3)
    temp_POS(2) = InitInp%gravity(1)
@@ -715,9 +714,9 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    TmpPos(2) = temp_POS(3)
    TmpPos(3) = temp_POS(1)
 
-   temp_CRV(1) = temp_glb(2)
-   temp_CRV(2) = temp_glb(3)
-   temp_CRV(3) = temp_glb(1)
+   temp_CRV(1) = p%Glb_crv(2)
+   temp_CRV(2) = p%Glb_crv(3)
+   temp_CRV(3) = p%Glb_crv(1)
   CALL BD_CrvMatrixR(temp_CRV,TmpDCM,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    TmpDCM(:,:) = TRANSPOSE(TmpDCM)
@@ -738,7 +737,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            TmpPos(2) = temp_POS(3)
            TmpPos(3) = temp_POS(1)
            temp_CRV(:) = MATMUL(p%GlbRot,p%uuN0(temp_id+4:temp_id+6,i))
-           CALL BD_CrvCompose(temp_POS,temp_glb,temp_CRV,0,ErrStat2,ErrMsg2)
+           CALL BD_CrvCompose(temp_POS,p%Glb_crv,temp_CRV,0,ErrStat2,ErrMsg2)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            temp_CRV(1) = temp_POS(2)
            temp_CRV(2) = temp_POS(3)
@@ -765,7 +764,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            TmpPos(2) = temp_POS(3)
            TmpPos(3) = temp_POS(1)
            temp_CRV(:) = MATMUL(p%GlbRot,temp_L2(4:6,i))
-           CALL BD_CrvCompose(temp_POS,temp_glb,temp_CRV,0,ErrStat2,ErrMsg2)
+           CALL BD_CrvCompose(temp_POS,p%Glb_crv,temp_CRV,0,ErrStat2,ErrMsg2)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            temp_CRV(1) = temp_POS(2)
            temp_CRV(2) = temp_POS(3)
@@ -789,7 +788,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            TmpPos(2) = temp_POS(3)
            TmpPos(3) = temp_POS(1)
            temp_CRV(:) = MATMUL(p%GlbRot,temp_L2(4:6,i))
-           CALL BD_CrvCompose(temp_POS,temp_glb,temp_CRV,0,ErrStat2,ErrMsg2)
+           CALL BD_CrvCompose(temp_POS,p%Glb_crv,temp_CRV,0,ErrStat2,ErrMsg2)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            temp_CRV(1) = temp_POS(2)
            temp_CRV(2) = temp_POS(3)
@@ -925,7 +924,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ! initialize outputs
    !...............................................
       
-   call Init_y(temp_glb, p, u, y, ErrStat2, ErrMsg2)
+   call Init_y(p, u, y, ErrStat2, ErrMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
    !...............................................
@@ -999,9 +998,8 @@ subroutine SetInitOut(p, InitOut, errStat, errMsg)
    
 end subroutine SetInitOut
 !-----------------------------------------------------------------------------------------------------------------------------------
-subroutine Init_y(temp_glb, p, u, y, ErrStat, ErrMsg)
+subroutine Init_y( p, u, y, ErrStat, ErrMsg)
 
-   real(BDKi),                   intent(in   )  :: temp_glb(3)       ! CRV parameters of p%GlbRot
    type(BD_ParameterType),       intent(inout)  :: p                 ! Parameters  ! intent(out) only because it changes p%NdIndx
    type(BD_InputType),           intent(inout)  :: u                 ! Inputs
    type(BD_OutputType),          intent(inout)  :: y                 ! Outputs
@@ -1094,7 +1092,7 @@ subroutine Init_y(temp_glb, p, u, y, ErrStat, ErrMsg)
            TmpPos(3) = temp_POS(1)
            
            temp_CRV = MATMUL(p%GlbRot,p%uuN0(temp_id+4:temp_id+6,i))
-           CALL BD_CrvCompose(temp_POS,temp_glb,temp_CRV,0,ErrStat2,ErrMsg2) !given temp_glb and temp_CRV, returns temp_POS
+           CALL BD_CrvCompose(temp_POS,p%Glb_crv,temp_CRV,0,ErrStat2,ErrMsg2) !given p%Glb_crv and temp_CRV, returns temp_POS
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
               
            temp_CRV(1) = temp_POS(2)
@@ -1277,7 +1275,6 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    REAL(ReKi)                                   :: cc(3)
    REAL(ReKi)                                   :: cc0(3)
    REAL(ReKi)                                   :: temp_cc(3)
-   REAL(ReKi)                                   :: temp_glb(3)
    REAL(ReKi)                                   :: temp_R(3,3)
    REAL(ReKi)                                   :: temp6(6)
    REAL(ReKi)                                   :: temp_Force(p%dof_total)
@@ -1309,8 +1306,6 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    CALL BD_CopyInput(u_tmp, u_tmp2, MESH_NEWCOPY, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-   CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
@@ -1329,7 +1324,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
            temp_id = (j-1)*p%dof_node
            cc0(1:3) = p%uuN0(temp_id+4:temp_id+6,i)
            cc0(1:3) = MATMUL(p%GlbRot,cc0)
-           CALL BD_CrvCompose(temp_cc,temp_glb,cc0,0,ErrStat2,ErrMsg2)
+           CALL BD_CrvCompose(temp_cc,p%Glb_crv,cc0,0,ErrStat2,ErrMsg2)
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
            CALL BD_CrvCompose(cc0,cc,temp_cc,0,ErrStat2,ErrMsg2)
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -4565,7 +4560,6 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
    CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    REAL(ReKi)                                   :: temp_cc(3)
-   REAL(ReKi)                                   :: temp_glb(3)
    REAL(ReKi)                                   :: temp3(3)
    INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
@@ -4579,9 +4573,7 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
    ! Root rotations
    CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),temp3,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvCompose(temp_cc,temp3,temp_glb,2,ErrStat2,ErrMsg2)
+   CALL BD_CrvCompose(temp_cc,temp3,p%Glb_crv,2,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    x%q(4:6) = MATMUL(TRANSPOSE(p%GlbRot),temp_cc)
    ! Root velocities/angular velocities and accelerations/angular accelerations
@@ -5068,7 +5060,6 @@ SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
    INTEGER(IntKi)                             :: temp_id
    REAL(ReKi)                                 :: temp3(3)
    REAL(ReKi)                                 :: temp_p0(3)
-   REAL(ReKi)                                 :: temp_glb(3)
    REAL(ReKi)                                 :: temp_rv(3)
    REAL(ReKi)                                 :: temp_R(3,3)
 !   REAL(ReKi)                                 :: temp_Rb(3,3)
@@ -5081,9 +5072,7 @@ SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
 
    CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),temp3,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_CrvCompose(temp_rv,temp3,temp_glb,2,ErrStat2,ErrMsg2)
+   CALL BD_CrvCompose(temp_rv,temp3,p%Glb_crv,2,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CrvMatrixR(temp_rv,temp_R,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
