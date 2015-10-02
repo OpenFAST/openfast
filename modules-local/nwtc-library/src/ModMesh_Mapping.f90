@@ -967,12 +967,12 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
                on_element = .true.
             else
                elem_position_SiKi = REAL( elem_position, SiKi )
-               !if (EqualRealNos( elem_position_SiKi, 1.0_SiKi )) then !we're ON the element (at a node)
-               if (elem_position_SiKi <= 1.0005_SiKi ) then !we'll say we're ON the element (at a node)
+               if (EqualRealNos( elem_position_SiKi, 1.0_SiKi )) then !we're ON the element (at a node)
+               !if (elem_position_SiKi <= 1.0005_SiKi ) then !we'll say we're ON the element (at a node)
                   on_element = .true.
                   elem_position = 1.0_ReKi
-               !elseif (EqualRealNos( elem_position_SiKi,  0.0_SiKi )) then !we're ON the element (at a node)
-               elseif (elem_position_SiKi >= -0.0005_SiKi ) then !we'll say we're ON the element (at a node)
+               elseif (EqualRealNos( elem_position_SiKi,  0.0_SiKi )) then !we're ON the element (at a node)
+               !elseif (elem_position_SiKi >= -0.0005_SiKi ) then !we'll say we're ON the element (at a node)
                   on_element = .true.
                   elem_position = 0.0_ReKi
                else !we're not on the element
