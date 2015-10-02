@@ -120,7 +120,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF( ErrStat >= AbortErrLev ) RETURN
       
-   OtherState%InitAcc = .false. ! accelerations have not been initialized, yet
    
    p%OutFmt = InputFileData%OutFmt
    !Read inputs from Driver/Glue code
@@ -580,22 +579,20 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(x%dqdt,p%dof_total,'x%dqdt',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ! Allocate other states: Acceleration and algorithm accelerations 
-   ! for generalized-alpha time integator
-   CALL AllocAry(OtherState%acc,p%dof_total,'OtherState%acc',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(OtherState%xcc,p%dof_total,'OtherState%xcc',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
       end if
    x%q(:) = 0.0_BDKi
    x%dqdt(:) = 0.0_BDKi
-   OtherState%acc(:) = 0.0_BDKi
-   OtherState%xcc(:) = 0.0_BDKi
 
 
+      ! allocate and initialize other states:
+   call Init_OtherStates(p, OtherState, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   
    ! Define system output initializations (set up and initialize input meshes) here:
    call Init_u(temp_L2, InitInp, p, u, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1187,6 +1184,37 @@ subroutine Init_u( temp_L2, InitInp, p, u, ErrStat, ErrMsg )
    
       
 end subroutine Init_u
+!-----------------------------------------------------------------------------------------------------------------------------------
+subroutine Init_OtherStates( p, OtherState, ErrStat, ErrMsg )
+   type(BD_ParameterType),       intent(in   )  :: p                 ! Parameters
+   type(BD_OtherStateType),      intent(inout)  :: OtherState        ! Other/optimization states
+   integer(IntKi),               intent(  out)  :: ErrStat           ! Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+   
+   
+   
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'Init_OtherStates'
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   
+   ! Allocate other states: Acceleration and algorithm accelerations for generalized-alpha time integator
+   CALL AllocAry(OtherState%acc,p%dof_total,'OtherState%acc',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(OtherState%xcc,p%dof_total,'OtherState%xcc',ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+   if (ErrStat>=AbortErrLev) return   
+   
+   OtherState%InitAcc = .false. ! accelerations have not been initialized, yet
+      
+   OtherState%acc(:) = 0.0_BDKi
+   OtherState%xcc(:) = 0.0_BDKi
+            
+end subroutine Init_OtherStates   
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !
