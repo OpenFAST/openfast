@@ -77,23 +77,23 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    INTEGER(IntKi)          :: temp_int
    INTEGER(IntKi)          :: temp_id
    INTEGER(IntKi)          :: temp_id2
-   REAL(ReKi)              :: temp_Coef(4,4)
-   REAL(ReKi)              :: temp66(6,6)
-   REAL(ReKi)              :: temp_twist
-   REAL(ReKi)              :: eta
-   REAL(ReKi)              :: temp_POS(3)
-   REAL(ReKi)              :: temp_e1(3)
-   REAL(ReKi)              :: temp_CRV(3)
-   REAL(ReKi),PARAMETER    :: EPS = 1.0D-10
-   REAL(ReKi),ALLOCATABLE  :: temp_GLL(:)
-   REAL(ReKi),ALLOCATABLE  :: temp_GL(:)
-   REAL(ReKi),ALLOCATABLE  :: temp_w(:)
-   REAL(ReKi),ALLOCATABLE  :: temp_ratio(:,:)
-   REAL(ReKi),ALLOCATABLE  :: temp_L2(:,:)
-   REAL(ReKi),ALLOCATABLE  :: SP_Coef(:,:,:)
-   REAL(ReKi)              :: TmpPos(3)
-   REAL(ReKi)              :: TmpDCM(3,3)
-   REAL(ReKi)              :: denom
+   REAL(BDKi)              :: temp_Coef(4,4)
+   REAL(BDKi)              :: temp66(6,6)
+   REAL(BDKi)              :: temp_twist
+   REAL(BDKi)              :: eta
+   REAL(BDKi)              :: temp_POS(3)
+   REAL(BDKi)              :: temp_e1(3)
+   REAL(BDKi)              :: temp_CRV(3)
+   REAL(BDKi),PARAMETER    :: EPS = 1.0D-10
+   REAL(BDKi),ALLOCATABLE  :: temp_GLL(:)
+   REAL(BDKi),ALLOCATABLE  :: temp_GL(:)
+   REAL(BDKi),ALLOCATABLE  :: temp_w(:)
+   REAL(BDKi),ALLOCATABLE  :: temp_ratio(:,:)
+   REAL(BDKi),ALLOCATABLE  :: temp_L2(:,:)
+   REAL(BDKi),ALLOCATABLE  :: SP_Coef(:,:,:)
+   REAL(BDKi)              :: TmpPos(3)
+   REAL(BDKi)              :: TmpDCM(3,3)
+   REAL(BDKi)              :: denom
 
    INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
@@ -693,7 +693,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       
    !...............................................
    
-   xd%DummyDiscState = 0.0_ReKi
    z%DummyConstrState = 0.0_ReKi
    
    call Cleanup()
@@ -5606,12 +5605,12 @@ SUBROUTINE PitchActuator_SetBC(p, u, xd, AllOuts)
    TYPE(BD_DiscreteStateType),INTENT(IN   )  :: xd                                ! The module discrete states
    REAL(ReKi),       OPTIONAL,INTENT(INOUT)  :: AllOuts(0:)                       ! all output array for writing to file
    ! local variables
-   REAL(ReKi)                                :: temp_R(3,3)
-   REAL(ReKi)                                :: temp_cc(3)
-   REAL(ReKi)                                :: u_theta_pitch
-   REAL(ReKi)                                :: thetaP
-   REAL(ReKi)                                :: omegaP
-   REAL(ReKi)                                :: alphaP
+   REAL(BDKi)                                :: temp_R(3,3)
+   REAL(BDKi)                                :: temp_cc(3)
+   REAL(BDKi)                                :: u_theta_pitch
+   REAL(BDKi)                                :: thetaP
+   REAL(BDKi)                                :: omegaP
+   REAL(BDKi)                                :: alphaP
    
    
    temp_R = MATMUL(u%RootMotion%Orientation(:,:,1),TRANSPOSE(u%HubMotion%Orientation(:,:,1)))
