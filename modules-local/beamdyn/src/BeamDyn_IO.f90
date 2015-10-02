@@ -566,7 +566,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
    INTEGER(IntKi)               :: i
    INTEGER(IntKi)               :: j
    INTEGER(IntKi)               :: temp_int
-   REAL(ReKi)                   :: tmpReAry(4)
+   REAL(BDKi)                   :: tmpReAry(4)
 
    ! Initialize some variables:
    ErrStat = ErrID_None
@@ -731,6 +731,13 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
    CALL ReadVar(UnIn,InputFile,InputFileData%kp_total,"kp_total", "Total number of key point",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
+         ! check these values before allocating the arrays below
+      if (InputFileData%member_total<1 .or. InputFileData%kp_total<1) then
+         CALL SetErrStat( ErrID_Fatal, "member_total and kp_total must be positive numbers", ErrStat, ErrMsg, RoutineName )         
+         call cleanup()
+         return
+      end if
+         
       CALL AllocAry(InputFileData%kp_member,InputFileData%member_total,'Number of key point in each member',ErrStat2,ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
@@ -741,8 +748,8 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
             return
          end if
          
-   InputFileData%kp_member(:) = 0
-   InputFileData%kp_coordinate(:,:) = 0.0D0
+   InputFileData%kp_member = 0
+   InputFileData%kp_coordinate = 0.0_BDKi
    temp_int = 0
    DO i=1,InputFileData%member_total
       ! bjj: we cannot read j, InputFileData%kp_member(j) because j could be outside the valid range:
@@ -761,7 +768,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,&
          !bjj: what happens if the user enters a member number multiple times? or if not each member is accounted for?
          !    I'm going to force them to be entered 1-InputFileData%kp_member to avoid this issue for now.
          if (j /= i) then
-            call SetErrStat(ErrID_Warn, "Member numbers must be entered in monotonic increasing order, starting with 1.",ErrStat,ErrMsg,RoutineName)
+            call SetErrStat(ErrID_Warn, "Member numbers must be entered in monotonicly increasing order, starting with 1.",ErrStat,ErrMsg,RoutineName)
          end if
          
    ENDDO
@@ -882,8 +889,9 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
    character(*), parameter    :: RoutineName = 'BD_ReadBladeFile'
    INTEGER(IntKi)             :: i
    INTEGER(IntKi)             :: j
-   REAL(ReKi)                 :: temp66(6,6)
-   REAL(ReKi)                 :: temp6(6)
+   
+   REAL(BDKi)                 :: temp66(6,6)
+   REAL(BDKi)                 :: temp6(6)
 
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -912,15 +920,20 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
 
    CALL AllocAry(BladeInputFileData%stiff0,6,6,BladeInputFileData%station_total,'Cross-sectional 6 by 6 stiffness matrix',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   BladeInputFileData%stiff0(:,:,:) = 0.0D0
    CALL AllocAry(BladeInputFileData%mass0,6,6,BladeInputFileData%station_total,'Cross-sectional 6 by 6 mass matrix',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   BladeInputFileData%mass0(:,:,:) = 0.0D0
    CALL AllocAry(BladeInputFileData%station_eta,BladeInputFileData%station_total,'Station eta array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   BladeInputFileData%station_eta(:) = 0.0D0
+      
+      !after allocating these arrays, we'll make sure it was successful:
+   if (ErrStat >= AbortErrLev) then
+      call cleanup()
+      return
+   end if
+            
    CALL ReadVar(UnIn,BldFile,BladeInputFileData%damp_flag,'damp_flag','Damping flag',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
    !  -------------- DAMPING PARAMETER-----------------------------------------------
    CALL ReadCom(UnIn,BldFile,'damping parameters',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -928,74 +941,74 @@ SUBROUTINE BD_ReadBladeFile(BldFile,BladeInputFileData,UnEc,ErrStat,ErrMsg)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL ReadCom(UnIn,BldFile,'units',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(BladeInputFileData%beta,6,'Number of damping coefficient',ErrStat2,ErrMsg2)
+                  
+   CALL ReadAry(UnIn,BldFile,temp6,6,'damping coefficient','damping coefficient',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   temp6(:) = 0.0D0
-   CALL ReadAry(UnIn,BldFile,temp6(:),6,'damping coefficient','damping coefficient',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      
    BladeInputFileData%beta(1) = temp6(3)
    BladeInputFileData%beta(2) = temp6(1)
    BladeInputFileData%beta(3) = temp6(2)
    BladeInputFileData%beta(4) = temp6(6)
    BladeInputFileData%beta(5) = temp6(4)
    BladeInputFileData%beta(6) = temp6(5)
-!  -------------- DISTRIBUTED PROPERTIES--------------------------------------------
+   
+   
+!  -------------- DISTRIBUTED PROPERTIES--------------------------------------------      
    CALL ReadCom(UnIn,BldFile,'Distributed properties',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            
    DO i=1,BladeInputFileData%station_total
-       READ(UnIn,*) BladeInputFileData%station_eta(i)
-       DO j=1,6
-           CALL ReadAry(UnIn,BldFile,BladeInputFileData%stiff0(j,:,i),6,'siffness_matrix',&
-                   'Blade C/S stiffness matrix',ErrStat2,ErrMsg2,UnEc)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       ENDDO
-       temp66(:,:) = 0.0D0
-       temp66(:,:) = BladeInputFileData%stiff0(:,:,i)
-       DO j=1,6
-           BladeInputFileData%stiff0(j,1,i) = temp66(j,3)
-           BladeInputFileData%stiff0(j,2,i) = temp66(j,1)
-           BladeInputFileData%stiff0(j,3,i) = temp66(j,2)
-           BladeInputFileData%stiff0(j,4,i) = temp66(j,6)
-           BladeInputFileData%stiff0(j,5,i) = temp66(j,4)
-           BladeInputFileData%stiff0(j,6,i) = temp66(j,5)
-       ENDDO
-       temp66(:,:) = 0.0D0
-       temp66(:,:) = BladeInputFileData%stiff0(:,:,i)
-       BladeInputFileData%stiff0(1,:,i) = temp66(3,:)
-       BladeInputFileData%stiff0(2,:,i) = temp66(1,:)
-       BladeInputFileData%stiff0(3,:,i) = temp66(2,:)
-       BladeInputFileData%stiff0(4,:,i) = temp66(6,:)
-       BladeInputFileData%stiff0(5,:,i) = temp66(4,:)
-       BladeInputFileData%stiff0(6,:,i) = temp66(5,:)
-       DO j=1,6
-           CALL ReadAry(UnIn,BldFile,BladeInputFileData%mass0(j,:,i),6,'mass_matrix',&
-                   'Blade C/S mass matrix',ErrStat2,ErrMsg2,UnEc)
-              CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       ENDDO
-       temp66(:,:) = 0.0D0
-       temp66(:,:) = BladeInputFileData%mass0(:,:,i)
-       DO j=1,6
-           BladeInputFileData%mass0(j,1,i) = temp66(j,3)
-           BladeInputFileData%mass0(j,2,i) = temp66(j,1)
-           BladeInputFileData%mass0(j,3,i) = temp66(j,2)
-           BladeInputFileData%mass0(j,4,i) = temp66(j,6)
-           BladeInputFileData%mass0(j,5,i) = temp66(j,4)
-           BladeInputFileData%mass0(j,6,i) = temp66(j,5)
-       ENDDO
-       temp66(:,:) = 0.0D0
-       temp66(:,:) = BladeInputFileData%mass0(:,:,i)
-       BladeInputFileData%mass0(1,:,i) = temp66(3,:)
-       BladeInputFileData%mass0(2,:,i) = temp66(1,:)
-       BladeInputFileData%mass0(3,:,i) = temp66(2,:)
-       BladeInputFileData%mass0(4,:,i) = temp66(6,:)
-       BladeInputFileData%mass0(5,:,i) = temp66(4,:)
-       BladeInputFileData%mass0(6,:,i) = temp66(5,:)
+      
+      CALL ReadVar(UnIn,BldFile,BladeInputFileData%station_eta(i),'station_eta','Station '//trim(num2lstr(i))//' Eta',ErrStat2,ErrMsg2,UnEc)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
+      DO j=1,6
+         CALL ReadAry(UnIn,BldFile,temp66(j,:),6,'siffness_matrix','Blade C/S stiffness matrix',ErrStat2,ErrMsg2,UnEc)
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ENDDO
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if       
+      BladeInputFileData%stiff0(:,:,i) = IEC_to_BD_coords(temp66)
+              
+      DO j=1,6
+         CALL ReadAry(UnIn,BldFile,temp66(j,:),6,'mass_matrix','Blade C/S mass matrix',ErrStat2,ErrMsg2,UnEc)
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ENDDO
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      BladeInputFileData%mass0(:,:,i) = IEC_to_BD_coords(temp66)
+       
    ENDDO
 
    call cleanup()
    return
       
 contains
+   function IEC_to_BD_coords(temp66) result(BD_temp66)
+    
+      real(BDKi), intent(in) :: temp66(6,6)    ! matrix in IEC coordinates
+      real(BDKi)             :: BD_temp66(6,6) ! equivalent matrix in BD coordinates
+
+      integer, parameter     :: indx(6) = (/ 3,1,2,6,4,5 /)
+      integer                :: i,j            ! loop counters
+                                                 
+      do j=1,6
+         do i=1,6
+            BD_temp66(i,j) = temp66( indx(i), indx(j) )
+         end do
+      end do
+                  
+   end function IEC_to_BD_coords
+   !.....................
    subroutine cleanup() 
       close(UnIn)
       return
@@ -1407,7 +1420,7 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
 
    TYPE(BD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
    TYPE(BD_InputType),        INTENT(IN   )  :: u                                 ! inputs
-   REAL(ReKi),                INTENT(INOUT)  :: AllOuts(0:)                        ! array of values to potentially write to file
+   REAL(ReKi),                INTENT(INOUT)  :: AllOuts(0:)                       ! array of values to potentially write to file
    TYPE(BD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
@@ -1433,26 +1446,20 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    REAL(BDKi)                                :: temp_cc(3)
    REAL(BDKi)                                :: temp_R(3,3)
    REAL(BDKi)                                :: temp33(3,3)
+   REAL(BDKi)                                :: temp33_2(3,3)
    
    
       ! start routine:
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   CALL BD_CrvExtractCrv(p%GlbRot,temp_glb,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   temp_vec(:) = temp_glb(:)
-   temp_glb(1) = temp_vec(2)
-   temp_glb(2) = temp_vec(3)
-   temp_glb(3) = temp_vec(1)
-   temp_vec(:) = y%ReactionForce%Force(:,1)
-   temp_vec(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_vec)
+   
+   temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1),y%ReactionForce%Force(:,1))
    AllOuts( RootFxr ) = temp_vec(1)
    AllOuts( RootFyr ) = temp_vec(2)
    AllOuts( RootFzr ) = temp_vec(3) 
 
-   temp_vec(:) = y%ReactionForce%Moment(:,1)
-   temp_vec(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_vec)
+   temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1),y%ReactionForce%Moment(:,1))
    AllOuts( RootMxr ) = temp_vec(1)
    AllOuts( RootMyr ) = temp_vec(2)
    AllOuts( RootMzr ) = temp_vec(3) 
@@ -1461,34 +1468,40 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
       ! we don't need to calculate the rest of these values if we don't ask for WriteOutput channels
    ! (but we did need RootMxr and RootMyr)
    if ( p%NumOuts <= 0 ) RETURN
-   
-      ! tip motions:   
+
+   ! convert global position and crv values:
+   temp_glb(1) = p%Glb_crv(2)
+   temp_glb(2) = p%Glb_crv(3)
+   temp_glb(3) = p%Glb_crv(1)
+
    temp_glbp(1) = p%GlbPos(2)
    temp_glbp(2) = p%GlbPos(3)
    temp_glbp(3) = p%GlbPos(1)
-   temp_vec(1:3) = MATMUL(p%GlbRot, p%uuN0( (p%node_elem*p%dof_node-5):(p%node_elem*p%dof_node-3),p%elem_total) )
+   
+      ! tip motions:   
+   temp_vec = MATMUL(p%GlbRot, p%uuN0( (p%node_elem*p%dof_node-5):(p%node_elem*p%dof_node-3),p%elem_total) )
    temp_tip0(1) = temp_vec(2)
    temp_tip0(2) = temp_vec(3)
    temp_tip0(3) = temp_vec(1)
    temp_ini(:) = temp_glbp(:) + temp_tip0(:)
    temp_roott(:) = temp_glbp(:) + u%RootMotion%TranslationDisp(:,1)
-   CALL BD_CrvExtractCrv(TRANSPOSE(u%RootMotion%Orientation(1:3,1:3,1)),temp_vec,ErrStat2,ErrMsg2)
+   temp33_2=TRANSPOSE(u%RootMotion%Orientation(1:3,1:3,1))  ! possible type conversion here
+   CALL BD_CrvExtractCrv(temp33_2,temp_vec,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CrvCompose(temp_cc,temp_vec,temp_glb,2,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CrvMatrixR(temp_cc,temp_R,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   temp_vec(:) = MATMUL(temp_R,temp_tip0)
-   temp_cur(:) = temp_roott(:) + temp_vec(:)
-   temp_vec(:) = y%BldMotion%TranslationDisp(1:3,p%node_elem*p%elem_total) - &
-                 (temp_cur(:) - temp_ini(:))
-   temp_vec(:) = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec)
+   temp_vec = MATMUL(temp_R,temp_tip0)
+   temp_cur = temp_roott + temp_vec
+   temp_vec = y%BldMotion%TranslationDisp(1:3,p%node_elem*p%elem_total) - (temp_cur(:) - temp_ini(:))
+   temp_vec = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec)
    AllOuts( TipTDxr ) = temp_vec(1)
    AllOuts( TipTDyr ) = temp_vec(2)
    AllOuts( TipTDzr ) = temp_vec(3)
    !
    temp_vec(1:3) = MATMUL(p%GlbRot, p%uuN0( (p%node_elem*p%dof_node-2):(p%node_elem*p%dof_node),p%elem_total) )
-   temp_vec2(:) = temp_vec(:)
+   temp_vec2   = temp_vec
    temp_vec(1) = temp_vec2(2)
    temp_vec(2) = temp_vec2(3)
    temp_vec(3) = temp_vec2(1)
@@ -1497,7 +1510,8 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    CALL BD_CrvCompose(temp_vec,temp_cc,temp_vec2,0,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    temp_cur(:) = 0.0D0
-   CALL BD_CrvExtractCrv(TRANSPOSE(y%BldMotion%Orientation(1:3,1:3,p%node_elem*p%elem_total)),temp_cur,ErrStat2,ErrMsg2)
+   temp33_2=TRANSPOSE(y%BldMotion%Orientation(1:3,1:3,p%node_elem*p%elem_total)) ! possible type conversion here   
+   CALL BD_CrvExtractCrv(temp33_2,temp_cur,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CrvCompose(temp_vec2,temp_cur,temp_vec,2,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1538,34 +1552,33 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
           node_no = j - (elem_no - 1)*(p%node_elem-1)
       ENDIF
       temp_id = (elem_no-1)*p%node_elem+node_no
-      temp33(:,:) = y%BldMotion%Orientation(1:3,1:3,temp_id)
+      temp33 = y%BldMotion%Orientation(1:3,1:3,temp_id)
 
-      temp_vec(:) = MATMUL(temp33,y%BldForce%Force(:,j))
+      temp_vec = MATMUL(temp33,y%BldForce%Force(:,j))
       AllOuts( NFl( beta,1 ) ) = temp_vec(1) 
       AllOuts( NFl( beta,2 ) ) = temp_vec(2)
       AllOuts( NFl( beta,3 ) ) = temp_vec(3)
       !
-      temp_vec(:) = MATMUL(temp33,y%BldForce%Moment(:,j))
+      temp_vec = MATMUL(temp33,y%BldForce%Moment(:,j))
       AllOuts( NMl( beta,1 ) ) = temp_vec(1) 
       AllOuts( NMl( beta,2 ) ) = temp_vec(2)
       AllOuts( NMl( beta,3 ) ) = temp_vec(3)
       !
-      temp_vec(1:3) = MATMUL(p%GlbRot, p%uuN0( (node_no*p%dof_node-5):(node_no*p%dof_node-3),elem_no) )
+      temp_vec = MATMUL(p%GlbRot, p%uuN0( (node_no*p%dof_node-5):(node_no*p%dof_node-3),elem_no) )
       temp_tip0(1) = temp_vec(2)
       temp_tip0(2) = temp_vec(3)
       temp_tip0(3) = temp_vec(1)
-      temp_ini(:) = temp_glbp(:) + temp_tip0(:)
-      temp_vec(:) = MATMUL(temp_R,temp_tip0)
-      temp_cur(:) = temp_roott(:) + temp_vec(:)
-      temp_vec(:) = y%BldMotion%TranslationDisp(1:3,p%node_elem*(elem_no-1)+node_no) - &
-                    (temp_cur(:) - temp_ini(:))
-      temp_vec(:) = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec)
+      temp_ini = temp_glbp + temp_tip0
+      temp_vec = MATMUL(temp_R,temp_tip0)
+      temp_cur = temp_roott + temp_vec
+      temp_vec = y%BldMotion%TranslationDisp(1:3,p%node_elem*(elem_no-1)+node_no) - (temp_cur - temp_ini)
+      temp_vec = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec)
       AllOuts( NTDr( beta,1 ) ) = temp_vec(1) 
       AllOuts( NTDr( beta,2 ) ) = temp_vec(2)
       AllOuts( NTDr( beta,3 ) ) = temp_vec(3)
       !
-      temp_vec(1:3) = MATMUL(p%GlbRot, p%uuN0( (node_no*p%dof_node-2):(node_no*p%dof_node),elem_no) )
-      temp_vec2(:) = temp_vec(:)
+      temp_vec = MATMUL(p%GlbRot, p%uuN0( (node_no*p%dof_node-2):(node_no*p%dof_node),elem_no) )
+      temp_vec2 = temp_vec
       temp_vec(1) = temp_vec2(2)
       temp_vec(2) = temp_vec2(3)
       temp_vec(3) = temp_vec2(1)
@@ -1573,12 +1586,12 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL BD_CrvCompose(temp_vec,temp_cc,temp_vec2,0,ErrStat2,ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      temp_cur(:) = 0.0D0
-      CALL BD_CrvExtractCrv(TRANSPOSE(y%BldMotion%Orientation(1:3,1:3,temp_id)),temp_cur,ErrStat2,ErrMsg2)
+      temp33_2 = TRANSPOSE(y%BldMotion%Orientation(1:3,1:3,temp_id)) ! possible type conversion here
+      CALL BD_CrvExtractCrv(temp33_2,temp_cur,ErrStat2,ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL BD_CrvCompose(temp_vec2,temp_cur,temp_vec,2,ErrStat2,ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      temp_vec(:) = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec2)
+      temp_vec = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec2)
       AllOuts( NRDr( beta,1 ) ) = temp_vec(1)
       AllOuts( NRDr( beta,2 ) ) = temp_vec(2) 
       AllOuts( NRDr( beta,3 ) ) = temp_vec(3)
@@ -1600,12 +1613,12 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
       AllOuts( NRAg( beta,3 ) ) = y%BldMotion%RotationAcc(3,j)*R2D
             
       !
-      temp_vec(:) = MATMUL(temp33,u%PointLoad%Force(:,j))
+      temp_vec = MATMUL(temp33,u%PointLoad%Force(:,j))
       AllOuts( NPFl( beta,1 ) ) = temp_vec(1) 
       AllOuts( NPFl( beta,2 ) ) = temp_vec(2) 
       AllOuts( NPFl( beta,3 ) ) = temp_vec(3)     
       !
-      temp_vec(:) = MATMUL(temp33,u%PointLoad%Moment(:,j))
+      temp_vec = MATMUL(temp33,u%PointLoad%Moment(:,j))
       AllOuts( NPMl( beta,1 ) ) = temp_vec(1) 
       AllOuts( NPMl( beta,2 ) ) = temp_vec(2) 
       AllOuts( NPMl( beta,3 ) ) = temp_vec(3) 
@@ -1657,9 +1670,8 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
    WRITE (UnSu,'(/,A)')  'This summary information was generated by '//TRIM( GetNVD(BeamDyn_Ver) )// &
                          ' on '//CurDate()//' at '//CurTime()//'.'
 
-   WRITE (UnSu,'(A,F13.3)') 'Blade mass                  (kg)    ', p%blade_mass
-
-   WRITE (UnSu,'(A,F13.3)' ) 'Blade length                  (m)    ', p%blade_length
+   WRITE (UnSu,'(A,F13.3)')  'Blade mass                  (kg)    ', p%blade_mass
+   WRITE (UnSu,'(A,F13.3)' ) 'Blade length                 (m)    ', p%blade_length
 
    WRITE (UnSu,'(A)')  'Blade center of mass: '
    WRITE (UnSu,'(3ES18.5)' ) p%blade_CG(:)

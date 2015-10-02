@@ -57,7 +57,7 @@ PROGRAM MAIN
    REAL(DbKi),ALLOCATABLE           :: BD_OutputTimes(:)
    INTEGER(IntKi)                     :: DvrOut 
 
-   REAL(ReKi) ::temp_cc(3)
+   REAL(BDKi) ::temp_cc(3)
 
    CHARACTER(256)    :: DvrInputFile
    CHARACTER(256)    :: RootName
@@ -67,8 +67,8 @@ PROGRAM MAIN
    Integer(IntKi)                     :: i               ! counter for various loops
    Integer(IntKi)                     :: j               ! counter for various loops
 
-   REAL(ReKi):: temp_R(3,3)
-   REAL(DbKi):: start, finish
+   REAL(BDKi):: temp_R(3,3)
+   REAL(R8Ki):: start, finish
 
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
@@ -221,13 +221,12 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
    CHARACTER(*),                   INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
    INTEGER(IntKi)          :: i                ! do-loop counter
-   REAL(ReKi)              :: temp_vec(3)
-   REAL(ReKi)              :: temp_vec2(3)
-   REAL(ReKi)              :: temp_rr(3)
-   REAL(ReKi)              :: temp_R(3,3)
-   REAL(ReKi)              :: temp_r0(3)
-   REAL(ReKi)              :: temp_theta(3)
-   REAL(ReKi)              :: temp3(3)
+   REAL(BDKi)              :: temp_vec(3)
+   REAL(BDKi)              :: temp_rr(3)
+   REAL(BDKi)              :: temp_R(3,3)
+   REAL(BDKi)              :: temp_r0(3)
+   REAL(BDKi)              :: temp_theta(3)
+   REAL(BDKi)              :: temp33(3,3)
 
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -253,7 +252,8 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
        u%RootMotion%Orientation(i,i,1) = 1.0D0
        u%HubMotion%Orientation(i,i,1) = 1.0D0
    ENDDO
-   CALL BD_CrvMatrixR(temp_vec,u%RootMotion%Orientation(:,:,1),ErrStat,ErrMsg)
+   temp33=u%RootMotion%Orientation(:,:,1) !possible type conversion
+   CALL BD_CrvMatrixR(temp_vec,temp33,ErrStat,ErrMsg)
    temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
    u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
 !   IF(t .GT. 0.2) THEN
@@ -271,15 +271,15 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
    u%RootMotion%RotationVel(2,1) = p%IniVelo(6)
    u%RootMotion%RotationVel(3,1) = p%IniVelo(1)
    u%RootMotion%TranslationVel(:,:) = 0.0D0
-   u%RootMotion%TranslationVel(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr)
+   u%RootMotion%TranslationVel(:,1) = MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr)
    ! END Calculate root translational and angular velocities
 
 
    ! Calculate root translational and angular accelerations
    u%RootMotion%TranslationAcc(:,:) = 0.0D0
    u%RootMotion%RotationAcc(:,:) = 0.0D0
-   u%RootMotion%TranslationAcc(:,1) = MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)), &
-               MATMUL(BD_Tilde(u%RootMotion%RotationVel(:,1)),temp_rr))
+   u%RootMotion%TranslationAcc(:,1) = MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)), &
+               MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr))
    ! END Calculate root translational and angular accelerations
 
    u%PointLoad%Force(:,:)  = 0.0D0
@@ -338,7 +338,6 @@ SUBROUTINE BD_ReadDvrFile(DvrInputFile,t_ini,t_f,dt,InitInputData,&
    CHARACTER(1024)              :: FTitle                       ! "File Title": the 2nd line of the input file, which contains a description of its contents
 
    INTEGER(IntKi)               :: i
-   INTEGER(IntKi)               :: j
 
    ! Initialize some variables:
    ErrStat = ErrID_None
