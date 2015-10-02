@@ -58,9 +58,9 @@ init_type_table()
   p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "dbki" )            ;
                                                 strcpy( p->mapsto, "REAL(DbKi)")      ;
                                                 add_node_to_end ( p , &Type )         ;
-//  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "r8Ki" )            ;
-//                                                strcpy( p->mapsto, "REAL(DbKi)")      ;
-//                                                add_node_to_end ( p , &Type )         ;
+  p = new_node(TYPE) ; p->type_type = SIMPLE  ; strcpy( p->name , "r8ki" )            ;
+                                                strcpy( p->mapsto, "REAL(R8Ki)")      ;
+                                                add_node_to_end ( p , &Type )         ;
   p = new_node(TYPE) ; p->type_type = DERIVED ; strcpy( p->name , "meshtype" )        ;
                                                 strcpy( p->mapsto, "MeshType")        ;
                                                 add_node_to_end ( p , &Type )         ;
@@ -79,9 +79,11 @@ C_type( char * s )
 {
   if ( !strcmp(  s, "INTEGER(IntKi)") ) return("int"   ) ;
   if ( !strcmp(  s, "LOGICAL"       ) ) return("bool"  ) ;
-  if ( !strcmp(  s, "REAL(ReKi)"    ) ) return("float" ) ;
-  if ( !strcmp(  s, "REAL(DbKi)"    ) ) return("double") ;
-  if ( !strncmp( s, "CHARACTER",9   ) ) return("char"  ) ; 
+  if (!strcmp(s, "REAL(ReKi)")) return("float");
+  if (!strcmp(s, "REAL(SiKi)")) return("float");
+  if (!strcmp(s, "REAL(DbKi)")) return("double");
+  if (!strcmp(s, "REAL(R8Ki)")) return("double");
+  if (!strncmp(s, "CHARACTER", 9)) return("char");
   return("unknown") ;
 }
 
@@ -94,9 +96,11 @@ c_types_binding( char *s )
 
   if ( !strcmp(  s, "INTEGER(IntKi)") ) return("INTEGER(KIND=C_INT)" ) ;
   if ( !strcmp(  s, "LOGICAL"       ) ) return("LOGICAL(KIND=C_BOOL)") ;
-  if ( !strcmp(  s, "REAL(ReKi)"    ) ) return("REAL(KIND=C_FLOAT)"  ) ;
-  if ( !strcmp(  s, "REAL(DbKi)"    ) ) return("REAL(KIND=C_DOUBLE)" ) ;
-  if ( !strncmp( s, "CHARACTER",9   ) ) { // give the C string a length identical to the fortran type
+  if (!strcmp(s, "REAL(ReKi)")) return("REAL(KIND=C_FLOAT)");
+  if (!strcmp(s, "REAL(SiKi)")) return("REAL(KIND=C_FLOAT)");
+  if (!strcmp(s, "REAL(DbKi)")) return("REAL(KIND=C_DOUBLE)");
+  if (!strcmp(s, "REAL(R8Ki)")) return("REAL(KIND=C_DOUBLE)");
+  if (!strncmp(s, "CHARACTER", 9)) { // give the C string a length identical to the fortran type
     char *p = s, buf[10];
     while ( *p ) { 
       if ( isdigit(*p) ) { 
