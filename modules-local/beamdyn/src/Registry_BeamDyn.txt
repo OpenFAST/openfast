@@ -36,14 +36,17 @@ typedef   ^        InitOutputType ProgDesc            Ver             -   -   - 
 # ..... States
 # ....................................................................................................................
 # Define continuous (differentiable) states here:
-typedef BeamDyn/BD ContinuousStateType ReKi q        {:} - - "q - displacement of Mass 1" m
-typedef      ^              ^             ^   dqdt     {:} - -  "dqdt - velocity of Mass 1" m/s
+#vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+#the following are BDKi = R8Ki
+typedef BeamDyn/BD ContinuousStateType R8Ki q        {:} - -  "q - displacement" m    #BDKi
+typedef      ^     ContinuousStateType  ^   dqdt     {:} - -  "dqdt - velocity"  m/s  #BDKi
+#end of BDKi-type variables
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 # Define discrete (nondifferentiable) states here:
-typedef BeamDyn/BD BD_DiscreteStateType ReKi DummyDiscState - - - "A variable, Replace if you have discrete states" -
-#typedef BeamDyn/BD BD_DiscreteStateType ReKi rot  {3} - - "For filter" -
-typedef BeamDyn/BD BD_DiscreteStateType ReKi thetaP  - - - "Pitch angle state" -
-typedef BeamDyn/BD BD_DiscreteStateType ReKi thetaPD  - - - "Pitch rate state" -
+#typedef BeamDyn/BD BD_DiscreteStateType ReKi rot  {3} - - "For filter" -             
+typedef BeamDyn/BD BD_DiscreteStateType ReKi thetaP  - - - "Pitch angle state" -      
+typedef BeamDyn/BD BD_DiscreteStateType ReKi thetaPD  - - - "Pitch rate state" -      
 
 # Define constraint states here:
 typedef BeamDyn/BD ConstraintStateType ReKi DummyConstrState - - - "A variable, Replace if you have constraint states" -
@@ -51,8 +54,12 @@ typedef BeamDyn/BD ConstraintStateType ReKi DummyConstrState - - - "A variable, 
 # Define any data that are not considered actual states here:
 # e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
 # at a given time, etc.)
-typedef BeamDyn/BD OtherStateType ReKi  acc        {:} - - "Accerleration in GA2"
-typedef BeamDyn/BD OtherStateType ReKi  xcc        {:} - - "Algorithm accerleration in GA2"
+#vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+#the following are BDKi = R8Ki
+typedef BeamDyn/BD OtherStateType R8Ki  acc        {:} - - "Accerleration in GA2"
+typedef BeamDyn/BD OtherStateType  ^    xcc        {:} - - "Algorithm accerleration in GA2"
+#end of BDKi-type variables
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef BeamDyn/BD OtherStateType Logical  InitAcc  -  - - "flag to determine if accerlerations have been initialized in updateStates"
 
 # ..... Parameters
@@ -60,11 +67,16 @@ typedef BeamDyn/BD OtherStateType Logical  InitAcc  -  - - "flag to determine if
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 
-typedef BeamDyn/BD ParameterType ReKi   uuN0      {:}{:} - -  "Initial Postion Vector" -
-typedef BeamDyn/BD ParameterType ReKi   Gauss     {:}{:} - -  "Gauss point postion vector" -
+typedef BeamDyn/BD ParameterType DbKi   dt     - - -  "module dt" s
+typedef BeamDyn/BD ParameterType DbKi   coef   {9} - -  "GA2 Coefficient" -
+typedef BeamDyn/BD ParameterType DbKi   rhoinf - - -  "Numerical Damping Coefficient for GA2"
+#vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+#the following are BDKi = R8Ki
+typedef BeamDyn/BD ParameterType R8Ki   uuN0      {:}{:} - -  "Initial Postion Vector" -
+typedef BeamDyn/BD ParameterType  ^     Gauss     {:}{:} - -  "Gauss point postion vector" -
 typedef      ^            ^       ^     Stif0_GL     {:}{:}{:}  - -  "Sectional Stiffness Properties at Gauss point" -
 typedef      ^            ^       ^     Mass0_GL     {:}{:}{:}  - -  "Sectional Mass Properties at Gauss point" -
-typedef BeamDyn/BD ParameterType ReKi   gravity   {3} - -  "Gravitational acceleration" m/s^2
+typedef      ^            ^       ^     gravity   {3} - -  "Gravitational acceleration" m/s^2
 typedef      ^            ^       ^     segment_length   {:}{:} - -  "Array stored length of each segment" -
 typedef      ^            ^       ^     member_length   {:}{:} - -  "Array stored length of each member" -
 typedef      ^            ^       ^     blade_length     - - -  "Blade Length" -
@@ -72,6 +84,24 @@ typedef      ^            ^       ^     blade_mass     - - -  "Blade Length" -
 typedef      ^            ^       ^     blade_CG    {3} - -  "Blade Length" -
 typedef      ^            ^       ^     blade_IN    {3}{3} - -  "Blade Length" -
 typedef      ^            ^       ^     kp_coordinate  {:}{:} - -  "Total number of dofs" -
+typedef      ^            ^       ^     beta   {6} - -  "Damping Coefficient" -
+typedef      ^            ^       ^     tol    - - -  "Tolerance used in stopping criterion" -
+typedef      ^            ^       ^     GlbPos {3} - -  "Initial Position Vector between origins of Global and blade frames" -
+typedef      ^            ^       ^     GlbRot {3}{3} - -  "Initial Rotation Tensor between Global and Blade frames" -
+typedef      ^            ^       ^     Glb_crv {3} - -  "CRV parameters of GlbRot" -
+#typedef      ^            ^       ^     IniDisp {:} - -  "Initial Position Vector between origins of Global and blade frames" -
+#typedef      ^            ^       ^     IniVelo {:} - -  "Initial Position Vector between origins of Global and blade frames" -
+#typedef      ^            ^       ^     GLL {:} - -  "GLL point locations in natural frame" -
+typedef      ^            ^       ^     GL {:} - -  "GL(Gauss) point locations in natural frame" -
+typedef      ^            ^       ^     GLw {:} - -  "Weights at each GL(Gauss) point" -
+typedef      ^            ^       ^     Shp {:}{:} - -  "Shape function matrix" -
+typedef      ^            ^       ^     Der {:}{:} - -  "Derivative of shape function matrix" -
+typedef      ^            ^       ^     Jacobian {:}{:} - -  "Jacobian value at each quadrature point" -
+typedef      ^            ^       ^     rrN0  {:}{:} - -  "Initial relative rotation array" -
+typedef      ^            ^       ^     uu0  {:}{:} - -  "Initial Disp/Rot value at quadrature point " -
+typedef      ^            ^       ^     E10  {:}{:} - -  "Initial E10 at quadrature point" -
+#end of BDKi-type variables
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef      ^            ^     IntKi   node_elem - - -  "Node per element" -
 typedef      ^            ^       ^     kp_total  - - -  "Total number of dofs" -
 typedef      ^            ^       ^     kp_member {:} - -  "Total number of dofs" -
@@ -87,17 +117,6 @@ typedef      ^            ^       ^     niter  - - -  "Maximum number of iterati
 typedef      ^            ^       ^     quadrature  - - -  "Quadrature method: 1 Gauss 2 Trapezoidal" -
 typedef      ^            ^       ^     n_fact  - - -  "Factorization frequency" -
 #typedef      ^            ^       ^     NRMax  - - -  "Maximum number of iterations in Newton-Ralphson algorithm" -
-typedef      ^            ^      DbKi   dt     - - -  "module dt" s
-typedef      ^            ^      ReKi   beta   {6} - -  "Damping Coefficient" -
-typedef      ^            ^      ReKi   tol    - - -  "Tolerance used in stopping criterion" -
-typedef      ^            ^      DbKi   coef   {9} - -  "GA2 Coefficient" -
-typedef BeamDyn/BD ParameterType DbKi   rhoinf - - -  "Numerical Damping Coefficient for GA2"
-typedef      ^            ^      ReKi   GlbPos {3} - -  "Initial Position Vector between origins of Global and blade frames" -
-typedef      ^            ^      ReKi   GlbRot {3}{3} - -  "Initial Rotation Tensor between Global and Blade frames" -
-typedef      ^            ^      ReKi   Glb_crv {3} - -  "CRV parameters of GlbRot" -
-
-typedef      ^            ^      ReKi   IniDisp {:} - -  "Initial Position Vector between origins of Global and blade frames" -
-typedef      ^            ^      ReKi   IniVelo {:} - -  "Initial Position Vector between origins of Global and blade frames" -
 typedef      ^            ^      IntKi  NumOuts - - -  "Number of parameters in the output list (number of outputs requested)" -
 typedef      ^     ParameterType OutParmType OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
 typedef      ^     ParameterType IntKi  NNodeOuts - - - "Number of nodes to output data to a file[0 - 9]"	-
@@ -110,15 +129,6 @@ typedef      ^            ^      ReKi   pitchJ - - -  "Pitch actuator inertia" (
 typedef      ^            ^      ReKi   pitchK - - -  "Pitch actuator stiffness" (kg-m^2/s^2) 
 typedef      ^            ^      ReKi   pitchC - - -  "Pitch actuator damping" - (kg-m^2/s)
 typedef      ^            ^      ReKi   torqM {2}{2} - -  "Pitch actuator matrix: (I-hA)^-1" - 
-typedef      ^            ^      ReKi   GLL {:} - -  "GLL point locations in natural frame" -
-typedef      ^            ^      ReKi   GL {:} - -  "GL(Gauss) point locations in natural frame" -
-typedef      ^            ^      ReKi   GLw {:} - -  "Weights at each GL(Gauss) point" -
-typedef      ^            ^      ReKi   Shp {:}{:} - -  "Shape function matrix" -
-typedef      ^            ^      ReKi   Der {:}{:} - -  "Derivative of shape function matrix" -
-typedef      ^            ^      ReKi   Jacobian {:}{:} - -  "Jacobian value at each quadrature point" -
-typedef      ^            ^      ReKi   rrN0  {:}{:} - -  "Initial relative rotation array" -
-typedef      ^            ^      ReKi   uu0  {:}{:} - -  "Initial Disp/Rot value at quadrature point " -
-typedef      ^            ^      ReKi   E10  {:}{:} - -  "Initial E10 at quadrature point" -
 
 
 # ..... Inputs
@@ -144,37 +154,45 @@ typedef  ^           OutputType  ReKi      WriteOutput  {:}  -  -  "Data to be w
 # ..... Blade Input file data........................................................................
 typedef BeamDyn/BD    BladeInputData    IntKi    station_total    -     -     -    "Number of blade input stations"
 typedef BeamDyn/BD    BladeInputData    IntKi    format_index     -     -     -    "Number of blade input stations"
-typedef BeamDyn/BD    BladeInputData    ReKi     station_eta     {:}    -     -    "Station location in eta [0,1]"
-typedef BeamDyn/BD    BladeInputData    ReKi     stiff0       {:}{:}{:} -     -    "C/S stiffness matrix arrays"
-typedef BeamDyn/BD    BladeInputData    ReKi     mass0        {:}{:}{:} -     -    "C/S mass matrix arrays"
-typedef BeamDyn/BD    BladeInputData    ReKi     beta             {:} - - "Damping Coefficient" -
+#vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+#the following are BDKi = R8Ki
+typedef BeamDyn/BD    BladeInputData    R8Ki     station_eta     {:}    -     -    "Station location in eta [0,1]"
+typedef BeamDyn/BD    BladeInputData     ^       stiff0       {:}{:}{:} -     -    "C/S stiffness matrix arrays"
+typedef BeamDyn/BD    BladeInputData     ^       mass0        {:}{:}{:} -     -    "C/S mass matrix arrays"
+typedef BeamDyn/BD    BladeInputData     ^       beta             {6} - - "Damping Coefficient" -
+#end of BDKi-type variables
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef BeamDyn/BD    BladeInputData    IntKi    damp_flag    - - - "Damping Flag: 0-No Damping, 1-Damped"
 # ..... Input file data..............................................................................
 # This is data defined in the Input File for this module (or could otherwise be passed in)
 # ..... Primary Input file data......................................................................
 typedef BeamDyn/BD    BD_InputFile    IntKi    analysis_type    - - - "Analysis Type: 0-Rigid, 1-Static, 2-Dynamic" -
-typedef BeamDyn/BD    BD_InputFile    IntKi    member_total     - - - "Total number of members" -
-typedef BeamDyn/BD    BD_InputFile    IntKi    kp_total         - - - "Total number of key point" -
-typedef BeamDyn/BD    BD_InputFile    IntKi    kp_member       {:} - - "Number of key points in each member" -
-typedef BeamDyn/BD    BD_InputFile    IntKi    order_elem       - - - "Order of interpolation (basis) function" -
-typedef BeamDyn/BD    BD_InputFile    IntKi    NRMax            - - - "Max number of iterations in Newton Ralphson algorithm" -
-typedef BeamDyn/BD    BD_InputFile    IntKi    quadrature       - - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
-typedef BeamDyn/BD    BD_InputFile    IntKi    n_fact           - - - "Factorization frequency" -
-typedef BeamDyn/BD    BD_InputFile    IntKi    refine           - - - "FE mesh refinement factor for trapezoidal quadrature" -
-typedef BeamDyn/BD    BD_InputFile    ReKi     stop_tol         - - - "Key point coordinates array" -
-typedef BeamDyn/BD    BD_InputFile    ReKi     kp_coordinate   {:}{:} - - "Key point coordinates array" -
-typedef BeamDyn/BD    BD_InputFile    DbKi     rhoinf          - - - "Key point coordinates array" -
-typedef BeamDyn/BD    BD_InputFile    DbKi     DTBeam          - - - "Time interval for BeamDyn  calculations {or default} (s)" -
-typedef BeamDyn/BD    BD_InputFile    BladeInputData    InpBl   - - - "Input data for individual blades"   "see BladeInputData Type"
-typedef BeamDyn/BD    BD_InputFile    CHARACTER(1024) BldFile   - - -  "Name of blade input file"
-typedef      ^            ^           Logical  UsePitchAct - - -  "Whether to use a pitch actuator inside BeamDyn" (flag) 
-typedef      ^            ^           ReKi     pitchJ - - -     "Pitch actuator inertia" (kg-m^2)
-typedef      ^            ^           ReKi     pitchK - - -     "Pitch actuator stiffness" (kg-m^2/s^2) 
-typedef      ^            ^           ReKi     pitchC - - -     "Pitch actuator damping" - (kg-m^2/s)
-typedef BeamDyn/BD    BD_InputFile    Logical  Echo             - - -  "Echo"
+typedef ^             BD_InputFile    IntKi    member_total     - - - "Total number of members" -
+typedef ^             BD_InputFile    IntKi    kp_total         - - - "Total number of key point" -
+typedef ^             BD_InputFile    IntKi    kp_member       {:} - - "Number of key points in each member" -
+typedef ^             BD_InputFile    IntKi    order_elem       - - - "Order of interpolation (basis) function" -
+typedef ^             BD_InputFile    IntKi    NRMax            - - - "Max number of iterations in Newton Ralphson algorithm" -
+typedef ^             BD_InputFile    IntKi    quadrature       - - - "Quadrature: 1: Gauss; 2: Trapezoidal" -
+typedef ^             BD_InputFile    IntKi    n_fact           - - - "Factorization frequency" -
+typedef ^             BD_InputFile    IntKi    refine           - - - "FE mesh refinement factor for trapezoidal quadrature" -
+typedef ^             BD_InputFile    DbKi     rhoinf          - - - "Key point coordinates array" -
+typedef ^             BD_InputFile    DbKi     DTBeam          - - - "Time interval for BeamDyn  calculations {or default} (s)" -
+typedef ^             BD_InputFile    BladeInputData    InpBl   - - - "Input data for individual blades"   "see BladeInputData Type"
+typedef ^             BD_InputFile    CHARACTER(1024) BldFile   - - -  "Name of blade input file"
+typedef ^             BD_InputFile    Logical  UsePitchAct - - -  "Whether to use a pitch actuator inside BeamDyn" (flag) 
+#vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+#the following are BDKi = R8Ki
+typedef ^             BD_InputFile    R8Ki     stop_tol         - - - "Key point coordinates array" -
+typedef ^             BD_InputFile     ^       kp_coordinate   {:}{:} - - "Key point coordinates array" -
+typedef ^             BD_InputFile     ^       pitchJ - - -     "Pitch actuator inertia" (kg-m^2)
+typedef ^             BD_InputFile     ^       pitchK - - -     "Pitch actuator stiffness" (kg-m^2/s^2) 
+typedef ^             BD_InputFile     ^       pitchC - - -     "Pitch actuator damping" - (kg-m^2/s)
+#end of BDKi-type variables
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+typedef ^             BD_InputFile    Logical  Echo             - - -  "Echo"
 typedef ^             BD_InputFile    IntKi    NNodeOuts - - - "Number of node outputs [0 - 9]"	-
 typedef ^             BD_InputFile    IntKi    OutNd   {9} - - "Nodes whose values will be output"	-
 typedef ^             BD_InputFile    IntKi    NumOuts  -  - - "Number of parameters in the output list (number of outputs requested)"	-
 typedef ^             BD_InputFile    CHARACTER(ChanLen)	OutList	{:}	-	-	"List of user-requested output channels"	-
 typedef ^             BD_InputFile    LOGICAL  SumPrint  -  -  -  "Print summary data to file? (.sum)"	-
-typedef BeamDyn/BD    BD_InputFile    CHARACTER(20) OutFmt   - - -  "Format specifier" -
+typedef ^             BD_InputFile    CHARACTER(20) OutFmt   - - -  "Format specifier" -

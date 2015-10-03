@@ -133,22 +133,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          return
       end if
       
-         p%OutFmt = InputFileData%OutFmt
-
-      
-
-
-   ! Key point coordinates
-   CALL AllocAry(p%kp_coordinate,p%kp_total,3,'Key point coordinates array',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   p%kp_coordinate(:,:) = 0.0D0
-   DO i = 1, p%kp_total
-       p%kp_coordinate(i,1:3) = InputFileData%kp_coordinate(i,1:3)
-   ENDDO
-   ! Number of key points in each member
-   CALL AllocAry(p%kp_member,InputFileData%member_total,'Number of key points in each memeber',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   p%kp_member(:) = InputFileData%kp_member(:)
 
    
    ! Compute coefficients for cubic spline fit, clamped at two ends
@@ -206,14 +190,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          return
       end if
    DEALLOCATE(temp_w)
-   ! Quadrature point array in natural frame
-   ! If Gauss: Gauss points and weights
-   ! If Trapezoidal: quadrature points and weights
-   CALL AllocAry(p%GL,p%ngp,'p%GL',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ! Quadrature weight array
-   CALL AllocAry(p%GLw,p%ngp,'p%GLw weight array',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    if (ErrStat >= AbortErrLev) then
       call cleanup()
       return
@@ -463,21 +439,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            ENDIF
        ENDDO
    ENDIF
-   ! Physical damping flag and 6 damping coefficients
-   p%damp_flag  = InputFileData%InpBl%damp_flag
-   p%beta(:)  = InputFileData%InpBl%beta(:)
-   if (ErrStat >= AbortErrLev) then
-      call cleanup()
-      return
-   end if
-
    
-   CALL AllocAry(p%Shp,p%node_elem,p%ngp,'p%Shp',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%Der,p%node_elem,p%ngp,'p%Der',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%Jacobian,p%ngp,p%elem_total,'p%Jacobian',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    if (ErrStat >= AbortErrLev) then
       call cleanup()
       return
@@ -488,17 +450,16 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 
    CALL BD_InitShpDerJaco(p%quadrature,p%GL,GLL,p%uuN0,&
            p%node_elem,p%elem_total,p%dof_node,p%ngp,    &
-           p%refine,p%kp_member,                         &
+           p%refine,InputFileData%kp_member,             &
            p%Shp,p%Der,p%GLw,p%Jacobian,                 &
            ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
 
 
-   CALL AllocAry(p%rrN0,(p%dof_node*p%node_elem)/2,p%elem_total,'p%Nrr0',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%uu0,p%dof_node*p%ngp,p%elem_total,'p%uu0',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%E10,3*p%ngp,p%elem_total,'p%E10',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    p%rrN0(:,:) = 0.0D0
    p%uu0(:,:)  = 0.0D0
    p%E10(:,:)  = 0.0D0
@@ -735,6 +696,9 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    p%gravity = MATMUL(TRANSPOSE(p%GlbRot),temp_POS)
 
            
+   !....................
+   ! data copied/derived from input file
+   !....................
    ! Analysis type: 1 Static 2 Dynamic
    p%analysis_type  = InputFileData%analysis_type
    ! Numerical damping coefficient: [0,1].
@@ -777,15 +741,45 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    p%dof_total   = p%node_total*p%dof_node   
    
       
+   !................................
+   ! allocate some parameter arrays
+   !................................
    CALL AllocAry(p%member_length, InputFileData%member_total,2,'member length array', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocAry(p%segment_length,InputFileData%kp_total-1,  3,'segment length array',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
-   temp_int = p%node_elem * p%dof_node
-   CALL AllocAry(p%uuN0,temp_int,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2);      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%Shp,     p%node_elem,p%ngp,       'p%Shp',     ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%Der,     p%node_elem,p%ngp,       'p%Der',     ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%Jacobian,p%ngp,      p%elem_total,'p%Jacobian',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
-      if (ErrStat >= AbortErrLev) return
+   CALL AllocAry(p%uuN0, p%dof_node*p%node_elem,   p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+   CALL AllocAry(p%rrN0,(p%dof_node*p%node_elem)/2,p%elem_total,'p%Nrr0',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%uu0,  p%dof_node*p%ngp,         p%elem_total,'p%uu0', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%E10,  3*p%ngp,                  p%elem_total,'p%E10', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   ! Quadrature point and weight arrays in natural frame
+   !    If Gauss: Gauss points and weights
+   !    If Trapezoidal: quadrature points and weights
+   CALL AllocAry(p%GL, p%ngp,'p%GL',              ErrStat2,ErrMsg2) ; CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%GLw,p%ngp,'p%GLw weight array',ErrStat2,ErrMsg2) ; CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   !bjj: these values aren't used anywhere
+   !! Key point coordinates
+   !CALL AllocAry(p%kp_coordinate,p%kp_total,3,'Key point coordinates array',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   !! Number of key points in each member
+   !CALL AllocAry(p%kp_member,InputFileData%member_total,'Number of key points in each memeber',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   
+   if (ErrStat >= AbortErrLev) return
          
-
+   !p%kp_coordinate = InputFileData%kp_coordinate(:,1:3)
+   !p%kp_member     = InputFileData%kp_member
+   
+   !...............................................      
+   ! Physical damping flag and 6 damping coefficients
+   !...............................................
+   p%damp_flag  = InputFileData%InpBl%damp_flag
+   p%beta       = InputFileData%InpBl%beta
+      
    !...............................................
    ! set parameters for pitch actuator:
    !...............................................
