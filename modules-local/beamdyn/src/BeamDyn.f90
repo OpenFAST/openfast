@@ -3313,7 +3313,7 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,hhx,hpx,ErrStat,ErrMsg)
    REAL(BDKi)                  :: Ps(np+1,ns)
    REAL(BDKi)                  :: dnum
    REAL(BDKi)                  :: den
-   REAL(BDKi),        PARAMETER:: eps = 1.0D-08
+   REAL(BDKi),        PARAMETER:: eps = SQRT(EPSILON(eps)) !1.0D-08
    INTEGER(IntKi)              :: l
    INTEGER(IntKi)              :: j
    INTEGER(IntKi)              :: i
@@ -4700,7 +4700,8 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
    ! Root displacements
    x%q(1:3) = u%RootMotion%TranslationDisp(1:3,1)
    ! Root rotations
-   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),temp3,ErrStat2,ErrMsg2)
+   temp33=u%RootMotion%Orientation(:,:,1) !possible type conversion
+   CALL BD_CrvExtractCrv(temp33,temp3,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CrvCompose(temp_cc,temp3,p%Glb_crv,2,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -5077,7 +5078,7 @@ SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
    INTEGER(IntKi),         INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),           INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
                                                            ! 1: Blade to Global
-   REAL(BDKi)                           :: RotTen(3,3)
+   REAL(BDKi)                           :: temp33(3,3)
    REAL(BDKi)                           :: temp_v(3)
    REAL(BDKi)                           :: temp_v2(3)
    INTEGER(IntKi)                       :: i
@@ -5088,7 +5089,6 @@ SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   RotTen(1:3,1:3) = p%GlbRot(:,:)
    temp_v(:) = u%RootMotion%TranslationDisp(:,1)
    u%RootMotion%TranslationDisp(1,1) = temp_v(3) 
    u%RootMotion%TranslationDisp(2,1) = temp_v(1) 
@@ -5110,19 +5110,20 @@ SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
    u%RootMotion%RotationAcc(2,1) = temp_v(1) 
    u%RootMotion%RotationAcc(3,1) = temp_v(2) 
    ! Transform Root Motion from Global to Local (Blade) frame
-   u%RootMotion%TranslationDisp(:,1) = MATMUL(TRANSPOSE(RotTen),u%RootMotion%TranslationDisp(:,1))
-   u%RootMotion%TranslationVel(:,1)  = MATMUL(TRANSPOSE(RotTen),u%RootMotion%TranslationVel(:,1))
-   u%RootMotion%RotationVel(:,1)     = MATMUL(TRANSPOSE(RotTen),u%RootMotion%RotationVel(:,1))
-   u%RootMotion%TranslationAcc(:,1)  = MATMUL(TRANSPOSE(RotTen),u%RootMotion%TranslationAcc(:,1))
-   u%RootMotion%RotationAcc(:,1)     = MATMUL(TRANSPOSE(RotTen),u%RootMotion%RotationAcc(:,1))
+   u%RootMotion%TranslationDisp(:,1) = MATMUL(u%RootMotion%TranslationDisp(:,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationDisp(:,1))
+   u%RootMotion%TranslationVel(:,1)  = MATMUL(u%RootMotion%TranslationVel( :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationVel(:,1))
+   u%RootMotion%RotationVel(:,1)     = MATMUL(u%RootMotion%RotationVel(    :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%RotationVel(:,1))
+   u%RootMotion%TranslationAcc(:,1)  = MATMUL(u%RootMotion%TranslationAcc( :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%TranslationAcc(:,1))
+   u%RootMotion%RotationAcc(:,1)     = MATMUL(u%RootMotion%RotationAcc(    :,1),p%GlbRot)  ! = MATMUL(TRANSPOSE(p%GlbRot),u%RootMotion%RotationAcc(:,1))
    ! Transform DCM to Rotation Tensor (RT)
-   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
-   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),temp_v,ErrStat2,ErrMsg2)
+   temp33 = TRANSPOSE(u%RootMotion%Orientation(:,:,1)) !possible type conversion
+   CALL BD_CrvExtractCrv(temp33,temp_v,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    temp_v2(1) = temp_v(3)
    temp_v2(2) = temp_v(1)
    temp_v2(3) = temp_v(2)
-   CALL BD_CrvMatrixR(temp_v2,u%RootMotion%Orientation(:,:,1),ErrStat2,ErrMsg2)
+   CALL BD_CrvMatrixR(temp_v2,temp33,ErrStat2,ErrMsg2)
+   u%RootMotion%Orientation(:,:,1)=temp33 !possible type conversion
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Transform Applied Forces from Global to Local (Blade) frame
    DO i=1,p%node_total
@@ -5130,12 +5131,12 @@ SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
        u%PointLoad%Force(1,i) = temp_v(3)
        u%PointLoad%Force(2,i) = temp_v(1)
        u%PointLoad%Force(3,i) = temp_v(2)
-       u%PointLoad%Force(1:3,i)  = MATMUL(TRANSPOSE(RotTen),u%PointLoad%Force(:,i))
+       u%PointLoad%Force(1:3,i)  = MATMUL(u%PointLoad%Force(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%PointLoad%Force(:,i))
        temp_v(:) = u%PointLoad%Moment(1:3,i)
        u%PointLoad%Moment(1,i) = temp_v(3)
        u%PointLoad%Moment(2,i) = temp_v(1)
        u%PointLoad%Moment(3,i) = temp_v(2)
-       u%PointLoad%Moment(1:3,i) = MATMUL(TRANSPOSE(RotTen),u%PointLoad%Moment(:,i))
+       u%PointLoad%Moment(1:3,i) = MATMUL(u%PointLoad%Moment(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%PointLoad%Moment(:,i))
    ENDDO
    IF(p%quadrature .EQ. 1) THEN
        DO i=1,p%ngp * p%elem_total + 2
@@ -5143,12 +5144,12 @@ SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
            u%DistrLoad%Force(1,i) = temp_v(3)
            u%DistrLoad%Force(2,i) = temp_v(1)
            u%DistrLoad%Force(3,i) = temp_v(2)
-           u%DistrLoad%Force(1:3,i)  = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Force(:,i))
+           u%DistrLoad%Force(1:3,i)  = MATMUL(u%DistrLoad%Force(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Force(:,i))
            temp_v(:) = u%DistrLoad%Moment(1:3,i)
            u%DistrLoad%Moment(1,i) = temp_v(3)
            u%DistrLoad%Moment(2,i) = temp_v(1)
            u%DistrLoad%Moment(3,i) = temp_v(2)
-           u%DistrLoad%Moment(1:3,i) = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Moment(:,i))
+           u%DistrLoad%Moment(1:3,i) = MATMUL(u%DistrLoad%Moment(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Moment(:,i))
        ENDDO
    ELSEIF(p%quadrature .EQ. 2) THEN
        DO i=1,p%ngp
@@ -5156,12 +5157,12 @@ SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
            u%DistrLoad%Force(1,i) = temp_v(3)
            u%DistrLoad%Force(2,i) = temp_v(1)
            u%DistrLoad%Force(3,i) = temp_v(2)
-           u%DistrLoad%Force(1:3,i)  = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Force(:,i))
+           u%DistrLoad%Force(1:3,i)  = MATMUL(u%DistrLoad%Force(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Force(:,i))
            temp_v(:) = u%DistrLoad%Moment(1:3,i)
            u%DistrLoad%Moment(1,i) = temp_v(3)
            u%DistrLoad%Moment(2,i) = temp_v(1)
            u%DistrLoad%Moment(3,i) = temp_v(2)
-           u%DistrLoad%Moment(1:3,i) = MATMUL(TRANSPOSE(RotTen),u%DistrLoad%Moment(:,i))
+           u%DistrLoad%Moment(1:3,i) = MATMUL(u%DistrLoad%Moment(:,i),p%GlbRot) !=MATMUL(TRANSPOSE(p%GlbRot),u%DistrLoad%Moment(:,i)) 
        ENDDO
    ENDIF
 
@@ -5201,7 +5202,8 @@ SUBROUTINE BD_CalcIC( u, p, x, ErrStat, ErrMsg)
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   CALL BD_CrvExtractCrv(u%RootMotion%Orientation(1:3,1:3,1),temp3,ErrStat2,ErrMsg2) !returns temp3
+   temp33=u%RootMotion%Orientation(:,:,1) ! possible type conversion
+   CALL BD_CrvExtractCrv(temp33,temp3,ErrStat2,ErrMsg2) !returns temp3
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CrvCompose(temp_rv,temp3,p%Glb_crv,2,ErrStat2,ErrMsg2)  !returns temp_rv
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
