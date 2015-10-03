@@ -115,54 +115,29 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       
    CALL BD_ReadInput(InitInp%InputFile,InputFileData,InitInp%RootName,Interval,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF( ErrStat >= AbortErrLev ) RETURN
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
    CALL BD_ValidateInputData( InputFileData, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF( ErrStat >= AbortErrLev ) RETURN
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
       
-   
-   p%OutFmt = InputFileData%OutFmt
-   !Read inputs from Driver/Glue code
-   !1 Global position vector
-   !2 Global rotation tensor
-   !3 Gravity vector
-   p%GlbPos(1)     = InitInp%GlbPos(3)
-   p%GlbPos(2)     = InitInp%GlbPos(1)
-   p%GlbPos(3)     = InitInp%GlbPos(2)
+  call setParameters(InitInp, InputFileData, p, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      
+         p%OutFmt = InputFileData%OutFmt
 
-   p%GlbRot = TRANSPOSE(InitInp%GlbRot)
-   CALL BD_CrvExtractCrv(p%GlbRot,TmpPos,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   p%Glb_crv(1) = TmpPos(3)
-   p%Glb_crv(2) = TmpPos(1)
-   p%Glb_crv(3) = TmpPos(2)
-   CALL BD_CrvMatrixR(p%Glb_crv,p%GlbRot,ErrStat2,ErrMsg2) !given p%Glb_crv, returns p%GlbRot
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   temp_POS(1) = InitInp%gravity(3)
-   temp_POS(2) = InitInp%gravity(1)
-   temp_POS(3) = InitInp%gravity(2)
-   p%gravity = MATMUL(TRANSPOSE(p%GlbRot),temp_POS)
+      
 
-   ! Analysis type: 1 Static 2 Dynamic
-   p%analysis_type  = InputFileData%analysis_type
-   ! Numerical damping coefficient: [0,1].
-   ! No numerical damping if rhoinf = 1; maximum numerical damping if rhoinf = 0.
-   p%rhoinf = InputFileData%rhoinf
-   ! Time step size
-   p%dt = InputFileData%DTBeam
-   ! Compute generalized-alpha time integrator coefficients given rhoinf
-   p%coef(:) = 0.0D0
-   CALL BD_TiSchmComputeCoefficients(p%rhoinf,p%dt,p%coef, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ! Maximum number of iterations in Newton-Ralphson algorithm
-   p%niter = InputFileData%NRMax
-   ! Tolerance used in stopping criterion
-   p%tol = InputFileData%stop_tol
-   ! Total number of elements
-   p%elem_total = InputFileData%member_total      
-   ! Total number of key points
-   p%kp_total = InputFileData%kp_total
-   ! Total number of key points
+
    ! Key point coordinates
    CALL AllocAry(p%kp_coordinate,p%kp_total,3,'Key point coordinates array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -173,32 +148,9 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ! Number of key points in each member
    CALL AllocAry(p%kp_member,InputFileData%member_total,'Number of key points in each memeber',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   p%kp_member(:) = 0
    p%kp_member(:) = InputFileData%kp_member(:)
-   ! Number of nodes per elelemt
-   p%node_elem  = InputFileData%order_elem + 1   
-   ! Factorization frequency
-   p%n_fact = InputFileData%n_fact
-   ! Quadrature method: 1 Gauss 2 Trapezoidal
-   p%quadrature = InputFileData%quadrature
-   IF(p%quadrature .EQ. 1) THEN
-       ! Number of Gauss points
-       p%ngp = p%node_elem - 1
-   ELSEIF(p%quadrature .EQ. 2) THEN 
-       p%refine = InputFileData%refine
-       p%ngp = (InputFileData%kp_member(1) - 1)*p%refine + 1
-   ENDIF
 
-   ! Degree-of-freedom (DoF) per node
-   p%dof_node   = 6
-   ! Total number of (finite element) nodes
-   p%node_total  = p%elem_total*(p%node_elem-1) + 1         
-   ! Total number of (finite element) dofs
-   p%dof_total   = p%node_total*p%dof_node   
    
-      ! allocate arry for mapping PointLoad to BldMotion (for writeOutput)
-   CALL AllocAry(p%NdIndx,p%node_total,'p%NdIndx',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Compute coefficients for cubic spline fit, clamped at two ends
    CALL AllocAry(SP_Coef,InputFileData%kp_total-1,4,4,'Spline coefficient matrix',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -219,15 +171,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        temp_id = temp_id2
    ENDDO
    ! Compute blade/member/segment lengths and the ratios between member/segment and blade lengths
-   CALL AllocAry(p%member_length,InputFileData%member_total,2,'member length array',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL AllocAry(p%segment_length,InputFileData%kp_total-1,3,'segment length array',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if     
+   
    p%member_length(:,:) = 0.0D0
    p%segment_length(:,:) = 0.0D0
    CALL BD_ComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,&
@@ -242,8 +186,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    
    ! Compute initial position vector uuN0 in blade frame
    temp_int = p%node_elem * p%dof_node
-   CALL AllocAry(p%uuN0,temp_int,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Temporary GLL point intrinsic coordinates array
    CALL AllocAry(GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -641,16 +583,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    end if   
 ! END Actuator
    
-
-   ! set data for File I/O data:
-   !...............................................
-   p%numOuts   = InputFileData%NumOuts  
-   p%NNodeOuts = InputFileData%NNodeOuts      
-   p%OutNd     = InputFileData%OutNd
-
-   call SetOutParam(InputFileData%OutList, p, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, p%NumBlNds, sets: p%OutParam.
-      call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      if (ErrStat >= AbortErrLev) return  
       
    call SetInitOut(p, InitOut, errStat, errMsg)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -731,6 +663,152 @@ subroutine SetInitOut(p, InitOut, ErrStat, ErrMsg)
    InitOut%Ver = BeamDyn_Ver
    
 end subroutine SetInitOut
+!-----------------------------------------------------------------------------------------------------------------------------------
+subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
+   type(BD_InitInputType),       intent(in   )  :: InitInp           ! Input data for initialization routine
+   type(BD_InputFile),           intent(in   )  :: InputFileData     ! data from the input file
+   type(BD_ParameterType),       intent(inout)  :: p                 ! Parameters  ! intent(out) only because it changes p%NdIndx
+   integer(IntKi),               intent(  out)  :: ErrStat           ! Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+
+   
+   !local variables
+   !INTEGER(IntKi)          :: i                ! do-loop counter
+   !INTEGER(IntKi)          :: j                ! do-loop counter
+   !INTEGER(IntKi)          :: k                ! do-loop counter
+   !INTEGER(IntKi)          :: m                ! do-loop counter
+   !INTEGER(IntKi)          :: NNodes           ! number of nodes
+   !INTEGER(IntKi)          :: id0
+   !INTEGER(IntKi)          :: id1
+   INTEGER(IntKi)          :: temp_int
+   !INTEGER(IntKi)          :: temp_id
+   !INTEGER(IntKi)          :: temp_id2
+   !REAL(BDKi)              :: temp_Coef(4,4)
+   !REAL(BDKi)              :: temp66(6,6)
+   !REAL(BDKi)              :: temp_twist
+   !REAL(BDKi)              :: eta
+   REAL(BDKi)              :: TmpPos(3)
+   REAL(BDKi)              :: temp_POS(3)
+   !REAL(BDKi)              :: temp_e1(3)
+   !REAL(BDKi)              :: temp_CRV(3)
+   !REAL(BDKi),ALLOCATABLE  :: GLL(:)      ! GLL point locations in natural frame [-]
+   !
+   !REAL(BDKi),ALLOCATABLE  :: temp_GL(:)
+   !REAL(BDKi),ALLOCATABLE  :: temp_w(:)
+   !REAL(BDKi),ALLOCATABLE  :: temp_ratio(:,:)
+   !REAL(BDKi),ALLOCATABLE  :: SP_Coef(:,:,:)
+   !REAL(BDKi)              :: TmpDCM(3,3)
+   !REAL(BDKi)              :: denom
+   
+   
+   
+   
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'SetParameters'
+   
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""   
+   
+            
+   !Read inputs from Driver/Glue code
+   !1 Global position vector
+   !2 Global rotation tensor
+   !3 Gravity vector
+   p%GlbPos(1)     = InitInp%GlbPos(3)
+   p%GlbPos(2)     = InitInp%GlbPos(1)
+   p%GlbPos(3)     = InitInp%GlbPos(2)
+
+   p%GlbRot = TRANSPOSE(InitInp%GlbRot)
+   CALL BD_CrvExtractCrv(p%GlbRot,TmpPos,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   p%Glb_crv(1) = TmpPos(3)
+   p%Glb_crv(2) = TmpPos(1)
+   p%Glb_crv(3) = TmpPos(2)
+   CALL BD_CrvMatrixR(p%Glb_crv,p%GlbRot,ErrStat2,ErrMsg2) !given p%Glb_crv, returns p%GlbRot
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   temp_POS(1) = InitInp%gravity(3)
+   temp_POS(2) = InitInp%gravity(1)
+   temp_POS(3) = InitInp%gravity(2)
+   p%gravity = MATMUL(TRANSPOSE(p%GlbRot),temp_POS)
+
+           
+   ! Analysis type: 1 Static 2 Dynamic
+   p%analysis_type  = InputFileData%analysis_type
+   ! Numerical damping coefficient: [0,1].
+   ! No numerical damping if rhoinf = 1; maximum numerical damping if rhoinf = 0.
+   p%rhoinf = InputFileData%rhoinf
+   ! Time step size
+   p%dt = InputFileData%DTBeam
+   ! Compute generalized-alpha time integrator coefficients given rhoinf
+   CALL BD_TiSchmComputeCoefficients(p%rhoinf,p%dt,p%coef, ErrStat2, ErrMsg2) !requires p%rhoinf,p%dt; sets p%coef
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ! Maximum number of iterations in Newton-Ralphson algorithm
+   p%niter = InputFileData%NRMax
+   ! Tolerance used in stopping criterion
+   p%tol = InputFileData%stop_tol
+   ! Total number of elements
+   p%elem_total = InputFileData%member_total      
+   ! Total number of key points
+   p%kp_total = InputFileData%kp_total  !bjj: not used
+      
+   ! Number of nodes per elelemt
+   p%node_elem  = InputFileData%order_elem + 1   
+   ! Factorization frequency
+   p%n_fact = InputFileData%n_fact
+   ! Quadrature method: 1 Gauss 2 Trapezoidal
+   p%quadrature = InputFileData%quadrature
+   
+   IF(p%quadrature .EQ. 1) THEN
+       ! Number of Gauss points
+       p%ngp = p%node_elem - 1
+   ELSEIF(p%quadrature .EQ. 2) THEN 
+       p%refine = InputFileData%refine
+       p%ngp = (InputFileData%kp_member(1) - 1)*p%refine + 1
+   ENDIF
+
+   ! Degree-of-freedom (DoF) per node
+   p%dof_node   = 6
+   ! Total number of (finite element) nodes
+   p%node_total  = p%elem_total*(p%node_elem-1) + 1         
+   ! Total number of (finite element) dofs
+   p%dof_total   = p%node_total*p%dof_node   
+   
+      
+   CALL AllocAry(p%member_length, InputFileData%member_total,2,'member length array', ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(p%segment_length,InputFileData%kp_total-1,  3,'segment length array',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   temp_int = p%node_elem * p%dof_node
+   CALL AllocAry(p%uuN0,temp_int,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2);      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+      if (ErrStat >= AbortErrLev) return
+         
+
+   !...............................................
+   ! set parameters for pitch actuator:
+   !...............................................
+      
+      
+      
+   !...............................................
+   ! set parameters for File I/O data:
+   !...............................................
+      ! allocate arry for mapping PointLoad to BldMotion (for writeOutput); array is initialized in Init_y
+   CALL AllocAry(p%NdIndx,p%node_total,'p%NdIndx',ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            
+   p%OutFmt    = InputFileData%OutFmt
+   
+   p%numOuts   = InputFileData%NumOuts  
+   p%NNodeOuts = InputFileData%NNodeOuts      
+   p%OutNd     = InputFileData%OutNd
+
+   call SetOutParam(InputFileData%OutList, p, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, p%NNodeOuts, p%UsePitchAct; sets: p%OutParam.
+      call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return        
+      
+end subroutine SetParameters
 !-----------------------------------------------------------------------------------------------------------------------------------
 subroutine Init_y( p, u, y, ErrStat, ErrMsg)
 ! this routine initializes the outputs, y, that are used in the BeamDyn interface for coupling in the FAST framework.
@@ -910,7 +988,7 @@ subroutine Init_u( temp_L2, InitInp, p, u, ErrStat, ErrMsg )
 
    real(BDKi),                   intent(in   )  :: temp_L2(:,:)      ! 
    type(BD_InitInputType),       intent(in   )  :: InitInp           ! Input data for initialization routine
-   type(BD_ParameterType),       intent(in   )  :: p                 ! Parameters  ! intent(out) only because it changes p%NdIndx
+   type(BD_ParameterType),       intent(in   )  :: p                 ! Parameters
    type(BD_InputType),           intent(inout)  :: u                 ! Inputs
    integer(IntKi),               intent(  out)  :: ErrStat           ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
