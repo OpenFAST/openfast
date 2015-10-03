@@ -1635,17 +1635,18 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
          
 END SUBROUTINE Calc_WriteOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
+SUBROUTINE BD_PrintSum( p, u, y, x, OtherState, RootName, ErrStat, ErrMsg )
 ! This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
 
       ! passed variables
-   TYPE(BD_ParameterType),    INTENT(IN)  :: p                                    ! Parameters of the structural dynamics module
-   TYPE(BD_InputType),        INTENT(IN)  :: u                                    ! inputs 
-   TYPE(BD_OutputType),       INTENT(IN)  :: y                                    ! outputs
-   TYPE(BD_OtherStateType),   INTENT(IN)  :: OtherState                           ! Other/optimization states of the structural dynamics module 
-   CHARACTER(*),              INTENT(IN)  :: RootName
-   INTEGER(IntKi),            INTENT(OUT) :: ErrStat
-   CHARACTER(*),              INTENT(OUT) :: ErrMsg
+   TYPE(BD_ParameterType),       INTENT(IN)  :: p                 ! Parameters of the structural dynamics module
+   TYPE(BD_InputType),           INTENT(IN)  :: u                 ! inputs 
+   TYPE(BD_OutputType),          INTENT(IN)  :: y                 ! outputs
+   type(BD_ContinuousStateType), intent(in)  :: x                 ! Continuous states
+   TYPE(BD_OtherStateType),      INTENT(IN)  :: OtherState        ! Other/optimization states of the structural dynamics module 
+   CHARACTER(*),                 INTENT(IN)  :: RootName
+   INTEGER(IntKi),               INTENT(OUT) :: ErrStat
+   CHARACTER(*),                 INTENT(OUT) :: ErrMsg
 
 
       ! Local variables.
@@ -1772,25 +1773,25 @@ SUBROUTINE BD_PrintSum( p, u, y, OtherState, RootName, ErrStat, ErrMsg )
    WRITE (UnSu,'(/,A)')  'Initial displacement'
    DO i=1,p%node_total
        temp_id = (i - 1)*p%dof_node
-       WRITE(UnSu,'(I4,3ES18.5)') i,p%IniDisp(temp_id+1:temp_id+3)
+       WRITE(UnSu,'(I4,3ES18.5)') i,x%q(temp_id+1:temp_id+3)
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Initial rotation'
    DO i=1,p%node_total
        temp_id = (i - 1)*p%dof_node
-       WRITE(UnSu,'(I4,3ES18.5)') i,p%IniDisp(temp_id+4:temp_id+6)
+       WRITE(UnSu,'(I4,3ES18.5)') i,x%q(temp_id+4:temp_id+6)
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Initial velocity'
    DO i=1,p%node_total
        temp_id = (i - 1)*p%dof_node
-       WRITE(UnSu,'(I4,3ES18.5)') i,p%IniVelo(temp_id+1:temp_id+3)
+       WRITE(UnSu,'(I4,3ES18.5)') i,x%dqdt(temp_id+1:temp_id+3)
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Initial angular velocity'
    DO i=1,p%node_total
        temp_id = (i - 1)*p%dof_node
-       WRITE(UnSu,'(I4,3ES18.5)') i,p%IniVelo(temp_id+4:temp_id+6)
+       WRITE(UnSu,'(I4,3ES18.5)') i,x%dqdt(temp_id+4:temp_id+6)
    ENDDO
 
       ! Interpolated blade properties.
