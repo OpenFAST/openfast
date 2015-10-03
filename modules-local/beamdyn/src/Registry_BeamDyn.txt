@@ -83,7 +83,7 @@ typedef      ^            ^       ^     blade_length     - - -  "Blade Length" -
 typedef      ^            ^       ^     blade_mass     - - -  "Blade Length" -
 typedef      ^            ^       ^     blade_CG    {3} - -  "Blade Length" -
 typedef      ^            ^       ^     blade_IN    {3}{3} - -  "Blade Length" -
-typedef      ^            ^       ^     kp_coordinate  {:}{:} - -  "Total number of dofs" -
+#typedef      ^            ^       ^     kp_coordinate  {:}{:} - -  "Total number of dofs" -
 typedef      ^            ^       ^     beta   {6} - -  "Damping Coefficient" -
 typedef      ^            ^       ^     tol    - - -  "Tolerance used in stopping criterion" -
 typedef      ^            ^       ^     GlbPos {3} - -  "Initial Position Vector between origins of Global and blade frames" -
@@ -103,8 +103,8 @@ typedef      ^            ^       ^     E10  {:}{:} - -  "Initial E10 at quadrat
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef      ^            ^     IntKi   node_elem - - -  "Node per element" -
-typedef      ^            ^       ^     kp_total  - - -  "Total number of dofs" -
-typedef      ^            ^       ^     kp_member {:} - -  "Total number of dofs" -
+#typedef      ^            ^       ^     kp_total  - - -  "Total number of dofs" -
+#typedef      ^            ^       ^     kp_member {:} - -  "Total number of dofs" -
 typedef      ^            ^       ^     refine   - - -  "FE mesh refinement factor for trapezoidal quadrature" -
 typedef      ^            ^       ^     dof_node  - - -  "dof per node" -
 typedef      ^            ^       ^     elem_total  - - -  "Total number of elements" -
