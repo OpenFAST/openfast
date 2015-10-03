@@ -69,7 +69,7 @@ PROGRAM MAIN
 
    REAL(BDKi):: temp_R(3,3)
    REAL(R8Ki):: start, finish
-
+   REAL(BDKi) , DIMENSION(:), ALLOCATABLE  :: IniVelo      ! Initial Position Vector between origins of Global and blade frames [-]
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
    ! -------------------------------------------------------------------------
@@ -108,6 +108,11 @@ PROGRAM MAIN
                    , ErrMsg )
       CALL CheckError()
 
+!bjj: this is the driver's hack to get initial velocities for the input-output solve      
+   CALL AllocAry(IniVelo,BD_Parameter%dof_total,'IniVelo',ErrStat,ErrMsg); 
+      CALL CheckError()
+   IniVelo = BD_ContinuousState%dqdt
+   
    CALL Dvr_InitializeOutputFile(DvrOut,BD_InitOutput,RootName,ErrStat,ErrMsg)
       CALL CheckError()
 
@@ -117,7 +122,7 @@ PROGRAM MAIN
    BD_OutputTimes(2) = t_initial
 
 
-   CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_InitInput,ErrStat, ErrMsg)
+   CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_InitInput,IniVelo,ErrStat, ErrMsg)
    CALL BD_CopyInput(BD_Input(1), BD_Input(2), MESH_NEWCOPY, ErrStat, ErrMsg)
    CALL BD_CopyOutput(BD_Output(1), BD_Output(2), MESH_NEWCOPY, ErrStat, ErrMsg)
       CALL CheckError()
@@ -131,8 +136,8 @@ PROGRAM MAIN
      BD_InputTimes(1) = t_global + dt_global
      BD_OutputTimes(2) = BD_OutputTimes(1) 
      BD_OutputTimes(1) = t_global + dt_global
-     CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_InitInput, ErrStat, ErrMsg)
-     CALL BD_InputSolve( BD_InputTimes(2), BD_Input(2), BD_Parameter, BD_InitInput, ErrStat, ErrMsg)
+     CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_InitInput, IniVelo, ErrStat, ErrMsg)
+     CALL BD_InputSolve( BD_InputTimes(2), BD_Input(2), BD_Parameter, BD_InitInput, IniVelo, ErrStat, ErrMsg)
         CALL CheckError()
 
      CALL BD_CalcOutput( t_global, BD_Input(2), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
@@ -206,7 +211,7 @@ END PROGRAM MAIN
 
 
 
-SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
+SUBROUTINE BD_InputSolve( t, u,  p, InitInput, IniVelo, ErrStat, ErrMsg)
  
    USE BeamDyn
    USE BeamDyn_Subs
@@ -217,6 +222,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
    TYPE(BD_InputType),             INTENT(INOUT):: u
    TYPE(BD_ParameterType),         INTENT(IN   ):: p
    TYPE(BD_InitInputType),         INTENT(IN   ):: InitInput
+   REAL(BDKi),                     INTENT(IN   ):: IniVelo(*)
    INTEGER(IntKi),                 INTENT(  OUT):: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
    ! local variables
@@ -238,9 +244,9 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
    temp_r0(2) = p%GlbPos(3)
    temp_r0(3) = p%GlbPos(1)
 
-   temp_theta(1) = p%IniVelo(5)*t
-   temp_theta(2) = p%IniVelo(6)*t
-   temp_theta(3) = p%IniVelo(4)*t
+   temp_theta(1) = IniVelo(5)*t
+   temp_theta(2) = IniVelo(6)*t
+   temp_theta(3) = IniVelo(4)*t
    temp_vec(:) = 0.0D0
    temp_vec(:) = 4.0D0*TAN(temp_theta(:)/4.0D0)
    ! gather point forces and line forces
@@ -267,9 +273,9 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, ErrStat, ErrMsg)
 
    ! Calculate root translational and angular velocities
    u%RootMotion%RotationVel(:,:) = 0.0D0
-   u%RootMotion%RotationVel(1,1) = p%IniVelo(5)
-   u%RootMotion%RotationVel(2,1) = p%IniVelo(6)
-   u%RootMotion%RotationVel(3,1) = p%IniVelo(1)
+   u%RootMotion%RotationVel(1,1) = IniVelo(5)
+   u%RootMotion%RotationVel(2,1) = IniVelo(6)
+   u%RootMotion%RotationVel(3,1) = IniVelo(1)
    u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%TranslationVel(:,1) = MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr)
    ! END Calculate root translational and angular velocities

@@ -85,7 +85,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    REAL(BDKi)              :: temp_e1(3)
    REAL(BDKi)              :: temp_CRV(3)
    REAL(BDKi),PARAMETER    :: EPS = 1.0D-10
-   REAL(BDKi),ALLOCATABLE  :: temp_GLL(:)
+   REAL(BDKi),ALLOCATABLE  :: GLL(:)
    REAL(BDKi),ALLOCATABLE  :: temp_GL(:)
    REAL(BDKi),ALLOCATABLE  :: temp_w(:)
    REAL(BDKi),ALLOCATABLE  :: temp_ratio(:,:)
@@ -245,7 +245,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    CALL AllocAry(p%uuN0,temp_int,p%elem_total,'uuN0 (initial position) array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Temporary GLL point intrinsic coordinates array
-   CALL AllocAry(p%GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
+   CALL AllocAry(GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ! Temporary GLL weight function array
    CALL AllocAry(temp_w,p%node_elem,'GLL weight array',ErrStat2,ErrMsg2)
@@ -255,9 +255,9 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          return
       end if
    p%uuN0(:,:) = 0.0D0
-   p%GLL(:) = 0.0D0
+   GLL(:) = 0.0D0
    temp_w(:) = 0.0D0
-   CALL BD_GenerateGLL(p%node_elem-1,p%GLL,temp_w,ErrStat2,ErrMsg2)
+   CALL BD_GenerateGLL(p%node_elem-1,GLL,temp_w,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
          call cleanup()
@@ -331,7 +331,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
            id1 = id0 + InputFileData%kp_member(i) - 1
        ENDIF
        DO j=1,p%node_elem
-           eta = (p%GLL(j) + 1.0D0)/2.0D0
+           eta = (GLL(j) + 1.0D0)/2.0D0
            DO k=1,InputFileData%kp_member(i)-1
                temp_id2 = temp_id + k
                IF(eta - p%segment_length(temp_id2,3) <= EPS) THEN !bjj: would it be better to use equalRealNos and compare with 0? 1D-10 stored in single precision scares me as a limit
@@ -544,7 +544,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    p%Der(:,:) = 0.0D0
    p%Jacobian(:,:) = 0.0D0
 
-   CALL BD_InitShpDerJaco(p%quadrature,p%GL,p%GLL,p%uuN0,&
+   CALL BD_InitShpDerJaco(p%quadrature,p%GL,GLL,p%uuN0,&
            p%node_elem,p%elem_total,p%dof_node,p%ngp,    &
            p%refine,p%kp_member,                         &
            p%Shp,p%Der,p%GLw,p%Jacobian,                 &
@@ -574,18 +574,11 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        ENDDO
    ENDDO
    !CALL WrScr( "Finished reading input" )
-   ! Allocate continuous states
-   CALL AllocAry(x%q,p%dof_total,'x%q',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(x%dqdt,p%dof_total,'x%dqdt',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
       if (ErrStat >= AbortErrLev) then
          call cleanup()
          return
       end if
-   x%q(:) = 0.0_BDKi
-   x%dqdt(:) = 0.0_BDKi
 
 
       ! allocate and initialize other states:
@@ -593,7 +586,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
    
-   ! Define system output initializations (set up and initialize input meshes) here:
+      ! Define system output initializations (set up and initialize input meshes) here:
    call Init_u(temp_L2, InitInp, p, u, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
@@ -602,32 +595,22 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          return
       end if
       
+      ! allocate and initialize continuous states:
+   call Init_ContinuousStates(p, u, x, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      
 
-      ! create copy of inputs, u, to convert to BeamDyn-internal system inputs, u_tmp
-   CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL BD_ComputeBladeMassNew(p%Mass0_GL,p%Gauss,p%elem_total,p%node_elem,&
                                p%dof_node,p%quadrature,p%ngp,p%GLw,p%Jacobian,&
                                p%blade_mass,p%blade_CG,p%blade_IN,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-      ! initialize states, given parameters and initial inputs
-   CALL BD_CalcIC(u_tmp,p,x,OtherState,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL AllocAry(p%IniDisp,p%dof_total,'p%IniDisp',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL AllocAry(p%IniVelo,p%dof_total,'p%IniVelo',ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-   p%IniDisp(:) = x%q(:)
-   p%IniVelo(:) = x%dqdt(:)
 
 ! Actuator
    p%UsePitchAct = InputFileData%UsePitchAct
@@ -684,7 +667,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       
        ! Print the summary file if requested:
    if (InputFileData%SumPrint) then
-      call BD_PrintSum( p, u, y, OtherState, InitInp%RootName, ErrStat2, ErrMsg2 )
+      call BD_PrintSum( p, u, y, x, OtherState, InitInp%RootName, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    end if
       
@@ -698,7 +681,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
 contains
       subroutine Cleanup()
    
-         if (allocated(temp_GLL  )) deallocate(temp_GLL  )
+         if (allocated(GLL       )) deallocate(GLL       )
          if (allocated(temp_GL   )) deallocate(temp_GL   )
          if (allocated(temp_w    )) deallocate(temp_w    )
          if (allocated(temp_ratio)) deallocate(temp_ratio)
@@ -1215,6 +1198,59 @@ subroutine Init_OtherStates( p, OtherState, ErrStat, ErrMsg )
    OtherState%xcc(:) = 0.0_BDKi
             
 end subroutine Init_OtherStates   
+!-----------------------------------------------------------------------------------------------------------------------------------
+subroutine Init_ContinuousStates( p, u, x, ErrStat, ErrMsg )
+   type(BD_ParameterType),       intent(inout)  :: p                 ! Parameters !sets the copy-of-state values
+   type(BD_InputType),           intent(inout)  :: u                 ! Inputs  !intent(out) because of mesh copy, otherwise not changed
+   type(BD_ContinuousStateType), intent(inout)  :: x                 ! Continuous states
+   integer(IntKi),               intent(  out)  :: ErrStat           ! Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+   
+   
+   TYPE(BD_InputType)                           :: u_tmp             ! A copy of the initial input (guess), converted to BeamDyn internal coordinates
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'Init_ContinuousStates'
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! Allocate continuous states
+   CALL AllocAry(x%q,      p%dof_total,'x%q',      ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   CALL AllocAry(x%dqdt,   p%dof_total,'x%dqdt',   ErrStat2,ErrMsg2); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      
+   x%q(:)    = 0.0_BDKi
+   x%dqdt(:) = 0.0_BDKi
+         
+   
+      ! create copy of inputs, u, to convert to BeamDyn-internal system inputs, u_tmp, which is used to initialize states:
+   CALL BD_CopyInput(u, u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
+      
+      ! convert to BeamDyn-internal system inputs, u_tmp:      
+   CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+      ! initialize states, given parameters and initial inputs (in BD coordinates)
+   CALL BD_CalcIC(u_tmp,p,x,ErrStat2,ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
+   call cleanup()
+   
+contains
+   subroutine cleanup()
+      call BD_DestroyInput( u_tmp, ErrStat2, ErrMsg2)
+   end subroutine cleanup   
+end subroutine Init_ContinuousStates   
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !
@@ -5090,7 +5126,7 @@ SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
 
 END SUBROUTINE BD_InputGlobalLocal
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
+SUBROUTINE BD_CalcIC( u, p, x,  ErrStat, ErrMsg)
 !----------------------------------------------------------------------------
 ! This subroutine computes the initial states
 ! Rigid body assumption is used in initialization of the states.
@@ -5102,7 +5138,6 @@ SUBROUTINE BD_CalcIC( u, p, x, OtherState, ErrStat, ErrMsg)
    TYPE(BD_InputType),           INTENT(INOUT):: u             ! Inputs at t
    TYPE(BD_ParameterType),       INTENT(IN   ):: p             ! Parameters
    TYPE(BD_ContinuousStateType), INTENT(INOUT):: x             ! Continuous states at t
-   TYPE(BD_OtherStateType),      INTENT(INOUT):: OtherState    ! Other/optimization states
    INTEGER(IntKi),               INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),                 INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
