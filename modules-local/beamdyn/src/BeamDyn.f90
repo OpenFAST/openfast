@@ -124,6 +124,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          return
       end if
       
+      ! this routine sets *some* of the parameters (basically the "easy" ones)
   call setParameters(InitInp, InputFileData, p, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
@@ -164,8 +165,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          return
       end if
    
-   ! Compute initial position vector uuN0 in blade frame
-   temp_int = p%node_elem * p%dof_node
    ! Temporary GLL point intrinsic coordinates array
    CALL AllocAry(GLL,p%node_elem,'GLL points array',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -225,16 +224,11 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        ENDDO
    ENDIF
 
+   
+   temp_id = 0
+   id0 = 1
    DO i=1,p%elem_total
-       IF(i .EQ. 1) THEN
-           temp_id = 0
-           id0 = 1
-           id1 = InputFileData%kp_member(i)
-       ELSE
-           temp_id = temp_id + InputFileData%kp_member(i-1) - 1
-           id0 = id1
-           id1 = id0 + InputFileData%kp_member(i) - 1
-       ENDIF
+       id1 = id0 + InputFileData%kp_member(i) - 1
        DO j=1,p%node_elem
            eta = (GLL(j) + 1.0_BDKi)/2.0_BDKi
            DO k=1,InputFileData%kp_member(i)-1
@@ -307,10 +301,17 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
                p%Gauss(4:6,j) = temp_CRV(1:3)
            ENDDO
        ENDIF
+
+         ! set for next time:
+      temp_id = temp_id + InputFileData%kp_member(i) - 1
+      id0 = id1           
+       
    ENDDO
    IF(p%quadrature .EQ. 1) THEN
        p%Gauss(1:3,1) = p%uuN0(1:3,1)
        p%Gauss(4:6,1) = p%uuN0(4:6,1)
+       
+       temp_int = p%node_elem * p%dof_node
        p%Gauss(1:3,p%ngp*p%elem_total+2) = p%uuN0(temp_int-5:temp_int-3,p%elem_total)
        p%Gauss(4:6,p%ngp*p%elem_total+2) = p%uuN0(temp_int-2:temp_int,p%elem_total)
    ENDIF
@@ -327,24 +328,22 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
              call cleanup()
              return
           end if
-       temp_ratio(:,:) = 0.0_BDKi
        DO i=1,p%ngp
            temp_GL(i) = (p%GL(i) + 1.0_BDKi)/2.0_BDKi
        ENDDO
-       DO i=1,p%elem_total
-           IF(i .EQ. 1) THEN
-               DO j=1,p%ngp
-                   temp_ratio(j,i) = temp_GL(j)*p%member_length(i,2)
-               ENDDO
-           ELSE
-               DO j=1,i-1
-                   temp_ratio(:,i) = temp_ratio(:,i) + p%member_length(j,2)
-               ENDDO
-               DO j=1,p%ngp
-                   temp_ratio(j,i) = temp_ratio(j,i) + temp_GL(j)*p%member_length(i,2)
-               ENDDO
-           ENDIF
-       ENDDO
+
+      temp_ratio(:,:) = 0.0_BDKi
+      DO j=1,p%ngp
+         temp_ratio(j,1) = temp_GL(j)*p%member_length(1,2)
+      ENDDO
+      DO i=2,p%elem_total
+         DO j=1,i-1
+               temp_ratio(:,i) = temp_ratio(:,i) + p%member_length(j,2)
+         ENDDO
+         DO j=1,p%ngp
+               temp_ratio(j,i) = temp_ratio(j,i) + temp_GL(j)*p%member_length(i,2)
+         ENDDO
+      ENDDO
 
        CALL AllocAry(p%Stif0_GL,6,6,p%ngp*p%elem_total,'Stif0_GL',ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -438,20 +437,22 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          return
       end if
 
-
-   p%rrN0(:,:) = 0.0D0
+      ! calculate rrN0 (Initial relative rotation array)
+   DO i = 1,p%elem_total
+       CALL BD_NodalRelRot(p%uuN0(:,i),p%node_elem,p%dof_node,p%rrN0(:,i),ErrStat2,ErrMsg2)  !computes p%rrN0(:,i)
+          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   ENDDO
+          
    p%uu0(:,:)  = 0.0D0
    p%E10(:,:)  = 0.0D0
    DO i = 1,p%elem_total
-       CALL BD_NodalRelRot(p%uuN0(:,i),p%node_elem,p%dof_node,p%rrN0(:,i),ErrStat2,ErrMsg2)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        DO j = 1,p%ngp
            temp_id = (j-1)*p%dof_node
            temp_id2= (j-1)*(p%dof_node/2)
            CALL BD_GaussPointDataAt0(p%Shp(:,j),p%Der(:,j),p%Jacobian(j,i),&
-                   p%uuN0(:,i),p%rrN0(:,i),&
-                   p%node_elem,p%dof_node,p%uu0(temp_id+1:temp_id+6,i),&
-                   p%E10(temp_id2+1:temp_id2+3,i),ErrStat2,ErrMsg2)
+                   p%uuN0(:,i),p%rrN0(:,i),p%node_elem,p%dof_node,&
+                   p%uu0(temp_id +1:temp_id +6,i),&
+                   p%E10(temp_id2+1:temp_id2+3,i),ErrStat2,ErrMsg2) !computes p%uu0(temp_id+1:temp_id+6,i) and p%E10(temp_id2+1:temp_id2+3,i)
               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        ENDDO
    ENDDO
@@ -462,38 +463,13 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          return
       end if
 
-
-      ! allocate and initialize other states:
-   call Init_OtherStates(p, OtherState, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
-   
-      ! Define system output initializations (set up and initialize input meshes) here:
-   call Init_u(InitInp, p, u, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-      
-      ! allocate and initialize continuous states:
-   call Init_ContinuousStates(p, u, x, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-      
-
-
+         ! compute blade mass, CG, and IN for summary file:
    CALL BD_ComputeBladeMassNew(p%Mass0_GL,p%Gauss,p%elem_total,p%node_elem,&
                                p%dof_node,p%quadrature,p%ngp,p%GLw,p%Jacobian,&
                                p%blade_mass,p%blade_CG,p%blade_IN,ErrStat2,ErrMsg2) !computes p%blade_mass,p%blade_CG,p%blade_IN
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-
+      
 ! Actuator
    p%UsePitchAct = InputFileData%UsePitchAct
    
@@ -522,22 +498,42 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       xd%thetaPD = 0.0_BDKi
    end if   
 ! END Actuator
-   
+                     
 
+      ! allocate and initialize other states:
+   call Init_OtherStates(p, OtherState, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   
+   
+      ! Define and initialize system inputs (set up and initialize input meshes) here:
+   call Init_u(InitInp, p, u, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+            
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
       
-   call SetInitOut(p, InitOut, errStat, errMsg)
-      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      ! allocate and initialize continuous states (need to do this after initializing inputs):
+   call Init_ContinuousStates(p, u, x, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
-   !...............................................
-   ! initialize outputs
-   !...............................................
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
       
+      ! initialize outputs (need to do this after initializing inputs)      
    call Init_y(p, u, y, ErrStat2, ErrMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+
       
+      ! set initializaiton outputs
+   call SetInitOut(p, InitOut, errStat, errMsg)
+      call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  
    !...............................................
-      
-      
+            
        ! Print the summary file if requested:
    if (InputFileData%SumPrint) then
       call BD_PrintSum( p, u, y, x, OtherState, InitInp%RootName, ErrStat2, ErrMsg2 )
@@ -612,36 +608,9 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
 
    
    !local variables
-   !INTEGER(IntKi)          :: i                ! do-loop counter
-   !INTEGER(IntKi)          :: j                ! do-loop counter
-   !INTEGER(IntKi)          :: k                ! do-loop counter
-   !INTEGER(IntKi)          :: m                ! do-loop counter
-   !INTEGER(IntKi)          :: NNodes           ! number of nodes
-   !INTEGER(IntKi)          :: id0
-   !INTEGER(IntKi)          :: id1
-   INTEGER(IntKi)          :: temp_int
-   !INTEGER(IntKi)          :: temp_id
-   !INTEGER(IntKi)          :: temp_id2
-   !REAL(BDKi)              :: temp_Coef(4,4)
-   !REAL(BDKi)              :: temp66(6,6)
-   !REAL(BDKi)              :: temp_twist
-   !REAL(BDKi)              :: eta
-   REAL(BDKi)              :: TmpPos(3)
-   REAL(BDKi)              :: temp_POS(3)
-   !REAL(BDKi)              :: temp_e1(3)
-   !REAL(BDKi)              :: temp_CRV(3)
-   !REAL(BDKi),ALLOCATABLE  :: GLL(:)      ! GLL point locations in natural frame [-]
-   !
-   !REAL(BDKi),ALLOCATABLE  :: temp_GL(:)
-   !REAL(BDKi),ALLOCATABLE  :: temp_w(:)
-   !REAL(BDKi),ALLOCATABLE  :: temp_ratio(:,:)
-   !REAL(BDKi),ALLOCATABLE  :: SP_Coef(:,:,:)
-   !REAL(BDKi)              :: TmpDCM(3,3)
-   !REAL(BDKi)              :: denom
-   
-   
-   
-   
+   REAL(BDKi)                                   :: TmpPos(3)
+   REAL(BDKi)                                   :: temp_POS(3)  
+         
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'SetParameters'
@@ -792,7 +761,7 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
    character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
 
       ! local variables
-   real(ReKi)                                   :: DCM(3,3)          ! must be same type as mesh orientation fields
+   real(R8Ki)                                   :: DCM(3,3)          ! must be same type as mesh orientation fields
    real(ReKi)                                   :: Pos(3)            ! must be same type as mesh position fields 
    
    real(BDKi)                                   :: TmpDCM(3,3)
@@ -965,7 +934,7 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
    character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
    
    
-   real(ReKi)                                   :: DCM(3,3)          ! must be same type as mesh orientation fields
+   real(R8Ki)                                   :: DCM(3,3)          ! must be same type as mesh orientation fields
    real(ReKi)                                   :: Pos(3)            ! must be same type as mesh position fields
 
    real(BDKi)                                   :: TmpDCM(3,3)
@@ -1005,7 +974,7 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
                          , Pos     = Pos                  &
                          , ErrStat = ErrStat2             &
                          , ErrMess = ErrMsg2              &
-                         , Orient  = InitInp%HubRot       )
+                         , Orient  = DCM                  )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
    CALL MeshConstructElement ( Mesh = u%HubMotion         &
@@ -1150,15 +1119,7 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
    ! u%DistrLoad (for coupling with AeroDyn)
    !.................................
             
-   IF(p%quadrature .EQ. 1) THEN
-       NNodes = p%ngp * p%elem_total + 2
-   ELSEIF(p%quadrature .EQ. 2) THEN
-      NNodes = p%ngp
-   ELSE
-      CALL SetErrStat( ErrID_Fatal, "Invalid quadrature selected.", ErrStat, ErrMsg, RoutineName )
-      RETURN
-   ENDIF
-   
+   NNodes = size(p%Gauss,2)   
    CALL MeshCreate( BlankMesh  = u%DistrLoad      &
                    ,IOS        = COMPONENT_INPUT  &
                    ,NNodes     = NNodes           &
