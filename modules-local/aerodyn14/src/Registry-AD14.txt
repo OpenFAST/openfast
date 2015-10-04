@@ -270,7 +270,7 @@ typedef	^	Wind	ReKi	VROTORX	-	-	-
 typedef	^	Wind	ReKi	VROTORY	-	-	-
 typedef	^	Wind	ReKi	VROTORZ	-	-	-
 typedef	^	Wind	ReKi	SDEL	-	-	-
-typedef	^	WindParms	ReKi	Rho	-	-	-	"Air density"	kg/m&3
+typedef	^	WindParms	ReKi	Rho	-	-	-	"Air density"	kg/m^3
 typedef	^	WindParms	ReKi	KinVisc	-	-	-	"Kinematic air viscosity"	(m^2/sec)
 
 ##################	Registry	for	AeroDyn	###############
@@ -302,6 +302,7 @@ typedef	^	InitInputType	DWM_InitInputType	DWM_InitInputs	-	-	-		-
 # Define outputs from the initialization routine here:
 typedef	AeroDyn14/AD14	InitOutputType	ProgDesc	Ver	-	-	-	"version information"
 typedef	^	InitOutputType	DWM_InitOutputType	DWM_InitOutput	-	-	-		-
+typedef	^	InitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:

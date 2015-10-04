@@ -193,7 +193,7 @@ SUBROUTINE pass_velocity(p, OS, array_velocity)
     TYPE(DWM_ParameterType),       INTENT(IN   )  :: p           ! Parameters
     
     
-    REAL                  ::  array_velocity(p%ElementNum)
+    REAL(ReKi)                  ::  array_velocity(p%ElementNum)
     !INTEGER,SAVE          ::  OS%TAVD%time_step_pass_velocity = -1
     
     OS%TAVD%time_step_pass_velocity = OS%TAVD%time_step_pass_velocity+1
@@ -269,9 +269,9 @@ SUBROUTINE filter_average_induction_factor( OS, p, y, thrust_force, num_of_eleme
     INTEGER, INTENT(IN)          ::  num_of_element                   ! The number of the nodes in the blade
     REAL(ReKi), INTENT(IN)       ::  thrust_force ( num_of_element,p%BNum )  ! Thrust force at each node
     !INTEGER, SAVE                ::  OS%TAVD%time_step_force = -1                   ! The time step (save attribute) of the FAST simulation
-    REAL                         ::  thrust_coefficient ( num_of_element )
-    REAL                         ::  average_induction_factor   ( num_of_element )
-    REAL                         ::  induction_factor_local_temp ( num_of_element )
+    REAL(ReKi)                   ::  thrust_coefficient ( num_of_element )
+    REAL(ReKi)                   ::  average_induction_factor   ( num_of_element )
+    REAL(ReKi)                   ::  induction_factor_local_temp ( num_of_element )
     INTEGER                      ::  I,J
     REAL(ReKi), INTENT(IN)       ::  dr_blade ( num_of_element )
     
@@ -1236,10 +1236,10 @@ SUBROUTINE create_F1_filter (F1_vector, filter1, length_F1_vector,np_x,X_length)
 ! This function returns the F1 filter function
 !.............................................................................................
     REAL,ALLOCATABLE   ::     F1_vector(:)
-    REAL               ::     filter1(2)
+    REAL(ReKi)         ::     filter1(2)
     INTEGER            ::     length_F1_vector
     INTEGER            ::     np_x
-    REAL               ::     X_length
+    REAL(ReKi)         ::     X_length
     
     INTEGER            ::     length_F1_vector_1
     INTEGER            ::     length_F1_vector_2

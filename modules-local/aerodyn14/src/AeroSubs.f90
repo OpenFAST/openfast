@@ -1973,7 +1973,7 @@ DO WHILE ( ABS( DELAI ) > ATOLERBY10 .AND. ABS(DAI) > ATOLER2 )
  ! Reduce step size after a zero crossing
  !CH--  Put floor under ASTEP to keep it reasonable after many zero crossings
 
-   IF( NINT( SIGN(1.0_ReKi, DAI) ) /= NINT( SIGN(1.0_ReKi, DAI1) ) ) ASTEP = MAX( 1.0E-4, 0.5*ASTEP )
+   IF( NINT( SIGN(1.0_ReKi, DAI) ) /= NINT( SIGN(1.0_ReKi, DAI1) ) ) ASTEP = MAX( 1.0E-4_ReKi, 0.5_ReKi*ASTEP )
 
    AI   = AI + DELAI
    DAI1 = DELAI
@@ -2804,7 +2804,7 @@ SUBROUTINE TwrAeroLoads ( p, Node, NodeDCMGbl, NodeVelGbl, NodeWindVelGbl, NodeF
 
       ! Arguments:
 
-   REAL(ReKi), INTENT(IN )                   :: NodeDCMGbl    (3,3)           ! The direction-cosine matrix used to transform from the global system to the node system.
+   REAL(R8Ki), INTENT(IN )                   :: NodeDCMGbl    (3,3)           ! The direction-cosine matrix used to transform from the global system to the node system.
    REAL(ReKi), INTENT(OUT)                   :: NodeFrcGbl    (3)             ! The forces per unit length at the current tower element.
    REAL(ReKi), INTENT(IN )                   :: NodeVelGbl    (3)             ! The 3 components of the translational velocity at the node in the global system.
    REAL(ReKi), INTENT(IN )                   :: NodeWindVelGbl(3)             ! The 3 components of the wind at the node in the global system.
@@ -3469,7 +3469,7 @@ O%Beddoes%DQP(J,IBLADE) = O%Beddoes%DQP1(J,IBLADE) * EXP(-X0/XKA) + (O%Beddoes%Q
 
 O%Beddoes%CMQ = -.25 * CNQ - (XKA*CO/3.) * (O%Beddoes%QX(J,IBLADE) - O%Beddoes%DQP(J,IBLADE))
 
-O%Beddoes%CNIQ = MIN( ABS( CNI+CNQ ), 1. ) * SIGN( 1.0_ReKi, CNI+CNQ )
+O%Beddoes%CNIQ = MIN( ABS( CNI+CNQ ), 1.0_ReKi ) * SIGN( 1.0_ReKi, CNI+CNQ )
 
 O%Beddoes%XN(J,IBLADE) = O%Beddoes%OLDXN(J,IBLADE)*EXP(-.14*BS) + .3*DA*EXP(-.07*BS)
 O%Beddoes%YN(J,IBLADE) = O%Beddoes%OLDYN(J,IBLADE)*EXP(-.53*BS) + .7*DA*EXP(-.265*BS)
@@ -4263,7 +4263,7 @@ END DO !irow
 
  ! Calculate the tip speed of the rotor. This isn't constant in ADAMS.
  !  Thus, it will be updated at every time step in ADAMS.
-O%DynInflow%TipSpeed = MAX(P%Blade%r * O%Rotor%revs, 1.0e-6)
+O%DynInflow%TipSpeed = MAX(P%Blade%r * O%Rotor%revs, 1.0e-6_ReKi)
 
  ! Calculate the disk loading normalization factor.
  !  This is not exactly pressure but let's call it P0.
@@ -4557,7 +4557,7 @@ END SUBROUTINE DynDebug
 
    ErrStat = ErrID_None
    ErrMess = ""
-O%DynInflow%TipSpeed = MAX(P%Blade%r  * O%Rotor%revs, 1.0e-6)   !bjj: why is this here AND in InfInit()?
+O%DynInflow%TipSpeed = MAX(P%Blade%r  * O%Rotor%revs, 1.0e-6_ReKi)   !bjj: why is this here AND in InfInit()?
 
 O%DynInflow%Pzero    = pi * p%Wind%rho * O%DynInflow%TipSpeed * O%DynInflow%TipSpeed * P%Blade%r
 

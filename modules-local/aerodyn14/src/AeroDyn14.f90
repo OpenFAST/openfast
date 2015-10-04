@@ -623,6 +623,10 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, Interval, InitOut, ErrStat,
       p%DynInflow%xMinv(ie) = PIBY2 / hfunc(MRvector(ie), NJvector(ie))   !bjj: this is really just a Fortran parameter, too.
    END DO !ie   
 
+   
+   InitOut%AirDens = p%Wind%Rho
+
+   
    RETURN
 
 END SUBROUTINE AD14_Init
