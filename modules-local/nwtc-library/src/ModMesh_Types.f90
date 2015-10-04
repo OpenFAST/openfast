@@ -138,7 +138,7 @@ MODULE ModMesh_Types
       REAL(ReKi), ALLOCATABLE :: Force(:,:)              ! Field: Force vectors (3,NNodes)
       REAL(ReKi), ALLOCATABLE :: Moment(:,:)             ! Field: Moment vectors (3,NNodes)
       REAL(R8Ki), ALLOCATABLE :: Orientation(:,:,:)      ! Field: Direction Cosine Matrix (DCM) (3,3,NNodes)
-      REAL(ReKi), ALLOCATABLE :: TranslationDisp(:,:)    ! Field: Translational displacements (3,NNodes)
+      REAL(R8Ki), ALLOCATABLE :: TranslationDisp(:,:)    ! Field: Translational displacements (3,NNodes)
       REAL(ReKi), ALLOCATABLE :: RotationVel(:,:)        ! Field: Rotational velocities (3,NNodes)
       REAL(ReKi), ALLOCATABLE :: TranslationVel(:,:)     ! Field: Translational velocities (3,NNodes)
       REAL(ReKi), ALLOCATABLE :: RotationAcc(:,:)        ! Field: Rotational accelerations (3,NNodes)
