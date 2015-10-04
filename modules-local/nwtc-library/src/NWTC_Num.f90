@@ -170,7 +170,9 @@ MODULE NWTC_Num
 
    INTERFACE Cross_Product
       MODULE PROCEDURE Cross_ProductR4
+      MODULE PROCEDURE Cross_ProductR4R8
       MODULE PROCEDURE Cross_ProductR8
+      MODULE PROCEDURE Cross_ProductR8R4
       MODULE PROCEDURE Cross_ProductR16
    END INTERFACE
 
@@ -398,6 +400,29 @@ CONTAINS
    RETURN
    END FUNCTION Cross_ProductR4
 !=======================================================================
+   FUNCTION Cross_ProductR4R8(Vector1, Vector2) result(CProd)
+
+      ! This function computes the cross product of two 3-element arrays:
+      ! Cross_Product = Vector1 X Vector2 (resulting in a vector)
+
+
+      ! Argument declarations.
+
+   REAL(SiKi), INTENT(IN )         :: Vector1       (3)
+   REAL(R8Ki), INTENT(IN )         :: Vector2       (3)
+
+      ! Function definition
+   REAL(R8Ki)                      :: CProd (3)        ! = Vector1 X Vector2 (resulting in a vector)
+
+
+   CProd(1) = Vector1(2)*Vector2(3) - Vector1(3)*Vector2(2)
+   CProd(2) = Vector1(3)*Vector2(1) - Vector1(1)*Vector2(3)
+   CProd(3) = Vector1(1)*Vector2(2) - Vector1(2)*Vector2(1)
+
+
+   RETURN
+   END FUNCTION Cross_ProductR4R8
+!=======================================================================
    FUNCTION Cross_ProductR8(Vector1, Vector2) result(CProd)
 
       ! This function computes the cross product of two 3-element arrays:
@@ -420,6 +445,29 @@ CONTAINS
 
    RETURN
    END FUNCTION Cross_ProductR8
+!=======================================================================
+   FUNCTION Cross_ProductR8R4(Vector1, Vector2) result(CProd)
+
+      ! This function computes the cross product of two 3-element arrays:
+      ! Cross_Product = Vector1 X Vector2 (resulting in a vector)
+
+
+      ! Argument declarations.
+
+   REAL(R8Ki), INTENT(IN )         :: Vector1       (3)
+   REAL(SiKi), INTENT(IN )         :: Vector2       (3)
+
+      ! Function definition
+   REAL(R8Ki)                      :: CProd (3)        ! = Vector1 X Vector2 (resulting in a vector)
+
+
+   CProd(1) = Vector1(2)*Vector2(3) - Vector1(3)*Vector2(2)
+   CProd(2) = Vector1(3)*Vector2(1) - Vector1(1)*Vector2(3)
+   CProd(3) = Vector1(1)*Vector2(2) - Vector1(2)*Vector2(1)
+
+
+   RETURN
+   END FUNCTION Cross_ProductR8R4
 !=======================================================================
    FUNCTION Cross_ProductR16(Vector1, Vector2) result(CProd)
 

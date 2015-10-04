@@ -594,8 +594,8 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
       ! local variables
    INTEGER(IntKi)            :: i , j                          ! counter over the nodes
    INTEGER(IntKi)            :: n, n1, n2                      ! temporary space for node numbers
-   REAL(ReKi)                :: FieldValueN1(3)                ! Temporary variable to store field values on element nodes
-   REAL(ReKi)                :: FieldValueN2(3)                ! Temporary variable to store field values on element nodes
+   REAL(R8Ki)                :: FieldValueN1(3)                ! Temporary variable to store field values on element nodes
+   REAL(R8Ki)                :: FieldValueN2(3)                ! Temporary variable to store field values on element nodes
    REAL(ReKi)                :: TmpVec(3)
    REAL(R8Ki)                :: RotationMatrix(3,3)
 
