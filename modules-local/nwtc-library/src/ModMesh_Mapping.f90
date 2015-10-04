@@ -597,7 +597,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    REAL(ReKi)                :: FieldValueN1(3)                ! Temporary variable to store field values on element nodes
    REAL(ReKi)                :: FieldValueN2(3)                ! Temporary variable to store field values on element nodes
    REAL(ReKi)                :: TmpVec(3)
-   REAL(ReKi)                :: RotationMatrix(3,3)
+   REAL(R8Ki)                :: RotationMatrix(3,3)
 
    REAL(DbKi)                :: FieldValue(3,2)                ! Temporary variable to store values for DCM interpolation
    REAL(DbKi)                :: RotationMatrixD(3,3)
@@ -1544,7 +1544,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
       ! local variables
    INTEGER(IntKi)  :: i, j                                     ! counter over the nodes
-   REAL(ReKi)      :: RotationMatrix(3,3)
+   REAL(R8Ki)      :: RotationMatrix(3,3)
    REAL(ReKi)      :: TmpVec(3)
 
 
@@ -1704,7 +1704,7 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, S
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg     ! Error message if ErrStat /= ErrID_None
 
       ! local variables
-!   REAL(ReKi)                                     :: RotationMatrix(3,3)
+!   REAL(R8Ki)                                     :: RotationMatrix(3,3)
    REAL(ReKi)                                     :: torque(3), DisplacedPosition(3)
    INTEGER(IntKi)                                 :: i         ! counter over the nodes
 
@@ -2226,7 +2226,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
    INTEGER(IntKi)                                 :: Aug_NElem, curr_Aug_NElem
    INTEGER(IntKi)                                 :: n, n1, n2
    REAL(ReKi)                                     :: p_ED(3), p_ES(3), n1S_nD_vector(3), position(3)
-   REAL(ReKi)                                     :: RefOrientation(3,3)
+   REAL(R8Ki)                                     :: RefOrientation(3,3)
    REAL(DbKi)                                     :: TmpVec(3), RefOrientationD(3,3), FieldValue(3,2)   ! values for interpolating direction cosine matrices
    REAL(ReKi)                                     :: denom, elem_position
    REAL(ReKi), PARAMETER                          :: TOL = sqrt(epsilon(elem_position))  ! we're not using EqualRealNos here because we don't want elements of zero length (EqualRealNos produces elements of zero length)

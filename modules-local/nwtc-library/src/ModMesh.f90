@@ -928,10 +928,10 @@ CONTAINS
      Re_BufSz = 0
      IF (Mesh%Initialized) THEN
         Re_BufSz = Re_BufSz + Mesh%Nnodes * 3 ! Position
-        Re_BufSz = Re_BufSz + Mesh%Nnodes * 9 ! RefOrientation
+        !Re_BufSz = Re_BufSz + Mesh%Nnodes * 9 ! RefOrientation
         IF ( Mesh%FieldMask(MASKID_FORCE) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
         IF ( Mesh%FieldMask(MASKID_MOMENT) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
-        IF ( Mesh%FieldMask(MASKID_ORIENTATION) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 9
+        !IF ( Mesh%FieldMask(MASKID_ORIENTATION) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 9
         IF ( Mesh%FieldMask(MASKID_TRANSLATIONDISP) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
         IF ( Mesh%FieldMask(MASKID_ROTATIONVEL) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
         IF ( Mesh%FieldMask(MASKID_TRANSLATIONVEL) ) Re_BufSz = Re_BufSz + Mesh%Nnodes * 3
@@ -944,7 +944,10 @@ CONTAINS
      ! get number of double values (none now)
      !.........................................
      Db_BufSz = 0
-          
+     IF (Mesh%Initialized) THEN
+        Db_BufSz = Db_BufSz + Mesh%Nnodes * 9 ! RefOrientation
+        IF ( Mesh%FieldMask(MASKID_ORIENTATION) ) Db_BufSz = Db_BufSz + Mesh%Nnodes * 9
+     END IF 
      
      !.........................................
      ! allocate buffer arrays
@@ -1015,14 +1018,14 @@ CONTAINS
          
       END IF         
      
-     ! ..... fill ReKiBuf .....
+     ! ..... fill ReKiBuf and DbKiBuf .....
      IF (Mesh%Initialized) THEN
          DO i = 1, Mesh%Nnodes ! Position
             ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%Position(:,i); Re_Xferred = Re_Xferred + 3
          END DO
          DO i = 1, Mesh%Nnodes ! RefOrientation
             DO j = 1,3
-               ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%RefOrientation(:,j,i); Re_Xferred = Re_Xferred + 3
+               DbKiBuf(Db_Xferred:Db_Xferred+2) = Mesh%RefOrientation(:,j,i); Db_Xferred = Db_Xferred + 3
             ENDDO
          END DO
                 
@@ -1039,7 +1042,7 @@ CONTAINS
          IF ( Mesh%FieldMask(MASKID_ORIENTATION) ) THEN ! Orientation
             DO i = 1, Mesh%Nnodes 
                DO j = 1,3
-                  ReKiBuf(Re_Xferred:Re_Xferred+2) = Mesh%Orientation(:,j,i); Re_Xferred = Re_Xferred + 3
+                  DbKiBuf(Db_Xferred:Db_Xferred+2) = Mesh%Orientation(:,j,i); Db_Xferred = Db_Xferred + 3
                ENDDO
             END DO
          ENDIF
@@ -1236,7 +1239,7 @@ CONTAINS
       END DO
       DO i = 1, Mesh%Nnodes ! RefOrientation
          DO j = 1,3
-            Mesh%RefOrientation(:,j,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
+            Mesh%RefOrientation(:,j,i) = DbKiBuf(Db_Xferred:Db_Xferred+2); Db_Xferred = Db_Xferred + 3
          ENDDO
       END DO
                 
@@ -1253,7 +1256,7 @@ CONTAINS
       IF ( FieldMask(MASKID_ORIENTATION) ) THEN ! Orientation
          DO i = 1, Mesh%Nnodes 
             DO j = 1,3
-               Mesh%Orientation(:,j,i) = ReKiBuf(Re_Xferred:Re_Xferred+2); Re_Xferred = Re_Xferred + 3
+               Mesh%Orientation(:,j,i) = DbKiBuf(Db_Xferred:Db_Xferred+2); Db_Xferred = Db_Xferred + 3
             ENDDO
          END DO
       ENDIF
@@ -1561,7 +1564,7 @@ CONTAINS
      REAL(ReKi),                  INTENT(IN   ) :: Pos(3)       ! Xi,Yi,Zi, coordinates of node
      INTEGER(IntKi),              INTENT(  OUT) :: ErrStat      ! Error code
      CHARACTER(*),                INTENT(  OUT) :: ErrMess      ! Error message
-     REAL(ReKi), OPTIONAL,        INTENT(IN   ) :: Orient(3,3)  ! Orientation (direction cosine matrix) of node; identity by default
+     REAL(R8Ki), OPTIONAL,        INTENT(IN   ) :: Orient(3,3)  ! Orientation (direction cosine matrix) of node; identity by default
      
      ErrStat = ErrID_None
      ErrMess = ""
@@ -1610,9 +1613,9 @@ CONTAINS
      IF ( PRESENT(Orient) ) THEN
         Mesh%RefOrientation(:,:,Inode) = Orient
      ELSE
-        Mesh%RefOrientation(:,1,Inode) = (/ 1., 0., 0. /)
-        Mesh%RefOrientation(:,2,Inode) = (/ 0., 1., 0. /)
-        Mesh%RefOrientation(:,3,Inode) = (/ 0., 0., 1. /)
+        Mesh%RefOrientation(:,1,Inode) = (/ 1._R8Ki, 0._R8Ki, 0._R8Ki /)
+        Mesh%RefOrientation(:,2,Inode) = (/ 0._R8Ki, 1._R8Ki, 0._R8Ki /)
+        Mesh%RefOrientation(:,3,Inode) = (/ 0._R8Ki, 0._R8Ki, 1._R8Ki /)
      END IF
 
      RETURN

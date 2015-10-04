@@ -174,7 +174,25 @@ MODULE NWTC_Num
       MODULE PROCEDURE Cross_ProductR16
    END INTERFACE
 
+   
+   INTERFACE SmllRotTrans
+      MODULE PROCEDURE SmllRotTransDD
+      MODULE PROCEDURE SmllRotTransD
+      MODULE PROCEDURE SmllRotTransR
+   END INTERFACE
 
+   
+   INTERFACE GetSmllRotAngs
+      MODULE PROCEDURE GetSmllRotAngsD
+      MODULE PROCEDURE GetSmllRotAngsR
+   END INTERFACE
+  
+   INTERFACE Zero2TwoPi
+      MODULE PROCEDURE Zero2TwoPiD
+      MODULE PROCEDURE Zero2TwoPiR
+   END INTERFACE
+   
+   
       ! Create interface for a generic TwoNorm that uses specific routines.
 
    INTERFACE TwoNorm
@@ -216,6 +234,7 @@ MODULE NWTC_Num
       MODULE PROCEDURE Eye2   ! matrix of two dimensions
       MODULE PROCEDURE Eye2D  ! matrix of two dimensions (double precision)
       MODULE PROCEDURE Eye3   ! matrix of three dimensions
+      MODULE PROCEDURE Eye3D  ! matrix of three dimensions
    END INTERFACE
 
 
@@ -2098,6 +2117,48 @@ CONTAINS
 
    END SUBROUTINE Eye3
 !=======================================================================
+   SUBROUTINE Eye3D( A, ErrStat, ErrMsg )
+
+      ! This routine sets each of the n matries A(:,:,n) to the identity
+      ! matrix (all zeros, with ones on the diagonal).
+      ! Note that this also returns the "pseudo-identity" when A(:,:)
+      ! is not square (i.e., nr/=nc).
+
+   REAL(DbKi),     INTENT(INOUT) :: A (:,:,:)                      ! Array to matricies to set to the identity matrix (nr,nc,n)
+   INTEGER(IntKi), INTENT(OUT)   :: ErrStat                        ! Error level
+   CHARACTER(*),   INTENT(OUT)   :: ErrMsg                         ! ErrMsg corresponding to ErrStat
+
+      ! local variables
+   INTEGER                       :: i, j                           ! loop counters
+   INTEGER                       :: nr                             ! number of rows
+   INTEGER                       :: nc                             ! number of columns
+   INTEGER                       :: n                              ! number of matricies
+
+
+   nr = SIZE(A,1)
+   nc = SIZE(A,2)
+   n  = SIZE(A,3)
+
+   IF (nr /= nc) THEN
+      ErrStat = ErrID_Info
+      ErrMsg  = 'NWTC Library, Eye(): Matrix is not square.'
+   ELSE
+      ErrStat = ErrID_None
+      ErrMsg = ''
+   END IF
+
+      ! initialize to zero:
+   A = 0._ReKi
+
+      ! set the diagonals to one:
+   DO i = 1, n ! loop through the matrices
+      DO j = 1, MIN(nr,nc) ! the diagonal of the matrix
+         A(j,j,i) = 1._DbKi
+      END DO
+   END DO
+
+   END SUBROUTINE Eye3D
+!=======================================================================
    SUBROUTINE GaussElim( AugMatIn, NumEq, x, ErrStat, ErrMsg )
 
       ! This routine uses the Gauss-Jordan elimination method for the
@@ -2291,7 +2352,7 @@ CONTAINS
 !   RETURN
 !   END SUBROUTINE GetPermMat ! ( InpMat, PMat, ErrStat )
 !=======================================================================
-   FUNCTION GetSmllRotAngs ( DCMat, ErrStat, ErrMsg )
+   FUNCTION GetSmllRotAngsD ( DCMat, ErrStat, ErrMsg )
 
       ! This subroutine computes the angles that make up the input direction cosine matrix, DCMat
       ! It is the inverse of SmllRotTrans()
@@ -2299,36 +2360,36 @@ CONTAINS
       
       ! passed variables
 
-   REAL(ReKi), INTENT(IN )            :: DCMat          (3,3)
+   REAL(DbKi), INTENT(IN )            :: DCMat          (3,3)
    INTEGER,    INTENT(OUT )           :: ErrStat               ! a non-zero value indicates an error in the permutation matrix algorithm
    CHARACTER(*),INTENT(OUT ),OPTIONAL :: ErrMsg                ! a non-zero value indicates an error in the permutation matrix algorithm
 
-   REAL(ReKi)                         :: GetSmllRotAngs ( 3 )
+   REAL(DbKi)                         :: GetSmllRotAngsD ( 3 )
 
       ! local variables
-   REAL(ReKi)                         :: denom                 ! the denominator of the resulting matrix
-   REAL(ReKi), PARAMETER              :: LrgAngle  = 0.4       ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+   REAL(DbKi)                         :: denom                 ! the denominator of the resulting matrix
+   REAL(DbKi), PARAMETER              :: LrgAngle  = 0.4       ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
 
 
 
       ! initialize output angles (just in case there is an error that prevents them from getting set)
 
-   GetSmllRotAngs = 0.0
-   ErrStat        = ErrID_None
-   ErrMsg         = ""
+   GetSmllRotAngsD = 0.0
+   ErrStat         = ErrID_None
+   ErrMsg          = ""
 
       ! calculate the small angles
-   GetSmllRotAngs(1) = DCMat(2,3) - DCMat(3,2)
-   GetSmllRotAngs(2) = DCMat(3,1) - DCMat(1,3)
-   GetSmllRotAngs(3) = DCMat(1,2) - DCMat(2,1)
+   GetSmllRotAngsD(1) = DCMat(2,3) - DCMat(3,2)
+   GetSmllRotAngsD(2) = DCMat(3,1) - DCMat(1,3)
+   GetSmllRotAngsD(3) = DCMat(1,2) - DCMat(2,1)
 
    denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) - 1
 
-   IF ( .NOT. EqualRealNos( denom, 0.0_ReKi ) ) THEN
-      GetSmllRotAngs = GetSmllRotAngs / denom
+   IF ( .NOT. EqualRealNos( denom, 0.0_DbKi ) ) THEN
+      GetSmllRotAngsD = GetSmllRotAngsD / denom
 
          ! check that the angles are, in fact, small
-      IF ( ANY( ABS(GetSmllRotAngs) > LrgAngle ) ) THEN
+      IF ( ANY( ABS(GetSmllRotAngsD) > LrgAngle ) ) THEN
          ErrStat = ErrID_Severe
 
          IF (PRESENT(ErrMsg)) THEN
@@ -2352,7 +2413,70 @@ CONTAINS
    END IF
 
 
-   END FUNCTION GetSmllRotAngs ! ( DCMat, PMat, ErrStat [, ErrMsg] )
+   END FUNCTION GetSmllRotAngsD
+!=======================================================================
+   FUNCTION GetSmllRotAngsR ( DCMat, ErrStat, ErrMsg )
+
+      ! This subroutine computes the angles that make up the input direction cosine matrix, DCMat
+      ! It is the inverse of SmllRotTrans()
+      
+      
+      ! passed variables
+
+   REAL(ReKi), INTENT(IN )            :: DCMat          (3,3)
+   INTEGER,    INTENT(OUT )           :: ErrStat               ! a non-zero value indicates an error in the permutation matrix algorithm
+   CHARACTER(*),INTENT(OUT ),OPTIONAL :: ErrMsg                ! a non-zero value indicates an error in the permutation matrix algorithm
+
+   REAL(ReKi)                         :: GetSmllRotAngsR ( 3 )
+
+      ! local variables
+   REAL(ReKi)                         :: denom                 ! the denominator of the resulting matrix
+   REAL(ReKi), PARAMETER              :: LrgAngle  = 0.4       ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+
+
+
+      ! initialize output angles (just in case there is an error that prevents them from getting set)
+
+   GetSmllRotAngsR = 0.0
+   ErrStat         = ErrID_None
+   ErrMsg          = ""
+
+      ! calculate the small angles
+   GetSmllRotAngsR(1) = DCMat(2,3) - DCMat(3,2)
+   GetSmllRotAngsR(2) = DCMat(3,1) - DCMat(1,3)
+   GetSmllRotAngsR(3) = DCMat(1,2) - DCMat(2,1)
+
+   denom             = DCMat(1,1) + DCMat(2,2) + DCMat(3,3) - 1
+
+   IF ( .NOT. EqualRealNos( denom, 0.0_ReKi ) ) THEN
+      GetSmllRotAngsR = GetSmllRotAngsR / denom
+
+         ! check that the angles are, in fact, small
+      IF ( ANY( ABS(GetSmllRotAngsR) > LrgAngle ) ) THEN
+         ErrStat = ErrID_Severe
+
+         IF (PRESENT(ErrMsg)) THEN
+            ErrMsg = ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.'
+         ELSE
+            CALL ProgWarn( ' Angles in GetSmllRotAngs() are larger than '//TRIM(Num2LStr(LrgAngle))//' radians.' )
+         END IF
+
+      END IF
+
+   ELSE
+         ! check that the angles are, in fact, small (denom should be close to 2 if angles are small)
+      ErrStat = ErrID_Fatal
+
+      IF (PRESENT(ErrMsg)) THEN
+         ErrMsg = ' Denominator is zero in GetSmllRotAngs().'
+      ELSE
+         CALL ProgAbort( ' Denominator is zero in GetSmllRotAngs().', TrapErrors = .TRUE. )
+      END IF
+
+   END IF
+
+
+   END FUNCTION GetSmllRotAngsR
 !=======================================================================
    SUBROUTINE GL_Pts ( IPt, NPts, Loc, Wt, ErrStat )
 
@@ -4975,7 +5099,7 @@ END SUBROUTINE InterpStpReal3D
       RETURN
    END SUBROUTINE SimStatus   
 !=======================================================================
-   SUBROUTINE SmllRotTrans( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt, ErrStat, ErrMsg )
+   SUBROUTINE SmllRotTransR( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt, ErrStat, ErrMsg )
 
 
       ! This routine computes the 3x3 transformation matrix, TransMat,
@@ -5072,21 +5196,21 @@ END SUBROUTINE InterpStpReal3D
    Theta33      = Theta3*Theta3
 
    SqrdSum      = Theta11 + Theta22 + Theta33
-   SQRT1SqrdSum = SQRT( 1.0 + SqrdSum )
+   SQRT1SqrdSum = SQRT( 1.0_ReKi + SqrdSum )
    ComDenom     = SqrdSum*SQRT1SqrdSum
 
-   Theta12S     = Theta1*Theta2*( SQRT1SqrdSum - 1.0 )
-   Theta13S     = Theta1*Theta3*( SQRT1SqrdSum - 1.0 )
-   Theta23S     = Theta2*Theta3*( SQRT1SqrdSum - 1.0 )
+   Theta12S     = Theta1*Theta2*( SQRT1SqrdSum - 1.0_Reki )
+   Theta13S     = Theta1*Theta3*( SQRT1SqrdSum - 1.0_Reki )
+   Theta23S     = Theta2*Theta3*( SQRT1SqrdSum - 1.0_Reki )
 
 
       ! Define the transformation matrix:
 
-   IF ( ComDenom == 0.0 )  THEN  ! All angles are zero and matrix is ill-conditioned (the matrix is derived assuming that the angles are not zero); return identity
+   IF ( ComDenom == 0.0_ReKi )  THEN  ! All angles are zero and matrix is ill-conditioned (the matrix is derived assuming that the angles are not zero); return identity
 
-      TransMat(1,:) = (/ 1.0, 0.0, 0.0 /)
-      TransMat(2,:) = (/ 0.0, 1.0, 0.0 /)
-      TransMat(3,:) = (/ 0.0, 0.0, 1.0 /)
+      TransMat(1,:) = (/ 1.0_ReKi, 0.0_ReKi, 0.0_ReKi /)
+      TransMat(2,:) = (/ 0.0_ReKi, 1.0_ReKi, 0.0_ReKi /)
+      TransMat(3,:) = (/ 0.0_ReKi, 0.0_ReKi, 1.0_ReKi /)
 
    ELSE                          ! At least one angle is nonzero
 
@@ -5104,7 +5228,269 @@ END SUBROUTINE InterpStpReal3D
 
 
    RETURN
-   END SUBROUTINE SmllRotTrans
+   END SUBROUTINE SmllRotTransR
+!=======================================================================
+   SUBROUTINE SmllRotTransD( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt, ErrStat, ErrMsg )
+
+
+      ! This routine computes the 3x3 transformation matrix, TransMat,
+      !   to a coordinate system x (with orthogonal axes x1, x2, x3)
+      !   resulting from three rotations (Theta1, Theta2, Theta3) about the
+      !   orthogonal axes (X1, X2, X3) of coordinate system X.  All angles
+      !   are assummed to be small, as such, the order of rotations does
+      !   not matter and Euler angles do not need to be used.  This routine
+      !   is used to compute the transformation matrix (TransMat) between
+      !   undeflected (X) and deflected (x) coordinate systems.  In matrix
+      !   form:
+      !      {x1}   [TransMat(Theta1, ] {X1}
+      !      {x2} = [         Theta2, ]*{X2}
+      !      {x3}   [         Theta3 )] {X3}
+      !
+      ! The transformation matrix, TransMat, is the closest orthonormal
+      !   matrix to the nonorthonormal, but skew-symmetric, Bernoulli-Euler
+      !   matrix:
+      !          [   1.0    Theta3 -Theta2 ]
+      !      A = [ -Theta3   1.0    Theta1 ]
+      !          [  Theta2 -Theta1   1.0   ]
+      !
+      !   In the Frobenius Norm sense, the closest orthornormal matrix is:
+      !      TransMat = U*V^T,
+      !
+      !   where the columns of U contain the eigenvectors of A*A^T and the
+      !   columns of V contain the eigenvectors of A^T*A (^T = transpose).
+      !   This result comes directly from the Singular Value Decomposition
+      !   (SVD) of A = U*S*V^T where S is a diagonal matrix containing the
+      !   singular values of A, which are SQRT( eigenvalues of A*A^T ) =
+      !   SQRT( eigenvalues of A^T*A ).
+      !
+      ! The algebraic form of the transformation matrix, as implemented
+      !   below, was derived symbolically by J. Jonkman by computing U*V^T
+      !   by hand with verification in Mathematica.
+      !
+      ! This routine is the inverse of GetSmllRotAngs()
+
+      ! Passed Variables:
+
+   REAL(ReKi), INTENT(IN )             :: Theta1                                          ! The small rotation about X1, (rad).
+   REAL(ReKi), INTENT(IN )             :: Theta2                                          ! The small rotation about X2, (rad).
+   REAL(ReKi), INTENT(IN )             :: Theta3                                          ! The small rotation about X3, (rad).
+   REAL(DbKi), INTENT(OUT)             :: TransMat (3,3)                                  ! The resulting transformation matrix from X to x, (-).
+
+   INTEGER(IntKi),INTENT(OUT)          :: ErrStat
+   CHARACTER(*), INTENT(OUT)           :: ErrMsg
+
+   CHARACTER(*), INTENT(IN)            :: RotationType                                    ! The type of rotation; used to inform the user where a large rotation is occuring upon such an event.
+   CHARACTER(*), INTENT(IN ), OPTIONAL :: ErrTxt                                          ! an additional message to be displayed as a warning (typically the simulation time)
+
+      ! Local Variables:
+
+   REAL(DbKi)                          :: ComDenom                                        ! = ( Theta1^2 + Theta2^2 + Theta3^2 )*SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
+   REAL(DbKi), PARAMETER               :: LrgAngle  = 0.4                                 ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+   REAL(DbKi)                          :: Theta11                                         ! = Theta1^2
+   REAL(DbKi)                          :: Theta12S                                        ! = Theta1*Theta2*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(DbKi)                          :: Theta13S                                        ! = Theta1*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(DbKi)                          :: Theta22                                         ! = Theta2^2
+   REAL(DbKi)                          :: Theta23S                                        ! = Theta2*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(DbKi)                          :: Theta33                                         ! = Theta3^2
+   REAL(DbKi)                          :: SqrdSum                                         ! = Theta1^2 + Theta2^2 + Theta3^2
+   REAL(DbKi)                          :: SQRT1SqrdSum                                    ! = SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
+
+   LOGICAL,    SAVE                    :: FrstWarn  = .TRUE.                              ! When .TRUE., indicates that we're on the first warning.
+
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+      ! Display a warning message if at least one angle gets too large in magnitude:
+
+   IF ( ( ( ABS(Theta1) > LrgAngle ) .OR. ( ABS(Theta2) > LrgAngle ) .OR. ( ABS(Theta3) > LrgAngle ) ) .AND. FrstWarn )  THEN
+
+      ErrStat= ErrID_Severe
+      ErrMsg = 'Small angle assumption violated in SUBROUTINE SmllRotTrans() due to a large '//TRIM(RotationType)//'. '// &
+               'The solution may be inaccurate. Simulation continuing, but future warnings from SmllRotTrans() will be suppressed.'
+
+      IF ( PRESENT(ErrTxt) ) THEN
+         ErrMsg = TRIM(ErrMsg)//NewLine//' Additional debugging message from SUBROUTINE SmllRotTrans(): '//TRIM(ErrTxt)
+      END IF
+
+      !CALL ProgWarn( TRIM(ErrMsg) )
+
+      FrstWarn = .FALSE.   ! Don't enter here again!
+
+   ENDIF
+
+
+      ! Compute some intermediate results:
+
+   Theta11      = Theta1*Theta1
+   Theta22      = Theta2*Theta2
+   Theta33      = Theta3*Theta3
+
+   SqrdSum      = Theta11 + Theta22 + Theta33
+   SQRT1SqrdSum = SQRT( 1.0_DbKi + SqrdSum )
+   ComDenom     = SqrdSum*SQRT1SqrdSum
+
+   Theta12S     = Theta1*Theta2*( SQRT1SqrdSum - 1.0_DbKi )
+   Theta13S     = Theta1*Theta3*( SQRT1SqrdSum - 1.0_DbKi )
+   Theta23S     = Theta2*Theta3*( SQRT1SqrdSum - 1.0_DbKi )
+
+
+      ! Define the transformation matrix:
+
+   IF ( ComDenom == 0.0_DbKi )  THEN  ! All angles are zero and matrix is ill-conditioned (the matrix is derived assuming that the angles are not zero); return identity
+
+      TransMat(1,:) = (/ 1.0_DbKi, 0.0_DbKi, 0.0_DbKi /)
+      TransMat(2,:) = (/ 0.0_DbKi, 1.0_DbKi, 0.0_DbKi /)
+      TransMat(3,:) = (/ 0.0_DbKi, 0.0_DbKi, 1.0_DbKi /)
+
+   ELSE                          ! At least one angle is nonzero
+
+      TransMat(1,1) = ( Theta11*SQRT1SqrdSum + Theta22              + Theta33              )/ComDenom
+      TransMat(2,2) = ( Theta11              + Theta22*SQRT1SqrdSum + Theta33              )/ComDenom
+      TransMat(3,3) = ( Theta11              + Theta22              + Theta33*SQRT1SqrdSum )/ComDenom
+      TransMat(1,2) = (  Theta3*SqrdSum + Theta12S )/ComDenom
+      TransMat(2,1) = ( -Theta3*SqrdSum + Theta12S )/ComDenom
+      TransMat(1,3) = ( -Theta2*SqrdSum + Theta13S )/ComDenom
+      TransMat(3,1) = (  Theta2*SqrdSum + Theta13S )/ComDenom
+      TransMat(2,3) = (  Theta1*SqrdSum + Theta23S )/ComDenom
+      TransMat(3,2) = ( -Theta1*SqrdSum + Theta23S )/ComDenom
+
+   ENDIF
+
+
+   RETURN
+   END SUBROUTINE SmllRotTransD
+!=======================================================================
+   SUBROUTINE SmllRotTransDD( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt, ErrStat, ErrMsg )
+
+
+      ! This routine computes the 3x3 transformation matrix, TransMat,
+      !   to a coordinate system x (with orthogonal axes x1, x2, x3)
+      !   resulting from three rotations (Theta1, Theta2, Theta3) about the
+      !   orthogonal axes (X1, X2, X3) of coordinate system X.  All angles
+      !   are assummed to be small, as such, the order of rotations does
+      !   not matter and Euler angles do not need to be used.  This routine
+      !   is used to compute the transformation matrix (TransMat) between
+      !   undeflected (X) and deflected (x) coordinate systems.  In matrix
+      !   form:
+      !      {x1}   [TransMat(Theta1, ] {X1}
+      !      {x2} = [         Theta2, ]*{X2}
+      !      {x3}   [         Theta3 )] {X3}
+      !
+      ! The transformation matrix, TransMat, is the closest orthonormal
+      !   matrix to the nonorthonormal, but skew-symmetric, Bernoulli-Euler
+      !   matrix:
+      !          [   1.0    Theta3 -Theta2 ]
+      !      A = [ -Theta3   1.0    Theta1 ]
+      !          [  Theta2 -Theta1   1.0   ]
+      !
+      !   In the Frobenius Norm sense, the closest orthornormal matrix is:
+      !      TransMat = U*V^T,
+      !
+      !   where the columns of U contain the eigenvectors of A*A^T and the
+      !   columns of V contain the eigenvectors of A^T*A (^T = transpose).
+      !   This result comes directly from the Singular Value Decomposition
+      !   (SVD) of A = U*S*V^T where S is a diagonal matrix containing the
+      !   singular values of A, which are SQRT( eigenvalues of A*A^T ) =
+      !   SQRT( eigenvalues of A^T*A ).
+      !
+      ! The algebraic form of the transformation matrix, as implemented
+      !   below, was derived symbolically by J. Jonkman by computing U*V^T
+      !   by hand with verification in Mathematica.
+      !
+      ! This routine is the inverse of GetSmllRotAngs()
+
+      ! Passed Variables:
+
+   REAL(DbKi), INTENT(IN )             :: Theta1                                          ! The small rotation about X1, (rad).
+   REAL(DbKi), INTENT(IN )             :: Theta2                                          ! The small rotation about X2, (rad).
+   REAL(DbKi), INTENT(IN )             :: Theta3                                          ! The small rotation about X3, (rad).
+   REAL(DbKi), INTENT(OUT)             :: TransMat (3,3)                                  ! The resulting transformation matrix from X to x, (-).
+
+   INTEGER(IntKi),INTENT(OUT)          :: ErrStat
+   CHARACTER(*), INTENT(OUT)           :: ErrMsg
+
+   CHARACTER(*), INTENT(IN)            :: RotationType                                    ! The type of rotation; used to inform the user where a large rotation is occuring upon such an event.
+   CHARACTER(*), INTENT(IN ), OPTIONAL :: ErrTxt                                          ! an additional message to be displayed as a warning (typically the simulation time)
+
+      ! Local Variables:
+
+   REAL(DbKi)                          :: ComDenom                                        ! = ( Theta1^2 + Theta2^2 + Theta3^2 )*SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
+   REAL(DbKi), PARAMETER               :: LrgAngle  = 0.4                                 ! Threshold for when a small angle becomes large (about 23deg).  This comes from: COS(SmllAngle) ~ 1/SQRT( 1 + SmllAngle^2 ) and SIN(SmllAngle) ~ SmllAngle/SQRT( 1 + SmllAngle^2 ) results in ~5% error when SmllAngle = 0.4rad.
+   REAL(DbKi)                          :: Theta11                                         ! = Theta1^2
+   REAL(DbKi)                          :: Theta12S                                        ! = Theta1*Theta2*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(DbKi)                          :: Theta13S                                        ! = Theta1*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(DbKi)                          :: Theta22                                         ! = Theta2^2
+   REAL(DbKi)                          :: Theta23S                                        ! = Theta2*Theta3*[ SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 ) - 1.0 ]
+   REAL(DbKi)                          :: Theta33                                         ! = Theta3^2
+   REAL(DbKi)                          :: SqrdSum                                         ! = Theta1^2 + Theta2^2 + Theta3^2
+   REAL(DbKi)                          :: SQRT1SqrdSum                                    ! = SQRT( 1.0 + Theta1^2 + Theta2^2 + Theta3^2 )
+
+   LOGICAL,    SAVE                    :: FrstWarn  = .TRUE.                              ! When .TRUE., indicates that we're on the first warning.
+
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+      ! Display a warning message if at least one angle gets too large in magnitude:
+
+   IF ( ( ( ABS(Theta1) > LrgAngle ) .OR. ( ABS(Theta2) > LrgAngle ) .OR. ( ABS(Theta3) > LrgAngle ) ) .AND. FrstWarn )  THEN
+
+      ErrStat= ErrID_Severe
+      ErrMsg = 'Small angle assumption violated in SUBROUTINE SmllRotTrans() due to a large '//TRIM(RotationType)//'. '// &
+               'The solution may be inaccurate. Simulation continuing, but future warnings from SmllRotTrans() will be suppressed.'
+
+      IF ( PRESENT(ErrTxt) ) THEN
+         ErrMsg = TRIM(ErrMsg)//NewLine//' Additional debugging message from SUBROUTINE SmllRotTrans(): '//TRIM(ErrTxt)
+      END IF
+
+      !CALL ProgWarn( TRIM(ErrMsg) )
+
+      FrstWarn = .FALSE.   ! Don't enter here again!
+
+   ENDIF
+
+
+      ! Compute some intermediate results:
+
+   Theta11      = Theta1*Theta1
+   Theta22      = Theta2*Theta2
+   Theta33      = Theta3*Theta3
+
+   SqrdSum      = Theta11 + Theta22 + Theta33
+   SQRT1SqrdSum = SQRT( 1.0_DbKi + SqrdSum )
+   ComDenom     = SqrdSum*SQRT1SqrdSum
+
+   Theta12S     = Theta1*Theta2*( SQRT1SqrdSum - 1.0_DbKi )
+   Theta13S     = Theta1*Theta3*( SQRT1SqrdSum - 1.0_DbKi )
+   Theta23S     = Theta2*Theta3*( SQRT1SqrdSum - 1.0_DbKi )
+
+
+      ! Define the transformation matrix:
+
+   IF ( ComDenom == 0.0_DbKi )  THEN  ! All angles are zero and matrix is ill-conditioned (the matrix is derived assuming that the angles are not zero); return identity
+
+      TransMat(1,:) = (/ 1.0_DbKi, 0.0_DbKi, 0.0_DbKi /)
+      TransMat(2,:) = (/ 0.0_DbKi, 1.0_DbKi, 0.0_DbKi /)
+      TransMat(3,:) = (/ 0.0_DbKi, 0.0_DbKi, 1.0_DbKi /)
+
+   ELSE                          ! At least one angle is nonzero
+
+      TransMat(1,1) = ( Theta11*SQRT1SqrdSum + Theta22              + Theta33              )/ComDenom
+      TransMat(2,2) = ( Theta11              + Theta22*SQRT1SqrdSum + Theta33              )/ComDenom
+      TransMat(3,3) = ( Theta11              + Theta22              + Theta33*SQRT1SqrdSum )/ComDenom
+      TransMat(1,2) = (  Theta3*SqrdSum + Theta12S )/ComDenom
+      TransMat(2,1) = ( -Theta3*SqrdSum + Theta12S )/ComDenom
+      TransMat(1,3) = ( -Theta2*SqrdSum + Theta13S )/ComDenom
+      TransMat(3,1) = (  Theta2*SqrdSum + Theta13S )/ComDenom
+      TransMat(2,3) = (  Theta1*SqrdSum + Theta23S )/ComDenom
+      TransMat(3,2) = ( -Theta1*SqrdSum + Theta23S )/ComDenom
+
+   ENDIF
+
+
+   RETURN
+   END SUBROUTINE SmllRotTransDD
 !=======================================================================
    SUBROUTINE SortUnion ( Ary1, N1, Ary2, N2, Ary, N )
 
@@ -5327,7 +5713,7 @@ END SUBROUTINE InterpStpReal3D
    END FUNCTION
 
 !=======================================================================  
-   SUBROUTINE Zero2TwoPi ( Angle )
+   SUBROUTINE Zero2TwoPiR ( Angle )
 
       ! This routine is used to convert Angle to an equivalent value
       !  in the range [0, 2*pi).
@@ -5352,6 +5738,33 @@ END SUBROUTINE InterpStpReal3D
 
 
    RETURN
-   END SUBROUTINE Zero2TwoPi   
+   END SUBROUTINE Zero2TwoPiR   
+!=======================================================================  
+   SUBROUTINE Zero2TwoPiD ( Angle )
+
+      ! This routine is used to convert Angle to an equivalent value
+      !  in the range [0, 2*pi).
+      
+
+      ! Argument declarations:
+
+   REAL(DbKi), INTENT(INOUT)    :: Angle
+
+
+
+      ! Get the angle between 0 and 2Pi.
+
+   Angle = MODULO( Angle, TwoPi_D )   
+
+
+      ! Check numerical case where Angle == 2Pi.
+
+   IF ( Angle == TwoPi_D )  THEN
+      Angle = 0.0_DbKi
+   END IF
+
+
+   RETURN
+   END SUBROUTINE Zero2TwoPiD   
 !=======================================================================  
 END MODULE NWTC_Num
