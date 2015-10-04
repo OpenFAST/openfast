@@ -14,7 +14,7 @@ int
 main(int argc, char *argv[], char *env[])
 {
    double dt;
-   double TMax;
+   double TMax=10.0;
    float TurbinePos[3];
    int TurbID;
    int ErrStat = 0;
