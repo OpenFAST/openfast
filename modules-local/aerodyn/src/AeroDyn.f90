@@ -505,9 +505,9 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
       ! Local variables
    real(reKi)                                   :: position(3)       ! node reference position
    real(reKi)                                   :: positionL(3)      ! node local position
-   real(reKi)                                   :: theta(3)          ! Euler angles
-   real(reKi)                                   :: orientation(3,3)  ! node reference orientation
-   real(reKi)                                   :: orientationL(3,3) ! node local orientation
+   real(R8Ki)                                   :: theta(3)          ! Euler angles
+   real(R8Ki)                                   :: orientation(3,3)  ! node reference orientation
+   real(R8Ki)                                   :: orientationL(3,3) ! node local orientation
    
    integer(intKi)                               :: j                 ! counter for nodes
    integer(intKi)                               :: k                 ! counter for blades
@@ -702,7 +702,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
 
             
                ! reference orientation of the jth node in the kth blade, relative to the root in the local blade coordinate system:
-            theta(1)     =  0.0_ReKi
+            theta(1)     =  0.0_R8Ki
             theta(2)     =  InputFileData%BladeProps(k)%BlCrvAng(j)
             theta(3)     = -InputFileData%BladeProps(k)%BlTwist( j)            
             orientationL = EulerConstruct( theta )
@@ -1104,9 +1104,9 @@ subroutine SetInputsForBEMT(p, u, OtherState, errStat, errMsg)
    real(ReKi)                              :: y_hat_disk(3)
    real(ReKi)                              :: z_hat_disk(3)
    real(ReKi)                              :: tmp(3)
-   real(ReKi)                              :: theta(3)
-   real(ReKi)                              :: orientation(3,3)
-   real(ReKi)                              :: orientation_nopitch(3,3)
+   real(R8Ki)                              :: theta(3)
+   real(R8Ki)                              :: orientation(3,3)
+   real(R8Ki)                              :: orientation_nopitch(3,3)
    real(ReKi)                              :: tmp_sz, tmp_sz_y
    
    integer(intKi)                          :: j                      ! loop counter for nodes
@@ -1182,7 +1182,7 @@ subroutine SetInputsForBEMT(p, u, OtherState, errStat, errMsg)
          ! construct system equivalent to u%BladeRootMotion(k)%Orientation, but without the blade-pitch angle:
       
       !orientation = matmul( u%BladeRootMotion(k)%Orientation(:,:,1), transpose(u%HubMotion%Orientation(:,:,1)) )
-      call LAPACK_gemm( 'n', 't', 1.0_ReKi, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_ReKi, orientation, errStat2, errMsg2)
+      call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeRootMotion(k)%Orientation(:,:,1), u%HubMotion%Orientation(:,:,1), 0.0_R8Ki, orientation, errStat2, errMsg2)
          call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       theta = EulerExtract( orientation ) !hub_theta_root(k)
 #ifndef DBG_OUTS
@@ -1198,7 +1198,7 @@ subroutine SetInputsForBEMT(p, u, OtherState, errStat, errMsg)
             ! deflection), blade-pitch and twist (aerodynamic + elastic) angles:
          
          ! orientation = matmul( u%BladeMotion(k)%Orientation(:,:,j), transpose(orientation_nopitch) )
-         call LAPACK_gemm( 'n', 't', 1.0_ReKi, u%BladeMotion(k)%Orientation(:,:,j), orientation_nopitch, 0.0_ReKi, orientation, errStat2, errMsg2)
+         call LAPACK_gemm( 'n', 't', 1.0_R8Ki, u%BladeMotion(k)%Orientation(:,:,j), orientation_nopitch, 0.0_R8Ki, orientation, errStat2, errMsg2)
             call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          theta = EulerExtract( orientation ) !root(k)WithoutPitch_theta(j)_blade(k)
          

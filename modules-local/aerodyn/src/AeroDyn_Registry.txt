@@ -25,9 +25,9 @@ typedef	AeroDyn/AD	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the in
 typedef	^	InitInputType	IntKi	NumBlades	-	-	-	"Number of blades on the turbine"
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^	InitInputType	ReKi	HubPosition	{3}	-	-	"X-Y-Z reference position of hub"	m
-typedef	^	InitInputType	ReKi	HubOrientation	{3}{3}	-	-	"DCM reference orientation of hub"	-
+typedef	^	InitInputType	R8Ki	HubOrientation	{3}{3}	-	-	"DCM reference orientation of hub"	-
 typedef	^	InitInputType	ReKi	BladeRootPosition	{:}{:}	-	-	"X-Y-Z reference position of each blade root (3 x NumBlades)"	m
-typedef	^	InitInputType	ReKi	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
+typedef	^	InitInputType	R8Ki	BladeRootOrientation	{:}{:}{:}	-	-	"DCM reference orientation of blade roots (3x3 x NumBlades)"	-
 
 # Define outputs from the initialization routine here:
 typedef	^	InitOutputType	CHARACTER(ChanLen)	WriteOutputHdr	{:}	-	-	"Names of the output-to-file channels"	-
