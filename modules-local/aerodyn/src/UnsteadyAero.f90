@@ -389,7 +389,8 @@ real(ReKi) function Get_f_c_from_Lookup( Re, alpha, alpha0, C_nalpha, AFInfo, Er
    call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
       if (ErrStat > ErrID_None) return
    
-   denom = ( alpha-alpha0 )*tan(alpha)  !NOTE,NOTE: On 8/27/15 GJH Added back tan(alpha) because results for Fy did not match steady state without it. ! NOTE: We removed the tan(alpha) term from the equation and repace with another (alpha-alpha0) term, per Rick's suggestion 8/13/2015.    *tan(alpha)
+   !denom = ( alpha-alpha0 )*tan(alpha)  !NOTE,NOTE: On 8/27/15 GJH Added back tan(alpha) because results for Fy did not match steady state without it. ! NOTE: We removed the tan(alpha) term from the equation and repace with another (alpha-alpha0) term, per Rick's suggestion 8/13/2015.    *tan(alpha)
+   denom = ( alpha-alpha0 )**2  !testing again On 9/16/15
    if (abs(denom) < .015 ) then
       Get_f_c_from_Lookup = 1.0_ReKi
       return
@@ -488,7 +489,8 @@ real(ReKi) function Get_Cc_FS( eta_e, alpha_e, alpha0, Cn_alpha_q_circ, fprimepr
       Get_Cc_FS   = Cn_alpha_q_circ * sqrt(fprimeprime) * tan(alpha_e + alpha0) * eta_e
    else if ( UAMod == 2 ) then
       ! use equation 1.38
-      Get_Cc_FS   = Cn_alpha_q_circ * (sqrt(fprimeprime) - 0.2_ReKi) * tan(alpha_e + alpha0) * eta_e
+     ! Get_Cc_FS   = Cn_alpha_q_circ * (sqrt(fprimeprime) - 0.2_ReKi) * tan(alpha_e + alpha0) * eta_e
+      Get_Cc_FS   = Cn_alpha_q_circ * (sqrt(fprimeprime) - 0.2_ReKi) * alpha_e * eta_e !testing this version without tan here and in fc retrieval
    else
       ! implementation error!  Cannot have UAMod other than 0,1,2
    end if
@@ -805,8 +807,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    
    k_alpha  = Get_k_       ( M, beta_M, C_nalpha/2.0_ReKi, A1, A2, b1, b2 )                 ! Eqn 1.11a
    k_q      = Get_k_       ( M, beta_M, C_nalpha         , A1, A2, b1, b2 )                 ! Eqn 1.11b
-   T_alpha  = T_I * k_alpha                                                 ! Eqn 1.10a
-   T_q      = T_I * k_q                                                     ! Eqn 1.10b
+   T_alpha  = T_I * k_alpha * 0.75                                                 ! Eqn 1.10a -RRD 9/28 added *0.75 that seemed to be missing
+   T_q      = T_I * k_q * 0.75                                                     ! Eqn 1.10b -RRD 9/28 added *0.75
       
       ! These quantities are needed for the update state calculations, but are then updated themselves based on the logic which follows
    T_f           = T_f0 / OtherState%sigma1(i,j)       ! Eqn 1.34
@@ -880,8 +882,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn1
    
    
       ! Compute Cc_pot using eqn 1.28
-   Cc_pot          = Cn_alpha_q_circ*tan(alpha_e+alpha0)
-   
+   !Cc_pot          = Cn_alpha_q_circ*tan(alpha_e+alpha0)
+   Cc_pot          = Cn_alpha_q_circ*alpha_e !testing 9/16/15 without tangent
    
    if (OtherState%FirstPass(i,j)) then
       Cn_pot_minus1 = Cn_pot
@@ -1346,8 +1348,9 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
          
       end if
       
-      if ( xd%tau_V(i,j) >= (T_VL + T_sh) ) then
+      if (( xd%tau_V(i,j) >= (T_VL + T_sh) ) .and. (OtherState%TESF(i,j)))  then !.and. (OtherState%TESF(i,j))RRD added 
          xd%tau_V(i,j)     = 0.0_ReKi
+        ! OtherState%LESF(i,j)=.FALSE. !also added this
       end if
       
       OtherState%sigma1(i,j) = 1.0_ReKi
@@ -1375,6 +1378,9 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
                OtherState%sigma1(i,j) = 0.75_ReKi
             end if
          end if
+      !!!if (.not. OtherState%LESF(i,j) ) then  !RRD: trying to emulate the old AD14 SEPAR.f90 with SHIFT=NOT(LESF), go back to original commented!!! out above when done
+      !!!        OtherState%sigma1(i,j) = 0.667_ReKi
+      !!!end if
       
       OtherState%sigma3(i,j) = 1.0_ReKi
       
@@ -1409,6 +1415,11 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
          OtherState%sigma3(i,j) =  4.0_ReKi
       end if
       
+      !!!if ( (.not. OtherState%VRTX(i,j)) .OR. (.not. OtherState%TESF(i,j)) ) then !RRD: trying to emulate the old AD14 SEPAR.f90 with SHIFT=NOT(TESF), go back to original commented!!! out above when done
+      !!!       OtherState%sigma3(i,j) =  2_ReKi
+      !!!   else
+      !!!      OtherState%sigma3(i,j) = 1.0_ReKi
+      !!!endif
       
       if ((.not. OtherState%TESF(i,j)) .and. (Kq*dalpha0 < 0.0_ReKi)) then
          OtherState%sigma3(i,j) = 1.0_ReKi
@@ -1620,7 +1631,8 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
          if  ( Kafactor < 0.0_ReKi ) then ! .AND.  .NOT. OtherState%VRTX(OtherState%iBladeNode, OtherState%iBlade )  )then
             y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset)
          else         
-            y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*tan(alpha_e)*(1-xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)/(2.0*T_VL))
+            !y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*tan(alpha_e)*(1-xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)/(2.0*T_VL))
+            y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*alpha_e*(1-xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)/(2.0*T_VL)) !testing without tan 9/16/15
          end if
          
       elseif ( p%UAMod == 2 ) then
@@ -1722,6 +1734,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       y%WriteOutput(iOffset+28) = C_V          
       y%WriteOutput(iOffset+29) = Cn_FS 
       y%WriteOutput(iOffset+30) = Cm_FS
+!      y%WriteOutput(iOffset+31) = u%U
    end if
    
 end subroutine UA_CalcOutput
