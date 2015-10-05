@@ -70,7 +70,7 @@ program UnsteadyAero_Driver
    character(1024)                               :: RoutineName
    real(DbKi), allocatable                       :: timeArr(:)
    real(ReKi), allocatable                       :: AOAarr(:)
-   
+   real(ReKi), allocatable                       :: Uarr(:) !RRD
    
       ! Initialize the NWTC library
    call NWTC_Init()
@@ -161,7 +161,7 @@ program UnsteadyAero_Driver
    else
          ! Read time-series data file with a 1 line header and then each row contains time-step data with 4, white-space-separated columns
          ! time  Angle-fo-attack  
-      call ReadTimeSeriesData( dvrInitInp%InputsFile, nSimSteps, timeArr, AOAarr, errStat2, errMsg2 )
+      call ReadTimeSeriesData( dvrInitInp%InputsFile, nSimSteps, timeArr, AOAarr, Uarr, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
          if ( ErrStat >= AbortErrLev ) then
             call Cleanup()
@@ -241,6 +241,7 @@ program UnsteadyAero_Driver
          ! Load timestep data from the time-series inputs which were previous read from input file
          InputTime(1) = timeArr(n)
          u(1)%alpha   = AOAarr (n)*pi/180.0   ! This needs to be in radians
+         u(1)%U = Uarr(n) !RRD 
          t            = timeArr(n)
       end if
       

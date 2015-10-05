@@ -384,21 +384,23 @@ module UA_Dvr_Subs
 
    end subroutine ReadDriverInputFile
    
-   subroutine ReadTimeSeriesData( inputsFile, nSimSteps, timeArr, AOAarr, ErrStat, ErrMsg )
+   subroutine ReadTimeSeriesData( inputsFile, nSimSteps, timeArr, AOAarr, Uarr, ErrStat, ErrMsg )
       character(1024),               intent( in    )   :: inputsFile
       integer,                       intent(   out )   :: nSimSteps
       real(DbKi),allocatable,        intent(   out )   :: timeArr(:)
       real(ReKi),allocatable,        intent(   out )   :: AOAarr(:)
+      real(ReKi),allocatable,        intent(   out )   :: Uarr(:) !RRD
       integer,                       intent(   out )   :: ErrStat              ! returns a non-zero value when an error occurs  
       character(*),                  intent(   out )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
       
-      real(DbKi)                                       :: tmpArr(2)
+      real(DbKi)                                       :: tmpArr(3) !RRD changed from (2)
       integer(IntKi)                                   :: errStat2    ! Status of error message
       character(1024)                                  :: errMsg2     ! Error message if ErrStat /= ErrID_None
       character(1024)                                  :: RoutineName
       character(1024)                                  :: FileName
       integer                                          :: UnIn
-      integer                                          :: i
+      integer                                           :: i
+      integer, PARAMETER                               ::hdrlines=8 ! RRD
       
       ErrStat     = ErrID_None
       ErrMsg      = ''
@@ -419,20 +421,20 @@ module UA_Dvr_Subs
    
    
       !-------------------------------------------------------------------------------------------------
-      ! File header
+      ! File header  7lines
       !-------------------------------------------------------------------------------------------------
-   
-      call ReadCom( UnIn, FileName, '  UnsteadyAero time-series input file header line 1', errStat2, errMsg2 )
+      do i=1,hdrlines !RRD
+        call ReadCom( UnIn, FileName, '  UnsteadyAero time-series input file header line 1', errStat2, errMsg2 )
          call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
          if (ErrStat >= AbortErrLev) then
             call Cleanup()
             return
          end if
-
+      enddo
    
        
       do
-         call  ReadAry( UnIn, FileName, tmpArr, 2, 'Data', 'Time-series data', errStat2, errMsg2  )
+         call  ReadAry( UnIn, FileName, tmpArr, 3, 'Data', 'Time-series data', errStat2, errMsg2  ) !RRD 2-->3
             ! The assumption is that the only parsing error occurs at the end of the file and therefor we stop reading data
          if (errStat2 > ErrID_None) then
             exit
@@ -442,7 +444,9 @@ module UA_Dvr_Subs
       end do
       
       rewind(UnIn)
-      call ReadCom( UnIn, FileName, '  UnsteadyAero time-series input file header line 1', errStat2, errMsg2 )
+      do i=1,hdrlines !RRD
+          call ReadCom( UnIn, FileName, '  UnsteadyAero time-series input file header line 1', errStat2, errMsg2 )
+      enddo
       allocate ( timeArr( nSimSteps ), STAT=ErrStat )
          if ( ErrStat /= 0 ) then
             call SetErrStat( ErrID_Fatal, 'Error trying to allocate timeArr.', ErrStat, ErrMsg, RoutineName)  
@@ -456,11 +460,19 @@ module UA_Dvr_Subs
             call Cleanup()
             stop       
          end if
+
+      allocate ( Uarr( nSimSteps ), STAT=ErrStat ) !RRD
+         if ( ErrStat /= 0 ) then
+            call SetErrStat( ErrID_Fatal, 'Error trying to allocate Uarr.', ErrStat, ErrMsg, RoutineName)  
+            call Cleanup()
+            stop       
+         end if
          
       do i = 1,nSimSteps
-         call  ReadAry( UnIn, FileName, tmpArr, 2, 'Data', 'Time-series data', errStat2, errMsg2  )
+         call  ReadAry( UnIn, FileName, tmpArr, 3, 'Data', 'Time-series data', errStat2, errMsg2  ) !RRD 2-->3
          timeArr(i) = tmpArr(1)
          AOAarr(i)  = real(tmpArr(2))
+         Uarr(i)  = real(tmpArr(3))
       end do
       
          
