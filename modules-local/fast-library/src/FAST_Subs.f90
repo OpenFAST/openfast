@@ -8686,28 +8686,6 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
                
       END DO !nBeams
       
-!debug_print_unit = 77
-!call WrNumAryFileNR(debug_print_unit,(/real(n_t_module,DbKi), t_module/), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%TranslationDisp(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%TranslationVel(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%TranslationAcc(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%Orientation(1,:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%Orientation(2,:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%Orientation(3,:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%RotationVel(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%RootMotion%RotationAcc(:,1), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!do k=1,BD%Input(1,1)%DistrLoad%nnodes
-!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%DistrLoad%Force(:,k), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,BD%Input(1,1)%DistrLoad%Moment(:,k), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!end do
-!write(debug_print_unit,'()')
-!         
-!debug_print_unit = 78
-!call WrNumAryFileNR(debug_print_unit,(/real(n_t_module,DbKi), t_module/), "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,BD%x(1,STATE_PRED)%q, "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!call WrNumAryFileNR(debug_print_unit,BD%x(1,STATE_PRED)%dqdt, "1x,ES15.5E3", ErrStat, ErrMsg  ) 
-!write(debug_print_unit,'()')         
-!      
    END IF !CompElast
    
    
