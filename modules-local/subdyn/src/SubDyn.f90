@@ -712,7 +712,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
       
          ! Inputs at the transition piece:
-      OtherState%u_TP       = (/u%TPMesh%TranslationDisp(:,1), rotations/)
+      OtherState%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
       OtherState%udot_TP    = (/u%TPMesh%TranslationVel( :,1), u%TPMesh%RotationVel(:,1)/)
       OtherState%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
          ! Inputs on interior nodes:
