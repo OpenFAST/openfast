@@ -262,11 +262,6 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, IniVelo, ErrStat, ErrMsg)
    CALL BD_CrvMatrixR(temp_vec,temp33,ErrStat,ErrMsg)
    temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
    u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
-!   IF(t .GT. 0.2) THEN
-!       temp3(:) = 0.0D0
-!       temp3(3) = 0.0175
-!       u%RootMotion%Orientation(:,:,1) = EulerConstruct(temp3)
-!   ENDIF
    u%RootMotion%TranslationDisp(:,:)  = 0.0D0
    u%RootMotion%TranslationDisp(:,1) = temp_rr(:) - temp_r0(:)
    ! END Calculate root displacements and rotations
@@ -275,7 +270,7 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, IniVelo, ErrStat, ErrMsg)
    u%RootMotion%RotationVel(:,:) = 0.0D0
    u%RootMotion%RotationVel(1,1) = IniVelo(5)
    u%RootMotion%RotationVel(2,1) = IniVelo(6)
-   u%RootMotion%RotationVel(3,1) = IniVelo(1)
+   u%RootMotion%RotationVel(3,1) = IniVelo(4)
    u%RootMotion%TranslationVel(:,:) = 0.0D0
    u%RootMotion%TranslationVel(:,1) = MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr)
    ! END Calculate root translational and angular velocities
@@ -322,6 +317,7 @@ SUBROUTINE BD_ReadDvrFile(DvrInputFile,t_ini,t_f,dt,InitInputData,&
 !     reading of inputs.
 !------------------------------------------------------------------------------------
    USE BeamDyn
+   USE BeamDyn_Subs
    USE BeamDyn_Types
    USE NWTC_Library
 
@@ -425,18 +421,13 @@ SUBROUTINE BD_ReadDvrFile(DvrInputFile,t_ini,t_f,dt,InitInputData,&
    CALL ReadCom(UnIn,DvrInputFile,'Section Header: Initial Velocity Parameter',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    InitInputData%RootVel(:)   = 0.0D0
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(1),"InitInputData%IniRootVel(1)", "velocity vector X",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(4),"InitInputData%IniRootVel(1)", "angular velocity vector X",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(2),"InitInputData%IniRootVel(2)", "velocity vector Y",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(5),"InitInputData%IniRootVel(2)", "angular velocity vector Y",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(3),"InitInputData%IniRootVel(3)", "velocity vector Z",ErrStat2,ErrMsg2,UnEc)
+   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(6),"InitInputData%IniRootVel(3)", "angular velocity vector Z",ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(4),"InitInputData%IniRootVel(4)", "angular velocity vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(5),"InitInputData%IniRootVel(5)", "angular velocity vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(6),"InitInputData%IniRootVel(6)", "angular velocity vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+   InitInputData%RootVel(1:3)   = MATMUL(BD_Tilde(InitInputData%RootVel(4:6)),InitInputData%GlbPos(:))
    if (ErrStat >= AbortErrLev) then
        call cleanup()
        return
