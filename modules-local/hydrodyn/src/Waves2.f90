@@ -41,7 +41,7 @@ MODULE Waves2
    USE Waves2_Output
    USE NWTC_Library
    USE NWTC_FFTPACK
-   USE Waves                  ,  ONLY : InterpWrappedStpReal, WaveNumber
+   USE Waves,  ONLY : WaveNumber
 
    IMPLICIT NONE
 
@@ -110,7 +110,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          ! Local Variables
-      COMPLEX(ReKi)                                      :: ImagNmbr = (0.0,1.0) !< The imaginary number, \f$ \sqrt{-1.0} \f$
+      COMPLEX(SiKi)                                      :: ImagNmbr = (0.0,1.0) !< The imaginary number, \f$ \sqrt{-1.0} \f$
 
       INTEGER(IntKi)                                     :: I                    !< Generic counter
       INTEGER(IntKi)                                     :: J                    !< Generic counter
@@ -119,102 +119,102 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       INTEGER(IntKi)                                     :: mu_minus             !< Generic counter for difference kinematics calculations
       INTEGER(IntKi)                                     :: mu_plus              !< Generic counter for sum        kinematics calculations
 
-      REAL(ReKi)                                         :: B_minus              !< The value of the \f$ B^-_{nm} \f$ transfer function for the current n,m,z.
-      REAL(ReKi)                                         :: B_plus               !< The value of the \f$ B^+_{nm} \f$ transfer function for the current n,m,z.
+      REAL(SiKi)                                         :: B_minus              !< The value of the \f$ B^-_{nm} \f$ transfer function for the current n,m,z.
+      REAL(SiKi)                                         :: B_plus               !< The value of the \f$ B^+_{nm} \f$ transfer function for the current n,m,z.
 
-      REAL(ReKi)                                         :: Omega_n              !< The frequency corresponding to index n
-      REAL(ReKi)                                         :: Omega_m              !< The frequency corresponding to index m
-      REAL(ReKi)                                         :: Omega_minus          !< The difference frequency corresponding to \f$ \omega_{\mu^-} \f$
-      REAL(ReKi)                                         :: Omega_plus           !< The sum frequency corresponding to \f$ \omega_{\mu^+} \f$
+      REAL(SiKi)                                         :: Omega_n              !< The frequency corresponding to index n
+      REAL(SiKi)                                         :: Omega_m              !< The frequency corresponding to index m
+      REAL(SiKi)                                         :: Omega_minus          !< The difference frequency corresponding to \f$ \omega_{\mu^-} \f$
+      REAL(SiKi)                                         :: Omega_plus           !< The sum frequency corresponding to \f$ \omega_{\mu^+} \f$
 
-      REAL(ReKi)                                         :: k_n                  !< The wavenumber corresponding to \f$ \omega_n \f$
-      REAL(ReKi)                                         :: k_m                  !< The wavenumber corresponding to \f$ \omega_m \f$
-      REAL(ReKi)                                         :: k_nm                 !< Value of \f$ k_{nm}^{-} \f$
+      REAL(SiKi)                                         :: k_n                  !< The wavenumber corresponding to \f$ \omega_n \f$
+      REAL(SiKi)                                         :: k_m                  !< The wavenumber corresponding to \f$ \omega_m \f$
+      REAL(SiKi)                                         :: k_nm                 !< Value of \f$ k_{nm}^{-} \f$
 
-      COMPLEX(ReKi)                                      :: WaveElevxyPrime0     !< The dot product of the wave vector differece and location \f$ \exp[ -i * (\vec{k_n}-\vec{k_m})\cdot\vec{x}] \f$
+      COMPLEX(SiKi)                                      :: WaveElevxyPrime0     !< The dot product of the wave vector differece and location \f$ \exp[ -i * (\vec{k_n}-\vec{k_m})\cdot\vec{x}] \f$
 
-      COMPLEX(ReKi)                                      :: WaveElevC_n          !< The complex wave elevation for the nth frequency component
-      COMPLEX(ReKi)                                      :: WaveElevC_m          !< The complex wave elevation for the mth frequency component
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveElevC0Norm(:)    !< The complex wave amplitude, normalized for these equations.
+      COMPLEX(SiKi)                                      :: WaveElevC_n          !< The complex wave elevation for the nth frequency component
+      COMPLEX(SiKi)                                      :: WaveElevC_m          !< The complex wave elevation for the mth frequency component
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveElevC0Norm(:)    !< The complex wave amplitude, normalized for these equations.
 
          ! Velocity calculations
-      REAL(ReKi)                                         :: Ux_nm_minus          !< The value of \f$ _xU^-_{nm}      = B_{nm}^- \cdot (|\vec{k_n}|\cos \theta_n - |\vec{k_m}|\cos \theta_m) \f$ used in calculating the x-component of the second order wave velocity
-      REAL(ReKi)                                         :: Ux_nm_plus           !< The value of \f$ _xU^+_{nm}      = B_{nm}^+ \cdot (|\vec{k_n}|\cos \theta_n + |\vec{k_m}|\cos \theta_m) \f$ used in calculating the x-component of the second order sum-frequency wave velocity
-      REAL(ReKi)                                         :: Uy_nm_minus          !< The value of \f$ _yU^-_{nm}      = B_{nm}^- \cdot (|\vec{k_n}|\sin \theta_n - |\vec{k_m}|\sin \theta_m) \f$ used in calculating the y-component of the second order wave velocity
-      REAL(ReKi)                                         :: Uy_nm_plus           !< The value of \f$ _yU^+_{nm}      = B_{nm}^+ \cdot (|\vec{k_n}|\sin \theta_n + |\vec{k_m}|\sin \theta_m) \f$ used in calculating the y-component of the second order sum-frequency wave velocity
-      COMPLEX(ReKi)                                      :: Uz_nm_minus          !< The value of \f$ _z{U}^-_{nm}    = (\imath) \cdot {B}_{nm}^- \cdot k^-_{nm} \cdot \tanh[k^-_{nm}(h+z)]   \f$ used in calculating the z-component of the second order wave velocity
-      COMPLEX(ReKi)                                      :: Uz_nm_plus           !< The value of \f$ _z{U}^+_{nm}    = (\imath) \cdot {B}_{nm}^+ \cdot k^+_{nm} \cdot \tanh[k^+_{nm}(h+z)]   \f$ used in calculating the z-component of the second order sum-frequency wave velocity
+      REAL(SiKi)                                         :: Ux_nm_minus          !< The value of \f$ _xU^-_{nm}      = B_{nm}^- \cdot (|\vec{k_n}|\cos \theta_n - |\vec{k_m}|\cos \theta_m) \f$ used in calculating the x-component of the second order wave velocity
+      REAL(SiKi)                                         :: Ux_nm_plus           !< The value of \f$ _xU^+_{nm}      = B_{nm}^+ \cdot (|\vec{k_n}|\cos \theta_n + |\vec{k_m}|\cos \theta_m) \f$ used in calculating the x-component of the second order sum-frequency wave velocity
+      REAL(SiKi)                                         :: Uy_nm_minus          !< The value of \f$ _yU^-_{nm}      = B_{nm}^- \cdot (|\vec{k_n}|\sin \theta_n - |\vec{k_m}|\sin \theta_m) \f$ used in calculating the y-component of the second order wave velocity
+      REAL(SiKi)                                         :: Uy_nm_plus           !< The value of \f$ _yU^+_{nm}      = B_{nm}^+ \cdot (|\vec{k_n}|\sin \theta_n + |\vec{k_m}|\sin \theta_m) \f$ used in calculating the y-component of the second order sum-frequency wave velocity
+      COMPLEX(SiKi)                                      :: Uz_nm_minus          !< The value of \f$ _z{U}^-_{nm}    = (\imath) \cdot {B}_{nm}^- \cdot k^-_{nm} \cdot \tanh[k^-_{nm}(h+z)]   \f$ used in calculating the z-component of the second order wave velocity
+      COMPLEX(SiKi)                                      :: Uz_nm_plus           !< The value of \f$ _z{U}^+_{nm}    = (\imath) \cdot {B}_{nm}^+ \cdot k^+_{nm} \cdot \tanh[k^+_{nm}(h+z)]   \f$ used in calculating the z-component of the second order sum-frequency wave velocity
 
          ! Acceleration calculations
-      COMPLEX(ReKi)                                      :: Accx_nm_minus        !< The value of \f$ _xAcc^-_{nm}    = (\imath) \cdot _xU^-_{nm} \omega_{\mu^-} \f$
-      COMPLEX(ReKi)                                      :: Accx_nm_plus         !< The value of \f$ _xAcc^+_{nm}    = (\imath) \cdot _xU^+_{nm} \omega_{\mu^+} \f$
-      COMPLEX(ReKi)                                      :: Accy_nm_minus        !< The value of \f$ _yAcc^-_{nm}    = (\imath) \cdot _yU^-_{nm} \omega_{\mu^-} \f$
-      COMPLEX(ReKi)                                      :: Accy_nm_plus         !< The value of \f$ _yAcc^+_{nm}    = (\imath) \cdot _yU^+_{nm} \omega_{\mu^+} \f$
-      COMPLEX(ReKi)                                      :: Accz_nm_minus        !< The value of \f$ _z{Acc}^-_{nm}  = (\imath) \cdot _zU^-_{nm} \omega_{\mu^-} \f$
-      COMPLEX(ReKi)                                      :: Accz_nm_plus         !< The value of \f$ _z{Acc}^+_{nm}  = (\imath) \cdot _zU^+_{nm} \omega_{\mu^+} \f$
+      COMPLEX(SiKi)                                      :: Accx_nm_minus        !< The value of \f$ _xAcc^-_{nm}    = (\imath) \cdot _xU^-_{nm} \omega_{\mu^-} \f$
+      COMPLEX(SiKi)                                      :: Accx_nm_plus         !< The value of \f$ _xAcc^+_{nm}    = (\imath) \cdot _xU^+_{nm} \omega_{\mu^+} \f$
+      COMPLEX(SiKi)                                      :: Accy_nm_minus        !< The value of \f$ _yAcc^-_{nm}    = (\imath) \cdot _yU^-_{nm} \omega_{\mu^-} \f$
+      COMPLEX(SiKi)                                      :: Accy_nm_plus         !< The value of \f$ _yAcc^+_{nm}    = (\imath) \cdot _yU^+_{nm} \omega_{\mu^+} \f$
+      COMPLEX(SiKi)                                      :: Accz_nm_minus        !< The value of \f$ _z{Acc}^-_{nm}  = (\imath) \cdot _zU^-_{nm} \omega_{\mu^-} \f$
+      COMPLEX(SiKi)                                      :: Accz_nm_plus         !< The value of \f$ _z{Acc}^+_{nm}  = (\imath) \cdot _zU^+_{nm} \omega_{\mu^+} \f$
 
          ! Pressure calculations
-      REAL(ReKi)                                         :: DynP_nm_minus        !< The value of \f$ \rho_\mathrm{w} B_{nm}^- \omega_{\mu^-} \f$
-      REAL(ReKi)                                         :: DynP_nm_plus         !< The value of \f$ \rho_\mathrm{w} B_{nm}^+ \omega_{\mu^+} \f$
+      REAL(SiKi)                                         :: DynP_nm_minus        !< The value of \f$ \rho_\mathrm{w} B_{nm}^- \omega_{\mu^-} \f$
+      REAL(SiKi)                                         :: DynP_nm_plus         !< The value of \f$ \rho_\mathrm{w} B_{nm}^+ \omega_{\mu^+} \f$
 
          ! Tracking of joints for which we are doing calculations
-      REAL(ReKi),                            ALLOCATABLE :: WaveKinzi0Prime(:)   !< zi-coordinates for points where the incident wave kinematics will be computed before applying stretching; these are relative to the mean see level (meters)
+      REAL(SiKi),                            ALLOCATABLE :: WaveKinzi0Prime(:)   !< zi-coordinates for points where the incident wave kinematics will be computed before applying stretching; these are relative to the mean see level (meters)
       INTEGER(IntKi),                        ALLOCATABLE :: WaveKinPrimeMap(:)   !< Mapping function for the wave kinematics to calculate (based on depth)
       INTEGER(IntKi)                                     :: NWaveKin0Prime       !< Number of points where the incident wave kinematics will be computed before applying stretching to the instantaneous free surface (-)
 
 
          ! Second order wave elevation calculations
-      REAL(ReKi),                            ALLOCATABLE :: TmpTimeSeries(:)     !< Temporary storage for a wave elevation time series for a single point.
-      REAL(ReKi),                            ALLOCATABLE :: TmpTimeSeries2(:)    !< Temporary storage for a wave elevation time series for a single point.
-      COMPLEX(ReKi),                         ALLOCATABLE :: TmpFreqSeries(:)     !< Temporary storage for a wave elevation frequency series for a single point.
-      COMPLEX(ReKi),                         ALLOCATABLE :: TmpFreqSeries2(:)    !< Temporary storage for a wave elevation frequency series for a single point.
+      REAL(SiKi),                            ALLOCATABLE :: TmpTimeSeries(:)     !< Temporary storage for a wave elevation time series for a single point.
+      REAL(SiKi),                            ALLOCATABLE :: TmpTimeSeries2(:)    !< Temporary storage for a wave elevation time series for a single point.
+      COMPLEX(SiKi),                         ALLOCATABLE :: TmpFreqSeries(:)     !< Temporary storage for a wave elevation frequency series for a single point.
+      COMPLEX(SiKi),                         ALLOCATABLE :: TmpFreqSeries2(:)    !< Temporary storage for a wave elevation frequency series for a single point.
 
 
          ! Calculation of 2nd order particle acceleration, velocity, and pressure terms
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveVel2xCDiff(:)    !< Frequency space difference frequency particle velocity     term in the x direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveVel2yCDiff(:)    !< Frequency space difference frequency particle velocity     term in the y direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveVel2zCDiff(:)    !< Frequency space difference frequency particle velocity     term in the z direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveAcc2xCDiff(:)    !< Frequency space difference frequency particle acceleration term in the x direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveAcc2yCDiff(:)    !< Frequency space difference frequency particle acceleration term in the y direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveAcc2zCDiff(:)    !< Frequency space difference frequency particle acceleration term in the z direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveVel2xDiff(:)     !< Time domain     difference frequency particle velocity     term in the x direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveVel2yDiff(:)     !< Time domain     difference frequency particle velocity     term in the y direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveVel2zDiff(:)     !< Time domain     difference frequency particle velocity     term in the z direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveAcc2xDiff(:)     !< Time domain     difference frequency particle acceleration term in the x direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveAcc2yDiff(:)     !< Time domain     difference frequency particle acceleration term in the y direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveAcc2zDiff(:)     !< Time domain     difference frequency particle acceleration term in the z direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveDynP2CDiff(:)    !< Frequency space difference frequency dynamic pressure term
-      REAL(ReKi),                            ALLOCATABLE :: WaveDynP2Diff(:)     !< Time domain     difference frequency dynamic pressure term
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveVel2xCDiff(:)    !< Frequency space difference frequency particle velocity     term in the x direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveVel2yCDiff(:)    !< Frequency space difference frequency particle velocity     term in the y direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveVel2zCDiff(:)    !< Frequency space difference frequency particle velocity     term in the z direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveAcc2xCDiff(:)    !< Frequency space difference frequency particle acceleration term in the x direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveAcc2yCDiff(:)    !< Frequency space difference frequency particle acceleration term in the y direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveAcc2zCDiff(:)    !< Frequency space difference frequency particle acceleration term in the z direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveVel2xDiff(:)     !< Time domain     difference frequency particle velocity     term in the x direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveVel2yDiff(:)     !< Time domain     difference frequency particle velocity     term in the y direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveVel2zDiff(:)     !< Time domain     difference frequency particle velocity     term in the z direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveAcc2xDiff(:)     !< Time domain     difference frequency particle acceleration term in the x direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveAcc2yDiff(:)     !< Time domain     difference frequency particle acceleration term in the y direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveAcc2zDiff(:)     !< Time domain     difference frequency particle acceleration term in the z direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveDynP2CDiff(:)    !< Frequency space difference frequency dynamic pressure term
+      REAL(SiKi),                            ALLOCATABLE :: WaveDynP2Diff(:)     !< Time domain     difference frequency dynamic pressure term
 
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveVel2xCSumT1(:)   !< Frequency space difference frequency particle velocity     term 1 in the x direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveVel2yCSumT1(:)   !< Frequency space difference frequency particle velocity     term 1 in the y direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveVel2zCSumT1(:)   !< Frequency space difference frequency particle velocity     term 1 in the z direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveAcc2xCSumT1(:)   !< Frequency space difference frequency particle acceleration term 1 in the x direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveAcc2yCSumT1(:)   !< Frequency space difference frequency particle acceleration term 1 in the y direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveAcc2zCSumT1(:)   !< Frequency space difference frequency particle acceleration term 1 in the z direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveVel2xSumT1(:)    !< Time domain     difference frequency particle velocity     term 1 in the x direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveVel2ySumT1(:)    !< Time domain     difference frequency particle velocity     term 1 in the y direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveVel2zSumT1(:)    !< Time domain     difference frequency particle velocity     term 1 in the z direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveAcc2xSumT1(:)    !< Time domain     difference frequency particle acceleration term 1 in the x direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveAcc2ySumT1(:)    !< Time domain     difference frequency particle acceleration term 1 in the y direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveAcc2zSumT1(:)    !< Time domain     difference frequency particle acceleration term 1 in the z direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveDynP2CSumT1(:)   !< Frequency space difference frequency dynamic pressure term 1
-      REAL(ReKi),                            ALLOCATABLE :: WaveDynP2SumT1(:)    !< Time domain     difference frequency dynamic pressure term 1
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveVel2xCSumT1(:)   !< Frequency space difference frequency particle velocity     term 1 in the x direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveVel2yCSumT1(:)   !< Frequency space difference frequency particle velocity     term 1 in the y direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveVel2zCSumT1(:)   !< Frequency space difference frequency particle velocity     term 1 in the z direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveAcc2xCSumT1(:)   !< Frequency space difference frequency particle acceleration term 1 in the x direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveAcc2yCSumT1(:)   !< Frequency space difference frequency particle acceleration term 1 in the y direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveAcc2zCSumT1(:)   !< Frequency space difference frequency particle acceleration term 1 in the z direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveVel2xSumT1(:)    !< Time domain     difference frequency particle velocity     term 1 in the x direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveVel2ySumT1(:)    !< Time domain     difference frequency particle velocity     term 1 in the y direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveVel2zSumT1(:)    !< Time domain     difference frequency particle velocity     term 1 in the z direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveAcc2xSumT1(:)    !< Time domain     difference frequency particle acceleration term 1 in the x direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveAcc2ySumT1(:)    !< Time domain     difference frequency particle acceleration term 1 in the y direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveAcc2zSumT1(:)    !< Time domain     difference frequency particle acceleration term 1 in the z direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveDynP2CSumT1(:)   !< Frequency space difference frequency dynamic pressure term 1
+      REAL(SiKi),                            ALLOCATABLE :: WaveDynP2SumT1(:)    !< Time domain     difference frequency dynamic pressure term 1
 
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveVel2xCSumT2(:)   !< Frequency space difference frequency particle velocity     term 2 in the x direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveVel2yCSumT2(:)   !< Frequency space difference frequency particle velocity     term 2 in the y direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveVel2zCSumT2(:)   !< Frequency space difference frequency particle velocity     term 2 in the z direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveAcc2xCSumT2(:)   !< Frequency space difference frequency particle acceleration term 2 in the x direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveAcc2yCSumT2(:)   !< Frequency space difference frequency particle acceleration term 2 in the y direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveAcc2zCSumT2(:)   !< Frequency space difference frequency particle acceleration term 2 in the z direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveVel2xSumT2(:)    !< Time domain     difference frequency particle velocity     term 2 in the x direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveVel2ySumT2(:)    !< Time domain     difference frequency particle velocity     term 2 in the y direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveVel2zSumT2(:)    !< Time domain     difference frequency particle velocity     term 2 in the z direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveAcc2xSumT2(:)    !< Time domain     difference frequency particle acceleration term 2 in the x direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveAcc2ySumT2(:)    !< Time domain     difference frequency particle acceleration term 2 in the y direction
-      REAL(ReKi),                            ALLOCATABLE :: WaveAcc2zSumT2(:)    !< Time domain     difference frequency particle acceleration term 2 in the z direction
-      COMPLEX(ReKi),                         ALLOCATABLE :: WaveDynP2CSumT2(:)   !< Frequency space difference frequency dynamic pressure term 2
-      REAL(ReKi),                            ALLOCATABLE :: WaveDynP2SumT2(:)    !< Time domain     difference frequency dynamic pressure term 2
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveVel2xCSumT2(:)   !< Frequency space difference frequency particle velocity     term 2 in the x direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveVel2yCSumT2(:)   !< Frequency space difference frequency particle velocity     term 2 in the y direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveVel2zCSumT2(:)   !< Frequency space difference frequency particle velocity     term 2 in the z direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveAcc2xCSumT2(:)   !< Frequency space difference frequency particle acceleration term 2 in the x direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveAcc2yCSumT2(:)   !< Frequency space difference frequency particle acceleration term 2 in the y direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveAcc2zCSumT2(:)   !< Frequency space difference frequency particle acceleration term 2 in the z direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveVel2xSumT2(:)    !< Time domain     difference frequency particle velocity     term 2 in the x direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveVel2ySumT2(:)    !< Time domain     difference frequency particle velocity     term 2 in the y direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveVel2zSumT2(:)    !< Time domain     difference frequency particle velocity     term 2 in the z direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveAcc2xSumT2(:)    !< Time domain     difference frequency particle acceleration term 2 in the x direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveAcc2ySumT2(:)    !< Time domain     difference frequency particle acceleration term 2 in the y direction
+      REAL(SiKi),                            ALLOCATABLE :: WaveAcc2zSumT2(:)    !< Time domain     difference frequency particle acceleration term 2 in the z direction
+      COMPLEX(SiKi),                         ALLOCATABLE :: WaveDynP2CSumT2(:)   !< Frequency space difference frequency dynamic pressure term 2
+      REAL(SiKi),                            ALLOCATABLE :: WaveDynP2SumT2(:)    !< Time domain     difference frequency dynamic pressure term 2
 
          ! Stuff for the FFT calculations
       TYPE(FFT_DataType)                                 :: FFT_Data             !< the instance of the FFT module we're using
@@ -491,13 +491,13 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          !Initialize the output arrays to zero.  We will only fill it in for the points we calculate.
-      p%WaveElev2          =  0.0_ReKi
-      InitOut%WaveVel2D    =  0.0_ReKi
-      InitOut%WaveAcc2D    =  0.0_ReKi
-      InitOut%WaveDynP2D   =  0.0_ReKi
-      InitOut%WaveVel2S  =  0.0_ReKi
-      InitOut%WaveAcc2S  =  0.0_ReKi
-      InitOut%WaveDynP2S =  0.0_ReKi
+      p%WaveElev2          =  0.0_SiKi
+      InitOut%WaveVel2D    =  0.0_SiKi
+      InitOut%WaveAcc2D    =  0.0_SiKi
+      InitOut%WaveDynP2D   =  0.0_SiKi
+      InitOut%WaveVel2S  =  0.0_SiKi
+      InitOut%WaveAcc2S  =  0.0_SiKi
+      InitOut%WaveDynP2S =  0.0_SiKi
 
 
 
@@ -666,13 +666,13 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                ! Reset the \f$ H_{\mu^-} \f$ terms to zero before calculating.
-            WaveVel2xCDiff = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveVel2yCDiff = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveVel2zCDiff = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveAcc2xCDiff = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveAcc2yCDiff = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveAcc2zCDiff = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveDynP2CDiff = CMPLX(0.0_ReKi, 0.0_ReKi)
+            WaveVel2xCDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveVel2yCDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveVel2zCDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveAcc2xCDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveAcc2yCDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveAcc2zCDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveDynP2CDiff = CMPLX(0.0_SiKi, 0.0_SiKi)
 
 
                ! \f$ \mu^- \f$ loop.  This loop is used to construct the full set of \f$ H_{\mu^-} \f$ terms used in the IFFT to find the timeseries.
@@ -776,13 +776,13 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ENDDO ! mu_minus loop (diff frequency)
 
                   !  Divide by two for the single sided FFT given in the documentation.
-            WaveVel2xCDiff =  WaveVel2xCDiff / 2.0_Reki
-            WaveVel2yCDiff =  WaveVel2yCDiff / 2.0_Reki
-            WaveVel2zCDiff =  WaveVel2zCDiff / 2.0_Reki
-            WaveAcc2xCDiff =  WaveAcc2xCDiff / 2.0_Reki
-            WaveAcc2yCDiff =  WaveAcc2yCDiff / 2.0_Reki
-            WaveAcc2zCDiff =  WaveAcc2zCDiff / 2.0_Reki
-            WaveDynP2CDiff =  WaveDynP2CDiff / 2.0_Reki
+            WaveVel2xCDiff =  WaveVel2xCDiff / 2.0_SiKi
+            WaveVel2yCDiff =  WaveVel2yCDiff / 2.0_SiKi
+            WaveVel2zCDiff =  WaveVel2zCDiff / 2.0_SiKi
+            WaveAcc2xCDiff =  WaveAcc2xCDiff / 2.0_SiKi
+            WaveAcc2yCDiff =  WaveAcc2yCDiff / 2.0_SiKi
+            WaveAcc2zCDiff =  WaveAcc2zCDiff / 2.0_SiKi
+            WaveDynP2CDiff =  WaveDynP2CDiff / 2.0_SiKi
 
 
 
@@ -815,15 +815,15 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                ! Copy the results to the output
-            InitOut%WaveVel2D(:,WaveKinPrimeMap(I),1) =  2.0_ReKi * WaveVel2xDiff(:)     ! x-component of velocity
-            InitOut%WaveVel2D(:,WaveKinPrimeMap(I),2) =  2.0_ReKi * WaveVel2yDiff(:)     ! y-component of velocity
-            InitOut%WaveVel2D(:,WaveKinPrimeMap(I),3) =  2.0_ReKi * WaveVel2zDiff(:)     ! z-component of velocity
+            InitOut%WaveVel2D(:,WaveKinPrimeMap(I),1) =  2.0_SiKi * WaveVel2xDiff(:)     ! x-component of velocity
+            InitOut%WaveVel2D(:,WaveKinPrimeMap(I),2) =  2.0_SiKi * WaveVel2yDiff(:)     ! y-component of velocity
+            InitOut%WaveVel2D(:,WaveKinPrimeMap(I),3) =  2.0_SiKi * WaveVel2zDiff(:)     ! z-component of velocity
 
-            InitOut%WaveAcc2D(:,WaveKinPrimeMap(I),1) =  2.0_ReKi * WaveAcc2xDiff(:)     ! x-component of acceleration
-            InitOut%WaveAcc2D(:,WaveKinPrimeMap(I),2) =  2.0_ReKi * WaveAcc2yDiff(:)     ! y-component of acceleration
-            InitOut%WaveAcc2D(:,WaveKinPrimeMap(I),3) =  2.0_ReKi * WaveAcc2zDiff(:)     ! z-component of acceleration
+            InitOut%WaveAcc2D(:,WaveKinPrimeMap(I),1) =  2.0_SiKi * WaveAcc2xDiff(:)     ! x-component of acceleration
+            InitOut%WaveAcc2D(:,WaveKinPrimeMap(I),2) =  2.0_SiKi * WaveAcc2yDiff(:)     ! y-component of acceleration
+            InitOut%WaveAcc2D(:,WaveKinPrimeMap(I),3) =  2.0_SiKi * WaveAcc2zDiff(:)     ! z-component of acceleration
 
-            InitOut%WaveDynP2D(:,WaveKinPrimeMap(I))  =  2.0_ReKi * WaveDynP2Diff(:)     ! Dynamic pressure
+            InitOut%WaveDynP2D(:,WaveKinPrimeMap(I))  =  2.0_SiKi * WaveDynP2Diff(:)     ! Dynamic pressure
 
 
                ! Copy the first point to the last to make it easier.
@@ -1037,21 +1037,21 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                ! Reset the \f$ H_{\mu^+} \f$ terms to zero before calculating.
-            WaveVel2xCSumT1 = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveVel2yCSumT1 = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveVel2zCSumT1 = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveAcc2xCSumT1 = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveAcc2yCSumT1 = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveAcc2zCSumT1 = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveDynP2CSumT1 = CMPLX(0.0_ReKi, 0.0_ReKi)
+            WaveVel2xCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveVel2yCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveVel2zCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveAcc2xCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveAcc2yCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveAcc2zCSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveDynP2CSumT1 = CMPLX(0.0_SiKi, 0.0_SiKi)
 
-            WaveVel2xCSumT2 = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveVel2yCSumT2 = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveVel2zCSumT2 = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveAcc2xCSumT2 = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveAcc2yCSumT2 = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveAcc2zCSumT2 = CMPLX(0.0_ReKi, 0.0_ReKi)
-            WaveDynP2CSumT2 = CMPLX(0.0_ReKi, 0.0_ReKi)
+            WaveVel2xCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveVel2yCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveVel2zCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveAcc2xCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveAcc2yCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveAcc2zCSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
+            WaveDynP2CSumT2 = CMPLX(0.0_SiKi, 0.0_SiKi)
 
 
                !---------------
@@ -1068,14 +1068,14 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                ! The limits look a little funny.  But remember we are placing the value in the 2*J location,
                ! so we cannot overun the end of the array.  The floor function is just in case NStepWave2 is
                ! an odd number
-            DO n=1,FLOOR( REAL(InitInp%NStepWave2-1) / 2.0_ReKi )   ! Only
+            DO n=1,FLOOR( REAL(InitInp%NStepWave2-1) / 2.0_SiKi )   ! Only
 
                Omega_n  =  n * InitInp%WaveDOmega
 
                ! The frequency we are dealing with
                !> * \f$ \omega^+ = \mu^+ \Delta \omega = 2 \omega_n \f$
                mu_plus     =  2 * n
-               Omega_plus  =  2.0_ReKi * Omega_n
+               Omega_plus  =  2.0_SiKi * Omega_n
 
                IF ( Omega_plus >= InitInp%WvLowCOffS .AND. Omega_plus <= InitInp%WvHiCOffS ) THEN
                   k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
@@ -1093,8 +1093,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                      !!             +  |\vec{k_n}| \sin \theta_n ~ y \right] \right) \f$
 
                   WaveElevxyPrime0  = exp( - ImagNmbr &
-                           *  (  2.0_ReKi * k_n * COS( D2R*InitInp%WaveDirArr(n) ) * InitInp%WaveKinxi0(WaveKinPrimeMap(I))  &
-                              +  2.0_ReKi * k_n * SIN( D2R*InitInp%WaveDirArr(n) ) * InitInp%WaveKinyi0(WaveKinPrimeMap(I))  ))
+                           *  (  2.0_SiKi * k_n * COS( D2R*InitInp%WaveDirArr(n) ) * InitInp%WaveKinxi0(WaveKinPrimeMap(I))  &
+                              +  2.0_SiKi * k_n * SIN( D2R*InitInp%WaveDirArr(n) ) * InitInp%WaveKinyi0(WaveKinPrimeMap(I))  ))
 
 
                      ! Get value for \f$ B+ \f$ for the n,m index pair
@@ -1104,10 +1104,10 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                      !> Calculate \f$ U^+ \f$ terms for the velocity calculations (\f$B^+\f$ provided by ::TransFuncB_plus)
                      ! NOTE: InitInp%WtrDpth + WaveKinzi0Prime(I) is the height above the ocean floor
                      !> * \f$ _x{U}_{nn}^+ = B_{nn}^+ 2 k_n \cos \theta_n \f$
-                  Ux_nm_plus = B_plus * 2.0_ReKi * k_n * COS( D2R*InitInp%WaveDirArr(n) )
+                  Ux_nm_plus = B_plus * 2.0_SiKi * k_n * COS( D2R*InitInp%WaveDirArr(n) )
 
                      !> * \f$ _y{U}_{nn}^+ = B_{nn}^+ 2 k_n \sin \theta_n \f$
-                  Uy_nm_plus = B_plus * 2.0_ReKi * k_n * SIN( D2R*InitInp%WaveDirArr(n) )
+                  Uy_nm_plus = B_plus * 2.0_SiKi * k_n * SIN( D2R*InitInp%WaveDirArr(n) )
 
                      !> * \f$ _z{U}_{nn}^+ = \imath B_{nn}^+ k_{nn} \tanh \left( k_{nn} ( h + z ) \right) \f$
                   Uz_nm_plus = ImagNmbr * B_plus * k_nm * tanh( k_nm * ( InitInp%WtrDpth + WaveKinzi0Prime(I) ) )
@@ -1174,7 +1174,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
                IF ( Omega_plus >= InitInp%WvLowCOffS .AND. Omega_plus <= InitInp%WvHiCOffS ) THEN
                      ! The inner \f$ m \f$ loop for calculating the \f$ H_{\mu^+} \f$ terms at each frequency.
-                  DO m=1,FLOOR( REAL(mu_plus - 1) / 2.0_ReKi )
+                  DO m=1,FLOOR( REAL(mu_plus - 1) / 2.0_SiKi )
                         ! Calculate the value of the n index from \f$ \mu^+ = n + m \f$.  Calculate corresponding wavenumbers and frequencies.
                      n           =  mu_plus - m
                      Omega_n     =  n * InitInp%WaveDOmega
@@ -1264,20 +1264,20 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                   !  Divide by two for the single sided FFT given in the documentation.
-            WaveVel2xCSumT1 =  WaveVel2xCSumT1 / 2.0_Reki
-            WaveVel2yCSumT1 =  WaveVel2yCSumT1 / 2.0_Reki
-            WaveVel2zCSumT1 =  WaveVel2zCSumT1 / 2.0_Reki
-            WaveAcc2xCSumT1 =  WaveAcc2xCSumT1 / 2.0_Reki
-            WaveAcc2yCSumT1 =  WaveAcc2yCSumT1 / 2.0_Reki
-            WaveAcc2zCSumT1 =  WaveAcc2zCSumT1 / 2.0_Reki
-            WaveDynP2CSumT1 =  WaveDynP2CSumT1 / 2.0_Reki
-            WaveVel2xCSumT2 =  WaveVel2xCSumT2 / 2.0_Reki
-            WaveVel2yCSumT2 =  WaveVel2yCSumT2 / 2.0_Reki
-            WaveVel2zCSumT2 =  WaveVel2zCSumT2 / 2.0_Reki
-            WaveAcc2xCSumT2 =  WaveAcc2xCSumT2 / 2.0_Reki
-            WaveAcc2yCSumT2 =  WaveAcc2yCSumT2 / 2.0_Reki
-            WaveAcc2zCSumT2 =  WaveAcc2zCSumT2 / 2.0_Reki
-            WaveDynP2CSumT2 =  WaveDynP2CSumT2 / 2.0_Reki
+            WaveVel2xCSumT1 =  WaveVel2xCSumT1 / 2.0_SiKi
+            WaveVel2yCSumT1 =  WaveVel2yCSumT1 / 2.0_SiKi
+            WaveVel2zCSumT1 =  WaveVel2zCSumT1 / 2.0_SiKi
+            WaveAcc2xCSumT1 =  WaveAcc2xCSumT1 / 2.0_SiKi
+            WaveAcc2yCSumT1 =  WaveAcc2yCSumT1 / 2.0_SiKi
+            WaveAcc2zCSumT1 =  WaveAcc2zCSumT1 / 2.0_SiKi
+            WaveDynP2CSumT1 =  WaveDynP2CSumT1 / 2.0_SiKi
+            WaveVel2xCSumT2 =  WaveVel2xCSumT2 / 2.0_SiKi
+            WaveVel2yCSumT2 =  WaveVel2yCSumT2 / 2.0_SiKi
+            WaveVel2zCSumT2 =  WaveVel2zCSumT2 / 2.0_SiKi
+            WaveAcc2xCSumT2 =  WaveAcc2xCSumT2 / 2.0_SiKi
+            WaveAcc2yCSumT2 =  WaveAcc2yCSumT2 / 2.0_SiKi
+            WaveAcc2zCSumT2 =  WaveAcc2zCSumT2 / 2.0_SiKi
+            WaveDynP2CSumT2 =  WaveDynP2CSumT2 / 2.0_SiKi
 
 
 
@@ -1326,15 +1326,15 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                ! Add the results to the output
-            InitOut%WaveVel2S(:,WaveKinPrimeMap(I),1) =  WaveVel2xSumT1(:) +  2.0_ReKi * WaveVel2xSumT2(:)     ! x-component of velocity
-            InitOut%WaveVel2S(:,WaveKinPrimeMap(I),2) =  WaveVel2ySumT1(:) +  2.0_ReKi * WaveVel2ySumT2(:)     ! y-component of velocity
-            InitOut%WaveVel2S(:,WaveKinPrimeMap(I),3) =  WaveVel2zSumT1(:) +  2.0_ReKi * WaveVel2zSumT2(:)     ! z-component of velocity
+            InitOut%WaveVel2S(:,WaveKinPrimeMap(I),1) =  WaveVel2xSumT1(:) +  2.0_SiKi * WaveVel2xSumT2(:)     ! x-component of velocity
+            InitOut%WaveVel2S(:,WaveKinPrimeMap(I),2) =  WaveVel2ySumT1(:) +  2.0_SiKi * WaveVel2ySumT2(:)     ! y-component of velocity
+            InitOut%WaveVel2S(:,WaveKinPrimeMap(I),3) =  WaveVel2zSumT1(:) +  2.0_SiKi * WaveVel2zSumT2(:)     ! z-component of velocity
 
-            InitOut%WaveAcc2S(:,WaveKinPrimeMap(I),1) =  WaveAcc2xSumT1(:) +  2.0_ReKi * WaveAcc2xSumT2(:)     ! x-component of acceleration
-            InitOut%WaveAcc2S(:,WaveKinPrimeMap(I),2) =  WaveAcc2ySumT1(:) +  2.0_ReKi * WaveAcc2ySumT2(:)     ! y-component of acceleration
-            InitOut%WaveAcc2S(:,WaveKinPrimeMap(I),3) =  WaveAcc2zSumT1(:) +  2.0_ReKi * WaveAcc2zSumT2(:)     ! z-component of acceleration
+            InitOut%WaveAcc2S(:,WaveKinPrimeMap(I),1) =  WaveAcc2xSumT1(:) +  2.0_SiKi * WaveAcc2xSumT2(:)     ! x-component of acceleration
+            InitOut%WaveAcc2S(:,WaveKinPrimeMap(I),2) =  WaveAcc2ySumT1(:) +  2.0_SiKi * WaveAcc2ySumT2(:)     ! y-component of acceleration
+            InitOut%WaveAcc2S(:,WaveKinPrimeMap(I),3) =  WaveAcc2zSumT1(:) +  2.0_SiKi * WaveAcc2zSumT2(:)     ! z-component of acceleration
 
-            InitOut%WaveDynP2S(:,WaveKinPrimeMap(I))  =  WaveDynP2SumT1(:) +  2.0_ReKi * WaveDynP2SumT2(:)     ! Dynamic pressure
+            InitOut%WaveDynP2S(:,WaveKinPrimeMap(I))  =  WaveDynP2SumT1(:) +  2.0_SiKi * WaveDynP2SumT2(:)     ! Dynamic pressure
 
 
                ! Copy the first point to the last to make it easier.
@@ -1432,9 +1432,9 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       !! Also notice that the multiplier 2 is moved inside the IFFT.  This was done purely to make the programming simpler.
       SUBROUTINE WaveElevTimeSeriesAtXY_Diff(Xcoord,Ycoord, WaveElevSeriesAtXY, ErrStatLcl, ErrMsgLcl )
    
-         REAL(ReKi),       INTENT(IN   )              :: Xcoord
-         REAL(ReKi),       INTENT(IN   )              :: Ycoord
-         REAL(ReKi),       INTENT(  OUT)              :: WaveElevSeriesAtXY(0:InitInp%NStepWave)
+         REAL(SiKi),       INTENT(IN   )              :: Xcoord
+         REAL(SiKi),       INTENT(IN   )              :: Ycoord
+         REAL(SiKi),       INTENT(  OUT)              :: WaveElevSeriesAtXY(0:InitInp%NStepWave)
          INTEGER(IntKi),   INTENT(  OUT)              :: ErrStatLcl
          INTEGER(IntKi)                               :: ErrStatLcl2
          CHARACTER(*),     INTENT(  OUT)              :: ErrMsgLcl
@@ -1442,14 +1442,14 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! Local variables
          INTEGER(IntKi)                               :: n              !< Index to the first  frequency we are dealing with
          INTEGER(IntKi)                               :: m              !< Index to the second frequency we are dealing with
-         REAL(ReKi)                                   :: k_n            !< WaveNumber for Omega_n -- note no direction associated with this
-         REAL(ReKi)                                   :: k_m            !< WaveNumber for Omega_m -- note no direction associated with this
-         REAL(ReKi)                                   :: L_minus        !< Resulting \f$ L^{-}_{nm} \f$ value.  Calculated in this routine.
-         REAL(ReKi)                                   :: R_n            !< Effect scaling relationship of depth and wavenumber
-         REAL(ReKi)                                   :: R_m            !< Effect scaling relationship of depth and wavenumber
-         REAL(ReKi)                                   :: Omega_n        !< First  frequency of index n
-         REAL(ReKi)                                   :: Omega_m        !< Second frequency of index m
-         REAL(ReKi)                                   :: D_minus        !< Value of \f$ D^-_{nm} \f$ found by ::TransFuncD_minus
+         REAL(SiKi)                                   :: k_n            !< WaveNumber for Omega_n -- note no direction associated with this
+         REAL(SiKi)                                   :: k_m            !< WaveNumber for Omega_m -- note no direction associated with this
+         REAL(SiKi)                                   :: L_minus        !< Resulting \f$ L^{-}_{nm} \f$ value.  Calculated in this routine.
+         REAL(SiKi)                                   :: R_n            !< Effect scaling relationship of depth and wavenumber
+         REAL(SiKi)                                   :: R_m            !< Effect scaling relationship of depth and wavenumber
+         REAL(SiKi)                                   :: Omega_n        !< First  frequency of index n
+         REAL(SiKi)                                   :: Omega_m        !< Second frequency of index m
+         REAL(SiKi)                                   :: D_minus        !< Value of \f$ D^-_{nm} \f$ found by ::TransFuncD_minus
 
             ! Initializations
          ErrMsgLcl   = ''
@@ -1457,8 +1457,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
   
             ! Note that TmpFreqSeries was allocated in the calling routine.  Probably bad programming
             ! practice, but I didn't want to have to allocate it at each point.
-         TmpFreqSeries  =  CMPLX(0.0_ReKi, 0.0_ReKi)
-         WaveElevSeriesAtXY   =  0.0_ReKi
+         TmpFreqSeries  =  CMPLX(0.0_SiKi, 0.0_SiKi)
+         WaveElevSeriesAtXY   =  0.0_SiKi
 
             ! \f$ \mu^- \f$ loop.  This loop is used to construct the full set of \f$ H_{\mu^-} \f$ terms used in the IFFT to find the timeseries.
             !> * \f$ \mu^- = n -m \f$
@@ -1489,7 +1489,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                      !!
                      !!    The value of \f$ D^-_{nm} \f$ is found from by the ::TransFuncD_minus routine.
 
-                  L_minus  =  (( D_minus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) - R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_ReKi !4.0_ReKi
+                  L_minus  =  (( D_minus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) - R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_SiKi !4.0_SiKi
 
 
                      ! Calculate the terms \f$ n,m \f$ necessary for calculations
@@ -1519,7 +1519,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                      !> Wave elevation term:
                      !!    *  \f$ 2 H^-(\omega_{\mu^-}) =  {\sum_{m=1}^{\frac{N}{2}-\mu^{-}}}  2 A_n  A^*_m L_{nm}^-
                      !!                                  \exp\left(-\imath (\vec{k_n} - \vec{k_m})\cdot\vec{x}\right) \f$
-                  TmpFreqSeries(mu_minus)   =  TmpFreqSeries(mu_minus) + 2.0_ReKi * WaveElevC_n * CONJG( WaveElevC_m ) * L_minus * WaveElevxyPrime0
+                  TmpFreqSeries(mu_minus)   =  TmpFreqSeries(mu_minus) + 2.0_SiKi * WaveElevC_n * CONJG( WaveElevC_m ) * L_minus * WaveElevxyPrime0
 
 
                ENDDO ! m loop
@@ -1530,7 +1530,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                   !  Divide by two for the single sided FFT given in the documentation.
-            TmpFreqSeries = TmpFreqSeries / 2.0_Reki
+            TmpFreqSeries = TmpFreqSeries / 2.0_SiKi
 
 
             !> ### Apply the inverse FFT to each of the components to get the time domain result ###
@@ -1559,9 +1559,9 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       !!
       SUBROUTINE WaveElevTimeSeriesAtXY_Sum(Xcoord,Ycoord, WaveElevSeriesAtXY, ErrStatLcl, ErrMsgLcl )
    
-         REAL(ReKi),       INTENT(IN   )              :: Xcoord
-         REAL(ReKi),       INTENT(IN   )              :: Ycoord
-         REAL(ReKi),       INTENT(  OUT)              :: WaveElevSeriesAtXY(0:InitInp%NStepWave)
+         REAL(SiKi),       INTENT(IN   )              :: Xcoord
+         REAL(SiKi),       INTENT(IN   )              :: Ycoord
+         REAL(SiKi),       INTENT(  OUT)              :: WaveElevSeriesAtXY(0:InitInp%NStepWave)
          INTEGER(IntKi),   INTENT(  OUT)              :: ErrStatLcl
          INTEGER(IntKi)                               :: ErrStatLcl2
          CHARACTER(*),     INTENT(  OUT)              :: ErrMsgLcl
@@ -1570,14 +1570,14 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          INTEGER(IntKi)                               :: n              !< Index to the first  frequency we are dealing with
          INTEGER(IntKi)                               :: m              !< Index to the second frequency we are dealing with
          INTEGER(IntKi)                               :: Ctr            !< Generic counter
-         REAL(ReKi)                                   :: k_n            !< WaveNumber for Omega_n -- note no direction associated with this
-         REAL(ReKi)                                   :: k_m            !< WaveNumber for Omega_m -- note no direction associated with this
-         REAL(ReKi)                                   :: L_plus         !< Resulting \f$ L^{+}_{nm} \f$ value.  Calculated in this routine.
-         REAL(ReKi)                                   :: R_n            !< Effect scaling relationship of depth and wavenumber
-         REAL(ReKi)                                   :: R_m            !< Effect scaling relationship of depth and wavenumber
-         REAL(ReKi)                                   :: Omega_n        !< First  frequency of index n
-         REAL(ReKi)                                   :: Omega_m        !< Second frequency of index m
-         REAL(ReKi)                                   :: D_plus         !< Value of \f$ D^+_{nm} \f$ found by ::TransFuncD_plus
+         REAL(SiKi)                                   :: k_n            !< WaveNumber for Omega_n -- note no direction associated with this
+         REAL(SiKi)                                   :: k_m            !< WaveNumber for Omega_m -- note no direction associated with this
+         REAL(SiKi)                                   :: L_plus         !< Resulting \f$ L^{+}_{nm} \f$ value.  Calculated in this routine.
+         REAL(SiKi)                                   :: R_n            !< Effect scaling relationship of depth and wavenumber
+         REAL(SiKi)                                   :: R_m            !< Effect scaling relationship of depth and wavenumber
+         REAL(SiKi)                                   :: Omega_n        !< First  frequency of index n
+         REAL(SiKi)                                   :: Omega_m        !< Second frequency of index m
+         REAL(SiKi)                                   :: D_plus         !< Value of \f$ D^+_{nm} \f$ found by ::TransFuncD_plus
 
             ! Initializations
          ErrMsgLcl   = ''
@@ -1585,22 +1585,22 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
   
             ! Note that TmpFreqSeries was allocated in the calling routine.  Probably bad programming
             ! practice, but I didn't want to have to allocate it at each point.
-         TmpFreqSeries  =  CMPLX(0.0_ReKi, 0.0_ReKi)     ! used for first term
-         TmpFreqSeries2 =  CMPLX(0.0_ReKi, 0.0_ReKi)     ! used for second term
-         WaveElevSeriesAtXY   =  0.0_ReKi
+         TmpFreqSeries  =  CMPLX(0.0_SiKi, 0.0_SiKi)     ! used for first term
+         TmpFreqSeries2 =  CMPLX(0.0_SiKi, 0.0_SiKi)     ! used for second term
+         WaveElevSeriesAtXY   =  0.0_SiKi
 
 
             !> ## First term ##
             ! First term results are stored in TmpFreqSeries.
 
-         DO n=1,FLOOR( REAL(InitInp%NStepWave2-1) / 2.0_ReKi )   ! Only
+         DO n=1,FLOOR( REAL(InitInp%NStepWave2-1) / 2.0_SiKi )   ! Only
 
             Omega_n  =  n * InitInp%WaveDOmega
 
             ! The frequency we are dealing with
             !> * \f$ \omega^+ = \mu^+ \Delta \omega = 2 \omega_n \f$
             mu_plus     =  2 * n
-            Omega_plus  =  2.0_ReKi * Omega_n
+            Omega_plus  =  2.0_SiKi * Omega_n
 
             IF ( Omega_plus >= InitInp%WvLowCOffS .AND. Omega_plus <= InitInp%WvHiCOffS ) THEN
                k_n         =  WaveNumber( Omega_n, InitInp%Gravity, InitInp%WtrDpth )
@@ -1614,7 +1614,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                   !!       =  \frac{1}{4} \left[ \frac{ D^+_{nn} - |\vec{k}_n|^2 + R_n^2 }{ R_n } + 2 R_n \right] \f$
                   !!
                   !!    The value of \f$ D^+_{nn} \f$ is found from by the ::TransFuncD_plus routine.
-               L_plus  =  (( D_plus - k_n * k_n + R_n * R_n )/R_n + 2.0_ReKi * R_n ) / 4.0_ReKi
+               L_plus  =  (( D_plus - k_n * k_n + R_n * R_n )/R_n + 2.0_SiKi * R_n ) / 4.0_SiKi
 
                   !> Calculate the dot product of the wavenumbers with the (x,y) location
                   !! This is given by:
@@ -1625,8 +1625,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                   !!             +  |\vec{k_n}| \sin \theta_n ~ y \right] \right) \f$
 
                WaveElevxyPrime0  = exp( - ImagNmbr &
-                        *  (  2.0_ReKi * k_n * COS( D2R*InitInp%WaveDirArr(n) ) * XCoord  &
-                           +  2.0_ReKi * k_n * SIN( D2R*InitInp%WaveDirArr(n) ) * YCoord  ))
+                        *  (  2.0_SiKi * k_n * COS( D2R*InitInp%WaveDirArr(n) ) * XCoord  &
+                           +  2.0_SiKi * k_n * SIN( D2R*InitInp%WaveDirArr(n) ) * YCoord  ))
 
                   ! First get the wave amplitude -- must be reconstructed from the WaveElevC0 array.  First index is the real (1) or
                   ! imaginary (2) part.  Divide by NStepWave2 to remove the built in normalization in WaveElevC0.  Note that the phase
@@ -1664,7 +1664,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             IF ( Omega_plus >= InitInp%WvLowCOffS .AND. Omega_plus <= InitInp%WvHiCOffS ) THEN
 
                   ! The inner \f$ m \f$ loop for calculating the \f$ H_{\mu^+} \f$ terms at each frequency.
-               DO m=1,FLOOR( REAL(mu_plus - 1) / 2.0_ReKi )
+               DO m=1,FLOOR( REAL(mu_plus - 1) / 2.0_SiKi )
                      ! Calculate the value of the n index from \f$ \mu^+ = n + m \f$.  Calculate corresponding wavenumbers and frequencies.
                   n           =  mu_plus - m
                   Omega_n     =  n * InitInp%WaveDOmega
@@ -1681,7 +1681,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                      !!          +  (R_n+R_m) \right] \f$
                      !!
                      !!    The value of \f$ D^-_{nm} \f$ is found from by the ::TransFuncD_plus routine.
-                  L_plus  =  (( D_plus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) + R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_ReKi
+                  L_plus  =  (( D_plus - k_n * k_m * COS(D2R*InitInp%WaveDirArr(n) - D2R*InitInp%WaveDirArr(m)) + R_n * R_m )/SQRT( R_n * R_m ) + R_n + R_m) / 4.0_SiKi
 
                      !> Calculate the dot product of the wavenumbers with the (x,y) location
                      !! This is given by:
@@ -1716,8 +1716,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                   !  Divide by two for the single sided FFT given in the documentation.
-            TmpFreqSeries  = TmpFreqSeries / 2.0_Reki
-            TmpFreqSeries2 = TmpFreqSeries2 / 2.0_Reki
+            TmpFreqSeries  = TmpFreqSeries / 2.0_SiKi
+            TmpFreqSeries2 = TmpFreqSeries2 / 2.0_SiKi
 
             !> ## Apply the inverse FFT to the first and second terms to get the time domain result ##
             !> *   \f$ \eta^{(2)+}(t)  =  \operatorname{IFFT}\left[K^+\right]
@@ -1729,7 +1729,7 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
             ! Add the two terms together
          DO Ctr=0,InitInp%NStepWave
-            WaveElevSeriesAtXY(Ctr) =  WaveElevSeriesAtXY(Ctr)  +  2.0_ReKi * TmpTimeSeries2(Ctr)
+            WaveElevSeriesAtXY(Ctr) =  WaveElevSeriesAtXY(Ctr)  +  2.0_SiKi * TmpTimeSeries2(Ctr)
          ENDDO
  
             ! Append first datapoint as the last as aid for repeated wave data
@@ -1755,28 +1755,28 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! Passed variables
          INTEGER(IntKi),               INTENT(IN   )  :: n              !< Index to the first  frequency we are dealing with
          INTEGER(IntKi),               INTENT(IN   )  :: m              !< Index to the second frequency we are dealing with
-         REAL(ReKi),                   INTENT(IN   )  :: k_n            !< WaveNumber for Omega_n -- note no direction associated with this
-         REAL(ReKi),                   INTENT(IN   )  :: k_m            !< WaveNumber for Omega_m -- note no direction associated with this
-         REAL(ReKi),                   INTENT(IN   )  :: z              !< The depth of the point of interest from the surface of the water.
-         REAL(ReKi)                                   :: TransFuncB_minus  !< Resulting \f$ B^{-}_{nm} \f$ value.
+         REAL(SiKi),                   INTENT(IN   )  :: k_n            !< WaveNumber for Omega_n -- note no direction associated with this
+         REAL(SiKi),                   INTENT(IN   )  :: k_m            !< WaveNumber for Omega_m -- note no direction associated with this
+         REAL(SiKi),                   INTENT(IN   )  :: z              !< The depth of the point of interest from the surface of the water.
+         REAL(SiKi)                                   :: TransFuncB_minus  !< Resulting \f$ B^{-}_{nm} \f$ value.
 
             ! Local variables
-         REAL(ReKi)                                   :: R_n            !< Effect scaling relationship of depth and wavenumber
-         REAL(ReKi)                                   :: R_m            !< Effect scaling relationship of depth and wavenumber
-         REAL(ReKi)                                   :: k_nm           !< Value of \f$ k_{nm}^{-} \f$ found by ::k_nm_minus
-         REAL(ReKi)                                   :: Omega_n        !< First  frequency of index n
-         REAL(ReKi)                                   :: Omega_m        !< Second frequency of index m
-         REAL(ReKi)                                   :: D_minus        !< Value of \f$ D^-_{nm} \f$ found by ::TransFuncD_minus
+         REAL(SiKi)                                   :: R_n            !< Effect scaling relationship of depth and wavenumber
+         REAL(SiKi)                                   :: R_m            !< Effect scaling relationship of depth and wavenumber
+         REAL(SiKi)                                   :: k_nm           !< Value of \f$ k_{nm}^{-} \f$ found by ::k_nm_minus
+         REAL(SiKi)                                   :: Omega_n        !< First  frequency of index n
+         REAL(SiKi)                                   :: Omega_m        !< Second frequency of index m
+         REAL(SiKi)                                   :: D_minus        !< Value of \f$ D^-_{nm} \f$ found by ::TransFuncD_minus
 
             ! Check that we are not trying to compute a transfer function with any zero frequencies in it.  Those are by definition zero.
          IF ( n==0 .or. m==0 ) THEN
 
-            TransFuncB_minus  = 0.0_ReKi
+            TransFuncB_minus  = 0.0_SiKi
 
          ELSEIF ( n==m ) THEN
 
                ! If the frequencies are the same, we get a zero in the denominator.  These should be defined as zero.
-            TransFuncB_minus  = 0.0_ReKi
+            TransFuncB_minus  = 0.0_SiKi
 
          ELSE
 
@@ -1796,8 +1796,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                ! Calculation of B_minus
-            TransFuncB_minus  =  InitInp%Gravity*InitInp%Gravity / ( 4.0_ReKi * Omega_n * Omega_m ) &          
-                                 * COSHNumOvrCOSHDen(k_nm, InitInp%WtrDpth, z)  * D_minus / ( Omega_n - Omega_m )
+            TransFuncB_minus  =  InitInp%Gravity*InitInp%Gravity / ( 4.0_SiKi * Omega_n * Omega_m ) &          
+                                 * COSHNumOvrCOSHDen(k_nm, REAL(InitInp%WtrDpth,SiKi), z)  * D_minus / ( Omega_n - Omega_m )
 
 
          ENDIF
@@ -1821,23 +1821,23 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! Passed variables
          INTEGER(IntKi),               INTENT(IN   )  :: n              !< Index to the first  frequency we are dealing with
          INTEGER(IntKi),               INTENT(IN   )  :: m              !< Index to the second frequency we are dealing with
-         REAL(ReKi),                   INTENT(IN   )  :: k_n            !< WaveNumber for Omega_n -- note no direction associated with this
-         REAL(ReKi),                   INTENT(IN   )  :: k_m            !< WaveNumber for Omega_m -- note no direction associated with this
-         REAL(ReKi),                   INTENT(IN   )  :: z              !< The depth of the point of interest from the surface of the water.
-         REAL(ReKi)                                   :: TransFuncB_plus  !< Resulting \f$ B^{-}_{nm} \f$ value.
+         REAL(SiKi),                   INTENT(IN   )  :: k_n            !< WaveNumber for Omega_n -- note no direction associated with this
+         REAL(SiKi),                   INTENT(IN   )  :: k_m            !< WaveNumber for Omega_m -- note no direction associated with this
+         REAL(SiKi),                   INTENT(IN   )  :: z              !< The depth of the point of interest from the surface of the water.
+         REAL(SiKi)                                   :: TransFuncB_plus  !< Resulting \f$ B^{-}_{nm} \f$ value.
 
             ! Local variables
-         REAL(ReKi)                                   :: R_n            !< Effect scaling relationship of depth and wavenumber
-         REAL(ReKi)                                   :: R_m            !< Effect scaling relationship of depth and wavenumber
-         REAL(ReKi)                                   :: k_nm           !< Value of \f$ k_{nm}^{+} \f$ found by ::k_nm_plus
-         REAL(ReKi)                                   :: Omega_n        !< First  frequency of index n
-         REAL(ReKi)                                   :: Omega_m        !< Second frequency of index m
-         REAL(ReKi)                                   :: D_plus        !< Value of \f$ D^+_{nm} \f$ found by ::TransFuncD_plus
+         REAL(SiKi)                                   :: R_n            !< Effect scaling relationship of depth and wavenumber
+         REAL(SiKi)                                   :: R_m            !< Effect scaling relationship of depth and wavenumber
+         REAL(SiKi)                                   :: k_nm           !< Value of \f$ k_{nm}^{+} \f$ found by ::k_nm_plus
+         REAL(SiKi)                                   :: Omega_n        !< First  frequency of index n
+         REAL(SiKi)                                   :: Omega_m        !< Second frequency of index m
+         REAL(SiKi)                                   :: D_plus        !< Value of \f$ D^+_{nm} \f$ found by ::TransFuncD_plus
 
             ! Check that we are not trying to compute a transfer function with any zero frequencies in it.  Those are by definition zero.
          IF ( n==0 .or. m==0 ) THEN
 
-            TransFuncB_plus  = 0.0_ReKi
+            TransFuncB_plus  = 0.0_SiKi
 
 
          ELSE
@@ -1857,8 +1857,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             D_plus     =  TransFuncD_plus(n,m,k_n,k_m,R_n,R_m)
 
                ! Calculation of B_plus
-            TransFuncB_plus  =  InitInp%Gravity*InitInp%Gravity / ( 4.0_ReKi * Omega_n * Omega_m ) &
-                                 * COSHNumOvrCOSHDen(k_nm, InitInp%WtrDpth, z)  * D_plus / ( Omega_n + Omega_m )
+            TransFuncB_plus  =  InitInp%Gravity*InitInp%Gravity / ( 4.0_SiKi * Omega_n * Omega_m ) &
+                                 * COSHNumOvrCOSHDen(k_nm, REAL(InitInp%WtrDpth,SiKi), z)  * D_plus / ( Omega_n + Omega_m )
 
 
          ENDIF
@@ -1886,20 +1886,20 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          IMPLICIT                        NONE
 
             ! Passed Variables:
-         REAL(ReKi)                   :: COSHNumOvrCOSHDen                               ! This function = COSH( k*( z + h ) )/COSH( k*h ) (-)
-         REAL(ReKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
-         REAL(ReKi), INTENT(IN )      :: k                                               ! Wave number ( k      >= 0 ) (1/m)
-         REAL(ReKi), INTENT(IN )      :: z                                               ! Elevation   (-h <= z <= 0 ) (meters)
+         REAL(SiKi)                   :: COSHNumOvrCOSHDen                               ! This function = COSH( k*( z + h ) )/COSH( k*h ) (-)
+         REAL(SiKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
+         REAL(SiKi), INTENT(IN )      :: k                                               ! Wave number ( k      >= 0 ) (1/m)
+         REAL(SiKi), INTENT(IN )      :: z                                               ! Elevation   (-h <= z <= 0 ) (meters)
 
 
             ! Compute the hyperbolic numerator over denominator:
 
-         IF ( k*h  > 89.4_ReKi )  THEN    ! When .TRUE., the shallow water formulation will trigger a floating point overflow error;
+         IF ( k*h  > 89.4_SiKi )  THEN    ! When .TRUE., the shallow water formulation will trigger a floating point overflow error;
                                           ! however, COSH( k*( z + h ) )/COSH( k*h ) = EXP( k*z ) + EXP( -k*( z + 2*h ) ) for large k*h.
                                           ! This equals the deep water formulation, EXP( k*z ), except near z = -h, because
                                           ! h > 14.23*wavelength (since k = 2*Pi/wavelength) in this case.
 
-            COSHNumOvrCOSHDen = EXP( k*z ) + EXP( -k*( z + 2.0_ReKi*h ) )
+            COSHNumOvrCOSHDen = EXP( k*z ) + EXP( -k*( z + 2.0_SiKi*h ) )
 
          ELSE                       ! 0 < k*h <= 89.4; use the shallow water formulation.
 
@@ -1945,24 +1945,24 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! Passed variables
          INTEGER(IntKi),               INTENT(IN   )  :: n              !< Index to the first  frequency we are dealing with
          INTEGER(IntKi),               INTENT(IN   )  :: m              !< Index to the second frequency we are dealing with
-         REAL(ReKi),                   INTENT(IN   )  :: k_n            !< WaveNumber for Omega_n -- note no direction associated with this
-         REAL(ReKi),                   INTENT(IN   )  :: k_m            !< WaveNumber for Omega_m -- note no direction associated with this
-         REAL(ReKi),                   INTENT(IN   )  :: R_n            !< Effect scaling relationship of depth and wavenumber
-         REAL(ReKi),                   INTENT(IN   )  :: R_m            !< Effect scaling relationship of depth and wavenumber
-         REAL(ReKi)                                   :: TransFuncD_minus  !< Resulting \f$ D^{-}_{nm} \f$ value.
+         REAL(SiKi),                   INTENT(IN   )  :: k_n            !< WaveNumber for Omega_n -- note no direction associated with this
+         REAL(SiKi),                   INTENT(IN   )  :: k_m            !< WaveNumber for Omega_m -- note no direction associated with this
+         REAL(SiKi),                   INTENT(IN   )  :: R_n            !< Effect scaling relationship of depth and wavenumber
+         REAL(SiKi),                   INTENT(IN   )  :: R_m            !< Effect scaling relationship of depth and wavenumber
+         REAL(SiKi)                                   :: TransFuncD_minus  !< Resulting \f$ D^{-}_{nm} \f$ value.
 
             ! Local variables
-         REAL(ReKi)                                   :: k_nm           !< Value of \f$ k_{nm}^{-} \f$
-         REAL(ReKi)                                   :: SqrtRnMinusRm  !< Value of \f$ \sqrt{R_n} - \sqrt{R_m} \f$
+         REAL(SiKi)                                   :: k_nm           !< Value of \f$ k_{nm}^{-} \f$
+         REAL(SiKi)                                   :: SqrtRnMinusRm  !< Value of \f$ \sqrt{R_n} - \sqrt{R_m} \f$
 
-         REAL(ReKi)                                   :: Den            !< Denominator
-         REAL(ReKi)                                   :: Num1           !< Numerator first  term
-         REAL(ReKi)                                   :: Num2           !< Numerator second term
+         REAL(SiKi)                                   :: Den            !< Denominator
+         REAL(SiKi)                                   :: Num1           !< Numerator first  term
+         REAL(SiKi)                                   :: Num2           !< Numerator second term
 
 
             ! If n == m, D^- is set to zero.  It should be set to the limit as n -> m.
          IF ( n==m ) THEN
-            TransFuncD_minus  =  0.0_ReKi
+            TransFuncD_minus  =  0.0_SiKi
          ELSE
 
             k_nm  = k_nm_minus(n,m,k_n,k_m)
@@ -2013,19 +2013,19 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! Passed variables
          INTEGER(IntKi),               INTENT(IN   )  :: n              !< Index to the first  frequency we are dealing with
          INTEGER(IntKi),               INTENT(IN   )  :: m              !< Index to the second frequency we are dealing with
-         REAL(ReKi),                   INTENT(IN   )  :: k_n            !< WaveNumber for Omega_n -- note no direction associated with this
-         REAL(ReKi),                   INTENT(IN   )  :: k_m            !< WaveNumber for Omega_m -- note no direction associated with this
-         REAL(ReKi),                   INTENT(IN   )  :: R_n            !< Effect scaling relationship of depth and wavenumber
-         REAL(ReKi),                   INTENT(IN   )  :: R_m            !< Effect scaling relationship of depth and wavenumber
-         REAL(ReKi)                                   :: TransFuncD_plus  !< Resulting \f$ D^{+}_{nm} \f$ value.
+         REAL(SiKi),                   INTENT(IN   )  :: k_n            !< WaveNumber for Omega_n -- note no direction associated with this
+         REAL(SiKi),                   INTENT(IN   )  :: k_m            !< WaveNumber for Omega_m -- note no direction associated with this
+         REAL(SiKi),                   INTENT(IN   )  :: R_n            !< Effect scaling relationship of depth and wavenumber
+         REAL(SiKi),                   INTENT(IN   )  :: R_m            !< Effect scaling relationship of depth and wavenumber
+         REAL(SiKi)                                   :: TransFuncD_plus  !< Resulting \f$ D^{+}_{nm} \f$ value.
 
             ! Local variables
-         REAL(ReKi)                                   :: k_nm           !< Value of \f$ k_{nm}^{+} \f$
-         REAL(ReKi)                                   :: SqrtRnPlusRm  !< Value of \f$ \sqrt{R_n} + \sqrt{R_m} \f$
+         REAL(SiKi)                                   :: k_nm           !< Value of \f$ k_{nm}^{+} \f$
+         REAL(SiKi)                                   :: SqrtRnPlusRm  !< Value of \f$ \sqrt{R_n} + \sqrt{R_m} \f$
 
-         REAL(ReKi)                                   :: Den            !< Denominator
-         REAL(ReKi)                                   :: Num1           !< Numerator first  term
-         REAL(ReKi)                                   :: Num2           !< Numerator second term
+         REAL(SiKi)                                   :: Den            !< Denominator
+         REAL(SiKi)                                   :: Num1           !< Numerator first  term
+         REAL(SiKi)                                   :: Num2           !< Numerator second term
 
 
 
@@ -2063,12 +2063,12 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! Passed variables
          INTEGER(IntKi),               INTENT(IN   )  :: n              !< Index to the first  frequency we are dealing with
          INTEGER(IntKi),               INTENT(IN   )  :: m              !< Index to the second frequency we are dealing with
-         REAL(ReKi),                   INTENT(IN   )  :: k_n            !< WaveNumber for \f$\omega_n\f$ -- note the direction is found in _InitInp\%WaveDirArr(n)_
-         REAL(ReKi),                   INTENT(IN   )  :: k_m            !< WaveNumber for \f$\omega_m\f$ -- note the direction is found in _InitInp\%WaveDirArr(m)_
-         REAL(ReKi)                                   :: k_nm_minus
+         REAL(SiKi),                   INTENT(IN   )  :: k_n            !< WaveNumber for \f$\omega_n\f$ -- note the direction is found in _InitInp\%WaveDirArr(n)_
+         REAL(SiKi),                   INTENT(IN   )  :: k_m            !< WaveNumber for \f$\omega_m\f$ -- note the direction is found in _InitInp\%WaveDirArr(m)_
+         REAL(SiKi)                                   :: k_nm_minus
 
          IF (n == m ) THEN
-            k_nm_minus = 0.0_ReKi            ! This is just to eliminate any numerical error
+            k_nm_minus = 0.0_SiKi            ! This is just to eliminate any numerical error
          ELSE
                !bjj: added abs() because we were getting very small negative numbers here (which should be 0). 
             k_nm_minus = sqrt( abs( k_n * k_n + k_m * k_m - 2 * k_n * k_m * cos( D2R*InitInp%WaveDirArr(n) - D2R*InitINp%WaveDirArr(m) )  ) )
@@ -2089,12 +2089,12 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! Passed variables
          INTEGER(IntKi),               INTENT(IN   )  :: n              !< Index to the first  frequency we are dealing with
          INTEGER(IntKi),               INTENT(IN   )  :: m              !< Index to the second frequency we are dealing with
-         REAL(ReKi),                   INTENT(IN   )  :: k_n            !< WaveNumber for \f$\omega_n\f$ -- note the direction is found in _InitInp\%WaveDirArr(n)_
-         REAL(ReKi),                   INTENT(IN   )  :: k_m            !< WaveNumber for \f$\omega_m\f$ -- note the direction is found in _InitInp\%WaveDirArr(m)_
-         REAL(ReKi)                                   :: k_nm_plus
+         REAL(SiKi),                   INTENT(IN   )  :: k_n            !< WaveNumber for \f$\omega_n\f$ -- note the direction is found in _InitInp\%WaveDirArr(n)_
+         REAL(SiKi),                   INTENT(IN   )  :: k_m            !< WaveNumber for \f$\omega_m\f$ -- note the direction is found in _InitInp\%WaveDirArr(m)_
+         REAL(SiKi)                                   :: k_nm_plus
 
          IF (n == m ) THEN
-            k_nm_plus = 2.0_ReKi * k_n       ! This is just to eliminate any numerical error.
+            k_nm_plus = 2.0_SiKi * k_n       ! This is just to eliminate any numerical error.
          ELSE
             k_nm_plus = sqrt( k_n * k_n + k_m * k_m + 2 * k_n * k_m * cos( D2R*InitInp%WaveDirArr(n) - D2R*InitINp%WaveDirArr(m) )  )
          ENDIF
@@ -2288,7 +2288,7 @@ SUBROUTINE Waves2_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrM
 
          ! Local Variables:
       INTEGER(IntKi)                                     :: I                          ! Generic index
-      REAL(ReKi)                                         :: WaveElev2Temp(p%NWaveElev)
+      REAL(SiKi)                                         :: WaveElev2Temp(p%NWaveElev)
       REAL(ReKi)                                         :: AllOuts(MaxWaves2Outputs)
 
  
@@ -2307,7 +2307,7 @@ SUBROUTINE Waves2_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrM
 
 
       DO I=1,p%NWaveElev
-         WaveElev2Temp(I)  = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveElev2(:,I), &
+         WaveElev2Temp(I)  = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveElev2(:,I), &
                                                      OtherState%LastIndWave, p%NStepWave + 1       )
       ENDDO
 
@@ -2358,7 +2358,7 @@ SUBROUTINE Waves2_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, Er
          ! Compute the first time derivatives of the continuous states here: None to calculate, so no code here.
 
          ! Dummy output value for dxdt -- this is only here to prevent the compiler from complaining.
-   dxdt%DummyContState = 0.0_ReKi
+   dxdt%DummyContState = 0.0_SiKi
 
 
 END SUBROUTINE Waves2_CalcContStateDeriv
@@ -2431,7 +2431,7 @@ SUBROUTINE Waves2_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_r
 
          ! Solve for the constraint states here: Since there are no constraint states to solve for in Waves2, there is no code here.
 
-      z_residual%DummyConstrState = 0.0_ReKi    ! This exists just so that we can make the compiler happy.
+      z_residual%DummyConstrState = 0.0_SiKi    ! This exists just so that we can make the compiler happy.
 
 END SUBROUTINE Waves2_CalcConstrStateResidual
 

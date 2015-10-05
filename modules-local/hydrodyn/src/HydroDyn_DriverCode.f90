@@ -195,12 +195,9 @@ REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     
       
          ! Open the WAMIT inputs data file
       CALL GetNewUnit( UnWAMITInp ) 
-      CALL OpenFInpFile ( UnWAMITInp, drvrInitInp%WAMITInputsFile, ErrStat, ErrMsg   )  ! Open WAMIT inputs file.
+      CALL OpenFOutFile ( UnWAMITInp, drvrInitInp%WAMITInputsFile, ErrStat, ErrMsg ) 
+         IF (ErrStat >=AbortErrLev) STOP
       
-      IF ( ErrStat /= 0 ) THEN
-         CALL WrScr( ErrMsg )
-         STOP
-      END IF
       
       ALLOCATE ( WAMITin(drvrInitInp%NSteps, 19), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
@@ -227,14 +224,10 @@ REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     
     IF ( drvrInitInp%MorisonInputsMod == 2 ) THEN
       
          ! Open the Morison inputs data file
-      CALL GetNewUnit( UnMorisonInp ) 
-      CALL OpenFInpFile ( UnMorisonInp, drvrInitInp%MorisonInputsFile, ErrStat, ErrMsg   )  ! Open Morison inputs file.
+      CALL GetNewUnit( UnMorisonInp )
+      CALL OpenFOutFile ( UnMorisonInp, drvrInitInp%MorisonInputsFile, ErrStat, ErrMsg ) 
+         IF (ErrStat >=AbortErrLev) STOP
       
-      IF ( ErrStat /= 0 ) THEN
-         CALL WrScr('Morison Input time-series file not found')
-         CALL WrScr( ErrMsg )
-         STOP
-      END IF
       
       ALLOCATE ( MorisonIn(drvrInitInp%NSteps, 19), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
@@ -471,6 +464,26 @@ call HD_DvrCleanup()
 
 
    CONTAINS
+
+
+   
+   FUNCTION GetClockTime(StartClockTime, EndClockTime)
+   ! return the number of seconds between StartClockTime and EndClockTime
+   
+      REAL                         :: GetClockTime          ! Elapsed clock time for the simulation phase of the run.
+      INTEGER   , INTENT(IN)       :: StartClockTime (8)                                 ! Start time of simulation (after initialization)
+      INTEGER   , INTENT(IN)       :: EndClockTime (8)                                 ! Start time of simulation (after initialization)
+   
+   !bjj: This calculation will be wrong at certain times (e.g. if it's near midnight on the last day of the month), but to my knowledge, no one has complained...
+      GetClockTime =       0.001*( EndClockTime(8) - StartClockTime(8) ) &  ! Is the milliseconds of the second (range 0 to 999) - local time
+                     +           ( EndClockTime(7) - StartClockTime(7) ) &  ! Is the seconds of the minute (range 0 to 59) - local time
+                     +      60.0*( EndClockTime(6) - StartClockTime(6) ) &  ! Is the minutes of the hour (range 0 to 59) - local time
+                     +    3600.0*( EndClockTime(5) - StartClockTime(5) ) &  ! Is the hour of the day (range 0 to 23) - local time
+                     + SecPerDay*( EndClockTime(3) - StartClockTime(3) )    ! Is the day of the month
+   
+   
+   END FUNCTION
+
    
 !====================================================================================================
 SUBROUTINE CleanupEchoFile( EchoFlag, UnEcho)
@@ -513,7 +526,7 @@ subroutine HD_DvrCleanup()
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
       
       if ( ErrStat /= ErrID_None ) then !This assumes PRESENT(ErrID) is also .TRUE. :
-         CALL WrScr(NewLine//NewLine//'Error status and messages fter execution:'//NewLine//'           ErrStat: '// &
+         CALL WrScr(NewLine//NewLine//'Error status and messages after execution:'//NewLine//'           ErrStat: '// &
                      TRIM(Num2LStr(ErrStat))//NewLine//'   ErrMsg returned: '//TRIM(ErrMsg)//NewLine)
          if ( time < 0.0 ) then
             ErrMsg = 'at initialization'
@@ -566,26 +579,20 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    
    FileName = TRIM(inputFile)
    
-   CALL GetNewUnit( UnIn )   
-   CALL OpenFInpFile( UnIn, FileName, ErrStat, ErrMsg )
-   
-   IF ( ErrStat /= ErrID_None ) THEN
-      ErrMsg  = ' Failed to open HydroDyn Driver input file: '//FileName
-      ErrStat = ErrID_Fatal
-      CLOSE( UnIn )
-      RETURN
-   END IF
+   CALL GetNewUnit( UnIn ) 
+   CALL OpenFInpFile ( UnIn, FileName, ErrStat, ErrMsg ) 
+      IF (ErrStat >=AbortErrLev) RETURN
 
    
    CALL WrScr( 'Opening HydroDyn Driver input file:  '//FileName )
    
-   
+
    !-------------------------------------------------------------------------------------------------
    ! File header
    !-------------------------------------------------------------------------------------------------
    
    CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 1', ErrStat, ErrMsg )
-
+   
    IF ( ErrStat /= ErrID_None ) THEN
       ErrStat = ErrID_Fatal
       CLOSE( UnIn )
@@ -623,6 +630,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       CALL GetNewUnit( UnEchoLocal )   
       CALL OpenEcho ( UnEchoLocal, EchoFile, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN
+         !ErrMsg  = ' Failed to open Echo file.'
          ErrStat = ErrID_Fatal
          CLOSE( UnIn )
          RETURN
@@ -633,6 +641,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 1', ErrStat, ErrMsg, UnEchoLocal )
    
       IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = ' Failed to read HydroDyn Driver input file header line 1.'
          ErrStat = ErrID_Fatal
          CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
          CLOSE( UnIn )
@@ -643,6 +652,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       CALL ReadCom( UnIn, FileName, 'HydroDyn Driver input file header line 2', ErrStat, ErrMsg, UnEchoLocal )
    
       IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = ' Failed to read HydroDyn Driver input file header line 2.'
          ErrStat = ErrID_Fatal
          CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
          CLOSE( UnIn )
@@ -655,6 +665,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
       CALL ReadVar ( UnIn, FileName, InitInp%Echo, 'Echo', 'Echo the input file data', ErrStat, ErrMsg, UnEchoLocal )
       !WRITE (UnEchoLocal,Frmt      ) InitInp%Echo, 'Echo', 'Echo input file'
       IF ( ErrStat /= ErrID_None ) THEN
+         ErrMsg  = ' Failed to read Echo parameter.'
          ErrStat = ErrID_Fatal
          CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
          CLOSE( UnIn )
@@ -671,6 +682,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    CALL ReadCom( UnIn, FileName, 'Environmental conditions header', ErrStat, ErrMsg, UnEchoLocal )
    
    IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read Comment line.'
       ErrStat = ErrID_Fatal
       CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
       CLOSE( UnIn )
@@ -683,6 +695,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    CALL ReadVar ( UnIn, FileName, InitInp%Gravity, 'Gravity', 'Gravity', ErrStat, ErrMsg, UnEchoLocal )
 
    IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read Gravity parameter.'
       ErrStat = ErrID_Fatal
       CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
       CLOSE( UnIn )
@@ -699,6 +712,7 @@ SUBROUTINE ReadDriverInputFile( inputFile, InitInp, ErrStat, ErrMsg )
    CALL ReadCom( UnIn, FileName, 'HYDRODYN header', ErrStat, ErrMsg, UnEchoLocal )
    
    IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read Comment line.'
       ErrStat = ErrID_Fatal
       CALL CleanupEchoFile( InitInp%Echo, UnEchoLocal )
       CLOSE( UnIn )
@@ -1005,6 +1019,7 @@ CALL ReadCom( UnIn, FileName, 'Waves multipoint elevation output header', ErrSta
       !> WaveElevSeriesFlag   -- are we doing multipoint wave elevation output?
    CALL ReadVar ( UnIn, FileName, InitInp%WaveElevSeriesFlag, 'WaveElevSeriesFlag', 'WaveElevSeriesFlag', ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN
+      ErrMsg  = ' Failed to read WaveElevSeries parameter.'
       ErrStat = ErrID_Fatal
       CLOSE( UnIn )
       RETURN
@@ -1151,6 +1166,9 @@ subroutine print_help()
     print '(a)', ''
 
 end subroutine print_help
+
+
+!----------------------------------------------------------------------------------------------------------------------------------
 
 END PROGRAM HydroDynDriver
 

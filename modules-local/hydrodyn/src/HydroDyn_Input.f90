@@ -552,10 +552,10 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
 
 
-      ! GHWvFile
+      ! WvKinFile
 
-   CALL ReadVar ( UnIn, FileName, InitInp%Waves%GHWvFile, 'GHWvFile', &
-                                    'Root name of GH Bladed files containing wave data', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, InitInp%Waves%WvKinFile, 'WvKinFile', &
+                                    'Root name of wave kinematics files', ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -815,9 +815,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
 
 
 
-      ! HasWAMIT - Flag indicating whether or not WAMIT is used in the simulation.
+      ! PotMod - State indicating potential flow model used in the simulation. 0=none, 1=WAMIT, 2=FIT
 
-   CALL ReadVar ( UnIn, FileName, InitInp%HasWAMIT, 'HasWAMIT', 'Using WAMIT', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, InitInp%PotMod, 'PotMod', 'Potential flow model', ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -825,9 +825,9 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
       END IF
 
 
-      ! WAMITFile - Root name of WAMIT output files
+      ! PotFile - Root name of Potential flow data files (Could be WAMIT files or the FIT input file)
 
-   CALL ReadVar ( UnIn, FileName, InitInp%WAMIT%WAMITFile, 'WAMITFile', 'Root name of WAMIT output files', ErrStat2, ErrMsg2, UnEchoLocal )
+   CALL ReadVar ( UnIn, FileName, InitInp%PotFile, 'PotFile', 'Root name of Potential flow model files', ErrStat2, ErrMsg2, UnEchoLocal )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'HydroDynInput_GetInput' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
@@ -1704,7 +1704,7 @@ SUBROUTINE HydroDynInput_GetInput( InitInp, ErrStat, ErrMsg )
             READ(Line,*,IOSTAT=ErrStat2) InitInp%Morison%InpMembers(I)%MemberID,   InitInp%Morison%InpMembers(I)%MJointID1,    &
                                         InitInp%Morison%InpMembers(I)%MJointID2,   InitInp%Morison%InpMembers(I)%MPropSetID1,  &
                                         InitInp%Morison%InpMembers(I)%MPropSetID2, InitInp%Morison%InpMembers(I)%MDivSize,     &
-                                        InitInp%Morison%InpMembers(I)%MCoefMod,    InitInp%Morison%InpMembers(I)%PropWAMIT
+                                        InitInp%Morison%InpMembers(I)%MCoefMod,    InitInp%Morison%InpMembers(I)%PropPot
          END IF
 
          IF ( ErrStat2 /= 0 ) THEN         
@@ -2343,8 +2343,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       ! MSL2SWL - Mean sea level to still water level
 
-   IF ( InitInp%HasWAMIT .AND. .NOT. EqualRealNos(InitInp%Morison%MSL2SWL, 0.0_ReKi) ) THEN
-      CALL SetErrStat( ErrID_Fatal,'MSL2SWL must be 0 when HasWAMIT is True.',ErrStat,ErrMsg,RoutineName)        
+   IF ( InitInp%PotMod == 1 .AND. .NOT. EqualRealNos(InitInp%Morison%MSL2SWL, 0.0_ReKi) ) THEN
+      CALL SetErrStat( ErrID_Fatal,'MSL2SWL must be 0 when PotMod = 1 (WAMIT).',ErrStat,ErrMsg,RoutineName)        
       RETURN
    END IF
    
@@ -2385,15 +2385,15 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
    END IF ! LEN_TRIM(InitInp%Waves%WaveModChr)
 
-
-   IF ( WaveModIn == 5 ) THEN
-      CALL SetErrStat( ErrID_Fatal,'GH Bladed wave model is currently disabled in this release.  Future versions will support GH Bladed wave models.',ErrStat,ErrMsg,RoutineName)
+   IF ( (WaveModIn == 6) .AND. .NOT. EqualRealNos(InitInp%Morison%MSL2SWL, 0.0_ReKi) ) THEN
+      CALL SetErrStat( ErrID_Fatal,'MSL2SWL must be 0 when WaveMod = 6.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')        
       RETURN
    END IF
+   
 
-   IF ( WaveModIn < 0 .OR. WaveModIn > 4 ) THEN
-      IF ( InitInp%HasWAMIT  ) THEN
-         CALL SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, or 4.',ErrStat,ErrMsg,RoutineName)
+   IF ( WaveModIn < 0 .OR. WaveModIn > 6 ) THEN
+      IF ( InitInp%PotMod == 1  ) THEN
+         CALL SetErrStat( ErrID_Fatal,'WaveMod must be 0, 1, 1P#, 2, 3, 4, 5, or 6.',ErrStat,ErrMsg,RoutineName)
          RETURN
 !ADP: This seems like a strange test on ErrStat...
       ELSE IF ( ErrStat /= ErrID_None .OR. WaveModIn /= 5)  THEN
@@ -2452,7 +2452,12 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       IF ( .NOT. EqualRealNos(InitInp%Waves%WaveTMax, 0.0_DbKi) ) THEN
          CALL WrScr( '  Setting WaveTMax to 0.0 since WaveMod = 0' )
       InitInp%Waves%WaveTMax = 0.0
-   END IF
+      END IF
+   ELSEIF ( InitInp%Waves%WaveMod == 5 ) THEN   ! User wave elevation file reading in
+      IF (InitInp%TMax > InitInp%Waves%WaveTMax ) THEN
+         CALL SetErrstat( ErrID_Fatal, '  WaveTMax must be larger than the simulation time for user wave elevations (WaveMod == 5).',ErrStat,ErrMsg,RoutineName)
+         RETURN
+      END IF
    ELSE
       IF (InitInp%TMax > InitInp%Waves%WaveTMax ) THEN
          CALL WrScr( '  WaveTMax is less then the simulation time.  Wave data will repeat every WaveTMax seconds.')
@@ -2468,7 +2473,11 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          CALL SetErrStat( ErrID_Fatal,'WaveDT must be greater than zero.',ErrStat,ErrMsg,RoutineName)
          RETURN
       END IF
-
+      
+      IF ( (InitInp%Waves%WaveMod == 6) .AND. (.NOT. EqualRealNos(InitInp%Waves%WaveDT, InitInp%DT)) ) THEN
+         CALL SetErrStat( ErrID_Fatal,'WaveDT must equal the simulation DT value when WaveMod = 6.',ErrStat,ErrMsg,RoutineName)
+         RETURN
+      END IF
    ELSE
 
       InitInp%Waves%WaveDT = 0.0
@@ -2550,7 +2559,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    IF ( EqualRealNos(InitInp%Waves%WaveDT, 0.0_DbKi) ) THEN
       InitInp%Waves%WvHiCOff = 10000.0;  ! This is not going to be used because WaveDT is zero.
    ELSE
-      InitInp%Waves%WvHiCOff =  MIN( Pi/REAL(InitInp%Waves%WaveDT,ReKi), InitInp%Waves%WvHiCOff ) 
+      InitInp%Waves%WvHiCOff =  MIN( REAL( Pi/InitInp%Waves%WaveDT,SiKi), InitInp%Waves%WvHiCOff ) 
    END IF
    
    !TODO Issue warning if we changed WvHiCOff  GJH 7/24/13
@@ -2568,7 +2577,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       ! WaveDir - Wave heading direction.
 
-   IF ( ( InitInp%Waves%WaveMod > 0 ) .AND. ( InitInp%Waves%WaveMod /= 5 ) )  THEN   ! .TRUE if we have incident waves, but not GH Bladed wave data.
+   IF ( ( InitInp%Waves%WaveMod > 0 ) .AND. ( InitInp%Waves%WaveMod /= 6 ) )  THEN   ! .TRUE if we have incident waves, but not user input wave data.
 
       IF ( ( InitInp%Waves%WaveDir <= -180.0 ) .OR. ( InitInp%Waves%WaveDir > 180.0 ) )  THEN
          CALL SetErrStat( ErrID_Fatal,'WaveDir must be greater than -180 and less than or equal to 180.',ErrStat,ErrMsg,RoutineName)
@@ -2603,7 +2612,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       !  Check to see if the for some reason the wave direction spreading range is set to zero.  If it is, 
       !  we don't have any spreading, so we will turn off the multidirectional waves.
-   IF ( InitInp%Waves%WaveMultiDir .AND. EqualRealNos( InitInp%Waves%WaveDirRange, 0.0_ReKi ) ) THEN
+   IF ( InitInp%Waves%WaveMultiDir .AND. EqualRealNos( InitInp%Waves%WaveDirRange, 0.0_SiKi ) ) THEN
       CALL SetErrStat( ErrID_Warn,' WaveDirRange set to zero, so multidirectional waves are turned off.',ErrStat,ErrMsg,RoutineName)
       InitInp%Waves%WaveMultiDir = .FALSE.
    ENDIF
@@ -2663,19 +2672,37 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    END IF
 
 
-      ! GHWvFile
+      ! WvKinFile
 
-   IF ( InitInp%Waves%WaveMod == 5 ) THEN      ! .TRUE if we are to use GH Bladed wave data.
+   IF ( InitInp%Waves%WaveMod == 5 .OR. InitInp%Waves%WaveMod == 6 ) THEN      ! .TRUE if we are to read user-supplied wave elevation or wave kinematics file(s).
 
-      IF ( LEN_TRIM( InitInp%Waves%GHWvFile ) == 0 )  THEN
-         CALL SetErrStat( ErrID_Fatal,'GHWvFile must not be an empty string.',ErrStat,ErrMsg,RoutineName)
+      IF ( LEN_TRIM( InitInp%Waves%WvKinFile ) == 0 )  THEN
+         CALL SetErrStat( ErrID_Fatal,'WvKinFile must not be an empty string.',ErrStat,ErrMsg,'HydroDynInput_ProcessInitData')
          RETURN
       END IF
 
+      IF ( PathIsRelative( InitInp%Waves%WvKinFile ) ) THEN
+         CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
+         InitInp%Waves%WvKinFile    = TRIM(TmpPath)//TRIM(InitInp%Waves%WvKinFile)
+      END IF
+      InitInp%Waves%WriteWvKin = .FALSE.
    ELSE !don't use this one
-
-      InitInp%Waves%GHWvFile = ""
-
+      
+#ifdef WRITE_WV_KIN
+      IF ( LEN_TRIM( InitInp%Waves%WvKinFile ) == 0 )  THEN
+         InitInp%Waves%WriteWvKin = .FALSE.
+      ELSE
+         InitInp%Waves%WriteWvKin = .TRUE.
+         IF ( PathIsRelative( InitInp%Waves%WvKinFile ) ) THEN
+            CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
+            InitInp%Waves%WvKinFile    = TRIM(TmpPath)//TRIM(InitInp%Waves%WvKinFile)
+         END IF
+      END IF
+      
+#else
+      InitInp%Waves%WvKinFile = ""
+      InitInp%Waves%WriteWvKin = .FALSE.
+#endif
    END IF
 
 
@@ -2693,14 +2720,6 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       !-------------------------------------------------------------------------
       ! Check 2nd Order Waves section
       !-------------------------------------------------------------------------
-
-!      !FIXME: Remove this when Waves2 is developed fully
-      ! For this release, we are not permitting any of the Waves2 items to be set to true.
-!   IF ( InitInp%Waves2%WvDiffQTFF .OR. InitInp%Waves2%WvSumQTFF ) THEN
-!      CALL SetErrStat( ErrID_Fatal,'The Waves2 module is currently disabled in this release.  Future versions will support Waves2.',&
-!                        ErrStat,ErrMsg,RoutineName)
-!      RETURN
-!   END IF
 
 
       ! Difference frequency cutoffs
@@ -2753,8 +2772,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       RETURN
    END IF
 
-   IF ( ( InitInp%Current%CurrMod /= 0 ) .AND. ( InitInp%Waves%WaveMod == 5 ) )  THEN
-      CALL SetErrStat( ErrID_Fatal,'CurrMod must be set to 0 when WaveMod is set to 5: GH Bladed wave data.',ErrStat,ErrMsg,RoutineName)
+   IF ( ( InitInp%Current%CurrMod /= 0 ) .AND. ( InitInp%Waves%WaveMod == 6 ) )  THEN
+      CALL SetErrStat( ErrID_Fatal,'CurrMod must be set to 0 when WaveMod is set to 6: user-input wave data.',ErrStat,ErrMsg,RoutineName)
       RETURN
    END IF
 
@@ -2891,21 +2910,22 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
    END IF
 
-       ! WAMITFile - Root name of WAMIT output files
+       ! PotFile - Root name of potential flow files
 
-   IF ( InitInp%HasWAMIT ) THEN
-       IF ( LEN_TRIM( InitInp%WAMIT%WAMITFile ) == 0 ) THEN
-         CALL SetErrStat( ErrID_Fatal,'WAMITFile must not be an empty string.',ErrStat,ErrMsg,RoutineName)
+   IF ( InitInp%PotMod > 0 ) THEN
+       IF ( LEN_TRIM( InitInp%PotFile ) == 0 ) THEN
+         CALL SetErrStat( ErrID_Fatal,'PotFile must not be an empty string.',ErrStat,ErrMsg,RoutineName)
          RETURN
       END IF
 
          ! if this is a relative path, let's make it relative to the location of the main input file
          ! tell the WAMIT and WAMIT2 modules what the filename is
 
-      IF ( PathIsRelative( InitInp%WAMIT%WAMITFile ) ) THEN
+      IF ( PathIsRelative( InitInp%PotFile ) ) THEN
          CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
-         InitInp%WAMIT%WAMITFile    = TRIM(TmpPath)//TRIM(InitInp%WAMIT%WAMITFile)
-         InitInp%WAMIT2%WAMITFile   = InitInp%WAMIT%WAMITFile
+         InitInp%PotFile            = TRIM(TmpPath)//TRIM(InitInp%PotFile)
+         InitInp%WAMIT%WAMITFile    = InitInp%PotFile
+         InitInp%WAMIT2%WAMITFile   = InitInp%PotFile
       END IF
       
          ! Set the flag for multidirectional waves for WAMIT2 module.  It needs to know since the Newman approximation
@@ -2913,6 +2933,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       InitInp%WAMIT2%WaveMultiDir = InitInp%Waves%WaveMultiDir
 
    ELSE
+      InitInp%PotFile            = ""
       InitInp%WAMIT%WAMITFile    = ""
       InitInp%WAMIT2%WAMITFile   = ""     
    END IF
@@ -2922,7 +2943,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       ! WAMITULEN - WAMIT characteristic body length scale
 
-   IF ( InitInp%HasWAMIT ) THEN
+   IF ( InitInp%PotMod == 1 ) THEN
 
       InitInp%WAMIT2%WAMITULEN = InitInp%WAMIT%WAMITULEN    ! Copy to the WAMIT2 module info
       IF ( InitInp%WAMIT%WAMITULEN < 0.0 ) THEN
@@ -2939,7 +2960,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
       ! PtfmVol0 - Displaced volume of water when the platform is in its undisplaced position
 
-   IF ( InitInp%HasWAMIT ) THEN
+   IF ( InitInp%PotMod == 1 ) THEN
 
       IF ( InitInp%WAMIT%PtfmVol0 < 0.0 ) THEN
          CALL SetErrStat( ErrID_Fatal,'PtfmVol0 must not be negative.',ErrStat,ErrMsg,RoutineName)
@@ -2956,7 +2977,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       ! RdtnTMax - Analysis time for wave radiation kernel calculations
       ! NOTE: Use RdtnTMax = 0.0 to eliminate wave radiation damping
 
-   IF ( InitInp%HasWAMIT ) THEN
+   IF ( InitInp%PotMod == 1 ) THEN
 
       IF ( InitInp%WAMIT%RdtnTMax < 0.0 ) THEN
          CALL SetErrStat( ErrID_Fatal,'RdtnTMax must not be negative.',ErrStat,ErrMsg,RoutineName)
@@ -2971,7 +2992,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
        ! RdtnDT - Time step for wave radiation kernel calculations
 
-   IF ( InitInp%HasWAMIT ) THEN
+   IF ( InitInp%PotMod == 1 ) THEN
 
       CALL Conv2UC( InitInp%WAMIT%Conv_Rdtn%RdtnDTChr )    ! Convert Line to upper case.
       
@@ -3724,8 +3745,8 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
             END IF
          END IF
 
-         IF ( InitInp%Morison%InpMembers(I)%PropWAMIT .AND. .NOT. InitInp%HasWAMIT ) THEN
-            CALL SetErrStat( ErrID_Fatal,'A member cannot have PropWAMIT set to TRUE if HasWAMIT is set to FALSE in the FLOATING PLATFORM section.',ErrStat,ErrMsg,RoutineName)
+         IF ( InitInp%Morison%InpMembers(I)%PropPot .AND. InitInp%PotMod == 0  ) THEN
+            CALL SetErrStat( ErrID_Fatal,'A member cannot have PropPot set to TRUE if PotMod = 0 in the FLOATING PLATFORM section.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
 
@@ -4064,12 +4085,12 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       InitInp%WAMIT%WtrDens      = InitInp%Waves%WtrDens
       InitInp%WAMIT%WaveMod      = InitInp%Waves%WaveMod
       InitInp%WAMIT%OutAll       = InitInp%OutAll
-      InitInp%WAMIT%HasWAMIT     = InitInp%HasWAMIT
+      InitInp%WAMIT%HasWAMIT     = InitInp%PotMod == 1
       ! WAMIT2
       InitInp%WAMIT2%WtrDens     = InitInp%Waves%WtrDens
       InitInp%WAMIT2%WaveMod     = InitInp%Waves%WaveMod
       InitInp%WAMIT2%OutAll      = InitInp%OutAll
-      InitInp%WAMIT2%HasWAMIT    = InitInp%HasWAMIT
+      InitInp%WAMIT2%HasWAMIT    = InitInp%PotMod == 1
       ! Morison
       InitInp%Morison%UnSum      = InitInp%UnSum
       InitInp%Morison%Gravity    = InitInp%Gravity

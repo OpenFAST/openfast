@@ -28,13 +28,13 @@ typedef     ^                 ^                 INTEGER              NStepWave2 
 typedef     ^                 ^                 ReKi                 WaveDOmega        -        -        -        "Frequency step for incident wave calculations"       (rad/s)
 typedef     ^                 ^                 ReKi                 WtrDens           -        -        -        "Water density"   (kg/m^3)
 
-typedef     ^                 ^                 ReKi                 WaveElevC0        {:}{:}   -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
-typedef     ^                 ^                 ReKi                 WaveDir           -        -        -        "Mean incident wave propagation heading direction"    (degrees)
+typedef     ^                 ^                 SiKi                 WaveElevC0        {:}{:}   -        -        "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
+typedef     ^                 ^                 SiKi                 WaveDir           -        -        -        "Mean incident wave propagation heading direction"    (degrees)
 typedef     ^                 ^                 LOGICAL              WaveMultiDir      -        -        -        "Indicates the waves are multidirectional -- set by HydroDyn_Input"  -
-typedef     ^                 ^                 ReKi                 WaveDirArr        {:}      -        -        "Wave direction assigned to each frequency"    (degrees)
-typedef     ^                 ^                 ReKi                 WaveDirMin        -        -        -        "Minimum wave direction from Waves module"    -
-typedef     ^                 ^                 ReKi                 WaveDirMax        -        -        -        "Maximum wave direction from Waves module"    -
-typedef     ^                 ^                 ReKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
+typedef     ^                 ^                 SiKi                 WaveDirArr        {:}      -        -        "Wave direction assigned to each frequency"    (degrees)
+typedef     ^                 ^                 SiKi                 WaveDirMin        -        -        -        "Minimum wave direction from Waves module"    -
+typedef     ^                 ^                 SiKi                 WaveDirMax        -        -        -        "Maximum wave direction from Waves module"    -
+typedef     ^                 ^                 SiKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
 
 typedef     ^                 ^                 CHARACTER(10)        OutList           {27}     -        -        "This should really be dimensioned with MaxOutPts"    -
 typedef     ^                 ^                 LOGICAL              OutAll            -        -        -        ""                                                    -
@@ -100,12 +100,12 @@ typedef     ^                 ^                 ReKi                 F_Waves2   
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
 #
-typedef     ^                 ParameterType     ReKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
+typedef     ^                 ParameterType     SiKi                 WaveTime          {:}      -        -        "Simulation times at which the instantaneous second order loads associated with the incident waves are determined"   sec
 typedef     ^                 ^                 IntKi                NStepWave         -        -        -        "Number of wave time steps"                           -
 typedef     ^                 ^                 DbKi                 DT                -        -        -        ""                                                    -
 
 #The 2nd order force time series
-typedef     ^                 ^                 ReKi                 WaveExctn2        {:}{:}   -        -        "Time series of the resulting 2nd order force (first index is timestep, second index is load component)"    (N)
+typedef     ^                 ^                 SiKi                 WaveExctn2        {:}{:}   -        -        "Time series of the resulting 2nd order force (first index is timestep, second index is load component)"    (N)
 
 #Flags set for dimensions to use with each method (MnDrift, NewmanApp, etc). These are stored by method because .8 files that can be used in MnDrift or NewmanApp don't have some of the dimensions.
 typedef     ^                 ^                 LOGICAL              MnDriftDims       {6}      -        -        "Flags for which dimensions to calculate in MnDrift   calculations"  -

@@ -129,13 +129,13 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
        
          ! Local Variables
          
-      COMPLEX(ReKi), ALLOCATABLE             :: HdroExctn (:,:,:)                    ! Frequency- and direction-dependent complex hydrodynamic wave excitation force per unit wave amplitude vector (kg/s^2, kg-m/s^2)
-      COMPLEX(ReKi), ALLOCATABLE             :: WaveExctnC(:,:)                      ! Discrete Fourier transform of the instantaneous value of the total excitation force on the support platfrom from incident waves (N, N-m)
+      COMPLEX(SiKi), ALLOCATABLE             :: HdroExctn (:,:,:)                    ! Frequency- and direction-dependent complex hydrodynamic wave excitation force per unit wave amplitude vector (kg/s^2, kg-m/s^2)
+      COMPLEX(SiKi), ALLOCATABLE             :: WaveExctnC(:,:)                      ! Discrete Fourier transform of the instantaneous value of the total excitation force on the support platfrom from incident waves (N, N-m)
       REAL(ReKi)                             :: DffrctDim (6)                        ! Matrix used to redimensionalize WAMIT hydrodynamic wave excitation force  output (kg/s^2, kg-m/s^2            )
-      REAL(ReKi), ALLOCATABLE                :: HdroAddMs (:,:)                      ! The upper-triangular portion (diagonal and above) of the frequency-dependent hydrodynamic added mass matrix from the radiation problem (kg  , kg-m  , kg-m^2  )
-      REAL(ReKi), ALLOCATABLE                :: HdroDmpng (:,:)                      ! The upper-triangular portion (diagonal and above) of the frequency-dependent hydrodynamic damping    matrix from the radiation problem (kg/s, kg-m/s, kg-m^2/s)
-      REAL(ReKi), ALLOCATABLE                :: HdroFreq  (:)                        ! Frequency components inherent in the hydrodynamic added mass matrix, hydrodynamic daming matrix, and complex wave excitation force per unit wave amplitude vector (rad/s)
-      REAL(ReKi), ALLOCATABLE                :: HdroWvDir (:)                        ! Incident wave propagation heading direction components inherent in the complex wave excitation force per unit wave amplitude vector (degrees)
+      REAL(SiKi), ALLOCATABLE                :: HdroAddMs (:,:)                      ! The upper-triangular portion (diagonal and above) of the frequency-dependent hydrodynamic added mass matrix from the radiation problem (kg  , kg-m  , kg-m^2  )
+      REAL(SiKi), ALLOCATABLE                :: HdroDmpng (:,:)                      ! The upper-triangular portion (diagonal and above) of the frequency-dependent hydrodynamic damping    matrix from the radiation problem (kg/s, kg-m/s, kg-m^2/s)
+      REAL(SiKi), ALLOCATABLE                :: HdroFreq  (:)                        ! Frequency components inherent in the hydrodynamic added mass matrix, hydrodynamic daming matrix, and complex wave excitation force per unit wave amplitude vector (rad/s)
+      REAL(SiKi), ALLOCATABLE                :: HdroWvDir (:)                        ! Incident wave propagation heading direction components inherent in the complex wave excitation force per unit wave amplitude vector (degrees)
       REAL(ReKi)                             :: HighFreq                             ! The highest frequency component in the WAMIT file, not counting infinity.
       REAL(ReKi)                             :: Omega                                ! Wave frequency (rad/s)
       REAL(ReKi)                             :: PrvDir                               ! The value of TmpDir from the previous line (degrees)
@@ -148,7 +148,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
       REAL(ReKi)                             :: TmpIm                                ! A temporary imaginary value  read in from a WAMIT file (-      ) - stored as a REAL value
       REAL(ReKi)                             :: TmpPer                               ! A temporary period           read in from a WAMIT file (sec    )
       REAL(ReKi)                             :: TmpRe                                ! A temporary real      value  read in from a WAMIT file (-      )
-      REAL(ReKi)                             :: TmpCoord(2)                          ! A temporary real array to hold the (Omega,WaveDir) pair for interpolation
+      REAL(SiKi)                             :: TmpCoord(2)                          ! A temporary real array to hold the (Omega,WaveDir) pair for interpolation
       REAL(ReKi), ALLOCATABLE                :: WAMITFreq (:)                        ! Frequency      components as ordered in the WAMIT output files (rad/s  )
       REAL(ReKi), ALLOCATABLE                :: WAMITPer  (:)                        ! Period         components as ordered in the WAMIT output files (sec    )
       REAL(ReKi), ALLOCATABLE                :: WAMITWvDir(:)                        ! Wave direction components as ordered in the WAMIT output files (degrees)
@@ -908,7 +908,7 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
 
          p%WaveExctn = 0.0   
          
-      CASE ( 1, 2, 3, 4, 10 )    ! Plane progressive (regular) wave, JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, white-noise wave,  or user-defined spectrum (irregular) wave.
+      CASE ( 1, 2, 3, 4, 5, 10 )    ! Plane progressive (regular) wave, JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, white-noise wave,  or user-defined spectrum (irregular) wave.
 
 
 
@@ -1037,9 +1037,9 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
             END IF
 
 
-      CASE ( 5 )              ! GH Bladed wave data.
+      CASE ( 6 )              ! User wave data.
 
-         CALL SetErrStat( ErrID_Fatal, 'GH Bladed wave data not applicable for floating platforms.', ErrStat, ErrMsg, 'WAMIT_Init')
+         CALL SetErrStat( ErrID_Fatal, 'User input wave data not applicable for floating platforms.', ErrStat, ErrMsg, 'WAMIT_Init')
          CALL Cleanup()
          RETURN
 
@@ -1478,7 +1478,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
          ! Compute the load contribution from incident waves (i.e., the diffraction problem):
 
       DO I = 1,6     ! Loop through all wave excitation forces and moments
-         OtherState%F_Waves1(I) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveExctn(:,I), &
+         OtherState%F_Waves1(I) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveExctn(:,I), &
                                                   OtherState%LastIndWave, p%NStepWave + 1       )
       END DO          ! I - All wave excitation forces and moments
       
@@ -1488,7 +1488,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
          ! Determine the rotational angles from the direction-cosine matrix
       rotdisp = GetSmllRotAngs ( u%Mesh%Orientation(:,:,1), ErrStat, ErrMsg )
 
-      q         = reshape((/u%Mesh%TranslationDisp(:,1),rotdisp(:)/),(/6/))
+      q         = reshape((/real(u%Mesh%TranslationDisp(:,1),ReKi),rotdisp(:)/),(/6/))
       qdot      = reshape((/u%Mesh%TranslationVel(:,1),u%Mesh%RotationVel(:,1)/),(/6/))
       qdotdot   = reshape((/u%Mesh%TranslationAcc(:,1),u%Mesh%RotationAcc(:,1)/),(/6/))
       

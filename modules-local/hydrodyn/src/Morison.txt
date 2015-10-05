@@ -63,7 +63,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             INTEGER          MCoefMod                 -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          MmbrCoefIDIndx           -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          MmbrFilledIDIndx         -          -        -         ""    -
-typedef   ^                            ^                             LOGICAL          PropWAMIT                -          -        -         ""    -
+typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         ""    -
 #typedef   ^                            ^                             INTEGER          MGSplitState             -          -        -         ""    -
 #typedef   ^                            ^                             INTEGER          WtrSplitState            -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          NumSplits                -          -        -         ""    -
@@ -100,7 +100,7 @@ typedef   ^                            ^                             LOGICAL    
 typedef   ^                            ^                             ReKi             FillDensity              -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          InpMbrIndx               -          -        -         ""    -
 typedef   ^                            ^                             ReKi             InpMbrDist               -          -        -         ""    -
-typedef   ^                            ^                             LOGICAL          PropWAMIT                -          -        -         ""    -
+typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         ""    -
 typedef   ^                            ^                             ReKi             R_LToG                   {3}{3}     -        -         ""    -
 typedef   Morison/Morison              Morison_MemberType            INTEGER          Node1Indx                -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          Node2Indx                -          -        -         ""    -
@@ -146,7 +146,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi             FillDens                 -          -        -         ""    -
 typedef   ^                            ^                             ReKi             F_Bouy                   {6}        -        -         ""    -
 typedef   ^                            ^                             ReKi             F_DP                     {6}        -        -         ""    -
-typedef   ^                            ^                             LOGICAL          PropWAMIT                -          -        -         ""    -
+typedef   ^                            ^                             LOGICAL          PropPot                  -          -        -         ""    -
 typedef   Morison/Morison              Morison_CoefMembers           INTEGER          MemberID                 -          -        -         ""    -
 typedef   ^                            ^                             ReKi             MemberCd1                -          -        -         ""    -
 typedef   ^                            ^                             ReKi             MemberCd2                -          -        -         ""    -
@@ -236,10 +236,11 @@ typedef   ^                            ^                             CHARACTER(1
 typedef   ^                            ^                             INTEGER                  UnOutFile                        -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  UnSum                            -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave                        -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     WaveAcc0                         {:}{:}{:}  -        -         ""    -
-typedef   ^                            ^                             ReKi                     WaveTime                         {:}        -        -         ""    -
-typedef   ^                            ^                             ReKi                     WaveDynP0                        {:}{:}     -        -         ""    -
-typedef   ^                            ^                             ReKi                     WaveVel0                         {:}{:}{:}  -        -         ""    -
+typedef   ^                            ^                             SiKi                     WaveAcc0                         {:}{:}{:}  -        -         ""    -
+typedef   ^                            ^                             SiKi                     WaveTime                         {:}        -        -         ""    -
+typedef   ^                            ^                             SiKi                     WaveDynP0                        {:}{:}     -        -         ""    -
+typedef   ^                            ^                             SiKi                     WaveVel0                         {:}{:}{:}  -        -         ""    -
+typedef   ^                            ^                             LOGICAL                  nodeInWater                      {:}{:}     -        -         "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
 #
 #
 # Define outputs from the initialization routine here:
@@ -296,13 +297,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             INTEGER                  NNodes                          -          -         -         ""        -
 typedef   ^                            ^                             Morison_NodeType         Nodes                           {:}        -         -         ""        -
 typedef   ^                            ^                             ReKi                     D_F_I                           {:}{:}{:}  -         -         ""        -
-typedef   ^                            ^                             ReKi                     D_F_B                           {:}{:}     -         -         ""        -
 typedef   ^                            ^                             ReKi                     D_F_DP                          {:}{:}{:}  -         -         ""        -
-typedef   ^                            ^                             ReKi                     D_F_MG                          {:}{:}     -         -         ""        -
-typedef   ^                            ^                             ReKi                     D_F_BF                          {:}{:}     -         -         ""        -
-typedef   ^                            ^                             ReKi                     D_AM_M                          {:}{:}{:}  -         -         ""        -
-typedef   ^                            ^                             ReKi                     D_AM_MG                         {:}{:}{:}  -         -         ""        -
-typedef   ^                            ^                             ReKi                     D_AM_F                          {:}{:}{:}  -         -         ""        -
 typedef   ^                            ^                             ReKi                     D_dragConst                     {:}        -         -         ""        -
 typedef   ^                            ^                             ReKi                     L_An                            {:}{:}     -         -         ""        -
 typedef   ^                            ^                             ReKi                     L_F_B                           {:}{:}     -         -         ""        -
@@ -316,10 +311,19 @@ typedef   ^                            ^                             INTEGER    
 typedef   ^                            ^                             INTEGER                  distribToNodeIndx               {:}        -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NLumpedMarkers                  -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  lumpedToNodeIndx                {:}        -         -         ""        -
-typedef   ^                            ^                             ReKi                     WaveVel0                        {:}{:}{:}  -         -         ""        -
-typedef   ^                            ^                             ReKi                     WaveAcc0                        {:}{:}{:}  -         -         ""        -
-typedef   ^                            ^                             ReKi                     WaveDynP0                       {:}{:}     -         -         ""        -
-typedef   ^                            ^                             ReKi                     WaveTime                        {:}        -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveVel0                        {:}{:}{:}  -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveAcc0                        {:}{:}{:}  -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveDynP0                       {:}{:}     -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveTime                        {:}        -         -         ""        -
+typedef   ^                            ^                             INTEGER                  elementWaterState               {:}{:}     -         -         "State indicating if the element a node is attached to at the given time step is in the water [0], above the water [1], or in the seabed [2]" -
+typedef   ^                            ^                             INTEGER                  elementFillState                {:}        -         -         "State indicating if the element a node is attached to is in the filled fluid [0], above the fluid [1], or in the seabed [2]" -
+typedef   ^                            ^                             LOGICAL                  nodeInWater                     {:}{:}     -        -          "Logical flag indicating if the node at the given time step is in the water, and hence needs to have hydrodynamic forces calculated" -
+typedef   ^                            ^                             ReKi                     D_F_B                           {:}{:}     -         -         "Distributed buoyancy loads"   -
+typedef   ^                            ^                             ReKi                     D_F_BF                          {:}{:}     -         -         "Distributed filled buoyancy loads"   -
+typedef   ^                            ^                             ReKi                     D_F_MG                          {:}{:}     -         -         "Distributed marine growth loads"   -
+typedef   ^                            ^                             ReKi                     D_AM_M                          {:}{:}{:}  -         -         "Distributed member added mass matrix"   -
+typedef   ^                            ^                             ReKi                     D_AM_MG                         {:}{:}{:}  -         -         "Distributed marine growth added mass matrix (weight)"   -
+typedef   ^                            ^                             ReKi                     D_AM_F                          {:}{:}{:}  -         -         "Distributed added mass matrix due to flooding/filled fluid"   -
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NMOutputs                       -          -         -         ""        -
 typedef   ^                            ^                             Morison_MOutput          MOutLst                         {:}        -         -         ""        -

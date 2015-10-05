@@ -66,25 +66,25 @@ SUBROUTINE WAMIT_Interp2D_Cplx( InCoord, DataSet2D, WvFreq1, WvDir1, LastIndex, 
 
       ! I/O variables
 
-   REAL(ReKi),       INTENT(IN   )     :: InCoord(2)                                   !< Arranged as (Omega1, WaveDir1)
-   COMPLEX(ReKi),    INTENT(IN   )     :: DataSet2D(:,:)                               !< Arranged as Index 1= Omega1, Index 2= WaveDir1.
-   REAL(ReKi),       INTENT(IN   )     :: WvFreq1(:)                                   !< Frequencies associated with Index 1 of DataSet2D
-   REAL(ReKi),       INTENT(IN   )     :: WvDir1(:)                                    !< Directions associated with Index 2 of DataSet2D
+   REAL(SiKi),       INTENT(IN   )     :: InCoord(2)                                   !< Arranged as (Omega1, WaveDir1)
+   COMPLEX(SiKi),    INTENT(IN   )     :: DataSet2D(:,:)                               !< Arranged as Index 1= Omega1, Index 2= WaveDir1.
+   REAL(SiKi),       INTENT(IN   )     :: WvFreq1(:)                                   !< Frequencies associated with Index 1 of DataSet2D
+   REAL(SiKi),       INTENT(IN   )     :: WvDir1(:)                                    !< Directions associated with Index 2 of DataSet2D
    INTEGER(IntKi),   INTENT(INOUT)     :: LastIndex(2)                                 !< Index for the last (Omega1, WaveDir1) used
-   COMPLEX(ReKi),    INTENT(  OUT)     :: OutForce                                     !< The interpolated resulting force from DataSet2D
+   COMPLEX(SiKi),    INTENT(  OUT)     :: OutForce                                     !< The interpolated resulting force from DataSet2D
    INTEGER(IntKi),   INTENT(  OUT)     :: ErrStat                                      !< Error status
    CHARACTER(*),     INTENT(  OUT)     :: ErrMsg                                       !< Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
 
-   REAL(ReKi)                          :: Coords(2)                                    !< coordinates with wave directions converted to range [-180, 180)
+   REAL(SiKi)                          :: Coords(2)                                    !< coordinates with wave directions converted to range [-180, 180)
    INTEGER(IntKi)                      :: n(2)                                         !< number of points in WvFreq1 and WvDir1, and WvDir2
    
    INTEGER(IntKi)                      :: Indx_Lo(2)                                   !< index associated with lower bound of dimension 1,2 where val(Indx_lo(i)) <= InCoord(i) <= val(Indx_hi(i))
    INTEGER(IntKi)                      :: Indx_Hi(2)                                   !< index associated with upper bound of dimension 1,2 where val(Indx_lo(i)) <= InCoord(i) <= val(Indx_hi(i))
-   REAL(ReKi)                          :: Pos_Lo(2)                                    !< coordinate value with lower bound of dimension 1,2 
-   REAL(ReKi)                          :: Pos_Hi(2)                                    !< coordinate value with upper bound of dimension 1,2 
+   REAL(SiKi)                          :: Pos_Lo(2)                                    !< coordinate value with lower bound of dimension 1,2 
+   REAL(SiKi)                          :: Pos_Hi(2)                                    !< coordinate value with upper bound of dimension 1,2 
    
    
    ErrStat = ErrID_None
@@ -104,8 +104,8 @@ SUBROUTINE WAMIT_Interp2D_Cplx( InCoord, DataSet2D, WvFreq1, WvDir1, LastIndex, 
    Coords = InCoord
       
       ! make sure these requested degrees fall in the range -180 <= Coords(2) < 180
-   Coords(2) = MODULO( Coords(2), 360.0_ReKi )
-   IF ( Coords(2) >= 180.0_ReKi ) Coords(2) = Coords(2) - 360.0_ReKi
+   Coords(2) = MODULO( Coords(2), 360.0_SiKi )
+   IF ( Coords(2) >= 180.0_SiKi ) Coords(2) = Coords(2) - 360.0_SiKi
    
    CALL LocateStp( Coords(1), WvFreq1, LastIndex(1), n(1) )
    CALL LocateStp( Coords(2), WvDir1,  LastIndex(2), n(2) )
@@ -144,9 +144,9 @@ SUBROUTINE WAMIT_Interp2D_Cplx( InCoord, DataSet2D, WvFreq1, WvDir1, LastIndex, 
       ! angles have to be adjusted so that pos_Lo(2) <= Coords(2) <= pos_Hi(2)
    IF ( Indx_Hi(2) == 1 .AND. n(2) > 1 )  THEN ! we're looping around the array [periodic]
       IF ( pos_Lo(2) < Coords(2) ) THEN
-         pos_Hi(2) = pos_Hi(2) + 360.0_ReKi
+         pos_Hi(2) = pos_Hi(2) + 360.0_SiKi
       ELSEIF ( pos_Lo(2) /= Coords(2) ) THEN !bjj: I think it's okay if we don't use equalRealNos here
-         pos_Lo(2) = pos_Lo(2) - 360.0_ReKi 
+         pos_Lo(2) = pos_Lo(2) - 360.0_SiKi 
       END IF
    END IF   
    
@@ -177,27 +177,27 @@ SUBROUTINE WAMIT_Interp3D_Cplx( InCoord, DataSet3D, WvFreq1, WvDir1, WvDir2, Las
 
       ! I/O variables
 
-   REAL(ReKi),       INTENT(IN   )     :: InCoord(3)                                   !< Arranged as (Omega1, WaveDir1, WaveDir2)
-   COMPLEX(ReKi),    INTENT(IN   )     :: DataSet3D(:,:,:)                             !< Arranged as Index 1= Omega1, Index 2= WaveDir1, Index 3= WaveDir2.
-   REAL(ReKi),       INTENT(IN   )     :: WvFreq1(:)                                   !< Frequencies associated with Index 1 of DataSet3D
-   REAL(ReKi),       INTENT(IN   )     :: WvDir1(:)                                    !< Directions associated with Index 2 of DataSet3D
-   REAL(ReKi),       INTENT(IN   )     :: WvDir2(:)                                    !< Directions associated with Index 3 of DataSet3D
+   REAL(SiKi),       INTENT(IN   )     :: InCoord(3)                                   !< Arranged as (Omega1, WaveDir1, WaveDir2)
+   COMPLEX(SiKi),    INTENT(IN   )     :: DataSet3D(:,:,:)                             !< Arranged as Index 1= Omega1, Index 2= WaveDir1, Index 3= WaveDir2.
+   REAL(SiKi),       INTENT(IN   )     :: WvFreq1(:)                                   !< Frequencies associated with Index 1 of DataSet3D
+   REAL(SiKi),       INTENT(IN   )     :: WvDir1(:)                                    !< Directions associated with Index 2 of DataSet3D
+   REAL(SiKi),       INTENT(IN   )     :: WvDir2(:)                                    !< Directions associated with Index 3 of DataSet3D
    INTEGER(IntKi),   INTENT(INOUT)     :: LastIndex(3)                                 !< Index for the last (Omega1, WaveDir1, WaveDir2) used
-   COMPLEX(ReKi),    INTENT(  OUT)     :: OutForce                                     !< The interpolated resulting force from DataSet3D
+   COMPLEX(SiKi),    INTENT(  OUT)     :: OutForce                                     !< The interpolated resulting force from DataSet3D
    INTEGER(IntKi),   INTENT(  OUT)     :: ErrStat                                      !< Error status
    CHARACTER(*),     INTENT(  OUT)     :: ErrMsg                                       !< Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
 
-   REAL(ReKi)                          :: Coords(3)                                    !< coordinates with wave directions converted to range [-180, 180)
+   REAL(SiKi)                          :: Coords(3)                                    !< coordinates with wave directions converted to range [-180, 180)
    INTEGER(IntKi)                      :: i                                            !< generic counter
    INTEGER(IntKi)                      :: n(3)                                         !< number of points in WvFreq1, WvDir1, and WvDir2
    
    INTEGER(IntKi)                      :: Indx_Lo(3)                                   !< index associated with lower bound of dimension 1,2,3 where val(Indx_lo(1,2,3)) <= InCoord(1,2,3) <= val(Indx_hi(1,2,3))
    INTEGER(IntKi)                      :: Indx_Hi(3)                                   !< index associated with upper bound of dimension 1,2,3 where val(Indx_lo(1,2,3)) <= InCoord(1,2,3) <= val(Indx_hi(1,2,3))
-   REAL(ReKi)                          :: Pos_Lo(3)                                    !< coordinate value with lower bound of dimension 1,2,3 
-   REAL(ReKi)                          :: Pos_Hi(3)                                    !< coordinate value with upper bound of dimension 1,2,3 
+   REAL(SiKi)                          :: Pos_Lo(3)                                    !< coordinate value with lower bound of dimension 1,2,3 
+   REAL(SiKi)                          :: Pos_Hi(3)                                    !< coordinate value with upper bound of dimension 1,2,3 
    
    
    ErrStat = ErrID_None
@@ -219,8 +219,8 @@ SUBROUTINE WAMIT_Interp3D_Cplx( InCoord, DataSet3D, WvFreq1, WvDir1, WvDir2, Las
       Coords = InCoord
       
    DO i=2,3  ! make sure these requested degrees fall in the range -180 <= Coord(2:3) < 180
-      Coords(i) = MODULO( Coords(i), 360.0_ReKi )
-      IF ( Coords(i) >= 180.0_ReKi ) Coords(i) = Coords(i) - 360.0_ReKi
+      Coords(i) = MODULO( Coords(i), 360.0_SiKi )
+      IF ( Coords(i) >= 180.0_SiKi ) Coords(i) = Coords(i) - 360.0_SiKi
    END DO
    
    CALL LocateStp( Coords(1), WvFreq1, LastIndex(1), n(1) )
@@ -266,9 +266,9 @@ SUBROUTINE WAMIT_Interp3D_Cplx( InCoord, DataSet3D, WvFreq1, WvDir1, WvDir2, Las
    DO i=2,3      
       IF ( Indx_Hi(i) == 1 .AND. n(i) > 1 )  THEN ! we're looping around the array [periodic]
          IF ( pos_Lo(i) < Coords(i) ) THEN
-            pos_Hi(i) = pos_Hi(i) + 360.0_ReKi
+            pos_Hi(i) = pos_Hi(i) + 360.0_SiKi
          ELSEIF ( pos_Lo(i) /= Coords(i) ) THEN !bjj: I think it's okay if we don't use equalRealNos here
-            pos_Lo(i) = pos_Lo(i) - 360.0_ReKi 
+            pos_Lo(i) = pos_Lo(i) - 360.0_SiKi 
          END IF
       END IF   
    END DO
@@ -303,28 +303,28 @@ SUBROUTINE WAMIT_Interp4D_Cplx( InCoord, DataSet4D, WvFreq1, WvFreq2, WvDir1, Wv
 
       ! I/O variables
 
-   REAL(ReKi),       INTENT(IN   )     :: InCoord(4)                                   !< Arranged as (Omega1, Omega2, WaveDir1)
-   COMPLEX(ReKi),    INTENT(IN   )     :: DataSet4D(:,:,:,:)                           !< Arranged as Index 1= Omega1, Index 2= Omega2, Index 3= WaveDir1, Index 4= Wavedir2.
-   REAL(ReKi),       INTENT(IN   )     :: WvFreq1(:)                                   !< Frequencies associated with Index 1 of DataSet4D
-   REAL(ReKi),       INTENT(IN   )     :: WvFreq2(:)                                   !< Frequencies associated with Index 2 of DataSet4D
-   REAL(ReKi),       INTENT(IN   )     :: WvDir1(:)                                    !< Frequencies associated with Index 3 of DataSet4D
-   REAL(ReKi),       INTENT(IN   )     :: WvDir2(:)                                    !< Frequencies associated with Index 3 of DataSet4D
+   REAL(SiKi),       INTENT(IN   )     :: InCoord(4)                                   !< Arranged as (Omega1, Omega2, WaveDir1)
+   COMPLEX(SiKi),    INTENT(IN   )     :: DataSet4D(:,:,:,:)                           !< Arranged as Index 1= Omega1, Index 2= Omega2, Index 3= WaveDir1, Index 4= Wavedir2.
+   REAL(SiKi),       INTENT(IN   )     :: WvFreq1(:)                                   !< Frequencies associated with Index 1 of DataSet4D
+   REAL(SiKi),       INTENT(IN   )     :: WvFreq2(:)                                   !< Frequencies associated with Index 2 of DataSet4D
+   REAL(SiKi),       INTENT(IN   )     :: WvDir1(:)                                    !< Frequencies associated with Index 3 of DataSet4D
+   REAL(SiKi),       INTENT(IN   )     :: WvDir2(:)                                    !< Frequencies associated with Index 3 of DataSet4D
    INTEGER(IntKi),   INTENT(INOUT)     :: LastIndex(4)                                 !< Index for the last (Omega1, Omega2, WaveDir1) used
-   COMPLEX(ReKi),    INTENT(  OUT)     :: OutForce                                     !< The interpolated resulting force from DataSet4D
+   COMPLEX(SiKi),    INTENT(  OUT)     :: OutForce                                     !< The interpolated resulting force from DataSet4D
    INTEGER(IntKi),   INTENT(  OUT)     :: ErrStat                                      !< Error status
    CHARACTER(*),     INTENT(  OUT)     :: ErrMsg                                       !< Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
 
-   REAL(ReKi)                          :: Coords(4)                                    !< coordinates with wave directions converted to range [-180, 180)
+   REAL(SiKi)                          :: Coords(4)                                    !< coordinates with wave directions converted to range [-180, 180)
    INTEGER(IntKi)                      :: i                                            !< generic counter
    INTEGER(IntKi)                      :: n(4)                                         !< number of points in WvFreq1, WvFreq2, WvDir1, and WvDir2
    
    INTEGER(IntKi)                      :: Indx_Lo(4)                                   !< index associated with lower bound of dimension 1-4 where val(Indx_lo(i)) <= InCoord(i) <= val(Indx_hi(i))
    INTEGER(IntKi)                      :: Indx_Hi(4)                                   !< index associated with upper bound of dimension 1-4 where val(Indx_lo(i)) <= InCoord(i) <= val(Indx_hi(i))
-   REAL(ReKi)                          :: Pos_Lo(4)                                    !< coordinate value with lower bound of dimension 1-4 
-   REAL(ReKi)                          :: Pos_Hi(4)                                    !< coordinate value with upper bound of dimension 1-4 
+   REAL(SiKi)                          :: Pos_Lo(4)                                    !< coordinate value with lower bound of dimension 1-4 
+   REAL(SiKi)                          :: Pos_Hi(4)                                    !< coordinate value with upper bound of dimension 1-4 
 
 
    
@@ -350,8 +350,8 @@ SUBROUTINE WAMIT_Interp4D_Cplx( InCoord, DataSet4D, WvFreq1, WvFreq2, WvDir1, Wv
    Coords = InCoord
       
    DO i=3,4  ! make sure these requested degrees fall in the range -180 <= Coord(3:4) < 180
-      Coords(i) = MODULO( Coords(i), 360.0_ReKi )
-      IF ( Coords(i) >= 180.0_ReKi ) Coords(i) = Coords(i) - 360.0_ReKi
+      Coords(i) = MODULO( Coords(i), 360.0_SiKi )
+      IF ( Coords(i) >= 180.0_SiKi ) Coords(i) = Coords(i) - 360.0_SiKi
    END DO
    
    CALL LocateStp( Coords(1), WvFreq1, LastIndex(1), n(1) )
@@ -404,9 +404,9 @@ SUBROUTINE WAMIT_Interp4D_Cplx( InCoord, DataSet4D, WvFreq1, WvFreq2, WvDir1, Wv
    DO i=3,4
       IF ( Indx_Hi(i) == 1 .AND. n(i) > 1 )  THEN ! we're looping around the array [periodic]
          IF ( pos_Lo(i) < Coords(i) ) THEN
-            pos_Hi(i) = pos_Hi(i) + 360.0_ReKi
+            pos_Hi(i) = pos_Hi(i) + 360.0_SiKi
          ELSEIF ( pos_Lo(i) /= Coords(i) ) THEN !bjj: I think it's okay if we don't use equalRealNos here
-            pos_Lo(i) = pos_Lo(i) - 360.0_ReKi 
+            pos_Lo(i) = pos_Lo(i) - 360.0_SiKi 
          END IF
       END IF   
    END DO
@@ -429,31 +429,31 @@ END SUBROUTINE WAMIT_Interp4D_Cplx
 !!
 SUBROUTINE Interp2D_withIndx_Cplx( InCoord, InData2D, Indx_Lo, Indx_Hi, posLo, posHi, InterpVal )
 
-   REAL(ReKi),     INTENT(IN   )          :: InCoord(2)                             !< Arranged as (x, y)
-   COMPLEX(ReKi),  INTENT(IN   )          :: InData2D(:,:)                          !< Arranged as Index 1= x, Index 2= y.
-   COMPLEX(ReKi),  INTENT(  OUT)          :: InterpVal                              !< The interpolated value of DataSet2D at InCoord
+   REAL(SiKi),     INTENT(IN   )          :: InCoord(2)                             !< Arranged as (x, y)
+   COMPLEX(SiKi),  INTENT(IN   )          :: InData2D(:,:)                          !< Arranged as Index 1= x, Index 2= y.
+   COMPLEX(SiKi),  INTENT(  OUT)          :: InterpVal                              !< The interpolated value of DataSet2D at InCoord
 
-   REAL(ReKi),     INTENT(IN   )          :: posLo(2)                               !< coordinate values associated with Indx_Lo 
-   REAL(ReKi),     INTENT(IN   )          :: posHi(2)                               !< coordinate values associated with Indx_Hi
+   REAL(SiKi),     INTENT(IN   )          :: posLo(2)                               !< coordinate values associated with Indx_Lo 
+   REAL(SiKi),     INTENT(IN   )          :: posHi(2)                               !< coordinate values associated with Indx_Hi
 
    INTEGER(IntKi), INTENT(IN   )          :: Indx_Lo(2)                             !< index associated with lower bound of dimension 1 where x(xIndx_lo) <= InCoord(1) <= x(xIndx_hi)
    INTEGER(IntKi), INTENT(IN   )          :: Indx_Hi(2)                             !< index associated with upper bound of dimension 1 where x(xIndx_lo) <= InCoord(1) <= x(xIndx_hi)
        
    ! local variables
-   REAL(ReKi)                             :: isopc(2)                               ! isoparametric coordinates 
+   REAL(SiKi)                             :: isopc(2)                               ! isoparametric coordinates 
    
-   REAL(ReKi)                             :: N(4)                                   ! size 2^n
-   COMPLEX(ReKi)                          :: u(4)                                   ! size 2^n
+   REAL(SiKi)                             :: N(4)                                   ! size 2^n
+   COMPLEX(SiKi)                          :: u(4)                                   ! size 2^n
    
    
    CALL CalcIsoparCoords( InCoord, posLo, posHi, isopc )      ! Calculate iospc
    
 
-   N(1)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )
-   N(2)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )
-   N(3)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )
-   N(4)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )
-   N     = N / REAL( SIZE(N), ReKi )  ! normalize
+   N(1)  = ( 1.0_SiKi + isopc(1) )*( 1.0_SiKi - isopc(2) )
+   N(2)  = ( 1.0_SiKi + isopc(1) )*( 1.0_SiKi + isopc(2) )
+   N(3)  = ( 1.0_SiKi - isopc(1) )*( 1.0_SiKi + isopc(2) )
+   N(4)  = ( 1.0_SiKi - isopc(1) )*( 1.0_SiKi - isopc(2) )
+   N     = N / REAL( SIZE(N), SiKi )  ! normalize
       
    u(1)  = InData2D( Indx_Hi(1), Indx_Lo(2) )
    u(2)  = InData2D( Indx_Hi(1), Indx_Hi(2) )
@@ -475,38 +475,38 @@ END SUBROUTINE Interp2D_withIndx_Cplx
 !!
 SUBROUTINE Interp3D_withIndx_Cplx( InCoord, InData3D, Indx_Lo, Indx_Hi, posLo, posHi, InterpVal )
 
-   REAL(ReKi),     INTENT(IN   )          :: InCoord(3)                             !< Arranged as (x, y, z)
-   COMPLEX(ReKi),  INTENT(IN   )          :: InData3D(:,:,:)                        !< Arranged as Index 1= x, Index 2= y, Index 3= z.
-   COMPLEX(ReKi),  INTENT(  OUT)          :: InterpVal                              !< The interpolated value of DataSet3D at InCoord
+   REAL(SiKi),     INTENT(IN   )          :: InCoord(3)                             !< Arranged as (x, y, z)
+   COMPLEX(SiKi),  INTENT(IN   )          :: InData3D(:,:,:)                        !< Arranged as Index 1= x, Index 2= y, Index 3= z.
+   COMPLEX(SiKi),  INTENT(  OUT)          :: InterpVal                              !< The interpolated value of DataSet3D at InCoord
 
-   REAL(ReKi),     INTENT(IN   )          :: posLo(3)                               !< xyz (coordinate) values associated with Indx_Lo 
-   REAL(ReKi),     INTENT(IN   )          :: posHi(3)                               !< xyz (coordinate) values associated with Indx_Hi
+   REAL(SiKi),     INTENT(IN   )          :: posLo(3)                               !< xyz (coordinate) values associated with Indx_Lo 
+   REAL(SiKi),     INTENT(IN   )          :: posHi(3)                               !< xyz (coordinate) values associated with Indx_Hi
 
    INTEGER(IntKi), INTENT(IN   )          :: Indx_Lo(3)                             !< index associated with lower bound of dimension 1 where x(xIndx_lo) <= InCoord(1) <= x(xIndx_hi)
    INTEGER(IntKi), INTENT(IN   )          :: Indx_Hi(3)                             !< index associated with upper bound of dimension 1 where x(xIndx_lo) <= InCoord(1) <= x(xIndx_hi)
        
    ! local variables
-   REAL(ReKi)                             :: isopc(3)                               ! isoparametric hexahedral coordinates (natural coordinates) [ xi, eta, mu ]
+   REAL(SiKi)                             :: isopc(3)                               ! isoparametric hexahedral coordinates (natural coordinates) [ xi, eta, mu ]
    
-   REAL(ReKi)                             :: N(8)                                   ! size 2^n
-   COMPLEX(ReKi)                          :: u(8)                                   ! size 2^n
+   REAL(SiKi)                             :: N(8)                                   ! size 2^n
+   COMPLEX(SiKi)                          :: u(8)                                   ! size 2^n
 
    
    CALL CalcIsoparCoords( InCoord, posLo, posHi, isopc )      ! Calculate iospc
       
-   !eta  = ( 2.0_ReKi*InCoord(1) - posLo(1) - posHi(1) ) / ( posHi(1) - posLo(1) ) !< (2*x - x1 - x2 ) / (x2-x1) !note that this is actually negative eta from the referenced paper, but it follows the other 2 dimensions better if we use the negative here and then flip the signs in N(:) (I think there is a bug in that paper)
-   !xi   = ( 2.0_ReKi*InCoord(2) - posLo(2) - posHi(2) ) / ( posHi(2) - posLo(2) ) !< (2*y - y1 - y2 ) / (y2-y1)
-   !mu   = ( 2.0_ReKi*InCoord(3) - posLo(3) - posHi(3) ) / ( posHi(3) - posLo(3) ) !< (2*z - z1 - z2 ) / (z2-z1)
+   !eta  = ( 2.0_SiKi*InCoord(1) - posLo(1) - posHi(1) ) / ( posHi(1) - posLo(1) ) !< (2*x - x1 - x2 ) / (x2-x1) !note that this is actually negative eta from the referenced paper, but it follows the other 2 dimensions better if we use the negative here and then flip the signs in N(:) (I think there is a bug in that paper)
+   !xi   = ( 2.0_SiKi*InCoord(2) - posLo(2) - posHi(2) ) / ( posHi(2) - posLo(2) ) !< (2*y - y1 - y2 ) / (y2-y1)
+   !mu   = ( 2.0_SiKi*InCoord(3) - posLo(3) - posHi(3) ) / ( posHi(3) - posLo(3) ) !< (2*z - z1 - z2 ) / (z2-z1)
 
-   N(1)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N(2)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N(3)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N(4)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi - isopc(3) )
-   N(5)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N(6)  = ( 1.0_ReKi + isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N(7)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi + isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N(8)  = ( 1.0_ReKi - isopc(1) )*( 1.0_ReKi - isopc(2) )*( 1.0_ReKi + isopc(3) )
-   N     = N / REAL( SIZE(N), ReKi )  ! normalize
+   N(1)  = ( 1.0_SiKi + isopc(1) )*( 1.0_SiKi - isopc(2) )*( 1.0_SiKi - isopc(3) )
+   N(2)  = ( 1.0_SiKi + isopc(1) )*( 1.0_SiKi + isopc(2) )*( 1.0_SiKi - isopc(3) )
+   N(3)  = ( 1.0_SiKi - isopc(1) )*( 1.0_SiKi + isopc(2) )*( 1.0_SiKi - isopc(3) )
+   N(4)  = ( 1.0_SiKi - isopc(1) )*( 1.0_SiKi - isopc(2) )*( 1.0_SiKi - isopc(3) )
+   N(5)  = ( 1.0_SiKi + isopc(1) )*( 1.0_SiKi - isopc(2) )*( 1.0_SiKi + isopc(3) )
+   N(6)  = ( 1.0_SiKi + isopc(1) )*( 1.0_SiKi + isopc(2) )*( 1.0_SiKi + isopc(3) )
+   N(7)  = ( 1.0_SiKi - isopc(1) )*( 1.0_SiKi + isopc(2) )*( 1.0_SiKi + isopc(3) )
+   N(8)  = ( 1.0_SiKi - isopc(1) )*( 1.0_SiKi - isopc(2) )*( 1.0_SiKi + isopc(3) )
+   N     = N / REAL( SIZE(N), SiKi )  ! normalize
       
    u(1)  = InData3D( Indx_Hi(1), Indx_Lo(2), Indx_Lo(3) )
    u(2)  = InData3D( Indx_Hi(1), Indx_Hi(2), Indx_Lo(3) )
@@ -532,42 +532,42 @@ END SUBROUTINE Interp3D_withIndx_Cplx
 !!
 SUBROUTINE Interp4D_withIndx_Cplx( InCoord, InData4D, Indx_Lo, Indx_Hi, posLo, posHi, InterpVal )
 
-   REAL(ReKi),     INTENT(IN   )          :: InCoord(4)                             !< Arranged as (x1, x2, x3, x4 )
-   COMPLEX(ReKi),  INTENT(IN   )          :: InData4D(:,:,:,:)                        !< Arranged as Index 1= x1, Index 2= x2, Index 3= x3, Index 4= x4.
-   COMPLEX(ReKi),  INTENT(  OUT)          :: InterpVal                              !< The interpolated value of InData4D at InCoord
+   REAL(SiKi),     INTENT(IN   )          :: InCoord(4)                             !< Arranged as (x1, x2, x3, x4 )
+   COMPLEX(SiKi),  INTENT(IN   )          :: InData4D(:,:,:,:)                        !< Arranged as Index 1= x1, Index 2= x2, Index 3= x3, Index 4= x4.
+   COMPLEX(SiKi),  INTENT(  OUT)          :: InterpVal                              !< The interpolated value of InData4D at InCoord
 
-   REAL(ReKi),     INTENT(IN   )          :: posLo(4)                               !< coordinate values associated with Indx_Lo 
-   REAL(ReKi),     INTENT(IN   )          :: posHi(4)                               !< coordinate values associated with Indx_Hi
+   REAL(SiKi),     INTENT(IN   )          :: posLo(4)                               !< coordinate values associated with Indx_Lo 
+   REAL(SiKi),     INTENT(IN   )          :: posHi(4)                               !< coordinate values associated with Indx_Hi
 
    INTEGER(IntKi), INTENT(IN   )          :: Indx_Lo(4)                             !< index associated wtih lower bound of dimension 1 where x(xIndx_lo) <= InCoord(1) <= x(xIndx_hi)
    INTEGER(IntKi), INTENT(IN   )          :: Indx_Hi(4)                             !< index associated wtih upper bound of dimension 1 where x(xIndx_lo) <= InCoord(1) <= x(xIndx_hi)
        
    ! local variables
-   REAL(ReKi)                             :: isopc(4)                               ! isoparametric coordinates 
-   REAL(ReKi)                             :: N(16)                                  ! size 2^n
-   COMPLEX(ReKi)                          :: u(16)                                  ! size 2^n
+   REAL(SiKi)                             :: isopc(4)                               ! isoparametric coordinates 
+   REAL(SiKi)                             :: N(16)                                  ! size 2^n
+   COMPLEX(SiKi)                          :: u(16)                                  ! size 2^n
    
    
    CALL CalcIsoparCoords( InCoord, posLo, posHi, isopc )      ! Calculate iospc
          
    
-   N( 1) = ( 1.0_ReKi - isopc(1) ) * ( 1.0_ReKi - isopc(2) ) * ( 1.0_ReKi - isopc(3) ) * ( 1.0_ReKi - isopc(4) )
-   N( 2) = ( 1.0_ReKi - isopc(1) ) * ( 1.0_ReKi - isopc(2) ) * ( 1.0_ReKi - isopc(3) ) * ( 1.0_ReKi + isopc(4) )
-   N( 3) = ( 1.0_ReKi - isopc(1) ) * ( 1.0_ReKi - isopc(2) ) * ( 1.0_ReKi + isopc(3) ) * ( 1.0_ReKi - isopc(4) )
-   N( 4) = ( 1.0_ReKi - isopc(1) ) * ( 1.0_ReKi - isopc(2) ) * ( 1.0_ReKi + isopc(3) ) * ( 1.0_ReKi + isopc(4) )    
-   N( 5) = ( 1.0_ReKi - isopc(1) ) * ( 1.0_ReKi + isopc(2) ) * ( 1.0_ReKi - isopc(3) ) * ( 1.0_ReKi - isopc(4) )
-   N( 6) = ( 1.0_ReKi - isopc(1) ) * ( 1.0_ReKi + isopc(2) ) * ( 1.0_ReKi - isopc(3) ) * ( 1.0_ReKi + isopc(4) )
-   N( 7) = ( 1.0_ReKi - isopc(1) ) * ( 1.0_ReKi + isopc(2) ) * ( 1.0_ReKi + isopc(3) ) * ( 1.0_ReKi - isopc(4) )
-   N( 8) = ( 1.0_ReKi - isopc(1) ) * ( 1.0_ReKi + isopc(2) ) * ( 1.0_ReKi + isopc(3) ) * ( 1.0_ReKi + isopc(4) )    
-   N( 9) = ( 1.0_ReKi + isopc(1) ) * ( 1.0_ReKi - isopc(2) ) * ( 1.0_ReKi - isopc(3) ) * ( 1.0_ReKi - isopc(4) )
-   N(10) = ( 1.0_ReKi + isopc(1) ) * ( 1.0_ReKi - isopc(2) ) * ( 1.0_ReKi - isopc(3) ) * ( 1.0_ReKi + isopc(4) )
-   N(11) = ( 1.0_ReKi + isopc(1) ) * ( 1.0_ReKi - isopc(2) ) * ( 1.0_ReKi + isopc(3) ) * ( 1.0_ReKi - isopc(4) )
-   N(12) = ( 1.0_ReKi + isopc(1) ) * ( 1.0_ReKi - isopc(2) ) * ( 1.0_ReKi + isopc(3) ) * ( 1.0_ReKi + isopc(4) )
-   N(13) = ( 1.0_ReKi + isopc(1) ) * ( 1.0_ReKi + isopc(2) ) * ( 1.0_ReKi - isopc(3) ) * ( 1.0_ReKi - isopc(4) )
-   N(14) = ( 1.0_ReKi + isopc(1) ) * ( 1.0_ReKi + isopc(2) ) * ( 1.0_ReKi - isopc(3) ) * ( 1.0_ReKi + isopc(4) )
-   N(15) = ( 1.0_ReKi + isopc(1) ) * ( 1.0_ReKi + isopc(2) ) * ( 1.0_ReKi + isopc(3) ) * ( 1.0_ReKi - isopc(4) )
-   N(16) = ( 1.0_ReKi + isopc(1) ) * ( 1.0_ReKi + isopc(2) ) * ( 1.0_ReKi + isopc(3) ) * ( 1.0_ReKi + isopc(4) )
-   N     = N / REAL( SIZE(N), ReKi )  ! normalize
+   N( 1) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   N( 2) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   N( 3) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   N( 4) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )    
+   N( 5) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   N( 6) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   N( 7) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   N( 8) = ( 1.0_SiKi - isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )    
+   N( 9) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   N(10) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   N(11) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   N(12) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi - isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   N(13) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   N(14) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi - isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   N(15) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi - isopc(4) )
+   N(16) = ( 1.0_SiKi + isopc(1) ) * ( 1.0_SiKi + isopc(2) ) * ( 1.0_SiKi + isopc(3) ) * ( 1.0_SiKi + isopc(4) )
+   N     = N / REAL( SIZE(N), SiKi )  ! normalize
    
    
    u( 1) = InData4D( Indx_Lo(1), Indx_Lo(2), Indx_Lo(3), Indx_Lo(4) )
@@ -601,26 +601,26 @@ END SUBROUTINE Interp4D_withIndx_Cplx
 SUBROUTINE CalcIsoparCoords( InCoord, posLo, posHi, isopc )
 
 
-   REAL(ReKi),     INTENT(IN   )          :: InCoord(:)                             !< Arranged as (x, y)
-   REAL(ReKi),     INTENT(IN   )          :: posLo(:)                               !< coordinate values associated with Indx_Lo 
-   REAL(ReKi),     INTENT(IN   )          :: posHi(:)                               !< coordinate values associated with Indx_Hi
-   REAL(ReKi),     INTENT(  OUT)          :: isopc(:)                               ! isoparametric coordinates 
+   REAL(SiKi),     INTENT(IN   )          :: InCoord(:)                             !< Arranged as (x, y)
+   REAL(SiKi),     INTENT(IN   )          :: posLo(:)                               !< coordinate values associated with Indx_Lo 
+   REAL(SiKi),     INTENT(IN   )          :: posHi(:)                               !< coordinate values associated with Indx_Hi
+   REAL(SiKi),     INTENT(  OUT)          :: isopc(:)                               ! isoparametric coordinates 
 
    ! local variables
-   REAL(ReKi)                             :: dx                                     ! difference between high and low coordinates in the bounding "box"
+   REAL(SiKi)                             :: dx                                     ! difference between high and low coordinates in the bounding "box"
    INTEGER(IntKi)                         :: i                                      !  loop counter
    
    
    do i=1,size(isopc)
       
       dx = posHi(i) - posLo(i) 
-      if (EqualRealNos(dx, 0.0_ReKi)) then
-         isopc(i) = 1.0_ReKi
+      if (EqualRealNos(dx, 0.0_SiKi)) then
+         isopc(i) = 1.0_SiKi
       else
-         isopc(i) = ( 2.0_ReKi*InCoord(i) - posLo(i) - posHi(i) ) / dx
+         isopc(i) = ( 2.0_SiKi*InCoord(i) - posLo(i) - posHi(i) ) / dx
             ! to verify that we don't extrapolate, make sure this is bound between -1 and 1 (effectively nearest neighbor)
-         isopc(i) = min( 1.0_ReKi, isopc(i) )
-         isopc(i) = max(-1.0_ReKi, isopc(i) )
+         isopc(i) = min( 1.0_SiKi, isopc(i) )
+         isopc(i) = max(-1.0_SiKi, isopc(i) )
       end if
       
    end do

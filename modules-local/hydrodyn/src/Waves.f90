@@ -29,7 +29,8 @@
 !**********************************************************************************************************************************
 MODULE Waves
 
-   USE Waves_Types   
+   USE Waves_Types  
+   USE UserWaves
    USE NWTC_Library
    USE NWTC_FFTPACK
       
@@ -66,7 +67,6 @@ MODULE Waves
    !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the constraint 
    !                                                 !   states (z)
    
-   PUBLIC :: InterpWrappedStpReal
    
    PRIVATE:: WheelerStretching                    ! This FUNCTION applies the principle of Wheeler stretching to (1-Forward) find the elevation where the wave kinematics are to be applied using Wheeler stretching or (2-Backword)   
    PRIVATE:: BoxMuller
@@ -75,7 +75,6 @@ MODULE Waves
    PRIVATE:: UserWaveSpctrm   
    PRIVATE:: StillWaterWaves_Init
    PRIVATE:: VariousWaves_Init
-   PRIVATE:: GH_BladedWaves_Init
   ! PRIVATE:: WhiteNoiseWaves_Init
 
 CONTAINS
@@ -100,14 +99,14 @@ CONTAINS
 
       ! Passed Variables:
 
-   REAL(ReKi), INTENT(IN )      :: Hs                                              ! Significant wave height (meters)
-   REAL(ReKi), INTENT(IN )      :: Tp                                              ! Peak spectral period (sec)
-   REAL(ReKi)                   :: WavePkShpDefault                                ! This function = default value of the peak shape parameter of the incident wave spectrum conditioned on significant wave height and peak spectral period (-)
+   REAL(SiKi), INTENT(IN )      :: Hs                                              ! Significant wave height (meters)
+   REAL(SiKi), INTENT(IN )      :: Tp                                              ! Peak spectral period (sec)
+   REAL(SiKi)                   :: WavePkShpDefault                                ! This function = default value of the peak shape parameter of the incident wave spectrum conditioned on significant wave height and peak spectral period (-)
 
 
       ! Local Variables:
 
-   REAL(ReKi)                   :: TpOvrSqrtHs                                     ! = Tp/SQRT(Hs) (s/SQRT(m))
+   REAL(SiKi)                   :: TpOvrSqrtHs                                     ! = Tp/SQRT(Hs) (s/SQRT(m))
 
 
 
@@ -144,19 +143,19 @@ CONTAINS
 
          ! Passed Variables:
 
-      COMPLEX(ReKi)                     :: BoxMuller                                  ! This function
+      COMPLEX(SiKi)                     :: BoxMuller                                  ! This function
 
-      REAL(ReKi), INTENT(IN ), OPTIONAL :: Phase                                      ! Optional phase to override random phase (radians)
+      REAL(SiKi), INTENT(IN ), OPTIONAL :: Phase                                      ! Optional phase to override random phase (radians)
 
       LOGICAL,    INTENT(IN )           :: NDAmp                                      ! Flag for normally-distributed amplitudes
 
 
          ! Local Variables:
 
-      REAL(ReKi)                   :: C1                                              ! Intermediate variable
-      REAL(ReKi)                   :: C2                                              ! Intermediate variable
-      REAL(ReKi)                   :: U1                                              ! First  uniformly distributed random
-      REAL(ReKi)                   :: U2                                              ! Second uniformly distributed random
+      REAL(SiKi)                   :: C1                                              ! Intermediate variable
+      REAL(SiKi)                   :: C2                                              ! Intermediate variable
+      REAL(SiKi)                   :: U1                                              ! First  uniformly distributed random
+      REAL(SiKi)                   :: U2                                              ! Second uniformly distributed random
 
 
 
@@ -219,28 +218,28 @@ CONTAINS
 
          ! Passed Variables:
 
-      REAL(ReKi), INTENT(IN )      :: Gamma                                           ! Peak shape parameter (-)
-      REAL(ReKi), INTENT(IN )      :: Hs                                              ! Significant wave height (meters)
-      REAL(ReKi)                   :: JONSWAP                                         ! This function = JONSWAP wave spectrum, S (m^2/(rad/s))
-      REAL(ReKi), INTENT(IN )      :: Omega                                           ! Wave frequency (rad/s)
-      REAL(ReKi), INTENT(IN )      :: Tp                                              ! Peak spectral period (sec)
+      REAL(SiKi), INTENT(IN )      :: Gamma                                           ! Peak shape parameter (-)
+      REAL(SiKi), INTENT(IN )      :: Hs                                              ! Significant wave height (meters)
+      REAL(SiKi)                   :: JONSWAP                                         ! This function = JONSWAP wave spectrum, S (m^2/(rad/s))
+      REAL(SiKi), INTENT(IN )      :: Omega                                           ! Wave frequency (rad/s)
+      REAL(SiKi), INTENT(IN )      :: Tp                                              ! Peak spectral period (sec)
 
 
          ! Local Variables:
 
-      REAL(ReKi)                   :: Alpha                                           ! Exponent on Gamma used in the spectral formulation (-)
-      REAL(ReKi)                   :: C                                               ! Normalising factor used in the spectral formulation (-)
-      REAL(ReKi)                   :: f                                               ! Wave frequency (Hz)
-      REAL(ReKi)                   :: fp                                              ! Peak spectral frequency (Hz)
-      REAL(ReKi)                   :: fpOvrf4                                         ! (fp/f)^4
-      REAL(ReKi)                   :: Sigma                                           ! Scaling factor used in the spectral formulation (-)
+      REAL(SiKi)                   :: Alpha                                           ! Exponent on Gamma used in the spectral formulation (-)
+      REAL(SiKi)                   :: C                                               ! Normalising factor used in the spectral formulation (-)
+      REAL(SiKi)                   :: f                                               ! Wave frequency (Hz)
+      REAL(SiKi)                   :: fp                                              ! Peak spectral frequency (Hz)
+      REAL(SiKi)                   :: fpOvrf4                                         ! (fp/f)^4
+      REAL(SiKi)                   :: Sigma                                           ! Scaling factor used in the spectral formulation (-)
 
-       REAL(ReKi)                  :: Inv2Pi   =  0.15915494
+       REAL(SiKi)                  :: Inv2Pi   =  0.15915494
 
          ! Compute the JONSWAP wave spectrum, unless Omega is zero, in which case,
          !   return zero:
 
-      IF ( EqualRealNos(Omega, 0.0_ReKi) )  THEN  ! When .TRUE., the formulation below is ill-conditioned; thus, the known value of zero is returned.
+      IF ( EqualRealNos(Omega, 0.0_SiKi) )  THEN  ! When .TRUE., the formulation below is ill-conditioned; thus, the known value of zero is returned.
 
 
          JONSWAP  = 0.0
@@ -299,9 +298,9 @@ CONTAINS
 
          ! Passed Variables:
 
-      REAL(ReKi), INTENT(IN )      :: Omega                                           ! Wave frequency, rad/s.
-      REAL(ReKi), INTENT(IN )      :: WaveDir                                         ! Incident wave propagation heading direction, degrees
-      REAL(ReKi), INTENT(OUT)      :: WaveS1Sdd                                       ! One-sided power spectral density of the wave spectrum per unit time for the current frequency component and heading direction, m^2/(rad/s).
+      REAL(SiKi), INTENT(IN )      :: Omega                                           ! Wave frequency, rad/s.
+      REAL(SiKi), INTENT(IN )      :: WaveDir                                         ! Incident wave propagation heading direction, degrees
+      REAL(SiKi), INTENT(OUT)      :: WaveS1Sdd                                       ! One-sided power spectral density of the wave spectrum per unit time for the current frequency component and heading direction, m^2/(rad/s).
 
       CHARACTER(1024), INTENT(IN ) :: DirRoot                                         ! The name of the root file including the full path to the current working directory.  This may be useful if you want this routine to write a permanent record of what it does to be stored with the simulation results: the results should be stored in a file whose name (including path) is generated by appending any suitable extension to DirRoot.
 
@@ -338,20 +337,20 @@ CONTAINS
          ! Passed Variables:
 
       REAL(ReKi), INTENT(IN )      :: g                                               ! Gravitational acceleration (m/s^2)
-      REAL(ReKi), INTENT(IN )      :: h                                               ! Water depth (meters)
-      REAL(ReKi), INTENT(IN )      :: Omega                                           ! Wave frequency (rad/s)
-      REAL(ReKi)                   :: WaveNumber                                      ! This function = wavenumber, k (1/m)
+      REAL(SiKi), INTENT(IN )      :: h                                               ! Water depth (meters)
+      REAL(SiKi), INTENT(IN )      :: Omega                                           ! Wave frequency (rad/s)
+      REAL(SiKi)                   :: WaveNumber                                      ! This function = wavenumber, k (1/m)
 
 
          ! Local Variables:
 
-      REAL(ReKi)                   :: A                                               ! A temporary variable used in the solution.
-      REAL(ReKi)                   :: B                                               ! A temporary variable used in the solution.
-      REAL(ReKi)                   :: C                                               ! A temporary variable used in the solution.
-      REAL(ReKi)                   :: C2                                              ! A temporary variable used in the solution.
-      REAL(ReKi)                   :: CC                                              ! A temporary variable used in the solution.
-      REAL(ReKi)                   :: E2                                              ! A temporary variable used in the solution.
-      REAL(ReKi)                   :: X0                                              ! A temporary variable used in the solution.
+      REAL(SiKi)                   :: A                                               ! A temporary variable used in the solution.
+      REAL(SiKi)                   :: B                                               ! A temporary variable used in the solution.
+      REAL(SiKi)                   :: C                                               ! A temporary variable used in the solution.
+      REAL(SiKi)                   :: C2                                              ! A temporary variable used in the solution.
+      REAL(SiKi)                   :: CC                                              ! A temporary variable used in the solution.
+      REAL(SiKi)                   :: E2                                              ! A temporary variable used in the solution.
+      REAL(SiKi)                   :: X0                                              ! A temporary variable used in the solution.
 
 
 
@@ -427,18 +426,18 @@ CONTAINS
 
          ! Passed Variables:
 
-      REAL(ReKi)                   :: COSHNumOvrCOSHDen                               ! This function = COSH( k*( z + h ) )/COSH( k*h ) (-)
-      REAL(ReKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
-      REAL(ReKi), INTENT(IN )      :: k                                               ! Wave number ( k      >= 0 ) (1/m)
-      REAL(ReKi), INTENT(IN )      :: z                                               ! Elevation   (-h <= z <= 0 ) (meters)
+      REAL(SiKi)                   :: COSHNumOvrCOSHDen                               ! This function = COSH( k*( z + h ) )/COSH( k*h ) (-)
+      REAL(SiKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
+      REAL(SiKi), INTENT(IN )      :: k                                               ! Wave number ( k      >= 0 ) (1/m)
+      REAL(SiKi), INTENT(IN )      :: z                                               ! Elevation   (-h <= z <= 0 ) (meters)
 
 
 
          ! Compute the hyperbolic numerator over denominator:
 
-      IF ( k*h  > 89.4_ReKi )  THEN   ! When .TRUE., the shallow water formulation will trigger a floating point overflow error; however, COSH( k*( z + h ) )/COSH( k*h ) = EXP( k*z ) + EXP( -k*( z + 2*h ) ) for large k*h.  This equals the deep water formulation, EXP( k*z ), except near z = -h, because h > 14.23*wavelength (since k = 2*Pi/wavelength) in this case.
+      IF ( k*h  > 89.4_SiKi )  THEN   ! When .TRUE., the shallow water formulation will trigger a floating point overflow error; however, COSH( k*( z + h ) )/COSH( k*h ) = EXP( k*z ) + EXP( -k*( z + 2*h ) ) for large k*h.  This equals the deep water formulation, EXP( k*z ), except near z = -h, because h > 14.23*wavelength (since k = 2*Pi/wavelength) in this case.
 
-         COSHNumOvrCOSHDen = EXP( k*z ) + EXP( -k*( z + 2.0_ReKi*h ) )
+         COSHNumOvrCOSHDen = EXP( k*z ) + EXP( -k*( z + 2.0_SiKi*h ) )
 
       ELSE                       ! 0 < k*h <= 89.4; use the shallow water formulation.
 
@@ -469,21 +468,21 @@ CONTAINS
 
          ! Passed Variables:
 
-      REAL(ReKi)                   :: COSHNumOvrSINHDen                               ! This function = COSH( k*( z + h ) )/SINH( k*h ) (-)
-      REAL(ReKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
-      REAL(ReKi), INTENT(IN )      :: k                                               ! Wave number ( k      >= 0 ) (1/m)
-      REAL(ReKi), INTENT(IN )      :: z                                               ! Elevation   (-h <= z <= 0 ) (meters)
+      REAL(SiKi)                   :: COSHNumOvrSINHDen                               ! This function = COSH( k*( z + h ) )/SINH( k*h ) (-)
+      REAL(SiKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
+      REAL(SiKi), INTENT(IN )      :: k                                               ! Wave number ( k      >= 0 ) (1/m)
+      REAL(SiKi), INTENT(IN )      :: z                                               ! Elevation   (-h <= z <= 0 ) (meters)
 
 
 
          ! Compute the hyperbolic numerator over denominator:
 
 
-      IF (   k  < EPSILON(0.0_ReKi)  )  THEN  ! When .TRUE., the shallow water formulation is ill-conditioned; thus, HUGE(k) is returned to approximate the known value of infinity.
+      IF (   k  < EPSILON(0.0_SiKi)  )  THEN  ! When .TRUE., the shallow water formulation is ill-conditioned; thus, HUGE(k) is returned to approximate the known value of infinity.
 
          COSHNumOvrSINHDen = HUGE( k )
 
-      ELSEIF ( k*h  > 89.4_ReKi )  THEN  ! When .TRUE., the shallow water formulation will trigger a floating point overflow error; however, COSH( k*( z + h ) )/SINH( k*h ) = EXP( k*z ) + EXP( -k*( z + 2*h ) ) for large k*h.  This equals the deep water formulation, EXP( k*z ), except near z = -h, because h > 14.23*wavelength (since k = 2*Pi/wavelength) in this case.
+      ELSEIF ( k*h  > 89.4_SiKi )  THEN  ! When .TRUE., the shallow water formulation will trigger a floating point overflow error; however, COSH( k*( z + h ) )/SINH( k*h ) = EXP( k*z ) + EXP( -k*( z + 2*h ) ) for large k*h.  This equals the deep water formulation, EXP( k*z ), except near z = -h, because h > 14.23*wavelength (since k = 2*Pi/wavelength) in this case.
 
          COSHNumOvrSINHDen = EXP( k*z ) + EXP( -k*( z + 2*h ) )
 
@@ -513,20 +512,20 @@ CONTAINS
 
          ! Passed Variables:
 
-      REAL(ReKi)                   :: COTH                                            ! This function = COSH( X )/SINH( X ) (-)
-      REAL(ReKi), INTENT(IN )      :: X                                               ! The argument (-)
+      REAL(SiKi)                   :: COTH                                            ! This function = COSH( X )/SINH( X ) (-)
+      REAL(SiKi), INTENT(IN )      :: X                                               ! The argument (-)
 
 
 
          ! Compute the hyperbolic cotangent:
 
-      IF ( X == 0.0 )  THEN   ! When .TRUE., the formulation below is ill-conditioned; thus, HUGE(X) is returned to approximate the known value of infinity.
+      IF ( X == 0.0_SiKi )  THEN   ! When .TRUE., the formulation below is ill-conditioned; thus, HUGE(X) is returned to approximate the known value of infinity.
 
          COTH = HUGE( X )
 
       ELSE                    ! X /= 0.0; use the numerically-stable computation of COTH(X) by means of TANH(X).
 
-         COTH = 1.0/TANH( X ) ! = COSH( X )/SINH( X )
+         COTH = 1.0_SiKi/TANH( X ) ! = COSH( X )/SINH( X )
 
       END IF
 
@@ -553,22 +552,22 @@ CONTAINS
 
          ! Passed Variables:
 
-      REAL(ReKi)                   :: SINHNumOvrSINHDen                               ! This function = SINH( k*( z + h ) )/SINH( k*h ) (-)
-      REAL(ReKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
-      REAL(ReKi), INTENT(IN )      :: k                                               ! Wave number ( k      >= 0 ) (1/m)
-      REAL(ReKi), INTENT(IN )      :: z                                               ! Elevation   (-h <= z <= 0 ) (meters)
+      REAL(SiKi)                   :: SINHNumOvrSINHDen                               ! This function = SINH( k*( z + h ) )/SINH( k*h ) (-)
+      REAL(SiKi), INTENT(IN )      :: h                                               ! Water depth ( h      >  0 ) (meters)
+      REAL(SiKi), INTENT(IN )      :: k                                               ! Wave number ( k      >= 0 ) (1/m)
+      REAL(SiKi), INTENT(IN )      :: z                                               ! Elevation   (-h <= z <= 0 ) (meters)
 
 
 
          ! Compute the hyperbolic numerator over denominator:
 
-      IF (     k   == 0.0  )  THEN  ! When .TRUE., the shallow water formulation is ill-conditioned; thus, the known value of unity is returned.
+      IF (     k   == 0.0_SiKi  )  THEN  ! When .TRUE., the shallow water formulation is ill-conditioned; thus, the known value of unity is returned.
 
          SINHNumOvrSINHDen = 1.0
 
-      ELSEIF ( k*h >  89.4_ReKi )  THEN  ! When .TRUE., the shallow water formulation will trigger a floating point overflow error; however, SINH( k*( z + h ) )/SINH( k*h ) = EXP( k*z ) - EXP( -k*( z + 2*h ) ) for large k*h.  This equals the deep water formulation, EXP( k*z ), except near z = -h, because h > 14.23*wavelength (since k = 2*Pi/wavelength) in this case.
+      ELSEIF ( k*h >  89.4_SiKi )  THEN  ! When .TRUE., the shallow water formulation will trigger a floating point overflow error; however, SINH( k*( z + h ) )/SINH( k*h ) = EXP( k*z ) - EXP( -k*( z + 2*h ) ) for large k*h.  This equals the deep water formulation, EXP( k*z ), except near z = -h, because h > 14.23*wavelength (since k = 2*Pi/wavelength) in this case.
 
-         SINHNumOvrSINHDen = EXP( k*z ) - EXP( -k*( z + 2.0_ReKi*h ) )
+         SINHNumOvrSINHDen = EXP( k*z ) - EXP( -k*( z + 2.0_SiKi*h ) )
 
       ELSE                          ! 0 < k*h <= 89.4; use the shallow water formulation.
 
@@ -581,27 +580,7 @@ CONTAINS
       RETURN
       END FUNCTION SINHNumOvrSINHDen
       
-      
-      
-
-
-
-
-!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE WhiteNoiseWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )    
-!! This routine initializes the waves data for WaveMod = 5 , or white noise waves option
-!!----------------------------------------------------------------------------------------------------------------------------------
-! 
-!
-!   TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine    
-!   TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut     ! Initialization output data      
-!   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-!   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-!
-!   
-!      ! Local Variables
-!      WaveS1Sdd = WaveDT*WaveHs*WaveHs/(8.0*Pi)
-!END SUBROUTINE WhiteNoiseWaves_Init
+ 
 
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )    
@@ -649,7 +628,10 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ALLOCATE ( InitOut%WaveAcc0   (0:InitOut%NStepWave,InitInp%NWaveKin0,3) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc0.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
       
-      ALLOCATE ( InitOut%WaveDirArr( 0:InitOut%NStepWave2                  ), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%nodeInWater(0:InitOut%NStepWave,InitInp%NWaveKin0  ) , STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%nodeInWater.',  ErrStat,ErrMsg,'StillWaterWaves_Init')
+      
+      ALLOCATE ( InitOut%WaveDirArr (0:InitOut%NStepWave2                   ) , STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDirArr.',ErrStat,ErrMsg,'StillWaterWaves_Init')
       
       
@@ -664,6 +646,7 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       InitOut%WaveVel0   = 0.0
       InitOut%WaveAcc0   = 0.0
       InitOut%WaveDirArr = 0.0
+      InitOut%nodeInWater= .FALSE.
       
       ! Add the current velocities to the wave velocities:
 
@@ -671,7 +654,12 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          
          InitOut%WaveVel0(:,J,1) =  InitInp%CurrVxi(J)  ! xi-direction
          InitOut%WaveVel0(:,J,2) =  InitInp%CurrVyi(J)  ! yi-direction
-
+         IF (    InitInp%WaveKinzi0(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi0(J) <= 0 )  THEN
+               
+            InitOut%nodeInWater(:, J) = .TRUE.
+         ELSE
+            InitOut%nodeInWater(:, J) = .FALSE.
+         END IF
       END DO                ! J - All points where the incident wave kinematics will be computed
 
 END SUBROUTINE StillWaterWaves_Init
@@ -684,103 +672,103 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 !----------------------------------------------------------------------------------------------------------------------------------
 
    TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
-   TYPE(Waves_InitOutputType),       INTENT(INOUT)  :: InitOut     ! Output data      
+   TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut     ! Output data      
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
    
    
    ! Local Variables
-   COMPLEX(ReKi), PARAMETER     :: ImagNmbr = (0.0,1.0)                            ! The imaginary number, SQRT(-1.0)
-   COMPLEX(ReKi)                :: ImagOmega                                       ! = ImagNmbr*Omega (rad/s)
-   REAL(ReKi), ALLOCATABLE      :: WaveElev0  (:)                                  ! Instantaneous elevation of incident waves at the platform reference point (meters)
-   COMPLEX(ReKi), ALLOCATABLE   :: PWaveAccC0HxiPz0 (:)                            ! Partial derivative of WaveAccC0Hxi(:) with respect to zi at zi = 0 (1/s^2) 
-   COMPLEX(ReKi), ALLOCATABLE   :: PWaveAccC0HyiPz0 (:)                            ! Partial derivative of WaveAccC0Hyi(:) with respect to zi at zi = 0 (1/s^2) 
-   COMPLEX(ReKi), ALLOCATABLE   :: PWaveAccC0VPz0 (:)                              ! Partial derivative of WaveAccC0V  (:) with respect to zi at zi = 0 (1/s^2) 
-   COMPLEX(ReKi), ALLOCATABLE   :: PWaveDynPC0BPz0(:)                              ! Partial derivative of WaveDynPC0B (:) with respect to zi at zi = 0 (N/m  ) 
-   COMPLEX(ReKi), ALLOCATABLE   :: PWaveVelC0HxiPz0 (:)                            ! Partial derivative of WaveVelC0Hxi(:) with respect to zi at zi = 0 (1/s  ) 
-   COMPLEX(ReKi), ALLOCATABLE   :: PWaveVelC0HyiPz0 (:)                            ! Partial derivative of WaveVelC0Hyi(:) with respect to zi at zi = 0 (1/s  ) 
-   COMPLEX(ReKi), ALLOCATABLE   :: PWaveVelC0VPz0 (:)                              ! Partial derivative of WaveVelC0V  (:) with respect to zi at zi = 0 (1/s  ) 
-   COMPLEX(ReKi), ALLOCATABLE   :: WaveAccC0Hxi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-   COMPLEX(ReKi), ALLOCATABLE   :: WaveAccC0Hyi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-   COMPLEX(ReKi), ALLOCATABLE   :: WaveAccC0V(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-   COMPLEX(ReKi), ALLOCATABLE   :: WaveDynPC0(:,:)                                 ! Discrete Fourier transform of the instantaneous dynamic pressure                       of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
-   COMPLEX(ReKi), ALLOCATABLE   :: WaveElevC (:,:)                                 ! Discrete Fourier transform of the instantaneous elevation of incident waves (meters)
-   COMPLEX(ReKi), ALLOCATABLE   :: WaveVelC0Hxi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal velocity                    of incident waves before applying stretching at the zi-coordinates for points (m/s)
-   COMPLEX(ReKi), ALLOCATABLE   :: WaveVelC0Hyi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal velocity in x-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
-   COMPLEX(ReKi), ALLOCATABLE   :: WaveVelC0V(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   velocity in y-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
-   COMPLEX(ReKi)                :: WGNC                                            ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
-!   REAL(ReKi)                   :: CurrVxi                                         ! xi-component of the current velocity at the instantaneous elevation (m/s)
-!   REAL(ReKi)                   :: CurrVyi                                         ! yi-component of the current velocity at the instantaneous elevation (m/s)
-!   REAL(ReKi)                   :: CurrVxi0                                        ! xi-component of the current velocity at zi =  0.0 meters            (m/s)
-!   REAL(ReKi)                   :: CurrVyi0                                        ! yi-component of the current velocity at zi =  0.0 meters            (m/s)
-!   REAL(ReKi)                   :: CurrVxiS                                        ! xi-component of the current velocity at zi = -SmllNmbr meters       (m/s)
-!   REAL(ReKi)                   :: CurrVyiS                                        ! yi-component of the current velocity at zi = -SmllNmbr meters       (m/s)
-   REAL(ReKi), ALLOCATABLE      :: CosWaveDir(:)                                   ! COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
-   REAL(ReKi), ALLOCATABLE      :: GHWaveAcc (:,:)                                 ! Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the GHNWvDpth vertical locations in GH Bladed wave data files (m/s^2)
-   REAL(ReKi), ALLOCATABLE      :: GHWaveDynP(:  )                                 ! Instantaneous dynamic pressure of incident waves                                                            at each of the GHNWvDpth vertical locations in GH Bladed wave data files (N/m^2)
-!   REAL(ReKi)                   :: GHWaveTime                                      ! Instantaneous simulation times in GH Bladed wave data files (sec)
-   REAL(ReKi), ALLOCATABLE      :: GHWaveVel (:,:)                                 ! Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the GHNWvDpth vertical locations in GH Bladed wave data files (m/s  )
-   REAL(ReKi), ALLOCATABLE      :: GHWvDpth  (:)                                   ! Vertical locations in GH Bladed wave data files.
-!UNUSED:   !REAL(ReKi), PARAMETER        :: n_Massel = 3.0                                  ! Factor used to the scale the peak spectral frequency in order to find the cut-off frequency based on the suggestion in: Massel, S. R., Ocean Surface Waves: Their Physics and Prediction, Advanced Series on Ocean Engineering - Vol. 11, World Scientific Publishing, Singapore - New Jersey - London - Hong Kong, 1996.  This reference recommends n_Massel > 3.0 (higher for higher-order wave kinemetics); the ">" designation is accounted for by checking if ( Omega > OmegaCutOff ).
-   REAL(ReKi)                   :: Omega                                           ! Wave frequency (rad/s)
-!UNUSED:   !REAL(ReKi)                   :: OmegaCutOff                                     ! Cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s)
-!   REAL(ReKi)                   :: PCurrVxiPz0                                     ! Partial derivative of CurrVxi        with respect to zi at zi = 0 (1/s  )
-!   REAL(ReKi)                   :: PCurrVyiPz0                                     ! Partial derivative of CurrVyi        with respect to zi at zi = 0 (1/s  )
-   REAL(ReKi), ALLOCATABLE      :: PWaveAcc0HxiPz0(:)                              ! Partial derivative of WaveAcc0Hxi(:) with respect to zi at zi = 0 (1/s^2)
-   REAL(ReKi), ALLOCATABLE      :: PWaveAcc0HyiPz0(:)                              ! Partial derivative of WaveAcc0Hyi(:) with respect to zi at zi = 0 (1/s^2)
-   REAL(ReKi), ALLOCATABLE      :: PWaveAcc0VPz0  (:)                              ! Partial derivative of WaveAcc0V  (:) with respect to zi at zi = 0 (1/s^2)
-   REAL(ReKi), ALLOCATABLE      :: PWaveDynP0BPz0 (:)                              ! Partial derivative of WaveDynP0B (:) with respect to zi at zi = 0 (N/m  ) 
-   REAL(ReKi), ALLOCATABLE      :: PWaveVel0HxiPz0(:)                              ! Partial derivative of WaveVel0Hxi(:) with respect to zi at zi = 0 (1/s  )
-   REAL(ReKi), ALLOCATABLE      :: PWaveVel0HyiPz0(:)                              ! Partial derivative of WaveVel0Hyi(:) with respect to zi at zi = 0 (1/s  )
-   REAL(ReKi), ALLOCATABLE      :: PWaveVel0VPz0  (:)                              ! Partial derivative of WaveVel0V  (:) with respect to zi at zi = 0 (1/s  )
-!   REAL(ReKi)                   :: Slope                                           ! Miscellanous slope used in an interpolation (-)
-   REAL(ReKi), PARAMETER        :: SmllNmbr  = 9.999E-4                            ! A small number representing epsilon for taking numerical derivatives.  !bjj: how about using SQRT(EPSILON())?
-   REAL(ReKi)                   :: SQRTNStepWave2                                  ! SQRT( NStepWave/2 )
-   REAL(ReKi), ALLOCATABLE      :: SinWaveDir     (:)                              ! SIN( WaveDirArr(I) )
-   REAL(ReKi), ALLOCATABLE      :: WaveAcc0Hxi (:,:)                               ! Instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
-   REAL(ReKi), ALLOCATABLE      :: WaveAcc0Hyi (:,:)                               ! Instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   COMPLEX(SiKi), PARAMETER     :: ImagNmbr = (0.0,1.0)                            ! The imaginary number, SQRT(-1.0)
+   COMPLEX(SiKi)                :: ImagOmega                                       ! = ImagNmbr*Omega (rad/s)
+   REAL(SiKi), ALLOCATABLE      :: WaveElev0  (:)                                  ! Instantaneous elevation of incident waves at the platform reference point (meters)
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HxiPz0 (:)                            ! Partial derivative of WaveAccC0Hxi(:) with respect to zi at zi = 0 (1/s^2) 
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0HyiPz0 (:)                            ! Partial derivative of WaveAccC0Hyi(:) with respect to zi at zi = 0 (1/s^2) 
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveAccC0VPz0 (:)                              ! Partial derivative of WaveAccC0V  (:) with respect to zi at zi = 0 (1/s^2) 
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveDynPC0BPz0(:)                              ! Partial derivative of WaveDynPC0B (:) with respect to zi at zi = 0 (N/m  ) 
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveVelC0HxiPz0 (:)                            ! Partial derivative of WaveVelC0Hxi(:) with respect to zi at zi = 0 (1/s  ) 
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveVelC0HyiPz0 (:)                            ! Partial derivative of WaveVelC0Hyi(:) with respect to zi at zi = 0 (1/s  ) 
+   COMPLEX(SiKi), ALLOCATABLE   :: PWaveVelC0VPz0 (:)                              ! Partial derivative of WaveVelC0V  (:) with respect to zi at zi = 0 (1/s  ) 
+   COMPLEX(SiKi), ALLOCATABLE   :: WaveAccC0Hxi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   COMPLEX(SiKi), ALLOCATABLE   :: WaveAccC0Hyi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   COMPLEX(SiKi), ALLOCATABLE   :: WaveAccC0V(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   acceleration                of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   COMPLEX(SiKi), ALLOCATABLE   :: WaveDynPC0(:,:)                                 ! Discrete Fourier transform of the instantaneous dynamic pressure                       of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
+   COMPLEX(SiKi), ALLOCATABLE   :: WaveElevC (:,:)                                 ! Discrete Fourier transform of the instantaneous elevation of incident waves (meters)
+   COMPLEX(SiKi), ALLOCATABLE   :: WaveVelC0Hxi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal velocity                    of incident waves before applying stretching at the zi-coordinates for points (m/s)
+   COMPLEX(SiKi), ALLOCATABLE   :: WaveVelC0Hyi(:,:)                               ! Discrete Fourier transform of the instantaneous horizontal velocity in x-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
+   COMPLEX(SiKi), ALLOCATABLE   :: WaveVelC0V(:,:)                                 ! Discrete Fourier transform of the instantaneous vertical   velocity in y-direction     of incident waves before applying stretching at the zi-coordinates for points (m/s)
+   COMPLEX(SiKi)                :: WGNC                                            ! Discrete Fourier transform of the realization of a White Gaussian Noise (WGN) time series process with unit variance for the current frequency component (-)
+!   REAL(SiKi)                   :: CurrVxi                                         ! xi-component of the current velocity at the instantaneous elevation (m/s)
+!   REAL(SiKi)                   :: CurrVyi                                         ! yi-component of the current velocity at the instantaneous elevation (m/s)
+!   REAL(SiKi)                   :: CurrVxi0                                        ! xi-component of the current velocity at zi =  0.0 meters            (m/s)
+!   REAL(SiKi)                   :: CurrVyi0                                        ! yi-component of the current velocity at zi =  0.0 meters            (m/s)
+!   REAL(SiKi)                   :: CurrVxiS                                        ! xi-component of the current velocity at zi = -SmllNmbr meters       (m/s)
+!   REAL(SiKi)                   :: CurrVyiS                                        ! yi-component of the current velocity at zi = -SmllNmbr meters       (m/s)
+   REAL(SiKi), ALLOCATABLE      :: CosWaveDir(:)                                   ! COS( WaveDirArr(I) ) -- Each wave frequency has a unique wave direction.
+   REAL(SiKi), ALLOCATABLE      :: GHWaveAcc (:,:)                                 ! Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the GHNWvDpth vertical locations in GH Bladed wave data files (m/s^2)
+   REAL(SiKi), ALLOCATABLE      :: GHWaveDynP(:  )                                 ! Instantaneous dynamic pressure of incident waves                                                            at each of the GHNWvDpth vertical locations in GH Bladed wave data files (N/m^2)
+!   REAL(SiKi)                   :: GHWaveTime                                      ! Instantaneous simulation times in GH Bladed wave data files (sec)
+   REAL(SiKi), ALLOCATABLE      :: GHWaveVel (:,:)                                 ! Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the GHNWvDpth vertical locations in GH Bladed wave data files (m/s  )
+   REAL(SiKi), ALLOCATABLE      :: GHWvDpth  (:)                                   ! Vertical locations in GH Bladed wave data files.
+!UNUSED:   !REAL(SiKi), PARAMETER        :: n_Massel = 3.0                                  ! Factor used to the scale the peak spectral frequency in order to find the cut-off frequency based on the suggestion in: Massel, S. R., Ocean Surface Waves: Their Physics and Prediction, Advanced Series on Ocean Engineering - Vol. 11, World Scientific Publishing, Singapore - New Jersey - London - Hong Kong, 1996.  This reference recommends n_Massel > 3.0 (higher for higher-order wave kinemetics); the ">" designation is accounted for by checking if ( Omega > OmegaCutOff ).
+   REAL(SiKi)                   :: Omega                                           ! Wave frequency (rad/s)
+!UNUSED:   !REAL(SiKi)                   :: OmegaCutOff                                     ! Cut-off frequency or upper frequency limit of the wave spectrum beyond which the wave spectrum is zeroed (rad/s)
+   REAL(SiKi)                   :: PCurrVxiPz0                                     ! Partial derivative of CurrVxi        with respect to zi at zi = 0 (1/s  )
+   REAL(SiKi)                   :: PCurrVyiPz0                                     ! Partial derivative of CurrVyi        with respect to zi at zi = 0 (1/s  )
+   REAL(SiKi), ALLOCATABLE      :: PWaveAcc0HxiPz0(:)                              ! Partial derivative of WaveAcc0Hxi(:) with respect to zi at zi = 0 (1/s^2)
+   REAL(SiKi), ALLOCATABLE      :: PWaveAcc0HyiPz0(:)                              ! Partial derivative of WaveAcc0Hyi(:) with respect to zi at zi = 0 (1/s^2)
+   REAL(SiKi), ALLOCATABLE      :: PWaveAcc0VPz0  (:)                              ! Partial derivative of WaveAcc0V  (:) with respect to zi at zi = 0 (1/s^2)
+   REAL(SiKi), ALLOCATABLE      :: PWaveDynP0BPz0 (:)                              ! Partial derivative of WaveDynP0B (:) with respect to zi at zi = 0 (N/m  ) 
+   REAL(SiKi), ALLOCATABLE      :: PWaveVel0HxiPz0(:)                              ! Partial derivative of WaveVel0Hxi(:) with respect to zi at zi = 0 (1/s  )
+   REAL(SiKi), ALLOCATABLE      :: PWaveVel0HyiPz0(:)                              ! Partial derivative of WaveVel0Hyi(:) with respect to zi at zi = 0 (1/s  )
+   REAL(SiKi), ALLOCATABLE      :: PWaveVel0VPz0  (:)                              ! Partial derivative of WaveVel0V  (:) with respect to zi at zi = 0 (1/s  )
+!   REAL(SiKi)                   :: Slope                                           ! Miscellanous slope used in an interpolation (-)
+   REAL(SiKi), PARAMETER        :: SmllNmbr  = 9.999E-4                            ! A small number representing epsilon for taking numerical derivatives.  !bjj: how about using SQRT(EPSILON())?
+   REAL(SiKi)                   :: SQRTNStepWave2                                  ! SQRT( NStepWave/2 )
+   REAL(SiKi), ALLOCATABLE      :: SinWaveDir     (:)                              ! SIN( WaveDirArr(I) )
+   REAL(SiKi), ALLOCATABLE      :: WaveAcc0Hxi (:,:)                               ! Instantaneous horizontal acceleration in x-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+   REAL(SiKi), ALLOCATABLE      :: WaveAcc0Hyi (:,:)                               ! Instantaneous horizontal acceleration in y-direction of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
 !UNUSED:  for future wave stretching
-!   REAL(ReKi)                   :: WaveAcc0HxiExtrap                               ! Temporary value extrapolated from the WaveAcc0Hxi(:,:) array (m/s^2)
-!   REAL(ReKi)                   :: WaveAcc0HxiExtrap                               ! Temporary value extrapolated from the WaveAcc0Hxi(:,:) array (m/s^2)
-!   REAL(ReKi)                   :: WaveAcc0HyiInterp                               ! Temporary value interpolated from the WaveAcc0Hyi(:,:) array (m/s^2)
-!   REAL(ReKi)                   :: WaveAcc0HyiInterp                               ! Temporary value interpolated from the WaveAcc0Hyi(:,:) array (m/s^2)
-   REAL(ReKi), ALLOCATABLE      :: WaveAcc0V (:,:)                                 ! Instantaneous vertical   acceleration of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
+!   REAL(SiKi)                   :: WaveAcc0HxiExtrap                               ! Temporary value extrapolated from the WaveAcc0Hxi(:,:) array (m/s^2)
+!   REAL(SiKi)                   :: WaveAcc0HxiExtrap                               ! Temporary value extrapolated from the WaveAcc0Hxi(:,:) array (m/s^2)
+!   REAL(SiKi)                   :: WaveAcc0HyiInterp                               ! Temporary value interpolated from the WaveAcc0Hyi(:,:) array (m/s^2)
+!   REAL(SiKi)                   :: WaveAcc0HyiInterp                               ! Temporary value interpolated from the WaveAcc0Hyi(:,:) array (m/s^2)
+   REAL(SiKi), ALLOCATABLE      :: WaveAcc0V (:,:)                                 ! Instantaneous vertical   acceleration of incident waves before applying stretching at the zi-coordinates for points (m/s^2)
 !UNUSED:  for future wave stretching
-!   REAL(ReKi)                   :: WaveAcc0VExtrap                                 ! Temporary value extrapolated from the WaveAcc0V  (:,:) array (m/s^2)
-!   REAL(ReKi)                   :: WaveAcc0VInterp                                 ! Temporary value interpolated from the WaveAcc0V  (:,:) array (m/s^2)
-   REAL(ReKi), ALLOCATABLE      :: WaveDynP0B(:,:)                                 ! Instantaneous dynamic pressure        of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
+!   REAL(SiKi)                   :: WaveAcc0VExtrap                                 ! Temporary value extrapolated from the WaveAcc0V  (:,:) array (m/s^2)
+!   REAL(SiKi)                   :: WaveAcc0VInterp                                 ! Temporary value interpolated from the WaveAcc0V  (:,:) array (m/s^2)
+   REAL(SiKi), ALLOCATABLE      :: WaveDynP0B(:,:)                                 ! Instantaneous dynamic pressure        of incident waves before applying stretching at the zi-coordinates for points (N/m^2)
 !UNUSED:  for future wave stretching
-!   REAL(ReKi)                   :: WaveDynP0BExtrap                                ! Temporary value extrapolated from the WaveDynP0B (:,:) array (N/m^2)
-!   REAL(ReKi)                   :: WaveDynP0BInterp                                ! Temporary value interpolated from the WaveDynP0B (:,:) array (N/m^2)
-!   REAL(ReKi)                   :: WaveElev_Max                                    ! Maximum expected value of the instantaneous elevation of incident waves (meters)
-!   REAL(ReKi)                   :: WaveElev_Min                                    ! Minimum expected value of the instantaneous elevation of incident waves (meters)
-   COMPLEX(ReKi)                :: WaveElevxiPrime0
-   REAL(ReKi), ALLOCATABLE      :: WaveKinzi0Prime(:)                              ! zi-coordinates for points where the incident wave kinematics will be computed before applying stretching; these are relative to the mean see level (meters)
+!   REAL(SiKi)                   :: WaveDynP0BExtrap                                ! Temporary value extrapolated from the WaveDynP0B (:,:) array (N/m^2)
+!   REAL(SiKi)                   :: WaveDynP0BInterp                                ! Temporary value interpolated from the WaveDynP0B (:,:) array (N/m^2)
+!   REAL(SiKi)                   :: WaveElev_Max                                    ! Maximum expected value of the instantaneous elevation of incident waves (meters)
+!   REAL(SiKi)                   :: WaveElev_Min                                    ! Minimum expected value of the instantaneous elevation of incident waves (meters)
+   COMPLEX(SiKi)                :: WaveElevxiPrime0
+   REAL(SiKi), ALLOCATABLE      :: WaveKinzi0Prime(:)                              ! zi-coordinates for points where the incident wave kinematics will be computed before applying stretching; these are relative to the mean see level (meters)
    INTEGER   , ALLOCATABLE      :: WaveKinPrimeMap(:)
-!   REAL(ReKi), ALLOCATABLE      :: WaveKinzi0St   (:)                              ! Array of elevations found by stretching the elevations in the WaveKinzi0Prime(:) array using the instantaneous wave elevation; these are relative to the mean see level (meters)
-   REAL(ReKi)                   :: WaveNmbr                                        ! Wavenumber of the current frequency component (1/meter)
-   REAL(ReKi)                   :: WaveS1Sdd                                       ! One-sided power spectral density of the wave spectrum per unit time for the current frequency component (m^2/(rad/s))
-   REAL(ReKi)                   :: WaveS2Sdd                                       ! Two-sided power spectral density of the wave spectrum per unit time for the current frequency component (m^2/(rad/s))
+!   REAL(SiKi), ALLOCATABLE      :: WaveKinzi0St   (:)                              ! Array of elevations found by stretching the elevations in the WaveKinzi0Prime(:) array using the instantaneous wave elevation; these are relative to the mean see level (meters)
+   REAL(SiKi)                   :: WaveNmbr                                        ! Wavenumber of the current frequency component (1/meter)
+   REAL(SiKi)                   :: WaveS1Sdd                                       ! One-sided power spectral density of the wave spectrum per unit time for the current frequency component (m^2/(rad/s))
+   REAL(SiKi)                   :: WaveS2Sdd                                       ! Two-sided power spectral density of the wave spectrum per unit time for the current frequency component (m^2/(rad/s))
    REAL(DbKi)                   :: WaveTMax                                        ! Analysis time for incident wave calculations (sec)
-   REAL(ReKi), ALLOCATABLE      :: WaveVel0Hxi    (:,:)                            ! Instantaneous xi-direction velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
+   REAL(SiKi), ALLOCATABLE      :: WaveVel0Hxi    (:,:)                            ! Instantaneous xi-direction velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
 !UNUSED:  for future wave stretching
-!   REAL(ReKi)                   :: WaveVel0HxiExtrap                               ! Temporary value extrapolated from the WaveVel0Hxi(:,:) array (m/s  )
-!   REAL(ReKi)                   :: WaveVel0HxiInterp                               ! Temporary value interpolated from the WaveVel0Hxi(:,:) array (m/s  )
-   REAL(ReKi), ALLOCATABLE      :: WaveVel0Hyi    (:,:)                            ! Instantaneous yi-direction velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
+!   REAL(SiKi)                   :: WaveVel0HxiExtrap                               ! Temporary value extrapolated from the WaveVel0Hxi(:,:) array (m/s  )
+!   REAL(SiKi)                   :: WaveVel0HxiInterp                               ! Temporary value interpolated from the WaveVel0Hxi(:,:) array (m/s  )
+   REAL(SiKi), ALLOCATABLE      :: WaveVel0Hyi    (:,:)                            ! Instantaneous yi-direction velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
 !UNUSED:  for future wave stretching
-!   REAL(ReKi)                   :: WaveVel0HyiExtrap                               ! Temporary value extrapolated from the WaveVel0Hyi(:,:) array (m/s  )
-!   REAL(ReKi)                   :: WaveVel0HyiInterp                               ! Temporary value interpolated from the WaveVel0Hyi(:,:) array (m/s  )
-   REAL(ReKi), ALLOCATABLE      :: WaveVel0V (:,:)                                 ! Instantaneous vertical     velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
+!   REAL(SiKi)                   :: WaveVel0HyiExtrap                               ! Temporary value extrapolated from the WaveVel0Hyi(:,:) array (m/s  )
+!   REAL(SiKi)                   :: WaveVel0HyiInterp                               ! Temporary value interpolated from the WaveVel0Hyi(:,:) array (m/s  )
+   REAL(SiKi), ALLOCATABLE      :: WaveVel0V (:,:)                                 ! Instantaneous vertical     velocity   of incident waves before applying stretching at the zi-coordinates for points (m/s  )
 !UNUSED:  for future wave stretching
-!   REAL(ReKi)                   :: WaveVel0VExtrap                                 ! Temporary value extrapolated from the WaveVel0V  (:,:) array (m/s  )
-!   REAL(ReKi)                   :: WaveVel0VInterp                                 ! Temporary value interpolated from the WaveVel0V  (:,:) array (m/s  )
-!   REAL(ReKi)                   :: zi_Max                                          ! Maximum elevation where the wave kinematics are to be applied using      stretching to the instantaneous free surface (meters)
-!   REAL(ReKi)                   :: zi_Min                                          ! Minimum elevation where the wave kinematics are to be applied using      stretching to the instantaneous free surface (meters)
-!   REAL(ReKi)                   :: ziPrime_Max                                     ! Maximum elevation where the wave kinematics are computed before applying stretching to the instantaneous free surface (meters)
-!   REAL(ReKi)                   :: ziPrime_Min                                     ! Minimum elevation where the wave kinematics are computed before applying stretching to the instantaneous free surface (meters)
+!   REAL(SiKi)                   :: WaveVel0VExtrap                                 ! Temporary value extrapolated from the WaveVel0V  (:,:) array (m/s  )
+!   REAL(SiKi)                   :: WaveVel0VInterp                                 ! Temporary value interpolated from the WaveVel0V  (:,:) array (m/s  )
+!   REAL(SiKi)                   :: zi_Max                                          ! Maximum elevation where the wave kinematics are to be applied using      stretching to the instantaneous free surface (meters)
+!   REAL(SiKi)                   :: zi_Min                                          ! Minimum elevation where the wave kinematics are to be applied using      stretching to the instantaneous free surface (meters)
+!   REAL(SiKi)                   :: ziPrime_Max                                     ! Maximum elevation where the wave kinematics are computed before applying stretching to the instantaneous free surface (meters)
+!   REAL(SiKi)                   :: ziPrime_Min                                     ! Minimum elevation where the wave kinematics are computed before applying stretching to the instantaneous free surface (meters)
 
-!   REAL(ReKi)                   :: WGNC_Fact
+!   REAL(SiKi)                   :: WGNC_Fact
 !   INTEGER                      :: GHNStepWave                                     ! Total number of time steps in the GH Bladed wave data files.
 !   INTEGER                      :: GHNWvDpth                                       ! Number of vertical locations in GH Bladed wave data files.
    INTEGER                      :: I                                               ! Generic index
@@ -793,22 +781,22 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    INTEGER                      :: nSeeds                                          ! number of seeds required to initialize the intrinsic random number generator
    INTEGER                      :: NWaveKin0Prime                                  ! Number of points where the incident wave kinematics will be computed before applying stretching to the instantaneous free surface (-)
    INTEGER,    ALLOCATABLE      :: TmpWaveSeeds   (:)                              ! A temporary array used for portability. IVF/CVF use a random number generator initialized with 2 seeds; other platforms can use different implementations (e.g. gfortran needs 8 or 12 seeds)
-   COMPLEX(ReKi)                :: tmpComplex                                      ! A temporary varible to hold the complex value of the wave elevation before storing it into a REAL array
-   COMPLEX(ReKi),ALLOCATABLE    :: tmpComplexArr(:)                                ! A temporary array (0:NStepWave2-1) for FFT use. 
+   COMPLEX(SiKi)                :: tmpComplex                                      ! A temporary varible to hold the complex value of the wave elevation before storing it into a REAL array
+   COMPLEX(SiKi),ALLOCATABLE    :: tmpComplexArr(:)                                ! A temporary array (0:NStepWave2-1) for FFT use. 
    TYPE(FFT_DataType)           :: FFT_Data                                        ! the instance of the FFT module we're using
 
       ! Variables for mult-direction waves
    INTEGER(IntKi)               :: WaveNDirMax                                     !< Maximum value we can change WaveNDir to (relative to original value passed in). Used in finding new WaveNDir value.
    INTEGER(IntKi)               :: WvSpreadNDir                                    !< Number of wave spreading directions for intermediate calculations.  Set later to be MAX(15*InitOut%WaveNDir,1000)
    INTEGER(IntKi)               :: WvSpreadFreqPerDir                              !< Number of wave frequencies per direction
-   REAL(ReKi),    ALLOCATABLE   :: WvSpreadCos2SArr(:)                             !< Wave spreading function results array.  Used in equal energy wave spreading function.
-   REAL(ReKi)                   :: WvSpreadCos2SConst                              !< Normalization constant for wave spreading function.
-   REAL(ReKi),    ALLOCATABLE   :: WvSpreadIntegral(:)                             !< Cumulative integral of the wave spreading function.  Used in finding equal energy wave directions.
-   REAL(ReKi)                   :: WvSpreadDTheta                                  !< Wave direction step size for intermediate calculations.  Used in finding equal energy wave directions.
-   REAL(ReKi),    ALLOCATABLE   :: WvSpreadThetas(:)                               !< Wave direction used in calculations and interpolations
-   REAL(ReKi),    ALLOCATABLE   :: WvSpreadThetaIdx(:)                             !< Indices for wave directions 
-   REAL(ReKi),    ALLOCATABLE   :: WvTheta(:)                                      !< Final set of wave directions (degrees)
-   REAL(ReKi)                   :: WvSpreadIntegralTmp                             !< Temporary variable for the interpolation
+   REAL(SiKi),    ALLOCATABLE   :: WvSpreadCos2SArr(:)                             !< Wave spreading function results array.  Used in equal energy wave spreading function.
+   REAL(SiKi)                   :: WvSpreadCos2SConst                              !< Normalization constant for wave spreading function.
+   REAL(SiKi),    ALLOCATABLE   :: WvSpreadIntegral(:)                             !< Cumulative integral of the wave spreading function.  Used in finding equal energy wave directions.
+   REAL(SiKi)                   :: WvSpreadDTheta                                  !< Wave direction step size for intermediate calculations.  Used in finding equal energy wave directions.
+   REAL(SiKi),    ALLOCATABLE   :: WvSpreadThetas(:)                               !< Wave direction used in calculations and interpolations
+   REAL(SiKi),    ALLOCATABLE   :: WvSpreadThetaIdx(:)                             !< Indices for wave directions 
+   REAL(SiKi),    ALLOCATABLE   :: WvTheta(:)                                      !< Final set of wave directions (degrees)
+   REAL(SiKi)                   :: WvSpreadIntegralTmp                             !< Temporary variable for the interpolation
 
    
       ! Variables for error handling
@@ -829,21 +817,15 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !     -> Since this must be adjusted later, put it in InitOut first and adjust that later in the code.
    InitOut%WaveNDir  = InitInp%WaveNDir
    InitOut%WaveDir   = InitInp%WaveDir                         ! We may want this value later (I had a nasty surprise when this wasn't set)
-   WaveNDirMax       = CEILING(InitOut%WaveNDir*1.25_ReKi)     ! Value we allow WaveNDir to reach before aborting
+   WaveNDirMax       = CEILING(InitOut%WaveNDir*1.25_SiKi)     ! Value we allow WaveNDir to reach before aborting
 
    
-
-!FIXME: what does this comment go to now?  It appears to have gotten separated from its source code.
-   ! Plane progressive (regular) wave, JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, or user-defined spectrum (irregular) wave.
-
 
 
 
          ! Tell our nice users what is about to happen that may take a while:
 
       CALL WrScr ( ' Generating incident wave kinematics and current time history.' )
-
-
 
 
 
@@ -1037,29 +1019,38 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                   
 
          ! Set new value for NStepWave so that the FFT algorithms are efficient.  Note that if this method is changed, the method
-         ! used to calculate the number of multidirectional wave directions (WaveNDir) may need to be updated.
+         ! used to calculate the number of multidirectional wave directions (WaveNDir) and the UserWaveElevations_Init subroutine
+         ! will need to be updated.
 
-      InitOut%NStepWave  = CEILING ( InitInp%WaveTMax/InitInp%WaveDT )                       ! Set NStepWave to an even integer
-      IF ( MOD(InitOut%NStepWave,2) == 1 )  InitOut%NStepWave = InitOut%NStepWave + 1        !   larger or equal to WaveTMax/WaveDT.
-      InitOut%NStepWave2 = MAX( InitOut%NStepWave/2, 1 )                                     ! Make sure that NStepWave is an even product of small factors (PSF) that is
-      InitOut%NStepWave  = 2*PSF ( InitOut%NStepWave2, 9 )                                   !   greater or equal to WaveTMax/WaveDT to ensure that the FFT is efficient.
+            ! NOTE:  For WaveMod = 5, NStepWave and several other things were already set in the UserWaveElevations_Init routine
+            !        using file information (an FFT was performed there, so the information was needed before now).
+      IF (InitInp%WaveMod /= 5 ) THEN
+         InitOut%NStepWave    = CEILING ( InitInp%WaveTMax/InitInp%WaveDT )               ! Set NStepWave to an even integer
+         IF ( MOD(InitOut%NStepWave,2) == 1 )  InitOut%NStepWave = InitOut%NStepWave + 1  !   larger or equal to WaveTMax/WaveDT.
+         InitOut%NStepWave2   = MAX( InitOut%NStepWave/2, 1 )                             ! Make sure that NStepWave is an even product of small factors (PSF) that is
+         InitOut%NStepWave    = 2*PSF ( InitOut%NStepWave2, 9 )                           !   greater or equal to WaveTMax/WaveDT to ensure that the FFT is efficient.
 
-      InitOut%NStepWave2 = InitOut%NStepWave/2                                               ! Update the value of NStepWave2 based on the value needed for NStepWave.
-      WaveTMax           = InitOut%NStepWave*InitInp%WaveDT                                  ! Update the value of WaveTMax   based on the value needed for NStepWave.
-      InitOut%WaveTMax   = WaveTMax                                                          ! Update the value of WaveTMax in the output.  Needed by glue code later.
-      SQRTNStepWave2 = SQRT( REAL( InitOut%NStepWave2, ReKi ) )                              ! Compute SQRT( NStepWave/2 ).
-      InitOut%WaveDOmega = TwoPi/WaveTMax                                                    ! Compute the frequency step for incident wave calculations.
-      I_WaveTp           = NINT ( TwoPi/(InitOut%WaveDOmega*InitInp%WaveTp) )                ! Compute the index of the frequency component nearest to WaveTp.
+         InitOut%NStepWave2   = InitOut%NStepWave/2                                       ! Update the value of NStepWave2 based on the value needed for NStepWave.
+         WaveTMax             = InitOut%NStepWave*InitInp%WaveDT                          ! Update the value of WaveTMax   based on the value needed for NStepWave.
+         InitOut%WaveTMax     = WaveTMax                                                  ! Update the value of WaveTMax in the output.  Needed by glue code later.
+         InitOut%WaveDOmega   = TwoPi/WaveTMax                                            ! Compute the frequency step for incident wave calculations.
+      ELSE
+         WaveTMax             =  InitOut%WaveTMax                                         
+      ENDIF
+      SQRTNStepWave2          = SQRT( REAL( InitOut%NStepWave2, SiKi ) )                  ! Compute SQRT( NStepWave/2 ).
+      I_WaveTp                = NINT ( TwoPi/(InitOut%WaveDOmega*InitInp%WaveTp) )        ! Compute the index of the frequency component nearest to WaveTp.
       
 
 
          ! Allocate all the arrays we need.
 
+      IF ( InitInp%WaveMod /= 5 ) THEN    ! For WaveMod == 5, these are allocated and populated in UserWaveElevations_Init
+         ALLOCATE ( InitOut%WaveElevC0(2, 0:InitOut%NStepWave2                ), STAT=ErrStatTmp )
+         IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,'VariousWaves_Init')
+      ENDIF
+
       ALLOCATE ( InitOut%WaveTime  (0:InitOut%NStepWave                    ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,'VariousWaves_Init')
-
-      ALLOCATE ( InitOut%WaveElevC0(2, 0:InitOut%NStepWave2                ), STAT=ErrStatTmp )
-      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,'VariousWaves_Init')
 
       ALLOCATE ( tmpComplexArr(0:InitOut%NStepWave2                        ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array tmpComplexArr.',     ErrStat,ErrMsg,'VariousWaves_Init')
@@ -1166,6 +1157,9 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       ALLOCATE ( InitOut%WaveAcc0  (0:InitOut%NStepWave,InitInp%NWaveKin0,3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc0.',  ErrStat,ErrMsg,'VariousWaves_Init')
 
+      ALLOCATE ( InitOut%nodeInWater(0:InitOut%NStepWave,InitInp%NWaveKin0  ) , STAT=ErrStatTmp )
+      IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%nodeInWater.',  ErrStat,ErrMsg,'VariousWaves_Init')
+      
          ! Wave direction associated with each frequency
       ALLOCATE ( InitOut%WaveDirArr( 0:InitOut%NStepWave2                  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDirArr.',ErrStat,ErrMsg,'VariousWaves_Init')
@@ -1198,6 +1192,19 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          END IF
       ENDIF
 
+      ! We now need to establish the nodeInWater flag values for all the simulation node for all timesteps, this is an extension which is needed to
+      ! support user input wave data.  TODO:  THIS ASSUMES NO WAVE STRETCHING!!!!!!!! GJH 18 Mar 2015
+      DO J = 1,InitInp%NWaveKin0 ! Loop through all points where the incident wave kinematics will be computed without stretching
+            ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi0 and WtrDpth have already been adjusted using MSL2SWL
+         IF (    InitInp%WaveKinzi0(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi0(J) <= 0 )  THEN
+               
+            InitOut%nodeInWater(:, J) = .TRUE.
+         ELSE
+            InitOut%nodeInWater(:, J) = .FALSE.
+         END IF
+            
+      END DO                   ! J - All points where the incident wave kinematics will be computed without stretching
+       
       
 !FIXME: Is this piece still needed?  If so, why is it commented out?
      ! Calculate the factors needed by the discrete time inverse Fourier
@@ -1259,7 +1266,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                                      ((REAL(InitOut%NStepWave2))/REAL(InitOut%WaveNDir)) )) THEN
             DO WHILE ( InitOut%WaveNDir <= WaveNDirMax )
 
-               InitOut%WaveNDir = InitOut%WaveNDir + 2.0_ReKi
+               InitOut%WaveNDir = InitOut%WaveNDir + 2.0_SiKi
                IF ( EqualRealNos(REAL((     InitOut%NStepWave2 )/     InitOut%WaveNDir), &
                                      ((REAL(InitOut%NStepWave2))/REAL(InitOut%WaveNDir)) )) THEN
                   ErrMsgTmp   =  'Changed WaveNDir from '//TRIM(Num2LStr(InitInp%WaveNDir))//' to '//  &
@@ -1297,7 +1304,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                   I = I + 1
                END IF
 
-               InitOut%WaveNDir = InitOut%WaveNDir + 2.0_ReKi
+               InitOut%WaveNDir = InitOut%WaveNDir + 2.0_SiKi
 
                IF ( I >= 5 ) EXIT
 
@@ -1380,11 +1387,11 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             ! large, or 1000 (whichever is larger).  WvSpreadNDir is used only in discretization for later
             ! interpolation of actual wave directions.
          WvSpreadNDir   = MAX(15*InitOut%WaveNDir,1000)
-         WvSpreadDTheta = InitInp%WaveDirRange/REAL(WvSpreadNDir,ReKi)
+         WvSpreadDTheta = InitInp%WaveDirRange/REAL(WvSpreadNDir,SiKi)
 
             ! Calculate the normalization constant for the wave spreading.
-         WvSpreadCos2SConst   = sqrt(Pi)* (NWTC_GAMMA(InitInp%WaveDirSpread + 1.0_ReKi))/               &
-                                (InitInp%WaveDirRange * NWTC_GAMMA(InitInp%WaveDirSpread + 0.5_ReKi))
+         WvSpreadCos2SConst   = sqrt(Pi)* (NWTC_GAMMA(InitInp%WaveDirSpread + 1.0_SiKi))/               &
+                                (InitInp%WaveDirRange * NWTC_GAMMA(InitInp%WaveDirSpread + 0.5_SiKi))
 
             ! Allocate arrays to use for storing the intermediate values
          ALLOCATE( WvSpreadCos2SArr(0:WvSpreadNDir),  STAT=ErrStatTmp )
@@ -1407,7 +1414,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             !> 2. Calculate the spreading function as a function of angle.  Step through all _WvSpreadNDir_ steps.
          DO I=0,WvSpreadNDir
                ! The current angle as we step through the range
-            WvSpreadThetas(I) =  I*WvSpreadDTheta  + InitInp%WaveDir - InitInp%WaveDirRange/(2.0_ReKi)
+            WvSpreadThetas(I) =  I*WvSpreadDTheta  + InitInp%WaveDir - InitInp%WaveDirRange/(2.0_SiKi)
 
                ! Calculate the wave spreading for the current value of WvSpreadThetas
             WvSpreadCos2SArr(I)  =  WvSpreadCos2SConst*abs( cos(Pi*(WvSpreadThetas(I)-InitInp%WaveDir)/InitInp%WaveDirRange) ) &
@@ -1426,7 +1433,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             !> 4. Perform a quick sanity check.  The last value of the integral table should be 1.0 exactly.
             !!    We will allow for a 1% deviation.  If for some reason an error occurs, it may be due to the
             !!    GAMMA function calculation for the normalization constant, _WvSpreadCos2SConst_.
-         IF ( WvSpreadIntegral(WvSpreadNDir) < 0.99_ReKi .OR. WvSpreadIntegral(WvSpreadNDir) > 1.01_ReKi ) THEN
+         IF ( WvSpreadIntegral(WvSpreadNDir) < 0.99_SiKi .OR. WvSpreadIntegral(WvSpreadNDir) > 1.01_SiKi ) THEN
             CALL SetErrStat(ErrID_Fatal,' Something went wrong in evaluating the multidirectional wave spreading function.  '// &
                            'Integral is '//TRIM(Num2LStr(WvSpreadIntegral(WvSpreadNDir))),ErrStat,ErrMsg,'VariousWaves_Init')
             RETURN
@@ -1437,7 +1444,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             !  We will use the variable LastInd as a simple index for figuring out where in the array we are.  First set to 0
          LastInd  =  0_IntKi
          DO I=1,InitOut%WaveNDir
-            WvSpreadIntegralTmp  = (REAL(I)-0.5_ReKi)/REAL(InitOut%WaveNDir)
+            WvSpreadIntegralTmp  = (REAL(I)-0.5_SiKi)/REAL(InitOut%WaveNDir)
             WvTheta(I)    =  InterpStp( WvSpreadIntegralTmp, WvSpreadIntegral, WvSpreadThetas, LastInd, WvSpreadNDir )
          ENDDO       ! I=1,InitOut%WaveNDir
 
@@ -1563,20 +1570,30 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          ENDSELECT
 
 
-      ! Compute the two-sided power spectral density of the wave spectrum per unit
-      !   time:
+         IF ( InitInp%WaveMod == 5 ) THEN    ! Wave Elevation data read in
 
-         WaveS2Sdd  = 0.5*WaveS1Sdd
+               ! Apply limits to the existing WaveElevC0 arrays if outside frequency range
+            IF ( Omega < InitInp%WvLowCOff .OR. Omega > InitInp%WvHiCOff )  THEN
+               InitOut%WaveElevC0(:,I) = 0.0_SiKi
+            ENDIF
+
+         ELSE  ! All other wave cases
+         
+               ! Compute the two-sided power spectral density of the wave spectrum per unit
+               !   time:
+
+            WaveS2Sdd  = 0.5*WaveS1Sdd
 
 
-      ! Compute the discrete Fourier transform of the instantaneous elevation of
-      !   incident waves at the WAMIT reference point:
-         tmpComplex                   = SQRTNStepWave2*WGNC*SQRT( TwoPi*WaveS2Sdd/REAL(InitInp%WaveDT,ReKi) )
-         InitOut%WaveElevC0     (1,I) = REAL( tmpComplex)
-         InitOut%WaveElevC0     (2,I) = AIMAG(tmpComplex)
+               ! Compute the discrete Fourier transform of the instantaneous elevation of
+               !   incident waves at the WAMIT reference point:
+            tmpComplex                   = SQRTNStepWave2*WGNC*SQRT( TwoPi*WaveS2Sdd/REAL(InitInp%WaveDT,SiKi) )
+            InitOut%WaveElevC0     (1,I) = REAL( tmpComplex)
+            InitOut%WaveElevC0     (2,I) = AIMAG(tmpComplex)
+
+         ENDIF
 
       END DO                ! I - The positive frequency components (including zero) of the discrete Fourier transforms
-
 
 
       !--------------------------------------------------------------------------------
@@ -1632,7 +1649,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
                InitOut%WaveDirArr(K)   =  WvTheta( LastInd )
 
                   ! Now make that element in the WvSpreadThetaIdx really big so we don't pick it again
-               WvSpreadThetaIdx( LastInd )   = HUGE(1.0)
+               WvSpreadThetaIdx( LastInd )   = HUGE(1.0_SiKi)
 
                K  = K + 1     ! Increment the frequency index
 
@@ -1647,7 +1664,6 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             CALL CleanUp()
             RETURN
          END IF
-         InitOut%WaveDirArr(InitOut%NStepWave2) = 0.0_ReKi
 
             !  We are done with the indexing array, so deallocate it
          IF(ALLOCATED( WvSpreadThetaIdx ))   DEALLOCATE( WvSpreadThetaIdx )
@@ -1729,7 +1745,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       !   the incident waves are to be determined:
 
       DO I = 0,InitOut%NStepWave ! Loop through all time steps
-         InitOut%WaveTime(I) = I*REAL(InitInp%WaveDT,ReKi)
+         InitOut%WaveTime(I) = I*REAL(InitInp%WaveDT,SiKi)
       END DO                ! I - All time steps
 
       DO I = 0,InitOut%NStepWave2  ! Loop through the positive frequency components (including zero) of the discrete Fourier transform
@@ -1979,9 +1995,9 @@ CONTAINS
 
    SUBROUTINE WaveElevTimeSeriesAtXY(Xcoord,Ycoord, WaveElevSeriesAtXY, ErrStatLcl, ErrMsgLcl )
 
-      REAL(ReKi),       INTENT(IN   )                 :: Xcoord
-      REAL(ReKi),       INTENT(IN   )                 :: Ycoord
-      REAL(ReKi),       INTENT(  OUT)                 :: WaveElevSeriesAtXY(0:InitOut%NStepWave)
+      REAL(SiKi),       INTENT(IN   )                 :: Xcoord
+      REAL(SiKi),       INTENT(IN   )                 :: Ycoord
+      REAL(SiKi),       INTENT(  OUT)                 :: WaveElevSeriesAtXY(0:InitOut%NStepWave)
       INTEGER(IntKi),   INTENT(  OUT)                 :: ErrStatLcl
       INTEGER(IntKi)                                  :: ErrStatLcl2
       CHARACTER(*),     INTENT(  OUT)                 :: ErrMsgLcl
@@ -1991,7 +2007,7 @@ CONTAINS
       ErrStatLcl  = ErrID_None
 
          ! Zero out the temporary array.
-      tmpComplexArr  = CMPLX(0.0_ReKi,0.0_ReKi)
+      tmpComplexArr  = CMPLX(0.0_SiKi,0.0_SiKi)
 
          ! Loop through the positive frequency components (including zero).  Skip the last point since that is zero by definition.
       DO I = 0,InitOut%NStepWave2-1
@@ -2064,307 +2080,7 @@ CONTAINS
 
 END SUBROUTINE VariousWaves_Init
 
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE GH_BladedWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )              
-!  This routine initializes GH BLADED Waves
-!----------------------------------------------------------------------------------------------------------------------------------
-   TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
-   TYPE(Waves_InitOutputType),      INTENT(INOUT)  :: InitOut     ! Initialization outputs      
-   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-   ! GH Bladed wave data.
-   REAL(ReKi), ALLOCATABLE      :: WaveElev0  (:)                                  ! Instantaneous elevation of incident waves at the WAMIT reference point (meters)
-   
-   INTEGER                       :: UnFA                          ! I/O unit number for the file needed for the GH Bladed wave data by FAST.
-   INTEGER                       :: UnKi                          ! I/O unit number for the GH Bladed wave data file containing wave particle kinematics time history.
-   INTEGER                       :: UnSu                          ! I/O unit number for the GH Bladed wave data file containing surface elevation time history.
-   REAL(ReKi), ALLOCATABLE      :: GHWaveAcc (:,:)                                 ! Instantaneous acceleration of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the GHNWvDpth vertical locations in GH Bladed wave data files (m/s^2)
-   REAL(ReKi), ALLOCATABLE      :: GHWaveDynP(:  )                                 ! Instantaneous dynamic pressure of incident waves                                                            at each of the GHNWvDpth vertical locations in GH Bladed wave data files (N/m^2)
-   REAL(ReKi)                   :: GHWaveTime                                      ! Instantaneous simulation times in GH Bladed wave data files (sec)
-   REAL(ReKi), ALLOCATABLE      :: GHWaveVel (:,:)                                 ! Instantaneous velocity     of incident waves in the xi- (1), yi- (2), and zi- (3) directions, respectively, at each of the GHNWvDpth vertical locations in GH Bladed wave data files (m/s  )
-   REAL(ReKi), ALLOCATABLE      :: GHWvDpth  (:)                                   ! Vertical locations in GH Bladed wave data files.
-   INTEGER                      :: GHNStepWave                                     ! Total number of time steps in the GH Bladed wave data files.
-   INTEGER                      :: GHNWvDpth                                       ! Number of vertical locations in GH Bladed wave data files.
-   INTEGER                      :: I                                               ! Generic index
-   INTEGER                      :: I_Orig                                          ! The index of the time step from original (input) part of data
-   INTEGER                      :: J                                               ! Generic index
-   INTEGER                      :: K                                               ! Generic index
-   INTEGER                      :: LastInd                                         ! Index into the arrays saved from the last call as a starting point for this call
-   
-   LOGICAL                      :: Reading                                        ! Flag to say whether or not we are still reading from the GH Bladed wave data files (files not exhausted).
-
-      ! Temporary error handling variables
-   INTEGER(IntKi)                :: ErrStatTmp                    ! Temporarary error status for procesing
-   CHARACTER(1024)               :: ErrMsgTmp                     ! Temporary error message for processing
-   
-   CHARACTER(*), PARAMETER       :: RoutineName = 'GH_BladedWaves_Init'
-   
-      ! Initialize ErrStat
-         
-   ErrStat = ErrID_None         
-   ErrMsg  = "" 
-   
-   LastInd  = 1
-   Reading  = .TRUE.
-
-   ! Tell our nice users what is about to happen that may take a while:
-
-   CALL WrScr1 ( ' Reading in wave data from GH Bladed files with root name "'//TRIM(InitInp%GHWvFile)//'".' )
-
-
-
-   ! Perform some initialization computations including calculating the
-   !   total number of time steps in the incident wave and ALLOCATing the
-   !   arrays; initialize the unneeded values to zero:
-
-   InitOut%NStepWave  = CEILING ( InitInp%WaveTMax/InitInp%WaveDT )                              ! Set NStepWave to an even integer
-   IF ( MOD(InitOut%NStepWave,2) == 1 )  InitOut%NStepWave = InitOut%NStepWave + 1              !   larger or equal to WaveTMax/WaveDT.
-   InitOut%NStepWave2 = InitOut%NStepWave/2
-
-   ALLOCATE ( InitOut%WaveTime   (0:InitOut%NStepWave                    ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveTime.',  ErrStat,ErrMsg,RoutineName)
-
-   ALLOCATE ( InitOut%WaveElevC0 (2,0:InitOut%NStepWave2                 ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElevC0.',ErrStat,ErrMsg,RoutineName)
-
-   ALLOCATE ( WaveElev0          (0:InitOut%NStepWave-1                  ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveElev0.',         ErrStat,ErrMsg,RoutineName)
-
-   ALLOCATE ( InitOut%WaveElev   (0:InitOut%NStepWave,InitInp%NWaveElev  ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,RoutineName)
-
-   ALLOCATE ( InitOut%WaveDynP0  (0:InitOut%NStepWave,InitInp%NWaveKin0  ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP0.', ErrStat,ErrMsg,RoutineName)
-
-   ALLOCATE ( InitOut%WaveVel0   (0:InitOut%NStepWave,InitInp%NWaveKin0,3) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel0.',  ErrStat,ErrMsg,RoutineName)
-
-   ALLOCATE ( InitOut%WaveAcc0   (0:InitOut%NStepWave,InitInp%NWaveKin0,3) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc0.',  ErrStat,ErrMsg,RoutineName)
-
-   ALLOCATE ( InitOut%WaveDirArr( 0:InitOut%NStepWave2                  ), STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDirArr.',ErrStat,ErrMsg,RoutineName)
-   
-   
-      ! Now check if all the allocations worked properly
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL CleanUp()
-      RETURN
-   END IF
-
-   InitOut%WaveDOmega = 0.0
-   InitOut%WaveElevC0(1,0) = 0.0
-   InitOut%WaveElevC0(2,0) = 0.0
-   InitOut%WaveDirArr      = 0.0_ReKi
-
-
-
-   ! Open the file needed for the GH Bladed wave data by FAST, read in the
-   !   input parameters, then close it again:
-
-   CALL  GetNewUnit( UnFA )
-   CALL  OpenFInpFile ( UnFA, TRIM(InitInp%GHWvFile)//'_FAST.txt', ErrStatTmp, ErrMsgTmp ) ! Open file.
-   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL CleanUp()
-      RETURN
-   END IF
-
-
-
-   ! GHNWvDpth - Number of vertical locations in GH Bladed wave data files.
-
-   READ (UnFA,*)  GHNWvDpth
-
-   IF ( GHNWvDpth <= 0 )  THEN
-      CALL  SetErrStat(ErrID_Fatal,'GHNWvDpth must be greater than zero.',ErrStat,ErrMsg,RoutineName)
-      CLOSE ( UnFA ) 
-      RETURN
-   END IF
-
-   ! GHWvDpth - Vertical locations in GH Bladed wave data files.
-
-   ALLOCATE ( GHWvDpth(GHNWvDpth) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) THEN
-      CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWvDpth.',ErrStat,ErrMsg,RoutineName)
-      CALL CleanUp()
-      CLOSE ( UnFA ) 
-      RETURN
-   END IF
-
-   DO J = 1,GHNWvDpth   ! Loop through all vertical locations in the GH Bladed wave data files
-      READ (UnFA,*)  GHWvDpth(J)
-   END DO                ! J - All vertical locations in the GH Bladed wave data files
-
-   IF ( GHWvDpth(1) /= -InitInp%WtrDpth )  THEN  !TODO: Verify this check is valid if MSL2SWL is /= 0  GJH 9/6/13
-      CALL SetErrStat(ErrID_Fatal,'GHWvDpth(1) must be set to -WtrDpth when WaveMod is set to 5.',ErrStat,ErrMsg,RoutineName)
-      CALL CleanUp()
-      CLOSE ( UnFA ) 
-      RETURN
-   END IF
-
-   CLOSE ( UnFA )                                        ! Close file.
-
-
-
-   ! ALLOCATE arrays associated with the GH Bladed wave data:
-
-   ALLOCATE ( GHWaveDynP(GHNWvDpth) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWaveDynP.',  ErrStat,ErrMsg,RoutineName)
-
-   ALLOCATE ( GHWaveVel(GHNWvDpth,3) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWaveVel.',   ErrStat,ErrMsg,RoutineName)
-
-   ALLOCATE ( GHWaveAcc(GHNWvDpth,3) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array GHWaveAcc.',   ErrStat,ErrMsg,RoutineName)
-
-      ! Now check if all the allocations worked properly
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL CleanUp()
-      RETURN
-   END IF
-
-
-
-
-   ! Open the GH Bladed wave data files:
-
-   CALL  GetNewUnit( UnKi )
-   CALL  OpenFInpFile ( UnKi, TRIM(InitInp%GHWvFile)//'_kinematics.txt', ErrStatTmp, ErrMsgTmp )
-   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL CleanUp()
-      RETURN
-   END IF
-
-   CALL  GetNewUnit( UnSu )
-   CALL  OpenFInpFile ( UnSu, TRIM(InitInp%GHWvFile)//'_surface.txt',ErrStatTmp, ErrMsgTmp )
-   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-   IF ( ErrStat >= AbortErrLev ) THEN
-      CALL CleanUp()
-      RETURN
-   END IF
-
-
-   ! Skip first line in the surface file:
-
-   READ (UnSu,'()')
-
-
-   ! Process data for all the time steps:
-
-   DO I = 0,InitOut%NStepWave ! Loop through all time steps
-
-
-   ! Calculate the array of simulation times at which the instantaneous
-   !   elevation of, velocity of, acceleration of, and loads associated with
-   !   the incident waves are to be determined:
-
-      InitOut%WaveTime(I) = I*REAL(InitInp%WaveDT,ReKi)
-
-
-      IF ( Reading )  THEN       ! .TRUE. if we are still reading from the GH Bladed wave data files.
-
-
-   ! Let's read in data for this time step:
-
-         READ (UnSu,*,IOSTAT=ErrStatTmp)  GHWaveTime, WaveElev0(I)
-
-         IF ( ErrStatTmp == 0 )  THEN ! .TRUE. if there was no error reading in the line of data
-
-            IF ( NINT( GHWaveTime/InitInp%WaveDT ) /= I )  THEN ! This is the same as: IF ( GHWaveTime /= WaveTime(I) ), but works better numerically
-               ErrMsgTmp  = ' The input value of WaveDT is not consistent with the'// &
-                              ' time step inherent in the GH Bladed wave data files.'
-               CALL  SetErrStat(ErrID_Fatal,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
-               RETURN
-            END IF
-
-            DO J = 1,GHNWvDpth   ! Loop through all vertical locations in the GH Bladed wave data files
-               READ (UnKi,*)  ( GHWaveVel(J,K), K=1,3 ), ( GHWaveAcc(J,K), K=1,3 ), GHWaveDynP(J)
-            END DO                ! J - All vertical locations in the GH Bladed wave data files
-
-
-   ! Let's interpolate GHWaveDynP, GHWaveVel, and GHWaveAcc to find
-   !   WaveDynP0, WaveVel0, and WaveAcc0 if the elevation of the point
-   !   defined by WaveKinzi0(J) lies within the range of GHWvDpth, else set
-   !   WaveDynP0, WaveVel0, and WaveAcc0 to zero:
-
-            DO J = 1,InitInp%NWaveKin0   ! Loop through all points where the incident wave kinematics will be computed
-               IF ( ( InitInp%WaveKinzi0(J) < GHWvDpth(1) ) .OR. ( InitInp%WaveKinzi0(J) > GHWvDpth(GHNWvDpth) ) )  THEN ! .TRUE. if the elevation of the point defined by WaveKinzi0(J) lies outside the range of GHWvDpth
-                  InitOut%WaveDynP0   (I,J  ) = 0.0
-                  InitOut%WaveVel0    (I,J,:) = 0.0
-                  InitOut%WaveAcc0    (I,J,:) = 0.0
-               ELSE                                                                                      ! The elevation of the point defined by WaveKinzi0(J) must lie within the range of GHWvDpth; therefore, interpolate to find the incident wave kinematics at that elevation
-                  InitOut%WaveDynP0   (I,J  ) = InterpStp ( InitInp%WaveKinzi0(J), GHWvDpth(:), GHWaveDynP(:),  &
-                                                            LastInd,               GHNWvDpth                    )
-                  DO K = 1,3     ! Loop through all xi- (1), yi- (2), and zi- (3) directions
-                     InitOut%WaveVel0 (I,J,K) = InterpStp ( InitInp%WaveKinzi0(J), GHWvDpth(:), GHWaveVel(:,K), &
-                                                            LastInd,               GHNWvDpth                    )
-                     InitOut%WaveAcc0 (I,J,K) = InterpStp ( InitInp%WaveKinzi0(J), GHWvDpth(:), GHWaveAcc(:,K), &
-                                                            LastInd,               GHNWvDpth                    )
-                  END DO          ! K - All xi- (1), yi- (2), and zi- (3) directions
-               END IF
-            END DO                ! J - All points where the incident wave kinematics will be computed
-
-         ELSE                    ! There must have been an error reading in the line of data
-
-            GHNStepWave = I
-            Reading     = .FALSE.
-
-         END IF
-
-
-      END IF
-
-
-      IF ( .NOT. Reading )  THEN ! .TRUE. if we have finished reading from the GH Bladed wave data files.
-
-
-   ! Let's reuse the input data to fill out the array:
-
-         I_Orig = MOD( I, GHNStepWave )
-
-         InitOut%WaveDynP0(I,:  ) = InitOut%WaveDynP0(I_Orig,:  )
-         WaveElev0(I    ) = WaveElev0(I_Orig    )
-         InitOut%WaveVel0 (I,:,:) = InitOut%WaveVel0 (I_Orig,:,:)
-         InitOut%WaveAcc0 (I,:,:) = InitOut%WaveAcc0 (I_Orig,:,:)
-
-
-      END IF
-
-
-   END DO                ! I - All time steps
-
-
-   ! Close the GH Bladed wave data files:
-
-   CLOSE ( UnKi )
-   CLOSE ( UnSu )
-
-
-
-   ! Compute the incident wave elevations at each desired point on the still
-   !   water level plane where it can be output; the only available point in
-   !   the GH Bladed wave data is (xi=0.0,yi=0.0):
-
-   DO J = 1,InitInp%NWaveElev   ! Loop through all points where the incident wave elevations can be output
-      InitOut%WaveElev (:,J) = WaveElev0(:)
-   END DO                ! J - All points where the incident wave elevations can be output
-
-
-CONTAINS
-   SUBROUTINE CleanUp( )
-
-      IF (ALLOCATED( GHWaveAcc ))         DEALLOCATE( GHWaveAcc,        STAT=ErrStatTmp)
-      IF (ALLOCATED( GHWaveDynP ))        DEALLOCATE( GHWaveDynP,       STAT=ErrStatTmp)
-      IF (ALLOCATED( GHWaveVel ))         DEALLOCATE( GHWaveVel,        STAT=ErrStatTmp)
-      IF (ALLOCATED( GHWvDpth ))          DEALLOCATE( GHWvDpth,         STAT=ErrStatTmp)
-      IF (ALLOCATED( WaveElev0 ))         DEALLOCATE( WaveElev0,        STAT=ErrStatTmp)
-      RETURN
-   END SUBROUTINE CleanUp
-
-END SUBROUTINE GH_BladedWaves_Init
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2445,12 +2161,7 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
          IF ( ErrStat >= AbortErrLev ) RETURN
             
                
-      !CASE ( 3 )                 ! White-noise
-      !   
-      !   CALL WhiteNoiseWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
-      !   CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
-      !   IF ( ErrStat >= AbortErrLev ) RETURN
-         
+               
       CASE ( 1, 2, 3, 4, 10 )       ! 1, 10: Plane progressive (regular) wave, 2: JONSWAP/Pierson-Moskowitz spectrum (irregular) wave, 3: white-noise, or 4: user-defined spectrum (irregular) wave.
       
          CALL VariousWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
@@ -2458,12 +2169,24 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
          IF ( ErrStat >= AbortErrLev ) RETURN
 
         
-      CASE ( 5 )              ! GH Bladed wave data.   
+      CASE ( 5 )              ! User-supplied wave elevation time history; HD derives full wave kinematics from this elevation time series data.   
          
-         CALL GH_BladedWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
+            ! Get the wave frequency information from the file (by FFT of the elevation)
+         CALL UserWaveElevations_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
          CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
          IF ( ErrStat >= AbortErrLev ) RETURN
 
+            ! Now call VariousWaves to continue using the wave elevation and derived frequency information from the file
+         CALL VariousWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
+         CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
+         IF ( ErrStat >= AbortErrLev ) RETURN
+
+         
+      CASE ( 6 )              ! User-supplied wave kinematics data.   
+         
+         CALL UserWaves_Init( InitInp, InitOut, ErrStatTmp, ErrMsgTmp )
+         CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_Init')
+         IF ( ErrStat >= AbortErrLev ) RETURN
       ENDSELECT
    
       
@@ -2684,7 +2407,7 @@ SUBROUTINE Waves_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
       
       
          ! Compute outputs here:
-      y%DummyOutput    = 2.0_ReKi
+      y%DummyOutput    = 2.0_SiKi
 
      
                
@@ -2715,7 +2438,7 @@ SUBROUTINE Waves_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, Err
       
          ! Compute the first time derivatives of the continuous states here:
       
-      dxdt%DummyContState = 0.0_ReKi
+      dxdt%DummyContState = 0.0_SiKi
          
 
 END SUBROUTINE Waves_CalcContStateDeriv
@@ -2773,7 +2496,7 @@ SUBROUTINE Waves_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_re
       
          ! Solve for the constraint states here:
       
-      z_residual%DummyConstrState = 0.0_ReKi
+      z_residual%DummyConstrState = 0.0_SiKi
 
 END SUBROUTINE Waves_CalcConstrStateResidual
 !!----------------------------------------------------------------------------------------------------------------------------------
@@ -3090,10 +2813,10 @@ FUNCTION WheelerStretching ( zOrzPrime, Zeta, h, ForwardOrBackward, ErrStat, Err
 
       ! Passed Variables:
 
-   REAL(ReKi),     INTENT(IN )    :: h                                               ! Water depth (meters)
-   REAL(ReKi)                     :: WheelerStretching                               ! This function = zPrime [forward] or z [backward] (meters)
-   REAL(ReKi),     INTENT(IN )    :: Zeta                                            ! Instantaneous elevation of incident waves (meters)
-   REAL(ReKi),     INTENT(IN )    :: zOrzPrime                                       ! Elevations where the wave kinematics are to be applied using Wheeler stretching, z, [forward] or elevations where the wave kinematics are computed before applying Wheeler stretching, zPrime, [backward] (meters)
+   REAL(SiKi),     INTENT(IN )    :: h                                               ! Water depth (meters)
+   REAL(SiKi)                     :: WheelerStretching                               ! This function = zPrime [forward] or z [backward] (meters)
+   REAL(SiKi),     INTENT(IN )    :: Zeta                                            ! Instantaneous elevation of incident waves (meters)
+   REAL(SiKi),     INTENT(IN )    :: zOrzPrime                                       ! Elevations where the wave kinematics are to be applied using Wheeler stretching, z, [forward] or elevations where the wave kinematics are computed before applying Wheeler stretching, zPrime, [backward] (meters)
    CHARACTER(1),   INTENT(IN )    :: ForwardOrBackWard                               ! A string holding the direction ('F'=Forward, 'B'=Backward) for applying Wheeler stretching.
    INTEGER(IntKi), INTENT(OUT)    :: ErrStat                                         ! Error status of the operation
    CHARACTER(*),   INTENT(OUT)    :: ErrMsg                                        ! Error message if ErrStat /= ErrID_None
@@ -3120,7 +2843,7 @@ FUNCTION WheelerStretching ( zOrzPrime, Zeta, h, ForwardOrBackward, ErrStat, Err
 
    CASE DEFAULT
 
-      WheelerStretching = 0.0_ReKi
+      WheelerStretching = 0.0_SiKi
       
       ErrMsg = 'The last argument in routine WheelerStretching() must be ''F'' or ''B''.'
       ErrStat = ErrID_Fatal

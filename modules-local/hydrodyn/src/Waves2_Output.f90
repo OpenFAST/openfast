@@ -94,7 +94,7 @@ SUBROUTINE Wvs2OUT_MapOutputs( CurrentTime, y, NWaveElev, WaveElev2, AllOuts, Er
    REAL(DbKi),                         INTENT( IN    )  :: CurrentTime    ! Current simulation time in seconds
    TYPE(Waves2_OutputType),            INTENT( INOUT )  :: y              ! Waves2's output data
    INTEGER,                            INTENT( IN    )  :: NWaveElev      ! Number of wave elevation locations to output
-   REAL(ReKi),                         INTENT( IN    )  :: WaveElev2(:)   ! Instantaneous second order correction to the elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
+   REAL(SiKi),                         INTENT( IN    )  :: WaveElev2(:)   ! Instantaneous second order correction to the elevation of incident waves at each of the NWaveElev points where the incident wave elevations can be output (meters)   
    REAL(ReKi),                         INTENT(   OUT )  :: AllOuts(MaxWaves2Outputs)
    INTEGER(IntKi),                     INTENT(   OUT )  :: ErrStat        ! Error status of the operation
    CHARACTER(*),                       INTENT(   OUT )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None

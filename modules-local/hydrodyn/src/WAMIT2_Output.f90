@@ -95,7 +95,7 @@ SUBROUTINE WMT2OUT_MapOutputs( CurrentTime, y, F_Waves2, AllOuts, ErrStat, ErrMs
    INTEGER(IntKi),                     INTENT(   OUT )  :: ErrStat        ! Error status of the operation
    CHARACTER(*),                       INTENT(   OUT )  :: ErrMsg         ! Error message if ErrStat /= ErrID_None
 
-!   INTEGER                                              :: I
+   INTEGER                                              :: I
    
    ErrStat = ErrID_None
    ErrMsg = ""

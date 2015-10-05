@@ -35,13 +35,13 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             INTEGER                  NStepWave                       -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NStepWave2                      -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     WaveDOmega                      -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     WaveElevC0                      {:}{:}     -        -         "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
-typedef   ^                            ^                             ReKi                     WaveTime                        {:}        -        -         ""    -
+typedef   ^                            ^                             SiKi                     WaveElevC0                      {:}{:}     -        -         "Discrete Fourier transform of the instantaneous elevation of incident waves at the platform reference point.  First column is real part, second column is imaginary part"   (meters)
+typedef   ^                            ^                             SiKi                     WaveTime                        {:}        -        -         ""    -
 typedef   ^                            ^                             INTEGER                  WaveMod                         -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     WtrDens                         -          -        -         ""    -
-typedef   ^                            ^                             ReKi                     WaveDirArr                      {:}        -        -         "Array of wave directions (one per frequency) from the Waves module"    -
-typedef   ^                            ^                             ReKi                     WaveDirMin                      -          -        -         "Minimum wave direction from Waves module"    -
-typedef   ^                            ^                             ReKi                     WaveDirMax                      -          -        -         "Maximum wave direction from Waves module"    -
+typedef   ^                            ^                             SiKi                     WaveDirArr                      {:}        -        -         "Array of wave directions (one per frequency) from the Waves module"    -
+typedef   ^                            ^                             SiKi                     WaveDirMin                      -          -        -         "Minimum wave direction from Waves module"    -
+typedef   ^                            ^                             SiKi                     WaveDirMax                      -          -        -         "Maximum wave direction from Waves module"    -
 typedef   ^                            ^                             CHARACTER(10)            OutList                         {18}       -        -         "This should really be dimensioned with MaxOutPts"    -
 typedef   ^                            ^                             LOGICAL                  OutAll                          -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  NumOuts                         -          -        -         ""    -
@@ -91,9 +91,9 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     PtfmCOBxt                -          -        -         ""    -
 typedef   ^                            ^                             ReKi                     PtfmCOByt                -          -        -         ""    -
 typedef   ^                            ^                             INTEGER                  RdtnMod                  -          -         -         ""        -
-typedef   ^                            ^                             ReKi                     WaveExctn                {:}{:}     -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveExctn                {:}{:}     -         -         ""        -
 typedef   ^                            ^                             ReKi                     RhoXg                    -          -         -         ""        -
-typedef   ^                            ^                             ReKi                     WaveTime                 {:}        -         -         ""        -
+typedef   ^                            ^                             SiKi                     WaveTime                 {:}        -         -         ""        -
 typedef   ^                            ^                             INTEGER                  NStepWave                -          -         -         ""        -
 typedef   ^                            ^                             Conv_Rdtn_ParameterType  Conv_Rdtn                -          -         -         ""        -
 typedef   ^                            ^                             SS_Rad_ParameterType     SS_Rdtn                  -          -         -         ""        -

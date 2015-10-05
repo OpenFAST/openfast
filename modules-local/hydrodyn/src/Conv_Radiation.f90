@@ -119,7 +119,7 @@ SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Ini
       
          ! Local variables
              
-      REAL(ReKi)                             :: Omega                                ! Wave frequency (rad/s)     
+      REAL(SiKi)                             :: Omega                                ! Wave frequency (rad/s)     
       REAL(DbKi)                             :: Krnl_Fact                            ! Factor used to scale the magnitude of the RdtnKnrl  as required by the discrete time (co)sine transform (-)     
       REAL(DbKi)                             :: RdtnTMax                             ! Analysis time for wave radiation kernel calculations (sec), may be different from Init_Data%RdtnTMax
       REAL(ReKi)                             :: RdtnDOmega                           ! Frequency step for wave radiation kernel calculations (rad/s)
@@ -195,7 +195,7 @@ RdtnFrmAM = .FALSE.
       p%NStepRdtn  = 2*PSF ( NStepRdtn2, 9 ) + 1                                 !   or equal to RdtnTMax/RdtnDT to ensure that the (co)sine transform is efficient.
 
       p%NStepRdtn1 = p%NStepRdtn + 1                                       ! Save the value of NStepRdtn + 1 for future use.
-      NStepRdtn2   = ( p%NStepRdtn-1 )/2                                           ! Update the value of NStepRdtn2 based on the value needed for NStepRdtn.
+      !NStepRdtn2   = ( p%NStepRdtn-1 )/2                                           ! Update the value of NStepRdtn2 based on the value needed for NStepRdtn.
       RdtnTMax     = ( p%NStepRdtn-1 )*p%RdtnDT                      ! Update the value of RdtnTMax   based on the value needed for NStepRdtn.
       RdtnDOmega   = Pi/RdtnTMax                                                 ! Compute the frequency step for wave radiation kernel calculations.
 
@@ -230,7 +230,7 @@ RdtnFrmAM = .FALSE.
       LastInd = 1
       IF ( RdtnFrmAM )  THEN  ! .TRUE. if we will determine the wave radiation kernel from the frequency-dependent hydrodynamic added mass matrix
 
-
+         
 
          ! Calculate the factor needed by the discrete sine transform in the
          !   calculation of the wave radiation kernel:
@@ -759,7 +759,7 @@ SUBROUTINE Conv_Rdtn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, ErrSt
       CHARACTER(*),                        INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
           ! Local Variables
-!      REAL(ReKi)                           :: IncrmntUD                  ! Incremental change in UD over a single radiation time step (m/s, rad/s)
+      REAL(ReKi)                           :: IncrmntUD                  ! Incremental change in UD over a single radiation time step (m/s, rad/s)
       REAL(ReKi)                           :: RdtnRmndr                  ! Fractional amount of the p%RdtnDT timestep
       INTEGER(IntKi)                       :: J                          ! Generic index
       INTEGER(IntKi)                       :: K                          ! Generic index

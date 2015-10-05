@@ -26,9 +26,9 @@ typedef   Conv_Radiation/Conv_Rdtn     InitInputType                 DbKi       
 typedef   ^                            ^                             CHARACTER(80)    RdtnDTChr
 typedef   ^                            ^                             ReKi             HighFreq                 -          -        -         ""    -
 typedef   ^                            ^                             CHARACTER(1024)  WAMITFile                -          -        -         ""    -
-typedef   ^                            ^                             ReKi             HdroAddMs                {:}{:}     -        -         ""    -
-typedef   ^                            ^                             ReKi             HdroFreq                 {:}        -        -         ""    -
-typedef   ^                            ^                             ReKi             HdroDmpng                {:}{:}     -        -         ""    -
+typedef   ^                            ^                             SiKi             HdroAddMs                {:}{:}     -        -         ""    -
+typedef   ^                            ^                             SiKi             HdroFreq                 {:}        -        -         ""    -
+typedef   ^                            ^                             SiKi             HdroDmpng                {:}{:}     -        -         ""    -
 typedef   ^                            ^                             INTEGER          NInpFreq                 -          -        -         ""    -
 typedef   ^                            ^                             DbKi             RdtnTMax                 -          -        -         ""    -
 typedef   ^                            ^                             INTEGER          UnSum                    -          -        -         ""    -
@@ -71,7 +71,7 @@ typedef   ^                            ^                             INTEGER    
 #
 typedef   ^                            ParameterType                 DbKi             DT                       -          -         -         "Time step for continuous state integration & discrete state update"  seconds
 typedef   ^                            ^                             DbKi             RdtnDT                   -          -         -         ""        -
-typedef   ^                            ^                             ReKi             RdtnKrnl                {:}{:}{:}   -         -         ""        -
+typedef   ^                            ^                             SiKi             RdtnKrnl                {:}{:}{:}   -         -         ""        -
 typedef   ^                            ^                             INTEGER          NStepRdtn                -          -         -         ""        -
 typedef   ^                            ^                             INTEGER          NStepRdtn1               -          -         -         ""        -
 #

@@ -61,7 +61,6 @@ MODULE WAMIT2
    USE WAMIT2_Output
    USE NWTC_Library
    USE NWTC_FFTPACK
-   USE Waves                  ,  ONLY : InterpWrappedStpReal
 
    IMPLICIT NONE
 
@@ -133,11 +132,11 @@ MODULE WAMIT2
       INTEGER(IntKi)                   :: NumWvDir2            !< Number of wave directions in second  wave direction set
       LOGICAL                          :: DataIsSparse(6)      !< Flag to indicate if the data is sparse or complete.  One per component direction
       LOGICAL                          :: LoadComponents(6)    !< Which load components actually exist in the input file
-      COMPLEX(ReKi),    ALLOCATABLE    :: DataSet(:,:,:,:)     !< Storage for 3D data from the 2nd order WAMIT file
+      COMPLEX(SiKi),    ALLOCATABLE    :: DataSet(:,:,:,:)     !< Storage for 3D data from the 2nd order WAMIT file
       LOGICAL,          ALLOCATABLE    :: DataMask(:,:,:,:)    !< Mask for knowing which data points are complete, which are missing
-      REAL(ReKi),       ALLOCATABLE    :: WvFreq1(:)           !< (1:NumFreq1)  elements -- values correspond to index 1 of DataSet
-      REAL(ReKi),       ALLOCATABLE    :: WvDir1(:)            !< (1:NumWvDir1) elements -- values correspond to index 2 of DataSet
-      REAL(ReKi),       ALLOCATABLE    :: WvDir2(:)            !< (1:NumWvDir2) elements -- values correspond to index 3 of DataSet
+      REAL(SiKi),       ALLOCATABLE    :: WvFreq1(:)           !< (1:NumFreq1)  elements -- values correspond to index 1 of DataSet
+      REAL(SiKi),       ALLOCATABLE    :: WvDir1(:)            !< (1:NumWvDir1) elements -- values correspond to index 2 of DataSet
+      REAL(SiKi),       ALLOCATABLE    :: WvDir2(:)            !< (1:NumWvDir2) elements -- values correspond to index 3 of DataSet
    END TYPE W2_InitData3D_Type
 
 
@@ -158,12 +157,12 @@ MODULE WAMIT2
       LOGICAL                          :: WvFreqDiagComplete   !< Flag to indicate if the diagonal element is complete or not (Omega_m, Omega_m).
       LOGICAL                          :: IsSumForce           !< Flag to indicate that this is a sum type array.  Used in setting the F_{nm} term from F_{mn} term.
       LOGICAL                          :: LoadComponents(6)    !< Which load components actually exist in the input file
-      COMPLEX(ReKi),    ALLOCATABLE    :: DataSet(:,:,:,:,:)   !< Storage for 4D data from the 2nd order WAMIT file
+      COMPLEX(SiKi),    ALLOCATABLE    :: DataSet(:,:,:,:,:)   !< Storage for 4D data from the 2nd order WAMIT file
       LOGICAL,          ALLOCATABLE    :: DataMask(:,:,:,:,:)  !< Mask for knowing which data points are complete, which are missing
-      REAL(ReKi),       ALLOCATABLE    :: WvFreq1(:)           !< (1:NumFreq1)  elements -- values correspond to index 1 of DataSet
-      REAL(ReKi),       ALLOCATABLE    :: WvFreq2(:)           !< (1:NumFreq2)  elements -- values correspond to index 2 of DataSet
-      REAL(ReKi),       ALLOCATABLE    :: WvDir1(:)            !< (1:NumWvDir1) elements -- values correspond to index 3 of DataSet
-      REAL(ReKi),       ALLOCATABLE    :: WvDir2(:)            !< (1:NumWvDir2) elements -- values correspond to index 4 of DataSet
+      REAL(SiKi),       ALLOCATABLE    :: WvFreq1(:)           !< (1:NumFreq1)  elements -- values correspond to index 1 of DataSet
+      REAL(SiKi),       ALLOCATABLE    :: WvFreq2(:)           !< (1:NumFreq2)  elements -- values correspond to index 2 of DataSet
+      REAL(SiKi),       ALLOCATABLE    :: WvDir1(:)            !< (1:NumWvDir1) elements -- values correspond to index 3 of DataSet
+      REAL(SiKi),       ALLOCATABLE    :: WvDir2(:)            !< (1:NumWvDir2) elements -- values correspond to index 4 of DataSet
    END TYPE W2_InitData4D_Type
 
 
@@ -242,10 +241,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       TYPE(W2_SumData_Type)                              :: SumQTFData           !< Data storage for the full sum QTF method
 
          ! Force arrays
-      REAL(ReKi)                                         :: MnDriftForce(6)      !< MnDrift force array.   Constant for all time.  First index is force component
-      REAL(ReKi),    ALLOCATABLE                         :: NewmanAppForce(:,:)  !< NewmanApp force array.  Index 1: Time,    Index 2: force component
-      REAL(ReKi),    ALLOCATABLE                         :: DiffQTFForce(:,:)    !< DiffQTF force array.    Index 1: Time,    Index 2: force component
-      REAL(ReKi),    ALLOCATABLE                         :: SumQTFForce(:,:)     !< SumQTF force array.     Index 1: Time,    Index 2: force component
+      REAL(SiKi)                                         :: MnDriftForce(6)      !< MnDrift force array.   Constant for all time.  First index is force component
+      REAL(SiKi),    ALLOCATABLE                         :: NewmanAppForce(:,:)  !< NewmanApp force array.  Index 1: Time,    Index 2: force component
+      REAL(SiKi),    ALLOCATABLE                         :: DiffQTFForce(:,:)    !< DiffQTF force array.    Index 1: Time,    Index 2: force component
+      REAL(SiKi),    ALLOCATABLE                         :: SumQTFForce(:,:)     !< SumQTF force array.     Index 1: Time,    Index 2: force component
 
          ! Temporary error trapping variables
       INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary variable for holding the error status  returned from a CALL statement
@@ -588,7 +587,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          !----------------------------------------------------------------------
 
          ! Initialize the second order force to zero.
-      p%WaveExctn2 = 0.0_ReKi
+      p%WaveExctn2 = 0.0_SiKi
 
 
          ! Difference method data.  Only one difference method can be calculated at a time.
@@ -713,9 +712,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          !> 6. Set zero values for unused outputs.  This is mostly so that the
          !!    compiler does not complain.
          !----------------------------------------------------------------------
-      x%DummyContState           = 0.0_ReKi
-      xd%DummyDiscState          = 0.0_ReKi
-      z%DummyConstrState         = 0.0_ReKi
+      x%DummyContState           = 0.0_SiKi
+      xd%DummyDiscState          = 0.0_SiKi
+      z%DummyConstrState         = 0.0_SiKi
       OtherState%LastIndWave     = 0_IntKi
 
 
@@ -785,32 +784,32 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
       TYPE(W2_DiffData_Type),             INTENT(INOUT)  :: MnDriftData          !< Data storage for the MnDrift method.  Set to INOUT in case we need to convert 4D to 3D
-      REAL(ReKi),                         INTENT(  OUT)  :: MnDriftForce(6)      !< Force data.  Index 1 is the force component.  Constant for all time.
+      REAL(SiKi),                         INTENT(  OUT)  :: MnDriftForce(6)      !< Force data.  Index 1 is the force component.  Constant for all time.
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
 
          ! Local Variables
       CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary error message for calls
       INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
-      REAL(ReKi)                                         :: TmpReal1             !< Temporary real
-      REAL(ReKi)                                         :: TmpReal2             !< Temporary real
+      REAL(SiKi)                                         :: TmpReal1             !< Temporary real
+      REAL(SiKi)                                         :: TmpReal2             !< Temporary real
       LOGICAL                                            :: TmpFlag              !< Temporary logical flag
       INTEGER(IntKi)                                     :: I                    !< Generic counter
       INTEGER(IntKi)                                     :: J                    !< Generic counter
       INTEGER(IntKi)                                     :: K                    !< Generic counter
 
          ! Wave information and QTF temporary
-      COMPLEX(ReKi)                                      :: QTF_Value            !< Temporary complex number for QTF
-      COMPLEX(ReKi)                                      :: aWaveElevC           !< Wave elevation of current frequency component.  NStepWave2 normalization is removed.
-      REAL(ReKi)                                         :: Omega1               !< Wave frequency of this component
+      COMPLEX(SiKi)                                      :: QTF_Value            !< Temporary complex number for QTF
+      COMPLEX(SiKi)                                      :: aWaveElevC           !< Wave elevation of current frequency component.  NStepWave2 normalization is removed.
+      REAL(SiKi)                                         :: Omega1               !< Wave frequency of this component
 
          ! Interpolation routine indices and value to search for, and smaller array to pass
       INTEGER(IntKi)                                     :: LastIndex3(3)        !< Last used index for searching in the interpolation algorithms
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms
-      REAL(ReKi)                                         :: Coord3(3)            !< The (omega1,beta1,beta2) coordinate we want in the 3D dataset
-      REAL(ReKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset
-      COMPLEX(ReKi),ALLOCATABLE                          :: TmpData3D(:,:,:)     !< Temporary 3D array we put the 3D data into (minus the load component indice)
-      COMPLEX(ReKi),ALLOCATABLE                          :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
+      REAL(SiKi)                                         :: Coord3(3)            !< The (omega1,beta1,beta2) coordinate we want in the 3D dataset
+      REAL(SiKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset
+      COMPLEX(SiKi),ALLOCATABLE                          :: TmpData3D(:,:,:)     !< Temporary 3D array we put the 3D data into (minus the load component indice)
+      COMPLEX(SiKi),ALLOCATABLE                          :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
 
 
          ! Initialize a few things
@@ -818,16 +817,16 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       ErrMsgTmp   = ''
       ErrStat     = ErrID_None
       ErrStatTmp  = ErrID_None
-      MnDriftForce = 0.0_ReKi
+      MnDriftForce = 0.0_SiKi
 
 
          !> 1. Check the data to see if low cutoff on the difference frequency is 0.  If it is above zero, that implies no mean drift
          !!    term since \f$ \omega_1=\omega_2 \f$ 
 
-      IF ( InitInp%WvLowCOffD > 0.0_ReKi )  THEN
+      IF ( InitInp%WvLowCOffD > 0.0_SiKi )  THEN
          CALL SetErrStat( ErrID_Warn, ' WvLowCOffD > 0.0, so no mean drift term is calculated (the mean drift uses only the equal '//&
                         'frequency terms of the QTF).  Setting the mean drift force to 0.',ErrStat,ErrMsg,'MnDrift_InitCalc')
-         MnDriftForce = 0.0_ReKi
+         MnDriftForce = 0.0_SiKi
          RETURN
       ENDIF
 
@@ -910,9 +909,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
                ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
                ! we will issue a warning.
-            IF ( (InitInp%WaveDirMin > 150.0_ReKi) .OR. (InitInp%WaveDirMax < -150.0_ReKi) .OR. &
-                 (minval(MnDriftData%data3d%WvDir1) > 150.0_reki) .OR.  (maxval(MnDriftData%data3d%WvDir1) < -150.0_reki) .OR. &
-                 (minval(MnDriftData%data3d%WvDir2) > 150.0_reki) .OR.  (maxval(MnDriftData%data3d%WvDir2) < -150.0_reki) ) THEN
+            IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+                 (minval(MnDriftData%data3d%WvDir1) > 150.0_SiKi) .OR.  (maxval(MnDriftData%data3d%WvDir1) < -150.0_SiKi) .OR. &
+                 (minval(MnDriftData%data3d%WvDir2) > 150.0_SiKi) .OR.  (maxval(MnDriftData%data3d%WvDir2) < -150.0_SiKi) ) THEN
                CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
                                           'direction of interest is near the +/- 180 direction.  This is a known issue with '// &
                                           'the WAMIT2 module that has not yet been addressed.',ErrStat,ErrMsg,'MnDrift_InitCalc')
@@ -966,9 +965,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
                ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
                ! we will issue a warning.
-            IF ( (InitInp%WaveDirMin > 150.0_ReKi) .OR. (InitInp%WaveDirMax < -150.0_ReKi) .OR. &
-                 (MINVAL(MnDriftData%Data4D%WvDir1) > 150.0_reki) .OR.  (MAXVAL(MnDriftData%Data4D%WvDir1) < -150.0_reki) .OR. &
-                 (MINVAL(MnDriftData%Data4D%WvDir2) > 150.0_reki) .OR.  (MAXVAL(MnDriftData%Data4D%WvDir2) < -150.0_reki) ) THEN
+            IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+                 (MINVAL(MnDriftData%Data4D%WvDir1) > 150.0_SiKi) .OR.  (MAXVAL(MnDriftData%Data4D%WvDir1) < -150.0_SiKi) .OR. &
+                 (MINVAL(MnDriftData%Data4D%WvDir2) > 150.0_SiKi) .OR.  (MAXVAL(MnDriftData%Data4D%WvDir2) < -150.0_SiKi) ) THEN
                CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
                                           'direction of interest is near the +/- 180 direction.  This is a known issue with '// &
                                           'the WAMIT2 module that has not yet been addressed.',ErrStat,ErrMsg,'MnDrift_InitCalc')
@@ -1088,7 +1087,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       DO I=1,6
 
             ! Set the MnDrift force to 0.0 (Even ones we don't calculate)
-         MnDriftForce(I)   = 0.0_ReKi
+         MnDriftForce(I)   = 0.0_SiKi
 
             ! Only on the dimensions we requested
          IF ( p%MnDriftDims(I) ) THEN
@@ -1144,7 +1143,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
                ELSE     ! outside the frequency range
 
-                  QTF_Value = CMPLX(0.0_ReKi,0.0_ReKi)
+                  QTF_Value = CMPLX(0.0_SiKi,0.0_SiKi)
 
                ENDIF    ! frequency check
 
@@ -1161,7 +1160,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                   ! Now we have the value of the QTF.  These values should only be real for the omega1=omega2 case of the mean drift.
                   ! However if the value came from the 4D interpolation routine, it might have some residual complex part to it.  So
                   ! we throw the complex part out.
-               QTF_Value = CMPLX(REAL(QTF_Value),0.0_ReKi)
+               QTF_Value = CMPLX(REAL(QTF_Value),0.0_SiKi)
 
 
                   ! Now put it all together... note the frequency stepsize is multiplied after the summation
@@ -1242,15 +1241,15 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
       TYPE(W2_DiffData_Type),             INTENT(INOUT)  :: NewmanAppData        !< Data storage for the NewmanApp method.  Set to INOUT in case we need to convert 4D to 3D
-      REAL(ReKi),  ALLOCATABLE,           INTENT(  OUT)  :: NewmanAppForce(:,:)  !< Force data.  Index 1 is the timestep, index 2 is the load component.
+      REAL(SiKi),  ALLOCATABLE,           INTENT(  OUT)  :: NewmanAppForce(:,:)  !< Force data.  Index 1 is the timestep, index 2 is the load component.
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
 
          ! Local Variables
       CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary error message for calls
       INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
-      REAL(ReKi)                                         :: TmpReal1             !< Temporary real
-      REAL(ReKi)                                         :: TmpReal2             !< Temporary real
+      REAL(SiKi)                                         :: TmpReal1             !< Temporary real
+      REAL(SiKi)                                         :: TmpReal2             !< Temporary real
       LOGICAL                                            :: TmpFlag              !< Temporary logical flag
       INTEGER(IntKi)                                     :: I                    !< Generic counter
       INTEGER(IntKi)                                     :: J                    !< Generic counter
@@ -1259,21 +1258,21 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          ! Wave information and QTF temporary
-      COMPLEX(ReKi)                                      :: QTF_Value            !< Temporary complex number for QTF
-      COMPLEX(ReKi), ALLOCATABLE                         :: NewmanTerm1C(:)      !< First  term in the newman calculation, complex frequency space.  Current load dimension.
-      COMPLEX(ReKi), ALLOCATABLE                         :: NewmanTerm2C(:)      !< Second term in the newman calculation, complex frequency space.  Current load dimension.
-      COMPLEX(ReKi), ALLOCATABLE                         :: NewmanTerm1t(:)      !< First  term in the newman calculation, time domain.  Current load dimension.
-      COMPLEX(ReKi), ALLOCATABLE                         :: NewmanTerm2t(:)      !< Second term in the newman calculation, time domain.  Current load dimension.
-      COMPLEX(ReKi)                                      :: aWaveElevC           !< Wave elevation of current frequency component.  NStepWave2 factor removed.
-      REAL(ReKi)                                         :: Omega1               !< Wave frequency of this component
+      COMPLEX(SiKi)                                      :: QTF_Value            !< Temporary complex number for QTF
+      COMPLEX(SiKi), ALLOCATABLE                         :: NewmanTerm1C(:)      !< First  term in the newman calculation, complex frequency space.  Current load dimension.
+      COMPLEX(SiKi), ALLOCATABLE                         :: NewmanTerm2C(:)      !< Second term in the newman calculation, complex frequency space.  Current load dimension.
+      COMPLEX(SiKi), ALLOCATABLE                         :: NewmanTerm1t(:)      !< First  term in the newman calculation, time domain.  Current load dimension.
+      COMPLEX(SiKi), ALLOCATABLE                         :: NewmanTerm2t(:)      !< Second term in the newman calculation, time domain.  Current load dimension.
+      COMPLEX(SiKi)                                      :: aWaveElevC           !< Wave elevation of current frequency component.  NStepWave2 factor removed.
+      REAL(SiKi)                                         :: Omega1               !< Wave frequency of this component
 
          ! Interpolation routine indices and value to search for, and smaller array to pass
       INTEGER(IntKi)                                     :: LastIndex3(3)        !< Last used index for searching in the interpolation algorithms
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms
-      REAL(ReKi)                                         :: Coord3(3)            !< The (omega1,beta1,beta2) coordinate we want in the 3D dataset
-      REAL(ReKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset
-      COMPLEX(ReKi), ALLOCATABLE                         :: TmpData3D(:,:,:)     !< Temporary 3D array we put the 3D data into (minus the load component indice)
-      COMPLEX(ReKi), ALLOCATABLE                         :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
+      REAL(SiKi)                                         :: Coord3(3)            !< The (omega1,beta1,beta2) coordinate we want in the 3D dataset
+      REAL(SiKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset
+      COMPLEX(SiKi), ALLOCATABLE                         :: TmpData3D(:,:,:)     !< Temporary 3D array we put the 3D data into (minus the load component indice)
+      COMPLEX(SiKi), ALLOCATABLE                         :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
 
 
          ! Initialize a few things
@@ -1367,9 +1366,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
                ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
                ! we will issue a warning.
-            IF ( (InitInp%WaveDirMin > 150.0_ReKi) .OR. (InitInp%WaveDirMax < -150.0_ReKi) .OR. &
-                 (minval(NewmanAppData%data3d%WvDir1) > 150.0_reki) .OR.  (maxval(NewmanAppData%data3d%WvDir1) < -150.0_reki) .OR. &
-                 (minval(NewmanAppData%data3d%WvDir2) > 150.0_reki) .OR.  (maxval(NewmanAppData%data3d%WvDir2) < -150.0_reki) ) THEN
+            IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+                 (minval(NewmanAppData%data3d%WvDir1) > 150.0_SiKi) .OR.  (maxval(NewmanAppData%data3d%WvDir1) < -150.0_SiKi) .OR. &
+                 (minval(NewmanAppData%data3d%WvDir2) > 150.0_SiKi) .OR.  (maxval(NewmanAppData%data3d%WvDir2) < -150.0_SiKi) ) THEN
                CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
                                           'direction of interest is near the +/- 180 direction.  This is a known issue with '// &
                                           'the WAMIT2 module that has not yet been addressed.',ErrStat,ErrMsg,'NewmanApp_InitCalc')
@@ -1423,9 +1422,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
                ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
                ! we will issue a warning.
-            IF ( (InitInp%WaveDirMin > 150.0_ReKi) .OR. (InitInp%WaveDirMax < -150.0_ReKi) .OR. &
-                 (MINVAL(NewmanAppData%Data4D%WvDir1) > 150.0_reki) .OR.  (MAXVAL(NewmanAppData%Data4D%WvDir1) < -150.0_reki) .OR. &
-                 (MINVAL(NewmanAppData%Data4D%WvDir2) > 150.0_reki) .OR.  (MAXVAL(NewmanAppData%Data4D%WvDir2) < -150.0_reki) ) THEN
+            IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+                 (MINVAL(NewmanAppData%Data4D%WvDir1) > 150.0_SiKi) .OR.  (MAXVAL(NewmanAppData%Data4D%WvDir1) < -150.0_SiKi) .OR. &
+                 (MINVAL(NewmanAppData%Data4D%WvDir2) > 150.0_SiKi) .OR.  (MAXVAL(NewmanAppData%Data4D%WvDir2) < -150.0_SiKi) ) THEN
                CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
                                           'direction of interest is near the +/- 180 direction.  This is a known issue with '// &
                                           'the WAMIT2 module that has not yet been addressed.',ErrStat,ErrMsg,'NewmanApp_InitCalc')
@@ -1572,7 +1571,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          ! Set the resulting force to zero.  Will calculate for the dimensions requested.
-      NewmanAppForce = 0.0_ReKi
+      NewmanAppForce = 0.0_SiKi
 
 
          ! Initialize the FFT library
@@ -1595,8 +1594,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       DO I=1,6
 
             ! set zero frequency term to zero
-         NewmanTerm1C(0) = CMPLX(0.0_ReKi, 0.0_ReKi)
-         NewmanTerm2C(0) = CMPLX(0.0_ReKi, 0.0_ReKi)
+         NewmanTerm1C(0) = CMPLX(0.0_SiKi, 0.0_SiKi)
+         NewmanTerm2C(0) = CMPLX(0.0_SiKi, 0.0_SiKi)
 
             ! Only on the dimensions we requested
          IF ( p%NewmanAppDims(I) ) THEN
@@ -1650,7 +1649,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
                ELSE     ! outside the frequency range
 
-                  QTF_Value = CMPLX(0.0_ReKi,0.0_ReKi)
+                  QTF_Value = CMPLX(0.0_SiKi,0.0_SiKi)
 
                ENDIF    ! frequency check
 
@@ -1674,24 +1673,24 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                   ! Now we have the value of the QTF.  These values should only be real for the omega1=omega2 case of the approximation.
                   ! However if the value came from the 4D interpolation routine, it might have some residual complex part to it.  So
                   ! we throw the complex part out.
-               QTF_Value = CMPLX(REAL(QTF_Value),0.0_ReKi)
+               QTF_Value = CMPLX(REAL(QTF_Value),0.0_SiKi)
 
 
                   ! Now we place these results into the arrays
-               IF (REAL(QTF_Value) > 0.0_ReKi) THEN
+               IF (REAL(QTF_Value) > 0.0_SiKi) THEN
 
-                  NewmanTerm1C(J) = aWaveElevC * (QTF_Value)**0.5_ReKi
-                  NewmanTerm2C(J) = CMPLX(0.0_ReKi, 0.0_ReKi)
+                  NewmanTerm1C(J) = aWaveElevC * (QTF_Value)**0.5_SiKi
+                  NewmanTerm2C(J) = CMPLX(0.0_SiKi, 0.0_SiKi)
 
-               ELSE IF (REAL(QTF_Value) < 0.0_ReKi) THEN
+               ELSE IF (REAL(QTF_Value) < 0.0_SiKi) THEN
 
-                  NewmanTerm1C(J) = CMPLX(0.0_ReKi, 0.0_ReKi)
-                  NewmanTerm2C(J) = aWaveElevC * (-QTF_Value)**0.5_ReKi
+                  NewmanTerm1C(J) = CMPLX(0.0_SiKi, 0.0_SiKi)
+                  NewmanTerm2C(J) = aWaveElevC * (-QTF_Value)**0.5_SiKi
 
                ELSE ! at 0
 
-                  NewmanTerm1C(J) = CMPLX(0.0_ReKi, 0.0_ReKi)
-                  NewmanTerm2C(J) = CMPLX(0.0_ReKi, 0.0_ReKi)
+                  NewmanTerm1C(J) = CMPLX(0.0_SiKi, 0.0_SiKi)
+                  NewmanTerm2C(J) = CMPLX(0.0_SiKi, 0.0_SiKi)
 
                ENDIF
 
@@ -1814,15 +1813,15 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
       TYPE(W2_DiffData_Type),             INTENT(INOUT)  :: DiffQTFData          !< Data storage for the DiffQTF method.  Set to INOUT in case we need to convert 4D to 3D
-      REAL(ReKi),  ALLOCATABLE,           INTENT(  OUT)  :: DiffQTFForce(:,:)    !< Force data.  Index 1 is the timestep, index 2 is the load component.
+      REAL(SiKi),  ALLOCATABLE,           INTENT(  OUT)  :: DiffQTFForce(:,:)    !< Force data.  Index 1 is the timestep, index 2 is the load component.
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
 
          ! Local Variables
       CHARACTER(2048)                                    :: ErrMsgTmp            !< Temporary error message for calls
       INTEGER(IntKi)                                     :: ErrStatTmp           !< Temporary error status for calls
-      REAL(ReKi)                                         :: TmpReal1             !< Temporary real
-      REAL(ReKi)                                         :: TmpReal2             !< Temporary real
+      REAL(SiKi)                                         :: TmpReal1             !< Temporary real
+      REAL(SiKi)                                         :: TmpReal2             !< Temporary real
       LOGICAL                                            :: TmpFlag              !< Temporary logical flag
       INTEGER(IntKi)                                     :: I                    !< Generic counter
       INTEGER(IntKi)                                     :: J                    !< Generic counter
@@ -1831,21 +1830,21 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          ! Wave information and QTF temporary
-      COMPLEX(ReKi)                                      :: QTF_Value            !< Temporary complex number for QTF
-      COMPLEX(ReKi), ALLOCATABLE                         :: TmpComplexArr(:)     !< Temporary complex array for frequency domain of one complete load component
-      COMPLEX(ReKi)                                      :: TmpHMinusC           !< Temporary variable for holding the current value of \f$ H^- \f$
-      COMPLEX(ReKi)                                      :: aWaveElevC1          !< Wave elevation of the first  frequency component.  NStepWave2 factor removed.
-      COMPLEX(ReKi)                                      :: aWaveElevC2          !< Wave elevation of the second frequency component.  NStepWave2 factor removed.
-      REAL(ReKi)                                         :: OmegaDiff            !< Wave difference frequency
-      REAL(ReKi),    ALLOCATABLE                         :: TmpDiffQTFForce(:)   !< The resulting diffQTF force for this load component
-      REAL(ReKi)                                         :: Omega1               !< First  wave frequency
-      REAL(ReKi)                                         :: Omega2               !< Second wave frequency
-      REAL(ReKi)                                         :: MnDriftForce(6)      !< Mean drift force (first term).  MnDrift_InitCalc routine will return this.
+      COMPLEX(SiKi)                                      :: QTF_Value            !< Temporary complex number for QTF
+      COMPLEX(SiKi), ALLOCATABLE                         :: TmpComplexArr(:)     !< Temporary complex array for frequency domain of one complete load component
+      COMPLEX(SiKi)                                      :: TmpHMinusC           !< Temporary variable for holding the current value of \f$ H^- \f$
+      COMPLEX(SiKi)                                      :: aWaveElevC1          !< Wave elevation of the first  frequency component.  NStepWave2 factor removed.
+      COMPLEX(SiKi)                                      :: aWaveElevC2          !< Wave elevation of the second frequency component.  NStepWave2 factor removed.
+      REAL(SiKi)                                         :: OmegaDiff            !< Wave difference frequency
+      REAL(SiKi),    ALLOCATABLE                         :: TmpDiffQTFForce(:)   !< The resulting diffQTF force for this load component
+      REAL(SiKi)                                         :: Omega1               !< First  wave frequency
+      REAL(SiKi)                                         :: Omega2               !< Second wave frequency
+      REAL(SiKi)                                         :: MnDriftForce(6)      !< Mean drift force (first term).  MnDrift_InitCalc routine will return this.
 
          ! Interpolation routine indices and value to search for, and smaller array to pass
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms.  First  wave freq
-      REAL(ReKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset. First  wave freq.
-      COMPLEX(ReKi), ALLOCATABLE                         :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
+      REAL(SiKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset. First  wave freq.
+      COMPLEX(SiKi), ALLOCATABLE                         :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
 
 
          ! Initialize a few things
@@ -1915,9 +1914,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
             ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
             ! we will issue a warning.
-         IF ( (InitInp%WaveDirMin > 150.0_ReKi) .OR. (InitInp%WaveDirMax < -150.0_ReKi) .OR. &
-              (MINVAL(DiffQTFData%Data4D%WvDir1) > 150.0_reki) .OR.  (MAXVAL(DiffQTFData%Data4D%WvDir1) < -150.0_reki) .OR. &
-              (MINVAL(DiffQTFData%Data4D%WvDir2) > 150.0_reki) .OR.  (MAXVAL(DiffQTFData%Data4D%WvDir2) < -150.0_reki) ) THEN
+         IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+              (MINVAL(DiffQTFData%Data4D%WvDir1) > 150.0_SiKi) .OR.  (MAXVAL(DiffQTFData%Data4D%WvDir1) < -150.0_SiKi) .OR. &
+              (MINVAL(DiffQTFData%Data4D%WvDir2) > 150.0_SiKi) .OR.  (MAXVAL(DiffQTFData%Data4D%WvDir2) < -150.0_SiKi) ) THEN
             CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
                                        'direction of interest is near the +/- 180 direction.  This is a known issue with '// &
                                        'the WAMIT2 module that has not yet been addressed.',ErrStat,ErrMsg,'DiffQTF_InitCalc')
@@ -2006,7 +2005,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          ! Set the resulting force to zero.  Will calculate for the dimensions requested.
-      DiffQTFForce = 0.0_ReKi
+      DiffQTFForce = 0.0_SiKi
 
 
          ! Initialize the FFT library.  Do not apply normalization.
@@ -2068,7 +2067,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             TmpData4D = DiffQTFData%Data4D%DataSet(:,:,:,:,I)
 
                ! Initialize the temporary array to zero.
-            TmpComplexArr = CMPLX(0.0_ReKi,0.0_ReKi)
+            TmpComplexArr = CMPLX(0.0_SiKi,0.0_SiKi)
 
 
                ! Outer loop to create the TmpComplexArr
@@ -2082,7 +2081,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                IF ( (OmegaDiff >= InitInp%WvLowCOffD) .AND. (OmegaDiff <= InitInp%WvHiCOffD) ) THEN
 
                      ! Set the \f$ H^- \f$ term to zero before we start
-                  TmpHMinusC = CMPLX(0.0_ReKi,0.0_ReKi)
+                  TmpHMinusC = CMPLX(0.0_SiKi,0.0_SiKi)
 
 
                     ! Do the sum over H^-
@@ -2119,11 +2118,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
                      ! Copy this value difference frequency information over to the array we will take the IFFT.  Divide 
                      ! by two for the single sided FFT given in the documentation.
-                  TmpComplexArr(J) = TmpHMinusC / 2.0_ReKi
+                  TmpComplexArr(J) = TmpHMinusC / 2.0_SiKi
 
                ELSE     ! outside the frequency range, so
 
-                  TmpComplexArr(J) = CMPLX(0.0_ReKi,0.0_ReKi)
+                  TmpComplexArr(J) = CMPLX(0.0_SiKi,0.0_SiKi)
 
                ENDIF    ! frequency check
 
@@ -2145,8 +2144,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
                ! Now we multiply the result by 2 and save it to the DiffQTFForce array and add the MnDrift term
             DO K=0,InitInp%NStepWave
-!bjj: todo: Inspector flags this as uninitialized for CertTest 25               
-               DiffQTFForce(K,I) = 2.0_ReKi * TmpDiffQTFForce(K) + MnDriftForce(I)
+               DiffQTFForce(K,I) = 2.0_SiKi * TmpDiffQTFForce(K) + MnDriftForce(I)
             ENDDO
 
                ! Copy the last first term to the last so that it is cyclic
@@ -2253,7 +2251,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       TYPE(WAMIT2_InitInputType),         INTENT(IN   )  :: InitInp              !< Input data for initialization routine
       TYPE(WAMIT2_ParameterType),         INTENT(IN   )  :: p                    !< Parameters
       TYPE(W2_SumData_Type),              INTENT(INOUT)  :: SumQTFData           !< Data storage for the SumQTF method.  Set to INOUT in case we need to convert 4D to 3D
-      REAL(ReKi),  ALLOCATABLE,           INTENT(  OUT)  :: SumQTFForce(:,:)     !< Force data.  Index 1 is the timestep, index 2 is the load component.
+      REAL(SiKi),  ALLOCATABLE,           INTENT(  OUT)  :: SumQTFForce(:,:)     !< Force data.  Index 1 is the timestep, index 2 is the load component.
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
 
@@ -2268,22 +2266,22 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          ! Wave information and QTF temporary
-      COMPLEX(ReKi)                                      :: QTF_Value           !< Temporary complex number for QTF
-      COMPLEX(ReKi), ALLOCATABLE                         :: Term1ArrayC(:)       !< Temporary complex array for frequency domain of one load component. For first  term.
-      COMPLEX(ReKi), ALLOCATABLE                         :: Term2ArrayC(:)       !< Temporary complex array for frequency domain of one load component. For second term.
-      REAL(ReKi),    ALLOCATABLE                         :: Term1Array(:)        !< Temporary complex array for time      domain of one load component. For first  term.
-      REAL(ReKi),    ALLOCATABLE                         :: Term2Array(:)        !< Temporary complex array for time      domain of one load component. For second term.
-      COMPLEX(ReKi)                                      :: TmpHPlusC            !< Temporary variable for holding the current value of \f$ H^+ \f$
-      COMPLEX(ReKi)                                      :: aWaveElevC1          !< Wave elevation of the first  frequency component.  NStepWave2 factor removed.
-      COMPLEX(ReKi)                                      :: aWaveElevC2          !< Wave elevation of the second frequency component.  NStepWave2 factor removed.
-      REAL(ReKi)                                         :: OmegaSum             !< Wave difference frequency
-      REAL(ReKi)                                         :: Omega1               !< First  wave frequency
-      REAL(ReKi)                                         :: Omega2               !< Second wave frequency
+      COMPLEX(SiKi)                                      :: QTF_Value           !< Temporary complex number for QTF
+      COMPLEX(SiKi), ALLOCATABLE                         :: Term1ArrayC(:)       !< Temporary complex array for frequency domain of one load component. For first  term.
+      COMPLEX(SiKi), ALLOCATABLE                         :: Term2ArrayC(:)       !< Temporary complex array for frequency domain of one load component. For second term.
+      REAL(SiKi),    ALLOCATABLE                         :: Term1Array(:)        !< Temporary complex array for time      domain of one load component. For first  term.
+      REAL(SiKi),    ALLOCATABLE                         :: Term2Array(:)        !< Temporary complex array for time      domain of one load component. For second term.
+      COMPLEX(SiKi)                                      :: TmpHPlusC            !< Temporary variable for holding the current value of \f$ H^+ \f$
+      COMPLEX(SiKi)                                      :: aWaveElevC1          !< Wave elevation of the first  frequency component.  NStepWave2 factor removed.
+      COMPLEX(SiKi)                                      :: aWaveElevC2          !< Wave elevation of the second frequency component.  NStepWave2 factor removed.
+      REAL(SiKi)                                         :: OmegaSum             !< Wave difference frequency
+      REAL(SiKi)                                         :: Omega1               !< First  wave frequency
+      REAL(SiKi)                                         :: Omega2               !< Second wave frequency
 
          ! Interpolation routine indices and value to search for, and smaller array to pass
       INTEGER(IntKi)                                     :: LastIndex4(4)        !< Last used index for searching in the interpolation algorithms.  First  wave freq
-      REAL(ReKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset. First  wave freq.
-      COMPLEX(ReKi), ALLOCATABLE                         :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
+      REAL(SiKi)                                         :: Coord4(4)            !< The (omega1,omega2,beta1,beta2) coordinate we want in the 4D dataset. First  wave freq.
+      COMPLEX(SiKi), ALLOCATABLE                         :: TmpData4D(:,:,:,:)   !< Temporary 4D array we put the 4D data into (minus the load component indice)
 
 
          ! Initialize a few things
@@ -2353,9 +2351,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! now (since time is limited) we will issue a warning if any of the wave directions for multidirectional waves
             ! or data from the WAMIT file for the wavedirections is close to the +/-pi boundary (>150 degrees, <-150 degrees),
             ! we will issue a warning.
-         IF ( (InitInp%WaveDirMin > 150.0_ReKi) .OR. (InitInp%WaveDirMax < -150.0_ReKi) .OR. &
-              (MINVAL(SumQTFData%Data4D%WvDir1) > 150.0_reki) .OR.  (MAXVAL(SumQTFData%Data4D%WvDir1) < -150.0_reki) .OR. &
-              (MINVAL(SumQTFData%Data4D%WvDir2) > 150.0_reki) .OR.  (MAXVAL(SumQTFData%Data4D%WvDir2) < -150.0_reki) ) THEN
+         IF ( (InitInp%WaveDirMin > 150.0_SiKi) .OR. (InitInp%WaveDirMax < -150.0_SiKi) .OR. &
+              (MINVAL(SumQTFData%Data4D%WvDir1) > 150.0_SiKi) .OR.  (MAXVAL(SumQTFData%Data4D%WvDir1) < -150.0_SiKi) .OR. &
+              (MINVAL(SumQTFData%Data4D%WvDir2) > 150.0_SiKi) .OR.  (MAXVAL(SumQTFData%Data4D%WvDir2) < -150.0_SiKi) ) THEN
             CALL SetErrStat( ErrID_Warn,' There may be issues with how the wave direction data is handled when the wave '// &
                                        'direction of interest is near the +/- 180 direction.  This is a known issue with '// &
                                        'the WAMIT2 module that has not yet been addressed.',ErrStat,ErrMsg,'SumQTF_InitCalc')
@@ -2451,7 +2449,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          ! Set the resulting force to zero.  Will calculate for the dimensions requested.
-      SumQTFForce = 0.0_ReKi
+      SumQTFForce = 0.0_SiKi
 
 
          ! Initialize the FFT library.  Normalization not required in this formulation.
@@ -2491,17 +2489,17 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             LastIndex4 = (/0,0,0,0/)
 
                ! Initialize the array to zero
-            Term1ArrayC = CMPLX(0.0_ReKi,0.0_ReKi)
+            Term1ArrayC = CMPLX(0.0_SiKi,0.0_SiKi)
 
 
                ! The limits look a little funny.  But remember we are placing the value in the 2*J location,
                ! so we cannot overun the end of the array, and the highest frequency must be zero.  The
                ! floor function is just in case (NStepWave2 - 1) is an odd number
-            DO J=1,FLOOR(REAL(InitInp%NStepWave2-1)/2.0_ReKi)
+            DO J=1,FLOOR(REAL(InitInp%NStepWave2-1)/2.0_SiKi)
 
                   ! The frequency
                Omega1   = J * InitInp%WaveDOmega
-               OmegaSum = 2.0_ReKi * Omega1           ! the sum frequency
+               OmegaSum = 2.0_SiKi * Omega1           ! the sum frequency
 
                   ! Only perform calculations if the difference frequency is in the right range
                IF ( (OmegaSum >= InitInp%WvLowCOffS) .AND. (OmegaSum <= InitInp%WvHiCOffS) ) THEN
@@ -2543,7 +2541,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             LastIndex4 = (/0,0,0,0/)
 
                ! Initialize the temporary arrays for each term to zero.
-            Term2ArrayC = CMPLX(0.0_ReKi,0.0_ReKi)
+            Term2ArrayC = CMPLX(0.0_SiKi,0.0_SiKi)
 
 
                ! Check the limits for the high frequency cutoff. If WvHiCOffS is less than the
@@ -2579,7 +2577,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
                   ! Set the \f$ H^+ \f$ term to zero before we start
-               TmpHPlusC = CMPLX(0.0_ReKi,0.0_ReKi)
+               TmpHPlusC = CMPLX(0.0_SiKi,0.0_SiKi)
 
 
                   ! Only perform calculations if the difference frequency is in the right range
@@ -2592,7 +2590,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                   !! So, we essentially end up running into the sampling limit.  If we want higher frequency
                   !! terms, we need to use a smaller stepsize.
 
-                  DO K=0,FLOOR(Real(J-1)/2.0_ReKi)
+                  DO K=0,FLOOR(Real(J-1)/2.0_SiKi)
 
                         ! Calculate the frequency pair
                      Omega1 =    K  * InitInp%WaveDOmega
@@ -2649,8 +2647,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
                ! Now we add the two terms together.  The 0.5 multiplier on is because the double sided FFT was used.
             DO J=0,InitInp%NStepWave
-!bjj: TODO: Inspector flags this with uninitialized memory access               
-               SumQTFForce(J,I) = 0.5_ReKi*(REAL(Term1Array(J) + 2*Term2Array(J)))
+               SumQTFForce(J,I) = 0.5_SiKi*(REAL(Term1Array(J) + 2*Term2Array(J)))
             ENDDO
 
                ! Copy the last first term to the last so that it is cyclic
@@ -3265,9 +3262,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       INTEGER(IntKi)                                     :: NumHeaderLines    !< Flag to indicate if the first line of the file is text
 
          ! Raw file data storage
-      REAL(ReKi),       ALLOCATABLE                      :: RawData3D(:,:)    !< The raw data from the entirety of the input file -- after ignoring negative force components
-      REAL(ReKi),       ALLOCATABLE                      :: RawData3DTmp(:,:) !< The raw data from the entirety of the input file -- as read in.
-      REAL(ReKi)                                         :: HighFreq1         !< The highest frequency found.  Needed for setting the infinite frequency data.
+      REAL(SiKi),       ALLOCATABLE                      :: RawData3D(:,:)    !< The raw data from the entirety of the input file -- after ignoring negative force components
+      REAL(SiKi),       ALLOCATABLE                      :: RawData3DTmp(:,:) !< The raw data from the entirety of the input file -- as read in.
+      REAL(SiKi)                                         :: HighFreq1         !< The highest frequency found.  Needed for setting the infinite frequency data.
       INTEGER(IntKi)                                     :: WvFreq1HiIdx      !< Index to the highest wave 1 frequency
       INTEGER(IntKi)                                     :: WvFreq1LoIdx      !< Index to the  lowest wave 1 frequency
       LOGICAL                                            :: HaveZeroFreq1     !< Indicates we have a zer frequency value
@@ -3276,9 +3273,9 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! File reading variables
       CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
       INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
-      REAL(ReKi),       ALLOCATABLE                      :: TmpRealArr(:)     !< Temporary real array
-      REAL(ReKi),       ALLOCATABLE                      :: TmpDataRow(:)     !< Single row of data
-      REAL(ReKi),       ALLOCATABLE                      :: TmpWvFreq1(:)     !< Temporary array to hold the wave frequencies read in.
+      REAL(SiKi),       ALLOCATABLE                      :: TmpRealArr(:)     !< Temporary real array
+      REAL(SiKi),       ALLOCATABLE                      :: TmpDataRow(:)     !< Single row of data
+      REAL(SiKi),       ALLOCATABLE                      :: TmpWvFreq1(:)     !< Temporary array to hold the wave frequencies read in.
 
          ! Temporary sparseness checking flag
       LOGICAL                                            :: TmpSparseFlag     !< Temporary flag for checking sparseness
@@ -3294,6 +3291,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       INTEGER(IntKi)                                     :: ErrStatTmp        !< Temporary variable for the local error status
       CHARACTER(2048)                                    :: ErrMsgTmp         !< Temporary error message variable
       INTEGER(IntKi)                                     :: LclErrStat        !< Temporary error status.  Used locally to indicate when we have reached the end of the file.
+      CHARACTER(*), PARAMETER                            :: RoutineName = 'Read_DataFile3D'
+
 
       !> ## Subroutine Contents
 
@@ -3323,7 +3322,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Find a unit number to use
       CALL GetNewUnit(UnitDataFile,ErrStatTmp,ErrMsgTmp)
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
@@ -3336,7 +3335,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Open the file
       CALL OpenFInpFile(  UnitDataFile, TRIM(Filename3D), ErrStat, ErrMsg )  ! Open file containing mean drift information
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -3352,8 +3351,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
 
          ! Do an initial readthrough and find out the length of the file, if there is a header line, and the number of columns in the file.
-      CALL GetFileLength( UnitDataFile, TRIM(Filename3D), NumDataColumns, NumDataLines, NumHeaderLines, ErrMsg, ErrStat)
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D')
+      CALL GetFileLength( UnitDataFile, TRIM(Filename3D), NumDataColumns, NumDataLines, NumHeaderLines, ErrStat, ErrMsg)
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -3369,7 +3368,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! Make sure we have 8 columns of data in the data file.
       IF ( NumDataColumns /= 8 ) THEN
          CALL SetErrStat( ErrID_Fatal, ' The 2nd order WAMIT data file '//TRIM(Filename3D)//' has '//TRIM(Num2LStr(NumDataColumns))// &
-                        ' columns instead of the 8 columns expected.', ErrStat, ErrMsg, 'Read_DataFile3D')
+                        ' columns instead of the 8 columns expected.', ErrStat, ErrMsg, RoutineName)
          CLOSE( UnitDataFile )
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
@@ -3388,11 +3387,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Allocate the temporary array for reading in one line
       CALL AllocAry( TmpDataRow, NumDataColumns, ' Array for holding one line of 4D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
 
          ! Allocate an array to hold the entirety of the raw contents of the file
       CALL AllocAry( RawData3DTmp, NumDataLines, NumDataColumns, ' Array for holding raw 3D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -3414,7 +3413,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          CALL ReadAry( UnitDataFile, TRIM(Filename3D), TmpDataRow, NumDataColumns, 'RawData3D('//TRIM(Num2LStr(I))//',:)', &
                      ' Line '//TRIM(Num2LStr(NumHeaderLines+I))//' of '//TRIM(Filename3D), &
                      ErrStatTmp, ErrMsgTmp )      ! Note, not echoing this to anything.
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D')
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CLOSE( UnitDataFile )
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -3437,7 +3436,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          !! components, then count the number of data rows we are keeping.  Then copy data over.
       IF ( MINVAL(RawData3DTmp(:,4)) < 0_IntKi ) THEN             ! check the 4th element (force component)
          CALL SetErrStat( ErrID_Warn,' Negative load components found (moving reference frame). Ignoring', &
-               ErrStat,ErrMsg,'Read_DataFile3D')
+               ErrStat,ErrMsg,RoutineName)
 
             ! Count how many lines we are keeping.
          NumDataLinesKeep = 0_IntKi
@@ -3449,7 +3448,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
             ! Allocate an array to hold the data from the file that we are keeping
          CALL AllocAry( RawData3D, NumDataLinesKeep, NumDataColumns, ' Array for holding raw 3D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D')
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CLOSE( UnitDataFile )
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -3494,7 +3493,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          !! the highest frequency is handled exactly the same.
 
       DO I=1,NumDataLinesKeep
-         IF ( EqualRealNos(RawData3D(I,1), 0.0_ReKi) ) THEN
+         IF ( EqualRealNos(RawData3D(I,1), 0.0_SiKi) ) THEN
             ! Leave it alone.  We will have to fix it afterwards.
          ELSE IF ( RawData3D(I,1) < 0 ) THEN
             ! Leave it alone.  We will have to fix it afterwards.
@@ -3512,15 +3511,15 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! frequency.  This results in having a flat response from the highest frequency found to the
          ! infinite frequency.
       DO I=1,NumDataLinesKeep
-         IF ( EqualRealNos(RawData3D(I,1), 0.0_ReKi) ) THEN
+         IF ( EqualRealNos(RawData3D(I,1), 0.0_SiKi) ) THEN
             RawData3D(I,1) = HighFreq1 * OnePlusEps
          ENDIF
       ENDDO
 
          ! Now change the negative values to be 0.0 (zero frequency)
       DO I=1,NumDataLinesKeep
-         IF ( RawData3D(I,1) < 0.0_ReKi ) THEN
-            RawData3D(I,1) = 0.0_ReKi
+         IF ( RawData3D(I,1) < 0.0_SiKi ) THEN
+            RawData3D(I,1) = 0.0_SiKi
             HaveZeroFreq1 = .TRUE.
          ENDIF
       ENDDO
@@ -3559,7 +3558,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Get the number of first frequencies
       CALL UniqueRealValues( RawData3D(:,1), TmpWvFreq1, Data3D%NumWvFreq1, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D' )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
@@ -3572,7 +3571,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Get the number of first wave directions
       CALL UniqueRealValues( RawData3D(:,2), Data3D%WvDir1, Data3D%NumWvDir1, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D' )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
@@ -3585,7 +3584,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Get the number of second wave directions
       CALL UniqueRealValues( RawData3D(:,3), Data3D%WvDir2, Data3D%NumWvDir2, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D' )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
@@ -3599,11 +3598,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Find out which load components are actually in use
       CALL UniqueRealValues( RawData3D(:,4), TmpRealArr, K, ErrStatTmp,ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile3D' )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
 
          ! If the value of K is more than 6, we have some serious issues
       IF ( K > 6 ) CALL SetErrStat( ErrID_Fatal, ' More than 6 load components found in column 4 of '// &
-                     TRIM(Filename3D)//'.', ErrStat,ErrMsg,'Read_DataFile3D')
+                     TRIM(Filename3D)//'.', ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
@@ -3620,7 +3619,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       DO I=1,K
          IF ( NINT(TmpRealArr(I)) < 1 .OR. NINT(TmpRealArr(K)) > 6 ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Load components listed in column 4 of '//TRIM(Filename3D)// &
-                  ' must be between 1 and 6.', ErrStat,ErrMsg,'Read_DataFile3D')
+                  ' must be between 1 and 6.', ErrStat,ErrMsg,RoutineName)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
@@ -3658,7 +3657,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! Now allocate the array for holding the WvFreq1
       ALLOCATE( Data3D%WvFreq1( Data3D%NumWvFreq1), STAT=ErrStatTmp)
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data3D%WvFreq1 to store '// &
-                              'the sorted 3D 2nd order WAMIT frequency data.',  ErrStat,ErrMsg,'Read_DataFile3D')
+                              'the sorted 3D 2nd order WAMIT frequency data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
@@ -3674,13 +3673,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! If no zero frequency was supplied, add the two points for step-change before first entered frequency 
       IF ( .NOT. HaveZeroFreq1) THEN
-         Data3D%WvFreq1( 1 )                 = 0.0_ReKi
-         Data3D%WvFreq1( 2 )                 = MAX( TmpWvFreq1(1) - 10.0_ReKi*EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
+         Data3D%WvFreq1( 1 )                 = 0.0_SiKi
+         Data3D%WvFreq1( 2 )                 = MAX( TmpWvFreq1(1) - 10.0_SiKi*EPSILON(0.0_SiKi), 0.0_SiKi )  ! make sure the Frequencies are still monotonically increasing
       ENDIF
       
          ! add the two points for step-change after last entered frequency
-      Data3D%WvFreq1( Data3D%NumWvFreq1-1 )     = Data3D%WvFreq1(Data3D%NumWvFreq1-2) + 10.0_ReKi*EPSILON(0.0_ReKi)
-      Data3D%WvFreq1( Data3D%NumWvFreq1   )     = HUGE(1.0_ReKi)
+      Data3D%WvFreq1( Data3D%NumWvFreq1-1 )     = Data3D%WvFreq1(Data3D%NumWvFreq1-2) + 10.0_SiKi*EPSILON(0.0_SiKi)
+      Data3D%WvFreq1( Data3D%NumWvFreq1   )     = HUGE(1.0_SiKi)
 
 
 
@@ -3688,7 +3687,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! for saving the sorted data.
       ALLOCATE( Data3D%DataSet( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6 ),  STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data3D%DataSet to store '// &
-                              'the sorted 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,'Read_DataFile3D')
+                              'the sorted 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
@@ -3702,7 +3701,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! Allocate the logical array for storing the mask for which points are valid. Set to .FALSE.
       ALLOCATE( Data3D%DataMask( Data3D%NumWvFreq1, Data3D%NumWvDir1, Data3D%NumWvDir2, 6 ),  STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data3D%DataMask to store '// &
-                              'the sorted 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,'Read_DataFile3D')
+                              'the sorted 3D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
@@ -3753,7 +3752,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! cutoffs that were added to the frequency range.  This is contained within TmpWvFreq1 from reading in.
          CALL LocateStp( RawData3D(I,1), TmpWvFreq1, TmpCoord(1),   WvFreq1HiIdx - (WvFreq1LoIdx - 1) )  ! inclusive limits
          IF ( TmpCoord(1) == 0 .OR. ( RawData3D(I,1) > Data3D%WvFreq1(Data3D%NumWvFreq1)) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data3D%WvFreq1 array.', ErrStat, ErrMsg, 'Read_DataFile3D')
+            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data3D%WvFreq1 array.', ErrStat, ErrMsg, RoutineName)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
@@ -3767,7 +3766,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! Find the location in the WvDir1 array that this point corresponds to.
          CALL LocateStp( RawData3D(I,2), Data3D%WvDir1,  TmpCoord(2),   Data3D%NumWvDir1 )
          IF ( TmpCoord(2) == 0 .OR. ( RawData3D(I,2) > Data3D%WvDir1(Data3D%NumWvDir1)) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data3D%WvDir1 array.', ErrStat, ErrMsg, 'Read_DataFile3D')
+            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data3D%WvDir1 array.', ErrStat, ErrMsg, RoutineName)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
@@ -3780,7 +3779,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! Find the location in the WvDir2 array that this point corresponds to.
          CALL LocateStp( RawData3D(I,3), Data3D%WvDir2,  TmpCoord(3),   Data3D%NumWvDir2 )
          IF ( TmpCoord(3) == 0 .OR. ( RawData3D(I,3) > Data3D%WvDir2(Data3D%NumWvDir2)) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data3D%WvDir2 array.', ErrStat, ErrMsg, 'Read_DataFile3D')
+            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data3D%WvDir2 array.', ErrStat, ErrMsg, RoutineName)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
@@ -3820,14 +3819,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! it does not agree, then we will have to stop since it is ambiguous which is correct.
 
          IF ( Data3D%DataMask( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ) ) THEN
-            IF ( .NOT. EqualRealNos(REAL(Data3D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) )), &
-                        InitInp%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,7)) .AND. &
-                 .NOT. EqualRealNos(AIMAG(Data3D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) )), &
-                        InitInp%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,8)))  THEN
+            IF ( .NOT. EqualRealNos(REAL(Data3D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ),SiKi), &
+                                    REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,7)               ,SiKi)) .AND. &
+                 .NOT. EqualRealNos( AIMAG(Data3D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4) ) ), &
+                                    REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData3D(I,8)               ,SiKi)) ) THEN
                CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename3D)// &
                         ' contains different values for the real and imaginary part (columns 7 and 8) than was '// &
                         'given earlier in the file for the same values of wave frequency and wave direction.', &
-                        ErrStat, ErrMsg, 'Read_DataFile3D' )
+                        ErrStat, ErrMsg, RoutineName )
                IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
                IF (ALLOCATED(RawData3D))        DEALLOCATE(RawData3D,STAT=ErrStatTmp)
                IF (ALLOCATED(RawData3DTmp))     DEALLOCATE(RawData3DTmp,STAT=ErrStatTmp)
@@ -3910,10 +3909,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       !----------------------------------------------------------------------------------
 
       IF (.NOT. HaveZeroFreq1) THEN
-         Data3D%DataSet( 1:2,:,:,:)  = CMPLX(0.0_ReKi,0.0_ReKi)                                     ! Set the values to zero for everything before entered frequency range
+         Data3D%DataSet( 1:2,:,:,:)  = CMPLX(0.0_SiKi,0.0_SiKi)                                     ! Set the values to zero for everything before entered frequency range
          Data3D%DataMask(1:2,:,:,:)  = .TRUE.                                                       ! Set the mask for these first two frequencies
       ENDIF      
-      Data3D%DataSet( Data3D%NumWvFreq1-1:Data3D%NumWvFreq1,:,:,:) = CMPLX(0.0_ReKi,0.0_ReKi)       ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
+      Data3D%DataSet( Data3D%NumWvFreq1-1:Data3D%NumWvFreq1,:,:,:) = CMPLX(0.0_SiKi,0.0_SiKi)       ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
       Data3D%DataMask(Data3D%NumWvFreq1-1:Data3D%NumWvFreq1,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies 
             
 
@@ -4000,10 +3999,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       INTEGER(IntKi)                                     :: NumHeaderLines    !< Flag to indicate if the first line of the file is text
 
          ! Raw file data storage
-      REAL(ReKi),       ALLOCATABLE                      :: RawData4D(:,:)    !< The raw data from the entirety of the input file -- after removing negative force components
-      REAL(ReKi),       ALLOCATABLE                      :: RawData4DTmp(:,:) !< The raw data from the entirety of the input file -- as read in
-      REAL(ReKi)                                         :: HighFreq1         !< The highest frequency found.  Needed for setting the infinite frequency data.
-      REAL(ReKi)                                         :: HighFreq2         !< The highest frequency found.  Needed for setting the infinite frequency data.
+      REAL(SiKi),       ALLOCATABLE                      :: RawData4D(:,:)    !< The raw data from the entirety of the input file -- after removing negative force components
+      REAL(SiKi),       ALLOCATABLE                      :: RawData4DTmp(:,:) !< The raw data from the entirety of the input file -- as read in
+      REAL(SiKi)                                         :: HighFreq1         !< The highest frequency found.  Needed for setting the infinite frequency data.
+      REAL(SiKi)                                         :: HighFreq2         !< The highest frequency found.  Needed for setting the infinite frequency data.
       INTEGER(IntKi)                                     :: WvFreq1HiIdx      !< Index to the highest wave 1 frequency
       INTEGER(IntKi)                                     :: WvFreq1LoIdx      !< Index to the  lowest wave 1 frequency
       INTEGER(IntKi)                                     :: WvFreq2HiIdx      !< Index to the highest wave 2 frequency
@@ -4015,10 +4014,10 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! File reading variables
       CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
       INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
-      REAL(ReKi),       ALLOCATABLE                      :: TmpRealArr(:)     !< Temporary real array
-      REAL(ReKi),       ALLOCATABLE                      :: TmpDataRow(:)     !< Single row of data
-      REAL(ReKi),       ALLOCATABLE                      :: TmpWvFreq1(:)     !< Temporary array to hold the wave frequencies read in.
-      REAL(ReKi),       ALLOCATABLE                      :: TmpWvFreq2(:)     !< Temporary array to hold the wave frequencies read in.
+      REAL(SiKi),       ALLOCATABLE                      :: TmpRealArr(:)     !< Temporary real array
+      REAL(SiKi),       ALLOCATABLE                      :: TmpDataRow(:)     !< Single row of data
+      REAL(SiKi),       ALLOCATABLE                      :: TmpWvFreq1(:)     !< Temporary array to hold the wave frequencies read in.
+      REAL(SiKi),       ALLOCATABLE                      :: TmpWvFreq2(:)     !< Temporary array to hold the wave frequencies read in.
 
          ! Temporary sparseness checking flag
       LOGICAL                                            :: TmpSparseFlag     !< Temporary flag for checking sparseness
@@ -4036,6 +4035,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       INTEGER(IntKi)                                     :: ErrStatTmp        !< Temporary variable for the local error status
       CHARACTER(2048)                                    :: ErrMsgTmp         !< Temporary error message variable
       INTEGER(IntKi)                                     :: LclErrStat        !< Temporary error status.  Used locally to indicate when we have reached the end of the file.
+      CHARACTER(*), PARAMETER                            :: RoutineName = 'Read_DataFile4D'
+
 
       !> ## Subroutine Contents
 
@@ -4066,7 +4067,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Find a unit number to use
       CALL GetNewUnit(UnitDataFile,ErrStatTmp,ErrMsgTmp)
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
@@ -4080,7 +4081,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Open the file
       CALL OpenFInpFile(  UnitDataFile, TRIM(Filename4D), ErrStat, ErrMsg )  ! Open file containing mean drift information
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
@@ -4094,8 +4095,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       ENDIF
 
          ! Do an initial readthrough and find out the length of the file, if there is a header line, and the number of columns in the file.
-      CALL GetFileLength( UnitDataFile, TRIM(Filename4D), NumDataColumns, NumDataLines, NumHeaderLines, ErrMsg, ErrStat)
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D')
+      CALL GetFileLength( UnitDataFile, TRIM(Filename4D), NumDataColumns, NumDataLines, NumHeaderLines, ErrStat, ErrMsg)
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
@@ -4115,7 +4116,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! Make sure we have 9 columns of data in the data file.
       IF ( NumDataColumns /= 9 ) THEN
          CALL SetErrStat( ErrID_Fatal, ' The 2nd order WAMIT data file '//TRIM(Filename4D)//' has '//TRIM(Num2LStr(NumDataColumns))// &
-                        ' columns instead of the 9 columns expected.', ErrStat, ErrMsg, 'Read_DataFile4D')
+                        ' columns instead of the 9 columns expected.', ErrStat, ErrMsg, RoutineName)
          CLOSE( UnitDataFile )
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
@@ -4136,11 +4137,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Allocate the temporary array for reading in one line
       CALL AllocAry( TmpDataRow, NumDataColumns, ' Array for holding one line of 4D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
 
          ! Allocate an array to hold the entirety of the raw contents of the file
       CALL AllocAry( RawData4DTmp, NumDataLines, NumDataColumns, ' Array for holding raw 4D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D')
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          CLOSE( UnitDataFile )
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
@@ -4163,7 +4164,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          CALL ReadAry( UnitDataFile, TRIM(Filename4D), TmpDataRow, NumDataColumns, 'RawData4DTmp('//TRIM(Num2LStr(I))//',:)', &
                      ' Line '//TRIM(Num2LStr(NumHeaderLines+I))//' of '//TRIM(Filename4D), &
                      ErrStatTmp, ErrMsgTmp )      ! Note, not echoing this to anything.
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D')
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CLOSE( UnitDataFile )
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
@@ -4187,7 +4188,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          !! components, then count the number of data rows we are keeping.  Then copy data over.
       IF ( MINVAL(RawData4DTmp(:,5)) < 0_IntKi ) THEN          ! check the 5th element (force component)
          CALL SetErrStat( ErrID_Warn,' Negative load components found (moving reference frame). Ignoring', &
-               ErrStat,ErrMsg,'Read_DataFile4D')
+               ErrStat,ErrMsg,RoutineName)
 
             ! Count how many lines we are keeping.
          NumDataLinesKeep = 0_IntKi
@@ -4199,7 +4200,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
             ! Allocate an array to hold the data from the file that we are keeping
          CALL AllocAry( RawData4D, NumDataLinesKeep, NumDataColumns, ' Array for holding raw 4D data for 2nd order WAMIT files', ErrStatTmp, ErrMsgTmp )
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D')
+         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CLOSE( UnitDataFile )
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -4239,14 +4240,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          !! would not be calculated for sum and difference frequencies as there is little
          !! information of interest there.
       DO I=1,NumDataLinesKeep
-         IF ( EqualRealNos(RawData4D(I,1), 0.0_ReKi) ) THEN
+         IF ( EqualRealNos(RawData4D(I,1), 0.0_SiKi) ) THEN
             ! Leave it alone.  We will have to fix it afterwards.
          ELSE IF ( RawData4D(I,1) < 0 ) THEN
             ! Leave it alone.  We will have to fix it afterwards.
          ELSE
             RawData4D(I,1) =  TwoPi/RawData4D(I,1)       ! First column is Tau1
          ENDIF
-         IF ( EqualRealNos(RawData4D(I,2), 0.0_ReKi) ) THEN
+         IF ( EqualRealNos(RawData4D(I,2), 0.0_SiKi) ) THEN
             ! Leave it alone.  We will have to fix it afterwards.
          ELSE IF ( RawData4D(I,2) < 0 ) THEN
             ! Leave it alone.  We will have to fix it afterwards.
@@ -4263,22 +4264,22 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! First change the values given as 0.0 to the infinite frequency and set a flag to indicate we
          ! found an infinite frequency in this dimension
       DO I=1,NumDataLinesKeep
-         IF ( EqualRealNos(RawData4D(I,1), 0.0_ReKi) ) THEN
+         IF ( EqualRealNos(RawData4D(I,1), 0.0_SiKi) ) THEN
             RawData4D(I,1) = HighFreq1 * OnePlusEps
          ENDIF
-         IF ( EqualRealNos(RawData4D(I,1), 0.0_ReKi) ) THEN
+         IF ( EqualRealNos(RawData4D(I,1), 0.0_SiKi) ) THEN
             RawData4D(I,1) = HighFreq2 * OnePlusEps
          ENDIF
       ENDDO
 
          ! Now change the negative values to be 0.0
       DO I=1,NumDataLinesKeep
-         IF ( RawData4D(I,1) < 0.0_ReKi ) THEN
-            RawData4D(I,1) = 0.0_ReKi
+         IF ( RawData4D(I,1) < 0.0_SiKi ) THEN
+            RawData4D(I,1) = 0.0_SiKi
             HaveZeroFreq1 = .TRUE.
          ENDIF
-         IF ( RawData4D(I,2) < 0.0_ReKi ) THEN
-            RawData4D(I,2) = 0.0_ReKi
+         IF ( RawData4D(I,2) < 0.0_SiKi ) THEN
+            RawData4D(I,2) = 0.0_SiKi
             HaveZeroFreq2 = .TRUE.
          ENDIF
       ENDDO
@@ -4318,7 +4319,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Get the number of first frequencies
       CALL UniqueRealValues( RawData4D(:,1), TmpWvFreq1, Data4D%NumWvFreq1, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D' )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
@@ -4332,7 +4333,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Get the number of second frequencies
       CALL UniqueRealValues( RawData4D(:,2), TmpWvFreq2, Data4D%NumWvFreq2, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D' )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
@@ -4346,7 +4347,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Get the number of first wave directions
       CALL UniqueRealValues( RawData4D(:,3), Data4D%WvDir1, Data4D%NumWvDir1, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D' )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
@@ -4360,7 +4361,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Get the number of second wave directions
       CALL UniqueRealValues( RawData4D(:,4), Data4D%WvDir2, Data4D%NumWvDir2, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D' )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
@@ -4375,11 +4376,11 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Find out which load components are actually in use
       CALL UniqueRealValues( RawData4D(:,5), TmpRealArr, K, ErrStatTmp,ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Read_DataFile4D' )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
 
          ! If the value of K is more than 6, we have some serious issues
       IF ( K > 6 ) CALL SetErrStat( ErrID_Fatal, ' More than 6 load components found in column 4 of '// &
-                     TRIM(Filename4D)//'.', ErrStat,ErrMsg,'Read_DataFile4D')
+                     TRIM(Filename4D)//'.', ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
@@ -4397,7 +4398,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       DO I=1,K
          IF ( NINT(TmpRealArr(I)) < 1 .OR. NINT(TmpRealArr(K)) > 6 ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Load components listed in column 4 of '//TRIM(Filename4D)// &
-                  ' must be between 1 and 6.', ErrStat,ErrMsg,'Read_DataFile4D')
+                  ' must be between 1 and 6.', ErrStat,ErrMsg,RoutineName)
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -4448,7 +4449,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! Now allocate the array for holding the WvFreq1
       ALLOCATE( Data4D%WvFreq1( Data4D%NumWvFreq1), STAT=ErrStatTmp)
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data4D%WvFreq1 to store '// &
-                              'the sorted 4D 2nd order WAMIT frequency data.',  ErrStat,ErrMsg,'Read_DataFile4D')
+                              'the sorted 4D 2nd order WAMIT frequency data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
@@ -4464,7 +4465,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! Now allocate the array for holding the WvFreq2
       ALLOCATE( Data4D%WvFreq2( Data4D%NumWvFreq2), STAT=ErrStatTmp)
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data4D%WvFreq2 to store '// &
-                              'the sorted 4D 2nd order WAMIT frequency data.',  ErrStat,ErrMsg,'Read_DataFile4D')
+                              'the sorted 4D 2nd order WAMIT frequency data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
@@ -4481,13 +4482,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! If no zero frequency was supplied, add the two points for step-change before first entered frequency 
       IF ( .NOT. HaveZeroFreq1) THEN
-         Data4D%WvFreq1( 1 )                 = 0.0_ReKi
-         Data4D%WvFreq1( 2 )                 = MAX( TmpWvFreq1(1) - 10.0_ReKi*EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
+         Data4D%WvFreq1( 1 )                 = 0.0_SiKi
+         Data4D%WvFreq1( 2 )                 = MAX( TmpWvFreq1(1) - 10.0_SiKi*EPSILON(0.0_SiKi), 0.0_SiKi )  ! make sure the Frequencies are still monotonically increasing
       ENDIF
       
          ! add the two points for step-change after last entered frequency
-      Data4D%WvFreq1( Data4D%NumWvFreq1-1 )     = Data4D%WvFreq1(Data4D%NumWvFreq1-2) + 10.0_ReKi*EPSILON(0.0_ReKi)
-      Data4D%WvFreq1( Data4D%NumWvFreq1   )     = HUGE(1.0_ReKi)/3.  ! divided by 3 because we get overflow when using EqualRealNos (Huge,Huge) later (b/c we try to add Huge+Huge)
+      Data4D%WvFreq1( Data4D%NumWvFreq1-1 )     = Data4D%WvFreq1(Data4D%NumWvFreq1-2) + 10.0_SiKi*EPSILON(0.0_SiKi)
+      Data4D%WvFreq1( Data4D%NumWvFreq1   )     = HUGE(1.0_SiKi)
 
 
 
@@ -4496,20 +4497,20 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! If no zero frequency was supplied, add the two points for step-change before first entered frequency 
       IF ( .NOT. HaveZeroFreq2) THEN
-         Data4D%WvFreq2( 1 )                 = 0.0_ReKi
-         Data4D%WvFreq2( 2 )                 = MAX( TmpWvFreq2(1) - 10.0_ReKi*EPSILON(0.0_ReKi), 0.0_ReKi )  ! make sure the Frequencies are still monotonically increasing
+         Data4D%WvFreq2( 1 )                 = 0.0_SiKi
+         Data4D%WvFreq2( 2 )                 = MAX( TmpWvFreq2(1) - 10.0_SiKi*EPSILON(0.0_SiKi), 0.0_SiKi )  ! make sure the Frequencies are still monotonically increasing
       ENDIF
       
          ! add the two points for step-change after last entered frequency
-      Data4D%WvFreq2( Data4D%NumWvFreq2-1 )     = Data4D%WvFreq2(Data4D%NumWvFreq2-2) + 10.0_ReKi*EPSILON(0.0_ReKi)
-      Data4D%WvFreq2( Data4D%NumWvFreq2   )     = HUGE(1.0_ReKi)/3  ! divided by 3 because we get overflow when using EqualRealNos (Huge,Huge) later (b/c we try to add Huge+Huge)
+      Data4D%WvFreq2( Data4D%NumWvFreq2-1 )     = Data4D%WvFreq2(Data4D%NumWvFreq2-2) + 10.0_SiKi*EPSILON(0.0_SiKi)
+      Data4D%WvFreq2( Data4D%NumWvFreq2   )     = HUGE(1.0_SiKi)
 
 
          ! Now that we know how many frequencies and wave directions there are, we can allocate the array
          ! for saving the sorted data.
       ALLOCATE( Data4D%DataSet( Data4D%NumWvFreq1, Data4D%NumWvFreq2, Data4D%NumWvDir1, Data4D%NumWvDir2, 6 ),  STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data4D%DataSet to store '// &
-                              'the sorted 4D 2nd order WAMIT data.',  ErrStat,ErrMsg,'Read_DataFile4D')
+                              'the sorted 4D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
@@ -4524,7 +4525,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! Allocate the logical array for storing the mask for which points are valid. Set to .FALSE.
       ALLOCATE( Data4D%DataMask( Data4D%NumWvFreq1, Data4D%NumWvFreq2, Data4D%NumWvDir1, Data4D%NumWvDir2, 6 ),  STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array Data4D%DataMask to store '// &
-                              'the sorted 4D 2nd order WAMIT data.',  ErrStat,ErrMsg,'Read_DataFile4D')
+                              'the sorted 4D 2nd order WAMIT data.',  ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat >= AbortErrLev ) THEN
          IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
          IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
@@ -4577,7 +4578,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! cutoffs that were added to the frequency range.  This is contained within TmpWvFreq1 from reading in.
          CALL LocateStp( RawData4D(I,1), TmpWvFreq1, TmpCoord(1),   WvFreq1HiIdx - (WvFreq1LoIdx - 1) )  ! inclusive limits
          IF ( TmpCoord(1) == 0 .OR. ( RawData4D(I,1) > Data4D%WvFreq1(Data4D%NumWvFreq1)) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvFreq1 array.', ErrStat, ErrMsg, 'Read_DataFile4D')
+            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvFreq1 array.', ErrStat, ErrMsg, RoutineName)
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -4593,7 +4594,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! cutoffs that were added to the frequency range.  This is contained within TmpWvFreq2 from reading in.
          CALL LocateStp( RawData4D(I,2), TmpWvFreq2, TmpCoord(2),   WvFreq2HiIdx - (WvFreq2LoIdx - 1) )  ! inclusive limits
          IF ( TmpCoord(2) == 0 .OR. ( RawData4D(I,2) > Data4D%WvFreq2(Data4D%NumWvFreq2)) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvFreq2 array.', ErrStat, ErrMsg, 'Read_DataFile4D')
+            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvFreq2 array.', ErrStat, ErrMsg, RoutineName)
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -4608,7 +4609,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! Find the location in the WvDir1 array that this point corresponds to.
          CALL LocateStp( RawData4D(I,3), Data4D%WvDir1,  TmpCoord(3),   Data4D%NumWvDir1 )
          IF ( TmpCoord(3) == 0 .OR. ( RawData4D(I,3) > Data4D%WvDir1(Data4D%NumWvDir1)) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvDir1 array.', ErrStat, ErrMsg, 'Read_DataFile4D')
+            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvDir1 array.', ErrStat, ErrMsg, RoutineName)
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -4622,7 +4623,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! Find the location in the WvDir2 array that this point corresponds to.
          CALL LocateStp( RawData4D(I,4), Data4D%WvDir2,  TmpCoord(4),   Data4D%NumWvDir2 )
          IF ( TmpCoord(4) == 0 .OR. ( RawData4D(I,4) > Data4D%WvDir2(Data4D%NumWvDir2)) ) THEN
-            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvDir2 array.', ErrStat, ErrMsg, 'Read_DataFile4D')
+            CALL SetErrStat( ErrID_Fatal, ' Programming error.  Array data point not found in Data4D%WvDir2 array.', ErrStat, ErrMsg, RoutineName)
             IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
             IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
             IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -4663,14 +4664,14 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             ! it does not agree, then we will have to stop since it is ambiguous which is correct.
 
          IF ( Data4D%DataMask( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) ) ) THEN
-            IF ( .NOT. EqualRealNos(REAL(Data4D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) )), &
-                        InitInp%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,8)) .AND. &
+            IF ( .NOT. EqualRealNos( REAL(Data4D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) ),SiKi), &
+                                     REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,8)                            ,SiKi)) .AND. &
                  .NOT. EqualRealNos(AIMAG(Data4D%DataSet( TmpCoord(1), TmpCoord(2), TmpCoord(3), TmpCoord(4), TmpCoord(5) )), &
-                        InitInp%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,9)))  THEN
+                                     REAL(InitInp%RhoXg * InitInp%WAMITULEN**K * RawData4D(I,9)                            ,SiKi))) THEN
                CALL SetErrStat( ErrID_Fatal, ' Line '//TRIM(Num2Lstr(NumHeaderLines+I))//' of '//TRIM(Filename4D)// &
                         ' contains different values for the real and imaginary part (columns 8 and 9) than was '// &
                         'given earlier in the file for the same values of wave frequency and wave direction.', &
-                        ErrStat, ErrMsg, 'Read_DataFile4D' )
+                        ErrStat, ErrMsg, RoutineName )
                IF (ALLOCATED(RawData4D))        DEALLOCATE(RawData4D,STAT=ErrStatTmp)
                IF (ALLOCATED(RawData4DTmp))     DEALLOCATE(RawData4DTmp,STAT=ErrStatTmp)
                IF (ALLOCATED(TmpRealArr))       DEALLOCATE(TmpRealArr,STAT=ErrStatTmp)
@@ -4782,17 +4783,17 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       !----------------------------------------------------------------------------------
 
       IF (.NOT. HaveZeroFreq1) THEN
-         Data4D%DataSet( 1:2,:,:,:,:)  = CMPLX(0.0_ReKi,0.0_ReKi)                                     ! Set the values to zero for everything before entered frequency range
+         Data4D%DataSet( 1:2,:,:,:,:)  = CMPLX(0.0_SiKi,0.0_SiKi)                                     ! Set the values to zero for everything before entered frequency range
          Data4D%DataMask(1:2,:,:,:,:)  = .TRUE.                                                       ! Set the mask for these first two frequencies
       ENDIF      
-      Data4D%DataSet( Data4D%NumWvFreq1-1:Data4D%NumWvFreq1,:,:,:,:) = CMPLX(0.0_ReKi,0.0_ReKi)       ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
+      Data4D%DataSet( Data4D%NumWvFreq1-1:Data4D%NumWvFreq1,:,:,:,:) = CMPLX(0.0_SiKi,0.0_SiKi)       ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
       Data4D%DataMask(Data4D%NumWvFreq1-1:Data4D%NumWvFreq1,:,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies 
 
       IF (.NOT. HaveZeroFreq2) THEN
-         Data4D%DataSet( :,1:2,:,:,:)  = CMPLX(0.0_ReKi,0.0_ReKi)                                     ! Set the values to zero for everything before entered frequency range
+         Data4D%DataSet( :,1:2,:,:,:)  = CMPLX(0.0_SiKi,0.0_SiKi)                                     ! Set the values to zero for everything before entered frequency range
          Data4D%DataMask(:,1:2,:,:,:)  = .TRUE.                                                       ! Set the mask for these first two frequencies
       ENDIF      
-      Data4D%DataSet( :,Data4D%NumWvFreq2-1:Data4D%NumWvFreq2,:,:,:) = CMPLX(0.0_ReKi,0.0_ReKi)       ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
+      Data4D%DataSet( :,Data4D%NumWvFreq2-1:Data4D%NumWvFreq2,:,:,:) = CMPLX(0.0_SiKi,0.0_SiKi)       ! Set the values for the last two frequencies to zero (everything higher than the last non-infinite frequency)
       Data4D%DataMask(:,Data4D%NumWvFreq2-1:Data4D%NumWvFreq2,:,:,:) = .TRUE.                         ! Set the mask for the last two frequencies 
             
 
@@ -4906,22 +4907,24 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
    SUBROUTINE UniqueRealValues( DataArrayIn, DataArrayOut, NumUnique, ErrStat, ErrMsg )
       IMPLICIT NONE
 
-      REAL(ReKi),                         INTENT(IN   )  :: DataArrayIn(:)    !< Array to search
-      REAL(ReKi),       ALLOCATABLE,      INTENT(  OUT)  :: DataArrayOut(:)   !< Array to return results in
+      REAL(SiKi),                         INTENT(IN   )  :: DataArrayIn(:)    !< Array to search
+      REAL(SiKi),       ALLOCATABLE,      INTENT(  OUT)  :: DataArrayOut(:)   !< Array to return results in
       INTEGER(IntKi),                     INTENT(  OUT)  :: NumUnique         !< Number of unique values found
       INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat           !< Error Status
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg            !< Message about the error
 
          ! Local variables
-      REAL(ReKi)                                         :: TmpReal           !< Temporary real value
+      REAL(SiKi)                                         :: TmpReal           !< Temporary real value
       INTEGER(IntKi)                                     :: I                 !< Generic counter
       INTEGER(IntKi)                                     :: J                 !< Generic counter
-      REAL(ReKi),       ALLOCATABLE                      :: TmpRealArray(:)   !< Temporary real array
+      REAL(SiKi),       ALLOCATABLE                      :: TmpRealArray(:)   !< Temporary real array
       LOGICAL                                            :: Duplicate         !< If there is a duplicate value
 
          ! Error handling
       INTEGER(IntKi)                                     :: ErrStatTmp
       CHARACTER(2048)                                    :: ErrMsgTmp
+      CHARACTER(*), PARAMETER                            :: RoutineName = 'UniqueRealValues'
+
 
 
          ! Initialize things
@@ -4933,7 +4936,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Allocate the temporary array
       CALL AllocAry( TmpRealArray, SIZE(DataArrayIn,1), 'Temporary array for data sorting', ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'UniqueRealValues' )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp
          RETURN
@@ -4942,7 +4945,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
          ! Initialize the array with a large negative number.  Only positive frequencies and wave directions from
          ! +/-180 degrees should ever be sent here.  The way this algorithm works, only empty values will have
          ! this number.  We won't be returning it to the calling routine
-      TmpRealArray   = -9.9e9_ReKi
+      TmpRealArray   = -9.9e9_SiKi
 
 
          ! The first point is unique since we haven't compared it to anything yet.
@@ -4993,7 +4996,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
          ! Now that we have the array sorted into unique values, we need to construct an array to return the values in.
       CALL AllocAry( DataArrayOut, NumUnique, 'Return array with sorted values', ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'UniqueRealValues' )
+      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp
          RETURN
@@ -5026,7 +5029,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
    !!       3. All data rows must contain the same number of columns
    !!
    !!
-   SUBROUTINE GetFileLength(UnitDataFile, Filename, NumDataColumns, NumDataLines, NumHeaderLines, ErrMsg, ErrStat)
+   SUBROUTINE GetFileLength(UnitDataFile, Filename, NumDataColumns, NumDataLines, NumHeaderLines, ErrStat, ErrMsg)
 
       IMPLICIT NONE
 
@@ -5049,7 +5052,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       CHARACTER(1024)                                    :: TextLine          !< One line of text read from the file
       INTEGER(IntKi)                                     :: LineLen           !< The length of the line read in
       CHARACTER(1024)                                    :: StrRead           !< String containing the first word read in
-      REAL(ReKi)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
+      REAL(SiKi)                                         :: RealRead          !< Returns value of the number (if there was one), or NaN (as set by NWTC_Num) if there wasn't
       CHARACTER(1024)                                    :: VarName           !< Name of the variable we are trying to read from the file
       CHARACTER(24)                                      :: Words(20)         !< Array of words we extract from a line.  We shouldn't have more than 20.
       INTEGER(IntKi)                                     :: i,j,k             !< simple integer counters
@@ -5058,6 +5061,8 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       LOGICAL                                            :: HaveReadData      !< Flag indicating if I have started reading data.
       INTEGER(IntKi)                                     :: NumWords          !< Number of words on a line
       INTEGER(IntKi)                                     :: FirstDataLineNum  !< Line number of the first row of data in the file
+      CHARACTER(*), PARAMETER                            :: RoutineName = 'GetFileLength'
+
 
 
          ! Initialize the error handling
@@ -5116,7 +5121,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
             !> Now cycle through the first 'NumWords' of non-empty values stored in 'Words'.  Words should contain
             !! everything that is one the line.  The subroutine ReadRealNumberFromString will set a flag 'IsRealNum'
-            !! when the value in Words(i) can be read as a real(ReKi).  'StrRead' will contain the string equivalent.
+            !! when the value in Words(i) can be read as a real(SiKi).  'StrRead' will contain the string equivalent.
          DO i=1,NumWords
             CALL ReadRealNumberFromString( Words(i), RealRead, StrRead, IsRealNum, ErrStatTmp, ErrMsgTmp, TmpIOErrStat )
             IF ( .NOT. IsRealNum) THEN
@@ -5131,7 +5136,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
             IF ( HaveReadData ) THEN      ! Uh oh, we have already read a line of data before now, so there is a problem
                CALL SetErrStat( ErrID_Fatal, ' Found text on line '//TRIM(Num2LStr(LineNumber))//' of '//TRIM(FileName)// &
                            ' when real numbers were expected.  There may be a problem with the 2nd order WAMIT file: '// &
-                           TRIM(Filename)//'.', ErrStat, ErrMsg, 'GetFileLength')
+                           TRIM(Filename)//'.', ErrStat, ErrMsg, RoutineName)
                IF ( ErrStat >= AbortErrLev ) THEN
                   CALL CleanUp
                   RETURN
@@ -5154,7 +5159,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
                            ' The number of data columns on line '//TRIM(Num2LStr(LineNumber))// &
                            '('//TRIM(Num2LStr(NumWords))//' columns) is different than the number of columns on first row of data '// &
                            ' (line: '//TRIM(Num2LStr(FirstDataLineNum))//', '//TRIM(Num2LStr(NumDataColumns))//' columns).', &
-                           ErrStat, ErrMsg, 'GetFileLength')
+                           ErrStat, ErrMsg, RoutineName)
                   IF ( ErrStat >= AbortErrLev ) THEN
                      CALL CleanUp
                      RETURN
@@ -5167,7 +5172,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
 
       IF ( NumDataLines < 2 ) THEN
          CALL SetErrStat( ErrID_Fatal, ' 2nd order WAMIT file '//TRIM(Filename)//' contains only '//TRIM(Num2LStr(NumDataLines))// &
-                        ' lines of data. This does not appear to be a valid WAMIT file.', ErrStat, ErrMsg, 'Read_DataFile3D')
+                        ' lines of data. This does not appear to be a valid WAMIT file.', ErrStat, ErrMsg, RoutineName)
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp
             RETURN
@@ -5200,7 +5205,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
    SUBROUTINE ReadRealNumberFromString(StringToParse, ValueRead, StrRead, IsRealNum, ErrStat, ErrMsg, IOErrStat)
 
       CHARACTER(*),        INTENT(IN   )           :: StringToParse  !< The string we were handed.
-      REAL(ReKi),          INTENT(  OUT)           :: ValueRead      !< The variable being read.  Returns as NaN (library defined) if not a Real.
+      REAL(SiKi),          INTENT(  OUT)           :: ValueRead      !< The variable being read.  Returns as NaN (library defined) if not a Real.
       CHARACTER(*),        INTENT(  OUT)           :: StrRead        !< A string containing what was read from the ReadNum routine.
       LOGICAL,             INTENT(  OUT)           :: IsRealNum      !< Flag indicating if we successfully read a Real
       INTEGER(IntKi),      INTENT(  OUT)           :: ErrStat        !< ErrID level returned from ReadNum
@@ -5258,7 +5263,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       INTEGER(IntKi),      INTENT(IN   )           :: UnitNum        !< The unit number of the file being read
       CHARACTER(*),        INTENT(IN   )           :: FileName       !< The name of the file being read.  Used in the ErrMsg from ReadNum (Library routine).
       CHARACTER(*),        INTENT(IN   )           :: VarName        !< The variable we are reading.  Used in the ErrMsg from ReadNum (Library routine)'.
-      REAL(ReKi),          INTENT(  OUT)           :: VarRead        !< The variable being read.  Returns as NaN (library defined) if not a Real.
+      REAL(SiKi),          INTENT(  OUT)           :: VarRead        !< The variable being read.  Returns as NaN (library defined) if not a Real.
       CHARACTER(*),        INTENT(  OUT)           :: StrRead        !< A string containing what was read from the ReadNum routine.
       LOGICAL,             INTENT(  OUT)           :: IsRealNum      !< Flag indicating if we successfully read a Real
       INTEGER(IntKi),      INTENT(  OUT)           :: ErrStat        !< ErrID level returned from ReadNum
@@ -5452,7 +5457,7 @@ SUBROUTINE WAMIT2_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrM
          ! Compute the 2nd order load contribution from incident waves:
 
       DO I = 1,6     ! Loop through all wave excitation forces and moments
-         OtherState%F_Waves2(I) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveExctn2(:,I), &
+         OtherState%F_Waves2(I) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveExctn2(:,I), &
                                                   OtherState%LastIndWave, p%NStepWave + 1       )
       END DO          ! I - All wave excitation forces and moments
 
@@ -5514,7 +5519,7 @@ SUBROUTINE WAMIT2_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, Er
          ! Compute the first time derivatives of the continuous states here: None to calculate, so no code here.
 
          ! Dummy output value for dxdt -- this is only here to prevent the compiler from complaining.
-   dxdt%DummyContState = 0.0_ReKi
+   dxdt%DummyContState = 0.0_SiKi
 
 
 END SUBROUTINE WAMIT2_CalcContStateDeriv
@@ -5587,7 +5592,7 @@ SUBROUTINE WAMIT2_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_r
 
          ! Solve for the constraint states here: Since there are no constraint states to solve for in WAMIT2, there is no code here.
 
-      z_residual%DummyConstrState = 0.0_ReKi    ! This exists just so that we can make the compiler happy.
+      z_residual%DummyConstrState = 0.0_SiKi    ! This exists just so that we can make the compiler happy.
 
 END SUBROUTINE WAMIT2_CalcConstrStateResidual
 
