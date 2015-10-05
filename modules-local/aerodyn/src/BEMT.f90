@@ -1001,7 +1001,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
          Vx    = u%Vx(i,j)
          Vy    = u%Vy(i,j)
          theta = u%theta(i,j)
-         Vinf  = u%Vinf(i,j)
+         Vinf  = u%Vinf(i,j)  !FIX ME Is this used at all RRD?
             ! Set the active blade element for UnsteadyAero
          OtherState%UA%iBladeNode = i
          OtherState%UA%iBlade     = j
@@ -1068,7 +1068,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
            ! y%inducedVel(I,J) = sqrt( ( Vx*( cos(chi0) - y%axInduction(i,j) + Vy*y%tanInduction(i,j)*sin(y%chi(i,j))*cos(psi)*( 1 + sin(y%chi(i,j))*sin(psi) ) ) )**2 + &
            !           ( Vy*( 1 + y%tanInduction(i,j)*cos(y%chi(i,j))*( 1 + sin(y%chi(i,j))*sin(psi) ) ) + Vx*cos(psi)*( y%axInduction(i,j)*tan(y%chi(i,j)/2.0) - sin(chi0) ) )**2 )
          else
-            y%inducedVel(I,J) = sqrt( ( Vx*( 1-y%axInduction(i,j)) )**2 + ( Vy*( 1+y%tanInduction(i,j) ) )**2 )
+            y%inducedVel(I,J) = sqrt( ( Vx*( 1-y%axInduction(i,j)) )**2 + ( Vy*( 1+y%tanInduction(i,j) ) )**2 )  !FIX ME RRD: Please change nomenclature ASAP induced Vel should be Vrel
          end if
         
 
