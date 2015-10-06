@@ -610,7 +610,7 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
 
       ! Copy values over
-   DO I=0,WaveElevData%NStepWave
+   DO I=0,MIN(WaveElevData%NStepWave,InitOut%NStepWave-1)
       TmpFFTWaveElev(I)    =  WaveElevData%WaveElev(I)
    ENDDO
 
