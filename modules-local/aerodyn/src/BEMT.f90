@@ -801,7 +801,7 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
       
       integer(IntKi)                                    :: i,j
       type(UA_InputType)                                :: u_UA
-      real(ReKi)                                        :: phi, phiOut, chi, Rtip, AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, fzero
+      real(ReKi)                                        :: phi, phiOut, chi, Rtip, AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, fzero, phitemp
       
       if ( p%useInduction ) then
          
@@ -826,20 +826,11 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                               .FALSE., p%UA, xd%UA, OtherState%UA, &  !p%UA_Flag
                               p%numReIterations, p%maxIndIterations, p%aTol,  &
                               phiOut, errStat, errMsg) 
-                  z%phi(i,j) = phiOut
+                
                   if (errStat >= AbortErrLev) return
                   
-                     ! Need to get the induction factors for these conditions without skewed wake correction and without UA
-                  fzero = BEMTU_InductionWithResidual(phiOut, u%psi(j), u%chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), Rtip, p%chord(i,j), u%theta(i,j),  AFInfo(p%AFIndx(i,j)), &
-                              u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), SkewMod_Uncoupled, &
-                              .FALSE., p%UA, xd%UA, OtherState%UA, &
-                              AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, chi, ErrStat, ErrMsg)
-                  if (errStat >= AbortErrLev) return 
-                  
-                     ! Apply the skewed wake correction to the axial induction and recompute phi and alpha
-                  if ( p%skewWakeMod == SkewMod_PittPeters ) then
-                     call ApplySkewedWakeCorrection( u%Vx(i,j), u%Vy(i,j), u%psi(j), u%chi0, axInduction, tanInduction, u%rlocal(i,j)/Rtip, phiOut, chi, ErrStat, ErrMsg )
-                  end if
+                  phitemp=z%phi(i,j)  ! Store this time step phi before updating it for the next time step, so that UA does not get messed up - RRD  
+                  z%phi(i,j) = phiOut
                   
                else if ( p%SkewWakeMod == SkewMod_Coupled ) then
          
@@ -854,15 +845,25 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
                   ! Need to generate the inputs for the unsteady aero module for time t
                   ! These are the local relative wind velocity, the angle of attack, and the Reynolds number
                   ! We can get all of these from the BEMT Wind routines
-                   
+
+                  ! Need to get the induction factors for these conditions without skewed wake correction and without UA
+                  fzero = BEMTU_InductionWithResidual(phitemp, u%psi(j), u%chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), Rtip, p%chord(i,j), u%theta(i,j),  AFInfo(p%AFIndx(i,j)), &
+                              u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), SkewMod_Uncoupled, &
+                              .FALSE., p%UA, xd%UA, OtherState%UA, &
+                              AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, chi, ErrStat, ErrMsg)
+                  if (errStat >= AbortErrLev) return 
+                  
+                     ! Apply the skewed wake correction to the axial induction and recompute phi and alpha - RRD: where is the new AOA?
+                  if ( p%skewWakeMod == SkewMod_PittPeters ) then
+                     call ApplySkewedWakeCorrection( u%Vx(i,j), u%Vy(i,j), u%psi(j), u%chi0, axInduction, tanInduction, u%rlocal(i,j)/Rtip, phitemp, chi, ErrStat, ErrMsg ) !replaced phiOut with phitemp  RRD
+                  end if
                   
                   if ( p%SkewWakeMod < SkewMod_Coupled ) then
                         ! Need to compute local velocity including both axial and tangential induction
-                     call BEMTU_Wind(phiOut, axInduction, tanInduction, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u_UA%alpha,  u_UA%U, u_UA%Re)
-                     
+                     call BEMTU_Wind(phitemp, axInduction, tanInduction, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u_UA%alpha,  u_UA%U, u_UA%Re) !replaced phiOut with phitemp  RRD
                   else
-                     phi = ComputePhiWithInduction(u%Vx(i,j), u%Vy(i,j), z%axInduction(i,j), z%tanInduction(i,j), errStat, errMsg)
-                     u_UA%U = BEMTC_Wind(z%axInduction(i,j), z%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u%chi0, u%psi(j), phi, u_UA%alpha, u_UA%Re, chi)
+                     phi = ComputePhiWithInduction(u%Vx(i,j), u%Vy(i,j), z%axInduction(i,j), z%tanInduction(i,j), errStat, errMsg)  
+                     u_UA%U = BEMTC_Wind(z%axInduction(i,j), z%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u%chi0, u%psi(j), phi, u_UA%alpha, u_UA%Re, chi)! left phi as it seems to be the one associated with previous statesreplaced phi with phitemp RRD
                   end if
 
                   if ( abs(u_UA%alpha) > AFInfo(p%AFIndx(i,j))%Table(1)%UA_BL%UACutout*D2R ) then ! p%UACutout ) then
@@ -887,14 +888,18 @@ subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat
          z%tanInduction = 0.0_ReKi
          do j = 1,p%numBlades       
             do i = 1,p%numBladeNodes 
-               z%phi(i,j) = ComputePhiWithInduction(u%Vx(i,j), u%Vy(i,j),  0.0_ReKi, 0.0_ReKi, errStat, errMsg)
+                
+                phitemp=z%phi(i,j)  ! Store this time step phi before updating it for the next time step, so that UA does not get messed up - RRD
+                z%phi(i,j) = ComputePhiWithInduction(u%Vx(i,j), u%Vy(i,j),  0.0_ReKi, 0.0_ReKi, errStat, errMsg)
+                
                if (OtherState%UA_Flag(i,j)) then
                      ! Set the active blade element for UnsteadyAero
                   OtherState%UA%iBladeNode = i
                   OtherState%UA%iBlade     = j
+                  
                  ! u_UA%U = BEMTC_Wind(z%axInduction(i,j), z%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u%chi0, u%psi(j), z%phi(i,j), u_UA%alpha, u_UA%Re, chi)
                      ! Uncoupled wind for determining alpha, and U, and Re
-                  call BEMTU_Wind(z%phi(i,j), 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u_UA%alpha,  u_UA%U, u_UA%Re)
+                  call BEMTU_Wind(phitemp, 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u_UA%alpha,  u_UA%U, u_UA%Re)
                       
                   if ( abs(u_UA%alpha) > AFInfo(p%AFIndx(i,j))%Table(1)%UA_BL%UACutout*D2R ) then ! p%UACutout ) 
                      OtherState%UA_Flag(i,j) = .FALSE.
