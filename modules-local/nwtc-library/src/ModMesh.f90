@@ -1367,19 +1367,44 @@ CONTAINS
 
       IF (.NOT. SrcMesh%Initialized) RETURN !bjj: maybe we should first CALL MeshDestroy(DestMesh,ErrStat, ErrMess)
 
-      IF ( CtrlCode .EQ. MESH_NEWCOPY .OR. CtrlCode .EQ. MESH_SIBLING ) THEN
-
-         IF ( CtrlCode .EQ. MESH_NEWCOPY ) THEN
-            CALL MeshCreate( DestMesh, IOS=SrcMesh%IOS, Nnodes=SrcMesh%Nnodes, ErrStat=ErrStat, ErrMess=ErrMess &
-                            ,Force=SrcMesh%FieldMask(MASKID_FORCE)                                              &
-                            ,Moment=SrcMesh%FieldMask(MASKID_MOMENT)                                            &
-                            ,Orientation=SrcMesh%FieldMask(MASKID_ORIENTATION)                                  &
-                            ,TranslationDisp=SrcMesh%FieldMask(MASKID_TRANSLATIONDISP)                          &
-                            ,TranslationVel=SrcMesh%FieldMask(MASKID_TRANSLATIONVEL)                            &
-                            ,RotationVel=SrcMesh%FieldMask(MASKID_ROTATIONVEL)                                  &
-                            ,TranslationAcc=SrcMesh%FieldMask(MASKID_TRANSLATIONACC)                            &
-                            ,RotationAcc=SrcMesh%FieldMask(MASKID_ROTATIONACC)                                  &
-                            ,nScalars=SrcMesh%nScalars                                                          )
+      IF ( CtrlCode .EQ. MESH_NEWCOPY .OR. CtrlCode .EQ. MESH_SIBLING .OR. CtrlCode .EQ. MESH_COUSIN ) THEN
+         
+         IF (CtrlCode .EQ. MESH_NEWCOPY) THEN
+            IOS_l              = SrcMesh%IOS 
+            Force_l            = SrcMesh%FieldMask(MASKID_FORCE)                     
+            Moment_l           = SrcMesh%FieldMask(MASKID_MOMENT)                   
+            Orientation_l      = SrcMesh%FieldMask(MASKID_ORIENTATION)         
+            TranslationDisp_l  = SrcMesh%FieldMask(MASKID_TRANSLATIONDISP) 
+            TranslationVel_l   = SrcMesh%FieldMask(MASKID_TRANSLATIONVEL)   
+            RotationVel_l      = SrcMesh%FieldMask(MASKID_ROTATIONVEL)         
+            TranslationAcc_l   = SrcMesh%FieldMask(MASKID_TRANSLATIONACC)   
+            RotationAcc_l      = SrcMesh%FieldMask(MASKID_ROTATIONACC)         
+            nScalars_l         = SrcMesh%nScalars          
+         ELSE ! Sibling or cousin
+            IOS_l          = SrcMesh%IOS ; IF ( PRESENT(IOS) )                         IOS_l = IOS
+            Force_l            = .FALSE. ; IF ( PRESENT(Force) )                     Force_l = Force
+            Moment_l           = .FALSE. ; IF ( PRESENT(Moment) )                   Moment_l = Moment
+            Orientation_l      = .FALSE. ; IF ( PRESENT(Orientation) )         Orientation_l = Orientation
+            TranslationDisp_l  = .FALSE. ; IF ( PRESENT(TranslationDisp) ) TranslationDisp_l = TranslationDisp
+            TranslationVel_l   = .FALSE. ; IF ( PRESENT(TranslationVel) )   TranslationVel_l = TranslationVel
+            RotationVel_l      = .FALSE. ; IF ( PRESENT(RotationVel) )         RotationVel_l = RotationVel
+            TranslationAcc_l   = .FALSE. ; IF ( PRESENT(TranslationAcc) )   TranslationAcc_l = TranslationAcc
+            RotationAcc_l      = .FALSE. ; IF ( PRESENT(RotationAcc) )         RotationAcc_l = RotationAcc
+            nScalars_l         = 0       ; IF ( PRESENT(nScalars) )               nScalars_l = nScalars
+         END IF
+            
+         IF ( CtrlCode .EQ. MESH_NEWCOPY .OR. CtrlCode .EQ. MESH_COUSIN ) THEN
+                                    
+            CALL MeshCreate( DestMesh, IOS=IOS_l, Nnodes=SrcMesh%Nnodes, ErrStat=ErrStat, ErrMess=ErrMess &
+                            ,Force=Force_l                                                                &
+                            ,Moment=Moment_l                                                              &
+                            ,Orientation=Orientation_l                                                    &
+                            ,TranslationDisp=TranslationDisp_l                                            &
+                            ,TranslationVel=TranslationVel_l                                              &
+                            ,RotationVel=RotationVel_l                                                    &
+                            ,TranslationAcc=TranslationAcc_l                                              &
+                            ,RotationAcc=RotationAcc_l                                                    &
+                            ,nScalars=nScalars_l                                                          )
 
             IF (ErrStat >= AbortErrLev) RETURN
 
@@ -1459,16 +1484,6 @@ CONTAINS
                RETURN !early return
             END IF
 
-            IOS_l          = SrcMesh%IOS ; IF ( PRESENT(IOS) )                         IOS_l = IOS
-            Force_l            = .FALSE. ; IF ( PRESENT(Force) )                     Force_l = Force
-            Moment_l           = .FALSE. ; IF ( PRESENT(Moment) )                   Moment_l = Moment
-            Orientation_l      = .FALSE. ; IF ( PRESENT(Orientation) )         Orientation_l = Orientation
-            TranslationDisp_l  = .FALSE. ; IF ( PRESENT(TranslationDisp) ) TranslationDisp_l = TranslationDisp
-            TranslationVel_l   = .FALSE. ; IF ( PRESENT(TranslationVel) )   TranslationVel_l = TranslationVel
-            RotationVel_l      = .FALSE. ; IF ( PRESENT(RotationVel) )         RotationVel_l = RotationVel
-            TranslationAcc_l   = .FALSE. ; IF ( PRESENT(TranslationAcc) )   TranslationAcc_l = TranslationAcc
-            RotationAcc_l      = .FALSE. ; IF ( PRESENT(RotationAcc) )         RotationAcc_l = RotationAcc
-            nScalars_l         = 0       ; IF ( PRESENT(nScalars) )               nScalars_l = nScalars
             CALL MeshCreate( DestMesh, IOS=IOS_l, Nnodes=SrcMesh%Nnodes, ErrStat=ErrStat, ErrMess=ErrMess   &
                             ,Force=Force_l                                                                  &
                             ,Moment=Moment_l                                                                &
