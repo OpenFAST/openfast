@@ -337,7 +337,7 @@ SUBROUTINE OpFM_SetInputs( p_FAST, p_AD14, u_AD14, y_AD14, u_AD, y_AD, y_ED, y_S
    
       ! set SuperController inputs
    if (p_FAST%CompServo == Module_SrvD) then
-      OpFM%u%SuperController = y_SrvD%SuperController      
+      if (allocated(y_SrvD%SuperController).and. associated(OpFM%u%SuperController)) OpFM%u%SuperController = y_SrvD%SuperController      
    end if
    
       
