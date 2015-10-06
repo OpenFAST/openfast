@@ -1238,6 +1238,7 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
       InvalidOutput( PRatAct ) = .true.
       InvalidOutput( PAccAct ) = .true.
    END IF
+      
    
 !   ................. End of validity checking .................
 
@@ -1308,6 +1309,8 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
             p%OutParam(I)%SignM = 0
          ELSE
             p%OutParam(I)%Units = ParamUnitsAry(Indx) ! it's a valid output
+            
+            if ( p%OutParam(I)%Indx >= N1DFxl .and. p%OutParam(I)%Indx <= N9DMzl ) p%OutInputs = .true.
          END IF
       ELSE ! this channel isn't valid
          p%OutParam(I)%Indx  = Time                 ! pick any valid channel (I just picked "Time" here because it's universal)
@@ -1401,7 +1404,8 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
    else 
 
    ! Check to see if all OutNd(:) analysis points are existing analysis points:
-      nNodes = InputFileData%member_total*InputFileData%order_elem + 1  ! = p%node_total
+      nNodes = (InputFileData%order_elem + 1)*InputFileData%member_total  ! = p%node_elem*p%elem_total (number of nodes on y%BldMotion mesh)
+       
       do j=1,InputFileData%NNodeOuts
          if ( InputFileData%OutNd(j) < 1_IntKi .OR. InputFileData%OutNd(j) > nNodes ) then
             call SetErrStat( ErrID_Fatal, ' All OutNd values must be between 1 and '//&
@@ -1414,7 +1418,7 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
    
 END SUBROUTINE BD_ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, OtherState, ErrStat, ErrMsg )
    
    ! this routine fills the AllOuts array, which is used to send data to the glue code to be written to an output file.
 
@@ -1422,6 +1426,7 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
    TYPE(BD_InputType),        INTENT(IN   )  :: u                                 ! inputs
    REAL(ReKi),                INTENT(INOUT)  :: AllOuts(0:)                       ! array of values to potentially write to file
    TYPE(BD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
+   TYPE(BD_OtherStateType),   INTENT(INOUT)  :: OtherState                        ! other states (for computing mesh transfers)
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
 
@@ -1622,17 +1627,49 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )
       AllOuts( NPMl( beta,1 ) ) = temp_vec(1) 
       AllOuts( NPMl( beta,2 ) ) = temp_vec(2) 
       AllOuts( NPMl( beta,3 ) ) = temp_vec(3) 
-      !
-      !AllOuts( NDFl( beta,1 ) ) = 
-      !AllOuts( NDFl( beta,2 ) ) = 
-      !AllOuts( NDFl( beta,3 ) ) =  
-      !
-      !AllOuts( NDMl( beta,1 ) ) = 
-      !AllOuts( NDMl( beta,2 ) ) = 
-      !AllOuts( NDMl( beta,3 ) ) = 
+      
       
    end do ! nodes
          
+      ! to avoid unnecessary mesh mapping calculations, calculate these outputs only when we've requested them 
+   if (p%OutInputs) then 
+
+         ! transfer the output motions to the input nodes for load transfer
+      CALL Transfer_Line2_to_Line2( y%BldMotion, OtherState%y_BldMotion_at_u, OtherState%Map_y_BldMotion_to_u, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+         ! transfer the input loads to the output nodes for writing output
+      CALL Transfer_Line2_to_Line2( u%DistrLoad, OtherState%u_DistrLoad_at_y, OtherState%Map_u_DistrLoad_to_y, ErrStat2, ErrMsg2, OtherState%y_BldMotion_at_u, y%BldMotion)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
+      
+      do beta=1,p%NNodeOuts
+         
+         j=p%OutNd(beta)         
+         j_BldMotion = p%NdIndx(j)      
+      
+         !bjj: if we have a zero-length element, we probably need to use j_BldMotion in the following "if" statement
+         IF(j .LE. p%node_elem) THEN
+             elem_no = 1
+             node_no = j
+         ELSE
+             elem_no = INT((j+1)/(p%node_elem-1))
+             node_no = j - (elem_no - 1)*(p%node_elem-1)
+         ENDIF
+         temp_id = (elem_no-1)*p%node_elem+node_no
+         temp33 = y%BldMotion%Orientation(1:3,1:3,temp_id)
+         
+         AllOuts( NDFl( beta,: ) ) = MATMUL(temp33,OtherState%u_DistrLoad_at_y%Force( :,j))
+         AllOuts( NDMl( beta,: ) ) = MATMUL(temp33,OtherState%u_DistrLoad_at_y%Moment(:,j))
+         
+      end do ! nodes
+         
+      
+   end if
+   
+   
+   
+   
 END SUBROUTINE Calc_WriteOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_PrintSum( p, u, y, x, OtherState, RootName, ErrStat, ErrMsg )

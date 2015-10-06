@@ -17,7 +17,7 @@ typedef BeamDyn/BD InitInputType CHARACTER(1024) RootName   - - - "RootName for 
 typedef BeamDyn/BD InitInputType ReKi            gravity   {3} - - "Gravitational acceleration" m/s^2
 typedef BeamDyn/BD InitInputType ReKi            GlbPos    {3} - - "Initial Position Vector of the local blade coordinate system"
 typedef BeamDyn/BD InitInputType R8Ki            GlbRot    {3}{3} - - "Initial direction cosine matrix of the local blade coordinate system"
-typedef BeamDyn/BD InitInputType ReKi            RootDisp  {3} - - "Initial root displacement"
+typedef BeamDyn/BD InitInputType R8Ki            RootDisp  {3} - - "Initial root displacement"
 typedef BeamDyn/BD InitInputType R8Ki            RootOri   {3}{3} - - "Initial root orientation"
 typedef BeamDyn/BD InitInputType ReKi            RootVel   {6} - - "Initial root velocities and angular veolcities"
 typedef BeamDyn/BD InitInputType ReKi            DistrLoad {6} - - "Constant distributed load along beam axis, 3 forces and 3 moments" 
@@ -61,6 +61,12 @@ typedef BeamDyn/BD OtherStateType  ^    xcc        {:} - - "Algorithm accerlerat
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef BeamDyn/BD OtherStateType Logical  InitAcc  -  - - "flag to determine if accerlerations have been initialized in updateStates"
+ #ideally these would be misc vars:
+typedef BeamDyn/BD OtherStateType MeshType    u_DistrLoad_at_y - - - "input loads at output node locations" -
+typedef BeamDyn/BD OtherStateType MeshType    y_BldMotion_at_u - - - "output motions at input node locations (displacements necessary for mapping loads)" -
+typedef BeamDyn/BD OtherStateType MeshMapType Map_u_DistrLoad_to_y - - - "mapping of input loads to output node locations" -
+typedef BeamDyn/BD OtherStateType MeshMapType Map_y_BldMotion_to_u - - - "mapping of output motions to input node locations (for load transfer)" -
+
 
 # ..... Parameters
 # ................................................................................................................
@@ -117,6 +123,7 @@ typedef      ^            ^       ^     niter  - - -  "Maximum number of iterati
 typedef      ^            ^       ^     quadrature  - - -  "Quadrature method: 1 Gauss 2 Trapezoidal" -
 typedef      ^            ^       ^     n_fact  - - -  "Factorization frequency" -
 #typedef      ^            ^       ^     NRMax  - - -  "Maximum number of iterations in Newton-Ralphson algorithm" -
+typedef      ^            ^      Logical  OutInputs - - -  "Determines if we've asked to output the inputs (do we need mesh transfer?)" -
 typedef      ^            ^      IntKi  NumOuts - - -  "Number of parameters in the output list (number of outputs requested)" -
 typedef      ^     ParameterType OutParmType OutParam	{:}	-	-	"Names and units (and other characteristics) of all requested output parameters"	-
 typedef      ^     ParameterType IntKi  NNodeOuts - - - "Number of nodes to output data to a file[0 - 9]"	-
