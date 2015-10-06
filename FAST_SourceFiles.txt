@@ -11,6 +11,7 @@ Source\Morison_Output.f90
 Source\Morison_Types.f90
 Source\SS_Radiation.f90
 Source\SS_Radiation_Types.f90
+Source\UserWaves.f90
 Source\WAMIT.f90
 Source\WAMIT_Interp.f90
 Source\WAMIT_Output.f90
