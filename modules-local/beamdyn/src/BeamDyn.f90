@@ -224,7 +224,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
        ENDDO
    ENDIF
 
-   
+     ! initialize for first step (i=1)
    temp_id = 0
    id0 = 1
    DO i=1,p%elem_total
@@ -499,11 +499,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    end if   
 ! END Actuator
                      
-
-      ! allocate and initialize other states:
-   call Init_OtherStates(p, OtherState, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   
    
       ! Define and initialize system inputs (set up and initialize input meshes) here:
    call Init_u(InitInp, p, u, ErrStat2, ErrMsg2)
@@ -527,6 +522,11 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    call Init_y(p, u, y, ErrStat2, ErrMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+      
+      ! allocate and initialize other states (do this after initializing input and output meshes):
+   call Init_OtherStates(p, u, y, OtherState, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
       
       ! set initializaiton outputs
    call SetInitOut(p, InitOut, errStat, errMsg)
@@ -744,6 +744,8 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    p%numOuts   = InputFileData%NumOuts  
    p%NNodeOuts = InputFileData%NNodeOuts      
    p%OutNd     = InputFileData%OutNd
+
+   p%OutInputs = .false.  ! will get set to true in SetOutParam if we request the inputs as output values
 
    call SetOutParam(InputFileData%OutList, p, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, p%NNodeOuts, p%UsePitchAct; sets: p%OutParam.
       call setErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1178,8 +1180,10 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
       
 end subroutine Init_u
 !-----------------------------------------------------------------------------------------------------------------------------------
-subroutine Init_OtherStates( p, OtherState, ErrStat, ErrMsg )
+subroutine Init_OtherStates( p, u, y, OtherState, ErrStat, ErrMsg )
    type(BD_ParameterType),       intent(in   )  :: p                 ! Parameters
+   type(BD_InputType),           intent(inout)  :: u                 ! Inputs   ! intent(out) because I'm copying it
+   type(BD_OutputType),          intent(inout)  :: y                 ! Outputs  ! intent(out) because I'm copying it
    type(BD_OtherStateType),      intent(inout)  :: OtherState        ! Other/optimization states
    integer(IntKi),               intent(  out)  :: ErrStat           ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
@@ -1194,6 +1198,44 @@ subroutine Init_OtherStates( p, OtherState, ErrStat, ErrMsg )
    ErrMsg  = ""
 
    
+   ! create copy of u%DistrLoad at y%BldMotion locations (for WriteOutput only)
+   if (p%OutInputs) then
+      
+         ! y%BldMotion and u%DistrLoad are not siblings, so we need to create  
+         ! mapping to output u%DistrLoad values at y%BldMotion nodes 
+         ! (not making these new meshes siblings of old ones because FAST needs to
+         ! do this same trick and we can't have more than one sibling of a mesh)
+                 
+      CALL MeshCopy ( SrcMesh  = y%BldMotion                  &
+                    , DestMesh = OtherState%u_DistrLoad_at_y  &
+                    , CtrlCode = MESH_COUSIN                  &  ! Like a sibling, except using new memory for position/refOrientation and elements
+                    , IOS      = COMPONENT_INPUT              &
+                    , Force    = .TRUE.                       &
+                    , Moment   = .TRUE.                       &
+                    , ErrStat  = ErrStat2                     &
+                    , ErrMess  = ErrMsg2                      )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      
+      CALL MeshCopy ( SrcMesh  = u%DistrLoad                  &
+                    , DestMesh = OtherState%y_BldMotion_at_u  &
+                    , CtrlCode = MESH_COUSIN                  &
+                    , IOS      = COMPONENT_OUTPUT             &
+                    , Orientation     = .TRUE.                &
+                    , TranslationDisp = .TRUE.                &
+                    , ErrStat         = ErrStat2              &
+                    , ErrMess         = ErrMsg2               )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         
+      CALL MeshMapCreate( u%DistrLoad, OtherState%u_DistrLoad_at_y, OtherState%Map_u_DistrLoad_to_y, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL MeshMapCreate( y%BldMotion, OtherState%y_BldMotion_at_u, OtherState%Map_y_BldMotion_to_u, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+               
+      OtherState%u_DistrLoad_at_y%remapFlag = .false.
+      OtherState%y_BldMotion_at_u%remapFlag = .false.
+   end if
+      
+   
    ! Allocate other states: Acceleration and algorithm accelerations for generalized-alpha time integator
    CALL AllocAry(OtherState%acc,p%dof_total,'OtherState%acc',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1201,7 +1243,7 @@ subroutine Init_OtherStates( p, OtherState, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
    if (ErrStat>=AbortErrLev) return   
-   
+            
    OtherState%InitAcc = .false. ! accelerations have not been initialized, yet
       
    OtherState%acc(:) = 0.0_BDKi
@@ -1518,8 +1560,8 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !  get values to output to file:  
    !-------------------------------------------------------   
    ! Actuator
-   call Calc_WriteOutput( p, u_tmp2, AllOuts, y, ErrStat, ErrMsg )   
-!   call Calc_WriteOutput( p, u, AllOuts, y, ErrStat, ErrMsg )   
+   call Calc_WriteOutput( p, u_tmp2, AllOuts, y, OtherState, ErrStat2, ErrMsg2 )   
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
     
    y%RootMxr = AllOuts( RootMxr )
    y%RootMyr = AllOuts( RootMyr )
