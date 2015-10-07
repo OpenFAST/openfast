@@ -331,7 +331,7 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
       ParamData%InitXPosition = 0                ! start at the hub
       ParamData%TotalTime     = ParamData%NFFSteps*ParamData%FFDTime
    ELSE
-      ParamData%InitXPosition = ParamData%FFYHWid          ! start half the grid with ahead of the turbine
+      ParamData%InitXPosition = ParamData%FFYHWid          ! start half the grid width ahead of the turbine
       ParamData%TotalTime     = (ParamData%NFFSteps-1)*ParamData%FFDTime
    ENDIF
 
