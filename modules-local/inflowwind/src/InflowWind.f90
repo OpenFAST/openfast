@@ -504,11 +504,11 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
                ! Check if the fist data point from the file is not along the X-axis while applying the windfield rotation
             IF ( ( .NOT. EqualRealNos (ParamData%UniformWind%Delta(1), 0.0_ReKi) ) .AND.  &
-                 ( .NOT. EqualRealNos (ParamData%PropogationDir, 0.0_ReKi)       ) ) THEN
+                 ( .NOT. EqualRealNos (ParamData%PropagationDir, 0.0_ReKi)       ) ) THEN
                CALL SetErrStat( ErrID_Warn,' Possible double rotation of wind field! Uniform wind file starts with a wind direction of '// &
                         TRIM(Num2LStr(ParamData%UniformWind%Delta(1)*R2D))//                       &
-                        ' degrees and the InflowWind input file specifies a PropogationDir of '//  &
-                        TRIM(Num2LStr(ParamData%PropogationDir*R2D))//' degrees.',                 &
+                        ' degrees and the InflowWind input file specifies a PropagationDir of '//  &
+                        TRIM(Num2LStr(ParamData%PropagationDir*R2D))//' degrees.',                 &
                         ErrStat,ErrMsg,RoutineName )
             ENDIF
 
@@ -797,12 +797,12 @@ END SUBROUTINE InflowWind_Init
 !! number to evaluate). The returned values in the OutputData are similar with U/V/W for the first index of 1/2/3.
 !!
 !! _Coordinate transformation:_
-!! The coordinates passed in are copied to the PositionXYZPrime array, then rotated by -(ParamData%PropogationDir) (radians) so
+!! The coordinates passed in are copied to the PositionXYZPrime array, then rotated by -(ParamData%PropagationDir) (radians) so
 !! that the wind direction lies along the X-axis (all wind files are given this way).  The submodules are then called with
 !! these PositionXYZPrime coordinates.
 !!
 !! After the calculation by the submodule, the PositionXYZPrime coordinate array is deallocated.  The returned VelocityUVW
-!! array is then rotated by ParamData%PropogationDir so that it now corresponds the the global coordinate UVW values for wind
+!! array is then rotated by ParamData%PropagationDir so that it now corresponds the the global coordinate UVW values for wind
 !! with that direction.
 !----------------------------------------------------------------------------------------------------
 SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &

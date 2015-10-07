@@ -317,9 +317,9 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
    ENDIF
 
 
-      ! Read PropogationDir
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%PropogationDir, 'PropogationDir', &
-               'Direction of wind propogation (meteoroligical direction)', TmpErrStat, TmpErrMsg, UnitEcho )
+      ! Read PropagationDir
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%PropagationDir, 'PropogationDir', &
+               'Direction of wind propagation (meteoroligical direction)', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
       CALL CleanUp()
@@ -1352,10 +1352,10 @@ SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrS
    ParamData%WindType   =  InputFileData%WindType
 
 
-      ! Convert the PropogationDir to radians and store this.  For simplicity, we will shift it to be between -pi and pi
+      ! Convert the PropagationDir to radians and store this.  For simplicity, we will shift it to be between -pi and pi
 
-   ParamData%PropogationDir   = D2R * InputFileData%PropogationDir
-   CALL MPi2Pi( ParamData%PropogationDir )         ! Shift if necessary so that the value is between -pi and pi
+   ParamData%PropagationDir   = D2R * InputFileData%PropogationDir
+   CALL MPi2Pi( ParamData%PropagationDir )         ! Shift if necessary so that the value is between -pi and pi
 
 
       ! Copy over the list of wind coordinates.  Move the arrays to the new one.
@@ -1402,14 +1402,14 @@ SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrS
          ! Setup the coordinate transforms for rotating the wind field.
          !-------------------------------------------------------------
 
-      !> Perform coordinate transformation using the PropogationDir value read in from the input file (the value stored in parameters
+      !> Perform coordinate transformation using the PropagationDir value read in from the input file (the value stored in parameters
       !! was converted from degrees to radians already).
-      !! @note    The PropogationDir is given in Meteorological \f$\Delta\phi\f$, so this is the negative of the \f$\Delta\phi\f$
+      !! @note    The PropagationDir is given in Meteorological \f$\Delta\phi\f$, so this is the negative of the \f$\Delta\phi\f$
       !!          for polar coordinates
 
       ! Create the rotation matrices -- rotate from XYZ to X'Y'Z' (wind aligned along X) coordinates
-   ParamData%RotToWind(1,:) = (/    COS(-ParamData%PropogationDir),   SIN(-ParamData%PropogationDir),     0.0_ReKi  /)  
-   ParamData%RotToWind(2,:) = (/   -SIN(-ParamData%PropogationDir),   COS(-ParamData%PropogationDir),     0.0_ReKi  /)  
+   ParamData%RotToWind(1,:) = (/    COS(-ParamData%PropagationDir),   SIN(-ParamData%PropogationDir),     0.0_ReKi  /)  
+   ParamData%RotToWind(2,:) = (/   -SIN(-ParamData%PropagationDir),   COS(-ParamData%PropogationDir),     0.0_ReKi  /)  
    ParamData%RotToWind(3,:) = (/                          0.0_ReKi,                         0.0_ReKi,     1.0_ReKi  /)  
 
       ! Create the rotation matrices -- rotate from X'Y'Z' (wind aligned along X) to global XYZ coordinates
@@ -1791,8 +1791,8 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
 
 
          ! Apply the coordinate transformation to the PositionXYZ coordinates to get the PositionXYZprime coordinate list
-         ! If the PropogationDir is zero, we don't need to apply this and will simply copy the data.  Repeat for the WindViXYZ.
-      IF ( EqualRealNos (ParamData%PropogationDir, 0.0_ReKi) ) THEN
+         ! If the PropagationDir is zero, we don't need to apply this and will simply copy the data.  Repeat for the WindViXYZ.
+      IF ( EqualRealNos (ParamData%PropagationDir, 0.0_ReKi) ) THEN
          PositionXYZprime  =  InputData%PositionXYZ
       ELSE
          DO I  = 1,SIZE(InputData%PositionXYZ,DIM=2)
@@ -2091,17 +2091,17 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
          ! The VelocityUVW array data that has been returned from the sub-modules is in the wind file (X'Y'Z') coordinates at
          ! this point.  These must be rotated to the global XYZ coordinates.  So now we apply the coordinate transformation
          ! to the VelocityUVW(prime) coordinates (in wind X'Y'Z' coordinate frame) returned from the submodules to the XYZ
-         ! coordinate frame, but only if PropogationDir is not zero.  This is only a rotation of the returned wind field, so
+         ! coordinate frame, but only if PropagationDir is not zero.  This is only a rotation of the returned wind field, so
          ! UVW contains the direction components of the wind at XYZ after translation from the U'V'W' wind velocity components
          ! in the X'Y'Z' (wind file) coordinate frame.
-      IF ( .NOT. EqualRealNos (ParamData%PropogationDir, 0.0_ReKi) ) THEN
+      IF ( .NOT. EqualRealNos (ParamData%PropagationDir, 0.0_ReKi) ) THEN
          DO I  = 1,SIZE(OutputData%VelocityUVW,DIM=2)
             OutputData%VelocityUVW(:,I)   =  MATMUL( ParamData%RotFromWind, OutputData%VelocityUVW(:,I) )
          ENDDO
       ENDIF
 
          ! We also need to rotate the reference frame for the WindViUVW array
-      IF ( .NOT. EqualRealNos (ParamData%PropogationDir, 0.0_ReKi)  .AND. FillWrOut ) THEN
+      IF ( .NOT. EqualRealNos (ParamData%PropagationDir, 0.0_ReKi)  .AND. FillWrOut ) THEN
          DO I  = 1,SIZE(OtherStates%WindViUVW,DIM=2)
             OtherStates%WindViUVW(:,I)   =  MATMUL( ParamData%RotFromWind, OtherStates%WindViUVW(:,I) )
          ENDDO
