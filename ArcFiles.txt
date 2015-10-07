@@ -3,26 +3,35 @@ Disclaimer.txt
 license.txt
 
 FAST_SourceFiles.txt
-Source/makefile
+OutListParameters.xlsx
 
-SampleCase/README.txt
-SampleCase/Sample1.bin
-SampleCase/Sample1.bts
-SampleCase/Sample1.cts
-SampleCase/Sample1.dat
-SampleCase/Sample1.hh
-SampleCase/Sample1.inp
-SampleCase/Sample1.sum
-SampleCase/Sample1.twr
-SampleCase/Sample1.u
-SampleCase/Sample1.v
-SampleCase/Sample1.w
-SampleCase/Sample1.wnd
+Docs\InflowWind_Manual.pdf
 
-Source/InflowWind_Driver.f90
-Source/InflowWind_Driver_Subs.f90
-Source/InflowWind_Driver_Types.f90
-Source/Testing/IfW_FFWind_Test.f90
-Source/Testing/IfW_HHWind_Test.f90
-Source/Testing/makefile
+Source/Driver/InflowWind_Driver.f90
+Source/Driver/InflowWind_Driver_Subs.f90
+Source/Driver/InflowWind_Driver_Types.f90
 
+Source\dependencies\NWTC_Library\*
+Source\dependencies\NWTC_Library\dependencies\lapack\*
+
+Compiling/makefile
+Compiling/VisualStudio/InflowWind_Driver.vfproj
+
+CertTest\Results\*
+
+CertTest\CertTest.bat
+CertTest\data\*
+
+CertTest\Test001--steady.dvr
+CertTest\Test001--steady.ipt
+CertTest\Test001--points.txt
+
+CertTest\Test002--Uniform.dvr
+CertTest\Test002--Uniform.ipt
+
+CertTest\Test003--TSFF.dvr
+CertTest\Test003--TSFF.ipt
+
+CertTest\Test004--BladedFF.dvr
+CertTest\Test004--BladedFF.ipt
+CertTest\Test004--points.txt

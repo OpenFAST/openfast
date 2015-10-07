@@ -38,7 +38,7 @@ PROGRAM InflowWind_Driver
    IMPLICIT NONE
 
       ! Info on this code
-   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("InflowWind_Driver","v1.01.00a-adp","22-Apr-2015")
+   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("InflowWind_Driver","v1.01.00a-adp","7-Oct-2015")
    INTEGER(IntKi)                                     :: IfWDriver_Verbose =  5  ! Verbose level.  0 = none, 5 = some, 10 = lots
 
       ! Types needed here (from InflowWind module)
