@@ -1,5 +1,6 @@
 ChangeLog.txt
 Disclaimer.txt
+license.txt
 
 FAST_SourceFiles.txt
 
@@ -7,10 +8,6 @@ Samples/AeroDyn_Tower.dat
 Samples/SampleAirfoil.dat
 Samples/SampleInput_wo_TwrInfluence.ad
 Samples/SampleInput_w_TwrInfluence.ad
-Samples/Steady.wnd
-Samples/Turb.sum
-Samples/Turb.wnd
-Samples/TurbSim_AD.ctp
 
 Documentation/AD_Theory.pdf
 Documentation/AeroDyn.pdf
