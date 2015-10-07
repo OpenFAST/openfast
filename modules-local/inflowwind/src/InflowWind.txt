@@ -61,7 +61,7 @@ typedef  ^                       ^                 ReKi              MWS        
 # ..... Primary Input file data ...................................................................................................
 typedef  InflowWind/InflowWind   InflowWind_InputFile   LOGICAL      EchoFlag          -     -     -     "Echo the input file"                                    -
 typedef  ^                       ^                 IntKi             WindType          -     0     -     "Type of windfile"                                       -
-typedef  ^                       ^                 ReKi              PropogationDir    -     -     -     "Direction of wind propogation (meteorological direction)"  (degrees)
+typedef  ^                       ^                 ReKi              PropagationDir    -     -     -     "Direction of wind propagation (meteorological direction)"  (degrees)
 typedef  ^                       ^                 IntKi             NWindVel          -     -     -     "Number of points to output the wind velocity (0 to 9)"
 typedef  ^                       ^                 ReKi              WindVxiList       :     -     -     "List of X coordinates for wind velocity measurements"   meters
 typedef  ^                       ^                 ReKi              WindVyiList       :     -     -     "List of Y coordinates for wind velocity measurements"   meters
@@ -154,7 +154,7 @@ typedef  ^                       ^                 CHARACTER(1024)   RootFileNam
 typedef  ^                       ^                 LOGICAL           Initialized       -  .FALSE.  -     "Flag to indicate if the module was initialized"         -
 typedef  ^                       ^                 LOGICAL           CTTS_Flag         -  .FALSE.  -     "determines if coherent turbulence is used"              -
 typedef  ^                       ^                 DbKi              DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
-typedef  ^                       ^                 ReKi              PropogationDir    -     -     -     "Direction of wind propogation"                          radians
+typedef  ^                       ^                 ReKi              PropagationDir    -     -     -     "Direction of wind propagation"                          radians
 
 typedef  ^                       ^                 ReKi              RotToWind        {3}{3} -     -     "Rotation matrix for rotating from the global XYZ coordinate system to the wind coordinate system (wind along X')"   -
 typedef  ^                       ^                 ReKi              RotFromWind      {3}{3} -     -     "Rotation matrix for rotating from the wind coordinate system (wind along X') back to the global XYZ coordinate system.  Equal to TRANSPOSE(RotToWind)"   -

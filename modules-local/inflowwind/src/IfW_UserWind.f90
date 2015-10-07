@@ -185,7 +185,7 @@ END SUBROUTINE IfW_UserWind_Init
 !! @note    This routine may be called multiple times in a single timestep!!!
 !!
 !! @note    The PositionXYZ coordinates have been rotated into the wind coordinate system where the
-!!          primary wind flow is along the X-axis.  The rotations to PropogationDir are taken care of
+!!          primary wind flow is along the X-axis.  The rotations to PropagationDir are taken care of
 !!          in the InflowWind_CalcOutput subroutine which calls this routine.
 !-------------------------------------------------------------------------------------------------
 SUBROUTINE IfW_UserWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates, OutData, ErrStat, ErrMsg)
