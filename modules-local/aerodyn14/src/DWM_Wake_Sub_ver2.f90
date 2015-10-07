@@ -1565,6 +1565,8 @@ SUBROUTINE Get_wake_center ( OS, p, y, u, x, xd, z, wakewidth, wake_center )
 
     U_Scale_Factor =  Modified_U / (p%Uambient*U_factor)       ! modify the wake displacement error caused by the change of Mean_FFWS                                                                                        
     
+    U_Scale_Factor = 1                       ! 7.15.2015
+    
     simulation_time_length = p%WakePosition_1    !80   in reality, 80*scale_factor*DWM_time_step
                                  ! from 1 to 800 (scale_factor : 800/80=10)         to 16D (16*50)
     OS%meandering_data%moving_time       = p%WakePosition_2         !50   from 0 to 49  0: wind turbine plane

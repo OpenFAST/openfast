@@ -32,7 +32,7 @@ MODULE AeroDyn14
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: AD14_Ver = ProgDesc( 'AeroDyn14', 'v14.04.00a-bjj', '14-Apr-2015' )
+   TYPE(ProgDesc), PARAMETER            :: AD14_Ver = ProgDesc( 'AeroDyn14', 'v14.04.00a-bjj', '6-Oct-2015' )
 
       ! ..... Public Subroutines ............
 
