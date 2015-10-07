@@ -1,6 +1,12 @@
 SubDyn Change Log
 ===============================================================================
 -------------------------------------------------------------------------------
+v1.02.00a          5-Oct-2015
+   Official FAST 8.12 public release
+-fixed issue with invalid output channels generating NaNs
+-fixed segmentation fault if output members were specified but no outputs were listed   
+-fixed a bug in SubDyn whereby the structural damping was not set properly when the Craig-Bampton reduction was disabled
+-------------------------------------------------------------------------------
 v1.01.02a          27-Feb-2015
    Official FAST 8.10 public release
 -modified matmul to use LAPACK version, which eliminated some stack-space issues for 32-bit compiles
