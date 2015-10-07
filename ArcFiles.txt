@@ -11,8 +11,9 @@ Source/Driver/InflowWind_Driver.f90
 Source/Driver/InflowWind_Driver_Subs.f90
 Source/Driver/InflowWind_Driver_Types.f90
 
-Source\dependencies\NWTC_Library\*
-Source\dependencies\NWTC_Library\dependencies\lapack\*
+Source\dependencies\NWTC_Library\*.f90
+Source\dependencies\NWTC_Library\Registry_NWTC_Library.txt
+Source\dependencies\NWTC_Library\dependencies\lapack\*.f90
 
 Compiling/makefile
 Compiling/VisualStudio/InflowWind_Driver.vfproj
