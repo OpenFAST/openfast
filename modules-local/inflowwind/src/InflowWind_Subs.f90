@@ -318,7 +318,7 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
 
       ! Read PropagationDir
-   CALL ReadVar( UnitInput, InputFileName, InputFileData%PropagationDir, 'PropogationDir', &
+   CALL ReadVar( UnitInput, InputFileName, InputFileData%PropagationDir, 'PropagationDir', &
                'Direction of wind propagation (meteoroligical direction)', TmpErrStat, TmpErrMsg, UnitEcho )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
    IF (ErrStat >= AbortErrLev) THEN
@@ -1354,7 +1354,7 @@ SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrS
 
       ! Convert the PropagationDir to radians and store this.  For simplicity, we will shift it to be between -pi and pi
 
-   ParamData%PropagationDir   = D2R * InputFileData%PropogationDir
+   ParamData%PropagationDir   = D2R * InputFileData%PropagationDir
    CALL MPi2Pi( ParamData%PropagationDir )         ! Shift if necessary so that the value is between -pi and pi
 
 
@@ -1408,8 +1408,8 @@ SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrS
       !!          for polar coordinates
 
       ! Create the rotation matrices -- rotate from XYZ to X'Y'Z' (wind aligned along X) coordinates
-   ParamData%RotToWind(1,:) = (/    COS(-ParamData%PropagationDir),   SIN(-ParamData%PropogationDir),     0.0_ReKi  /)  
-   ParamData%RotToWind(2,:) = (/   -SIN(-ParamData%PropagationDir),   COS(-ParamData%PropogationDir),     0.0_ReKi  /)  
+   ParamData%RotToWind(1,:) = (/    COS(-ParamData%PropagationDir),   SIN(-ParamData%PropagationDir),     0.0_ReKi  /)  
+   ParamData%RotToWind(2,:) = (/   -SIN(-ParamData%PropagationDir),   COS(-ParamData%PropagationDir),     0.0_ReKi  /)  
    ParamData%RotToWind(3,:) = (/                          0.0_ReKi,                         0.0_ReKi,     1.0_ReKi  /)  
 
       ! Create the rotation matrices -- rotate from X'Y'Z' (wind aligned along X) to global XYZ coordinates

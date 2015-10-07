@@ -657,7 +657,7 @@ PROGRAM InflowWind_Driver
       ! Report the rotation of the coordinates.
    IF ( IfWDriver_Verbose >= 10_IntKi .AND. InflowWind_p%NWindVel > 0_IntKi )   THEN
       CALL WrScr(NewLine//NewLine//'  Rotation of coordinates to prime (wind file) coordinates by rotating '//   &
-                  TRIM(Num2LStr(R2D*InflowWind_p%PropogationDir))// &
+                  TRIM(Num2LStr(R2D*InflowWind_p%PropagationDir))// &
                   ' degrees (meteorological wind direction change) ...'//NewLine)
       CALL WrScr('          ------ WindViXYZ ---------    ----- WindViXYZprime -----')
 
