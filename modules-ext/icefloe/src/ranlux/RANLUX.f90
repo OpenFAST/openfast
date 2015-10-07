@@ -110,7 +110,7 @@ contains
       Carry = Merge (TwoM24, 0.0_ReKi, Seeds(NSeeds - 1) == 0.0)
     end if
 
-      !bjj added to speed up later calculations (b/c I had to fix the "where" statment)
+      !bjj added to speed up later calculations (b/c I had to fix the "where" statement)
     tmpTwoM24Seed = TwoM24 * Seeds(J24)
     tmpTwoM24 = TwoM24 * TwoM24
       !bjj end of modifications
