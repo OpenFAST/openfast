@@ -20,7 +20,6 @@ Source\RegistryFiles\CreateTypes.bat
 Source\dependencies\NetLib\NWTC_LAPACK.f90
 Source\dependencies\NetLib\NWTC_FFTPACK.f90
 Source\dependencies\NetLib\fftpack4.1.f
-Source\dependencies\NWTC_Library\DoubPrec.f90
 Source\dependencies\NWTC_Library\ModMesh.f90
 Source\dependencies\NWTC_Library\ModMesh_Mapping.f90
 Source\dependencies\NWTC_Library\ModMesh_Types.f90
@@ -86,21 +85,50 @@ CertTest\Test_002.dvr
 CertTest\Test_002.dat
 CertTest\Test_003.dvr
 CertTest\Test_003.dat
+CertTest\Test_004.dvr
+CertTest\Test_004.dat
+CertTest\Test_005.dvr
+CertTest\Test_005.dat
+CertTest\Test_006.dvr
+CertTest\Test_006.dat
+CertTest\TEST_004.DynP
+CertTest\TEST_004.Elev
+CertTest\TEST_004.Azi
+CertTest\TEST_004.Ayi
+CertTest\TEST_004.Axi
+CertTest\TEST_004.Vzi
+CertTest\TEST_004.Vyi
+CertTest\TEST_004.Vxi
+CertTest\Test_006-WaveElevInput.Elev
+
 CertTest\NREL_Results\Test_001.HD.out
 CertTest\NREL_Results\Test_001.HD.sum
 CertTest\NREL_Results\Test_002.HD.out
 CertTest\NREL_Results\Test_002.HD.sum
 CertTest\NREL_Results\Test_003.HD.out
 CertTest\NREL_Results\Test_003.HD.sum
+CertTest\NREL_Results\Test_004.HD.sum
+CertTest\NREL_Results\Test_004.HD.out
+CertTest\NREL_Results\Test_005.HD.out
+CertTest\NREL_Results\Test_006.HD.out
+CertTest\HydroData\marin_semi.1
+CertTest\HydroData\marin_semi.3
+CertTest\HydroData\marin_semi.12d
+CertTest\HydroData\marin_semi.12s
+CertTest\HydroData\marin_semi.hst
 
 Utilities\Simulation Toolbox\ConvertFASTversions\ConvertHDto2_01_00.m
 Utilities\Simulation Toolbox\ConvertFASTversions\ConvertHDto2_02_00.m
+Utilities\Simulation Toolbox\ConvertFASTversions\ConvertHDto2_03_00.m
 Utilities\Simulation Toolbox\ConvertFASTversions\InputConversions\newInputs_HD_v2_00_03.m
 Utilities\Simulation Toolbox\ConvertFASTversions\InputConversions\newInputs_HD_v2_00_05.m
 Utilities\Simulation Toolbox\ConvertFASTversions\InputConversions\newInputs_HD_v2_01_00.m
 Utilities\Simulation Toolbox\ConvertFASTversions\InputConversions\newInputs_HD_v2_02_00.m
+Utilities\Simulation Toolbox\ConvertFASTversions\InputConversions\newInputs_HD_v2_03_00.m
 Utilities\Simulation Toolbox\ConvertFASTversions\TemplateFiles\HDv2.01.00.dat
 Utilities\Simulation Toolbox\ConvertFASTversions\TemplateFiles\HDv2.02.00.dat
+Utilities\Simulation Toolbox\ConvertFASTversions\TemplateFiles\HDv2.02.x.dat
+Utilities\Simulation Toolbox\ConvertFASTversions\TemplateFiles\HDv2.03.x.dat
 Utilities\Simulation Toolbox\FAST2MATLAB\HD2Matlab.m
 Utilities\Simulation Toolbox\FAST2MATLAB\ImportFastOut.m
 Utilities\Simulation Toolbox\FAST2MATLAB\ParseFASTInputLine.m

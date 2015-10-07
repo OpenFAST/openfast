@@ -1,3 +1,12 @@
+v2.03.00c-adp  (Oct 2015)
+•	Changed HasWAMIT flag to PotMod in the Floating Platform section of the HydroDyn input file.  Valid values are: 0: none=no potential flow, 
+      1: frequency-to-time-domain transforms based on WAMIT output
+•	Changed WAMITFile to PotFile in the Floating Platform section of the HydroDyn input file.  When PotMod = 1 this should contain the Root name of the potential-flow model data.
+•	Changed PropWAMIT label to PropPot in the Members table.  Valid values are still TRUE or FALSE.
+•	Added WaveMod option 5: Externally generated wave-elevation time series
+•	Added WaveMod option 6: Externally generated full wave-kinematics time series [option 6 is invalid for PotMod not equal to 0]
+•	Changed GHWvFile to WvKinFile in the Waves section of the HydroDyn input file.  This is the root name of externally generated wave data file(s).
+
 v2.02.02a-gjh  (Mar 2015)
 •	Restored call to Conv_Rdtn_Input_ExtrapInterp() in Conv_Rdtn_UpdateStates() of Conv_Radiation.f90, this should not have been removed in version 2.02.01c 
 

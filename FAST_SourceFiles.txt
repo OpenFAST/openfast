@@ -24,7 +24,6 @@ Source\Waves_Types.f90
 Source\Waves2.f90
 Source\Waves2_Output.f90
 Source\Waves2_Types.f90
-Source\UserWaves.f90
 
 Source\RegistryFiles\Current.txt
 Source\RegistryFiles\Waves.txt
