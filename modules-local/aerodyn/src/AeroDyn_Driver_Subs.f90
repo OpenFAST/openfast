@@ -575,7 +575,7 @@ subroutine Dvr_WriteOutputLine(OutFileData, t, output, errStat, errMsg)
       ! time
    write( tmpStr, '(F15.4)' ) t
    call WrFileNR( OutFileData%unOutFile, tmpStr )
-   call WrReAryFileNR ( OutFileData%unOutFile, output,  frmt, errStat, errMsg )
+   call WrNumAryFileNR ( OutFileData%unOutFile, output,  frmt, errStat, errMsg )
    if ( errStat >= AbortErrLev ) return
    
      ! write a new line (advance to the next line)
