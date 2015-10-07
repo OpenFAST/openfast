@@ -3051,12 +3051,12 @@ SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcDisp,
 END SUBROUTINE Lump_Line2_to_Point
 !==================================================================================================================================
 !bjj: these routines require the use of ModMesh.f90, thus they cannot be part of NWTC_Library_Types.f90:
-!STARTOFREGISTRYGENERATEDFILE './NWTC_Library_Types.f90'
+!STARTOFREGISTRYGENERATEDFILE 'NWTC_Library_Types.f90'
 !
 ! WARNING This file is generated automatically by the FAST registry
 ! Do not edit.  Your changes to this file will be lost.
 !
-! FAST Registry (v2.06.00, 14-Apr-2015)
+! FAST Registry (v2.08.03, 2-Oct-2015)
 !*********************************************************************************************************************************
  SUBROUTINE NWTC_Library_CopyMapType( SrcMapTypeData, DstMapTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(MapType), INTENT(IN) :: SrcMapTypeData
@@ -3070,7 +3070,7 @@ END SUBROUTINE Lump_Line2_to_Point
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(1024)                :: ErrMsg2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_CopyMapType'
 ! 
    ErrStat = ErrID_None
@@ -3107,10 +3107,10 @@ END SUBROUTINE Lump_Line2_to_Point
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_BufSz
   INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5     
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_PackMapType'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -3158,13 +3158,13 @@ END SUBROUTINE Lump_Line2_to_Point
   Db_Xferred  = 1
   Int_Xferred = 1
 
-       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%OtherMesh_Element
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%OtherMesh_Element
       Int_Xferred   = Int_Xferred   + 1
-       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%distance
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%distance
       Re_Xferred   = Re_Xferred   + 1
-       ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%couple_arm))-1 ) = PACK(InData%couple_arm,.TRUE.)
+      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%couple_arm))-1 ) = PACK(InData%couple_arm,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%couple_arm)
-       ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%shape_fn))-1 ) = PACK(InData%shape_fn,.TRUE.)
+      ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%shape_fn))-1 ) = PACK(InData%shape_fn,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%shape_fn)
  END SUBROUTINE NWTC_Library_PackMapType
 
@@ -3191,7 +3191,7 @@ END SUBROUTINE Lump_Line2_to_Point
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_UnPackMapType'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -3215,7 +3215,7 @@ END SUBROUTINE Lump_Line2_to_Point
        RETURN
     END IF
     mask1 = .TRUE. 
-       OutData%couple_arm = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%couple_arm))-1 ), mask1, 0.0_ReKi )
+      OutData%couple_arm = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%couple_arm))-1 ), mask1, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%couple_arm)
     DEALLOCATE(mask1)
     i1_l = LBOUND(OutData%shape_fn,1)
@@ -3226,7 +3226,7 @@ END SUBROUTINE Lump_Line2_to_Point
        RETURN
     END IF
     mask1 = .TRUE. 
-       OutData%shape_fn = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%shape_fn))-1 ), mask1, 0.0_ReKi )
+      OutData%shape_fn = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%shape_fn))-1 ), mask1, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%shape_fn)
     DEALLOCATE(mask1)
  END SUBROUTINE NWTC_Library_UnPackMapType
@@ -3243,7 +3243,7 @@ END SUBROUTINE Lump_Line2_to_Point
    INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
    INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
    INTEGER(IntKi)                 :: ErrStat2
-   CHARACTER(1024)                :: ErrMsg2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_CopyMeshMapType'
 ! 
    ErrStat = ErrID_None
@@ -3387,36 +3387,36 @@ IF (ALLOCATED(MeshMapTypeData%MapLoads)) THEN
 DO i1 = LBOUND(MeshMapTypeData%MapLoads,1), UBOUND(MeshMapTypeData%MapLoads,1)
   CALL NWTC_Library_Destroymaptype( MeshMapTypeData%MapLoads(i1), ErrStat, ErrMsg )
 ENDDO
-   DEALLOCATE(MeshMapTypeData%MapLoads)
+  DEALLOCATE(MeshMapTypeData%MapLoads)
 ENDIF
 IF (ALLOCATED(MeshMapTypeData%MapMotions)) THEN
 DO i1 = LBOUND(MeshMapTypeData%MapMotions,1), UBOUND(MeshMapTypeData%MapMotions,1)
   CALL NWTC_Library_Destroymaptype( MeshMapTypeData%MapMotions(i1), ErrStat, ErrMsg )
 ENDDO
-   DEALLOCATE(MeshMapTypeData%MapMotions)
+  DEALLOCATE(MeshMapTypeData%MapMotions)
 ENDIF
 IF (ALLOCATED(MeshMapTypeData%MapSrcToAugmt)) THEN
 DO i1 = LBOUND(MeshMapTypeData%MapSrcToAugmt,1), UBOUND(MeshMapTypeData%MapSrcToAugmt,1)
   CALL NWTC_Library_Destroymaptype( MeshMapTypeData%MapSrcToAugmt(i1), ErrStat, ErrMsg )
 ENDDO
-   DEALLOCATE(MeshMapTypeData%MapSrcToAugmt)
+  DEALLOCATE(MeshMapTypeData%MapSrcToAugmt)
 ENDIF
   CALL MeshDestroy( MeshMapTypeData%Augmented_Ln2_Src, ErrStat, ErrMsg )
   CALL MeshDestroy( MeshMapTypeData%Lumped_Points_Src, ErrStat, ErrMsg )
 IF (ALLOCATED(MeshMapTypeData%LoadLn2_A_Mat_Piv)) THEN
-   DEALLOCATE(MeshMapTypeData%LoadLn2_A_Mat_Piv)
+  DEALLOCATE(MeshMapTypeData%LoadLn2_A_Mat_Piv)
 ENDIF
 IF (ALLOCATED(MeshMapTypeData%DisplacedPosition)) THEN
-   DEALLOCATE(MeshMapTypeData%DisplacedPosition)
+  DEALLOCATE(MeshMapTypeData%DisplacedPosition)
 ENDIF
 IF (ALLOCATED(MeshMapTypeData%LoadLn2_F)) THEN
-   DEALLOCATE(MeshMapTypeData%LoadLn2_F)
+  DEALLOCATE(MeshMapTypeData%LoadLn2_F)
 ENDIF
 IF (ALLOCATED(MeshMapTypeData%LoadLn2_A_Mat)) THEN
-   DEALLOCATE(MeshMapTypeData%LoadLn2_A_Mat)
+  DEALLOCATE(MeshMapTypeData%LoadLn2_A_Mat)
 ENDIF
 IF (ALLOCATED(MeshMapTypeData%LoadLn2_M)) THEN
-   DEALLOCATE(MeshMapTypeData%LoadLn2_M)
+  DEALLOCATE(MeshMapTypeData%LoadLn2_M)
 ENDIF
  END SUBROUTINE NWTC_Library_DestroyMeshMapType
 
@@ -3435,10 +3435,10 @@ ENDIF
   INTEGER(IntKi)                 :: Db_Xferred
   INTEGER(IntKi)                 :: Int_BufSz
   INTEGER(IntKi)                 :: Int_Xferred
-  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5     
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
   LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_PackMeshMapType'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -3895,7 +3895,7 @@ ENDIF
   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
   INTEGER(IntKi)                 :: i3, i3_l, i3_u  !  bounds (upper/lower) for an array dimension 3
   INTEGER(IntKi)                 :: ErrStat2
-  CHARACTER(1024)                :: ErrMsg2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_UnPackMeshMapType'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
@@ -4286,6 +4286,7 @@ ENDIF
     DEALLOCATE(mask2)
   END IF
  END SUBROUTINE NWTC_Library_UnPackMeshMapType
+
 !*********************************************************************************************************************************
 !ENDOFREGISTRYGENERATEDFILE
 
