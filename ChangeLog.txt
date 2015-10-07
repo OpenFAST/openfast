@@ -608,11 +608,50 @@ v2.05.02a-bjj, 25-Feb-2015. B. Jonkman
 + updated registry-generated parts of the code; moved SetErrStat into NWTC_Library_Types.f90
 
 
+------------------------------
+v2.06.05a-bjj 5-Oct-2015 B. Jonkman
+------------------------------
+
+New routines in the library:
++ OuterProduct()
++ EulerConstruct()
++ EulerExtract()
++ RunTimes()
++ SimStatus_FirstTime()
++ SimStatus()
++ TimeValues2Seconds()
++ ParseVarWDefault()
+
+New features:
++ added option to return "restart" flag from CheckArgs()
++ Added ErrMsgLen parameter to use instead of LEN(ErrMsg)
++ added USE_DLL_INTERFACE compiler directive to make it easier to compile linux/mac with option for dynamic loading of dynamic libraries
++ changed TranslationDisp, Orientation, and RefOrientation fields in mesh to R8Ki instead of ReKi
++ removed "optional" from several routine arguments
++ updated arguments to CheckIOS
++ modified some error messages
++ meshPack and meshUnpack now allow uncommitted or uninitialized meshes.
++ updated DCM_logMap routines to use a different equation near theta == pi to avoid numerical issues
++ added interfaces for different precision versions of several routines
++ modified DLL_Type procedures to be able to load multiple procedures from the same DLL. Currently has max of 3 procedures allowed (see parameter NWTC_MAX_DLL_PROC)
+
+Bug fixes:
++ fixed lengths of INTENT(OUT) character strings to * instead of some arbitrary number.
++ initialized NNodes in the mesh data type to 0.
++ initialized DLL_Type pointer fields to NULL
++ fixed Str2IntAry() so it converts the entire string (previously had stopped at trailing spaces)
++ fixed error handling
++ fixed some potential gfortran memory issues
++ fixed issue with uninitialized variable when line2 mappings didn't project onto an element
++ fixed issue where committed mesh could be committed again, resulting in memory leaks
++ modifications for double-precision dcm exponential/logarithmic mappings
++ set file address to null (0) when dynamic library has been freed
++ fixed bug with negative sign in v(2) when theta=pi in DCM_logMap
++ modified check on mesh mapping with points projected onto line2 element. If we are numerically equal within single-precision of 0 or 1, we will consider it "on" the element.
++ fixed problem with DCM_SetLogMapForInterp, which would not give the correct results if we needed to move the vector by more than one period. (I've seen no evidence that it ever got in this place, though.)
+------------------------------
+
+
+
+
 ==========================================================
- To do:
-   *** change/add more routines specifically for R8Ki, SiKi, and QuKi instead of ReKi and DbKi. (see ReadAry, etc.) (in progress)
-
-   Suggestion from Marshall:
-
-      Add the optional UsrAlarm to ProgExit. (Requires moving BEEP from NWTC_IO)
-
