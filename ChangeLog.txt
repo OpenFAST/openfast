@@ -90,7 +90,7 @@ v2.00.01b-bjj, 30-June-2014, B. Jonkman
 + updated types files with latest Registry executable.
 
 
-v3.00.00a-adp through v3.01.00a-adp (10-Aug-2015, A. Platt)
+v3.00.00a-adp through v3.01.00a-adp (6-Oct-2015, A. Platt)
   - changed all licensing to the Apache2 license
   - new driver code with input file and command line options, and verbose output options for testing
   - driver code is capable of extracting a grid of wind data
