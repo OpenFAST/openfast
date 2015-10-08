@@ -323,7 +323,7 @@ SUBROUTINE ReadTurbulenceData(p, InitInp, ErrStat, ErrMsg)
 
                READ( UnWind, IOSTAT=TmpErrStat ) p%HAWCData(:,iy,ix,ic)  ! note that HAWCData is SiKi (4-byte reals, not default kinds)
 
-               IF (ErrStat /= 0) THEN
+               IF (TmpErrStat /= 0) THEN
                   TmpErrMsg = ' Error reading binary data from "'//TRIM(InitInp%WindFileName(IC))//'". I/O error ' &
                                        //TRIM(Num2LStr(TmpErrStat))//' occurred at IY='//TRIM(Num2LStr(IY))//', IX='//TRIM(Num2LStr(IX))//'.'
                   CLOSE ( UnWind )
