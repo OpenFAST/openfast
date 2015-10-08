@@ -1,7 +1,7 @@
 @ECHO OFF
 
 @SET PROGNAME=AeroDyn_Driver
-@SET ARCHNAME=AD_Driver_v%1
+@SET ARCHNAME=AeroDyn_v%1
 @SET ARCHPATH=Archive
 
 ::=======================================================================================================
