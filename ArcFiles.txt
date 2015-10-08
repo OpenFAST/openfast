@@ -2,7 +2,6 @@ ArcFiles.txt
 ArcWin.txt
 Archive.bat
 
-ChangeLog.txt
 Disclaimer.txt
 license.txt
 Notice.txt
@@ -17,6 +16,8 @@ CertTest\Test01_UAE.dvr
 CertTest\Test01_UAE_AeroDyn.dat
 CertTest\Test01_UAE_AeroDyn_blade.dat
 CertTest\Airfoils\UAE_VI\*
+CertTest\Results\Test01.AD.sum
+CertTest\Results\Test01.1.out
 
 Source\AeroDyn_Driver.f90
 Source\AeroDyn_Driver_Registry.txt
