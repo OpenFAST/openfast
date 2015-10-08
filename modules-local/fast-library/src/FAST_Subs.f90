@@ -270,7 +270,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax, TurbI
    y_FAST%Module_Ver( Module_MAP  )%Name = 'MAP'
    y_FAST%Module_Ver( Module_FEAM )%Name = 'FEAMooring'
    y_FAST%Module_Ver( Module_MD   )%Name = 'MoorDyn'
-   y_FAST%Module_Ver( Module_Orca )%Name = 'OrcaFlex interface'
+   y_FAST%Module_Ver( Module_Orca )%Name = 'OrcaFlexInterface'
    y_FAST%Module_Ver( Module_IceF )%Name = 'IceFloe'
    y_FAST%Module_Ver( Module_IceD )%Name = 'IceDyn'
          
@@ -326,10 +326,9 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax, TurbI
    END IF
 
    IF ( p%n_ChkptTime < p%n_TMax_m1 ) THEN
-      if (.NOT. p%WrBinOutFile) then
-         CALL SetErrStat( ErrID_Severe, 'It is highly recommended that time-marching output files be generated in binary format when generating checkpoint files.', ErrStat, ErrMsg, RoutineName )
-      end if
-         ! also check for features that aren't supported with restart (like ServoDyn's user-defined control routines)
+      if (.NOT. p%WrBinOutFile) CALL SetErrStat( ErrID_Severe, 'It is highly recommended that time-marching output files be generated in binary format when generating checkpoint files.', ErrStat, ErrMsg, RoutineName )
+      if (p%CompMooring==MODULE_Orca) CALL SetErrStat( ErrID_Fatal, 'Restart capability for OrcaFlexInterface is not supported. Set ChkptTime larger than TMax.', ErrStat, ErrMsg, RoutineName )
+      ! also check for other features that aren't supported with restart (like ServoDyn's user-defined control routines)
    END IF
       
    IF ( p%DT <= 0.0_DbKi )  THEN
