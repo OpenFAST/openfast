@@ -1350,12 +1350,10 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    if (InputFileData%AFAeroMod == AFAeroMod_BL_unsteady ) then
       if (InputFileData%UAMod < 2 .or. InputFileData%UAMod > 3 ) call SetErrStat( ErrID_Fatal, &
          "In this version, UAMod must be 2 (Gonzalez's variant) or 3 (Minemma/Pierce variant).", ErrStat, ErrMsg, RoutineName )  ! NOTE: for later-  1 (baseline/original) 
+      
+      if (.not. InputFileData%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
    end if
-   
-   
-   
-   
-   if (.not. InputFileData%FLookUp ) call SetErrStat( ErrID_Fatal, 'FLookUp must be TRUE for this version.', ErrStat, ErrMsg, RoutineName )
+           
    
          ! validate the AFI input data because it doesn't appear to be done in AFI
    if (InputFileData%NumAFfiles < 1) call SetErrStat( ErrID_Fatal, 'The number of unique airfoil tables (NumAFfiles) must be greater than zero.', ErrStat, ErrMsg, RoutineName )   

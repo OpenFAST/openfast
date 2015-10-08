@@ -1,0 +1,28 @@
+AeroDyn Driver
+Copyright (c) 2015  National Renewable Energy Laboratory
+
+This product includes software developed at
+National Renewable Energy Laboratory (http://www.nrel.gov, wind.nrel.gov)
+
+
+Third Party Content
+AeroDyn includes content from several 3rd party sources:
+
+Linear Algebra PACKage (LAPACK) (http://www.netlib.org/lapack/index.html)
+The authors of LAPACK are E. Anderson, Z. Bai, C. Bischof, S. Blackford, J. Demmel, J. Dongarra, J. Du Croz, A. Greenbaum, S. Hammarling, A. McKenney, and D. Sorensen.
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+Basic Linear Algebra Subprograms (BLAS), which is used indirectly in LAPACK routines (http://www.netlib.org/blas/)
+
+Dierckx FitPack (http://www.netlib.org/dierckx/)
+Paul Dierckx, Department of Computer Science, K.U. Leuven, Celestijnenlaan 200 A, B-3001, Heverlee, Belgium
+
+minpack (http://www.netlib.org/minpack/)
+Developed by the University of Chicago, as Operator of Argonne National Laboratory.
+
