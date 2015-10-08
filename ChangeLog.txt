@@ -4154,6 +4154,8 @@ CertTests
 + updated DISCON DLLs to allow -8/-9 flags for creating checkpoint files and restarting from them
 + added a Test 26 for BeamDyn
 + updated DISCON dlls minimum time to be less than the BeamDyn time step
++ Test23 now uses FEAMooring instead of MAP.
++ Test25 now uses MoorDyn instead of MAP.
 
 
 Utilities:
