@@ -456,7 +456,7 @@ CertTest\Test25.fst
 CertTest\Test25.cru
 
 CertTest\Test26.fst
-CertTest\Test25.cru
+CertTest\Test26.cru
 
 CertTest\TstFiles\Test01.sts
 CertTest\TstFiles\Test01.azi
@@ -569,3 +569,4 @@ CertTest\TstFiles\Test25.sts
 
 CertTest\TstFiles\Test26.sum
 CertTest\TstFiles\Test26.AD.sum
+CertTest\TstFiles\Test26.sts
