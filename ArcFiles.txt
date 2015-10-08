@@ -7,8 +7,7 @@ Disclaimer.txt
 license.txt
 Notice.txt
 
-Documentation\63217.pdf
-Documentation\AeroDynMesh.pdf
+Documentation\AeroDyn_Manual.pdf
 
 Compiling\makefile_ADdriver
 Compiling\Visual Studio 2013\AeroDyn_Driver\AeroDyn_Driver.vfproj
