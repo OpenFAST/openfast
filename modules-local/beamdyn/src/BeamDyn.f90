@@ -2820,11 +2820,12 @@ SUBROUTINE BD_ElementMatrixAcc(Nuuu,Nrrr,Nvvv,&
    CHARACTER(ErrMsgLen)        :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER     :: RoutineName = 'BD_ElementMatrixAcc'
 
-   ErrStat  = ErrID_None
-   ErrMsg   = ""
-   elf(:)   = 0.0_BDKi
-   elm(:,:) = 0.0_BDKi
-
+   ErrStat   = ErrID_None
+   ErrMsg    = ""
+   elf(:)    = 0.0_BDKi
+   elm(:,:)  = 0.0_BDKi
+   temp_Naaa = 0.0_BDKi
+   
    fact = .FALSE.
 
    DO igp=1,ngp
@@ -2837,10 +2838,10 @@ SUBROUTINE BD_ElementMatrixAcc(Nuuu,Nrrr,Nvvv,&
              uu0(temp_id1+1:temp_id1+6),E10(temp_id2+1:temp_id2+3),node_elem,dof_node,&
              uuu,uup,E1,RR0,kapa,Stif,cet,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-       mmm  = 0.0_BDKi
-       mEta = 0.0_BDKi
-       rho  = 0.0_BDKi
+       mmm          = 0.0_BDKi
+       rho          = 0.0_BDKi
        mmm          = EMass0_GL(1,1,igp)
+       mEta(1)      = 0.0_BDKi
        mEta(2)      = -EMass0_GL(1,6,igp)
        mEta(3)      =  EMass0_GL(1,5,igp)
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
@@ -2924,10 +2925,10 @@ SUBROUTINE BD_GyroForce(mEta,rho,vvv,Fb,ErrStat,ErrMsg)
 !----------------------------------------------------------------------------------------
 ! This subroutine computes gyroscopic forces
 !----------------------------------------------------------------------------------------
-   REAL(BDKi),    INTENT(IN   ):: mEta(:) ! m\Eta resolved in inertia frame at Gauss point
-   REAL(BDKi),    INTENT(IN   ):: rho(:,:) ! Tensor of inertia resolved in inertia frame at Gauss point
-   REAL(BDKi),    INTENT(IN   ):: vvv(:) ! Velocities at Gauss point (including linear and angular velocities)
-   REAL(BDKi),    INTENT(  OUT):: Fb(:) ! Gyroscopic forces
+   REAL(BDKi),    INTENT(IN   ):: mEta(:)       ! m\Eta resolved in inertia frame at Gauss point
+   REAL(BDKi),    INTENT(IN   ):: rho(:,:)      ! Tensor of inertia resolved in inertia frame at Gauss point
+   REAL(BDKi),    INTENT(IN   ):: vvv(:)        ! Velocities at Gauss point (including linear and angular velocities)
+   REAL(BDKi),    INTENT(  OUT):: Fb(:)         ! Gyroscopic forces
    INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
@@ -2977,25 +2978,25 @@ SUBROUTINE BD_ElementMatrixForce(Nuuu,Nrrr,Nvvv,&
 ! This subroutine calculates elemetal internal forces
 !------------------------------------------------------------
 
-   REAL(BDKi),     INTENT(IN   ):: Nuuu(:) ! Nodal displacement of Mass 1 for each element
-   REAL(BDKi),     INTENT(IN   ):: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
-   REAL(BDKi),     INTENT(IN   ):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
+   REAL(BDKi),     INTENT(IN   ):: Nuuu(:)          ! Nodal displacement of Mass 1 for each element
+   REAL(BDKi),     INTENT(IN   ):: Nrrr(:)          ! Nodal rotation parameters for displacement of Mass 1
+   REAL(BDKi),     INTENT(IN   ):: Nvvv(:)          ! Nodal velocity of Mass 1: m/s for each element
    REAL(BDKi),     INTENT(IN   ):: EStif0_GL(:,:,:) ! Nodal material properties for each element
    REAL(BDKi),     INTENT(IN   ):: EMass0_GL(:,:,:) ! Nodal material properties for each element
-   INTEGER(IntKi), INTENT(IN   ):: damp_flag ! Number of Gauss points
+   INTEGER(IntKi), INTENT(IN   ):: damp_flag        ! Number of Gauss points
    REAL(BDKi),     INTENT(IN   ):: beta(:)
-   INTEGER(IntKi), INTENT(IN   ):: ngp ! Number of Gauss points
-   REAL(BDKi),    INTENT(IN   ):: gw(:)
-   REAL(BDKi),    INTENT(IN   ):: hhx(:,:)
-   REAL(BDKi),    INTENT(IN   ):: hpx(:,:)
-   REAL(BDKi),    INTENT(IN   ):: Jaco(:)
-   REAL(BDKi),    INTENT(IN   ):: uu0(:)
-   REAL(BDKi),    INTENT(IN   ):: E10(:)
-   INTEGER(IntKi), INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi), INTENT(IN   ):: dof_node ! Degrees of freedom per node
-   REAL(BDKi),     INTENT(  OUT):: elf(:)  ! Total element force (Fd, Fc, Fb)
-   INTEGER(IntKi), INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),   INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi), INTENT(IN   ):: ngp              ! Number of Gauss points
+   REAL(BDKi),     INTENT(IN   ):: gw(:)
+   REAL(BDKi),     INTENT(IN   ):: hhx(:,:)
+   REAL(BDKi),     INTENT(IN   ):: hpx(:,:)
+   REAL(BDKi),     INTENT(IN   ):: Jaco(:)
+   REAL(BDKi),     INTENT(IN   ):: uu0(:)
+   REAL(BDKi),     INTENT(IN   ):: E10(:)
+   INTEGER(IntKi), INTENT(IN   ):: node_elem        ! Node per element
+   INTEGER(IntKi), INTENT(IN   ):: dof_node         ! Degrees of freedom per node
+   REAL(BDKi),     INTENT(  OUT):: elf(:)           ! Total element force (Fd, Fc, Fb)
+   INTEGER(IntKi), INTENT(  OUT):: ErrStat          ! Error status of the operation
+   CHARACTER(*),   INTENT(  OUT):: ErrMsg           ! Error message if ErrStat /= ErrID_None
 
    REAL(BDKi)                   :: temp_Naaa(dof_node*node_elem)
    REAL(BDKi)                   :: RR0(3,3)
@@ -3035,9 +3036,10 @@ SUBROUTINE BD_ElementMatrixForce(Nuuu,Nrrr,Nvvv,&
    CHARACTER(ErrMsgLen)         :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER      :: RoutineName = 'BD_ElememntMatrixForce'
 
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   elf(:)  = 0.0_BDKi
+   ErrStat   = ErrID_None
+   ErrMsg    = ""
+   elf       = 0.0_BDKi
+   temp_Naaa = 0.0_BDKi
    
    fact = .FALSE.
 
@@ -3099,44 +3101,44 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN,vvN,aaN,     &
 ! This subroutine computes Global mass matrix and force vector to 
 ! calculate the forces along the beam
 !----------------------------------------------------------------------------------------
-   REAL(BDKi),         INTENT(IN   ):: uuN(:) ! Displacement of Mass 1: m
-   REAL(BDKi),         INTENT(IN   ):: vvN(:) ! Velocity of Mass 1: m/s
-   REAL(BDKi),         INTENT(IN   ):: aaN(:) ! Velocity of Mass 1: m/s
+   REAL(BDKi),         INTENT(IN   ):: uuN(:)       ! Displacement of Mass 1: m
+   REAL(BDKi),         INTENT(IN   ):: vvN(:)       ! Velocity of Mass 1: m/s
+   REAL(BDKi),         INTENT(IN   ):: aaN(:)       ! Velocity of Mass 1: m/s
    REAL(BDKi),         INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(BDKi),         INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   TYPE(BD_InputType), INTENT(IN   ):: u           ! Inputs at t
-   INTEGER(IntKi),     INTENT(IN   ):: damp_flag ! Number of Gauss points
+   TYPE(BD_InputType), INTENT(IN   ):: u            ! Inputs at t
+   INTEGER(IntKi),     INTENT(IN   ):: damp_flag    ! Number of Gauss points
    REAL(BDKi),         INTENT(IN   ):: beta(:)
-   INTEGER(IntKi),     INTENT(IN   ):: elem_total ! Total number of elements
-   INTEGER(IntKi),     INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),     INTENT(IN   ):: dof_node ! Degrees of freedom per node
-   INTEGER(IntKi),     INTENT(IN   ):: ngp ! Number of Gauss points
-   INTEGER(IntKi),     INTENT(IN   ):: quadrature ! Number of Gauss points
-   REAL(BDKi),        INTENT(IN   ):: gw(:)
-   REAL(BDKi),        INTENT(IN   ):: hhx(:,:)
-   REAL(BDKi),        INTENT(IN   ):: hpx(:,:)
-   REAL(BDKi),        INTENT(IN   ):: Jaco(:,:)
-   REAL(BDKi),        INTENT(IN   ):: uu0(:,:)
-   REAL(BDKi),        INTENT(IN   ):: E10(:,:)
-   REAL(BDKi),         INTENT(  OUT):: RHS(:) ! Right hand side of the equation Ax=B
-   INTEGER(IntKi),     INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),       INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),     INTENT(IN   ):: elem_total   ! Total number of elements
+   INTEGER(IntKi),     INTENT(IN   ):: node_elem    ! Node per element
+   INTEGER(IntKi),     INTENT(IN   ):: dof_node     ! Degrees of freedom per node
+   INTEGER(IntKi),     INTENT(IN   ):: ngp          ! Number of Gauss points
+   INTEGER(IntKi),     INTENT(IN   ):: quadrature   ! Number of Gauss points
+   REAL(BDKi),         INTENT(IN   ):: gw(:)
+   REAL(BDKi),         INTENT(IN   ):: hhx(:,:)
+   REAL(BDKi),         INTENT(IN   ):: hpx(:,:)
+   REAL(BDKi),         INTENT(IN   ):: Jaco(:,:)
+   REAL(BDKi),         INTENT(IN   ):: uu0(:,:)
+   REAL(BDKi),         INTENT(IN   ):: E10(:,:)
+   REAL(BDKi),         INTENT(  OUT):: RHS(:)       ! Right hand side of the equation Ax=B
+   INTEGER(IntKi),     INTENT(  OUT):: ErrStat      ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT):: ErrMsg       ! Error message if ErrStat /= ErrID_None
 
-   REAL(BDKi),           ALLOCATABLE:: Nuuu(:) ! Nodal displacement of Mass 1 for each element
-   REAL(BDKi),           ALLOCATABLE:: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
-   REAL(BDKi),           ALLOCATABLE:: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
-   REAL(BDKi),           ALLOCATABLE:: Naaa(:) ! Nodal velocity of Mass 1: m/s for each element
-   REAL(BDKi),           ALLOCATABLE:: EStif0_GL(:,:,:) ! Nodal material properties for each element
-   REAL(BDKi),           ALLOCATABLE:: EMass0_GL(:,:,:) ! Nodal material properties for each element
+   REAL(BDKi),           ALLOCATABLE:: Nuuu(:)      ! Nodal displacement of Mass 1 for each element
+   REAL(BDKi),           ALLOCATABLE:: Nrrr(:)      ! Nodal rotation parameters for displacement of Mass 1
+   REAL(BDKi),           ALLOCATABLE:: Nvvv(:)      ! Nodal velocity of Mass 1: m/s for each element
+   REAL(BDKi),           ALLOCATABLE:: Naaa(:)      ! Nodal velocity of Mass 1: m/s for each element
+   REAL(BDKi),           ALLOCATABLE:: EStif0_GL(:,:,:)  ! Nodal material properties for each element
+   REAL(BDKi),           ALLOCATABLE:: EMass0_GL(:,:,:)  ! Nodal material properties for each element
    REAL(BDKi),           ALLOCATABLE:: DistrLoad_GL(:,:) ! Nodal material properties for each element
-   REAL(BDKi),           ALLOCATABLE:: elf(:) ! Total element force (Fc, Fd, Fb)
-   INTEGER(IntKi)                   :: dof_elem ! Degree of freedom per node
-   INTEGER(IntKi)                   :: rot_elem ! Rotational degrees of freedom
-   INTEGER(IntKi)                   :: nelem ! number of elements
-   INTEGER(IntKi)                   :: j ! Index counter
-   INTEGER(IntKi)                   :: temp_id ! Index counter
-   INTEGER(IntKi)                   :: ErrStat2                     ! Temporary Error status
-   CHARACTER(ErrMsgLen)             :: ErrMsg2                      ! Temporary Error message
+   REAL(BDKi),           ALLOCATABLE:: elf(:)       ! Total element force (Fc, Fd, Fb)
+   INTEGER(IntKi)                   :: dof_elem     ! Degree of freedom per node
+   INTEGER(IntKi)                   :: rot_elem     ! Rotational degrees of freedom
+   INTEGER(IntKi)                   :: nelem        ! number of elements
+   INTEGER(IntKi)                   :: j            ! Index counter
+   INTEGER(IntKi)                   :: temp_id      ! Index counter
+   INTEGER(IntKi)                   :: ErrStat2     ! Temporary Error status
+   CHARACTER(ErrMsgLen)             :: ErrMsg2      ! Temporary Error message
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_GenerateDynamicElementForce'
 
    ErrStat    = ErrID_None
@@ -3233,9 +3235,9 @@ contains
 
 END SUBROUTINE BD_GenerateDynamicElementForce
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_DynamicSolutionForce(uuN,vvN,aaN,                                      &
+SUBROUTINE BD_DynamicSolutionForce(uuN,vvN,aaN,                                   &
                                    Stif0,Mass0,u,                                 &
-                                   damp_flag,beta,                                        &
+                                   damp_flag,beta,                                &
                                    node_elem,dof_node,elem_total,ngp,&
                                    quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                    Force,ErrStat,ErrMsg)
@@ -3243,18 +3245,18 @@ SUBROUTINE BD_DynamicSolutionForce(uuN,vvN,aaN,                                 
 ! This subroutine calculates the finite-element nodal forces along the beam
 ! Nodal forces = C \dot{u} + K u
 !***************************************************************************************
-   REAL(BDKi),         INTENT(IN   ):: uuN(:) ! Displacement of Mass 1: m
-   REAL(BDKi),         INTENT(IN   ):: vvN(:) ! Velocity of Mass 1: m/s
-   REAL(BDKi),         INTENT(IN   ):: aaN(:) ! Velocity of Mass 1: m/s
+   REAL(BDKi),         INTENT(IN   ):: uuN(:)       ! Displacement of Mass 1: m
+   REAL(BDKi),         INTENT(IN   ):: vvN(:)       ! Velocity of Mass 1: m/s
+   REAL(BDKi),         INTENT(IN   ):: aaN(:)       ! Velocity of Mass 1: m/s
    REAL(BDKi),         INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
    REAL(BDKi),         INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   INTEGER(IntKi),     INTENT(IN   ):: damp_flag ! Number of Gauss points
+   INTEGER(IntKi),     INTENT(IN   ):: damp_flag    ! Number of Gauss points
    REAL(BDKi),         INTENT(IN   ):: beta(:)
-   TYPE(BD_InputType), INTENT(IN   ):: u           ! Inputs at t
-   INTEGER(IntKi),     INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),     INTENT(IN   ):: dof_node ! Degrees of freedom per element
-   INTEGER(IntKi),     INTENT(IN   ):: elem_total ! Total number of elements
-   INTEGER(IntKi),     INTENT(IN   ):: ngp ! Number of Gauss points
+   TYPE(BD_InputType), INTENT(IN   ):: u            ! Inputs at t
+   INTEGER(IntKi),     INTENT(IN   ):: node_elem    ! Node per element
+   INTEGER(IntKi),     INTENT(IN   ):: dof_node     ! Degrees of freedom per element
+   INTEGER(IntKi),     INTENT(IN   ):: elem_total   ! Total number of elements
+   INTEGER(IntKi),     INTENT(IN   ):: ngp          ! Number of Gauss points
    INTEGER(IntKi),     INTENT(IN   ):: quadrature
    REAL(BDKi),         INTENT(IN   ):: gw(:)
    REAL(BDKi),         INTENT(IN   ):: hhx(:,:)
@@ -3263,21 +3265,21 @@ SUBROUTINE BD_DynamicSolutionForce(uuN,vvN,aaN,                                 
    REAL(BDKi),         INTENT(IN   ):: uu0(:,:)
    REAL(BDKi),         INTENT(IN   ):: E10(:,:)
    REAL(BDKi),         INTENT(  OUT):: Force(:)
-   INTEGER(IntKi),     INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),       INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),     INTENT(  OUT):: ErrStat      ! Error status of the operation
+   CHARACTER(*),       INTENT(  OUT):: ErrMsg       ! Error message if ErrStat /= ErrID_None
 
-   INTEGER(IntKi)                   :: ErrStat2                     ! Temporary Error status
-   CHARACTER(ErrMsgLen)             :: ErrMsg2                      ! Temporary Error message
+   INTEGER(IntKi)                   :: ErrStat2     ! Temporary Error status
+   CHARACTER(ErrMsgLen)             :: ErrMsg2      ! Temporary Error message
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_DynamicSolutionForce'
 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
 
-   CALL BD_GenerateDynamicElementForce(uuN,vvN,aaN,     &
-                                       Stif0,Mass0,u,&
-                                       damp_flag,beta,&
-                                       elem_total,node_elem,dof_node,ngp,&
+   CALL BD_GenerateDynamicElementForce(uuN,vvN,aaN,                       &
+                                       Stif0,Mass0,u,                     &
+                                       damp_flag,beta,                    &
+                                       elem_total,node_elem,dof_node,ngp, &
                                        quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                        Force,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3329,24 +3331,24 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,hhx,hpx,ErrStat,ErrMsg)
       do l = 1,np+1
          
        if ((abs(spts(j)-1.).LE.eps).AND.(l.EQ.np+1)) then
-         dPhis(l,j) = float((np+1)*np)/4.
+         dPhis(l,j) = REAL((np+1)*np, BDKi)/4.0_BDKi
        elseif ((abs(spts(j)+1.).LE.eps).AND.(l.EQ.1)) then
-         dPhis(l,j) = -float((np+1)*np)/4.
+         dPhis(l,j) = -REAL((np+1)*np, BDKi)/4.0_BDKi
        elseif (abs(spts(j)-npts(l)).LE.eps) then
-         dPhis(l,j) = 0.
+         dPhis(l,j) = 0.0_BDKi
        else
-         dPhis(l,j) = 0.
-         den = 1.          
+         dPhis(l,j) = 0.0_BDKi
+         den = 1.0_BDKi          
          do i = 1,np+1
            if (i.NE.l) then
              den = den*(npts(l)-npts(i))
            endif
-           dnum = 1.
+           dnum = 1.0_BDKi
            do k = 1,np+1
              if ((k.NE.l).AND.(k.NE.i).AND.(i.NE.l)) then
                dnum = dnum*(spts(j)-npts(k))
              elseif (i.EQ.l) then
-               dnum = 0.
+               dnum = 0.0_BDKi
              endif
            enddo
            dPhis(l,j) = dPhis(l,j) + dnum
@@ -3360,13 +3362,13 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,hhx,hpx,ErrStat,ErrMsg)
       do l = 1,np+1
          
        if(abs(spts(j)-npts(l)).LE.eps) then
-         Ps(l,j) = 1.
+         Ps(l,j) = 1.0_BDKi
        else
-         dnum = 1.
-         den = 1.
+         dnum = 1.0_BDKi
+         den  = 1.0_BDKi
          do k = 1,np+1
            if (k.NE.l) then
-             den = den*(npts(l) - npts(k))
+             den  = den *(npts(l) - npts(k))
              dnum = dnum*(spts(j) - npts(k))
            endif
          enddo
@@ -4087,6 +4089,10 @@ SUBROUTINE BD_StaticElementMatrix(Nuuu,Nrrr,Distr_GL,gravity,&
    elk(:,:) = 0.0_BDKi
    elf(:)   = 0.0_BDKi
 
+      ! initialize for use in BD_GaussPointDataMass (though they are used to calculate vvv,aaa,vvp, which aren't technically needed)
+   temp_Nvvv = 0.0_BDKi
+   temp_Naaa = 0.0_BDKi
+   
    fact = .TRUE.
 
 
@@ -4102,6 +4108,7 @@ SUBROUTINE BD_StaticElementMatrix(Nuuu,Nrrr,Distr_GL,gravity,&
        CALL BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        mmm          = EMass0_GL(1,1,igp)
+       mEta(1)      = 0.0_BDKi
        mEta(2)      =-EMass0_GL(1,6,igp)
        mEta(3)      = EMass0_GL(1,5,igp)
        rho(1:3,1:3) = EMass0_GL(4:6,4:6,igp)
