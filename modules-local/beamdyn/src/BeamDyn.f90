@@ -2640,6 +2640,7 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN,vvN,Stif0,Mass0,gravity,u,    &
 !   INTEGER(IntKi)                  :: i ! Index counter
    INTEGER(IntKi)                  :: j ! Index counter
    INTEGER(IntKi)                  :: temp_id ! Index counter
+   INTEGER(IntKi)                  :: temp_id2 ! Index counter
    INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)            :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER         :: RoutineName = 'BD_GenerateDynamicElementAcc'
@@ -2695,13 +2696,15 @@ SUBROUTINE BD_GenerateDynamicElementAcc(uuN,vvN,Stif0,Mass0,gravity,u,    &
 
        IF(quadrature .EQ. 1) THEN
            temp_id = (nelem-1)*ngp + 1
+           temp_id2 = (nelem-1)*ngp
        ELSEIF(quadrature .EQ. 2) THEN
            temp_id = (nelem-1)*ngp
+           temp_id2= temp_id
        ENDIF
 
        DO j=1,ngp
-           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
-           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id2+j)
+           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id2+j)
            DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j)
            DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
@@ -3137,6 +3140,7 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN,vvN,aaN,     &
    INTEGER(IntKi)                   :: nelem        ! number of elements
    INTEGER(IntKi)                   :: j            ! Index counter
    INTEGER(IntKi)                   :: temp_id      ! Index counter
+   INTEGER(IntKi)                   :: temp_id2
    INTEGER(IntKi)                   :: ErrStat2     ! Temporary Error status
    CHARACTER(ErrMsgLen)             :: ErrMsg2      ! Temporary Error message
    CHARACTER(*), PARAMETER          :: RoutineName = 'BD_GenerateDynamicElementForce'
@@ -3188,13 +3192,15 @@ SUBROUTINE BD_GenerateDynamicElementForce(uuN,vvN,aaN,     &
            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        IF(quadrature .EQ. 1) THEN
            temp_id = (nelem-1)*ngp + 1
+           temp_id2 = (nelem-1)*ngp
        ELSEIF(quadrature .EQ. 2) THEN
            temp_id = (nelem-1)*ngp
+           temp_id2= temp_id
        ENDIF
 
        DO j=1,ngp
-           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
-           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id2+j)
+           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id2+j)
            DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j)
            DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
@@ -3933,6 +3939,7 @@ SUBROUTINE BD_GenerateStaticElement( uuNf,Mass0,Stif0,gravity,u,&
    INTEGER(IntKi)                  :: nelem
    INTEGER(IntKi)                  :: j
    INTEGER(IntKi)                  :: temp_id
+   INTEGER(IntKi)                  :: temp_id2
    INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)            :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*), PARAMETER         :: RoutineName = 'BD_GenerateStaticElement'
@@ -3980,13 +3987,15 @@ SUBROUTINE BD_GenerateStaticElement( uuNf,Mass0,Stif0,gravity,u,&
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        IF(quadrature .EQ. 1) THEN
            temp_id = (nelem-1)*ngp + 1
+           temp_id2 = (nelem-1)*ngp
        ELSEIF(quadrature .EQ. 2) THEN
            temp_id = (nelem-1)*ngp
+           temp_id2= temp_id
        ENDIF
 
        DO j=1,ngp
-           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
-           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id2+j)
+           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id2+j)
            DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j)
            DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
@@ -4289,6 +4298,7 @@ SUBROUTINE BD_GenerateStaticElementForce(uuN,vvN,Stif0,Mass0,u,&
    INTEGER(IntKi)                :: nelem ! number of elements
    INTEGER(IntKi)                :: j ! Index counter
    INTEGER(IntKi)                :: temp_id ! Index counter
+   INTEGER(IntKi)                :: temp_id2
    INTEGER(IntKi)                :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)          :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*),        PARAMETER:: RoutineName = 'BD_GenerateStaticElementForce'
@@ -4335,13 +4345,15 @@ SUBROUTINE BD_GenerateStaticElementForce(uuN,vvN,Stif0,Mass0,u,&
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        IF(quadrature .EQ. 1) THEN
            temp_id = (nelem-1)*ngp + 1
+           temp_id2 = (nelem-1)*ngp
        ELSEIF(quadrature .EQ. 2) THEN
            temp_id = (nelem-1)*ngp
+           temp_id2= temp_id
        ENDIF
 
        DO j=1,ngp
-           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
-           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id2+j)
+           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id2+j)
            DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j)
            DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
@@ -4953,6 +4965,7 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuNf,vvNf,aaNf,            &
    INTEGER(IntKi)                  :: nelem
    INTEGER(IntKi)                  :: j
    INTEGER(IntKi)                  :: temp_id
+   INTEGER(IntKi)                  :: temp_id2
    INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)            :: ErrMsg2                      ! Temporary Error message
    CHARACTER(*),          PARAMETER:: RoutineName = 'BD_GenerateDynamicElementGA2'
@@ -5017,13 +5030,15 @@ SUBROUTINE BD_GenerateDynamicElementGA2(uuNf,vvNf,aaNf,            &
 
        IF(quadrature .EQ. 1) THEN
            temp_id = (nelem-1)*ngp + 1
+           temp_id2 = (nelem-1)*ngp
        ELSEIF(quadrature .EQ. 2) THEN
            temp_id = (nelem-1)*ngp
+           temp_id2= temp_id
        ENDIF
 
        DO j=1,ngp
-           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id+j)
-           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id+j)
+           EStif0_GL(1:6,1:6,j) = Stif0(1:6,1:6,temp_id2+j)
+           EMass0_GL(1:6,1:6,j) = Mass0(1:6,1:6,temp_id2+j)
            DistrLoad_GL(1:3,j) = u%DistrLoad%Force(1:3,temp_id+j)
            DistrLoad_GL(4:6,j) = u%DistrLoad%Moment(1:3,temp_id+j)
        ENDDO
