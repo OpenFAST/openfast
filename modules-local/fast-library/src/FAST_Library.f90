@@ -64,8 +64,8 @@ subroutine FAST_Sizes(TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_
    ExternInitData%TMax       = TMax
    ExternInitData%TurbineID  = -1        ! we're not going to use this to simulate a wind farm
    ExternInitData%TurbinePos = 0.0_ReKi  ! turbine position is at the origin
-   ExternInitData%NumSCin = 0
-   ExternInitData%NumSCout = 0
+   ExternInitData%NumCtrl2SC = 0
+   ExternInitData%NumSC2Ctrl = 0
    ExternInitData%SensorType = NINT(InitInpAry(1))   
    
    IF ( NINT(InitInpAry(2)) == 1 ) THEN
@@ -359,7 +359,7 @@ subroutine FAST_Restart(CheckpointRootName_c, AbortErrLev_c, NumOuts_c, dt_c, n_
       
 end subroutine FAST_Restart 
 !==================================================================================================================================
-subroutine FAST_OpFM_Init(TMax, InputFileName_c, TurbID, NumSCin, NumSCout, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, &
+subroutine FAST_OpFM_Init(TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumCtrl2SC, TurbPosn, AbortErrLev_c, dt_c, NumBl_c, NumBlElem_c, &
                           OpFM_Input_from_FAST, OpFM_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Init')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_OpFM_Init
    IMPLICIT NONE 
@@ -367,8 +367,8 @@ subroutine FAST_OpFM_Init(TMax, InputFileName_c, TurbID, NumSCin, NumSCout, Turb
    REAL(C_DOUBLE),         INTENT(IN   ) :: TMax      
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: InputFileName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(IN   ) :: TurbID      
-   INTEGER(C_INT),         INTENT(IN   ) :: NumSCin      
-   INTEGER(C_INT),         INTENT(IN   ) :: NumSCout      
+   INTEGER(C_INT),         INTENT(IN   ) :: NumSC2Ctrl       ! Supercontroller outputs = controller inputs
+   INTEGER(C_INT),         INTENT(IN   ) :: NumCtrl2SC       ! controller outputs = Supercontroller inputs
    REAL(C_FLOAT),          INTENT(IN   ) :: TurbPosn(3)      
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
@@ -398,8 +398,8 @@ subroutine FAST_OpFM_Init(TMax, InputFileName_c, TurbID, NumSCin, NumSCout, Turb
    ExternInitData%TurbineID = TurbID
    ExternInitData%TurbinePos = TurbPosn
    ExternInitData%SensorType = SensorType_None
-   ExternInitData%NumSCin = NumSCin
-   ExternInitData%NumSCout = NumSCout
+   ExternInitData%NumCtrl2SC = NumCtrl2SC
+   ExternInitData%NumSC2Ctrl = NumSC2Ctrl
 
    CALL FAST_InitializeAll_T( t_initial, 1_IntKi, Turbine, ErrStat, ErrMsg, InputFileName, ExternInitData )
    

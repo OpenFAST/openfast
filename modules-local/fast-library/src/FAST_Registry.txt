@@ -393,8 +393,8 @@ typedef	^	FAST_ExternInitType	IntKi	SensorType	-	SensorType_None	-	"lidar sensor
 typedef	^	FAST_ExternInitType	LOGICAL	LidRadialVel	-	-	-	"TRUE => return radial component, FALSE => return 'x' direction estimate"	-
 typedef	^	FAST_ExternInitType	IntKi	TurbineID	-	-	-	"ID number for turbine (used to create output file naming convention)"	-
 typedef	^	FAST_ExternInitType	ReKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used in future for graphics)"	m
-typedef	^	FAST_ExternInitType	IntKi	NumSCin	-	-	-	"number of controller inputs [from supercontroller]"	-
-typedef	^	FAST_ExternInitType	IntKi	NumSCout	-	-	-	"number of controller outputs [to supercontroller]"	-
+typedef	^	FAST_ExternInitType	IntKi	NumSC2Ctrl	-	-	-	"number of controller inputs [from supercontroller]"	-
+typedef	^	FAST_ExternInitType	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-
 
 # ..... FAST Turbine Data (one realization) .......................................................................................................
 typedef	^	FAST_TurbineType	IntKi	TurbID	-	1	-	"Turbine ID Number"	-

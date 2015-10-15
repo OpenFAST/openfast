@@ -34,8 +34,8 @@ main(int argc, char *argv[], char *env[])
    int NumElementsPerBlade = 0;
    int NumTwrElements = 0;
    int n_checkpoint = 10;
-   int NumScOutputs = 0; // 5;  // # outputs from the supercontroller == # inputs to the controller
-   int NumScInputs = 0; // 2;   // # inputs to the supercontroller == # outputs from the controller
+   int NumScOutputs = 4; // 5;  // # outputs from the supercontroller == # inputs to the controller == NumSC2Ctrl
+   int NumScInputs = 2; // 2;   // # inputs to the supercontroller == # outputs from the controller == NumCtrl2SC
 
    OpFM_Input_from_FAST = malloc(sizeof(OpFM_InputType_t));
    OpFM_Output_to_FAST = malloc(sizeof(OpFM_OutputType_t));
@@ -74,6 +74,7 @@ main(int argc, char *argv[], char *env[])
       if (checkError(ErrStat, ErrMsg)) return 1;
 
       NumTwrElements = OpFM_Output_to_FAST->u_Len - NumBlades*NumElementsPerBlade - 1;
+
 
       // set wind speeds at initial locations
       setOutputsToFAST(OpFM_Input_from_FAST, OpFM_Output_to_FAST);
@@ -178,6 +179,7 @@ setOutputsToFAST(OpFM_InputType_t* OpFM_Input_from_FAST, OpFM_OutputType_t* OpFM
    for (j = 0; j < OpFM_Output_to_FAST->SuperController_Len; j++){
       OpFM_Output_to_FAST->SuperController[j] = (float) j; // set it somehow.... (would be set from the SuperController outputs)
    }
+
 
    return;
 }

@@ -7111,8 +7111,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ELSEIF ( p_FAST%CompInflow == Module_OpFM ) THEN
       
       IF ( PRESENT(ExternInitData) ) THEN
-         InitInData_OpFM%NumSCin = ExternInitData%NumSCin
-         InitInData_OpFM%NumSCout = ExternInitData%NumSCout  
+         InitInData_OpFM%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
+         InitInData_OpFM%NumCtrl2SC = ExternInitData%NumCtrl2SC  
       ELSE
          CALL SetErrStat( ErrID_Fatal, 'OpenFOAM integration can be used only with external input data (not the stand-alone executable).', ErrStat, ErrMsg, RoutineName )
          CALL Cleanup()
@@ -7196,11 +7196,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_SrvD%AvgWindSpeed  = InitOutData_IfW%WindFileInfo%MWS
       
       IF ( PRESENT(ExternInitData) ) THEN
-         InitInData_SrvD%NumSCin = ExternInitData%NumSCin
-         InitInData_SrvD%NumSCout = ExternInitData%NumSCout  
+         InitInData_SrvD%NumSC2Ctrl = ExternInitData%NumSC2Ctrl
+         InitInData_SrvD%NumCtrl2SC = ExternInitData%NumCtrl2SC  
       ELSE
-         InitInData_SrvD%NumSCin = 0
-         InitInData_SrvD%NumSCout = 0
+         InitInData_SrvD%NumSC2Ctrl = 0
+         InitInData_SrvD%NumCtrl2SC = 0
       END IF      
             
       CALL AllocAry(InitInData_SrvD%BlPitchInit, InitOutData_ED%NumBl, 'BlPitchInit', ErrStat2, ErrMsg2)

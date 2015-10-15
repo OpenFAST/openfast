@@ -15,8 +15,8 @@ include	Registry_NWTC_Library.txt
 
 
 # ..... OpenFOAM_InitInputType data .......................................................................................................
-typedef	OpenFOAM/OpFM	InitInputType	IntKi	NumSCin	-	-	-	"number of controller inputs [from supercontroller]"	-
-typedef	^	^	IntKi	NumSCout	-	-	-	"number of controller outputs [to supercontroller]"	-
+typedef	OpenFOAM/OpFM	InitInputType	IntKi	NumSC2Ctrl	-	-	-	"number of controller inputs [from supercontroller]"	-
+typedef	^	^	IntKi	NumCtrl2SC	-	-	-	"number of controller outputs [to supercontroller]"	-
 
 # ..... OpenFOAM_InitOutputType data .......................................................................................................
 # Define outputs from the initialization routine here:

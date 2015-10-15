@@ -115,8 +115,8 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD14, u_AD, y_AD, y_ED, OpFM, 
    CALL AllocPAry( OpFM%u%fy, OpFM%p%Nnodes, 'fy', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocPAry( OpFM%u%fz, OpFM%p%Nnodes, 'fz', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-   IF (InitInp%NumSCin > 0) THEN
-      CALL AllocPAry( OpFM%u%SuperController, InitInp%NumSCin, 'u%SuperController', ErrStat2, ErrMsg2 )
+   IF (InitInp%NumCtrl2SC > 0) THEN
+      CALL AllocPAry( OpFM%u%SuperController, InitInp%NumCtrl2SC, 'u%SuperController', ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
    
@@ -129,8 +129,8 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD14, u_AD, y_AD, y_ED, OpFM, 
    OpFM%u%c_obj%fx_Len = OpFM%p%Nnodes; OpFM%u%c_obj%fx = C_LOC( OpFM%u%fx(1) )
    OpFM%u%c_obj%fy_Len = OpFM%p%Nnodes; OpFM%u%c_obj%fy = C_LOC( OpFM%u%fy(1) )
    OpFM%u%c_obj%fz_Len = OpFM%p%Nnodes; OpFM%u%c_obj%fz = C_LOC( OpFM%u%fz(1) ) 
-   if (InitInp%NumSCin > 0) then
-      OpFM%u%c_obj%SuperController_Len = InitInp%NumSCin
+   if (InitInp%NumCtrl2SC > 0) then
+      OpFM%u%c_obj%SuperController_Len = InitInp%NumCtrl2SC
       OpFM%u%c_obj%SuperController     = C_LOC( OpFM%u%SuperController(1) )
       OpFM%u%SuperController = 0.0_ReKi
    end if
@@ -261,8 +261,8 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD14, u_AD, y_AD, y_ED, OpFM, 
    CALL AllocPAry( OpFM%y%u, OpFM%p%Nnodes, 'u', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocPAry( OpFM%y%v, OpFM%p%Nnodes, 'v', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL AllocPAry( OpFM%y%w, OpFM%p%Nnodes, 'w', ErrStat2, ErrMsg2 ); CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   if (InitInp%NumSCout > 0) then
-      CALL AllocPAry( OpFM%y%SuperController, InitInp%NumSCout, 'y%SuperController', ErrStat2, ErrMsg2 )
+   if (InitInp%NumSC2Ctrl > 0) then
+      CALL AllocPAry( OpFM%y%SuperController, InitInp%NumSC2Ctrl, 'y%SuperController', ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    end if
    
@@ -273,8 +273,8 @@ SUBROUTINE Init_OpFM( InitInp, p_FAST, AirDens, u_AD14, u_AD, y_AD, y_ED, OpFM, 
    OpFM%y%c_obj%v_Len = OpFM%p%Nnodes; OpFM%y%c_obj%v = C_LOC( OpFM%y%v(1) )
    OpFM%y%c_obj%w_Len = OpFM%p%Nnodes; OpFM%y%c_obj%w = C_LOC( OpFM%y%w(1) )
    
-   if (InitInp%NumSCout > 0) then
-      OpFM%u%c_obj%SuperController_Len = InitInp%NumSCout
+   if (InitInp%NumSC2Ctrl > 0) then
+      OpFM%y%c_obj%SuperController_Len = InitInp%NumSC2Ctrl
       OpFM%y%c_obj%SuperController     = C_LOC( OpFM%y%SuperController(1) )
    end if
    

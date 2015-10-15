@@ -9,7 +9,7 @@
 
 EXTERNAL_ROUTINE void FAST_OpFM_Restart(char *CheckpointRootName, int *AbortErrLev, double * dt, int * NumBl, int * NumBlElem, int * n_t_global,
    OpFM_InputType_t* OpFM_Input, OpFM_OutputType_t* OpFM_Output, int *ErrStat, char *ErrMsg);
-EXTERNAL_ROUTINE void FAST_OpFM_Init(double *TMax, char *InputFileName, int * TurbineID, int * NumScIn, int * NumScOut, float * TurbinePosition,
+EXTERNAL_ROUTINE void FAST_OpFM_Init(double *TMax, char *InputFileName, int * TurbineID, int * NumSC2Ctrl, int * NumCtrl2SC, float * TurbinePosition,
    int *AbortErrLev, double * dt, int * NumBl, int * NumBlElem, OpFM_InputType_t* OpFM_Input, OpFM_OutputType_t* OpFM_Output, int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_OpFM_Solution0(int *ErrStat, char *ErrMsg);
 EXTERNAL_ROUTINE void FAST_OpFM_Step(int *ErrStat, char *ErrMsg);
