@@ -1987,9 +1987,11 @@ SUBROUTINE SrvD_SetExternalInputs( p_FAST, m_FAST, u_SrvD )
    u_SrvD%ExternalYawRateCom   =  m_FAST%ExternInput%YawRateCom 
    u_SrvD%ExternalHSSBrFrac    =  m_FAST%ExternInput%HSSBrFrac 
 
-   do i=1,SIZE(u_SrvD%ExternalBlPitchCom)
-      u_SrvD%ExternalBlPitchCom(i)   = m_FAST%ExternInput%BlPitchCom(i)
-   end do
+   if (ALLOCATED(u_SrvD%ExternalBlPitchCom)) then !there should be no reason this isn't allocated, but OpenFOAM is acting strange...
+      do i=1,SIZE(u_SrvD%ExternalBlPitchCom)
+         u_SrvD%ExternalBlPitchCom(i)   = m_FAST%ExternInput%BlPitchCom(i)
+      end do
+   end if
 
 END SUBROUTINE SrvD_SetExternalInputs
 !----------------------------------------------------------------------------------------------------------------------------------
