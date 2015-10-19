@@ -89,7 +89,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    REAL(BDKi),ALLOCATABLE  :: temp_w(:)
    REAL(BDKi),ALLOCATABLE  :: temp_ratio(:,:)
    REAL(BDKi),ALLOCATABLE  :: SP_Coef(:,:,:)
-   REAL(BDKi)              :: TmpPos(3)
    REAL(BDKi)              :: TmpDCM(3,3)
    REAL(BDKi)              :: denom
 

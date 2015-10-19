@@ -95,6 +95,26 @@ SUBROUTINE BD_GenerateGLL(N, x, w, ErrStat, ErrMsg)
 
 END SUBROUTINE BD_GenerateGLL
 !-----------------------------------------------------------------------------------------------------------------------------------
+FUNCTION BD_Tilde_SP(vect) ! JRI: necessary for stand-alone version
+! this function returns the skew-symmetric matrix formed by the values of vect
+
+   REAL(ReKi),INTENT(IN):: vect(3)   
+   REAL(ReKi)           :: BD_Tilde_SP(3,3)
+
+   BD_Tilde_SP(1,1) =  0.0_ReKi
+   BD_Tilde_SP(2,1) =  vect(3)
+   BD_Tilde_SP(3,1) = -vect(2)
+
+   BD_Tilde_SP(1,2) = -vect(3)
+   BD_Tilde_SP(2,2) =  0.0_ReKi
+   BD_Tilde_SP(3,2) =  vect(1)
+
+   BD_Tilde_SP(1,3) =  vect(2)   
+   BD_Tilde_SP(2,3) = -vect(1)
+   BD_Tilde_SP(3,3) =  0.0_ReKi
+
+END FUNCTION BD_Tilde_SP
+!-----------------------------------------------------------------------------------------------------------------------------------
 FUNCTION BD_Tilde(vect)
 ! this function returns the skew-symmetric matrix formed by the values of vect
 
