@@ -30,6 +30,7 @@ Source\BeamDyn_IO.f90
 Source\BeamDyn_Subs.f90
 Source\BeamDyn_Types.f90
 Source\Driver_Beam.f90
+Source\Driver_Beam_Subs.f90
 Source\Registry_BeamDyn.txt
 
 Source\dependencies\NWTC_Library\*

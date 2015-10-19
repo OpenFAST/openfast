@@ -1,85 +1,77 @@
-!..................................................................................................................................
-! LICENSING                                                                                                                         
-! Copyright (C) 2013  National Renewable Energy Laboratory
+!**********************************************************************************************************************************
+! LICENSING
+! Copyright (C) 2015  National Renewable Energy Laboratory
 !
-!    Glue is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
-!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+!    This file is part of the NWTC Subroutine Library.
 !
-!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
 !
-!    You should have received a copy of the GNU General Public License along with Module2.
-!    If not, see <http://www.gnu.org/licenses/>.
+!     http://www.apache.org/licenses/LICENSE-2.0
+!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
 !
 !**********************************************************************************************************************************
-!  
-!    ADD DESCRIPTION
-!	
-!    References:
-!
-!
-!**********************************************************************************************************************************
-PROGRAM MAIN
+PROGRAM BeamDyn_Driver_Program
 
    USE BeamDyn
 
    USE BeamDyn_Subs  ! for crv extract routines
    USE BeamDyn_Types
+   USE BeamDyn_driver_subs
    USE NWTC_Library
 
    IMPLICIT NONE
 
    ! global glue-code-specific variables
 
-   INTEGER(IntKi)                     :: ErrStat          ! Error status of the operation
-   CHARACTER(1024)                    :: ErrMsg           ! Error message if ErrStat /= ErrID_None
-   REAL(DbKi)                         :: dt_global        ! fixed/constant global time step
-   REAL(DbKi)                         :: t_initial        ! time at initialization
-   REAL(DbKi)                         :: t_final          ! time at simulation end 
-   REAL(DbKi)                         :: t_global         ! global-loop time marker
-   INTEGER(IntKi)                     :: n_t_final        ! total number of time steps
-   INTEGER(IntKi)                     :: n_t_global       ! global-loop time counter
-   INTEGER(IntKi)                     :: BD_interp_order     ! order of interpolation/extrapolation
+   INTEGER(IntKi)                   :: ErrStat          ! Error status of the operation
+   CHARACTER(1024)                  :: ErrMsg           ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi)                       :: dt_global        ! fixed/constant global time step
+   REAL(DbKi)                       :: t_initial        ! time at initialization
+   REAL(DbKi)                       :: t_final          ! time at simulation end 
+   REAL(DbKi)                       :: t_global         ! global-loop time marker
+   INTEGER(IntKi)                   :: n_t_final        ! total number of time steps
+   INTEGER(IntKi)                   :: n_t_global       ! global-loop time counter
+   INTEGER(IntKi)                   :: BD_interp_order  ! order of interpolation/extrapolation
 
    ! Module1 Derived-types variables; see Registry_Module1.txt for details
 
    TYPE(BD_InitInputType)           :: BD_InitInput
    TYPE(BD_ParameterType)           :: BD_Parameter
    TYPE(BD_ContinuousStateType)     :: BD_ContinuousState
-   TYPE(BD_ContinuousStateType)     :: BD_ContinuousStateDeriv
    TYPE(BD_InitOutputType)          :: BD_InitOutput
    TYPE(BD_DiscreteStateType)       :: BD_DiscreteState
    TYPE(BD_ConstraintStateType)     :: BD_ConstraintState
    TYPE(BD_OtherStateType)          :: BD_OtherState
-   TYPE(BD_InputType),ALLOCATABLE  :: BD_Input(:)
-   REAL(DbKi),        ALLOCATABLE  :: BD_InputTimes(:)
+   TYPE(BD_InputType) ,ALLOCATABLE  :: BD_Input(:)
+   REAL(DbKi),         ALLOCATABLE  :: BD_InputTimes(:)
    TYPE(BD_OutputType),ALLOCATABLE  :: BD_Output(:)
    REAL(DbKi),ALLOCATABLE           :: BD_OutputTimes(:)
-   INTEGER(IntKi)                     :: DvrOut 
+   INTEGER(IntKi)                   :: DvrOut 
 
-   REAL(BDKi) ::temp_cc(3)
-
-   CHARACTER(256)    :: DvrInputFile
-   CHARACTER(256)    :: RootName
+   CHARACTER(256)                   :: DvrInputFile
+   CHARACTER(256)                   :: RootName
 
 
    ! local variables
-   Integer(IntKi)                     :: i               ! counter for various loops
-   Integer(IntKi)                     :: j               ! counter for various loops
-
-   REAL(BDKi):: temp_R(3,3)
-   REAL(R8Ki):: start, finish
-   REAL(BDKi) , DIMENSION(:), ALLOCATABLE  :: IniVelo      ! Initial Position Vector between origins of Global and blade frames [-]
+   Integer(IntKi)                          :: i               ! counter for various loops
+   REAL(R8Ki)                              :: start, finish
+   REAL(BDKi) , DIMENSION(:), ALLOCATABLE  :: IniVelo         ! Initial Position Vector between origins of Global and blade frames [-]
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
    ! -------------------------------------------------------------------------
    CALL GET_COMMAND_ARGUMENT(1,DvrInputFile)
    CALL GetRoot(DvrInputFile,RootName)
-   CALL BD_ReadDvrFile(DvrInputFile,t_initial,t_final,dt_global,BD_InitInput,&
-                          ErrStat,ErrMsg)
-   BD_InitInput%RootName  = TRIM(BD_Initinput%InputFile)
-   BD_InitInput%RootDisp(:) = 0.0D+00
-   BD_InitInput%RootOri(:,:) = 0.0D0
+   CALL BD_ReadDvrFile(DvrInputFile,t_initial,t_final,dt_global,BD_InitInput,ErrStat,ErrMsg)
+   BD_InitInput%RootName         = TRIM(BD_Initinput%InputFile)
+   BD_InitInput%RootDisp(:)      = 0.0_R8Ki
+   BD_InitInput%RootOri(:,:)     = 0.0_R8Ki
    BD_InitInput%RootOri(1:3,1:3) = BD_InitInput%GlbRot(1:3,1:3)
    t_global = t_initial
    n_t_final = ((t_final - t_initial) / dt_global )
@@ -94,7 +86,7 @@ PROGRAM MAIN
    ALLOCATE(BD_Output(BD_interp_order + 1)) 
    ALLOCATE(BD_OutputTimes(BD_interp_order + 1)) 
 
-   CALL BD_Init(BD_InitInput        &
+   CALL BD_Init(BD_InitInput             &
                    , BD_Input(1)         &
                    , BD_Parameter        &
                    , BD_ContinuousState  &
@@ -102,9 +94,9 @@ PROGRAM MAIN
                    , BD_ConstraintState  &
                    , BD_OtherState       &
                    , BD_Output(1)        &
-                   , dt_global             &
+                   , dt_global           &
                    , BD_InitOutput       &
-                   , ErrStat               &
+                   , ErrStat             &
                    , ErrMsg )
       CALL CheckError()
 
@@ -116,14 +108,14 @@ PROGRAM MAIN
    CALL Dvr_InitializeOutputFile(DvrOut,BD_InitOutput,RootName,ErrStat,ErrMsg)
       CALL CheckError()
 
-   BD_InputTimes(1) = t_initial
-   BD_InputTimes(2) = t_initial 
+   BD_InputTimes(1)  = t_initial
+   BD_InputTimes(2)  = t_initial 
    BD_OutputTimes(1) = t_initial
    BD_OutputTimes(2) = t_initial
 
 
    CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_InitInput,IniVelo,ErrStat, ErrMsg)
-   CALL BD_CopyInput(BD_Input(1), BD_Input(2), MESH_NEWCOPY, ErrStat, ErrMsg)
+   CALL BD_CopyInput (BD_Input(1) , BD_Input(2) , MESH_NEWCOPY, ErrStat, ErrMsg)
    CALL BD_CopyOutput(BD_Output(1), BD_Output(2), MESH_NEWCOPY, ErrStat, ErrMsg)
       CALL CheckError()
 
@@ -132,8 +124,8 @@ PROGRAM MAIN
 
    DO n_t_global = 0, n_t_final
      WRITE(*,*) "Time Step: ", n_t_global
-     BD_InputTimes(2) = BD_InputTimes(1) 
-     BD_InputTimes(1) = t_global + dt_global
+     BD_InputTimes(2)  = BD_InputTimes(1) 
+     BD_InputTimes(1)  = t_global + dt_global
      BD_OutputTimes(2) = BD_OutputTimes(1) 
      BD_OutputTimes(1) = t_global + dt_global
      CALL BD_InputSolve( BD_InputTimes(1), BD_Input(1), BD_Parameter, BD_InitInput, IniVelo, ErrStat, ErrMsg)
@@ -162,9 +154,9 @@ PROGRAM MAIN
 
    CALL CPU_TIME(finish)
    
-   WRITE(*,*) 'Start: ', start
+   WRITE(*,*) 'Start: ' , start
    WRITE(*,*) 'Finish: ', finish
-   WRITE(*,*) 'Time: ', finish-start
+   WRITE(*,*) 'Time: '  , finish-start
 
    CALL Dvr_End()
 
@@ -207,7 +199,7 @@ CONTAINS
          
    end subroutine CheckError
 
-END PROGRAM MAIN
+END PROGRAM BeamDyn_Driver_Program
 
 
 
@@ -218,28 +210,31 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, IniVelo, ErrStat, ErrMsg)
    USE BeamDyn_Types
    USE NWTC_Library
 
-   REAL(DbKi),                     INTENT(IN   ):: t
-   TYPE(BD_InputType),             INTENT(INOUT):: u
-   TYPE(BD_ParameterType),         INTENT(IN   ):: p
-   TYPE(BD_InitInputType),         INTENT(IN   ):: InitInput
-   REAL(BDKi),                     INTENT(IN   ):: IniVelo(*)
-   INTEGER(IntKi),                 INTENT(  OUT):: ErrStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   ! local variables
-   INTEGER(IntKi)          :: i                ! do-loop counter
-   REAL(BDKi)              :: temp_vec(3)
-   REAL(BDKi)              :: temp_rr(3)
-   REAL(BDKi)              :: temp_R(3,3)
-   REAL(BDKi)              :: temp_r0(3)
-   REAL(BDKi)              :: temp_theta(3)
-   REAL(BDKi)              :: temp33(3,3)
+   REAL(DbKi),             INTENT(IN   ) :: t
+   TYPE(BD_InputType),     INTENT(INOUT) :: u
+   TYPE(BD_ParameterType), INTENT(IN   ) :: p
+   TYPE(BD_InitInputType), INTENT(IN   ) :: InitInput
+   REAL(BDKi),             INTENT(IN   ) :: IniVelo(*)
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat          ! Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg           ! Error message if ErrStat /= ErrID_None
+                                         
+   ! local variables                     
+   INTEGER(IntKi)                        :: i                ! do-loop counter
+   REAL(BDKi)                            :: temp_vec(3)
+   REAL(BDKi)                            :: temp_rr(3)
+   REAL(BDKi)                            :: temp_R(3,3)
+   REAL(BDKi)                            :: temp_r0(3)
+   REAL(BDKi)                            :: temp_theta(3)
+   REAL(BDKi)                            :: temp33(3,3)
+   
+   ! ----------------------------------------------------------------------
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-   temp_r0(:) = 0.0D0 
-   temp_rr(:)     = 0.0D0
-   temp_R(:,:)    = 0.0D0
+   temp_r0(:) = 0.0_BDKi 
+   temp_rr(:) = 0.0_BDKi
+   temp_R(:,:)= 0.0_BDKi
    temp_r0(1) = p%GlbPos(2)
    temp_r0(2) = p%GlbPos(3)
    temp_r0(3) = p%GlbPos(1)
@@ -247,38 +242,38 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, IniVelo, ErrStat, ErrMsg)
    temp_theta(1) = IniVelo(5)*t
    temp_theta(2) = IniVelo(6)*t
    temp_theta(3) = IniVelo(4)*t
-   temp_vec(:) = 0.0D0
-   temp_vec(:) = 4.0D0*TAN(temp_theta(:)/4.0D0)
+   temp_vec(:) = 0.0_BDKi
+   temp_vec(:) = 4.0_BDKi*TAN(temp_theta(:)/4.0_BDKi)
    ! gather point forces and line forces
 
    ! Point mesh: RootMotion 
    ! Calculate root displacements and rotations
-   u%RootMotion%Orientation(:,:,:) = 0.0D0
+   u%RootMotion%Orientation(:,:,:) = 0.0_BDKi
    DO i=1,3
-       u%RootMotion%Orientation(i,i,1) = 1.0D0
-       u%HubMotion%Orientation(i,i,1) = 1.0D0
+       u%RootMotion%Orientation(i,i,1) = 1.0_BDKi
+       u%HubMotion%Orientation (i,i,1) = 1.0_BDKi
    ENDDO
    temp33=u%RootMotion%Orientation(:,:,1) !possible type conversion
    CALL BD_CrvMatrixR(temp_vec,temp33,ErrStat,ErrMsg)
    temp_rr(:) = MATMUL(u%RootMotion%Orientation(:,:,1),temp_r0)
-   u%RootMotion%Orientation(:,:,1) = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
-   u%RootMotion%TranslationDisp(:,:)  = 0.0D0
+   u%RootMotion%Orientation(:,:,1)   = TRANSPOSE(u%RootMotion%Orientation(:,:,1))
+   u%RootMotion%TranslationDisp(:,:) = 0.0_BDKi
    u%RootMotion%TranslationDisp(:,1) = temp_rr(:) - temp_r0(:)
    ! END Calculate root displacements and rotations
 
    ! Calculate root translational and angular velocities
-   u%RootMotion%RotationVel(:,:) = 0.0D0
+   u%RootMotion%RotationVel(:,:) = 0.0_BDKi
    u%RootMotion%RotationVel(1,1) = IniVelo(5)
    u%RootMotion%RotationVel(2,1) = IniVelo(6)
    u%RootMotion%RotationVel(3,1) = IniVelo(4)
-   u%RootMotion%TranslationVel(:,:) = 0.0D0
+   u%RootMotion%TranslationVel(:,:) = 0.0_BDKi
    u%RootMotion%TranslationVel(:,1) = MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr)
    ! END Calculate root translational and angular velocities
 
 
    ! Calculate root translational and angular accelerations
-   u%RootMotion%TranslationAcc(:,:) = 0.0D0
-   u%RootMotion%RotationAcc(:,:) = 0.0D0
+   u%RootMotion%TranslationAcc(:,:) = 0.0_BDKi
+   u%RootMotion%RotationAcc   (:,:) = 0.0_BDKi
    u%RootMotion%TranslationAcc(:,1) = MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)), &
                MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr))
    ! END Calculate root translational and angular accelerations
@@ -306,278 +301,3 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, IniVelo, ErrStat, ErrMsg)
 
 END SUBROUTINE BD_InputSolve
 
-SUBROUTINE BD_ReadDvrFile(DvrInputFile,t_ini,t_f,dt,InitInputData,&
-                          ErrStat,ErrMsg)
-!------------------------------------------------------------------------------------
-! This routine reads in the primary BeamDyn input file and places the values it reads
-! in the InputFileData structure.
-!   It opens an echo file if requested and returns the (still-open) echo file to the
-!     calling routine.
-!   It also returns the names of the BldFile, FurlFile, and TrwFile for further
-!     reading of inputs.
-!------------------------------------------------------------------------------------
-   USE BeamDyn
-   USE BeamDyn_Subs
-   USE BeamDyn_Types
-   USE NWTC_Library
-
-   ! Passed variables
-   CHARACTER(*),                 INTENT(IN   ) :: DvrInputFile
-   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat
-   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg
-   TYPE(BD_InitInputType),       INTENT(  OUT) :: InitInputData
-   REAL(DbKi),                   INTENT(  OUT) :: t_ini
-   REAL(DbKi),                   INTENT(  OUT) :: t_f
-   REAL(DbKi),                   INTENT(  OUT) :: dt
-
-   ! Local variables:
-   INTEGER(IntKi)               :: UnIn                         ! Unit number for reading file
-   INTEGER(IntKi)               :: ErrStat2                     ! Temporary Error status
-   CHARACTER(ErrMsgLen)         :: ErrMsg2                      ! Temporary Error message
-   character(*), parameter      :: RoutineName = 'BD_ReadDvrFile'
-   INTEGER(IntKi)               :: UnEc
-   
-   CHARACTER(1024)              :: FTitle                       ! "File Title": the 2nd line of the input file, which contains a description of its contents
-
-   INTEGER(IntKi)               :: i
-
-   ! Initialize some variables:
-   ErrStat = ErrID_None
-   ErrMsg  = ""
-   UnEc = -1
-   
-   CALL GetNewUnit(UnIn,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL OpenFInpFile(UnIn,DvrInputFile,ErrStat2,ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev) RETURN
-      
-   !-------------------------- HEADER ---------------------------------------------
-   CALL ReadCom(UnIn,DvrInputFile,'File Header: Module Version (line 1)',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-   CALL ReadStr(UnIn,DvrInputFile,FTitle,'FTitle','File Header: File Description (line 2)',ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) then
-         call cleanup()
-         return
-      end if
-
-   !---------------------- SIMULATION CONTROL --------------------------------------
-   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Simulation Control',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   t_ini = 0.0D0 
-   t_f   = 0.0D0 
-   dt    = 0.0D0 
-   CALL ReadVar(UnIn,DvrInputFile,t_ini,'t_initial','Starting time of simulation',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL ReadVar(UnIn,DvrInputFile,t_f,"t_final", "Ending time of simulation",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-   CALL ReadVar(UnIn,DvrInputFile,dt,"dt", "Time increment size",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      
-   !---------------------- GRAVITY PARAMETER --------------------------------------
-   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Gravity Parameter',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   InitInputData%gravity(:) = 0.0D0
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%gravity(1),"InitInputData%gravity(1)", "gravity vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%gravity(2),"InitInputData%gravity(2)", "gravity vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%gravity(3),"InitInputData%gravity(3)", "gravity vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   if (ErrStat >= AbortErrLev) then
-       call cleanup()
-       return
-   end if
-   !---------------------- FRAME PARAMETER --------------------------------------
-   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Frame Parameter',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   InitInputData%GlbPos(:)   = 0.0D0
-   InitInputData%GlbRot(:,:) = 0.0D0
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(1),"InitInputData%GlbPos(1)", "position vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(2),"InitInputData%GlbPos(2)", "position vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%GlbPos(3),"InitInputData%GlbPos(3)", "position vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-   CALL ReadCom(UnIn,DvrInputFile,'Comments on DCM',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ReadCom(UnIn,DvrInputFile,'Comments on DCM',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   DO i=1,3
-       CALL ReadAry(UnIn,DvrInputFile,InitInputData%GlbRot(i,:),3,"InitInputData%GlbPos",&
-               "Global DCM",ErrStat2,ErrMsg2,UnEc)
-          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ENDDO
-   if (ErrStat >= AbortErrLev) then
-       call cleanup()
-       return
-   end if
-   !---------------------- INITIAL VELOCITY PARAMETER --------------------------------
-   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Initial Velocity Parameter',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   InitInputData%RootVel(:)   = 0.0D0
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(4),"InitInputData%IniRootVel(1)", "angular velocity vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(5),"InitInputData%IniRootVel(2)", "angular velocity vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%RootVel(6),"InitInputData%IniRootVel(3)", "angular velocity vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   InitInputData%RootVel(1:3)   = MATMUL(BD_Tilde(InitInputData%RootVel(4:6)),InitInputData%GlbPos(:))
-   if (ErrStat >= AbortErrLev) then
-       call cleanup()
-       return
-   end if
-  
-   !---------------------- APPLIED FORCE --------------------------------
-   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Applied Force',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   InitInputData%DistrLoad(:)   = 0.0D0
-   InitInputData%TipLoad(:)     = 0.0D0
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(1),"InitInputData%DistrLoad(1)", "Distributed load vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(2),"InitInputData%DistrLoad(2)", "Distributed load vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(3),"InitInputData%DistrLoad(3)", "Distributed load vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(4),"InitInputData%DistrLoad(4)", "Distributed load vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(5),"InitInputData%DistrLoad(5)", "Distributed load vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%DistrLoad(6),"InitInputData%DistrLoad(6)", "Distributed load vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(1),"InitInputData%TipLoad(1)", "Tip load vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(2),"InitInputData%TipLoad(2)", "Tip load vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(3),"InitInputData%TipLoad(3)", "Tip load vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(4),"InitInputData%TipLoad(4)", "Tip load vector X",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(5),"InitInputData%TipLoad(5)", "Tip load vector Y",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   CALL ReadVar(UnIn,DvrInputFile,InitInputData%TipLoad(6),"InitInputData%TipLoad(6)", "Tip load vector Z",ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )  
-   if (ErrStat >= AbortErrLev) then
-       call cleanup()
-       return
-   end if
-   !---------------------- BEAM SECTIONAL PARAMETER ----------------------------------------
-   CALL ReadCom(UnIn,DvrInputFile,'Section Header: Primary input file',ErrStat2,ErrMsg2,UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL ReadVar ( UnIn, DvrInputFile, InitInputData%InputFile, 'InputFile', 'Name of the primary input file', ErrStat2,ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   if (ErrStat >= AbortErrLev) then
-       call cleanup()
-       return
-   end if
-
-   call cleanup()
-   return
-      
-contains
-   subroutine cleanup() 
-      close(UnIn)
-      return
-   end subroutine cleanup         
-END SUBROUTINE BD_ReadDvrFile
-
-SUBROUTINE Dvr_InitializeOutputFile(OutUnit,IntOutput,RootName,ErrStat,ErrMsg)
-
-   USE BeamDyn
-   USE BeamDyn_Types
-   USE NWTC_Library
-
-   INTEGER(IntKi),                    INTENT(  OUT):: OutUnit
-   TYPE(BD_InitOutputType),           INTENT(IN   ):: IntOutput     ! Output for initialization routine
-   INTEGER(IntKi),                    INTENT(  OUT):: ErrStat     ! Error status of the operation
-   CHARACTER(*),                      INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
-   CHARACTER(*),                      INTENT(IN   ):: RootName
-
-   integer(IntKi)                            ::  i      
-   integer(IntKi)                            :: numOuts
-   INTEGER(IntKi)          :: ErrStat2                     ! Temporary Error status
-   CHARACTER(ErrMsgLen)    :: ErrMsg2                      ! Temporary Error message
-   character(*), parameter :: RoutineName = 'Dvr_InitializeOutputFile'
-
-   CALL GetNewUnit(OutUnit,ErrStat2,ErrMsg2)
-   CALL OpenFOutFile ( OutUnit, trim(RootName)//'.out', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      if (ErrStat >= AbortErrLev) return
-
-   write (OutUnit,'(/,A)')  'Predictions were generated on '//CurDate()//' at '//CurTime()//' using '//trim(GetNVD(IntOutput%Ver))
-   write (OutUnit,'()' )    !print a blank line
-   
-   numOuts = size(IntOutput%WriteOutputHdr)
-   !......................................................
-   ! Write the names of the output parameters on one line:
-   !......................................................
-
-   write (OutUnit,'()')
-   write (OutUnit,'()')
-   write (OutUnit,'()')
-
-   call WrFileNR ( OutUnit, 'Time        ' )
-
-   do i=1,NumOuts
-      call WrFileNR ( OutUnit, tab//IntOutput%WriteOutputHdr(i) )
-   end do ! i
-
-   write (OutUnit,'()')
-
-      !......................................................
-      ! Write the units of the output parameters on one line:
-      !......................................................
-
-   call WrFileNR ( OutUnit, ' (s)            ' )
-
-   do i=1,NumOuts
-      call WrFileNR ( Outunit, tab//IntOutput%WriteOutputUnt(i) )
-   end do ! i
-
-   write (OutUnit,'()')  
-
-
-END SUBROUTINE Dvr_InitializeOutputFile
-
-
-SUBROUTINE Dvr_WriteOutputLine(t,OutUnit, OutFmt, Output, errStat, errMsg)
-
-   USE BeamDyn_Types
-   USE NWTC_Library
-
-   real(DbKi)             ,  intent(in   )   :: t                    ! simulation time (s)
-   INTEGER(IntKi)         ,  intent(in   )   :: OutUnit              ! Status of error message
-   CHARACTER(*)           ,  intent(in   )   :: OutFmt
-!   real(ReKi)             ,  intent(in   )   :: output(:)            ! Rootname for the output file
-   TYPE(BD_OutputType),      INTENT(IN   )   :: Output
-   integer(IntKi)         ,  intent(inout)   :: errStat              ! Status of error message
-   character(*)           ,  intent(inout)   :: errMsg               ! Error message if ErrStat /= ErrID_None
-      
-   ! Local variables.
-
-   character(200)                   :: frmt                                      ! A string to hold a format specifier
-   character(15)                    :: tmpStr                                    ! temporary string to print the time output as text
-
-   integer :: numOuts
-   
-   errStat = ErrID_None
-   errMsg  = ''
-
-   numOuts = size(Output%WriteOutput,1)
-   frmt = '"'//tab//'"'//trim(OutFmt)      ! format for array elements from individual modules
-   
-      ! time
-   write( tmpStr, '(F15.6)' ) t
-   call WrFileNR( OutUnit, tmpStr )
-   call WrNumAryFileNR ( OutUnit, Output%WriteOutput,  frmt, errStat, errMsg )
-   if ( errStat >= AbortErrLev ) return
-   
-     ! write a new line (advance to the next line)
-   write (OutUnit,'()')
-      
-end subroutine Dvr_WriteOutputLine
