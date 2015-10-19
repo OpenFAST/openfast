@@ -1514,7 +1514,7 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, OtherState, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CrvCompose(temp_vec,temp_cc,temp_vec2,0,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   temp_cur(:) = 0.0D0
+   temp_cur(:) = 0.0_BDKi
    temp33_2=TRANSPOSE(y%BldMotion%Orientation(1:3,1:3,p%node_elem*p%elem_total)) ! possible type conversion here   
    CALL BD_CrvExtractCrv(temp33_2,temp_cur,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1689,7 +1689,7 @@ SUBROUTINE BD_PrintSum( p, u, y, x, OtherState, RootName, ErrStat, ErrMsg )
       ! Local variables.
 
    INTEGER(IntKi)               :: I                                               ! Index for the nodes
-   INTEGER(IntKi)               :: j                                               ! Generic index
+   INTEGER(IntKi)               :: j, k                                            ! Generic index
    INTEGER(IntKi)               :: temp_id                                         ! Generic index
    INTEGER(IntKi)               :: UnSu                                            ! I/O unit number for the summary output file
 
@@ -1756,20 +1756,30 @@ SUBROUTINE BD_PrintSum( p, u, y, x, OtherState, RootName, ErrStat, ErrMsg )
    WRITE (UnSu,'(A,I4)' ) 'Number of nodes:       ', p%node_total
 
    WRITE (UnSu,'(/,A)')  'Initial position vectors'
+   k=1
    DO i=1,p%elem_total
-       WRITE (UnSu,'(A,I4)')  'Element number: ',i
+       WRITE (UnSu,'(2x,A,I4)')  'Element number: ',i
+       WRITE (UnSu, '(2x,A,1x,A)') 'Node', 'Global node' 
+       WRITE (UnSu, '(2x,A,1x,A)') '----', '-----------' 
        DO j = 1, p%node_elem
            temp_id = (j-1)*p%dof_node
-           WRITE(UnSu,'(I4,3ES18.5)') j,p%uuN0(temp_id+1:temp_id+3,i)
+           WRITE(UnSu,'(I6,1x,I9,2x,3ES18.5)') j,k,p%uuN0(temp_id+1:temp_id+3,i)
+           k=k+1
        ENDDO
+       k = k-1
    ENDDO
    WRITE (UnSu,'(/,A)')  'Initial rotation vectors'
+   k=1
    DO i=1,p%elem_total
-       WRITE (UnSu,'(A,I4)')  'Element number: ',i
+       WRITE (UnSu,'(2x,A,I4)')  'Element number: ',i
+       WRITE (UnSu, '(2x,A,1x,A)') 'Node', 'Global node' 
+       WRITE (UnSu, '(2x,A,1x,A)') '----', '-----------' 
        DO j = 1, p%node_elem
            temp_id = (j-1)*p%dof_node
-           WRITE(UnSu,'(I4,3ES18.5)') j,p%uuN0(temp_id+4:temp_id+6,i)
+           WRITE(UnSu,'(I6,1x,I9,2x,3ES18.5)') j,k,p%uuN0(temp_id+4:temp_id+6,i)
+           k=k+1
        ENDDO
+       k = k-1
    ENDDO
 
    WRITE (UnSu,'(/,A)')  'Quadrature point position vectors'
@@ -1831,24 +1841,11 @@ SUBROUTINE BD_PrintSum( p, u, y, x, OtherState, RootName, ErrStat, ErrMsg )
        WRITE(UnSu,'(I4,3ES18.5)') i,x%dqdt(temp_id+4:temp_id+6)
    ENDDO
 
-      ! Interpolated blade properties.
-
-
-      !WRITE (UnSu,'(//,A,I1,A,/)')  'Interpolated beam properties:'
-      !
-      !WRITE (UnSu,'(A)')  'Node  BlFract   RNodes  DRNodes PitchAxis  StrcTwst  BMassDen    FlpStff    EdgStff'
-      !WRITE (UnSu,'(A)')  ' (-)      (-)      (m)      (m)       (-)     (deg)    (kg/m)     (Nm^2)     (Nm^2)'
-      !
-      !DO I=1,p%BldNodes
-      !   WRITE(UnSu,'(I4,3F9.3,3F10.3,2ES11.3)')  I, p%RNodesNorm(I), p%RNodes(I) + p%HubRad, p%DRNodes(I), &
-      !                                                p%PitchAxis(K,I),p%ThetaS(K,I)*R2D, p%MassB(K,I), &
-      !                                                p%StiffBF(K,I), p%StiffBE(K,I)
-      !ENDDO ! I
-
-
+         
+   ! output channels:
    OutPFmt = '( I4, 3X,A '//TRIM(Num2LStr(ChanLen))//',1 X, A'//TRIM(Num2LStr(ChanLen))//' )'
    WRITE (UnSu,'(//,A,/)')  'Requested Outputs:'
-   WRITE (UnSu,"(/, '  Col  Parameter  Units', /, '  ---  ---------  -----')")
+   WRITE (UnSu,"( '  Col  Parameter  Units', /, '  ---  ---------  -----')")
    DO I = 0,p%NumOuts
       WRITE (UnSu,OutPFmt)  I, p%OutParam(I)%Name, p%OutParam(I)%Units
    END DO             

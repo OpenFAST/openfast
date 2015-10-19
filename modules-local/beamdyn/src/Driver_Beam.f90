@@ -63,12 +63,26 @@ PROGRAM BeamDyn_Driver_Program
    Integer(IntKi)                          :: i               ! counter for various loops
    REAL(R8Ki)                              :: start, finish
    REAL(BDKi) , DIMENSION(:), ALLOCATABLE  :: IniVelo         ! Initial Position Vector between origins of Global and blade frames [-]
+   
+   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'BeamDyn Driver', 'v1.00.01', '19-Oct-2015' )  ! The version number of this program.
+   
+   ! -------------------------------------------------------------------------
+   ! Initialization of library (especially for screen output)
+   ! -------------------------------------------------------------------------      
+   CALL NWTC_Init()
+      ! Display the copyright notice
+   CALL DispCopyrightLicense( version )   
+      ! Tell our users what they're running
+   CALL WrScr( ' Running '//GetNVD( version )//NewLine//' linked with '//TRIM( GetNVD( NWTC_Ver ))//NewLine )
+   
    ! -------------------------------------------------------------------------
    ! Initialization of glue-code time-step variables
-   ! -------------------------------------------------------------------------
+   ! -------------------------------------------------------------------------   
+   
    CALL GET_COMMAND_ARGUMENT(1,DvrInputFile)
    CALL GetRoot(DvrInputFile,RootName)
    CALL BD_ReadDvrFile(DvrInputFile,t_initial,t_final,dt_global,BD_InitInput,ErrStat,ErrMsg)
+      CALL CheckError()
    BD_InitInput%RootName         = TRIM(BD_Initinput%InputFile)
    BD_InitInput%RootDisp(:)      = 0.0_R8Ki
    BD_InitInput%RootOri(:,:)     = 0.0_R8Ki
@@ -278,14 +292,14 @@ SUBROUTINE BD_InputSolve( t, u,  p, InitInput, IniVelo, ErrStat, ErrMsg)
                MATMUL(BD_Tilde(real(u%RootMotion%RotationVel(:,1),BDKi)),temp_rr))
    ! END Calculate root translational and angular accelerations
 
-   u%PointLoad%Force(:,:)  = 0.0D0
-   u%PointLoad%Moment(:,:) = 0.0D0
+   u%PointLoad%Force(:,:)  = 0.0_ReKi
+   u%PointLoad%Moment(:,:) = 0.0_ReKi
    u%PointLoad%Force(1:3,p%node_total)  = InitInput%TipLoad(1:3)
    u%PointLoad%Moment(1:3,p%node_total) = InitInput%TipLoad(4:6)
    
    ! LINE2 mesh: DistrLoad
-   u%DistrLoad%Force(:,:)  = 0.0D0
-   u%DistrLoad%Moment(:,:) = 0.0D0
+   u%DistrLoad%Force(:,:)  = 0.0_ReKi
+   u%DistrLoad%Moment(:,:) = 0.0_ReKi
 
    IF(p%quadrature .EQ. 1) THEN
        DO i=1,p%ngp*p%elem_total+2
