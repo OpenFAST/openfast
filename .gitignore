@@ -7,3 +7,14 @@ fort.*
 *.vtk
 tmp.*
 gnb
+# latex files
+*.aux
+*.toc
+*.upa
+*.upb
+*.out
+*.bbl
+*.blg
+*.lof
+*.log
+*.lot
