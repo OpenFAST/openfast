@@ -89,7 +89,6 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    REAL(BDKi),ALLOCATABLE  :: temp_w(:)
    REAL(BDKi),ALLOCATABLE  :: temp_ratio(:,:)
    REAL(BDKi),ALLOCATABLE  :: SP_Coef(:,:,:)
-   REAL(BDKi)              :: TmpPos(3)
    REAL(BDKi)              :: TmpDCM(3,3)
    REAL(BDKi)              :: denom
 
@@ -153,8 +152,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    ENDDO
    ! Compute blade/member/segment lengths and the ratios between member/segment and blade lengths
    
-   p%member_length(:,:) = 0.0D0
-   p%segment_length(:,:) = 0.0D0
+   p%member_length(:,:) = 0.0_BDKi
+   p%segment_length(:,:) = 0.0_BDKi
    CALL BD_ComputeMemberLength(InputFileData%member_total,InputFileData%kp_member,&
                                InputFileData%kp_coordinate,SP_Coef,&
                                p%segment_length,p%member_length,p%blade_length,&
@@ -175,9 +174,9 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          call cleanup()
          return
       end if
-   p%uuN0(:,:) = 0.0D0
-   GLL(:) = 0.0D0
-   temp_w(:) = 0.0D0
+   p%uuN0(:,:) = 0.0_BDKi
+   GLL(:) = 0.0_BDKi
+   temp_w(:) = 0.0_BDKi
    CALL BD_GenerateGLL(p%node_elem-1,GLL,temp_w,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
@@ -443,8 +442,8 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ENDDO
           
-   p%uu0(:,:)  = 0.0D0
-   p%E10(:,:)  = 0.0D0
+   p%uu0(:,:)  = 0.0_BDKi
+   p%E10(:,:)  = 0.0_BDKi
    DO i = 1,p%elem_total
        DO j = 1,p%ngp
            temp_id = (j-1)*p%dof_node
