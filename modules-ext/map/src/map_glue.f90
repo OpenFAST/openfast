@@ -205,9 +205,9 @@ PROGRAM Main
                                MAP_Input      , &
                                MAP_InputTimes , &
                                p_MAP          , &
-                               x_MAP          , &
-                               xd_MAP         , &
-                               z_MAP          , &
+                               x_MAP_pred     , &
+                               xd_MAP_pred    , &
+                               z_MAP_pred     , &
                                other_MAP      , &
                                ErrStat        , &
                                ErrMsg )    
@@ -237,9 +237,9 @@ PROGRAM Main
      CALL MAP_CalcOutput(t_global     , &
                          MAP_Input(1) , &
                          p_MAP        , &
-                         x_MAP        , &
-                         xd_MAP       , &
-                         z_MAP        , &
+                         x_MAP_pred   , &
+                         xd_MAP_pred  , &
+                         z_MAP_pred   , &
                          other_MAP    , &
                          y_MAP        , &
                          ErrStat      , &
