@@ -176,12 +176,13 @@ MAP_EXTERNCALL void map_update_states(float t,
    Domain* domain = other_type->object;
    MAP_ERROR_CODE success = MAP_SAFE;
    ReferencePoint* point_iter = NULL;
-   // Node* node_iter = NULL;
    int i = 0;
 
    map_reset_universal_error(map_msg, ierr);
 
    MAP_BEGIN_ERROR_LOG;
+
+   success = associate_constraint_states(domain, z_type); CHECKERRQ(MAP_FATAL_97);
 
    /* If the reference to u_type changes, then we have to update the location MAP internal states are pointing 
     * to. This is accomplished in the following code. The issue here is when this is called in Fortran:
@@ -234,12 +235,13 @@ MAP_EXTERNCALL void map_calc_output(float t,
    Domain* domain = other_type->object;
    MAP_ERROR_CODE success = MAP_SAFE;
    ReferencePoint* point_iter = NULL;
-   // Node* node_iter = NULL;
    int i = 0;
 
    map_reset_universal_error(map_msg, ierr);
 
    MAP_BEGIN_ERROR_LOG;
+
+   success = associate_constraint_states(domain, z_type); CHECKERRQ(MAP_FATAL_98);
 
    /* If the reference to u_type changes, then we have to update the location MAP internal states are pointing
    * to. This is accomplished in the following code. The issue here is when this is called in Fortran:

@@ -130,6 +130,8 @@ typedef enum MAP_ERROR_CODE {
   MAP_FATAL_94  , // Krylov accelerator failed to converge inside the node solve sequence. Try adjusting tolerance levels or switch to the unmodified Newton step",
   MAP_FATAL_95  , // Could not create the MAP initialization output file
   MAP_FATAL_96  , // Atempting to run option KRYLOV_ACCELERATOR without LAPACK libraries compiled in. This option is not available without the LAPACK library
+  MAP_FATAL_97  , // Cannot associate constriaint variable in UpdateStates",
+  MAP_FATAL_98  , // Cannot associate constriaint variable in CalcOutput",
   MAP_ERROR_1   , // Line option 'DAMAGE_TIME' does not trail with a valid value. Ignoring this run-time flag. Chek the MAP input file
   MAP_ERROR_2   , // Value for 'INNER_FTOL' is not a valid numeric value. Using the default value <1e-6>
   MAP_ERROR_3   , // Value for 'OUTER_TOL' is not a valid numeric value. Using the default value <1e-6>

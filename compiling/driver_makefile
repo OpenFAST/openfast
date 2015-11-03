@@ -73,7 +73,7 @@ PREC = SingPrec
    # Destination and RootName for executable
 
 OUTPUT_NAME = map_driver
-DEST_DIR    = ..\bin
+DEST_DIR    = ../bin
 
    #==========================================================#
    # You should not need to change anything beyond this point #
@@ -132,7 +132,7 @@ MAP_SOURCES =              \
 
 
 
-vpath %.f90 $(NWTC_Lib_DIR) $(MAP_DIR) $(NETLIB_DIR)
+vpath %.f90 $(NWTC_Lib_DIR) $(MAP_DIR) $(NETLIB_DIR) ../fortran_driver
 vpath %.f   $(NETLIB_DIR)
 vpath %.mod $(INTER_DIR)
 vpath %.obj $(INTER_DIR)

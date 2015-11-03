@@ -161,7 +161,7 @@ PROGRAM Main
      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
      ! MAP
      CALL MAP_Input_ExtrapInterp(MAP_Input, MAP_InputTimes, u_MAP, t_global, ErrStat, ErrMsg)
-     CALL CheckError(ErrStat,'Message from MAP_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )              
+      CALL CheckError(ErrStat,'Message from MAP_Input_ExtrapInterp (FAST): '//NewLine//ErrMsg )              
      DO j = MAP_interp_order, 1, -1
         CALL MAP_CopyInput (MAP_Input(j),  MAP_Input(j+1),  MESH_UPDATECOPY, Errstat, ErrMsg)
         MAP_InputTimes(j+1) = MAP_InputTimes(j)
@@ -212,7 +212,7 @@ PROGRAM Main
                                ErrStat        , &
                                ErrMsg )    
         IF (ErrStat.NE.0) THEN
-           CALL WrScr(ErrMsg) 
+           CALL WrScr(trim(ErrMsg)) 
         END IF
         ! CALL CheckError( ErrStat, 'Message from MAP_UpdateStates: '//NewLine//ErrMsg )
      END DO !j_ss

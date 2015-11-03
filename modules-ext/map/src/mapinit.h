@@ -874,4 +874,9 @@ size_t vartype_ptr_meter(const void *el);
 const char* remove_first_character(const char* string);
 void print_machine_name_to_screen();
 
+/**
+ */
+MAP_ERROR_CODE associate_constraint_states(Domain* domain, MAP_ConstraintStateType_t* z_type);
+
+
 #endif /* _INITIALIZATION_H */
