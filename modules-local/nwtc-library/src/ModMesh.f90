@@ -51,7 +51,9 @@ MODULE ModMesh
    IMPLICIT NONE
 !   INTEGER :: DEBUG_UNIT = 74
 
-   INTEGER, PARAMETER :: BUMPUP = 64  ! do not set to less than 2
+   INTEGER,     PARAMETER, PRIVATE :: BUMPUP = 64  ! do not set to less than 2
+   CHARACTER(*),PARAMETER, PRIVATE :: VTK_AryFmt = '(3(F20.6))'  
+
 
    INTERFACE MeshConstructElement
       MODULE PROCEDURE MeshConstructElement_1PT ,                            &
@@ -66,179 +68,420 @@ MODULE ModMesh
 
 CONTAINS
 
-   !-------------------------------------------------------------------------------------------------------------------------------
-   SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
-      ! This routine writes mesh information in binary form. If UnIn is < 0, it gets a new unit number and opens the file,
-      ! otherwise the file is appended. It is up to the caller of this routine to close the file when it's finished.
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
+   ! This routine writes mesh information in binary form. If UnIn is < 0, it gets a new unit number and opens the file,
+   ! otherwise the file is appended. It is up to the caller of this routine to close the file when it's finished.
 
       
-      INTEGER, INTENT(INOUT)                ::  UnIn     ! fortran output unit
-      TYPE(MeshType),  INTENT(IN)           ::  M        ! mesh to be reported on
+   INTEGER, INTENT(INOUT)                ::  UnIn     ! fortran output unit
+   TYPE(MeshType),  INTENT(IN)           ::  M        ! mesh to be reported on
 
-      INTEGER(IntKi),  INTENT(OUT)          :: ErrStat   ! Indicates whether an error occurred (see NWTC_Library)
-      CHARACTER(*),    INTENT(OUT)          :: ErrMsg    ! Error message associated with the ErrStat
-      CHARACTER(*),    INTENT(IN), OPTIONAL :: FileName  ! Name of the file to write the output in
+   INTEGER(IntKi),  INTENT(OUT)          :: ErrStat   ! Indicates whether an error occurred (see NWTC_Library)
+   CHARACTER(*),    INTENT(OUT)          :: ErrMsg    ! Error message associated with the ErrStat
+   CHARACTER(*),    INTENT(IN), OPTIONAL :: FileName  ! Name of the file to write the output in
 
-      ! local variables
-      INTEGER(IntKi)                        :: ErrStat2  ! Temporary storage for local errors
-      INTEGER(IntKi)                        :: I         ! loop counter
+   ! local variables
+   INTEGER(IntKi)                        :: ErrStat2  ! Temporary storage for local errors
+   INTEGER(IntKi)                        :: I         ! loop counter
 
-      IF (UnIn < 0) THEN
-         CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
+   IF (UnIn < 0) THEN
+      CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
 
-         CALL OpenBOutFile ( UnIn, TRIM(FileName), ErrStat, ErrMsg )
-         IF ( ErrStat >= AbortErrLev ) RETURN
+      CALL OpenBOutFile ( UnIn, TRIM(FileName), ErrStat, ErrMsg )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+   END IF
+
+
+   ! Write information about mesh structure:
+   WRITE (UnIn, IOSTAT=ErrStat2)   INT(ReKi,B4Ki)
+   WRITE (UnIn, IOSTAT=ErrStat2)   INT(FIELDMASK_SIZE,B4Ki)
+   WRITE (UnIn, IOSTAT=ErrStat2)   M%fieldmask           ! BJJ: do we need to verify that this is size B4Ki?
+   WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%Nnodes,B4Ki)
+   WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%nelemlist,B4Ki)
+
+
+   !...........
+   ! Write nodal information:
+   !...........
+      
+   IF (.NOT. M%Initialized) RETURN
+      
+   WRITE (UnIn, IOSTAT=ErrStat2)   M%Position
+      IF ( ErrStat2 /= 0 ) THEN
+         CALL CheckError( ErrID_Fatal, 'Error writing Position to the mesh binary file.' )
+         RETURN
+      END IF
+
+   WRITE (UnIn, IOSTAT=ErrStat2)   M%RefOrientation
+      IF ( ErrStat2 /= 0 ) THEN
+         CALL CheckError( ErrID_Fatal, 'Error writing RefOrientation to the mesh binary file.' )
+         RETURN
       END IF
 
 
-      ! Write information about mesh structure:
-      WRITE (UnIn, IOSTAT=ErrStat2)   INT(ReKi,B4Ki)
-      WRITE (UnIn, IOSTAT=ErrStat2)   INT(FIELDMASK_SIZE,B4Ki)
-      WRITE (UnIn, IOSTAT=ErrStat2)   M%fieldmask           ! BJJ: do we need to verify that this is size B4Ki?
-      WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%Nnodes,B4Ki)
-      WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%nelemlist,B4Ki)
+   ! Write fields:
 
-
-      !...........
-      ! Write nodal information:
-      !...........
-      
-      IF (.NOT. M%Initialized) RETURN
-      
-      WRITE (UnIn, IOSTAT=ErrStat2)   M%Position
+   IF ( M%fieldmask(MASKID_FORCE) .AND. ALLOCATED(M%Force) ) THEN
+      WRITE (UnIn, IOSTAT=ErrStat2)   M%Force
          IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckError( ErrID_Fatal, 'Error writing Position to the mesh binary file.' )
+            CALL CheckError( ErrID_Fatal, 'Error writing Force to the mesh binary file.' )
             RETURN
          END IF
+   END IF
 
-      WRITE (UnIn, IOSTAT=ErrStat2)   M%RefOrientation
+   IF ( M%fieldmask(MASKID_Moment) .AND. ALLOCATED(M%Moment)) THEN
+      WRITE (UnIn, IOSTAT=ErrStat2)   M%Moment
          IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckError( ErrID_Fatal, 'Error writing RefOrientation to the mesh binary file.' )
+            CALL CheckError( ErrID_Fatal, 'Error writing Force to the mesh binary file.' )
             RETURN
          END IF
+   END IF
+
+   IF ( M%fieldmask(MASKID_ORIENTATION) .AND. ALLOCATED(M%Orientation)) THEN
+      WRITE (UnIn, IOSTAT=ErrStat2)   M%Orientation
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL CheckError( ErrID_Fatal, 'Error writing Orientation to the mesh binary file.' )
+            RETURN
+         END IF
+   END IF
+
+   IF ( M%fieldmask(MASKID_TRANSLATIONDISP) .AND. ALLOCATED(M%TranslationDisp)) THEN
+      WRITE (UnIn, IOSTAT=ErrStat2)   M%TranslationDisp
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL CheckError( ErrID_Fatal, 'Error writing TranslationDisp to the mesh binary file.' )
+            RETURN
+         END IF
+   END IF
+
+   IF ( M%fieldmask(MASKID_TRANSLATIONVEL) .AND. ALLOCATED(M%TranslationVel)) THEN
+      WRITE (UnIn, IOSTAT=ErrStat2)   M%TranslationVel
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL CheckError( ErrID_Fatal, 'Error writing TranslationVel to the mesh binary file.' )
+            RETURN
+         END IF
+   END IF
+
+   IF ( M%fieldmask(MASKID_ROTATIONVEL) .AND. ALLOCATED(M%RotationVel)) THEN
+      WRITE (UnIn, IOSTAT=ErrStat2)   M%RotationVel
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL CheckError( ErrID_Fatal, 'Error writing RotationVel to the mesh binary file.' )
+            RETURN
+         END IF
+   END IF
+
+   IF ( M%fieldmask(MASKID_TRANSLATIONACC) .AND. ALLOCATED(M%TranslationAcc)) THEN
+      WRITE (UnIn, IOSTAT=ErrStat2)   M%TranslationAcc
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL CheckError( ErrID_Fatal, 'Error writing TranslationAcc to the mesh binary file.' )
+            RETURN
+         END IF
+   END IF
+
+   IF ( M%fieldmask(MASKID_ROTATIONACC) .AND. ALLOCATED(M%RotationAcc)) THEN
+      WRITE (UnIn, IOSTAT=ErrStat2)   M%RotationAcc
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL CheckError( ErrID_Fatal, 'Error writing RotationAcc to the mesh binary file.' )
+            RETURN
+         END IF
+   END IF
+
+   IF ( M%fieldmask(MASKID_SCALAR) .AND. ALLOCATED(M%Scalars)) THEN
+      WRITE (UnIn, IOSTAT=ErrStat2)   M%Scalars
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL CheckError( ErrID_Fatal, 'Error writing Scalars to the mesh binary file.' )
+            RETURN
+         END IF
+   END IF
 
 
-      ! Write fields:
+   !...........
+   ! Write element information:
+   !...........
 
-      IF ( M%fieldmask(MASKID_FORCE) .AND. ALLOCATED(M%Force) ) THEN
-         WRITE (UnIn, IOSTAT=ErrStat2)   M%Force
-            IF ( ErrStat2 /= 0 ) THEN
-               CALL CheckError( ErrID_Fatal, 'Error writing Force to the mesh binary file.' )
-               RETURN
-            END IF
+   DO i=1,M%nelemlist
+      WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%ElemList(i)%Element%Xelement       ,B4Ki) ! what kind of element
+      WRITE (UnIn, IOSTAT=ErrStat2)   INT(SIZE(M%ElemList(i)%Element%ElemNodes),B4Ki) ! how many nodes
+      WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%ElemList(i)%Element%ElemNodes      ,B4Ki) ! which nodes
+   END DO
+
+CONTAINS
+   !............................................................................................................................
+   SUBROUTINE CheckError(ErrID,Msg)
+   !............................................................................................................................
+   ! This subroutine sets the error message and level
+   !............................................................................................................................
+
+         ! Passed arguments
+      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
+      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
+
+
+      !.........................................................................................................................
+      ! Set error status/message;
+      !.........................................................................................................................
+
+      IF ( ErrID /= ErrID_None ) THEN
+
+         IF ( ErrStat /= ErrID_None ) ErrMsg = TRIM(ErrMsg)//NewLine
+         ErrMsg = TRIM(ErrMsg)//'MeshWrBin:'//TRIM(Msg)
+         ErrStat = MAX(ErrStat, ErrID)
+
+         !......................................................................................................................
+         ! Clean up if we're going to return on error: close file, deallocate local arrays
+         !......................................................................................................................
+         IF ( ErrStat >= AbortErrLev ) THEN
+         END IF
+
       END IF
 
-      IF ( M%fieldmask(MASKID_Moment) .AND. ALLOCATED(M%Moment)) THEN
-         WRITE (UnIn, IOSTAT=ErrStat2)   M%Moment
-            IF ( ErrStat2 /= 0 ) THEN
-               CALL CheckError( ErrID_Fatal, 'Error writing Force to the mesh binary file.' )
-               RETURN
-            END IF
-      END IF
+   END SUBROUTINE CheckError
+   !............................................................................................................................
+END SUBROUTINE MeshWrBin
+!----------------------------------------------------------------------------------------------------------------------------------
+!   
+! VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf
+!
+SUBROUTINE MeshWrVTKreference ( M, FileRootName, ErrStat, ErrMsg )
+   ! This routine write the reference position and orientations of a mesh in VTK format
+   
+   TYPE(MeshType),  INTENT(IN)           :: M             ! mesh to be written
+   CHARACTER(*),    INTENT(IN)           :: FileRootName  ! Name of the file to write the output in (excluding extension)
 
-      IF ( M%fieldmask(MASKID_ORIENTATION) .AND. ALLOCATED(M%Orientation)) THEN
-         WRITE (UnIn, IOSTAT=ErrStat2)   M%Orientation
-            IF ( ErrStat2 /= 0 ) THEN
-               CALL CheckError( ErrID_Fatal, 'Error writing Orientation to the mesh binary file.' )
-               RETURN
-            END IF
-      END IF
-
-      IF ( M%fieldmask(MASKID_TRANSLATIONDISP) .AND. ALLOCATED(M%TranslationDisp)) THEN
-         WRITE (UnIn, IOSTAT=ErrStat2)   M%TranslationDisp
-            IF ( ErrStat2 /= 0 ) THEN
-               CALL CheckError( ErrID_Fatal, 'Error writing TranslationDisp to the mesh binary file.' )
-               RETURN
-            END IF
-      END IF
-
-      IF ( M%fieldmask(MASKID_TRANSLATIONVEL) .AND. ALLOCATED(M%TranslationVel)) THEN
-         WRITE (UnIn, IOSTAT=ErrStat2)   M%TranslationVel
-            IF ( ErrStat2 /= 0 ) THEN
-               CALL CheckError( ErrID_Fatal, 'Error writing TranslationVel to the mesh binary file.' )
-               RETURN
-            END IF
-      END IF
-
-      IF ( M%fieldmask(MASKID_ROTATIONVEL) .AND. ALLOCATED(M%RotationVel)) THEN
-         WRITE (UnIn, IOSTAT=ErrStat2)   M%RotationVel
-            IF ( ErrStat2 /= 0 ) THEN
-               CALL CheckError( ErrID_Fatal, 'Error writing RotationVel to the mesh binary file.' )
-               RETURN
-            END IF
-      END IF
-
-      IF ( M%fieldmask(MASKID_TRANSLATIONACC) .AND. ALLOCATED(M%TranslationAcc)) THEN
-         WRITE (UnIn, IOSTAT=ErrStat2)   M%TranslationAcc
-            IF ( ErrStat2 /= 0 ) THEN
-               CALL CheckError( ErrID_Fatal, 'Error writing TranslationAcc to the mesh binary file.' )
-               RETURN
-            END IF
-      END IF
-
-      IF ( M%fieldmask(MASKID_ROTATIONACC) .AND. ALLOCATED(M%RotationAcc)) THEN
-         WRITE (UnIn, IOSTAT=ErrStat2)   M%RotationAcc
-            IF ( ErrStat2 /= 0 ) THEN
-               CALL CheckError( ErrID_Fatal, 'Error writing RotationAcc to the mesh binary file.' )
-               RETURN
-            END IF
-      END IF
-
-      IF ( M%fieldmask(MASKID_SCALAR) .AND. ALLOCATED(M%Scalars)) THEN
-         WRITE (UnIn, IOSTAT=ErrStat2)   M%Scalars
-            IF ( ErrStat2 /= 0 ) THEN
-               CALL CheckError( ErrID_Fatal, 'Error writing Scalars to the mesh binary file.' )
-               RETURN
-            END IF
-      END IF
-
-
-      !...........
-      ! Write element information:
-      !...........
-
-      DO i=1,M%nelemlist
-         WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%ElemList(i)%Element%Xelement       ,B4Ki) ! what kind of element
-         WRITE (UnIn, IOSTAT=ErrStat2)   INT(SIZE(M%ElemList(i)%Element%ElemNodes),B4Ki) ! how many nodes
-         WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%ElemList(i)%Element%ElemNodes      ,B4Ki) ! which nodes
+   INTEGER(IntKi),  INTENT(OUT)          :: ErrStat       ! Indicates whether an error occurred (see NWTC_Library)
+   CHARACTER(*),    INTENT(OUT)          :: ErrMsg        ! Error message associated with the ErrStat
+   
+   ! local variables
+   INTEGER(IntKi)                        :: Un            ! fortran unit number
+   INTEGER(IntKi)                        :: I, J          ! loop counters
+      
+   INTEGER(IntKi)                        :: ErrStat2 
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2
+   CHARACTER(*),PARAMETER                :: RoutineName = 'MeshWrVTKreference'
+      
+   CHARACTER(*),PARAMETER                :: RefOrientation(3) = (/ 'RefOrientationX','RefOrientationY','RefOrientationZ' /)
+      
+      
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+      
+   ! PolyData (.vtp) — Serial vtkPolyData (unstructured)
+   CALL GetNewUnit( Un, ErrStat2, ErrMsg2 )      
+   CALL OpenFOutFile ( Un, TRIM(FileRootName)//'.Reference.vtp', ErrStat, ErrMsg )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+            
+      WRITE(Un,'(A)')         '<?xml version="1.0"?>'            
+      WRITE(Un,'(A)')         '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">'  ! bjj note: we don't have binary data in this file, so byte_order shouldn't matter, right?
+      WRITE(Un,'(A)')         '  <PolyData>'
+      WRITE(Un,'(2(A,i7),A)') '    <Piece NumberOfPoints="', M%Nnodes, '" NumberOfVerts="  0" NumberOfLines="', M%ElemTable(ELEMENT_LINE2)%nelem, '"'
+      WRITE(Un,'(A)')         '           NumberOfStrips="  0" NumberOfPolys="  0">'
+      
+! points (i.e., nodes):      
+      WRITE(Un,'(A)')         '      <Points>'         
+      WRITE(Un,'(A)')         '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
+      DO i=1,M%Nnodes
+         WRITE(Un,VTK_AryFmt) M%Position(:,i)
       END DO
+      WRITE(Un,'(A)')         '        </DataArray>'
+      WRITE(Un,'(A)')         '      </Points>'
+   
+! point data (orientation vectors):
+      WRITE(Un,'(A)')         '      <PointData>'        
+   DO j=1,3 
+      WRITE(Un,'(A,A,A)')   '        <DataArray type="Float32" Name="', RefOrientation(j), '" NumberOfComponents="3" format="ascii">'
+      DO i=1,M%Nnodes
+         WRITE(Un,VTK_AryFmt) M%RefOrientation(j,:,i)
+      END DO
+      WRITE(Un,'(A)')      '        </DataArray>'
+   END DO
+      WRITE(Un,'(A)')         '      </PointData>'
+   
+! lines (i.e., elements; for line2 meshes only):
+   if ( M%ElemTable(ELEMENT_LINE2)%nelem > 0) then
+      WRITE(Un,'(A)')         '      <Lines>'
+      WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="connectivity" format="ascii">'
+      DO i=1,M%ElemTable(ELEMENT_LINE2)%nelem
+         WRITE(Un,'(2(i7))') M%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1) - 1, M%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2) - 1
+      END DO
+      WRITE(Un,'(A)')         '        </DataArray>'
+      WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="offsets" format="ascii">'
+      DO i=1,M%ElemTable(ELEMENT_LINE2)%nelem
+         WRITE(Un,'(i7)') 2*i
+      END DO
+      WRITE(Un,'(A)')         '        </DataArray>'
+      WRITE(Un,'(A)')         '      </Lines>'
+   end if
 
-   CONTAINS
-      !............................................................................................................................
-      SUBROUTINE CheckError(ErrID,Msg)
-      !............................................................................................................................
-      ! This subroutine sets the error message and level
-      !............................................................................................................................
+      WRITE(Un,'(A)')         '    </Piece>'
+      WRITE(Un,'(A)')         '  </PolyData>'
+      WRITE(Un,'(A)')         '</VTKFile>'
+      CLOSE(Un)      
+      
+END SUBROUTINE MeshWrVTKreference   
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE MeshWrVTK ( M, FileRootName, VTKcount, ErrStat, ErrMsg )
+   ! This routine writes mesh information in VTK form. 
+      
+   TYPE(MeshType),  INTENT(IN)           :: M             ! mesh to be written
+   CHARACTER(*),    INTENT(IN)           :: FileRootName  ! Name of the file to write the output in (excluding extension)
+   INTEGER(IntKi),  INTENT(IN)           :: VTKcount      ! Indicates number for VTK output file
 
-            ! Passed arguments
-         INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
-         CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
+   INTEGER(IntKi),  INTENT(OUT)          :: ErrStat       ! Indicates whether an error occurred (see NWTC_Library)
+   CHARACTER(*),    INTENT(OUT)          :: ErrMsg        ! Error message associated with the ErrStat
+
+   ! local variables
+   INTEGER(IntKi)                        :: Un            ! fortran unit number
+   INTEGER(IntKi)                        :: i,j           ! loop counters
+   CHARACTER(1024)                       :: FileName
+      
+   INTEGER(IntKi)                        :: ErrStat2 
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2
+   CHARACTER(*),PARAMETER                :: RoutineName = 'MeshWrVTK'
+   CHARACTER(*),PARAMETER                :: Orientation(3) = (/ 'OrientationX','OrientationY','OrientationZ' /)
+
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   IF (.NOT. M%Initialized) RETURN
+   
+   !.................................................................
+   ! we'll write the mesh reference fields on the first timestep only:
+   !.................................................................
+   if (VTKcount == 0) then
+      call MeshWrVTKreference(M, FileRootName, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat >= AbortErrLev) return
+   end if
+
+   !.................................................................
+   ! write the data that potentially changes each time step:
+   !.................................................................
+      
+   ! PolyData (.vtp) — Serial vtkPolyData (unstructured) file
+   FileName = TRIM(FileRootName)//'.t'//TRIM(Num2LStr(VTKcount))//'.vtp'
+      
+   CALL GetNewUnit( Un, ErrStat2, ErrMsg2 )      
+   CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
+
+         
+      ! Write a VTP mesh file (Polygonal VTK file) with positions, lines, and field information
+      ! (note alignment of WRITE statements to make sure spaces are lined up in XML file)
+      WRITE(Un,'(A)')         '<?xml version="1.0"?>'
+      WRITE(Un,'(A)')         '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">' ! bjj note: we don't have binary data in this file, so byte_order shouldn't matter, right?
+      WRITE(Un,'(A)')         '  <PolyData>'
+      WRITE(Un,'(2(A,i7),A)') '    <Piece NumberOfPoints="', M%Nnodes, '" NumberOfVerts="  0" NumberOfLines="', M%ElemTable(ELEMENT_LINE2)%nelem, '"'
+      WRITE(Un,'(A)')         '           NumberOfStrips="  0" NumberOfPolys="  0">'
+   
+! points (nodes):   
+      WRITE(Un,'(A)')         '      <Points>'
+      WRITE(Un,'(A)')         '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
+      DO i=1,M%Nnodes
+         WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i)
+      END DO
+      WRITE(Un,'(A)')         '        </DataArray>'
+      WRITE(Un,'(A)')         '      </Points>'
+            
+! point data for any existing mesh fields:   
+      WRITE(Un,'(A)')         '      <PointData>'
+      
+   IF ( M%fieldmask(MASKID_FORCE) .AND. ALLOCATED(M%Force) ) THEN
+      WRITE(Un,'(A)')         '        <DataArray type="Float32" Name="Force" NumberOfComponents="3" format="ascii">'
+      DO i=1,M%Nnodes
+         WRITE(Un,VTK_AryFmt) M%Force(:,i)
+      END DO
+      WRITE(Un,'(A)')         '        </DataArray>'
+   END IF
+
+   IF ( M%fieldmask(MASKID_MOMENT) .AND. ALLOCATED(M%Moment) ) THEN
+      WRITE(Un,'(A)')         '        <DataArray type="Float32" Name="Moment" NumberOfComponents="3" format="ascii">'
+      DO i=1,M%Nnodes
+         WRITE(Un,VTK_AryFmt) M%Moment(:,i)
+      END DO
+      WRITE(Un,'(A)')         '        </DataArray>'
+   END IF
+
+   IF ( M%fieldmask(MASKID_TRANSLATIONVEL) .AND. ALLOCATED(M%TranslationVel)) THEN
+      WRITE(Un,'(A)')         '        <DataArray type="Float32" Name="TranslationalVelocity" NumberOfComponents="3" format="ascii">'
+      DO i=1,M%Nnodes
+         WRITE(Un,VTK_AryFmt) M%TranslationVel(:,i)
+      END DO
+      WRITE(Un,'(A)')         '        </DataArray>'
+   END IF
+
+   IF ( M%fieldmask(MASKID_ROTATIONVEL) .AND. ALLOCATED(M%RotationVel)) THEN
+      WRITE(Un,'(A)')         '        <DataArray type="Float32" Name="RotationalVelocity" NumberOfComponents="3" format="ascii">'
+      DO i=1,M%Nnodes
+         WRITE(Un,VTK_AryFmt) M%RotationVel(:,i)
+      END DO
+      WRITE(Un,'(A)')         '        </DataArray>'
+   END IF
+
+   IF ( M%fieldmask(MASKID_TRANSLATIONACC) .AND. ALLOCATED(M%TranslationAcc)) THEN
+      WRITE(Un,'(A)')         '        <DataArray type="Float32" Name="TranslationalAcceleration" NumberOfComponents="3" format="ascii">'
+      DO i=1,M%Nnodes
+         WRITE(Un,VTK_AryFmt) M%TranslationAcc(:,i)
+      END DO
+      WRITE(Un,'(A)')         '        </DataArray>'
+   END IF
+
+   IF ( M%fieldmask(MASKID_ROTATIONACC) .AND. ALLOCATED(M%RotationAcc)) THEN
+      WRITE(Un,'(A)')         '        <DataArray type="Float32" Name="RotationalAcceleration" NumberOfComponents="3" format="ascii">'
+      DO i=1,M%Nnodes
+         WRITE(Un,VTK_AryFmt) M%RotationAcc(:,i)
+      END DO
+      WRITE(Un,'(A)')         '        </DataArray>'
+   END IF
+
+IF (M%fieldmask(MASKID_ORIENTATION) .AND. ALLOCATED(M%Orientation)) THEN
+   DO j=1,3 
+      WRITE(Un,'(A,A,A)')   '        <DataArray type="Float32" Name="', Orientation(j), '" NumberOfComponents="3" format="ascii">'
+      DO i=1,M%Nnodes
+         WRITE(Un,VTK_AryFmt) M%Orientation(j,:,i)
+      END DO
+      WRITE(Un,'(A)')      '        </DataArray>'
+   END DO      
+END IF
+
+   IF ( M%fieldmask(MASKID_SCALAR) .AND. ALLOCATED(M%Scalars) .AND. M%nScalars > 0) THEN
+      WRITE(Un,'(A,I7,A)')         '        <DataArray type="Float32" Name="Scalars" NumberOfComponents="', M%nScalars, '" format="ascii">'
+      DO i=1,M%Nnodes
+         WRITE(Un,'('//trim(num2lstr(M%nScalars))//'(F20.6))') M%Scalars(:,i) ! not very efficient, but it's easy and I'm not sure anyone uses this field
+      END DO
+      WRITE(Un,'(A)')         '        </DataArray>'
+   END IF
 
 
-         !.........................................................................................................................
-         ! Set error status/message;
-         !.........................................................................................................................
+      WRITE(Un,'(A)')         '      </PointData>'
 
-         IF ( ErrID /= ErrID_None ) THEN
+      
+! lines (i.e., elements; for line2 meshes only):
+   if ( M%ElemTable(ELEMENT_LINE2)%nelem > 0) then    
+      WRITE(Un,'(A)')         '      <Lines>'
+      WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="connectivity" format="ascii">'
+      DO i=1,M%ElemTable(ELEMENT_LINE2)%nelem
+         WRITE(Un,'(2(i7))') M%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1) - 1, M%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2) - 1
+      END DO
+      WRITE(Un,'(A)')         '        </DataArray>'
+      WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="offsets" format="ascii">'
+      DO i=1,M%ElemTable(ELEMENT_LINE2)%nelem
+         WRITE(Un,'(i7)') 2*i
+      END DO
+      WRITE(Un,'(A)')         '        </DataArray>'
+      WRITE(Un,'(A)')         '      </Lines>'
+   end if      
 
-            IF ( ErrStat /= ErrID_None ) ErrMsg = TRIM(ErrMsg)//NewLine
-            ErrMsg = TRIM(ErrMsg)//'MeshWrBin:'//TRIM(Msg)
-            ErrStat = MAX(ErrStat, ErrID)
-
-            !......................................................................................................................
-            ! Clean up if we're going to return on error: close file, deallocate local arrays
-            !......................................................................................................................
-            IF ( ErrStat >= AbortErrLev ) THEN
-            END IF
-
-         END IF
-
-      END SUBROUTINE CheckError
-      !............................................................................................................................
-   END SUBROUTINE MeshWrBin
+      WRITE(Un,'(A)')         '    </Piece>'
+      WRITE(Un,'(A)')         '  </PolyData>'
+      WRITE(Un,'(A)')         '</VTKFile>'
+      CLOSE(Un)         
+               
+      
+   END SUBROUTINE MeshWrVTK
+   
    !-------------------------------------------------------------------------------------------------------------------------------
-
-
    SUBROUTINE MeshPrintInfo ( U, M, N)
    
       ! This routine writes mesh information in text form. If is used for debugging.
