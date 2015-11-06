@@ -850,6 +850,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
       END IF  ! ( InitLocal%Morison%NMembers > 0 )
     
 !===============================================
+      p%PotMod = InitLocal%Potmod      
       IF ( InitLocal%UnSum > 0 ) THEN
       
          IF (InitLocal%Waves%WaveMod /= 0 .AND. InitLocal%Waves%WaveMod /= 6)  THEN
@@ -870,7 +871,7 @@ SUBROUTINE HydroDyn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, Init
             END DO
          END IF
          
-         p%PotMod = InitLocal%Potmod
+         
          IF ( InitLocal%PotMod == 1 .AND.  InitLocal%WAMIT%RdtnMod == 1) THEN
             ! Write the header for this section
             WRITE( InitLocal%UnSum,  '(//)' ) 
