@@ -60,33 +60,9 @@ MODULE NWTC_Num
    REAL(ReKi)                                :: TwoByPi                       !< 2/Pi
    REAL(ReKi)                                :: TwoPi                         !< 2*Pi
 
-!bjj: I'm not sure why MLB added these 3 types; they don't seem to be used anywhere
-   !TYPE, PUBLIC               :: CubSplineType                                ! This derived type is used to hold data for performing cubic splines.
-   !   INTEGER                                :: NumPts                        ! The number of points in the XAry and YAry arrays.
-   !   REAL(ReKi), ALLOCATABLE                :: Coef      (:,:)               ! The NumPts-1 length array of cubic coefficients.  The second dimension must be "0:3".
-   !   REAL(ReKi), ALLOCATABLE                :: XAry      (:)                 ! The NumPts length array of x values for the interpolation.
-   !   REAL(ReKi), ALLOCATABLE                :: YAry      (:)                 ! The NumPts length array of y values for the interpolation.
-   !END TYPE CubSplineType
-   !
-   !TYPE, PUBLIC               :: RegCubSplineType                             ! This derived type is used to hold data for performing cubic splines wuth regularly-spaced data.
-   !   INTEGER                                :: NumPts                        ! The number of points in the XAry and YAry arrays.
-   !   REAL(ReKi), ALLOCATABLE                :: Coef      (:,:)               ! The NumPts-1 length array of cubic coefficients.  The second dimension must be "0:3".
-   !   REAL(ReKi)                             :: DelX                          ! The distance between the equally spaced points in XAry.
-   !   REAL(ReKi), ALLOCATABLE                :: XAry      (:)                 ! The NumPts length array of x values for the interpolation.
-   !   REAL(ReKi), ALLOCATABLE                :: YAry      (:)                 ! The NumPts length array of y values for the interpolation.
-   !END TYPE RegCubSplineType
-   !
-   !TYPE, PUBLIC               :: RegGridType                                  ! This derived type is used to hold the contents of a regular grid of data.
-   !   INTEGER                                :: NumDims                       ! The number of dimensions for this grid.
-   !   REAL(ReKi), ALLOCATABLE                :: Mins      (:)                 ! The set of minimums for the grid in each NumDims dimensions.
-   !   REAL(ReKi), ALLOCATABLE                :: Steps     (:)                 ! The set of step sizes for the grid in each NumDims dimensions.
-   !   REAL(ReKi), ALLOCATABLE                :: Grid      (:)                 ! The NumDims dimensional grid.
-   !END TYPE RegGridType
-!bjj: end of MLB types removed
-
 !=======================================================================
 
-      ! Create interfaces for a generic routines that use specific routines.
+      ! Create interfaces for generic routines that use specific routines.
 
       !> \copydoc nwtc_num::equalrealnos4()
    INTERFACE EqualRealNos
@@ -109,6 +85,7 @@ MODULE NWTC_Num
       MODULE PROCEDURE EulerExtractR16
    END INTERFACE
    
+      !> \copydoc nwtc_num::outerproductr4
    INTERFACE OuterProduct
       MODULE PROCEDURE OuterProductR4
       MODULE PROCEDURE OuterProductR8
@@ -137,53 +114,45 @@ MODULE NWTC_Num
       MODULE PROCEDURE GetSmllRotAngsR
    END INTERFACE
   
+      !> \copydoc nwtc_num::zero2twopir
    INTERFACE Zero2TwoPi
       MODULE PROCEDURE Zero2TwoPiD
       MODULE PROCEDURE Zero2TwoPiR
    END INTERFACE
    
-   
-      ! Create interface for a generic TwoNorm that uses specific routines.
-
+      !> \copydoc nwtc_num::twonormr4
    INTERFACE TwoNorm
       MODULE PROCEDURE TwoNormR4
       MODULE PROCEDURE TwoNormR8
       MODULE PROCEDURE TwoNormR16
    END INTERFACE
    
-      ! Create interface for a generic Trace that uses specific routines.
-
+      !> \copydoc nwtc_num::tracer4
    INTERFACE trace
       MODULE PROCEDURE traceR4
       MODULE PROCEDURE traceR8
       MODULE PROCEDURE traceR16
    END INTERFACE
    
-   
-      ! Create interface for a generic DCM log/exp interfaces that use specific routines.
-
-      !> \copydoc nwtc_num::dcm_expd()
+      !> \copydoc nwtc_num::dcm_expd
    INTERFACE DCM_exp  
       MODULE PROCEDURE DCM_expR
       MODULE PROCEDURE DCM_expD
    END INTERFACE
    
-      !> \copydoc nwtc_num::dcm_logmapd()
+      !> \copydoc nwtc_num::dcm_logmapd
    INTERFACE DCM_logMap
       MODULE PROCEDURE DCM_logMapR
       MODULE PROCEDURE DCM_logMapD
    END INTERFACE
 
-      !> \copydoc nwtc_num::dcm_setlogmapforinterpd()
+      !> \copydoc nwtc_num::dcm_setlogmapforinterpd
    INTERFACE DCM_SetLogMapForInterp
       MODULE PROCEDURE DCM_SetLogMapForInterpR
       MODULE PROCEDURE DCM_SetLogMapForInterpD
    END INTERFACE
    
-   
-      ! Create interface for a generic Eye that uses specific routines.
-
-      !> \copydoc nwtc_num::eye2()
+      !> \copydoc nwtc_num::eye2
    INTERFACE Eye
       MODULE PROCEDURE Eye2   ! matrix of two dimensions
       MODULE PROCEDURE Eye2D  ! matrix of two dimensions (double precision)
@@ -191,17 +160,13 @@ MODULE NWTC_Num
       MODULE PROCEDURE Eye3D  ! matrix of three dimensions
    END INTERFACE
 
-
-      ! Create interface for a generic InterpBin that actually uses specific routines.
-
+      !> \copydoc nwtc_num::interpbincomp
    INTERFACE InterpBin
       MODULE PROCEDURE InterpBinComp
       MODULE PROCEDURE InterpBinReal
    END INTERFACE
 
-
-      ! Create interface for a generic InterpStp that actually uses specific routines.
-
+      !> \copydoc nwtc_num::interpstpcomp4
    INTERFACE InterpStp
       MODULE PROCEDURE InterpStpComp4
       MODULE PROCEDURE InterpStpComp8
@@ -211,17 +176,14 @@ MODULE NWTC_Num
       MODULE PROCEDURE InterpStpReal16
    END INTERFACE
 
-
+      !> \copydoc nwtc_num::interpwrappedstpreal4
    INTERFACE InterpWrappedStpReal
       MODULE PROCEDURE InterpWrappedStpReal4
       MODULE PROCEDURE InterpWrappedStpReal8
       MODULE PROCEDURE InterpWrappedStpReal16
    END INTERFACE
    
-   
-   
-      ! Create interface for a generic LocateStp that actually uses specific routines.
-
+      !> \copydoc nwtc_num::locatestpr4
    INTERFACE LocateStp
       MODULE PROCEDURE LocateStpR4
       MODULE PROCEDURE LocateStpR8
@@ -346,7 +308,7 @@ CONTAINS
    RETURN
    END FUNCTION Cross_ProductR4
 !=======================================================================
-!> \copydoc nwtc_num::cross_productr4()
+!> \copydoc nwtc_num::cross_productr4
    FUNCTION Cross_ProductR4R8(Vector1, Vector2) result(CProd)
 
       ! Argument declarations.
@@ -366,7 +328,7 @@ CONTAINS
    RETURN
    END FUNCTION Cross_ProductR4R8
 !=======================================================================
-!> \copydoc nwtc_num::cross_productr4()
+!> \copydoc nwtc_num::cross_productr4
    FUNCTION Cross_ProductR8(Vector1, Vector2) result(CProd)
 
       ! Argument declarations.
@@ -386,7 +348,7 @@ CONTAINS
    RETURN
    END FUNCTION Cross_ProductR8
 !=======================================================================
-!> \copydoc nwtc_num::cross_productr4()
+!> \copydoc nwtc_num::cross_productr4
    FUNCTION Cross_ProductR8R4(Vector1, Vector2) result(CProd)
 
       ! Argument declarations.
@@ -406,7 +368,7 @@ CONTAINS
    RETURN
    END FUNCTION Cross_ProductR8R4
 !=======================================================================
-!> \copydoc nwtc_num::cross_productr4()
+!> \copydoc nwtc_num::cross_productr4
    FUNCTION Cross_ProductR16(Vector1, Vector2) result(CProd)
 
       ! Argument declarations.
@@ -1007,7 +969,7 @@ CONTAINS
       
    END FUNCTION DCM_expD
 !=======================================================================  
-!> \copydoc nwtc_num::dcm_expd()
+!> \copydoc nwtc_num::dcm_expd
    FUNCTION DCM_expR(lambda)
       ! This function computes a matrix exponential.
       !
@@ -1215,7 +1177,7 @@ CONTAINS
       
    END SUBROUTINE DCM_logMapD
 !=======================================================================
-!> \copydoc nwtc_num::dcm_logmapd()
+!> \copydoc nwtc_num::dcm_logmapd
    SUBROUTINE DCM_logMapR(DCM, logMap, ErrStat, ErrMsg, thetaOut)
    
       ! This function computes the logarithmic map for a direction cosine matrix.
@@ -1395,7 +1357,7 @@ CONTAINS
                  
    END SUBROUTINE DCM_SetLogMapForInterpD
 !=======================================================================         
-!> \copydoc nwtc_num::dcm_setlogmapforinterpd()
+!> \copydoc nwtc_num::dcm_setlogmapforinterpd
    SUBROUTINE DCM_SetLogMapForInterpR( tensor )
 
    ! this routine sets the rotation parameters (tensors from DCM_logMap)
@@ -1508,7 +1470,7 @@ CONTAINS
 
    END FUNCTION EqualRealNos4
 !=======================================================================
-!> \copydoc nwtc_num::equalrealnos4()
+!> \copydoc nwtc_num::equalrealnos4
    FUNCTION EqualRealNos8 ( ReNum1, ReNum2 )
 
       ! passed variables
@@ -1542,7 +1504,7 @@ CONTAINS
 
    END FUNCTION EqualRealNos8
 !=======================================================================
-!> \copydoc nwtc_num::equalrealnos4()
+!> \copydoc nwtc_num::equalrealnos4
    FUNCTION EqualRealNos16 ( ReNum1, ReNum2 )
 
       ! passed variables
@@ -1638,7 +1600,7 @@ CONTAINS
    
    END FUNCTION EulerConstructR4
 !=======================================================================
-!> \copydoc nwtc_num::eulerconstructr4()
+!> \copydoc nwtc_num::eulerconstructr4
    FUNCTION EulerConstructR8(theta) result(M)
    
       ! this function creates a rotation matrix, M, from a 1-2-3 rotation
@@ -1689,7 +1651,7 @@ CONTAINS
    
    END FUNCTION EulerConstructR8
 !=======================================================================
-!> \copydoc nwtc_num::eulerconstructr4()
+!> \copydoc nwtc_num::eulerconstructr4
    FUNCTION EulerConstructR16(theta) result(M)
    
       ! this function creates a rotation matrix, M, from a 1-2-3 rotation
@@ -1846,7 +1808,7 @@ CONTAINS
       
    END FUNCTION EulerExtractR4
 !=======================================================================
-!> \copydoc nwtc_num::eulerextractr4()
+!> \copydoc nwtc_num::eulerextractr4 
    FUNCTION EulerExtractR8(M) result(theta)
    
       ! if M is a rotation matrix from a 1-2-3 rotation sequence, this function returns 
@@ -1942,7 +1904,7 @@ CONTAINS
       
    END FUNCTION EulerExtractR8
 !=======================================================================
-!> \copydoc nwtc_num::eulerextractr4()
+!> \copydoc nwtc_num::eulerextractr4 
    FUNCTION EulerExtractR16(M) result(theta)
    
       ! if M is a rotation matrix from a 1-2-3 rotation sequence, this function returns 
@@ -2078,7 +2040,7 @@ CONTAINS
 
    END SUBROUTINE Eye2
 !=======================================================================
-!> \copydoc nwtc_num::eye2()
+!> \copydoc nwtc_num::eye2 
    SUBROUTINE Eye2D( A, ErrStat, ErrMsg )
 
    REAL(DbKi),     INTENT(INOUT) :: A (:,:)                        !< Array to set to the identity matrix (nr,nc,n)
@@ -2112,7 +2074,7 @@ CONTAINS
 
    END SUBROUTINE Eye2D
 !=======================================================================
-!> \copybrief nwtc_num::eye2()
+!> \copybrief nwtc_num::eye2 
    SUBROUTINE Eye3( A, ErrStat, ErrMsg )
 
       ! This routine sets each of the n matries A(:,:,n) to the identity
@@ -2155,7 +2117,7 @@ CONTAINS
 
    END SUBROUTINE Eye3
 !=======================================================================
-!> \copybrief NWTC_Num::eye2()
+!> \copybrief nwtc_num::eye2 
    SUBROUTINE Eye3D( A, ErrStat, ErrMsg )
 
       ! This routine sets each of the n matries A(:,:,n) to the identity
@@ -2451,7 +2413,7 @@ CONTAINS
 
    END FUNCTION GetSmllRotAngsD
 !=======================================================================
-!> \copydoc nwtc_num::getsmllrotangsd()
+!> \copydoc nwtc_num::getsmllrotangsd 
    FUNCTION GetSmllRotAngsR ( DCMat, ErrStat, ErrMsg )
 
       ! passed variables
@@ -2698,31 +2660,29 @@ CONTAINS
    RETURN
 
    END FUNCTION IndexCharAry
+!> This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
+!! It uses a binary interpolation scheme that takes about log(AryLen) / log(2) steps to converge.
+!! It returns the first or last YAry() value if XVal is outside the limits of XAry(). 
+!!
+!! Use InterpBin (nwtc_num::interpbin) instead of directly calling a specific routine in the generic interface. 
 !=======================================================================
    FUNCTION InterpBinComp( XVal, XAry, YAry, ILo, AryLen )
-
-
-      ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
-      ! It uses a binary interpolation scheme that takes about log(AryLen)/log(2) steps to converge.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is COMPLEX.
-
 
       ! Function declaration.
 
 
-   COMPLEX(ReKi)                :: InterpBinComp                                   ! This function.
+   COMPLEX(ReKi)                :: InterpBinComp                                   !< The interpolated value of Y at XVal
 
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: ILo                                             ! The low index into the arrays.
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: ILo                                             !< The low index into the arrays.
 
-   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
 
-   COMPLEX(ReKi), INTENT(IN)    :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+   COMPLEX(ReKi), INTENT(IN)    :: YAry    (AryLen)                                !< Array of Y values to be interpolated.
 
 
       ! Local declarations.
@@ -2768,29 +2728,23 @@ CONTAINS
    RETURN
    END FUNCTION InterpBinComp ! ( XVal, XAry, YAry, ILo, AryLen )
 !=======================================================================
+!> \copydoc nwtc_num::interpbincomp
    FUNCTION InterpBinReal( XVal, XAry, YAry, ILo, AryLen )
-
-
-      ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
-      ! It uses a binary interpolation scheme that takes about log(AryLen)/log(2) steps to converge.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is REAL.
-
 
       ! Function declaration.
 
 
-   REAL(ReKi)                   :: InterpBinReal                                   ! This function.
+   REAL(ReKi)                   :: InterpBinReal                                   !< The interpolated value of Y at XVal
 
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: ILo                                             ! The low index into the arrays.
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: ILo                                             !< The low index into the arrays.
 
-   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: YAry    (AryLen)                                !< Array of Y values to be interpolated.
 
 
       ! Local declarations.
@@ -2836,33 +2790,30 @@ CONTAINS
    RETURN
    END FUNCTION InterpBinReal ! ( XVal, XAry, YAry, ILo, AryLen )
 !=======================================================================
+!> This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
+!! It uses the passed index as the starting point and does a stepwise interpolation from there. This is
+!! especially useful when the calling routines save the value from the last time this routine was called
+!! for a given case where XVal does not change much from call to call. When there is no correlation
+!! from one interpolation to another, InterpBin() (nwtc_num::interpbin) may be a better choice.
+!! It returns the first or last YAry() value if XVal is outside the limits of XAry().
+!!
+!! Use InterpStp (nwtc_num::interpstp) instead of directly calling a specific routine in the generic interface. 
    FUNCTION InterpStpComp4( XVal, XAry, YAry, Ind, AryLen )
-
-
-      ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, InterpBin() may be a better choice.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is COMPLEX.
-
 
       ! Function declaration.
 
-
-   COMPLEX(SiKi)                :: InterpStpComp4                                  ! This function.
+   COMPLEX(SiKi)                :: InterpStpComp4                                  ! The interpolated value of Y at XVal
 
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             !< Initial and final index into the arrays.
 
-   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(SiKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
 
-   COMPLEX(SiKi), INTENT(IN)    :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+   COMPLEX(SiKi), INTENT(IN)    :: YAry    (AryLen)                                !< Array of Y values to be interpolated.
 
 
 
@@ -2906,33 +2857,23 @@ CONTAINS
    RETURN
    END FUNCTION InterpStpComp4
 !=======================================================================
+!> \copydoc nwtc_num::interpstpcomp4
    FUNCTION InterpStpComp8( XVal, XAry, YAry, Ind, AryLen )
-
-
-      ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, InterpBin() may be a better choice.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is COMPLEX.
-
 
       ! Function declaration.
 
-
-   COMPLEX(R8Ki)                :: InterpStpComp8                                  ! This function.
+   COMPLEX(R8Ki)                :: InterpStpComp8                                  !< The interpolated value of Y at XVal
 
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             !< Initial and final index into the arrays.
 
-   REAL(R8Ki), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(R8Ki), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
 
-   COMPLEX(R8Ki), INTENT(IN)    :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+   COMPLEX(R8Ki), INTENT(IN)    :: YAry    (AryLen)                                !< Array of Y values to be interpolated.
 
 
 
@@ -2976,33 +2917,23 @@ CONTAINS
    RETURN
    END FUNCTION InterpStpComp8
 !=======================================================================
+!> \copydoc nwtc_num::interpstpcomp4
    FUNCTION InterpStpComp16( XVal, XAry, YAry, Ind, AryLen )
-
-
-      ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, InterpBin() may be a better choice.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is COMPLEX.
-
 
       ! Function declaration.
 
-
-   COMPLEX(QuKi)                :: InterpStpComp16                                 ! This function.
+   COMPLEX(QuKi)                :: InterpStpComp16                                 !< The interpolated value of Y at XVal
 
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             !< Initial and final index into the arrays.
 
-   REAL(QuKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(QuKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(QuKi), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
+   REAL(QuKi), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
 
-   COMPLEX(QuKi), INTENT(IN)    :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+   COMPLEX(QuKi), INTENT(IN)    :: YAry    (AryLen)                                !< Array of Y values to be interpolated.
 
 
 
@@ -3046,21 +2977,12 @@ CONTAINS
    RETURN
    END FUNCTION InterpStpComp16
 !=======================================================================
+!> \copydoc nwtc_num::interpstpcomp4
    FUNCTION InterpStpReal4( XVal, XAry, YAry, Ind, AryLen )
-
-
-      ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, InterpBin() may be a better choice.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is REAL.
-
 
       ! Function declaration.
 
-   REAL(SiKi)                   :: InterpStpReal4                                   ! This function.
+   REAL(SiKi)                   :: InterpStpReal4                                  !< The interpolated value of Y at XVal
 
 
       ! Argument declarations.
@@ -3114,21 +3036,12 @@ CONTAINS
    RETURN
    END FUNCTION InterpStpReal4
 !=======================================================================
+!> \copydoc nwtc_num::interpstpcomp4
    FUNCTION InterpStpReal8( XVal, XAry, YAry, Ind, AryLen )
-
-
-      ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, InterpBin() may be a better choice.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is REAL.
-
 
       ! Function declaration.
 
-   REAL(R8Ki)                   :: InterpStpReal8                                  ! This function.
+   REAL(R8Ki)                   :: InterpStpReal8                                  !< The interpolated value of Y at XVal
 
 
       ! Argument declarations.
@@ -3182,22 +3095,12 @@ CONTAINS
    RETURN
    END FUNCTION InterpStpReal8 
 !=======================================================================
+!> \copydoc nwtc_num::interpstpcomp4
    FUNCTION InterpStpReal16( XVal, XAry, YAry, Ind, AryLen )
-
-
-      ! This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, InterpBin() may be a better choice.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is REAL.
-
 
       ! Function declaration.
 
-   REAL(QuKi)                   :: InterpStpReal16                                 ! This function.
-
+   REAL(QuKi)                   :: InterpStpReal16                                 !< The interpolated value of Y at XVal
 
       ! Argument declarations.
 
@@ -3450,35 +3353,33 @@ CONTAINS
 
    END SUBROUTINE InterpStpReal3D   
 !=======================================================================
+!> This funtion returns a y-value that corresponds to an input x-value which is wrapped back
+!! into the range [0-XAry(AryLen)] by interpolating into the arrays.  
+!! It is assumed that XAry is sorted in ascending order.
+!! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
+!! especially useful when the calling routines save the value from the last time this routine was called
+!! for a given case where XVal does not change much from call to call.  When there is no correlation
+!! from one interpolation to another, InterpBin() may be a better choice.
+!! It returns the first or last YAry() value if XVal is outside the limits of XAry().
+!!
+!! Use InterpWrappedStpReal (nwtc_num::interpwrappedstpreal) instead of directly calling a specific routine in the generic interface. 
    FUNCTION InterpWrappedStpReal4( XValIn, XAry, YAry, Ind, AryLen )
-
-
-      ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
-      ! into the range [0-XAry(AryLen) by interpolating into the arrays.  
-      ! It is assumed that XAry is sorted in ascending order.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, InterpBin() may be a better choice.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is REAL.
-
 
       ! Function declaration.
 
-   REAL(SiKi)                   :: InterpWrappedStpReal4                           ! This function.
+   REAL(SiKi)                   :: InterpWrappedStpReal4                           !< The interpolated value of Y at XVal
 
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             !< Initial and final index into the arrays.
 
-   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(SiKi), INTENT(IN)       :: XValIn                                           ! X value to be interpolated.
-   REAL(SiKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XValIn                                          !< X value to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: YAry    (AryLen)                                !< Array of Y values to be interpolated.
 
-   REAL(SiKi)                   :: XVal                                           ! X value to be interpolated.
+   REAL(SiKi)                   :: XVal                                            !< X value to be interpolated.
    
    
    
@@ -3495,23 +3396,12 @@ CONTAINS
    
    END FUNCTION InterpWrappedStpReal4 ! ( XVal, XAry, YAry, Ind, AryLen )
 !=======================================================================
+!> \copydoc nwtc_num::interpwrappedstpreal4
    FUNCTION InterpWrappedStpReal8( XValIn, XAry, YAry, Ind, AryLen )
-
-
-      ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
-      ! into the range [0-XAry(AryLen) by interpolating into the arrays.  
-      ! It is assumed that XAry is sorted in ascending order.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, InterpBin() may be a better choice.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is REAL.
-
 
       ! Function declaration.
 
-   REAL(R8Ki)                   :: InterpWrappedStpReal8                                   ! This function.
+   REAL(R8Ki)                   :: InterpWrappedStpReal8                           !< The interpolated value of Y at XVal
 
 
       ! Argument declarations.
@@ -3540,35 +3430,24 @@ CONTAINS
    
    END FUNCTION InterpWrappedStpReal8 ! ( XVal, XAry, YAry, Ind, AryLen )
 !=======================================================================
+!> \copydoc nwtc_num::interpwrappedstpreal4
    FUNCTION InterpWrappedStpReal16( XValIn, XAry, YAry, Ind, AryLen )
-
-
-      ! This funtion returns a y-value that corresponds to an input x-value which is wrapped back
-      ! into the range [0-XAry(AryLen) by interpolating into the arrays.  
-      ! It is assumed that XAry is sorted in ascending order.
-      ! It uses the passed index as the starting point and does a stepwise interpolation from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, InterpBin() may be a better choice.
-      ! It returns the first or last YAry() value if XVal is outside the limits of XAry().
-      ! This routine assumes YAry is REAL.
-
 
       ! Function declaration.
 
-   REAL(QuKi)                   :: InterpWrappedStpReal16                                 ! This function.
+   REAL(QuKi)                   :: InterpWrappedStpReal16                        !< The interpolated value of Y at XVal
 
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+   INTEGER, INTENT(IN)          :: AryLen                                        !< Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                           ! Initial and final index into the arrays.
 
-   REAL(QuKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(QuKi), INTENT(IN)       :: XValIn                                           ! X value to be interpolated.
-   REAL(QuKi), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+   REAL(QuKi), INTENT(IN)       :: XAry    (AryLen)                              ! Array of X values to be interpolated.
+   REAL(QuKi), INTENT(IN)       :: XValIn                                        ! X value to be interpolated.
+   REAL(QuKi), INTENT(IN)       :: YAry    (AryLen)                              ! Array of Y values to be interpolated.
 
-   REAL(QuKi)                   :: XVal                                           ! X value to be interpolated.
+   REAL(QuKi)                   :: XVal                                          ! X value to be interpolated.
    
    
    
@@ -3587,13 +3466,8 @@ CONTAINS
 !=======================================================================
 !> This subroutine calculates the iosparametric coordinates, isopc, which is a value between -1 and 1 
 !! (for each dimension of a dataset), indicating where InCoord falls between posLo and posHi.
-!! It is used in InterpStpReal2D and InterpStpReal3D.
+!! It is used in InterpStpReal2D (nwtcnum::interpstpreal2d) and InterpStpReal3D (nwtcnum::interpstpreal3d).
    SUBROUTINE IsoparametricCoords( InCoord, posLo, posHi, isopc )
-
-! This subroutine calculates the iosparametric coordinates, isopc, which is a value between -1 and 1 
-! (for each dimension of a dataset), indicating where InCoord falls between posLo and posHi.
-! It is used in InterpStpReal2D and InterpStpReal3D.
-   
    
       REAL(ReKi),     INTENT(IN   )          :: InCoord(:)                             !< Coordinate values we're interpolating to; (size = number of interpolation dimensions)
       REAL(ReKi),     INTENT(IN   )          :: posLo(:)                               !< coordinate values associated with Indx_Lo; (size = number of interpolation dimensions)
@@ -3621,17 +3495,15 @@ CONTAINS
             
    END SUBROUTINE IsoparametricCoords   
 !=======================================================================   
+!> This function returns a logical TRUE/FALSE value that indicates
+!! if the given (2-dimensional) matrix, A, is symmetric. If A is not
+!! square it returns FALSE.
    FUNCTION IsSymmetric( A )
-
-      ! This function returns a logical TRUE/FALSE value that indicates
-      ! if the given (2-dimensional) matrix, A, is symmetric. If A is not
-      ! square it returns FALSE.
-
 
          ! passed variables
 
-      REAL(ReKi), INTENT(IN) :: A(:,:)                   ! a real matrix A, whose symmetry is questioned
-      LOGICAL                :: IsSymmetric              ! true if A is symmetric, false if not
+      REAL(ReKi), INTENT(IN) :: A(:,:)                   !< a real matrix A, whose symmetry is questioned
+      LOGICAL                :: IsSymmetric              !< true if A is symmetric, false if not
 
          ! local variables
 
@@ -3666,25 +3538,23 @@ CONTAINS
 
    END FUNCTION IsSymmetric
 !=======================================================================
+!> This subroutine finds the lower-bound index of an input x-value located in an array.
+!! On return, Ind has a value such that
+!!           XAry(Ind) <= XVal < XAry(Ind+1), with the exceptions that
+!!             Ind = 0 when XVal < XAry(1), and
+!!          Ind = AryLen when XAry(AryLen) <= XVal.
+!!
+!! It uses a binary interpolation scheme that takes about log(AryLen)/log(2) steps to converge.
+!! If the index doesn't change much between calls, LocateStp() (nwtc_num::locatestp) may be a better option.
    SUBROUTINE LocateBin( XVal, XAry, Ind, AryLen )
-
-      ! This subroutine finds the lower-bound index of an input x-value located in an array.
-      ! On return, Ind has a value such that
-      !           XAry(Ind) <= XVal < XAry(Ind+1), with the exceptions that
-      !             Ind = 0 when XVal < XAry(1), and
-      !          Ind = AryLen when XAry(AryLen) <= XVal.
-      !
-      ! It uses a binary interpolation scheme that takes about log(AryLen)/log(2) steps to converge.
-      ! If the index doesn't change much between calls, LocateStp() may be a better option.
-
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the array.
-   INTEGER, INTENT(OUT)         :: Ind                                             ! Final (low) index into the array.
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the array.
+   INTEGER, INTENT(OUT)         :: Ind                                             !< Final (low) index into the array.
 
-   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(ReKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
+   REAL(ReKi), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
 
 
       ! Local declarations.
@@ -3723,28 +3593,27 @@ CONTAINS
    RETURN
    END SUBROUTINE LocateBin
 !=======================================================================
+!> This subroutine finds the lower-bound index of an input x-value located in an array.
+!! On return, Ind has a value such that
+!!           XAry(Ind) <= XVal < XAry(Ind+1), with the exceptions that
+!!             Ind = 0 when XVal < XAry(1), and
+!!          Ind = AryLen when XAry(AryLen) <= XVal.
+!!
+!! It uses the passed index as the starting point and does a stepwise search from there.  This is
+!! especially useful when the calling routines save the value from the last time this routine was called
+!! for a given case where XVal does not change much from call to call.  When there is no correlation
+!! from one interpolation to another, a binary search may be a better choice (see nwtc_num::locatebin).
+!!
+!! Use LocateStp (nwtc_num::locatestp) instead of directly calling a specific routine in the generic interface.    
    SUBROUTINE LocateStpR4( XVal, XAry, Ind, AryLen )
-
-      ! This subroutine finds the lower-bound index of an input x-value located in an array.
-      ! On return, Ind has a value such that
-      !           XAry(Ind) <= XVal < XAry(Ind+1), with the exceptions that
-      !             Ind = 0 when XVal < XAry(1), and
-      !          Ind = AryLen when XAry(AryLen) <= XVal.
-      !
-      ! It uses the passed index as the starting point and does a stepwise search from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, a binary search may be a better choice.
-
-
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the array.
-   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the array.
+   INTEGER, INTENT(IN)          :: AryLen                                          !< Length of the array.
+   INTEGER, INTENT(INOUT)       :: Ind                                             !< Initial and final index into the array.
 
-   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
-   REAL(SiKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                !< Array of X values to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XVal                                            !< X value to be interpolated.
 
 
 
@@ -3783,20 +3652,8 @@ CONTAINS
 
    END SUBROUTINE LocateStpR4
 !=======================================================================
+!> \copydoc nwtc_num::locatestpr4
    SUBROUTINE LocateStpR8( XVal, XAry, Ind, AryLen )
-
-      ! This subroutine finds the lower-bound index of an input x-value located in an array.
-      ! On return, Ind has a value such that
-      !           XAry(Ind) <= XVal < XAry(Ind+1), with the exceptions that
-      !             Ind = 0 when XVal < XAry(1), and
-      !          Ind = AryLen when XAry(AryLen) <= XVal.
-      !
-      ! It uses the passed index as the starting point and does a stepwise search from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, a binary search may be a better choice.
-
-
 
       ! Argument declarations.
 
@@ -3843,20 +3700,8 @@ CONTAINS
 
    END SUBROUTINE LocateStpR8
 !=======================================================================
+!> \copydoc nwtc_num::locatestpr4
    SUBROUTINE LocateStpR16( XVal, XAry, Ind, AryLen )
-
-      ! This subroutine finds the lower-bound index of an input x-value located in an array.
-      ! On return, Ind has a value such that
-      !           XAry(Ind) <= XVal < XAry(Ind+1), with the exceptions that
-      !             Ind = 0 when XVal < XAry(1), and
-      !          Ind = AryLen when XAry(AryLen) <= XVal.
-      !
-      ! It uses the passed index as the starting point and does a stepwise search from there.  This is
-      ! especially useful when the calling routines save the value from the last time this routine was called
-      ! for a given case where XVal does not change much from call to call.  When there is no correlation
-      ! from one interpolation to another, a binary search may be a better choice.
-
-
 
       ! Argument declarations.
 
@@ -3903,22 +3748,21 @@ CONTAINS
 
    END SUBROUTINE LocateStpR16
 !=======================================================================
+!> This routine calculates the mean value of an array.
    FUNCTION Mean ( Ary, AryLen )
-
-      ! This routine calculates the mean value of an array.
-
+      
    !NOTE: We should make AryLen an optional argument and use SIZE( Ary ) if it is not present.
 
       ! Function declaration.
 
-   REAL(ReKi)                   :: Mean                                         ! This function.
+   REAL(ReKi)                   :: Mean                                         ! The mean of the values in Ary.
 
 
       ! Argument declarations:
 
-   INTEGER, INTENT(IN)          :: AryLen                                       ! Length of the array.
+   INTEGER, INTENT(IN)          :: AryLen                                       !< Length of the array.
 
-   REAL(ReKi), INTENT(IN)       :: Ary  (AryLen)                                ! Input array.
+   REAL(ReKi), INTENT(IN)       :: Ary  (AryLen)                                !< Input array.
 
 
       ! Local declarations.
@@ -3941,14 +3785,14 @@ CONTAINS
    RETURN
    END FUNCTION Mean ! ( Ary, AryLen )
 !=======================================================================
+!> This routine is used to convert Angle to an equivalent value
+!!  between \f$-\pi\f$ and \f$pi\f$.
    SUBROUTINE MPi2Pi ( Angle )
 
-      ! This routine is used to convert Angle to an equivalent value
-      !  between -pi and pi.
                  
       ! Argument declarations:
 
-   REAL(ReKi), INTENT(INOUT)    :: Angle
+   REAL(ReKi), INTENT(INOUT)    :: Angle  !< Angle (in radians) to be converted
 
 
 
@@ -3967,76 +3811,92 @@ CONTAINS
    RETURN
    END SUBROUTINE MPi2Pi
 !=======================================================================
-   FUNCTION OuterProductR4(vec1,vec2)
+!> This routine calculates the outer product of two vectors, 
+!! \f$u = \left(u_1, u_2, \ldots, u_m\right)\f$ and 
+!! \f$v = \left(v_1, v_2, \ldots ,v_n\right)\f$. The outer product is defined as
+!! \f{equation}{
+!!   A = u \otimes v = \begin{bmatrix}
+!!   u_1 v_1 & u_1 v_2 & \dots  & u_1 v_n \\ 
+!!   u_2 v_1 & u_2 v_2 & \dots  & u_2 v_n \\
+!!    \vdots & \vdots  & \ddots & \vdots \\
+!!   u_m v_1 & u_m v_2 & \dots  & u_m v_n
+!!   \end{bmatrix}  
+!! \f}   
+!!
+!! Use OuterProduct (nwtc_num::outerproduct) instead of directly calling a specific routine in the generic interface.    
+   FUNCTION OuterProductR4(u,v)
    
-   ! this routine calculates the outer product of two vectors
 
-   REAL(SiKi),INTENT(IN):: vec1(:),vec2(:)
-   REAL(SiKi)::OuterProductR4(SIZE(vec1),SIZE(vec2))
+   REAL(SiKi),  INTENT(IN) :: u(:)                                !< first vector, \f$u\f$, in the outer product
+   REAL(SiKi),  INTENT(IN) :: v(:)                                !< second vector, \f$v\f$, in the outer product
+   REAL(SiKi)              :: OuterProductR4(SIZE(u),SIZE(v))     !< the resultant matrix, A
 
    INTEGER(IntKi)::i,j,n1,n2
 
-   n1=SIZE(vec1)
-   n2=SIZE(vec2)
+   n1=SIZE(u)
+   n2=SIZE(v)
 
    DO i=1,n1
        DO j=1,n2
-           OuterProductR4(i,j) = vec1(i) * vec2(j)
+           OuterProductR4(i,j) = u(i) * v(j)
        ENDDO
    ENDDO
 
    END FUNCTION OuterProductR4   
 !=======================================================================
-   FUNCTION OuterProductR8(vec1,vec2)
+!> \copydoc nwtc_num::outerproductr4
+   FUNCTION OuterProductR8(u,v)
    
    ! this routine calculates the outer product of two vectors
 
-   REAL(R8Ki),INTENT(IN):: vec1(:),vec2(:)
-   REAL(R8Ki)::OuterProductR8(SIZE(vec1),SIZE(vec2))
+   REAL(R8Ki),INTENT(IN):: u(:)
+   REAL(R8Ki),INTENT(IN):: v(:)
+   REAL(R8Ki)::OuterProductR8(SIZE(u),SIZE(v))
 
    INTEGER(IntKi)::i,j,n1,n2
 
-   n1=SIZE(vec1)
-   n2=SIZE(vec2)
+   n1=SIZE(u)
+   n2=SIZE(v)
 
    DO i=1,n1
        DO j=1,n2
-           OuterProductR8(i,j) = vec1(i) * vec2(j)
+           OuterProductR8(i,j) = u(i) * v(j)
        ENDDO
    ENDDO
 
    END FUNCTION OuterProductR8   
 !=======================================================================
-   FUNCTION OuterProductR16(vec1,vec2)
+!> \copydoc nwtc_num::outerproductr4
+   FUNCTION OuterProductR16(u,v)
    
    ! this routine calculates the outer product of two vectors
 
-   REAL(QuKi),INTENT(IN):: vec1(:),vec2(:)
-   REAL(QuKi)::OuterProductR16(SIZE(vec1),SIZE(vec2))
+   REAL(QuKi),INTENT(IN):: u(:),v(:)
+   REAL(QuKi)::OuterProductR16(SIZE(u),SIZE(v))
 
    INTEGER(IntKi)::i,j,n1,n2
 
-   n1=SIZE(vec1)
-   n2=SIZE(vec2)
+   n1=SIZE(u)
+   n2=SIZE(v)
 
    DO i=1,n1
        DO j=1,n2
-           OuterProductR16(i,j) = vec1(i) * vec2(j)
+           OuterProductR16(i,j) = u(i) * v(j)
        ENDDO
    ENDDO
 
    END FUNCTION OuterProductR16 
 !=======================================================================
+!> This routine factors the number N into its primes. If any of those
+!! prime factors is greater than the NumPrimes'th prime, a value of 1
+!! is added to N and the new number is factored.  This process is 
+!! repeated until no prime factors are greater than the NumPrimes'th 
+!! prime.
+!!
+!! If subract is .true., we will subtract 1 from the value of N instead
+!! of adding it.
    FUNCTION PSF ( Npsf, NumPrimes, subtract )
 
-    ! This routine factors the number N into its primes.  If any of those
-    ! prime factors is greater than the NumPrimes'th prime, a value of 1
-    ! is added to N and the new number is factored.  This process is 
-    ! repeated until no prime factors are greater than the NumPrimes'th 
-    ! prime.
-    !
-    ! If subract is .true., we will subtract 1 from the value of N instead
-    ! of adding it.
 
     IMPLICIT                 NONE
 
@@ -4117,15 +3977,15 @@ CONTAINS
     RETURN
     END FUNCTION PSF   
 !=======================================================================  
+!> This function computes the conjugate of a quaternion, q
    FUNCTION Quaternion_Conjugate(q)
 
-      ! This function computes the conjugate of a quaternion, q
       !
       ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 6
    
-   TYPE(Quaternion), INTENT(IN)    :: q     
+   TYPE(Quaternion), INTENT(IN)    :: q                     !< quaternion
    
-   TYPE(Quaternion)                :: Quaternion_Conjugate
+   TYPE(Quaternion)                :: Quaternion_Conjugate  !< conjugate of the quaternion
    
       
    Quaternion_Conjugate%q0 =  q%q0 
@@ -4133,15 +3993,14 @@ CONTAINS
       
    END FUNCTION Quaternion_Conjugate   
 !=======================================================================  
+!> This function computes the 2-norm of a quaternion, q
    FUNCTION Quaternion_Norm(q)
-
-      ! This function computes the 2-norm of a quaternion, q
-      !
+      
       ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 5
    
-   TYPE(Quaternion), INTENT(IN)    :: q     
+   TYPE(Quaternion), INTENT(IN)    :: q                  !< quaternion
    
-   REAL(ReKi)                      :: Quaternion_Norm
+   REAL(ReKi)                      :: Quaternion_Norm    !< 2-norm of q
    
       
    Quaternion_Norm = sqrt( q%q0**2 + DOT_PRODUCT(q%v, q%v) )
@@ -4149,17 +4008,16 @@ CONTAINS
    
    END FUNCTION Quaternion_Norm   
 !=======================================================================  
+!> This function computes the quaternion, q, raised to an arbitrary
+!! real exponent, alpha.
    FUNCTION Quaternion_Power(q,alpha)
 
-      ! This function computes the quaternion, q, raised to an arbitrary
-      ! real exponent, alpha.
-      !
       ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 7-8
    
-   TYPE(Quaternion), INTENT(IN)    :: q     
-   REAL(ReKi)      , INTENT(IN)    :: alpha
+   TYPE(Quaternion), INTENT(IN)    :: q                  !< quaternion
+   REAL(ReKi)      , INTENT(IN)    :: alpha              !< exponent
    
-   TYPE(Quaternion)                :: Quaternion_Power
+   TYPE(Quaternion)                :: Quaternion_Power   !< q^alpha
    
    
       ! local variables
@@ -4182,16 +4040,15 @@ CONTAINS
       
    END FUNCTION Quaternion_Power   
 !=======================================================================  
+!> This function computes the product of two quaternions, p and q
    FUNCTION Quaternion_Product(p, q)
 
-      ! This function computes the product of two quaternions, p and q
-      !
       ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 4
    
-   TYPE(Quaternion), INTENT(IN)    :: p      
-   TYPE(Quaternion), INTENT(IN)    :: q     
+   TYPE(Quaternion), INTENT(IN)    :: p                     !< quaternion   
+   TYPE(Quaternion), INTENT(IN)    :: q                     !< quaternion 
    
-   TYPE(Quaternion)                :: Quaternion_Product
+   TYPE(Quaternion)                :: Quaternion_Product    !< quaternion product, p*q
    
       
    Quaternion_Product%q0 = p%q0 * q%q0 - DOT_PRODUCT(p%v, q%v)
@@ -4200,15 +4057,14 @@ CONTAINS
    
    END FUNCTION Quaternion_Product   
 !=======================================================================  
+!> This function converts a quaternion to an equivalent direction cosine matrix.
    FUNCTION Quaternion_to_DCM(q)
 
-      ! This function converts a quaternion to an equivalent direction cosine matrix
-      !
       ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 9-17
    
-   TYPE(Quaternion), INTENT(IN)    :: q     
+   TYPE(Quaternion), INTENT(IN)    :: q                        !< quaternion    
    
-   REAL(ReKi)                      :: Quaternion_to_DCM (3,3)
+   REAL(ReKi)                      :: Quaternion_to_DCM (3,3)  ! equivalent direction cosine matrix
    
       ! local variables (products of quaternion terms)
    REAL(ReKi)                      :: q0q0, q0q1, q0q2, q0q3
@@ -4247,14 +4103,13 @@ CONTAINS
    
    END FUNCTION Quaternion_to_DCM   
 !=======================================================================  
+!> This function converts a direction cosine matrix to an equivalent quaternion.
    FUNCTION DCM_to_Quaternion(DCM)
 
-      ! This function converts a direction cosine matrix to an equivalent quaternion 
-      !
       ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 18-21
    
-   REAL(ReKi)      , INTENT(IN)    :: DCM (3,3)          ! Direction cosine matrix
-   TYPE(Quaternion)                :: DCM_to_Quaternion        
+   REAL(ReKi)      , INTENT(IN)    :: DCM (3,3)          !< direction cosine matrix
+   TYPE(Quaternion)                :: DCM_to_Quaternion  !< equivalent quaternion      
    
          
    DCM_to_Quaternion%q0   =      0.5_ReKi * sqrt( 1.0_ReKi + DCM(1,1) + DCM(2,2) + DCM(3,3) )                         ! Eq. 18
@@ -4266,18 +4121,17 @@ CONTAINS
    
    END FUNCTION DCM_to_Quaternion
 !=======================================================================         
+!> This function computes the interpolated quaternion at time
+!! t1 + s*(t2-t1) and s is in [0,1]
    FUNCTION Quaternion_Interp(q1,q2,s)
 
-      ! This function computes the interpolated quaternion at time
-      ! t1 + s*(t2-t1) and s is in [0,1]
-      ! 
       ! "'Interpolation' of DCMs", M.A. Sprague, 11 March 2014, Eq. 23
    
-   TYPE(Quaternion), INTENT(IN)    :: q1      
-   TYPE(Quaternion), INTENT(IN)    :: q2    
-   REAL(ReKi),       INTENT(IN)    :: s
+   TYPE(Quaternion), INTENT(IN)    :: q1              !< quaternion at t1    
+   TYPE(Quaternion), INTENT(IN)    :: q2              !< quaternion at t2
+   REAL(ReKi),       INTENT(IN)    :: s               !< fraction of distance between t1 and t2: s must be in [0,1]
    
-   TYPE(Quaternion)                :: Quaternion_Interp
+   TYPE(Quaternion)                :: Quaternion_Interp !< interpolated quaternion at s
    
       
    Quaternion_Interp = Quaternion_Conjugate(q1)
@@ -4290,26 +4144,24 @@ CONTAINS
 
    END FUNCTION Quaternion_Interp
 !=======================================================================
+!> This routine calculates the parameters needed to compute a regularly-spaced natural cubic spline.
+!! Natural cubic splines are used in that the curvature at the end points is zero.
+!! It assumes the XAry values are equally spaced for speed. If you have multiple curves that share the 
+!! same value, use RegCubicSplineInitM (nwtc_num::regcubicsplineinitm) instead of calling this routine multiple times.
    SUBROUTINE RegCubicSplineInit ( AryLen, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
-
-
-      ! This routine calculates the parameters needed to compute a regularly-spaced natural cubic spline.
-      ! Natural cubic splines are used in that the curvature at the end points is zero.
-      ! It assumes the XAry values are equally spaced for speed.
-
 
       ! Argument declarations:
 
-   INTEGER, INTENT(IN)          :: AryLen                                     ! Length of the array.
+   INTEGER, INTENT(IN)          :: AryLen                                     !< Length of the array.
 
-   REAL(ReKi), INTENT(OUT)      :: Coef  (AryLen-1,0:3)                       ! The coefficients for the cubic polynomials.
-   REAL(ReKi), INTENT(OUT)      :: DelX                                       ! The distance between the equally spaced points.
-   REAL(ReKi), INTENT(IN)       :: XAry  (AryLen)                             ! Input array of x values.
-   REAL(ReKi), INTENT(IN)       :: YAry  (AryLen)                             ! Input array of y values.
+   REAL(ReKi), INTENT(OUT)      :: Coef  (AryLen-1,0:3)                       !< The coefficients for the cubic polynomials.
+   REAL(ReKi), INTENT(OUT)      :: DelX                                       !< The distance between the equally spaced points.
+   REAL(ReKi), INTENT(IN)       :: XAry  (AryLen)                             !< Input array of x values.
+   REAL(ReKi), INTENT(IN)       :: YAry  (AryLen)                             !< Input array of y values.
 
-   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    !< Error status.
 
-   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                     ! Error message.
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                     !< Error message.
 
 
       ! Local declarations.
@@ -4430,14 +4282,11 @@ CONTAINS
 
    END SUBROUTINE RegCubicSplineInit ! ( AryLen, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 !=======================================================================
+!> This routine calculates the parameters needed to compute a regularly-spaced natural cubic spline.
+!! Natural cubic splines are used in that the curvature at the end points is zero.
+!! It assumes the XAry values are equally spaced for speed.
+!! This version of the routine works with multiple curves that share the same X values.
    SUBROUTINE RegCubicSplineInitM ( XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
-
-
-      ! This routine calculates the parameters needed to compute a regularly-spaced natural cubic spline.
-      ! Natural cubic splines are used in that the curvature at the end points is zero.
-      ! It assumes the XAry values are equally spaced for speed.
-      ! This version of the routine works with multiple curves that share the same X values.
-
 
       ! Argument declarations:
 
@@ -4596,32 +4445,29 @@ CONTAINS
 
    END SUBROUTINE RegCubicSplineInitM ! ( XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 !=======================================================================
+!> This routine interpolates a pair of arrays using cubic splines to find the function value at X.
+!! One must call RegCubicSplineInit() (nwtc_num::regcubicsplineinit) first to compute the coefficients of the cubics.
+!! This routine requires that the XAry be regularly spaced, which improves performance.
    FUNCTION RegCubicSplineInterp ( X, AryLen, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
-
-
-      ! This routine interpolates a pair of arrays using cubic splines to find the function value at X.
-      ! One must call RegCubicSplineInit() first to compute the coefficients of the cubics.
-      ! This routine requires that the XAry be regularly spaced, which improves performance.
-
 
       ! Function declaration.
 
-   REAL(ReKi)                   :: RegCubicSplineInterp                       ! This function.
+   REAL(ReKi)                   :: RegCubicSplineInterp                       !< This function.
 
 
       ! Argument declarations:
 
-   INTEGER, INTENT(IN)          :: AryLen                                     ! Length of the array.
+   INTEGER, INTENT(IN)          :: AryLen                                     !< Length of the array.
 
-   REAL(ReKi), INTENT(IN)       :: Coef  (AryLen-1,0:3)                       ! The coefficients for the cubic polynomials.
-   REAL(ReKi), INTENT(IN)       :: DelX                                       ! The distance between X values in XAry.
-   REAL(ReKi), INTENT(IN)       :: X                                          ! The value we are trying to interpolate for.
-   REAL(ReKi), INTENT(IN)       :: XAry (AryLen)                              ! Input array of regularly spaced x values.
-   REAL(ReKi), INTENT(IN)       :: YAry (AryLen)                              ! Input array of y values.
+   REAL(ReKi), INTENT(IN)       :: Coef  (AryLen-1,0:3)                       !< The coefficients for the cubic polynomials.
+   REAL(ReKi), INTENT(IN)       :: DelX                                       !< The distance between X values in XAry.
+   REAL(ReKi), INTENT(IN)       :: X                                          !< The value we are trying to interpolate for.
+   REAL(ReKi), INTENT(IN)       :: XAry (AryLen)                              !< Input array of regularly spaced x values.
+   REAL(ReKi), INTENT(IN)       :: YAry (AryLen)                              !< Input array of y values.
 
-   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    !< Error status.
 
-   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                     ! Error message.
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                     !< Error message.
 
 
       ! Local declarations.
@@ -4657,31 +4503,28 @@ CONTAINS
 
    END FUNCTION RegCubicSplineInterp ! ( X, AryLen, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 !=======================================================================
+!> This routine interpolates a pair of arrays using cubic splines to find the function value at X.
+!! One must call RegCubicSplineInitM() (nwtc_num::regcubicsplineinitm) first to compute the coefficients of the cubics.
+!! This routine requires that the XAry be regularly spaced, which improves performance.
+!! This version of the routine works with multiple curves that share the same X values.
    FUNCTION RegCubicSplineInterpM ( X, XAry, YAry, DelX, Coef, ErrStat, ErrMsg ) RESULT( Res )
-
-
-      ! This routine interpolates a pair of arrays using cubic splines to find the function value at X.
-      ! One must call RegCubicSplineInit() first to compute the coefficients of the cubics.
-      ! This routine requires that the XAry be regularly spaced, which improves performance.
-      ! This version of the routine works with multiple curves that share the same X values.
-
 
       ! Function declaration.
 
-   REAL(ReKi), ALLOCATABLE      :: Res(:)                                     ! The result of this function.
+   REAL(ReKi), ALLOCATABLE      :: Res(:)                                     !< The result of this function.
 
 
       ! Argument declarations:
 
-   REAL(ReKi), INTENT(IN)       :: Coef  (:,:,0:)                             ! The coefficients for the cubic polynomials.
-   REAL(ReKi), INTENT(IN)       :: DelX                                       ! The distance between X values in XAry.
-   REAL(ReKi), INTENT(IN)       :: X                                          ! The value we are trying to interpolate for.
-   REAL(ReKi), INTENT(IN)       :: XAry (:)                                   ! Input array of regularly spaced x values.
-   REAL(ReKi), INTENT(IN)       :: YAry (:,:)                                 ! Input array of y values.
+   REAL(ReKi), INTENT(IN)       :: Coef  (:,:,0:)                             !< The coefficients for the cubic polynomials.
+   REAL(ReKi), INTENT(IN)       :: DelX                                       !< The distance between X values in XAry.
+   REAL(ReKi), INTENT(IN)       :: X                                          !< The value we are trying to interpolate for.
+   REAL(ReKi), INTENT(IN)       :: XAry (:)                                   !< Input array of regularly spaced x values.
+   REAL(ReKi), INTENT(IN)       :: YAry (:,:)                                 !< Input array of y values.
 
-   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    ! Error status.
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                    !< Error status.
 
-   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                     ! Error message.
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                     !< Error message.
 
 
       ! Local declarations.
@@ -4733,37 +4576,37 @@ CONTAINS
    RETURN
    END FUNCTION RegCubicSplineInterpM ! ( X, XAry, YAry, DelX, Coef, ErrStat, ErrMsg )
 !=======================================================================
+!> This routine is used to integrate funciton f over the interval [a, b]. This routine
+!! is useful for sufficiently smooth (e.g., analytic) integrands, integrated over
+!! intervals which contain no singularities, and where the endpoints are also nonsingular.
+!!
+!! f is an external function. For example f(x) = 1 + x.
+!!
+!!   FUNCTION f(x)
+!!      USE PRECISION
+!!      IMPLICIT NONE
+!!
+!!      REAL(ReKi) f
+!!      REAL(ReKi) x
+!!
+!!      f = 1 + x
+!!
+!!      RETURN
+!!   END FUNCTION f
    SUBROUTINE RombergInt(f, a, b, R, err, eps, ErrStat)
 
-         ! This routine is used to integrate funciton f over the interval [a, b]. This routine
-         ! is useful for sufficiently smooth (e.g., analytic) integrands, integrated over
-         ! intervals which contain no singularities, and where the endpoints are also nonsingular.
-         !
-         ! f is an external function. For example f(x) = 1 + x.
-         !
-         !   FUNCTION f(x)
-         !      USE PRECISION
-         !      IMPLICIT NONE
-         !
-         !      REAL(ReKi) f
-         !      REAL(ReKi) x
-         !
-         !      f = 1 + x
-         !
-         !      RETURN
-         !   END FUNCTION f
 
       IMPLICIT NONE
 
          ! Argument declarations:
 
-      REAL(ReKi), EXTERNAL              :: f               ! Integrand function name
-      REAL(ReKi), INTENT(IN)            :: a               ! Lower integration limit
-      REAL(ReKi), INTENT(IN)            :: b               ! Upper integration limit
-      REAL(ReKi), INTENT(IN)            :: eps             ! Absolute error bound
-      REAL(ReKi), INTENT(OUT)           :: R               ! The result of integration
-      REAL(ReKi), INTENT(OUT)           :: err             ! Actual absolute error
-      INTEGER, INTENT(OUT), OPTIONAL    :: ErrStat         ! Error status; if present, program does not abort on error
+      REAL(ReKi), EXTERNAL              :: f               !< Integrand function name
+      REAL(ReKi), INTENT(IN)            :: a               !< Lower integration limit
+      REAL(ReKi), INTENT(IN)            :: b               !< Upper integration limit
+      REAL(ReKi), INTENT(IN)            :: eps             !< Absolute error bound
+      REAL(ReKi), INTENT(OUT)           :: R               !< The result of integration
+      REAL(ReKi), INTENT(OUT)           :: err             !< Actual absolute error
+      INTEGER, INTENT(OUT), OPTIONAL    :: ErrStat         !< Error status; if present, program does not abort on error
 
          ! Local declarations:
 
@@ -4839,19 +4682,20 @@ CONTAINS
       RETURN
    END SUBROUTINE RombergInt
 !=======================================================================
+!> This routine displays a message that gives that status of the simulation and the predicted end time of day.
+!! It is intended to be used with SimStatus (nwtc_num::simstatus) and SimStatus_FirstTime (nwtc_num::simstatus_firsttime).
    SUBROUTINE RunTimes( StrtTime, UsrTime1, SimStrtTime, UsrTime2, ZTime, UsrTime_out )
-   ! This routine displays a message that gives that status of the simulation and the predicted end time of day.
 
       IMPLICIT                        NONE
 
          ! Passed variables
 
-      INTEGER   ,INTENT(IN)          :: StrtTime (8)                                    ! Start time of simulation (including initialization)
-      INTEGER   ,INTENT(IN)          :: SimStrtTime (8)                                 ! Start time of simulation (after initialization)
-      REAL(ReKi),INTENT(IN)          :: UsrTime1                                        ! User CPU time for simulation initialization.
-      REAL(ReKi),INTENT(IN)          :: UsrTime2                                        ! User CPU time for simulation (without intialization)
-      REAL(DbKi),INTENT(IN)          :: ZTime                                           ! The final simulation time (not necessarially TMax)
-      REAL(ReKi),INTENT(OUT),OPTIONAL:: UsrTime_out                                     ! User CPU time for entire run - optional value returned to calling routine
+      INTEGER   ,INTENT(IN)          :: StrtTime (8)                                    !< Start time of simulation (including initialization)
+      INTEGER   ,INTENT(IN)          :: SimStrtTime (8)                                 !< Start time of simulation (after initialization)
+      REAL(ReKi),INTENT(IN)          :: UsrTime1                                        !< User CPU time for simulation initialization.
+      REAL(ReKi),INTENT(IN)          :: UsrTime2                                        !< User CPU time for simulation (without intialization)
+      REAL(DbKi),INTENT(IN)          :: ZTime                                           !< The final simulation time (not necessarially TMax)
+      REAL(ReKi),INTENT(OUT),OPTIONAL:: UsrTime_out                                     !< User CPU time for entire run - optional value returned to calling routine
 
          ! Local variables
 
@@ -4940,16 +4784,16 @@ CONTAINS
    
    END SUBROUTINE RunTimes   
 !=======================================================================   
+!> this routine takes angles (in radians) and converts them to appropriate
+!! ranges so they can be interpolated appropriately
+!! (i.e., interpolating between pi+.1 and -pi should give pi+0.5 
+!! instead of of 0.05 radians, so we return the angles pi+.1 and -pi+2pi=pi
+!! we assume the interpolation occurs in the second dimension of angles
+!! and it is done for each angle in the first dimension
    SUBROUTINE SetAnglesForInterp( angles )
 
-      ! this routine takes angles (in radians) and converts them to appropriate
-      ! ranges so they can be interpolated appropriately
-      ! (i.e., interpolating between pi+.1 and -pi should give pi+0.5 
-      ! instead of of 0.05 radians, so we give return the angles pi+.1 and -pi+2pi=pi
-      ! we assume the interpolation occurs in the second dimension of angles
-      ! and it is done for each angle in the first dimension
    
-      REAL(ReKi), INTENT(INOUT)     :: angles(:,:)
+      REAL(ReKi), INTENT(INOUT)     :: angles(:,:)  !
 
       REAL(ReKi)                    :: diff         ! difference between two adjacent angles 
       INTEGER(IntKi)                :: nr, nc       ! size of the angles matrix
@@ -4979,9 +4823,8 @@ CONTAINS
    
    END SUBROUTINE SetAnglesForInterp
 !=======================================================================
+!> This routine computes numeric constants stored in the NWTC Library
    SUBROUTINE SetConstants( )
-
-         ! This routine computes numeric constants stored in the NWTC Library
 
          ! Constants based upon Pi:
 
@@ -5013,18 +4856,19 @@ CONTAINS
    RETURN
    END SUBROUTINE SetConstants
 !=======================================================================   
+!> This routine displays a message that gives that status of the simulation.
+!! It is intended to be used with RunTimes (nwtc_num::runtimes) and SimStatus (nwtc_num::simstatus).
    SUBROUTINE SimStatus_FirstTime( PrevSimTime, PrevClockTime, SimStrtTime, UsrTimeSim, ZTime, TMax )
-      ! This routine displays a message that gives that status of the simulation.
 
       IMPLICIT                        NONE
 
          ! Passed variables
-      REAL(DbKi), INTENT(IN   )    :: ZTime                                           ! Current simulation time (s)
-      REAL(DbKi), INTENT(IN   )    :: TMax                                            ! Expected simulation time (s)
-      REAL(DbKi), INTENT(  OUT)    :: PrevSimTime                                     ! Previous time message was written to screen (s > 0)
-      REAL(ReKi), INTENT(  OUT)    :: PrevClockTime                                   ! Previous clock time in seconds past midnight
-      INTEGER,    INTENT(  OUT)    :: SimStrtTime (8)                                 ! An array containing the elements of the start time.
-      REAL(ReKi), INTENT(  OUT)    :: UsrTimeSim                                      ! User CPU time for simulation (without intialization)
+      REAL(DbKi), INTENT(IN   )    :: ZTime                                           !< Current simulation time (s)
+      REAL(DbKi), INTENT(IN   )    :: TMax                                            !< Expected simulation time (s)
+      REAL(DbKi), INTENT(  OUT)    :: PrevSimTime                                     !< Previous time message was written to screen (s > 0)
+      REAL(ReKi), INTENT(  OUT)    :: PrevClockTime                                   !< Previous clock time in seconds past midnight
+      INTEGER,    INTENT(  OUT)    :: SimStrtTime (8)                                 !< An array containing the elements of the start time.
+      REAL(ReKi), INTENT(  OUT)    :: UsrTimeSim                                      !< User CPU time for simulation (without intialization)
 
          ! Local variables.
 
@@ -5050,17 +4894,18 @@ CONTAINS
       RETURN
    END SUBROUTINE SimStatus_FirstTime
 !=======================================================================
+!> This routine displays a message that gives that status of the simulation and the predicted end time of day.
+!! It is intended to be used with RunTimes (nwtc_num::runtimes) and SimStatus_FirstTime (nwtc_num::simstatus_firsttime).
    SUBROUTINE SimStatus( PrevSimTime, PrevClockTime, ZTime, TMax )
    
-   ! This routine displays a message that gives that status of the simulation and the predicted end time of day.
 
       IMPLICIT                        NONE
 
          ! Passed variables
-      REAL(DbKi), INTENT(IN)       :: ZTime                                ! Current simulation time (s)
-      REAL(DbKi), INTENT(IN)       :: TMax                                 ! Expected simulation time (s)
-      REAL(DbKi), INTENT(INOUT)    :: PrevSimTime                          ! Previous time message was written to screen (s > 0)
-      REAL(ReKi), INTENT(INOUT)    :: PrevClockTime                        ! Previous clock time in seconds past midnight
+      REAL(DbKi), INTENT(IN)       :: ZTime                                !< Current simulation time (s)
+      REAL(DbKi), INTENT(IN)       :: TMax                                 !< Expected simulation time (s)
+      REAL(DbKi), INTENT(INOUT)    :: PrevSimTime                          !< Previous time message was written to screen (s > 0)
+      REAL(ReKi), INTENT(INOUT)    :: PrevClockTime                        !< Previous clock time in seconds past midnight
 
 
          ! Local variables.
@@ -5258,7 +5103,7 @@ CONTAINS
    RETURN
    END SUBROUTINE SmllRotTransD
 !=======================================================================
-!> \copydoc nwtc_num::smllrottransd()
+!> \copydoc nwtc_num::smllrottransd
    SUBROUTINE SmllRotTransDD( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt, ErrStat, ErrMsg )
 
       ! Passed Variables:
@@ -5353,7 +5198,7 @@ CONTAINS
    RETURN
    END SUBROUTINE SmllRotTransDD
 !=======================================================================
-!> \copydoc nwtc_num::smllrottransd()
+!> \copydoc nwtc_num::smllrottransd
    SUBROUTINE SmllRotTransR( RotationType, Theta1, Theta2, Theta3, TransMat, ErrTxt, ErrStat, ErrMsg )
 
 
@@ -5485,25 +5330,22 @@ CONTAINS
    RETURN
    END SUBROUTINE SmllRotTransR
 !=======================================================================
+!> This routine takes two sorted arrays and finds the sorted union of the two.
+!!
+!! Note: If the same value is found in both arrays, only one is kept. However, if either
+!!       array as multiple occurances of the same value, the largest multiple will be
+!!       kept. Duplicates should be eliminated externally if this is not desirable.
    SUBROUTINE SortUnion ( Ary1, N1, Ary2, N2, Ary, N )
-
-
-      ! This routine takes two sorted arrays and finds the sorted union of the two.
-
-      ! Note: If the same value is found in both arrays, only one is kept.  However, if either
-      !       array as multiple occurances of the same value, the largest multiple will be
-      !       kept.  Duplicates should be eliminated externally if this is not desirable.
-
 
       ! Argument declarations:
 
-   INTEGER, INTENT(OUT)         :: N                                            ! The length of the output array.
-   INTEGER, INTENT(IN)          :: N1                                           ! The length of the first input array.
-   INTEGER, INTENT(IN)          :: N2                                           ! The length of the second input array.
+   INTEGER, INTENT(OUT)         :: N                                            !< The length of the output array.
+   INTEGER, INTENT(IN)          :: N1                                           !< The length of the first input array.
+   INTEGER, INTENT(IN)          :: N2                                           !< The length of the second input array.
 
-   REAL(ReKi), INTENT(OUT)      :: Ary(N1+N2)                                   ! The sorted union.
-   REAL(ReKi), INTENT(IN)       :: Ary1(N1)                                     ! The first list of sorted real numbers.
-   REAL(ReKi), INTENT(IN)       :: Ary2(N2)                                     ! The second list of sorted real numbers.
+   REAL(ReKi), INTENT(OUT)      :: Ary(N1+N2)                                   !< The sorted union.
+   REAL(ReKi), INTENT(IN)       :: Ary1(N1)                                     !< The first list of sorted real numbers.
+   REAL(ReKi), INTENT(IN)       :: Ary2(N2)                                     !< The second list of sorted real numbers.
 
 
       ! Local declarations:
@@ -5553,15 +5395,12 @@ CONTAINS
    RETURN
    END SUBROUTINE SortUnion ! ( Ary1, N1, Ary2, N2, Ary, N )
 !=======================================================================
+!> This routine calculates the standard deviation of a population contained in Ary.
    FUNCTION StdDevFn ( Ary, AryLen, Mean )
-
-
-      ! This routine calculates the standard deviation of a population contained in Ary.
-
 
       ! Function declaration.
 
-   REAL(ReKi)                   :: StdDevFn                                     ! This function.
+   REAL(ReKi)                   :: StdDevFn                                     !< This function.
 
 
       ! Argument declarations:
@@ -5592,10 +5431,10 @@ CONTAINS
    RETURN
    END FUNCTION StdDevFn ! ( Ary, AryLen, Mean )
 !=======================================================================
+!> This routine takes an array of time values such as that returned from
+!!     CALL DATE_AND_TIME ( Values=TimeAry )
+!! and converts TimeAry to the number of seconds past midnight.
    FUNCTION TimeValues2Seconds( TimeAry )
-      ! This routine takes an array of time values such as that returned from
-      !     CALL DATE_AND_TIME ( Values=TimeAry )
-      ! and converts TimeAry to the number of seconds past midnight.
 
       ! Passed variables:
    INTEGER, INTENT(IN)          :: TimeAry  (8)                                    ! An array containing the elements of the time
@@ -5606,13 +5445,17 @@ CONTAINS
 
    END FUNCTION TimeValues2Seconds
 !=======================================================================
+!> This function computes the trace of a matrix \f$A \in \mathbb{R}^{m,n}\f$. The 
+!! trace of \f$A\f$, \f$\mathrm{Tr}\left[ A \right]\f$, is the sum of the diagonal elements of \f$A\f$:   
+!! \f{equation}{   
+!!   \mathrm{Tr}\left[ A \right] = \sum_{i=1}^{\min(m,n)} A(i,i)
+!! \f}   
+!!
+!! Use trace (nwtc_num::trace) instead of directly calling a specific routine in the generic interface.    
    FUNCTION traceR4(A)
-   
-      ! This function computes the trace of a square matrix:
-      ! SUM ( A(i,i) ) for i=1, min( SIZE(A,1), SIZE(A,2) )
-      
-   REAL(SiKi), INTENT(IN)  :: A(:,:)
-   REAL(SiKi)              :: traceR4
+         
+   REAL(SiKi), INTENT(IN)  :: A(:,:)     !< matrix A
+   REAL(SiKi)              :: traceR4    !< sum of the diagonal elements of A
    
    INTEGER(IntKi)          :: n     ! rows/cols in A
    INTEGER(IntKi)          :: i     ! loop counter
@@ -5626,13 +5469,11 @@ CONTAINS
    
    END FUNCTION traceR4
 !=======================================================================
+!> \copydoc nwtc_num::tracer4
    FUNCTION traceR8(A)
-   
-      ! This function computes the trace of a square matrix:
-      ! SUM ( A(i,i) ) for i=1, min( SIZE(A,1), SIZE(A,2) )
-      
-   REAL(R8Ki), INTENT(IN)  :: A(:,:)
-   REAL(R8Ki)              :: traceR8
+         
+   REAL(R8Ki), INTENT(IN)  :: A(:,:)  !< matrix A
+   REAL(R8Ki)              :: traceR8 !< sum of the diagonal elements of A
    
    INTEGER(IntKi)          :: n     ! rows/cols in A
    INTEGER(IntKi)          :: i     ! loop counter
@@ -5646,11 +5487,9 @@ CONTAINS
    
    END FUNCTION traceR8
 !=======================================================================
+!> \copydoc nwtc_num::tracer4
    FUNCTION traceR16(A)
-   
-      ! This function computes the trace of a square matrix:
-      ! SUM ( A(i,i) ) for i=1, min( SIZE(A,1), SIZE(A,2) )
-      
+         
    REAL(QuKi), INTENT(IN)  :: A(:,:)
    REAL(QuKi)              :: traceR16
    
@@ -5666,19 +5505,25 @@ CONTAINS
    
    END FUNCTION traceR16
 !=======================================================================
+!> This function returns the \f$l_2\f$ (Euclidian) norm of a vector, 
+!! \f$v = \left(v_1, v_2, \ldots ,v_n\right)\f$. The \f$l_2\f$-norm is defined as   
+!! \f{equation}{   
+!!  \lVert v \rVert_2 = \left( \sum_{i=1}^{n} {v_i}^2 \right)^{1/2}
+!! \f} \n
+!! Use TwoNorm (nwtc_num::twonorm) instead of directly calling a specific routine in the generic interface.    
    FUNCTION TwoNormR4(v)
    
-      ! this function returns the 2-norm of a vector v
       ! fortran 2008 has Norm2() built in
       
-      REAL(SiKi), INTENT(IN)  :: v(:)      
-      REAL(SiKi)              :: TwoNormR4      
+      REAL(SiKi), INTENT(IN)  :: v(:)           !< vector, v
+      REAL(SiKi)              :: TwoNormR4      !< two-norm of v
       
       TwoNormR4 = SQRT( DOT_PRODUCT(v, v) )
       
       
    END FUNCTION
 !=======================================================================
+!> \copydoc nwtc_num::twonormr4
    FUNCTION TwoNormR8(v)
    
       ! this function returns the 2-norm of a vector v
@@ -5692,6 +5537,7 @@ CONTAINS
       
    END FUNCTION
 !=======================================================================
+!> \copydoc nwtc_num::twonormr4
    FUNCTION TwoNormR16(v)
    
       ! this function returns the 2-norm of a vector v
@@ -5704,18 +5550,15 @@ CONTAINS
       
       
    END FUNCTION
-
 !=======================================================================  
+!> This routine is used to convert Angle to an equivalent value
+!!  in the range \f$[0, 2\pi)\f$. \n
+!! Use Zero2TwoPi (nwtc_num::zero2twopi) instead of directly calling a specific routine in the generic interface.    
    SUBROUTINE Zero2TwoPiR ( Angle )
-
-      ! This routine is used to convert Angle to an equivalent value
-      !  in the range [0, 2*pi).
       
-
       ! Argument declarations:
 
-   REAL(ReKi), INTENT(INOUT)    :: Angle
-
+   REAL(ReKi), INTENT(INOUT)    :: Angle     !< angle that is input and converted to equivalent in range \f$[0, 2\pi)\f$
 
 
       ! Get the angle between 0 and 2Pi.
@@ -5733,6 +5576,7 @@ CONTAINS
    RETURN
    END SUBROUTINE Zero2TwoPiR   
 !=======================================================================  
+!> \copydoc nwtc_num::zero2twopir
    SUBROUTINE Zero2TwoPiD ( Angle )
 
       ! This routine is used to convert Angle to an equivalent value

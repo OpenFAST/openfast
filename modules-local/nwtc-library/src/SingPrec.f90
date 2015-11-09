@@ -26,7 +26,7 @@
 !> This module stores constants to specify the KIND of variables.
 !!
 !! NOTE: When using preprocessor definition DOUBLE_PRECISION (which sets ReKi=R8Ki and DbKi=QuKi), you 
-!!    may need to use a compile option to convert default reals to 8 bytes:
+!!    may need to use a compile option to convert default reals to 8 bytes: \n
 !!       - Intel:   /real_size:64           /double_size:128
 !!       - Gnu:     -fdefault-real-8        
 MODULE Precision
