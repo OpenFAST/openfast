@@ -32,7 +32,7 @@ MODULE NWTC_IO
 
 !=======================================================================
 
-   TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               ! The name, version, and date of the NWTC Subroutine Library.
+   TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               !< The name, version, and date of the NWTC Subroutine Library.
                                     ProgDesc( 'NWTC Subroutine Library', 'v2.06.05a-bjj', '5-Oct-2015')
 
    TYPE, PUBLIC                 :: FNlist_Type                                ! This type stores a linked list of file names.
@@ -137,7 +137,6 @@ MODULE NWTC_IO
       MODULE PROCEDURE ParseSiVar                                             ! Parses a single-precision REAL from a string.
    END INTERFACE
 
-      ! Create interface for a generic ParseVarWDefault that actually uses specific routines.
 
    INTERFACE ParseVarWDefault                                                 ! Parses a character variable name and value from a string, potentially sets to a default value if "Default" is parsed.
       MODULE PROCEDURE ParseChVarWDefault                                     ! Parses a character string from a string, potentially sets to a default value if "Default" is parsed.
@@ -148,8 +147,6 @@ MODULE NWTC_IO
    END INTERFACE
 
 
-      ! Create interface for a generic ParseAry that actually uses specific routines.
-
    INTERFACE ParseAry                                                         ! Parse an array of numbers from a string.
       MODULE PROCEDURE ParseDbAry                                             ! Parse an array of double-precision REAL values.
       MODULE PROCEDURE ParseInAry                                             ! Parse an array of whole numbers.
@@ -157,8 +154,6 @@ MODULE NWTC_IO
       MODULE PROCEDURE ParseSiAry                                             ! Parse an array of single-precision REAL values.
    END INTERFACE
 
-
-      ! Create interface for a generic ReadVar that actually uses specific routines.
 
    INTERFACE ReadVar
       MODULE PROCEDURE ReadCVar
@@ -192,8 +187,7 @@ MODULE NWTC_IO
    END INTERFACE
 
 
-      ! Create interface for a generic Num2LStr that actually uses specific routines.
-
+      !> \copydoc nwtc_io::int2lstr
    INTERFACE Num2LStr
       MODULE PROCEDURE Int2LStr        ! default integers
       MODULE PROCEDURE R2LStr4         ! 4-byte  reals
@@ -201,16 +195,13 @@ MODULE NWTC_IO
       MODULE PROCEDURE R2LStr16        ! 16-byte reals
    END INTERFACE
 
-
-      ! Create interface for DispNVD so that we can pass in the name of the program
-
+      !> \copydoc nwtc_io::dispnvd0
    INTERFACE DispNVD
       MODULE PROCEDURE DispNVD0        ! No arguments.
       MODULE PROCEDURE DispNVD1        ! Single argument of TYPE ProgDesc
       MODULE PROCEDURE DispNVD2        ! Two arguments of TYPE character
    END INTERFACE
 
-      ! Create interface for writing matrix and array values (useful for debugging)
    INTERFACE WrMatrix
       MODULE PROCEDURE WrMatrix1R4     ! Single dimension matrix (Ary) of SiKi
       MODULE PROCEDURE WrMatrix2R4     ! Two dimension matrix of SiKi
@@ -218,7 +209,6 @@ MODULE NWTC_IO
       MODULE PROCEDURE WrMatrix2R8     ! Two dimension matrix of R8Ki
    END INTERFACE
 
-      ! Create interface for writing matrix and array values (useful for debugging)
    INTERFACE WrNumAryFileNR
       MODULE PROCEDURE WrR4AryFileNR
       MODULE PROCEDURE WrR8AryFileNR
@@ -1663,21 +1653,19 @@ CONTAINS
 
    END SUBROUTINE ChkParseData ! ( Words, ExpVarName, FileName, FileLineNum, NameIndx, ErrStat, ErrMsg )
 !=======================================================================
+!> This routine tests to make sure we have a valid format string for real numbers (i.e., it doesn't produce "****").
    SUBROUTINE ChkRealFmtStr ( RealFmt, RealFmtVar, FmtWidth, ErrStat, ErrMsg )
-
-
-      ! Test to make sure we have a valid format string for real numbers.
 
 
       ! Argument declarations.
 
-   INTEGER(IntKi), INTENT(OUT)      :: ErrStat                               ! An error level to be returned to the calling routine.
-   INTEGER(IntKi), INTENT(OUT)      :: FmtWidth                              ! The number of characters that will result from writes.
+   INTEGER(IntKi), INTENT(OUT)      :: ErrStat                               !< An error level to be returned to the calling routine.
+   INTEGER(IntKi), INTENT(OUT)      :: FmtWidth                              !< The number of characters that will result from writes.
 
-   CHARACTER(*), INTENT(OUT)        :: ErrMsg                                ! An error message to be returned to the calling routine.
+   CHARACTER(*), INTENT(OUT)        :: ErrMsg                                !< An error message to be returned to the calling routine.
 
-   CHARACTER(*), INTENT(IN)         :: RealFmt                               ! The proposed format string.
-   CHARACTER(*), INTENT(IN)         :: RealFmtVar                            ! The name of the variable storing the format string.
+   CHARACTER(*), INTENT(IN)         :: RealFmt                               !< The proposed format string.
+   CHARACTER(*), INTENT(IN)         :: RealFmtVar                            !< The name of the variable storing the format string.
 
 
       ! Local delarations.
@@ -1718,22 +1706,19 @@ CONTAINS
    RETURN
    END SUBROUTINE ChkRealFmtStr
 !=======================================================================
+!> This routine checks the I/O status and prints either an end-of-file or
+! an invalid-input message, and then aborts the program or returns an appropriate error level and message.
    SUBROUTINE CheckIOS ( IOS, Fil, Variable, VarType, ErrStat, ErrMsg, TrapErrors )
-
-
-      ! This routine checks the I/O status and prints either an end-of-file or
-      ! an invalid-input message, and then aborts the program.
-
 
       ! Argument declarations.
 
-   INTEGER,     INTENT(IN)           :: IOS                                   ! I/O status
-   CHARACTER(*),INTENT(IN)           :: Fil                                   ! Name of input file
-   CHARACTER(*),INTENT(IN)           :: Variable                              ! Variable name
-   INTEGER,     INTENT(IN)           :: VarType                               ! Type of variable
-   LOGICAL,     INTENT(IN), OPTIONAL :: TrapErrors                            ! Determines if the program should abort or return to calling function
-   INTEGER,     INTENT(OUT),OPTIONAL :: ErrStat                               ! Error status
-   CHARACTER(*),INTENT(OUT),OPTIONAL :: ErrMsg                                ! Error message (if present, no message is written to the screen)
+   INTEGER,     INTENT(IN)           :: IOS                                   !< I/O status
+   CHARACTER(*),INTENT(IN)           :: Fil                                   !< Name of input file
+   CHARACTER(*),INTENT(IN)           :: Variable                              !< Variable name
+   INTEGER,     INTENT(IN)           :: VarType                               !< Type of variable
+   LOGICAL,     INTENT(IN), OPTIONAL :: TrapErrors                            !< Determines if the program should abort or return to calling function
+   INTEGER,     INTENT(OUT),OPTIONAL :: ErrStat                               !< Error status
+   CHARACTER(*),INTENT(OUT),OPTIONAL :: ErrMsg                                !< Error message (if present, no message is written to the screen)
 
       ! local variables
    LOGICAL                           :: TrapThisError                         ! The local version of TrapErrors
@@ -1795,15 +1780,12 @@ CONTAINS
    RETURN
    END SUBROUTINE CheckIOS
 !=======================================================================
+!> This routine converts all the text in a string to upper case.
    SUBROUTINE Conv2UC ( Str )
-
-
-      ! This routine converts all the text in a string to upper case.
-
 
       ! Argument declarations.
 
-   CHARACTER(*), INTENT(INOUT)  :: Str                                          ! The string to be converted to UC.
+   CHARACTER(*), INTENT(INOUT)  :: Str                                          !< The string to be converted to UC (upper case).
 
 
       ! Local declarations.
@@ -1826,22 +1808,19 @@ CONTAINS
    RETURN
    END SUBROUTINE Conv2UC
 !=======================================================================
+!> This subroutine is used to count the number of "words" in a line of text.
+!! It uses spaces, tabs, commas, semicolons, single quotes, and double quotes ("whitespace")
+!!  as word separators. Use GetWords (nwtc_io::getwords) to return the words from the line.
    FUNCTION CountWords ( Line )
-
-
-      ! This subroutine is used to count the number of "words" in a line of text.
-      ! It uses spaces, tabs, commas, semicolons, single quotes, and double quotes ("whitespace")
-      !  as word separators.
-
 
       ! Function declaration.
 
-   INTEGER                      :: CountWords                                   ! This function.
+   INTEGER                      :: CountWords                                   !< Number of "words" in Line
 
 
       ! Argument declarations.
 
-   CHARACTER(*), INTENT(IN)     :: Line                                         ! Count the words in this text string.
+   CHARACTER(*), INTENT(IN)     :: Line                                         !< Count the words in this text string.
 
 
       ! Local declarations.
@@ -1885,15 +1864,12 @@ CONTAINS
    RETURN
    END FUNCTION CountWords
 !=======================================================================
+!> This function returns a character string encoded with today's date in the form dd-mmm-ccyy.
    FUNCTION CurDate( )
-
-
-      ! This function returns a character string encoded with the date in the form dd-mmm-ccyy.
-
 
       ! Function declaration.
 
-   CHARACTER(11)                :: CurDate                                      ! This function
+   CHARACTER(11)                :: CurDate                                      !< 'dd-mmm-yyyy' string with the current date
 
 
       ! Local declarations.
@@ -1950,15 +1926,12 @@ CONTAINS
    RETURN
    END FUNCTION CurDate
 !=======================================================================
+!> This function returns a character string encoded with the time in the form "hh:mm:ss".
    FUNCTION CurTime( )
-
-
-      ! This function returns a character string encoded with the time in the form "hh:mm:ss".
-
 
       ! Function declaration.
 
-   CHARACTER(8)                 :: CurTime                                      ! This function.
+   CHARACTER(8)                 :: CurTime                                      !< The current time in the form "hh:mm:ss".
 
 
       ! Local declarations.
@@ -1975,12 +1948,12 @@ CONTAINS
    RETURN
    END FUNCTION CurTime
 !=======================================================================
+!> This routine displays some text about copyright and license.
    SUBROUTINE DispCopyrightLicense( ProgInfo, AdditionalComment )
 
-      ! This routine displays some text about copyright and license.
 
-   TYPE( ProgDesc ), INTENT(IN)           :: ProgInfo    ! Contains the name and version info
-   CHARACTER(*),     INTENT(IN), OPTIONAL :: AdditionalComment
+   TYPE( ProgDesc ), INTENT(IN)           :: ProgInfo             !< Contains the name and version info of the program being run
+   CHARACTER(*),     INTENT(IN), OPTIONAL :: AdditionalComment    !< An additional comment displayed in the copyright notice. Typically used to describe alpha versions or one-off versions.
 
       ! local variable
    INTEGER(IntKi)         :: DateLen   ! the trim length of the ProgInfo date field
@@ -2024,18 +1997,18 @@ CONTAINS
 
    END SUBROUTINE DispCopyrightLicense
 !=======================================================================
+! This routine packs the DLL_Type (nwtc_base::dll_type) data into an integer buffer.
+! It is required for the FAST Registry. It is the inverse of DLLTypeUnPack (nwtc_io::dlltypeunpack).
    SUBROUTINE DLLTypePack( InData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg, SizeOnly )
    
-      ! This routine packs the DLL_Type data into an integer buffer.
-      ! It is required for the FAST Registry.
    
-      TYPE(DLL_Type),                INTENT(IN   ) :: InData
-      REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
-      REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
-      INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
-      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat
-      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg
-      LOGICAL,          OPTIONAL,    INTENT(IN   ) :: SizeOnly
+      TYPE(DLL_Type),                INTENT(IN   ) :: InData             !< DLL data to pack (store in arrays of type ReKi, DbKi, and/or IntKi)
+      REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)         !< buffer with real (ReKi) data from InData structure
+      REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)         !< buffer with double (DbKi) data from InData structure
+      INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)        !< buffer with integer (IntKi) data from InData structure
+      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat            !< error status
+      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg             !< error message
+      LOGICAL,          OPTIONAL,    INTENT(IN   ) :: SizeOnly           !< flag to determine if we're just looking for the size of the buffers instead of the packed data
       
          ! Local variable
       INTEGER(IntKi)                               :: Int_BufSz
@@ -2080,17 +2053,17 @@ CONTAINS
       
    END SUBROUTINE DLLTypePack
 !=======================================================================
+!> This routine unpacks the DLL_Type data from an integer buffer.
+! It is required for the FAST Registry. It is the inverse of DLLTypePack (nwtc_io::dlltypepack).
    SUBROUTINE DLLTypeUnPack( OutData, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMsg )
    
-      ! This routine unpacks the DLL_Type data from an integer buffer.
-      ! It is required for the FAST Registry.
    
-      REAL(ReKi),       ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
-      REAL(DbKi),       ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
-      INTEGER(IntKi),   ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-      TYPE(DLL_Type),                INTENT(  OUT) :: OutData
-      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat
-      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg
+      REAL(ReKi),       ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)        !< buffer with real (ReKi) data to place in the OutData structure
+      REAL(DbKi),       ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)        !< buffer with real (DbKi) data to place in the OutData structure
+      INTEGER(IntKi),   ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)       !< buffer with integer (IntKi) data to place in the OutData structure
+      TYPE(DLL_Type),                INTENT(  OUT) :: OutData           !< the reconstituted OutData structure, created from 3 buffers
+      INTEGER(IntKi),                INTENT(  OUT) :: ErrStat           !< error status/level
+      CHARACTER(*),                  INTENT(  OUT) :: ErrMsg            !< message corresponding to ErrStat
       
          ! Local variable
       INTEGER(IntKi)                               :: Int_BufSz
@@ -2123,10 +2096,9 @@ CONTAINS
       
    END SUBROUTINE DLLTypeUnPack   
 !=======================================================================
-   SUBROUTINE DispNVD0
-
-
-      ! This routine displays the name of the program, its version, and its release date.
+!> This routine displays the name of the program, its version, and its release date.
+!! Use DispNVD (nwtc_io::dispnvd) instead of directly calling a specific routine in the generic interface.
+   SUBROUTINE DispNVD0()
 
 
       ! Print out program name, version, and date.
@@ -2137,15 +2109,13 @@ CONTAINS
    RETURN
    END SUBROUTINE DispNVD0
 !=======================================================================
+!> \copydoc nwtc_io::dispnvd0
    SUBROUTINE DispNVD1 ( ProgInfo, DispNWTCVer )
 
 
-      ! This routine displays the name of the program, its version, and its release date.
-
-
    IMPLICIT NONE
-   TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    ! Contains the name and version info
-   LOGICAL,INTENT(IN),OPTIONAL         :: DispNWTCVer ! Option to display what version of the library is linked with the code
+   TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    !< Contains the name and version info
+   LOGICAL,INTENT(IN),OPTIONAL         :: DispNWTCVer !< Option to display what version of the library is linked with the code
 
       ! Print out program name, version, and date.
 
@@ -2163,15 +2133,14 @@ CONTAINS
    RETURN
    END SUBROUTINE DispNVD1
 !=======================================================================
+!> This routine displays the name of the program, its version, and its release date passed in as strings
+!! This routine is depricated and for legacy purposes only. Please don't use for any new code (Dec-2012).
    SUBROUTINE DispNVD2 ( Name, Ver )
 
 
-      ! This routine displays the name of the program, its version, and its release date passed in as strings
-      ! This routine is depricated and for legacy purposes only. Please don't use for any new code (Dec-2012)
-
    IMPLICIT NONE
-   CHARACTER(*),  INTENT(IN)           :: Name     ! String containing the name of the program using the library
-   CHARACTER(*),  INTENT(IN)           :: Ver      ! String containing the version and date info
+   CHARACTER(*),  INTENT(IN)           :: Name     !< String containing the name of the program using the library
+   CHARACTER(*),  INTENT(IN)           :: Ver      !< String containing the version and date info
 
 
       ! Print out program name, version, and date.
@@ -2182,22 +2151,19 @@ CONTAINS
    RETURN
    END SUBROUTINE DispNVD2
 !=======================================================================
+!> This routine finds one line of text with a maximum length of MaxLen from the Str.
+!! It tries to break the line at a blank.
    SUBROUTINE FindLine ( Str , MaxLen , StrEnd )
-
-
-      ! This routine finds one line of text with a maximum length of MaxLen from the Str.
-      ! It tries to break the line at a blank.
-
 
    IMPLICIT                        NONE
 
 
       ! Argument declarations:
 
-   INTEGER, INTENT(IN)          :: MaxLen                                       ! The maximum length of the string.
-   INTEGER, INTENT(OUT)         :: StrEnd                                       ! The location of the end of the string.
+   INTEGER, INTENT(IN)          :: MaxLen                                       !< The maximum length of the string.
+   INTEGER, INTENT(OUT)         :: StrEnd                                       !< The location of the end of the string.
 
-   CHARACTER(*), INTENT(IN)     :: Str                                          ! The string to search.
+   CHARACTER(*), INTENT(IN)     :: Str                                          !< The string to search.
 
 
       ! Local declarations:
@@ -2231,16 +2197,17 @@ CONTAINS
    RETURN
    END SUBROUTINE FindLine
 !=======================================================================
+!> This routine returns the next unit number greater than 9 that is not currently in use.
+!! If it cannot find any unit between 10 and 99 that is available, it either aborts or returns an appropriate error status/message.   
    SUBROUTINE GetNewUnit ( UnIn, ErrStat, ErrMsg )
 
-      ! This routine returns a unit number not currently in use.
 
 
       ! Argument declarations.
 
-   INTEGER,        INTENT(OUT)            :: UnIn                                         ! Logical unit for the file.
-   INTEGER(IntKi), INTENT(OUT), OPTIONAL  :: ErrStat                                      ! The error status code; If not present code aborts
-   CHARACTER(*),   INTENT(OUT), OPTIONAL  :: ErrMsg                                       ! The error message, if an error occurred
+   INTEGER,        INTENT(OUT)            :: UnIn                                         !< Logical unit for the file.
+   INTEGER(IntKi), INTENT(OUT), OPTIONAL  :: ErrStat                                      !< The error status code; If not present code aborts
+   CHARACTER(*),   INTENT(OUT), OPTIONAL  :: ErrMsg                                       !< The error message, if an error occurred
 
 
       ! Local declarations.
@@ -2292,15 +2259,16 @@ CONTAINS
    RETURN
    END SUBROUTINE GetNewUnit
 !=======================================================================
+!> This function returns a text description of the ErrID (ErrStat) code.
    FUNCTION GetErrStr  ( ErrID )
 
       ! This function returns a description of the ErrID code
 
       ! Argument declarations.
-   INTEGER(IntKi), INTENT(IN) :: ErrID
+   INTEGER(IntKi), INTENT(IN) :: ErrID          !< error status/level
 
       ! Function delcaration
-   CHARACTER(13)              :: GetErrStr
+   CHARACTER(13)              :: GetErrStr      !< description of the ErrID level
 
       SELECT CASE ( ErrID )
          CASE ( ErrID_None )
@@ -2320,21 +2288,19 @@ CONTAINS
 
    END FUNCTION GetErrStr
 !=======================================================================
+!> This function converts the three strings contained in the ProgDesc
+!! data type into a single string listing the program name,
+!! version, and release date.
    FUNCTION GetNVD ( ProgInfo )
-
-      ! This function converts the three strings contained in the ProgDesc
-      ! data type into a single string listing the program name,
-      ! version, and release date.
-
 
       ! Argument declarations.
 
-   TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    ! Contains the name and version info
+   TYPE( ProgDesc ), INTENT(IN)        :: ProgInfo    !< Contains the name, date, and version info
 
 
       ! Function delcaration
 
-   CHARACTER(200)                      :: GetNVD      ! A single string containing the name, date, and version info
+   CHARACTER(200)                      :: GetNVD      !< A single string containing the name, date, and version info
 
 
       ! Print all the version info into a nice string:
@@ -2343,17 +2309,14 @@ CONTAINS
 
    END FUNCTION GetNVD
 !=======================================================================
+!> Let's parse the path name from the name of the given file.
+!! We'll count everything before (and including) the last "\" or "/".
    SUBROUTINE GetPath ( GivenFil, PathName )
-
-
-      ! Let's parse the path name from the name of the given file.
-      ! We'll count everything before (and including) the last "\" or "/".
-
 
       ! Argument declarations.
 
-   CHARACTER(*), INTENT(IN)     :: GivenFil                                     ! The name of the given file.
-   CHARACTER(*), INTENT(OUT)    :: PathName                                     ! The path name of the given file.
+   CHARACTER(*), INTENT(IN)     :: GivenFil                                     !< The name of the given file.
+   CHARACTER(*), INTENT(OUT)    :: PathName                                     !< The path name of the given file (based solely on the GivenFil text string).
 
 
       ! Local declarations.
@@ -2377,17 +2340,14 @@ CONTAINS
    RETURN
    END SUBROUTINE GetPath
 !=======================================================================
+!> Let's parse the root file name from the name of the given file.
+!! We'll count everything after the last period as the extension.
    SUBROUTINE GetRoot ( GivenFil, RootName )
-
-
-      ! Let's parse the root file name from the name of the given file.
-      ! We'll count everything after the last period as the extension.
-
 
       ! Argument declarations.
 
-   CHARACTER(*), INTENT(IN)     :: GivenFil                                     ! The name of the given file.
-   CHARACTER(*), INTENT(OUT)    :: RootName                                     ! The parsed root name of the given file.
+   CHARACTER(*), INTENT(IN)     :: GivenFil                                     !< The name of the given file.
+   CHARACTER(*), INTENT(OUT)    :: RootName                                     !< The parsed root name of the given file.
 
 
       ! Local declarations.
@@ -2437,21 +2397,18 @@ CONTAINS
    RETURN
    END SUBROUTINE GetRoot
 !=======================================================================
+!> This routine will parse Line for NumTok "tokens" and return them in the Tokens array.
+!! This routine differs from GetWords() (nwtc_io::getwords) in that it uses only spaces as token separators.
    SUBROUTINE GetTokens ( Line, NumTok, Tokens, Error )
-
-
-      ! This routine will parse Line for NumTok "tokens" and return them in the Tokens array.
-      ! This routine differs from GetWords() in that it uses only spaces as token separators.
-
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: NumTok                                       ! The number of "words" to look for.
+   INTEGER, INTENT(IN)          :: NumTok                                       !< The number of "words" to look for.
 
-   LOGICAL, INTENT(OUT)         :: Error                                        ! Error flag to indicate an insuffient number of tokens were found.
+   LOGICAL, INTENT(OUT)         :: Error                                        !< Error flag to indicate an insuffient number of tokens were found.
 
-   CHARACTER(*), INTENT(INOUT)  :: Line                                         ! The string to search.
-   CHARACTER(*), INTENT(OUT)    :: Tokens  (:)                                  ! The tokens that were found.
+   CHARACTER(*), INTENT(INOUT)  :: Line                                         !< The string to search.
+   CHARACTER(*), INTENT(OUT)    :: Tokens  (:)                                  !< The tokens that were found.
 
 
       ! Local declarations.
@@ -2483,18 +2440,18 @@ CONTAINS
    RETURN
    END SUBROUTINE GetTokens
 !=======================================================================
+!> This subroutine is used to get the NumWords "words" from a line of text.
+!! It uses spaces, tabs, commas, semicolons, single quotes, and double quotes ("whitespace")
+!! as word separators. If there aren't NumWords in the line, the remaining array elements will remain empty.
+!! Use CountWords (nwtc_io::countwords) to count the number of words in a line.
    SUBROUTINE GetWords ( Line, Words, NumWords )
-
-
-      ! This subroutine is used to get NumWords "words" from a line of text.
-
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: NumWords                                     ! The number of words to look for.
+   INTEGER, INTENT(IN)          :: NumWords                                     !< The number of words to look for.
 
-   CHARACTER(*), INTENT(IN)     :: Line                                         ! The string to search.
-   CHARACTER(*), INTENT(OUT)    :: Words(NumWords)                              ! The array of found words.
+   CHARACTER(*), INTENT(IN)     :: Line                                         !< The string to search.
+   CHARACTER(*), INTENT(OUT)    :: Words(NumWords)                              !< The array of found words.
 
 
       ! Local declarations.
@@ -2554,19 +2511,16 @@ CONTAINS
    RETURN
    END SUBROUTINE GetWords
 !=======================================================================
+!> This routine converts an ASCII array of integers into an equivalent string
+!! (character array). This routine is the inverse of the Str2IntAry() (nwtc_io::str2intary) routine.
    SUBROUTINE IntAry2Str( IntAry, Str, ErrStat, ErrMsg )
-   
-      ! This routine converts an ASCII array of integers into an
-      ! equivalent string (character array).
-      ! This routine is the inverse of the Str2IntAry() routine.
-
 
          ! Argument declarations:
-      INTEGER(IntKi), INTENT(IN)    :: IntAry(:)                                    ! ASCII array to convert to a string
-      CHARACTER(*),   INTENT(OUT)   :: Str                                          ! The string representation of IntAry
+      INTEGER(IntKi), INTENT(IN)    :: IntAry(:)                                    !< ASCII array to convert to a string
+      CHARACTER(*),   INTENT(OUT)   :: Str                                          !< The string representation of IntAry
 
-      INTEGER(IntKi), INTENT(OUT)   :: ErrStat                                      ! Error status
-      CHARACTER(*),   INTENT(OUT)   :: ErrMsg                                       ! Error message associated with ErrStat
+      INTEGER(IntKi), INTENT(OUT)   :: ErrStat                                      !< Error status
+      CHARACTER(*),   INTENT(OUT)   :: ErrMsg                                       !< Error message associated with ErrStat
 
          ! Argument declarations:
       INTEGER(IntKi)                :: I                                            ! generic loop counter
@@ -2599,19 +2553,17 @@ CONTAINS
 
    END SUBROUTINE IntAry2Str   
 !=======================================================================
+!> This function returns a left-adjusted string representing the passed numeric value. 
+!! It eliminates trailing zeroes and even the decimal point if it is not a fraction. \n
+!! Use Num2LStr (nwtc_io::num2lstr) instead of directly calling a specific routine in the generic interface.   
    FUNCTION Int2LStr ( Intgr )
 
-
-      ! This function returns a left-adjusted string representing the passed integer.
-
-
-
-   CHARACTER(11)                :: Int2LStr                                     ! This function.
+   CHARACTER(11)                :: Int2LStr                                     !< string representing input number.
 
 
       ! Argument declarations.
 
-   INTEGER, INTENT(IN)          :: Intgr                                        ! The integer to convert to a left-justified string.
+   INTEGER, INTENT(IN)          :: Intgr                                        !< The number to convert to a left-justified string.
 
 
 
@@ -4535,12 +4487,8 @@ CONTAINS
    RETURN
    END SUBROUTINE ProgWarn 
 !=======================================================================
+!> \copydoc nwtc_io::int2lstr
    FUNCTION R2LStr4 ( FltNum )
-
-      ! This function converts a 4-byte floating point number to
-      ! a left-aligned string.  It eliminates trailing zeroes
-      ! and even the decimal point if it is not a fraction.
-
 
       ! Function declaration.
 
