@@ -53,7 +53,7 @@ MODULE SysSubs
 
    LOGICAL, PARAMETER            :: KBInputOK   = .TRUE.                            !< A flag to tell the program that keyboard input is allowed in the environment.
 
-   CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         !< The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\r is a line feed, CHAR(10)=\n is a new line}]
+   CHARACTER(*),  PARAMETER      :: NewLine     = ACHAR(10)                         !< The delimiter for New Lines [ Windows is CHAR(13)//CHAR(10); MAC is CHAR(13); Unix is CHAR(10) {CHAR(13)=\\r is a line feed, CHAR(10)=\\n is a new line}]
    CHARACTER(*),  PARAMETER      :: OS_Desc     = 'Intel Visual Fortran for Windows'!< Description of the language/OS
    CHARACTER( 1), PARAMETER      :: PathSep     = '\'                               !< The path separator.
    CHARACTER( 1), PARAMETER      :: SwChar      = '/'                               !< The switch character for command-line options.
@@ -158,7 +158,7 @@ CONTAINS
 
       ! Function declaration.
 
-   LOGICAL                      :: Is_Nan  !< 
+   LOGICAL                      :: Is_Nan  ! 
 
 
 
@@ -189,7 +189,7 @@ CONTAINS
    FUNCTION NWTC_ERFR8( x )
    
       REAL(R8Ki), INTENT(IN)     :: x             ! input 
-      REAL(R8Ki)                 :: NWTC_ERFR8    !< \f$\mathrm{erf}(x)\f$
+      REAL(R8Ki)                 :: NWTC_ERFR8    ! this function
       
       
       NWTC_ERFR8 = ERF( x )
@@ -213,11 +213,12 @@ CONTAINS
 !> Returns the gamma value of its argument. The result has a value equal  
 !! to a processor-dependent approximation to the gamma function of x:
 !! \f{equation}{
-!! \mathrm{\Gamma}(x) = \int_0^\infinity t^{x-1}e^{-t}\,dt
+!! \mathrm{ \Gamma }(x) = \int_0^\infty t^{x-1}e^{-t}\,dt
 !! \f} \n
 !! Use NWTC_Gamma (syssubs::nwtc_gamma) instead of directly calling a specific routine in the generic interface.
    FUNCTION NWTC_GammaR4( x )
    
+! \mathrm{ \Gamma }(x) = \int_0^\infinity t^{x-1}e^{-t}\,dt
 
       REAL(SiKi), INTENT(IN)     :: x             !< input 
       REAL(SiKi)                 :: NWTC_GammaR4  !< \f$\mathrm{\Gamma}(x)\f$
@@ -415,10 +416,10 @@ CONTAINS
 
       ! Argument declarations.
 
-   CHARACTER(*), INTENT(IN)     :: Str                                          !< The input string to write to the screen.
-   CHARACTER(*), INTENT(IN)     :: Frm                                          !< Format specifier for the output.
+   CHARACTER(*), INTENT(IN)     :: Str         !< The input string to write to the screen.
+   CHARACTER(*), INTENT(IN)     :: Frm         !< Format specifier for the output.
 
-   INTEGER                      :: ErrStat                                      ! Error status of write operation (so code doesn't crash)
+   INTEGER                      :: ErrStat     ! Error status of write operation (so code doesn't crash)
 
 
    IF ( LEN_TRIM(Str)  < 1 ) THEN

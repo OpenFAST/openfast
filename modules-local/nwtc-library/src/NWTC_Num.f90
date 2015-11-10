@@ -2472,10 +2472,10 @@ CONTAINS
 
 
    END FUNCTION GetSmllRotAngsR
-!> This funtion returns the non-dimensional (-1:+1) location of the given Gauss-Legendre Quadrature point and its weight.
-!! It works for NPts \f$\in \lef[{1,6\right].
-!! The values came from Carnahan, Brice; Luther, H.A.; Wilkes, James O.  (1969)  "Applied Numerical Methods."
 !=======================================================================
+!> This funtion returns the non-dimensional (-1:+1) location of the given Gauss-Legendre Quadrature point and its weight.
+!! It works for NPts \f$\in \left[{1,6\right]\f$.
+!! The values came from Carnahan, Brice; Luther, H.A.; Wilkes, James O.  (1969)  "Applied Numerical Methods."
    SUBROUTINE GL_Pts ( IPt, NPts, Loc, Wt, ErrStat, ErrMsg )
 
       ! Argument declarations.
@@ -2660,12 +2660,12 @@ CONTAINS
    RETURN
 
    END FUNCTION IndexCharAry
+!=======================================================================
 !> This funtion returns a y-value that corresponds to an input x-value by interpolating into the arrays.
 !! It uses a binary interpolation scheme that takes about log(AryLen) / log(2) steps to converge.
 !! It returns the first or last YAry() value if XVal is outside the limits of XAry(). 
 !!
 !! Use InterpBin (nwtc_num::interpbin) instead of directly calling a specific routine in the generic interface. 
-!=======================================================================
    FUNCTION InterpBinComp( XVal, XAry, YAry, ILo, AryLen )
 
       ! Function declaration.

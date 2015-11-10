@@ -56,10 +56,11 @@ MODULE NWTC_Base
    INTEGER(IntKi), PARAMETER     :: NWTC_MAX_DLL_PROC  = 3                        !< maximum number of procedures that can be dynamically loaded from a DLL (see DLL_Type nwtc_base::dll_type)
    
 
-      !< Type definition for dynamically loaded libraries:
-      !!  Note that changes here may need to be reflected in DLLTypePack() DLLTypeUnPack(), and the FAST Registry.exe
-
-   TYPE DLL_Type
+      !> Type definition for dynamically loaded libraries:
+      !! Note that changes here may need to be reflected in DLLTypePack() (nwtc_io::dlltypepack) DLLTypeUnPack() (nwtc_io::dlltypeunpack), 
+      !! and the FAST Registry executable.
+   
+   TYPE DLL_Type 
 
       INTEGER(C_INTPTR_T)       :: FileAddr                                        !< The address of file FileName.         (RETURN value from LoadLibrary ) [Windows]
       TYPE(C_PTR)               :: FileAddrX = C_NULL_PTR                          !< The address of file FileName.         (RETURN value from dlopen ) [Linux]
