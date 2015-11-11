@@ -108,6 +108,9 @@ v3.00.00a-adp through v3.01.00a-adp (6-Oct-2015, A. Platt)
   - converted to always use single precision for smaller memory footprint
 
 
+v3.01.00b-adp (11-Nov-2015, A. Platt)
+  - Bug fix in Uniform wind.  Added check that the RefLength must be > 0.
+
 
  To Do:
  - remove all *_ADHack_* subroutines (reintroduced for integration with AeroDyn)
