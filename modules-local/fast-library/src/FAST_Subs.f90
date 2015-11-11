@@ -1724,7 +1724,7 @@ SUBROUTINE BD_InputSolve( p_FAST, BD, y_AD, u_AD, MeshMapData, ErrStat, ErrMsg )
      
 END SUBROUTINE BD_InputSolve
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD, MeshMapData, ErrStat, ErrMsg )
+SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD, MeshMapData, ErrStat, ErrMsg )
 ! This routine sets the inputs required for ED--using the Option 2 solve method; currently the only input not solved in this routine
 ! are the fields on PlatformPtMesh and HubPtLoad,  which are solved in option 1.
 !..................................................................................................................................
@@ -1732,6 +1732,7 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD
    TYPE(FAST_ParameterType),       INTENT(IN   )  :: p_FAST                   ! Glue-code simulation parameters
    TYPE(ED_InputType),             INTENT(INOUT)  :: u_ED                     ! ED Inputs at t
    TYPE(ED_OutputType),            INTENT(IN   )  :: y_ED                     ! ElastoDyn outputs (need translation displacement on meshes for loads mapping)
+   TYPE(AD14_ParameterType),       INTENT(IN   )  :: p_AD14                   ! AeroDyn14 parameters (a hack because the AD14 meshes aren't set up properly)
    TYPE(AD14_OutputType),          INTENT(IN   )  :: y_AD14                   ! AeroDyn14 outputs
    TYPE(AD_OutputType),            INTENT(IN   )  :: y_AD                     ! AeroDyn outputs
    TYPE(AD_InputType),             INTENT(INOUT)  :: u_AD                     ! AD inputs (for AD-ED load transfer)
@@ -1748,8 +1749,8 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD
    INTEGER(IntKi)                                 :: ErrStat2                 ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                           :: ErrMsg2                  ! temporary Error message if ErrStat /= ErrID_None
    CHARACTER(*), PARAMETER                        :: RoutineName = 'ED_InputSolve' 
-   real(reKi)                                     :: Force(3,u_ED%TowerLn2Mesh%Nnodes)
-   real(reKi)                                     :: Moment(3,u_ED%TowerLn2Mesh%Nnodes)
+   real(reKi)                                     :: Force(3,u_ED%TowerPtLoads%Nnodes)
+   real(reKi)                                     :: Moment(3,u_ED%TowerPtLoads%Nnodes)
    
    integer         :: un_out
    character(1024) :: BinOutputName
@@ -1780,21 +1781,21 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD
    
       IF (y_SrvD%TTMD%Mesh%Committed) THEN
       
-         CALL Transfer_Point_to_Line2( y_SrvD%TTMD%Mesh, u_ED%TowerLn2Mesh, MeshMapData%SrvD_P_2_ED_L_T, ErrStat2, ErrMsg2, u_SrvD%TTMD%Mesh, y_ED%TowerLn2Mesh )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%TowerLn2Mesh' )      
+         CALL Transfer_Point_to_Point( y_SrvD%TTMD%Mesh, u_ED%TowerPtLoads, MeshMapData%SrvD_P_2_ED_P_T, ErrStat2, ErrMsg2, u_SrvD%TTMD%Mesh, y_ED%TowerLn2Mesh )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%TowerPtLoads' )      
 
-         ! we'll need to add this to the loads from AeroDyn, later, so we're going to transfer to a temp mesh here instead of u_ED%TowerLn2Mesh
-            Force  = u_ED%TowerLn2Mesh%force
-            Moment = u_ED%TowerLn2Mesh%moment
+         ! we'll need to add this to the loads from AeroDyn, later, so we're going to transfer to a temp mesh here instead of u_ED%TowerPtLoads
+            Force  = u_ED%TowerPtLoads%force
+            Moment = u_ED%TowerPtLoads%moment
             
 !BinOutputName = trim(p_FAST%OutFileRoot)//'.Meshes.bin'            
 !un_out = -1
-!CALL MeshWrBin ( un_out, u_ED%TowerLn2Mesh,  ErrStat2, ErrMsg2, BinOutputName);  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
+!CALL MeshWrBin ( un_out, u_ED%TowerPtLoads,  ErrStat2, ErrMsg2, BinOutputName);  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
 !CALL MeshWrBin ( un_out, y_ED%TowerLn2Mesh,  ErrStat2, ErrMsg2, BinOutputName);  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
 !CALL MeshWrBin ( un_out, u_SrvD%TTMD%Mesh,   ErrStat2, ErrMsg2, BinOutputName);  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
 !CALL MeshWrBin ( un_out, y_SrvD%TTMD%Mesh,   ErrStat2, ErrMsg2, BinOutputName);  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
 !CALL MeshMapWrBin( un_out, y_ED%TowerLn2Mesh, u_SrvD%TTMD%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
-!CALL MeshMapWrBin( un_out, y_SrvD%TTMD%Mesh, u_ED%TowerLn2Mesh, MeshMapData%SrvD_P_2_ED_L_T, ErrStat2, ErrMsg2, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
+!CALL MeshMapWrBin( un_out, y_SrvD%TTMD%Mesh, u_ED%TowerPtLoads, MeshMapData%SrvD_P_2_ED_L_T, ErrStat2, ErrMsg2, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
 !close( un_out )
             
       END IF
@@ -1836,8 +1837,8 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD
       
                   
    IF ( p_FAST%CompAero == Module_AD14 ) THEN   
-      u_ED%TowerLn2Mesh%Force  = 0.0_ReKi
-      u_ED%TowerLn2Mesh%Moment = 0.0_ReKi
+      u_ED%TowerPtLoads%Force  = 0.0_ReKi
+      u_ED%TowerPtLoads%Moment = 0.0_ReKi
             
          ! add aero force to the tower, if it's provided:
       IF ( y_AD14%Twr_OutputLoads%Committed ) THEN
@@ -1849,28 +1850,28 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD
          J = y_AD14%Twr_OutputLoads%NNodes
          
          IF ( y_AD14%Twr_OutputLoads%FIELDMASK(MASKID_FORCE) ) &
-            u_ED%TowerLn2Mesh%Force(:,1:J)  = u_ED%TowerLn2Mesh%Force( :,1:J) + y_AD14%Twr_OutputLoads%Force
+            u_ED%TowerPtLoads%Force(:,1:J)  = u_ED%TowerPtLoads%Force( :,1:J) + y_AD14%Twr_OutputLoads%Force*p_AD14%TwrProps%TwrNodeWidth(j)
          
          IF ( y_AD14%Twr_OutputLoads%FIELDMASK(MASKID_MOMENT) ) &
-            u_ED%TowerLn2Mesh%Moment(:,1:J) = u_ED%TowerLn2Mesh%Moment(:,1:J) + y_AD14%Twr_OutputLoads%Moment 
+            u_ED%TowerPtLoads%Moment(:,1:J) = u_ED%TowerPtLoads%Moment(:,1:J) + y_AD14%Twr_OutputLoads%Moment*p_AD14%TwrProps%TwrNodeWidth(j) 
       
       END IF   
       
    ELSEIF ( p_FAST%CompAero == Module_AD ) THEN
       
       IF ( y_AD%TowerLoad%Committed ) THEN
-         CALL Transfer_Line2_to_Line2( y_AD%TowerLoad, u_ED%TowerLn2Mesh, MeshMapData%AD_L_2_ED_L_T, ErrStat2, ErrMsg2, u_AD%TowerMotion, y_ED%TowerLn2Mesh )
+         CALL Transfer_Line2_to_Point( y_AD%TowerLoad, u_ED%TowerPtLoads, MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2, u_AD%TowerMotion, y_ED%TowerLn2Mesh )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)         
       END IF
             
    ELSE
-      u_ED%TowerLn2Mesh%Force  = 0.0_ReKi
-      u_ED%TowerLn2Mesh%Moment = 0.0_ReKi      
+      u_ED%TowerPtLoads%Force  = 0.0_ReKi
+      u_ED%TowerPtLoads%Moment = 0.0_ReKi      
    END IF
 
       ! add potential loads from TMD module:
-   u_ED%TowerLn2Mesh%Force  = u_ED%TowerLn2Mesh%Force  + Force
-   u_ED%TowerLn2Mesh%Moment = u_ED%TowerLn2Mesh%Moment + Moment     
+   u_ED%TowerPtLoads%Force  = u_ED%TowerPtLoads%Force  + Force
+   u_ED%TowerPtLoads%Moment = u_ED%TowerPtLoads%Moment + Moment     
          
    
    u_ED%TwrAddedMass  = 0.0_ReKi
@@ -1994,7 +1995,6 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, M
    
    IF (u_SrvD%NTMD%Mesh%Committed) THEN
       
-         !bjj: watch error handling if SrvD_InputSolve ever gets more complicated
       CALL Transfer_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NTMD%Mesh, MeshMapData%ED_P_2_SrvD_P_N, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
@@ -2002,7 +2002,6 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, M
 
    IF (u_SrvD%TTMD%Mesh%Committed) THEN
       
-         !bjj: watch error handling if SrvD_InputSolve ever gets more complicated
       CALL Transfer_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TTMD%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
@@ -5207,7 +5206,7 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_AD, u_SD, u_HD, u_MAP, u_BD, FileName,
       !!!CALL MeshPrintInfo(unOut2, u_ED%BladeLn2Mesh(K_local))
       !!!write(unOut2,'(A)') '_____________________________________________________________________________'
    END DO            
-   CALL MeshWrBin( unOut, u_ED%TowerLn2Mesh,            ErrStat, ErrMsg )
+   CALL MeshWrBin( unOut, u_ED%TowerPtLoads,            ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_ED%PlatformPtMesh,          ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_SD%TPMesh,                  ErrStat, ErrMsg )
    CALL MeshWrBin( unOut, u_SD%LMesh,                   ErrStat, ErrMsg )
@@ -5479,7 +5478,7 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM, M
    ! ElastoDyn meshes
    ED%Input( 1)%PlatformPtMesh%RemapFlag        = .FALSE.
    ED%Output(1)%PlatformPtMesh%RemapFlag        = .FALSE.
-   ED%Input( 1)%TowerLn2Mesh%RemapFlag          = .FALSE.
+   ED%Input( 1)%TowerPtLoads%RemapFlag          = .FALSE.
    ED%Output(1)%TowerLn2Mesh%RemapFlag          = .FALSE.
    DO K=1,SIZE(ED%Output(1)%BladeRootMotion)
       ED%Output(1)%BladeRootMotion(K)%RemapFlag = .FALSE.      
@@ -5754,8 +5753,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
          
       CALL MeshMapCreate( ED%Output(1)%TowerLn2Mesh, SrvD%Input(1)%TTMD%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_L_2_SrvD_P_T' )
-      CALL MeshMapCreate( SrvD%y%TTMD%Mesh, ED%Input(1)%TowerLn2Mesh,  MeshMapData%SrvD_P_2_ED_L_T, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SrvD_P_2_ED_L_T' )
+      CALL MeshMapCreate( SrvD%y%TTMD%Mesh, ED%Input(1)%TowerPtLoads,  MeshMapData%SrvD_P_2_ED_P_T, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SrvD_P_2_ED_P_T' )
    
    END IF   
    
@@ -5785,8 +5784,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
       IF ( AD14%Input(1)%Twr_InputMarkers%Committed ) THEN
          CALL MeshMapCreate( ED%Output(1)%TowerLn2Mesh, AD14%Input(1)%Twr_InputMarkers, MeshMapData%ED_L_2_AD_L_T, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_L_2_AD_L_T' )
-         CALL MeshMapCreate( AD14%y%Twr_OutputLoads, ED%Input(1)%TowerLn2Mesh,  MeshMapData%AD_L_2_ED_L_T, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_ED_L_T' )
+         CALL MeshMapCreate( AD14%y%Twr_OutputLoads, ED%Input(1)%TowerPtLoads,  MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_ED_P_T' )
       END IF
                
       IF (ErrStat >= AbortErrLev ) RETURN
@@ -5879,8 +5878,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_L_2_AD_L_T' )
             
          IF ( AD%y%TowerLoad%Committed ) THEN            
-            CALL MeshMapCreate( AD%y%TowerLoad, ED%Input(1)%TowerLn2Mesh,  MeshMapData%AD_L_2_ED_L_T, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_ED_L_T' )
+            CALL MeshMapCreate( AD%y%TowerLoad, ED%Input(1)%TowerPtLoads,  MeshMapData%AD_L_2_ED_P_T, ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_ED_P_T' )
          END IF         
       END IF
       
@@ -6733,7 +6732,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
               
       
    !bjj: note ED%Input(1) may be a sibling mesh of output, but ED%u is not (routine may update something that needs to be shared between siblings)      
-   CALL ED_InputSolve( p_FAST, ED%Input(1), ED%Output(1), AD14%y, AD%y, SrvD%y, AD%Input(1), SrvD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )
+   CALL ED_InputSolve( p_FAST, ED%Input(1), ED%Output(1), AD14%p, AD14%y, AD%y, SrvD%y, AD%Input(1), SrvD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
    CALL BD_InputSolve( p_FAST, BD, AD%y, AD%Input(1), MeshMapData, ErrStat2, ErrMsg2 )
