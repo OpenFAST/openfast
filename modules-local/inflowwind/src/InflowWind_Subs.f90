@@ -1055,7 +1055,13 @@ CONTAINS
                ErrStat,ErrMsg,RoutineName)
       ENDIF
 
-!FIXME: Do I need to check the RefLength?
+         ! Check that RefLength is positive
+      IF ( InputFileData%Uniform_RefLength <= 0.0_ReKi ) THEN
+         CALL SetErrStat(ErrID_Fatal,' Reference length (RefLength) for uniform winds must be greater than zero.',  &
+               ErrStat,ErrMsg,RoutineName)
+      ENDIF
+
+
       RETURN
 
    END SUBROUTINE Uniform_ValidateInput
