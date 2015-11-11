@@ -1748,12 +1748,19 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD
    INTEGER(IntKi)                                 :: ErrStat2                 ! temporary Error status of the operation
    CHARACTER(ErrMsgLen)                           :: ErrMsg2                  ! temporary Error message if ErrStat /= ErrID_None
    CHARACTER(*), PARAMETER                        :: RoutineName = 'ED_InputSolve' 
-
+   real(reKi)                                     :: Force(3,u_ED%TowerLn2Mesh%Nnodes)
+   real(reKi)                                     :: Moment(3,u_ED%TowerLn2Mesh%Nnodes)
+   
+   integer         :: un_out
+   character(1024) :: BinOutputName
+   
       ! Initialize error status
       
    ErrStat = ErrID_None
    ErrMsg = ""
 
+   Force = 0.0_ReKi
+   Moment = 0.0_ReKi
    
       ! ED inputs from ServoDyn
    IF ( p_FAST%CompServo == Module_SrvD ) THEN
@@ -1771,6 +1778,27 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD
             
       END IF
    
+      IF (y_SrvD%TTMD%Mesh%Committed) THEN
+      
+         CALL Transfer_Point_to_Line2( y_SrvD%TTMD%Mesh, u_ED%TowerLn2Mesh, MeshMapData%SrvD_P_2_ED_L_T, ErrStat2, ErrMsg2, u_SrvD%TTMD%Mesh, y_ED%TowerLn2Mesh )
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg,RoutineName//':u_ED%TowerLn2Mesh' )      
+
+         ! we'll need to add this to the loads from AeroDyn, later, so we're going to transfer to a temp mesh here instead of u_ED%TowerLn2Mesh
+            Force  = u_ED%TowerLn2Mesh%force
+            Moment = u_ED%TowerLn2Mesh%moment
+            
+!BinOutputName = trim(p_FAST%OutFileRoot)//'.Meshes.bin'            
+!un_out = -1
+!CALL MeshWrBin ( un_out, u_ED%TowerLn2Mesh,  ErrStat2, ErrMsg2, BinOutputName);  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
+!CALL MeshWrBin ( un_out, y_ED%TowerLn2Mesh,  ErrStat2, ErrMsg2, BinOutputName);  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
+!CALL MeshWrBin ( un_out, u_SrvD%TTMD%Mesh,   ErrStat2, ErrMsg2, BinOutputName);  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
+!CALL MeshWrBin ( un_out, y_SrvD%TTMD%Mesh,   ErrStat2, ErrMsg2, BinOutputName);  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
+!CALL MeshMapWrBin( un_out, y_ED%TowerLn2Mesh, u_SrvD%TTMD%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
+!CALL MeshMapWrBin( un_out, y_SrvD%TTMD%Mesh, u_ED%TowerLn2Mesh, MeshMapData%SrvD_P_2_ED_L_T, ErrStat2, ErrMsg2, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
+!close( un_out )
+            
+      END IF
+            
    ELSE !we'll just take the initial guesses..
    END IF
 
@@ -1839,6 +1867,11 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, y_AD14, y_AD, y_SrvD, u_AD, u_SrvD
       u_ED%TowerLn2Mesh%Force  = 0.0_ReKi
       u_ED%TowerLn2Mesh%Moment = 0.0_ReKi      
    END IF
+
+      ! add potential loads from TMD module:
+   u_ED%TowerLn2Mesh%Force  = u_ED%TowerLn2Mesh%Force  + Force
+   u_ED%TowerLn2Mesh%Moment = u_ED%TowerLn2Mesh%Moment + Moment     
+         
    
    u_ED%TwrAddedMass  = 0.0_ReKi
    u_ED%PtfmAddedMass = 0.0_ReKi
@@ -1863,7 +1896,12 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, M
 !  TYPE(AD_OutputType),              INTENT(IN)     :: y_AD         ! AeroDyn outputs
 
    INTEGER(IntKi)                                   :: k            ! blade loop counter
-
+   
+   INTEGER(IntKi)                                   :: ErrStat2                 ! temporary Error status of the operation
+   CHARACTER(ErrMsgLen)                             :: ErrMsg2                  ! temporary Error message if ErrStat /= ErrID_None
+   CHARACTER(*), PARAMETER                          :: RoutineName = 'SrvD_InputSolve' 
+   
+   
    ErrStat = ErrID_None
    ErrMsg  = ""
 
@@ -1957,9 +1995,19 @@ SUBROUTINE SrvD_InputSolve( p_FAST, m_FAST, u_SrvD, y_ED, y_IfW, y_OpFM, y_BD, M
    IF (u_SrvD%NTMD%Mesh%Committed) THEN
       
          !bjj: watch error handling if SrvD_InputSolve ever gets more complicated
-      CALL Transfer_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NTMD%Mesh, MeshMapData%ED_P_2_SrvD_P_N, ErrStat, ErrMsg )
+      CALL Transfer_Point_to_Point( y_ED%NacelleMotion, u_SrvD%NTMD%Mesh, MeshMapData%ED_P_2_SrvD_P_N, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
    END IF
+
+   IF (u_SrvD%TTMD%Mesh%Committed) THEN
+      
+         !bjj: watch error handling if SrvD_InputSolve ever gets more complicated
+      CALL Transfer_Line2_to_Point( y_ED%TowerLn2Mesh, u_SrvD%TTMD%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            
+   END IF
+   
    
 #ifdef SIMULINK_TIMESHIFT   
       ! we're going to use the extrapolated values instead of the old values (Simulink inputs are from t, not t+dt)
@@ -5493,7 +5541,22 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM, M
       END DO
                                     
    END IF
-             
+   
+   
+   ! ServoDyn
+   IF ( p_FAST%CompServo == Module_SrvD ) THEN
+      IF (SrvD%y%NTMD%Mesh%Committed) THEN
+         SrvD%y%NTMD%Mesh%RemapFlag        = .FALSE.
+         SrvD%Input(1)%NTMD%Mesh%RemapFlag = .FALSE.
+      END IF
+            
+      IF (SrvD%y%TTMD%Mesh%Committed) THEN
+         SrvD%y%TTMD%Mesh%RemapFlag        = .FALSE.
+         SrvD%Input(1)%TTMD%Mesh%RemapFlag = .FALSE.
+      END IF      
+   END IF
+      
+   
    ! HydroDyn
    IF ( p_FAST%CompHydro == Module_HD ) THEN
       IF (HD%Input(1)%Mesh%Committed) THEN
@@ -5686,6 +5749,16 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SrvD_P_2_ED_P_N' )
    
    END IF   
+   
+   IF ( SrvD%Input(1)%TTMD%Mesh%Committed ) THEN ! ED-SrvD
+         
+      CALL MeshMapCreate( ED%Output(1)%TowerLn2Mesh, SrvD%Input(1)%TTMD%Mesh, MeshMapData%ED_L_2_SrvD_P_T, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':ED_L_2_SrvD_P_T' )
+      CALL MeshMapCreate( SrvD%y%TTMD%Mesh, ED%Input(1)%TowerLn2Mesh,  MeshMapData%SrvD_P_2_ED_L_T, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':SrvD_P_2_ED_L_T' )
+   
+   END IF   
+   
    
 !-------------------------
 !  ElastoDyn <-> AeroDyn
@@ -7192,7 +7265,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_SrvD%RootName      = p_FAST%OutFileRoot
       InitInData_SrvD%NumBl         = InitOutData_ED%NumBl
       InitInData_SrvD%gravity       = InitOutData_ED%gravity
-      InitInData_SrvD%r_N_O_G       = ED%Input(1)%NacelleLoads%Position(:,1) !bjj: check this!
+      InitInData_SrvD%r_N_O_G       = ED%Input(1)%NacelleLoads%Position(:,1)
+      InitInData_SrvD%r_TwrBase     = InitOutData_ED%TwrBasePos
       InitInData_SrvD%TMax          = p_FAST%TMax
       InitInData_SrvD%AirDens       = AirDens
       InitInData_SrvD%AvgWindSpeed  = InitOutData_IfW%WindFileInfo%MWS
@@ -9516,8 +9590,8 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       ! determine if the Jacobian should be calculated this time
    IF ( m_FAST%calcJacobian ) THEN ! this was true (possibly at initialization), so we'll advance the time for the next calculation of the Jacobian
       
-      if (p_FAST%CompMooring == Module_Orca .and. n_t_global==0) then
-         m_FAST%NextJacCalcTime = m_FAST%t_global + p_FAST%DT  ! the jacobian calculated with OrcaFlex at t=0 is incorrect, but is okay on the 2nd step
+      if (p_FAST%CompMooring == Module_Orca .and. n_t_global < 5) then
+         m_FAST%NextJacCalcTime = m_FAST%t_global + p_FAST%DT  ! the jacobian calculated with OrcaFlex at t=0 is incorrect, but is okay on the 2nd step (it's not okay for OrcaFlex version 10, so I increased this to 5)
       else
          m_FAST%NextJacCalcTime = m_FAST%t_global + p_FAST%DT_UJac
       end if
