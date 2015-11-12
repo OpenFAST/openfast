@@ -1704,7 +1704,7 @@ SUBROUTINE BD_InputSolve( p_FAST, BD, y_AD, u_AD, MeshMapData, ErrStat, ErrMsg )
             CALL Transfer_Line2_to_Line2( BD%y(k)%BldMotion, MeshMapData%y_BD_BldMotion_4Loads(k), MeshMapData%BD_L_2_BD_L(k), ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                         
-            CALL Transfer_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_L_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
+            CALL Transfer_Line2_to_Line2( y_AD%BladeLoad(k), BD%Input(1,k)%DistrLoad, MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), MeshMapData%y_BD_BldMotion_4Loads(k) )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                
          END DO
@@ -1809,26 +1809,26 @@ SUBROUTINE ED_InputSolve( p_FAST, u_ED, y_ED, p_AD14, y_AD14, y_AD, y_SrvD, u_AD
       
       IF ( p_FAST%CompAero == Module_AD14 ) THEN   
       
-         DO K = 1,SIZE(u_ED%BladeLn2Mesh,1) ! Loop through all blades (p_ED%NumBl)
+         DO K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
             DO J = 1,y_AD14%OutputLoads(K)%Nnodes ! Loop through the blade nodes / elements (p_ED%BldNodes)
 
-               u_ED%BladeLn2Mesh(K)%Force(:,J)  = y_AD14%OutputLoads(K)%Force(:,J)
-               u_ED%BladeLn2Mesh(K)%Moment(:,J) = y_AD14%OutputLoads(K)%Moment(:,J)
+               u_ED%BladePtLoads(K)%Force(:,J)  = y_AD14%OutputLoads(K)%Force(:,J)*p_AD14%Blade%DR(J)
+               u_ED%BladePtLoads(K)%Moment(:,J) = y_AD14%OutputLoads(K)%Moment(:,J)*p_AD14%Blade%DR(J)
             
             END DO !J
          END DO   !K 
       ELSEIF ( p_FAST%CompAero == Module_AD ) THEN
          
-         DO K = 1,SIZE(u_ED%BladeLn2Mesh,1) ! Loop through all blades (p_ED%NumBl)
-            CALL Transfer_Line2_to_Line2( y_AD%BladeLoad(k), u_ED%BladeLn2Mesh(k), MeshMapData%AD_L_2_BDED_L_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), y_ED%BladeLn2Mesh(k) )
+         DO K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
+            CALL Transfer_Line2_to_Point( y_AD%BladeLoad(k), u_ED%BladePtLoads(k), MeshMapData%AD_L_2_BDED_B(k), ErrStat2, ErrMsg2, u_AD%BladeMotion(k), y_ED%BladeLn2Mesh(k) )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          END DO
                   
       ELSE
          !p_FAST%CompAero = Module_None
-         DO K = 1,SIZE(u_ED%BladeLn2Mesh,1) ! Loop through all blades (p_ED%NumBl)
-            u_ED%BladeLn2Mesh(K)%Force  = 0.0_ReKi
-            u_ED%BladeLn2Mesh(K)%Moment = 0.0_ReKi
+         DO K = 1,SIZE(u_ED%BladePtLoads,1) ! Loop through all blades (p_ED%NumBl)
+            u_ED%BladePtLoads(K)%Force  = 0.0_ReKi
+            u_ED%BladePtLoads(K)%Moment = 0.0_ReKi
          END DO         
          
       END IF
@@ -5193,17 +5193,17 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_AD, u_SD, u_HD, u_MAP, u_BD, FileName,
    
 
       ! Add how many blade meshes there are:
-   NumBl =  SIZE(u_ED%BladeLn2Mesh,1)   ! Note that NumBl is B4Ki 
+   NumBl =  SIZE(u_ED%BladePtLoads,1)   ! Note that NumBl is B4Ki 
    WRITE( unOut, IOSTAT=ErrStat )   NumBl
       
       ! Add all of the input meshes:
    DO K_local = 1,NumBl
-      CALL MeshWrBin( unOut, u_ED%BladeLn2Mesh(K_local), ErrStat, ErrMsg )
+      CALL MeshWrBin( unOut, u_ED%BladePtLoads(K_local), ErrStat, ErrMsg )
       
       !!!write(unOut2,'(A)') '_____________________________________________________________________________'
       !!!write(unOut2,*)     'ElastoDyn blade ', k_local, ' mesh'
       !!!write(unOut2,'(A)') '_____________________________________________________________________________'      
-      !!!CALL MeshPrintInfo(unOut2, u_ED%BladeLn2Mesh(K_local))
+      !!!CALL MeshPrintInfo(unOut2, u_ED%BladePtLoads(K_local))
       !!!write(unOut2,'(A)') '_____________________________________________________________________________'
    END DO            
    CALL MeshWrBin( unOut, u_ED%TowerPtLoads,            ErrStat, ErrMsg )
@@ -5483,10 +5483,10 @@ SUBROUTINE ResetRemapFlags(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM, M
    DO K=1,SIZE(ED%Output(1)%BladeRootMotion)
       ED%Output(1)%BladeRootMotion(K)%RemapFlag = .FALSE.      
    END DO
-   if (allocated(ED%Input(1)%BladeLn2Mesh)) then   
-      DO K=1,SIZE(ED%Input(1)%BladeLn2Mesh)
-         ED%Input( 1)%BladeLn2Mesh(K)%RemapFlag    = .FALSE.
-         ED%Output(1)%BladeLn2Mesh(K)%RemapFlag    = .FALSE.      
+   if (allocated(ED%Input(1)%BladePtLoads)) then   
+      DO K=1,SIZE(ED%Input(1)%BladePtLoads)
+         ED%Input( 1)%BladePtLoads(K)%RemapFlag = .FALSE.
+         ED%Output(1)%BladeLn2Mesh(K)%RemapFlag = .FALSE.      
       END DO
    end if
    
@@ -5766,9 +5766,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
    IF ( p_FAST%CompAero == Module_AD14 ) THEN ! ED-AD14
          
       ! Blade meshes: (allocate two mapping data structures to number of blades, then allocate data inside the structures)
-      ALLOCATE( MeshMapData%BDED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_BDED_L_B(NumBl), STAT=ErrStat2 )
+      ALLOCATE( MeshMapData%BDED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_BDED_B(NumBl), STAT=ErrStat2 )
          IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%BDED_L_2_AD_L_B and MeshMapData%AD_L_2_BDED_L_B.', &
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%BDED_L_2_AD_L_B and MeshMapData%AD_L_2_BDED_B.', &
                             ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
@@ -5776,8 +5776,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
       DO K=1,NumBl         
          CALL MeshMapCreate( ED%Output(1)%BladeLn2Mesh(K), AD14%Input(1)%InputMarkers(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BDED_L_2_AD_L_B('//TRIM(Num2LStr(K))//')' )
-         CALL MeshMapCreate( AD14%y%OutputLoads(K), ED%Input(1)%BladeLn2Mesh(K),  MeshMapData%AD_L_2_BDED_L_B(K), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_BDED_L_B('//TRIM(Num2LStr(K))//')' )
+         CALL MeshMapCreate( AD14%y%OutputLoads(K), ED%Input(1)%BladePtLoads(K),  MeshMapData%AD_L_2_BDED_B(K), ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_BDED_B('//TRIM(Num2LStr(K))//')' )
       END DO
          
       ! Tower mesh:
@@ -5813,9 +5813,9 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
       
       
       ! Blade meshes: (allocate two mapping data structures to number of blades, then allocate data inside the structures)                  
-      ALLOCATE( MeshMapData%BDED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_BDED_L_B(NumBl), STAT=ErrStat2 )
+      ALLOCATE( MeshMapData%BDED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_BDED_B(NumBl), STAT=ErrStat2 )
          IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%BDED_L_2_AD_L_B and MeshMapData%AD_L_2_BDED_L_B.', &
+            CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%BDED_L_2_AD_L_B and MeshMapData%AD_L_2_BDED_B.', &
                             ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
@@ -5825,8 +5825,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
          DO K=1,NumBl         
             CALL MeshMapCreate( ED%Output(1)%BladeLn2Mesh(K), AD%Input(1)%BladeMotion(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BDED_L_2_AD_L_B('//TRIM(Num2LStr(K))//')' )
-            CALL MeshMapCreate( AD%y%BladeLoad(K), ED%Input(1)%BladeLn2Mesh(K),  MeshMapData%AD_L_2_BDED_L_B(K), ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_BDED_L_B('//TRIM(Num2LStr(K))//')' )
+            CALL MeshMapCreate( AD%y%BladeLoad(K), ED%Input(1)%BladePtLoads(K),  MeshMapData%AD_L_2_BDED_B(K), ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_BDED_B('//TRIM(Num2LStr(K))//')' )
          END DO
          
       ELSEIF ( p_FAST%CompElast == Module_BD ) then
@@ -5835,8 +5835,8 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
          DO K=1,NumBl         
             CALL MeshMapCreate( BD%y(k)%BldMotion, AD%Input(1)%BladeMotion(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BDED_L_2_AD_L_B('//TRIM(Num2LStr(K))//')' )
-            CALL MeshMapCreate( AD%y%BladeLoad(K), BD%Input(1,k)%DistrLoad,  MeshMapData%AD_L_2_BDED_L_B(K), ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_BDED_L_B('//TRIM(Num2LStr(K))//')' )
+            CALL MeshMapCreate( AD%y%BladeLoad(K), BD%Input(1,k)%DistrLoad,  MeshMapData%AD_L_2_BDED_B(K), ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_BDED_B('//TRIM(Num2LStr(K))//')' )
          END DO
          
          ! Blade meshes for load transfer: (allocate meshes at BD input locations for motions transferred from BD output locations)                  
