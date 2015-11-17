@@ -52,7 +52,6 @@ contains
    INTEGER(IntKi)                         :: UnEcho         ! Unit number for the echo file
    INTEGER(IntKi)                         :: ErrStat2       ! The error status code
    CHARACTER(LEN(ErrMsg))                 :: ErrMsg2        ! The error message, if an error occurred
-   INTEGER(IntKi)                         :: i        ! Unit number for the echo file
    CHARACTER(1024) :: AV_file = 'AngVel_NO_Input_Data.inp'
    CHARACTER(1024) :: AA_file = 'AngAccel_NO_Input_Data.inp'
    CHARACTER(1024) :: AP_file = 'AngPos_NO_Input_Data.inp'
@@ -140,21 +139,15 @@ END SUBROUTINE U_ReadInput
    !TYPE(TMD_InputFile), INTENT(INOUT) :: InputFileData                       ! All the data in the TMD input file
     Real(ReKi), dimension(9, NumSteps), intent(inout) :: APvec
       ! Local variables:
-   REAL(ReKi)                    :: TmpRAry(2)                                ! A temporary array to read a table from the input file
-   REAL(ReKi)                    :: TmpRAry3(3)      ! Temporary variable to read table from file
    REAL(ReKi)                    :: TmpRAry9(9)      ! Temporary variable to read table from file
    INTEGER                :: I                                         ! loop counter
    INTEGER                :: J                                       ! loop counter
-   INTEGER                :: COUNT                                         ! loop counter
-   INTEGER(IntKi)                :: NumOuts                                   ! Number of output channel names read from the file 
    INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
      
    INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
    LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
    CHARACTER(LEN(ErrMsg))        :: ErrMsg2                                   ! Temporary Error message
    CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
-   CHARACTER(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
-   CHARACTER(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
 
    
       ! Initialize some variables:
@@ -260,15 +253,12 @@ CONTAINS
    REAL(ReKi)                    :: TmpRAry3(3)      ! Temporary variable to read table from file
    INTEGER(IntKi)                :: I                                         ! loop counter
       INTEGER(IntKi)                :: J                                         ! loop counter
-   INTEGER(IntKi)                :: NumOuts                                   ! Number of output channel names read from the file 
    INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
      
    INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
    LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
    CHARACTER(LEN(ErrMsg))        :: ErrMsg2                                   ! Temporary Error message
    CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
-   CHARACTER(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
-   CHARACTER(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
 
    
       ! Initialize some variables:
@@ -373,15 +363,12 @@ CONTAINS
    REAL(ReKi)                    :: TmpRAry3(3)      ! Temporary variable to read table from file
    INTEGER(IntKi)                :: I                                         ! loop counter
    INTEGER(IntKi)                :: J                                         ! loop counter
-   INTEGER(IntKi)                :: NumOuts                                   ! Number of output channel names read from the file 
    INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
      
    INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
    LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
    CHARACTER(LEN(ErrMsg))        :: ErrMsg2                                   ! Temporary Error message
    CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
-   CHARACTER(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
-   CHARACTER(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
 
    
       ! Initialize some variables:
@@ -485,15 +472,12 @@ END SUBROUTINE ReadAngAccelFile
    REAL(ReKi)                    :: TmpRAry3(3)      ! Temporary variable to read table from file
    INTEGER(IntKi)                :: I                                         ! loop counter
    INTEGER(IntKi)                :: J                                        ! loop counter
-   INTEGER(IntKi)                :: NumOuts                                   ! Number of output channel names read from the file 
    INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
      
    INTEGER(IntKi)                :: ErrStat2                                  ! Temporary Error status
    LOGICAL                       :: Echo                                      ! Determines if an echo file should be written
    CHARACTER(LEN(ErrMsg))        :: ErrMsg2                                   ! Temporary Error message
    CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
-   CHARACTER(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
-   CHARACTER(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
 
    
       ! Initialize some variables:
@@ -702,8 +686,6 @@ PROGRAM TestTemplate
     REAL(ReKi), ALLOCATABLE :: Re_SaveAry (:) ! Array to store reals in packed data structure
     REAL(DbKi), ALLOCATABLE :: Db_SaveAry (:) ! Array to store doubles in packed data structure
     INTEGER(IntKi), ALLOCATABLE :: Int_SaveAry (:) ! Array to store integers in packed data structure
-    Integer(IntKi) :: UnIn = 1
-    Real(ReKi), dimension(3) :: AngVel_NO
     Real(ReKi), dimension(9,NumSteps) :: APvec
     Real(ReKi), dimension(3,NumSteps) :: AVvec
     Real(ReKi), dimension(3,NumSteps) :: AAvec

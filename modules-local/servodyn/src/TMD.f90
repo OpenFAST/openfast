@@ -2,8 +2,8 @@
 ! WLaCava (WGL) and Matt Lackner (MAL)
 ! Tuned Mass Damper Module
 !**********************************************************************************************************************************
-! File last committed: $Date: 2015-11-17 11:50:33 -0700 (Tue, 17 Nov 2015) $
-! (File) Revision #: $Rev: 1174 $
+! File last committed: $Date: 2015-11-17 13:48:23 -0700 (Tue, 17 Nov 2015) $
+! (File) Revision #: $Rev: 1175 $
 ! URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/FOA_modules/TMD/Source/TMD.f90 $
 !**********************************************************************************************************************************
 MODULE TMD  
@@ -16,7 +16,7 @@ MODULE TMD
    PRIVATE
 
   
-   TYPE(ProgDesc), PARAMETER            :: TMD_Ver = ProgDesc( 'TMD', 'v1.01.00-wgl', '09-January-2015' )
+   TYPE(ProgDesc), PARAMETER            :: TMD_Ver = ProgDesc( 'TMD', 'v1.01.00-wgl', '17-Nov-2015' )
 
     
    
@@ -49,11 +49,19 @@ MODULE TMD
    
  
    INTEGER(IntKi), PRIVATE, PARAMETER :: ControlMode_NONE      = 0          ! The (ServoDyn-universal) control code for not using a particular type of control
-   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Semi            = 1          ! semi-active control 
-   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Active          = 2          ! active control
+   
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Indept        = 1          ! independent DOFs 
    INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Omni          = 2          ! omni-directional
+
+   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Semi            = 1          ! semi-active control 
+   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Active          = 2          ! active control
                                                     
+   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_vel       = 1          ! 1: velocity-based ground hook control;
+   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_invVel    = 2          ! 2: Inverse velocity-based ground hook control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_disp      = 3          ! 3: displacement-based ground hook control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_Ph_FF        = 4          ! 4: Phase difference Algorithm with Friction Force
+   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_Ph_DF        = 5          ! 5: Phase difference Algorithm with Damping Force
+      
                                                     
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -119,21 +127,30 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, 
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
-!.............      
-! @todo bjj: need to validate these switches: TMD_CMODE and TMD_SA_MODE
-!..............
       
    !CALL ValidatePrimaryData( InputFileData, InitInp%NumBl, ErrStat2, ErrMsg2 )
    !   CALL CheckError( ErrStat2, ErrMsg2 )
    !    IF (ErrStat >= AbortErrLev) RETURN
 
-   IF ( InputFileData%TMD_CMODE /= ControlMode_None .and. InputFileData%TMD_CMODE /= CMODE_Semi .and. InputFileData%TMD_CMODE /= CMODE_Active) &
-      CALL SetErrStat( ErrID_Fatal, 'Control mode (TMD_CMode) must be 0 (none), 1 (semi-active), or 2 (active).', ErrStat, ErrMsg, RoutineName )
-   
    IF ( InputFileData%TMD_DOF_MODE /= ControlMode_None .and. InputFileData%TMD_DOF_MODE /= DOFMode_Indept .and. InputFileData%TMD_DOF_MODE /= DOFMode_Omni ) &
       CALL SetErrStat( ErrID_Fatal, 'DOF mode (TMD_DOF_MODE) must be 0 (no DOF), 1 (two independent DOFs), or 2 (omni-directional).', ErrStat, ErrMsg, RoutineName )
+
+   IF ( InputFileData%TMD_CMODE /= ControlMode_None .and. InputFileData%TMD_CMODE /= CMODE_Semi ) &
+      CALL SetErrStat( ErrID_Fatal, 'Control mode (TMD_CMode) must be 0 (none) or 1 (semi-active) in this version of TMD.', ErrStat, ErrMsg, RoutineName )
+!   IF ( InputFileData%TMD_CMODE /= ControlMode_None .and. InputFileData%TMD_CMODE /= CMODE_Semi .and. InputFileData%TMD_CMODE /= CMODE_Active) &
+!      CALL SetErrStat( ErrID_Fatal, 'Control mode (TMD_CMode) must be 0 (none), 1 (semi-active), or 2 (active).', ErrStat, ErrMsg, RoutineName )
+      
+   IF ( InputFileData%TMD_SA_MODE /= SA_CMODE_GH_vel    .and. &
+        InputFileData%TMD_SA_MODE /= SA_CMODE_GH_invVel .and. &
+        InputFileData%TMD_SA_MODE /= SA_CMODE_GH_disp   .and. &
+        InputFileData%TMD_SA_MODE /= SA_CMODE_Ph_FF     .and. &
+        InputFileData%TMD_SA_MODE /= SA_CMODE_Ph_DF     ) then
+      CALL SetErrStat( ErrID_Fatal, 'Semi-active control mode (TMD_SA_MODE) must be 1 (velocity-based ground hook control), '// &
+                   '2 (inverse velocity-based ground hook control), 3 (displacement-based ground hook control), '// &
+                   '4 (phase difference algorithm with friction force), or 5 (phase difference algorithm with damping force).', ErrStat, ErrMsg, RoutineName )
+   END IF
    
-   
+      
       !............................................................................................
       ! Define parameters here:
       !............................................................................................
@@ -374,7 +391,6 @@ SUBROUTINE TMD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       CALL TMD_DestroyOutput( y, ErrStat, ErrMsg )     
 
 END SUBROUTINE TMD_End
-
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE TMD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 ! Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
@@ -410,7 +426,7 @@ SUBROUTINE TMD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, 
       CALL TMD_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       
 END SUBROUTINE TMD_UpdateStates
-
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !
 ! This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
@@ -589,7 +605,6 @@ CONTAINS
    END SUBROUTINE CheckError                    
       
 END SUBROUTINE TMD_RK4
-
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )   
 ! Routine for computing outputs, used in both loose and tight coupling.
@@ -860,7 +875,7 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrSt
       IF (p%TMD_CMODE == ControlMode_None) THEN
          OtherState%C_ctrl(1) = p%C_X
          OtherState%C_ctrl(2) = p%C_Y
-      ELSE IF (p%TMD_CMODE == 1 .OR. p%TMD_CMODE == 2 .OR. p%TMD_CMODE == 3 .OR. p%TMD_CMODE == 4 .OR. p%TMD_CMODE == 5) THEN ! ground hook control
+      ELSE IF (p%TMD_CMODE == CMODE_Semi) THEN ! ground hook control
          CALL TMD_GroundHookDamp(x,u,p,OtherState%C_ctrl,OtherState%C_Brake,OtherState%F_fr)
       END IF
       
@@ -941,7 +956,7 @@ CONTAINS
       REAL(ReKi), dimension(2),              INTENT(INOUT)     :: C_Brake     ! extrapolated/interpolated stiffness values
       REAL(ReKi), dimension(2),              INTENT(INOUT)     :: F_fr        ! Friction forces
       
-      IF (p%TMD_CMODE == 1) THEN ! velocity-based ground hook control with high damping for braking
+      IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_GH_vel) THEN ! velocity-based ground hook control with high damping for braking
       
          !X
          IF (dxdt%tmd_x(1) * u%Mesh%TranslationVel(1,1) <= 0 ) THEN
@@ -976,7 +991,7 @@ CONTAINS
             OtherState%C_Brake(2) = 0
          END IF
          
-      ELSE IF (p%TMD_CMODE == 2) THEN ! Inverse velocity-based ground hook control with high damping for braking
+      ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_GH_invVel) THEN ! Inverse velocity-based ground hook control with high damping for braking
       
          ! X
          IF (dxdt%tmd_x(1) * u%Mesh%TranslationVel(1,1) >= 0 ) THEN
@@ -1010,7 +1025,7 @@ CONTAINS
             OtherState%C_Brake(2) = 0
          END IF
 
-      ELSE IF (p%TMD_CMODE == 3) THEN ! displacement-based ground hook control with high damping for braking
+      ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_GH_disp) THEN ! displacement-based ground hook control with high damping for braking
       
          ! X
          IF (dxdt%tmd_x(1) * u%Mesh%TranslationDisp(1,1) <= 0 ) THEN
@@ -1043,14 +1058,12 @@ CONTAINS
          ELSE
             OtherState%C_Brake(2) = 0
          END IF
-
-    ! Start of the proposed change : Phase Difference Algorithm by sm 2015-0904
          
-      ELSE IF (p%TMD_CMODE == 4) THEN ! Phase Difference Algorithm with Friction Force
+      ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_Ph_FF) THEN ! Phase Difference Algorithm with Friction Force
             ! X
             ! (a)
          IF (u%Mesh%TranslationDisp(1,1) > 0 .AND. u%Mesh%TranslationVel(1,1) < 0 .AND. x%tmd_x(1) > 0 .AND. dxdt%tmd_x(1) < 0) THEN
-         OtherState%F_fr(1) = p%TMD_X_C_HIGH
+            OtherState%F_fr(1) = p%TMD_X_C_HIGH
             ! (b)
             ELSE IF (u%Mesh%TranslationDisp(1,1) < 0 .AND. u%Mesh%TranslationVel(1,1) > 0 .AND. x%tmd_x(1) < 0 .AND. dxdt%tmd_x(1) > 0) THEN
             OtherState%F_fr(1) = -p%TMD_X_C_HIGH
@@ -1075,7 +1088,7 @@ CONTAINS
             ! Y
             ! (a)
          IF (u%Mesh%TranslationDisp(2,1) > 0 .AND. u%Mesh%TranslationVel(2,1) < 0 .AND. x%tmd_x(3) > 0 .AND. dxdt%tmd_x(3) < 0) THEN
-         OtherState%F_fr(2) = p%TMD_Y_C_HIGH
+            OtherState%F_fr(2) = p%TMD_Y_C_HIGH
             ! (b)
             ELSE IF (u%Mesh%TranslationDisp(2,1) < 0 .AND. u%Mesh%TranslationVel(2,1) > 0 .AND. x%tmd_x(3) < 0 .AND. dxdt%tmd_x(3) > 0) THEN
             OtherState%F_fr(2) = -p%TMD_Y_C_HIGH
@@ -1097,11 +1110,11 @@ CONTAINS
             OtherState%C_Brake(2) = 0
          END IF
 
-      ELSE IF (p%TMD_CMODE == 5) THEN ! Phase Difference Algorithm with Damping On/Off
+      ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_Ph_DF) THEN ! Phase Difference Algorithm with Damping On/Off
             ! X
             ! (a)
          IF (u%Mesh%TranslationDisp(1,1) > 0 .AND. u%Mesh%TranslationVel(1,1) < 0 .AND. x%tmd_x(1) > 0 .AND. dxdt%tmd_x(1) < 0) THEN
-         OtherState%C_ctrl(1) = p%TMD_X_C_HIGH
+            OtherState%C_ctrl(1) = p%TMD_X_C_HIGH
             ! (b)
             ELSE IF (u%Mesh%TranslationDisp(1,1) < 0 .AND. u%Mesh%TranslationVel(1,1) > 0 .AND. x%tmd_x(1) < 0 .AND. dxdt%tmd_x(1) > 0) THEN
             OtherState%C_ctrl(1) = p%TMD_X_C_HIGH
@@ -1126,7 +1139,7 @@ CONTAINS
             ! Y
             ! (a)
          IF (u%Mesh%TranslationDisp(2,1) > 0 .AND. u%Mesh%TranslationVel(2,1) < 0 .AND. x%tmd_x(3) > 0 .AND. dxdt%tmd_x(3) < 0) THEN
-         OtherState%C_ctrl(2) = p%TMD_Y_C_HIGH
+            OtherState%C_ctrl(2) = p%TMD_Y_C_HIGH
             ! (b)
             ELSE IF (u%Mesh%TranslationDisp(2,1) < 0 .AND. u%Mesh%TranslationVel(2,1) > 0 .AND. x%tmd_x(3) < 0 .AND. dxdt%tmd_x(3) > 0) THEN
             OtherState%C_ctrl(2) = p%TMD_Y_C_HIGH
@@ -1150,9 +1163,6 @@ CONTAINS
 
     END IF
     
-      
-      
-    ! End of the proposed change : Phase Difference Algorithm by sm 2015-0904
        
    END SUBROUTINE TMD_GroundHookDamp
    
@@ -1541,7 +1551,12 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
       CALL CheckError( ErrStat2, ErrMsg2 )
       
     ! TMD_CMODE:
-   CALL ReadVar( UnIn, InputFile, InputFileData%TMD_CMODE, "TMD_CMODE", "control mode {0:none; 1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm} ", ErrStat2, ErrMsg2, UnEc)
+   CALL ReadVar( UnIn, InputFile, InputFileData%TMD_CMODE, "TMD_CMODE", "control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;} ", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+
+    ! TMD_SA_MODE:
+   CALL ReadVar( UnIn, InputFile, InputFileData%TMD_SA_MODE, "TMD_SA_MODE", "Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} ", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
       
@@ -1637,7 +1652,7 @@ CONTAINS
    END SUBROUTINE CheckError
    !...............................................................................................................................
 END SUBROUTINE ReadPrimaryFile      
-!-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE TMD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
 ! This subroutine sets the parameters, based on the data stored in InputFileData
 !..................................................................................................................................
@@ -1699,6 +1714,7 @@ SUBROUTINE TMD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    
    ! ground hook control damping files 
    p%TMD_CMODE = InputFileData%TMD_CMODE
+   p%TMD_SA_MODE = InputFileData%TMD_SA_MODE
    p%TMD_X_C_HIGH = InputFileData%TMD_X_C_HIGH
    p%TMD_X_C_LOW = InputFileData%TMD_X_C_LOW
    p%TMD_Y_C_HIGH = InputFileData%TMD_Y_C_HIGH
@@ -1717,6 +1733,6 @@ SUBROUTINE TMD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    p%F_TBL = InputFileData%F_TBL;
                       
 END SUBROUTINE TMD_SetParameters   
-!-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+!----------------------------------------------------------------------------------------------------------------------------------
 END MODULE TMD
 !**********************************************************************************************************************************

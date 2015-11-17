@@ -36,7 +36,8 @@ IMPLICIT NONE
 ! =========  TMD_InputFile  =======
   TYPE, PUBLIC :: TMD_InputFile
     CHARACTER(1024)  :: TMDFileName      ! Name of the input file; remove if there is no file [-]
-    INTEGER(IntKi)  :: TMD_CMODE      ! control mode {0:none; 1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control; 4: Phase difference Algorithm with Friction Force; 5: Phase difference Algorithm with Dampong On/Off }  [-]
+    INTEGER(IntKi)  :: TMD_CMODE      ! control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;}  [-]
+    INTEGER(IntKi)  :: TMD_SA_MODE      ! Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
     INTEGER(IntKi)  :: TMD_DOF_MODE      ! DOF mode {0: NO TMD_DOF; 1: TMD_X_DOF and TMD_Y_DOF; 2: TMD_XY_DOF}  [-]
     LOGICAL  :: TMD_X_DOF      ! DOF on or off [-]
     LOGICAL  :: TMD_Y_DOF      ! DOF on or off [-]
@@ -132,7 +133,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:2)  :: N_SP      ! Negative stop position (minimum X mass displacement) [m]
     REAL(ReKi) , DIMENSION(1:3)  :: F_ext      ! External forces (for user modification) [-]
     REAL(ReKi)  :: Gravity      ! Gravitational acceleration [m/s^2]
-    INTEGER(IntKi)  :: TMD_CMODE      ! control mode {0:none; 1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm}  [-]
+    INTEGER(IntKi)  :: TMD_CMODE      ! control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;}  [-]
+    INTEGER(IntKi)  :: TMD_SA_MODE      ! Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force}  [-]
     REAL(ReKi)  :: TMD_X_C_HIGH      ! TMD X high damping for ground hook control [N/(m/s)]
     REAL(ReKi)  :: TMD_X_C_LOW      ! TMD X low damping for ground hook control [N/(m/s)]
     REAL(ReKi)  :: TMD_Y_C_HIGH      ! TMD Y high damping for ground hook control [N/(m/s)]
@@ -172,6 +174,7 @@ CONTAINS
    ErrMsg  = ""
     DstInputFileData%TMDFileName = SrcInputFileData%TMDFileName
     DstInputFileData%TMD_CMODE = SrcInputFileData%TMD_CMODE
+    DstInputFileData%TMD_SA_MODE = SrcInputFileData%TMD_SA_MODE
     DstInputFileData%TMD_DOF_MODE = SrcInputFileData%TMD_DOF_MODE
     DstInputFileData%TMD_X_DOF = SrcInputFileData%TMD_X_DOF
     DstInputFileData%TMD_Y_DOF = SrcInputFileData%TMD_Y_DOF
@@ -270,6 +273,7 @@ ENDIF
   Int_BufSz  = 0
       Int_BufSz  = Int_BufSz  + 1*LEN(InData%TMDFileName)  ! TMDFileName
       Int_BufSz  = Int_BufSz  + 1  ! TMD_CMODE
+      Int_BufSz  = Int_BufSz  + 1  ! TMD_SA_MODE
       Int_BufSz  = Int_BufSz  + 1  ! TMD_DOF_MODE
       Int_BufSz  = Int_BufSz  + 1  ! TMD_X_DOF
       Int_BufSz  = Int_BufSz  + 1  ! TMD_Y_DOF
@@ -338,6 +342,8 @@ ENDIF
           Int_Xferred = Int_Xferred   + 1
         END DO ! I
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%TMD_CMODE
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%TMD_SA_MODE
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%TMD_DOF_MODE
       Int_Xferred   = Int_Xferred   + 1
@@ -460,6 +466,8 @@ ENDIF
         Int_Xferred = Int_Xferred   + 1
       END DO ! I
       OutData%TMD_CMODE = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%TMD_SA_MODE = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%TMD_DOF_MODE = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
@@ -1576,6 +1584,7 @@ ENDIF
     DstParamData%F_ext = SrcParamData%F_ext
     DstParamData%Gravity = SrcParamData%Gravity
     DstParamData%TMD_CMODE = SrcParamData%TMD_CMODE
+    DstParamData%TMD_SA_MODE = SrcParamData%TMD_SA_MODE
     DstParamData%TMD_X_C_HIGH = SrcParamData%TMD_X_C_HIGH
     DstParamData%TMD_X_C_LOW = SrcParamData%TMD_X_C_LOW
     DstParamData%TMD_Y_C_HIGH = SrcParamData%TMD_Y_C_HIGH
@@ -1669,6 +1678,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%F_ext)  ! F_ext
       Re_BufSz   = Re_BufSz   + 1  ! Gravity
       Int_BufSz  = Int_BufSz  + 1  ! TMD_CMODE
+      Int_BufSz  = Int_BufSz  + 1  ! TMD_SA_MODE
       Re_BufSz   = Re_BufSz   + 1  ! TMD_X_C_HIGH
       Re_BufSz   = Re_BufSz   + 1  ! TMD_X_C_LOW
       Re_BufSz   = Re_BufSz   + 1  ! TMD_Y_C_HIGH
@@ -1751,6 +1761,8 @@ ENDIF
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%Gravity
       Re_Xferred   = Re_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%TMD_CMODE
+      Int_Xferred   = Int_Xferred   + 1
+      IntKiBuf ( Int_Xferred:Int_Xferred+(1)-1 ) = InData%TMD_SA_MODE
       Int_Xferred   = Int_Xferred   + 1
       ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%TMD_X_C_HIGH
       Re_Xferred   = Re_Xferred   + 1
@@ -1906,6 +1918,8 @@ ENDIF
       OutData%Gravity = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1
       OutData%TMD_CMODE = IntKiBuf( Int_Xferred ) 
+      Int_Xferred   = Int_Xferred + 1
+      OutData%TMD_SA_MODE = IntKiBuf( Int_Xferred ) 
       Int_Xferred   = Int_Xferred + 1
       OutData%TMD_X_C_HIGH = ReKiBuf( Re_Xferred )
       Re_Xferred   = Re_Xferred + 1

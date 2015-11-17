@@ -7,14 +7,15 @@
 #
 # Use ^ as a shortcut for the value from the previous line.
 ###################################################################################################################################
-# File last committed: $Date: 2015-11-17 11:50:33 -0700 (Tue, 17 Nov 2015) $
-# (File) Revision #: $Rev: 1174 $
+# File last committed: $Date: 2015-02-09 22:29:06 -0700 (Mon, 09 Feb 2015) $
+# (File) Revision #: $Rev: 913 $
 # URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/FOA_modules/TMD/Source/TMD_Registry.txt $
 ###################################################################################################################################
 
 # ..... Input File data .......................................................................................................
 typedef TMD/TMD TMD_InputFile CHARACTER(1024) TMDFileName - - - "Name of the input file; remove if there is no file" -
-typedef	^		^				INTEGER			TMD_CMODE	-	-	-	"control mode {0:none; 1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control; 4: Phase difference Algorithm with Friction Force; 5: Phase difference Algorithm with Dampong On/Off } "	-
+typedef	^		^				INTEGER			TMD_CMODE	-	-	-	"control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;} "	-
+typedef	^		^				INTEGER			TMD_SA_MODE	-	-	-	"Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} "	-
 typedef	^		^				INTEGER			TMD_DOF_MODE	-	-	-	"DOF mode {0: NO TMD_DOF; 1: TMD_X_DOF and TMD_Y_DOF; 2: TMD_XY_DOF} "	-
 typedef	^		^				LOGICAL			TMD_X_DOF	-	-	-	"DOF on or off"	-
 typedef	^		^				LOGICAL			TMD_Y_DOF	-	-	-	"DOF on or off"	-
@@ -98,7 +99,8 @@ typedef	^		^				ReKi			P_SP	{2}	-	-	"Positive stop position (maximum mass displa
 typedef	^		^				ReKi			N_SP	{2}	-	-	"Negative stop position (minimum X mass displacement)" m
 typedef	^		^				ReKi			F_ext	{3}	-	-	"External forces (for user modification)"	-
 typedef	^		^				ReKi			Gravity	-	-	-	"Gravitational acceleration"	"m/s^2"
-typedef	^		^				INTEGER			TMD_CMODE	-	-	-	"control mode {0:none; 1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm} "	-
+typedef	^		^				INTEGER			TMD_CMODE	-	-	-	"control mode {0:none; 1: Semi-Active Control Mode; 2: Active Control Mode;} "	-
+typedef	^		^				INTEGER			TMD_SA_MODE	-	-	-	"Semi-Active control mode {1: velocity-based ground hook control; 2: Inverse velocity-based ground hook control; 3: displacement-based ground hook control 4: Phase difference Algorithm with Friction Force 5: Phase difference Algorithm with Damping Force} "	-
 typedef	^		^				ReKi			TMD_X_C_HIGH	-	-	-	"TMD X high damping for ground hook control"	"N/(m/s)"
 typedef	^		^				ReKi			TMD_X_C_LOW		-	-	-	"TMD X low damping for ground hook control"	"N/(m/s)"
 typedef	^		^				ReKi			TMD_Y_C_HIGH		-	-	-	"TMD Y high damping for ground hook control"	"N/(m/s)"
