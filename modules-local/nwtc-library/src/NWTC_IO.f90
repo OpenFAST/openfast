@@ -200,6 +200,7 @@ MODULE NWTC_IO
       MODULE PROCEDURE DispNVD2        ! Two arguments of TYPE character
    END INTERFACE
 
+      !> \copydoc nwtc_io::wrmatrix1r4
    INTERFACE WrMatrix
       MODULE PROCEDURE WrMatrix1R4     ! Single dimension matrix (Ary) of SiKi
       MODULE PROCEDURE WrMatrix2R4     ! Two dimension matrix of SiKi
@@ -207,6 +208,7 @@ MODULE NWTC_IO
       MODULE PROCEDURE WrMatrix2R8     ! Two dimension matrix of R8Ki
    END INTERFACE
 
+      !> \copydoc nwtc_io::wrr4aryfilenr
    INTERFACE WrNumAryFileNR
       MODULE PROCEDURE WrR4AryFileNR
       MODULE PROCEDURE WrR8AryFileNR
@@ -263,7 +265,7 @@ CONTAINS
 !> This routine allocates an array to the size specified in the AryDim input arguement(s).
 !! Arrays are of type ALLOCATABLE.   
 !! If the array is already allocated on entry to this routine, an error will be generated. \n
-!! Use AllocAry (nwtc_num::allocary) instead of directly calling a specific routine in the generic interface.   
+!! Use AllocAry (nwtc_io::allocary) instead of directly calling a specific routine in the generic interface.   
    SUBROUTINE AllCAry1 ( Ary, AryDim1, Descr, ErrStat, ErrMsg )
 
       ! This routine allocates a 1-D CHARACTER array.
@@ -540,7 +542,7 @@ CONTAINS
 !! Arrays are of type POINTER.   
 !! If the array pointer is already associated on entry to this routine, the array it points to 
 !!  will be deallocated first. \n
-!! Use AllocPAry (nwtc_num::allocpary) instead of directly calling a specific routine in the generic interface.   
+!! Use AllocPAry (nwtc_io::allocpary) instead of directly calling a specific routine in the generic interface.   
    SUBROUTINE AllIPAry1 ( Ary, AryDim1, Descr, ErrStat, ErrMsg )
 
       ! This routine allocates a 1-D INTEGER array.
@@ -4085,7 +4087,7 @@ CONTAINS
    END SUBROUTINE ParseSiVarWDefault
 !=======================================================================
 !> This routine determines if the given file name is absolute or relative.
-!! We'll consider an absolute path one that satisfies one of the
+!! We will consider an absolute path one that satisfies one of the
 !! following four criteria:
 !!     1. It contains ":/"
 !!     2. It contains ":\"
@@ -4100,14 +4102,17 @@ CONTAINS
    CHARACTER(*), INTENT(IN)     :: GivenFil                                            !< The name of the given file.
    LOGICAL                      :: PathIsRelative                                      !< The function return value
 
+   
 
-      ! Determine if file name begins with an absolute path name or if it is relative
+      ! Determine if file name begins with an absolute path name or if it is relative 
+      !    note that Doxygen has serious issues if you use the single quote instead of  
+      !    double quote characters in the strings below:
 
    PathIsRelative = .FALSE.
 
-   IF ( ( INDEX( GivenFil, ':/') == 0 ) .AND. ( INDEX( GivenFil, ':\') == 0 ) ) THEN   ! No drive is specified (by ':\' or ':/')
+   IF ( ( INDEX( GivenFil, ":/") == 0 ) .AND. ( INDEX( GivenFil, ":\") == 0 ) ) THEN   ! No drive is specified (by ":\" or ":/")
 
-      IF ( INDEX( '/\', GivenFil(1:1) ) == 0 ) THEN                                    ! The file name doesn't start with '\' or '/'
+      IF ( INDEX( "/\", GivenFil(1:1) ) == 0 ) THEN                                    ! The file name doesn't start with "\" or "/"
 
          PathIsRelative = .TRUE.
 
@@ -4317,7 +4322,7 @@ CONTAINS
 
       ! Argument declarations.
 
-   REAL(ReKi), INTENT(IN), OPTIONAL       :: TimeWait             !< Tells whether to wait for TimeWait s, or pause if <0.
+   REAL(ReKi), INTENT(IN), OPTIONAL       :: TimeWait             !< Tells whether to wait for TimeWait s, or pause if < 0.
 
    INTEGER(IntKi), INTENT(IN), OPTIONAL   :: ErrLevel             !< The error level to report to the OS.
 
@@ -5999,12 +6004,11 @@ CONTAINS
    RETURN
    END SUBROUTINE ReadStr
 !=======================================================================   
+!> This routine removes trailing C_NULL characters, which can be present when
+!! passing strings between C and Fortran.
    SUBROUTINE RemoveNullChar( Str )
-   
-      ! This routine removes trailing C_NULL characters, which can be present when
-      ! passing strings between C and Fortran
-      
-      CHARACTER(*), INTENT(INOUT) :: Str
+         
+      CHARACTER(*), INTENT(INOUT) :: Str   !< string that will be truncated before the null character
    
       INTEGER(IntKi)  :: I
    
@@ -6013,32 +6017,29 @@ CONTAINS
    
    END SUBROUTINE RemoveNullChar   
 !=============================================================================
+!> This routine opens and scans the contents of a file with comments counting non-comment lines.
+!! If a line has "@Filename" on a line, it recursively scans that file to add the non-comment lines
+!! to the total.
+!! This routine is typically called before ReadComFile() (nwtc_io::readcomfile) to count the number on non-comment lines
+!! that will need to be stored.
+!! It also adds to a linked list of unique file names that are in the call chain.
    RECURSIVE SUBROUTINE ScanComFile ( FirstFile, ThisFile, LastFile, StartLine, LastLine, NumLines, ErrStat, ErrMsg )
-
-
-         ! This routine opens and scans the contents of a file with comments counting non-comment lines.
-         ! If a line has "@Filename" on a line, it recursively scans that file to add the non-comment lines
-         ! to the total.
-         ! This routine is typically called before ReadComFile() to count the number on non-comment lines
-         ! that will need to be stored.
-         ! It also adds to a linked list of unique file names that are in the call chain.
-
 
       IMPLICIT                                        NONE
 
 
          ! Argument declarations.
 
-      INTEGER(IntKi), INTENT(OUT)                  :: ErrStat                 ! Error status.
-      INTEGER(IntKi), INTENT(IN)                   :: LastLine                ! The last line to read from this file.  Includes blank and comment lines. Zero means read to the end of file.
-      INTEGER(IntKi), INTENT(INOUT)                :: NumLines                ! The total number of non-comment lines scanned so far.
-      INTEGER(IntKi), INTENT(IN)                   :: StartLine               ! The line at which to start processing this file.  Includes blank and comment lines.
+      INTEGER(IntKi), INTENT(OUT)                  :: ErrStat                 !< Error status.
+      INTEGER(IntKi), INTENT(IN)                   :: LastLine                !< The last line to read from this file.  Includes blank and comment lines. Zero means read to the end of file.
+      INTEGER(IntKi), INTENT(INOUT)                :: NumLines                !< The total number of non-comment lines scanned so far.
+      INTEGER(IntKi), INTENT(IN)                   :: StartLine               !< The line at which to start processing this file.  Includes blank and comment lines.
 
-      CHARACTER(*), INTENT(OUT)                    :: ErrMsg                  ! Error message.
+      CHARACTER(*), INTENT(OUT)                    :: ErrMsg                  !< Error message.
 
-      TYPE (FNlist_Type), POINTER, INTENT(IN)      :: FirstFile               ! The first file in the linked list.
-      TYPE (FNlist_Type), POINTER, INTENT(INOUT)   :: LastFile                ! The last file in the linked list.
-      TYPE (FNlist_Type), POINTER, INTENT(IN)      :: ThisFile                ! The last file in the linked list.
+      TYPE (FNlist_Type), POINTER, INTENT(IN)      :: FirstFile               !< The first file in the linked list.
+      TYPE (FNlist_Type), POINTER, INTENT(INOUT)   :: LastFile                !< The last file in the linked list.
+      TYPE (FNlist_Type), POINTER, INTENT(IN)      :: ThisFile                !< The last file in the linked list.
 
 
          ! Local declarations.
@@ -6230,20 +6231,20 @@ CONTAINS
 
    END SUBROUTINE ScanComFile
 !=======================================================================
+!> This routine converts a string (character array) into an 
+!! equivalent ASCII array of integers.
+!! This routine is the inverse of the IntAry2Str() routine.
    SUBROUTINE Str2IntAry( Str, IntAry, ErrStat, ErrMsg )
    
-      ! This routine converts a string (character array) into an 
-      ! equivalent ASCII array of integers.
-      ! This routine is the inverse of the IntAry2Str() routine.
 
          ! Argument declarations:
-      CHARACTER(*),   INTENT(IN)    :: Str                                          ! The string to convert
-      INTEGER(IntKi),  INTENT(OUT)  :: IntAry(:)                                    ! ASCII representation of Str
+      CHARACTER(*),   INTENT(IN)    :: Str                                          !< The string to convert
+      INTEGER(IntKi),  INTENT(OUT)  :: IntAry(:)                                    !< ASCII representation of Str
 
-      INTEGER(IntKi), INTENT(OUT)   :: ErrStat                                      ! Error status
-      CHARACTER(*),   INTENT(OUT)   :: ErrMsg                                       ! Error message associated with ErrStat
+      INTEGER(IntKi), INTENT(OUT)   :: ErrStat                                      !< Error status
+      CHARACTER(*),   INTENT(OUT)   :: ErrMsg                                       !< Error message associated with ErrStat
 
-         ! Argument declarations:
+         ! Local variables:
       INTEGER(IntKi)                :: I                                            ! generic loop counter
       INTEGER(IntKi)                :: LStr                                         ! length of the string
       INTEGER(IntKi)                :: LAry                                         ! length of the integer array
@@ -6272,19 +6273,16 @@ CONTAINS
 
    END SUBROUTINE Str2IntAry   
 !=======================================================================
+!> This routine pauses program executaion for a specified
+!! number of seconds.
    SUBROUTINE WaitTime ( WaitSecs )
-
-
-      ! This routine pauses program executaion for a specified
-      ! number of seconds.
-
 
    IMPLICIT NONE
 
 
       ! Argument declarations:
 
-   REAL(ReKi), INTENT(IN)       :: WaitSecs                                        ! The number of seconds to wait.
+   REAL(ReKi), INTENT(IN)       :: WaitSecs                                        !< The number of seconds to wait.
 
 
       ! Local declarations:
@@ -6309,14 +6307,13 @@ CONTAINS
    RETURN
    END SUBROUTINE WaitTime
 !=======================================================================
+!> This subroutine opens a binary file named FileName, and writes a the AllOutData Matrix to a 16-bit packed 
+!! binary file. A text DescStr is written to the file as well as the text in the ChanName and ChanUnit arrays.
+!!  The file is closed at the end of this subroutine call (and on error). \n
+!! NOTE: Developers may wish to inquire if the file can be opened at the start of a simulation to ensure that 
+!!       it's available before running the simulation (i.e., don't run a code for a long time only to find out 
+!!       that the file cannot be opened for writing).
    SUBROUTINE WrBinFAST(FileName, FileID, DescStr, ChanName, ChanUnit, TimeData, AllOutData, ErrStat, ErrMsg)
-
-   ! This subroutine opens a binary file named FileName, and writes a the AllOutData Matrix to a 16-bit packed 
-   ! binary file. A text DescStr is written to the file as well as the text in the ChanName and ChanUnit arrays.
-   !  The file is closed at the end of this subroutine call (and on error).
-   ! NOTE: Developers may wish to inquire if the file can be opened at the start of a simulation to ensure that 
-   !       it's available before running the simulation (i.e., don't run a code for a long time only to find out 
-   !       that the file cannot be opened for writing).
 
 
    IMPLICIT                     NONE
@@ -6326,16 +6323,16 @@ CONTAINS
 
       ! Passed data (sorted by element size, then alphabetical)
 
-   REAL(DbKi),        INTENT(IN) :: TimeData(:)                      ! The time being output to the file (if using FileFmtID_WithoutTime: element 1 is the first output time, element 2 is the delta t)
-   REAL(ReKi),        INTENT(IN) :: AllOutData(:,:)                  ! All of the data being written to the file (except time; note that the channels are the rows and time is the column--this is done for speed of saving the array)
-   INTEGER(IntKi),    INTENT(OUT):: ErrStat                          ! Indicates whether an error occurred (see NWTC_Library)
-   INTEGER(B2Ki),     INTENT(IN) :: FileID                           ! File ID, used to determine format of output file (use FileFmtID_WithTime or FileFmtID_WithoutTime)
+   REAL(DbKi),        INTENT(IN) :: TimeData(:)                      !< The time being output to the file (if using FileFmtID_WithoutTime: element 1 is the first output time, element 2 is the delta t)
+   REAL(ReKi),        INTENT(IN) :: AllOutData(:,:)                  !< All of the data being written to the file (except time; note that the channels are the rows and time is the column--this is done for speed of saving the array)
+   INTEGER(IntKi),    INTENT(OUT):: ErrStat                          !< Indicates whether an error occurred (see NWTC_Library)
+   INTEGER(B2Ki),     INTENT(IN) :: FileID                           !< File ID, used to determine format of output file (use FileFmtID_WithTime or FileFmtID_WithoutTime)
 
-   CHARACTER(LenName),INTENT(IN) :: ChanName(:)                      ! The output channel names (including Time)
-   CHARACTER(LenUnit),INTENT(IN) :: ChanUnit(:)                      ! The output channel units (including Time)
-   CHARACTER(*),      INTENT(IN) :: DescStr                          ! Description to write to the binary file (e.g., program version, date, & time)
-   CHARACTER(*),      INTENT(OUT):: ErrMsg                           ! Error message associated with the ErrStat
-   CHARACTER(*),      INTENT(IN) :: FileName                         ! Name of the file to write the output in
+   CHARACTER(LenName),INTENT(IN) :: ChanName(:)                      !< The output channel names (including Time)
+   CHARACTER(LenUnit),INTENT(IN) :: ChanUnit(:)                      !< The output channel units (including Time)
+   CHARACTER(*),      INTENT(IN) :: DescStr                          !< Description to write to the binary file (e.g., program version, date, & time)
+   CHARACTER(*),      INTENT(OUT):: ErrMsg                           !< Error message associated with the ErrStat
+   CHARACTER(*),      INTENT(IN) :: FileName                         !< Name of the file to write the output in
 
 
          ! Parameters required for scaling Real data to 16-bit integers
@@ -6725,11 +6722,8 @@ CONTAINS
    !...............................................................................................................................
    END SUBROUTINE WrBinFAST
 !==================================================================================================================================
+!> This routine writes out a string to the file connected to Unit without following it with a new line.
    SUBROUTINE WrFileNR ( Unit, Str )
-
-
-      ! This routine writes out a string to the file connected to Unit without following it with a new line.
-
 
       ! Argument declarations.
 
@@ -6745,18 +6739,19 @@ CONTAINS
    RETURN
    END SUBROUTINE WrFileNR
 !=======================================================================
+!> This routine writes all the values of a 1- or 2-dimensional array, A, 
+!! of real numbers to unit Un, using ReFmt for each individual value
+!! in the array. If MatName is present, it also preceeds the matrix
+!! with "MatName" and the number of rows (dimension 1 of A) and columns (dimension 2 of A).
+!! It is useful for debugging and/or writing summary files.
+!! Use WrMatrix (nwtc_io::wrmatrix) instead of directly calling a specific routine in the generic interface.
    SUBROUTINE WrMatrix1R4( A, Un, ReFmt, MatName )
    
-      ! This routine writes all the values of a 1-dimensional matrix, A, 
-      ! of 4-byte real numbers to unit Un, using ReFmt for each individual value
-      ! in the array. If MatName is present, it also preceeds the matrix
-      ! with "MatName" and the number of rows (length of A) and columns (1).
-      ! Useful for debugging and/or writing summary files.
       
-      REAL(SiKi),             INTENT(IN) :: A(:)
-      INTEGER,           INTENT(IN) :: Un
-      CHARACTER(*),           INTENT(IN) :: ReFmt     ! Format for printing ReKi numbers  
-      CHARACTER(*), OPTIONAL, INTENT(IN) :: MatName
+      REAL(SiKi),             INTENT(IN) :: A(:)      !< vector/matrix to be written
+      INTEGER,                INTENT(IN) :: Un        !< Fortran unit number where matrix will be written
+      CHARACTER(*),           INTENT(IN) :: ReFmt     !< Format for printing numbers  
+      CHARACTER(*), OPTIONAL, INTENT(IN) :: MatName   !< name of matrix
 
       INTEGER        :: ErrStat
       INTEGER        :: nr  ! size (rows and columns) of A
@@ -6780,17 +6775,12 @@ CONTAINS
    RETURN
    END SUBROUTINE WrMatrix1R4
 !=======================================================================
+!> \copydoc nwtc_io::wrmatrix1r4
    SUBROUTINE WrMatrix1R8( A, Un, ReFmt, MatName )
    
-      ! This routine writes all the values of a 1-dimensional matrix, A, 
-      ! of 8-byte real numbers to unit Un, using ReFmt for each individual value
-      ! in the array. If MatName is present, it also preceeds the matrix
-      ! with "MatName" and the number of rows (length of A) and columns (1).
-      ! Useful for debugging and/or writing summary files.
-   
       REAL(R8Ki),             INTENT(IN) :: A(:)
-      INTEGER,        INTENT(IN) :: Un
-      CHARACTER(*),   INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers
+      INTEGER,                INTENT(IN) :: Un
+      CHARACTER(*),           INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers
       CHARACTER(*), OPTIONAL, INTENT(IN) :: MatName
 
       INTEGER        :: ErrStat
@@ -6815,14 +6805,9 @@ CONTAINS
    RETURN
    END SUBROUTINE WrMatrix1R8
 !=======================================================================
+!> \copydoc nwtc_io::wrmatrix1r4
    SUBROUTINE WrMatrix2R4( A, Un, ReFmt, MatName )
-   
-      ! This routine writes all the values of a 2-dimensional matrix, A, 
-      ! of 4-byte real numbers to unit Un, using ReFmt for each individual value
-      ! in the array. If MatName is present, it also preceeds the matrix
-      ! with "MatName" and the number of rows and columns in A.
-      ! Useful for debugging and/or writing summary files.
-   
+      
       REAL(SiKi),             INTENT(IN) :: A(:,:)
       INTEGER,                INTENT(IN) :: Un
       CHARACTER(*),           INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
@@ -6856,13 +6841,8 @@ CONTAINS
    RETURN
    END SUBROUTINE WrMatrix2R4
 !=======================================================================
+!> \copydoc nwtc_io::wrmatrix1r4
    SUBROUTINE WrMatrix2R8( A, Un, ReFmt, MatName )
-   
-      ! This routine writes all the values of a 2-dimensional matrix, A, 
-      ! of 8-byte real numbers to unit Un, using ReFmt for each individual value
-      ! in the array. If MatName is present, it also preceeds the matrix
-      ! with "MatName" and the number of rows and columns in A.
-      ! Useful for debugging and/or writing summary files.
    
       REAL(R8Ki),             INTENT(IN) :: A(:,:)
       INTEGER,                INTENT(IN) :: Un
@@ -6897,34 +6877,13 @@ CONTAINS
    RETURN
    END SUBROUTINE WrMatrix2R8
 !=======================================================================  
-   SUBROUTINE WrML ( Str )
-
-
-      ! This routine writes out a string in the middle of a line.
-
-
-      ! Argument declarations.
-
-   CHARACTER(*)                 :: Str
-
-
-
-   CALL WrNR ( Str )
-
-
-   RETURN
-   END SUBROUTINE WrML
-!=======================================================================
+!> This routine writes out a prompt to the screen without
+!! following it with a new line, though a new line precedes it.
    SUBROUTINE WrPr ( Str )
-
-
-      ! This routine writes out a prompt to the screen without
-      ! following it with a new line, though a new line precedes it.
-
 
       ! Argument declarations:
 
-   CHARACTER(*), INTENT(IN)     :: Str                                          ! The prompt string to print.
+   CHARACTER(*), INTENT(IN)     :: Str                                          !< The prompt string to print.
 
 
 
@@ -6935,20 +6894,18 @@ CONTAINS
    RETURN
    END SUBROUTINE WrPr
 !=======================================================================
+!> This routine writes out a real array to the file connected to Unit without following it with a new line.
+!! Use WrNumAryFileNR (nwtc_io::wrnumaryfilenr) instead of directly calling a specific routine in the generic interface.   
    SUBROUTINE WrR4AryFileNR ( Unit, Ary, Fmt, ErrStat, ErrMsg  )
-
-
-      ! This routine writes out a real array to the file connected to Unit without following it with a new line.
-
 
       ! Argument declarations.
 
-   INTEGER,      INTENT(IN)     :: Unit                                         ! I/O unit for input file.
-   REAL(SiKi),   INTENT(IN)     :: Ary (:)                                      ! Array to be written without a newline at the end.
-   CHARACTER(*), INTENT(IN)     :: Fmt                                          ! Fmt of one element to be written.
+   INTEGER,      INTENT(IN)     :: Unit                                         !< I/O unit for input file.
+   REAL(SiKi),   INTENT(IN)     :: Ary (:)                                      !< Array to be written without a newline at the end.
+   CHARACTER(*), INTENT(IN)     :: Fmt                                          !< Fmt of one element to be written.
 
-   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                      ! Error status
-   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                       ! Error message associated with ErrStat
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                      !< Error status
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                       !< Error message associated with ErrStat
 
       ! Local variables:
    CHARACTER(50)                :: Fmt2                                         ! Fmt of entire array to be written (will be copied).
@@ -6978,11 +6935,8 @@ CONTAINS
    RETURN
    END SUBROUTINE WrR4AryFileNR
 !=======================================================================
+!> \copydoc nwtc_io::wrr4aryfilenr
    SUBROUTINE WrR8AryFileNR ( Unit, Ary, Fmt, ErrStat, ErrMsg  )
-
-
-      ! This routine writes out a real array to the file connected to Unit without following it with a new line.
-
 
       ! Argument declarations.
 
@@ -7021,21 +6975,18 @@ CONTAINS
    RETURN
    END SUBROUTINE WrR8AryFileNR
 !=======================================================================
+!> \copydoc nwtc_io::wrr4aryfilenr
    SUBROUTINE WrR16AryFileNR ( Unit, Ary, Fmt, ErrStat, ErrMsg  )
-
-
-      ! This routine writes out a real array to the file connected to Unit without following it with a new line.
-
 
       ! Argument declarations.
 
-   INTEGER,      INTENT(IN)     :: Unit                                         ! I/O unit for input file.
-   REAL(QuKi),   INTENT(IN)     :: Ary (:)                                      ! Array to be written without a newline at the end.
-   CHARACTER(*), INTENT(IN)     :: Fmt                                          ! Fmt of one element to be written.
-
-   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                      ! Error status
-   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                       ! Error message associated with ErrStat
-
+   INTEGER,      INTENT(IN)     :: Unit                                         !  I/O unit for input file.
+   REAL(QuKi),   INTENT(IN)     :: Ary (:)                                      !  Array to be written without a newline at the end.
+   CHARACTER(*), INTENT(IN)     :: Fmt                                          !  Fmt of one element to be written.
+                                                                                  
+   INTEGER(IntKi), INTENT(OUT)  :: ErrStat                                      !  Error status
+   CHARACTER(*),   INTENT(OUT)  :: ErrMsg                                       !  Error message associated with ErrStat
+                                                                                  
       ! Local variables:
    CHARACTER(50)                :: Fmt2                                         ! Fmt of entire array to be written (will be copied).
 
@@ -7064,10 +7015,8 @@ CONTAINS
    RETURN
    END SUBROUTINE WrR16AryFileNR
 !=======================================================================
+!> This routine writes out a string to the screen.
    RECURSIVE SUBROUTINE WrScr ( InStr )
-
-
-      ! This routine writes out a string to the screen.
 
 
    IMPLICIT                        NONE
@@ -7075,7 +7024,7 @@ CONTAINS
 
       ! Argument declarations.
 
-   CHARACTER(*), INTENT(IN)     :: InStr                                        ! The input string to write to the screen.
+   CHARACTER(*), INTENT(IN)     :: InStr                                        !< The input string to write to the screen.
 
 
       ! Local declarations.
@@ -7152,21 +7101,15 @@ CONTAINS
    RETURN
    END SUBROUTINE WrScr
 !=======================================================================
+!> This routine writes out a string to the screen after a blank line.
    SUBROUTINE WrScr1 ( Str )
 
-
-      ! This routine writes out a string to the screen after a blank line.
       ! This routine is DEPRECATED. Call WrScr directly instead.
-
 
       ! Argument declarations.
 
-   CHARACTER(*)                 :: Str                                         ! The string to print.
+   CHARACTER(*)                 :: Str                                         !< The string to print.
 
-
-
-   !CALL WrScr ( ' ' )
-   !CALL WrScr ( TRIM( Str ) )
 
    CALL WrScr( NewLine//TRIM( Str ) )
 

@@ -886,8 +886,8 @@ CONTAINS
 !! \f$\lambda\f$ is defined as:
 !!
 !! \f{equation}{  \lambda = \begin{bmatrix}
-!!  0          &  \lambda_3 & -\lambda_2 \\ 
-!!  -\lambda_3 &  0         &  \lambda_1 \\ 
+!!  0          &  \lambda_3 & -\lambda_2 \\
+!!  -\lambda_3 &  0         &  \lambda_1 \\
 !!   \lambda_2 & -\lambda_1 &  0          
 !! 	\end{bmatrix}
 !! \f}   
@@ -1057,7 +1057,7 @@ CONTAINS
 !! \f{equation}{
 !!  \lambda = \left\{ \begin{matrix}
 !! 0                                                             &  \theta = 0 \\
-!! \frac{\theta}{2\sin\theta} \left( \Lambda - \Lambda^T\right)  &  \theta \in \left(0,\pi\right) \\ 
+!! \frac{\theta}{2\sin\theta} \left( \Lambda - \Lambda^T\right)  &  \theta \in \left(0,\pi\right) \\
 !! \pm\pi v  &  \theta = \pi 
 !!  \end{matrix}  \right.
 !! \f}
@@ -3816,7 +3816,7 @@ CONTAINS
 !! \f$v = \left(v_1, v_2, \ldots ,v_n\right)\f$. The outer product is defined as
 !! \f{equation}{
 !!   A = u \otimes v = \begin{bmatrix}
-!!   u_1 v_1 & u_1 v_2 & \dots  & u_1 v_n \\ 
+!!   u_1 v_1 & u_1 v_2 & \dots  & u_1 v_n \\
 !!   u_2 v_1 & u_2 v_2 & \dots  & u_2 v_n \\
 !!    \vdots & \vdots  & \ddots & \vdots \\
 !!   u_m v_1 & u_m v_2 & \dots  & u_m v_n
