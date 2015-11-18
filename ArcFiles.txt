@@ -87,8 +87,10 @@ Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\ED_Furling
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\ED_Tower.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\v8.00.x\OutListParameters.xlsx
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\ED_Primary_v1.03.x.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\FAST_Primary_v8.08.x.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\FAST_Primary_v8.12.x.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\SrvD_Primary_v1.03.x.dat
+Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\SrvD_Primary_v1.04.x.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\AD_Primary_v14.04.x.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\AD_Primary_v14.04.x_NT.dat
 Utilities\SimulationToolbox\ConvertFASTVersions\TemplateFiles\AD_Primary_v15.00.x.dat
