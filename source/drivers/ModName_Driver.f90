@@ -1,22 +1,22 @@
 !**********************************************************************************************************************************
-! ModuleName_DriverCode: This code tests the template modules
-!..................................................................................................................................
-! LICENSING
-! Copyright (C) 2012  National Renewable Energy Laboratory
-!
-!    This file is part of ModuleName.
-!
-! Licensed under the Apache License, Version 2.0 (the "License");
-! you may not use this file except in compliance with the License.
-! You may obtain a copy of the License at
-!
-!     http://www.apache.org/licenses/LICENSE-2.0
-!
-! Unless required by applicable law or agreed to in writing, software
-! distributed under the License is distributed on an "AS IS" BASIS,
-! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-! See the License for the specific language governing permissions and
-!
+!> ## ModuleName_DriverCode: This code tests the template modules
+!!..................................................................................................................................
+!! LICENSING
+!! Copyright (C) 2012, 2015  National Renewable Energy Laboratory
+!!
+!!    This file is part of ModuleName.
+!!
+!! Licensed under the Apache License, Version 2.0 (the "License");
+!! you may not use this file except in compliance with the License.
+!! You may obtain a copy of the License at
+!!
+!!     http://www.apache.org/licenses/LICENSE-2.0
+!!
+!! Unless required by applicable law or agreed to in writing, software
+!! distributed under the License is distributed on an "AS IS" BASIS,
+!! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+!! See the License for the specific language governing permissions and
+!! limitations under the License.
 !**********************************************************************************************************************************
 PROGRAM ModName_Driver
 
@@ -26,38 +26,35 @@ PROGRAM ModName_Driver
 
    IMPLICIT NONE
 
-   INTEGER(IntKi), PARAMETER                          :: NumInp = 1           ! Number of inputs sent to ModName_UpdateStates
+   INTEGER(IntKi), PARAMETER                          :: NumInp = 1           !< Number of inputs sent to ModName_UpdateStates
    
       ! Program variables
 
-   REAL(DbKi)                                         :: Time                 ! Variable for storing time, in seconds
-   REAL(DbKi)                                         :: TimeInterval         ! Interval between time steps, in seconds
-   REAL(DbKi)                                         :: InputTime(NumInp)    ! Variable for storing time associated with inputs, in seconds
+   REAL(DbKi)                                         :: Time                 !< Variable for storing time, in seconds
+   REAL(DbKi)                                         :: TimeInterval         !< Interval between time steps, in seconds
+   REAL(DbKi)                                         :: InputTime(NumInp)    !< Variable for storing time associated with inputs, in seconds
    
-   TYPE(ModName_InitInputType)                        :: InitInData           ! Input data for initialization
-   TYPE(ModName_InitOutputType)                       :: InitOutData          ! Output data from initialization
+   TYPE(ModName_InitInputType)                        :: InitInData           !< Input data for initialization
+   TYPE(ModName_InitOutputType)                       :: InitOutData          !< Output data from initialization
 
-   TYPE(ModName_ContinuousStateType)                  :: x                    ! Continuous states
-   TYPE(ModName_DiscreteStateType)                    :: xd                   ! Discrete states
-   TYPE(ModName_ConstraintStateType)                  :: z                    ! Constraint states
-   TYPE(ModName_ConstraintStateType)                  :: Z_residual           ! Residual of the constraint state functions (Z)
-   TYPE(ModName_OtherStateType)                       :: OtherState           ! Other states
-   TYPE(ModName_MiscVarType)                          :: misc                 ! Optimization variables
+   TYPE(ModName_ContinuousStateType)                  :: x                    !< Continuous states
+   TYPE(ModName_DiscreteStateType)                    :: xd                   !< Discrete states
+   TYPE(ModName_ConstraintStateType)                  :: z                    !< Constraint states
+   TYPE(ModName_ConstraintStateType)                  :: Z_residual           !< Residual of the constraint state functions (Z)
+   TYPE(ModName_OtherStateType)                       :: OtherState           !< Other states
+   TYPE(ModName_MiscVarType)                          :: misc                 !< Optimization variables
 
-   TYPE(ModName_ParameterType)                        :: p                    ! Parameters
-   TYPE(ModName_InputType)                            :: u(NumInp)            ! System inputs
-   TYPE(ModName_OutputType)                           :: y                    ! System outputs
-
-
-
-   INTEGER(IntKi)                                     :: n                    ! Loop counter (for time step)
-   INTEGER(IntKi)                                     :: ErrStat              ! Status of error message
-   CHARACTER(1024)                                    :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   TYPE(ModName_ParameterType)                        :: p                    !< Parameters
+   TYPE(ModName_InputType)                            :: u(NumInp)            !< System inputs
+   TYPE(ModName_OutputType)                           :: y                    !< System outputs
 
 
-   REAL(ReKi), ALLOCATABLE                            :: Re_SaveAry  (:)      ! Array to store reals in packed data structure
-   REAL(DbKi), ALLOCATABLE                            :: Db_SaveAry  (:)      ! Array to store doubles in packed data structure
-   INTEGER(IntKi), ALLOCATABLE                        :: Int_SaveAry (:)      ! Array to store integers in packed data structure
+
+   INTEGER(IntKi)                                     :: n                    !< Loop counter (for time step)
+   INTEGER(IntKi)                                     :: ErrStat              !< Status of error message
+   CHARACTER(1024)                                    :: ErrMsg               !< Error message if ErrStat /= ErrID_None
+
+
 
    !...............................................................................................................................
    ! Routines called in initialization
