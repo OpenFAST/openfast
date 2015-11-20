@@ -1,9 +1,9 @@
 !**********************************************************************************************************************************
-! The ElastoDyn.f90 and  ElastoDyn_Types.f90 make up the ElastoDyn module of the
+! The ElastoDyn.f90, ElastoDyn_IO.f90, and ElastoDyn_Types.f90 make up the ElastoDyn module of the
 ! FAST Modularization Framework. ElastoDyn_Types is auto-generated based on FAST_Registry.txt.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2012-2014  National Renewable Energy Laboratory
+! Copyright (C) 2012-2015  National Renewable Energy Laboratory
 !
 !    This file is part of ElastoDyn.
 !
@@ -62,30 +62,31 @@ MODULE ElastoDyn
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
-! This routine is called at the start of the simulation to perform initialization steps.
-! The parameters are set here and not changed during the simulation.
-! The initial states and initial guess for the input are defined.
+!> This routine is called at the start of the simulation to perform initialization steps.
+!! The parameters are set here and not changed during the simulation.
+!! The initial states and initial guess for the input are defined.
+SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   TYPE(ED_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
-   TYPE(ED_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
-   TYPE(ED_ParameterType),       INTENT(  OUT)  :: p           ! Parameters
-   TYPE(ED_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
-   TYPE(ED_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
-   TYPE(ED_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-   TYPE(ED_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states
-   TYPE(ED_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated;
-                                                               !   only the output mesh is initialized)
-   REAL(DbKi),                   INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that
-                                                               !   (1) ED_UpdateStates() is called in loose coupling &
-                                                               !   (2) ED_UpdateDiscState() is called in tight coupling.
-                                                               !   Input is the suggested time from the glue code;
-                                                               !   Output is the actual coupling interval that will be used
-                                                               !   by the glue code.
-   TYPE(ED_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(ED_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+   TYPE(ED_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
+   TYPE(ED_ParameterType),       INTENT(  OUT)  :: p           !< Parameters
+   TYPE(ED_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
+   TYPE(ED_DiscreteStateType),   INTENT(  OUT)  :: xd          !< Initial discrete states
+   TYPE(ED_ConstraintStateType), INTENT(  OUT)  :: z           !< Initial guess of the constraint states
+   TYPE(ED_OtherStateType),      INTENT(  OUT)  :: OtherState  !< Initial other states
+   TYPE(ED_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated;
+                                                               !!   only the output mesh is initialized)
+   TYPE(ED_MiscVarType),         INTENT(  OUT)  :: m           !< Misc variables for optimization (not copied in glue code)
+   REAL(DbKi),                   INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that
+                                                               !!   (1) ED_UpdateStates() is called in loose coupling &
+                                                               !!   (2) ED_UpdateDiscState() is called in tight coupling.
+                                                               !!   Input is the suggested time from the glue code;
+                                                               !!   Output is the actual coupling interval that will be used
+                                                               !!   by the glue code.
+   TYPE(ED_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -164,8 +165,8 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       IF (ErrStat >= AbortErrLev) RETURN
    
    
-      ! Initialize other states:
-   CALL Init_OtherStates( OtherState, p, x, InputFileData, ErrStat2, ErrMsg2 )    ! initialize the other states (must do this after ED_SetParameters)
+      ! Initialize other states and misc variables:
+   CALL Init_MiscOtherStates( m, OtherState, p, x, InputFileData, ErrStat2, ErrMsg2 )    ! initialize the other states (must do this after ED_SetParameters)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
       
@@ -175,7 +176,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       !............................................................................................
 
          ! allocate all the arrays that store data in the input type and initialize the values:
-   CALL Init_u( u, p, x, InputFileData, OtherState, ErrStat2, ErrMsg2 )      
+   CALL Init_u( u, p, x, InputFileData, m, ErrStat2, ErrMsg2 )      
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN                  
    
@@ -184,7 +185,7 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       ! Define system output initializations (set up meshes) here:
       !............................................................................................
 
-   CALL ED_AllocOutput(p, OtherState, u, y, ErrStat2, ErrMsg2) ! u is sent so we can create sibling meshes
+   CALL ED_AllocOutput(p, m, u, y, ErrStat2, ErrMsg2) ! u is sent so we can create sibling meshes
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
       
@@ -193,16 +194,16 @@ SUBROUTINE ED_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          ! the InitOutput type, but I'm going to use the ED_Outputs instead
       ! 
       !   ! set the coordinate system variables:
-      !CALL SetCoordSy( t, OtherState%CoordSys, OtherState%RtHS, u%BlPitchCom, p, x, ErrStat, ErrMsg )
+      !CALL SetCoordSy( t, m%CoordSys, m%RtHS, u%BlPitchCom, p, x, ErrStat, ErrMsg )
       !   IF (ErrStat >= AbortErrLev) RETURN
       !
-      !CALL CalculatePositions(        p, x, OtherState%CoordSys,    OtherState%RtHS ) ! calculate positions
-      !CALL CalculateAngularPosVelPAcc(p, x, OtherState%CoordSys,    OtherState%RtHS ) ! calculate angular positions, velocities, and partial accelerations, including partial angular quantities
-      !CALL CalculateLinearVelPAcc(    p, x, OtherState%CoordSys,    OtherState%RtHS ) ! calculate linear velocities and partial accelerations
+      !CALL CalculatePositions(        p, x, m%CoordSys,    m%RtHS ) ! calculate positions
+      !CALL CalculateAngularPosVelPAcc(p, x, m%CoordSys,    m%RtHS ) ! calculate angular positions, velocities, and partial accelerations, including partial angular quantities
+      !CALL CalculateLinearVelPAcc(    p, x, m%CoordSys,    m%RtHS ) ! calculate linear velocities and partial accelerations
 
       
       
-      CALL ED_CalcOutput( 0.0_DbKi, u, p, x, xd, z, OtherState, y, ErrStat2, ErrMsg2 )
+      CALL ED_CalcOutput( 0.0_DbKi, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
    END IF
       
@@ -295,19 +296,20 @@ CONTAINS
 
 END SUBROUTINE ED_Init
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-! This routine is called at the end of the simulation.
+!> This routine is called at the end of the simulation.
+SUBROUTINE ED_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(ED_InputType),           INTENT(INOUT)  :: u           ! System inputs
-      TYPE(ED_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
-      TYPE(ED_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
-      TYPE(ED_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
-      TYPE(ED_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-      TYPE(ED_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(ED_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(ED_InputType),           INTENT(INOUT)  :: u           !< System inputs
+   TYPE(ED_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
+   TYPE(ED_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
+   TYPE(ED_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
+   TYPE(ED_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
+   TYPE(ED_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states
+   TYPE(ED_OutputType),          INTENT(INOUT)  :: y           !< System outputs
+   TYPE(ED_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
 
@@ -346,36 +348,33 @@ SUBROUTINE ED_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
       CALL ED_DestroyOutput( y, ErrStat, ErrMsg )
 
+      CALL ED_DestroyMiscVar( m, ErrStat, ErrMsg )
 
 
 
 END SUBROUTINE ED_End
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
-! Constraint states are solved for input Time t; Continuous and discrete states are updated for t + Interval
+!> Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
+!! Constraint states are solved for input Time t; Continuous and discrete states are updated for t + Interval
+SUBROUTINE ED_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                         INTENT(IN   ) :: t          ! Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   ) :: n          ! Current simulation time step n = 0,1,...
-      TYPE(ED_InputType),                 INTENT(INOUT) :: u(:)       ! Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
-      REAL(DbKi),                         INTENT(IN   ) :: utimes(:)  ! Times associated with u(:), in seconds
-      TYPE(ED_ParameterType),             INTENT(IN   ) :: p          ! Parameters
-      TYPE(ED_ContinuousStateType),       INTENT(INOUT) :: x          ! Input: Continuous states at t;
-                                                                      !   Output: Continuous states at t + Interval
-      TYPE(ED_DiscreteStateType),         INTENT(INOUT) :: xd         ! Input: Discrete states at t;
-                                                                      !   Output: Discrete states at t  + Interval
-      TYPE(ED_ConstraintStateType),       INTENT(INOUT) :: z          ! Input: Initial guess of constraint states at t+dt;
-                                                                      !   Output: Constraint states at t+dt
-      TYPE(ED_OtherStateType),            INTENT(INOUT) :: OtherState ! Other/optimization states
-      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    ! Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                         INTENT(IN   ) :: t          !< Current simulation time in seconds
+      INTEGER(IntKi),                     INTENT(IN   ) :: n          !< Current simulation time step n = 0,1,...
+      TYPE(ED_InputType),                 INTENT(INOUT) :: u(:)       !< Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
+      REAL(DbKi),                         INTENT(IN   ) :: utimes(:)  !< Times associated with u(:), in seconds
+      TYPE(ED_ParameterType),             INTENT(IN   ) :: p          !< Parameters
+      TYPE(ED_ContinuousStateType),       INTENT(INOUT) :: x          !< Input: Continuous states at t;
+                                                                      !!   Output: Continuous states at t + Interval
+      TYPE(ED_DiscreteStateType),         INTENT(INOUT) :: xd         !< Input: Discrete states at t;
+                                                                      !!   Output: Discrete states at t  + Interval
+      TYPE(ED_ConstraintStateType),       INTENT(INOUT) :: z          !< Input: Initial guess of constraint states at t+dt;
+                                                                      !!   Output: Constraint states at t+dt
+      TYPE(ED_OtherStateType),            INTENT(INOUT) :: OtherState !< Other states
+      TYPE(ED_MiscVarType),               INTENT(INOUT) :: m          !< Misc variables for optimization (not copied in glue code)
+      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    !< Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
-      
-         ! local variables
-
-      !TYPE(ED_InputType)            :: u_interp  ! input interpolated from given u at utimes
-      !TYPE(ED_ContinuousStateType)  :: xdot      ! continuous state time derivative
 
 
          ! Initialize ErrStat
@@ -388,15 +387,15 @@ SUBROUTINE ED_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
          
       CASE (Method_RK4)
       
-         CALL ED_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         CALL ED_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
          
       CASE (Method_AB4)
       
-         CALL ED_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         CALL ED_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       
       CASE (Method_ABM4)
       
-         CALL ED_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         CALL ED_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
          
       CASE DEFAULT  !bjj: we already checked this at initialization, but for completeness:
          
@@ -418,27 +417,28 @@ SUBROUTINE ED_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
       
 END SUBROUTINE ED_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-! Routine for computing outputs, used in both loose and tight coupling.
-! This SUBROUTINE is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
-! NOTE: the descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
-! for a complete description of each output parameter.
-! NOTE: no matter how many channels are selected for output, all of the outputs are calcalated
-! All of the calculated output channels are placed into the OtherState%AllOuts(:), while the channels selected for outputs are
-! placed in the y%WriteOutput(:) array.
+!> Routine for computing outputs, used in both loose and tight coupling.
+!! This SUBROUTINE is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
+!! NOTE: the descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
+!! for a complete description of each output parameter.
+!! NOTE: no matter how many channels are selected for output, all of the outputs are calcalated
+!! All of the calculated output channels are placed into the m\%AllOuts(:), while the channels selected for outputs are
+!! placed in the y\%WriteOutput(:) array.
+SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(ED_InputType),           INTENT(IN   )  :: u           ! Inputs at Time t
-   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-   TYPE(ED_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(ED_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-   TYPE(ED_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(ED_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
-                                                               !   nectivity information does not have to be recalculated)
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
+   TYPE(ED_InputType),           INTENT(IN   )  :: u           !< Inputs at Time t
+   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
+   TYPE(ED_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
+   TYPE(ED_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
+   TYPE(ED_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states
+   TYPE(ED_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
+                                                               !!   nectivity information does not have to be recalculated)
+   TYPE(ED_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
       ! Local variables:
@@ -511,7 +511,7 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    IF ( UpdateValues ) THEN    
          ! Update the OtherState data by calculating the derivative...
       !OtherState%HSSBrTrqC = SIGN( u%HSSBrTrqC, x%QDT(DOF_GeAz) )
-      CALL ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg ) ! sets OtherState%QD2T = dxdt%QDT
+      CALL ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg ) ! sets m%QD2T = dxdt%QDT
       CALL ED_DestroyContState( dxdt, ErrStat2, ErrMsg2 )  
       IF (ErrStat >= AbortErrLev) RETURN
    END IF      
@@ -533,7 +533,7 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    
    
    
-   ! Array OtherState%AllOuts() is initialized to 0.0 in initialization, so we are not going to reinitialize it here.
+   ! Array m%AllOuts() is initialized to 0.0 in initialization, so we are not going to reinitialize it here.
 
    !...............................................................................................................................
    ! Calculate all of the total forces and moments using all of the partial forces and moments calculated in RtHS().  Also,
@@ -542,64 +542,64 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !   associated with the accelerations one by one:
    !...............................................................................................................................
 
-   AngAccEB   = OtherState%RtHS%AngAccEBt
-   AngAccEH   = OtherState%RtHS%AngAccEHt
-   AngAccEN   = OtherState%RtHS%AngAccENt
-   AngAccER   = OtherState%RtHS%AngAccERt
-   AngAccEX   = OtherState%RtHS%AngAccEXt
-   LinAccEIMU = OtherState%RtHS%LinAccEIMUt
-   LinAccEO   = OtherState%RtHS%LinAccEOt
-   LinAccEZ   = OtherState%RtHS%LinAccEZt
-   FrcONcRt   = OtherState%RtHS%FrcONcRtt
-   FrcPRot    = OtherState%RtHS%FrcPRott
-   FrcT0Trb   = OtherState%RtHS%FrcT0Trbt
+   AngAccEB   = m%RtHS%AngAccEBt
+   AngAccEH   = m%RtHS%AngAccEHt
+   AngAccEN   = m%RtHS%AngAccENt
+   AngAccER   = m%RtHS%AngAccERt
+   AngAccEX   = m%RtHS%AngAccEXt
+   LinAccEIMU = m%RtHS%LinAccEIMUt
+   LinAccEO   = m%RtHS%LinAccEOt
+   LinAccEZ   = m%RtHS%LinAccEZt
+   FrcONcRt   = m%RtHS%FrcONcRtt
+   FrcPRot    = m%RtHS%FrcPRott
+   FrcT0Trb   = m%RtHS%FrcT0Trbt
 
-   ! was FZHydro    = OtherState%RtHS%FZHydrot
-   FZHydro    = u%PlatformPtMesh%Force(DOF_Sg,1)*OtherState%RtHS%PLinVelEZ(DOF_Sg,0,:) &
-              + u%PlatformPtMesh%Force(DOF_Sw,1)*OtherState%RtHS%PLinVelEZ(DOF_Sw,0,:) &
-              + u%PlatformPtMesh%Force(DOF_Hv,1)*OtherState%RtHS%PLinVelEZ(DOF_Hv,0,:)
+   ! was FZHydro    = m%RtHS%FZHydrot
+   FZHydro    = u%PlatformPtMesh%Force(DOF_Sg,1)*m%RtHS%PLinVelEZ(DOF_Sg,0,:) &
+              + u%PlatformPtMesh%Force(DOF_Sw,1)*m%RtHS%PLinVelEZ(DOF_Sw,0,:) &
+              + u%PlatformPtMesh%Force(DOF_Hv,1)*m%RtHS%PLinVelEZ(DOF_Hv,0,:)
 
-   MomBNcRt   = OtherState%RtHS%MomBNcRtt
-   MomLPRot   = OtherState%RtHS%MomLPRott
-   MomNGnRt   = OtherState%RtHS%MomNGnRtt
-   MomNTail   = OtherState%RtHS%MomNTailt
-   MomX0Trb   = OtherState%RtHS%MomX0Trbt
+   MomBNcRt   = m%RtHS%MomBNcRtt
+   MomLPRot   = m%RtHS%MomLPRott
+   MomNGnRt   = m%RtHS%MomNGnRtt
+   MomNTail   = m%RtHS%MomNTailt
+   MomX0Trb   = m%RtHS%MomX0Trbt
 
-   ! was MXHydro = OtherState%RtHS%MXHydrot
-   MXHydro    = u%PlatformPtMesh%Moment(DOF_R-3,1)*OtherState%RtHS%PAngVelEX(DOF_R ,0,:) &
-              + u%PlatformPtMesh%Moment(DOF_P-3,1)*OtherState%RtHS%PAngVelEX(DOF_P ,0,:) &
-              + u%PlatformPtMesh%Moment(DOF_Y-3,1)*OtherState%RtHS%PAngVelEX(DOF_Y ,0,:)
+   ! was MXHydro = m%RtHS%MXHydrot
+   MXHydro    = u%PlatformPtMesh%Moment(DOF_R-3,1)*m%RtHS%PAngVelEX(DOF_R ,0,:) &
+              + u%PlatformPtMesh%Moment(DOF_P-3,1)*m%RtHS%PAngVelEX(DOF_P ,0,:) &
+              + u%PlatformPtMesh%Moment(DOF_Y-3,1)*m%RtHS%PAngVelEX(DOF_Y ,0,:)
 
    DO I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-      AngAccEB   = AngAccEB   + OtherState%RtHS%PAngVelEB  (p%DOFs%SrtPS(I),0,:)*OtherState%QD2T(p%DOFs%SrtPS(I))
-      AngAccEH   = AngAccEH   + OtherState%RtHS%PAngVelEH  (p%DOFs%SrtPS(I),0,:)*OtherState%QD2T(p%DOFs%SrtPS(I))      
-      AngAccEN   = AngAccEN   + OtherState%RtHS%PAngVelEN  (p%DOFs%SrtPS(I),0,:)*OtherState%QD2T(p%DOFs%SrtPS(I))      
-      AngAccER   = AngAccER   + OtherState%RtHS%PAngVelER  (p%DOFs%SrtPS(I),0,:)*OtherState%QD2T(p%DOFs%SrtPS(I))
-      LinAccEIMU = LinAccEIMU + OtherState%RtHS%PLinVelEIMU(p%DOFs%SrtPS(I),0,:)*OtherState%QD2T(p%DOFs%SrtPS(I))
-      LinAccEO   = LinAccEO   + OtherState%RtHS%PLinVelEO  (p%DOFs%SrtPS(I),0,:)*OtherState%QD2T(p%DOFs%SrtPS(I))
-      FrcONcRt   = FrcONcRt   + OtherState%RtHS%PFrcONcRt  (:,p%DOFs%SrtPS(I)  )*OtherState%QD2T(p%DOFs%SrtPS(I))
-      FrcPRot    = FrcPRot    + OtherState%RtHS%PFrcPRot   (:,p%DOFs%SrtPS(I)  )*OtherState%QD2T(p%DOFs%SrtPS(I))
-      FrcT0Trb   = FrcT0Trb   + OtherState%RtHS%PFrcT0Trb  (:,p%DOFs%SrtPS(I)  )*OtherState%QD2T(p%DOFs%SrtPS(I))
-      MomBNcRt   = MomBNcRt   + OtherState%RtHS%PMomBNcRt  (:,p%DOFs%SrtPS(I)  )*OtherState%QD2T(p%DOFs%SrtPS(I))
-      MomLPRot   = MomLPRot   + OtherState%RtHS%PMomLPRot  (:,p%DOFs%SrtPS(I)  )*OtherState%QD2T(p%DOFs%SrtPS(I))
-      MomNGnRt   = MomNGnRt   + OtherState%RtHS%PMomNGnRt  (:,p%DOFs%SrtPS(I)  )*OtherState%QD2T(p%DOFs%SrtPS(I))
-      MomNTail   = MomNTail   + OtherState%RtHS%PMomNTail  (:,p%DOFs%SrtPS(I)  )*OtherState%QD2T(p%DOFs%SrtPS(I))
-      MomX0Trb   = MomX0Trb   + OtherState%RtHS%PMomX0Trb  (:,p%DOFs%SrtPS(I)  )*OtherState%QD2T(p%DOFs%SrtPS(I))
+      AngAccEB   = AngAccEB   + m%RtHS%PAngVelEB  (p%DOFs%SrtPS(I),0,:)*m%QD2T(p%DOFs%SrtPS(I))
+      AngAccEH   = AngAccEH   + m%RtHS%PAngVelEH  (p%DOFs%SrtPS(I),0,:)*m%QD2T(p%DOFs%SrtPS(I))      
+      AngAccEN   = AngAccEN   + m%RtHS%PAngVelEN  (p%DOFs%SrtPS(I),0,:)*m%QD2T(p%DOFs%SrtPS(I))      
+      AngAccER   = AngAccER   + m%RtHS%PAngVelER  (p%DOFs%SrtPS(I),0,:)*m%QD2T(p%DOFs%SrtPS(I))
+      LinAccEIMU = LinAccEIMU + m%RtHS%PLinVelEIMU(p%DOFs%SrtPS(I),0,:)*m%QD2T(p%DOFs%SrtPS(I))
+      LinAccEO   = LinAccEO   + m%RtHS%PLinVelEO  (p%DOFs%SrtPS(I),0,:)*m%QD2T(p%DOFs%SrtPS(I))
+      FrcONcRt   = FrcONcRt   + m%RtHS%PFrcONcRt  (:,p%DOFs%SrtPS(I)  )*m%QD2T(p%DOFs%SrtPS(I))
+      FrcPRot    = FrcPRot    + m%RtHS%PFrcPRot   (:,p%DOFs%SrtPS(I)  )*m%QD2T(p%DOFs%SrtPS(I))
+      FrcT0Trb   = FrcT0Trb   + m%RtHS%PFrcT0Trb  (:,p%DOFs%SrtPS(I)  )*m%QD2T(p%DOFs%SrtPS(I))
+      MomBNcRt   = MomBNcRt   + m%RtHS%PMomBNcRt  (:,p%DOFs%SrtPS(I)  )*m%QD2T(p%DOFs%SrtPS(I))
+      MomLPRot   = MomLPRot   + m%RtHS%PMomLPRot  (:,p%DOFs%SrtPS(I)  )*m%QD2T(p%DOFs%SrtPS(I))
+      MomNGnRt   = MomNGnRt   + m%RtHS%PMomNGnRt  (:,p%DOFs%SrtPS(I)  )*m%QD2T(p%DOFs%SrtPS(I))
+      MomNTail   = MomNTail   + m%RtHS%PMomNTail  (:,p%DOFs%SrtPS(I)  )*m%QD2T(p%DOFs%SrtPS(I))
+      MomX0Trb   = MomX0Trb   + m%RtHS%PMomX0Trb  (:,p%DOFs%SrtPS(I)  )*m%QD2T(p%DOFs%SrtPS(I))
    ENDDO             ! I - All active (enabled) DOFs
    DO I = 1,p%DOFs%NPYE     ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the platform center of mass (point Y)
-      AngAccEX   = AngAccEX   + OtherState%RtHS%PAngVelEX  (p%DOFs%PYE  (I),0,:)*OtherState%QD2T(p%DOFs%PYE  (I))
-      LinAccEZ   = LinAccEZ   + OtherState%RtHS%PLinVelEZ  (p%DOFs%PYE  (I),0,:)*OtherState%QD2T(p%DOFs%PYE  (I))
+      AngAccEX   = AngAccEX   + m%RtHS%PAngVelEX  (p%DOFs%PYE  (I),0,:)*m%QD2T(p%DOFs%PYE  (I))
+      LinAccEZ   = LinAccEZ   + m%RtHS%PLinVelEZ  (p%DOFs%PYE  (I),0,:)*m%QD2T(p%DOFs%PYE  (I))
 
 
-      FZHydro    = FZHydro    + (- u%PtfmAddedMass(DOF_Sg,p%DOFs%PYE(I))*OtherState%RtHS%PLinVelEZ(DOF_Sg,0,:)   &  ! was  FZHydro = FZHydro + OtherState%RtHS%PFZHydro(p%DOFs%PYE(I),:)*OtherState%QD2T(p%DOFs%PYE  (I))
-                                 - u%PtfmAddedMass(DOF_Sw,p%DOFs%PYE(I))*OtherState%RtHS%PLinVelEZ(DOF_Sw,0,:)   &
-                                 - u%PtfmAddedMass(DOF_Hv,p%DOFs%PYE(I))*OtherState%RtHS%PLinVelEZ(DOF_Hv,0,:) ) &
-                                *OtherState%QD2T(p%DOFs%PYE  (I))
-      ! was MXHydro = MXHydro    +  OtherState%RtHS%PMXHydro   (p%DOFs%PYE  (I),  :)*OtherState%QD2T(p%DOFs%PYE  (I))
-      MXHydro    = MXHydro    +  (- u%PtfmAddedMass(DOF_R ,p%DOFs%PYE(I))*OtherState%RtHS%PAngVelEX(DOF_R ,0,:)   &
-                                  - u%PtfmAddedMass(DOF_P ,p%DOFs%PYE(I))*OtherState%RtHS%PAngVelEX(DOF_P ,0,:)   &
-                                  - u%PtfmAddedMass(DOF_Y ,p%DOFs%PYE(I))*OtherState%RtHS%PAngVelEX(DOF_Y ,0,:) ) &
-                                *OtherState%QD2T(p%DOFs%PYE  (I))
+      FZHydro    = FZHydro    + (- u%PtfmAddedMass(DOF_Sg,p%DOFs%PYE(I))*m%RtHS%PLinVelEZ(DOF_Sg,0,:)   &  ! was  FZHydro = FZHydro + m%RtHS%PFZHydro(p%DOFs%PYE(I),:)*m%QD2T(p%DOFs%PYE  (I))
+                                 - u%PtfmAddedMass(DOF_Sw,p%DOFs%PYE(I))*m%RtHS%PLinVelEZ(DOF_Sw,0,:)   &
+                                 - u%PtfmAddedMass(DOF_Hv,p%DOFs%PYE(I))*m%RtHS%PLinVelEZ(DOF_Hv,0,:) ) &
+                                *m%QD2T(p%DOFs%PYE  (I))
+      ! was MXHydro = MXHydro    +  m%RtHS%PMXHydro   (p%DOFs%PYE  (I),  :)*m%QD2T(p%DOFs%PYE  (I))
+      MXHydro    = MXHydro    +  (- u%PtfmAddedMass(DOF_R ,p%DOFs%PYE(I))*m%RtHS%PAngVelEX(DOF_R ,0,:)   &
+                                  - u%PtfmAddedMass(DOF_P ,p%DOFs%PYE(I))*m%RtHS%PAngVelEX(DOF_P ,0,:)   &
+                                  - u%PtfmAddedMass(DOF_Y ,p%DOFs%PYE(I))*m%RtHS%PAngVelEX(DOF_Y ,0,:) ) &
+                                *m%QD2T(p%DOFs%PYE  (I))
 
    ENDDO             ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the platform center of mass (point Y)
 
@@ -607,20 +607,20 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
    DO K = 1,p%NumBl ! Loop through all blades
 
-      FrcS0B  (:          ,K) = OtherState%RtHS%FrcS0Bt  (:,K          )
-      MomH0B  (:          ,K) = OtherState%RtHS%MomH0Bt  (:,K          )
+      FrcS0B  (:          ,K) = m%RtHS%FrcS0Bt  (:,K          )
+      MomH0B  (:          ,K) = m%RtHS%MomH0Bt  (:,K          )
 
       DO I = 1,p%DOFs%NPSE(K)  ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of blade K
-         FrcS0B  (:          ,K) = FrcS0B  (:          ,K) + OtherState%RtHS%PFrcS0B  (:,K,          p%DOFs%PSE(K,I)  )*OtherState%QD2T(p%DOFs%PSE(K,I))
-         MomH0B  (:          ,K) = MomH0B  (:          ,K) + OtherState%RtHS%PMomH0B  (:,K,          p%DOFs%PSE(K,I)  )*OtherState%QD2T(p%DOFs%PSE(K,I))
+         FrcS0B  (:          ,K) = FrcS0B  (:          ,K) + m%RtHS%PFrcS0B  (:,K,          p%DOFs%PSE(K,I)  )*m%QD2T(p%DOFs%PSE(K,I))
+         MomH0B  (:          ,K) = MomH0B  (:          ,K) + m%RtHS%PMomH0B  (:,K,          p%DOFs%PSE(K,I)  )*m%QD2T(p%DOFs%PSE(K,I))
       ENDDO             ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of blade K
 
       DO J = 0,p%TipNode ! Loop through the blade nodes / elements
 
-         LinAccES(:,J,K) = OtherState%RtHS%LinAccESt(:,K,J)
+         LinAccES(:,J,K) = m%RtHS%LinAccESt(:,K,J)
 
          DO I = 1,p%DOFs%NPSE(K)  ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of blade K
-            LinAccES(:,J,K) = LinAccES(:,J,K) + OtherState%RtHS%PLinVelES(K,J,p%DOFs%PSE(K,I),0,:)*OtherState%QD2T(p%DOFs%PSE(K,I))
+            LinAccES(:,J,K) = LinAccES(:,J,K) + m%RtHS%PLinVelES(K,J,p%DOFs%PSE(K,I),0,:)*m%QD2T(p%DOFs%PSE(K,I))
          ENDDO             ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of blade K
 
       ENDDO             ! J - Blade nodes / elements
@@ -629,12 +629,12 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
    DO J = 0,p%TwrNodes  ! Loop through the tower nodes / elements, starting at the tower base (0)
 
-      LinAccET(:,J) = OtherState%RtHS%LinAccETt(:,J)
-      AngAccEF(:,J) = OtherState%RtHS%AngAccEFt(:,J)
+      LinAccET(:,J) = m%RtHS%LinAccETt(:,J)
+      AngAccEF(:,J) = m%RtHS%AngAccEFt(:,J)
 
       DO I = 1,p%DOFs%NPTE  ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the yaw bearing center of mass (point O)
-         LinAccET(:,J) = LinAccET(:,J) + OtherState%RtHS%PLinVelET(J,p%DOFs%PTE(I),0,:)*OtherState%QD2T(p%DOFs%PTE(I))
-         AngAccEF(:,J) = AngAccEF(:,J) + OtherState%RtHS%PAngVelEF(J,p%DOFs%PTE(I),0,:)*OtherState%QD2T(p%DOFs%PTE(I))
+         LinAccET(:,J) = LinAccET(:,J) + m%RtHS%PLinVelET(J,p%DOFs%PTE(I),0,:)*m%QD2T(p%DOFs%PTE(I))
+         AngAccEF(:,J) = AngAccEF(:,J) + m%RtHS%PAngVelEF(J,p%DOFs%PTE(I),0,:)*m%QD2T(p%DOFs%PTE(I))
       ENDDO          ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the yaw bearing center of mass (point O)
 
    ENDDO ! J - Tower nodes / elements
@@ -642,12 +642,12 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
    DO J = 1,p%TwrNodes  ! Loop through the tower nodes / elements
 
-      FTTower (:,J) = OtherState%RtHS%FTHydrot (:,J)
-      MFHydro (:,J) = OtherState%RtHS%MFHydrot (:,J)
+      FTTower (:,J) = m%RtHS%FTHydrot (:,J)
+      MFHydro (:,J) = m%RtHS%MFHydrot (:,J)
 
       DO I = 1,p%DOFs%NPTE  ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the yaw bearing center of mass (point O)
-         FTTower (:,J) = FTTower (:,J) + OtherState%RtHS%PFTHydro (:,J,p%DOFs%PTE(I)  )*OtherState%QD2T(p%DOFs%PTE(I))
-         MFHydro (:,J) = MFHydro (:,J) + OtherState%RtHS%PMFHydro (:,J,p%DOFs%PTE(I)  )*OtherState%QD2T(p%DOFs%PTE(I))
+         FTTower (:,J) = FTTower (:,J) + m%RtHS%PFTHydro (:,J,p%DOFs%PTE(I)  )*m%QD2T(p%DOFs%PTE(I))
+         MFHydro (:,J) = MFHydro (:,J) + m%RtHS%PMFHydro (:,J,p%DOFs%PTE(I)  )*m%QD2T(p%DOFs%PTE(I))
       ENDDO          ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the yaw bearing center of mass (point O)
 
    ENDDO ! J - Tower nodes / elements
@@ -675,35 +675,35 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !...............................................................................................................................
       ! Define the output channel specifying the current simulation time:
 
-   OtherState%AllOuts(  Time) = REAL( t, ReKi )
+   m%AllOuts(  Time) = REAL( t, ReKi )
 
 
       ! Blade (1-3) Tip Motions:
 
    DO K = 1,p%NumBl
-      rSTipPSTip = OtherState%RtHS%rS0S(:,K,p%TipNode) - p%BldFlexL*OtherState%CoordSys%j3(K,:)  ! Position vector from the undeflected blade tip (point S tip prime) to the deflected blade tip (point S tip) of blade 1.
-      rOSTip     = OtherState%RtHS%rS  (:,K,p%TipNode) - OtherState%RtHS%rO                ! Position vector from the deflected tower top (point O) to the deflected blade tip (point S tip) of blade 1.
-      rOSTipxn   =      DOT_PRODUCT( rOSTip, OtherState%CoordSys%d1 )                ! Component of rOSTip directed along the xn-axis.
-      rOSTipyn   = -1.0*DOT_PRODUCT( rOSTip, OtherState%CoordSys%d3 )                ! Component of rOSTip directed along the yn-axis.
-      rOSTipzn   =      DOT_PRODUCT( rOSTip, OtherState%CoordSys%d2 )                ! Component of rOSTip directed along the zn-axis.
+      rSTipPSTip = m%RtHS%rS0S(:,K,p%TipNode) - p%BldFlexL*m%CoordSys%j3(K,:)  ! Position vector from the undeflected blade tip (point S tip prime) to the deflected blade tip (point S tip) of blade 1.
+      rOSTip     = m%RtHS%rS  (:,K,p%TipNode) - m%RtHS%rO                ! Position vector from the deflected tower top (point O) to the deflected blade tip (point S tip) of blade 1.
+      rOSTipxn   =      DOT_PRODUCT( rOSTip, m%CoordSys%d1 )                ! Component of rOSTip directed along the xn-axis.
+      rOSTipyn   = -1.0*DOT_PRODUCT( rOSTip, m%CoordSys%d3 )                ! Component of rOSTip directed along the yn-axis.
+      rOSTipzn   =      DOT_PRODUCT( rOSTip, m%CoordSys%d2 )                ! Component of rOSTip directed along the zn-axis.
 
       IF (.NOT. p%BD4Blades) THEN
-         OtherState%AllOuts(  TipDxc(K) ) = DOT_PRODUCT(            rSTipPSTip, OtherState%CoordSys%i1(K,         :) )
-         OtherState%AllOuts(  TipDyc(K) ) = DOT_PRODUCT(            rSTipPSTip, OtherState%CoordSys%i2(K,         :) )
-         OtherState%AllOuts(  TipDzc(K) ) = DOT_PRODUCT(            rSTipPSTip, OtherState%CoordSys%i3(K,         :) )
-         OtherState%AllOuts(  TipDxb(K) ) = DOT_PRODUCT(            rSTipPSTip, OtherState%CoordSys%j1(K,         :) )
-         OtherState%AllOuts(  TipDyb(K) ) = DOT_PRODUCT(            rSTipPSTip, OtherState%CoordSys%j2(K,         :) )
+         m%AllOuts(  TipDxc(K) ) = DOT_PRODUCT(            rSTipPSTip, m%CoordSys%i1(K,         :) )
+         m%AllOuts(  TipDyc(K) ) = DOT_PRODUCT(            rSTipPSTip, m%CoordSys%i2(K,         :) )
+         m%AllOuts(  TipDzc(K) ) = DOT_PRODUCT(            rSTipPSTip, m%CoordSys%i3(K,         :) )
+         m%AllOuts(  TipDxb(K) ) = DOT_PRODUCT(            rSTipPSTip, m%CoordSys%j1(K,         :) )
+         m%AllOuts(  TipDyb(K) ) = DOT_PRODUCT(            rSTipPSTip, m%CoordSys%j2(K,         :) )
       !JASON: USE TipNode HERE INSTEAD OF BldNodes IF YOU ALLOCATE AND DEFINE n1, n2, n3, m1, m2, AND m3 TO USE TipNode.  THIS WILL REQUIRE THAT THE AERODYNAMIC AND STRUCTURAL TWISTS, AeroTwst() AND ThetaS(), BE KNOWN AT THE TIP!!!
-         OtherState%AllOuts( TipALxb(K) ) = DOT_PRODUCT( LinAccES(:,p%TipNode,K), OtherState%CoordSys%n1(K,p%BldNodes,:) )
-         OtherState%AllOuts( TipALyb(K) ) = DOT_PRODUCT( LinAccES(:,p%TipNode,K), OtherState%CoordSys%n2(K,p%BldNodes,:) )
-         OtherState%AllOuts( TipALzb(K) ) = DOT_PRODUCT( LinAccES(:,p%TipNode,K), OtherState%CoordSys%n3(K,p%BldNodes,:) )
-         OtherState%AllOuts( TipRDxb(K) ) = DOT_PRODUCT( OtherState%RtHS%AngPosHM(:,K,p%TipNode), OtherState%CoordSys%j1(K,         :) )*R2D
-         OtherState%AllOuts( TipRDyb(K) ) = DOT_PRODUCT( OtherState%RtHS%AngPosHM(:,K,p%TipNode), OtherState%CoordSys%j2(K,         :) )*R2D
+         m%AllOuts( TipALxb(K) ) = DOT_PRODUCT( LinAccES(:,p%TipNode,K), m%CoordSys%n1(K,p%BldNodes,:) )
+         m%AllOuts( TipALyb(K) ) = DOT_PRODUCT( LinAccES(:,p%TipNode,K), m%CoordSys%n2(K,p%BldNodes,:) )
+         m%AllOuts( TipALzb(K) ) = DOT_PRODUCT( LinAccES(:,p%TipNode,K), m%CoordSys%n3(K,p%BldNodes,:) )
+         m%AllOuts( TipRDxb(K) ) = DOT_PRODUCT( m%RtHS%AngPosHM(:,K,p%TipNode), m%CoordSys%j1(K,         :) )*R2D
+         m%AllOuts( TipRDyb(K) ) = DOT_PRODUCT( m%RtHS%AngPosHM(:,K,p%TipNode), m%CoordSys%j2(K,         :) )*R2D
          ! There is no sense computing AllOuts( TipRDzc(K) ) here since it is always zero for FAST simulation results.
          IF ( rOSTipzn > 0.0 )  THEN   ! Tip of blade K is above the yaw bearing.
-            OtherState%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn + rOSTipzn*rOSTipzn ) ! Absolute distance from the tower top / yaw bearing to the tip of blade 1.
+            m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn + rOSTipzn*rOSTipzn ) ! Absolute distance from the tower top / yaw bearing to the tip of blade 1.
          ELSE                          ! Tip of blade K is below the yaw bearing.
-            OtherState%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn                     ) ! Perpendicular distance from the yaw axis / tower centerline to the tip of blade 1.
+            m%AllOuts(TipClrnc(K) ) = SQRT( rOSTipxn*rOSTipxn + rOSTipyn*rOSTipyn                     ) ! Perpendicular distance from the yaw axis / tower centerline to the tip of blade 1.
          ENDIF
       END IF      
 
@@ -714,19 +714,19 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    DO K = 1,p%NumBl
       DO I = 1, p%NBlGages
 
-         OtherState%AllOuts( SpnALxb(I,K) ) = DOT_PRODUCT( LinAccES(:,p%BldGagNd(I),K), OtherState%CoordSys%n1(K,p%BldGagNd(I),:) )
-         OtherState%AllOuts( SpnALyb(I,K) ) = DOT_PRODUCT( LinAccES(:,p%BldGagNd(I),K), OtherState%CoordSys%n2(K,p%BldGagNd(I),:) )
-         OtherState%AllOuts( SpnALzb(I,K) ) = DOT_PRODUCT( LinAccES(:,p%BldGagNd(I),K), OtherState%CoordSys%n3(K,p%BldGagNd(I),:) )
+         m%AllOuts( SpnALxb(I,K) ) = DOT_PRODUCT( LinAccES(:,p%BldGagNd(I),K), m%CoordSys%n1(K,p%BldGagNd(I),:) )
+         m%AllOuts( SpnALyb(I,K) ) = DOT_PRODUCT( LinAccES(:,p%BldGagNd(I),K), m%CoordSys%n2(K,p%BldGagNd(I),:) )
+         m%AllOuts( SpnALzb(I,K) ) = DOT_PRODUCT( LinAccES(:,p%BldGagNd(I),K), m%CoordSys%n3(K,p%BldGagNd(I),:) )
 
-         rSPS                      = OtherState%RtHS%rS0S(:,K,p%BldGagNd(I)) - p%RNodes(p%BldGagNd(I))*OtherState%CoordSys%j3(K,:)
+         rSPS                      = m%RtHS%rS0S(:,K,p%BldGagNd(I)) - p%RNodes(p%BldGagNd(I))*m%CoordSys%j3(K,:)
 
-         OtherState%AllOuts( SpnTDxb(I,K) ) = DOT_PRODUCT( rSPS, OtherState%CoordSys%j1(K,:) )
-         OtherState%AllOuts( SpnTDyb(I,K) ) = DOT_PRODUCT( rSPS, OtherState%CoordSys%j2(K,:) )
-         OtherState%AllOuts( SpnTDzb(I,K) ) = DOT_PRODUCT( rSPS, OtherState%CoordSys%j3(K,:) )
+         m%AllOuts( SpnTDxb(I,K) ) = DOT_PRODUCT( rSPS, m%CoordSys%j1(K,:) )
+         m%AllOuts( SpnTDyb(I,K) ) = DOT_PRODUCT( rSPS, m%CoordSys%j2(K,:) )
+         m%AllOuts( SpnTDzb(I,K) ) = DOT_PRODUCT( rSPS, m%CoordSys%j3(K,:) )
 
-         OtherState%AllOuts( SpnRDxb(I,K) ) = DOT_PRODUCT( OtherState%RtHS%AngPosHM(:,K,p%BldGagNd(I)), OtherState%CoordSys%j1(K,:) )*R2D
-         OtherState%AllOuts( SpnRDyb(I,K) ) = DOT_PRODUCT( OtherState%RtHS%AngPosHM(:,K,p%BldGagNd(I)), OtherState%CoordSys%j2(K,:) )*R2D
-        !OtherState%AllOuts( SpnRDzb(I,K) ) = DOT_PRODUCT( OtherState%RtHS%AngPosHM(:,K,p%BldGagNd(I)), OtherState%CoordSys%j3(K,:) )*R2D           ! this is always zero for FAST
+         m%AllOuts( SpnRDxb(I,K) ) = DOT_PRODUCT( m%RtHS%AngPosHM(:,K,p%BldGagNd(I)), m%CoordSys%j1(K,:) )*R2D
+         m%AllOuts( SpnRDyb(I,K) ) = DOT_PRODUCT( m%RtHS%AngPosHM(:,K,p%BldGagNd(I)), m%CoordSys%j2(K,:) )*R2D
+        !m%AllOuts( SpnRDzb(I,K) ) = DOT_PRODUCT( m%RtHS%AngPosHM(:,K,p%BldGagNd(I)), m%CoordSys%j3(K,:) )*R2D           ! this is always zero for FAST
 
       END DO !I
    END DO !K
@@ -735,20 +735,20 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
       ! Blade Pitch Motions:
 
-   OtherState%AllOuts(PtchPMzc1) = u%BlPitchCom(1)*R2D
-   OtherState%AllOuts(PtchPMzc2) = u%BlPitchCom(2)*R2D
+   m%AllOuts(PtchPMzc1) = u%BlPitchCom(1)*R2D
+   m%AllOuts(PtchPMzc2) = u%BlPitchCom(2)*R2D
    IF ( p%NumBl == 3 )  THEN ! 3-blader
 
-      OtherState%AllOuts(PtchPMzc3) = u%BlPitchCom(3)*R2D
+      m%AllOuts(PtchPMzc3) = u%BlPitchCom(3)*R2D
 
    ELSE  ! 2-blader
 
 
       ! Teeter Motions:
 
-      OtherState%AllOuts(  TeetPya) =x%QT  (DOF_Teet)*R2D
-      OtherState%AllOuts(  TeetVya) =x%QDT (DOF_Teet)*R2D
-      OtherState%AllOuts(  TeetAya) =  OtherState%QD2T(DOF_Teet)*R2D
+      m%AllOuts(  TeetPya) =x%QT  (DOF_Teet)*R2D
+      m%AllOuts(  TeetVya) =x%QDT (DOF_Teet)*R2D
+      m%AllOuts(  TeetAya) =  m%QD2T(DOF_Teet)*R2D
 
    ENDIF
 
@@ -757,164 +757,164 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
    y%LSSTipPxa = x%QT (DOF_GeAz) + x%QT  (DOF_DrTr) + p%AzimB1Up + PiBy2 !bjj: this used IgnoreMod for linearization
    CALL Zero2TwoPi(y%LSSTipPxa)  ! Return value between 0 and 2pi (LSSTipPxa is used only in calculations of SIN and COS, so it's okay to take MOD/MODULO here; this wouldn't be oaky for linearization)
-   OtherState%AllOuts(LSSTipPxa) = y%LSSTipPxa*R2D
+   m%AllOuts(LSSTipPxa) = y%LSSTipPxa*R2D
    
-   OtherState%AllOuts(LSSGagPxa) = MODULO( (      x%QT (DOF_GeAz)                            + p%AzimB1Up)*R2D  + 90.0_R8Ki, 360.0_R8Ki ) !bjj: this used IgnoreMod for linearization (Zero2TwoPi)
-   OtherState%AllOuts(   LSSTipVxa) =      (     x%QDT (DOF_GeAz) +          x%QDT (DOF_DrTr) )*RPS2RPM
-   OtherState%AllOuts(   LSSTipAxa) = ( OtherState%QD2T(DOF_GeAz) + OtherState%QD2T(DOF_DrTr) )*R2D
-   OtherState%AllOuts(   LSSGagVxa) =            x%QDT (DOF_GeAz)                              *RPS2RPM
-   OtherState%AllOuts(   LSSGagAxa) =   OtherState%QD2T(DOF_GeAz)                              *R2D
-   OtherState%AllOuts(     HSShftV) = ABS(p%GBRatio)*OtherState%AllOuts(LSSGagVxa)
-   OtherState%AllOuts(     HSShftA) = ABS(p%GBRatio)*OtherState%AllOuts(LSSGagAxa)
+   m%AllOuts(LSSGagPxa) = MODULO( (      x%QT (DOF_GeAz)                            + p%AzimB1Up)*R2D  + 90.0_R8Ki, 360.0_R8Ki ) !bjj: this used IgnoreMod for linearization (Zero2TwoPi)
+   m%AllOuts(   LSSTipVxa) =      (     x%QDT (DOF_GeAz) +          x%QDT (DOF_DrTr) )*RPS2RPM
+   m%AllOuts(   LSSTipAxa) = ( m%QD2T(DOF_GeAz) + m%QD2T(DOF_DrTr) )*R2D
+   m%AllOuts(   LSSGagVxa) =            x%QDT (DOF_GeAz)                              *RPS2RPM
+   m%AllOuts(   LSSGagAxa) =   m%QD2T(DOF_GeAz)                              *R2D
+   m%AllOuts(     HSShftV) = ABS(p%GBRatio)*m%AllOuts(LSSGagVxa)
+   m%AllOuts(     HSShftA) = ABS(p%GBRatio)*m%AllOuts(LSSGagAxa)
 
-   !IF ( .NOT. EqualRealNos( OtherState%AllOuts(WindVxi), 0.0_ReKi ) )  THEN  ! .TRUE. if the denominator in the following equation is not zero.
-   !   OtherState%AllOuts(TipSpdRat) =      ( x%QDT (DOF_GeAz) + x%QDT (DOF_DrTr) )*p%AvgNrmTpRd / OtherState%AllOuts(  WindVxi)
+   !IF ( .NOT. EqualRealNos( m%AllOuts(WindVxi), 0.0_ReKi ) )  THEN  ! .TRUE. if the denominator in the following equation is not zero.
+   !   m%AllOuts(TipSpdRat) =      ( x%QDT (DOF_GeAz) + x%QDT (DOF_DrTr) )*p%AvgNrmTpRd / m%AllOuts(  WindVxi)
    !ELSE
-   !   OtherState%AllOuts(TipSpdRat) = 0.0
+   !   m%AllOuts(TipSpdRat) = 0.0
    !ENDIF
 
 
       ! Nacelle IMU Motions:
 
-   OtherState%AllOuts(NcIMUTVxs) =      DOT_PRODUCT( OtherState%RtHS%LinVelEIMU, OtherState%CoordSys%c1 )
-   OtherState%AllOuts(NcIMUTVys) = -1.0*DOT_PRODUCT( OtherState%RtHS%LinVelEIMU, OtherState%CoordSys%c3 )
-   OtherState%AllOuts(NcIMUTVzs) =      DOT_PRODUCT( OtherState%RtHS%LinVelEIMU, OtherState%CoordSys%c2 )
-   OtherState%AllOuts(NcIMUTAxs) =      DOT_PRODUCT(                 LinAccEIMU, OtherState%CoordSys%c1 )
-   OtherState%AllOuts(NcIMUTAys) = -1.0*DOT_PRODUCT(                 LinAccEIMU, OtherState%CoordSys%c3 )
-   OtherState%AllOuts(NcIMUTAzs) =      DOT_PRODUCT(                 LinAccEIMU, OtherState%CoordSys%c2 )
-   OtherState%AllOuts(NcIMURVxs) =      DOT_PRODUCT( OtherState%RtHS%AngVelER  , OtherState%CoordSys%c1 )*R2D
-   OtherState%AllOuts(NcIMURVys) = -1.0*DOT_PRODUCT( OtherState%RtHS%AngVelER  , OtherState%CoordSys%c3 )*R2D
-   OtherState%AllOuts(NcIMURVzs) =      DOT_PRODUCT( OtherState%RtHS%AngVelER  , OtherState%CoordSys%c2 )*R2D
-   OtherState%AllOuts(NcIMURAxs) =      DOT_PRODUCT(                 AngAccER  , OtherState%CoordSys%c1 )*R2D
-   OtherState%AllOuts(NcIMURAys) = -1.0*DOT_PRODUCT(                 AngAccER  , OtherState%CoordSys%c3 )*R2D
-   OtherState%AllOuts(NcIMURAzs) =      DOT_PRODUCT(                 AngAccER  , OtherState%CoordSys%c2 )*R2D
+   m%AllOuts(NcIMUTVxs) =      DOT_PRODUCT( m%RtHS%LinVelEIMU, m%CoordSys%c1 )
+   m%AllOuts(NcIMUTVys) = -1.0*DOT_PRODUCT( m%RtHS%LinVelEIMU, m%CoordSys%c3 )
+   m%AllOuts(NcIMUTVzs) =      DOT_PRODUCT( m%RtHS%LinVelEIMU, m%CoordSys%c2 )
+   m%AllOuts(NcIMUTAxs) =      DOT_PRODUCT(                 LinAccEIMU, m%CoordSys%c1 )
+   m%AllOuts(NcIMUTAys) = -1.0*DOT_PRODUCT(                 LinAccEIMU, m%CoordSys%c3 )
+   m%AllOuts(NcIMUTAzs) =      DOT_PRODUCT(                 LinAccEIMU, m%CoordSys%c2 )
+   m%AllOuts(NcIMURVxs) =      DOT_PRODUCT( m%RtHS%AngVelER  , m%CoordSys%c1 )*R2D
+   m%AllOuts(NcIMURVys) = -1.0*DOT_PRODUCT( m%RtHS%AngVelER  , m%CoordSys%c3 )*R2D
+   m%AllOuts(NcIMURVzs) =      DOT_PRODUCT( m%RtHS%AngVelER  , m%CoordSys%c2 )*R2D
+   m%AllOuts(NcIMURAxs) =      DOT_PRODUCT(                 AngAccER  , m%CoordSys%c1 )*R2D
+   m%AllOuts(NcIMURAys) = -1.0*DOT_PRODUCT(                 AngAccER  , m%CoordSys%c3 )*R2D
+   m%AllOuts(NcIMURAzs) =      DOT_PRODUCT(                 AngAccER  , m%CoordSys%c2 )*R2D
 
 
       ! Rotor-Furl Motions:
 
-   OtherState%AllOuts( RotFurlP) = x%QT  (DOF_RFrl)*R2D
-   OtherState%AllOuts( RotFurlV) = x%QDT (DOF_RFrl)*R2D
-   OtherState%AllOuts( RotFurlA) = OtherState%QD2T(DOF_RFrl)*R2D
+   m%AllOuts( RotFurlP) = x%QT  (DOF_RFrl)*R2D
+   m%AllOuts( RotFurlV) = x%QDT (DOF_RFrl)*R2D
+   m%AllOuts( RotFurlA) = m%QD2T(DOF_RFrl)*R2D
 
 
       ! Tail-Furl Motions:
 
-   OtherState%AllOuts(TailFurlP) = x%QT  (DOF_TFrl)*R2D
-   OtherState%AllOuts(TailFurlV) = x%QDT (DOF_TFrl)*R2D
-   OtherState%AllOuts(TailFurlA) = OtherState%QD2T(DOF_TFrl)*R2D
+   m%AllOuts(TailFurlP) = x%QT  (DOF_TFrl)*R2D
+   m%AllOuts(TailFurlV) = x%QDT (DOF_TFrl)*R2D
+   m%AllOuts(TailFurlA) = m%QD2T(DOF_TFrl)*R2D
 
 
       ! Yaw Motions:
 
-   OtherState%AllOuts(   YawPzn) = x%QT  (DOF_Yaw )*R2D
-   OtherState%AllOuts(   YawVzn) = x%QDT (DOF_Yaw )*R2D
-   OtherState%AllOuts(   YawAzn) = OtherState%QD2T(DOF_Yaw )*R2D
+   m%AllOuts(   YawPzn) = x%QT  (DOF_Yaw )*R2D
+   m%AllOuts(   YawVzn) = x%QDT (DOF_Yaw )*R2D
+   m%AllOuts(   YawAzn) = m%QD2T(DOF_Yaw )*R2D
 
 
    ! Tower-Top / Yaw Bearing Motions:
 
-   rOPO     = OtherState%RtHS%rT0O - p%TwrFlexL*OtherState%CoordSys%a2 ! Position vector from the undeflected tower top (point O prime) to the deflected tower top (point O).
+   rOPO     = m%RtHS%rT0O - p%TwrFlexL*m%CoordSys%a2 ! Position vector from the undeflected tower top (point O prime) to the deflected tower top (point O).
 
-   OtherState%AllOuts(YawBrTDxp) =  DOT_PRODUCT(     rOPO, OtherState%CoordSys%b1 )
-   OtherState%AllOuts(YawBrTDyp) = -DOT_PRODUCT(     rOPO, OtherState%CoordSys%b3 )
-   OtherState%AllOuts(YawBrTDzp) =  DOT_PRODUCT(     rOPO, OtherState%CoordSys%b2 )
-   OtherState%AllOuts(YawBrTDxt) =  DOT_PRODUCT(     rOPO, OtherState%CoordSys%a1 )
-   OtherState%AllOuts(YawBrTDyt) = -DOT_PRODUCT(     rOPO, OtherState%CoordSys%a3 )
-   OtherState%AllOuts(YawBrTDzt) =  DOT_PRODUCT(     rOPO, OtherState%CoordSys%a2 )
-   OtherState%AllOuts(YawBrTAxp) =  DOT_PRODUCT( LinAccEO, OtherState%CoordSys%b1 )
-   OtherState%AllOuts(YawBrTAyp) = -DOT_PRODUCT( LinAccEO, OtherState%CoordSys%b3 )
-   OtherState%AllOuts(YawBrTAzp) =  DOT_PRODUCT( LinAccEO, OtherState%CoordSys%b2 )
-   OtherState%AllOuts(YawBrRDxt) =  DOT_PRODUCT( OtherState%RtHS%AngPosXB, OtherState%CoordSys%a1 )*R2D
-   OtherState%AllOuts(YawBrRDyt) = -DOT_PRODUCT( OtherState%RtHS%AngPosXB, OtherState%CoordSys%a3 )*R2D
-   ! There is no sense computing OtherState%AllOuts(YawBrRDzt) here since it is always zero for FAST simulation results.
-   OtherState%AllOuts(YawBrRVxp) =  DOT_PRODUCT( OtherState%RtHS%AngVelEB, OtherState%CoordSys%b1 )*R2D
-   OtherState%AllOuts(YawBrRVyp) = -DOT_PRODUCT( OtherState%RtHS%AngVelEB, OtherState%CoordSys%b3 )*R2D
-   OtherState%AllOuts(YawBrRVzp) =  DOT_PRODUCT( OtherState%RtHS%AngVelEB, OtherState%CoordSys%b2 )*R2D
-   OtherState%AllOuts(YawBrRAxp) =  DOT_PRODUCT( AngAccEB, OtherState%CoordSys%b1 )*R2D
-   OtherState%AllOuts(YawBrRAyp) = -DOT_PRODUCT( AngAccEB, OtherState%CoordSys%b3 )*R2D
-   OtherState%AllOuts(YawBrRAzp) =  DOT_PRODUCT( AngAccEB, OtherState%CoordSys%b2 )*R2D
+   m%AllOuts(YawBrTDxp) =  DOT_PRODUCT(     rOPO, m%CoordSys%b1 )
+   m%AllOuts(YawBrTDyp) = -DOT_PRODUCT(     rOPO, m%CoordSys%b3 )
+   m%AllOuts(YawBrTDzp) =  DOT_PRODUCT(     rOPO, m%CoordSys%b2 )
+   m%AllOuts(YawBrTDxt) =  DOT_PRODUCT(     rOPO, m%CoordSys%a1 )
+   m%AllOuts(YawBrTDyt) = -DOT_PRODUCT(     rOPO, m%CoordSys%a3 )
+   m%AllOuts(YawBrTDzt) =  DOT_PRODUCT(     rOPO, m%CoordSys%a2 )
+   m%AllOuts(YawBrTAxp) =  DOT_PRODUCT( LinAccEO, m%CoordSys%b1 )
+   m%AllOuts(YawBrTAyp) = -DOT_PRODUCT( LinAccEO, m%CoordSys%b3 )
+   m%AllOuts(YawBrTAzp) =  DOT_PRODUCT( LinAccEO, m%CoordSys%b2 )
+   m%AllOuts(YawBrRDxt) =  DOT_PRODUCT( m%RtHS%AngPosXB, m%CoordSys%a1 )*R2D
+   m%AllOuts(YawBrRDyt) = -DOT_PRODUCT( m%RtHS%AngPosXB, m%CoordSys%a3 )*R2D
+   ! There is no sense computing m%AllOuts(YawBrRDzt) here since it is always zero for FAST simulation results.
+   m%AllOuts(YawBrRVxp) =  DOT_PRODUCT( m%RtHS%AngVelEB, m%CoordSys%b1 )*R2D
+   m%AllOuts(YawBrRVyp) = -DOT_PRODUCT( m%RtHS%AngVelEB, m%CoordSys%b3 )*R2D
+   m%AllOuts(YawBrRVzp) =  DOT_PRODUCT( m%RtHS%AngVelEB, m%CoordSys%b2 )*R2D
+   m%AllOuts(YawBrRAxp) =  DOT_PRODUCT( AngAccEB, m%CoordSys%b1 )*R2D
+   m%AllOuts(YawBrRAyp) = -DOT_PRODUCT( AngAccEB, m%CoordSys%b3 )*R2D
+   m%AllOuts(YawBrRAzp) =  DOT_PRODUCT( AngAccEB, m%CoordSys%b2 )*R2D
 
 
       ! Local Tower Motions:
 
    DO I = 1, p%NTwGages
 
-      OtherState%AllOuts( TwHtALxt(I) ) =      DOT_PRODUCT( LinAccET(:,p%TwrGagNd(I)), OtherState%CoordSys%t1(p%TwrGagNd(I),:) )
-      OtherState%AllOuts( TwHtALyt(I) ) = -1.0*DOT_PRODUCT( LinAccET(:,p%TwrGagNd(I)), OtherState%CoordSys%t3(p%TwrGagNd(I),:) )
-      OtherState%AllOuts( TwHtALzt(I) ) =      DOT_PRODUCT( LinAccET(:,p%TwrGagNd(I)), OtherState%CoordSys%t2(p%TwrGagNd(I),:) )
+      m%AllOuts( TwHtALxt(I) ) =      DOT_PRODUCT( LinAccET(:,p%TwrGagNd(I)), m%CoordSys%t1(p%TwrGagNd(I),:) )
+      m%AllOuts( TwHtALyt(I) ) = -1.0*DOT_PRODUCT( LinAccET(:,p%TwrGagNd(I)), m%CoordSys%t3(p%TwrGagNd(I),:) )
+      m%AllOuts( TwHtALzt(I) ) =      DOT_PRODUCT( LinAccET(:,p%TwrGagNd(I)), m%CoordSys%t2(p%TwrGagNd(I),:) )
 
-      rTPT                   = OtherState%RtHS%rT0T(:,p%TwrGagNd(I)) - p%HNodes(p%TwrGagNd(I))*OtherState%CoordSys%a2(:)
+      rTPT                   = m%RtHS%rT0T(:,p%TwrGagNd(I)) - p%HNodes(p%TwrGagNd(I))*m%CoordSys%a2(:)
 
-      OtherState%AllOuts( TwHtTDxt(I) ) =      DOT_PRODUCT( rTPT,     OtherState%CoordSys%a1 )
-      OtherState%AllOuts( TwHtTDyt(I) ) = -1.0*DOT_PRODUCT( rTPT,     OtherState%CoordSys%a3 )
-      OtherState%AllOuts( TwHtTDzt(I) ) =      DOT_PRODUCT( rTPT,     OtherState%CoordSys%a2 )
+      m%AllOuts( TwHtTDxt(I) ) =      DOT_PRODUCT( rTPT,     m%CoordSys%a1 )
+      m%AllOuts( TwHtTDyt(I) ) = -1.0*DOT_PRODUCT( rTPT,     m%CoordSys%a3 )
+      m%AllOuts( TwHtTDzt(I) ) =      DOT_PRODUCT( rTPT,     m%CoordSys%a2 )
 
-      OtherState%AllOuts( TwHtRDxt(I) ) =      DOT_PRODUCT( OtherState%RtHS%AngPosXF(:,p%TwrGagNd(I)), OtherState%CoordSys%a1 )*R2D  !why is this zero???
-      OtherState%AllOuts( TwHtRDyt(I) ) = -1.0*DOT_PRODUCT( OtherState%RtHS%AngPosXF(:,p%TwrGagNd(I)), OtherState%CoordSys%a3 )*R2D
-   !   OtherState%AllOuts( TwHtRDzt(I) ) =     DOT_PRODUCT( OtherState%RtHS%AngPosXF(:,p%TwrGagNd(I)), OtherState%CoordSys%a2 )*R2D  !this will always be 0 in FAST, so no need to calculate
+      m%AllOuts( TwHtRDxt(I) ) =      DOT_PRODUCT( m%RtHS%AngPosXF(:,p%TwrGagNd(I)), m%CoordSys%a1 )*R2D  !why is this zero???
+      m%AllOuts( TwHtRDyt(I) ) = -1.0*DOT_PRODUCT( m%RtHS%AngPosXF(:,p%TwrGagNd(I)), m%CoordSys%a3 )*R2D
+   !   m%AllOuts( TwHtRDzt(I) ) =     DOT_PRODUCT( m%RtHS%AngPosXF(:,p%TwrGagNd(I)), m%CoordSys%a2 )*R2D  !this will always be 0 in FAST, so no need to calculate
 
 
-      OtherState%AllOuts( TwHtTPxi(I) ) =      OtherState%RtHS%rT(1,p%TwrGagNd(I))
-      OtherState%AllOuts( TwHtTPyi(I) ) = -1.0*OtherState%RtHS%rT(3,p%TwrGagNd(I))
-      OtherState%AllOuts( TwHtTPzi(I) ) =      OtherState%RtHS%rT(2,p%TwrGagNd(I)) + p%PtfmRefzt
+      m%AllOuts( TwHtTPxi(I) ) =      m%RtHS%rT(1,p%TwrGagNd(I))
+      m%AllOuts( TwHtTPyi(I) ) = -1.0*m%RtHS%rT(3,p%TwrGagNd(I))
+      m%AllOuts( TwHtTPzi(I) ) =      m%RtHS%rT(2,p%TwrGagNd(I)) + p%PtfmRefzt
 
-      OtherState%AllOuts( TwHtRPxi(I) ) =  OtherState%RtHS%AngPosEF(1,p%TwrGagNd(I))*R2D
-      OtherState%AllOuts( TwHtRPyi(I) ) = -OtherState%RtHS%AngPosEF(3,p%TwrGagNd(I))*R2D
-      OtherState%AllOuts( TwHtRPzi(I) ) =  OtherState%RtHS%AngPosEF(2,p%TwrGagNd(I))*R2D
+      m%AllOuts( TwHtRPxi(I) ) =  m%RtHS%AngPosEF(1,p%TwrGagNd(I))*R2D
+      m%AllOuts( TwHtRPyi(I) ) = -m%RtHS%AngPosEF(3,p%TwrGagNd(I))*R2D
+      m%AllOuts( TwHtRPzi(I) ) =  m%RtHS%AngPosEF(2,p%TwrGagNd(I))*R2D
 
    END DO !I
 
       ! Platform Motions:
 
-   OtherState%AllOuts( PtfmTDxt) =  DOT_PRODUCT(       OtherState%RtHS%rZ, OtherState%CoordSys%a1 )
-   OtherState%AllOuts( PtfmTDyt) = -DOT_PRODUCT(       OtherState%RtHS%rZ, OtherState%CoordSys%a3 )
-   OtherState%AllOuts( PtfmTDzt) =  DOT_PRODUCT(       OtherState%RtHS%rZ, OtherState%CoordSys%a2 )
-   OtherState%AllOuts( PtfmTDxi) = x%QT  (DOF_Sg )
-   OtherState%AllOuts( PtfmTDyi) = x%QT  (DOF_Sw )
-   OtherState%AllOuts( PtfmTDzi) = x%QT  (DOF_Hv )
-   OtherState%AllOuts( PtfmTVxt) =  DOT_PRODUCT( OtherState%RtHS%LinVelEZ, OtherState%CoordSys%a1 )
-   OtherState%AllOuts( PtfmTVyt) = -DOT_PRODUCT( OtherState%RtHS%LinVelEZ, OtherState%CoordSys%a3 )
-   OtherState%AllOuts( PtfmTVzt) =  DOT_PRODUCT( OtherState%RtHS%LinVelEZ, OtherState%CoordSys%a2 )
-   OtherState%AllOuts( PtfmTVxi) = x%QDT (DOF_Sg )
-   OtherState%AllOuts( PtfmTVyi) = x%QDT (DOF_Sw )
-   OtherState%AllOuts( PtfmTVzi) = x%QDT (DOF_Hv )
-   OtherState%AllOuts( PtfmTAxt) =  DOT_PRODUCT(                 LinAccEZ, OtherState%CoordSys%a1 )
-   OtherState%AllOuts( PtfmTAyt) = -DOT_PRODUCT(                 LinAccEZ, OtherState%CoordSys%a3 )
-   OtherState%AllOuts( PtfmTAzt) =  DOT_PRODUCT(                 LinAccEZ, OtherState%CoordSys%a2 )
-   OtherState%AllOuts( PtfmTAxi) = OtherState%QD2T(DOF_Sg  )
-   OtherState%AllOuts( PtfmTAyi) = OtherState%QD2T(DOF_Sw  )
-   OtherState%AllOuts( PtfmTAzi) = OtherState%QD2T(DOF_Hv  )
-   OtherState%AllOuts( PtfmRDxi) = x%QT  (DOF_R )*R2D
-   OtherState%AllOuts( PtfmRDyi) = x%QT  (DOF_P )*R2D
-   OtherState%AllOuts( PtfmRDzi) = x%QT  (DOF_Y )*R2D
-   OtherState%AllOuts( PtfmRVxt) =  DOT_PRODUCT( OtherState%RtHS%AngVelEX, OtherState%CoordSys%a1 )*R2D
-   OtherState%AllOuts( PtfmRVyt) = -DOT_PRODUCT( OtherState%RtHS%AngVelEX, OtherState%CoordSys%a3 )*R2D
-   OtherState%AllOuts( PtfmRVzt) =  DOT_PRODUCT( OtherState%RtHS%AngVelEX, OtherState%CoordSys%a2 )*R2D
-   OtherState%AllOuts( PtfmRVxi) = x%QDT (DOF_R )*R2D
-   OtherState%AllOuts( PtfmRVyi) = x%QDT (DOF_P )*R2D
-   OtherState%AllOuts( PtfmRVzi) = x%QDT (DOF_Y )*R2D
-   OtherState%AllOuts( PtfmRAxt) =  DOT_PRODUCT(                 AngAccEX, OtherState%CoordSys%a1 )*R2D
-   OtherState%AllOuts( PtfmRAyt) = -DOT_PRODUCT(                 AngAccEX, OtherState%CoordSys%a3 )*R2D
-   OtherState%AllOuts( PtfmRAzt) =  DOT_PRODUCT(                 AngAccEX, OtherState%CoordSys%a2 )*R2D
-   OtherState%AllOuts( PtfmRAxi) = OtherState%QD2T(DOF_R )*R2D
-   OtherState%AllOuts( PtfmRAyi) = OtherState%QD2T(DOF_P )*R2D
-   OtherState%AllOuts( PtfmRAzi) = OtherState%QD2T(DOF_Y )*R2D
+   m%AllOuts( PtfmTDxt) =  DOT_PRODUCT(       m%RtHS%rZ, m%CoordSys%a1 )
+   m%AllOuts( PtfmTDyt) = -DOT_PRODUCT(       m%RtHS%rZ, m%CoordSys%a3 )
+   m%AllOuts( PtfmTDzt) =  DOT_PRODUCT(       m%RtHS%rZ, m%CoordSys%a2 )
+   m%AllOuts( PtfmTDxi) = x%QT  (DOF_Sg )
+   m%AllOuts( PtfmTDyi) = x%QT  (DOF_Sw )
+   m%AllOuts( PtfmTDzi) = x%QT  (DOF_Hv )
+   m%AllOuts( PtfmTVxt) =  DOT_PRODUCT( m%RtHS%LinVelEZ, m%CoordSys%a1 )
+   m%AllOuts( PtfmTVyt) = -DOT_PRODUCT( m%RtHS%LinVelEZ, m%CoordSys%a3 )
+   m%AllOuts( PtfmTVzt) =  DOT_PRODUCT( m%RtHS%LinVelEZ, m%CoordSys%a2 )
+   m%AllOuts( PtfmTVxi) = x%QDT (DOF_Sg )
+   m%AllOuts( PtfmTVyi) = x%QDT (DOF_Sw )
+   m%AllOuts( PtfmTVzi) = x%QDT (DOF_Hv )
+   m%AllOuts( PtfmTAxt) =  DOT_PRODUCT(                 LinAccEZ, m%CoordSys%a1 )
+   m%AllOuts( PtfmTAyt) = -DOT_PRODUCT(                 LinAccEZ, m%CoordSys%a3 )
+   m%AllOuts( PtfmTAzt) =  DOT_PRODUCT(                 LinAccEZ, m%CoordSys%a2 )
+   m%AllOuts( PtfmTAxi) = m%QD2T(DOF_Sg  )
+   m%AllOuts( PtfmTAyi) = m%QD2T(DOF_Sw  )
+   m%AllOuts( PtfmTAzi) = m%QD2T(DOF_Hv  )
+   m%AllOuts( PtfmRDxi) = x%QT  (DOF_R )*R2D
+   m%AllOuts( PtfmRDyi) = x%QT  (DOF_P )*R2D
+   m%AllOuts( PtfmRDzi) = x%QT  (DOF_Y )*R2D
+   m%AllOuts( PtfmRVxt) =  DOT_PRODUCT( m%RtHS%AngVelEX, m%CoordSys%a1 )*R2D
+   m%AllOuts( PtfmRVyt) = -DOT_PRODUCT( m%RtHS%AngVelEX, m%CoordSys%a3 )*R2D
+   m%AllOuts( PtfmRVzt) =  DOT_PRODUCT( m%RtHS%AngVelEX, m%CoordSys%a2 )*R2D
+   m%AllOuts( PtfmRVxi) = x%QDT (DOF_R )*R2D
+   m%AllOuts( PtfmRVyi) = x%QDT (DOF_P )*R2D
+   m%AllOuts( PtfmRVzi) = x%QDT (DOF_Y )*R2D
+   m%AllOuts( PtfmRAxt) =  DOT_PRODUCT(                 AngAccEX, m%CoordSys%a1 )*R2D
+   m%AllOuts( PtfmRAyt) = -DOT_PRODUCT(                 AngAccEX, m%CoordSys%a3 )*R2D
+   m%AllOuts( PtfmRAzt) =  DOT_PRODUCT(                 AngAccEX, m%CoordSys%a2 )*R2D
+   m%AllOuts( PtfmRAxi) = m%QD2T(DOF_R )*R2D
+   m%AllOuts( PtfmRAyi) = m%QD2T(DOF_P )*R2D
+   m%AllOuts( PtfmRAzi) = m%QD2T(DOF_Y )*R2D
 
 
 
       ! Blade Root Loads:
 
    DO K=1,p%NumBl
-      OtherState%AllOuts( RootFxc(K) ) = DOT_PRODUCT( FrcS0B(:,K), OtherState%CoordSys%i1(K,:) )
-      OtherState%AllOuts( RootFyc(K) ) = DOT_PRODUCT( FrcS0B(:,K), OtherState%CoordSys%i2(K,:) )
-      OtherState%AllOuts( RootFzc(K) ) = DOT_PRODUCT( FrcS0B(:,K), OtherState%CoordSys%i3(K,:) )
-      OtherState%AllOuts( RootFxb(K) ) = DOT_PRODUCT( FrcS0B(:,K), OtherState%CoordSys%j1(K,:) )
-      OtherState%AllOuts( RootFyb(K) ) = DOT_PRODUCT( FrcS0B(:,K), OtherState%CoordSys%j2(K,:) )
-      OtherState%AllOuts( RootMxc(K) ) = DOT_PRODUCT( MomH0B(:,K), OtherState%CoordSys%i1(K,:) )
-      OtherState%AllOuts( RootMyc(K) ) = DOT_PRODUCT( MomH0B(:,K), OtherState%CoordSys%i2(K,:) )
-      OtherState%AllOuts( RootMzc(K) ) = DOT_PRODUCT( MomH0B(:,K), OtherState%CoordSys%i3(K,:) )
-      OtherState%AllOuts( RootMxb(K) ) = DOT_PRODUCT( MomH0B(:,K), OtherState%CoordSys%j1(K,:) )
-      OtherState%AllOuts( RootMyb(K) ) = DOT_PRODUCT( MomH0B(:,K), OtherState%CoordSys%j2(K,:) )
+      m%AllOuts( RootFxc(K) ) = DOT_PRODUCT( FrcS0B(:,K), m%CoordSys%i1(K,:) )
+      m%AllOuts( RootFyc(K) ) = DOT_PRODUCT( FrcS0B(:,K), m%CoordSys%i2(K,:) )
+      m%AllOuts( RootFzc(K) ) = DOT_PRODUCT( FrcS0B(:,K), m%CoordSys%i3(K,:) )
+      m%AllOuts( RootFxb(K) ) = DOT_PRODUCT( FrcS0B(:,K), m%CoordSys%j1(K,:) )
+      m%AllOuts( RootFyb(K) ) = DOT_PRODUCT( FrcS0B(:,K), m%CoordSys%j2(K,:) )
+      m%AllOuts( RootMxc(K) ) = DOT_PRODUCT( MomH0B(:,K), m%CoordSys%i1(K,:) )
+      m%AllOuts( RootMyc(K) ) = DOT_PRODUCT( MomH0B(:,K), m%CoordSys%i2(K,:) )
+      m%AllOuts( RootMzc(K) ) = DOT_PRODUCT( MomH0B(:,K), m%CoordSys%i3(K,:) )
+      m%AllOuts( RootMxb(K) ) = DOT_PRODUCT( MomH0B(:,K), m%CoordSys%j1(K,:) )
+      m%AllOuts( RootMyb(K) ) = DOT_PRODUCT( MomH0B(:,K), m%CoordSys%j2(K,:) )
    END DO !K
 
 
@@ -925,17 +925,17 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
       ! Initialize FrcMGagB and MomMGagB using the tip brake effects:
 
-         FrcMGagB = OtherState%RtHS%FSTipDrag(:,K) - p%TipMass(K)*( p%Gravity*OtherState%CoordSys%z2 + LinAccES(:,p%TipNode,K) )
-         MomMGagB = CROSS_PRODUCT( OtherState%RtHS%rS0S(:,K,p%TipNode) - OtherState%RtHS%rS0S(:,K,p%BldGagNd(I)), FrcMGagB )
+         FrcMGagB = m%RtHS%FSTipDrag(:,K) - p%TipMass(K)*( p%Gravity*m%CoordSys%z2 + LinAccES(:,p%TipNode,K) )
+         MomMGagB = CROSS_PRODUCT( m%RtHS%rS0S(:,K,p%TipNode) - m%RtHS%rS0S(:,K,p%BldGagNd(I)), FrcMGagB )
 
       ! Integrate to find FrcMGagB and MomMGagB using all of the nodes / elements above the current strain gage location:
          DO J = ( p%BldGagNd(I) + 1 ),p%BldNodes ! Loop through blade nodes / elements above strain gage node
 
-            TmpVec2  = OtherState%RtHS%FSAero(:,K,J) - p%MassB(K,J)*( p%Gravity*OtherState%CoordSys%z2 + LinAccES(:,J,K) )  ! Portion of FrcMGagB associated with element J
+            TmpVec2  = m%RtHS%FSAero(:,K,J) - p%MassB(K,J)*( p%Gravity*m%CoordSys%z2 + LinAccES(:,J,K) )  ! Portion of FrcMGagB associated with element J
             FrcMGagB = FrcMGagB + TmpVec2*p%DRNodes(J)
 
-            TmpVec = CROSS_PRODUCT( OtherState%RtHS%rS0S(:,K,J) - OtherState%RtHS%rS0S(:,K,p%BldGagNd(I)), TmpVec2 )           ! Portion of MomMGagB associated with element J
-            MomMGagB = MomMGagB + ( TmpVec + OtherState%RtHS%MMAero(:,K,J) )*p%DRNodes(J)
+            TmpVec = CROSS_PRODUCT( m%RtHS%rS0S(:,K,J) - m%RtHS%rS0S(:,K,p%BldGagNd(I)), TmpVec2 )           ! Portion of MomMGagB associated with element J
+            MomMGagB = MomMGagB + ( TmpVec + m%RtHS%MMAero(:,K,J) )*p%DRNodes(J)
 
          ENDDO ! J - Blade nodes / elements above strain gage node
 
@@ -945,24 +945,24 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       !   the moment arm for the force is 1/4 of p%DRNodes() and the element
       !   length is 1/2 of p%DRNodes().
 
-         TmpVec2  = OtherState%RtHS%FSAero(:,K,p%BldGagNd(I)) - p%MassB(K,p%BldGagNd(I))* ( p%Gravity*OtherState%CoordSys%z2 + LinAccES(:,p%BldGagNd(I),K) ) ! Portion of FrcMGagB associated with 1/2 of the strain gage element
+         TmpVec2  = m%RtHS%FSAero(:,K,p%BldGagNd(I)) - p%MassB(K,p%BldGagNd(I))* ( p%Gravity*m%CoordSys%z2 + LinAccES(:,p%BldGagNd(I),K) ) ! Portion of FrcMGagB associated with 1/2 of the strain gage element
          FrcMGagB = FrcMGagB + TmpVec2 * 0.5 * p%DRNodes(p%BldGagNd(I))                                                    ! Portion of FrcMGagB associated with 1/2 of the strain gage element
          FrcMGagB = 0.001*FrcMGagB           ! Convert the local force to kN
 
 
-         TmpVec = CROSS_PRODUCT( ( 0.25_R8Ki*p%DRNodes(p%BldGagNd(I)) )*OtherState%CoordSys%j3(K,:), TmpVec2 )                              ! Portion of MomMGagB associated with 1/2 of the strain gage element
+         TmpVec = CROSS_PRODUCT( ( 0.25_R8Ki*p%DRNodes(p%BldGagNd(I)) )*m%CoordSys%j3(K,:), TmpVec2 )                              ! Portion of MomMGagB associated with 1/2 of the strain gage element
 
-         MomMGagB = MomMGagB + ( TmpVec + OtherState%RtHS%MMAero(:,K,p%BldGagNd(I)) )* ( 0.5 *p%DRNodes(p%BldGagNd(I)) )
+         MomMGagB = MomMGagB + ( TmpVec + m%RtHS%MMAero(:,K,p%BldGagNd(I)) )* ( 0.5 *p%DRNodes(p%BldGagNd(I)) )
          MomMGagB = 0.001*MomMGagB           ! Convert the local moment to kN-m
 
 
-         OtherState%AllOuts(SpnFLxb(I,K)) = DOT_PRODUCT( FrcMGagB, OtherState%CoordSys%n1(K,p%BldGagNd(I),:) )
-         OtherState%AllOuts(SpnFLyb(I,K)) = DOT_PRODUCT( FrcMGagB, OtherState%CoordSys%n2(K,p%BldGagNd(I),:) )
-         OtherState%AllOuts(SpnFLzb(I,K)) = DOT_PRODUCT( FrcMGagB, OtherState%CoordSys%n3(K,p%BldGagNd(I),:) )
+         m%AllOuts(SpnFLxb(I,K)) = DOT_PRODUCT( FrcMGagB, m%CoordSys%n1(K,p%BldGagNd(I),:) )
+         m%AllOuts(SpnFLyb(I,K)) = DOT_PRODUCT( FrcMGagB, m%CoordSys%n2(K,p%BldGagNd(I),:) )
+         m%AllOuts(SpnFLzb(I,K)) = DOT_PRODUCT( FrcMGagB, m%CoordSys%n3(K,p%BldGagNd(I),:) )
 
-         OtherState%AllOuts(SpnMLxb(I,K)) = DOT_PRODUCT( MomMGagB, OtherState%CoordSys%n1(K,p%BldGagNd(I),:) )
-         OtherState%AllOuts(SpnMLyb(I,K)) = DOT_PRODUCT( MomMGagB, OtherState%CoordSys%n2(K,p%BldGagNd(I),:) )
-         OtherState%AllOuts(SpnMLzb(I,K)) = DOT_PRODUCT( MomMGagB, OtherState%CoordSys%n3(K,p%BldGagNd(I),:) )
+         m%AllOuts(SpnMLxb(I,K)) = DOT_PRODUCT( MomMGagB, m%CoordSys%n1(K,p%BldGagNd(I),:) )
+         m%AllOuts(SpnMLyb(I,K)) = DOT_PRODUCT( MomMGagB, m%CoordSys%n2(K,p%BldGagNd(I),:) )
+         m%AllOuts(SpnMLzb(I,K)) = DOT_PRODUCT( MomMGagB, m%CoordSys%n3(K,p%BldGagNd(I),:) )
       END DO ! I
    END DO ! K
 
@@ -970,115 +970,115 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
       ! Hub and Rotor Loads:
 
-   !ComDenom = 0.5*p%AirDens*p%ProjArea*OtherState%AllOuts(  WindVxi)*OtherState%AllOuts(  WindVxi)   ! Common denominator used in several expressions
+   !ComDenom = 0.5*p%AirDens*p%ProjArea*m%AllOuts(  WindVxi)*m%AllOuts(  WindVxi)   ! Common denominator used in several expressions
 
-   OtherState%AllOuts(LSShftFxa) =  DOT_PRODUCT(  FrcPRot, OtherState%CoordSys%e1 )
-   OtherState%AllOuts(LSShftFya) =  DOT_PRODUCT(  FrcPRot, OtherState%CoordSys%e2 )
-   OtherState%AllOuts(LSShftFza) =  DOT_PRODUCT(  FrcPRot, OtherState%CoordSys%e3 )
-   OtherState%AllOuts(LSShftFys) = -DOT_PRODUCT(  FrcPRot, OtherState%CoordSys%c3 )
-   OtherState%AllOuts(LSShftFzs) =  DOT_PRODUCT(  FrcPRot, OtherState%CoordSys%c2 )
-   OtherState%AllOuts(LSShftMxa) =  DOT_PRODUCT( MomLPRot, OtherState%CoordSys%e1 )
-   OtherState%AllOuts(LSSTipMya) =  DOT_PRODUCT( MomLPRot, OtherState%CoordSys%e2 )
-   OtherState%AllOuts(LSSTipMza) =  DOT_PRODUCT( MomLPRot, OtherState%CoordSys%e3 )
-   OtherState%AllOuts(LSSTipMys) = -DOT_PRODUCT( MomLPRot, OtherState%CoordSys%c3 )
-   OtherState%AllOuts(LSSTipMzs) =  DOT_PRODUCT( MomLPRot, OtherState%CoordSys%c2 )
+   m%AllOuts(LSShftFxa) =  DOT_PRODUCT(  FrcPRot, m%CoordSys%e1 )
+   m%AllOuts(LSShftFya) =  DOT_PRODUCT(  FrcPRot, m%CoordSys%e2 )
+   m%AllOuts(LSShftFza) =  DOT_PRODUCT(  FrcPRot, m%CoordSys%e3 )
+   m%AllOuts(LSShftFys) = -DOT_PRODUCT(  FrcPRot, m%CoordSys%c3 )
+   m%AllOuts(LSShftFzs) =  DOT_PRODUCT(  FrcPRot, m%CoordSys%c2 )
+   m%AllOuts(LSShftMxa) =  DOT_PRODUCT( MomLPRot, m%CoordSys%e1 )
+   m%AllOuts(LSSTipMya) =  DOT_PRODUCT( MomLPRot, m%CoordSys%e2 )
+   m%AllOuts(LSSTipMza) =  DOT_PRODUCT( MomLPRot, m%CoordSys%e3 )
+   m%AllOuts(LSSTipMys) = -DOT_PRODUCT( MomLPRot, m%CoordSys%c3 )
+   m%AllOuts(LSSTipMzs) =  DOT_PRODUCT( MomLPRot, m%CoordSys%c2 )
 
-!   IF ( .NOT. EqualRealNos( OtherState%AllOuts(LSShftFxa), 0.0_ReKi ) )   THEN ! .TRUE. if the denominator in the following equations is not zero.
+!   IF ( .NOT. EqualRealNos( m%AllOuts(LSShftFxa), 0.0_ReKi ) )   THEN ! .TRUE. if the denominator in the following equations is not zero.
 !
-!      CThrstys = -OtherState%AllOuts(LSSTipMzs)/OtherState%AllOuts(LSShftFxa)  ! Estimate of the ys-location of the center of thrust
-!      CThrstzs =  OtherState%AllOuts(LSSTipMys)/OtherState%AllOuts(LSShftFxa)  ! Estimate of the zs-location of the center of thrust
+!      CThrstys = -m%AllOuts(LSSTipMzs)/m%AllOuts(LSShftFxa)  ! Estimate of the ys-location of the center of thrust
+!      CThrstzs =  m%AllOuts(LSSTipMys)/m%AllOuts(LSShftFxa)  ! Estimate of the zs-location of the center of thrust
 !
-!!      OtherState%AllOuts(CThrstAzm) = MOD( ( ATAN2( -CThrstzs, -CThrstys ) + p%AzimB1Up )*R2D + 360.0 + 90.0, 360.0 )  !bjj: IgnoreMod was used for linearization... perhaps these outputs should not use the MOD function; only WriteOutputs should have that...
-!!      OtherState%AllOuts(CThrstRad) = MIN( 1.0, SQRT( CThrstys*CThrstys + CThrstzs*CThrstzs )/p%AvgNrmTpRd )
+!!      m%AllOuts(CThrstAzm) = MOD( ( ATAN2( -CThrstzs, -CThrstys ) + p%AzimB1Up )*R2D + 360.0 + 90.0, 360.0 )  !bjj: IgnoreMod was used for linearization... perhaps these outputs should not use the MOD function; only WriteOutputs should have that...
+!!      m%AllOuts(CThrstRad) = MIN( 1.0, SQRT( CThrstys*CThrstys + CThrstzs*CThrstzs )/p%AvgNrmTpRd )
 !
 !   ELSE
 !
-!      !OtherState%AllOuts(CThrstAzm) = 0.0
-!      !OtherState%AllOuts(CThrstRad) = 0.0
+!      !m%AllOuts(CThrstAzm) = 0.0
+!      !m%AllOuts(CThrstRad) = 0.0
 !
 !   ENDIF
 
-   OtherState%AllOuts(   RotPwr) = ( x%QDT(DOF_GeAz) + x%QDT(DOF_DrTr) )*OtherState%AllOuts(LSShftMxa)
+   m%AllOuts(   RotPwr) = ( x%QDT(DOF_GeAz) + x%QDT(DOF_DrTr) )*m%AllOuts(LSShftMxa)
 
    !IF ( .NOT. EqualRealNos( ComDenom, 0.0_ReKi ) )  THEN   ! .TRUE. if the denominator in the following equations is not zero.
    !
-   !   OtherState%AllOuts( RotCq) = 1000.0*OtherState%AllOuts(LSShftMxa) / ( ComDenom*p%TipRad )
-   !   OtherState%AllOuts( RotCp) = 1000.0*OtherState%AllOuts(   RotPwr) / ( ComDenom*OtherState%AllOuts(  WindVxi) )
-   !   OtherState%AllOuts( RotCt) = 1000.0*OtherState%AllOuts(LSShftFxa) /   ComDenom
+   !   m%AllOuts( RotCq) = 1000.0*m%AllOuts(LSShftMxa) / ( ComDenom*p%TipRad )
+   !   m%AllOuts( RotCp) = 1000.0*m%AllOuts(   RotPwr) / ( ComDenom*m%AllOuts(  WindVxi) )
+   !   m%AllOuts( RotCt) = 1000.0*m%AllOuts(LSShftFxa) /   ComDenom
    !
    !ELSE
    !
-   !   OtherState%AllOuts( RotCq) = 0.0
-   !   OtherState%AllOuts( RotCp) = 0.0
-   !   OtherState%AllOuts( RotCt) = 0.0
+   !   m%AllOuts( RotCq) = 0.0
+   !   m%AllOuts( RotCp) = 0.0
+   !   m%AllOuts( RotCt) = 0.0
    !
    !ENDIF
 
 
       ! Shaft Strain Gage Loads:
 
-   OtherState%AllOuts(LSSGagMya) = OtherState%AllOuts(LSSTipMya) + p%ShftGagL*OtherState%AllOuts(LSShftFza)
-   OtherState%AllOuts(LSSGagMza) = OtherState%AllOuts(LSSTipMza) - p%ShftGagL*OtherState%AllOuts(LSShftFya)
-   OtherState%AllOuts(LSSGagMys) = OtherState%AllOuts(LSSTipMys) + p%ShftGagL*OtherState%AllOuts(LSShftFzs)
-   OtherState%AllOuts(LSSGagMzs) = OtherState%AllOuts(LSSTipMzs) - p%ShftGagL*OtherState%AllOuts(LSShftFys)
+   m%AllOuts(LSSGagMya) = m%AllOuts(LSSTipMya) + p%ShftGagL*m%AllOuts(LSShftFza)
+   m%AllOuts(LSSGagMza) = m%AllOuts(LSSTipMza) - p%ShftGagL*m%AllOuts(LSShftFya)
+   m%AllOuts(LSSGagMys) = m%AllOuts(LSSTipMys) + p%ShftGagL*m%AllOuts(LSShftFzs)
+   m%AllOuts(LSSGagMzs) = m%AllOuts(LSSTipMzs) - p%ShftGagL*m%AllOuts(LSShftFys)
 
 
       ! Generator and High-Speed Shaft Loads:
 
-   OtherState%AllOuts( HSShftTq)  = OtherState%AllOuts(LSShftMxa)*OtherState%RtHS%GBoxEffFac/ABS(p%GBRatio)
-   OtherState%AllOuts(HSShftPwr)  = OtherState%AllOuts( HSShftTq)*ABS(p%GBRatio)*x%QDT(DOF_GeAz)
-   OtherState%AllOuts(HSSBrTq)    = OtherState%HSSBrTrq*0.001_ReKi
+   m%AllOuts( HSShftTq)  = m%AllOuts(LSShftMxa)*m%RtHS%GBoxEffFac/ABS(p%GBRatio)
+   m%AllOuts(HSShftPwr)  = m%AllOuts( HSShftTq)*ABS(p%GBRatio)*x%QDT(DOF_GeAz)
+   m%AllOuts(HSSBrTq)    = OtherState%HSSBrTrq*0.001_ReKi
 
 
    !IF ( .NOT. EqualRealNos( ComDenom, 0.0_ReKi ) )  THEN  ! .TRUE. if the denominator in the following equations is not zero (ComDenom is the same as it is calculated above).
    !
-   !   OtherState%AllOuts( HSShftCq) = 1000.0*OtherState%AllOuts( HSShftTq) / ( ComDenom*p%TipRad )
-   !   OtherState%AllOuts( HSShftCp) = 1000.0*OtherState%AllOuts(HSShftPwr) / ( ComDenom*OtherState%AllOuts(  WindVxi) )
-   !   OtherState%AllOuts(    GenCq) = 1000.0*OtherState%AllOuts(    GenTq) / ( ComDenom*p%TipRad )
-   !   OtherState%AllOuts(    GenCp) = 1000.0*OtherState%AllOuts(   GenPwr) / ( ComDenom*OtherState%AllOuts(  WindVxi) )
+   !   m%AllOuts( HSShftCq) = 1000.0*m%AllOuts( HSShftTq) / ( ComDenom*p%TipRad )
+   !   m%AllOuts( HSShftCp) = 1000.0*m%AllOuts(HSShftPwr) / ( ComDenom*m%AllOuts(  WindVxi) )
+   !   m%AllOuts(    GenCq) = 1000.0*m%AllOuts(    GenTq) / ( ComDenom*p%TipRad )
+   !   m%AllOuts(    GenCp) = 1000.0*m%AllOuts(   GenPwr) / ( ComDenom*m%AllOuts(  WindVxi) )
    !
    !ELSE
    !
-   !   OtherState%AllOuts( HSShftCq) = 0.0
-   !   OtherState%AllOuts( HSShftCp) = 0.0
-   !   OtherState%AllOuts(    GenCq) = 0.0
-   !   OtherState%AllOuts(    GenCp) = 0.0
+   !   m%AllOuts( HSShftCq) = 0.0
+   !   m%AllOuts( HSShftCp) = 0.0
+   !   m%AllOuts(    GenCq) = 0.0
+   !   m%AllOuts(    GenCp) = 0.0
    !
    !ENDIF
 
 
       ! Rotor-Furl Axis Loads:
 
-   OtherState%AllOuts(RFrlBrM  ) =  DOT_PRODUCT( MomNGnRt, OtherState%CoordSys%rfa )
+   m%AllOuts(RFrlBrM  ) =  DOT_PRODUCT( MomNGnRt, m%CoordSys%rfa )
 
 
       ! Tail-Furl Axis Loads:
 
-   OtherState%AllOuts(TFrlBrM  ) =  DOT_PRODUCT( MomNTail, OtherState%CoordSys%tfa )
+   m%AllOuts(TFrlBrM  ) =  DOT_PRODUCT( MomNTail, m%CoordSys%tfa )
 
 
       ! Tower-Top / Yaw Bearing Loads:
 
-   OtherState%AllOuts( YawBrFxn) =  DOT_PRODUCT( FrcONcRt, OtherState%CoordSys%d1 )
-   OtherState%AllOuts( YawBrFyn) = -DOT_PRODUCT( FrcONcRt, OtherState%CoordSys%d3 )
-   OtherState%AllOuts( YawBrFzn) =  DOT_PRODUCT( FrcONcRt, OtherState%CoordSys%d2 )
-   OtherState%AllOuts( YawBrFxp) =  DOT_PRODUCT( FrcONcRt, OtherState%CoordSys%b1 )
-   OtherState%AllOuts( YawBrFyp) = -DOT_PRODUCT( FrcONcRt, OtherState%CoordSys%b3 )
-   OtherState%AllOuts( YawBrMxn) =  DOT_PRODUCT( MomBNcRt, OtherState%CoordSys%d1 )
-   OtherState%AllOuts( YawBrMyn) = -DOT_PRODUCT( MomBNcRt, OtherState%CoordSys%d3 )
-   OtherState%AllOuts( YawBrMzn) =  DOT_PRODUCT( MomBNcRt, OtherState%CoordSys%d2 )
-   OtherState%AllOuts( YawBrMxp) =  DOT_PRODUCT( MomBNcRt, OtherState%CoordSys%b1 )
-   OtherState%AllOuts( YawBrMyp) = -DOT_PRODUCT( MomBNcRt, OtherState%CoordSys%b3 )
+   m%AllOuts( YawBrFxn) =  DOT_PRODUCT( FrcONcRt, m%CoordSys%d1 )
+   m%AllOuts( YawBrFyn) = -DOT_PRODUCT( FrcONcRt, m%CoordSys%d3 )
+   m%AllOuts( YawBrFzn) =  DOT_PRODUCT( FrcONcRt, m%CoordSys%d2 )
+   m%AllOuts( YawBrFxp) =  DOT_PRODUCT( FrcONcRt, m%CoordSys%b1 )
+   m%AllOuts( YawBrFyp) = -DOT_PRODUCT( FrcONcRt, m%CoordSys%b3 )
+   m%AllOuts( YawBrMxn) =  DOT_PRODUCT( MomBNcRt, m%CoordSys%d1 )
+   m%AllOuts( YawBrMyn) = -DOT_PRODUCT( MomBNcRt, m%CoordSys%d3 )
+   m%AllOuts( YawBrMzn) =  DOT_PRODUCT( MomBNcRt, m%CoordSys%d2 )
+   m%AllOuts( YawBrMxp) =  DOT_PRODUCT( MomBNcRt, m%CoordSys%b1 )
+   m%AllOuts( YawBrMyp) = -DOT_PRODUCT( MomBNcRt, m%CoordSys%b3 )
 
 
       ! Tower Base Loads:
 
-   OtherState%AllOuts( TwrBsFxt) =  DOT_PRODUCT( FrcT0Trb, OtherState%CoordSys%a1 )
-   OtherState%AllOuts( TwrBsFyt) = -DOT_PRODUCT( FrcT0Trb, OtherState%CoordSys%a3 )
-   OtherState%AllOuts( TwrBsFzt) =  DOT_PRODUCT( FrcT0Trb, OtherState%CoordSys%a2 )
-   OtherState%AllOuts( TwrBsMxt) =  DOT_PRODUCT( MomX0Trb, OtherState%CoordSys%a1 )
-   OtherState%AllOuts( TwrBsMyt) = -DOT_PRODUCT( MomX0Trb, OtherState%CoordSys%a3 )
-   OtherState%AllOuts( TwrBsMzt) =  DOT_PRODUCT( MomX0Trb, OtherState%CoordSys%a2 )
+   m%AllOuts( TwrBsFxt) =  DOT_PRODUCT( FrcT0Trb, m%CoordSys%a1 )
+   m%AllOuts( TwrBsFyt) = -DOT_PRODUCT( FrcT0Trb, m%CoordSys%a3 )
+   m%AllOuts( TwrBsFzt) =  DOT_PRODUCT( FrcT0Trb, m%CoordSys%a2 )
+   m%AllOuts( TwrBsMxt) =  DOT_PRODUCT( MomX0Trb, m%CoordSys%a1 )
+   m%AllOuts( TwrBsMyt) = -DOT_PRODUCT( MomX0Trb, m%CoordSys%a3 )
+   m%AllOuts( TwrBsMzt) =  DOT_PRODUCT( MomX0Trb, m%CoordSys%a2 )
 
 
       ! Local Tower Loads:
@@ -1089,16 +1089,16 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    DO I=1,p%NTwGages
 
       ! Initialize FrcFGagT and MomFGagT using the tower-top and yaw bearing mass effects:
-      FrcFGagT = FrcONcRt - p%YawBrMass*( p%Gravity*OtherState%CoordSys%z2 + LinAccEO )
-      MomFGagT = CROSS_PRODUCT( OtherState%RtHS%rZO - OtherState%RtHS%rZT(:,p%TwrGagNd(I)), FrcFGagT )
+      FrcFGagT = FrcONcRt - p%YawBrMass*( p%Gravity*m%CoordSys%z2 + LinAccEO )
+      MomFGagT = CROSS_PRODUCT( m%RtHS%rZO - m%RtHS%rZT(:,p%TwrGagNd(I)), FrcFGagT )
       MomFGagT = MomFGagT + MomBNcRt
 
       ! Integrate to find FrcFGagT and MomFGagT using all of the nodes / elements above the current strain gage location:
       DO J = ( p%TwrGagNd(I) + 1 ),p%TwrNodes ! Loop through tower nodes / elements above strain gage node
-         TmpVec2  = FTTower(:,J) - p%MassT(J)*( p%Gravity*OtherState%CoordSys%z2 + LinAccET(:,J) )           ! Portion of FrcFGagT associated with element J
+         TmpVec2  = FTTower(:,J) - p%MassT(J)*( p%Gravity*m%CoordSys%z2 + LinAccET(:,J) )           ! Portion of FrcFGagT associated with element J
          FrcFGagT = FrcFGagT + TmpVec2*p%DHNodes(J)
 
-         TmpVec = CROSS_PRODUCT( OtherState%RtHS%rZT(:,J) - OtherState%RtHS%rZT(:,p%TwrGagNd(I)), TmpVec2 )                          ! Portion of MomFGagT associated with element J
+         TmpVec = CROSS_PRODUCT( m%RtHS%rZT(:,J) - m%RtHS%rZT(:,p%TwrGagNd(I)), TmpVec2 )                          ! Portion of MomFGagT associated with element J
          MomFGagT = MomFGagT + ( TmpVec + MFHydro(:,J) )*p%DHNodes(J)
       ENDDO ! J -Tower nodes / elements above strain gage node
 
@@ -1107,128 +1107,128 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       !   effect (due to tower bending) within the element.  Thus, the moment arm
       !   for the force is 1/4 of DHNodes() and the element length is 1/2 of DHNodes().
 
-      TmpVec2  = FTTower(:,p%TwrGagNd(I)) - p%MassT(p%TwrGagNd(I))*( p%Gravity*OtherState%CoordSys%z2 + LinAccET(:,p%TwrGagNd(I)))
+      TmpVec2  = FTTower(:,p%TwrGagNd(I)) - p%MassT(p%TwrGagNd(I))*( p%Gravity*m%CoordSys%z2 + LinAccET(:,p%TwrGagNd(I)))
 
       FrcFGagT = FrcFGagT + TmpVec2 * 0.5 * p%DHNodes(p%TwrGagNd(I))
       FrcFGagT = 0.001*FrcFGagT  ! Convert the local force to kN
 
-      TmpVec = CROSS_PRODUCT( ( 0.25_R8Ki*p%DHNodes( p%TwrGagNd(I)) )*OtherState%CoordSys%a2, TmpVec2 )              ! Portion of MomFGagT associated with 1/2 of the strain gage element
+      TmpVec = CROSS_PRODUCT( ( 0.25_R8Ki*p%DHNodes( p%TwrGagNd(I)) )*m%CoordSys%a2, TmpVec2 )              ! Portion of MomFGagT associated with 1/2 of the strain gage element
       TmpVec   = TmpVec   + MFHydro(:,p%TwrGagNd(I))
       MomFGagT = MomFGagT + TmpVec * 0.5 * p%DHNodes(p%TwrGagNd(I))
       MomFGagT = 0.001*MomFGagT  ! Convert the local moment to kN-m
 
-      OtherState%AllOuts( TwHtFLxt(I) ) =     DOT_PRODUCT( FrcFGagT, OtherState%CoordSys%t1(p%TwrGagNd(I),:) )
-      OtherState%AllOuts( TwHtFLyt(I) ) = -1.*DOT_PRODUCT( FrcFGagT, OtherState%CoordSys%t3(p%TwrGagNd(I),:) )
-      OtherState%AllOuts( TwHtFLzt(I) ) =     DOT_PRODUCT( FrcFGagT, OtherState%CoordSys%t2(p%TwrGagNd(I),:) )
+      m%AllOuts( TwHtFLxt(I) ) =     DOT_PRODUCT( FrcFGagT, m%CoordSys%t1(p%TwrGagNd(I),:) )
+      m%AllOuts( TwHtFLyt(I) ) = -1.*DOT_PRODUCT( FrcFGagT, m%CoordSys%t3(p%TwrGagNd(I),:) )
+      m%AllOuts( TwHtFLzt(I) ) =     DOT_PRODUCT( FrcFGagT, m%CoordSys%t2(p%TwrGagNd(I),:) )
 
-      OtherState%AllOuts( TwHtMLxt(I) ) =     DOT_PRODUCT( MomFGagT, OtherState%CoordSys%t1(p%TwrGagNd(I),:) )
-      OtherState%AllOuts( TwHtMLyt(I) ) = -1.*DOT_PRODUCT( MomFGagT, OtherState%CoordSys%t3(p%TwrGagNd(I),:) )
-      OtherState%AllOuts( TwHtMLzt(I) ) =     DOT_PRODUCT( MomFGagT, OtherState%CoordSys%t2(p%TwrGagNd(I),:) )
+      m%AllOuts( TwHtMLxt(I) ) =     DOT_PRODUCT( MomFGagT, m%CoordSys%t1(p%TwrGagNd(I),:) )
+      m%AllOuts( TwHtMLyt(I) ) = -1.*DOT_PRODUCT( MomFGagT, m%CoordSys%t3(p%TwrGagNd(I),:) )
+      m%AllOuts( TwHtMLzt(I) ) =     DOT_PRODUCT( MomFGagT, m%CoordSys%t2(p%TwrGagNd(I),:) )
 
    END DO
 
 
    !   ! Platform Loads:
    !
-   !OtherState%AllOuts(  PtfmFxt) =  DOT_PRODUCT( FZHydro, OtherState%CoordSys%a1 )
-   !OtherState%AllOuts(  PtfmFyt) = -DOT_PRODUCT( FZHydro, OtherState%CoordSys%a3 )
-   !OtherState%AllOuts(  PtfmFzt) =  DOT_PRODUCT( FZHydro, OtherState%CoordSys%a2 )
-   !OtherState%AllOuts(  PtfmFxi) =  DOT_PRODUCT( FZHydro, OtherState%CoordSys%z1 )
-   !OtherState%AllOuts(  PtfmFyi) = -DOT_PRODUCT( FZHydro, OtherState%CoordSys%z3 )
-   !OtherState%AllOuts(  PtfmFzi) =  DOT_PRODUCT( FZHydro, OtherState%CoordSys%z2 )
-   !OtherState%AllOuts(  PtfmMxt) =  DOT_PRODUCT( MXHydro, OtherState%CoordSys%a1 )
-   !OtherState%AllOuts(  PtfmMyt) = -DOT_PRODUCT( MXHydro, OtherState%CoordSys%a3 )
-   !OtherState%AllOuts(  PtfmMzt) =  DOT_PRODUCT( MXHydro, OtherState%CoordSys%a2 )
-   !OtherState%AllOuts(  PtfmMxi) =  DOT_PRODUCT( MXHydro, OtherState%CoordSys%z1 )
-   !OtherState%AllOuts(  PtfmMyi) = -DOT_PRODUCT( MXHydro, OtherState%CoordSys%z3 )
-   !OtherState%AllOuts(  PtfmMzi) =  DOT_PRODUCT( MXHydro, OtherState%CoordSys%z2 )
+   !m%AllOuts(  PtfmFxt) =  DOT_PRODUCT( FZHydro, m%CoordSys%a1 )
+   !m%AllOuts(  PtfmFyt) = -DOT_PRODUCT( FZHydro, m%CoordSys%a3 )
+   !m%AllOuts(  PtfmFzt) =  DOT_PRODUCT( FZHydro, m%CoordSys%a2 )
+   !m%AllOuts(  PtfmFxi) =  DOT_PRODUCT( FZHydro, m%CoordSys%z1 )
+   !m%AllOuts(  PtfmFyi) = -DOT_PRODUCT( FZHydro, m%CoordSys%z3 )
+   !m%AllOuts(  PtfmFzi) =  DOT_PRODUCT( FZHydro, m%CoordSys%z2 )
+   !m%AllOuts(  PtfmMxt) =  DOT_PRODUCT( MXHydro, m%CoordSys%a1 )
+   !m%AllOuts(  PtfmMyt) = -DOT_PRODUCT( MXHydro, m%CoordSys%a3 )
+   !m%AllOuts(  PtfmMzt) =  DOT_PRODUCT( MXHydro, m%CoordSys%a2 )
+   !m%AllOuts(  PtfmMxi) =  DOT_PRODUCT( MXHydro, m%CoordSys%z1 )
+   !m%AllOuts(  PtfmMyi) = -DOT_PRODUCT( MXHydro, m%CoordSys%z3 )
+   !m%AllOuts(  PtfmMzi) =  DOT_PRODUCT( MXHydro, m%CoordSys%z2 )
    !
 
       ! Internal p%DOFs outputs:
 
-   OtherState%AllOuts( Q_B1E1   ) = x%QT(   DOF_BE(1,1) )
-   OtherState%AllOuts( Q_B2E1   ) = x%QT(   DOF_BE(2,1) )
-   OtherState%AllOuts( Q_B1F1   ) = x%QT(   DOF_BF(1,1) )
-   OtherState%AllOuts( Q_B2F1   ) = x%QT(   DOF_BF(2,1) )
-   OtherState%AllOuts( Q_B1F2   ) = x%QT(   DOF_BF(1,2) )
-   OtherState%AllOuts( Q_B2F2   ) = x%QT(   DOF_BF(2,2) )
-   OtherState%AllOuts( Q_DrTr   ) = x%QT(   DOF_DrTr    )
-   OtherState%AllOuts( Q_GeAz   ) = x%QT(   DOF_GeAz    )
-   OtherState%AllOuts( Q_RFrl   ) = x%QT(   DOF_RFrl    )
-   OtherState%AllOuts( Q_TFrl   ) = x%QT(   DOF_TFrl    )
-   OtherState%AllOuts( Q_Yaw    ) = x%QT(   DOF_Yaw     )
-   OtherState%AllOuts( Q_TFA1   ) = x%QT(   DOF_TFA1    )
-   OtherState%AllOuts( Q_TSS1   ) = x%QT(   DOF_TSS1    )
-   OtherState%AllOuts( Q_TFA2   ) = x%QT(   DOF_TFA2    )
-   OtherState%AllOuts( Q_TSS2   ) = x%QT(   DOF_TSS2    )
-   OtherState%AllOuts( Q_Sg     ) = x%QT(   DOF_Sg      )
-   OtherState%AllOuts( Q_Sw     ) = x%QT(   DOF_Sw      )
-   OtherState%AllOuts( Q_Hv     ) = x%QT(   DOF_Hv      )
-   OtherState%AllOuts( Q_R      ) = x%QT(   DOF_R       )
-   OtherState%AllOuts( Q_P      ) = x%QT(   DOF_P       )
-   OtherState%AllOuts( Q_Y      ) = x%QT(   DOF_Y       )
+   m%AllOuts( Q_B1E1   ) = x%QT(   DOF_BE(1,1) )
+   m%AllOuts( Q_B2E1   ) = x%QT(   DOF_BE(2,1) )
+   m%AllOuts( Q_B1F1   ) = x%QT(   DOF_BF(1,1) )
+   m%AllOuts( Q_B2F1   ) = x%QT(   DOF_BF(2,1) )
+   m%AllOuts( Q_B1F2   ) = x%QT(   DOF_BF(1,2) )
+   m%AllOuts( Q_B2F2   ) = x%QT(   DOF_BF(2,2) )
+   m%AllOuts( Q_DrTr   ) = x%QT(   DOF_DrTr    )
+   m%AllOuts( Q_GeAz   ) = x%QT(   DOF_GeAz    )
+   m%AllOuts( Q_RFrl   ) = x%QT(   DOF_RFrl    )
+   m%AllOuts( Q_TFrl   ) = x%QT(   DOF_TFrl    )
+   m%AllOuts( Q_Yaw    ) = x%QT(   DOF_Yaw     )
+   m%AllOuts( Q_TFA1   ) = x%QT(   DOF_TFA1    )
+   m%AllOuts( Q_TSS1   ) = x%QT(   DOF_TSS1    )
+   m%AllOuts( Q_TFA2   ) = x%QT(   DOF_TFA2    )
+   m%AllOuts( Q_TSS2   ) = x%QT(   DOF_TSS2    )
+   m%AllOuts( Q_Sg     ) = x%QT(   DOF_Sg      )
+   m%AllOuts( Q_Sw     ) = x%QT(   DOF_Sw      )
+   m%AllOuts( Q_Hv     ) = x%QT(   DOF_Hv      )
+   m%AllOuts( Q_R      ) = x%QT(   DOF_R       )
+   m%AllOuts( Q_P      ) = x%QT(   DOF_P       )
+   m%AllOuts( Q_Y      ) = x%QT(   DOF_Y       )
 
-   OtherState%AllOuts( QD_B1E1  ) = x%QDT(  DOF_BE(1,1) )
-   OtherState%AllOuts( QD_B2E1  ) = x%QDT(  DOF_BE(2,1) )
-   OtherState%AllOuts( QD_B1F1  ) = x%QDT(  DOF_BF(1,1) )
-   OtherState%AllOuts( QD_B2F1  ) = x%QDT(  DOF_BF(2,1) )
-   OtherState%AllOuts( QD_B1F2  ) = x%QDT(  DOF_BF(1,2) )
-   OtherState%AllOuts( QD_B2F2  ) = x%QDT(  DOF_BF(2,2) )
-   OtherState%AllOuts( QD_DrTr  ) = x%QDT(  DOF_DrTr    )
-   OtherState%AllOuts( QD_GeAz  ) = x%QDT(  DOF_GeAz    )
-   OtherState%AllOuts( QD_RFrl  ) = x%QDT(  DOF_RFrl    )
-   OtherState%AllOuts( QD_TFrl  ) = x%QDT(  DOF_TFrl    )
-   OtherState%AllOuts( QD_Yaw   ) = x%QDT(  DOF_Yaw     )
-   OtherState%AllOuts( QD_TFA1  ) = x%QDT(  DOF_TFA1    )
-   OtherState%AllOuts( QD_TSS1  ) = x%QDT(  DOF_TSS1    )
-   OtherState%AllOuts( QD_TFA2  ) = x%QDT(  DOF_TFA2    )
-   OtherState%AllOuts( QD_TSS2  ) = x%QDT(  DOF_TSS2    )
-   OtherState%AllOuts( QD_Sg    ) = x%QDT(  DOF_Sg      )
-   OtherState%AllOuts( QD_Sw    ) = x%QDT(  DOF_Sw      )
-   OtherState%AllOuts( QD_Hv    ) = x%QDT(  DOF_Hv      )
-   OtherState%AllOuts( QD_R     ) = x%QDT(  DOF_R       )
-   OtherState%AllOuts( QD_P     ) = x%QDT(  DOF_P       )
-   OtherState%AllOuts( QD_Y     ) = x%QDT(  DOF_Y       )
+   m%AllOuts( QD_B1E1  ) = x%QDT(  DOF_BE(1,1) )
+   m%AllOuts( QD_B2E1  ) = x%QDT(  DOF_BE(2,1) )
+   m%AllOuts( QD_B1F1  ) = x%QDT(  DOF_BF(1,1) )
+   m%AllOuts( QD_B2F1  ) = x%QDT(  DOF_BF(2,1) )
+   m%AllOuts( QD_B1F2  ) = x%QDT(  DOF_BF(1,2) )
+   m%AllOuts( QD_B2F2  ) = x%QDT(  DOF_BF(2,2) )
+   m%AllOuts( QD_DrTr  ) = x%QDT(  DOF_DrTr    )
+   m%AllOuts( QD_GeAz  ) = x%QDT(  DOF_GeAz    )
+   m%AllOuts( QD_RFrl  ) = x%QDT(  DOF_RFrl    )
+   m%AllOuts( QD_TFrl  ) = x%QDT(  DOF_TFrl    )
+   m%AllOuts( QD_Yaw   ) = x%QDT(  DOF_Yaw     )
+   m%AllOuts( QD_TFA1  ) = x%QDT(  DOF_TFA1    )
+   m%AllOuts( QD_TSS1  ) = x%QDT(  DOF_TSS1    )
+   m%AllOuts( QD_TFA2  ) = x%QDT(  DOF_TFA2    )
+   m%AllOuts( QD_TSS2  ) = x%QDT(  DOF_TSS2    )
+   m%AllOuts( QD_Sg    ) = x%QDT(  DOF_Sg      )
+   m%AllOuts( QD_Sw    ) = x%QDT(  DOF_Sw      )
+   m%AllOuts( QD_Hv    ) = x%QDT(  DOF_Hv      )
+   m%AllOuts( QD_R     ) = x%QDT(  DOF_R       )
+   m%AllOuts( QD_P     ) = x%QDT(  DOF_P       )
+   m%AllOuts( QD_Y     ) = x%QDT(  DOF_Y       )
 
-   OtherState%AllOuts( QD2_B1E1 ) = OtherState%QD2T( DOF_BE(1,1) )
-   OtherState%AllOuts( QD2_B2E1 ) = OtherState%QD2T( DOF_BE(2,1) )
-   OtherState%AllOuts( QD2_B1F1 ) = OtherState%QD2T( DOF_BF(1,1) )
-   OtherState%AllOuts( QD2_B2F1 ) = OtherState%QD2T( DOF_BF(2,1) )
-   OtherState%AllOuts( QD2_B1F2 ) = OtherState%QD2T( DOF_BF(1,2) )
-   OtherState%AllOuts( QD2_B2F2 ) = OtherState%QD2T( DOF_BF(2,2) )
-   OtherState%AllOuts( QD2_DrTr ) = OtherState%QD2T( DOF_DrTr    )
-   OtherState%AllOuts( QD2_GeAz ) = OtherState%QD2T( DOF_GeAz    )
-   OtherState%AllOuts( QD2_RFrl ) = OtherState%QD2T( DOF_RFrl    )
-   OtherState%AllOuts( QD2_TFrl ) = OtherState%QD2T( DOF_TFrl    )
-   OtherState%AllOuts( QD2_Yaw  ) = OtherState%QD2T( DOF_Yaw     )
-   OtherState%AllOuts( QD2_TFA1 ) = OtherState%QD2T( DOF_TFA1    )
-   OtherState%AllOuts( QD2_TSS1 ) = OtherState%QD2T( DOF_TSS1    )
-   OtherState%AllOuts( QD2_TFA2 ) = OtherState%QD2T( DOF_TFA2    )
-   OtherState%AllOuts( QD2_TSS2 ) = OtherState%QD2T( DOF_TSS2    )
-   OtherState%AllOuts( QD2_Sg   ) = OtherState%QD2T( DOF_Sg      )
-   OtherState%AllOuts( QD2_Sw   ) = OtherState%QD2T( DOF_Sw      )
-   OtherState%AllOuts( QD2_Hv   ) = OtherState%QD2T( DOF_Hv      )
-   OtherState%AllOuts( QD2_R    ) = OtherState%QD2T( DOF_R       )
-   OtherState%AllOuts( QD2_P    ) = OtherState%QD2T( DOF_P       )
-   OtherState%AllOuts( QD2_Y    ) = OtherState%QD2T( DOF_Y       )
+   m%AllOuts( QD2_B1E1 ) = m%QD2T( DOF_BE(1,1) )
+   m%AllOuts( QD2_B2E1 ) = m%QD2T( DOF_BE(2,1) )
+   m%AllOuts( QD2_B1F1 ) = m%QD2T( DOF_BF(1,1) )
+   m%AllOuts( QD2_B2F1 ) = m%QD2T( DOF_BF(2,1) )
+   m%AllOuts( QD2_B1F2 ) = m%QD2T( DOF_BF(1,2) )
+   m%AllOuts( QD2_B2F2 ) = m%QD2T( DOF_BF(2,2) )
+   m%AllOuts( QD2_DrTr ) = m%QD2T( DOF_DrTr    )
+   m%AllOuts( QD2_GeAz ) = m%QD2T( DOF_GeAz    )
+   m%AllOuts( QD2_RFrl ) = m%QD2T( DOF_RFrl    )
+   m%AllOuts( QD2_TFrl ) = m%QD2T( DOF_TFrl    )
+   m%AllOuts( QD2_Yaw  ) = m%QD2T( DOF_Yaw     )
+   m%AllOuts( QD2_TFA1 ) = m%QD2T( DOF_TFA1    )
+   m%AllOuts( QD2_TSS1 ) = m%QD2T( DOF_TSS1    )
+   m%AllOuts( QD2_TFA2 ) = m%QD2T( DOF_TFA2    )
+   m%AllOuts( QD2_TSS2 ) = m%QD2T( DOF_TSS2    )
+   m%AllOuts( QD2_Sg   ) = m%QD2T( DOF_Sg      )
+   m%AllOuts( QD2_Sw   ) = m%QD2T( DOF_Sw      )
+   m%AllOuts( QD2_Hv   ) = m%QD2T( DOF_Hv      )
+   m%AllOuts( QD2_R    ) = m%QD2T( DOF_R       )
+   m%AllOuts( QD2_P    ) = m%QD2T( DOF_P       )
+   m%AllOuts( QD2_Y    ) = m%QD2T( DOF_Y       )
 
 
    IF ( p%NumBl > 2 ) THEN
-      OtherState%AllOuts( Q_B3E1   ) = x%QT(   DOF_BE(3,1) )
-      OtherState%AllOuts( Q_B3F1   ) = x%QT(   DOF_BF(3,1) )
-      OtherState%AllOuts( Q_B3F2   ) = x%QT(   DOF_BF(3,2) )
+      m%AllOuts( Q_B3E1   ) = x%QT(   DOF_BE(3,1) )
+      m%AllOuts( Q_B3F1   ) = x%QT(   DOF_BF(3,1) )
+      m%AllOuts( Q_B3F2   ) = x%QT(   DOF_BF(3,2) )
 
-      OtherState%AllOuts( QD_B3E1  ) = x%QDT(  DOF_BE(3,1) )
-      OtherState%AllOuts( QD_B3F1  ) = x%QDT(  DOF_BF(3,1) )
-      OtherState%AllOuts( QD_B3F2  ) = x%QDT(  DOF_BF(3,2) )
+      m%AllOuts( QD_B3E1  ) = x%QDT(  DOF_BE(3,1) )
+      m%AllOuts( QD_B3F1  ) = x%QDT(  DOF_BF(3,1) )
+      m%AllOuts( QD_B3F2  ) = x%QDT(  DOF_BF(3,2) )
 
-      OtherState%AllOuts( QD2_B3E1 ) = OtherState%QD2T( DOF_BE(3,1) )
-      OtherState%AllOuts( QD2_B3F1 ) = OtherState%QD2T( DOF_BF(3,1) )
-      OtherState%AllOuts( QD2_B3F2 ) = OtherState%QD2T( DOF_BF(3,2) )
+      m%AllOuts( QD2_B3E1 ) = m%QD2T( DOF_BE(3,1) )
+      m%AllOuts( QD2_B3F1 ) = m%QD2T( DOF_BF(3,1) )
+      m%AllOuts( QD2_B3F2 ) = m%QD2T( DOF_BF(3,2) )
    ELSE
-      OtherState%AllOuts( Q_Teet   ) = x%QT(            DOF_Teet    )
-      OtherState%AllOuts( QD_Teet  ) = x%QDT(           DOF_Teet    )
-      OtherState%AllOuts( QD2_Teet ) = OtherState%QD2T( DOF_Teet    )
+      m%AllOuts( Q_Teet   ) = x%QT(            DOF_Teet    )
+      m%AllOuts( QD_Teet  ) = x%QDT(           DOF_Teet    )
+      m%AllOuts( QD2_Teet ) = m%QD2T( DOF_Teet    )
    END IF
 
    !...............................................................................................................................
@@ -1237,7 +1237,7 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
    DO I = 1,p%NumOuts  ! Loop through all selected output channels
 
-      y%WriteOutput(I) = p%OutParam(I)%SignM * OtherState%AllOuts( p%OutParam(I)%Indx )
+      y%WriteOutput(I) = p%OutParam(I)%SignM * m%AllOuts( p%OutParam(I)%Indx )
 
    ENDDO             ! I - All selected output channels
 
@@ -1271,20 +1271,20 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
                                                                                                         
             if (p%UseAD14) then                  
                   ! Translational Displacement (first calculate absolute position)
-               y%BladeLn2Mesh(K)%TranslationDisp(1,NodeNum) =     OtherState%RtHS%rS (1,K,J2) + OtherState%RtHS%rSAerCen(1,J2,K)               ! = the distance from the undeflected tower centerline                                     to the current blade aerodynamic center in the xi ( z1) direction
-               y%BladeLn2Mesh(K)%TranslationDisp(2,NodeNum) = -1.*OtherState%RtHS%rS (3,K,J2) - OtherState%RtHS%rSAerCen(3,J2,K)               ! = the distance from the undeflected tower centerline                                     to the current blade aerodynamic center in the yi (-z3) direction
-               y%BladeLn2Mesh(K)%TranslationDisp(3,NodeNum) =     OtherState%RtHS%rS (2,K,J2) + OtherState%RtHS%rSAerCen(2,J2,K) + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade aerodynamic center in the zi ( z2) direction
+               y%BladeLn2Mesh(K)%TranslationDisp(1,NodeNum) =     m%RtHS%rS (1,K,J2) + m%RtHS%rSAerCen(1,J2,K)               ! = the distance from the undeflected tower centerline                                     to the current blade aerodynamic center in the xi ( z1) direction
+               y%BladeLn2Mesh(K)%TranslationDisp(2,NodeNum) = -1.*m%RtHS%rS (3,K,J2) - m%RtHS%rSAerCen(3,J2,K)               ! = the distance from the undeflected tower centerline                                     to the current blade aerodynamic center in the yi (-z3) direction
+               y%BladeLn2Mesh(K)%TranslationDisp(3,NodeNum) =     m%RtHS%rS (2,K,J2) + m%RtHS%rSAerCen(2,J2,K) + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade aerodynamic center in the zi ( z2) direction
                
                   ! Orientation 
-               y%BladeLn2Mesh(K)%Orientation(1,1,NodeNum) =     OtherState%CoordSys%te1(K,J2,1)
-               y%BladeLn2Mesh(K)%Orientation(2,1,NodeNum) =     OtherState%CoordSys%te2(K,J2,1)
-               y%BladeLn2Mesh(K)%Orientation(3,1,NodeNum) =     OtherState%CoordSys%te3(K,J2,1)
-               y%BladeLn2Mesh(K)%Orientation(1,2,NodeNum) = -1.*OtherState%CoordSys%te1(K,J2,3)
-               y%BladeLn2Mesh(K)%Orientation(2,2,NodeNum) = -1.*OtherState%CoordSys%te2(K,J2,3)
-               y%BladeLn2Mesh(K)%Orientation(3,2,NodeNum) = -1.*OtherState%CoordSys%te3(K,J2,3)
-               y%BladeLn2Mesh(K)%Orientation(1,3,NodeNum) =     OtherState%CoordSys%te1(K,J2,2)
-               y%BladeLn2Mesh(K)%Orientation(2,3,NodeNum) =     OtherState%CoordSys%te2(K,J2,2)
-               y%BladeLn2Mesh(K)%Orientation(3,3,NodeNum) =     OtherState%CoordSys%te3(K,J2,2)
+               y%BladeLn2Mesh(K)%Orientation(1,1,NodeNum) =     m%CoordSys%te1(K,J2,1)
+               y%BladeLn2Mesh(K)%Orientation(2,1,NodeNum) =     m%CoordSys%te2(K,J2,1)
+               y%BladeLn2Mesh(K)%Orientation(3,1,NodeNum) =     m%CoordSys%te3(K,J2,1)
+               y%BladeLn2Mesh(K)%Orientation(1,2,NodeNum) = -1.*m%CoordSys%te1(K,J2,3)
+               y%BladeLn2Mesh(K)%Orientation(2,2,NodeNum) = -1.*m%CoordSys%te2(K,J2,3)
+               y%BladeLn2Mesh(K)%Orientation(3,2,NodeNum) = -1.*m%CoordSys%te3(K,J2,3)
+               y%BladeLn2Mesh(K)%Orientation(1,3,NodeNum) =     m%CoordSys%te1(K,J2,2)
+               y%BladeLn2Mesh(K)%Orientation(2,3,NodeNum) =     m%CoordSys%te2(K,J2,2)
+               y%BladeLn2Mesh(K)%Orientation(3,3,NodeNum) =     m%CoordSys%te3(K,J2,2)
                
                   ! Translational Acceleration (for water-power request for added mass calculations)
                y%BladeLn2Mesh(K)%TranslationAcc(1,NodeNum) =     LinAccES(1,J2,K)
@@ -1293,20 +1293,20 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
                
             else         
                   ! Translational Displacement (first calculate absolute position)
-               y%BladeLn2Mesh(K)%TranslationDisp(1,NodeNum) =     OtherState%RtHS%rS (1,K,J2)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
-               y%BladeLn2Mesh(K)%TranslationDisp(2,NodeNum) = -1.*OtherState%RtHS%rS (3,K,J2)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
-               y%BladeLn2Mesh(K)%TranslationDisp(3,NodeNum) =     OtherState%RtHS%rS (2,K,J2)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
+               y%BladeLn2Mesh(K)%TranslationDisp(1,NodeNum) =     m%RtHS%rS (1,K,J2)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
+               y%BladeLn2Mesh(K)%TranslationDisp(2,NodeNum) = -1.*m%RtHS%rS (3,K,J2)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
+               y%BladeLn2Mesh(K)%TranslationDisp(3,NodeNum) =     m%RtHS%rS (2,K,J2)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
                
                   ! Orientation
-               y%BladeLn2Mesh(K)%Orientation(1,1,NodeNum) =     OtherState%CoordSys%n1(K,J2,1)
-               y%BladeLn2Mesh(K)%Orientation(2,1,NodeNum) =     OtherState%CoordSys%n2(K,J2,1)
-               y%BladeLn2Mesh(K)%Orientation(3,1,NodeNum) =     OtherState%CoordSys%n3(K,J2,1)
-               y%BladeLn2Mesh(K)%Orientation(1,2,NodeNum) = -1.*OtherState%CoordSys%n1(K,J2,3)
-               y%BladeLn2Mesh(K)%Orientation(2,2,NodeNum) = -1.*OtherState%CoordSys%n2(K,J2,3)
-               y%BladeLn2Mesh(K)%Orientation(3,2,NodeNum) = -1.*OtherState%CoordSys%n3(K,J2,3)
-               y%BladeLn2Mesh(K)%Orientation(1,3,NodeNum) =     OtherState%CoordSys%n1(K,J2,2)
-               y%BladeLn2Mesh(K)%Orientation(2,3,NodeNum) =     OtherState%CoordSys%n2(K,J2,2)
-               y%BladeLn2Mesh(K)%Orientation(3,3,NodeNum) =     OtherState%CoordSys%n3(K,J2,2)
+               y%BladeLn2Mesh(K)%Orientation(1,1,NodeNum) =     m%CoordSys%n1(K,J2,1)
+               y%BladeLn2Mesh(K)%Orientation(2,1,NodeNum) =     m%CoordSys%n2(K,J2,1)
+               y%BladeLn2Mesh(K)%Orientation(3,1,NodeNum) =     m%CoordSys%n3(K,J2,1)
+               y%BladeLn2Mesh(K)%Orientation(1,2,NodeNum) = -1.*m%CoordSys%n1(K,J2,3)
+               y%BladeLn2Mesh(K)%Orientation(2,2,NodeNum) = -1.*m%CoordSys%n2(K,J2,3)
+               y%BladeLn2Mesh(K)%Orientation(3,2,NodeNum) = -1.*m%CoordSys%n3(K,J2,3)
+               y%BladeLn2Mesh(K)%Orientation(1,3,NodeNum) =     m%CoordSys%n1(K,J2,2)
+               y%BladeLn2Mesh(K)%Orientation(2,3,NodeNum) =     m%CoordSys%n2(K,J2,2)
+               y%BladeLn2Mesh(K)%Orientation(3,3,NodeNum) =     m%CoordSys%n3(K,J2,2)
             end if
             
                ! Translational Displacement (get displacement, not absolute position):
@@ -1314,9 +1314,9 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
             
            
                ! Translational Velocity
-            y%BladeLn2Mesh(K)%TranslationVel(1,NodeNum) =     OtherState%RtHS%LinVelES(1,J2,K)
-            y%BladeLn2Mesh(K)%TranslationVel(2,NodeNum) = -1.*OtherState%RtHS%LinVelES(3,J2,K)
-            y%BladeLn2Mesh(K)%TranslationVel(3,NodeNum) =     OtherState%RtHS%LinVelES(2,J2,K)  
+            y%BladeLn2Mesh(K)%TranslationVel(1,NodeNum) =     m%RtHS%LinVelES(1,J2,K)
+            y%BladeLn2Mesh(K)%TranslationVel(2,NodeNum) = -1.*m%RtHS%LinVelES(3,J2,K)
+            y%BladeLn2Mesh(K)%TranslationVel(3,NodeNum) =     m%RtHS%LinVelES(2,J2,K)  
                                                 
          END DO !J = 1,p%BldNodes ! Loop through the blade nodes / elements
                   
@@ -1329,26 +1329,26 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !...........   
    
          ! Translation (absolute position - starting position):
-   y%HubPtMotion%TranslationDisp(1,1)  =     OtherState%RtHS%rQ(1)
-   y%HubPtMotion%TranslationDisp(2,1)  = -1.*OtherState%RtHS%rQ(3)
-   y%HubPtMotion%TranslationDisp(3,1)  =     OtherState%RtHS%rQ(2) + p%PtfmRefzt
+   y%HubPtMotion%TranslationDisp(1,1)  =     m%RtHS%rQ(1)
+   y%HubPtMotion%TranslationDisp(2,1)  = -1.*m%RtHS%rQ(3)
+   y%HubPtMotion%TranslationDisp(3,1)  =     m%RtHS%rQ(2) + p%PtfmRefzt
    y%HubPtMotion%TranslationDisp       = y%HubPtMotion%TranslationDisp - y%HubPtMotion%Position   ! relative position
    
       ! Orientation:        
-   y%HubPtMotion%Orientation(1,1,1)    =     OtherState%CoordSys%g1(1) 
-   y%HubPtMotion%Orientation(2,1,1)    =     OtherState%CoordSys%g2(1)
-   y%HubPtMotion%Orientation(3,1,1)    =     OtherState%CoordSys%g3(1)   
-   y%HubPtMotion%Orientation(1,2,1)    = -1.*OtherState%CoordSys%g1(3)
-   y%HubPtMotion%Orientation(2,2,1)    = -1.*OtherState%CoordSys%g2(3) 
-   y%HubPtMotion%Orientation(3,2,1)    = -1.*OtherState%CoordSys%g3(3) 
-   y%HubPtMotion%Orientation(1,3,1)    =     OtherState%CoordSys%g1(2)
-   y%HubPtMotion%Orientation(2,3,1)    =     OtherState%CoordSys%g2(2)
-   y%HubPtMotion%Orientation(3,3,1)    =     OtherState%CoordSys%g3(2)
+   y%HubPtMotion%Orientation(1,1,1)    =     m%CoordSys%g1(1) 
+   y%HubPtMotion%Orientation(2,1,1)    =     m%CoordSys%g2(1)
+   y%HubPtMotion%Orientation(3,1,1)    =     m%CoordSys%g3(1)   
+   y%HubPtMotion%Orientation(1,2,1)    = -1.*m%CoordSys%g1(3)
+   y%HubPtMotion%Orientation(2,2,1)    = -1.*m%CoordSys%g2(3) 
+   y%HubPtMotion%Orientation(3,2,1)    = -1.*m%CoordSys%g3(3) 
+   y%HubPtMotion%Orientation(1,3,1)    =     m%CoordSys%g1(2)
+   y%HubPtMotion%Orientation(2,3,1)    =     m%CoordSys%g2(2)
+   y%HubPtMotion%Orientation(3,3,1)    =     m%CoordSys%g3(2)
    
       ! Rotational velocity:
-   y%HubPtMotion%RotationVel(1,1)      =     OtherState%RtHS%AngVelEH(1)
-   y%HubPtMotion%RotationVel(2,1)      = -1.*OtherState%RtHS%AngVelEH(3)
-   y%HubPtMotion%RotationVel(3,1)      =     OtherState%RtHS%AngVelEH(2)   
+   y%HubPtMotion%RotationVel(1,1)      =     m%RtHS%AngVelEH(1)
+   y%HubPtMotion%RotationVel(2,1)      = -1.*m%RtHS%AngVelEH(3)
+   y%HubPtMotion%RotationVel(3,1)      =     m%RtHS%AngVelEH(2)   
    
    !...........
    ! Blade roots (BeamDyn/AeroDyn v15):
@@ -1357,32 +1357,32 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    DO K=1,p%NumBl
          
       ! Translation displacement  ! rS at the root      
-      y%BladeRootMotion(K)%TranslationDisp(1,1) =            OtherState%RtHS%rS (1,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
-      y%BladeRootMotion(K)%TranslationDisp(2,1) =        -1.*OtherState%RtHS%rS (3,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
-      y%BladeRootMotion(K)%TranslationDisp(3,1) =            OtherState%RtHS%rS (2,K,0)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
+      y%BladeRootMotion(K)%TranslationDisp(1,1) =            m%RtHS%rS (1,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
+      y%BladeRootMotion(K)%TranslationDisp(2,1) =        -1.*m%RtHS%rS (3,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
+      y%BladeRootMotion(K)%TranslationDisp(3,1) =            m%RtHS%rS (2,K,0)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
       y%BladeRootMotion(K)%TranslationDisp      = y%BladeRootMotion(K)%TranslationDisp - y%BladeRootMotion(K)%Position ! make it relative
       
       
       ! Orientation 
-      y%BladeRootMotion(K)%Orientation(1,1,1)   =     OtherState%CoordSys%j1(K,1)
-      y%BladeRootMotion(K)%Orientation(2,1,1)   =     OtherState%CoordSys%j2(K,1)
-      y%BladeRootMotion(K)%Orientation(3,1,1)   =     OtherState%CoordSys%j3(K,1)
-      y%BladeRootMotion(K)%Orientation(1,2,1)   = -1.*OtherState%CoordSys%j1(K,3)
-      y%BladeRootMotion(K)%Orientation(2,2,1)   = -1.*OtherState%CoordSys%j2(K,3)
-      y%BladeRootMotion(K)%Orientation(3,2,1)   = -1.*OtherState%CoordSys%j3(K,3)
-      y%BladeRootMotion(K)%Orientation(1,3,1)   =     OtherState%CoordSys%j1(K,2)
-      y%BladeRootMotion(K)%Orientation(2,3,1)   =     OtherState%CoordSys%j2(K,2)
-      y%BladeRootMotion(K)%Orientation(3,3,1)   =     OtherState%CoordSys%j3(K,2)
+      y%BladeRootMotion(K)%Orientation(1,1,1)   =     m%CoordSys%j1(K,1)
+      y%BladeRootMotion(K)%Orientation(2,1,1)   =     m%CoordSys%j2(K,1)
+      y%BladeRootMotion(K)%Orientation(3,1,1)   =     m%CoordSys%j3(K,1)
+      y%BladeRootMotion(K)%Orientation(1,2,1)   = -1.*m%CoordSys%j1(K,3)
+      y%BladeRootMotion(K)%Orientation(2,2,1)   = -1.*m%CoordSys%j2(K,3)
+      y%BladeRootMotion(K)%Orientation(3,2,1)   = -1.*m%CoordSys%j3(K,3)
+      y%BladeRootMotion(K)%Orientation(1,3,1)   =     m%CoordSys%j1(K,2)
+      y%BladeRootMotion(K)%Orientation(2,3,1)   =     m%CoordSys%j2(K,2)
+      y%BladeRootMotion(K)%Orientation(3,3,1)   =     m%CoordSys%j3(K,2)
 
       ! Translation velocity 
-      y%BladeRootMotion(K)%TranslationVel(1,1)  =     OtherState%RtHS%LinVelES(1,0,K)
-      y%BladeRootMotion(K)%TranslationVel(2,1)  = -1.*OtherState%RtHS%LinVelES(3,0,K)
-      y%BladeRootMotion(K)%TranslationVel(3,1)  =     OtherState%RtHS%LinVelES(2,0,K)
+      y%BladeRootMotion(K)%TranslationVel(1,1)  =     m%RtHS%LinVelES(1,0,K)
+      y%BladeRootMotion(K)%TranslationVel(2,1)  = -1.*m%RtHS%LinVelES(3,0,K)
+      y%BladeRootMotion(K)%TranslationVel(3,1)  =     m%RtHS%LinVelES(2,0,K)
 
       ! Rotation velocity  
-      y%BladeRootMotion(K)%RotationVel(1,1)     =      OtherState%RtHS%AngVelEH(1)
-      y%BladeRootMotion(K)%RotationVel(2,1)     =  -1.*OtherState%RtHS%AngVelEH(3)
-      y%BladeRootMotion(K)%RotationVel(3,1)     =      OtherState%RtHS%AngVelEH(2)
+      y%BladeRootMotion(K)%RotationVel(1,1)     =      m%RtHS%AngVelEH(1)
+      y%BladeRootMotion(K)%RotationVel(2,1)     =  -1.*m%RtHS%AngVelEH(3)
+      y%BladeRootMotion(K)%RotationVel(3,1)     =      m%RtHS%AngVelEH(2)
       
       ! Translation acceleration
       y%BladeRootMotion(K)%TranslationAcc(1,1)  =      LinAccES(1,0,K)
@@ -1403,31 +1403,31 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       ! the hub position should use rQ instead of rP, but AeroDyn 14 treats
       ! teeter deflections like blade deflections:
    
-   y%HubPtMotion14%TranslationDisp(1,1)  =     OtherState%RtHS%rP(1)
-   y%HubPtMotion14%TranslationDisp(2,1)  = -1.*OtherState%RtHS%rP(3)
-   y%HubPtMotion14%TranslationDisp(3,1)  =     OtherState%RtHS%rP(2) + p%PtfmRefzt
+   y%HubPtMotion14%TranslationDisp(1,1)  =     m%RtHS%rP(1)
+   y%HubPtMotion14%TranslationDisp(2,1)  = -1.*m%RtHS%rP(3)
+   y%HubPtMotion14%TranslationDisp(3,1)  =     m%RtHS%rP(2) + p%PtfmRefzt
    
    y%HubPtMotion14%TranslationDisp  = y%HubPtMotion14%TranslationDisp - y%HubPtMotion14%Position   
    
         ! Hub orientation should use the g instead of e system, but the current version
         ! of AeroDyn calculates forces normal and tangential to the cone of rotation
          
-   y%HubPtMotion14%Orientation(1,1,1)  =     OtherState%CoordSys%e1(1) 
-   y%HubPtMotion14%Orientation(2,1,1)  =     OtherState%CoordSys%e2(1)
-   y%HubPtMotion14%Orientation(3,1,1)  =     OtherState%CoordSys%e3(1)   
-   y%HubPtMotion14%Orientation(1,2,1)  = -1.*OtherState%CoordSys%e1(3)
-   y%HubPtMotion14%Orientation(2,2,1)  = -1.*OtherState%CoordSys%e2(3) 
-   y%HubPtMotion14%Orientation(3,2,1)  = -1.*OtherState%CoordSys%e3(3) 
-   y%HubPtMotion14%Orientation(1,3,1)  =     OtherState%CoordSys%e1(2)
-   y%HubPtMotion14%Orientation(2,3,1)  =     OtherState%CoordSys%e2(2)
-   y%HubPtMotion14%Orientation(3,3,1)  =     OtherState%CoordSys%e3(2)
+   y%HubPtMotion14%Orientation(1,1,1)  =     m%CoordSys%e1(1) 
+   y%HubPtMotion14%Orientation(2,1,1)  =     m%CoordSys%e2(1)
+   y%HubPtMotion14%Orientation(3,1,1)  =     m%CoordSys%e3(1)   
+   y%HubPtMotion14%Orientation(1,2,1)  = -1.*m%CoordSys%e1(3)
+   y%HubPtMotion14%Orientation(2,2,1)  = -1.*m%CoordSys%e2(3) 
+   y%HubPtMotion14%Orientation(3,2,1)  = -1.*m%CoordSys%e3(3) 
+   y%HubPtMotion14%Orientation(1,3,1)  =     m%CoordSys%e1(2)
+   y%HubPtMotion14%Orientation(2,3,1)  =     m%CoordSys%e2(2)
+   y%HubPtMotion14%Orientation(3,3,1)  =     m%CoordSys%e3(2)
    
       ! Note the hub rotational velocity should be AngVelEH instead AngVelEL, but AeroDyn (13.00.00)
       ! treats teeter deflections like blade deflections:
    
-   y%HubPtMotion14%RotationVel(1,1) =     OtherState%RtHS%AngVelEL(1)
-   y%HubPtMotion14%RotationVel(2,1) = -1.*OtherState%RtHS%AngVelEL(3)
-   y%HubPtMotion14%RotationVel(3,1) =     OtherState%RtHS%AngVelEL(2)
+   y%HubPtMotion14%RotationVel(1,1) =     m%RtHS%AngVelEL(1)
+   y%HubPtMotion14%RotationVel(2,1) = -1.*m%RtHS%AngVelEL(3)
+   y%HubPtMotion14%RotationVel(3,1) =     m%RtHS%AngVelEL(2)
       
    !...........
    ! Blade roots (AeroDyn v14):
@@ -1438,15 +1438,15 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       
    DO K=1,p%NumBl
          
-      y%BladeRootMotion14%Orientation(1,1,K) =     OtherState%CoordSys%i1(K,1)
-      y%BladeRootMotion14%Orientation(2,1,K) =     OtherState%CoordSys%i2(K,1)
-      y%BladeRootMotion14%Orientation(3,1,K) =     OtherState%CoordSys%i3(K,1)
-      y%BladeRootMotion14%Orientation(1,2,K) = -1.*OtherState%CoordSys%i1(K,3)
-      y%BladeRootMotion14%Orientation(2,2,K) = -1.*OtherState%CoordSys%i2(K,3)
-      y%BladeRootMotion14%Orientation(3,2,K) = -1.*OtherState%CoordSys%i3(K,3)
-      y%BladeRootMotion14%Orientation(1,3,K) =     OtherState%CoordSys%i1(K,2)
-      y%BladeRootMotion14%Orientation(2,3,K) =     OtherState%CoordSys%i2(K,2)
-      y%BladeRootMotion14%Orientation(3,3,K) =     OtherState%CoordSys%i3(K,2)
+      y%BladeRootMotion14%Orientation(1,1,K) =     m%CoordSys%i1(K,1)
+      y%BladeRootMotion14%Orientation(2,1,K) =     m%CoordSys%i2(K,1)
+      y%BladeRootMotion14%Orientation(3,1,K) =     m%CoordSys%i3(K,1)
+      y%BladeRootMotion14%Orientation(1,2,K) = -1.*m%CoordSys%i1(K,3)
+      y%BladeRootMotion14%Orientation(2,2,K) = -1.*m%CoordSys%i2(K,3)
+      y%BladeRootMotion14%Orientation(3,2,K) = -1.*m%CoordSys%i3(K,3)
+      y%BladeRootMotion14%Orientation(1,3,K) =     m%CoordSys%i1(K,2)
+      y%BladeRootMotion14%Orientation(2,3,K) =     m%CoordSys%i2(K,2)
+      y%BladeRootMotion14%Orientation(3,3,K) =     m%CoordSys%i3(K,2)
             
    END DO
    
@@ -1457,58 +1457,58 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    
       ! Rotor furl position should be rP instead of rV, but AeroDyn needs this for the HubVDue2Yaw calculation:
    
-   y%RotorFurlMotion14%TranslationDisp(1,1) =     OtherState%RtHS%rV(1)
-   y%RotorFurlMotion14%TranslationDisp(2,1) = -1.*OtherState%RtHS%rV(3)
-   y%RotorFurlMotion14%TranslationDisp(3,1) =     OtherState%RtHS%rV(2) + p%PtfmRefzt
+   y%RotorFurlMotion14%TranslationDisp(1,1) =     m%RtHS%rV(1)
+   y%RotorFurlMotion14%TranslationDisp(2,1) = -1.*m%RtHS%rV(3)
+   y%RotorFurlMotion14%TranslationDisp(3,1) =     m%RtHS%rV(2) + p%PtfmRefzt
    
    y%RotorFurlMotion14%TranslationDisp      = y%RotorFurlMotion14%TranslationDisp - y%RotorFurlMotion14%Position   
          
         ! Rotor furl orientation (note the different order than hub and blade root!)
    
-   y%RotorFurlMotion14%Orientation(1,1,1) =     OtherState%CoordSys%c1(1)
-   y%RotorFurlMotion14%Orientation(2,1,1) = -1.*OtherState%CoordSys%c3(1)
-   y%RotorFurlMotion14%Orientation(3,1,1) =     OtherState%CoordSys%c2(1)
-   y%RotorFurlMotion14%Orientation(1,2,1) = -1.*OtherState%CoordSys%c1(3)
-   y%RotorFurlMotion14%Orientation(2,2,1) =     OtherState%CoordSys%c3(3)
-   y%RotorFurlMotion14%Orientation(3,2,1) = -1.*OtherState%CoordSys%c2(3)
-   y%RotorFurlMotion14%Orientation(1,3,1) =     OtherState%CoordSys%c1(2)
-   y%RotorFurlMotion14%Orientation(2,3,1) = -1.*OtherState%CoordSys%c3(2)
-   y%RotorFurlMotion14%Orientation(3,3,1) =     OtherState%CoordSys%c2(2) 
+   y%RotorFurlMotion14%Orientation(1,1,1) =     m%CoordSys%c1(1)
+   y%RotorFurlMotion14%Orientation(2,1,1) = -1.*m%CoordSys%c3(1)
+   y%RotorFurlMotion14%Orientation(3,1,1) =     m%CoordSys%c2(1)
+   y%RotorFurlMotion14%Orientation(1,2,1) = -1.*m%CoordSys%c1(3)
+   y%RotorFurlMotion14%Orientation(2,2,1) =     m%CoordSys%c3(3)
+   y%RotorFurlMotion14%Orientation(3,2,1) = -1.*m%CoordSys%c2(3)
+   y%RotorFurlMotion14%Orientation(1,3,1) =     m%CoordSys%c1(2)
+   y%RotorFurlMotion14%Orientation(2,3,1) = -1.*m%CoordSys%c3(2)
+   y%RotorFurlMotion14%Orientation(3,3,1) =     m%CoordSys%c2(2) 
    
       ! rotaional velocity:
-   y%RotorFurlMotion14%RotationVel(1,1) =     OtherState%RtHS%AngVelER(1)
-   y%RotorFurlMotion14%RotationVel(2,1) = -1.*OtherState%RtHS%AngVelER(3)
-   y%RotorFurlMotion14%RotationVel(3,1) =     OtherState%RtHS%AngVelER(2)
+   y%RotorFurlMotion14%RotationVel(1,1) =     m%RtHS%AngVelER(1)
+   y%RotorFurlMotion14%RotationVel(2,1) = -1.*m%RtHS%AngVelER(3)
+   y%RotorFurlMotion14%RotationVel(3,1) =     m%RtHS%AngVelER(2)
       
    !...........
    ! Nacelle :
    !...........   
       
-   y%NacelleMotion%TranslationDisp(1,1) =     OtherState%RtHS%rO(1)
-   y%NacelleMotion%TranslationDisp(2,1) = -1.*OtherState%RtHS%rO(3)
-   y%NacelleMotion%TranslationDisp(3,1) =     OtherState%RtHS%rO(2) + p%PtfmRefzt
+   y%NacelleMotion%TranslationDisp(1,1) =     m%RtHS%rO(1)
+   y%NacelleMotion%TranslationDisp(2,1) = -1.*m%RtHS%rO(3)
+   y%NacelleMotion%TranslationDisp(3,1) =     m%RtHS%rO(2) + p%PtfmRefzt
                
    y%NacelleMotion%TranslationDisp      = y%NacelleMotion%TranslationDisp - y%NacelleMotion%Position   
    
       ! Nacelle orientation (note the different order than hub and blade root!)
    
-   y%NacelleMotion%Orientation(1,1,1) =     OtherState%CoordSys%d1(1)
-   y%NacelleMotion%Orientation(2,1,1) = -1.*OtherState%CoordSys%d3(1)
-   y%NacelleMotion%Orientation(3,1,1) =     OtherState%CoordSys%d2(1)
-   y%NacelleMotion%Orientation(1,2,1) = -1.*OtherState%CoordSys%d1(3)
-   y%NacelleMotion%Orientation(2,2,1) =     OtherState%CoordSys%d3(3)
-   y%NacelleMotion%Orientation(3,2,1) = -1.*OtherState%CoordSys%d2(3)
-   y%NacelleMotion%Orientation(1,3,1) =     OtherState%CoordSys%d1(2)
-   y%NacelleMotion%Orientation(2,3,1) = -1.*OtherState%CoordSys%d3(2)
-   y%NacelleMotion%Orientation(3,3,1) =     OtherState%CoordSys%d2(2) 
+   y%NacelleMotion%Orientation(1,1,1) =     m%CoordSys%d1(1)
+   y%NacelleMotion%Orientation(2,1,1) = -1.*m%CoordSys%d3(1)
+   y%NacelleMotion%Orientation(3,1,1) =     m%CoordSys%d2(1)
+   y%NacelleMotion%Orientation(1,2,1) = -1.*m%CoordSys%d1(3)
+   y%NacelleMotion%Orientation(2,2,1) =     m%CoordSys%d3(3)
+   y%NacelleMotion%Orientation(3,2,1) = -1.*m%CoordSys%d2(3)
+   y%NacelleMotion%Orientation(1,3,1) =     m%CoordSys%d1(2)
+   y%NacelleMotion%Orientation(2,3,1) = -1.*m%CoordSys%d3(2)
+   y%NacelleMotion%Orientation(3,3,1) =     m%CoordSys%d2(2) 
    
-   y%NacelleMotion%RotationVel(1,1)   =     OtherState%RtHS%AngVelEN(1)
-   y%NacelleMotion%RotationVel(2,1)   = -1.*OtherState%RtHS%AngVelEN(3)
-   y%NacelleMotion%RotationVel(3,1)   =     OtherState%RtHS%AngVelEN(2) 
+   y%NacelleMotion%RotationVel(1,1)   =     m%RtHS%AngVelEN(1)
+   y%NacelleMotion%RotationVel(2,1)   = -1.*m%RtHS%AngVelEN(3)
+   y%NacelleMotion%RotationVel(3,1)   =     m%RtHS%AngVelEN(2) 
       
-   y%NacelleMotion%TranslationVel(1,1)  =     OtherState%RtHS%LinVelEO(1)
-   y%NacelleMotion%TranslationVel(2,1)  = -1.*OtherState%RtHS%LinVelEO(3)
-   y%NacelleMotion%TranslationVel(3,1)  =     OtherState%RtHS%LinVelEO(2)
+   y%NacelleMotion%TranslationVel(1,1)  =     m%RtHS%LinVelEO(1)
+   y%NacelleMotion%TranslationVel(2,1)  = -1.*m%RtHS%LinVelEO(3)
+   y%NacelleMotion%TranslationVel(3,1)  =     m%RtHS%LinVelEO(2)
       
    y%NacelleMotion%RotationAcc(   1,1)  =      AngAccEN(1) 
    y%NacelleMotion%RotationAcc(   2,1)  =  -1.*AngAccEN(3) 
@@ -1524,15 +1524,15 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !...........         
    
       ! Tower base position should be rT(0) instead of rZ, but AeroDyn needs this for  the HubVDue2Yaw calculation:
-   y%TowerBaseMotion14%TranslationDisp(1,1) =     OtherState%RtHS%rZ(1)
-   y%TowerBaseMotion14%TranslationDisp(2,1) = -1.*OtherState%RtHS%rZ(3)
-   y%TowerBaseMotion14%TranslationDisp(3,1) =     OtherState%RtHS%rZ(2) + p%PtfmRefzt
+   y%TowerBaseMotion14%TranslationDisp(1,1) =     m%RtHS%rZ(1)
+   y%TowerBaseMotion14%TranslationDisp(2,1) = -1.*m%RtHS%rZ(3)
+   y%TowerBaseMotion14%TranslationDisp(3,1) =     m%RtHS%rZ(2) + p%PtfmRefzt
    
    y%TowerBaseMotion14%TranslationDisp      = y%TowerBaseMotion14%TranslationDisp - y%TowerBaseMotion14%Position   
       
-   y%TowerBaseMotion14%RotationVel(1,1)     =     OtherState%RtHS%AngVelEX(1)
-   y%TowerBaseMotion14%RotationVel(2,1)     = -1.*OtherState%RtHS%AngVelEX(3)
-   y%TowerBaseMotion14%RotationVel(3,1)     =     OtherState%RtHS%AngVelEX(2) 
+   y%TowerBaseMotion14%RotationVel(1,1)     =     m%RtHS%AngVelEX(1)
+   y%TowerBaseMotion14%RotationVel(2,1)     = -1.*m%RtHS%AngVelEX(3)
+   y%TowerBaseMotion14%RotationVel(3,1)     =     m%RtHS%AngVelEX(2) 
    
    !...............................................................................................................................
    ! Outputs required for HydroDyn
@@ -1556,40 +1556,40 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       IF (ErrStat /= ErrID_None)    ErrMsg = TRIM(ErrMsg)//' (occurred at '//TRIM(Num2LStr(t))//' s)'
      !IF (ErrStat >= AbortErrLev) RETURN
 
-   y%PlatformPtMesh%RotationAcc(1,1) = OtherState%QD2T(DOF_R )     
-   y%PlatformPtMesh%RotationAcc(2,1) = OtherState%QD2T(DOF_P )     
-   y%PlatformPtMesh%RotationAcc(3,1) = OtherState%QD2T(DOF_Y )     
+   y%PlatformPtMesh%RotationAcc(1,1) = m%QD2T(DOF_R )     
+   y%PlatformPtMesh%RotationAcc(2,1) = m%QD2T(DOF_P )     
+   y%PlatformPtMesh%RotationAcc(3,1) = m%QD2T(DOF_Y )     
 
-   y%PlatformPtMesh%TranslationAcc(1,1) = OtherState%QD2T(DOF_Sg)     
-   y%PlatformPtMesh%TranslationAcc(2,1) = OtherState%QD2T(DOF_Sw)    
-   y%PlatformPtMesh%TranslationAcc(3,1) = OtherState%QD2T(DOF_Hv)    
+   y%PlatformPtMesh%TranslationAcc(1,1) = m%QD2T(DOF_Sg)     
+   y%PlatformPtMesh%TranslationAcc(2,1) = m%QD2T(DOF_Sw)    
+   y%PlatformPtMesh%TranslationAcc(3,1) = m%QD2T(DOF_Hv)    
       
    !...............................................................................................................................
    ! Outputs required for external tower loads
    !...............................................................................................................................
       
    DO J=1,p%TwrNodes
-      y%TowerLn2Mesh%TranslationDisp(1,J) =     OtherState%RtHS%rT( 1,J) - y%TowerLn2Mesh%Position(1,J)
-      y%TowerLn2Mesh%TranslationDisp(2,J) = -1.*OtherState%RtHS%rT( 3,J) - y%TowerLn2Mesh%Position(2,J)
-      y%TowerLn2Mesh%TranslationDisp(3,J) =     OtherState%RtHS%rT( 2,J) - y%TowerLn2Mesh%Position(3,J) + p%PtfmRefzt
+      y%TowerLn2Mesh%TranslationDisp(1,J) =     m%RtHS%rT( 1,J) - y%TowerLn2Mesh%Position(1,J)
+      y%TowerLn2Mesh%TranslationDisp(2,J) = -1.*m%RtHS%rT( 3,J) - y%TowerLn2Mesh%Position(2,J)
+      y%TowerLn2Mesh%TranslationDisp(3,J) =     m%RtHS%rT( 2,J) - y%TowerLn2Mesh%Position(3,J) + p%PtfmRefzt
             
-      y%TowerLn2Mesh%Orientation(1,1,J)   =     OtherState%CoordSys%t1(J,1)
-      y%TowerLn2Mesh%Orientation(3,1,J)   =     OtherState%CoordSys%t2(J,1)
-      y%TowerLn2Mesh%Orientation(2,1,J)   = -1.*OtherState%CoordSys%t3(J,1)
-      y%TowerLn2Mesh%Orientation(1,2,J)   = -1.*OtherState%CoordSys%t1(J,3)
-      y%TowerLn2Mesh%Orientation(3,2,J)   = -1.*OtherState%CoordSys%t2(J,3)
-      y%TowerLn2Mesh%Orientation(2,2,J)   =     OtherState%CoordSys%t3(J,3)
-      y%TowerLn2Mesh%Orientation(1,3,J)   =     OtherState%CoordSys%t1(J,2)
-      y%TowerLn2Mesh%Orientation(3,3,J)   =     OtherState%CoordSys%t2(J,2)
-      y%TowerLn2Mesh%Orientation(2,3,J)   = -1.*OtherState%CoordSys%t3(J,2)     
+      y%TowerLn2Mesh%Orientation(1,1,J)   =     m%CoordSys%t1(J,1)
+      y%TowerLn2Mesh%Orientation(3,1,J)   =     m%CoordSys%t2(J,1)
+      y%TowerLn2Mesh%Orientation(2,1,J)   = -1.*m%CoordSys%t3(J,1)
+      y%TowerLn2Mesh%Orientation(1,2,J)   = -1.*m%CoordSys%t1(J,3)
+      y%TowerLn2Mesh%Orientation(3,2,J)   = -1.*m%CoordSys%t2(J,3)
+      y%TowerLn2Mesh%Orientation(2,2,J)   =     m%CoordSys%t3(J,3)
+      y%TowerLn2Mesh%Orientation(1,3,J)   =     m%CoordSys%t1(J,2)
+      y%TowerLn2Mesh%Orientation(3,3,J)   =     m%CoordSys%t2(J,2)
+      y%TowerLn2Mesh%Orientation(2,3,J)   = -1.*m%CoordSys%t3(J,2)     
       
-      y%TowerLn2Mesh%TranslationVel(1,J)  =     OtherState%RtHS%LinVelET(1,J)
-      y%TowerLn2Mesh%TranslationVel(2,J)  = -1.*OtherState%RtHS%LinVelET(3,J)
-      y%TowerLn2Mesh%TranslationVel(3,J)  =     OtherState%RtHS%LinVelET(2,J)
+      y%TowerLn2Mesh%TranslationVel(1,J)  =     m%RtHS%LinVelET(1,J)
+      y%TowerLn2Mesh%TranslationVel(2,J)  = -1.*m%RtHS%LinVelET(3,J)
+      y%TowerLn2Mesh%TranslationVel(3,J)  =     m%RtHS%LinVelET(2,J)
             
-      y%TowerLn2Mesh%RotationVel(1,J)     =     OtherState%RtHS%AngVelEF(1,J)
-      y%TowerLn2Mesh%RotationVel(2,J)     = -1.*OtherState%RtHS%AngVelEF(3,J)
-      y%TowerLn2Mesh%RotationVel(3,J)     =     OtherState%RtHS%AngVelEF(2,J) 
+      y%TowerLn2Mesh%RotationVel(1,J)     =     m%RtHS%AngVelEF(1,J)
+      y%TowerLn2Mesh%RotationVel(2,J)     = -1.*m%RtHS%AngVelEF(3,J)
+      y%TowerLn2Mesh%RotationVel(3,J)     =     m%RtHS%AngVelEF(2,J) 
             
       y%TowerLn2Mesh%TranslationAcc(1,J)  =     LinAccET(1,J)
       y%TowerLn2Mesh%TranslationAcc(2,J)  = -1.*LinAccET(3,J)
@@ -1605,27 +1605,27 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    ! p%TwrNodes+1 is the tower top:
    J = p%TwrNodes+1
    
-   y%TowerLn2Mesh%TranslationDisp(1,J) =     OtherState%RtHS%rO(1) - y%TowerLn2Mesh%Position(1,J)
-   y%TowerLn2Mesh%TranslationDisp(2,J) = -1.*OtherState%RtHS%rO(3) - y%TowerLn2Mesh%Position(2,J)
-   y%TowerLn2Mesh%TranslationDisp(3,J) =     OtherState%RtHS%rO(2) - y%TowerLn2Mesh%Position(3,J) + p%PtfmRefzt
+   y%TowerLn2Mesh%TranslationDisp(1,J) =     m%RtHS%rO(1) - y%TowerLn2Mesh%Position(1,J)
+   y%TowerLn2Mesh%TranslationDisp(2,J) = -1.*m%RtHS%rO(3) - y%TowerLn2Mesh%Position(2,J)
+   y%TowerLn2Mesh%TranslationDisp(3,J) =     m%RtHS%rO(2) - y%TowerLn2Mesh%Position(3,J) + p%PtfmRefzt
    
-   y%TowerLn2Mesh%Orientation(1,1,J)   =     OtherState%CoordSys%b1(1)
-   y%TowerLn2Mesh%Orientation(3,1,J)   =     OtherState%CoordSys%b2(1)
-   y%TowerLn2Mesh%Orientation(2,1,J)   = -1.*OtherState%CoordSys%b3(1)
-   y%TowerLn2Mesh%Orientation(1,2,J)   = -1.*OtherState%CoordSys%b1(3)
-   y%TowerLn2Mesh%Orientation(3,2,J)   = -1.*OtherState%CoordSys%b2(3)
-   y%TowerLn2Mesh%Orientation(2,2,J)   =     OtherState%CoordSys%b3(3)
-   y%TowerLn2Mesh%Orientation(1,3,J)   =     OtherState%CoordSys%b1(2)
-   y%TowerLn2Mesh%Orientation(3,3,J)   =     OtherState%CoordSys%b2(2)
-   y%TowerLn2Mesh%Orientation(2,3,J)   = -1.*OtherState%CoordSys%b3(2)         
+   y%TowerLn2Mesh%Orientation(1,1,J)   =     m%CoordSys%b1(1)
+   y%TowerLn2Mesh%Orientation(3,1,J)   =     m%CoordSys%b2(1)
+   y%TowerLn2Mesh%Orientation(2,1,J)   = -1.*m%CoordSys%b3(1)
+   y%TowerLn2Mesh%Orientation(1,2,J)   = -1.*m%CoordSys%b1(3)
+   y%TowerLn2Mesh%Orientation(3,2,J)   = -1.*m%CoordSys%b2(3)
+   y%TowerLn2Mesh%Orientation(2,2,J)   =     m%CoordSys%b3(3)
+   y%TowerLn2Mesh%Orientation(1,3,J)   =     m%CoordSys%b1(2)
+   y%TowerLn2Mesh%Orientation(3,3,J)   =     m%CoordSys%b2(2)
+   y%TowerLn2Mesh%Orientation(2,3,J)   = -1.*m%CoordSys%b3(2)         
           
-   y%TowerLn2Mesh%TranslationVel(1,J)  =     OtherState%RtHS%LinVelEO(1)         
-   y%TowerLn2Mesh%TranslationVel(2,J)  = -1.*OtherState%RtHS%LinVelEO(3)   
-   y%TowerLn2Mesh%TranslationVel(3,J)  =     OtherState%RtHS%LinVelEO(2)        
+   y%TowerLn2Mesh%TranslationVel(1,J)  =     m%RtHS%LinVelEO(1)         
+   y%TowerLn2Mesh%TranslationVel(2,J)  = -1.*m%RtHS%LinVelEO(3)   
+   y%TowerLn2Mesh%TranslationVel(3,J)  =     m%RtHS%LinVelEO(2)        
 
-   y%TowerLn2Mesh%RotationVel(1,J)     =     OtherState%RtHS%AngVelEB(1)
-   y%TowerLn2Mesh%RotationVel(2,J)     = -1.*OtherState%RtHS%AngVelEB(3)
-   y%TowerLn2Mesh%RotationVel(3,J)     =     OtherState%RtHS%AngVelEB(2) 
+   y%TowerLn2Mesh%RotationVel(1,J)     =     m%RtHS%AngVelEB(1)
+   y%TowerLn2Mesh%RotationVel(2,J)     = -1.*m%RtHS%AngVelEB(3)
+   y%TowerLn2Mesh%RotationVel(3,J)     =     m%RtHS%AngVelEB(2) 
 
    y%TowerLn2Mesh%TranslationAcc(1,J)  =     LinAccEO(1)
    y%TowerLn2Mesh%TranslationAcc(2,J)  = -1.*LinAccEO(3)
@@ -1639,27 +1639,27 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    ! p%TwrNodes+2 is the tower base:
    J = p%TwrNodes+2
 
-   y%TowerLn2Mesh%TranslationDisp(1,J) =     OtherState%RtHS%rZ(1) + OtherState%RtHS%rZT0(1) - y%TowerLn2Mesh%Position(1,J)
-   y%TowerLn2Mesh%TranslationDisp(2,J) = -1.*OtherState%RtHS%rZ(3) - OtherState%RtHS%rZT0(3) - y%TowerLn2Mesh%Position(2,J)
-   y%TowerLn2Mesh%TranslationDisp(3,J) =     OtherState%RtHS%rZ(2) + OtherState%RtHS%rZT0(2) - y%TowerLn2Mesh%Position(3,J) + p%PtfmRefzt
+   y%TowerLn2Mesh%TranslationDisp(1,J) =     m%RtHS%rZ(1) + m%RtHS%rZT0(1) - y%TowerLn2Mesh%Position(1,J)
+   y%TowerLn2Mesh%TranslationDisp(2,J) = -1.*m%RtHS%rZ(3) - m%RtHS%rZT0(3) - y%TowerLn2Mesh%Position(2,J)
+   y%TowerLn2Mesh%TranslationDisp(3,J) =     m%RtHS%rZ(2) + m%RtHS%rZT0(2) - y%TowerLn2Mesh%Position(3,J) + p%PtfmRefzt
       
-   y%TowerLn2Mesh%Orientation(1,1,J)   =     OtherState%CoordSys%a1(1)
-   y%TowerLn2Mesh%Orientation(3,1,J)   =     OtherState%CoordSys%a2(1)
-   y%TowerLn2Mesh%Orientation(2,1,J)   = -1.*OtherState%CoordSys%a3(1)
-   y%TowerLn2Mesh%Orientation(1,2,J)   = -1.*OtherState%CoordSys%a1(3)
-   y%TowerLn2Mesh%Orientation(3,2,J)   = -1.*OtherState%CoordSys%a2(3)
-   y%TowerLn2Mesh%Orientation(2,2,J)   =     OtherState%CoordSys%a3(3)
-   y%TowerLn2Mesh%Orientation(1,3,J)   =     OtherState%CoordSys%a1(2)
-   y%TowerLn2Mesh%Orientation(3,3,J)   =     OtherState%CoordSys%a2(2)
-   y%TowerLn2Mesh%Orientation(2,3,J)   = -1.*OtherState%CoordSys%a3(2)
+   y%TowerLn2Mesh%Orientation(1,1,J)   =     m%CoordSys%a1(1)
+   y%TowerLn2Mesh%Orientation(3,1,J)   =     m%CoordSys%a2(1)
+   y%TowerLn2Mesh%Orientation(2,1,J)   = -1.*m%CoordSys%a3(1)
+   y%TowerLn2Mesh%Orientation(1,2,J)   = -1.*m%CoordSys%a1(3)
+   y%TowerLn2Mesh%Orientation(3,2,J)   = -1.*m%CoordSys%a2(3)
+   y%TowerLn2Mesh%Orientation(2,2,J)   =     m%CoordSys%a3(3)
+   y%TowerLn2Mesh%Orientation(1,3,J)   =     m%CoordSys%a1(2)
+   y%TowerLn2Mesh%Orientation(3,3,J)   =     m%CoordSys%a2(2)
+   y%TowerLn2Mesh%Orientation(2,3,J)   = -1.*m%CoordSys%a3(2)
 
-   y%TowerLn2Mesh%TranslationVel(1,J)  =     OtherState%RtHS%LinVelET(1,0)       
-   y%TowerLn2Mesh%TranslationVel(2,J)  = -1.*OtherState%RtHS%LinVelET(3,0) 
-   y%TowerLn2Mesh%TranslationVel(3,J)  =     OtherState%RtHS%LinVelET(2,0)   
+   y%TowerLn2Mesh%TranslationVel(1,J)  =     m%RtHS%LinVelET(1,0)       
+   y%TowerLn2Mesh%TranslationVel(2,J)  = -1.*m%RtHS%LinVelET(3,0) 
+   y%TowerLn2Mesh%TranslationVel(3,J)  =     m%RtHS%LinVelET(2,0)   
    
-   y%TowerLn2Mesh%RotationVel(1,J)     =     OtherState%RtHS%AngVelEF(1,0)
-   y%TowerLn2Mesh%RotationVel(2,J)     = -1.*OtherState%RtHS%AngVelEF(3,0)
-   y%TowerLn2Mesh%RotationVel(3,J)     =     OtherState%RtHS%AngVelEF(2,0) 
+   y%TowerLn2Mesh%RotationVel(1,J)     =     m%RtHS%AngVelEF(1,0)
+   y%TowerLn2Mesh%RotationVel(2,J)     = -1.*m%RtHS%AngVelEF(3,0)
+   y%TowerLn2Mesh%RotationVel(3,J)     =     m%RtHS%AngVelEF(2,0) 
    
    y%TowerLn2Mesh%TranslationAcc(1,J)  =     LinAccET(1,0)
    y%TowerLn2Mesh%TranslationAcc(2,J)  = -1.*LinAccET(3,0)
@@ -1685,36 +1685,36 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
       ! Calculate tower-top acceleration (fore-aft mode only) in the tower-top system:
 
-      LinAccEO = OtherState%RtHS%LinAccEOt
+      LinAccEO = m%RtHS%LinAccEOt
       DO I = 1,p%DOFs%NPTE  ! Loop through all active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the yaw bearing center of mass (point O)
-         LinAccEO = LinAccEO + OtherState%RtHS%PLinVelEO(p%DOFs%PTE(I),0,:)*OtherState%QD2T(p%DOFs%PTE(I))
+         LinAccEO = LinAccEO + m%RtHS%PLinVelEO(p%DOFs%PTE(I),0,:)*m%QD2T(p%DOFs%PTE(I))
       ENDDO          ! I - All active (enabled) DOFs that contribute to the QD2T-related linear accelerations of the yaw bearing center of mass (point O)
 
-      y%TwrAccel = DOT_PRODUCT( LinAccEO, OtherState%CoordSys%b1 )
+      y%TwrAccel = DOT_PRODUCT( LinAccEO, m%CoordSys%b1 )
    ELSE
       y%TwrAccel = 0
    END IF      
    
    !Control outputs for Bladed DLL:
-   y%RotPwr    = OtherState%AllOuts(  RotPwr)*1000.
+   y%RotPwr    = m%AllOuts(  RotPwr)*1000.
    DO K=1,p%NumBl
-      y%RootMxc(K)   = OtherState%AllOuts( RootMxc(K) )*1000.
-      y%RootMyc(K)   = OtherState%AllOuts( RootMyc(K) )*1000.
+      y%RootMxc(K)   = m%AllOuts( RootMxc(K) )*1000.
+      y%RootMyc(K)   = m%AllOuts( RootMyc(K) )*1000.
    END DO
-   y%YawBrTAxp = OtherState%AllOuts( YawBrTAxp)
-   y%YawBrTAyp = OtherState%AllOuts( YawBrTAyp)
-   !y%LSSTipPxa = OtherState%AllOuts( LSSTipPxa)*D2R ! bjj: did this above already
+   y%YawBrTAxp = m%AllOuts( YawBrTAxp)
+   y%YawBrTAyp = m%AllOuts( YawBrTAyp)
+   !y%LSSTipPxa = m%AllOuts( LSSTipPxa)*D2R ! bjj: did this above already
 
-   y%LSSTipMxa = OtherState%AllOuts(LSShftMxa)*1000.
-   y%LSSTipMya = OtherState%AllOuts(LSSTipMya)*1000.                ! Rotating hub My (GL co-ords) (Nm)
-   y%LSSTipMza = OtherState%AllOuts(LSSTipMza)*1000.                ! Rotating hub Mz (GL co-ords) (Nm)
-   y%LSSTipMys = OtherState%AllOuts(LSSTipMys)*1000.                ! Fixed hub My (GL co-ords) (Nm)
-   y%LSSTipMzs = OtherState%AllOuts(LSSTipMzs)*1000.                ! Fixed hub Mz (GL co-ords) (Nm)
-   y%YawBrMyn  = OtherState%AllOuts( YawBrMyn)*1000.                ! Yaw bearing My (GL co-ords) (Nm) !tower accel
-   y%YawBrMzn  = OtherState%AllOuts( YawBrMzn)*1000.                ! Yaw bearing Mz (GL co-ords) (Nm)
-   y%NcIMURAxs = OtherState%AllOuts(NcIMURAxs)*D2R                  ! Nacelle roll    acceleration (rad/s^2) -- this is in the shaft (tilted) coordinate system, instead of the nacelle (nontilted) coordinate system
-   y%NcIMURAys = OtherState%AllOuts(NcIMURAys)*D2R                  ! Nacelle nodding acceleration (rad/s^2)
-   y%NcIMURAzs = OtherState%AllOuts(NcIMURAzs)*D2R                  ! Nacelle yaw     acceleration (rad/s^2) -- this is in the shaft (tilted) coordinate system, instead of the nacelle (nontilted) coordinate system
+   y%LSSTipMxa = m%AllOuts(LSShftMxa)*1000.
+   y%LSSTipMya = m%AllOuts(LSSTipMya)*1000.                ! Rotating hub My (GL co-ords) (Nm)
+   y%LSSTipMza = m%AllOuts(LSSTipMza)*1000.                ! Rotating hub Mz (GL co-ords) (Nm)
+   y%LSSTipMys = m%AllOuts(LSSTipMys)*1000.                ! Fixed hub My (GL co-ords) (Nm)
+   y%LSSTipMzs = m%AllOuts(LSSTipMzs)*1000.                ! Fixed hub Mz (GL co-ords) (Nm)
+   y%YawBrMyn  = m%AllOuts( YawBrMyn)*1000.                ! Yaw bearing My (GL co-ords) (Nm) !tower accel
+   y%YawBrMzn  = m%AllOuts( YawBrMzn)*1000.                ! Yaw bearing Mz (GL co-ords) (Nm)
+   y%NcIMURAxs = m%AllOuts(NcIMURAxs)*D2R                  ! Nacelle roll    acceleration (rad/s^2) -- this is in the shaft (tilted) coordinate system, instead of the nacelle (nontilted) coordinate system
+   y%NcIMURAys = m%AllOuts(NcIMURAys)*D2R                  ! Nacelle nodding acceleration (rad/s^2)
+   y%NcIMURAzs = m%AllOuts(NcIMURAzs)*D2R                  ! Nacelle yaw     acceleration (rad/s^2) -- this is in the shaft (tilted) coordinate system, instead of the nacelle (nontilted) coordinate system
    
                
    RETURN
@@ -1722,20 +1722,21 @@ SUBROUTINE ED_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
 END SUBROUTINE ED_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-! Tight coupling routine for computing derivatives of continuous states
+!> Tight coupling routine for computing derivatives of continuous states.
+SUBROUTINE ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(ED_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-   TYPE(ED_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(ED_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-   TYPE(ED_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(ED_ContinuousStateType), INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at t
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
+   TYPE(ED_InputType),           INTENT(IN   )  :: u           !< Inputs at t
+   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
+   TYPE(ED_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
+   TYPE(ED_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
+   TYPE(ED_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states
+   TYPE(ED_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
+   TYPE(ED_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at t
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! LOCAL variables
    LOGICAL, PARAMETER           :: UpdateValues  = .TRUE.      ! determines if the OtherState values need to be updated
@@ -1754,19 +1755,19 @@ SUBROUTINE ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat, 
 
          ! Compute the first time derivatives of the continuous states here:
 
-   ! See if the values stored in OtherState%RtHS and OtherState%CoordSys need to be updated:
+   ! See if the values stored in m%RtHS and m%CoordSys need to be updated:
    IF ( UpdateValues ) THEN       
       
        !OtherState%BlPitch = u%BlPitchCom
        
          ! set the coordinate system variables:
-      CALL SetCoordSy( t, OtherState%CoordSys, OtherState%RtHS, u%BlPitchCom, p, x, ErrStat, ErrMsg )
+      CALL SetCoordSy( t, m%CoordSys, m%RtHS, u%BlPitchCom, p, x, ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev) RETURN
    
-      CALL CalculatePositions(        p, x, OtherState%CoordSys,    OtherState%RtHS ) ! calculate positions
-      CALL CalculateAngularPosVelPAcc(p, x, OtherState%CoordSys,    OtherState%RtHS ) ! calculate angular positions, velocities, and partial accelerations, including partial angular quantities
-      CALL CalculateLinearVelPAcc(    p, x, OtherState%CoordSys,    OtherState%RtHS ) ! calculate linear velocities and partial accelerations
-      CALL CalculateForcesMoments(    p, x, OtherState%CoordSys, u, OtherState%RtHS ) ! calculate the forces and moments (requires AeroBladeForces and AeroBladeMoments)            
+      CALL CalculatePositions(        p, x, m%CoordSys,    m%RtHS ) ! calculate positions
+      CALL CalculateAngularPosVelPAcc(p, x, m%CoordSys,    m%RtHS ) ! calculate angular positions, velocities, and partial accelerations, including partial angular quantities
+      CALL CalculateLinearVelPAcc(    p, x, m%CoordSys,    m%RtHS ) ! calculate linear velocities and partial accelerations
+      CALL CalculateForcesMoments(    p, x, m%CoordSys, u, m%RtHS ) ! calculate the forces and moments (requires AeroBladeForces and AeroBladeMoments)            
       
    END IF
       
@@ -1777,14 +1778,14 @@ SUBROUTINE ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat, 
    
       ! Compute the moments from teeter springs and dampers, rotor-furl springs and dampers, tail-furl springs and dampers
 
-   CALL Teeter  ( t, p, OtherState%RtHS%TeetAng, OtherState%RtHS%TeetAngVel, OtherState%RtHS%TeetMom ) ! Compute moment from teeter     springs and dampers, TeetMom; NOTE: TeetMom will be zero for a 3-blader since TeetAng = TeetAngVel = 0
-   CALL RFurling( t, p, x%QT(DOF_RFrl),          x%QDT(DOF_RFrl),            OtherState%RtHS%RFrlMom ) ! Compute moment from rotor-furl springs and dampers, RFrlMom
-   CALL TFurling( t, p, x%QT(DOF_TFrl),          x%QDT(DOF_TFrl),            OtherState%RtHS%TFrlMom ) ! Compute moment from tail-furl  springs and dampers, TFrlMom
+   CALL Teeter  ( t, p, m%RtHS%TeetAng, m%RtHS%TeetAngVel, m%RtHS%TeetMom ) ! Compute moment from teeter     springs and dampers, TeetMom; NOTE: TeetMom will be zero for a 3-blader since TeetAng = TeetAngVel = 0
+   CALL RFurling( t, p, x%QT(DOF_RFrl),          x%QDT(DOF_RFrl),            m%RtHS%RFrlMom ) ! Compute moment from rotor-furl springs and dampers, RFrlMom
+   CALL TFurling( t, p, x%QT(DOF_TFrl),          x%QDT(DOF_TFrl),            m%RtHS%TFrlMom ) ! Compute moment from tail-furl  springs and dampers, TFrlMom
    
-   !bjj: note OtherState%RtHS%GBoxEffFac needed in OtherState only to fix HSSBrTrq (and used in FillAugMat)
-   OtherState%RtHS%GBoxEffFac  = p%GBoxEff**OtherState%SgnPrvLSTQ      ! = GBoxEff if SgnPrvLSTQ = 1 OR 1/GBoxEff if SgnPrvLSTQ = -1
+   !bjj: note m%RtHS%GBoxEffFac needed in OtherState only to fix HSSBrTrq (and used in FillAugMat)
+   m%RtHS%GBoxEffFac  = p%GBoxEff**OtherState%SgnPrvLSTQ      ! = GBoxEff if SgnPrvLSTQ = 1 OR 1/GBoxEff if SgnPrvLSTQ = -1
    
-   CALL FillAugMat( p, x, OtherState%CoordSys, u, OtherState%HSSBrTrq, OtherState%RtHS, OtherState%AugMat )
+   CALL FillAugMat( p, x, m%CoordSys, u, OtherState%HSSBrTrq, m%RtHS, m%AugMat )
    
 
    ! Invert the matrix to solve for the accelerations. The accelerations are returned by Gauss() in the first NActvDOF elements
@@ -1794,17 +1795,17 @@ SUBROUTINE ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat, 
    !   in INTENT(OUT) arguments.
 
    IF ( p%DOFs%NActvDOF > 0 ) THEN
-      OtherState%AugMat_factor = OtherState%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1:p%DOFs%NActvDOF) )
-      OtherState%SolnVec       = OtherState%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1+p%DOFs%NActvDOF) )
+      m%AugMat_factor = m%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1:p%DOFs%NActvDOF) )
+      m%SolnVec       = m%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1+p%DOFs%NActvDOF) )
    
 
-      CALL LAPACK_getrf( M=p%DOFs%NActvDOF, N=p%DOFs%NActvDOF, A=OtherState%AugMat_factor, IPIV=OtherState%AugMat_pivot, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+      CALL LAPACK_getrf( M=p%DOFs%NActvDOF, N=p%DOFs%NActvDOF, A=m%AugMat_factor, IPIV=m%AugMat_pivot, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
          IF ( ErrStat >= AbortErrLev ) RETURN
       
-      CALL LAPACK_getrs( TRANS='N',N=p%DOFs%NActvDOF, A=OtherState%AugMat_factor,IPIV=OtherState%AugMat_pivot, B=OtherState%SolnVec, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      CALL LAPACK_getrs( TRANS='N',N=p%DOFs%NActvDOF, A=m%AugMat_factor,IPIV=m%AugMat_pivot, B=m%SolnVec, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
    
-      !CALL GaussElim( OtherState%AugMat( p%DOFs%SrtPS(    1: p%DOFs%NActvDOF   ),     &
+      !CALL GaussElim( m%AugMat( p%DOFs%SrtPS(    1: p%DOFs%NActvDOF   ),     &
       !                                   p%DOFs%SrtPSNAUG(1:(p%DOFs%NActvDOF+1)) ),   &
       !                                   p%DOFs%NActvDOF,  SolnVec, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1829,36 +1830,37 @@ END IF
    
    dxdt%QDT = 0.0
    DO I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-      dxdt%QDT(p%DOFs%SrtPS(I)) = OtherState%SolnVec(I)    ! dxdt%QDT = OtherState%QD2T
+      dxdt%QDT(p%DOFs%SrtPS(I)) = m%SolnVec(I)    ! dxdt%QDT = m%QD2T
    ENDDO             ! I - All active (enabled) DOFs
 
-   OtherState%QD2T = dxdt%QDT
+   m%QD2T = dxdt%QDT
       
    
       ! Let's calculate the sign (+/-1) of the low-speed shaft torque for this time step and store it in SgnPrvLSTQ.
       !  This will be used during the next call to RtHS (bjj: currently violates framework, but DOE wants a hack for HSS brake).
-      ! need OtherState%QD2T set before calling this
+      ! need m%QD2T set before calling this
       
-   !OtherState%SgnPrvLSTQ = SignLSSTrq(p, OtherState)
+   !OtherState%SgnPrvLSTQ = SignLSSTrq(p, m)
    
    
 END SUBROUTINE ED_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-! Tight coupling routine for updating discrete states
+!> Tight coupling routine for updating discrete states
+SUBROUTINE ED_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),               INTENT(IN   )  :: n           ! Current step of the simulation: t = n*Interval
-      TYPE(ED_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(ED_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(ED_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at t;
-                                                                  !   Output: Discrete states at t + Interval
-      TYPE(ED_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(ED_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),               INTENT(IN   )  :: n           !< Current step of the simulation: t = n*Interval
+      TYPE(ED_InputType),           INTENT(IN   )  :: u           !< Inputs at t
+      TYPE(ED_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
+      TYPE(ED_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Input: Discrete states at t;
+                                                                  !!   Output: Discrete states at t + Interval
+      TYPE(ED_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
+      TYPE(ED_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states
+      TYPE(ED_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
+      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
          ! Initialize ErrStat
@@ -1873,21 +1875,22 @@ SUBROUTINE ED_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
 
 END SUBROUTINE ED_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_residual, ErrStat, ErrMsg )
-! Tight coupling routine for solving for the residual of the constraint state equations
+!> Tight coupling routine for solving for the residual of the constraint state equations
+SUBROUTINE ED_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                   INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(ED_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
-      TYPE(ED_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(ED_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(ED_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time (possibly a guess)
-      TYPE(ED_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(ED_ConstraintStateType), INTENT(  OUT)  :: z_residual  ! Residual of the constraint state equations using
-                                                                  !     the input values described above
-      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                   INTENT(IN   )  :: Time        !< Current simulation time in seconds
+      TYPE(ED_InputType),           INTENT(IN   )  :: u           !< Inputs at Time
+      TYPE(ED_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(ED_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(ED_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time (possibly a guess)
+      TYPE(ED_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states
+      TYPE(ED_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
+      TYPE(ED_ConstraintStateType), INTENT(  OUT)  :: z_residual  !< Residual of the constraint state equations using
+                                                                  !!     the input values described above
+      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
          ! Initialize ErrStat
@@ -1902,17 +1905,16 @@ SUBROUTINE ED_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_resid
 
 END SUBROUTINE ED_CalcConstrStateResidual
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! WE ARE NOT YET IMPLEMENTING THE JACOBIANS...
 
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine sets the parameters, based on the data stored in InputFileData
 SUBROUTINE ED_SetParameters( InputFileData, p, ErrStat, ErrMsg )
-! This subroutine sets the parameters, based on the data stored in InputFileData
 !..................................................................................................................................
 
-   TYPE(ED_InputFile),       INTENT(IN)       :: InputFileData  ! Data stored in the module's input file
-   TYPE(ED_ParameterType),   INTENT(INOUT)    :: p              ! The module's parameter data
-   INTEGER(IntKi),           INTENT(OUT)      :: ErrStat        ! The error status code
-   CHARACTER(*),             INTENT(OUT)      :: ErrMsg         ! The error message, if an error occurred
+   TYPE(ED_InputFile),       INTENT(IN)       :: InputFileData  !< Data stored in the module's input file
+   TYPE(ED_ParameterType),   INTENT(INOUT)    :: p              !< The module's parameter data
+   INTEGER(IntKi),           INTENT(OUT)      :: ErrStat        !< The error status code
+   CHARACTER(*),             INTENT(OUT)      :: ErrMsg         !< The error message, if an error occurred
 
       ! Local variables
 !   INTEGER(IntKi)                             :: K              ! Loop counter (for blades)
@@ -1993,16 +1995,15 @@ CONTAINS
 
 END SUBROUTINE ED_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine initializes the ActiveDOF data type as well as the variables related to DOFs, including p%NAug and p%NDOF.
+!! It assumes that p\%NumBl is set.
 SUBROUTINE Init_DOFparameters( InputFileData, p, ErrStat, ErrMsg )
-! This subroutine initializes the ActiveDOF data type as well as the variables related to DOFs, including p%NAug and p%NDOF.
-! It assumes that p%NumBl is set.
 !..................................................................................................................................
 
-!   TYPE(ED_ActiveDOFs),      INTENT(INOUT)    :: DOFs           ! ActiveDOF data
-   TYPE(ED_InputFile),       INTENT(IN)       :: InputFileData  ! Data stored in the module's input file
-   TYPE(ED_ParameterType),   INTENT(INOUT)    :: p              ! The module's parameter data
-   INTEGER(IntKi),           INTENT(OUT)      :: ErrStat        ! The error status code
-   CHARACTER(*),             INTENT(OUT)      :: ErrMsg         ! The error message, if an error occurred
+   TYPE(ED_InputFile),       INTENT(IN)       :: InputFileData  !< Data stored in the module's input file
+   TYPE(ED_ParameterType),   INTENT(INOUT)    :: p              !< The module's parameter data
+   INTEGER(IntKi),           INTENT(OUT)      :: ErrStat        !< The error status code
+   CHARACTER(*),             INTENT(OUT)      :: ErrMsg         !< The error message, if an error occurred
 
       ! Local variables
    INTEGER(IntKi)                             :: K              ! Loop counter (for blades)
@@ -2213,21 +2214,21 @@ CONTAINS
 
 END SUBROUTINE Init_DOFparameters
 !----------------------------------------------------------------------------------------------------------------------------------
+!> SHP calculates the Derive-derivative of the shape function ModShpAry at Fract.
+!! NOTE: This function only works for Deriv = 0, 1, or 2.
 FUNCTION SHP(Fract, FlexL, ModShpAry, Deriv, ErrStat, ErrMsg)
-! SHP calculates the Derive-derivative of the shape function ModShpAry at Fract.
-! NOTE: This function only works for Deriv = 0, 1, or 2.
 !..................................................................................................................................
 
       ! Passed variables:
 
-   REAL(ReKi),     INTENT(IN )    :: FlexL                     ! Length of flexible beam, (m)
-   REAL(ReKi),     INTENT(IN )    :: Fract                     ! Fractional distance along flexible beam, 0<=Frac<=1
-   REAL(ReKi),     INTENT(IN )    :: ModShpAry(:)              ! Array holding mode shape coefficients (2:PolyOrd)
-   REAL(ReKi)                     :: SHP                       ! The shape function returned by this function.
+   REAL(ReKi),     INTENT(IN )    :: FlexL                     !< Length of flexible beam, (m)
+   REAL(ReKi),     INTENT(IN )    :: Fract                     !< Fractional distance along flexible beam, 0<=Frac<=1
+   REAL(ReKi),     INTENT(IN )    :: ModShpAry(:)              !< Array holding mode shape coefficients (2:PolyOrd)
+   REAL(ReKi)                     :: SHP                       !< The shape function returned by this function.
 
-   INTEGER(IntKi), INTENT(IN )    :: Deriv                     ! Which derivative to compute Deriv = 0 (regular function SHP), 1 (D(SHP)/DZ), 2 (D2(SHP)/DZ2)
-   INTEGER(IntKi), INTENT(OUT)    :: ErrStat                   ! A error level that indicates if/what error occurred
-   CHARACTER(*),   INTENT(OUT)    :: ErrMsg                    ! A message indicating the error if one occurred
+   INTEGER(IntKi), INTENT(IN )    :: Deriv                     !< Which derivative to compute Deriv = 0 (regular function SHP), 1 (D(SHP)/DZ), 2 (D2(SHP)/DZ2)
+   INTEGER(IntKi), INTENT(OUT)    :: ErrStat                   !< A error level that indicates if/what error occurred
+   CHARACTER(*),   INTENT(OUT)    :: ErrMsg                    !< A message indicating the error if one occurred
 
 
       ! Local variables:
@@ -2268,19 +2269,19 @@ FUNCTION SHP(Fract, FlexL, ModShpAry, Deriv, ErrStat, ErrMsg)
 
 END FUNCTION SHP
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine allocates the coordinate systems in the ED_CoordSys type.
 SUBROUTINE Alloc_CoordSys( CoordSys, p, ErrStat, ErrMsg )
-! This subroutine allocates the coordinate systems in the ED_CoordSys type.
 !..................................................................................................................................
 
 IMPLICIT NONE
 
    ! passed arguments
 
-TYPE(ED_CoordSys),        INTENT(OUT) :: CoordSys       ! The coordinate systems, with arrays to be allocated
-TYPE(ED_ParameterType),   INTENT(IN)  :: p              ! Parameters of the structural dynamics module
+TYPE(ED_CoordSys),        INTENT(OUT) :: CoordSys       !< The coordinate systems, with arrays to be allocated
+TYPE(ED_ParameterType),   INTENT(IN)  :: p              !< Parameters of the structural dynamics module
 
-INTEGER(IntKi),           INTENT(OUT) :: ErrStat        ! Error status
-CHARACTER(*),             INTENT(OUT) :: ErrMsg         ! Err msg
+INTEGER(IntKi),           INTENT(OUT) :: ErrStat        !< Error status
+CHARACTER(*),             INTENT(OUT) :: ErrMsg         !< Err msg
 
 
    ! local variables
@@ -2350,17 +2351,17 @@ END IF
 RETURN
 END SUBROUTINE Alloc_CoordSys
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This takes the blade input file data and sets the corresponding blade parameters, performing linear interpolation of the
+!! input data to the specified blade mesh.
+!! This routine assumes p\%HubRad and p\%BldFlexL are already set.
 SUBROUTINE SetBladeParameters( p, BladeInData, BladeMeshData, ErrStat, ErrMsg )
-! This takes the blade input file data and sets the corresponding blade parameters, performing linear interpolation of the
-! input data to the specified blade mesh.
-! This routine assumes p%HubRad and p%BldFlexL are already set.
 !..................................................................................................................................
 
-   TYPE(ED_ParameterType),        INTENT(INOUT)  :: p                                   ! The parameters of the structural dynamics module
-   TYPE(BladeInputData),          INTENT(IN)     :: BladeInData(:)                      ! Program input data for all blades
-   TYPE(ED_BladeMeshInputData),   INTENT(IN)     :: BladeMeshData(:)                    ! Program input mesh data for all blades
-   INTEGER(IntKi),                INTENT(OUT)    :: ErrStat                             ! Error status
-   CHARACTER(*),                  INTENT(OUT)    :: ErrMsg                              ! Error message
+   TYPE(ED_ParameterType),        INTENT(INOUT)  :: p                                   !< The parameters of the structural dynamics module
+   TYPE(BladeInputData),          INTENT(IN)     :: BladeInData(:)                      !< Program input data for all blades
+   TYPE(ED_BladeMeshInputData),   INTENT(IN)     :: BladeMeshData(:)                    !< Program input mesh data for all blades
+   INTEGER(IntKi),                INTENT(OUT)    :: ErrStat                             !< Error status
+   CHARACTER(*),                  INTENT(OUT)    :: ErrMsg                              !< Error message
 
       ! Local variables:
    REAL(ReKi)                                    :: x                                   ! Fractional location between two points in linear interpolation
@@ -2599,14 +2600,14 @@ CONTAINS
 !..................................................................................................................................
 END SUBROUTINE SetBladeParameters
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine allocates arrays for the blade parameters.
 SUBROUTINE Alloc_BladeParameters( p, AllocAdams, ErrStat, ErrMsg )
-! This routine allocates arrays for the blade parameters.
 !..................................................................................................................................
 
-   TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                                   ! The parameters of the structural dynamics module
-   LOGICAL,                  INTENT(IN)     :: AllocAdams                          ! Logical to determine if Adams inputs should be allocated
-   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             ! Error status
-   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              ! Err msg
+   TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                                   !< The parameters of the structural dynamics module
+   LOGICAL,                  INTENT(IN)     :: AllocAdams                          !< Logical to determine if Adams inputs should be allocated
+   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
+   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              !< Err msg
 
 
       ! Allocate arrays to hold the blade analysis nodes.
@@ -2681,14 +2682,14 @@ SUBROUTINE Alloc_BladeParameters( p, AllocAdams, ErrStat, ErrMsg )
 
 END SUBROUTINE Alloc_BladeParameters
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine allocates arrays for the tower parameters.
 SUBROUTINE Alloc_TowerParameters( p, AllocAdams, ErrStat, ErrMsg )
-! This routine allocates arrays for the tower parameters.
 !..................................................................................................................................
 
-   TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                                   ! The parameters of the structural dynamics module
-   LOGICAL,                  INTENT(IN)     :: AllocAdams                          ! Logical to determine if Adams inputs should be allocated
-   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             ! Error status
-   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              ! Err msg
+   TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                                   !< The parameters of the structural dynamics module
+   LOGICAL,                  INTENT(IN)     :: AllocAdams                          !< Logical to determine if Adams inputs should be allocated
+   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
+   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              !< Err msg
 
 
 
@@ -2745,15 +2746,15 @@ SUBROUTINE Alloc_TowerParameters( p, AllocAdams, ErrStat, ErrMsg )
 
 END SUBROUTINE Alloc_TowerParameters
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine sets the remaining parameters (replacing the former FAST Initialize routine), first allocating necessary arrays.
+!! It requires p\%NDOF, p\%NumBl, p\%TTopNode, p\%TipNode to be set before calling this routine.
 SUBROUTINE SetOtherParameters( p, InputFileData, ErrStat, ErrMsg )
-! This routine sets the remaining parameters (replacing the former FAST Initialize routine), first allocating necessary arrays.
-! It requires p%NDOF, p%NumBl, p%TTopNode, p%TipNode to be set before calling this routine.
 !..................................................................................................................................
 
-   TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                ! Data stored in the module's input file
-   TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            ! The parameters of the structural dynamics module
-   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      ! Error status
-   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       ! Err msg
+   TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                !< Data stored in the module's input file
+   TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            !< The parameters of the structural dynamics module
+   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
+   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       !< Err msg
 
 
 
@@ -2811,15 +2812,15 @@ SUBROUTINE SetOtherParameters( p, InputFileData, ErrStat, ErrMsg )
    
 END SUBROUTINE SetOtherParameters
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine allocates arrays in the RtHndSide data structure.
+!! It requires p\%TwrNodes, p\%NumBl, p\%TipNode, p\%NDOF, p\%BldNodes to be set before calling this routine.
 SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
-! This routine allocates arrays in the RtHndSide data structure.
-! It requires p%TwrNodes, p%NumBl, p%TipNode, p%NDOF, p%BldNodes to be set before calling this routine.
 !..................................................................................................................................
 
-   TYPE(ED_RtHndSide),       INTENT(INOUT)  :: RtHS                         ! RtHndSide data type
-   TYPE(ED_ParameterType),   INTENT(IN)     :: p                            ! Parameters of the structural dynamics module
-   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      ! Error status
-   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       ! Error message
+   TYPE(ED_RtHndSide),       INTENT(INOUT)  :: RtHS                         !< RtHndSide data type
+   TYPE(ED_ParameterType),   INTENT(IN)     :: p                            !< Parameters of the structural dynamics module
+   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
+   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       !< Error message
 
    ! local variables:
    INTEGER(IntKi),   PARAMETER              :: Dims = 3                     ! The position arrays all must be allocated with a dimension for X,Y,and Z
@@ -3076,21 +3077,18 @@ SUBROUTINE Alloc_RtHS( RtHS, p, ErrStat, ErrMsg  )
 
 END SUBROUTINE Alloc_RtHS
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This takes the tower input file data and sets the corresponding tower parameters, performing linear interpolation of the
+!! input data to the specified tower mesh.
+!! It requires p\%TwrFlexL, and p\%TwrNodes to be set first.
 SUBROUTINE SetTowerParameters( p, InputFileData, ErrStat, ErrMsg  )
-! This takes the tower input file data and sets the corresponding tower parameters, performing linear interpolation of the
-! input data to the specified tower mesh.
-! It requires p%TwrFlexL, and p%TwrNodes to be set first.
 !..................................................................................................................................
-
-   IMPLICIT                        NONE
-
 
       ! Passed variables
 
-   TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            ! Parameters of the structural dynamics module
-   TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                ! Data stored in the module's input file
-   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      ! Error status
-   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       ! Error message
+   TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            !< Parameters of the structural dynamics module
+   TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                !< Data stored in the module's input file
+   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
+   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       !< Error message
 
       ! Local variables:
 
@@ -3204,19 +3202,16 @@ CONTAINS
 
 END SUBROUTINE SetTowerParameters
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This takes the furling input file data and sets the corresponding furling parameters.
 SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
-! This takes the furling input file data and sets the corresponding furling parameters.
 !..................................................................................................................................
-
-   IMPLICIT                        NONE
-
 
       ! Passed variables
 
-   TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            ! Parameters of the structural dynamics module
-   TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                ! Data stored in the module's input file
-   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      ! Error status
-   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       ! Error message
+   TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            !< Parameters of the structural dynamics module
+   TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                !< Data stored in the module's input file
+   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
+   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       !< Error message
 
       ! Local variables:
 
@@ -3344,19 +3339,16 @@ SUBROUTINE SetFurlParameters( p, InputFileData, ErrStat, ErrMsg  )
 
 END SUBROUTINE SetFurlParameters
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This takes the primary input file data and sets the corresponding parameters.
 SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
-! This takes the primary input file data and sets the corresponding parameters.
 !..................................................................................................................................
-
-   IMPLICIT                        NONE
-
 
       ! Passed variables
 
-   TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            ! Parameters of the structural dynamics module
-   TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                ! Data stored in the module's input file
-   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      ! Error status
-   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       ! Error message
+   TYPE(ED_ParameterType),   INTENT(INOUT)  :: p                            !< Parameters of the structural dynamics module
+   TYPE(ED_InputFile),       INTENT(IN)     :: InputFileData                !< Data stored in the module's input file
+   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
+   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       !< Error message
 
 !bjj: ERROR CHECKING!!!
 
@@ -3544,16 +3536,16 @@ SUBROUTINE SetPrimaryParameters( p, InputFileData, ErrStat, ErrMsg  )
 
 END SUBROUTINE SetPrimaryParameters
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine initializes the continuous states of the module.
+!! It assumes the parameters are set and that InputFileData contains initial conditions for the continuous states.
 SUBROUTINE Init_ContStates( x, p, InputFileData, OtherState, ErrStat, ErrMsg  )
-! This routine initializes the continuous states of the module.
-! It assumes the parameters are set and that InputFileData contains initial conditions for the continuous states.
 !..................................................................................................................................
-   TYPE(ED_ContinuousStateType), INTENT(OUT)    :: x                 ! Initial continuous states
-   TYPE(ED_ParameterType),       INTENT(IN)     :: p                 ! Parameters of the structural dynamics module
-   TYPE(ED_InputFile),           INTENT(IN)     :: InputFileData     ! Data stored in the module's input file
-   TYPE(ED_OtherStateType),      INTENT(IN)     :: OtherState        ! Initial other states
-   INTEGER(IntKi),               INTENT(OUT)    :: ErrStat           ! Error status
-   CHARACTER(*),                 INTENT(OUT)    :: ErrMsg            ! Error message
+   TYPE(ED_ContinuousStateType), INTENT(OUT)    :: x                 !< Initial continuous states
+   TYPE(ED_ParameterType),       INTENT(IN)     :: p                 !< Parameters of the structural dynamics module
+   TYPE(ED_InputFile),           INTENT(IN)     :: InputFileData     !< Data stored in the module's input file
+   TYPE(ED_OtherStateType),      INTENT(IN)     :: OtherState        !< Initial other states
+   INTEGER(IntKi),               INTENT(OUT)    :: ErrStat           !< Error status
+   CHARACTER(*),                 INTENT(OUT)    :: ErrMsg            !< Error message
 
       ! local variables
    REAL(ReKi)                                   :: InitQE1(p%NumBl)  ! Initial value of the 1st blade edge DOF
@@ -3704,38 +3696,39 @@ SUBROUTINE Init_ContStates( x, p, InputFileData, OtherState, ErrStat, ErrMsg  )
 
 END SUBROUTINE Init_ContStates
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Init_OtherStates( OtherState, p, x, InputFileData, ErrStat, ErrMsg  )
-! This routine initializes the other states of the module.
-! It assumes the parameters are set and that InputFileData contains initial conditions for the continuous states. and p%NumBl is set
+!> This routine initializes the other states of the module.
+!! It assumes the parameters are set and that InputFileData contains initial conditions for the continuous states. and p%NumBl is set
+SUBROUTINE Init_MiscOtherStates( m, OtherState, p, x, InputFileData, ErrStat, ErrMsg  )
 !..................................................................................................................................
-   TYPE(ED_OtherStateType),      INTENT(OUT)    :: OtherState        ! Initial other states
-   TYPE(ED_ParameterType),       INTENT(IN)     :: p                 ! Parameters of the structural dynamics module
-   TYPE(ED_ContinuousStateType), INTENT(IN)     :: x                 ! Initial continuous states
-   TYPE(ED_InputFile),           INTENT(IN)     :: InputFileData     ! Data stored in the module's input file
-   INTEGER(IntKi),               INTENT(OUT)    :: ErrStat           ! Error status
-   CHARACTER(*),                 INTENT(OUT)    :: ErrMsg            ! Error message
+   TYPE(ED_MiscVarType),         INTENT(OUT)    :: m                 !< Initial misc variables
+   TYPE(ED_OtherStateType),      INTENT(OUT)    :: OtherState        !< Initial other states
+   TYPE(ED_ParameterType),       INTENT(IN)     :: p                 !< Parameters of the structural dynamics module
+   TYPE(ED_ContinuousStateType), INTENT(IN)     :: x                 !< Initial continuous states
+   TYPE(ED_InputFile),           INTENT(IN)     :: InputFileData     !< Data stored in the module's input file
+   INTEGER(IntKi),               INTENT(OUT)    :: ErrStat           !< Error status
+   CHARACTER(*),                 INTENT(OUT)    :: ErrMsg            !< Error message
 
    INTEGER(IntKi)               :: I                                 ! Generic loop counter.
 
       ! First allocate the arrays stored here:
 
-   CALL Alloc_RtHS( OtherState%RtHS, p, ErrStat, ErrMsg  )
+   CALL Alloc_RtHS( m%RtHS, p, ErrStat, ErrMsg  )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
-   CALL Alloc_CoordSys( OtherState%CoordSys, p, ErrStat, ErrMsg )
+   CALL Alloc_CoordSys( m%CoordSys, p, ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
    
-   CALL AllocAry( OtherState%QD2T, p%NDOF,   'OtherState%QD2T',  ErrStat, ErrMsg )
+   CALL AllocAry( m%QD2T, p%NDOF,   'm%QD2T',  ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
    
-   ALLOCATE ( OtherState%AllOuts(0:MaxOutPts) , STAT=ErrStat )
+   ALLOCATE ( m%AllOuts(0:MaxOutPts) , STAT=ErrStat )
       IF ( ErrStat /= 0 )  THEN
          ErrStat = ErrID_Fatal
          ErrMsg  = ' Error allocating memory for the AllOuts array.'
          RETURN
       ENDIF   
-   OtherState%AllOuts = 0.0_ReKi
+   m%AllOuts = 0.0_ReKi
    
       ! for loose coupling:
    CALL AllocAry( OtherState%IC,  ED_NMX,   'IC',   ErrStat, ErrMsg )
@@ -3747,15 +3740,15 @@ SUBROUTINE Init_OtherStates( OtherState, p, x, InputFileData, ErrStat, ErrMsg  )
    !      IF ( ErrStat >= AbortErrLev ) RETURN
    !   OtherState%BlPitch = InputFileData%BlPitch(1:p%NumBl)
 
-   CALL AllocAry( OtherState%AugMat,       p%NDOF,          p%NAug,          'AugMat',       ErrStat, ErrMsg )
+   CALL AllocAry( m%AugMat,       p%NDOF,          p%NAug,          'AugMat',       ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
-   CALL AllocAry( OtherState%OgnlGeAzRo,                    p%NAug,          'OgnlGeAzRo',   ErrStat, ErrMsg )
+   CALL AllocAry( m%OgnlGeAzRo,                    p%NAug,          'OgnlGeAzRo',   ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
-   CALL AllocAry( OtherState%SolnVec,      p%DOFs%NActvDOF,                  'SolnVec',      ErrStat, ErrMsg )
+   CALL AllocAry( m%SolnVec,      p%DOFs%NActvDOF,                  'SolnVec',      ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
-   CALL AllocAry( OtherState%AugMat_pivot, p%DOFs%NActvDOF,                  'AugMat_pivot', ErrStat, ErrMsg )
+   CALL AllocAry( m%AugMat_pivot, p%DOFs%NActvDOF,                  'AugMat_pivot', ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
-   CALL AllocAry( OtherState%AugMat_factor,p%DOFs%NActvDOF, p%DOFs%NActvDOF, 'AugMat_factor',ErrStat, ErrMsg )
+   CALL AllocAry( m%AugMat_factor,p%DOFs%NActvDOF, p%DOFs%NActvDOF, 'AugMat_factor',ErrStat, ErrMsg )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
    
@@ -3788,7 +3781,7 @@ SUBROUTINE Init_OtherStates( OtherState, p, x, InputFileData, ErrStat, ErrMsg  )
    OtherState%SgnLSTQ    = 1
    
    
-END SUBROUTINE Init_OtherStates
+END SUBROUTINE Init_MiscOtherStates
 
 !----------------------------------------------------------------------------------------------------------------------------------
 
@@ -4537,33 +4530,30 @@ END SUBROUTINE SetOutParam
 !----------------------------------------------------------------------------------------------------------------------------------
 !End of code generated by Matlab script
 !**********************************************************************************************************************************
+!> This routine is used to compute rotor (blade and hub) properties:
+!!   KBF(), KBE(), CBF(), CBE(), FreqBF(), FreqBE(), AxRedBld(),
+!!   TwistedSF(), BldMass(), FirstMom(), SecondMom(), BldCG(),
+!!   RotMass, RotIner, Hubg1Iner, Hubg2Iner, rSAerCenn1(), and
+!!   rSAerCenn2(), BElmtMass()
+!! tower properties:
+!!   KTFA(), KTSS(), CTFA(), CTSS(), FreqTFA(), FreqTSS(),
+!!   AxRedTFA(), AxRedTSS(), TwrFASF(), TwrSSSF(), TwrMass, and
+!!   TwrTpMass, TElmtMass()
+!! structure that furls with the rotor (not including rotor) properties:
+!!   RrfaIner
+!! tail boom properties:
+!!   AtfaIner
+!! and nacelle properties:
+!!   Nacd2Iner
 SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
-! This routine is used to compute rotor (blade and hub) properties:
-!   KBF(), KBE(), CBF(), CBE(), FreqBF(), FreqBE(), AxRedBld(),
-!   TwistedSF(), BldMass(), FirstMom(), SecondMom(), BldCG(),
-!   RotMass, RotIner, Hubg1Iner, Hubg2Iner, rSAerCenn1(), and
-!   rSAerCenn2(), BElmtMass()
-! tower properties:
-!   KTFA(), KTSS(), CTFA(), CTSS(), FreqTFA(), FreqTSS(),
-!   AxRedTFA(), AxRedTSS(), TwrFASF(), TwrSSSF(), TwrMass, and
-!   TwrTpMass, TElmtMass()
-! structure that furls with the rotor (not including rotor) properties:
-!   RrfaIner
-! tail boom properties:
-!   AtfaIner
-! and nacelle properties:
-!   Nacd2Iner
 !..................................................................................................................................
-
-   IMPLICIT                        NONE
-
 
       ! Passed variables
 
-   TYPE(ED_ParameterType),        INTENT(INOUT)    :: p                             ! Parameters of the structural dynamics module
-   TYPE(ED_InputFile),            INTENT(IN)       :: InputFileData                 ! all the data in the ElastoDyn input file
-   INTEGER(IntKi),                INTENT(OUT)      :: ErrStat                       ! Error status
-   CHARACTER(*),                  INTENT(OUT)      :: ErrMsg                        ! Error message when ErrStat =/ ErrID_None
+   TYPE(ED_ParameterType),        INTENT(INOUT)    :: p                             !< Parameters of the structural dynamics module
+   TYPE(ED_InputFile),            INTENT(IN)       :: InputFileData                 !< all the data in the ElastoDyn input file
+   INTEGER(IntKi),                INTENT(OUT)      :: ErrStat                       !< Error status
+   CHARACTER(*),                  INTENT(OUT)      :: ErrMsg                        !< Error message when ErrStat =/ ErrID_None
 
 
       ! Local variables.
@@ -5223,27 +5213,25 @@ SUBROUTINE Coeff(p,InputFileData, ErrStat, ErrMsg)
    RETURN
 END SUBROUTINE Coeff
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine calculates the initial blade deflections.
+!! Base the intial values of the blade DOFs, INITQF1, INITQF2, and
+!!   INITQE1, on OoPDefl and IPDefl.
+!! Write messages to the screen if the specified initial tip displacements
+!!  are incompatible with the enabled DOFs.
 SUBROUTINE InitBlDefl ( p, InputFileData, InitQF1, InitQF2, InitQE1, ErrStat, ErrMsg )
-! This routine calculates the initial blade deflections.
-! Base the intial values of the blade DOFs, INITQF1, INITQF2, and
-!   INITQE1, on OoPDefl and IPDefl.
-! Write messages to the screen if the specified initial tip displacements
-!  are incompatible with the enabled DOFs.
 !..................................................................................................................................
 
 
-      IMPLICIT                        NONE
-
       ! Passed variables:
-   TYPE(ED_ParameterType),  INTENT(IN)  :: p                                       ! parameters of the structural dynamics module
-   TYPE(ED_InputFile),      INTENT(IN)  :: InputFileData                           ! all the data in the ElastoDyn input file
+   TYPE(ED_ParameterType),  INTENT(IN)  :: p                                       !< parameters of the structural dynamics module
+   TYPE(ED_InputFile),      INTENT(IN)  :: InputFileData                           !< all the data in the ElastoDyn input file
 
-   REAL(ReKi),              INTENT(OUT) :: InitQE1(p%NumBl)                        ! Initial edge deflection (output).
-   REAL(ReKi),              INTENT(OUT) :: InitQF1(p%NumBl)                        ! Initial flap deflection for mode 1 (output).
-   REAL(ReKi),              INTENT(OUT) :: InitQF2(p%NumBl)                        ! Initial flap deflection for mode 2 (output).
+   REAL(ReKi),              INTENT(OUT) :: InitQE1(p%NumBl)                        !< Initial edge deflection (output).
+   REAL(ReKi),              INTENT(OUT) :: InitQF1(p%NumBl)                        !< Initial flap deflection for mode 1 (output).
+   REAL(ReKi),              INTENT(OUT) :: InitQF2(p%NumBl)                        !< Initial flap deflection for mode 2 (output).
 
-   INTEGER(IntKi),          INTENT(OUT) :: ErrStat                                 ! Error status
-   CHARACTER(1024),         INTENT(OUT) :: ErrMsg                                  ! Error message when ErrStat =/ ErrID_None
+   INTEGER(IntKi),          INTENT(OUT) :: ErrStat                                 !< Error status
+   CHARACTER(1024),         INTENT(OUT) :: ErrMsg                                  !< Error message when ErrStat =/ ErrID_None
 
 
       ! Local variables:
@@ -5501,20 +5489,17 @@ CONTAINS
 
 END SUBROUTINE InitBlDefl
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine is used create arrays of DOF indices (pointers / (vector susbscript arrays) that contribute to the QD2T-related
+!!   linear accelerations of various points within the system in the inertia frame, based on which DOFs are presently enabled.
+!! NOTE: The order in which the DOFs are tested within this routine and hence the order in which the DOF indices appear in the
+!!       vector subscript arrays, determines the order in which the states will appear in the linearized model created by FAST
+!!       when AnalMode == 2.  This order is not necessarily sorted from smallest to largest DOF index.
+!! bjj: note that this routine is now called only in the initialization routine. It is not available during time simulation.
 SUBROUTINE SetEnabledDOFIndexArrays( p )
-! This routine is used create arrays of DOF indices (pointers / (vector susbscript arrays) that contribute to the QD2T-related
-!   linear accelerations of various points within the system in the inertia frame, based on which DOFs are presently enabled.
-! NOTE: The order in which the DOFs are tested within this routine and hence the order in which the DOF indices appear in the
-!       vector subscript arrays, determines the order in which the states will appear in the linearized model created by FAST
-!       when AnalMode == 2.  This order is not necessarily sorted from smallest to largest DOF index.
-! bjj: note that this routine is now called only in the initialization routine. It is not available during time simulation.
 !----------------------------------------------------------------------------------------------------------------------------------
 
-   IMPLICIT                        NONE
-
-
       ! passed variables
-   TYPE(ED_ParameterType), INTENT(INOUT)   :: p                                  ! Parameters of the structural dynamics module
+   TYPE(ED_ParameterType), INTENT(INOUT)   :: p                                  !< Parameters of the structural dynamics module
 
       ! Local Variables:
    INTEGER(IntKi)                   :: I                                          ! Loops through all DOFs.
@@ -5927,26 +5912,21 @@ SUBROUTINE SetEnabledDOFIndexArrays( p )
    RETURN
 END SUBROUTINE SetEnabledDOFIndexArrays
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine is used to define the internal coordinate systems for this particular time step.
+!! It also sets the TeeterAng and TeetAngVel for this time step.
 SUBROUTINE SetCoordSy( t, CoordSys, RtHSdat, BlPitch, p, x, ErrStat, ErrMsg )
-
-
-   ! This routine is used to define the internal coordinate systems for this particular time step.
-   ! It also sets the TeeterAng and TeetAngVel for this time step.
-
-
-   IMPLICIT                        NONE
 
       ! Subroutine arguments (passed variables)
 
-   REAL(DbKi),                   INTENT(IN)    :: t                             ! Current simulation time, in seconds (used only for SmllRotTrans error messages)
-   REAL(ReKi),                   INTENT(IN)    :: BlPitch (:)                   ! The current blade pitch
-   TYPE(ED_CoordSys),            INTENT(INOUT) :: CoordSys                      ! The coordinate systems to be set
-   TYPE(ED_RtHndSide),           INTENT(INOUT) :: RtHSdat                       ! data from the RtHndSid module
-   TYPE(ED_ParameterType),       INTENT(IN)    :: p                             ! The module's parameters
-   TYPE(ED_ContinuousStateType), INTENT(IN)    :: x                             ! The module's continuous states
+   REAL(DbKi),                   INTENT(IN)    :: t                             !< Current simulation time, in seconds (used only for SmllRotTrans error messages)
+   REAL(ReKi),                   INTENT(IN)    :: BlPitch (:)                   !< The current blade pitch
+   TYPE(ED_CoordSys),            INTENT(INOUT) :: CoordSys                      !< The coordinate systems to be set
+   TYPE(ED_RtHndSide),           INTENT(INOUT) :: RtHSdat                       !< data from the RtHndSid module
+   TYPE(ED_ParameterType),       INTENT(IN)    :: p                             !< The module's parameters
+   TYPE(ED_ContinuousStateType), INTENT(IN)    :: x                             !< The module's continuous states
 
-   INTEGER(IntKi),               INTENT(OUT)    :: ErrStat                      ! Error status
-   CHARACTER(*),                 INTENT(OUT)    :: ErrMsg                       ! Error message
+   INTEGER(IntKi),               INTENT(OUT)    :: ErrStat                      !< Error status
+   CHARACTER(*),                 INTENT(OUT)    :: ErrMsg                       !< Error message
 
       ! Local variables
 
@@ -6283,20 +6263,17 @@ CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
 END SUBROUTINE SetCoordSy
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine computes the rotor-furl moment due to rotor-furl deflection and rate.
 SUBROUTINE RFurling( t, p, RFrlDef, RFrlRate, RFrlMom )
-! This routine computes the rotor-furl moment due to rotor-furl deflection and rate.
 !..................................................................................................................................
 
-   IMPLICIT                        NONE
-
-
       ! Passed Variables:
-   REAL(DbKi), INTENT(IN)              :: t                                   ! simulation time
-   TYPE(ED_ParameterType), INTENT(IN)  :: p                                   ! parameters from the structural dynamics module
+   REAL(DbKi), INTENT(IN)              :: t                                   !< simulation time
+   TYPE(ED_ParameterType), INTENT(IN)  :: p                                   !< parameters from the structural dynamics module
 
-   REAL(R8Ki), INTENT(IN )             :: RFrlDef                             ! The rotor-furl deflection, x%QT(DOF_RFrl)
-   REAL(ReKi), INTENT(OUT)             :: RFrlMom                             ! The total moment supplied by the springs, and dampers
-   REAL(R8Ki), INTENT(IN )             :: RFrlRate                            ! The rotor-furl rate, x%QDT(DOF_RFrl)
+   REAL(R8Ki), INTENT(IN )             :: RFrlDef                             !< The rotor-furl deflection, x%QT(DOF_RFrl)
+   REAL(ReKi), INTENT(OUT)             :: RFrlMom                             !< The total moment supplied by the springs, and dampers
+   REAL(R8Ki), INTENT(IN )             :: RFrlRate                            !< The rotor-furl rate, x%QDT(DOF_RFrl)
 
 
       ! Local variables:
@@ -6366,19 +6343,16 @@ SUBROUTINE RFurling( t, p, RFrlDef, RFrlRate, RFrlMom )
    RETURN
 END SUBROUTINE RFurling
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine computes the teeter moment due to teeter deflection and rate.
 SUBROUTINE Teeter( t, p, TeetDef, TeetRate, TeetMom )
-! This routine computes the teeter moment due to teeter deflection and rate.
 !..................................................................................................................................
 
-   IMPLICIT                        NONE
-
-
       ! Passed Variables:
-   REAL(DbKi), INTENT(IN)             :: t                                       ! simulation time
-   TYPE(ED_ParameterType), INTENT(IN) :: p                                       ! parameters from the structural dynamics module
-   REAL(R8Ki), INTENT(IN )            :: TeetDef                                 ! The teeter deflection, x%QT(DOF_Teet).
-   REAL(ReKi), INTENT(OUT)            :: TeetMom                                 ! The total moment supplied by the stop, spring, and damper.
-   REAL(R8Ki), INTENT(IN )            :: TeetRate                                ! The teeter rate, x%QDT(DOF_Teet).
+   REAL(DbKi), INTENT(IN)             :: t                                       !< simulation time
+   TYPE(ED_ParameterType), INTENT(IN) :: p                                       !< parameters from the structural dynamics module
+   REAL(R8Ki), INTENT(IN )            :: TeetDef                                 !< The teeter deflection, x%QT(DOF_Teet).
+   REAL(ReKi), INTENT(OUT)            :: TeetMom                                 !< The total moment supplied by the stop, spring, and damper.
+   REAL(R8Ki), INTENT(IN )            :: TeetRate                                !< The teeter rate, x%QDT(DOF_Teet).
 
 
       ! Local variables:
@@ -6466,19 +6440,19 @@ SUBROUTINE Teeter( t, p, TeetDef, TeetRate, TeetMom )
    RETURN
 END SUBROUTINE Teeter
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine computes the tail-furl moment due to tail-furl deflection and rate.
 SUBROUTINE TFurling( t, p, TFrlDef, TFrlRate, TFrlMom )
-! This routine computes the tail-furl moment due to tail-furl deflection and rate.
 !..................................................................................................................................
 
    IMPLICIT                        NONE
 
       ! Passed Variables:
-   REAL(DbKi), INTENT(IN)             :: t ! simulation time
-   TYPE(ED_ParameterType), INTENT(IN) :: p                                       ! parameters from the structural dynamics module
+   REAL(DbKi), INTENT(IN)             :: t                                       !< simulation time
+   TYPE(ED_ParameterType), INTENT(IN) :: p                                       !< parameters from the structural dynamics module
 
-   REAL(R8Ki), INTENT(IN )            :: TFrlDef                                 ! The tail-furl deflection, QT(DOF_TFrl).
-   REAL(ReKi), INTENT(OUT)            :: TFrlMom                                 ! The total moment supplied by the springs, and dampers.
-   REAL(R8Ki), INTENT(IN )            :: TFrlRate                                ! The tail-furl rate, QDT(DOF_TFrl).
+   REAL(R8Ki), INTENT(IN )            :: TFrlDef                                 !< The tail-furl deflection, QT(DOF_TFrl).
+   REAL(ReKi), INTENT(OUT)            :: TFrlMom                                 !< The total moment supplied by the springs, and dampers.
+   REAL(R8Ki), INTENT(IN )            :: TFrlRate                                !< The tail-furl rate, QDT(DOF_TFrl).
 
 
       ! Local variables:
@@ -6551,17 +6525,17 @@ SUBROUTINE TFurling( t, p, TFrlDef, TFrlRate, TFrlMom )
    RETURN
 END SUBROUTINE TFurling
 !----------------------------------------------------------------------------------------------------------------------------------
-FUNCTION SignLSSTrq( p, OtherState )
-! This function calculates the sign (+/-1) of the low-speed shaft torque for
-   !   this time step.  MomLPRot is the moment on the
-   !   low-speed shaft at the teeter pin caused by the rotor.
+!> This function calculates the sign (+/-1) of the low-speed shaft torque for
+!!   this time step.  MomLPRot is the moment on the
+!!   low-speed shaft at the teeter pin caused by the rotor.
+FUNCTION SignLSSTrq( p, m )
 
       ! Passed variables
 
-   TYPE(ED_ParameterType),  INTENT(IN)  :: p                 ! Parameters
-   TYPE(ED_OtherStateType), INTENT(IN)  :: OtherState        ! Initial other/optimization states
+   TYPE(ED_ParameterType),  INTENT(IN)  :: p                 !< Parameters
+   TYPE(ED_MiscVarType),    INTENT(IN)  :: m                 !< Misc variables
 
-   INTEGER(IntKi)                       :: SignLSSTrq        ! The sign of the LSS_Trq, output from this function
+   INTEGER(IntKi)                       :: SignLSSTrq        !< The sign of the LSS_Trq, output from this function
 
       ! Local variables
 
@@ -6569,30 +6543,30 @@ FUNCTION SignLSSTrq( p, OtherState )
    INTEGER(IntKi)                       :: I                 ! loop counter
 
 
-   MomLPRot = OtherState%RtHS%MomLPRott ! Initialize MomLPRot using MomLPRott
+   MomLPRot = m%RtHS%MomLPRott ! Initialize MomLPRot using MomLPRott
    DO I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
 
-      MomLPRot = MomLPRot + OtherState%RtHS%PMomLPRot(:,p%DOFs%SrtPS(I))*OtherState%QD2T(p%DOFs%SrtPS(I))  ! Add the moments associated with the accelerations of the DOFs
+      MomLPRot = MomLPRot + m%RtHS%PMomLPRot(:,p%DOFs%SrtPS(I))*m%QD2T(p%DOFs%SrtPS(I))  ! Add the moments associated with the accelerations of the DOFs
 
    ENDDO             ! I - All active (enabled) DOFs
 
       ! MomLProt has now been found.  Now dot this with e1 to get the
       !   low-speed shaft torque and take the SIGN of the result:
 
-   SignLSSTrq = NINT( SIGN( 1.0_R8Ki, DOT_PRODUCT( MomLPRot, OtherState%CoordSys%e1 ) ) )
+   SignLSSTrq = NINT( SIGN( 1.0_R8Ki, DOT_PRODUCT( MomLPRot, m%CoordSys%e1 ) ) )
 
 END FUNCTION SignLSSTrq
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine is used to calculate the positions stored in other states that are used in both the
+!! CalcOutput and CalcContStateDeriv routines.
 SUBROUTINE CalculatePositions( p, x, CoordSys, RtHSdat )
-! This routine is used to calculate the positions stored in other states that are used in both the
-! CalcOutput and CalcContStateDeriv routines.
 !..................................................................................................................................
 
       ! Passed variables
-   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-   TYPE(ED_CoordSys),            INTENT(IN   )  :: CoordSys    ! The coordinate systems that have been set for these states/time
-   TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     ! data from the RtHndSid module (contains positions to be set)
+   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+   TYPE(ED_CoordSys),            INTENT(IN   )  :: CoordSys    !< The coordinate systems that have been set for these states/time
+   TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     !< data from the RtHndSid module (contains positions to be set)
 
       !Local variables
    REAL(R8Ki)                   :: rK        (3)                                   ! Position vector from inertial frame origin to tail fin center of pressure (point K).
@@ -6727,16 +6701,16 @@ SUBROUTINE CalculatePositions( p, x, CoordSys, RtHSdat )
 
 END SUBROUTINE CalculatePositions
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine is used to calculate the angular positions, velocities, and partial accelerations stored in other states that are used in
+!! both the CalcOutput and CalcContStateDeriv routines.
 SUBROUTINE CalculateAngularPosVelPAcc( p, x, CoordSys, RtHSdat )
-! This routine is used to calculate the angular positions, velocities, and partial accelerations stored in other states that are used in
-! both the CalcOutput and CalcContStateDeriv routines.
 !..................................................................................................................................
 
       ! Passed variables
-   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-   TYPE(ED_CoordSys),            INTENT(IN   )  :: CoordSys    ! The coordinate systems that have been set for these states/time
-   TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     ! data from the RtHndSid module (contains positions to be set)
+   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+   TYPE(ED_CoordSys),            INTENT(IN   )  :: CoordSys    !< The coordinate systems that have been set for these states/time
+   TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     !< data from the RtHndSid module (contains positions to be set)
 
       !Local variables
 !   REAL(ReKi)                   :: AngVelEN  (3)                                   ! Angular velocity of the nacelle (body N) in the inertia frame (body E for earth).
@@ -6975,16 +6949,16 @@ ENDIF
 
 END SUBROUTINE CalculateAngularPosVelPAcc
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine is used to calculate the linear velocities and accelerations stored in other states that are used in
+!! both the CalcOutput and CalcContStateDeriv routines.
 SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
-! This routine is used to calculate the linear velocities and accelerations stored in other states that are used in
-! both the CalcOutput and CalcContStateDeriv routines.
 !..................................................................................................................................
 
       ! Passed variables
-   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-   TYPE(ED_CoordSys),            INTENT(IN   )  :: CoordSys    ! The coordinate systems that have been set for these states/time
-   TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     ! data from the RtHndSid module (contains positions to be set)
+   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+   TYPE(ED_CoordSys),            INTENT(IN   )  :: CoordSys    !< The coordinate systems that have been set for these states/time
+   TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     !< data from the RtHndSid module (contains positions to be set)
 
       ! Local variables
    REAL(ReKi)                   :: LinAccEKt (3)                                   ! "Portion of the linear acceleration of the tail fin  center of pressure (point K) in the inertia frame (body E for earth) associated with everything but the QD2T()'s"
@@ -7458,17 +7432,17 @@ SUBROUTINE CalculateLinearVelPAcc( p, x, CoordSys, RtHSdat )
 
 END SUBROUTINE CalculateLinearVelPAcc
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine is used to calculate the forces and moments stored in other states that are used in
+!! both the CalcOutput and CalcContStateDeriv routines.
 SUBROUTINE CalculateForcesMoments( p, x, CoordSys, u, RtHSdat )
-! This routine is used to calculate the forces and moments stored in other states that are used in
-! both the CalcOutput and CalcContStateDeriv routines.
 !..................................................................................................................................
 
       ! Passed variables
-   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-   TYPE(ED_CoordSys),            INTENT(IN   )  :: CoordSys    ! The coordinate systems that have been set for these states/time
-   TYPE(ED_InputType),           INTENT(IN   )  :: u           ! The aero (blade) & nacelle forces/moments
-   TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     ! data from the RtHndSid module (contains positions to be set)
+   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+   TYPE(ED_CoordSys),            INTENT(IN   )  :: CoordSys    !< The coordinate systems that have been set for these states/time
+   TYPE(ED_InputType),           INTENT(IN   )  :: u           !< The aero (blade) & nacelle forces/moments
+   TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     !< data from the RtHndSid module (contains positions to be set)
 
       ! Local variables
    REAL(ReKi)                   :: TmpVec    (3)                                   ! A temporary vector used in various computations.
@@ -7497,7 +7471,7 @@ SUBROUTINE CalculateForcesMoments( p, x, CoordSys, u, RtHSdat )
       
          ! Calculate the tip drag forces if necessary:
       !bjj: add this back when we've figured out how to handle the tip brakes:
-      !RtHSdat%FSTipDrag(:,K) = OtherState%CoordSys%m2(K,p%BldNodes,:)*SIGN( 0.5*p%AirDens*(RtHSdat%LinVelESm2(K)**2)*u%TBDrCon(K), -1.*RtHSdat%LinVelESm2(K) )
+      !RtHSdat%FSTipDrag(:,K) = m%CoordSys%m2(K,p%BldNodes,:)*SIGN( 0.5*p%AirDens*(RtHSdat%LinVelESm2(K)**2)*u%TBDrCon(K), -1.*RtHSdat%LinVelESm2(K) )
       RtHSdat%FSTipDrag = 0.0_ReKi         ! Calculate the tip drag forces if necessary
 
       
@@ -7513,8 +7487,8 @@ SUBROUTINE CalculateForcesMoments( p, x, CoordSys, u, RtHSdat )
 
          RtHSdat%rSAerCen(:,J,K) = p%rSAerCenn1(K,J)*CoordSys%n1(K,J,:) + p%rSAerCenn2(K,J)*CoordSys%n2(K,J,:)   
 
-!        rPAerCen     = OtherState%RtHS%rPQ + OtherState%RtHS%rQS(:,K,J) + OtherState%RtHS%rSAerCen(:,J,K)     ! Position vector from teeter pin (point P)  to blade analysis node aerodynamic center.
-!        rAerCen      =                       OtherState%RtHS%rS (:,K,J) + OtherState%RtHS%rSAerCen(:,J,K)     ! Position vector from inertial frame origin to blade analysis node aerodynamic center.
+!        rPAerCen     = m%RtHS%rPQ + m%RtHS%rQS(:,K,J) + m%RtHS%rSAerCen(:,J,K)     ! Position vector from teeter pin (point P)  to blade analysis node aerodynamic center.
+!        rAerCen      =                       m%RtHS%rS (:,K,J) + m%RtHS%rSAerCen(:,J,K)     ! Position vector from inertial frame origin to blade analysis node aerodynamic center.
          
 
    ! fill FSAero() and MMAero() with the forces resulting from inputs u%BladeLn2Mesh(K)%Force(1:2,:) and u%BladeLn2Mesh(K)%Moment(3,:):
@@ -7675,7 +7649,7 @@ DO K = 1,p%NumBl ! Loop through all blades
    
          ! Calculate the position vector from the teeter pin to the blade root:
    
-      !rPS0 = RtHSdat%rPQ + p%HubRad*OtherState%CoordSys%j3(K,:)   ! Position vector from teeter pin (point P) to blade root (point S(0)).
+      !rPS0 = RtHSdat%rPQ + p%HubRad*m%CoordSys%j3(K,:)   ! Position vector from teeter pin (point P) to blade root (point S(0)).
             
       TmpVec = CROSS_PRODUCT( RtHSdat%rPS0(:,K), RtHSdat%FrcS0Bt(:,K) )       ! The portion of MomLPRott associated with FrcS0Bt.
 
@@ -8020,7 +7994,7 @@ DO K = 1,p%NumBl ! Loop through all blades
    !   on the platform other than loads transmitted from the wind turbine. For example, these platform forces contain contributions
    !   from foundation stiffness and damping [not floating] or mooring line restoring and damping [floating], as well as hydrostatic
    !   and hydrodynamic contributions [offshore].
-   !bjj: OtherState%RtHS%PFZHydro, %PMXHydro, %FZHydrot, and %MXHydrot are not used in the output routine anymore
+   !bjj: m%RtHS%PFZHydro, %PMXHydro, %FZHydrot, and %MXHydrot are not used in the output routine anymore
    !      (because of their dependence on inputs, u)
 
    RtHSdat%PFZHydro = 0.0
@@ -8092,18 +8066,18 @@ DO K = 1,p%NumBl ! Loop through all blades
    
 END SUBROUTINE CalculateForcesMoments
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine is used to populate the AugMat matrix for RtHS (CalcContStateDeriv)
 SUBROUTINE FillAugMat( p, x, CoordSys, u, HSSBrTrq, RtHSdat, AugMat )
-! This routine is used to populate the AugMat matrix for RtHS (CalcContStateDeriv)
 !..................................................................................................................................
 
       ! Passed variables
-   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-   TYPE(ED_CoordSys),            INTENT(IN   )  :: CoordSys    ! The coordinate systems that have been set for these states/time
-   TYPE(ED_InputType),           INTENT(IN   )  :: u           ! The aero blade forces/moments
-   TYPE(ED_RtHndSide),           INTENT(INOUT)  :: RtHSdat     ! data from the RtHndSid module (contains positions to be set)
-   REAL(ReKi),                   INTENT(IN )    :: HSSBrTrq    !  SIGN( u%HSSBrTrqC, x%QDT(DOF_GeAz) ) or corrected value from FixHSS
-   REAL(R8Ki),                   INTENT(OUT)    :: AugMat(:,:) ! 
+   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+   TYPE(ED_CoordSys),            INTENT(IN   )  :: CoordSys    !< The coordinate systems that have been set for these states/time
+   TYPE(ED_InputType),           INTENT(IN   )  :: u           !< The aero blade forces/moments
+   TYPE(ED_RtHndSide),           INTENT(IN   )  :: RtHSdat     !< data from the RtHndSid module (contains positions to be set)
+   REAL(ReKi),                   INTENT(IN )    :: HSSBrTrq    !<  SIGN( u%HSSBrTrqC, x%QDT(DOF_GeAz) ) or corrected value from FixHSS
+   REAL(R8Ki),                   INTENT(OUT)    :: AugMat(:,:) !< the return matrix 
    
       ! Local variables
    REAL(ReKi)                   :: TmpVec    (3)                                   ! A temporary vector used in various computations.
@@ -8515,18 +8489,18 @@ SUBROUTINE FillAugMat( p, x, CoordSys, u, HSSBrTrq, RtHSdat, AugMat )
    
 END SUBROUTINE FillAugMat
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_AllocOutput( p, OtherState, u, y, ErrStat, ErrMsg )
-! This routine allocates the arrays and meshes stored in the ED_OutputType data structure (y), based on the parameters (p). 
-! Inputs (u) are included only so that output meshes can be siblings of the inputs.
-! The routine assumes that the arrays/meshes are not currently allocated (It will produce a fatal error otherwise.)
+!> This routine allocates the arrays and meshes stored in the ED_OutputType data structure (y), based on the parameters (p). 
+!! Inputs (u) are included only so that output meshes can be siblings of the inputs.
+!! The routine assumes that the arrays/meshes are not currently allocated (It will produce a fatal error otherwise.)
+SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(ED_OtherStateType),      INTENT(IN   )  :: OtherState  ! Other states (initial positions, set in Init_Inputs())
-   TYPE(ED_InputType),           INTENT(INOUT)  :: u           ! Input meshes (sibling)
-   TYPE(ED_OutputType),          INTENT(INOUT)  :: y           ! Outputs to be allocated
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(ED_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(ED_MiscVarType),         INTENT(IN   )  :: m           !< Misc vars (initial positions, set in Init_Inputs())
+   TYPE(ED_InputType),           INTENT(INOUT)  :: u           !< Input meshes (sibling)
+   TYPE(ED_OutputType),          INTENT(INOUT)  :: y           !< Outputs to be allocated
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       
    
    ! local variables
@@ -8607,20 +8581,20 @@ SUBROUTINE ED_AllocOutput( p, OtherState, u, y, ErrStat, ErrMsg )
                   NodeNum = p%BldNodes + 1
                end if
          
-               Orientation(1,1) =     OtherState%CoordSys%n1(K,J,1)
-               Orientation(2,1) =     OtherState%CoordSys%n2(K,J,1)
-               Orientation(3,1) =     OtherState%CoordSys%n3(K,J,1)
-               Orientation(1,2) = -1.*OtherState%CoordSys%n1(K,J,3)
-               Orientation(2,2) = -1.*OtherState%CoordSys%n2(K,J,3)
-               Orientation(3,2) = -1.*OtherState%CoordSys%n3(K,J,3)
-               Orientation(1,3) =     OtherState%CoordSys%n1(K,J,2)
-               Orientation(2,3) =     OtherState%CoordSys%n2(K,J,2)
-               Orientation(3,3) =     OtherState%CoordSys%n3(K,J,2) 
+               Orientation(1,1) =     m%CoordSys%n1(K,J,1)
+               Orientation(2,1) =     m%CoordSys%n2(K,J,1)
+               Orientation(3,1) =     m%CoordSys%n3(K,J,1)
+               Orientation(1,2) = -1.*m%CoordSys%n1(K,J,3)
+               Orientation(2,2) = -1.*m%CoordSys%n2(K,J,3)
+               Orientation(3,2) = -1.*m%CoordSys%n3(K,J,3)
+               Orientation(1,3) =     m%CoordSys%n1(K,J,2)
+               Orientation(2,3) =     m%CoordSys%n2(K,J,2)
+               Orientation(3,3) =     m%CoordSys%n3(K,J,2) 
                
                   ! Translational Displacement 
-               position(1) =     OtherState%RtHS%rS (1,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
-               position(2) = -1.*OtherState%RtHS%rS (3,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
-               position(3) =     OtherState%RtHS%rS (2,K,J)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
+               position(1) =     m%RtHS%rS (1,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
+               position(2) = -1.*m%RtHS%rS (3,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
+               position(3) =     m%RtHS%rS (2,K,J)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
                
                
                CALL MeshPositionNode ( y%BladeLn2Mesh(K), NodeNum, position, ErrStat2, ErrMsg2, Orient=Orientation )
@@ -8860,20 +8834,20 @@ SUBROUTINE ED_AllocOutput( p, OtherState, u, y, ErrStat, ErrMsg )
          IF (ErrStat >= AbortErrLev) RETURN
                   
                
-      position(1) =     OtherState%RtHS%rS (1,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
-      position(2) = -1.*OtherState%RtHS%rS (3,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
-      position(3) =     OtherState%RtHS%rS (2,K,0)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
+      position(1) =     m%RtHS%rS (1,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
+      position(2) = -1.*m%RtHS%rS (3,K,0)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
+      position(3) =     m%RtHS%rS (2,K,0)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
       
       
-      Orientation(1,1) =     OtherState%CoordSys%j1(K,1)
-      Orientation(2,1) =     OtherState%CoordSys%j2(K,1)
-      Orientation(3,1) =     OtherState%CoordSys%j3(K,1)
-      Orientation(1,2) = -1.*OtherState%CoordSys%j1(K,3)
-      Orientation(2,2) = -1.*OtherState%CoordSys%j2(K,3)
-      Orientation(3,2) = -1.*OtherState%CoordSys%j3(K,3)
-      Orientation(1,3) =     OtherState%CoordSys%j1(K,2)
-      Orientation(2,3) =     OtherState%CoordSys%j2(K,2)
-      Orientation(3,3) =     OtherState%CoordSys%j3(K,2)
+      Orientation(1,1) =     m%CoordSys%j1(K,1)
+      Orientation(2,1) =     m%CoordSys%j2(K,1)
+      Orientation(3,1) =     m%CoordSys%j3(K,1)
+      Orientation(1,2) = -1.*m%CoordSys%j1(K,3)
+      Orientation(2,2) = -1.*m%CoordSys%j2(K,3)
+      Orientation(3,2) = -1.*m%CoordSys%j3(K,3)
+      Orientation(1,3) =     m%CoordSys%j1(K,2)
+      Orientation(2,3) =     m%CoordSys%j2(K,2)
+      Orientation(3,3) =     m%CoordSys%j3(K,2)
       
       CALL MeshPositionNode ( y%BladeRootMotion(K), 1, Position, &
                             ErrStat, ErrMsg, Orient=Orientation ) 
@@ -9012,18 +8986,18 @@ CONTAINS
    !...............................................................................................................................
 END SUBROUTINE ED_AllocOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Init_u( u, p, x, InputFileData, OtherState, ErrStat, ErrMsg )
-! This routine allocates the arrays stored in the ED_InputType data structure (u), based on the parameters (p). 
-! The routine assumes that the arrays are not currently allocated (It will produce a fatal error otherwise.) It also initializes the inputs
+!> This routine allocates the arrays stored in the ED_InputType data structure (u), based on the parameters (p). 
+!! The routine assumes that the arrays are not currently allocated (It will produce a fatal error otherwise.) It also initializes the inputs
+SUBROUTINE Init_u( u, p, x, InputFileData, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   TYPE(ED_InputType),           INTENT(INOUT)  :: u                 ! Inputs to be allocated
-   TYPE(ED_ParameterType),       INTENT(IN   )  :: p                 ! Parameters
-   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x                 ! Continuous states
-   TYPE(ED_InputFile),           INTENT(IN   )  :: InputFileData     ! Data stored in the module's input file
-   TYPE(ED_OtherStateType),      INTENT(INOUT)  :: OtherState        ! Other states
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat           ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+   TYPE(ED_InputType),           INTENT(INOUT)  :: u                 !< Inputs to be allocated
+   TYPE(ED_ParameterType),       INTENT(IN   )  :: p                 !< Parameters
+   TYPE(ED_ContinuousStateType), INTENT(IN   )  :: x                 !< Continuous states
+   TYPE(ED_InputFile),           INTENT(IN   )  :: InputFileData     !< Data stored in the module's input file
+   TYPE(ED_MiscVarType),         INTENT(INOUT)  :: m                 !< Misc variables (used to calculate initial position/orientation for meshes)
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat           !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
       
    
    ! local variables
@@ -9072,10 +9046,10 @@ SUBROUTINE Init_u( u, p, x, InputFileData, OtherState, ErrStat, ErrMsg )
       u%BlPitchCom = 0.0_ReKi
       
       ! set the coordinate system variables:
-   CALL SetCoordSy( -p%DT, OtherState%CoordSys, OtherState%RtHS, u%BlPitchCom, p, x_tmp, ErrStat2, ErrMsg2 )
+   CALL SetCoordSy( -p%DT, m%CoordSys, m%RtHS, u%BlPitchCom, p, x_tmp, ErrStat2, ErrMsg2 )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    
-   CALL CalculatePositions( p, x_tmp, OtherState%CoordSys, OtherState%RtHS ) ! calculate positions
+   CALL CalculatePositions( p, x_tmp, m%CoordSys, m%RtHS ) ! calculate positions
    
    CALL ED_DestroyContState(x_tmp, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -9146,20 +9120,20 @@ SUBROUTINE Init_u( u, p, x, InputFileData, OtherState, ErrStat, ErrMsg )
             DO J = 1,p%BldNodes
                NodeNum = J
          
-               Orientation(1,1) =     OtherState%CoordSys%n1(K,J,1)
-               Orientation(2,1) =     OtherState%CoordSys%n2(K,J,1)
-               Orientation(3,1) =     OtherState%CoordSys%n3(K,J,1)
-               Orientation(1,2) = -1.*OtherState%CoordSys%n1(K,J,3)
-               Orientation(2,2) = -1.*OtherState%CoordSys%n2(K,J,3)
-               Orientation(3,2) = -1.*OtherState%CoordSys%n3(K,J,3)
-               Orientation(1,3) =     OtherState%CoordSys%n1(K,J,2)
-               Orientation(2,3) =     OtherState%CoordSys%n2(K,J,2)
-               Orientation(3,3) =     OtherState%CoordSys%n3(K,J,2) 
+               Orientation(1,1) =     m%CoordSys%n1(K,J,1)
+               Orientation(2,1) =     m%CoordSys%n2(K,J,1)
+               Orientation(3,1) =     m%CoordSys%n3(K,J,1)
+               Orientation(1,2) = -1.*m%CoordSys%n1(K,J,3)
+               Orientation(2,2) = -1.*m%CoordSys%n2(K,J,3)
+               Orientation(3,2) = -1.*m%CoordSys%n3(K,J,3)
+               Orientation(1,3) =     m%CoordSys%n1(K,J,2)
+               Orientation(2,3) =     m%CoordSys%n2(K,J,2)
+               Orientation(3,3) =     m%CoordSys%n3(K,J,2) 
                
                   ! Translational Displacement 
-               position(1) =     OtherState%RtHS%rS (1,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
-               position(2) = -1.*OtherState%RtHS%rS (3,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
-               position(3) =     OtherState%RtHS%rS (2,K,J)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
+               position(1) =     m%RtHS%rS (1,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the xi ( z1) direction
+               position(2) = -1.*m%RtHS%rS (3,K,J)                ! = the distance from the undeflected tower centerline to the current blade node in the yi (-z3) direction
+               position(3) =     m%RtHS%rS (2,K,J)  + p%PtfmRefzt ! = the distance from the nominal tower base position (i.e., the undeflected position of the tower base) to the current blade node in the zi ( z2) direction
                
                
                CALL MeshPositionNode ( u%BladePtLoads(K), NodeNum, position, ErrStat2, ErrMsg2, Orient=Orientation )
@@ -9225,19 +9199,19 @@ SUBROUTINE Init_u( u, p, x, InputFileData, OtherState, ErrStat, ErrMsg )
       END IF
 
    ! place single node at hub; position affects mapping/coupling with other modules      
-   Position(1)  =     OtherState%RtHS%rQ(1)
-   Position(2)  = -1.*OtherState%RtHS%rQ(3)
-   Position(3)  =     OtherState%RtHS%rQ(2) + p%PtfmRefzt
+   Position(1)  =     m%RtHS%rQ(1)
+   Position(2)  = -1.*m%RtHS%rQ(3)
+   Position(3)  =     m%RtHS%rQ(2) + p%PtfmRefzt
    
-   Orientation(1,1) =     OtherState%CoordSys%g1(1)
-   Orientation(2,1) =     OtherState%CoordSys%g2(1)
-   Orientation(3,1) =     OtherState%CoordSys%g3(1)
-   Orientation(1,2) = -1.*OtherState%CoordSys%g1(3)
-   Orientation(2,2) = -1.*OtherState%CoordSys%g2(3)
-   Orientation(3,2) = -1.*OtherState%CoordSys%g3(3)
-   Orientation(1,3) =     OtherState%CoordSys%g1(2)
-   Orientation(2,3) =     OtherState%CoordSys%g2(2)
-   Orientation(3,3) =     OtherState%CoordSys%g3(2) 
+   Orientation(1,1) =     m%CoordSys%g1(1)
+   Orientation(2,1) =     m%CoordSys%g2(1)
+   Orientation(3,1) =     m%CoordSys%g3(1)
+   Orientation(1,2) = -1.*m%CoordSys%g1(3)
+   Orientation(2,2) = -1.*m%CoordSys%g2(3)
+   Orientation(3,2) = -1.*m%CoordSys%g3(3)
+   Orientation(1,3) =     m%CoordSys%g1(2)
+   Orientation(2,3) =     m%CoordSys%g2(2)
+   Orientation(3,3) =     m%CoordSys%g3(2) 
       
    CALL MeshPositionNode ( u%HubPtLoad, 1, Position, ErrStat2, ErrMsg2, orient=Orientation )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -9464,37 +9438,36 @@ CONTAINS
             
 END SUBROUTINE Init_u
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-!   Define constants k1, k2, k3, and k4 as 
-!        k1 = dt * f(t        , x_t        )
-!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
-!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
-!        k4 = dt * f(t + dt   , x_t + k3   ).
-!   Then the continuous states at t = t + dt are
-!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
-!
-! For details, see:
-! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
-!   Runge-Kutta." §16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
-!   Cambridge University Press, pp. 704-716, 1992.
-!
+!> This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!   Define constants k1, k2, k3, and k4 as 
+!!        k1 = dt * f(t        , x_t        )
+!!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
+!!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
+!!        k4 = dt * f(t + dt   , x_t + k3   ).
+!!   Then the continuous states at t = t + dt are
+!!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
+!!
+!! For details, see:
+!! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
+!!   Runge-Kutta." §16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
+!!   Cambridge University Press, pp. 704-716, 1992.
+SUBROUTINE ED_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),               INTENT(IN   )  :: n           ! time step number
-      TYPE(ED_InputType),           INTENT(INOUT)  :: u(:)        ! Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
-      REAL(DbKi),                   INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(ED_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(ED_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(ED_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(ED_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(ED_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),               INTENT(IN   )  :: n           !< time step number
+      TYPE(ED_InputType),           INTENT(INOUT)  :: u(:)        !< Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+      REAL(DbKi),                   INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(ED_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(ED_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+      TYPE(ED_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(ED_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
+      TYPE(ED_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states
+      TYPE(ED_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables
+      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
          
@@ -9541,7 +9514,7 @@ SUBROUTINE ED_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !      OtherState%HSSBrTrq  = OtherState%HSSBrTrqC         
 
       ! find xdot at t
-      CALL ED_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+      CALL ED_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -9560,7 +9533,7 @@ SUBROUTINE ED_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !      OtherState%HSSBrTrq  = OtherState%HSSBrTrqC         
 
       ! find xdot at t + dt/2
-      CALL ED_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+      CALL ED_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -9574,7 +9547,7 @@ SUBROUTINE ED_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !      u_interp%HSSBrTrqC = max(0.0_ReKi, min(u_interp%HSSBrTrqC, HSSBrTrq_at_t )) ! hack for extrapolation of limits       
 !      OtherState%HSSBrTrqC = SIGN( u_interp%HSSBrTrqC, x_tmp%QDT(DOF_GeAz) )         
 !      OtherState%HSSBrTrq  = OtherState%HSSBrTrqC         
-      CALL ED_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+      CALL ED_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -9593,7 +9566,7 @@ SUBROUTINE ED_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 !      OtherState%HSSBrTrq  = OtherState%HSSBrTrqC         
 
       ! find xdot at t + dt
-      CALL ED_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+      CALL ED_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -9663,35 +9636,34 @@ CONTAINS
       
 END SUBROUTINE ED_RK4
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential 
-! equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-!
-!   x(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
-!
-!  See, e.g.,
-!  http://en.wikipedia.org/wiki/Linear_multistep_method
-!
-!  or
-!
-!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
-!
+!> This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential 
+!! equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!
+!!   x(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!!
+!!  See, e.g.,
+!!  http://en.wikipedia.org/wiki/Linear_multistep_method
+!!
+!!  or
+!!
+!!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+SUBROUTINE ED_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                 INTENT(IN   )  :: n           ! time step number
-      TYPE(ED_InputType),             INTENT(INOUT)  :: u(:)        ! Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
-      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(ED_ParameterType),         INTENT(IN   )  :: p           ! Parameters
-      TYPE(ED_ContinuousStateType),   INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(ED_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(ED_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(ED_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),                 INTENT(IN   )  :: n           !< time step number
+      TYPE(ED_InputType),             INTENT(INOUT)  :: u(:)        !< Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(ED_ParameterType),         INTENT(IN   )  :: p           !< Parameters
+      TYPE(ED_ContinuousStateType),   INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+      TYPE(ED_DiscreteStateType),     INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(ED_ConstraintStateType),   INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
+      TYPE(ED_OtherStateType),        INTENT(INOUT)  :: OtherState  !< Other states
+      TYPE(ED_MiscVarType),           INTENT(INOUT)  :: m           !< misc/optimization variables
+      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
       ! local variables
@@ -9742,7 +9714,7 @@ SUBROUTINE ED_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       OtherState%HSSBrTrq   = OtherState%HSSBrTrqC
       OtherState%SgnPrvLSTQ = OtherState%SgnLSTQ(OtherState%IC(2))
       
-      CALL ED_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+      CALL ED_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          
          CALL ED_CopyContState(xdot, OtherState%xdot ( OtherState%IC(1) ), MESH_NEWCOPY, ErrStat2, ErrMsg2)
@@ -9752,7 +9724,7 @@ SUBROUTINE ED_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
                                                     
       if (n .le. 2) then
                                                
-         CALL ED_RK4(t, n, u, utimes, p, x, xd, z, OtherState, ErrStat2, ErrMsg2 )
+         CALL ED_RK4(t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -9772,13 +9744,13 @@ SUBROUTINE ED_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
             !   for the Runga-Kutta integration scheme.
    
          
-         CALL FixHSSBrTq ( 'P', p, x, OtherState, ErrStat2, ErrMsg2 )
+         CALL FixHSSBrTq ( 'P', p, x, OtherState, m, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
             
       endif
             
-      OtherState%SgnPrvLSTQ = SignLSSTrq(p, OtherState)   
+      OtherState%SgnPrvLSTQ = SignLSSTrq(p, m)   
       OtherState%SgnLSTQ(OtherState%IC(1)) = OtherState%SgnPrvLSTQ 
       
       
@@ -9835,39 +9807,38 @@ CONTAINS
          
 END SUBROUTINE ED_AB4
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE ED_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary 
-! differential equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-!
-!   Adams-Bashforth Predictor:
-!   x^p(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
-!
-!   Adams-Moulton Corrector:
-!   x(t+dt) = x(t)  + (dt / 24.) * ( 9.*f(t+dt,x^p) + 19.*f(t,x) - 5.*f(t-dt,x) + 1.*f(t-2.*dt,x) )
-!
-!  See, e.g.,
-!  http://en.wikipedia.org/wiki/Linear_multistep_method
-!
-!  or
-!
-!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
-!
+!> This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary 
+!! differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!
+!!   Adams-Bashforth Predictor: \n
+!!   x^p(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!!
+!!   Adams-Moulton Corrector: \n
+!!   x(t+dt) = x(t)  + (dt / 24.) * ( 9.*f(t+dt,x^p) + 19.*f(t,x) - 5.*f(t-dt,x) + 1.*f(t-2.*dt,x) )
+!!
+!!  See, e.g.,
+!!  http://en.wikipedia.org/wiki/Linear_multistep_method
+!!
+!!  or
+!!
+!!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+SUBROUTINE ED_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                 INTENT(IN   )  :: n           ! time step number
-      TYPE(ED_InputType),             INTENT(INOUT)  :: u(:)        ! Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
-      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(ED_ParameterType),         INTENT(IN   )  :: p           ! Parameters
-      TYPE(ED_ContinuousStateType),   INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(ED_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(ED_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(ED_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),                 INTENT(IN   )  :: n           !< time step number
+      TYPE(ED_InputType),             INTENT(INOUT)  :: u(:)        !< Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(ED_ParameterType),         INTENT(IN   )  :: p           !< Parameters
+      TYPE(ED_ContinuousStateType),   INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+      TYPE(ED_DiscreteStateType),     INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(ED_ConstraintStateType),   INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
+      TYPE(ED_OtherStateType),        INTENT(INOUT)  :: OtherState  !< Other states
+      TYPE(ED_MiscVarType),           INTENT(INOUT)  :: m           !< misc/optimization variables
+      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
 
@@ -9890,7 +9861,7 @@ SUBROUTINE ED_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
-      CALL ED_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, ErrStat2, ErrMsg2 )
+      CALL ED_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -9916,7 +9887,7 @@ SUBROUTINE ED_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
          END IF
          OtherState%HSSBrTrq  = OtherState%HSSBrTrqC
 
-         CALL ED_CalcContStateDeriv(t + p%dt, u_interp, p, x_pred, xd, z, OtherState, xdot_pred, ErrStat2, ErrMsg2 )
+         CALL ED_CalcContStateDeriv(t + p%dt, u_interp, p, x_pred, xd, z, OtherState, m, xdot_pred, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -9932,10 +9903,10 @@ SUBROUTINE ED_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
                   
           ! Make sure the HSS brake has not reversed the direction of the HSS:
          
-         CALL FixHSSBrTq ( 'C', p, x, OtherState, ErrStat2, ErrMsg2 )      
+         CALL FixHSSBrTq ( 'C', p, x, OtherState, m, ErrStat2, ErrMsg2 )      
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
-         OtherState%SgnPrvLSTQ = SignLSSTrq(p, OtherState)
+         OtherState%SgnPrvLSTQ = SignLSSTrq(p, m)
          OtherState%SgnLSTQ(OtherState%IC(1)) = OtherState%SgnPrvLSTQ 
                                                                     
       else
@@ -9999,16 +9970,15 @@ CONTAINS
 
 END SUBROUTINE ED_ABM4
 !----------------------------------------------------------------------------------------------------------------------------------
-
+!> This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
 SUBROUTINE ED_PrintSum( p, OtherState, GenerateAdamsModel, ErrStat, ErrMsg )
-! This routine generates the summary file, which contains a regurgitation of  the input data and interpolated flexible body data.
 
       ! passed variables
-   TYPE(ED_ParameterType),    INTENT(IN)  :: p                                    ! Parameters of the structural dynamics module
-   TYPE(ED_OtherStateType),   INTENT(IN)  :: OtherState                           ! Other/optimization states of the structural dynamics module 
-   LOGICAL,                   INTENT(IN)  :: GenerateAdamsModel                   ! Logical to determine if Adams inputs were read/should be summarized
-   INTEGER(IntKi),            INTENT(OUT) :: ErrStat
-   CHARACTER(*),              INTENT(OUT) :: ErrMsg
+   TYPE(ED_ParameterType),    INTENT(IN   )  :: p                       !< Parameters of the structural dynamics module
+   TYPE(ED_OtherStateType),   INTENT(IN   )  :: OtherState              !< Other states of the structural dynamics module 
+   LOGICAL,                   INTENT(IN   )  :: GenerateAdamsModel      !< Logical to determine if Adams inputs were read/should be summarized
+   INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                 !< Error status of the operation
+   CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                  !< Error message if ErrStat /= ErrID_None
 
 
       ! Local variables.
@@ -10222,29 +10192,24 @@ END IF
 
 RETURN
 END SUBROUTINE ED_PrintSum
-!=======================================================================
-
-!=======================================================================
-SUBROUTINE FixHSSBrTq ( Integrator, p, x, OtherState, ErrStat, ErrMsg )
-
-
-   ! This routine is used to adjust the HSSBrTrq value if the absolute
-   !   magnitudue of the HSS brake torque was strong enough to reverse
-   !   the direction of the HSS, which is a physically impossible
-   !   situation.  The problem arises since we are integrating in
-   !   discrete time, not continuous time.
-
-   IMPLICIT                        NONE
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine is used to adjust the HSSBrTrq value if the absolute
+!!   magnitudue of the HSS brake torque was strong enough to reverse
+!!   the direction of the HSS, which is a physically impossible
+!!   situation.  The problem arises since we are integrating in
+!!   discrete time, not continuous time.
+SUBROUTINE FixHSSBrTq ( Integrator, p, x, OtherState, m, ErrStat, ErrMsg )
 
 
    ! Passed variables:
 
-   TYPE(ED_ParameterType),      INTENT(IN   ):: p                                 ! Parameters of the structural dynamics module
-   TYPE(ED_OtherStateType),     INTENT(INOUT):: OtherState                        ! Other/optimization states of the structural dynamics module 
-   TYPE(ED_ContinuousStateType),INTENT(INOUT):: x                                 ! Continuous states of the structural dynamics module at n+1
-   CHARACTER(1),                INTENT(IN   ):: Integrator                        ! A string holding the current integrator being used.
-   INTEGER(IntKi),              INTENT(  OUT):: ErrStat
-   CHARACTER(*),                INTENT(  OUT):: ErrMsg
+   TYPE(ED_ParameterType),      INTENT(IN   )  :: p                       !< Parameters of the structural dynamics module
+   TYPE(ED_OtherStateType),     INTENT(INOUT)  :: OtherState              !< Other states of the structural dynamics module 
+   TYPE(ED_MiscVarType),        INTENT(INOUT)  :: m                       !< misc (optimization) variables
+   TYPE(ED_ContinuousStateType),INTENT(INOUT)  :: x                       !< Continuous states of the structural dynamics module at n+1
+   CHARACTER(1),                INTENT(IN   )  :: Integrator              !< A string holding the current integrator being used.
+   INTEGER(IntKi),              INTENT(  OUT)  :: ErrStat                 !< Error status of the operation
+   CHARACTER(*),                INTENT(  OUT)  :: ErrMsg                  !< Error message if ErrStat /= ErrID_None
 
 
    ! Local variables:
@@ -10320,20 +10285,20 @@ SUBROUTINE FixHSSBrTq ( Integrator, p, x, OtherState, ErrStat, ErrMsg )
    !   Once this equation is solved, the unknown force can be found from:
    !      {Fb}=[Cba]{Qa}+[Cbb]{Qb}
 
-   OtherState%OgnlGeAzRo    = OtherState%AugMat(DOF_GeAz,:)  ! used for HSS Brake hack; copy this row before modifying the old matrix
+   m%OgnlGeAzRo    = m%AugMat(DOF_GeAz,:)  ! used for HSS Brake hack; copy this row before modifying the old matrix
    
   
    DO I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
 
-      OtherState%AugMat(p%DOFs%SrtPS(I),    p%NAUG) = OtherState%AugMat(p%DOFs%SrtPS(I),p%NAUG) &
-                                                    - OtherState%AugMat(p%DOFs%SrtPS(I),DOF_GeAz)*RqdQD2GeAz  ! {{Fa}-[Cab]{Qb}}
-      OtherState%AugMat(p%DOFs%SrtPS(I),DOF_GeAz)   = 0.0                                                     ! [0]
-      OtherState%AugMat(DOF_GeAz, p%DOFs%SrtPS(I))  = 0.0                                                     ! [0]
+      m%AugMat(p%DOFs%SrtPS(I),    p%NAUG) = m%AugMat(p%DOFs%SrtPS(I),p%NAUG) &
+                                                    - m%AugMat(p%DOFs%SrtPS(I),DOF_GeAz)*RqdQD2GeAz  ! {{Fa}-[Cab]{Qb}}
+      m%AugMat(p%DOFs%SrtPS(I),DOF_GeAz)   = 0.0                                                     ! [0]
+      m%AugMat(DOF_GeAz, p%DOFs%SrtPS(I))  = 0.0                                                     ! [0]
 
    ENDDO             ! I - All active (enabled) DOFs
 
-   OtherState%AugMat(DOF_GeAz,DOF_GeAz) = 1.0                                                           ! [I]{Qb}={Qb}
-   OtherState%AugMat(DOF_GeAz,  p%NAUG) = RqdQD2GeAz                                                    !
+   m%AugMat(DOF_GeAz,DOF_GeAz) = 1.0                                                           ! [I]{Qb}={Qb}
+   m%AugMat(DOF_GeAz,  p%NAUG) = RqdQD2GeAz                                                    !
 
 
    ! Invert the matrix to solve for the new (updated) accelerations.  Like in
@@ -10346,14 +10311,14 @@ SUBROUTINE FixHSSBrTq ( Integrator, p, x, OtherState, ErrStat, ErrMsg )
    !   of the solution vector, SolnVec(). These are transfered to the proper index locations of the acceleration vector QD2T()
    !   using the vector subscript array SrtPS(), after Gauss() has been called:
 
-      OtherState%AugMat_factor = OtherState%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1:p%DOFs%NActvDOF) )
-      OtherState%SolnVec       = OtherState%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1+p%DOFs%NActvDOF) )
+      m%AugMat_factor = m%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1:p%DOFs%NActvDOF) )
+      m%SolnVec       = m%AugMat( p%DOFs%SrtPS( 1:p%DOFs%NActvDOF ), p%DOFs%SrtPSNAUG(1+p%DOFs%NActvDOF) )
    
-      CALL LAPACK_getrf( M=p%DOFs%NActvDOF, N=p%DOFs%NActvDOF, A=OtherState%AugMat_factor, IPIV=OtherState%AugMat_pivot, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
+      CALL LAPACK_getrf( M=p%DOFs%NActvDOF, N=p%DOFs%NActvDOF, A=m%AugMat_factor, IPIV=m%AugMat_pivot, ErrStat=ErrStat2, ErrMsg=ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
          IF ( ErrStat >= AbortErrLev ) RETURN
       
-      CALL LAPACK_getrs( TRANS='N',N=p%DOFs%NActvDOF, A=OtherState%AugMat_factor,IPIV=OtherState%AugMat_pivot, B=OtherState%SolnVec, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      CALL LAPACK_getrs( TRANS='N',N=p%DOFs%NActvDOF, A=m%AugMat_factor,IPIV=m%AugMat_pivot, B=m%SolnVec, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
    
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          IF ( ErrStat >= AbortErrLev ) RETURN
@@ -10364,17 +10329,17 @@ SUBROUTINE FixHSSBrTq ( Integrator, p, x, OtherState, ErrStat, ErrMsg )
 
    RqdFrcGeAz = 0.0
    DO I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-      ! bjj: use OtherState%SolnVec(I) instead of OtherState%QD2T(p%DOFs%SrtPS(I)) here; then update OtherState%QD2T(p%DOFs%SrtPS(I))
+      ! bjj: use m%SolnVec(I) instead of m%QD2T(p%DOFs%SrtPS(I)) here; then update m%QD2T(p%DOFs%SrtPS(I))
       !      later if necessary
-      !RqdFrcGeAz = RqdFrcGeAz + OgnlGeAzRo(SrtPS(I))*OtherState%QD2T(p%DOFs%SrtPS(I))  ! {Fb}=[Cba]{Qa}+[Cbb]{Qb}
-      RqdFrcGeAz = RqdFrcGeAz + OtherState%OgnlGeAzRo(p%DOFs%SrtPS(I))*OtherState%SolnVec(I)  ! {Fb}=[Cba]{Qa}+[Cbb]{Qb}
+      !RqdFrcGeAz = RqdFrcGeAz + OgnlGeAzRo(SrtPS(I))*m%QD2T(p%DOFs%SrtPS(I))  ! {Fb}=[Cba]{Qa}+[Cbb]{Qb}
+      RqdFrcGeAz = RqdFrcGeAz + m%OgnlGeAzRo(p%DOFs%SrtPS(I))*m%SolnVec(I)  ! {Fb}=[Cba]{Qa}+[Cbb]{Qb}
    ENDDO             ! I - All active (enabled) DOFs
 
 
       ! Find the HSSBrTrq necessary to bring about this force:
 
    OtherState%HSSBrTrq = OtherState%HSSBrTrqC & 
-                       + ( ( OtherState%OgnlGeAzRo(p%NAUG) - RqdFrcGeAz )*OtherState%RtHS%GBoxEffFac/ABS(p%GBRatio) )
+                       + ( ( m%OgnlGeAzRo(p%NAUG) - RqdFrcGeAz )*m%RtHS%GBoxEffFac/ABS(p%GBRatio) )
 
 
       ! Make sure this new HSSBrTrq isn't larger in absolute magnitude than
@@ -10389,14 +10354,14 @@ SUBROUTINE FixHSSBrTq ( Integrator, p, x, OtherState, ErrStat, ErrMsg )
    IF ( ABS( OtherState%HSSBrTrq ) > ABS( OtherState%HSSBrTrqC ) )  THEN
 
       OtherState%HSSBrTrq = OtherState%HSSBrTrqC !OtherState%HSSBrTrqC = SIGN( u%HSSBrTrqC, x%QDT(DOF_GeAz) )
-      !OtherState%QD2T     = QD2TC
+      !m%QD2T     = QD2TC
 
    ELSE
 
       ! overwrite QD2T with the new values
-      OtherState%QD2T = 0.0
+      m%QD2T = 0.0
       DO I = 1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-         OtherState%QD2T(p%DOFs%SrtPS(I)) = OtherState%SolnVec(I)
+         m%QD2T(p%DOFs%SrtPS(I)) = m%SolnVec(I)
       ENDDO             ! I - All active (enabled) DOFs
       
             
@@ -10413,7 +10378,7 @@ SUBROUTINE FixHSSBrTq ( Integrator, p, x, OtherState, ErrStat, ErrMsg )
       ! The Q's are unnaffected by this change.     
       
          x%qdt =                   OtherState%xdot(OtherState%IC(1))%qt &  ! qd at n
-                 + p%DT24 * ( 9. * OtherState%QD2T &                 ! the value we just changed
+                 + p%DT24 * ( 9. * m%QD2T &                                ! the value we just changed
                            + 19. * OtherState%xdot(OtherState%IC(1))%qdt &
                            -  5. * OtherState%xdot(OtherState%IC(2))%qdt &
                            +  1. * OtherState%xdot(OtherState%IC(3))%qdt )
@@ -10425,12 +10390,12 @@ SUBROUTINE FixHSSBrTq ( Integrator, p, x, OtherState, ErrStat, ErrMsg )
       ! Update QD and QD2 with the new accelerations using predictor.  
          
          x%qdt =                OtherState%xdot(OtherState%IC(1))%qt + &  ! qd at n
-                 p%DT24 * ( 55.*OtherState%QD2T &                    ! the value we just changed
+                 p%DT24 * ( 55.*m%QD2T &                                  ! the value we just changed
                           - 59.*OtherState%xdot(OtherState%IC(2))%qdt  &
                           + 37.*OtherState%xdot(OtherState%IC(3))%qdt  &
                            - 9.*OtherState%xdot(OtherState%IC(4))%qdt )
          
-         OtherState%xdot ( OtherState%IC(1) )%qdt = OtherState%QD2T        ! fix the history
+         OtherState%xdot ( OtherState%IC(1) )%qdt = m%QD2T        ! fix the history
 
          
       END SELECT
@@ -10439,8 +10404,7 @@ SUBROUTINE FixHSSBrTq ( Integrator, p, x, OtherState, ErrStat, ErrMsg )
 
    RETURN
 END SUBROUTINE FixHSSBrTq
-!=======================================================================
-
+!----------------------------------------------------------------------------------------------------------------------------------
 
 END MODULE ElastoDyn
 !**********************************************************************************************************************************

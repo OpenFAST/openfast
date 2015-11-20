@@ -9,10 +9,6 @@
 #
 # Use ^ as a shortcut for the value in the same column from the previous line.
 ###################################################################################################################################
-# File last committed $Date: 2015-11-12 13:43:42 -0700 (Thu, 12 Nov 2015) $
-# (File) Revision #: $Rev: 1172 $
-# URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/BJonkman/Source/ElastoDyn_Registry.txt $
-###################################################################################################################################
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include	Registry_NWTC_Library.txt
 
@@ -519,25 +515,25 @@ typedef	^	DiscreteStateType	ReKi	DummyDiscState	-	-	-	"Remove this variable if y
 # Define constraint states here:
 typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"	-
 
-# Define "other" states (any data that are not considered actual states) here:
-typedef	^	OtherStateType	ED_CoordSys	CoordSys	-	-	-	"Coordinate systems in the FAST framework"	-
-typedef	^	OtherStateType	ED_RtHndSide	RtHS	-	-	-	"Values used in calculating the right-hand-side RtHS (and outputs)"
+# Define "other" states here:
 typedef	^	OtherStateType	IntKi	n	-	-	-	"tracks time step for which OtherState was updated"
 typedef	^	OtherStateType	ED_ContinuousStateType	xdot	{ED_NMX}	-	-	"previous state deriv for multi-step"
 typedef	^	OtherStateType	IntKi	IC	{:}	-	-	"Array which stores pointers to predictor-corrector results"
-typedef	^	OtherStateType	R8Ki	QD2T	{:}	-	-	"Solution (acceleration) vector; the first time derivative of QDT"
-#typedef	^	OtherStateType	ReKi	BlPitch	{:}	-	-	"Current blade pitch angles"	radians
-typedef	^	OtherStateType	R8Ki	AugMat	{:}{:}	-	-	"The augmented matrix used for the solution of the QD2T()s"
-typedef	^	OtherStateType	R8Ki	AugMat_factor	{:}{:}	-	-	"factored version of AugMat matrix"
-typedef	^	OtherStateType	R8Ki	SolnVec	{:}	-	-	"b in the equation Ax=b (last column of AugMat)"
-typedef	^	OtherStateType	IntKi	AugMat_pivot	{:}	-	-	"Pivot column for AugMat in LAPACK factorization"
-#typedef	^	OtherStateType	ED_ContinuousStateType	k1	-	-	-	"Constant for ED_RK4 routine"	-
-typedef	^	OtherStateType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	"see OutListParameters.xlsx spreadsheet"
 typedef	^	OtherStateType	ReKi	HSSBrTrq	-	-	-	"HSSBrTrq from update states; a hack to get this working with a single integrator"	-
 typedef	^	OtherStateType	ReKi	HSSBrTrqC	-	-	-	"Commanded HSS brake torque (adjusted for sign)"	N-m
-typedef	^	OtherStateType	ReKi	OgnlGeAzRo	{:}	-	-	"Original DOF_GeAz row in AugMat"	-
 typedef	^	OtherStateType	IntKi	SgnPrvLSTQ	-	-	-	"The sign of the low-speed shaft torque from the previous call to RtHS().  This is calculated at the end of RtHS().  NOTE: The low-speed shaft torque is assumed to be positive at the beginning of the run!"	-
 typedef	^	OtherStateType	IntKi	SgnLSTQ	{ED_NMX}	-	-	"history of sign of LSTQ"
+
+# ..... Misc Vars ................................................................................................................
+typedef	^	MiscVarType	ED_CoordSys	CoordSys	-	-	-	"Coordinate systems in the FAST framework"	-
+typedef	^	MiscVarType	ED_RtHndSide	RtHS	-	-	-	"Values used in calculating the right-hand-side RtHS (and outputs)"
+typedef	^	MiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	"see OutListParameters.xlsx spreadsheet"
+typedef	^	MiscVarType	R8Ki	AugMat	{:}{:}	-	-	"The augmented matrix used for the solution of the QD2T()s"
+typedef	^	MiscVarType	R8Ki	AugMat_factor	{:}{:}	-	-	"factored version of AugMat matrix"
+typedef	^	MiscVarType	R8Ki	SolnVec	{:}	-	-	"b in the equation Ax=b (last column of AugMat)"
+typedef	^	MiscVarType	IntKi	AugMat_pivot	{:}	-	-	"Pivot column for AugMat in LAPACK factorization"
+typedef	^	MiscVarType	ReKi	OgnlGeAzRo	{:}	-	-	"Original DOF_GeAz row in AugMat"	-
+typedef	^	MiscVarType	R8Ki	QD2T	{:}	-	-	"Solution (acceleration) vector; the first time derivative of QDT"
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:

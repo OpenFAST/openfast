@@ -4328,7 +4328,7 @@ CONTAINS
    END SUBROUTINE cleanup
 END SUBROUTINE ReadPrimaryFile
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine allocates arrays for the blade mesh properties from the input file
+!> This routine allocates arrays for the blade mesh properties from the input file.
 SUBROUTINE Alloc_BladeMeshInputProperties( BladeKInputFileMesh, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -4353,7 +4353,7 @@ SUBROUTINE Alloc_BladeMeshInputProperties( BladeKInputFileMesh, ErrStat, ErrMsg 
 
 END SUBROUTINE Alloc_BladeMeshInputProperties
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine allocates arrays for the blade properties from the input file
+!> This routine allocates arrays for the blade properties from the input file.
 SUBROUTINE Alloc_BladeInputProperties( BladeKInputFileData, AllocAdams, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -4424,7 +4424,7 @@ SUBROUTINE Alloc_BladeInputProperties( BladeKInputFileData, AllocAdams, ErrStat,
 
 END SUBROUTINE Alloc_BladeInputProperties
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine allocates arrays for the tower properties from the input file
+!> This routine allocates arrays for the tower properties from the input file.
 SUBROUTINE Alloc_TowerInputProperties( InputFileData, AllocAdams, ErrStat, ErrMsg )
 !..................................................................................................................................
 
