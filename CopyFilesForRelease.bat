@@ -53,11 +53,10 @@ IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :ElastoDyn
 ECHO ElastoDyn
-SET src_folder=%ED_Loc%\..
+SET src_folder=%ED_Loc%
 SET dst_folder=%depend_dir%\ElastoDyn
-SET list_of_files=%src_folder%\FAST_SourceFiles_ED.txt
 
-@CALL :CopyFileList
+@CALL :CopyFileFolder
 IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :BeamDyn
@@ -204,6 +203,12 @@ REM -------------------------------------
 :CopyFileList
 if exist "%dst_folder%\*" DEL "%dst_folder%\*"
 for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
+
+EXIT /B
+REM -------------------------------------
+:CopyFileFolder
+if exist "%dst_folder%\*" DEL "%dst_folder%\*"
+copy /Y "%src_folder%\*" "%dst_folder%"
 
 EXIT /B
 REM -------------------------------------
