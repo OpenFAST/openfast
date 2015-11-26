@@ -17,10 +17,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2015-10-15 12:21:09 -0600 (Thu, 15 Oct 2015) $
-! (File) Revision #: $Rev: 1163 $
-! URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/BJonkman/Source/BladedInterface.f90 $
-!**********************************************************************************************************************************
 MODULE BladedInterface
 
    USE NWTC_Library  
@@ -36,30 +32,30 @@ MODULE BladedInterface
    TYPE(ProgDesc), PARAMETER    :: BladedInterface_Ver = ProgDesc( 'ServoDyn Interface for Bladed Controllers', 'using '//TRIM(OS_Desc), '14-Oct-2015' )
    
    
-      ! Definition of the DLL Interface (from Bladed):
-      ! Note that aviFAIL and avcMSG should be used as INTENT(OUT), but I'm defining them INTENT(INOUT) just in case the compiler decides to reinitialize something that's INTENT(OUT)
+      !> Definition of the DLL Interface (from Bladed):
+      !! Note that aviFAIL and avcMSG should be used as INTENT(OUT), but I'm defining them INTENT(INOUT) just in case the compiler decides to reinitialize something that's INTENT(OUT)
   
    ABSTRACT INTERFACE
       SUBROUTINE BladedDLL_Procedure ( avrSWAP, aviFAIL, accINFILE, avcOUTNAME, avcMSG )  BIND(C)
          USE, INTRINSIC :: ISO_C_Binding
          
-         REAL(C_FLOAT),          INTENT(INOUT) :: avrSWAP   (*)  ! DATA 
-         INTEGER(C_INT),         INTENT(INOUT) :: aviFAIL        ! FLAG  (Status set in DLL and returned to simulation code)
-         CHARACTER(KIND=C_CHAR), INTENT(IN)    :: accINFILE (*)  ! INFILE
-         CHARACTER(KIND=C_CHAR), INTENT(IN)    :: avcOUTNAME(*)  ! OUTNAME (Simulation RootName)
-         CHARACTER(KIND=C_CHAR), INTENT(INOUT) :: avcMSG    (*)  ! MESSAGE (Message from DLL to simulation code [ErrMsg])         
+         REAL(C_FLOAT),          INTENT(INOUT) :: avrSWAP   (*)  !< DATA 
+         INTEGER(C_INT),         INTENT(INOUT) :: aviFAIL        !< FLAG  (Status set in DLL and returned to simulation code)
+         CHARACTER(KIND=C_CHAR), INTENT(IN)    :: accINFILE (*)  !< INFILE
+         CHARACTER(KIND=C_CHAR), INTENT(IN)    :: avcOUTNAME(*)  !< OUTNAME (Simulation RootName)
+         CHARACTER(KIND=C_CHAR), INTENT(INOUT) :: avcMSG    (*)  !< MESSAGE (Message from DLL to simulation code [ErrMsg])         
       END SUBROUTINE BladedDLL_Procedure
       
       SUBROUTINE BladedDLL_SC_Procedure ( avrSWAP, from_SC, to_SC, aviFAIL, accINFILE, avcOUTNAME, avcMSG )  BIND(C)
          USE, INTRINSIC :: ISO_C_Binding
          
-         REAL(C_FLOAT),          INTENT(INOUT) :: avrSWAP   (*)  ! DATA 
-         REAL(C_FLOAT),          INTENT(IN   ) :: from_SC   (*)  ! DATA from the supercontroller
-         REAL(C_FLOAT),          INTENT(INOUT) :: to_SC     (*)  ! DATA to the supercontroller
-         INTEGER(C_INT),         INTENT(INOUT) :: aviFAIL        ! FLAG  (Status set in DLL and returned to simulation code)
-         CHARACTER(KIND=C_CHAR), INTENT(IN)    :: accINFILE (*)  ! INFILE
-         CHARACTER(KIND=C_CHAR), INTENT(IN)    :: avcOUTNAME(*)  ! OUTNAME (Simulation RootName)
-         CHARACTER(KIND=C_CHAR), INTENT(INOUT) :: avcMSG    (*)  ! MESSAGE (Message from DLL to simulation code [ErrMsg])         
+         REAL(C_FLOAT),          INTENT(INOUT) :: avrSWAP   (*)  !< DATA 
+         REAL(C_FLOAT),          INTENT(IN   ) :: from_SC   (*)  !< DATA from the supercontroller
+         REAL(C_FLOAT),          INTENT(INOUT) :: to_SC     (*)  !< DATA to the supercontroller
+         INTEGER(C_INT),         INTENT(INOUT) :: aviFAIL        !< FLAG  (Status set in DLL and returned to simulation code)
+         CHARACTER(KIND=C_CHAR), INTENT(IN)    :: accINFILE (*)  !< INFILE
+         CHARACTER(KIND=C_CHAR), INTENT(IN)    :: avcOUTNAME(*)  !< OUTNAME (Simulation RootName)
+         CHARACTER(KIND=C_CHAR), INTENT(INOUT) :: avcMSG    (*)  !< MESSAGE (Message from DLL to simulation code [ErrMsg])         
       END SUBROUTINE BladedDLL_SC_Procedure
       
       
@@ -92,17 +88,16 @@ MODULE BladedInterface
 
       ! Some constants for the Interface:
    
-   INTEGER(IntKi), PARAMETER    :: R_v36 = 85                                      ! Start of below-rated torque-speed look-up table (record no.) for Bladed version 3.6
-   INTEGER(IntKi), PARAMETER    :: R_v4  = 145                                     ! Start of below-rated torque-speed look-up table (record no.) for Bladed version 3.8 and later
+   INTEGER(IntKi), PARAMETER    :: R_v36 = 85         !< Start of below-rated torque-speed look-up table (record no.) for Bladed version 3.6
+   INTEGER(IntKi), PARAMETER    :: R_v4  = 145        !< Start of below-rated torque-speed look-up table (record no.) for Bladed version 3.8 and later
 
-   INTEGER(IntKi), PARAMETER    :: R = R_v4   ! start of the generator speed look-up table  
+   INTEGER(IntKi), PARAMETER    :: R = R_v4           !< start of the generator speed look-up table  
             
 
 CONTAINS
 !==================================================================================================================================
+!> This SUBROUTINE is used to call the Bladed-style DLL.
 SUBROUTINE CallBladedDLL ( u, DLL, dll_data, p, ErrStat, ErrMsg )
-
-      ! This SUBROUTINE is used to call the Bladed-style DLL.
 
       ! Passed Variables:
    TYPE(SrvD_InputType),      INTENT(IN   )  :: u              ! System inputs
@@ -184,16 +179,17 @@ SUBROUTINE CallBladedDLL ( u, DLL, dll_data, p, ErrStat, ErrMsg )
    RETURN
 END SUBROUTINE CallBladedDLL
 !==================================================================================================================================
-SUBROUTINE BladedInterface_Init(u,p,OtherState,y,InputFileData, ErrStat, ErrMsg)
+!> This routine initializes variables used in the Bladed DLL interface.
+SUBROUTINE BladedInterface_Init(u,p,m,y,InputFileData, ErrStat, ErrMsg)
    
-   TYPE(SrvD_InputType),           INTENT(INOUT)  :: u               ! An initial guess for the input; input mesh must be defined
-   TYPE(SrvD_ParameterType),       INTENT(INOUT)  :: p               ! Parameters
-   TYPE(SrvD_OtherStateType),      INTENT(INOUT)  :: OtherState      ! Initial other/optimization states
-   TYPE(SrvD_OutputType),          INTENT(INOUT)  :: y               ! Initial system outputs (outputs are not calculated;
-                                                                     !   only the output mesh is initialized)
-   TYPE(SrvD_InputFile),           INTENT(INOUT)  :: InputFileData   ! Data stored in the module's input file
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat         ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+   TYPE(SrvD_InputType),           INTENT(INOUT)  :: u               !< An initial guess for the input; input mesh must be defined
+   TYPE(SrvD_ParameterType),       INTENT(INOUT)  :: p               !< Parameters
+   TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m               !< Initial misc (optimization) variables
+   TYPE(SrvD_OutputType),          INTENT(INOUT)  :: y               !< Initial system outputs (outputs are not calculated;
+                                                                     !!   only the output mesh is initialized)
+   TYPE(SrvD_InputFile),           INTENT(INOUT)  :: InputFileData   !< Data stored in the module's input file
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat         !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
    
       ! local variables
@@ -241,7 +237,7 @@ SUBROUTINE BladedInterface_Init(u,p,OtherState,y,InputFileData, ErrStat, ErrMsg)
    
    p%DLL_Ramp = InputFileData%DLL_Ramp 
    p%BlAlpha = exp( -TwoPi*p%DT*InputFileData%BPCutoff ) !used only for the DLL   
-   OtherState%dll_data%PrevBlPitch(1:p%NumBl) = p%BlPitchInit
+   m%dll_data%PrevBlPitch(1:p%NumBl) = p%BlPitchInit
    
    if (InputFileData%BPCutoff < EPSILON( InputFileData%BPCutoff )) CALL CheckError( ErrID_Fatal, 'BPCutoff must be greater than 0.') 
    
@@ -266,23 +262,23 @@ SUBROUTINE BladedInterface_Init(u,p,OtherState,y,InputFileData, ErrStat, ErrMsg)
    IF ( ErrStat >= AbortErrLev ) RETURN
    
    
-   CALL AllocAry( OtherState%dll_data%avrSwap,   R+(2*p%DLL_NumTrq)-1, 'avrSwap', ErrStat2, ErrMsg2 )
+   CALL AllocAry( m%dll_data%avrSwap,   R+(2*p%DLL_NumTrq)-1, 'avrSwap', ErrStat2, ErrMsg2 )
       CALL CheckError(ErrStat2,ErrMsg2)
       IF ( ErrStat >= AbortErrLev ) RETURN
 
    IF (ALLOCATED(y%SuperController)) THEN
-      CALL AllocAry( OtherState%dll_data%SCoutput, SIZE(y%SuperController), 'OtherState%dll_data%SuperController', ErrStat2, ErrMsg2 )
+      CALL AllocAry( m%dll_data%SCoutput, SIZE(y%SuperController), 'm%dll_data%SuperController', ErrStat2, ErrMsg2 )
          CALL CheckError( ErrStat2, ErrMsg2 )
          IF (ErrStat >= AbortErrLev) RETURN
-      OtherState%dll_data%SCoutput = 0.0_SiKi
+      m%dll_data%SCoutput = 0.0_SiKi
    END IF
       
 
       ! Initialize dll data stored in OtherState
-   OtherState%dll_data%GenState   = 1
-   OtherState%dll_Data%GenTrq     = 0.0
-   OtherState%dll_Data%YawRateCom = 0.0
-   OtherState%dll_Data%HSSBrFrac  = 0.0
+   m%dll_data%GenState   = 1
+   m%dll_data%GenTrq     = 0.0
+   m%dll_data%YawRateCom = 0.0
+   m%dll_data%HSSBrFrac  = 0.0
 
    
 #ifdef STATIC_DLL_LOAD
@@ -304,12 +300,12 @@ SUBROUTINE BladedInterface_Init(u,p,OtherState,y,InputFileData, ErrStat, ErrMsg)
       
     ! Set status flag:
 
-   !OtherState%dll_data%avrSWAP( 1) = 0.0   
-   OtherState%dll_data%avrSWAP = 0.0  
-   !CALL Fill_avrSWAP( 0_IntKi, t, u, p, LEN(ErrMsg), OtherState%dll_data )  ! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-)
+   !m%dll_data%avrSWAP( 1) = 0.0   
+   m%dll_data%avrSWAP = 0.0  
+   !CALL Fill_avrSWAP( 0_IntKi, t, u, p, LEN(ErrMsg), m%dll_data )  ! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-)
   
       
-   !CALL CallBladedDLL(p%DLL_Trgt,  OtherState%dll_data, ErrStat2, ErrMsg2)
+   !CALL CallBladedDLL(p%DLL_Trgt,  m%dll_data, ErrStat2, ErrMsg2)
    !   CALL CheckError(ErrStat2,ErrMsg2)
    !   IF ( ErrStat >= AbortErrLev ) RETURN
    !   
@@ -347,24 +343,25 @@ CONTAINS
    END SUBROUTINE CheckError      
 END SUBROUTINE BladedInterface_Init
 !==================================================================================================================================
-SUBROUTINE BladedInterface_End(u, p, OtherState, ErrStat, ErrMsg)
+!> This routine calls the DLL for the final time (if it was previously called), and frees the dynamic library.
+SUBROUTINE BladedInterface_End(u, p, m, ErrStat, ErrMsg)
    
-   TYPE(SrvD_InputType),           INTENT(IN   )  :: u               ! System inputs
-   TYPE(SrvD_ParameterType),       INTENT(INOUT)  :: p               ! Parameters
-   TYPE(SrvD_OtherStateType),      INTENT(INOUT)  :: OtherState      ! Other/optimization states
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat         ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+   TYPE(SrvD_InputType),           INTENT(IN   )  :: u               !< System inputs
+   TYPE(SrvD_ParameterType),       INTENT(INOUT)  :: p               !< Parameters
+   TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m               !< misc (optimization) variables
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat         !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
       ! local variables:
    INTEGER(IntKi)                                 :: ErrStat2    ! The error status code
    CHARACTER(ErrMsgLen)                           :: ErrMsg2     ! The error message, if an error occurred
    
       ! call DLL final time, but skip if we've never called it
-   IF ( .NOT. EqualRealNos( OtherState%dll_data%avrSWAP( 1), 0.0_SiKi ) ) THEN
-      OtherState%dll_data%avrSWAP( 1) = -1.0   ! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-)
-      !CALL Fill_avrSWAP( -1_IntKi, -10.0_DbKi, u, p, LEN(ErrMsg), OtherState%dll_data )
+   IF ( .NOT. EqualRealNos( m%dll_data%avrSWAP( 1), 0.0_SiKi ) ) THEN
+      m%dll_data%avrSWAP( 1) = -1.0   ! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-)
+      !CALL Fill_avrSWAP( -1_IntKi, -10.0_DbKi, u, p, LEN(ErrMsg), m%dll_data )
 
-      CALL CallBladedDLL(u, p%DLL_Trgt,  OtherState%dll_data, p, ErrStat, ErrMsg)
+      CALL CallBladedDLL(u, p%DLL_Trgt,  m%dll_data, p, ErrStat, ErrMsg)
    END IF
       
    CALL FreeDynamicLib( p%DLL_Trgt, ErrStat2, ErrMsg2 )  ! this doesn't do anything #ifdef STATIC_DLL_LOAD  because p%DLL_Trgt is 0 (NULL)
@@ -375,14 +372,16 @@ SUBROUTINE BladedInterface_End(u, p, OtherState, ErrStat, ErrMsg)
    
 END SUBROUTINE BladedInterface_End
 !==================================================================================================================================
-SUBROUTINE BladedInterface_CalcOutput(t, u, p, OtherState, ErrStat, ErrMsg)
+!> This routine sets the AVRswap array, calls the routine from the BladedDLL, and sets the outputs from the call to be used as
+!! necessary in the main ServoDyn CalcOutput routine.
+SUBROUTINE BladedInterface_CalcOutput(t, u, p, m, ErrStat, ErrMsg)
 
-   REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(SrvD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(SrvD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
+   TYPE(SrvD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
+   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m           !< misc (optimization) variables
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !, Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !, Error message if ErrStat /= ErrID_None
       
       ! local variables:
    INTEGER(IntKi)                                 :: ErrStat2    ! The error status code
@@ -395,32 +394,32 @@ SUBROUTINE BladedInterface_CalcOutput(t, u, p, OtherState, ErrStat, ErrMsg)
    
    
       ! Set the input values of the avrSWAP array:
-   CALL Fill_avrSWAP( t, u, p, LEN(ErrMsg), OtherState%dll_data )
+   CALL Fill_avrSWAP( t, u, p, LEN(ErrMsg), m%dll_data )
    
 #ifdef DEBUG_BLADED_INTERFACE
 !CALL WrNumAryFileNR ( 58, (/t/),'1x,ES15.6E2', ErrStat, ErrMsg )
-CALL WrNumAryFileNR ( 58, OtherState%dll_data%avrSWAP,'1x,ES15.6E2', ErrStat, ErrMsg )
+CALL WrNumAryFileNR ( 58, m%dll_data%avrSWAP,'1x,ES15.6E2', ErrStat, ErrMsg )
 write(58,'()')
 #endif
    
    
       ! Call the Bladed-style DLL controller:
-   CALL CallBladedDLL(u, p%DLL_Trgt,  OtherState%dll_data, p, ErrStat, ErrMsg)
+   CALL CallBladedDLL(u, p%DLL_Trgt,  m%dll_data, p, ErrStat, ErrMsg)
       IF ( ErrStat >= AbortErrLev ) RETURN
 
 #ifdef DEBUG_BLADED_INTERFACE
 !CALL WrNumAryFileNR ( 59, (/t/),'1x,ES15.6E2', ErrStat, ErrMsg )
-CALL WrNumAryFileNR ( 59, OtherState%dll_data%avrSWAP,'1x,ES15.6E2', ErrStat, ErrMsg )
+CALL WrNumAryFileNR ( 59, m%dll_data%avrSWAP,'1x,ES15.6E2', ErrStat, ErrMsg )
 write(59,'()')
 #endif
       
       
       !bjj: setting this after the call so that the first call is with avrSWAP(1)=0 [apparently it doesn't like to be called at initialization.... but maybe we can fix that later]
-   OtherState%dll_data%avrSWAP( 1) = 1.0   ! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-)
+   m%dll_data%avrSWAP( 1) = 1.0   ! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-)
 
       ! Get the output values from the avrSWAP array:
       
-   CALL Retrieve_avrSWAP( p, OtherState%dll_data, ErrStat2, ErrMsg2 )
+   CALL Retrieve_avrSWAP( p, m%dll_data, ErrStat2, ErrMsg2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
          IF ( ErrStat /= ErrID_None ) ErrMsg = TRIM(ErrMsg)//NewLine
          ErrMsg = TRIM(ErrMsg)//TRIM(ErrMsg2)
@@ -431,24 +430,24 @@ write(59,'()')
       
 END SUBROUTINE BladedInterface_CalcOutput  
 !==================================================================================================================================
+!> This routine fills the avrSWAP array with its inputs, as described in Appendices A and B of the Bladed User Manual of Bladed 
+!! version 3.81.
 SUBROUTINE Fill_avrSWAP( t, u, p, ErrMsgSz, dll_data )
 !SUBROUTINE Fill_avrSWAP( StatFlag, t, u, p, ErrMsgSz, dll_data )
-! This routine fills the avrSWAP array with its inputs, as described in Appendices A and B of the Bladed User Manual of Bladed 
-! version 3.6.
 !..................................................................................................................................
  
 !   INTEGER(IntKi),                 INTENT(IN   )  :: StatFlag    ! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-)
-   REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(SrvD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   INTEGER(IntKi),                 INTENT(IN   )  :: ErrMsgSz    ! Allowed size of the DLL-returned error message (-)
+   REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
+   TYPE(SrvD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
+   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   INTEGER(IntKi),                 INTENT(IN   )  :: ErrMsgSz    !< Allowed size of the DLL-returned error message (-)
 !   REAL(SiKi),                     INTENT(INOUT)  :: avrSWAP(:)  ! the SWAP array for the Bladed DLL Interface
-   TYPE(BladedDLLType),            INTENT(INOUT)  :: dll_data    ! data for the Bladed DLL
+   TYPE(BladedDLLType),            INTENT(INOUT)  :: dll_data    !< data for the Bladed DLL
 
       ! local variables:
    INTEGER(IntKi)                                 :: I           ! Loop counter
    
-   ! Set the values of the avrSWAP array that vary during a simulation
+   !! Set the values of the avrSWAP array that vary during a simulation
    
    !IF ( StatFlag == 0 ) ! Initialization flag
    !   avrSWAP = 0.0
@@ -457,7 +456,7 @@ SUBROUTINE Fill_avrSWAP( t, u, p, ErrMsgSz, dll_data )
    !   
    !ELSE
    
-   !dll_data%avrSWAP( 1) = REAL(StatFlag, SiKi)              ! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-) 
+   !dll_data%avrSWAP( 1) = REAL(StatFlag, SiKi)             !! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-) 
    dll_data%avrSWAP( 2) = REAL(t, SiKi)                     ! Current time (sec)
    dll_data%avrSWAP( 3) = p%DLL_DT                          ! Communication interval (sec)   ! WAS y_StrD%AllOuts(     Time) - LastTime 
    dll_data%avrSWAP( 4) = u%BlPitch(1)                      ! Blade 1 pitch angle (rad)
@@ -467,7 +466,7 @@ SUBROUTINE Fill_avrSWAP( t, u, p, ErrMsgSz, dll_data )
    dll_data%avrSWAP( 8) = p%PtchRate_Min                    ! Minimum pitch rate (most negative value allowed) (rad/s)
    dll_data%avrSWAP( 9) = p%PtchRate_Max                    ! Maximum pitch rate                               (rad/s)
    dll_data%avrSWAP(10) = 0.0                               ! 0 = pitch position actuator, 1 = pitch rate actuator (-) -- must be 0 for FAST
-!bjj: record 11 technically needs the old demanded values (currently equivallent to this quantity)                      
+!bjj: record 11 technically needs the old demanded values (currently equivalent to this quantity)                      
 !   dll_data%avrSWAP(11) = u%BlPitch(1)                      ! Current demanded pitch angle (rad  ) -- I am sending the value for blade 1, in the absence of any more information provided in Bladed documentation
    dll_data%avrSWAP(11) = dll_data%PrevBlPitch(1)           ! Current demanded pitch angle (rad  ) -- I am sending the value for blade 1, in the absence of any more information provided in Bladed documentation
    dll_data%avrSWAP(12) = 0.0                               ! Current demanded pitch rate  (rad/s) -- always zero for FAST
@@ -573,16 +572,16 @@ END IF
    
 END SUBROUTINE Fill_avrSWAP
 !==================================================================================================================================  
+!> This routine retrieves the DLL return values from the avrSWAP array, as described in Appendices A and B of the Bladed User  
+!! Manual of Bladed version 3.81.
 SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
 !SUBROUTINE Retrieve_avrSWAP( p, dll_data )
-! This routine retrieves the DLL return values from the avrSWAP array, as described in Appendices A and B of the Bladed User  
-! Manual of Bladed version 3.6.
 !..................................................................................................................................
  
-   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BladedDLLType),            INTENT(INOUT)  :: dll_data    ! data for the Bladed DLL
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(BladedDLLType),            INTENT(INOUT)  :: dll_data    !< data for the Bladed DLL
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables:
    INTEGER(IntKi)                                 :: K           ! Loop counter
@@ -593,10 +592,10 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
    ErrMsg  = ''   
    
    
-   ! Load control demands (commands) out of the avrSWAP array according to
-   !   Appendix A of the Bladed User Manual:
+   !!  Load control demands (commands) out of the avrSWAP array according to
+   !!   Appendix A of the Bladed User Manual:
 
-! Record 35: Generator contactor (-)   
+!! Record 35: Generator contactor (-)   
    dll_data%GenState  = NINT( dll_data%avrSWAP(35) )    ! Generator contactor (-)
    
    IF ( ( dll_data%GenState /= 0_IntKi ) .AND. ( dll_data%GenState /= 1_IntKi ) )  THEN 
@@ -611,7 +610,7 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
    END IF   
    
    
-! Record 36: Shaft brake status (-)   
+!! Record 36: Shaft brake status (-)   
    dll_data%HSSBrFrac = dll_data%avrSWAP(36)            ! Shaft brake status (-)
    
    IF ( ( .NOT. EqualRealNos(dll_data%HSSBrFrac, 0.0_ReKi) ) .AND. &
@@ -626,21 +625,21 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
 
    END IF   
 
-! Records 38-40 are reserved
-! Record 41, demanded yaw actuator torque, is ignored since record 29 is set to 0 by FAST indicating yaw rate control
+!! Records 38-40 are reserved
+!! Record 41, demanded yaw actuator torque, is ignored since record 29 is set to 0 by FAST indicating yaw rate control
 
 ! Records 42-46: demanded pitch positions or rates
    IF ( p%Ptch_Cntrl /= 0_IntKi )  THEN ! Individual pitch control (p%Ptch_Cntrl == 1)
-! Records 42-44: Demanded Individual Pitch position (rad) (or pitch rate [rad/s])
+!! Records 42-44: Demanded Individual Pitch position (rad) (or pitch rate [rad/s])
       DO K = 1,p%NumBl ! Loop through all blades avrSWAP(42), avrSWAP(43), and, if NumBl = 3, avrSWAP(44)
          dll_data%BlPitchCom(K) = dll_data%avrSWAP( 41 + K )          ! Demanded individual pitch position of blade K (rad)
       ENDDO ! K - blades
 
    ELSE !IF ( p%Ptch_Cntrl == 0_IntKi )  THEN ! Collective pitch control
-! Record 45: Demanded pitch angle (Collective pitch) (rad)
+!! Record 45: Demanded pitch angle (Collective pitch) (rad)
       dll_data%BlPitchCom       = dll_data%avrSWAP(45)                ! Demanded pitch angle (Collective pitch) (rad)
       
-! Record 46, demanded pitch rate (Collective pitch), is ingored since record 10 is set to 0 by ServoDyn indicating pitch position actuator
+!! Record 46, demanded pitch rate (Collective pitch), is ingored since record 10 is set to 0 by ServoDyn indicating pitch position actuator
 
    ENDIF
 
@@ -648,7 +647,7 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
    dll_data%YawRateCom = dll_data%avrSWAP(48)       ! Demanded nacelle yaw rate (rad/s)
    
    
-! Record 55: Pitch override
+!! Record 55: Pitch override
    IF ( NINT( dll_data%avrSWAP(55) ) /=  0 )  THEN 
 
          ! Pitch  override requested by DLL; abort program
@@ -660,7 +659,7 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
    END IF
    
 
-! Record 56: Torque override
+!! Record 56: Torque override
    IF ( NINT( dll_data%avrSWAP(56) ) /=  0 )  THEN
       
          ! Torque override requested by DLL; abort program
@@ -672,9 +671,9 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
    END IF
 
 
-! Records 57-59 are reserved
+!! Records 57-59 are reserved
 
-! Record 65: Number of variables returned for logging
+!! Record 65: Number of variables returned for logging
    IF ( NINT( dll_data%avrSWAP(65) ) /=  0 )  THEN
       
          ! Return variables for logging requested by DLL; abort program
@@ -686,22 +685,22 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
 
    ENDIF
 
-! Record 72, the generator start-up resistance, is ignored
-! Record 79, the request for loads, is ignored; instead, the blade, hub, and yaw bearing loads are always passed to the DLL as if Record 79 was set to 4
-! Records 80-81, the variable-slip current demand inputs, are ignored; instead, the generator torque demand from Record 47 is used
+!! Record 72, the generator start-up resistance, is ignored
+!! Record 79, the request for loads, is ignored; instead, the blade, hub, and yaw bearing loads are always passed to the DLL as if Record 79 was set to 4
+!! Records 80-81, the variable-slip current demand inputs, are ignored; instead, the generator torque demand from Record 47 is used
    
 
-! Records 92-94: allow the control to change the wind inflow input; NOT ALLOWED in ServoDyn
-! Record 98: Safety system number to activate; not used in ServoDyn
+!! Records 92-94: allow the control to change the wind inflow input; NOT ALLOWED in ServoDyn
+!! Record 98: Safety system number to activate; not used in ServoDyn
 
-! Records 102-104: Yaw control/stiffness/damping; ignored in ServoDyn
-! Record 107: Brake torque demand; ignored in ServoDyn
-! Record 108: Yaw brake torque demand; ignored in ServoDyn
+!! Records 102-104: Yaw control/stiffness/damping; ignored in ServoDyn
+!! Record 107: Brake torque demand; ignored in ServoDyn
+!! Record 108: Yaw brake torque demand; ignored in ServoDyn
 
-! Records 120-129: User-defined variables 1-10; ignored in ServoDyn
-! Records 130-142: Reserved
+!! Records 120-129: User-defined variables 1-10; ignored in ServoDyn
+!! Records 130-142: Reserved
 
-! L1: variables for logging output; not yet implemented in ServoDyn
+!! L1: variables for logging output; not yet implemented in ServoDyn
       
 
 END SUBROUTINE Retrieve_avrSWAP

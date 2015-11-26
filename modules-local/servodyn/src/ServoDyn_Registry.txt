@@ -9,11 +9,6 @@
 #
 # Use ^ as a shortcut for the value in the same column from the previous line.
 ###################################################################################################################################
-# File last committed $Date: 2015-11-11 10:05:54 -0700 (Wed, 11 Nov 2015) $
-# (File) Revision #: $Rev: 1167 $
-# URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/BJonkman/Source/ServoDyn_Registry.txt $
-###################################################################################################################################
-
 
 # ...... Include files (definitions from NWTC Library) ............................................................................
 include	Registry_NWTC_Library.txt
@@ -149,26 +144,34 @@ typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable 
 typedef	^	ConstraintStateType	TMD_ConstraintStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
 typedef	^	ConstraintStateType	TMD_ConstraintStateType	TTMD	-	-	-	"TMD module states - tower"	-
 
-# Define "other" states (any data that are not considered actual states) here:
+# Define "other" states (e.g. logical states) here:
+# other states for pitch maneuver:
+typedef	^	OtherStateType	Logical	BegPitMan	{:}	-	-	"Whether the override pitch maneuver actually began"	-
 typedef	^	OtherStateType	ReKi	BlPitchI	{:}	-	-	"Initial blade pitch angles at the start of the override pitch maneuver"	radians
-typedef	^	OtherStateType	DbKi	BegPitMan	{:}	-	-	"Time that the override pitch manuever actually began"	seconds
-typedef	^	OtherStateType	DbKi	BegYawMan	-	-	-	"Time that the yaw maneuver actually began"	seconds
+typedef	^	OtherStateType	DbKi	TPitManE	{:}	-	-	"Time to end pitch maneuvers for each blade"	s
+# other states for yaw maneuver:
+typedef	^	OtherStateType	Logical	BegYawMan	-	-	-	"Whether the yaw maneuver actually began"	-
 typedef	^	OtherStateType	ReKi	NacYawI	-	-	-	"Initial yaw angle at the start of the override yaw maneuver"	radians
-typedef	^	OtherStateType	ReKi	YawManRat	-	-	-	"Yaw rate at which override yaw maneuver head toward for final yaw angle (includes sign)"	rad/s
 typedef	^	OtherStateType	DbKi	TYawManE	-	-	-	"Time to end override yaw maneuver"	s
+# other states for tip-brake deployment:
+typedef	^	OtherStateType	Logical	BegTpBr	{:}	-	-	"Whether the tip brakes actually deployed"	-
 typedef	^	OtherStateType	DbKi	TTpBrDp	{:}	-	-	"Times to initiate deployment of tip brakes"	s
 typedef	^	OtherStateType	DbKi	TTpBrFl	{:}	-	-	"Times at which tip brakes are fully deployed"	s
-typedef	^	OtherStateType	DbKi	TPitManE	{:}	-	-	"Time to end pitch maneuvers for each blade"	s
-typedef	^	OtherStateType	ReKi	PitManRat	{:}	-	-	"Pitch rates at which override pitch maneuvers head toward final pitch angles (includes sign)"	rad/s
-typedef	^	OtherStateType	DbKi	TOff4Good	-	-	-	"Time that the generator went offline (for rest of simulation)"	s
-typedef	^	OtherStateType	DbKi	TGenOnLine	-	-	-	"Time that the generator first went online"	s
-typedef	^	OtherStateType	BladedDLLType	dll_data	-	-	-	"data used for Bladed DLL"	-
-typedef	^	OtherStateType	DbKi	LastTimeCalled	-	-	-	"last time the CalcOutput/Bladed DLL was called"	s
-typedef	^	OtherStateType	logical	FirstWarn	-	-	-	"Whether or not this is the first warning about the DLL being called without Explicit-Loose coupling."	-
+# other states for generator on/off:
+typedef	^	OtherStateType	Logical	Off4Good	-	-	-	"Is the generator offline for rest of simulation?"	-
+typedef	^	OtherStateType	Logical	GenOnLine	-	-	-	"Is the generator online?"	-
+# other states for TMD sub-module:
 typedef	^	OtherStateType	TMD_OtherStateType	NTMD	-	-	-	"TMD module states - nacelle"	-
 typedef	^	OtherStateType	TMD_OtherStateType	TTMD	-	-	-	"TMD module states - tower"	-
-typedef	^	OtherStateType	DbKi	LastTimeFiltered	-	-	-	"last time the CalcOutput/Bladed DLL was filtered"	s
-typedef	^	OtherStateType	ReKi	xd_BlPitchFilter	{:}	-	-	"blade pitch filter"	-
+
+# ..... Misc Variables ................................................................................................................
+typedef	^	MiscVarType	DbKi	LastTimeCalled	-	-	-	"last time the CalcOutput/Bladed DLL was called"	s
+typedef	^	MiscVarType	BladedDLLType	dll_data	-	-	-	"data used for Bladed DLL"	-
+typedef	^	MiscVarType	logical	FirstWarn	-	-	-	"Whether or not this is the first warning about the DLL being called without Explicit-Loose coupling."	-
+typedef	^	MiscVarType	DbKi	LastTimeFiltered	-	-	-	"last time the CalcOutput/Bladed DLL was filtered"	s
+typedef	^	MiscVarType	ReKi	xd_BlPitchFilter	{:}	-	-	"blade pitch filter"	-
+typedef	^	MiscVarType	TMD_MiscVarType	NTMD	-	-	-	"TMD module misc vars - nacelle"	-
+typedef	^	MiscVarType	TMD_MiscVarType	TTMD	-	-	-	"TMD module misc vars - tower"	-
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -199,7 +202,9 @@ typedef	^	ParameterType	ReKi	TEC_Xe1	-	-	-	"Thevenin's equivalent stator leakage
 typedef	^	ParameterType	ReKi	GenEff	-	-	-	"Generator efficiency"
 typedef	^	ParameterType	ReKi	BlPitchInit	{:}	-	-	"Initial blade pitch angles"	radians
 typedef	^	ParameterType	ReKi	BlPitchF	{:}	-	-	"Final blade pitch"
+typedef	^	ParameterType	ReKi	PitManRat	{:}	-	-	"Pitch rates at which override pitch maneuvers head toward final pitch angles (does not include sign)"	rad/s
 typedef	^	ParameterType	ReKi	BlAlpha
+typedef	^	ParameterType	ReKi	YawManRat	-	-	-	"Yaw rate at which override yaw maneuver head toward for final yaw angle (does not include sign)"	rad/s
 typedef	^	ParameterType	ReKi	NacYawF	-	-	-	"Final yaw angle after override yaw maneuver"
 typedef	^	ParameterType	ReKi	SpdGenOn	-	-	-	"Generator speed to turn on the generator for a startup"
 typedef	^	ParameterType	DbKi	THSSBrDp	-	-	-	"Time to initiate deployment of the shaft brake"	s
@@ -225,12 +230,12 @@ typedef	^	ParameterType	IntKi	VSContrl	-	-	-	"Variable-speed-generator control s
 typedef	^	ParameterType	IntKi	YCMode	-	-	-	"Yaw control mode"	-
 typedef	^	ParameterType	LOGICAL	GenTiStp	-	-	-	"Stop generator based upon T: time or F: generator power = 0"
 typedef	^	ParameterType	LOGICAL	GenTiStr	-	-	-	"Start generator based upon T: time or F: generator speed"
-typedef	^	ParameterType	ReKi	TBDepISp	{:}	-	-	"Deployment-initiation speed for the tip brakes"	rad/s
 typedef	^	ParameterType	ReKi	VS_Rgn2K	-	-	-	"Generator torque constant in Region 2 for simple variable-speed generator control (HSS side) [used only when VSContrl=1]"	N-m/(rad/s)^2
 typedef	^	ParameterType	ReKi	YawNeut	-	-	-	"Neutral yaw position--yaw spring force is zero at this yaw"	radians
 typedef	^	ParameterType	ReKi	YawSpr	-	-	-	"Nacelle-yaw spring constant"	N-m/rad
 typedef	^	ParameterType	ReKi	YawDamp	-	-	-	"Nacelle-yaw constant"	N-m/(rad/s)
 typedef	^	ParameterType	DbKi	TpBrDT	-	-	-	"Time for tip-brake to reach full deployment once released"	s
+typedef	^	ParameterType	ReKi	TBDepISp	{:}	-	-	"Deployment-initiation speed for the tip brakes"	rad/s
 typedef	^	ParameterType	ReKi	TBDrConN	-	-	-	"Tip-brake drag constant during normal operation, Cd*Area"
 typedef	^	ParameterType	ReKi	TBDrConD	-	-	-	"Tip-brake drag constant during fully-deployed operation, Cd*Area"
 typedef	^	ParameterType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
