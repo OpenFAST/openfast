@@ -6705,7 +6705,8 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
       END IF
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      CALL SrvD_CalcOutput( this_time, SrvD%Input(1), SrvD%p, SrvD%x(this_state), SrvD%xd(this_state), SrvD%z(this_state), SrvD%OtherSt, SrvD%y, ErrStat2, ErrMsg2 )
+      CALL SrvD_CalcOutput( this_time, SrvD%Input(1), SrvD%p, SrvD%x(this_state), SrvD%xd(this_state), SrvD%z(this_state), &
+                             SrvD%OtherSt(this_state), SrvD%y, SrvD%m, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    END IF
@@ -7274,7 +7275,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
 
       InitInData_SrvD%BlPitchInit   = InitOutData_ED%BlPitch
       CALL SrvD_Init( InitInData_SrvD, SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), &
-                      SrvD%OtherSt, SrvD%y, p_FAST%dt_module( MODULE_SrvD ), InitOutData_SrvD, ErrStat2, ErrMsg2 )
+                      SrvD%OtherSt(STATE_CURR), SrvD%y, SrvD%m, p_FAST%dt_module( MODULE_SrvD ), InitOutData_SrvD, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       p_FAST%ModuleInitialized(Module_SrvD) = .TRUE.
 
@@ -8315,10 +8316,8 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, A
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL SrvD_CopyConstrState (SrvD%z( STATE_CURR), SrvD%z( STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( p_FAST%n_substeps( MODULE_SrvD ) > 1 ) THEN
-         CALL SrvD_CopyOtherState( SrvD%OtherSt, SrvD%OtherSt_old, MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL SrvD_CopyOtherState( SrvD%OtherSt(STATE_CURR), SrvD%OtherSt(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-      END IF    
          
    END IF ! CompServo
    
@@ -8827,17 +8826,15 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL SrvD_CopyConstrState (SrvD%z( STATE_CURR), SrvD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            
-      IF ( p_FAST%n_substeps( Module_SrvD ) > 1 ) THEN
-         CALL SrvD_CopyOtherState( SrvD%OtherSt, SrvD%OtherSt_old, MESH_UPDATECOPY, Errstat2, ErrMsg2)
-            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      END IF
-         
+      CALL SrvD_CopyOtherState (SrvD%OtherSt( STATE_CURR), SrvD%OtherSt( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                     
       DO j_ss = 1, p_FAST%n_substeps( Module_SrvD )
          n_t_module = n_t_global*p_FAST%n_substeps( Module_SrvD ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( Module_SrvD ) + t_initial
                
-         CALL SrvD_UpdateStates( t_module, n_t_module, SrvD%Input, SrvD%InputTimes, SrvD%p, SrvD%x(STATE_PRED), SrvD%xd(STATE_PRED), SrvD%z(STATE_PRED), SrvD%OtherSt, ErrStat2, ErrMsg2 )
+         CALL SrvD_UpdateStates( t_module, n_t_module, SrvD%Input, SrvD%InputTimes, SrvD%p, SrvD%x(STATE_PRED), SrvD%xd(STATE_PRED), &
+                 SrvD%z(STATE_PRED), SrvD%OtherSt(STATE_PRED), SrvD%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss
    END IF            
@@ -9108,8 +9105,8 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD
    END IF   
    
    IF ( p_FAST%ModuleInitialized(Module_SrvD) ) THEN
-      CALL SrvD_End( SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), SrvD%OtherSt, &
-                     SrvD%y, ErrStat2, ErrMsg2 )
+      CALL SrvD_End( SrvD%Input(1), SrvD%p, SrvD%x(STATE_CURR), SrvD%xd(STATE_CURR), SrvD%z(STATE_CURR), SrvD%OtherSt(STATE_CURR), &
+                     SrvD%y, SrvD%m, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    END IF
 
@@ -9622,7 +9619,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       IF ( j_pc /= p_FAST%NumCrctn)  THEN          ! Don't copy these on the last loop iteration...
                               
-         ! ED and BD treat "OtherStates" as actual "other states", which are copied like the rest of the states; they are separate from MiscVar 
+         ! ED, SrvD, and BD treat "OtherStates" as actual "other states", which are copied like the rest of the states; they are separate from MiscVar 
          
          IF ( p_FAST%n_substeps( Module_AD14 ) > 1 ) THEN
             CALL AD14_CopyOtherState( AD14%OtherSt_old, AD14%OtherSt, MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -9636,12 +9633,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL InflowWind_CopyOtherState( IfW%OtherSt_old, IfW%OtherSt, MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END IF
-                     
-         IF ( p_FAST%n_substeps( Module_SrvD ) > 1 ) THEN
-            CALL SrvD_CopyOtherState( SrvD%OtherSt_old, SrvD%OtherSt, MESH_UPDATECOPY, Errstat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         END IF
-            
+                                 
          IF ( p_FAST%n_substeps( Module_HD ) > 1 ) THEN
             CALL HydroDyn_CopyOtherState( HD%OtherSt_old, HD%OtherSt, MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -9752,6 +9744,8 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       CALL SrvD_CopyDiscState   (SrvD%xd(STATE_PRED), SrvD%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)  
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL SrvD_CopyConstrState (SrvD%z( STATE_PRED), SrvD%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)      
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL SrvD_CopyOtherState (SrvD%OtherSt( STATE_PRED), SrvD%OtherSt( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)      
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
       
@@ -9988,21 +9982,21 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
       
       ! A hack to pack Bladed-style DLL data
    IF (Turbine%SrvD%p%UseBladedInterface) THEN
-      if (Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) > 0   ) then
+      if (Turbine%SrvD%m%dll_data%avrSWAP( 1) > 0   ) then
             ! store value to be overwritten
-         old_avrSwap1 = Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) 
+         old_avrSwap1 = Turbine%SrvD%m%dll_data%avrSWAP( 1) 
          FileName     = Turbine%SrvD%p%DLL_InFile
             ! overwrite values:
          Turbine%SrvD%p%DLL_InFile = DLLFileName
-         Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
-         Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = -8
-         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt, Turbine%SrvD%OtherSt%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+         Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
+         Turbine%SrvD%m%dll_data%avrSWAP( 1) = -8
+         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt, Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
             ! put values back:
          Turbine%SrvD%p%DLL_InFile = FileName
-         Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(FileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
-         Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = old_avrSwap1
+         Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(FileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
+         Turbine%SrvD%m%dll_data%avrSWAP( 1) = old_avrSwap1
       end if      
    END IF
    
@@ -10172,20 +10166,20 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    
       ! A hack to restore Bladed-style DLL data
    if (Turbine%SrvD%p%UseBladedInterface) then
-      if (Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) > 0   ) then ! this isn't allocated if UseBladedInterface is FALSE
+      if (Turbine%SrvD%m%dll_data%avrSWAP( 1) > 0   ) then ! this isn't allocated if UseBladedInterface is FALSE
             ! store value to be overwritten
-         old_avrSwap1 = Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) 
+         old_avrSwap1 = Turbine%SrvD%m%dll_data%avrSWAP( 1) 
          FileName     = Turbine%SrvD%p%DLL_InFile
             ! overwrite values before calling DLL:
          Turbine%SrvD%p%DLL_InFile = DLLFileName
-         Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
-         Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = -9
-         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%OtherSt%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
+         Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(DLLFileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
+         Turbine%SrvD%m%dll_data%avrSWAP( 1) = -9
+         CALL CallBladedDLL(Turbine%SrvD%Input(1), Turbine%SrvD%p%DLL_Trgt,  Turbine%SrvD%m%dll_data, Turbine%SrvD%p, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                           
             ! put values back:
          Turbine%SrvD%p%DLL_InFile = FileName
-         Turbine%SrvD%OtherSt%dll_data%avrSWAP(50) = REAL( LEN_TRIM(FileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
-         Turbine%SrvD%OtherSt%dll_data%avrSWAP( 1) = old_avrSwap1      
+         Turbine%SrvD%m%dll_data%avrSWAP(50) = REAL( LEN_TRIM(FileName) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
+         Turbine%SrvD%m%dll_data%avrSWAP( 1) = old_avrSwap1      
       end if      
    end if   
    

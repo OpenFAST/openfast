@@ -71,11 +71,10 @@ IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 :ServoDyn
 :TMD
 ECHO ServoDyn and TMD
-SET src_folder=%SrvD_Loc%\..
+SET src_folder=%SrvD_Loc%
 SET dst_folder=%depend_dir%\ServoDyn
-SET list_of_files=%src_folder%/FAST_SourceFiles_SrvD.txt
 
-@CALL :CopyFileList
+@CALL :CopyFileFolder
 
 SET src_folder=%TMD_Loc%\..
 SET list_of_files=%src_folder%/FAST_SourceFiles.txt
