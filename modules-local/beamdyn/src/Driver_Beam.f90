@@ -135,13 +135,6 @@ PROGRAM BeamDyn_Driver_Program
 
 
 
-   do i = 1, 10
-     
-
-   enddo
-   stop
-
-
    CALL CPU_TIME(start)
 
    DO n_t_global = 0, n_t_final
