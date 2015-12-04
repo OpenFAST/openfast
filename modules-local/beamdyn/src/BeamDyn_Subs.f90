@@ -44,8 +44,8 @@ SUBROUTINE BD_GenerateGLL(N, x, w, ErrStat, ErrMsg)
    ! input variables
 
    INTEGER(IntKi), INTENT(IN   ):: N           ! Order of spectral element
-   REAL(BDKi),     INTENT(  OUT):: x(:)        ! location of GLL nodes
-   REAL(BDKi),     INTENT(  OUT):: w(:)        ! quadrature weights at GLL nodes
+   REAL(BDKi),     INTENT(  OUT):: x(n+1)        ! location of GLL nodes
+   REAL(BDKi),     INTENT(  OUT):: w(n+1)        ! quadrature weights at GLL nodes
    INTEGER(IntKi), INTENT(  OUT):: ErrStat     ! Error status of the operation
    CHARACTER(*),   INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -140,8 +140,8 @@ SUBROUTINE BD_CrvMatrixR(cc,Rr,ErrStat,ErrMsg)
 ! This subroutine computes the rotation tensor (RT)
 ! given Wiener-Milenkovic rotation parameters
 !--------------------------------------------------
-   REAL(BdKi),    INTENT(IN   ):: cc(:)
-   REAL(BdKi),    INTENT(  OUT):: Rr(:,:)
+   REAL(BdKi),    INTENT(IN   ):: cc(3)
+   REAL(BdKi),    INTENT(  OUT):: Rr(3,3)
    INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
@@ -177,8 +177,8 @@ END SUBROUTINE BD_CrvMatrixR
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_CrvMatrixH(cc,Hh)
 
-   REAL(BDKi),INTENT(IN) ::cc(:)
-   REAL(BDKi),INTENT(OUT)::Hh(:,:)
+   REAL(BDKi),INTENT(IN) ::cc(3)
+   REAL(BDKi),INTENT(OUT)::Hh(3,3)
 
    REAL(BDKi):: cf1,cf2,cf3,cq,ocq,aa,cb0,cb1,cb2,cb3
 
@@ -219,10 +219,10 @@ SUBROUTINE BD_CrvCompose( rr, pp, qq, flag, ErrStat, ErrMsg)
 !   flag = 3: R(rr) = R(T) (pp) R(T) (qq)
 !************************************************************************************************************
 
-   REAL(BDKi),    INTENT(IN   ):: pp(:)     ! Input rotation 1
-   REAL(BDKi),    INTENT(IN   ):: qq(:)     ! Input rotation 2
+   REAL(BDKi),    INTENT(IN   ):: pp(3)     ! Input rotation 1
+   REAL(BDKi),    INTENT(IN   ):: qq(3)     ! Input rotation 2
    INTEGER       ,INTENT(IN   ):: flag      ! Option flag
-   REAL(BDKi),    INTENT(  OUT):: rr(:)     ! Composed rotation
+   REAL(BDKi),    INTENT(  OUT):: rr(3)     ! Composed rotation
    INTEGER(IntKi),INTENT(  OUT):: ErrStat   ! Error status of the operation
    CHARACTER(*),  INTENT(  OUT):: ErrMsg    ! Error message if ErrStat /= ErrID_None
 
@@ -288,8 +288,8 @@ SUBROUTINE BD_CrvExtractCrv(Rr,cc,ErrStat,ErrMsg)
 ! the rotation matrix
 !--------------------------------------------------
 
-   REAL(BDKi),    INTENT(IN   ):: Rr(:,:)       ! Rotation Matrix
-   REAL(BDKi),    INTENT(  OUT):: cc(:)         ! Crv paramteres
+   REAL(BDKi),    INTENT(IN   ):: Rr(3,3)       ! Rotation Matrix
+   REAL(BDKi),    INTENT(  OUT):: cc(3)         ! Crv paramteres
    INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
    CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
 
@@ -361,8 +361,8 @@ SUBROUTINE BD_GaussPointWeight(n, x, w, ErrStat, ErrMsg)
 !-------------------------------------------------------------------------
 
    INTEGER(IntKi),INTENT(IN   ):: n       ! Number of Gauss point
-   REAL(BDKi),    INTENT(  OUT):: x(:)    ! Gauss point location
-   REAL(BDKi),    INTENT(  OUT):: w(:)    ! Gauss point weight
+   REAL(BDKi),    INTENT(  OUT):: x(n)    ! Gauss point location
+   REAL(BDKi),    INTENT(  OUT):: w(n)    ! Gauss point weight
    INTEGER(IntKi),INTENT(  OUT):: ErrStat ! Error status of the operation
    CHARACTER(*),  INTENT(  OUT):: ErrMsg  ! Error message if ErrStat /=
 
@@ -453,9 +453,9 @@ SUBROUTINE BD_GaussPointWeight(n, x, w, ErrStat, ErrMsg)
 !-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_MotionTensor(RotTen,Pos,MotTen,flag)
 
-   REAL(BDKi),     INTENT(IN   ):: RotTen(:,:)
-   REAL(BDKi),     INTENT(IN   ):: Pos(:)
-   REAL(BDKi),     INTENT(  OUT):: MotTen(:,:)
+   REAL(BDKi),     INTENT(IN   ):: RotTen(3,3)
+   REAL(BDKi),     INTENT(IN   ):: Pos(3)
+   REAL(BDKi),     INTENT(  OUT):: MotTen(6,6)
    INTEGER(IntKi), INTENT(IN   ):: flag            ! 0: Motion Tensor;
                                                    ! 1: Inverse of Motion Tensor
 
