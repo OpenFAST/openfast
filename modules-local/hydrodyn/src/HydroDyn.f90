@@ -1552,13 +1552,6 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
          
          J = p%NumOuts + 1        
          
-         IF (ALLOCATED( p%Waves2%OutParam ) .AND. p%Waves2%NumOuts > 0) THEN
-            DO I=1, p%Waves2%NumOuts
-               y%WriteOutput(J) = y%Waves2%WriteOutput(I)
-               J = J + 1
-            END DO
-         END IF
-
          IF (ALLOCATED( p%WAMIT%OutParam ) .AND. p%WAMIT%NumOuts > 0) THEN
             DO I=1, p%WAMIT%NumOuts
                y%WriteOutput(J) = y%WAMIT%WriteOutput(I)
@@ -1566,6 +1559,13 @@ SUBROUTINE HydroDyn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Er
             END DO
          END IF
          
+         IF (ALLOCATED( p%Waves2%OutParam ) .AND. p%Waves2%NumOuts > 0) THEN
+            DO I=1, p%Waves2%NumOuts
+               y%WriteOutput(J) = y%Waves2%WriteOutput(I)
+               J = J + 1
+            END DO
+         END IF
+
          IF (ALLOCATED( p%WAMIT2%OutParam ) .AND. p%WAMIT2%NumOuts > 0) THEN
             DO I=1, p%WAMIT2%NumOuts
                y%WriteOutput(J) = y%WAMIT2%WriteOutput(I)

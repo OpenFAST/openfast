@@ -689,17 +689,19 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, OtherState, InitOut, E
                J = J + 1
             END DO
          END IF
-         IF ( hasWAMIT2Outs ) THEN
-            DO I=1, p%WAMIT2%NumOuts
-               InitOut%WriteOutputHdr(J) = InitOut%WAMIT2%WriteOutputHdr(I)
-               InitOut%WriteOutputUnt(J) = InitOut%WAMIT2%WriteOutputUnt(I)
-               J = J + 1
-            END DO
-         END IF
+         
          IF ( hasWaves2Outs ) THEN
             DO I=1, p%Waves2%NumOuts
                InitOut%WriteOutputHdr(J) = InitOut%Waves2%WriteOutputHdr(I)
                InitOut%WriteOutputUnt(J) = InitOut%Waves2%WriteOutputUnt(I)
+               J = J + 1
+            END DO
+         END IF
+         
+         IF ( hasWAMIT2Outs ) THEN
+            DO I=1, p%WAMIT2%NumOuts
+               InitOut%WriteOutputHdr(J) = InitOut%WAMIT2%WriteOutputHdr(I)
+               InitOut%WriteOutputUnt(J) = InitOut%WAMIT2%WriteOutputUnt(I)
                J = J + 1
             END DO
          END IF
