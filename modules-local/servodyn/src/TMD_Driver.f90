@@ -20,10 +20,6 @@
 ! limitations under the License.
 !
 !**********************************************************************************************************************************
-! File last committed: $Date: 2015-02-09 22:29:06 -0700 (Mon, 09 Feb 2015) $
-! (File) Revision #: $Rev: 913 $
-! URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/FOA_modules/TMD/Source/TMD_Driver.f90 $
-!**********************************************************************************************************************************
 module read_file_module
 ! this module reads in external nacelle data for testing the module.  
   USE NWTC_Library
@@ -666,7 +662,8 @@ PROGRAM TestTemplate
     TYPE(TMD_DiscreteStateType) :: xd ! Discrete states
     TYPE(TMD_ConstraintStateType) :: z ! Constraint states
     TYPE(TMD_ConstraintStateType) :: Z_residual ! Residual of the constraint state functions (Z)
-    TYPE(TMD_OtherStateType) :: OtherState ! Other/optimization states
+    TYPE(TMD_OtherStateType) :: OtherState ! Other states
+    TYPE(TMD_MiscVarType) :: m ! misc variables
     
     TYPE(TMD_ParameterType) :: p ! Parameters
     TYPE(TMD_InputType) :: u(NumInp) ! System inputs
@@ -710,7 +707,7 @@ PROGRAM TestTemplate
 
     ! Initialize the module
     
-    CALL TMD_Init( InitInData, u(1), p, x, xd, z, OtherState, y, TimeInterval, InitOutData, ErrStat, ErrMsg )
+    CALL TMD_Init( InitInData, u(1), p, x, xd, z, OtherState, y, m, TimeInterval, InitOutData, ErrStat, ErrMsg )
     IF ( ErrStat /= ErrID_None ) THEN ! Check if there was an error and do something about it if necessary
         IF (ErrStat >= AbortErrLev) CALL ProgAbort( ErrMsg )
         CALL WrScr( ErrMsg )
@@ -762,12 +759,12 @@ DO n = 0,NumSteps-1
         
         
         ! Calculate outputs at n
-        CALL TMD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+        CALL TMD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
         IF ( ErrStat /= ErrID_None ) THEN ! Check if there was an error and do something about it if necessary
             CALL WrScr( ErrMsg )
         END IF
         ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
-        CALL TMD_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+        CALL TMD_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
         IF ( ErrStat /= ErrID_None ) THEN ! Check if there was an error and do something about it if necessary
             CALL WrScr( ErrMsg )
         END IF
@@ -877,7 +874,7 @@ CALL TMD_CloseOutputFile(UnOut)
     !...............................................................................................................................
     ! Routine to terminate program execution
     !...............................................................................................................................
-    CALL TMD_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+    CALL TMD_End( u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
     
     IF ( ErrStat /= ErrID_None ) THEN
         CALL WrScr( ErrMsg )
@@ -903,7 +900,7 @@ CALL TMD_CloseOutputFile(UnOut)
     !...............................................................................................................................
     ! Routine to terminate program execution (again)
     !...............................................................................................................................
-    CALL TMD_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+    CALL TMD_End( u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
     IF ( ErrStat /= ErrID_None ) THEN
         CALL WrScr( ErrMsg )
     END IF

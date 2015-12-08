@@ -2,10 +2,6 @@
 ! WLaCava (WGL) and Matt Lackner (MAL)
 ! Tuned Mass Damper Module
 !**********************************************************************************************************************************
-! File last committed: $Date: 2015-11-17 13:48:23 -0700 (Tue, 17 Nov 2015) $
-! (File) Revision #: $Rev: 1175 $
-! URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/FOA_modules/TMD/Source/TMD.f90 $
-!**********************************************************************************************************************************
 MODULE TMD  
 
    USE TMD_Types   
@@ -16,7 +12,7 @@ MODULE TMD
    PRIVATE
 
   
-   TYPE(ProgDesc), PARAMETER            :: TMD_Ver = ProgDesc( 'TMD', 'v1.01.00-wgl', '17-Nov-2015' )
+   TYPE(ProgDesc), PARAMETER            :: TMD_Ver = ProgDesc( 'TMD', 'v1.02.00-sp', '2-Dec-2015' )
 
     
    
@@ -48,47 +44,48 @@ MODULE TMD
                                                     !   states (z)
    
  
-   INTEGER(IntKi), PRIVATE, PARAMETER :: ControlMode_NONE      = 0          ! The (ServoDyn-universal) control code for not using a particular type of control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: ControlMode_NONE      = 0          !< The (TMD-universal) control code for not using a particular type of control
    
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Indept        = 1          ! independent DOFs 
-   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Omni          = 2          ! omni-directional
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Indept        = 1          !< independent DOFs 
+   INTEGER(IntKi), PRIVATE, PARAMETER :: DOFMode_Omni          = 2          !< omni-directional
 
-   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Semi            = 1          ! semi-active control 
-   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Active          = 2          ! active control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Semi            = 1          !< semi-active control 
+   INTEGER(IntKi), PRIVATE, PARAMETER :: CMODE_Active          = 2          !< active control
                                                     
-   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_vel       = 1          ! 1: velocity-based ground hook control;
-   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_invVel    = 2          ! 2: Inverse velocity-based ground hook control
-   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_disp      = 3          ! 3: displacement-based ground hook control
-   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_Ph_FF        = 4          ! 4: Phase difference Algorithm with Friction Force
-   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_Ph_DF        = 5          ! 5: Phase difference Algorithm with Damping Force
+   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_vel       = 1          !< 1: velocity-based ground hook control;
+   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_invVel    = 2          !< 2: Inverse velocity-based ground hook control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_GH_disp      = 3          !< 3: displacement-based ground hook control
+   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_Ph_FF        = 4          !< 4: Phase difference Algorithm with Friction Force
+   INTEGER(IntKi), PRIVATE, PARAMETER :: SA_CMODE_Ph_DF        = 5          !< 5: Phase difference Algorithm with Damping Force
       
                                                     
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
-! This routine is called at the start of the simulation to perform initialization steps. 
-! The parameters are set here and not changed during the simulation.
-! The initial states and initial guess for the input are defined.
+!> This routine is called at the start of the simulation to perform initialization steps. 
+!! The parameters are set here and not changed during the simulation.
+!! The initial states and initial guess for the input are defined.
+SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(TMD_InitInputType),       INTENT(INOUT)  :: InitInp     ! Input data for initialization routine. 
-      TYPE(TMD_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
-      TYPE(TMD_ParameterType),       INTENT(  OUT)  :: p           ! Parameters      
-      TYPE(TMD_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
-      TYPE(TMD_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
-      TYPE(TMD_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-      TYPE(TMD_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states            
-      TYPE(TMD_OutputType),          INTENT(INOUT)  :: y           ! Initial system outputs (outputs are not calculated; 
-                                                                   !   only the output mesh is initialized)
-      REAL(DbKi),                    INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that 
-                                                                   !   (1) TMD_UpdateStates() is called in loose coupling &
-                                                                   !   (2) TMD_UpdateDiscState() is called in tight coupling.
-                                                                   !   Input is the suggested time from the glue code; 
-                                                                   !   Output is the actual coupling interval that will be used 
-                                                                   !   by the glue code.
-      TYPE(TMD_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
-      INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(TMD_InitInputType),       INTENT(INOUT)  :: InitInp     !< Input data for initialization routine. 
+      TYPE(TMD_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
+      TYPE(TMD_ParameterType),       INTENT(  OUT)  :: p           !< Parameters      
+      TYPE(TMD_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
+      TYPE(TMD_DiscreteStateType),   INTENT(  OUT)  :: xd          !< Initial discrete states
+      TYPE(TMD_ConstraintStateType), INTENT(  OUT)  :: z           !< Initial guess of the constraint states
+      TYPE(TMD_OtherStateType),      INTENT(  OUT)  :: OtherState  !< Initial other states            
+      TYPE(TMD_OutputType),          INTENT(INOUT)  :: y           !< Initial system outputs (outputs are not calculated; 
+                                                                   !!   only the output mesh is initialized)
+      TYPE(TMD_MiscVarType),         INTENT(  OUT)  :: m           !< Misc (optimization) variables
+      REAL(DbKi),                    INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that 
+                                                                   !!   (1) TMD_UpdateStates() is called in loose coupling &
+                                                                   !!   (2) TMD_UpdateDiscState() is called in tight coupling.
+                                                                   !!   Input is the suggested time from the glue code; 
+                                                                   !!   Output is the actual coupling interval that will be used 
+                                                                   !!   by the glue code.
+      TYPE(TMD_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
+      INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
  
       
          ! Local variables
@@ -172,13 +169,15 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, 
     z%DummyConstrState = 0
     
     ! Initialize other states here:
-    ! external and stop forces
-    OtherState%F_ext    = 0.0_ReKi    ! whole array initializaton
-    OtherState%F_stop   = 0.0_ReKi    ! whole array initializaton
-    OtherState%F_fr     = 0.0_ReKi    ! whole array initialization
-    OtherState%C_ctrl   = 0.0_ReKi    ! whole array initialization
-    OtherState%C_Brake  = 0.0_ReKi    ! whole array initialization
-    OtherState%F_table  = 0.0_ReKi    ! whole array initialization
+    OtherState%DummyOtherState = 0
+    
+    ! misc variables: external and stop forces
+    m%F_ext    = 0.0_ReKi    ! whole array initializaton
+    m%F_stop   = 0.0_ReKi    ! whole array initializaton
+    m%F_fr     = 0.0_ReKi    ! whole array initialization
+    m%C_ctrl   = 0.0_ReKi    ! whole array initialization
+    m%C_Brake  = 0.0_ReKi    ! whole array initialization
+    m%F_table  = 0.0_ReKi    ! whole array initialization
     
     ! Define initial guess for the system inputs here:
     x%tmd_x(1) = p%X_DSP
@@ -335,19 +334,20 @@ CONTAINS
 !......................................... 
 END SUBROUTINE TMD_Init
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE TMD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-! This routine is called at the end of the simulation.
+!> This routine is called at the end of the simulation.
+SUBROUTINE TMD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(TMD_InputType),           INTENT(INOUT)  :: u           ! System inputs
-      TYPE(TMD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters     
-      TYPE(TMD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
-      TYPE(TMD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
-      TYPE(TMD_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-      TYPE(TMD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states            
-      TYPE(TMD_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-      INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat      ! Error status of the operation
-      CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg       ! Error message if ErrStat /= ErrID_None
+      TYPE(TMD_InputType),           INTENT(INOUT)  :: u           !< System inputs
+      TYPE(TMD_ParameterType),       INTENT(INOUT)  :: p           !< Parameters     
+      TYPE(TMD_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
+      TYPE(TMD_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
+      TYPE(TMD_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
+      TYPE(TMD_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states            
+      TYPE(TMD_OutputType),          INTENT(INOUT)  :: y           !< System outputs
+      TYPE(TMD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc (optimization) variables
+      INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
          ! Initialize ErrStat
@@ -385,6 +385,7 @@ SUBROUTINE TMD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       CALL TMD_DestroyConstrState( z,           ErrStat, ErrMsg )
       CALL TMD_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
          
+      CALL TMD_DestroyMisc(  m,  ErrStat, ErrMsg )
 
          ! Destroy the output data:
          
@@ -392,25 +393,27 @@ SUBROUTINE TMD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
 END SUBROUTINE TMD_End
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE TMD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-! Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
-! Continuous, constraint, and discrete states are updated to values at t + Interval.
+!> Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
+!! Continuous, constraint, and discrete states are updated to values at t + Interval.
+SUBROUTINE TMD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                         INTENT(IN   )  :: t               ! Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   )  :: n               ! Current step of the simulation: t = n*Interval
-      TYPE(TMD_InputType),                INTENT(INOUT)  :: Inputs(:)       ! Inputs at InputTimes
-      REAL(DbKi),                         INTENT(IN   )  :: InputTimes(:)   ! Times in seconds associated with Inputs
-      TYPE(TMD_ParameterType),            INTENT(IN   )  :: p               ! Parameters
-      TYPE(TMD_ContinuousStateType),      INTENT(INOUT)  :: x               ! Input: Continuous states at t;
-                                                                            !   Output: Continuous states at t + Interval
-      TYPE(TMD_DiscreteStateType),        INTENT(INOUT)  :: xd              ! Input: Discrete states at t;
-                                                                            !   Output: Discrete states at t + Interval
-      TYPE(TMD_ConstraintStateType),      INTENT(INOUT)  :: z               ! Input: Constraint states at t;
-                                                                            !   Output: Constraint states at t + Interval
-      TYPE(TMD_OtherStateType),           INTENT(INOUT)  :: OtherState      ! Other/optimization states
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat         ! Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                         INTENT(IN   )  :: t               !< Current simulation time in seconds
+      INTEGER(IntKi),                     INTENT(IN   )  :: n               !< Current step of the simulation: t = n*Interval
+      TYPE(TMD_InputType),                INTENT(INOUT)  :: Inputs(:)       !< Inputs at InputTimes
+      REAL(DbKi),                         INTENT(IN   )  :: InputTimes(:)   !< Times in seconds associated with Inputs
+      TYPE(TMD_ParameterType),            INTENT(IN   )  :: p               !< Parameters
+      TYPE(TMD_ContinuousStateType),      INTENT(INOUT)  :: x               !< Input: Continuous states at t;
+                                                                            !!   Output: Continuous states at t + Interval
+      TYPE(TMD_DiscreteStateType),        INTENT(INOUT)  :: xd              !< Input: Discrete states at t;
+                                                                            !!   Output: Discrete states at t + Interval
+      TYPE(TMD_ConstraintStateType),      INTENT(INOUT)  :: z               !< Input: Constraint states at t;
+                                                                            !!   Output: Constraint states at t + Interval
+      TYPE(TMD_OtherStateType),           INTENT(INOUT)  :: OtherState      !< Input: Other states at t;
+                                                                            !!   Output: Other states at t + Interval
+      TYPE(TMD_MiscVarType),              INTENT(INOUT)  :: m               !< Misc (optimization) variables
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat         !< Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
          ! Local variables
       !INTEGER                                            :: I               ! Generic loop counter
@@ -423,41 +426,40 @@ SUBROUTINE TMD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, 
       !INTEGER                                            :: nTime           ! number of inputs 
 
      
-      CALL TMD_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+      CALL TMD_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       
 END SUBROUTINE TMD_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-!   Define constants k1, k2, k3, and k4 as 
-!        k1 = dt * f(t        , x_t        )
-!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
-!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
-!        k4 = dt * f(t + dt   , x_t + k3   ).
-!   Then the continuous states at t = t + dt are
-!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
-!
-! For details, see:
-! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
-!   Runge-Kutta." §16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
-!   Cambridge University Press, pp. 704-716, 1992.
-!
+!> This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!   Define constants k1, k2, k3, and k4 as 
+!!        k1 = dt * f(t        , x_t        )
+!!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
+!!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
+!!        k4 = dt * f(t + dt   , x_t + k3   ).
+!!   Then the continuous states at t = t + dt are
+!!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
+!!
+!! For details, see:
+!! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
+!!   Runge-Kutta." §16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
+!!   Cambridge University Press, pp. 704-716, 1992.
+SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                    INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                INTENT(IN   )  :: n           ! time step number
-      TYPE(TMD_InputType),           INTENT(INOUT)  :: u(:)        ! Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
-      REAL(DbKi),                    INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(TMD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(TMD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(TMD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(TMD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(TMD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                    INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),                INTENT(IN   )  :: n           !< time step number
+      TYPE(TMD_InputType),           INTENT(INOUT)  :: u(:)        !< Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+      REAL(DbKi),                    INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(TMD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(TMD_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+      TYPE(TMD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(TMD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
+      TYPE(TMD_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states at t
+      TYPE(TMD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc (optimization) variables
+      INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
                                      
       ! local variables
          
@@ -500,7 +502,7 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! find xdot at t
-      CALL TMD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+      CALL TMD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -514,7 +516,7 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! find xdot at t + dt/2
-      CALL TMD_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+      CALL TMD_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -523,7 +525,7 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       x_tmp%tmd_x  = x%tmd_x  + 0.5 * k2%tmd_x
 
       ! find xdot at t + dt/2
-      CALL TMD_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+      CALL TMD_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -537,7 +539,7 @@ SUBROUTINE TMD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
          IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! find xdot at t + dt
-      CALL TMD_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+      CALL TMD_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -606,21 +608,23 @@ CONTAINS
       
 END SUBROUTINE TMD_RK4
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )   
-! Routine for computing outputs, used in both loose and tight coupling.
+!> Routine for computing outputs, used in both loose and tight coupling.
+SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                    INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(TMD_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
-      TYPE(TMD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(TMD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(TMD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(TMD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(TMD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(TMD_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at Time (Input only so that mesh con-
-                                                                        !   nectivity information does not have to be recalculated)
-      INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                    INTENT(IN   )  :: Time        !< Current simulation time in seconds
+      TYPE(TMD_InputType),           INTENT(IN   )  :: u           !< Inputs at Time
+      TYPE(TMD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(TMD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(TMD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(TMD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(TMD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time
+      TYPE(TMD_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at Time (Input only so that mesh con-
+                                                                   !!  nectivity information does not have to be recalculated)
+      TYPE(TMD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc (optimization) variables
+      INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+      
       ! local variables
       REAL(ReKi), dimension(3)                   :: a_G_O
       REAL(ReKi), dimension(3)                   :: a_G_N
@@ -640,6 +644,8 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg 
       Real(ReKi)                                 :: F_z_tmdXY_P_N 
       Real(ReKi)                                 :: F_y_tmdXY_P_N 
       
+      TYPE(TMD_ContinuousStateType)              :: dxdt    ! first time derivative of continuous states
+      
 
       ErrStat = ErrID_None         
       ErrMsg  = "" 
@@ -650,167 +656,82 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg 
       
        ! Compute nacelle and gravitational acceleration in nacelle coordinates 
       a_G_N  = matmul(u%Mesh%Orientation(:,:,1),a_G_O)
-      r_ddot_P_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%TranslationAcc(:,1))
+      r_ddot_P_N  = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%TranslationAcc(:,1))
       omega_N_O_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%RotationVel(:,1))
       alpha_N_O_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%RotationAcc(:,1))
 
-      IF (p%TMD_DOF_MODE == ControlMode_None) THEN
+         ! calculate the derivative, only to get updated values of m, which are used in the equations below
+      CALL TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )      
+      
+      IF (p%TMD_DOF_MODE == ControlMode_None .OR. p%TMD_DOF_MODE == DOFMode_Indept) THEN
+         
+         ! tmd external forces of dependent degrees:
+         F_x_tmdY_P_N = - p%M_Y * (a_G_N(1) - r_ddot_P_N(1) + (alpha_N_O_N(3) - omega_N_O_N(1)*omega_N_O_N(2))*x%tmd_x(3) + 2*omega_N_O_N(3)*x%tmd_x(4))
+         F_z_tmdY_P_N = - p%M_Y * (a_G_N(3) - r_ddot_P_N(3) - (alpha_N_O_N(1) + omega_N_O_N(2)*omega_N_O_N(3))*x%tmd_x(3) - 2*omega_N_O_N(1)*x%tmd_x(4))
+      
+         F_y_tmdX_P_N = - p%M_X *( a_G_N(2) - r_ddot_P_N(2) - (alpha_N_O_N(3) + omega_N_O_N(1)*omega_N_O_N(2))*x%tmd_x(1) - 2*omega_N_O_N(3)*x%tmd_x(2))
+         F_z_tmdX_P_N = - p%M_X * (a_G_N(3) - r_ddot_P_N(3) + (alpha_N_O_N(2) - omega_N_O_N(1)*omega_N_O_N(3))*x%tmd_x(1) + 2*omega_N_O_N(2)*x%tmd_x(2))
+      
+         ! forces in local coordinates
+         F_P_N(1) =  p%K_X * x%tmd_x(1) + m%C_ctrl(1) * x%tmd_x(2) + m%C_Brake(1) * x%tmd_x(2) - m%F_stop(1) - m%F_ext(1) - m%F_fr(1) - F_x_tmdY_P_N + m%F_table(1)
+         F_P_N(2) =  p%K_Y * x%tmd_x(3) + m%C_ctrl(2) * x%tmd_x(4) + m%C_Brake(2) * x%tmd_x(4) - m%F_stop(2) - m%F_ext(2) - m%F_fr(2) - F_y_tmdX_P_N + m%F_table(2)
+         F_P_N(3) = - F_z_tmdX_P_N - F_z_tmdY_P_N
+      
+         ! inertial contributions from mass of TMDs and acceleration of nacelle
+         ! forces in global coordinates
+         y%Mesh%Force(:,1) =  matmul(transpose(u%Mesh%Orientation(:,:,1)),F_P_N)
      
-      ! tmd external forces of dependent degrees:
-      F_x_tmdY_P_N = - p%M_Y * (a_G_N(1) - r_ddot_P_N(1) + (alpha_N_O_N(3) - omega_N_O_N(1)*omega_N_O_N(2))*x%tmd_x(3) + 2*omega_N_O_N(3)*x%tmd_x(4))
-      F_z_tmdY_P_N = - p%M_Y * (a_G_N(3) - r_ddot_P_N(3) - (alpha_N_O_N(1) + omega_N_O_N(2)*omega_N_O_N(3))*x%tmd_x(3) - 2*omega_N_O_N(1)*x%tmd_x(4))
+         ! Moments on nacelle in local coordinates
+         M_P_N(1) =  - F_z_tmdY_P_N  * x%tmd_x(3)
+         M_P_N(2) =    F_z_tmdX_P_N  * x%tmd_x(1)
+         M_P_N(3) = (- F_x_tmdY_P_N) * x%tmd_x(3) + (F_y_tmdX_P_N) * x%tmd_x(1)
       
-      F_y_tmdX_P_N = - p%M_X *( a_G_N(2) - r_ddot_P_N(2) - (alpha_N_O_N(3) + omega_N_O_N(1)*omega_N_O_N(2))*x%tmd_x(1) - 2*omega_N_O_N(3)*x%tmd_x(2))
-      F_z_tmdX_P_N = - p%M_X * (a_G_N(3) - r_ddot_P_N(3) + (alpha_N_O_N(2) - omega_N_O_N(1)*omega_N_O_N(3))*x%tmd_x(1) + 2*omega_N_O_N(2)*x%tmd_x(2))
-      
-      ! forces in local coordinates
-      F_P_N(1) =  p%K_X * x%tmd_x(1) + OtherState%C_ctrl(1) * x%tmd_x(2) + OtherState%C_Brake(1) * x%tmd_x(2) - OtherState%F_stop(1) - OtherState%F_ext(1) - OtherState%F_fr(1) - F_x_tmdY_P_N + OtherState%F_table(1)
-      F_P_N(2) =  p%K_Y * x%tmd_x(3) + OtherState%C_ctrl(2) * x%tmd_x(4) + OtherState%C_Brake(2) * x%tmd_x(4) - OtherState%F_stop(2) - OtherState%F_ext(2) - OtherState%F_fr(2) - F_y_tmdX_P_N + OtherState%F_table(2)
-      F_P_N(3) = - F_z_tmdX_P_N - F_z_tmdY_P_N
-      
-      ! inertial contributions from mass of TMDs and acceleration of nacelle
-      ! forces in global coordinates
-      y%Mesh%Force(:,1) =  matmul(transpose(u%Mesh%Orientation(:,:,1)),F_P_N)
-     
-      ! Moments on nacelle in local coordinates
-      M_P_N(1) = - F_z_tmdY_P_N * x%tmd_x(3)
-      M_P_N(2) =  F_z_tmdX_P_N * x%tmd_x(1)
-      M_P_N(3) = (- F_x_tmdY_P_N) * x%tmd_x(3) + (F_y_tmdX_P_N) * x%tmd_x(1)
-      
-      ! moments in global coordinates
-      y%Mesh%Moment(:,1) = matmul(transpose(u%Mesh%Orientation(:,:,1)),M_P_N)
-      
-   END IF
+         ! moments in global coordinates
+         y%Mesh%Moment(:,1) = matmul(transpose(u%Mesh%Orientation(:,:,1)),M_P_N)
+           
+      ELSE IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
 
+         ! tmd external forces of dependent degrees:
+         F_x_tmdXY_P_N = 0
+         F_y_tmdXY_P_N = 0
+         F_z_tmdXY_P_N = - p%M_XY * (a_G_N(3) - r_ddot_P_N(3) - (alpha_N_O_N(1) + omega_N_O_N(2)*omega_N_O_N(3))*x%tmd_x(3) + (alpha_N_O_N(2) - omega_N_O_N(1)*omega_N_O_N(3))*x%tmd_x(1) - 2*omega_N_O_N(1)*x%tmd_x(4) + 2*omega_N_O_N(2)*x%tmd_x(2))
       
-      IF (p%TMD_DOF_MODE == DOFMode_Indept .AND. p%TMD_X_DOF) THEN
+         ! forces in local coordinates
+         F_P_N(1) =  p%K_X * x%tmd_x(1) + m%C_ctrl(1) * x%tmd_x(2) + m%C_Brake(1) * x%tmd_x(2) - m%F_stop(1) - m%F_ext(1) - m%F_fr(1) - F_x_tmdXY_P_N + m%F_table(1)
+         F_P_N(2) =  p%K_Y * x%tmd_x(3) + m%C_ctrl(2) * x%tmd_x(4) + m%C_Brake(2) * x%tmd_x(4) - m%F_stop(2) - m%F_ext(2) - m%F_fr(2) - F_y_tmdXY_P_N + m%F_table(2)
+         F_P_N(3) = - F_z_tmdXY_P_N
+      
+         ! inertial contributions from mass of TMDs and acceleration of nacelle
+         ! forces in global coordinates
+         y%Mesh%Force(:,1) =  matmul(transpose(u%Mesh%Orientation(:,:,1)),F_P_N)
      
-      ! tmd external forces of dependent degrees:
-      F_x_tmdY_P_N = - p%M_Y * (a_G_N(1) - r_ddot_P_N(1) + (alpha_N_O_N(3) - omega_N_O_N(1)*omega_N_O_N(2))*x%tmd_x(3) + 2*omega_N_O_N(3)*x%tmd_x(4))
-      F_z_tmdY_P_N = - p%M_Y * (a_G_N(3) - r_ddot_P_N(3) - (alpha_N_O_N(1) + omega_N_O_N(2)*omega_N_O_N(3))*x%tmd_x(3) - 2*omega_N_O_N(1)*x%tmd_x(4))
+         ! Moments on nacelle in local coordinates
+         M_P_N(1) = - F_z_tmdXY_P_N * x%tmd_x(3)
+         M_P_N(2) =   F_z_tmdXY_P_N * x%tmd_x(1)
+         M_P_N(3) = (- F_x_tmdXY_P_N) * x%tmd_x(3) + (F_y_tmdXY_P_N) * x%tmd_x(1)
       
-      F_y_tmdX_P_N = - p%M_X *( a_G_N(2) - r_ddot_P_N(2) - (alpha_N_O_N(3) + omega_N_O_N(1)*omega_N_O_N(2))*x%tmd_x(1) - 2*omega_N_O_N(3)*x%tmd_x(2))
-      F_z_tmdX_P_N = - p%M_X * (a_G_N(3) - r_ddot_P_N(3) + (alpha_N_O_N(2) - omega_N_O_N(1)*omega_N_O_N(3))*x%tmd_x(1) + 2*omega_N_O_N(2)*x%tmd_x(2))
-      
-      ! forces in local coordinates
-      F_P_N(1) =  p%K_X * x%tmd_x(1) + OtherState%C_ctrl(1) * x%tmd_x(2) + OtherState%C_Brake(1) * x%tmd_x(2) - OtherState%F_stop(1) - OtherState%F_ext(1) - OtherState%F_fr(1) - F_x_tmdY_P_N + OtherState%F_table(1)
-      F_P_N(2) =  p%K_Y * x%tmd_x(3) + OtherState%C_ctrl(2) * x%tmd_x(4) + OtherState%C_Brake(2) * x%tmd_x(4) - OtherState%F_stop(2) - OtherState%F_ext(2) - OtherState%F_fr(2) - F_y_tmdX_P_N + OtherState%F_table(2)
-      F_P_N(3) = - F_z_tmdX_P_N - F_z_tmdY_P_N
-      
-      ! inertial contributions from mass of TMDs and acceleration of nacelle
-      ! forces in global coordinates
-      y%Mesh%Force(:,1) =  matmul(transpose(u%Mesh%Orientation(:,:,1)),F_P_N)
-     
-      ! Moments on nacelle in local coordinates
-      M_P_N(1) = - F_z_tmdY_P_N * x%tmd_x(3)
-      M_P_N(2) =  F_z_tmdX_P_N * x%tmd_x(1)
-      M_P_N(3) = (- F_x_tmdY_P_N) * x%tmd_x(3) + (F_y_tmdX_P_N) * x%tmd_x(1)
-      
-      ! moments in global coordinates
-      y%Mesh%Moment(:,1) = matmul(transpose(u%Mesh%Orientation(:,:,1)),M_P_N)
-     
-      END IF
-
-      IF (p%TMD_DOF_MODE == DOFMode_Indept .AND. p%TMD_Y_DOF) THEN
-     
-      ! tmd external forces of dependent degrees:
-      F_x_tmdY_P_N = - p%M_Y * (a_G_N(1) - r_ddot_P_N(1) + (alpha_N_O_N(3) - omega_N_O_N(1)*omega_N_O_N(2))*x%tmd_x(3) + 2*omega_N_O_N(3)*x%tmd_x(4))
-      F_z_tmdY_P_N = - p%M_Y * (a_G_N(3) - r_ddot_P_N(3) - (alpha_N_O_N(1) + omega_N_O_N(2)*omega_N_O_N(3))*x%tmd_x(3) - 2*omega_N_O_N(1)*x%tmd_x(4))
-      
-      F_y_tmdX_P_N = - p%M_X *( a_G_N(2) - r_ddot_P_N(2) - (alpha_N_O_N(3) + omega_N_O_N(1)*omega_N_O_N(2))*x%tmd_x(1) - 2*omega_N_O_N(3)*x%tmd_x(2))
-      F_z_tmdX_P_N = - p%M_X * (a_G_N(3) - r_ddot_P_N(3) + (alpha_N_O_N(2) - omega_N_O_N(1)*omega_N_O_N(3))*x%tmd_x(1) + 2*omega_N_O_N(2)*x%tmd_x(2))
-      
-      ! forces in local coordinates
-      F_P_N(1) =  p%K_X * x%tmd_x(1) + OtherState%C_ctrl(1) * x%tmd_x(2) + OtherState%C_Brake(1) * x%tmd_x(2) - OtherState%F_stop(1) - OtherState%F_ext(1) - OtherState%F_fr(1) - F_x_tmdY_P_N + OtherState%F_table(1)
-      F_P_N(2) =  p%K_Y * x%tmd_x(3) + OtherState%C_ctrl(2) * x%tmd_x(4) + OtherState%C_Brake(2) * x%tmd_x(4) - OtherState%F_stop(2) - OtherState%F_ext(2) - OtherState%F_fr(2) - F_y_tmdX_P_N + OtherState%F_table(2)
-      F_P_N(3) = - F_z_tmdX_P_N - F_z_tmdY_P_N
-      
-      ! inertial contributions from mass of TMDs and acceleration of nacelle
-      ! forces in global coordinates
-      y%Mesh%Force(:,1) =  matmul(transpose(u%Mesh%Orientation(:,:,1)),F_P_N)
-     
-      ! Moments on nacelle in local coordinates
-      M_P_N(1) = - F_z_tmdY_P_N * x%tmd_x(3)
-      M_P_N(2) =  F_z_tmdX_P_N * x%tmd_x(1)
-      M_P_N(3) = (- F_x_tmdY_P_N) * x%tmd_x(3) + (F_y_tmdX_P_N) * x%tmd_x(1)
-      
-      ! moments in global coordinates
-      y%Mesh%Moment(:,1) = matmul(transpose(u%Mesh%Orientation(:,:,1)),M_P_N)
-     
-      END IF
-
-      IF (p%TMD_DOF_MODE == DOFMode_Indept .AND. p%TMD_X_DOF .AND. p%TMD_Y_DOF) THEN
-     
-      ! tmd external forces of dependent degrees:
-      F_x_tmdY_P_N = - p%M_Y * (a_G_N(1) - r_ddot_P_N(1) + (alpha_N_O_N(3) - omega_N_O_N(1)*omega_N_O_N(2))*x%tmd_x(3) + 2*omega_N_O_N(3)*x%tmd_x(4))
-      F_z_tmdY_P_N = - p%M_Y * (a_G_N(3) - r_ddot_P_N(3) - (alpha_N_O_N(1) + omega_N_O_N(2)*omega_N_O_N(3))*x%tmd_x(3) - 2*omega_N_O_N(1)*x%tmd_x(4))
-      
-      F_y_tmdX_P_N = - p%M_X *( a_G_N(2) - r_ddot_P_N(2) - (alpha_N_O_N(3) + omega_N_O_N(1)*omega_N_O_N(2))*x%tmd_x(1) - 2*omega_N_O_N(3)*x%tmd_x(2))
-      F_z_tmdX_P_N = - p%M_X * (a_G_N(3) - r_ddot_P_N(3) + (alpha_N_O_N(2) - omega_N_O_N(1)*omega_N_O_N(3))*x%tmd_x(1) + 2*omega_N_O_N(2)*x%tmd_x(2))
-      
-      ! forces in local coordinates
-      F_P_N(1) =  p%K_X * x%tmd_x(1) + OtherState%C_ctrl(1) * x%tmd_x(2) + OtherState%C_Brake(1) * x%tmd_x(2) - OtherState%F_stop(1) - OtherState%F_ext(1) - OtherState%F_fr(1) - F_x_tmdY_P_N + OtherState%F_table(1)
-      F_P_N(2) =  p%K_Y * x%tmd_x(3) + OtherState%C_ctrl(2) * x%tmd_x(4) + OtherState%C_Brake(2) * x%tmd_x(4) - OtherState%F_stop(2) - OtherState%F_ext(2) - OtherState%F_fr(2) - F_y_tmdX_P_N + OtherState%F_table(2)
-      F_P_N(3) = - F_z_tmdX_P_N - F_z_tmdY_P_N
-      
-      ! inertial contributions from mass of TMDs and acceleration of nacelle
-      ! forces in global coordinates
-      y%Mesh%Force(:,1) =  matmul(transpose(u%Mesh%Orientation(:,:,1)),F_P_N)
-     
-      ! Moments on nacelle in local coordinates
-      M_P_N(1) = - F_z_tmdY_P_N * x%tmd_x(3)
-      M_P_N(2) =  F_z_tmdX_P_N * x%tmd_x(1)
-      M_P_N(3) = (- F_x_tmdY_P_N) * x%tmd_x(3) + (F_y_tmdX_P_N) * x%tmd_x(1)
-      
-      ! moments in global coordinates
-      y%Mesh%Moment(:,1) = matmul(transpose(u%Mesh%Orientation(:,:,1)),M_P_N)
-     
-   END IF
-
-      
-      
-      IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
-
-      ! tmd external forces of dependent degrees:
-      F_x_tmdXY_P_N = 0
-      F_y_tmdXY_P_N  = 0
-      F_z_tmdXY_P_N = - p%M_XY * (a_G_N(3) - r_ddot_P_N(3) - (alpha_N_O_N(1) + omega_N_O_N(2)*omega_N_O_N(3))*x%tmd_x(3) + (alpha_N_O_N(2) - omega_N_O_N(1)*omega_N_O_N(3))*x%tmd_x(1) - 2*omega_N_O_N(1)*x%tmd_x(4) + 2*omega_N_O_N(2)*x%tmd_x(2))
-      
-      ! forces in local coordinates
-      F_P_N(1) =  p%K_X * x%tmd_x(1) + OtherState%C_ctrl(1) * x%tmd_x(2) + OtherState%C_Brake(1) * x%tmd_x(2) - OtherState%F_stop(1) - OtherState%F_ext(1) - OtherState%F_fr(1) - F_x_tmdXY_P_N + OtherState%F_table(1)
-      F_P_N(2) =  p%K_Y * x%tmd_x(3) + OtherState%C_ctrl(2) * x%tmd_x(4) + OtherState%C_Brake(2) * x%tmd_x(4) - OtherState%F_stop(2) - OtherState%F_ext(2) - OtherState%F_fr(2) - F_y_tmdXY_P_N + OtherState%F_table(2)
-      F_P_N(3) = - F_z_tmdXY_P_N
-      
-      ! inertial contributions from mass of TMDs and acceleration of nacelle
-      ! forces in global coordinates
-      y%Mesh%Force(:,1) =  matmul(transpose(u%Mesh%Orientation(:,:,1)),F_P_N)
-     
-      ! Moments on nacelle in local coordinates
-      M_P_N(1) = - F_z_tmdXY_P_N * x%tmd_x(3)
-      M_P_N(2) =  F_z_tmdXY_P_N * x%tmd_x(1)
-      M_P_N(3) = (- F_x_tmdXY_P_N) * x%tmd_x(3) + (F_y_tmdXY_P_N) * x%tmd_x(1)
-      
-      ! moments in global coordinates
-      y%Mesh%Moment(:,1) = matmul(transpose(u%Mesh%Orientation(:,:,1)),M_P_N)
+         ! moments in global coordinates
+         y%Mesh%Moment(:,1) = matmul(transpose(u%Mesh%Orientation(:,:,1)),M_P_N)
 
       END IF
      
 END SUBROUTINE TMD_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )  
-! Tight coupling routine for computing derivatives of continuous states
+!> Tight coupling routine for computing derivatives of continuous states
+SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )  
 !..................................................................................................................................
    
-      REAL(DbKi),                    INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(TMD_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                    
-      TYPE(TMD_ParameterType),       INTENT(IN   )  :: p           ! Parameters                             
-      TYPE(TMD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(TMD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(TMD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(TMD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
-      TYPE(TMD_ContinuousStateType), INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at Time
-      INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     ! Error status of the operation     
-      CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                    INTENT(IN   )  :: Time        !< Current simulation time in seconds
+      TYPE(TMD_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                    
+      TYPE(TMD_ParameterType),       INTENT(IN   )  :: p           !< Parameters                             
+      TYPE(TMD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(TMD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(TMD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(TMD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time
+      TYPE(TMD_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at Time
+      TYPE(TMD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc (optimization) variables
+      INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     !< Error status of the operation     
+      CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
          ! local variables
       REAL(ReKi), dimension(3)                   :: a_G_O
       REAL(ReKi), dimension(3)                   :: a_G_N
@@ -827,15 +748,17 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrSt
       ErrStat = ErrID_None         
       ErrMsg  = ""               
       
+         ! compute stop force (m%F_stop) 
       IF (p%Use_F_TBL) THEN
-         OtherState%F_stop = (/0,0/)
+         m%F_stop = 0.0_ReKi
       ELSE
-         CALL TMD_CalcStopForce(x,p,OtherState%F_stop)
+         CALL TMD_CalcStopForce(x,p,m%F_stop)
       END IF
       
-      ! Compute stiffness
+      ! Compute stiffness 
       IF (p%Use_F_TBL) THEN ! use stiffness table
-         CALL SpringForceExtrapInterp(x,p,OtherState%F_table)
+         CALL SpringForceExtrapInterp(x,p,m%F_table)
+         K = 0.0_ReKi
       ELSE ! use preset values
          K(1) = p%K_X
          K(2) = p%K_Y
@@ -847,385 +770,399 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrSt
       a_G_O (3) = -p%Gravity
       
        ! Compute nacelle and gravitational acceleration in nacelle coordinates 
-      a_G_N  = matmul(u%Mesh%Orientation(:,:,1),a_G_O)
-      rddot_N_N =  matmul(u%Mesh%Orientation(:,:,1),u%Mesh%TranslationAcc(:,1))    
+      a_G_N     = matmul(u%Mesh%Orientation(:,:,1),a_G_O)
+      rddot_N_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%TranslationAcc(:,1))    
       omega_P_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%RotationVel(:,1)) 
       alpha_P_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%RotationAcc(:,1))
 
+      ! NOTE: m%F_stop and m%F_table are calculated earlier
       IF (p%TMD_DOF_MODE == ControlMode_None) THEN
-      ! Compute inputs
-      B_X = - rddot_N_N(1) + a_G_N(1) + 1 / p%M_X * ( OtherState%F_ext(1) + OtherState%F_stop(1) - OtherState%F_table(1) )
-      B_Y = - rddot_N_N(2) + a_G_N(2) + 1 / p%M_Y * ( OtherState%F_ext(2) + OtherState%F_stop(2) - OtherState%F_table(2) )
-      END IF
-      IF (p%TMD_DOF_MODE == DOFMode_Indept) THEN
-      ! Compute inputs
-      B_X = - rddot_N_N(1) + a_G_N(1) + 1 / p%M_X * ( OtherState%F_ext(1) + OtherState%F_stop(1) - OtherState%F_table(1) )
-      B_Y = - rddot_N_N(2) + a_G_N(2) + 1 / p%M_Y * ( OtherState%F_ext(2) + OtherState%F_stop(2) - OtherState%F_table(2) )
-      END IF
-      
-      IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
-      B_X = - rddot_N_N(1) + a_G_N(1) + 1 / p%M_XY * ( OtherState%F_ext(1) + OtherState%F_stop(1) - OtherState%F_table(1) )
-      B_Y = - rddot_N_N(2) + a_G_N(2) + 1 / p%M_XY * ( OtherState%F_ext(2) + OtherState%F_stop(2) - OtherState%F_table(2) )
+         ! Compute inputs
+         B_X = - rddot_N_N(1) + a_G_N(1) + 1 / p%M_X * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
+         B_Y = - rddot_N_N(2) + a_G_N(2) + 1 / p%M_Y * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2) )
+      ELSE IF (p%TMD_DOF_MODE == DOFMode_Indept) THEN
+         ! Compute inputs
+         B_X = - rddot_N_N(1) + a_G_N(1) + 1 / p%M_X * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
+         B_Y = - rddot_N_N(2) + a_G_N(2) + 1 / p%M_Y * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2) )
+      ELSE IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
+         B_X = - rddot_N_N(1) + a_G_N(1) + 1 / p%M_XY * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
+         B_Y = - rddot_N_N(2) + a_G_N(2) + 1 / p%M_XY * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2) )
       END IF
       
-
-       IF (p%TMD_DOF_MODE == ControlMode_None) THEN
-            dxdt%tmd_x(1) = 0
-            dxdt%tmd_x(2) = 0
-            dxdt%tmd_x(3) = 0
-            dxdt%tmd_x(4) = 0
-       END IF
-     
-       IF (p%TMD_DOF_MODE == DOFMode_Indept .AND. p%TMD_X_DOF) THEN
-            dxdt%tmd_x(1) = x%tmd_x(2)
-            dxdt%tmd_x(2) = (omega_P_N(2)**2 + omega_P_N(3)**2 - K(1) / p%M_X) * x%tmd_x(1) - ( OtherState%C_ctrl(1)/p%M_X ) * x%tmd_x(2) - ( OtherState%C_Brake(1)/p%M_X ) * x%tmd_x(2) + B_X + 1 / p%M_X * ( OtherState%F_fr(1) )
-       ELSE
-            dxdt%tmd_x(1) =0
-            dxdt%tmd_x(2) =0
-       END IF
-       IF (p%TMD_DOF_MODE == DOFMode_Indept .AND. p%TMD_Y_DOF) THEN
-            dxdt%tmd_x(3) = x%tmd_x(4)
-            dxdt%tmd_x(4) = (omega_P_N(1)**2 + omega_P_N(3)**2 - K(2) / p%M_Y) * x%tmd_x(3) - ( OtherState%C_ctrl(2)/p%M_Y ) * x%tmd_x(4) - ( OtherState%C_Brake(2)/p%M_Y ) * x%tmd_x(4) + B_Y + 1 / p%M_Y * ( OtherState%F_fr(2) )
-       ELSE
-            dxdt%tmd_x(3) =0
-            dxdt%tmd_x(4) =0
-       END IF
-
-       IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
-            dxdt%tmd_x(1) = x%tmd_x(2)
-            dxdt%tmd_x(2) = (omega_P_N(2)**2 + omega_P_N(3)**2 - K(1) / p%M_XY) * x%tmd_x(1) - ( OtherState%C_ctrl(1)/p%M_XY ) * x%tmd_x(2) - ( OtherState%C_Brake(1)/p%M_XY ) * x%tmd_x(2) + B_X + 1 / p%M_XY * ( OtherState%F_fr(1) ) - ( omega_P_N(1)*omega_P_N(2) - alpha_P_N(3) ) * x%tmd_x(3) + 2 * omega_P_N(3) * x%tmd_x(4)
-            dxdt%tmd_x(3) = x%tmd_x(4)
-            dxdt%tmd_x(4) = (omega_P_N(1)**2 + omega_P_N(3)**2 - K(2) / p%M_XY) * x%tmd_x(3) - ( OtherState%C_ctrl(2)/p%M_XY ) * x%tmd_x(4) - ( OtherState%C_Brake(2)/p%M_XY ) * x%tmd_x(4) + B_Y + 1 / p%M_XY * ( OtherState%F_fr(2) ) - ( omega_P_N(1)*omega_P_N(2) + alpha_P_N(3) ) * x%tmd_x(1) - 2 * omega_P_N(3) * x%tmd_x(2)
+            
+      ! Compute the first time derivatives, dxdt%tmd_x(1) and dxdt%tmd_x(3), of the continuous states,:
+         ! Compute elements 1 and 3 of dxdt%tmd_x so that we can compute m%C_ctrl,m%C_Brake, and m%F_fr in TMD_GroundHookDamp if necessary
+      IF (p%TMD_DOF_MODE == ControlMode_None) THEN
          
-       END IF
-   
-       ! compute damping
+         dxdt%tmd_x = 0.0_ReKi ! Whole array 
+         
+      ELSE
+                  
+         IF (p%TMD_DOF_MODE == DOFMode_Indept .AND. .NOT. p%TMD_X_DOF) THEN
+            dxdt%tmd_x(1) = 0.0_ReKi
+         ELSE
+            dxdt%tmd_x(1) = x%tmd_x(2)
+         END IF
+         
+         IF (p%TMD_DOF_MODE == DOFMode_Indept .AND. .NOT. p%TMD_Y_DOF) THEN
+            dxdt%tmd_x(3) = 0.0_ReKi
+         ELSE
+            dxdt%tmd_x(3) = x%tmd_x(4)
+         END IF
+         
+      END IF
+      
+      
+      ! compute damping for dxdt%tmd_x(2) and dxdt%tmd_x(4)
       IF (p%TMD_CMODE == ControlMode_None) THEN
-         OtherState%C_ctrl(1) = p%C_X
-         OtherState%C_ctrl(2) = p%C_Y
+         m%C_ctrl(1) = p%C_X
+         m%C_ctrl(2) = p%C_Y
+         
+         m%C_Brake = 0.0_ReKi
+         m%F_fr    = 0.0_ReKi
       ELSE IF (p%TMD_CMODE == CMODE_Semi) THEN ! ground hook control
-         CALL TMD_GroundHookDamp(x,u,p,OtherState%C_ctrl,OtherState%C_Brake,OtherState%F_fr)
+         CALL TMD_GroundHookDamp(dxdt,x,u,p,m%C_ctrl,m%C_Brake,m%F_fr)
       END IF
-
-  
-CONTAINS
-   SUBROUTINE TMD_CalcStopForce(x,p,F_stop)
-      TYPE(TMD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(TMD_ParameterType),       INTENT(IN   )  :: p           ! Parameters   
-      Real(ReKi), dimension(2), INTENT(INOUT)       :: F_stop      !stop forces
-   ! local variables
-      Real(ReKi), dimension(2)                      :: F_SK      !stop spring forces
-      Real(ReKi), dimension(2)                      :: F_SD      !stop damping forces
-      INTEGER(IntKi)                                :: i ! counter
-      INTEGER(IntKi)                                :: j = 1! counter
-      j=1
-      DO i=1,2
-         IF (j < 5) THEN
-            IF ( x%tmd_x(j) > p%P_SP(i) ) THEN
-               F_SK(i) = p%K_S(i) *( p%P_SP(i) - x%tmd_x(j)  )
-            ELSEIF ( x%tmd_x(j) < p%N_SP(i) ) THEN
-               F_SK(i) = p%K_S(i) * ( p%N_SP(i) - x%tmd_x(j) )
-            ELSE
-               F_SK(i)  = 0.0_ReKi
-            ENDIF
-            IF ( (x%tmd_x(j) > p%P_SP(i)) .AND. (x%tmd_x(j+1) > 0) ) THEN
-               F_SD(i) = -p%C_S(i) *( x%tmd_x(j+1)  )
-            ELSEIF ( (x%tmd_x(j) < p%N_SP(i)) .AND. (x%tmd_x(j+1) < 0) ) THEN
-               F_SD(i) = -p%C_S(i) *( x%tmd_x(j+1)  )
-            ELSE
-               F_SD(i)  = 0.0_ReKi
-            ENDIF
-            F_stop(i) = F_SK(i) + F_SD(i)
-            j = j+2
-         END IF
-   END DO
-   END SUBROUTINE TMD_CalcStopForce
-   
-   SUBROUTINE TMD_GroundHookDamp(x,u,p,C_ctrl,C_Brake,F_fr)
-      TYPE(TMD_ContinuousStateType),         INTENT(IN   )     :: x           ! Continuous states at Time
-      TYPE(TMD_InputType),                   INTENT(IN   )     :: u           ! Inputs at Time 
-      TYPE(TMD_ParameterType),               INTENT(IN)        :: p           ! The module's parameter data
-      REAL(ReKi), dimension(2),              INTENT(INOUT)     :: C_ctrl      ! extrapolated/interpolated stiffness values
-      REAL(ReKi), dimension(2),              INTENT(INOUT)     :: C_Brake     ! extrapolated/interpolated stiffness values
-      REAL(ReKi), dimension(2),              INTENT(INOUT)     :: F_fr        ! Friction forces
       
-      IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_GH_vel) THEN ! velocity-based ground hook control with high damping for braking
       
-         !X
-         IF (dxdt%tmd_x(1) * u%Mesh%TranslationVel(1,1) <= 0 ) THEN
-            OtherState%C_ctrl(1) = p%TMD_X_C_HIGH
-         ELSE
-            OtherState%C_ctrl(1) = p%TMD_X_C_LOW
-         END IF
-         
-         !Brake X
-         IF ( (x%tmd_x(1) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2) > 0) ) THEN
-            OtherState%C_Brake(1) = p%TMD_X_C_BRAKE
-         ELSE IF ( (x%tmd_x(1) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2) < 0) ) THEN
-            OtherState%C_Brake(1) = p%TMD_X_C_BRAKE
-         ELSE
-            OtherState%C_Brake(1) = 0
-         END IF
-         
-         
-         ! Y
-         IF (dxdt%tmd_x(3) * u%Mesh%TranslationVel(2,1) <= 0 ) THEN
-            OtherState%C_ctrl(2) = p%TMD_Y_C_HIGH
-         ELSE
-            OtherState%C_ctrl(2) = p%TMD_Y_C_LOW
-         END IF
+      ! Compute the first time derivatives, dxdt%tmd_x(2) and dxdt%tmd_x(4), of the continuous states,:
+       IF (p%TMD_DOF_MODE == DOFMode_Indept) THEN
+     
+          IF (p%TMD_X_DOF) THEN
+               dxdt%tmd_x(2) = (omega_P_N(2)**2 + omega_P_N(3)**2 - K(1) / p%M_X) * x%tmd_x(1) - ( m%C_ctrl(1)/p%M_X ) * x%tmd_x(2) - ( m%C_Brake(1)/p%M_X ) * x%tmd_x(2) + B_X + m%F_fr(1) / p%M_X
+          ELSE
+               dxdt%tmd_x(2) = 0.0_ReKi
+          END IF
+          IF (p%TMD_Y_DOF) THEN
+               dxdt%tmd_x(4) = (omega_P_N(1)**2 + omega_P_N(3)**2 - K(2) / p%M_Y) * x%tmd_x(3) - ( m%C_ctrl(2)/p%M_Y ) * x%tmd_x(4) - ( m%C_Brake(2)/p%M_Y ) * x%tmd_x(4) + B_Y + m%F_fr(2) / p%M_Y 
+          ELSE
+               dxdt%tmd_x(4) = 0.0_ReKi
+          END IF
 
-         !Brake Y
-         IF ( (x%tmd_x(3) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4) > 0) ) THEN
-            OtherState%C_Brake(2) = p%TMD_Y_C_BRAKE
-         ELSE IF ( (x%tmd_x(3) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4) < 0) ) THEN
-            OtherState%C_Brake(2) = p%TMD_Y_C_BRAKE
-         ELSE
-            OtherState%C_Brake(2) = 0
-         END IF
-         
-      ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_GH_invVel) THEN ! Inverse velocity-based ground hook control with high damping for braking
+       ELSE IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
+          ! Compute the first time derivatives of the continuous states of Omnidirectional TMD mode by sm 2015-0904 
+            dxdt%tmd_x(2) = (omega_P_N(2)**2 + omega_P_N(3)**2 - K(1) / p%M_XY) * x%tmd_x(1) - ( m%C_ctrl(1)/p%M_XY ) * x%tmd_x(2) - ( m%C_Brake(1)/p%M_XY ) * x%tmd_x(2) + B_X + 1 / p%M_XY * ( m%F_fr(1) ) - ( omega_P_N(1)*omega_P_N(2) - alpha_P_N(3) ) * x%tmd_x(3) + 2 * omega_P_N(3) * x%tmd_x(4)
+            dxdt%tmd_x(4) = (omega_P_N(1)**2 + omega_P_N(3)**2 - K(2) / p%M_XY) * x%tmd_x(3) - ( m%C_ctrl(2)/p%M_XY ) * x%tmd_x(4) - ( m%C_Brake(2)/p%M_XY ) * x%tmd_x(4) + B_Y + 1 / p%M_XY * ( m%F_fr(2) ) - ( omega_P_N(1)*omega_P_N(2) + alpha_P_N(3) ) * x%tmd_x(1) - 2 * omega_P_N(3) * x%tmd_x(2)         
+       END IF
       
-         ! X
-         IF (dxdt%tmd_x(1) * u%Mesh%TranslationVel(1,1) >= 0 ) THEN
-            OtherState%C_ctrl(1) = p%TMD_X_C_HIGH
-         ELSE
-            OtherState%C_ctrl(1) = p%TMD_X_C_LOW
-         END IF
-
-         !Brake X
-         IF ( (x%tmd_x(1) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2) > 0) ) THEN
-            OtherState%C_Brake(1) = p%TMD_X_C_BRAKE
-         ELSE IF ( (x%tmd_x(1) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2) < 0) ) THEN
-            OtherState%C_Brake(1) = p%TMD_X_C_BRAKE
-         ELSE
-            OtherState%C_Brake(1) = 0
-         END IF
-   
-         ! Y
-         IF (dxdt%tmd_x(3) * u%Mesh%TranslationVel(2,1) >= 0 ) THEN
-            OtherState%C_ctrl(2) = p%TMD_Y_C_HIGH
-         ELSE
-            OtherState%C_ctrl(2) = p%TMD_Y_C_LOW
-         END IF
-
-         !Brake Y
-         IF ( (x%tmd_x(3) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4) > 0) ) THEN
-            OtherState%C_Brake(2) = p%TMD_Y_C_BRAKE
-         ELSE IF ( (x%tmd_x(3) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4) < 0) ) THEN
-            OtherState%C_Brake(2) = p%TMD_Y_C_BRAKE
-         ELSE
-            OtherState%C_Brake(2) = 0
-         END IF
-
-      ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_GH_disp) THEN ! displacement-based ground hook control with high damping for braking
       
-         ! X
-         IF (dxdt%tmd_x(1) * u%Mesh%TranslationDisp(1,1) <= 0 ) THEN
-            OtherState%C_ctrl(1) = p%TMD_X_C_HIGH
-         ELSE
-            OtherState%C_ctrl(1) = p%TMD_X_C_LOW
-         END IF
-
-         !Brake X
-         IF ( (x%tmd_x(1) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2) > 0) ) THEN
-            OtherState%C_Brake(1) = p%TMD_X_C_BRAKE
-         ELSE IF ( (x%tmd_x(1) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2) < 0) ) THEN
-            OtherState%C_Brake(1) = p%TMD_X_C_BRAKE
-         ELSE
-            OtherState%C_Brake(1) = 0
-         END IF
-
-         ! Y
-         IF (dxdt%tmd_x(3) * u%Mesh%TranslationDisp(2,1) <= 0 ) THEN
-            OtherState%C_ctrl(2) = p%TMD_Y_C_HIGH
-         ELSE
-            OtherState%C_ctrl(2) = p%TMD_Y_C_LOW
-         END IF
- 
-         !Brake Y
-         IF ( (x%tmd_x(3) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4) > 0) ) THEN
-            OtherState%C_Brake(2) = p%TMD_Y_C_BRAKE
-         ELSE IF ( (x%tmd_x(3) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4) < 0) ) THEN
-            OtherState%C_Brake(2) = p%TMD_Y_C_BRAKE
-         ELSE
-            OtherState%C_Brake(2) = 0
-         END IF
-         
-      ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_Ph_FF) THEN ! Phase Difference Algorithm with Friction Force
-            ! X
-            ! (a)
-         IF (u%Mesh%TranslationDisp(1,1) > 0 .AND. u%Mesh%TranslationVel(1,1) < 0 .AND. x%tmd_x(1) > 0 .AND. dxdt%tmd_x(1) < 0) THEN
-            OtherState%F_fr(1) = p%TMD_X_C_HIGH
-            ! (b)
-            ELSE IF (u%Mesh%TranslationDisp(1,1) < 0 .AND. u%Mesh%TranslationVel(1,1) > 0 .AND. x%tmd_x(1) < 0 .AND. dxdt%tmd_x(1) > 0) THEN
-            OtherState%F_fr(1) = -p%TMD_X_C_HIGH
-            ! (c)
-            ELSE IF (u%Mesh%TranslationDisp(1,1) < 0 .AND. u%Mesh%TranslationVel(1,1) < 0 .AND. x%tmd_x(1) > 0 .AND. dxdt%tmd_x(1) > 0) THEN
-            OtherState%F_fr(1) = -p%TMD_X_C_HIGH
-            ELSE IF (u%Mesh%TranslationDisp(1,1) > 0 .AND. u%Mesh%TranslationVel(1,1) > 0 .AND. x%tmd_x(1) < 0 .AND. dxdt%tmd_x(1) < 0) THEN
-            OtherState%F_fr(1) = p%TMD_X_C_HIGH
-            ELSE
-            OtherState%F_fr(1) = p%TMD_X_C_LOW
-            END IF
-            
-         !Brake X
-         IF ( (x%tmd_x(1) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2) > 0) ) THEN
-            OtherState%C_Brake(1) = p%TMD_X_C_BRAKE
-         ELSE IF ( (x%tmd_x(1) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2) < 0) ) THEN
-            OtherState%C_Brake(1) = p%TMD_X_C_BRAKE
-         ELSE
-            OtherState%C_Brake(1) = 0
-         END IF
-
-            ! Y
-            ! (a)
-         IF (u%Mesh%TranslationDisp(2,1) > 0 .AND. u%Mesh%TranslationVel(2,1) < 0 .AND. x%tmd_x(3) > 0 .AND. dxdt%tmd_x(3) < 0) THEN
-            OtherState%F_fr(2) = p%TMD_Y_C_HIGH
-            ! (b)
-            ELSE IF (u%Mesh%TranslationDisp(2,1) < 0 .AND. u%Mesh%TranslationVel(2,1) > 0 .AND. x%tmd_x(3) < 0 .AND. dxdt%tmd_x(3) > 0) THEN
-            OtherState%F_fr(2) = -p%TMD_Y_C_HIGH
-            ! (c)
-            ELSE IF (u%Mesh%TranslationDisp(2,1) < 0 .AND. u%Mesh%TranslationVel(2,1) < 0 .AND. x%tmd_x(3) > 0 .AND. dxdt%tmd_x(3) > 0) THEN
-            OtherState%F_fr(2) = -p%TMD_Y_C_HIGH
-            ELSE IF (u%Mesh%TranslationDisp(2,1) > 0 .AND. u%Mesh%TranslationVel(2,1) > 0 .AND. x%tmd_x(3) < 0 .AND. dxdt%tmd_x(3) < 0) THEN
-            OtherState%F_fr(2) = p%TMD_Y_C_HIGH
-            ELSE
-            OtherState%F_fr(2) = p%TMD_Y_C_LOW
-            END IF
-           
-         !Brake Y
-         IF ( (x%tmd_x(3) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4) > 0) ) THEN
-            OtherState%C_Brake(2) = p%TMD_Y_C_BRAKE
-         ELSE IF ( (x%tmd_x(3) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4) < 0) ) THEN
-            OtherState%C_Brake(2) = p%TMD_Y_C_BRAKE
-         ELSE
-            OtherState%C_Brake(2) = 0
-         END IF
-
-      ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_Ph_DF) THEN ! Phase Difference Algorithm with Damping On/Off
-            ! X
-            ! (a)
-         IF (u%Mesh%TranslationDisp(1,1) > 0 .AND. u%Mesh%TranslationVel(1,1) < 0 .AND. x%tmd_x(1) > 0 .AND. dxdt%tmd_x(1) < 0) THEN
-            OtherState%C_ctrl(1) = p%TMD_X_C_HIGH
-            ! (b)
-            ELSE IF (u%Mesh%TranslationDisp(1,1) < 0 .AND. u%Mesh%TranslationVel(1,1) > 0 .AND. x%tmd_x(1) < 0 .AND. dxdt%tmd_x(1) > 0) THEN
-            OtherState%C_ctrl(1) = p%TMD_X_C_HIGH
-            ! (c)
-            ELSE IF (u%Mesh%TranslationDisp(1,1) < 0 .AND. u%Mesh%TranslationVel(1,1) < 0 .AND. x%tmd_x(1) > 0 .AND. dxdt%tmd_x(1) > 0) THEN
-            OtherState%C_ctrl(1) = p%TMD_X_C_HIGH
-            ELSE IF (u%Mesh%TranslationDisp(1,1) > 0 .AND. u%Mesh%TranslationVel(1,1) > 0 .AND. x%tmd_x(1) < 0 .AND. dxdt%tmd_x(1) < 0) THEN
-            OtherState%C_ctrl(1) = p%TMD_X_C_HIGH
-            ELSE
-            OtherState%C_ctrl(1) = p%TMD_X_C_LOW
-            END IF
-            
-         !Brake X
-         IF ( (x%tmd_x(1) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2) > 0) ) THEN
-            OtherState%C_Brake(1) = p%TMD_X_C_BRAKE
-         ELSE IF ( (x%tmd_x(1) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2) < 0) ) THEN
-            OtherState%C_Brake(1) = p%TMD_X_C_BRAKE
-         ELSE
-            OtherState%C_Brake(1) = 0
-         END IF
-
-            ! Y
-            ! (a)
-         IF (u%Mesh%TranslationDisp(2,1) > 0 .AND. u%Mesh%TranslationVel(2,1) < 0 .AND. x%tmd_x(3) > 0 .AND. dxdt%tmd_x(3) < 0) THEN
-            OtherState%C_ctrl(2) = p%TMD_Y_C_HIGH
-            ! (b)
-            ELSE IF (u%Mesh%TranslationDisp(2,1) < 0 .AND. u%Mesh%TranslationVel(2,1) > 0 .AND. x%tmd_x(3) < 0 .AND. dxdt%tmd_x(3) > 0) THEN
-            OtherState%C_ctrl(2) = p%TMD_Y_C_HIGH
-            ! (c)
-            ELSE IF (u%Mesh%TranslationDisp(2,1) < 0 .AND. u%Mesh%TranslationVel(2,1) < 0 .AND. x%tmd_x(3) > 0 .AND. dxdt%tmd_x(3) > 0) THEN
-            OtherState%C_ctrl(2) = p%TMD_Y_C_HIGH
-            ELSE IF (u%Mesh%TranslationDisp(2,1) > 0 .AND. u%Mesh%TranslationVel(2,1) > 0 .AND. x%tmd_x(3) < 0 .AND. dxdt%tmd_x(3) < 0) THEN
-            OtherState%C_ctrl(2) = p%TMD_Y_C_HIGH
-            ELSE
-            OtherState%C_ctrl(2) = p%TMD_Y_C_LOW
-            END IF
-            
-         !Brake Y
-         IF ( (x%tmd_x(3) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4) > 0) ) THEN
-            OtherState%C_Brake(2) = p%TMD_Y_C_BRAKE
-         ELSE IF ( (x%tmd_x(3) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4) < 0) ) THEN
-            OtherState%C_Brake(2) = p%TMD_Y_C_BRAKE
-         ELSE
-            OtherState%C_Brake(2) = 0
-         END IF
-
-    END IF
-    
-       
-   END SUBROUTINE TMD_GroundHookDamp
-   
-   SUBROUTINE SpringForceExtrapInterp(x, p, F_table)
-      ! extrapolate or interpolate stiffness value based on stiffness table. 
-      TYPE(TMD_ContinuousStateType),         INTENT(IN   )     :: x           ! Continuous states at Time
-      TYPE(TMD_ParameterType),               INTENT(IN)        :: p              ! The module's parameter data
-      REAL(ReKi), dimension(2),              INTENT(INOUT)     :: F_table       ! extrapolated/interpolated stiffness values
-
-      !INTEGER(IntKi),                        INTENT(OUT)      :: ErrStat        ! The error status code
-      !CHARACTER(*),                          INTENT(OUT)      :: ErrMsg         ! The error message, if an error occurred
-
-      ! local variables
-      INTEGER(IntKi)                                           :: I              ! Loop counter 
-      INTEGER(IntKi), DIMENSION(2)                             :: J = (/1, 3/)   ! Loop counter 
-      INTEGER(IntKi)                                           :: M              ! location of closest table position
-      INTEGER(IntKi)                                           :: Nrows        ! Number of rows in F_TBL
-      REAL(ReKi)                                               :: Slope             ! 
-      REAL(ReKi)                                               :: DX            ! 
-      REAL(ReKi)                                               :: Disp              ! Current displacement
-      REAL(ReKi), ALLOCATABLE                                  :: TmpRAry(:) 
-
-
-      Nrows = SIZE(p%F_TBL,1)
-      ALLOCATE(TmpRAry(Nrows))
-      DO I = 1,2
-         Disp = x%tmd_x(J(I))
-         TmpRAry = p%F_TBL(:,J(I))-Disp
-         TmpRAry = ABS(TmpRAry)
-         M = MINLOC(TmpRAry,1)
-    
-         !interpolate
-         IF ((x%tmd_x(J(I)) > p%F_TBL(M,J(I)) .AND. M /= Nrows ) .OR. (x%tmd_x(J(I)) < p%F_TBL(M,J(I)) .AND. M == 1)) THEN  
-         ! for displacements higher than the closest table value or lower than the lower bound
-            Slope = ( p%F_TBL(M+1,J(I)+1) - p%F_TBL(M,J(I)+1) ) / ( p%F_TBL(M+1,J(I)) - p%F_TBL(M,J(I)) )
-      
-         ELSE IF ((x%tmd_x(J(I)) < p%F_TBL(M,J(I)) .AND. M /= 1 ) .OR. (x%tmd_x(J(I)) > p%F_TBL(M,J(I)) .AND. M == Nrows)) THEN ! lower
-         ! for displacements lower than the closest table value or higher than the upper bound
-            Slope = ( p%F_TBL(M,J(I)+1) - p%F_TBL(M-1,J(I)+1) ) / ( p%F_TBL(M,J(I)) - p%F_TBL(M-1,J(I)) )
-      
-         ELSE ! equal
-            Slope = 0
-         END IF
-      
-         OtherState%F_table(I) = p%F_TBL(M,J(I)+1) + Slope * ( x%tmd_x(J(I)) - p%F_TBL(M,J(I)) )
-      
-   
-   
-      END DO
-
-
-      DEALLOCATE(TmpRAry)
-   END SUBROUTINE SpringForceExtrapInterp
 END SUBROUTINE TMD_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE TMD_CalcStopForce(x,p,F_stop)
+   TYPE(TMD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+   TYPE(TMD_ParameterType),       INTENT(IN   )  :: p           !< Parameters   
+   Real(ReKi), dimension(2),      INTENT(INOUT)  :: F_stop      !< stop forces
+! local variables
+   Real(ReKi), dimension(2)                      :: F_SK      !stop spring forces
+   Real(ReKi), dimension(2)                      :: F_SD      !stop damping forces
+   INTEGER(IntKi)                                :: i ! counter
+   INTEGER(IntKi)                                :: j = 1! counter
+   j=1
+   DO i=1,2
+      IF (j < 5) THEN
+         IF ( x%tmd_x(j) > p%P_SP(i) ) THEN
+            F_SK(i) = p%K_S(i) *( p%P_SP(i) - x%tmd_x(j)  )
+         ELSEIF ( x%tmd_x(j) < p%N_SP(i) ) THEN
+            F_SK(i) = p%K_S(i) * ( p%N_SP(i) - x%tmd_x(j) )
+         ELSE
+            F_SK(i)  = 0.0_ReKi
+         ENDIF
+         IF ( (x%tmd_x(j) > p%P_SP(i)) .AND. (x%tmd_x(j+1) > 0) ) THEN
+            F_SD(i) = -p%C_S(i) *( x%tmd_x(j+1)  )
+         ELSEIF ( (x%tmd_x(j) < p%N_SP(i)) .AND. (x%tmd_x(j+1) < 0) ) THEN
+            F_SD(i) = -p%C_S(i) *( x%tmd_x(j+1)  )
+         ELSE
+            F_SD(i)  = 0.0_ReKi
+         ENDIF
+         F_stop(i) = F_SK(i) + F_SD(i)
+         j = j+2
+      END IF
+END DO
+END SUBROUTINE TMD_CalcStopForce
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE TMD_GroundHookDamp(dxdt,x,u,p,C_ctrl,C_Brake,F_fr)
+   TYPE(TMD_ContinuousStateType),         INTENT(IN   )     :: dxdt        !< Derivative of continuous states at Time (needs elements 1 and 3 only)
+   TYPE(TMD_ContinuousStateType),         INTENT(IN   )     :: x           !< Continuous states at Time
+   TYPE(TMD_InputType),                   INTENT(IN   )     :: u           !< Inputs at Time 
+   TYPE(TMD_ParameterType),               INTENT(IN)        :: p           !< The module's parameter data
+   REAL(ReKi), dimension(2),              INTENT(INOUT)     :: C_ctrl      !< extrapolated/interpolated stiffness values
+   REAL(ReKi), dimension(2),              INTENT(INOUT)     :: C_Brake     !< extrapolated/interpolated stiffness values
+   REAL(ReKi), dimension(2),              INTENT(INOUT)     :: F_fr        !< Friction forces
+      
+   IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_GH_vel) THEN ! velocity-based ground hook control with high damping for braking
+      
+      !X
+      IF (dxdt%tmd_x(1) * u%Mesh%TranslationVel(1,1) <= 0 ) THEN
+         C_ctrl(1) = p%TMD_X_C_HIGH
+      ELSE
+         C_ctrl(1) = p%TMD_X_C_LOW
+      END IF
+         
+      !Brake X
+      IF ( (x%tmd_x(1) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2) > 0) ) THEN
+         C_Brake(1) = p%TMD_X_C_BRAKE
+      ELSE IF ( (x%tmd_x(1) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2) < 0) ) THEN
+         C_Brake(1) = p%TMD_X_C_BRAKE
+      ELSE
+         C_Brake(1) = 0
+      END IF
+         
+         
+      ! Y
+      IF (dxdt%tmd_x(3) * u%Mesh%TranslationVel(2,1) <= 0 ) THEN
+         C_ctrl(2) = p%TMD_Y_C_HIGH
+      ELSE
+         C_ctrl(2) = p%TMD_Y_C_LOW
+      END IF
+
+      !Brake Y
+      IF ( (x%tmd_x(3) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4) > 0) ) THEN
+         C_Brake(2) = p%TMD_Y_C_BRAKE
+      ELSE IF ( (x%tmd_x(3) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4) < 0) ) THEN
+         C_Brake(2) = p%TMD_Y_C_BRAKE
+      ELSE
+         C_Brake(2) = 0
+      END IF
+         
+   ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_GH_invVel) THEN ! Inverse velocity-based ground hook control with high damping for braking
+      
+      ! X
+      IF (dxdt%tmd_x(1) * u%Mesh%TranslationVel(1,1) >= 0 ) THEN
+         C_ctrl(1) = p%TMD_X_C_HIGH
+      ELSE
+         C_ctrl(1) = p%TMD_X_C_LOW
+      END IF
+
+      !Brake X
+      IF ( (x%tmd_x(1) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2) > 0) ) THEN
+         C_Brake(1) = p%TMD_X_C_BRAKE
+      ELSE IF ( (x%tmd_x(1) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2) < 0) ) THEN
+         C_Brake(1) = p%TMD_X_C_BRAKE
+      ELSE
+         C_Brake(1) = 0
+      END IF
+   
+      ! Y
+      IF (dxdt%tmd_x(3) * u%Mesh%TranslationVel(2,1) >= 0 ) THEN
+         C_ctrl(2) = p%TMD_Y_C_HIGH
+      ELSE
+         C_ctrl(2) = p%TMD_Y_C_LOW
+      END IF
+
+      !Brake Y
+      IF ( (x%tmd_x(3) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4) > 0) ) THEN
+         C_Brake(2) = p%TMD_Y_C_BRAKE
+      ELSE IF ( (x%tmd_x(3) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4) < 0) ) THEN
+         C_Brake(2) = p%TMD_Y_C_BRAKE
+      ELSE
+         C_Brake(2) = 0
+      END IF
+
+   ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_GH_disp) THEN ! displacement-based ground hook control with high damping for braking
+      
+      ! X
+      IF (dxdt%tmd_x(1) * u%Mesh%TranslationDisp(1,1) <= 0 ) THEN
+         C_ctrl(1) = p%TMD_X_C_HIGH
+      ELSE
+         C_ctrl(1) = p%TMD_X_C_LOW
+      END IF
+
+      !Brake X
+      IF ( (x%tmd_x(1) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2) > 0) ) THEN
+         C_Brake(1) = p%TMD_X_C_BRAKE
+      ELSE IF ( (x%tmd_x(1) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2) < 0) ) THEN
+         C_Brake(1) = p%TMD_X_C_BRAKE
+      ELSE
+         C_Brake(1) = 0
+      END IF
+
+      ! Y
+      IF (dxdt%tmd_x(3) * u%Mesh%TranslationDisp(2,1) <= 0 ) THEN
+         C_ctrl(2) = p%TMD_Y_C_HIGH
+      ELSE
+         C_ctrl(2) = p%TMD_Y_C_LOW
+      END IF
+ 
+      !Brake Y
+      IF ( (x%tmd_x(3) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4) > 0) ) THEN
+         C_Brake(2) = p%TMD_Y_C_BRAKE
+      ELSE IF ( (x%tmd_x(3) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4) < 0) ) THEN
+         C_Brake(2) = p%TMD_Y_C_BRAKE
+      ELSE
+         C_Brake(2) = 0
+      END IF
+         
+   ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_Ph_FF) THEN ! Phase Difference Algorithm with Friction Force
+         ! X
+         ! (a)
+      IF (u%Mesh%TranslationDisp(1,1) > 0 .AND. u%Mesh%TranslationVel(1,1) < 0 .AND. x%tmd_x(1) > 0 .AND. dxdt%tmd_x(1) < 0) THEN
+         F_fr(1) = p%TMD_X_C_HIGH
+         ! (b)
+      ELSE IF (u%Mesh%TranslationDisp(1,1) < 0 .AND. u%Mesh%TranslationVel(1,1) > 0 .AND. x%tmd_x(1) < 0 .AND. dxdt%tmd_x(1) > 0) THEN
+         F_fr(1) = -p%TMD_X_C_HIGH
+         ! (c)
+      ELSE IF (u%Mesh%TranslationDisp(1,1) < 0 .AND. u%Mesh%TranslationVel(1,1) < 0 .AND. x%tmd_x(1) > 0 .AND. dxdt%tmd_x(1) > 0) THEN
+         F_fr(1) = -p%TMD_X_C_HIGH
+      ELSE IF (u%Mesh%TranslationDisp(1,1) > 0 .AND. u%Mesh%TranslationVel(1,1) > 0 .AND. x%tmd_x(1) < 0 .AND. dxdt%tmd_x(1) < 0) THEN
+         F_fr(1) = p%TMD_X_C_HIGH
+      ELSE
+         F_fr(1) = p%TMD_X_C_LOW
+      END IF
+            
+      !Brake X
+      IF ( (x%tmd_x(1) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2) > 0) ) THEN
+         C_Brake(1) = p%TMD_X_C_BRAKE
+      ELSE IF ( (x%tmd_x(1) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2) < 0) ) THEN
+         C_Brake(1) = p%TMD_X_C_BRAKE
+      ELSE
+         C_Brake(1) = 0
+      END IF
+
+         ! Y
+         ! (a)
+      IF (u%Mesh%TranslationDisp(2,1) > 0 .AND. u%Mesh%TranslationVel(2,1) < 0 .AND. x%tmd_x(3) > 0 .AND. dxdt%tmd_x(3) < 0) THEN
+         F_fr(2) = p%TMD_Y_C_HIGH
+         ! (b)
+      ELSE IF (u%Mesh%TranslationDisp(2,1) < 0 .AND. u%Mesh%TranslationVel(2,1) > 0 .AND. x%tmd_x(3) < 0 .AND. dxdt%tmd_x(3) > 0) THEN
+         F_fr(2) = -p%TMD_Y_C_HIGH
+         ! (c)
+      ELSE IF (u%Mesh%TranslationDisp(2,1) < 0 .AND. u%Mesh%TranslationVel(2,1) < 0 .AND. x%tmd_x(3) > 0 .AND. dxdt%tmd_x(3) > 0) THEN
+         F_fr(2) = -p%TMD_Y_C_HIGH
+      ELSE IF (u%Mesh%TranslationDisp(2,1) > 0 .AND. u%Mesh%TranslationVel(2,1) > 0 .AND. x%tmd_x(3) < 0 .AND. dxdt%tmd_x(3) < 0) THEN
+         F_fr(2) = p%TMD_Y_C_HIGH
+      ELSE
+         F_fr(2) = p%TMD_Y_C_LOW
+      END IF
+           
+      !Brake Y
+      IF ( (x%tmd_x(3) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4) > 0) ) THEN
+         C_Brake(2) = p%TMD_Y_C_BRAKE
+      ELSE IF ( (x%tmd_x(3) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4) < 0) ) THEN
+         C_Brake(2) = p%TMD_Y_C_BRAKE
+      ELSE
+         C_Brake(2) = 0
+      END IF
+
+   ELSE IF (p%TMD_CMODE == CMODE_Semi .AND. p%TMD_SA_MODE == SA_CMODE_Ph_DF) THEN ! Phase Difference Algorithm with Damping On/Off
+         ! X
+         ! (a)
+      IF (u%Mesh%TranslationDisp(1,1) > 0 .AND. u%Mesh%TranslationVel(1,1) < 0 .AND. x%tmd_x(1) > 0 .AND. dxdt%tmd_x(1) < 0) THEN
+         C_ctrl(1) = p%TMD_X_C_HIGH
+         ! (b)
+      ELSE IF (u%Mesh%TranslationDisp(1,1) < 0 .AND. u%Mesh%TranslationVel(1,1) > 0 .AND. x%tmd_x(1) < 0 .AND. dxdt%tmd_x(1) > 0) THEN
+         C_ctrl(1) = p%TMD_X_C_HIGH
+         ! (c)
+      ELSE IF (u%Mesh%TranslationDisp(1,1) < 0 .AND. u%Mesh%TranslationVel(1,1) < 0 .AND. x%tmd_x(1) > 0 .AND. dxdt%tmd_x(1) > 0) THEN
+         C_ctrl(1) = p%TMD_X_C_HIGH
+      ELSE IF (u%Mesh%TranslationDisp(1,1) > 0 .AND. u%Mesh%TranslationVel(1,1) > 0 .AND. x%tmd_x(1) < 0 .AND. dxdt%tmd_x(1) < 0) THEN
+         C_ctrl(1) = p%TMD_X_C_HIGH
+      ELSE
+         C_ctrl(1) = p%TMD_X_C_LOW
+      END IF
+            
+      !Brake X
+      IF ( (x%tmd_x(1) > p%P_SP(1)-0.2) .AND. (x%tmd_x(2) > 0) ) THEN
+         C_Brake(1) = p%TMD_X_C_BRAKE
+      ELSE IF ( (x%tmd_x(1) < p%N_SP(1)+0.2) .AND. (x%tmd_x(2) < 0) ) THEN
+         C_Brake(1) = p%TMD_X_C_BRAKE
+      ELSE
+         C_Brake(1) = 0
+      END IF
+
+         ! Y
+         ! (a)
+      IF (u%Mesh%TranslationDisp(2,1) > 0 .AND. u%Mesh%TranslationVel(2,1) < 0 .AND. x%tmd_x(3) > 0 .AND. dxdt%tmd_x(3) < 0) THEN
+         C_ctrl(2) = p%TMD_Y_C_HIGH
+         ! (b)
+      ELSE IF (u%Mesh%TranslationDisp(2,1) < 0 .AND. u%Mesh%TranslationVel(2,1) > 0 .AND. x%tmd_x(3) < 0 .AND. dxdt%tmd_x(3) > 0) THEN
+         C_ctrl(2) = p%TMD_Y_C_HIGH
+         ! (c)
+      ELSE IF (u%Mesh%TranslationDisp(2,1) < 0 .AND. u%Mesh%TranslationVel(2,1) < 0 .AND. x%tmd_x(3) > 0 .AND. dxdt%tmd_x(3) > 0) THEN
+         C_ctrl(2) = p%TMD_Y_C_HIGH
+      ELSE IF (u%Mesh%TranslationDisp(2,1) > 0 .AND. u%Mesh%TranslationVel(2,1) > 0 .AND. x%tmd_x(3) < 0 .AND. dxdt%tmd_x(3) < 0) THEN
+         C_ctrl(2) = p%TMD_Y_C_HIGH
+      ELSE
+         C_ctrl(2) = p%TMD_Y_C_LOW
+      END IF
+            
+      !Brake Y
+      IF ( (x%tmd_x(3) > p%P_SP(2)-0.2) .AND. (x%tmd_x(4) > 0) ) THEN
+         C_Brake(2) = p%TMD_Y_C_BRAKE
+      ELSE IF ( (x%tmd_x(3) < p%N_SP(2)+0.2) .AND. (x%tmd_x(4) < 0) ) THEN
+         C_Brake(2) = p%TMD_Y_C_BRAKE
+      ELSE
+         C_Brake(2) = 0
+      END IF
+
+END IF
+    
+       
+END SUBROUTINE TMD_GroundHookDamp
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Extrapolate or interpolate stiffness value based on stiffness table. 
+SUBROUTINE SpringForceExtrapInterp(x, p, F_table)
+   TYPE(TMD_ContinuousStateType),         INTENT(IN   )     :: x           !< Continuous states at Time
+   TYPE(TMD_ParameterType),               INTENT(IN)        :: p           !< The module's parameter data
+   REAL(ReKi), dimension(2),              INTENT(INOUT)     :: F_table     !< extrapolated/interpolated stiffness values
+
+   !INTEGER(IntKi),                        INTENT(OUT)      :: ErrStat        ! The error status code
+   !CHARACTER(*),                          INTENT(OUT)      :: ErrMsg         ! The error message, if an error occurred
+
+   ! local variables
+   INTEGER(IntKi)                                           :: I              ! Loop counter 
+   INTEGER(IntKi), DIMENSION(2)                             :: J = (/1, 3/)   ! Loop counter 
+   INTEGER(IntKi)                                           :: M              ! location of closest table position
+   INTEGER(IntKi)                                           :: Nrows        ! Number of rows in F_TBL
+   REAL(ReKi)                                               :: Slope             ! 
+   REAL(ReKi)                                               :: DX            ! 
+   REAL(ReKi)                                               :: Disp              ! Current displacement
+   REAL(ReKi), ALLOCATABLE                                  :: TmpRAry(:) 
+
+
+   Nrows = SIZE(p%F_TBL,1)
+   ALLOCATE(TmpRAry(Nrows))
+   DO I = 1,2
+      Disp = x%tmd_x(J(I))
+      TmpRAry = p%F_TBL(:,J(I))-Disp
+      TmpRAry = ABS(TmpRAry)
+      M = MINLOC(TmpRAry,1)
+    
+      !interpolate
+      IF ((x%tmd_x(J(I)) > p%F_TBL(M,J(I)) .AND. M /= Nrows ) .OR. (x%tmd_x(J(I)) < p%F_TBL(M,J(I)) .AND. M == 1)) THEN  
+      ! for displacements higher than the closest table value or lower than the lower bound
+         Slope = ( p%F_TBL(M+1,J(I)+1) - p%F_TBL(M,J(I)+1) ) / ( p%F_TBL(M+1,J(I)) - p%F_TBL(M,J(I)) )
+      
+      ELSE IF ((x%tmd_x(J(I)) < p%F_TBL(M,J(I)) .AND. M /= 1 ) .OR. (x%tmd_x(J(I)) > p%F_TBL(M,J(I)) .AND. M == Nrows)) THEN ! lower
+      ! for displacements lower than the closest table value or higher than the upper bound
+         Slope = ( p%F_TBL(M,J(I)+1) - p%F_TBL(M-1,J(I)+1) ) / ( p%F_TBL(M,J(I)) - p%F_TBL(M-1,J(I)) )
+      
+      ELSE ! equal
+         Slope = 0
+      END IF
+      
+      F_table(I) = p%F_TBL(M,J(I)+1) + Slope * ( x%tmd_x(J(I)) - p%F_TBL(M,J(I)) )
+            
+   END DO
+
+
+   DEALLOCATE(TmpRAry)
+END SUBROUTINE SpringForceExtrapInterp
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine reads the input file and stores all the data in the TMD_InputFile structure.
+!! It does not perform data validation.
 SUBROUTINE TMD_ReadInput( InputFileName, InputFileData, Default_DT, OutFileRoot, ErrStat, ErrMsg )
-! This subroutine reads the input file and stores all the data in the TMD_InputFile structure.
-! It does not perform data validation.
 !..................................................................................................................................
 
       ! Passed variables
-   REAL(DbKi),           INTENT(IN)       :: Default_DT     ! The default DT (from glue code)
+   REAL(DbKi),           INTENT(IN)       :: Default_DT     !< The default DT (from glue code)
 
-   CHARACTER(*), INTENT(IN)               :: InputFileName  ! Name of the input file
-   CHARACTER(*), INTENT(IN)               :: OutFileRoot    ! The rootname of all the output files written by this routine.
+   CHARACTER(*), INTENT(IN)               :: InputFileName  !< Name of the input file
+   CHARACTER(*), INTENT(IN)               :: OutFileRoot    !< The rootname of all the output files written by this routine.
 
-   TYPE(TMD_InputFile),   INTENT(OUT)     :: InputFileData  ! Data stored in the module's input file
+   TYPE(TMD_InputFile),   INTENT(OUT)     :: InputFileData  !< Data stored in the module's input file
 
-   INTEGER(IntKi),       INTENT(OUT)      :: ErrStat        ! The error status code
-   CHARACTER(*),         INTENT(OUT)      :: ErrMsg         ! The error message, if an error occurred
+   INTEGER(IntKi),       INTENT(OUT)      :: ErrStat        !< The error status code
+   CHARACTER(*),         INTENT(OUT)      :: ErrMsg         !< The error message, if an error occurred
 
       ! local variables
 
@@ -1289,23 +1226,22 @@ CONTAINS
 
 END SUBROUTINE TMD_ReadInput
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine reads in the primary ServoDyn input file and places the values it reads in the InputFileData structure.
+!! It opens and prints to an echo file if requested.
 SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat, ErrMsg )
-! This routine reads in the primary ServoDyn input file and places the values it reads in the InputFileData structure.
-!   It opens and prints to an echo file if requested.
 !..................................................................................................................................
-
 
    IMPLICIT                        NONE
 
       ! Passed variables
-   INTEGER(IntKi),     INTENT(OUT)     :: UnEc                                ! I/O unit for echo file. If > 0, file is open for writing.
-   INTEGER(IntKi),     INTENT(OUT)     :: ErrStat                             ! Error status
+   INTEGER(IntKi),     INTENT(OUT)     :: UnEc                                !< I/O unit for echo file. If > 0, file is open for writing.
+   INTEGER(IntKi),     INTENT(OUT)     :: ErrStat                             !< Error status
 
-   CHARACTER(*),       INTENT(IN)      :: InputFile                           ! Name of the file containing the primary input data
-   CHARACTER(*),       INTENT(OUT)     :: ErrMsg                              ! Error message
-   CHARACTER(*),       INTENT(IN)      :: OutFileRoot                         ! The rootname of the echo file, possibly opened in this routine
+   CHARACTER(*),       INTENT(IN)      :: InputFile                           !< Name of the file containing the primary input data
+   CHARACTER(*),       INTENT(OUT)     :: ErrMsg                              !< Error message
+   CHARACTER(*),       INTENT(IN)      :: OutFileRoot                         !< The rootname of the echo file, possibly opened in this routine
 
-   TYPE(TMD_InputFile), INTENT(INOUT) :: InputFileData                       ! All the data in the TMD input file
+   TYPE(TMD_InputFile), INTENT(INOUT)  :: InputFileData                       !< All the data in the TMD input file
    
       ! Local variables:
    REAL(ReKi)                    :: TmpRAry(4)                                ! A temporary array to read a table from the input file
@@ -1646,14 +1582,14 @@ CONTAINS
    !...............................................................................................................................
 END SUBROUTINE ReadPrimaryFile      
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine sets the parameters, based on the data stored in InputFileData.
 SUBROUTINE TMD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
-! This subroutine sets the parameters, based on the data stored in InputFileData
 !..................................................................................................................................
 
-   TYPE(TMD_InputFile),      INTENT(IN)       :: InputFileData  ! Data stored in the module's input file
-   TYPE(TMD_ParameterType),  INTENT(INOUT)    :: p              ! The module's parameter data
-   INTEGER(IntKi),           INTENT(OUT)      :: ErrStat        ! The error status code
-   CHARACTER(*),             INTENT(OUT)      :: ErrMsg         ! The error message, if an error occurred
+   TYPE(TMD_InputFile),      INTENT(IN)       :: InputFileData  !< Data stored in the module's input file
+   TYPE(TMD_ParameterType),  INTENT(INOUT)    :: p              !< The module's parameter data
+   INTEGER(IntKi),           INTENT(OUT)      :: ErrStat        !< The error status code
+   CHARACTER(*),             INTENT(OUT)      :: ErrMsg         !< The error message, if an error occurred
 
       ! Local variables   
    INTEGER(IntKi)                             :: ErrStat2       ! Temporary error ID   

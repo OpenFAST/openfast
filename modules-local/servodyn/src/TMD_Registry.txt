@@ -7,10 +7,6 @@
 #
 # Use ^ as a shortcut for the value from the previous line.
 ###################################################################################################################################
-# File last committed: $Date: 2015-02-09 22:29:06 -0700 (Mon, 09 Feb 2015) $
-# (File) Revision #: $Rev: 913 $
-# URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/FOA_modules/TMD/Source/TMD_Registry.txt $
-###################################################################################################################################
 
 # ..... Input File data .......................................................................................................
 typedef TMD/TMD TMD_InputFile CHARACTER(1024) TMDFileName - - - "Name of the input file; remove if there is no file" -
@@ -67,15 +63,19 @@ typedef	^		ContinuousStateType	ReKi		tmd_x			{4} - -  "Continuous States" -
 typedef ^ DiscreteStateType ReKi DummyDiscState - - - "Remove this variable if you have discrete states" -
 # Define constraint states here:
 typedef ^ ConstraintStateType ReKi DummyConstrState - - - "Remove this variable if you have constraint states" -
-# Define any data that are not considered actual states here:
-# e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
-# at a given time, etc.)
-typedef ^ 		OtherStateType 	Reki 			F_stop   {2} - - "Stop forces" -
-typedef	^		^				ReKi			F_ext	{2}	-	-	"External forces (user defined)"	-
-typedef	^		OtherStateType  ReKi			F_fr	{2}	-	-	"Friction forces"	-
-typedef	^		OtherStateType  ReKi			C_ctrl	{2}	-	-	"Controlled Damping (On/Off)"	-
-typedef	^		OtherStateType  ReKi			C_Brake	{2}	-	-	"Braking Damping"	-
-typedef	^		OtherStateType  ReKi			F_table	{2}	-	-	"Tabled Stiffness"	-
+# Define any other states (e.g. logical states):
+typedef ^ 		OtherStateType 	Reki DummyOtherState - - - "Remove this variable if you have other/logical states" -
+
+# Define any misc data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
+# at a given time, etc.) or other data that do not depend on time
+typedef ^ 		MiscVarType  Reki			F_stop   {2} - - "Stop forces" -
+typedef	^		MiscVarType  ReKi			F_ext	{2}	-	-	"External forces (user defined)"	-
+typedef	^		MiscVarType  ReKi			F_fr	{2}	-	-	"Friction forces"	-
+typedef	^		MiscVarType  ReKi			C_ctrl	{2}	-	-	"Controlled Damping (On/Off)"	-
+typedef	^		MiscVarType  ReKi			C_Brake	{2}	-	-	"Braking Damping"	-
+typedef	^		MiscVarType  ReKi			F_table	{2}	-	-	"Tabled Stiffness"	-
+
+
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
@@ -94,7 +94,7 @@ typedef	^		^				ReKi			K_Y		-	-	-	"TMD stiffness"	"N/m"
 typedef	^		^				ReKi			C_X		-	-	-	"TMD damping"	"N/(m/s)"
 typedef	^		^				ReKi			C_Y		-	-	-	"TMD damping"	"N/(m/s)"
 typedef	^		^				ReKi			K_S	{2}	-	-	"TMD stop stiffness"	"N/m"
-typedef	^		^				ReKi			C_S	{2}	-	-	"TMD stop damping" "N/(m/s)"	
+typedef	^		^				ReKi			C_S	{2}	-	-	"TMD stop damping" "N/(m/s)"
 typedef	^		^				ReKi			P_SP	{2}	-	-	"Positive stop position (maximum mass displacement)"	m
 typedef	^		^				ReKi			N_SP	{2}	-	-	"Negative stop position (minimum X mass displacement)" m
 typedef	^		^				ReKi			F_ext	{3}	-	-	"External forces (for user modification)"	-
