@@ -729,7 +729,7 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
 
       
          u%BladeMotion(k)%Orientation     = u%BladeMotion(k)%RefOrientation
-         u%BladeMotion(k)%TranslationDisp = 0.8_ReKi
+         u%BladeMotion(k)%TranslationDisp = 0.0_R8Ki
          u%BladeMotion(k)%TranslationVel  = 0.0_ReKi
          u%BladeMotion(k)%RotationVel     = 0.0_ReKi
    
@@ -1233,8 +1233,7 @@ subroutine SetInputsForBEMT(p, u, OtherState, errStat, errMsg)
          tmp_sz   = dot_product( tmp, z_hat_disk )**2
          OtherState%BEMT_u%rLocal(j,k) = sqrt( tmp_sz + tmp_sz_y )
          
-      end do !j=nodes
-      
+      end do !j=nodes      
    end do !k=blades
    
    
@@ -1850,10 +1849,14 @@ SUBROUTINE TwrInfl( p, u, OtherState, ErrStat, ErrMsg )
             v_TwrPotent = 0.0_ReKi
          end if
          
-         denom = sqrt( sqrt( xbar**2 + ybar**2 ) )
-         if ( p%TwrShadow .and. abs(ybar) < denom .and. abs(zbar) < 1.0_ReKi ) then
-            u_TwrShadow = -TwrCd / denom * cos( PiBy2*ybar / denom )**2
-         else
+         if ( p%TwrShadow .and. xbar > 0.0_ReKi .and. abs(zbar) < 1.0_ReKi) then
+            denom = sqrt( sqrt( xbar**2 + ybar**2 ) )
+            if ( abs(ybar) < denom ) then
+               u_TwrShadow = -TwrCd / denom * cos( PiBy2*ybar / denom )**2
+            else
+               u_TwrShadow = 0.0_ReKi
+            end if
+         else            
             u_TwrShadow = 0.0_ReKi
          end if
                      

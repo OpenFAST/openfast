@@ -234,7 +234,7 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
          orientation = EulerConstruct(theta)
          
          AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) = matmul( orientation, AD%u(1)%HubMotion%Orientation(  :,:,1) )
-         AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) = 0.0_ReKi
+         AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) = 0.0_R8Ki
          AD%u(1)%BladeRootMotion(k)%TranslationVel( :,1) = 0.0_ReKi
          AD%u(1)%BladeRootMotion(k)%RotationVel(    :,1) = 0.0_ReKi
       end do !k=numBlades
