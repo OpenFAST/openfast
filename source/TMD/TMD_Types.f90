@@ -103,13 +103,18 @@ IMPLICIT NONE
 ! =======================
 ! =========  TMD_OtherStateType  =======
   TYPE, PUBLIC :: TMD_OtherStateType
+    REAL(ReKi)  :: DummyOtherState      ! Remove this variable if you have other/logical states [-]
+  END TYPE TMD_OtherStateType
+! =======================
+! =========  TMD_MiscVarType  =======
+  TYPE, PUBLIC :: TMD_MiscVarType
     REAL(ReKi) , DIMENSION(1:2)  :: F_stop      ! Stop forces [-]
     REAL(ReKi) , DIMENSION(1:2)  :: F_ext      ! External forces (user defined) [-]
     REAL(ReKi) , DIMENSION(1:2)  :: F_fr      ! Friction forces [-]
     REAL(ReKi) , DIMENSION(1:2)  :: C_ctrl      ! Controlled Damping (On/Off) [-]
     REAL(ReKi) , DIMENSION(1:2)  :: C_Brake      ! Braking Damping [-]
     REAL(ReKi) , DIMENSION(1:2)  :: F_table      ! Tabled Stiffness [-]
-  END TYPE TMD_OtherStateType
+  END TYPE TMD_MiscVarType
 ! =======================
 ! =========  TMD_ParameterType  =======
   TYPE, PUBLIC :: TMD_ParameterType
@@ -1338,19 +1343,13 @@ ENDIF
    CHARACTER(*),    INTENT(  OUT) :: ErrMsg
 ! Local 
    INTEGER(IntKi)                 :: i,j,k
-   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
    INTEGER(IntKi)                 :: ErrStat2
    CHARACTER(ErrMsgLen)           :: ErrMsg2
    CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_CopyOtherState'
 ! 
    ErrStat = ErrID_None
    ErrMsg  = ""
-    DstOtherStateData%F_stop = SrcOtherStateData%F_stop
-    DstOtherStateData%F_ext = SrcOtherStateData%F_ext
-    DstOtherStateData%F_fr = SrcOtherStateData%F_fr
-    DstOtherStateData%C_ctrl = SrcOtherStateData%C_ctrl
-    DstOtherStateData%C_Brake = SrcOtherStateData%C_Brake
-    DstOtherStateData%F_table = SrcOtherStateData%F_table
+    DstOtherStateData%DummyOtherState = SrcOtherStateData%DummyOtherState
  END SUBROUTINE TMD_CopyOtherState
 
  SUBROUTINE TMD_DestroyOtherState( OtherStateData, ErrStat, ErrMsg )
@@ -1384,6 +1383,143 @@ ENDIF
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
   CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_PackOtherState'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+      Re_BufSz   = Re_BufSz   + 1  ! DummyOtherState
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%DummyOtherState
+      Re_Xferred   = Re_Xferred   + 1
+ END SUBROUTINE TMD_PackOtherState
+
+ SUBROUTINE TMD_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(TMD_OtherStateType), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  LOGICAL                        :: mask0
+  LOGICAL, ALLOCATABLE           :: mask1(:)
+  LOGICAL, ALLOCATABLE           :: mask2(:,:)
+  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
+  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
+  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_UnPackOtherState'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+      OutData%DummyOtherState = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+ END SUBROUTINE TMD_UnPackOtherState
+
+ SUBROUTINE TMD_CopyMisc( SrcMiscData, DstMiscData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(TMD_MiscVarType), INTENT(IN) :: SrcMiscData
+   TYPE(TMD_MiscVarType), INTENT(INOUT) :: DstMiscData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_CopyMisc'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+    DstMiscData%F_stop = SrcMiscData%F_stop
+    DstMiscData%F_ext = SrcMiscData%F_ext
+    DstMiscData%F_fr = SrcMiscData%F_fr
+    DstMiscData%C_ctrl = SrcMiscData%C_ctrl
+    DstMiscData%C_Brake = SrcMiscData%C_Brake
+    DstMiscData%F_table = SrcMiscData%F_table
+ END SUBROUTINE TMD_CopyMisc
+
+ SUBROUTINE TMD_DestroyMisc( MiscData, ErrStat, ErrMsg )
+  TYPE(TMD_MiscVarType), INTENT(INOUT) :: MiscData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  CHARACTER(*),    PARAMETER :: RoutineName = 'TMD_DestroyMisc'
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+! 
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+ END SUBROUTINE TMD_DestroyMisc
+
+ SUBROUTINE TMD_PackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(TMD_MiscVarType),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_PackMisc'
  ! buffers to store subtypes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -1444,13 +1580,13 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(InData%C_Brake)
       ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%F_table))-1 ) = PACK(InData%F_table,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%F_table)
- END SUBROUTINE TMD_PackOtherState
+ END SUBROUTINE TMD_PackMisc
 
- SUBROUTINE TMD_UnPackOtherState( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+ SUBROUTINE TMD_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
   REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
   REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
   INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
-  TYPE(TMD_OtherStateType), INTENT(INOUT) :: OutData
+  TYPE(TMD_MiscVarType), INTENT(INOUT) :: OutData
   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
     ! Local variables
@@ -1468,7 +1604,7 @@ ENDIF
   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
   INTEGER(IntKi)                 :: ErrStat2
   CHARACTER(ErrMsgLen)           :: ErrMsg2
-  CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_UnPackOtherState'
+  CHARACTER(*), PARAMETER        :: RoutineName = 'TMD_UnPackMisc'
  ! buffers to store meshes, if any
   REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
   REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
@@ -1545,7 +1681,7 @@ ENDIF
       OutData%F_table = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%F_table))-1 ), mask1, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%F_table)
     DEALLOCATE(mask1)
- END SUBROUTINE TMD_UnPackOtherState
+ END SUBROUTINE TMD_UnPackMisc
 
  SUBROUTINE TMD_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
    TYPE(TMD_ParameterType), INTENT(IN) :: SrcParamData
