@@ -654,7 +654,6 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg 
       omega_N_O_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%RotationVel(:,1))
       alpha_N_O_N = matmul(u%Mesh%Orientation(:,:,1),u%Mesh%RotationAcc(:,1))
 
-   ! Start of the proposed change : Change the TMD DOF Mode to the specific number {1: TMD_X_DOF; 2: TMD_Y_DOF; 3: TMD_XY_DOF} by sm 2015-0922 
       IF (p%TMD_DOF_MODE == ControlMode_None) THEN
      
       ! tmd external forces of dependent degrees:
@@ -770,7 +769,6 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg 
 
       
       
-     ! Start of the proposed change : Change EOMs for the omni-directional TMD by sm 2015/10/06
       IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
 
       ! tmd external forces of dependent degrees:
@@ -870,17 +868,7 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrSt
       B_Y = - rddot_N_N(2) + a_G_N(2) + 1 / p%M_XY * ( OtherState%F_ext(2) + OtherState%F_stop(2) - OtherState%F_table(2) )
       END IF
       
-      
-      ! compute damping
-      IF (p%TMD_CMODE == ControlMode_None) THEN
-         OtherState%C_ctrl(1) = p%C_X
-         OtherState%C_ctrl(2) = p%C_Y
-      ELSE IF (p%TMD_CMODE == CMODE_Semi) THEN ! ground hook control
-         CALL TMD_GroundHookDamp(x,u,p,OtherState%C_ctrl,OtherState%C_Brake,OtherState%F_fr)
-      END IF
-      
-   ! Start of the proposed change : Change the TMD DOF Mode to the specific number {1: TMD_X_DOF; 2: TMD_Y_DOF; 3: TMD_XY_DOF} by sm 2015-0922 
-      ! Compute the first time derivatives of the continuous states here:
+
        IF (p%TMD_DOF_MODE == ControlMode_None) THEN
             dxdt%tmd_x(1) = 0
             dxdt%tmd_x(2) = 0
@@ -903,7 +891,6 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrSt
             dxdt%tmd_x(4) =0
        END IF
 
-     ! Start of the proposed change : Compute the first time derivatives of the continuous states of Omnidirectional TMD mode by sm 2015-0904 
        IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
             dxdt%tmd_x(1) = x%tmd_x(2)
             dxdt%tmd_x(2) = (omega_P_N(2)**2 + omega_P_N(3)**2 - K(1) / p%M_XY) * x%tmd_x(1) - ( OtherState%C_ctrl(1)/p%M_XY ) * x%tmd_x(2) - ( OtherState%C_Brake(1)/p%M_XY ) * x%tmd_x(2) + B_X + 1 / p%M_XY * ( OtherState%F_fr(1) ) - ( omega_P_N(1)*omega_P_N(2) - alpha_P_N(3) ) * x%tmd_x(3) + 2 * omega_P_N(3) * x%tmd_x(4)
@@ -911,10 +898,16 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrSt
             dxdt%tmd_x(4) = (omega_P_N(1)**2 + omega_P_N(3)**2 - K(2) / p%M_XY) * x%tmd_x(3) - ( OtherState%C_ctrl(2)/p%M_XY ) * x%tmd_x(4) - ( OtherState%C_Brake(2)/p%M_XY ) * x%tmd_x(4) + B_Y + 1 / p%M_XY * ( OtherState%F_fr(2) ) - ( omega_P_N(1)*omega_P_N(2) + alpha_P_N(3) ) * x%tmd_x(1) - 2 * omega_P_N(3) * x%tmd_x(2)
          
        END IF
-      ! End of the proposed change : Compute the first time derivatives of the continuous states of Omnidirectional TMD mode by sm 2015-0904 
-   ! eND of the proposed change : Change the TMD DOF Mode to the specific number {1: TMD_X_DOF; 2: TMD_Y_DOF; 3: TMD_XY_DOF} by sm 2015-0922 
-      
-      
+   
+       ! compute damping
+      IF (p%TMD_CMODE == ControlMode_None) THEN
+         OtherState%C_ctrl(1) = p%C_X
+         OtherState%C_ctrl(2) = p%C_Y
+      ELSE IF (p%TMD_CMODE == CMODE_Semi) THEN ! ground hook control
+         CALL TMD_GroundHookDamp(x,u,p,OtherState%C_ctrl,OtherState%C_Brake,OtherState%F_fr)
+      END IF
+
+  
 CONTAINS
    SUBROUTINE TMD_CalcStopForce(x,p,F_stop)
       TYPE(TMD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
@@ -1695,9 +1688,7 @@ SUBROUTINE TMD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    p%K_Y = InputFileData%TMD_Y_K
    p%C_Y = InputFileData%TMD_Y_C
 
-   ! Start of the proposed change : Add TMD Mass_XY by sm 2015-0922 
    p%M_XY = InputFileData%TMD_XY_M
-   ! End of the proposed change : Add TMD Mass_XY by sm 2015-0922 
    
      ! vector parameters
    ! stop positions
