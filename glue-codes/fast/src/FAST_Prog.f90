@@ -35,7 +35,7 @@ PROGRAM FAST
 !.................................................................................................
 
 
-USE FAST_Subs   ! all of the ModuleName and ModuleName_types modules are inherited from FAST_IO_Subs
+USE FAST_Subs   ! all of the ModuleName and ModuleName_types modules are inherited from FAST_Subs
                        
 IMPLICIT  NONE
    
