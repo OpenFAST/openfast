@@ -673,7 +673,7 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
    
    IF(p%quadrature .EQ. 1) THEN
        ! Number of Gauss points
-       p%ngp = p%node_elem - 1
+       p%ngp = p%node_elem !- 1
    ELSEIF(p%quadrature .EQ. 2) THEN 
        p%refine = InputFileData%refine
        p%ngp = (InputFileData%kp_member(1) - 1)*p%refine + 1
