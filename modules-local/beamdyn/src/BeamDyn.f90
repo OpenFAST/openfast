@@ -905,14 +905,14 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
    
    
-      ! initialization (not necessary)
+      ! initialization (used for initial guess to AeroDyn)
 
-   !y%BldMotion%TranslationDisp(:,:) = 0.0_BDKi
-   !y%BldMotion%Orientation(:,:,:)   = 0.0_BDKi
-   !y%BldMotion%TranslationVel(:,:)  = 0.0_BDKi
-   !y%BldMotion%RotationVel(:,:)     = 0.0_BDKi
-   !y%BldMotion%TranslationAcc(:,:)  = 0.0_BDKi
-   !y%BldMotion%RotationAcc(:,:)     = 0.0_BDKi
+   y%BldMotion%TranslationDisp(:,:) = 0.0_BDKi
+   y%BldMotion%Orientation(:,:,:)   = y%BldMotion%RefOrientation(:,:,:)
+   y%BldMotion%TranslationVel(:,:)  = 0.0_BDKi
+   y%BldMotion%RotationVel(:,:)     = 0.0_BDKi
+   y%BldMotion%TranslationAcc(:,:)  = 0.0_BDKi
+   y%BldMotion%RotationAcc(:,:)     = 0.0_BDKi
    
    
    !.................................
@@ -5487,7 +5487,6 @@ contains
    end subroutine cleanup 
 END SUBROUTINE BD_InitAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
-
 SUBROUTINE BD_ComputeBladeMassNew(Mass0,GaussPos,         &
                                   elem_total,node_elem,dof_node,&
                                   quadrature,ngp,gw,Jaco,&
