@@ -223,8 +223,8 @@ SUBROUTINE ModName_End( u, p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
 
 END SUBROUTINE ModName_End
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
-!! Continuous, constraint, and discrete states are updated to values at t + Interval.
+!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other 
+!! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
 SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -367,7 +367,7 @@ SUBROUTINE ModName_CalcOutput( t, u, p, x, xd, z, OtherState, y, misc, ErrStat, 
       TYPE(ModName_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
       TYPE(ModName_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
       TYPE(ModName_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
-      TYPE(ModName_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states
+      TYPE(ModName_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
       TYPE(ModName_MiscVarType),         INTENT(INOUT)  :: misc        !< Misc variables for optimization (not copied in glue code)
       TYPE(ModName_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                        !!   nectivity information does not have to be recalculated)
