@@ -1,20 +1,20 @@
 MODULE IfW_TSFFWind
 !
-!  This module uses full-field binary wind files to determine the wind inflow.
-!  This module assumes that the origin, (0,0,0), is located at the tower centerline at ground level,
-!  and that all units are specified in the metric system (using meters and seconds).
-!  Data is shifted by half the grid width to account for turbine yaw (so that data in the X
-!  direction actually starts at -1*ParamData%FFYHWid meters).
-!
-!  Created 25-Sep-2009 by B. Jonkman, National Renewable Energy Laboratory
-!     using subroutines and modules from AeroDyn v12.58
-!
-!----------------------------------------------------------------------------------------------------
-!  Feb 2013    v2.00.00          A. Platt
-!     -- updated to the new framework
-!     -- Modified to use NWTC_Library v. 2.0
-!     -- Note:  Jacobians are not included in this version.
-!
+!>  This module uses full-field binary wind files to determine the wind inflow.
+!!  This module assumes that the origin, (0,0,0), is located at the tower centerline at ground level,
+!!  and that all units are specified in the metric system (using meters and seconds).
+!!  Data is shifted by half the grid width to account for turbine yaw (so that data in the X
+!!  direction actually starts at -1*ParamData%FFYHWid meters).
+!!
+!!  Created 25-Sep-2009 by B. Jonkman, National Renewable Energy Laboratory
+!!     using subroutines and modules from AeroDyn v12.58
+!!
+!!----------------------------------------------------------------------------------------------------
+!!  Feb 2013    v2.00.00          A. Platt
+!!     -- updated to the new framework
+!!     -- Modified to use NWTC_Library v. 2.0
+!!     -- Note:  Jacobians are not included in this version.
+!!
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015  National Renewable Energy Laboratory
@@ -45,7 +45,7 @@ MODULE IfW_TSFFWind
    IMPLICIT                                     NONE
    PRIVATE
 
-   TYPE(ProgDesc),   PARAMETER               :: IfW_TSFFWind_Ver = ProgDesc( 'IfW_TSFFWind', 'v1.00.00', '02-Apr-2015' )
+   TYPE(ProgDesc),   PARAMETER               :: IfW_TSFFWind_Ver = ProgDesc( 'IfW_TSFFWind', 'v1.01.00', '14-Dec-2015' )
 
    PUBLIC                                    :: IfW_TSFFWind_Init
    PUBLIC                                    :: IfW_TSFFWind_End
@@ -56,14 +56,11 @@ MODULE IfW_TSFFWind
 
 CONTAINS
 !====================================================================================================
-SUBROUTINE IfW_TSFFWind_Init(InitData, PositionXYZ, ParamData, OtherStates, &
-                           OutData, Interval, InitOutData, ErrStat, ErrMsg)
-   !-------------------------------------------------------------------------------------------------
-   !  This routine is used read the full-field turbulence data.
-   !  09/25/1997  - Created by M. Buhl from GETFILES in ViewWind.
-   !  09/23/2009  - modified by B. Jonkman: this subroutine was split into several subroutines (was ReadFF)
-   !  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-   !-------------------------------------------------------------------------------------------------
+!>  This routine is used read the full-field turbulence data.
+!!  09/25/1997  - Created by M. Buhl from GETFILES in ViewWind.
+!!  09/23/2009  - modified by B. Jonkman: this subroutine was split into several subroutines (was ReadFF)
+!!  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
+SUBROUTINE IfW_TSFFWind_Init(InitData, PositionXYZ, ParamData, OutData, MiscVars, Interval, InitOutData, ErrStat, ErrMsg)
 
    IMPLICIT                       NONE
 
@@ -71,19 +68,19 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, PositionXYZ, ParamData, OtherStates, &
 
 
       ! Passed Variables
-   TYPE(IfW_TSFFWind_InitInputType),         INTENT(IN   )  :: InitData       ! Initialization data passed to the module
-   REAL(ReKi),             ALLOCATABLE,      INTENT(INOUT)  :: PositionXYZ(:,:)  ! Array of positions to find wind speed at
-   TYPE(IfW_TSFFWind_ParameterType),         INTENT(  OUT)  :: ParamData         ! Parameters
-   TYPE(IfW_TSFFWind_OtherStateType),        INTENT(  OUT)  :: OtherStates       ! Other State data   (storage for the main data)
-   TYPE(IfW_TSFFWind_OutputType),            INTENT(  OUT)  :: OutData           ! Initial output
-   TYPE(IfW_TSFFWind_InitOutputType),        INTENT(  OUT)  :: InitOutData       ! Initial output
+   TYPE(IfW_TSFFWind_InitInputType),         INTENT(IN   )  :: InitData          !< Initialization data passed to the module
+   REAL(ReKi),             ALLOCATABLE,      INTENT(INOUT)  :: PositionXYZ(:,:)  !< Array of positions to find wind speed at
+   TYPE(IfW_TSFFWind_ParameterType),         INTENT(  OUT)  :: ParamData         !< Parameters
+   TYPE(IfW_TSFFWind_OutputType),            INTENT(  OUT)  :: OutData           !< Initial output
+   TYPE(IfW_TSFFWind_MiscVarType),           INTENT(  OUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
+   TYPE(IfW_TSFFWind_InitOutputType),        INTENT(  OUT)  :: InitOutData       !< Initial output
 
-   REAL(DbKi),                               INTENT(IN   )  :: Interval          ! Time Interval to use (passed through here)
+   REAL(DbKi),                               INTENT(IN   )  :: Interval          !< Time Interval to use (passed through here)
 
 
       ! Error Handling
-   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           ! determines if an error has been encountered
-   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            ! Message about errors
+   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< determines if an error has been encountered
+   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Message about errors
 
 
       ! Temporary variables for error handling
@@ -138,16 +135,6 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, PositionXYZ, ParamData, OtherStates, &
       RETURN
    ENDIF
 
-
-
-      !-------------------------------------------------------------------------------------------------
-      ! Check that it's not already initialized
-      !-------------------------------------------------------------------------------------------------
-
-   IF ( OtherStates%Initialized ) THEN
-      CALL SetErrStat(ErrID_Warn,' TSFFWind has already been initialized.',ErrStat,ErrMsg,RoutineName)
-      RETURN      ! No point continuing since already initialized.
-   ENDIF
 
 
       ! Get a unit number to use
@@ -221,8 +208,6 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, PositionXYZ, ParamData, OtherStates, &
       ParamData%TotalTime     = (ParamData%NFFSteps-1)*ParamData%FFDTime
    ENDIF
 
-   OtherStates%Initialized = .TRUE.
-
 
       !-------------------------------------------------------------------------------------------------
       ! Set the InitOutput information
@@ -238,11 +223,11 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, PositionXYZ, ParamData, OtherStates, &
    CONTAINS
 
    !====================================================================================================
+   !> This subroutine reads the binary TurbSim-format FF file (.bts).  It fills the FFData array with
+   !! velocity data for the grids and fills the FFTower array with velocities at points on the tower
+   !! (if data exists).
+   !!   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
    SUBROUTINE Read_TurbSim_FF(UnitWind, ErrStat, ErrMsg)
-   ! This subroutine reads the binary TurbSim-format FF file (.bts).  It fills the FFData array with
-   ! velocity data for the grids and fills the FFTower array with velocities at points on the tower
-   ! (if data exists).
-   !   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
    !----------------------------------------------------------------------------------------------------
 
       CHARACTER(*),           PARAMETER                  :: RoutineName="READ_TurbSim_FF"
@@ -250,9 +235,9 @@ SUBROUTINE IfW_TSFFWind_Init(InitData, PositionXYZ, ParamData, OtherStates, &
 
          ! Passed Variables:
 
-      INTEGER(IntKi),                     INTENT(IN   )  :: UnitWind       ! unit number for the wind file
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        ! error status return value (0=no error; non-zero is error)
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         ! message about the error encountered
+      INTEGER(IntKi),                     INTENT(IN   )  :: UnitWind       !< unit number for the wind file
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< error status return value (0=no error; non-zero is error)
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< message about the error encountered
 
          ! Local Variables:
 
@@ -639,17 +624,14 @@ END SUBROUTINE IfW_TSFFWind_Init
 
 
 !====================================================================================================
-SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,   &
-                           OutData, ErrStat, ErrMsg)
-   !-------------------------------------------------------------------------------------------------
-   ! This routine acts as a wrapper for the GetWindSpeed routine. It steps through the array of input
-   ! positions and calls the GetWindSpeed routine to calculate the velocities at each point.
-   !
-   ! There are inefficiencies in how this set of routines is coded, but that is a problem for another
-   ! day. For now, it merely needs to be functional. It can be fixed up and made all pretty later.
-   !
-   !   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-   !-------------------------------------------------------------------------------------------------
+!> This routine acts as a wrapper for the GetWindSpeed routine. It steps through the array of input
+!! positions and calls the GetWindSpeed routine to calculate the velocities at each point.
+!!
+!! There are inefficiencies in how this set of routines is coded, but that is a problem for another
+!! day. For now, it merely needs to be functional. It can be fixed up and made all pretty later.
+!!
+!!   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
+SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData,  OutData, MiscVars, ErrStat, ErrMsg)
 
    IMPLICIT                                                 NONE
 
@@ -658,15 +640,15 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,   
 
 
       ! Passed Variables
-   REAL(DbKi),                               INTENT(IN   )  :: Time              ! time from the start of the simulation
-   REAL(ReKi), ALLOCATABLE,                  INTENT(IN   )  :: PositionXYZ(:,:)  ! Array of XYZ coordinates, 3xN
-   TYPE(IfW_TSFFWind_ParameterType),         INTENT(IN   )  :: ParamData         ! Parameters
-   TYPE(IfW_TSFFWind_OtherStateType),        INTENT(INOUT)  :: OtherStates       ! Other State data   (storage for the main data)
-   TYPE(IfW_TSFFWind_OutputType),            INTENT(  OUT)  :: OutData           ! Initial output
+   REAL(DbKi),                               INTENT(IN   )  :: Time              !< time from the start of the simulation
+   REAL(ReKi), ALLOCATABLE,                  INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
+   TYPE(IfW_TSFFWind_ParameterType),         INTENT(IN   )  :: ParamData         !< Parameters
+   TYPE(IfW_TSFFWind_OutputType),            INTENT(  OUT)  :: OutData           !< Output at Time
+   TYPE(IfW_TSFFWind_MiscVarType),           INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
 
       ! Error handling
-   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat        ! error status
-   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg         ! The error message
+   INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< error status
+   CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< The error message
 
       ! local variables
    INTEGER(IntKi)                                           :: NumPoints      ! Number of points specified by the PositionXYZ array
@@ -688,13 +670,6 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,   
    ErrMsg      = ''
    TmpErrStat  = ErrID_None
    TmpErrMsg   = ""
-
-   IF ( .NOT. OtherStates%Initialized ) THEN
-      ErrMsg   = ' Initialialize the TSFFWind module before calling its subroutines.'
-      ErrStat  = ErrID_Fatal
-      RETURN
-   ENDIF
-
 
       !-------------------------------------------------------------------------------------------------
       ! Initialize some things
@@ -720,13 +695,8 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,   
       ! Step through all the positions and get the velocities
    DO PointNum = 1, NumPoints
 
-
-
-
          ! Calculate the velocity for the position
-      OutData%Velocity(:,PointNum) = FF_Interp(Time,PositionXYZ(:,PointNum),ParamData,OtherStates,TmpErrStat,TmpErrMsg)
-
-
+      OutData%Velocity(:,PointNum) = FF_Interp(Time,PositionXYZ(:,PointNum),ParamData,MiscVars,TmpErrStat,TmpErrMsg)
 
 
          ! Error handling
@@ -752,39 +722,38 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData, OtherStates,   
 
 CONTAINS
    !+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-   FUNCTION FF_Interp(Time, Position, ParamData, OtherStates, ErrStat, ErrMsg)
-   !    This function is used to interpolate into the full-field wind array or tower array if it has
-   !    been defined and is necessary for the given inputs.  It receives X, Y, Z and
-   !    TIME from the calling routine.  It then computes a time shift due to a nonzero X based upon
-   !    the average windspeed.  The modified time is used to decide which pair of time slices to interpolate
-   !    within and between.  After finding the two time slices, it decides which four grid points bound the
-   !    (Y,Z) pair.  It does a bilinear interpolation for each time slice. Linear interpolation is then used
-   !    to interpolate between time slices.  This routine assumes that X is downwind, Y is to the left when
-   !    looking downwind and Z is up.  It also assumes that no extrapolation will be needed.
-   !
-   !    If tower points are used, it assumes the velocity at the ground is 0.  It interpolates between
-   !    heights and between time slices, but ignores the Y input.
-   !
-   !    11/07/1994 - Created by M. Buhl from the original TURBINT.
-   !    09/25/1997 - Modified by M. Buhl to use f90 constructs and new variable names.  Renamed to FF_Interp.
-   !    09/23/2009 - Modified by B. Jonkman to use arguments instead of modules to determine time and position.
-   !                 Height is now relative to the ground
-   !   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-   !
+   !>    This function is used to interpolate into the full-field wind array or tower array if it has
+   !!    been defined and is necessary for the given inputs.  It receives X, Y, Z and
+   !!    TIME from the calling routine.  It then computes a time shift due to a nonzero X based upon
+   !!    the average windspeed.  The modified time is used to decide which pair of time slices to interpolate
+   !!    within and between.  After finding the two time slices, it decides which four grid points bound the
+   !!    (Y,Z) pair.  It does a bilinear interpolation for each time slice. Linear interpolation is then used
+   !!    to interpolate between time slices.  This routine assumes that X is downwind, Y is to the left when
+   !!    looking downwind and Z is up.  It also assumes that no extrapolation will be needed.
+   !!
+   !!    If tower points are used, it assumes the velocity at the ground is 0.  It interpolates between
+   !!    heights and between time slices, but ignores the Y input.
+   !!
+   !!    11/07/1994 - Created by M. Buhl from the original TURBINT.
+   !!    09/25/1997 - Modified by M. Buhl to use f90 constructs and new variable names.  Renamed to FF_Interp.
+   !!    09/23/2009 - Modified by B. Jonkman to use arguments instead of modules to determine time and position.
+   !!                 Height is now relative to the ground
+   !!   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
+   FUNCTION FF_Interp(Time, Position, ParamData, MiscVars, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------------------------------
 
       IMPLICIT                                              NONE
 
       CHARACTER(*),           PARAMETER                  :: RoutineName="FF_Interp"
 
-      REAL(DbKi),                         INTENT(IN   )  :: Time
-      REAL(ReKi),                         INTENT(IN   )  :: Position(3)    ! takes the place of XGrnd, YGrnd, ZGrnd
-      TYPE(IfW_TSFFWind_ParameterType),   INTENT(IN   )  :: ParamData      ! Parameters
-      TYPE(IfW_TSFFWind_OtherStateType),  INTENT(INOUT)  :: OtherStates    ! Other State data   (storage for the main data)
-      REAL(ReKi)                                         :: FF_Interp(3)   ! The U, V, W velocities
+      REAL(DbKi),                         INTENT(IN   )  :: Time           !< time
+      REAL(ReKi),                         INTENT(IN   )  :: Position(3)    !< takes the place of XGrnd, YGrnd, ZGrnd
+      TYPE(IfW_TSFFWind_ParameterType),   INTENT(IN   )  :: ParamData      !< Parameters
+      TYPE(IfW_TSFFWind_MiscVarType),     INTENT(INOUT)  :: MiscVars       !< Misc variables for optimization (not copied in glue code)
+      REAL(ReKi)                                         :: FF_Interp(3)   !< The U, V, W velocities
 
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat        !< error status
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< error message
 
          ! Local Variables:
 
@@ -1055,15 +1024,11 @@ END SUBROUTINE IfW_TSFFWind_CalcOutput
 
 
 !====================================================================================================
-SUBROUTINE IfW_TSFFWind_End( PositionXYZ, ParamData, OtherStates,   &
-                           OutData, ErrStat, ErrMsg)
-   !-------------------------------------------------------------------------------------------------
-   !  This subroutine cleans up any data that is still allocated.  The (possibly) open files are
-   !  closed in InflowWindMod.
-   !
-   !  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-   !-------------------------------------------------------------------------------------------------
-
+!>  This subroutine cleans up any data that is still allocated.  The (possibly) open files are
+!!  closed in InflowWindMod.
+!!
+!!  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
+SUBROUTINE IfW_TSFFWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrStat, ErrMsg)
 
    IMPLICIT                                                 NONE
 
@@ -1072,15 +1037,15 @@ SUBROUTINE IfW_TSFFWind_End( PositionXYZ, ParamData, OtherStates,   &
 
 
       ! Passed Variables
-   REAL(ReKi),             ALLOCATABLE,   INTENT(INOUT)  :: PositionXYZ(:,:)  ! Coordinate position list
-   TYPE(IfW_TSFFWind_ParameterType),      INTENT(INOUT)  :: ParamData      ! Parameters
-   TYPE(IfW_TSFFWind_OtherStateType),     INTENT(INOUT)  :: OtherStates    ! Other State data   (storage for the main data)
-   TYPE(IfW_TSFFWind_OutputType),         INTENT(INOUT)  :: OutData        ! Initial output
+   REAL(ReKi),             ALLOCATABLE,   INTENT(INOUT)  :: PositionXYZ(:,:)  !< Coordinate position list
+   TYPE(IfW_TSFFWind_ParameterType),      INTENT(INOUT)  :: ParamData         !< Parameters
+   TYPE(IfW_TSFFWind_OutputType),         INTENT(INOUT)  :: OutData           !< Output
+   TYPE(IfW_TSFFWind_MiscVarType),        INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
 
 
       ! Error Handling
-   INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat        ! determines if an error has been encountered
-   CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg         ! Message about errors
+   INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< determines if an error has been encountered
+   CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg            !< Message about errors
 
 
       ! Local Variables
@@ -1106,9 +1071,9 @@ SUBROUTINE IfW_TSFFWind_End( PositionXYZ, ParamData, OtherStates,   &
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
 
 
-      ! Destroy the state data
+      ! Destroy the misc data
 
-   CALL IfW_TSFFWind_DestroyOtherState(  OtherStates,   TmpErrStat, TmpErrMsg )
+   CALL IfW_TSFFWind_DestroyMisc(  MiscVars,   TmpErrStat, TmpErrMsg )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
 
 
@@ -1118,13 +1083,7 @@ SUBROUTINE IfW_TSFFWind_End( PositionXYZ, ParamData, OtherStates,   &
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
 
 
-      ! flag as uninitialized
-   OtherStates%Initialized = .FALSE.
-
-
 END SUBROUTINE IfW_TSFFWind_End
 
-!====================================================================================================
-!====================================================================================================
 !====================================================================================================
 END MODULE IfW_TSFFWind

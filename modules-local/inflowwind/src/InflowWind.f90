@@ -1,19 +1,20 @@
 !**********************************************************************************************************************************
 ! $Id: InflowWind.f90 125 2014-10-29 22:28:35Z aplatt $
 !
-! This module is used to read and process the (undisturbed) inflow winds.  It must be initialized
-! using InflowWind_Init() with the name of the file, the file type, and possibly reference height and
-! width (depending on the type of wind file being used).  This module calls appropriate routines
-! in the wind modules so that the type of wind becomes seamless to the user.  InflowWind_End()
-! should be called when the program has finshed.
-!
-! Data are assumed to be in units of meters and seconds.  Z is measured from the ground (NOT the hub!).
-!
-!  7 Oct 2009    Initial Release with AeroDyn 13.00.00         B. Jonkman, NREL/NWTC
-! 14 Nov 2011    v1.00.01b-bjj                                 B. Jonkman
-!  1 Aug 2012    v1.01.00a-bjj                                 B. Jonkman
-! 10 Aug 2012    v1.01.00b-bjj                                 B. Jonkman
-!    Feb 2013    v2.00.00a-adp   conversion to Framework       A. Platt
+!! This module is used to read and process the (undisturbed) inflow winds.  It must be initialized
+!! using InflowWind_Init() with the name of the file, the file type, and possibly reference height and
+!! width (depending on the type of wind file being used).  This module calls appropriate routines
+!! in the wind modules so that the type of wind becomes seamless to the user.  InflowWind_End()
+!! should be called when the program has finshed.
+!!
+!! Data are assumed to be in units of meters and seconds.  Z is measured from the ground (NOT the hub!).
+!!
+!!  7 Oct 2009    Initial Release with AeroDyn 13.00.00         B. Jonkman, NREL/NWTC
+!! 14 Nov 2011    v1.00.01b-bjj                                 B. Jonkman
+!!  1 Aug 2012    v1.01.00a-bjj                                 B. Jonkman
+!! 10 Aug 2012    v1.01.00b-bjj                                 B. Jonkman
+!!    Feb 2013    v2.00.00a-adp   conversion to Framework       A. Platt
+!!    Sep 2015    v3.00.00a-adb   added separate input file     A. Platt
 !
 !..................................................................................................................................
 ! Files with this module:
@@ -67,7 +68,7 @@ MODULE InflowWind
    IMPLICIT NONE
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v3.01.00b-adp', '11-Nov-2015' )
+   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v3.02.00a-bjj', '14-Dec-2015' )
 
 
 
@@ -97,7 +98,7 @@ CONTAINS
 !----------------------------------------------------------------------------------------------------
 SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,                   &
                      ContStates, DiscStates,    ConstrStateGuess,    OtherStates,   &
-                     OutData,    TimeInterval,  InitOutData,                        &
+                     OutData,    MiscVars,   TimeInterval,  InitOutData,            &
                      ErrStat,    ErrMsg )
 
       IMPLICIT                                                 NONE
@@ -114,6 +115,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       TYPE(InflowWind_ConstraintStateType),  INTENT(  OUT)  :: ConstrStateGuess  !< Initial guess of the constraint states
       TYPE(InflowWind_OtherStateType),       INTENT(  OUT)  :: OtherStates       !< Initial other/optimization states
       TYPE(InflowWind_OutputType),           INTENT(  OUT)  :: OutData           !< Initial output (outputs are not calculated; only the output mesh is initialized)
+      TYPE(InflowWind_MiscVarType),          INTENT(  OUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
       REAL(DbKi),                            INTENT(IN   )  :: TimeInterval      !< Coupling time interval in seconds: InflowWind does not change this.
       TYPE(InflowWind_InitOutputType),       INTENT(  OUT)  :: InitOutData       !< Initial output data -- Names, units, and version info.
 
@@ -237,7 +239,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          ! initialize sensor data:   
       CALL Lidar_Init( InitData,   InputGuess,    ParamData,                          &
                        ContStates, DiscStates,    ConstrStateGuess,    OtherStates,   &
-                       OutData,    TimeInterval,  InitOutData,  TmpErrStat, TmpErrMsg )
+                       OutData,    MiscVars,      TimeInterval,  InitOutData,  TmpErrStat, TmpErrMsg )
                   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )      
       
 
@@ -253,7 +255,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
          ! Set the ParamData and OtherStates for InflowWind using the input file information.
 
-      CALL InflowWind_SetParameters( InputFileData, ParamData, OtherStates, TmpErrStat, TmpErrMsg )
+      CALL InflowWind_SetParameters( InputFileData, ParamData, MiscVars, TmpErrStat, TmpErrMsg )
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       IF ( ErrStat>= AbortErrLev ) THEN
          CALL Cleanup()
@@ -358,7 +360,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             ParamData%UniformWind%NumDataLines     =  1_IntKi
             ParamData%UniformWind%RefHt            =  InputFileData%Steady_RefHt
             ParamData%UniformWind%RefLength        =  1.0_ReKi    ! This is not used since no shear gusts are used.  Set to 1.0 so calculations don't bomb. 
-            OtherStates%UniformWind%TimeIndex      =  1           ! Used in UniformWind as a check if initialization was done.
+            MiscVars%UniformWind%TimeIndex         =  1           ! Used in UniformWind as a check if initialization was done.
 
 
             IF (.NOT. ALLOCATED(ParamData%UniformWind%Tdata) ) THEN
@@ -426,7 +428,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
                ! Now we have in effect initialized the IfW_UniformWind module, so set the parameters
             ParamData%UniformWind%RefLength        =  1.0_ReKi       ! This is done so that 0.0*(some stuff)/RefLength doesn't blow up.
             ParamData%UniformWind%RefHt            =  InputFileData%Steady_RefHt
-            OtherStates%UniformWind%TimeIndex      =  1_IntKi
+            MiscVars%UniformWind%TimeIndex         =  1_IntKi
 
 
                ! Store wind file metadata
@@ -475,8 +477,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             Uniform_InitData%SumFileUnit              =  SumFileUnit
 
                ! Initialize the UniformWind module
-            CALL IfW_UniformWind_Init(Uniform_InitData, InputGuess%PositionXYZ, ParamData%UniformWind, OtherStates%UniformWind, &
-                        Uniform_OutData,    TimeInterval,  Uniform_InitOutData,  TmpErrStat,          TmpErrMsg)
+            CALL IfW_UniformWind_Init(Uniform_InitData, InputGuess%PositionXYZ, ParamData%UniformWind, &
+                        Uniform_OutData,    MiscVars%UniformWind, TimeInterval,  Uniform_InitOutData,  TmpErrStat,          TmpErrMsg)
 
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
             IF ( ErrStat >= AbortErrLev ) RETURN
@@ -501,7 +503,20 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             InitOutData%WindFileInfo%TI               =  0.0_ReKi
             InitOutData%WindFileInfo%TI_listed        =  .FALSE.
 
-
+            if (ParamData%UniformWind%NumDataLines == 1) then
+               InitOutData%WindFileInfo%MWS = ParamData%UniformWind%V(i)
+            else
+               InitOutData%WindFileInfo%MWS = 0.0_ReKi               
+               do i=2,ParamData%UniformWind%NumDataLines
+                  InitOutData%WindFileInfo%MWS = InitOutData%WindFileInfo%MWS + &
+                                                 0.5_ReKi*(ParamData%UniformWind%V(i)+ParamData%UniformWind%V(i-1))*&
+                                                          (ParamData%UniformWind%Tdata(i)-ParamData%UniformWind%Tdata(i-1))
+               end do
+               InitOutData%WindFileInfo%MWS = InitOutData%WindFileInfo%MWS / &
+                           ( ParamData%UniformWind%Tdata(ParamData%UniformWind%NumDataLines) - ParamData%UniformWind%Tdata(1) )
+            end if
+            
+            
                ! Check if the fist data point from the file is not along the X-axis while applying the windfield rotation
             IF ( ( .NOT. EqualRealNos (ParamData%UniformWind%Delta(1), 0.0_ReKi) ) .AND.  &
                  ( .NOT. EqualRealNos (ParamData%PropagationDir, 0.0_ReKi)       ) ) THEN
@@ -521,8 +536,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             TSFF_InitData%SumFileUnit                    =  SumFileUnit
 
                ! Initialize the TSFFWind module
-            CALL IfW_TSFFWind_Init(TSFF_InitData, InputGuess%PositionXYZ, ParamData%TSFFWind, OtherStates%TSFFWind, &
-                        TSFF_OutData,    TimeInterval,  TSFF_InitOutData,  TmpErrStat,          TmpErrMsg)
+            CALL IfW_TSFFWind_Init(TSFF_InitData, InputGuess%PositionXYZ, ParamData%TSFFWind, &
+                        TSFF_OutData,    MiscVars%TSFFWind, TimeInterval,  TSFF_InitOutData,  TmpErrStat, TmpErrMsg)
             CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -568,8 +583,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             BladedFF_InitData%SumFileUnit                =  SumFileUnit
 
                ! Initialize the BladedFFWind module
-            CALL IfW_BladedFFWind_Init(BladedFF_InitData, InputGuess%PositionXYZ, ParamData%BladedFFWind, OtherStates%BladedFFWind, &
-                        BladedFF_OutData,    TimeInterval,  BladedFF_InitOutData,  TmpErrStat,          TmpErrMsg)
+            CALL IfW_BladedFFWind_Init(BladedFF_InitData, InputGuess%PositionXYZ, ParamData%BladedFFWind, &
+                        BladedFF_OutData, MiscVars%BladedFFWind, TimeInterval,  BladedFF_InitOutData,  TmpErrStat, TmpErrMsg)
             CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -637,8 +652,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
                    
             
                ! Initialize the HAWCWind module
-            CALL IfW_HAWCWind_Init(HAWC_InitData, InputGuess%PositionXYZ, ParamData%HAWCWind, OtherStates%HAWCWind, &
-                        HAWC_OutData,    TimeInterval,  HAWC_InitOutData,  TmpErrStat,          TmpErrMsg)
+            CALL IfW_HAWCWind_Init(HAWC_InitData, InputGuess%PositionXYZ, ParamData%HAWCWind, &
+                        HAWC_OutData, MiscVars%HAWCWind, TimeInterval,  HAWC_InitOutData,  TmpErrStat,          TmpErrMsg)
             CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -669,8 +684,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          CASE (User_WindNumber)
 
                ! Initialize the UserWind module
-            CALL IfW_UserWind_Init(User_InitData, InputGuess%PositionXYZ, ParamData%UserWind, OtherStates%UserWind, &
-                        User_OutData,    TimeInterval,  User_InitOutData,  TmpErrStat,          TmpErrMsg)
+            CALL IfW_UserWind_Init(User_InitData, InputGuess%PositionXYZ, ParamData%UserWind, &
+                        User_OutData, MiscVars%UserWind, TimeInterval,  User_InitOutData,  TmpErrStat, TmpErrMsg)
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -704,12 +719,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 !!!
 !!!         CALL CTTS_Init(UnWind, ParamData%WindFileName, BackGrndValues, ErrStat, ErrMsg)
 !!!         IF (ErrStat /= 0) THEN
-!!!   !         CALL IfW_End( ParamData, ErrStat )
-!!!   !FIXME: cannot call IfW_End here -- requires InitData to be INOUT. Not allowed by framework.
-!!!   !         CALL IfW_End( InitData, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
-!!!   !                       OutData, ErrStat, ErrMsg )
 !!!            ParamData%WindType = Undef_Wind
-!!!            ErrStat  = 1
+!!!            ErrStat  = ErrID_Fatal
 !!!            RETURN
 !!!         END IF
 !!!
@@ -807,7 +818,7 @@ END SUBROUTINE InflowWind_Init
 !----------------------------------------------------------------------------------------------------
 SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
                               ContStates, DiscStates, ConstrStates, &   ! Framework required states -- empty in this case.
-                              OtherStates, OutputData, ErrStat, ErrMsg )
+                              OtherStates, OutputData, MiscVars, ErrStat, ErrMsg )
 
 
       IMPLICIT                                                    NONE
@@ -823,8 +834,9 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
       TYPE(InflowWind_ContinuousStateType),     INTENT(IN   )  :: ContStates        !< Continuous states at Time
       TYPE(InflowWind_DiscreteStateType),       INTENT(IN   )  :: DiscStates        !< Discrete states at Time
       TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: ConstrStates      !< Constraint states at Time
-      TYPE(InflowWind_OtherStateType),          INTENT(INOUT)  :: OtherStates       !< Other/optimization states at Time
+      TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherStates       !< Other/optimization states at Time
       TYPE(InflowWind_OutputType),              INTENT(INOUT)  :: OutputData        !< Outputs computed at Time (IN for mesh reasons and data allocation)
+      TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
 
       INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
       CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
@@ -861,7 +873,7 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
 
       CALL CalculateOutput( Time, InputData, ParamData, &
                        ContStates, DiscStates, ConstrStates, & 
-                       OtherStates, OutputData, .TRUE., TmpErrStat, TmpErrMsg )      
+                       OtherStates, OutputData, MiscVars, .TRUE., TmpErrStat, TmpErrMsg )      
          CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 
       !-----------------------------
@@ -873,22 +885,22 @@ SUBROUTINE InflowWind_CalcOutput( Time, InputData, ParamData, &
          
          CALL Lidar_CalcOutput(Time, InputData, ParamData, &
                               ContStates, DiscStates, ConstrStates, OtherStates, &  
-                              OutputData, TmpErrStat, TmpErrMsg )
+                              OutputData, MiscVars, TmpErrStat, TmpErrMsg )
          CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
          
       END IF      
        
       
       !-----------------------------
-      ! Outputs: OutputData%WriteOutput from OtherState%AllOuts and OutputData%lidar%LidSpeed
+      ! Outputs: OutputData%WriteOutput from MiscVars%AllOuts and OutputData%lidar%LidSpeed
       !-----------------------------
 
-      CALL SetAllOuts( ParamData, OutputData, OtherStates, TmpErrStat, TmpErrMsg ) 
+      CALL SetAllOuts( ParamData, OutputData, MiscVars, TmpErrStat, TmpErrMsg ) 
          CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
    
          ! Map to the outputs
       DO I = 1,ParamData%NumOuts  ! Loop through all selected output channels
-         OutputData%WriteOutput(I) = ParamData%OutParam(I)%SignM * OtherStates%AllOuts( ParamData%OutParam(I)%Indx )
+         OutputData%WriteOutput(I) = ParamData%OutParam(I)%SignM * MiscVars%AllOuts( ParamData%OutParam(I)%Indx )
       ENDDO             ! I - All selected output channels
 
 
@@ -897,11 +909,10 @@ END SUBROUTINE InflowWind_CalcOutput
 
 
 !====================================================================================================
+!> Clean up the allocated variables and close all open files.  Reset the initialization flag so
+!! that we have to reinitialize before calling the routines again.
 SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrStateGuess, OtherStates, &
-                       OutData, ErrStat, ErrMsg )
-   ! Clean up the allocated variables and close all open files.  Reset the initialization flag so
-   ! that we have to reinitialize before calling the routines again.
-   !----------------------------------------------------------------------------------------------------
+                       OutData, MiscVars, ErrStat, ErrMsg )
 
       IMPLICIT                                                    NONE
 
@@ -916,6 +927,7 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
       TYPE(InflowWind_ConstraintStateType),     INTENT(INOUT)  :: ConstrStateGuess  !< Guess of the constraint states
       TYPE(InflowWind_OtherStateType),          INTENT(INOUT)  :: OtherStates       !< Other/optimization states
       TYPE(InflowWind_OutputType),              INTENT(INOUT)  :: OutData           !< Output data
+      TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
 
 
          ! Error Handling
@@ -944,27 +956,27 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
 
          CASE (Steady_WindNumber)         ! The Steady wind is a simple wrapper for the UniformWind module.
             CALL IfW_UniformWind_End( InputData%PositionXYZ, ParamData%UniformWind, &
-                                 OtherStates%UniformWind, Uniform_OutData, ErrStat, ErrMsg )
+                                 Uniform_OutData, MiscVars%UniformWind, ErrStat, ErrMsg )
 
          CASE (Uniform_WindNumber)
             CALL IfW_UniformWind_End( InputData%PositionXYZ, ParamData%UniformWind, &
-                                 OtherStates%UniformWind, Uniform_OutData, ErrStat, ErrMsg )
+                                 Uniform_OutData, MiscVars%UniformWind, ErrStat, ErrMsg )
 
          CASE (TSFF_WindNumber)
             CALL IfW_TSFFWind_End( InputData%PositionXYZ, ParamData%TSFFWind, &
-                                 OtherStates%TSFFWind, TSFF_OutData, ErrStat, ErrMsg )
+                                 TSFF_OutData, MiscVars%TSFFWind, ErrStat, ErrMsg )
 
          CASE (BladedFF_WindNumber)
             CALL IfW_BladedFFWind_End( InputData%PositionXYZ, ParamData%BladedFFWind, &
-                                 OtherStates%BladedFFWind, BladedFF_OutData, ErrStat, ErrMsg )
+                                 BladedFF_OutData, MiscVars%BladedFFWind, ErrStat, ErrMsg )
 
          CASE (HAWC_WindNumber)
             CALL IfW_HAWCWind_End( InputData%PositionXYZ, ParamData%HAWCWind, &
-                                 OtherStates%HAWCWind, HAWC_OutData, ErrStat, ErrMsg )
+                                 HAWC_OutData, MiscVars%HAWCWind, ErrStat, ErrMsg )
 
          CASE (User_WindNumber)
             CALL IfW_UserWind_End( InputData%PositionXYZ, ParamData%UserWind, &
-                                 OtherStates%UserWind, User_OutData, ErrStat, ErrMsg )
+                                 User_OutData, MiscVars%UserWind, ErrStat, ErrMsg )
 
          CASE ( Undef_WindNumber )
             ! Do nothing
@@ -985,6 +997,7 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
       CALL InflowWind_DestroyConstrState( ConstrStateGuess, ErrStat, ErrMsg )         
       CALL InflowWind_DestroyOtherState( OtherStates, ErrStat, ErrMsg )         
       CALL InflowWind_DestroyOutput( OutData, ErrStat, ErrMsg )                     
+      CALL InflowWind_DestroyMisc( MiscVars, ErrStat, ErrMsg )                     
       
       
          ! Reset the wind type so that the initialization routine must be called
@@ -996,14 +1009,12 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
 END SUBROUTINE InflowWind_End
 
 
-
 !====================================================================================================
 ! The following routines were added to satisfy the framework, but do nothing useful.
 !====================================================================================================
-SUBROUTINE InflowWind_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
-! Constraint states are solved for input Time; Continuous and discrete states are updated for Time + Interval
-!..................................................................................................................................
+!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other 
+!! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
+SUBROUTINE InflowWind_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       REAL(DbKi),                            INTENT(IN   ) :: t               !< Current simulation time in seconds
       INTEGER(IntKi),                        INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
@@ -1011,12 +1022,14 @@ SUBROUTINE InflowWind_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, Other
       REAL(DbKi),                            INTENT(IN   ) :: InputTimes(:)   !< Times in seconds associated with Inputs
       TYPE(InflowWind_ParameterType),        INTENT(IN   ) :: p               !< Parameters
       TYPE(InflowWind_ContinuousStateType),  INTENT(INOUT) :: x               !< Input: Continuous states at t;
-                                                                              !    Output: Continuous states at t + Interval
+                                                                              !!    Output: Continuous states at t + Interval
       TYPE(InflowWind_DiscreteStateType),    INTENT(INOUT) :: xd              !< Input: Discrete states at t;
-                                                                              !    Output: Discrete states at t  + Interval
-      TYPE(InflowWind_ConstraintStateType),  INTENT(INOUT) :: z               !< Input: Initial guess of constraint states at t;
-                                                                              !    Output: Constraint states at t
-      TYPE(InflowWind_OtherStateType),       INTENT(INOUT) :: OtherState      !< Other/optimization states
+                                                                              !!    Output: Discrete states at t  + Interval
+      TYPE(InflowWind_ConstraintStateType),  INTENT(INOUT) :: z               !< Input: Constraint states at t;
+                                                                              !!   Output: Constraint states at t + Interval
+      TYPE(InflowWind_OtherStateType),       INTENT(INOUT) :: OtherState      !< Other states: Other states at t;
+                                                                              !!   Output: Other states at t + Interval
+      TYPE(InflowWind_MiscVarType),          INTENT(INOUT) :: m               !< Misc variables for optimization (not copied in glue code)
       INTEGER(IntKi),                        INTENT(  OUT) :: ErrStat         !< Error status of the operation
       CHARACTER(*),                          INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
@@ -1035,11 +1048,9 @@ SUBROUTINE InflowWind_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, Other
 
 END SUBROUTINE InflowWind_UpdateStates
 
-
-
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE InflowWind_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-! Tight coupling routine for computing derivatives of continuous states
+!> Tight coupling routine for computing derivatives of continuous states
+SUBROUTINE InflowWind_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                               INTENT(IN   )  :: Time        !< Current simulation time in seconds
@@ -1048,7 +1059,8 @@ SUBROUTINE InflowWind_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt
       TYPE(InflowWind_ContinuousStateType),     INTENT(IN   )  :: x           !< Continuous states at Time
       TYPE(InflowWind_DiscreteStateType),       INTENT(IN   )  :: xd          !< Discrete states at Time
       TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: z           !< Constraint states at Time
-      TYPE(InflowWind_OtherStateType),          INTENT(INOUT)  :: OtherState  !< Other/optimization states
+      TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherState  !< Other states at Time
+      TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
       TYPE(InflowWind_ContinuousStateType),     INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at Time
       INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -1067,12 +1079,9 @@ SUBROUTINE InflowWind_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt
 
 END SUBROUTINE InflowWind_CalcContStateDeriv
 
-
-
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE InflowWind_UpdateDiscState( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-! Tight coupling routine for updating discrete states
-!..................................................................................................................................
+!> Tight coupling routine for updating discrete states
+SUBROUTINE InflowWind_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       REAL(DbKi),                               INTENT(IN   )  :: Time        !< Current simulation time in seconds
       TYPE(InflowWind_InputType),               INTENT(IN   )  :: u           !< Inputs at Time
@@ -1081,7 +1090,8 @@ SUBROUTINE InflowWind_UpdateDiscState( Time, u, p, x, xd, z, OtherState, ErrStat
       TYPE(InflowWind_DiscreteStateType),       INTENT(INOUT)  :: xd          !< Input: Discrete states at Time;
                                                                               !! Output: Discrete states at Time + Interval
       TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: z           !< Constraint states at Time
-      TYPE(InflowWind_OtherStateType),          INTENT(INOUT)  :: OtherState  !< Other/optimization states
+      TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherState  !< Other states at Time
+      TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
       INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -1098,12 +1108,9 @@ SUBROUTINE InflowWind_UpdateDiscState( Time, u, p, x, xd, z, OtherState, ErrStat
 
 END SUBROUTINE InflowWind_UpdateDiscState
 
-
-
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE InflowWind_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_residual, ErrStat, ErrMsg )
-! Tight coupling routine for solving for the residual of the constraint state equations
-!..................................................................................................................................
+!> Tight coupling routine for solving for the residual of the constraint state equations
+SUBROUTINE InflowWind_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )
 
       REAL(DbKi),                               INTENT(IN   )  :: Time        !< Current simulation time in seconds
       TYPE(InflowWind_InputType),               INTENT(IN   )  :: u           !< Inputs at Time
@@ -1111,7 +1118,8 @@ SUBROUTINE InflowWind_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState,
       TYPE(InflowWind_ContinuousStateType),     INTENT(IN   )  :: x           !< Continuous states at Time
       TYPE(InflowWind_DiscreteStateType),       INTENT(IN   )  :: xd          !< Discrete states at Time
       TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: z           !< Constraint states at Time (possibly a guess)
-      TYPE(InflowWind_OtherStateType),          INTENT(INOUT)  :: OtherState  !< Other/optimization states
+      TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherState  !< Other states at Time
+      TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
       TYPE(InflowWind_ConstraintStateType),     INTENT(  OUT)  :: z_residual  !< Residual of the constraint state equations using
                                                                               !! the input values described above
       INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat     !< Error status of the operation

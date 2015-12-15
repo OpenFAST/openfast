@@ -1,25 +1,4 @@
 !**********************************************************************************************************************************
-! $Id: InflowWind.f90 125 2014-10-29 22:28:35Z aplatt $
-!
-! This module is used to read and process the (undisturbed) inflow winds.  It must be initialized
-! using InflowWind_Init() with the name of the file, the file type, and possibly reference height and
-! width (depending on the type of wind file being used).  This module calls appropriate routines
-! in the wind modules so that the type of wind becomes seamless to the user.  InflowWind_End()
-! should be called when the program has finshed.
-!
-! Data are assumed to be in units of meters and seconds.  Z is measured from the ground (NOT the hub!).
-!
-!  7 Oct 2009    Initial Release with AeroDyn 13.00.00         B. Jonkman, NREL/NWTC
-! 14 Nov 2011    v1.00.01b-bjj                                 B. Jonkman
-!  1 Aug 2012    v1.01.00a-bjj                                 B. Jonkman
-! 10 Aug 2012    v1.01.00b-bjj                                 B. Jonkman
-!    Feb 2013    v2.00.00a-adp   conversion to Framework       A. Platt
-!
-!..................................................................................................................................
-! Files with this module:
-!!!!!  InflowWind_Subs.f90
-!  InflowWind.txt       -- InflowWind_Types will be auto-generated based on the descriptions found in this file.
-!**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015  National Renewable Energy Laboratory
 !
@@ -158,9 +137,9 @@ CONTAINS
 
 
 !====================================================================================================
+!>  This public subroutine reads the input required for InflowWind from the file whose name is an
+!!     input parameter.
 SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, ErrStat, ErrMsg )
-!     This public subroutine reads the input required for InflowWind from the file whose name is an
-!     input parameter.
 !----------------------------------------------------------------------------------------------------
 
       IMPLICIT                                           NONE
@@ -169,9 +148,9 @@ SUBROUTINE InflowWind_ReadInput( InputFileName, EchoFileName, InputFileData, Err
 
 
       ! Passed variables
-   CHARACTER(*),                       INTENT(IN   )  :: InputFileName
-   CHARACTER(*),                       INTENT(IN   )  :: EchoFileName
-   TYPE(InflowWind_InputFile),         INTENT(INOUT)  :: InputFileData            !< The data for initialization
+   CHARACTER(*),                       INTENT(IN   )  :: InputFileName        !< name of the input file
+   CHARACTER(*),                       INTENT(IN   )  :: EchoFileName         !< name of the echo file 
+   TYPE(InflowWind_InputFile),         INTENT(INOUT)  :: InputFileData        !< The data for initialization
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Returned error status  from this subroutine
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Returned error message from this subroutine
 
@@ -1319,7 +1298,7 @@ END SUBROUTINE InflowWind_ValidateInput
 
 !====================================================================================================
 !> This private subroutine copies the info from the input file over to the parameters for InflowWind.
-SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrStat, ErrMsg )
+SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, MiscVars, ErrStat, ErrMsg )
 
       IMPLICIT                                           NONE
 
@@ -1330,7 +1309,7 @@ SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrS
 
    TYPE(InflowWind_InputFile),         INTENT(INOUT)  :: InputFileData        !< The data for initialization
    TYPE(InflowWind_ParameterType),     INTENT(INOUT)  :: ParamData            !< The parameters for InflowWind
-   TYPE(InflowWind_OtherStateType),    INTENT(INOUT)  :: OtherStates          !< The OtherStates for InflowWind
+   TYPE(InflowWind_MiscVarType),       INTENT(INOUT)  :: MiscVars             !< The misc/optimization variables for InflowWind
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status  from this subroutine
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message from this subroutine
 
@@ -1383,11 +1362,11 @@ SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrS
       ! Allocate array used for calculating the AllOuts values.  This has a total of nine 3d velocity vectors
       ! in it (one for each of the possible WindViXYZ points).  This gets passed into CalcOutput at each timestep,
       ! although only the first NWindVel velocity vectors gets calculated.  
-   CALL AllocAry( OtherStates%WindViUVW, 3, ParamData%NWindVel, &
+   CALL AllocAry( MiscVars%WindViUVW, 3, ParamData%NWindVel, &
                "Array of wind velocities corresponding to the WindViLists", TmpErrStat, TmpErrMsg )
    CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    IF ( ErrStat>= AbortErrLev ) RETURN
-   OtherStates%WindViUVW   =  0.0_ReKi
+   MiscVars%WindViUVW   =  0.0_ReKi
 
 
       ! Set the OutList
@@ -1397,10 +1376,10 @@ SUBROUTINE InflowWind_SetParameters( InputFileData, ParamData, OtherStates, ErrS
 
 
       ! Allocate array for AllOuts
-   CALL AllocAry( OtherStates%AllOuts, MaxOutPts, 'AllOuts', TmpErrStat, TmpErrMsg )
+   CALL AllocAry( MiscVars%AllOuts, MaxOutPts, 'AllOuts', TmpErrStat, TmpErrMsg )
    CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
    IF ( ErrStat>= AbortErrLev ) RETURN
-   OtherStates%AllOuts = 0.0_ReKi
+   MiscVars%AllOuts = 0.0_ReKi
    
 
 
@@ -1459,10 +1438,10 @@ SUBROUTINE SetOutParam(OutList, p, ErrStat, ErrMsg )
 
       ! Passed variables
 
-   CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                        ! The list out user-requested outputs
-   TYPE(InflowWind_ParameterType),    INTENT(INOUT)  :: p                                 ! The module parameters
-   INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                           ! The error status code
-   CHARACTER(*),              INTENT(OUT)    :: ErrMsg                            ! The error message, if an error occurred
+   CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                        !< The list out user-requested outputs
+   TYPE(InflowWind_ParameterType),    INTENT(INOUT)  :: p                                 !< The module parameters
+   INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                           !< The error status code
+   CHARACTER(*),              INTENT(OUT)    :: ErrMsg                            !< The error message, if an error occurred
 
       ! Local variables
 
@@ -1606,7 +1585,7 @@ END SUBROUTINE SetOutParam
 
 
 
-SUBROUTINE SetAllOuts( ParamData, OutData, OtherStates, ErrStat, ErrMsg )
+SUBROUTINE SetAllOuts( ParamData, OutData, MiscVars, ErrStat, ErrMsg )
 
    IMPLICIT                                              NONE
 
@@ -1615,7 +1594,7 @@ SUBROUTINE SetAllOuts( ParamData, OutData, OtherStates, ErrStat, ErrMsg )
 
    TYPE(InflowWind_ParameterType),     INTENT(IN   )  :: ParamData            !< The parameters for InflowWind
    TYPE(InflowWind_OutputType),        INTENT(IN   )  :: OutData              !< Outputs
-   TYPE(InflowWind_OtherStateType),    INTENT(INOUT)  :: OtherStates          !< The OtherStates info for InflowWind
+   TYPE(InflowWind_MiscVarType),       INTENT(INOUT)  :: MiscVars             !< Misc variables for optimization (not copied in glue code)
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status  from this subroutine
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message from this subroutine
 
@@ -1631,16 +1610,16 @@ SUBROUTINE SetAllOuts( ParamData, OutData, OtherStates, ErrStat, ErrMsg )
       ! We set the unused values to 0 at init, so we don't need to set them again here:
    DO I = 1,ParamData%NWindVel
       
-      OtherStates%AllOuts( WindVelX(I) ) =  OtherStates%WindViUVW(1,I)
-      OtherStates%AllOuts( WindVelY(I) ) =  OtherStates%WindViUVW(2,I)
-      OtherStates%AllOuts( WindVelZ(I) ) =  OtherStates%WindViUVW(3,I)      
+      MiscVars%AllOuts( WindVelX(I) ) =  MiscVars%WindViUVW(1,I)
+      MiscVars%AllOuts( WindVelY(I) ) =  MiscVars%WindViUVW(2,I)
+      MiscVars%AllOuts( WindVelZ(I) ) =  MiscVars%WindViUVW(3,I)      
       
    END DO
    
       !FIXME:  Add in Wind1Dir, Wind1Mag etc.  -- allthough those can be derived outside of FAST.
 
    DO I = 1,MIN(5, ParamData%lidar%NumPulseGate )
-      OtherStates%AllOuts( WindMeas(I) ) = OutData%lidar%lidSpeed(I)
+      MiscVars%AllOuts( WindMeas(I) ) = OutData%lidar%lidSpeed(I)
    END DO   
 
 END SUBROUTINE SetAllOuts
@@ -1729,7 +1708,7 @@ END SUBROUTINE InflowWind_CloseSumFile
 
 SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
                        ContStates, DiscStates, ConstrStates, &   ! Framework required states -- empty in this case.
-                       OtherStates, OutputData, FillWrOut, ErrStat, ErrMsg )
+                       OtherStates, OutputData, MiscVars, FillWrOut, ErrStat, ErrMsg )
 
 
       IMPLICIT                                                    NONE
@@ -1745,8 +1724,9 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
       TYPE(InflowWind_ContinuousStateType),     INTENT(IN   )  :: ContStates        !< Continuous states at Time
       TYPE(InflowWind_DiscreteStateType),       INTENT(IN   )  :: DiscStates        !< Discrete states at Time
       TYPE(InflowWind_ConstraintStateType),     INTENT(IN   )  :: ConstrStates      !< Constraint states at Time
-      TYPE(InflowWind_OtherStateType),          INTENT(INOUT)  :: OtherStates       !< Other/optimization states at Time
+      TYPE(InflowWind_OtherStateType),          INTENT(IN   )  :: OtherStates       !< Other states at Time
       TYPE(InflowWind_OutputType),              INTENT(INOUT)  :: OutputData        !< Outputs computed at Time (IN for mesh reasons and data allocation)
+      TYPE(InflowWind_MiscVarType),             INTENT(INOUT)  :: MiscVars          !< misc/optimization variables
       LOGICAL,                                  INTENT(IN   )  :: FillWrOut         !< Flag to determine if we need to fill WriteOutput values
       
       INTEGER(IntKi),                           INTENT(  OUT)  :: ErrStat           !< Error status of the operation
@@ -1820,8 +1800,8 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
             CALL MOVE_ALLOC( OutputData%VelocityUVW,  Uniform_OutData%Velocity )
 
                ! InputData only contains the Position array, so we can pass that directly.
-            CALL  IfW_UniformWind_CalcOutput(  Time, PositionXYZprime, ParamData%UniformWind, OtherStates%UniformWind, &
-                                          Uniform_OutData, TmpErrStat, TmpErrMsg)
+            CALL  IfW_UniformWind_CalcOutput(  Time, PositionXYZprime, ParamData%UniformWind, &
+                                          Uniform_OutData, MiscVars%UniformWind, TmpErrStat, TmpErrMsg)
 
                ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
             CALL MOVE_ALLOC( Uniform_OutData%Velocity,   OutputData%VelocityUVW )
@@ -1832,15 +1812,14 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
                ! Call IfW_UniformWind_CalcOutput again in order to get the values needed for the OutList -- note that we do not report errors from this
             IF ( ParamData%NWindVel >= 1_IntKi .AND. FillWrOut ) THEN
                   ! Move the arrays for the Velocity information
-               CALL MOVE_ALLOC( OtherStates%WindViUVW,  Uniform_OutData%Velocity )
+               CALL MOVE_ALLOC( MiscVars%WindViUVW,  Uniform_OutData%Velocity )
                CALL  IfW_UniformWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%UniformWind, &
-                                             OtherStates%UniformWind, &
-                                             Uniform_OutData, TmpErrStat, TmpErrMsg)
+                                             Uniform_OutData, MiscVars%UniformWind, TmpErrStat, TmpErrMsg)
                TmpErrStat  = ErrID_None
                TmpErrMsg   = ''
 
                   ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
-               CALL MOVE_ALLOC( Uniform_OutData%Velocity, OtherStates%WindViUVW )
+               CALL MOVE_ALLOC( Uniform_OutData%Velocity, MiscVars%WindViUVW )
             ENDIF
 
 
@@ -1854,8 +1833,8 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
 
 
                ! InputData only contains the Position array, so we can pass that directly.
-            CALL  IfW_UniformWind_CalcOutput(  Time, PositionXYZprime, ParamData%UniformWind, OtherStates%UniformWind, &
-                                          Uniform_OutData, TmpErrStat, TmpErrMsg)
+            CALL  IfW_UniformWind_CalcOutput(  Time, PositionXYZprime, ParamData%UniformWind, &
+                                          Uniform_OutData, MiscVars%UniformWind, TmpErrStat, TmpErrMsg)
 
                ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
             CALL MOVE_ALLOC( Uniform_OutData%Velocity,   OutputData%VelocityUVW )
@@ -1867,10 +1846,9 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
                ! Call IfW_UniformWind_CalcOutput again in order to get the values needed for the OutList
             IF ( ParamData%NWindVel >= 1_IntKi  .AND. FillWrOut ) THEN
                   ! Move the arrays for the Velocity information
-               CALL MOVE_ALLOC( OtherStates%WindViUVW,  Uniform_OutData%Velocity )
+               CALL MOVE_ALLOC( MiscVars%WindViUVW,  Uniform_OutData%Velocity )
                CALL  IfW_UniformWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%UniformWind, &
-                                             OtherStates%UniformWind, &
-                                             Uniform_OutData, TmpErrStat, TmpErrMsg)
+                                             Uniform_OutData, MiscVars%UniformWind, TmpErrStat, TmpErrMsg)
 
                   ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
                IF ( TmpErrStat >= ErrID_Fatal ) THEN
@@ -1882,7 +1860,7 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
                ENDIF
 
                   ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
-               CALL MOVE_ALLOC( Uniform_OutData%Velocity, OtherStates%WindViUVW )
+               CALL MOVE_ALLOC( Uniform_OutData%Velocity, MiscVars%WindViUVW )
             ENDIF
 
 
@@ -1894,8 +1872,8 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
 
 
                ! InputData only contains the Position array, so we can pass that directly.
-            CALL  IfW_TSFFWind_CalcOutput(  Time, PositionXYZprime, ParamData%TSFFWind, OtherStates%TSFFWind, &
-                                          TSFF_OutData, TmpErrStat, TmpErrMsg)
+            CALL  IfW_TSFFWind_CalcOutput(  Time, PositionXYZprime, ParamData%TSFFWind, &
+                                          TSFF_OutData, MiscVars%TSFFWind, TmpErrStat, TmpErrMsg)
 
                ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
             CALL MOVE_ALLOC( TSFF_OutData%Velocity,   OutputData%VelocityUVW )
@@ -1907,10 +1885,9 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
                ! Call IfW_TSFFWind_CalcOutput again in order to get the values needed for the OutList
             IF ( ParamData%NWindVel >= 1_IntKi  .AND. FillWrOut ) THEN
                   ! Move the arrays for the Velocity information
-               CALL MOVE_ALLOC( OtherStates%WindViUVW,  TSFF_OutData%Velocity )
+               CALL MOVE_ALLOC( MiscVars%WindViUVW,  TSFF_OutData%Velocity )
                CALL  IfW_TSFFWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%TSFFWind, &
-                                             OtherStates%TSFFWind, &
-                                             TSFF_OutData, TmpErrStat, TmpErrMsg)
+                                             TSFF_OutData, MiscVars%TSFFWind, TmpErrStat, TmpErrMsg)
 
                   ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
                IF ( TmpErrStat >= ErrID_Fatal ) THEN
@@ -1922,7 +1899,7 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
                ENDIF
 
                   ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
-               CALL MOVE_ALLOC( TSFF_OutData%Velocity, OtherStates%WindViUVW )
+               CALL MOVE_ALLOC( TSFF_OutData%Velocity, MiscVars%WindViUVW )
             ENDIF
 
 
@@ -1937,8 +1914,8 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
 
 
                ! InputData only contains the Position array, so we can pass that directly.
-            CALL  IfW_BladedFFWind_CalcOutput(  Time, PositionXYZprime, ParamData%BladedFFWind, OtherStates%BladedFFWind, &
-                                          BladedFF_OutData, TmpErrStat, TmpErrMsg)
+            CALL  IfW_BladedFFWind_CalcOutput(  Time, PositionXYZprime, ParamData%BladedFFWind, &
+                                          BladedFF_OutData, MiscVars%BladedFFWind, TmpErrStat, TmpErrMsg)
 
                ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
             CALL MOVE_ALLOC( BladedFF_OutData%Velocity,   OutputData%VelocityUVW )
@@ -1950,10 +1927,9 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
                ! Call IfW_BladedFFWind_CalcOutput again in order to get the values needed for the OutList
             IF ( ParamData%NWindVel >= 1_IntKi  .AND. FillWrOut ) THEN
                   ! Move the arrays for the Velocity information
-               CALL MOVE_ALLOC( OtherStates%WindViUVW,  BladedFF_OutData%Velocity )
+               CALL MOVE_ALLOC( MiscVars%WindViUVW,  BladedFF_OutData%Velocity )
                CALL  IfW_BladedFFWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%BladedFFWind, &
-                                             OtherStates%BladedFFWind, &
-                                             BladedFF_OutData, TmpErrStat, TmpErrMsg)
+                                             BladedFF_OutData, MiscVars%BladedFFWind, TmpErrStat, TmpErrMsg)
 
                   ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
                IF ( TmpErrStat >= ErrID_Fatal ) THEN
@@ -1965,7 +1941,7 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
                ENDIF
 
                   ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
-               CALL MOVE_ALLOC( BladedFF_OutData%Velocity, OtherStates%WindViUVW )
+               CALL MOVE_ALLOC( BladedFF_OutData%Velocity, MiscVars%WindViUVW )
             ENDIF
 
 
@@ -1976,8 +1952,8 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
 
 
                ! InputData only contains the Position array, so we can pass that directly.
-            CALL  IfW_UserWind_CalcOutput(  Time, PositionXYZprime, ParamData%UserWind, OtherStates%UserWind, &
-                                          User_OutData, TmpErrStat, TmpErrMsg)
+            CALL  IfW_UserWind_CalcOutput(  Time, PositionXYZprime, ParamData%UserWind, &
+                                          User_OutData, MiscVars%UserWind, TmpErrStat, TmpErrMsg)
 
                ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
             CALL MOVE_ALLOC( User_OutData%Velocity,   OutputData%VelocityUVW )
@@ -1989,10 +1965,9 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
                ! Call IfW_UserWind_CalcOutput again in order to get the values needed for the OutList
             IF ( ParamData%NWindVel >= 1_IntKi  .AND. FillWrOut ) THEN
                   ! Move the arrays for the Velocity information
-               CALL MOVE_ALLOC( OtherStates%WindViUVW,  User_OutData%Velocity )
+               CALL MOVE_ALLOC( MiscVars%WindViUVW,  User_OutData%Velocity )
                CALL  IfW_UserWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%UserWind, &
-                                             OtherStates%UserWind, &
-                                             User_OutData, TmpErrStat, TmpErrMsg)
+                                             User_OutData, MiscVars%UserWind, TmpErrStat, TmpErrMsg)
 
                   ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
                IF ( TmpErrStat >= ErrID_Fatal ) THEN
@@ -2004,7 +1979,7 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
                ENDIF
 
                   ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
-               CALL MOVE_ALLOC( User_OutData%Velocity, OtherStates%WindViUVW )
+               CALL MOVE_ALLOC( User_OutData%Velocity, MiscVars%WindViUVW )
             ENDIF
 
          CASE ( HAWC_WindNumber )
@@ -2014,8 +1989,8 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
 
 
                ! InputData only contains the Position array, so we can pass that directly.
-            CALL  IfW_HAWCWind_CalcOutput(  Time, PositionXYZprime, ParamData%HAWCWind, OtherStates%HAWCWind, &
-                                          HAWC_OutData, TmpErrStat, TmpErrMsg)
+            CALL  IfW_HAWCWind_CalcOutput(  Time, PositionXYZprime, ParamData%HAWCWind, &
+                                          HAWC_OutData, MiscVars%HAWCWind, TmpErrStat, TmpErrMsg)
 
                ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
             CALL MOVE_ALLOC( HAWC_OutData%Velocity,   OutputData%VelocityUVW )
@@ -2027,10 +2002,9 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
                ! Call IfW_TSFFWind_CalcOutput again in order to get the values needed for the OutList
             IF ( ParamData%NWindVel >= 1_IntKi  .AND. FillWrOut ) THEN
                   ! Move the arrays for the Velocity information
-               CALL MOVE_ALLOC( OtherStates%WindViUVW,  HAWC_OutData%Velocity )
+               CALL MOVE_ALLOC( MiscVars%WindViUVW,  HAWC_OutData%Velocity )
                CALL  IfW_HAWCWind_CalcOutput(  Time, ParamData%WindViXYZprime, ParamData%HAWCWind, &
-                                             OtherStates%HAWCWind, &
-                                             HAWC_OutData, TmpErrStat, TmpErrMsg)
+                                             HAWC_OutData, MiscVars%HAWCWind, TmpErrStat, TmpErrMsg)
 
                   ! Out of bounds errors will be ErrID_Severe, not ErrID_Fatal
                IF ( TmpErrStat >= ErrID_Fatal ) THEN
@@ -2042,7 +2016,7 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
                ENDIF
 
                   ! Move the arrays back.  note that these are in the prime (wind file) coordinate frame still.
-               CALL MOVE_ALLOC( HAWC_OutData%Velocity, OtherStates%WindViUVW )
+               CALL MOVE_ALLOC( HAWC_OutData%Velocity, MiscVars%WindViUVW )
             ENDIF
             
 
@@ -2108,8 +2082,8 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
 
          ! We also need to rotate the reference frame for the WindViUVW array
       IF ( .NOT. EqualRealNos (ParamData%PropagationDir, 0.0_ReKi)  .AND. FillWrOut ) THEN
-         DO I  = 1,SIZE(OtherStates%WindViUVW,DIM=2)
-            OtherStates%WindViUVW(:,I)   =  MATMUL( ParamData%RotFromWind, OtherStates%WindViUVW(:,I) )
+         DO I  = 1,SIZE(MiscVars%WindViUVW,DIM=2)
+            MiscVars%WindViUVW(:,I)   =  MATMUL( ParamData%RotFromWind, MiscVars%WindViUVW(:,I) )
          ENDDO
       ENDIF
 
@@ -2153,26 +2127,27 @@ SUBROUTINE CalculateOutput( Time, InputData, ParamData, &
 END SUBROUTINE CalculateOutput
                       
 !====================================================================================================
-! this routine calculates the mean wind speed 
+!> this routine calculates the mean wind speed 
 SUBROUTINE InflowWind_GetMean( StartTime, EndTime, delta_time, InputPosition, MeanVelocity, &
-                               p, x, xd, z, OtherState, ErrStat, ErrMsg )
+                               p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !----------------------------------------------------------------------------------------------------
       ! Inputs / Outputs
-   REAL(DbKi),                         INTENT(IN   )  :: StartTime
-   REAL(DbKi),                         INTENT(IN   )  :: EndTime
-   REAL(DbKi),                         INTENT(IN   )  :: delta_time
-   REAL(ReKi),                         INTENT(IN   )  :: InputPosition(3)  ! X, Y, Z positions
-   REAL(ReKi),                         INTENT(  OUT)  :: MeanVelocity(3)   ! at InputPosition
+   REAL(DbKi),                              INTENT(IN   )  :: StartTime         !< first time in range from which to calculate mean
+   REAL(DbKi),                              INTENT(IN   )  :: EndTime           !< last time in range from which to calculate mean 
+   REAL(DbKi),                              INTENT(IN   )  :: delta_time        !< dt in time range from which to calculate mean
+   REAL(ReKi),                              INTENT(IN   )  :: InputPosition(3)  !< X, Y, Z positions
+   REAL(ReKi),                              INTENT(  OUT)  :: MeanVelocity(3)   !< at InputPosition
       
-   TYPE( InflowWind_ParameterType ),          INTENT(IN   )  :: p                 ! Parameters
-   TYPE( InflowWind_ContinuousStateType ),    INTENT(IN   )  :: x                 ! Continuous states at Time
-   TYPE( InflowWind_DiscreteStateType ),      INTENT(IN   )  :: xd                ! Discrete states at Time
-   TYPE( InflowWind_ConstraintStateType ),    INTENT(IN   )  :: z                 ! Constraint states at Time
-   TYPE( InflowWind_OtherStateType ),         INTENT(INOUT)  :: OtherState        ! Other/optimization states at Time
+   TYPE( InflowWind_ParameterType ),        INTENT(IN   )  :: p                 !< Parameters
+   TYPE( InflowWind_ContinuousStateType ),  INTENT(IN   )  :: x                 !< Continuous states at Time
+   TYPE( InflowWind_DiscreteStateType ),    INTENT(IN   )  :: xd                !< Discrete states at Time
+   TYPE( InflowWind_ConstraintStateType ),  INTENT(IN   )  :: z                 !< Constraint states at Time
+   TYPE( InflowWind_OtherStateType ),       INTENT(IN   )  :: OtherState        !< Other/optimization states at Time
+   TYPE(InflowWind_MiscVarType),            INTENT(INOUT)  :: m                 !< misc/optimization variables
       
       
-   INTEGER( IntKi ),                   INTENT(  OUT)  :: ErrStat           ! Error status of the operation
-   CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+   INTEGER( IntKi ),                        INTENT(  OUT)  :: ErrStat           !< Error status of the operation
+   CHARACTER(*),                            INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
 
       ! local variables
@@ -2222,7 +2197,7 @@ SUBROUTINE InflowWind_GetMean( StartTime, EndTime, delta_time, InputPosition, Me
 
       Time = StartTime + (I-1)*delta_time
 
-      CALL CalculateOutput( Time, Input, p, x, xd, z, OtherState, Output, .FALSE., ErrStat2, ErrMsg2 )      
+      CALL CalculateOutput( Time, Input, p, x, xd, z, OtherState, Output, m, .FALSE., ErrStat2, ErrMsg2 )      
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )                
          
       IF ( ErrStat >= AbortErrLev ) THEN
