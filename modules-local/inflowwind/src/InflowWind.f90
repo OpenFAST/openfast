@@ -932,8 +932,8 @@ SUBROUTINE InflowWind_End( InputData, ParamData, ContStates, DiscStates, ConstrS
 
          ! Error Handling
 
-      INTEGER( IntKi ),                         INTENT(  OUT)  :: ErrStat
-      CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg
+      INTEGER( IntKi ),                         INTENT(  OUT)  :: ErrStat           !< error status
+      CHARACTER(*),                             INTENT(  OUT)  :: ErrMsg            !< error message
 
          ! Local variables
 

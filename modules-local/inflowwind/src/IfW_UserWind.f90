@@ -79,8 +79,8 @@ SUBROUTINE IfW_UserWind_Init(InitData, PositionXYZ, ParamData, OutData, MiscVars
 
 
       ! Error handling
-   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           ! determines if an error has been encountered
-   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            ! A message about the error.  See NWTC_Library info for ErrID_* levels.
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< determines if an error has been encountered
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< A message about the error.  See NWTC_Library info for ErrID_* levels.
 
       ! local variables
    ! Put local variables used during initializing your wind here.  DO NOT USE GLOBAL VARIABLES EVER!
