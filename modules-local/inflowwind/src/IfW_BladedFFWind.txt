@@ -26,11 +26,10 @@ typedef  ^                       InitOutputType       ProgDesc    Ver           
 typedef  ^                       ^                       ReKi     TI                {3}   -     -     "Turbulence intensity given in the file"                       -
 
 
-# Define any data that are not considered actual states here:
-#   e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
-#   at a given time, etc.)
-typedef  ^                       OtherStateType          IntKi    TimeIndex         -     0     -     "An Index into the TData array"                                -
-typedef  ^                       ^                       Logical  Initialized       -  .FALSE.  -     "Flag to indicate if the module was initialized"               -
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef  ^                       MiscVarType          IntKi    TimeIndex         -     0     -     "An Index into the TData array"                                -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:

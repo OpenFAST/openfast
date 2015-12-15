@@ -31,10 +31,10 @@ typedef  ^                       ^                       IntKi    WindFileNumTSt
 typedef  ^                       ^                       LOGICAL  WindFileConstantDT -    -     -     "Timesteps are the same throughout file"                       -
 
 
-# Define any data that are not considered actual states here:
-#   e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
-#   at a given time, etc.)
-typedef  ^                       OtherStateType          IntKi    TimeIndex         -     -     -     "An Index into the TData array"                                -
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef  ^                       MiscVarType          IntKi    TimeIndex         -     -     -     "An Index into the TData array"                                -
 
 
 # ..... Parameters ................................................................................................................

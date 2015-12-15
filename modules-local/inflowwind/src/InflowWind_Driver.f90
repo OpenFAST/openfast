@@ -54,6 +54,7 @@ PROGRAM InflowWind_Driver
    TYPE(InflowWind_OutputType)                        :: InflowWind_y1           ! Output Data -- contains the velocities at xyz -- set 1
    TYPE(InflowWind_OutputType)                        :: InflowWind_y2           ! Output Data -- contains the velocities at xyz -- set 2
    TYPE(InflowWind_OutputType)                        :: InflowWind_y3           ! Output Data -- contains the velocities at xyz -- set 3
+   TYPE(InflowWind_MiscVarType)                       :: InflowWind_MiscVars     ! misc/optimization data
    TYPE(InflowWind_InitOutputType)                    :: InflowWind_InitOut      ! Output Data -- contains the names and units
 
 
@@ -461,7 +462,7 @@ PROGRAM InflowWind_Driver
 
    CALL InflowWind_Init( InflowWind_InitInp, InflowWind_u1, InflowWind_p, &
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
-                  InflowWind_y1,    Settings%DT,  InflowWind_InitOut, ErrStat, ErrMsg )
+                  InflowWind_y1, InflowWind_MiscVars, Settings%DT,  InflowWind_InitOut, ErrStat, ErrMsg )
 
 
       ! Make sure no errors occured that give us reason to terminate now.
@@ -701,7 +702,7 @@ PROGRAM InflowWind_Driver
          ! Get results for WindGrid data from IfW -- WindGrid may contain only a single point at the hub if the WindGrid flag isn't set.
       CALL InflowWind_CalcOutput( TimeNow,  InflowWind_u1, InflowWind_p, &
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
-                  InflowWind_y1, ErrStat, ErrMsg)
+                  InflowWind_y1, InflowWind_MiscVars, ErrStat, ErrMsg)
 
 
 
@@ -733,7 +734,7 @@ PROGRAM InflowWind_Driver
             ! Get results for Points data from IfW
          CALL InflowWind_CalcOutput( TimeNow,  InflowWind_u2, InflowWind_p, &
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
-                  InflowWind_y2, ErrStat, ErrMsg)
+                  InflowWind_y2, InflowWind_MiscVars, ErrStat, ErrMsg)
 
             ! Output the Points results for this timestep
          CALL PointsVel_OutputWrite( Settings%PointsOutputUnit, Settings%PointsOutputName, SettingsFlags%PointsOutputInit, &
@@ -765,13 +766,13 @@ PROGRAM InflowWind_Driver
       !  used because we don't want linewrapping.
    IF ( IfWDriver_Verbose >= 10_IntKi ) THEN
 
-      write(*,'(A)'),NewLine//NewLine//'   DiskVel:  ( '//TRIM(num2lstr(inflowwind_y1%diskvel(1)))//', '//             &
+      write(*,'(A)') NewLine//NewLine//'   DiskVel:  ( '//TRIM(num2lstr(inflowwind_y1%diskvel(1)))//', '//             &
                   TRIM(num2lstr(inflowwind_y1%diskvel(2)))//', '//TRIM(num2lstr(inflowwind_y1%diskvel(3)))//' )'
-      write(*,'(A)'),NewLine//NewLine//'   Requested wind points and writeoutput results at last timestep (t='//       &
+      write(*,'(A)') NewLine//NewLine//'   Requested wind points and writeoutput results at last timestep (t='//       &
                   TRIM(Num2LStr(TimeNow))//'):'//NewLine
-      write(*,'(A)'),'          ------ WindViXYZ ---------    ----- WindViUVW ---------           -- AllOuts --     '//      &
+      write(*,'(A)') '          ------ WindViXYZ ---------    ----- WindViUVW ---------           -- AllOuts --     '//      &
                   '------------- WriteOutput -------------'
-      write(*,'(A)'),' Index,      coord,        name             Vector value                        Value         '//      &
+      write(*,'(A)') ' Index,      coord,        name             Vector value                        Value         '//      &
                   ' Name        Unit   OutIndex     Value'
       DO I = 1,27
          ErrMsgTmp   =  ''
@@ -781,12 +782,12 @@ PROGRAM InflowWind_Driver
                            ', '//TRIM(Num2LStr(InflowWind_p%WindViXYZ(2,(I-1)/3+1)))//', '//                      &
                            TRIM(Num2LStr(InflowWind_p%WindViXYZ(3,(I-1)/3+1)))//')'
             ErrMsgTmp   =  ErrMsgTmp(1:25)//ValidParamAry(I)
-            ErrMsgTmp   =  ErrMsgTmp(1:40)//'('//TRIM(Num2LStr(InflowWind_OtherState%WindViUVW(1,(I-1)/3+1)))//   &
-                           ', '//TRIM(Num2LStr(InflowWind_OtherState%WindViUVW(2,(I-1)/3+1)))//', '//             &
-                           TRIM(Num2LStr(InflowWind_OtherState%WindViUVW(3,(I-1)/3+1)))//')'
+            ErrMsgTmp   =  ErrMsgTmp(1:40)//'('//TRIM(Num2LStr(InflowWind_MiscVars%WindViUVW(1,(I-1)/3+1)))//   &
+                           ', '//TRIM(Num2LStr(InflowWind_MiscVars%WindViUVW(2,(I-1)/3+1)))//', '//             &
+                           TRIM(Num2LStr(InflowWind_MiscVars%WindViUVW(3,(I-1)/3+1)))//')'
 
          ENDIF
-         ErrMsgTmp   =  ErrMsgTmp(1:73)//' '//TRIM(Num2LStr(InflowWind_OtherState%AllOuts(I)))
+         ErrMsgTmp   =  ErrMsgTmp(1:73)//' '//TRIM(Num2LStr(InflowWind_MiscVars%AllOuts(I)))
          DO J  = 1, InflowWind_p%NumOuts
             IF ( InflowWind_p%OutParam(J)%Indx == I ) THEN
                ErrMsgTmp   =  ErrMsgTmp(1:94)//InflowWind_InitOut%WriteOutputHdr(J)//'  '//     &
@@ -794,7 +795,7 @@ PROGRAM InflowWind_Driver
                ErrMsgTmp   =  ErrMsgTmp(1:126)//TRIM(Num2LStr(InflowWind_y1%WriteOutput(J)))
             ENDIF 
          ENDDO
-         write(*,'(A)'),TRIM(ErrMsgTmp)
+         write(*,'(A)') TRIM(ErrMsgTmp)
       ENDDO
    ENDIF
    
@@ -829,7 +830,7 @@ PROGRAM InflowWind_Driver
    
    CALL InflowWind_End( InflowWind_u1, InflowWind_p, &
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
-                  InflowWind_y1,    ErrStat, ErrMsg )
+                  InflowWind_y1, InflowWind_MiscVars, ErrStat, ErrMsg )
 
       ! Make sure no errors occured that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN
@@ -848,7 +849,7 @@ PROGRAM InflowWind_Driver
 
    CALL InflowWind_End( InflowWind_u2, InflowWind_p, &
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
-                  InflowWind_y2,    ErrStat, ErrMsg )
+                  InflowWind_y2, InflowWind_MiscVars,  ErrStat, ErrMsg )
 
       ! Make sure no errors occured that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN
@@ -867,7 +868,7 @@ PROGRAM InflowWind_Driver
 
    CALL InflowWind_End( InflowWind_u3, InflowWind_p, &
                   InflowWind_x, InflowWind_xd, InflowWind_z, InflowWind_OtherState, &
-                  InflowWind_y3,    ErrStat, ErrMsg )
+                  InflowWind_y3, InflowWind_MiscVars, ErrStat, ErrMsg )
 
       ! Make sure no errors occured that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN
