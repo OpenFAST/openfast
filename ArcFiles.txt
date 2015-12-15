@@ -9,12 +9,13 @@ license.txt
 Notice.txt
 README_FAST8.pdf
 
-Source\FAST_Subs.f90
-Source\FAST_Mods.f90
-Source\FAST_Types.f90
 Source\FAST_Registry.txt
-Source\FAST_Prog.f90
+Source\FAST_Types.f90
+Source\FAST_Mods.f90
+Source\FAST_Solver.f90
+Source\FAST_Subs.f90
 Source\FAST_Library.f90
+Source\FAST_Prog.f90
 
 Source\FAST_Library.h
 Source\FAST_Prog.c
@@ -51,15 +52,12 @@ Simulink\Samples\Run_OpenLoop.m
 Simulink\Samples\Test01_SIG.mdl
 Simulink\Samples\Run_Test01_SIG.m
 
-Simulink\VisualStudio\FAST_Library.vfproj
 
 Compiling\CompilingInstructions_FASTv8.pdf
 Compiling\Compile_FAST.bat
 Compiling\makefile
 Compiling\Compile_DISCON_DLL.bat
 Compiling\makefile_DISCON_DLL
-Compiling\VisualStudio\FAST_Project.vfproj
-Compiling\VisualStudio\RunRegistry.bat
 Compiling\DISCON_DLLs\DISCON.vfproj
 
 Utilities\ModeShapePolyFitting.xls

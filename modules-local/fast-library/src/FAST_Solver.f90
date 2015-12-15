@@ -291,10 +291,6 @@ SUBROUTINE IfW_InputSolve( p_FAST, m_FAST, u_IfW, p_IfW, u_AD14, u_AD, y_ED, Err
    
       ! Fill input array for InflowWind
    
-   !-------------------------------------------------------------------------------------------------
-   ! bjj: this is a hack for now, just to get IfW separate from AD
-   ! bjj: it assumes AD 14 is used!!!
-   !-------------------------------------------------------------------------------------------------
    Node = 0      
    IF (p_FAST%CompServo == MODULE_SrvD) THEN
       Node = Node + 1
@@ -4579,7 +4575,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
       CALL InflowWind_CalcOutput( this_time, IfW%Input(1), IfW%p, IfW%x(this_state), IfW%xd(this_state), IfW%z(this_state), &
-                                  IfW%OtherSt, IfW%y, ErrStat2, ErrMsg2 )         
+                                  IfW%OtherSt(this_state), IfW%y, IfW%m, ErrStat2, ErrMsg2 )         
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
    !ELSE IF ( p_FAST%CompInflow == Module_OpFM ) THEN
    ! ! OpenFOAM is the driver and it computes outputs outside of this solve; the OpenFOAM inputs and outputs thus don't change 
@@ -4799,18 +4795,16 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
       CALL InflowWind_CopyDiscState   (IfW%xd(STATE_CURR), IfW%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)  
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL InflowWind_CopyConstrState (IfW%z( STATE_CURR), IfW%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )            
+      CALL InflowWind_CopyOtherState( IfW%OtherSt(STATE_CURR), IfW%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            
-      IF ( p_FAST%n_substeps( Module_IfW ) > 1 ) THEN
-         CALL InflowWind_CopyOtherState( IfW%OtherSt, IfW%OtherSt_old, MESH_UPDATECOPY, Errstat2, ErrMsg2)
-            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      END IF
             
       DO j_ss = 1, p_FAST%n_substeps( MODULE_IfW )
          n_t_module = n_t_global*p_FAST%n_substeps( MODULE_IfW ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( MODULE_IfW ) + t_initial
             
-         CALL InflowWind_UpdateStates( t_module, n_t_module, IfW%Input, IfW%InputTimes, IfW%p, IfW%x(STATE_PRED), IfW%xd(STATE_PRED), IfW%z(STATE_PRED), IfW%OtherSt, ErrStat2, ErrMsg2 )
+         CALL InflowWind_UpdateStates( t_module, n_t_module, IfW%Input, IfW%InputTimes, IfW%p, IfW%x(STATE_PRED), IfW%xd(STATE_PRED), &
+                                       IfW%z(STATE_PRED), IfW%OtherSt(STATE_PRED), IfW%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss
    END IF          

@@ -76,9 +76,8 @@ SET dst_folder=%depend_dir%\ServoDyn
 
 @CALL :CopyFileFolder
 
-SET src_folder=%TMD_Loc%\..
-SET list_of_files=%src_folder%/FAST_SourceFiles.txt
-for /f %%i in (%list_of_files%) DO copy /Y "%src_folder%\%%i" "%dst_folder%"
+:: put TMD in ServoDyn folder for now
+copy /Y "%TMD_Loc%\*" "%dst_folder%"
 
 IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 

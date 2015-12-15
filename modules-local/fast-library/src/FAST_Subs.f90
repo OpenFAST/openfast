@@ -463,8 +463,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          InitInData_IfW%lidar%SensorType          = SensorType_None
       END IF
                                      
-      CALL InflowWind_Init( InitInData_IfW, IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR), IfW%OtherSt, &
-                     IfW%y, p_FAST%dt_module( MODULE_IfW ), InitOutData_IfW, ErrStat2, ErrMsg2 )
+      CALL InflowWind_Init( InitInData_IfW, IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR),  &
+                     IfW%OtherSt(STATE_CURR), IfW%y, IfW%m, p_FAST%dt_module( MODULE_IfW ), InitOutData_IfW, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       p_FAST%ModuleInitialized(Module_IfW) = .TRUE.            
@@ -2855,10 +2855,8 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, A
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL InflowWind_CopyConstrState (IfW%z( STATE_CURR), IfW%z( STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )      
-      IF ( p_FAST%n_substeps( MODULE_IfW ) > 1 ) THEN
-         CALL InflowWind_CopyOtherState( IfW%OtherSt, IfW%OtherSt_old, MESH_NEWCOPY, Errstat2, ErrMsg2)
+      CALL InflowWind_CopyOtherState( IfW%OtherSt(STATE_CURR), IfW%OtherSt(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-      END IF         
 
    END IF ! CompInflow == Module_IfW 
       
@@ -3222,7 +3220,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
       IF ( j_pc /= p_FAST%NumCrctn)  THEN          ! Don't copy these on the last loop iteration...
                               
-         ! ED, SrvD, and BD treat "OtherStates" as actual "other states", which are copied like the rest of the states; they are separate from MiscVar 
+         ! ED, SrvD, IfW, and BD treat "OtherStates" as actual "other states", which are copied like the rest of the states; they are separate from MiscVar 
          
          IF ( p_FAST%n_substeps( Module_AD14 ) > 1 ) THEN
             CALL AD14_CopyOtherState( AD14%OtherSt_old, AD14%OtherSt, MESH_UPDATECOPY, Errstat2, ErrMsg2)
@@ -3231,12 +3229,7 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL AD_CopyOtherState( AD%OtherSt_old, AD%OtherSt, MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END IF
-            
-         IF ( p_FAST%n_substeps( Module_IfW ) > 1 ) THEN
-            CALL InflowWind_CopyOtherState( IfW%OtherSt_old, IfW%OtherSt, MESH_UPDATECOPY, Errstat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         END IF
-                                 
+                                             
          IF ( p_FAST%n_substeps( Module_HD ) > 1 ) THEN
             CALL HydroDyn_CopyOtherState( HD%OtherSt_old, HD%OtherSt, MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -3336,6 +3329,8 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
       CALL InflowWind_CopyDiscState   (IfW%xd(STATE_PRED), IfW%xd(STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)  
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL InflowWind_CopyConstrState (IfW%z( STATE_PRED), IfW%z( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)      
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      CALL InflowWind_CopyOtherState (IfW%OtherSt( STATE_PRED), IfW%OtherSt( STATE_CURR), MESH_UPDATECOPY, Errstat2, ErrMsg2)      
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    END IF
             
@@ -4158,8 +4153,8 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD
    END IF
       
    IF ( p_FAST%ModuleInitialized(Module_IfW) ) THEN
-      CALL InflowWind_End( IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR), IfW%OtherSt,   &
-                           IfW%y,   ErrStat2, ErrMsg2 )
+      CALL InflowWind_End( IfW%Input(1), IfW%p, IfW%x(STATE_CURR), IfW%xd(STATE_CURR), IfW%z(STATE_CURR), IfW%OtherSt(STATE_CURR),   &
+                           IfW%y, IfW%m, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    END IF   
    
