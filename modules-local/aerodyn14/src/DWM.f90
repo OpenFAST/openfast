@@ -81,7 +81,7 @@ SUBROUTINE DWM_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, 
    
    CALL InflowWind_Init( InitInp%IfW_InitInputs,   u%IfW_Inputs,    p%IfW_Params,                                &
                      x%IfW_ContStates, xd%IfW_DiscStates,   z%IfW_ConstrStates,    OtherState%IfW_OtherStates,   &
-                     y%IfW_Outputs,    Interval,  InitOut%IfW_InitOutput,   ErrStat,    ErrMess )
+                     y%IfW_Outputs,  OtherState%IfW_m,  Interval,  InitOut%IfW_InitOutput,   ErrStat,    ErrMess )
       
    ! Read the parameter data from the text input file
       
@@ -127,7 +127,7 @@ SUBROUTINE DWM_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMess )
       CALL write_result_file( OtherState, p, y, u )
       
       CALL InflowWind_End(  u%IfW_Inputs, p%IfW_Params, x%IfW_ContStates, xd%IfW_DiscStates, z%IfW_ConstrStates, &
-                     OtherState%IfW_OtherStates, y%IfW_Outputs, ErrStat, ErrMess )
+                     OtherState%IfW_OtherStates, y%IfW_Outputs, OtherState%IfW_m, ErrStat, ErrMess )
 
          ! Close files here:
 

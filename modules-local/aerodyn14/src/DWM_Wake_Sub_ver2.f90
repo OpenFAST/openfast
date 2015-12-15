@@ -1470,7 +1470,7 @@ FUNCTION filter_velocity (OS,p,u,x,xd,z,y,timestep,y_0,z_0,wake_radius)
             u%IfW_Inputs%PositionXYZ(3,1) = REAL(z_axis,ReKi)                                         
             CALL InflowWind_CalcOutput( timestep, u%IfW_Inputs, p%IfW_Params, &
                                  x%IfW_ContStates, xd%IfW_DiscStates, z%IfW_ConstrStates, OS%IfW_OtherStates, &   ! States -- none in this case
-                                 y%IfW_Outputs, ErrStat, ErrMsg )
+                                 y%IfW_Outputs, OS%IfW_m, ErrStat, ErrMsg )
             temp_wind_velocity (:) = y%IfW_Outputs%VelocityUVW(:,1)                          
           
             !temp_filter_velocity(:) = temp_filter_velocity(:) + AD_WindVelocityWithDisturbance(  REAL(timestep,ReKi), A_u, A_p, A_x, A_xd, A_z, A_O, A_y, ErrStat, ErrMsg,&
@@ -1608,7 +1608,7 @@ SUBROUTINE Get_wake_center ( OS, p, y, u, x, xd, z, wakewidth, wake_center )
        
        CALL InflowWind_CalcOutput( ( ((release_time-1)+1)*DWM_time_step*OS%meandering_data%scale_factor), u%IfW_Inputs, p%IfW_Params, &
                             x%IfW_ContStates, xd%IfW_DiscStates, z%IfW_ConstrStates, OS%IfW_OtherStates, &   ! States -- none in this case
-                            y%IfW_Outputs, ErrStat, ErrMsg )
+                            y%IfW_Outputs, OS%IfW_m, ErrStat, ErrMsg )
 
        temp_center_wake (:) = y%IfW_Outputs%VelocityUVW(:,1)
        !temp_center_wake (3) = y%IfW_Outputs%Velocity(3,1)

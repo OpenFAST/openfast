@@ -216,6 +216,7 @@ typedef  ^                    ^                IntKi                        SDti
 typedef  ^                    ^                DWM_turbine_blade            DWM_tb
 typedef  ^                    ^                wake_meandered_center        WMC
 typedef	 ^	         OtherStateType	InflowWind_OtherStateType	IfW_OtherStates	-	-	-		-
+typedef	 ^	         OtherStateType	InflowWind_MiscVarType	IfW_m	-	-	-		-
 
 # ........ Input ............
 # DWM_InputType
