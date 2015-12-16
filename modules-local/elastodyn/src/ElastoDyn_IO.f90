@@ -26,7 +26,7 @@ MODULE ElastoDyn_Parameters
 
    USE NWTC_Library
 
-   TYPE(ProgDesc), PARAMETER  :: ED_Ver = ProgDesc( 'ElastoDyn', 'v1.03.01a-bjj', '5-Nov-2015' )
+   TYPE(ProgDesc), PARAMETER  :: ED_Ver = ProgDesc( 'ElastoDyn', 'v1.03.02a-bjj', '23-Nov-2015' )
    CHARACTER(*),   PARAMETER  :: ED_Nickname = 'ED'
    
    REAL(ReKi), PARAMETER      :: SmallAngleLimit_Deg  =  15.0                     ! Largest input angle considered "small" (used as a check on input data), degrees
@@ -1261,7 +1261,7 @@ INTEGER,  PARAMETER          :: TwHtRPyi(9) = (/ &
 INTEGER,  PARAMETER          :: TwHtRPzi(9) = (/ &
                                     TwHt1RPzi,TwHt2RPzi,TwHt3RPzi,TwHt4RPzi,TwHt5RPzi,TwHt6RPzi,TwHt7RPzi,TwHt8RPzi,TwHt9RPzi /)
 
-   END MODULE ElastoDyn_Parameters
+END MODULE ElastoDyn_Parameters
 !**********************************************************************************************************************************
 !> This module contains file I/O routines and data validation routines.
 MODULE ElastoDyn_IO

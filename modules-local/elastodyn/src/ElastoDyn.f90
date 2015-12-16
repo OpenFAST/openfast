@@ -29,6 +29,8 @@ MODULE ElastoDyn
    USE ElastoDyn_IO
    USE NWTC_LAPACK
 
+   USE ED_UserSubs         ! <- module not in the FAST Framework! (see ServoDyn source)
+
    IMPLICIT NONE
 
    PRIVATE
@@ -348,14 +350,14 @@ SUBROUTINE ED_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
       CALL ED_DestroyOutput( y, ErrStat, ErrMsg )
 
-      CALL ED_DestroyMiscVar( m, ErrStat, ErrMsg )
+      CALL ED_DestroyMisc( m, ErrStat, ErrMsg )
 
 
 
 END SUBROUTINE ED_End
 !----------------------------------------------------------------------------------------------------------------------------------
-!> Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
-!! Constraint states are solved for input Time t; Continuous and discrete states are updated for t + Interval
+!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other 
+!! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
 SUBROUTINE ED_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -367,10 +369,11 @@ SUBROUTINE ED_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
       TYPE(ED_ContinuousStateType),       INTENT(INOUT) :: x          !< Input: Continuous states at t;
                                                                       !!   Output: Continuous states at t + Interval
       TYPE(ED_DiscreteStateType),         INTENT(INOUT) :: xd         !< Input: Discrete states at t;
-                                                                      !!   Output: Discrete states at t  + Interval
-      TYPE(ED_ConstraintStateType),       INTENT(INOUT) :: z          !< Input: Initial guess of constraint states at t+dt;
-                                                                      !!   Output: Constraint states at t+dt
-      TYPE(ED_OtherStateType),            INTENT(INOUT) :: OtherState !< Other states
+                                                                      !!   Output: Discrete states at t + Interval
+      TYPE(ED_ConstraintStateType),       INTENT(INOUT) :: z          !< Input: Constraint states at t;
+                                                                      !!   Output: Constraint states at t + Interval
+      TYPE(ED_OtherStateType),            INTENT(INOUT) :: OtherState !< Other states: Other states at t;
+                                                                      !!   Output: Other states at t + Interval
       TYPE(ED_MiscVarType),               INTENT(INOUT) :: m          !< Misc variables for optimization (not copied in glue code)
       INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
@@ -3184,17 +3187,16 @@ RETURN
 
 CONTAINS
 !..................................................................................................................................
+   !> This subroutine is used to interpolate the arrays more efficiently (all arrays have the same X value)
+   !! See InterpStpReal() for comparison. This assumes we already know Ind and that
+   !! x = ( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) )
    FUNCTION InterpAry( x, YAry, Ind )
-      ! This subroutine is used to interpolate the arrays more efficiently (all arrays have the same X value)
-      ! See InterpStpReal() for comparison. This assumes we already know Ind and that
-      ! x = ( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) )
 
+      REAL(ReKi),      INTENT(IN) :: x                !< the relative distance between Ind and Ind+ 1
+      REAL(ReKi),      INTENT(IN) :: YAry (:)         !< Array of Y values to be interpolated.
+      INTEGER(IntKi) , INTENT(IN) :: Ind              !< the index into the array
 
-      REAL(ReKi),      INTENT(IN) :: x                ! the relative distance between Ind and Ind+ 1
-      REAL(ReKi),      INTENT(IN) :: YAry (:)         ! Array of Y values to be interpolated.
-      INTEGER(IntKi) , INTENT(IN) :: Ind              ! the index into the array
-
-      REAL(ReKi)                  :: InterpAry        ! the value calculated in this function
+      REAL(ReKi)                  :: InterpAry        !< the value calculated in this function
 
       InterpAry = ( YAry(Ind+1) - YAry(Ind) ) * x  + YAry(Ind)
 
