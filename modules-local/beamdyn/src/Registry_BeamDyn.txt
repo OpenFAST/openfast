@@ -61,11 +61,14 @@ typedef BeamDyn/BD OtherStateType  ^    xcc        {:} - - "Algorithm accerlerat
 #end of BDKi-type variables
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 typedef BeamDyn/BD OtherStateType Logical  InitAcc  -  - - "flag to determine if accerlerations have been initialized in updateStates"
- #ideally these would be misc vars:
-typedef BeamDyn/BD OtherStateType MeshType    u_DistrLoad_at_y - - - "input loads at output node locations" -
-typedef BeamDyn/BD OtherStateType MeshType    y_BldMotion_at_u - - - "output motions at input node locations (displacements necessary for mapping loads)" -
-typedef BeamDyn/BD OtherStateType MeshMapType Map_u_DistrLoad_to_y - - - "mapping of input loads to output node locations" -
-typedef BeamDyn/BD OtherStateType MeshMapType Map_y_BldMotion_to_u - - - "mapping of output motions to input node locations (for load transfer)" -
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef BeamDyn/BD MiscVarType    MeshType    u_DistrLoad_at_y - - - "input loads at output node locations" -
+typedef BeamDyn/BD MiscVarType    MeshType    y_BldMotion_at_u - - - "output motions at input node locations (displacements necessary for mapping loads)" -
+typedef BeamDyn/BD MiscVarType    MeshMapType Map_u_DistrLoad_to_y - - - "mapping of input loads to output node locations" -
+typedef BeamDyn/BD MiscVarType    MeshMapType Map_y_BldMotion_to_u - - - "mapping of output motions to input node locations (for load transfer)" -
 
 
 # ..... Parameters

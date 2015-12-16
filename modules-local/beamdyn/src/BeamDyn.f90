@@ -33,37 +33,33 @@ MODULE BeamDyn
    PUBLIC :: BD_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
    PUBLIC :: BD_UpdateDiscState                ! Tight coupling routine for updating discrete states
    
-   ! bjj: would like to make sure these routines aren't public
-   PUBLIC :: BD_CalcIC
-   PUBLIC :: BD_InitAcc
 
 CONTAINS
 
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
-!
-! This routine is called at the start of the simulation to perform initialization steps.
-! The parameters are set here and not changed during the simulation.
-! The initial states and initial guess for the input are defined.
-!..................................................................................................................................
+!> This routine is called at the start of the simulation to perform initialization steps.
+!! The parameters are set here and not changed during the simulation.
+!! The initial states and initial guess for the input are defined.
+SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, MiscVar, Interval, InitOut, ErrStat, ErrMsg )
 
-   TYPE(BD_InitInputType),            INTENT(IN   )  :: InitInp     ! Input data for initialization routine
-   TYPE(BD_InputType),                INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
-   TYPE(BD_ParameterType),            INTENT(  OUT)  :: p           ! Parameters
-   TYPE(BD_ContinuousStateType),      INTENT(  OUT)  :: x           ! Initial continuous states
-   TYPE(BD_DiscreteStateType),        INTENT(  OUT)  :: xd          ! Initial discrete states
-   TYPE(BD_ConstraintStateType),      INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-   TYPE(BD_OtherStateType),           INTENT(  OUT)  :: OtherState  ! Initial other/optimization states
-   TYPE(BD_OutputType),               INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated;
-                                                                    !    only the output mesh is initialized)
-   REAL(DbKi),                        INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that
-                                                                    !   (1) Mod1_UpdateStates() is called in loose coupling &
-                                                                    !   (2) Mod1_UpdateDiscState() is called in tight coupling.  !   Input is the suggested time from the glue code;
-                                                                    !   Output is the actual coupling interval that will be used
-                                                                    !   by the glue code.
-   TYPE(BD_InitOutputType),           INTENT(  OUT)  :: InitOut     ! Output for initialization routine
-   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(BD_InitInputType),            INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+   TYPE(BD_InputType),                INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
+   TYPE(BD_ParameterType),            INTENT(  OUT)  :: p           !< Parameters
+   TYPE(BD_ContinuousStateType),      INTENT(  OUT)  :: x           !< Initial continuous states
+   TYPE(BD_DiscreteStateType),        INTENT(  OUT)  :: xd          !< Initial discrete states
+   TYPE(BD_ConstraintStateType),      INTENT(  OUT)  :: z           !< Initial guess of the constraint states
+   TYPE(BD_OtherStateType),           INTENT(  OUT)  :: OtherState  !< Initial other states
+   TYPE(BD_OutputType),               INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated;
+                                                                    !!    only the output mesh is initialized)
+   TYPE(BD_MiscVarType),              INTENT(  OUT)  :: MiscVar     !<  Misc variables for optimization (not copied in glue code)
+   REAL(DbKi),                        INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that
+                                                                    !!   (1) Mod1_UpdateStates() is called in loose coupling &
+                                                                    !!   (2) Mod1_UpdateDiscState() is called in tight coupling.  !   Input is the suggested time from the glue code;
+                                                                    !!   Output is the actual coupling interval that will be used
+                                                                    !!   by the glue code.
+   TYPE(BD_InitOutputType),           INTENT(  OUT)  :: InitOut     !< Output for initialization routine
+   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    ! local variables
    TYPE(BD_InputFile)      :: InputFileData    ! Data stored in the module's input file
@@ -517,15 +513,24 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
          return
       end if
       
+      ! allocate and initialize other states:
+   call Init_OtherStates(p, OtherState, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                           
       ! initialize outputs (need to do this after initializing inputs)      
    call Init_y(p, u, y, ErrStat2, ErrMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         return
+      end if
       
-      ! allocate and initialize other states (do this after initializing input and output meshes):
-   call Init_OtherStates(p, u, y, OtherState, ErrStat2, ErrMsg2)
+      
+      ! allocate and initialize misc vars (do this after initializing input and output meshes):
+   call Init_MiscVars(p, u, y, MiscVar, ErrStat2, ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         
+   
       
       ! set initializaiton outputs
    call SetInitOut(p, InitOut, errStat, errMsg)
@@ -535,7 +540,7 @@ SUBROUTINE BD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
             
        ! Print the summary file if requested:
    if (InputFileData%SumPrint) then
-      call BD_PrintSum( p, u, y, x, OtherState, InitInp%RootName, ErrStat2, ErrMsg2 )
+      call BD_PrintSum( p, u, y, x, MiscVar, InitInp%RootName, ErrStat2, ErrMsg2 )
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    end if
       
@@ -560,12 +565,13 @@ contains
       end subroutine Cleanup            
 END SUBROUTINE BD_Init
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine initializes data in the InitOut type, which is returned to the glue code.
 subroutine SetInitOut(p, InitOut, ErrStat, ErrMsg)
 
-   type(BD_InitOutputType),       intent(  out)  :: InitOut          ! output data
-   type(BD_ParameterType),        intent(in   )  :: p                ! Parameters
-   integer(IntKi),                intent(  out)  :: ErrStat          ! Error status of the operation
-   character(*),                  intent(  out)  :: ErrMsg           ! Error message if ErrStat /= ErrID_None
+   type(BD_InitOutputType),       intent(  out)  :: InitOut          !< output data
+   type(BD_ParameterType),        intent(in   )  :: p                !< Parameters
+   integer(IntKi),                intent(  out)  :: ErrStat          !< Error status of the operation
+   character(*),                  intent(  out)  :: ErrMsg           !< Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -598,12 +604,13 @@ subroutine SetInitOut(p, InitOut, ErrStat, ErrMsg)
    
 end subroutine SetInitOut
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine allocates and initializes most (not all) of the parameters used in BeamDyn.
 subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
-   type(BD_InitInputType),       intent(in   )  :: InitInp           ! Input data for initialization routine
-   type(BD_InputFile),           intent(in   )  :: InputFileData     ! data from the input file
-   type(BD_ParameterType),       intent(inout)  :: p                 ! Parameters  ! intent(out) only because it changes p%NdIndx
-   integer(IntKi),               intent(  out)  :: ErrStat           ! Error status of the operation
-   character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+   type(BD_InitInputType),       intent(in   )  :: InitInp           !< Input data for initialization routine
+   type(BD_InputFile),           intent(in   )  :: InputFileData     !< data from the input file
+   type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters  ! intent(out) only because it changes p%NdIndx
+   integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
    
    !local variables
@@ -752,14 +759,14 @@ subroutine SetParameters(InitInp, InputFileData, p, ErrStat, ErrMsg)
       
 end subroutine SetParameters
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> this routine initializes the outputs, y, that are used in the BeamDyn interface for coupling in the FAST framework.
 subroutine Init_y( p, u, y, ErrStat, ErrMsg)
-! this routine initializes the outputs, y, that are used in the BeamDyn interface for coupling in the FAST framework.
 
-   type(BD_ParameterType),       intent(inout)  :: p                 ! Parameters  ! intent(out) only because it changes p%NdIndx
-   type(BD_InputType),           intent(inout)  :: u                 ! Inputs
-   type(BD_OutputType),          intent(inout)  :: y                 ! Outputs
-   integer(IntKi),               intent(  out)  :: ErrStat           ! Error status of the operation
-   character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+   type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters  -- intent(out) only because it changes p%NdIndx
+   type(BD_InputType),           intent(inout)  :: u                 !< Inputs
+   type(BD_OutputType),          intent(inout)  :: y                 !< Outputs
+   integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
       ! local variables
    real(R8Ki)                                   :: DCM(3,3)          ! must be same type as mesh orientation fields
@@ -903,6 +910,7 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
                     ,ErrStat = ErrStat2        &
                     ,ErrMess = ErrMsg2         )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
+      if (ErrStat>=AbortErrLev) RETURN
    
    
       ! initialization (used for initial guess to AeroDyn)
@@ -925,14 +933,14 @@ subroutine Init_y( p, u, y, ErrStat, ErrMsg)
    
 end subroutine Init_y
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> this routine initializes the inputs, u, that are used in the BeamDyn interface for coupling in the FAST framework.
 subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
-! this routine initializes the inputs, u, that are used in the BeamDyn interface for coupling in the FAST framework.
 
-   type(BD_InitInputType),       intent(in   )  :: InitInp           ! Input data for initialization routine
-   type(BD_ParameterType),       intent(in   )  :: p                 ! Parameters
-   type(BD_InputType),           intent(inout)  :: u                 ! Inputs
-   integer(IntKi),               intent(  out)  :: ErrStat           ! Error status of the operation
-   character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+   type(BD_InitInputType),       intent(in   )  :: InitInp           !< Input data for initialization routine
+   type(BD_ParameterType),       intent(in   )  :: p                 !< Parameters
+   type(BD_InputType),           intent(inout)  :: u                 !< Inputs
+   integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
    
    
    real(R8Ki)                                   :: DCM(3,3)          ! must be same type as mesh orientation fields
@@ -1179,13 +1187,14 @@ subroutine Init_u( InitInp, p, u, ErrStat, ErrMsg )
       
 end subroutine Init_u
 !-----------------------------------------------------------------------------------------------------------------------------------
-subroutine Init_OtherStates( p, u, y, OtherState, ErrStat, ErrMsg )
-   type(BD_ParameterType),       intent(in   )  :: p                 ! Parameters
-   type(BD_InputType),           intent(inout)  :: u                 ! Inputs   ! intent(out) because I'm copying it
-   type(BD_OutputType),          intent(inout)  :: y                 ! Outputs  ! intent(out) because I'm copying it
-   type(BD_OtherStateType),      intent(inout)  :: OtherState        ! Other/optimization states
-   integer(IntKi),               intent(  out)  :: ErrStat           ! Error status of the operation
-   character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+!> this subroutine initializes the misc variables.
+subroutine Init_MiscVars( p, u, y, m, ErrStat, ErrMsg )
+   type(BD_ParameterType),       intent(in   )  :: p                 !< Parameters
+   type(BD_InputType),           intent(inout)  :: u                 !< Inputs   ! intent(out) because I'm copying it
+   type(BD_OutputType),          intent(inout)  :: y                 !< Outputs  ! intent(out) because I'm copying it
+   type(BD_MiscVarType),         intent(inout)  :: m                 !< misc/optimization variables
+   integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
    
    
    
@@ -1206,7 +1215,7 @@ subroutine Init_OtherStates( p, u, y, OtherState, ErrStat, ErrMsg )
          ! do this same trick and we can't have more than one sibling of a mesh)
                  
       CALL MeshCopy ( SrcMesh  = y%BldMotion                  &
-                    , DestMesh = OtherState%u_DistrLoad_at_y  &
+                    , DestMesh = m%u_DistrLoad_at_y           &
                     , CtrlCode = MESH_COUSIN                  &  ! Like a sibling, except using new memory for position/refOrientation and elements
                     , IOS      = COMPONENT_INPUT              &
                     , Force    = .TRUE.                       &
@@ -1216,7 +1225,7 @@ subroutine Init_OtherStates( p, u, y, OtherState, ErrStat, ErrMsg )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
       CALL MeshCopy ( SrcMesh  = u%DistrLoad                  &
-                    , DestMesh = OtherState%y_BldMotion_at_u  &
+                    , DestMesh = m%y_BldMotion_at_u           &
                     , CtrlCode = MESH_COUSIN                  &
                     , IOS      = COMPONENT_OUTPUT             &
                     , Orientation     = .TRUE.                &
@@ -1225,16 +1234,35 @@ subroutine Init_OtherStates( p, u, y, OtherState, ErrStat, ErrMsg )
                     , ErrMess         = ErrMsg2               )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
-      CALL MeshMapCreate( u%DistrLoad, OtherState%u_DistrLoad_at_y, OtherState%Map_u_DistrLoad_to_y, ErrStat2, ErrMsg2 )
+      CALL MeshMapCreate( u%DistrLoad, m%u_DistrLoad_at_y, m%Map_u_DistrLoad_to_y, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      CALL MeshMapCreate( y%BldMotion, OtherState%y_BldMotion_at_u, OtherState%Map_y_BldMotion_to_u, ErrStat2, ErrMsg2 )
+      CALL MeshMapCreate( y%BldMotion, m%y_BldMotion_at_u, m%Map_y_BldMotion_to_u, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                
-      OtherState%u_DistrLoad_at_y%remapFlag = .false.
-      OtherState%y_BldMotion_at_u%remapFlag = .false.
+      m%u_DistrLoad_at_y%remapFlag = .false.
+      m%y_BldMotion_at_u%remapFlag = .false.
    end if
       
+            
+end subroutine Init_MiscVars   
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> this subroutine initializes the other states.
+subroutine Init_OtherStates( p, OtherState, ErrStat, ErrMsg )
+   type(BD_ParameterType),       intent(in   )  :: p                 !< Parameters
+   type(BD_OtherStateType),      intent(inout)  :: OtherState        !< Other states
+   integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
    
+   
+   
+   integer(intKi)                               :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
+   character(*), parameter                      :: RoutineName = 'Init_OtherStates'
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+        
    ! Allocate other states: Acceleration and algorithm accelerations for generalized-alpha time integator
    CALL AllocAry(OtherState%acc,p%dof_total,'OtherState%acc',ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -1250,12 +1278,13 @@ subroutine Init_OtherStates( p, u, y, OtherState, ErrStat, ErrMsg )
             
 end subroutine Init_OtherStates   
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> this subroutine initializes the continuous states.
 subroutine Init_ContinuousStates( p, u, x, ErrStat, ErrMsg )
-   type(BD_ParameterType),       intent(inout)  :: p                 ! Parameters !sets the copy-of-state values
-   type(BD_InputType),           intent(inout)  :: u                 ! Inputs  !intent(out) because of mesh copy, otherwise not changed
-   type(BD_ContinuousStateType), intent(inout)  :: x                 ! Continuous states
-   integer(IntKi),               intent(  out)  :: ErrStat           ! Error status of the operation
-   character(*),                 intent(  out)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+   type(BD_ParameterType),       intent(inout)  :: p                 !< Parameters !sets the copy-of-state values
+   type(BD_InputType),           intent(inout)  :: u                 !< Inputs  !intent(out) because of mesh copy, otherwise not changed
+   type(BD_ContinuousStateType), intent(inout)  :: x                 !< Continuous states
+   integer(IntKi),               intent(  out)  :: ErrStat           !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
    
    
    TYPE(BD_InputType)                           :: u_tmp             ! A copy of the initial input (guess), converted to BeamDyn internal coordinates
@@ -1303,20 +1332,19 @@ contains
    end subroutine cleanup   
 end subroutine Init_ContinuousStates   
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-   !
-   ! This routine is called at the end of the simulation.
-   !..................................................................................................................................
+!> This routine is called at the end of the simulation.
+SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
-   TYPE(BD_InputType),           INTENT(INOUT)  :: u           ! System inputs
-   TYPE(BD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
-   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
-   TYPE(BD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
-   TYPE(BD_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(BD_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(BD_InputType),           INTENT(INOUT)  :: u           !< System inputs
+   TYPE(BD_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
+   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
+   TYPE(BD_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
+   TYPE(BD_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states
+   TYPE(BD_OutputType),          INTENT(INOUT)  :: y           !< System outputs
+   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    ! Initialize ErrStat
 
@@ -1348,25 +1376,24 @@ SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
 END SUBROUTINE BD_End
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! Routine for solving for constraint states, integrating continuous states, and updating discrete states
-! Constraint states are solved for input t; Continuous and discrete states are updated for t + p%dt
-! (stepsize dt assumed to be in ModName parameter)
-!..................................................................................................................................
+!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other 
+!! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
+SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
-   REAL(DbKi),                      INTENT(IN   ) :: t          ! Current simulation time in seconds
-   INTEGER(IntKi),                  INTENT(IN   ) :: n          ! Current simulation time step n = 0,1,...
-   TYPE(BD_InputType),              INTENT(INOUT) :: u(:)       ! Inputs at utimes
-   REAL(DbKi),                      INTENT(IN   ) :: utimes(:)  ! Times associated with u(:), in seconds
-   TYPE(BD_ParameterType),          INTENT(IN   ) :: p          ! Parameters
-   TYPE(BD_ContinuousStateType),    INTENT(INOUT) :: x          ! Input: Continuous states at t;
-                                                                !   Output: Continuous states at t + Interval
-   TYPE(BD_DiscreteStateType),      INTENT(INOUT) :: xd         ! Input: Discrete states at t;
-                                                                !   Output: Discrete states at t  + Interval
-   TYPE(BD_ConstraintStateType),    INTENT(INOUT) :: z          ! Input: Initial guess of constraint states at t+dt;
-                                                                !   Output: Constraint states at t+dt
-   TYPE(BD_OtherStateType),         INTENT(INOUT) :: OtherState ! Other/optimization states
+   REAL(DbKi),                      INTENT(IN   ) :: t          !< Current simulation time in seconds
+   INTEGER(IntKi),                  INTENT(IN   ) :: n          !< Current simulation time step n = 0,1,...
+   TYPE(BD_InputType),              INTENT(INOUT) :: u(:)       !< Inputs at utimes
+   REAL(DbKi),                      INTENT(IN   ) :: utimes(:)  !< Times associated with u(:), in seconds
+   TYPE(BD_ParameterType),          INTENT(IN   ) :: p          !< Parameters
+   TYPE(BD_ContinuousStateType),    INTENT(INOUT) :: x          !< Input: Continuous states at t;
+                                                                !!   Output: Continuous states at t + dt
+   TYPE(BD_DiscreteStateType),      INTENT(INOUT) :: xd         !< Input: Discrete states at t;
+                                                                !!   Output: Discrete states at t + dt
+   TYPE(BD_ConstraintStateType),    INTENT(INOUT) :: z          !< Input: Initial guess of constraint states at t + dt;
+                                                                !!   Output: Constraint states at t + dt
+   TYPE(BD_OtherStateType),         INTENT(INOUT) :: OtherState !< Other states: Other states at t;
+                                                                !!   Output: Other states at t + dt
+   TYPE(BD_MiscVarType),            INTENT(INOUT) :: m          !< misc/optimization variables
    INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat    ! Error status of the operation
    CHARACTER(*),                    INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
 
@@ -1379,29 +1406,28 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, E
    
          
    IF(p%analysis_type == 2) THEN
-       CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    ELSEIF(p%analysis_type == 1) THEN
-       CALL BD_Static( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+       CALL BD_Static( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    ENDIF
 
 END SUBROUTINE BD_UpdateStates
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-   !
-   ! Routine for computing outputs, used in both loose and tight coupling.
-   !..................................................................................................................................
+!> Routine for computing outputs, used in both loose and tight coupling.
+SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
-   REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(BD_InputType),           INTENT(INOUT)  :: u           ! Inputs at t
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-   TYPE(BD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(BD_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
-                                                               !   nectivity information does not have to be recalculated)
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
+   TYPE(BD_InputType),           INTENT(INOUT)  :: u           !< Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
+   TYPE(BD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
+   TYPE(BD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
+   TYPE(BD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
+   TYPE(BD_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
+                                                               !!   nectivity information does not have to be recalculated)
+   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    TYPE(BD_OtherStateType)                      :: OS_tmp
    TYPE(BD_ContinuousStateType)                 :: x_tmp
@@ -1489,7 +1515,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
    CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_BoundaryGA2(x_tmp,p,u_tmp,t,OS_tmp,ErrStat2,ErrMsg2)
+   CALL BD_BoundaryGA2(x_tmp,p,u_tmp,t,OS_tmp,m,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    IF(p%analysis_type .EQ. 2) THEN
        CALL BD_CalcForceAcc(u_tmp,p,x_tmp,OS_tmp,ErrStat2,ErrMsg2)
@@ -1559,7 +1585,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !  get values to output to file:  
    !-------------------------------------------------------   
    ! Actuator
-   call Calc_WriteOutput( p, u_tmp2, AllOuts, y, OtherState, ErrStat2, ErrMsg2 )   
+   call Calc_WriteOutput( p, u_tmp2, AllOuts, y, m, ErrStat2, ErrMsg2 )   
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
     
    y%RootMxr = AllOuts( RootMxr )
@@ -1587,22 +1613,21 @@ contains
    end subroutine cleanup 
 END SUBROUTINE BD_CalcOutput
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! Routine for updating discrete states
-!..................................................................................................................................
+!> Routine for updating discrete states
+SUBROUTINE BD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
-   REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
-   INTEGER(IntKi),                    INTENT(IN   )  :: n           ! Current step of the simulation: t = n*Interval
-   TYPE(BD_InputType),                INTENT(IN   )  :: u           ! Inputs at t
-   TYPE(BD_ParameterType),            INTENT(IN   )  :: p           ! Parameters
-   TYPE(BD_ContinuousStateType),      INTENT(IN   )  :: x           ! Continuous states at t
-   TYPE(BD_DiscreteStateType),        INTENT(INOUT)  :: xd          ! Input: Discrete states at t;
-                                                                    !   Output: Discrete states at t + Interval
-   TYPE(BD_ConstraintStateType),      INTENT(IN   )  :: z           ! Constraint states at t
-   TYPE(BD_OtherStateType),           INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
+   INTEGER(IntKi),                    INTENT(IN   )  :: n           !< Current step of the simulation: t = n*dt
+   TYPE(BD_InputType),                INTENT(IN   )  :: u           !< Inputs at t
+   TYPE(BD_ParameterType),            INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_ContinuousStateType),      INTENT(IN   )  :: x           !< Continuous states at t
+   TYPE(BD_DiscreteStateType),        INTENT(INOUT)  :: xd          !< Input: Discrete states at t;
+                                                                    !!   Output: Discrete states at t + dt
+   TYPE(BD_ConstraintStateType),      INTENT(IN   )  :: z           !< Constraint states at t
+   TYPE(BD_OtherStateType),           INTENT(IN   )  :: OtherState  !< Other states at t
+   TYPE(BD_MiscVarType),              INTENT(INOUT)  :: m           !< misc/optimization variables
+   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    ! local variables
    REAL(BDKi)                                        :: temp_R(3,3) 
@@ -1634,22 +1659,21 @@ SUBROUTINE BD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg
       
 END SUBROUTINE BD_UpdateDiscState
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residual, ErrStat, ErrMsg )
-!
-! Routine for solving for the residual of the constraint state equations
-!..................................................................................................................................
+!> Routine for solving for the residual of the constraint state equations
+SUBROUTINE BD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, Z_residual, ErrStat, ErrMsg )
 
-   REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(BD_InputType),                INTENT(IN   )  :: u           ! Inputs at t
-   TYPE(BD_ParameterType),            INTENT(IN   )  :: p           ! Parameters
-   TYPE(BD_ContinuousStateType),      INTENT(IN   )  :: x           ! Continuous states at t
-   TYPE(BD_DiscreteStateType),        INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(BD_ConstraintStateType),      INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-   TYPE(BD_OtherStateType),           INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(BD_ConstraintStateType),      INTENT(  OUT)  :: Z_residual  ! Residual of the constraint state equations using
-                                                                    !     the input values described above
-   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
+   TYPE(BD_InputType),                INTENT(IN   )  :: u           !< Inputs at t
+   TYPE(BD_ParameterType),            INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_ContinuousStateType),      INTENT(IN   )  :: x           !< Continuous states at t
+   TYPE(BD_DiscreteStateType),        INTENT(IN   )  :: xd          !< Discrete states at t
+   TYPE(BD_ConstraintStateType),      INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
+   TYPE(BD_OtherStateType),           INTENT(IN   )  :: OtherState  !< Other states at t
+   TYPE(BD_ConstraintStateType),      INTENT(  OUT)  :: Z_residual  !< Residual of the constraint state equations using
+                                                                    !!     the input values described above
+   TYPE(BD_MiscVarType),              INTENT(INOUT)  :: m           !< misc/optimization variables
+   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
    ! Initialize ErrStat
@@ -1664,18 +1688,16 @@ SUBROUTINE BD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residual
 
    END SUBROUTINE BD_CalcConstrStateResidual
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine output elemental nodal quantity vector given global quantity vector
 SUBROUTINE BD_ElemNodalDisp(uu,node_elem,dof_node,nelem,Nu,ErrStat,ErrMsg)
-!-----------------------------------------------------------------------------------
-! This subroutine output elemental nodal quantity vector given global quantity vector
-!-----------------------------------------------------------------------------------
 
    REAL(BDKi),    INTENT(IN   ):: uu(:) 
    INTEGER(IntKi),INTENT(IN   ):: node_elem 
    INTEGER(IntKi),INTENT(IN   ):: dof_node 
    INTEGER(IntKi),INTENT(IN   ):: nelem 
    REAL(BDKi),    INTENT(  OUT):: Nu(:) 
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi):: i ! Index counter
    INTEGER(IntKi):: j ! Index counter
@@ -1695,17 +1717,15 @@ SUBROUTINE BD_ElemNodalDisp(uu,node_elem,dof_node,nelem,Nu,ErrStat,ErrMsg)
 
 END SUBROUTINE BD_ElemNodalDisp
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes the relative rotation at each node 
+!! in a finite element with respects to the first node.
 SUBROUTINE BD_NodalRelRot(Nu,node_elem,dof_node,Nr,ErrStat,ErrMsg)
-!------------------------------------------------------------
-! This subroutine computes the relative rotation at each node 
-! in a finite element with respects to the first node.
-!------------------------------------------------------------
    REAL(BDKi),    INTENT(IN   ):: Nu(:) 
    INTEGER(IntKi),INTENT(IN   ):: node_elem
    INTEGER(IntKi),INTENT(IN   ):: dof_node
    REAL(BDKi),    INTENT(  OUT):: Nr(:) 
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi)              :: i 
    INTEGER(IntKi)              :: k
@@ -1930,21 +1950,19 @@ SUBROUTINE BD_ElementMatrixGA2(Nuuu,Nrrr,Nvvv,Naaa,           &
 
 END SUBROUTINE BD_ElementMatrixGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes initial Gauss point values: uu0, E10, and Stif
 SUBROUTINE BD_GaussPointDataAt0(hhx,hpx,Jaco,Nuu0,Nrr0,node_elem,dof_node,uu0,E10,ErrStat,ErrMsg)
-   !----------------------------------------------------------------------------------------
-   ! This subroutine computes initial Gauss point values: uu0, E10, and Stif
-   !----------------------------------------------------------------------------------------
-   REAL(BDKi),    INTENT(IN   ):: hhx(:)         ! Shape function
-   REAL(BDKi),    INTENT(IN   ):: hpx(:)         ! Derivative of shape function
-   REAL(BDKi),    INTENT(IN   ):: Jaco           ! Jacobian value
-   REAL(BDKi),    INTENT(IN   ):: Nuu0(:)        ! Element initial nodal position array
-   REAL(BDKi),    INTENT(IN   ):: Nrr0(:)        ! Element initial nodal relative rotation array
-   INTEGER(IntKi),INTENT(IN   ):: node_elem      ! Number of node in one element
-   INTEGER(IntKi),INTENT(IN   ):: dof_node       ! DoF per node (=6)
-   REAL(BDKi),    INTENT(  OUT):: uu0(:)         ! Initial position array at Gauss point
-   REAL(BDKi),    INTENT(  OUT):: E10(:)         ! E10 = x_0^\prime at Gauss point
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   REAL(BDKi),    INTENT(IN   ):: hhx(:)         !< Shape function
+   REAL(BDKi),    INTENT(IN   ):: hpx(:)         !< Derivative of shape function
+   REAL(BDKi),    INTENT(IN   ):: Jaco           !< Jacobian value
+   REAL(BDKi),    INTENT(IN   ):: Nuu0(:)        !< Element initial nodal position array
+   REAL(BDKi),    INTENT(IN   ):: Nrr0(:)        !< Element initial nodal relative rotation array
+   INTEGER(IntKi),INTENT(IN   ):: node_elem      !< Number of node in one element
+   INTEGER(IntKi),INTENT(IN   ):: dof_node       !< DoF per node (=6)
+   REAL(BDKi),    INTENT(  OUT):: uu0(:)         !< Initial position array at Gauss point
+   REAL(BDKi),    INTENT(  OUT):: E10(:)         !< E10 = x_0^\prime at Gauss point
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat        !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi)                  :: hhi
    REAL(BDKi)                  :: hpi
@@ -1991,30 +2009,28 @@ SUBROUTINE BD_GaussPointDataAt0(hhx,hpx,Jaco,Nuu0,Nrr0,node_elem,dof_node,uu0,E1
 
 END SUBROUTINE BD_GaussPointDataAt0
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes Gauss point values: 1) uuu, 2) uup, 3) E1
+!! 4) RR0, 5) kapa, 6) Stif, and 7) cet
 SUBROUTINE BD_GaussPointData(hhx,hpx,Jaco,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
                              uuu,uup,E1,RR0,kapa,Stif,cet,ErrStat,ErrMsg)
-!--------------------------------------------------------------------------
-! This subroutine computes Gauss point values: 1) uuu, 2) uup, 3) E1
-! 4) RR0, 5) kapa, 6) Stif, and 7) cet
-!--------------------------------------------------------------------------
-   REAL(BDKi),    INTENT(IN   ):: hhx(:)      ! Shape function
-   REAL(BDKi),    INTENT(IN   ):: hpx(:)      ! Derivative of shape function
-   REAL(BDKi),    INTENT(IN   ):: Jaco        ! Jacobian
-   REAL(BDKi),    INTENT(IN   ):: Nuuu(:)     ! Element nodal displacement array
-   REAL(BDKi),    INTENT(IN   ):: Nrrr(:)     ! Element nodal relative rotation array
-   REAL(BDKi),    INTENT(IN   ):: uu0(:)      ! Initial position array at Gauss point
-   REAL(BDKi),    INTENT(IN   ):: E10(:)      ! E10 = x_0^\prime at Gauss point
-   INTEGER(IntKi),INTENT(IN   ):: node_elem   ! Number of node in one element
-   INTEGER(IntKi),INTENT(IN   ):: dof_node    ! Number of DoF per node (=6)
-   REAL(BDKi),    INTENT(  OUT):: uuu(:)      ! Displacement(and rotation)  arrary at Gauss point
-   REAL(BDKi),    INTENT(  OUT):: uup(:)      ! Derivative of displacement wrt axix at Gauss point
-   REAL(BDKi),    INTENT(  OUT):: E1(:)       ! E1 = x_0^\prime + u^\prime at Gauss point
-   REAL(BDKi),    INTENT(  OUT):: RR0(:,:)    ! Rotation tensor at Gauss point
-   REAL(BDKi),    INTENT(  OUT):: kapa(:)     ! Curvature starin vector at Gauss point
-   REAL(BDKi),    INTENT(  OUT):: cet         ! Extension-torsion coefficient at Gauss point
-   REAL(BDKi),    INTENT(  OUT):: Stif(:,:)   ! C/S stiffness matrix resolved in inertial frame at Gauss point
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   REAL(BDKi),    INTENT(IN   ):: hhx(:)      !< Shape function
+   REAL(BDKi),    INTENT(IN   ):: hpx(:)      !< Derivative of shape function
+   REAL(BDKi),    INTENT(IN   ):: Jaco        !< Jacobian
+   REAL(BDKi),    INTENT(IN   ):: Nuuu(:)     !< Element nodal displacement array
+   REAL(BDKi),    INTENT(IN   ):: Nrrr(:)     !< Element nodal relative rotation array
+   REAL(BDKi),    INTENT(IN   ):: uu0(:)      !< Initial position array at Gauss point
+   REAL(BDKi),    INTENT(IN   ):: E10(:)      !< E10 = x_0^\prime at Gauss point
+   INTEGER(IntKi),INTENT(IN   ):: node_elem   !< Number of node in one element
+   INTEGER(IntKi),INTENT(IN   ):: dof_node    !< Number of DoF per node (=6)
+   REAL(BDKi),    INTENT(  OUT):: uuu(:)      !< Displacement(and rotation)  arrary at Gauss point
+   REAL(BDKi),    INTENT(  OUT):: uup(:)      !< Derivative of displacement wrt axix at Gauss point
+   REAL(BDKi),    INTENT(  OUT):: E1(:)       !< E1 = x_0^\prime + u^\prime at Gauss point
+   REAL(BDKi),    INTENT(  OUT):: RR0(:,:)    !< Rotation tensor at Gauss point
+   REAL(BDKi),    INTENT(  OUT):: kapa(:)     !< Curvature starin vector at Gauss point
+   REAL(BDKi),    INTENT(  OUT):: cet         !< Extension-torsion coefficient at Gauss point
+   REAL(BDKi),    INTENT(  OUT):: Stif(:,:)   !< C/S stiffness matrix resolved in inertial frame at Gauss point
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat     !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi)                  :: rrr(3)
    REAL(BDKi)                  :: rrp(3)
@@ -2098,11 +2114,9 @@ SUBROUTINE BD_GaussPointData(hhx,hpx,Jaco,Nuuu,Nrrr,uu0,E10,node_elem,dof_node,&
 
 END SUBROUTINE BD_GaussPointData
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine calculates the elastic forces Fc and Fd
+!! It also calcuates the linearized matrices Oe, Pe, and Qe for N-R algorithm
 SUBROUTINE BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat,ErrMsg)
-!---------------------------------------------------------------------------
-! This subroutine calculates the elastic forces Fc and Fd
-! It also calcuates the linearized matrices Oe, Pe, and Qe for N-R algorithm
-!---------------------------------------------------------------------------
    REAL(BDKi),    INTENT(IN   ):: E1(:)
    REAL(BDKi),    INTENT(IN   ):: RR0(:,:)
    REAL(BDKi),    INTENT(IN   ):: kapa(:)
@@ -2114,8 +2128,8 @@ SUBROUTINE BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat,ErrM
    REAL(BDKi),    INTENT(  OUT):: Oe(:,:)
    REAL(BDKi),    INTENT(  OUT):: Pe(:,:)
    REAL(BDKi),    INTENT(  OUT):: Qe(:,:)
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi)                  :: eee(6)
    REAL(BDKi)                  :: fff(6)
@@ -2220,13 +2234,11 @@ SUBROUTINE BD_ElasticForce(E1,RR0,kapa,Stif,cet,fact,Fc,Fd,Oe,Pe,Qe,ErrStat,ErrM
 
 END SUBROUTINE BD_ElasticForce
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine calculates the mass quantities at the Gauss point
+!! 1) velocity; 2) acceleration; 3) derivative of velocity wrt axis
+!! 4) mass matrix components (mmm,mEta,rho)
 SUBROUTINE BD_GaussPointDataMass(hhx,hpx,Jaco,Nvvv,Naaa,RR0,node_elem,dof_node,&
                                  vvv,aaa,vvp,mEta,rho,ErrStat,ErrMsg)
-!------------------------------------------------------------------
-! This subroutine calculates the mass quantities at the Gauss point
-! 1) velocity; 2) acceleration; 3) derivative of velocity wrt axis
-! 4) mass matrix components (mmm,mEta,rho)
-!------------------------------------------------------------------
    REAL(BDKi),     INTENT(IN   ):: hhx(:)
    REAL(BDKi),     INTENT(IN   ):: hpx(:)
    REAL(BDKi),     INTENT(IN   ):: Jaco
@@ -2271,11 +2283,9 @@ SUBROUTINE BD_GaussPointDataMass(hhx,hpx,Jaco,Nvvv,Naaa,RR0,node_elem,dof_node,&
 
 END SUBROUTINE BD_GaussPointDataMass
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine calculates the inertial force Fi
+!! It also calcuates the linearized matrices Mi, Gi, and Ki for N-R algorithm
 SUBROUTINE BD_InertialForce(m00,mEta,rho,vvv,aaa,fact,Fi,Mi,Gi,Ki,ErrStat,ErrMsg)
-!---------------------------------------------------------------------------
-! This subroutine calculates the inertial force Fi
-! It also calcuates the linearized matrices Mi, Gi, and Ki for N-R algorithm
-!---------------------------------------------------------------------------
 
    REAL(BDKi),    INTENT(IN   ):: m00
    REAL(BDKi),    INTENT(IN   ):: mEta(:)
@@ -2350,14 +2360,12 @@ SUBROUTINE BD_InertialForce(m00,mEta,rho,vvv,aaa,fact,Fi,Mi,Gi,Ki,ErrStat,ErrMsg
 
 END SUBROUTINE BD_InertialForce
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine calculates the dissipative forces and added it to Fc and Fd
+!! It also calcuates the linearized matrices Sd, Od, Pd and Qd 
+!! betaC, Gd, Xd, Yd for N-R algorithm
 SUBROUTINE BD_DissipativeForce(beta,Stiff,vvv,vvp,E1,fact,Fc,Fd,&
                                   Sd,Od,Pd,Qd,betaC,Gd,Xd,Yd, &
                                   ErrStat,ErrMsg)
-!---------------------------------------------------------------------------
-! This subroutine calculates the dissipative forces and added it to Fc and Fd
-! It also calcuates the linearized matrices Sd, Od, Pd and Qd 
-! betaC, Gd, Xd, Yd for N-R algorithm
-!---------------------------------------------------------------------------
    REAL(BDKi),    INTENT(IN   ):: beta(:)
    REAL(BDKi),    INTENT(IN   ):: Stiff(:,:)
    REAL(BDKi),    INTENT(IN   ):: vvv(:)
@@ -2458,10 +2466,8 @@ SUBROUTINE BD_DissipativeForce(beta,Stiff,vvv,vvp,E1,fact,Fc,Fd,&
 
 END SUBROUTINE BD_DissipativeForce
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine calculates the gravity forces Fg
 SUBROUTINE BD_GravityForce(m00,mEta,grav,Fg,ErrStat,ErrMsg)
-!---------------------------------------------------------------------------
-! This subroutine calculates the gravity forces Fg
-!---------------------------------------------------------------------------
 
    REAL(BDKi),    INTENT(IN   ):: m00
    REAL(BDKi),    INTENT(IN   ):: mEta(:)
@@ -2479,18 +2485,16 @@ SUBROUTINE BD_GravityForce(m00,mEta,grav,Fg,ErrStat,ErrMsg)
 
 END SUBROUTINE BD_GravityForce
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine assembles total stiffness matrix.
 SUBROUTINE BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,ElemK,GlobalK,ErrStat,ErrMsg)
-!-------------------------------------------------------------------------------
-! This subroutine assembles total stiffness matrix.
-!-------------------------------------------------------------------------------
-   REAL(BDKi),    INTENT(IN   ):: ElemK(:,:)    ! Element  matrix
-   INTEGER(IntKi),INTENT(IN   ):: nelem         ! Number of elements
-   INTEGER(IntKi),INTENT(IN   ):: node_elem     ! Nodes per element
-   INTEGER(IntKi),INTENT(IN   ):: dof_elem      ! Degrees of freedom per element
-   INTEGER(IntKi),INTENT(IN   ):: dof_node      ! Degrees of freedom per node
-   REAL(BDKi),    INTENT(INOUT):: GlobalK(:,:)  ! Global stiffness matrix
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   REAL(BDKi),    INTENT(IN   ):: ElemK(:,:)    !< Element  matrix
+   INTEGER(IntKi),INTENT(IN   ):: nelem         !< Number of elements
+   INTEGER(IntKi),INTENT(IN   ):: node_elem     !< Nodes per element
+   INTEGER(IntKi),INTENT(IN   ):: dof_elem      !< Degrees of freedom per element
+   INTEGER(IntKi),INTENT(IN   ):: dof_node      !< Degrees of freedom per node
+   REAL(BDKi),    INTENT(INOUT):: GlobalK(:,:)  !< Global stiffness matrix
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: j
@@ -2510,19 +2514,17 @@ SUBROUTINE BD_AssembleStiffK(nelem,node_elem,dof_elem,dof_node,ElemK,GlobalK,Err
 
 END SUBROUTINE BD_AssembleStiffK
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine assembles global force vector.
 SUBROUTINE BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,ElemRHS,GlobalRHS,ErrStat,ErrMsg)
-!-------------------------------------------------------------------------------
-! This subroutine assembles global force vector.
-!-------------------------------------------------------------------------------
 
-   REAL(BDKi),    INTENT(IN   ):: ElemRHS(:)    ! Total element force (Fc, Fd, Fb)
-   INTEGER(IntKi),INTENT(IN   ):: nelem         ! Number of elements
-   INTEGER(IntKi),INTENT(IN   ):: dof_elem      ! Degrees of freedom per element
-   INTEGER(IntKi),INTENT(IN   ):: node_elem     ! Nodes per element
-   INTEGER(IntKi),INTENT(IN   ):: dof_node      ! Degrees of freedom per node
-   REAL(BDKi),    INTENT(INOUT):: GlobalRHS(:)  ! Global force vector
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   REAL(BDKi),    INTENT(IN   ):: ElemRHS(:)    !< Total element force (Fc, Fd, Fb)
+   INTEGER(IntKi),INTENT(IN   ):: nelem         !< Number of elements
+   INTEGER(IntKi),INTENT(IN   ):: dof_elem      !< Degrees of freedom per element
+   INTEGER(IntKi),INTENT(IN   ):: node_elem     !< Nodes per element
+   INTEGER(IntKi),INTENT(IN   ):: dof_node      !< Degrees of freedom per node
+   REAL(BDKi),    INTENT(INOUT):: GlobalRHS(:)  !< Global force vector
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: temp_id
@@ -2537,13 +2539,11 @@ SUBROUTINE BD_AssembleRHS(nelem,dof_elem,node_elem,dof_node,ElemRHS,GlobalRHS,Er
 
 END SUBROUTINE BD_AssembleRHS
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine updates the 1) displacements/rotations(uf)
+!! 2) linear/angular velocities(vf); 3) linear/angular accelerations(af); and 
+!! 4) algorithmic accelerations(xf) given the increments obtained through
+!! N-R algorithm
 SUBROUTINE BD_UpdateDynamicGA2(ainc,uf,vf,af,xf,coef,node_total,dof_node,ErrStat,ErrMsg)
-!---------------------------------------------------------------------------
-! This subroutine updates the 1) displacements/rotations(uf)
-! 2) linear/angular velocities(vf); 3) linear/angular accelerations(af); and 
-! 4) algorithmic accelerations(xf) given the increments obtained through
-! N-R algorithm
-!---------------------------------------------------------------------------
 
    REAL(BDKi),    INTENT(IN   ):: ainc(:)
    REAL(DbKi),    INTENT(IN   ):: coef(:)
@@ -2593,37 +2593,36 @@ SUBROUTINE BD_UpdateDynamicGA2(ainc,uf,vf,af,xf,coef,node_total,dof_node,ErrStat
 
 END SUBROUTINE BD_UpdateDynamicGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes Global mass matrix and force vector for the beam.
 SUBROUTINE BD_GenerateDynamicElementAcc(uuN,vvN,Stif0,Mass0,gravity,u,    &
                                         damp_flag,beta,                             &
                                         quadrature,gw,hhx,hpx,Jacobian,uu0,E10,     &
                                         elem_total,node_elem,dof_node,ngp,&
                                         RHS,MassM,ErrStat,ErrMsg)
-!----------------------------------------------------------------------------------------
-! This subroutine computes Global mass matrix and force vector for the beam.
-!----------------------------------------------------------------------------------------
-   REAL(BDKi),        INTENT(IN   ):: uuN(:) ! Displacement of Mass 1: m
-   REAL(BDKi),        INTENT(IN   ):: vvN(:) ! Velocity of Mass 1: m/s
-   REAL(BDKi),        INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
-   REAL(BDKi),        INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   REAL(BDKi),        INTENT(IN   ):: gravity(:) ! Velocity of Mass 1: m/s
-   TYPE(BD_InputType),INTENT(IN   ):: u           ! Inputs at t
-   INTEGER(IntKi),    INTENT(IN   ):: damp_flag ! Total number of elements
+
+   REAL(BDKi),        INTENT(IN   ):: uuN(:)       !< Displacement of Mass 1: m
+   REAL(BDKi),        INTENT(IN   ):: vvN(:)       !< Velocity of Mass 1: m/s
+   REAL(BDKi),        INTENT(IN   ):: Stif0(:,:,:) !< Element stiffness matrix
+   REAL(BDKi),        INTENT(IN   ):: Mass0(:,:,:) !< Element stiffness matrix
+   REAL(BDKi),        INTENT(IN   ):: gravity(:)   !< Velocity of Mass 1: m/s
+   TYPE(BD_InputType),INTENT(IN   ):: u            !< Inputs at t
+   INTEGER(IntKi),    INTENT(IN   ):: damp_flag    !< Total number of elements
    REAL(BDKi),        INTENT(IN   ):: beta(:)
-   INTEGER(IntKi),    INTENT(IN   ):: quadrature ! Number of Gauss points
+   INTEGER(IntKi),    INTENT(IN   ):: quadrature   !< Number of Gauss points
    REAL(BDKi),        INTENT(IN   ):: gw(:)
    REAL(BDKi),        INTENT(IN   ):: hhx(:,:)
    REAL(BDKi),        INTENT(IN   ):: hpx(:,:)
    REAL(BDKi),        INTENT(IN   ):: Jacobian(:,:)
    REAL(BDKi),        INTENT(IN   ):: uu0(:,:)
    REAL(BDKi),        INTENT(IN   ):: E10(:,:)
-   INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
-   INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
-   INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
-   REAL(BDKi),        INTENT(  OUT):: MassM(:,:) ! Mass matrix
-   REAL(BDKi),        INTENT(  OUT):: RHS(:) ! Right hand side of the equation Ax=B
-   INTEGER(IntKi),    INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),      INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),    INTENT(IN   ):: elem_total   !< Total number of elements
+   INTEGER(IntKi),    INTENT(IN   ):: node_elem    !< Node per element
+   INTEGER(IntKi),    INTENT(IN   ):: dof_node     !< Degrees of freedom per node
+   INTEGER(IntKi),    INTENT(IN   ):: ngp          !< Number of Gauss points
+   REAL(BDKi),        INTENT(  OUT):: MassM(:,:)   !< Mass matrix
+   REAL(BDKi),        INTENT(  OUT):: RHS(:)       !< Right hand side of the equation Ax=B
+   INTEGER(IntKi),    INTENT(  OUT):: ErrStat      !< Error status of the operation
+   CHARACTER(*),      INTENT(  OUT):: ErrMsg       !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi),          ALLOCATABLE:: Nuuu(:)
    REAL(BDKi),          ALLOCATABLE:: Nrrr(:)
@@ -2747,38 +2746,35 @@ contains
 
 END SUBROUTINE BD_GenerateDynamicElementAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine total element forces and mass matrices
 SUBROUTINE BD_ElementMatrixAcc(Nuuu,Nrrr,Nvvv,&
                                EStif0_GL,EMass0_GL,gravity,DistrLoad_GL,&
                                ngp,gw,hhx,hpx,Jaco,uu0,E10,   &
                                node_elem,dof_node,damp_flag,beta,&
                                elf,elm,ErrStat,ErrMsg)
 
-!-------------------------------------------------------------------------------
-! This subroutine total element forces and mass matrices
-!-------------------------------------------------------------------------------
-
-   REAL(BDKi),    INTENT(IN   ):: Nuuu(:) ! Nodal displacement of Mass 1 for each element
-   REAL(BDKi),    INTENT(IN   ):: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
-   REAL(BDKi),    INTENT(IN   ):: Nvvv(:) ! Nodal velocity of Mass 1: m/s for each element
-   REAL(BDKi),    INTENT(IN   ):: EStif0_GL(:,:,:) ! Nodal material properties for each element
-   REAL(BDKi),    INTENT(IN   ):: EMass0_GL(:,:,:) ! Nodal material properties for each element
-   REAL(BDKi),    INTENT(IN   ):: gravity(:) !
-   REAL(BDKi),    INTENT(IN   ):: DistrLoad_GL(:,:) ! Nodal material properties for each element
-   INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
+   REAL(BDKi),    INTENT(IN   ):: Nuuu(:)             !< Nodal displacement of Mass 1 for each element
+   REAL(BDKi),    INTENT(IN   ):: Nrrr(:)             !< Nodal rotation parameters for displacement of Mass 1
+   REAL(BDKi),    INTENT(IN   ):: Nvvv(:)             !< Nodal velocity of Mass 1: m/s for each element
+   REAL(BDKi),    INTENT(IN   ):: EStif0_GL(:,:,:)    !< Nodal material properties for each element
+   REAL(BDKi),    INTENT(IN   ):: EMass0_GL(:,:,:)    !< Nodal material properties for each element
+   REAL(BDKi),    INTENT(IN   ):: gravity(:)          !< gravitational acceleration
+   REAL(BDKi),    INTENT(IN   ):: DistrLoad_GL(:,:)   !< Nodal material properties for each element
+   INTEGER(IntKi),INTENT(IN   ):: ngp                 !< Number of Gauss points
    REAL(BDKi),    INTENT(IN   ):: gw(:)
    REAL(BDKi),    INTENT(IN   ):: hhx(:,:)
    REAL(BDKi),    INTENT(IN   ):: hpx(:,:)
    REAL(BDKi),    INTENT(IN   ):: Jaco(:)
    REAL(BDKi),    INTENT(IN   ):: uu0(:)
    REAL(BDKi),    INTENT(IN   ):: E10(:)
-   INTEGER(IntKi),INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
-   INTEGER(IntKi),INTENT(IN   ):: damp_flag ! Degrees of freedom per node
+   INTEGER(IntKi),INTENT(IN   ):: node_elem           !< Node per element
+   INTEGER(IntKi),INTENT(IN   ):: dof_node            !< Degrees of freedom per node
+   INTEGER(IntKi),INTENT(IN   ):: damp_flag           !< Degrees of freedom per node
    REAL(BDKi),    INTENT(IN   ):: beta(:)
-   REAL(BDKi),    INTENT(  OUT):: elf(:)  ! Total element force (Fd, Fc, Fb)
-   REAL(BDKi),    INTENT(  OUT):: elm(:,:) ! Total element mass matrix
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   REAL(BDKi),    INTENT(  OUT):: elf(:)              !< Total element force (Fd, Fc, Fb)
+   REAL(BDKi),    INTENT(  OUT):: elm(:,:)            !< Total element mass matrix
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat             !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg              !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi)                  :: temp_Naaa(dof_node*node_elem)
    REAL(BDKi)                  :: RR0(3,3)
@@ -2895,17 +2891,15 @@ SUBROUTINE BD_ElementMatrixAcc(Nuuu,Nrrr,Nvvv,&
 
 END SUBROUTINE BD_ElementMatrixAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes the mass matrix.
 SUBROUTINE BD_MassMatrix(m00,mEta,rho,Mi,ErrStat,ErrMsg)
-!----------------------------------------------------------------------------------------
-! This subroutine computes the mass matrix.
-!----------------------------------------------------------------------------------------
 
-   REAL(BDKi),    INTENT(IN   ):: m00 ! Mass density at Gauss point
-   REAL(BDKi),    INTENT(IN   ):: mEta(:) ! m\Eta resolved in inertia frame at Gauss point
-   REAL(BDKi),    INTENT(IN   ):: rho(:,:) ! Tensor of inertia resolved in inertia frame at Gauss point
-   REAL(BDKi),    INTENT(  OUT):: Mi(:,:) ! Mass matrix
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   REAL(BDKi),    INTENT(IN   ):: m00        !< Mass density at Gauss point
+   REAL(BDKi),    INTENT(IN   ):: mEta(:)    !< m\Eta resolved in inertia frame at Gauss point
+   REAL(BDKi),    INTENT(IN   ):: rho(:,:)   !< Tensor of inertia resolved in inertia frame at Gauss point
+   REAL(BDKi),    INTENT(  OUT):: Mi(:,:)    !< Mass matrix
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat    !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi)              :: i
 
@@ -2923,16 +2917,14 @@ SUBROUTINE BD_MassMatrix(m00,mEta,rho,Mi,ErrStat,ErrMsg)
 
 END SUBROUTINE BD_MassMatrix
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes gyroscopic forces
 SUBROUTINE BD_GyroForce(mEta,rho,vvv,Fb,ErrStat,ErrMsg)
-!----------------------------------------------------------------------------------------
-! This subroutine computes gyroscopic forces
-!----------------------------------------------------------------------------------------
-   REAL(BDKi),    INTENT(IN   ):: mEta(:)       ! m\Eta resolved in inertia frame at Gauss point
-   REAL(BDKi),    INTENT(IN   ):: rho(:,:)      ! Tensor of inertia resolved in inertia frame at Gauss point
-   REAL(BDKi),    INTENT(IN   ):: vvv(:)        ! Velocities at Gauss point (including linear and angular velocities)
-   REAL(BDKi),    INTENT(  OUT):: Fb(:)         ! Gyroscopic forces
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   REAL(BDKi),    INTENT(IN   ):: mEta(:)       !< m\Eta resolved in inertia frame at Gauss point
+   REAL(BDKi),    INTENT(IN   ):: rho(:,:)      !< Tensor of inertia resolved in inertia frame at Gauss point
+   REAL(BDKi),    INTENT(IN   ):: vvv(:)        !< Velocities at Gauss point (including linear and angular velocities)
+   REAL(BDKi),    INTENT(  OUT):: Fb(:)         !< Gyroscopic forces
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi)              :: i
    INTEGER(IntKi)              :: j
@@ -2970,35 +2962,33 @@ SUBROUTINE BD_GyroForce(mEta,rho,vvv,Fb,ErrStat,ErrMsg)
 
 END SUBROUTINE BD_GyroForce
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine calculates elemetal internal forces
 SUBROUTINE BD_ElementMatrixForce(Nuuu,Nrrr,Nvvv,&
                                  EStif0_GL,EMass0_GL,     &
                                  damp_flag,beta,          &
                                  ngp,gw,hhx,hpx,Jaco,uu0,E10,&
                                  node_elem,dof_node,elf,&
                                  ErrStat,ErrMsg)
-!------------------------------------------------------------
-! This subroutine calculates elemetal internal forces
-!------------------------------------------------------------
 
-   REAL(BDKi),     INTENT(IN   ):: Nuuu(:)          ! Nodal displacement of Mass 1 for each element
-   REAL(BDKi),     INTENT(IN   ):: Nrrr(:)          ! Nodal rotation parameters for displacement of Mass 1
-   REAL(BDKi),     INTENT(IN   ):: Nvvv(:)          ! Nodal velocity of Mass 1: m/s for each element
-   REAL(BDKi),     INTENT(IN   ):: EStif0_GL(:,:,:) ! Nodal material properties for each element
-   REAL(BDKi),     INTENT(IN   ):: EMass0_GL(:,:,:) ! Nodal material properties for each element
-   INTEGER(IntKi), INTENT(IN   ):: damp_flag        ! Number of Gauss points
+   REAL(BDKi),     INTENT(IN   ):: Nuuu(:)          !< Nodal displacement of Mass 1 for each element
+   REAL(BDKi),     INTENT(IN   ):: Nrrr(:)          !< Nodal rotation parameters for displacement of Mass 1
+   REAL(BDKi),     INTENT(IN   ):: Nvvv(:)          !< Nodal velocity of Mass 1: m/s for each element
+   REAL(BDKi),     INTENT(IN   ):: EStif0_GL(:,:,:) !< Nodal material properties for each element
+   REAL(BDKi),     INTENT(IN   ):: EMass0_GL(:,:,:) !< Nodal material properties for each element
+   INTEGER(IntKi), INTENT(IN   ):: damp_flag        !< Number of Gauss points
    REAL(BDKi),     INTENT(IN   ):: beta(:)
-   INTEGER(IntKi), INTENT(IN   ):: ngp              ! Number of Gauss points
+   INTEGER(IntKi), INTENT(IN   ):: ngp              !< Number of Gauss points
    REAL(BDKi),     INTENT(IN   ):: gw(:)
    REAL(BDKi),     INTENT(IN   ):: hhx(:,:)
    REAL(BDKi),     INTENT(IN   ):: hpx(:,:)
    REAL(BDKi),     INTENT(IN   ):: Jaco(:)
    REAL(BDKi),     INTENT(IN   ):: uu0(:)
    REAL(BDKi),     INTENT(IN   ):: E10(:)
-   INTEGER(IntKi), INTENT(IN   ):: node_elem        ! Node per element
-   INTEGER(IntKi), INTENT(IN   ):: dof_node         ! Degrees of freedom per node
-   REAL(BDKi),     INTENT(  OUT):: elf(:)           ! Total element force (Fd, Fc, Fb)
-   INTEGER(IntKi), INTENT(  OUT):: ErrStat          ! Error status of the operation
-   CHARACTER(*),   INTENT(  OUT):: ErrMsg           ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi), INTENT(IN   ):: node_elem        !< Node per element
+   INTEGER(IntKi), INTENT(IN   ):: dof_node         !< Degrees of freedom per node
+   REAL(BDKi),     INTENT(  OUT):: elf(:)           !< Total element force (Fd, Fc, Fb)
+   INTEGER(IntKi), INTENT(  OUT):: ErrStat          !< Error status of the operation
+   CHARACTER(*),   INTENT(  OUT):: ErrMsg           !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi)                   :: temp_Naaa(dof_node*node_elem)
    REAL(BDKi)                   :: RR0(3,3)
@@ -3093,38 +3083,36 @@ SUBROUTINE BD_ElementMatrixForce(Nuuu,Nrrr,Nvvv,&
 
 END SUBROUTINE BD_ElementMatrixForce
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes Global mass matrix and force vector to 
+!! calculate the forces along the beam
 SUBROUTINE BD_GenerateDynamicElementForce(uuN,vvN,aaN,     &
                                           Stif0,Mass0,u,&
                                           damp_flag,beta,       &
                                           elem_total,node_elem,dof_node,ngp,&
                                           quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                           RHS,ErrStat,ErrMsg)
-!----------------------------------------------------------------------------------------
-! This subroutine computes Global mass matrix and force vector to 
-! calculate the forces along the beam
-!----------------------------------------------------------------------------------------
-   REAL(BDKi),         INTENT(IN   ):: uuN(:)       ! Displacement of Mass 1: m
-   REAL(BDKi),         INTENT(IN   ):: vvN(:)       ! Velocity of Mass 1: m/s
-   REAL(BDKi),         INTENT(IN   ):: aaN(:)       ! Velocity of Mass 1: m/s
-   REAL(BDKi),         INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
-   REAL(BDKi),         INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   TYPE(BD_InputType), INTENT(IN   ):: u            ! Inputs at t
-   INTEGER(IntKi),     INTENT(IN   ):: damp_flag    ! Number of Gauss points
+   REAL(BDKi),         INTENT(IN   ):: uuN(:)       !< Displacement of Mass 1: m
+   REAL(BDKi),         INTENT(IN   ):: vvN(:)       !< Velocity of Mass 1: m/s
+   REAL(BDKi),         INTENT(IN   ):: aaN(:)       !< Velocity of Mass 1: m/s
+   REAL(BDKi),         INTENT(IN   ):: Stif0(:,:,:) !< Element stiffness matrix
+   REAL(BDKi),         INTENT(IN   ):: Mass0(:,:,:) !< Element stiffness matrix
+   TYPE(BD_InputType), INTENT(IN   ):: u            !< Inputs at t
+   INTEGER(IntKi),     INTENT(IN   ):: damp_flag    !< Number of Gauss points
    REAL(BDKi),         INTENT(IN   ):: beta(:)
-   INTEGER(IntKi),     INTENT(IN   ):: elem_total   ! Total number of elements
-   INTEGER(IntKi),     INTENT(IN   ):: node_elem    ! Node per element
-   INTEGER(IntKi),     INTENT(IN   ):: dof_node     ! Degrees of freedom per node
-   INTEGER(IntKi),     INTENT(IN   ):: ngp          ! Number of Gauss points
-   INTEGER(IntKi),     INTENT(IN   ):: quadrature   ! Number of Gauss points
+   INTEGER(IntKi),     INTENT(IN   ):: elem_total   !< Total number of elements
+   INTEGER(IntKi),     INTENT(IN   ):: node_elem    !< Node per element
+   INTEGER(IntKi),     INTENT(IN   ):: dof_node     !< Degrees of freedom per node
+   INTEGER(IntKi),     INTENT(IN   ):: ngp          !< Number of Gauss points
+   INTEGER(IntKi),     INTENT(IN   ):: quadrature   !< Number of Gauss points
    REAL(BDKi),         INTENT(IN   ):: gw(:)
    REAL(BDKi),         INTENT(IN   ):: hhx(:,:)
    REAL(BDKi),         INTENT(IN   ):: hpx(:,:)
    REAL(BDKi),         INTENT(IN   ):: Jaco(:,:)
    REAL(BDKi),         INTENT(IN   ):: uu0(:,:)
    REAL(BDKi),         INTENT(IN   ):: E10(:,:)
-   REAL(BDKi),         INTENT(  OUT):: RHS(:)       ! Right hand side of the equation Ax=B
-   INTEGER(IntKi),     INTENT(  OUT):: ErrStat      ! Error status of the operation
-   CHARACTER(*),       INTENT(  OUT):: ErrMsg       ! Error message if ErrStat /= ErrID_None
+   REAL(BDKi),         INTENT(  OUT):: RHS(:)       !< Right hand side of the equation Ax=B
+   INTEGER(IntKi),     INTENT(  OUT):: ErrStat      !< Error status of the operation
+   CHARACTER(*),       INTENT(  OUT):: ErrMsg       !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi),           ALLOCATABLE:: Nuuu(:)      ! Nodal displacement of Mass 1 for each element
    REAL(BDKi),           ALLOCATABLE:: Nrrr(:)      ! Nodal rotation parameters for displacement of Mass 1
@@ -3240,28 +3228,27 @@ contains
 
 END SUBROUTINE BD_GenerateDynamicElementForce
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine calculates the finite-element nodal forces along the beam
+!! Nodal forces = C \dot{u} + K u
 SUBROUTINE BD_DynamicSolutionForce(uuN,vvN,aaN,                                   &
                                    Stif0,Mass0,u,                                 &
                                    damp_flag,beta,                                &
                                    node_elem,dof_node,elem_total,ngp,&
                                    quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                    Force,ErrStat,ErrMsg)
-!***************************************************************************************
-! This subroutine calculates the finite-element nodal forces along the beam
-! Nodal forces = C \dot{u} + K u
-!***************************************************************************************
-   REAL(BDKi),         INTENT(IN   ):: uuN(:)       ! Displacement of Mass 1: m
-   REAL(BDKi),         INTENT(IN   ):: vvN(:)       ! Velocity of Mass 1: m/s
-   REAL(BDKi),         INTENT(IN   ):: aaN(:)       ! Velocity of Mass 1: m/s
-   REAL(BDKi),         INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
-   REAL(BDKi),         INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   INTEGER(IntKi),     INTENT(IN   ):: damp_flag    ! Number of Gauss points
+
+   REAL(BDKi),         INTENT(IN   ):: uuN(:)       !< Displacement of Mass 1: m
+   REAL(BDKi),         INTENT(IN   ):: vvN(:)       !< Velocity of Mass 1: m/s
+   REAL(BDKi),         INTENT(IN   ):: aaN(:)       !< Velocity of Mass 1: m/s
+   REAL(BDKi),         INTENT(IN   ):: Stif0(:,:,:) !< Element stiffness matrix
+   REAL(BDKi),         INTENT(IN   ):: Mass0(:,:,:) !< Element stiffness matrix
+   INTEGER(IntKi),     INTENT(IN   ):: damp_flag    !< Number of Gauss points
    REAL(BDKi),         INTENT(IN   ):: beta(:)
-   TYPE(BD_InputType), INTENT(IN   ):: u            ! Inputs at t
-   INTEGER(IntKi),     INTENT(IN   ):: node_elem    ! Node per element
-   INTEGER(IntKi),     INTENT(IN   ):: dof_node     ! Degrees of freedom per element
-   INTEGER(IntKi),     INTENT(IN   ):: elem_total   ! Total number of elements
-   INTEGER(IntKi),     INTENT(IN   ):: ngp          ! Number of Gauss points
+   TYPE(BD_InputType), INTENT(IN   ):: u            !< Inputs at t
+   INTEGER(IntKi),     INTENT(IN   ):: node_elem    !< Node per element
+   INTEGER(IntKi),     INTENT(IN   ):: dof_node     !< Degrees of freedom per element
+   INTEGER(IntKi),     INTENT(IN   ):: elem_total   !< Total number of elements
+   INTEGER(IntKi),     INTENT(IN   ):: ngp          !< Number of Gauss points
    INTEGER(IntKi),     INTENT(IN   ):: quadrature
    REAL(BDKi),         INTENT(IN   ):: gw(:)
    REAL(BDKi),         INTENT(IN   ):: hhx(:,:)
@@ -3270,8 +3257,8 @@ SUBROUTINE BD_DynamicSolutionForce(uuN,vvN,aaN,                                 
    REAL(BDKi),         INTENT(IN   ):: uu0(:,:)
    REAL(BDKi),         INTENT(IN   ):: E10(:,:)
    REAL(BDKi),         INTENT(  OUT):: Force(:)
-   INTEGER(IntKi),     INTENT(  OUT):: ErrStat      ! Error status of the operation
-   CHARACTER(*),       INTENT(  OUT):: ErrMsg       ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),     INTENT(  OUT):: ErrStat      !< Error status of the operation
+   CHARACTER(*),       INTENT(  OUT):: ErrMsg       !< Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi)                   :: ErrStat2     ! Temporary Error status
    CHARACTER(ErrMsgLen)             :: ErrMsg2      ! Temporary Error message
@@ -3294,33 +3281,21 @@ SUBROUTINE BD_DynamicSolutionForce(uuN,vvN,aaN,                                 
 
 END SUBROUTINE BD_DynamicSolutionForce
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> calculate Lagrangian interpolant tensor at ns points where basis
+!! functions are assumed to be associated with (np+1) GLL points on
+!! [-1,1]
 SUBROUTINE BD_diffmtc(np,ns,spts,npts,hhx,hpx,ErrStat,ErrMsg)
-!--------------------------------------------------------------------
-! calculate Lagrangian interpolant tensor at ns points where basis
-! functions are assumed to be associated with (np+1) GLL points on
-! [-1,1]
-!
-!     INPUT:
-!       np             : polynomial order of basis funcitons
-!       ns             : number of points at which to eval shape/deriv
-!       spts(ns)       : location of ns points at which to eval
-!       npts(np+1)     : location of the (np+1) GLL points
-!
-!     OUTPUT
-!       dPhis(np+1,ns) : derivative evaluated at ns points
-!       ps(np+1,ns)    : (np+1) shape functions evaluated at ns points
-!--------------------------------------------------------------------
-   INTEGER(IntKi),INTENT(IN   ):: np
-   INTEGER(IntKi),INTENT(IN   ):: ns
-   REAL(BDKi),    INTENT(IN   ):: spts(:)
-   REAL(BDKi),    INTENT(IN   ):: npts(:)
-   REAL(BDKi),    INTENT(  OUT):: hhx(:,:)
-   REAL(BDKi),    INTENT(  OUT):: hpx(:,:)
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),INTENT(IN   ):: np            !< polynomial order of basis functions
+   INTEGER(IntKi),INTENT(IN   ):: ns            !< number of points at which to eval shape/deriv
+   REAL(BDKi),    INTENT(IN   ):: spts(:)       !< spts(ns): location of ns points at which to eval
+   REAL(BDKi),    INTENT(IN   ):: npts(:)       !< npts(np+1): location of the (np+1) GLL points
+   REAL(BDKi),    INTENT(  OUT):: hhx(:,:)      !< ps(np+1,ns): (np+1) shape functions evaluated at ns points
+   REAL(BDKi),    INTENT(  OUT):: hpx(:,:)      !< dPhis(np+1,ns): derivative evaluated at ns points 
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
-   REAL(BDKi)                  :: dPhis(np+1,ns)
-   REAL(BDKi)                  :: Ps(np+1,ns)
+   REAL(BDKi)                  :: dPhis(np+1,ns)   ! bjj: why not use hpx  
+   REAL(BDKi)                  :: Ps(np+1,ns)      ! bjj: why not use hhx
    REAL(BDKi)                  :: dnum
    REAL(BDKi)                  :: den
    REAL(BDKi),        PARAMETER:: eps = SQRT(EPSILON(eps)) !1.0D-08
@@ -3387,14 +3362,12 @@ SUBROUTINE BD_diffmtc(np,ns,spts,npts,hhx,hpx,ErrStat,ErrMsg)
 
  END SUBROUTINE BD_diffmtc
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes the segment length, member length, and total length of a beam.
+!! It also computes the ration between the segment/member and total length.
+!! Segment: defined by two adjacent key points
 SUBROUTINE BD_ComputeMemberLength(member_total,kp_member,kp_coordinate,&
                                   Coef,seg_length,member_length,total_length,&
                                   ErrStat,ErrMsg)
-!----------------------------------------------------------------------------------------
-! This subroutine computes the segment length, member length, and total length of a beam.
-! It also computes the ration between the segment/member and total length.
-! Segment: defined by two adjacent key points
-!----------------------------------------------------------------------------------------
    INTEGER(IntKi),INTENT(IN   ):: member_total
    INTEGER(IntKi),INTENT(IN   ):: kp_member(:)
    REAL(BDKi),    INTENT(IN   ):: Coef(:,:,:)
@@ -3474,18 +3447,17 @@ SUBROUTINE BD_ComputeMemberLength(member_total,kp_member,kp_coordinate,&
 
 END SUBROUTINE BD_ComputeMemberLength
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes the initial nodal locations given the coefficients for
+!! cubic spline fit. It also computes the unit tangent vector e1 for further use.
 SUBROUTINE BD_ComputeIniNodalPosition(Coef,eta,PosiVec,e1,Twist_Angle,ErrStat,ErrMsg)
-!--------------------------------------------------------------------------------
-! This subroutine computes the initial nodal locations given the coefficients for
-! cubie spline fit. It also computes the unit tangent vector e1 for further use.
-!--------------------------------------------------------------------------------
-   REAL(BDKi),    INTENT(IN   ):: Coef(:,:)     ! Coefficients for cubic spline interpolation
-   REAL(BDKi),    INTENT(IN   ):: eta           ! Nodal location in [0,1] 
-   REAL(BDKi),    INTENT(  OUT):: PosiVec(:)    ! Physical coordinates of GLL points in blade frame
-   REAL(BDKi),    INTENT(  OUT):: e1(:)         ! Tangent vector
-   REAL(BDKi),    INTENT(  OUT):: Twist_Angle   ! Twist angle at PosiVec
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+
+   REAL(BDKi),    INTENT(IN   ):: Coef(:,:)     !< Coefficients for cubic spline interpolation
+   REAL(BDKi),    INTENT(IN   ):: eta           !< Nodal location in [0,1] 
+   REAL(BDKi),    INTENT(  OUT):: PosiVec(:)    !< Physical coordinates of GLL points in blade frame
+   REAL(BDKi),    INTENT(  OUT):: e1(:)         !< Tangent vector
+   REAL(BDKi),    INTENT(  OUT):: Twist_Angle   !< Twist angle at PosiVec
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi)              :: i
 
@@ -3504,17 +3476,15 @@ SUBROUTINE BD_ComputeIniNodalPosition(Coef,eta,PosiVec,e1,Twist_Angle,ErrStat,Er
 
 END SUBROUTINE BD_ComputeIniNodalPosition
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes initial CRV parameters
+!! given geometry information
 SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc,ErrStat,ErrMsg)
-!-----------------------------------------------------
-! This subroutine computes initial CRV parameters
-! given geometry information
-!-----------------------------------------------------
 
-   REAL(BDKi),    INTENT(IN   ):: e1(:)       ! Unit tangent vector
-   REAL(BDKi),    INTENT(IN   ):: phi         ! Initial twist angle
-   REAL(BDKi),    INTENT(  OUT):: cc(:)       ! Initial Crv Parameter
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat     ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(BDKi),    INTENT(IN   ):: e1(:)       !< Unit tangent vector
+   REAL(BDKi),    INTENT(IN   ):: phi         !< Initial twist angle
+   REAL(BDKi),    INTENT(  OUT):: cc(:)       !< Initial Crv Parameter
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat     !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi)                  :: e2(3)                     ! Unit normal vector
    REAL(BDKi)                  :: e3(3)                     ! Unit e3 = e1 * e2, cross-product
@@ -3558,17 +3528,16 @@ SUBROUTINE BD_ComputeIniNodalCrv(e1,phi,cc,ErrStat,ErrMsg)
 
 END SUBROUTINE BD_ComputeIniNodalCrv
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes the coefficients for cubie-spline fit
+!! given key point locations. Clamped conditions are used at the
+!! two end nodes: f''(0) = f''(1) = 0 
 SUBROUTINE BD_ComputeIniCoef(kp_member,kp_coord,Coef,ErrStat,ErrMsg)
-!---------------------------------------------------------------
-! This subroutine computes the coefficients for cubie-spline fit
-! given key point locations. Clamped conditions are used at the
-! two end nodes: f''(0) = f''(1) = 0 
-!---------------------------------------------------------------
-   REAL(BDKi),    INTENT(IN   ):: kp_coord(:,:) ! Keypoints cooridinates
-   INTEGER(IntKi),INTENT(IN   ):: kp_member     ! Number of kps of each member
-   REAL(BDKi),    INTENT(  OUT):: Coef(:,:,:)   ! Coefficients for cubie spline interpolation
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+
+   REAL(BDKi),    INTENT(IN   ):: kp_coord(:,:) !< Keypoints coordinates
+   INTEGER(IntKi),INTENT(IN   ):: kp_member     !< Number of kps of each member
+   REAL(BDKi),    INTENT(  OUT):: Coef(:,:,:)   !< Coefficients for cubie spline interpolation
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat       !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi),      ALLOCATABLE:: K(:,:)
    REAL(BDKi),      ALLOCATABLE:: RHS(:)
@@ -3653,19 +3622,20 @@ SUBROUTINE BD_ComputeIniCoef(kp_member,kp_coord,Coef,ErrStat,ErrMsg)
 
 END SUBROUTINE BD_ComputeIniCoef
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
+SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
 
-   REAL(DbKi),                      INTENT(IN   ):: t           ! Current simulation time in seconds
-   INTEGER(IntKi),                  INTENT(IN   ):: n           ! time step number
-   REAL(DbKi),                      INTENT(IN   ):: utimes(:)   ! times of input
-   TYPE(BD_ParameterType),          INTENT(IN   ):: p           ! Parameters
-   TYPE(BD_DiscreteStateType),      INTENT(IN   ):: xd          ! Discrete states at t
-   TYPE(BD_ConstraintStateType),    INTENT(IN   ):: z           ! Constraint states at t (possibly a guess)
-   TYPE(BD_OtherStateType),         INTENT(INOUT):: OtherState  ! Other/optimization states
-   TYPE(BD_ContinuousStateType),    INTENT(INOUT):: x           ! Continuous states at t on input at t + dt on output
-   TYPE(BD_InputType),              INTENT(INOUT):: u(:)        ! Inputs at t
-   INTEGER(IntKi),                  INTENT(  OUT):: ErrStat     ! Error status of the operation
-   CHARACTER(*),                    INTENT(  OUT):: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                      INTENT(IN   ):: t           !< Current simulation time in seconds
+   INTEGER(IntKi),                  INTENT(IN   ):: n           !< time step number
+   REAL(DbKi),                      INTENT(IN   ):: utimes(:)   !< times of input
+   TYPE(BD_ParameterType),          INTENT(IN   ):: p           !< Parameters
+   TYPE(BD_DiscreteStateType),      INTENT(IN   ):: xd          !< Discrete states at t
+   TYPE(BD_ConstraintStateType),    INTENT(IN   ):: z           !< Constraint states at t (possibly a guess)
+   TYPE(BD_OtherStateType),         INTENT(INOUT):: OtherState  !< Other states at t
+   TYPE(BD_MiscVarType),            INTENT(INOUT):: m           !< misc/optimization variables
+   TYPE(BD_ContinuousStateType),    INTENT(INOUT):: x           !< Continuous states at t on input at t + dt on output
+   TYPE(BD_InputType),              INTENT(INOUT):: u(:)        !< Inputs at t
+   INTEGER(IntKi),                  INTENT(  OUT):: ErrStat     !< Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT):: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    TYPE(BD_InputType)                            :: u_interp
    TYPE(BD_InputType)                            :: u_temp
@@ -3698,7 +3668,7 @@ SUBROUTINE BD_Static(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    CALL BD_InputGlobalLocal(p,u_interp,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
    ! Incorporate boundary conditions
-   CALL BD_BoundaryGA2(x,p,u_interp,t,OtherState,ErrStat2,ErrMsg2)
+   CALL BD_BoundaryGA2(x,p,u_interp,t,OtherState,m,ErrStat2,ErrMsg2)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat, ErrMsg, RoutineName)
 
    if (ErrStat >= AbortErrLev) then
@@ -4165,12 +4135,10 @@ SUBROUTINE BD_StaticElementMatrix(Nuuu,Nrrr,Distr_GL,gravity,&
 
 END SUBROUTINE BD_StaticElementMatrix
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine updates the static configuration
+!! given incremental value calculated by the 
+!! Newton-Raphson algorithm
 SUBROUTINE BD_StaticUpdateConfiguration(uinc,uf,node_total,dof_node,ErrStat,ErrMsg)
-!-------------------------------------------------
-! This subroutine updates the static configuration
-! given incremental value calculated by the 
-! Newton-Ralphson algorithm
-!-------------------------------------------------
    REAL(BDKi),    INTENT(IN   ):: uinc(:)
    INTEGER(IntKi),INTENT(IN   ):: node_total
    INTEGER(IntKi),INTENT(IN   ):: dof_node
@@ -4209,23 +4177,22 @@ SUBROUTINE BD_StaticUpdateConfiguration(uinc,uf,node_total,dof_node,ErrStat,ErrM
 
 END SUBROUTINE BD_StaticUpdateConfiguration
 !-----------------------------------------------------------------------------------------------------------------------------------
+! This subroutine calculates the internal nodal forces at each finite-element 
+! nodes along beam axis. \n
+! Nodal forces = K u
 SUBROUTINE BD_StaticSolutionForce(uuN,vvN,Stif0,Mass0,u,&
                                   node_elem,dof_node,elem_total,&
                                   ngp,quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                   Force, ErrStat,ErrMsg)
-!***************************************************************************************
-! This subroutine calculates the internal nodal forces at each finite-element 
-! nodes along beam axis
-! Nodal forces = K u
-!***************************************************************************************
-   REAL(BDKi),        INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
-   REAL(BDKi),        INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   TYPE(BD_InputType),INTENT(IN   ):: u           ! Inputs at t
-   REAL(BDKi),        INTENT(IN   ):: uuN(:) ! Displacement of Mass 1: m
-   REAL(BDKi),        INTENT(IN   ):: vvN(:) ! Displacement of Mass 1: m
-   INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per element
-   INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
+
+   REAL(BDKi),        INTENT(IN   ):: Stif0(:,:,:) !< Element stiffness matrix
+   REAL(BDKi),        INTENT(IN   ):: Mass0(:,:,:) !< Element stiffness matrix
+   TYPE(BD_InputType),INTENT(IN   ):: u            !< Inputs at t
+   REAL(BDKi),        INTENT(IN   ):: uuN(:)       !< Displacement of Mass 1: m
+   REAL(BDKi),        INTENT(IN   ):: vvN(:)       !< Displacement of Mass 1: m
+   INTEGER(IntKi),    INTENT(IN   ):: node_elem    !< Node per element
+   INTEGER(IntKi),    INTENT(IN   ):: dof_node     !< Degrees of freedom per element
+   INTEGER(IntKi),    INTENT(IN   ):: elem_total   !< Total number of elements
    INTEGER(IntKi),    INTENT(IN   ):: ngp
    INTEGER(IntKi),    INTENT(IN   ):: quadrature
    REAL(BDKi),        INTENT(IN   ):: gw(:)
@@ -4235,8 +4202,8 @@ SUBROUTINE BD_StaticSolutionForce(uuN,vvN,Stif0,Mass0,u,&
    REAL(BDKi),        INTENT(IN   ):: uu0(:,:)
    REAL(BDKi),        INTENT(IN   ):: E10(:,:)
    REAL(BDKi),        INTENT(  OUT):: Force(:)
-   INTEGER(IntKi),    INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),      INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),    INTENT(  OUT):: ErrStat       !< Error status of the operation
+   CHARACTER(*),      INTENT(  OUT):: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
 !   INTEGER(IntKi)                  :: temp_id
    INTEGER(IntKi)                  :: ErrStat2                     ! Temporary Error status
@@ -4255,24 +4222,22 @@ SUBROUTINE BD_StaticSolutionForce(uuN,vvN,Stif0,Mass0,u,&
 
 END SUBROUTINE BD_StaticSolutionForce
 !-----------------------------------------------------------------------------------------------------------------------------------
+! This subroutine calculates the internal nodal forces at each finite-element 
+! nodes along beam axis \n
+! Nodal forces = K u
 SUBROUTINE BD_GenerateStaticElementForce(uuN,vvN,Stif0,Mass0,u,&
                                          elem_total,node_elem,dof_node,&
                                          ngp,quadrature,gw,hhx,hpx,Jaco,uu0,E10,&
                                          RHS,ErrStat,ErrMsg)
                                          
-!***************************************************************************************
-! This subroutine calculates the internal nodal forces at each finite-element 
-! nodes along beam axis
-! Nodal forces = K u
-!***************************************************************************************
-   REAL(BDKi),        INTENT(IN   ):: uuN(:) ! Displacement of Mass 1: m
-   REAL(BDKi),        INTENT(IN   ):: vvN(:) ! Displacement of Mass 1: m
-   REAL(BDKi),        INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
-   REAL(BDKi),        INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   TYPE(BD_InputType),INTENT(IN   ):: u           ! Inputs at t
-   INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
-   INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
+   REAL(BDKi),        INTENT(IN   ):: uuN(:)       !< Displacement of Mass 1: m
+   REAL(BDKi),        INTENT(IN   ):: vvN(:)       !< Displacement of Mass 1: m
+   REAL(BDKi),        INTENT(IN   ):: Stif0(:,:,:) !< Element stiffness matrix
+   REAL(BDKi),        INTENT(IN   ):: Mass0(:,:,:) !< Element stiffness matrix
+   TYPE(BD_InputType),INTENT(IN   ):: u            !< Inputs at t
+   INTEGER(IntKi),    INTENT(IN   ):: elem_total   !< Total number of elements
+   INTEGER(IntKi),    INTENT(IN   ):: node_elem    !< Node per element
+   INTEGER(IntKi),    INTENT(IN   ):: dof_node     !< Degrees of freedom per node
    INTEGER(IntKi),    INTENT(IN   ):: ngp
    INTEGER(IntKi),    INTENT(IN   ):: quadrature
    REAL(BDKi),        INTENT(IN   ):: gw(:)
@@ -4281,9 +4246,9 @@ SUBROUTINE BD_GenerateStaticElementForce(uuN,vvN,Stif0,Mass0,u,&
    REAL(BDKi),        INTENT(IN   ):: Jaco(:,:)
    REAL(BDKi),        INTENT(IN   ):: uu0(:,:)
    REAL(BDKi),        INTENT(IN   ):: E10(:,:)
-   REAL(BDKi),        INTENT(  OUT):: RHS(:) ! Right hand side of the equation Ax=B
-   INTEGER(IntKi),    INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),      INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   REAL(BDKi),        INTENT(  OUT):: RHS(:)       !< Right hand side of the equation Ax=B
+   INTEGER(IntKi),    INTENT(  OUT):: ErrStat      !< Error status of the operation
+   CHARACTER(*),      INTENT(  OUT):: ErrMsg       !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi),        ALLOCATABLE:: Nuuu(:) ! Nodal displacement of Mass 1 for each element
    REAL(BDKi),        ALLOCATABLE:: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
@@ -4389,27 +4354,25 @@ contains
 
 END SUBROUTINE BD_GenerateStaticElementForce
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine calculates elemental internal node force for static analysis
 SUBROUTINE BD_StaticElementMatrixForce(Nuuu,Nrrr,EStif0_GL,&
               ngp,gw,hhx,hpx,Jaco,uu0,E10,                     &
               node_elem,dof_node,elf,ErrStat,ErrMsg)
-!-------------------------------------------------------------------------------
-! This subroutine calculates elemental internal node force for static analysis
-!-------------------------------------------------------------------------------
-   REAL(BDKi),    INTENT(IN   ):: Nuuu(:) ! Nodal displacement of Mass 1 for each element
-   REAL(BDKi),    INTENT(IN   ):: Nrrr(:) ! Nodal rotation parameters for displacement of Mass 1
-   REAL(BDKi),    INTENT(IN   ):: EStif0_GL(:,:,:) ! Nodal material properties for each element
-   INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
+   REAL(BDKi),    INTENT(IN   ):: Nuuu(:)          !< Nodal displacement of Mass 1 for each element
+   REAL(BDKi),    INTENT(IN   ):: Nrrr(:)          !< Nodal rotation parameters for displacement of Mass 1
+   REAL(BDKi),    INTENT(IN   ):: EStif0_GL(:,:,:) !< Nodal material properties for each element
+   INTEGER(IntKi),INTENT(IN   ):: ngp              !< Number of Gauss points
    REAL(BDKi),    INTENT(IN   ):: gw(:)
    REAL(BDKi),    INTENT(IN   ):: hhx(:,:)
    REAL(BDKi),    INTENT(IN   ):: hpx(:,:)
    REAL(BDKi),    INTENT(IN   ):: Jaco(:)
    REAL(BDKi),    INTENT(IN   ):: uu0(:)
    REAL(BDKi),    INTENT(IN   ):: E10(:)
-   INTEGER(IntKi),INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),INTENT(IN   ):: dof_node ! Degrees of freedom per node
-   REAL(BDKi),    INTENT(  OUT):: elf(:)  ! Total element force (Fd, Fc, Fb)
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),INTENT(IN   ):: node_elem        !< Node per element
+   INTEGER(IntKi),INTENT(IN   ):: dof_node         !< Degrees of freedom per node
+   REAL(BDKi),    INTENT(  OUT):: elf(:)           !< Total element force (Fd, Fc, Fb)
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat          !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg           !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi)                  :: RR0(3,3)
    REAL(BDKi)                  :: kapa(3)
@@ -4469,21 +4432,21 @@ SUBROUTINE BD_StaticElementMatrixForce(Nuuu,Nrrr,EStif0_GL,&
 
 END SUBROUTINE BD_StaticElementMatrixForce
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
-!-------------------------------------------------------
-! This subroutine performs time marching from t_i to t_f
-!-------------------------------------------------------
-   REAL(DbKi),                        INTENT(IN   )  :: t           ! Current simulation time in seconds
-   INTEGER(IntKi),                    INTENT(IN   )  :: n           ! time step number
-   TYPE(BD_InputType),                INTENT(INOUT)  :: u(:)        ! Inputs at t
-   REAL(DbKi),                        INTENT(IN   )  :: utimes(:)   ! times of input
-   TYPE(BD_ParameterType),            INTENT(IN   )  :: p           ! Parameters
-   TYPE(BD_ContinuousStateType),      INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-   TYPE(BD_DiscreteStateType),        INTENT(INOUT)  :: xd          ! Discrete states at t
-   TYPE(BD_ConstraintStateType),      INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-   TYPE(BD_OtherStateType),           INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+!> This subroutine performs time marching from t_i to t_f
+SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,m,ErrStat,ErrMsg)
+
+   REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
+   INTEGER(IntKi),                    INTENT(IN   )  :: n           !< time step number
+   TYPE(BD_InputType),                INTENT(INOUT)  :: u(:)        !< Inputs at t
+   REAL(DbKi),                        INTENT(IN   )  :: utimes(:)   !< times of input
+   TYPE(BD_ParameterType),            INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_ContinuousStateType),      INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+   TYPE(BD_DiscreteStateType),        INTENT(INOUT)  :: xd          !< Discrete states at t
+   TYPE(BD_ConstraintStateType),      INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
+   TYPE(BD_OtherStateType),           INTENT(INOUT)  :: OtherState  !< Other states at t on input; at t+dt on outputs
+   TYPE(BD_MiscVarType),              INTENT(INOUT)  :: m           !< misc/optimization variables
+   INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    ! local variables
    TYPE(BD_ContinuousStateType)                       :: x_tmp      ! Holds temporary modification to x
@@ -4514,7 +4477,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       !Qi, call something to initialize
       call BD_Input_extrapinterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 )
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, ErrStat2, ErrMsg2)
+      CALL BD_InitAcc( t, u_interp, p, x_tmp, OtherState, m, ErrStat2, ErrMsg2)
           call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       OtherState%InitAcc = .true. 
    end if
@@ -4529,7 +4492,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
    call BD_Input_extrapinterp( u, utimes, u_interp, t+p%dt, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-   CALL BD_UpdateDiscState( t, n, u_interp, p, x, xd, z, OtherState, ErrStat2, ErrMsg2 )
+   CALL BD_UpdateDiscState( t, n, u_interp, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             
 ! Actuator
@@ -4548,7 +4511,7 @@ SUBROUTINE BD_GA2(t,n,u,utimes,p,x,xd,z,OtherState,ErrStat,ErrMsg)
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
    ! Incorporate boundary conditions
-   CALL BD_BoundaryGA2(x,p,u_interp,t+p%dt,OtherState,ErrStat2,ErrMsg2)
+   CALL BD_BoundaryGA2(x,p,u_interp,t+p%dt,OtherState,m,ErrStat2,ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    ! find x, acc, and xcc at t+dt
@@ -4572,13 +4535,11 @@ contains
    end subroutine cleanup   
 END SUBROUTINE BD_GA2
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine calculates the predicted values (initial guess)
+!! of u,v,acc, and xcc in generalized-alpha algorithm
 SUBROUTINE BD_TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,&
                 uuNf,vvNf,aaNf,xxNf,node_total,dof_node, &
                 ErrStat, ErrMsg)
-!----------------------------------------------------------------
-! This subroutine calculates the predicted values (initial guess)
-! of u,v,acc, and xcc in generalized-alpha algorithm
-!----------------------------------------------------------------
    REAL(BDKi),    INTENT(IN   ):: uuNi(:)
    REAL(BDKi),    INTENT(IN   ):: vvNi(:)
    REAL(BDKi),    INTENT(IN   ):: aaNi(:)
@@ -4644,11 +4605,9 @@ SUBROUTINE BD_TiSchmPredictorStep(uuNi,vvNi,aaNi,xxNi,coef,deltat,&
 
 END SUBROUTINE BD_TiSchmPredictorStep
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine calculates the coefficients used in generalized-alpha
+!! time integrator
 SUBROUTINE BD_TiSchmComputeCoefficients(rhoinf,deltat,coef,ErrStat,ErrMsg)
-!----------------------------------------------------------------------
-! This subroutine calculates the coefficients used in generalized-alpha
-! time integrator
-!----------------------------------------------------------------------
 
    REAL(DbKi),    INTENT(IN   ):: rhoinf
    REAL(DbKi),    INTENT(IN   ):: deltat
@@ -4694,19 +4653,18 @@ SUBROUTINE BD_TiSchmComputeCoefficients(rhoinf,deltat,coef,ErrStat,ErrMsg)
 
 END SUBROUTINE BD_TiSchmComputeCoefficients
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
-!------------------------------------------------------------
-! This subroutine applies the prescribed boundary conditions
-! into states and otherstates at the root finite element node
-!------------------------------------------------------------
+!> This subroutine applies the prescribed boundary conditions
+!! into states and otherstates at the root finite element node
+SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,m, ErrStat,ErrMsg)
 
-   TYPE(BD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-   REAL(DbKi),                   INTENT(IN   )  :: t           ! time (s)
-   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Inputs at t
-   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Continuous states at t
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(BD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
+   REAL(DbKi),                   INTENT(IN   )  :: t           !< time (s)
+   TYPE(BD_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states at t
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Inputs at t
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Continuous states at t
+   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< misc/optimization variables
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi)                                   :: temp_cc(3)
    REAL(BDKi)                                   :: temp3(3)
@@ -4735,17 +4693,16 @@ SUBROUTINE BD_BoundaryGA2(x,p,u,t,OtherState,ErrStat,ErrMsg)
 
 END SUBROUTINE BD_BoundaryGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine perform time-marching in one interval
+!! Given states (u,v) and accelerations (acc,xcc) at the initial of a time step (t_i),
+!! it returns the values of states and accelerations at the end of a time step (t_f)
 SUBROUTINE BD_DynamicSolutionGA2( uuNf,vvNf,aaNf,xxNf,          &
                                   Stif0,Mass0,gravity,u,damp_flag,beta,   &
                                   node_elem,dof_node,elem_total,dof_total,&
                                   quadrature,gw,hhx,hpx,Jaco,uu0,E10,            &
                                   node_total,niter,tol,ngp,coef, n_fact,  &
                                   ErrStat, ErrMsg)
-!------------------------------------------------------------------------------------
-! This subroutine perform time-marching in one interval
-! Given states (u,v) and accelerations (acc,xcc) at the initial of a time step (t_i),
-! it returns the values of states and accelerations at the end of a time step (t_f)
-!------------------------------------------------------------------------------------
+
    REAL(BDKi),         INTENT(IN   ):: Stif0(:,:,:)
    REAL(BDKi),         INTENT(IN   ):: Mass0(:,:,:)
    REAL(BDKi),         INTENT(IN   ):: gravity(:)
@@ -5089,14 +5046,13 @@ contains
 
 END SUBROUTINE BD_GenerateDynamicElementGA2
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine tranforms the folloing quantities in Input data structure
+!! from global frame to local (blade) frame:
+!! 1 Displacements; 2 Linear/Angular velocities; 3 Linear/Angular accelerations
+!! 4 Point forces/moments; 5 Distributed forces/moments
+!! It also transforms the DCM to rotation tensor in the input data structure
 SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
-!-----------------------------------------------------------------------------
-! This subroutine tranforms the folloing quantities in Input data structure
-! from global frame to local (blade) frame:
-! 1 Displacements; 2 Linear/Angular velocities; 3 Linear/Angular accelerations
-! 4 Piont forces/moments; 5 Distributed forces/moments
-! It also transforms the DCM to rotation tensor in the input data structure
-!-----------------------------------------------------------------------------
+
    TYPE(BD_ParameterType), INTENT(IN   ):: p
    TYPE(BD_InputType),     INTENT(INOUT):: u
    INTEGER(IntKi),         INTENT(  OUT):: ErrStat       ! Error status of the operation
@@ -5192,21 +5148,19 @@ SUBROUTINE BD_InputGlobalLocal( p, u, ErrStat, ErrMsg)
 
 END SUBROUTINE BD_InputGlobalLocal
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes the initial states
+!! Rigid body assumption is used in initialization of the states.
+!! The initial displacements/rotations and linear velocities are 
+!! set to the root value; the angular velocities over the beam 
+!! are computed based on rigid body rotation: \omega = v_{root} \times r_{pos}
 SUBROUTINE BD_CalcIC( u, p, x, ErrStat, ErrMsg)
-!----------------------------------------------------------------------------
-! This subroutine computes the initial states
-! Rigid body assumption is used in initialization of the states.
-! The initial displacements/rotations and linear velocities are 
-! set to the root value; the angular velocities over the beam 
-! are computed based on rigid body rotation: \omega = v_{root} \times r_{pos}
-!----------------------------------------------------------------------------
 
-   TYPE(BD_InputType),           INTENT(INOUT):: u             ! Inputs at t
-   TYPE(BD_ParameterType),       INTENT(IN   ):: p             ! Parameters
-   TYPE(BD_ContinuousStateType), INTENT(INOUT):: x             ! Continuous states at t
+   TYPE(BD_InputType),           INTENT(INOUT):: u             !< Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   ):: p             !< Parameters
+   TYPE(BD_ContinuousStateType), INTENT(INOUT):: x             !< Continuous states at t
 
-   INTEGER(IntKi),               INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),               INTENT(  OUT):: ErrStat       !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT):: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi)                             :: i
    INTEGER(IntKi)                             :: j
@@ -5281,18 +5235,17 @@ SUBROUTINE BD_CalcIC( u, p, x, ErrStat, ErrMsg)
 
 END SUBROUTINE BD_CalcIC
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> Routine for computing derivatives of continuous states.
+!! This subroutine calculates the reaction forces/moments at the root
+!! and the accelerations at all other FE points along the beam
 SUBROUTINE BD_CalcForceAcc( u, p, x, OtherState, ErrStat, ErrMsg)
-!-------------------------------------------------------------------
-! Routine for computing derivatives of continuous states.
-! This subroutine calculates the reaction forces/moments at the root
-! and the accelerations at all other FE points along the beam
-!-------------------------------------------------------------------
-   TYPE(BD_InputType),           INTENT(IN   ):: u           ! Inputs at t
-   TYPE(BD_ParameterType),       INTENT(IN   ):: p           ! Parameters
-   TYPE(BD_ContinuousStateType), INTENT(IN   ):: x           ! Continuous states at t
-   TYPE(BD_OtherStateType),      INTENT(INOUT):: OtherState  ! Other/optimization states
-   INTEGER(IntKi),               INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+
+   TYPE(BD_InputType),           INTENT(IN   ):: u             !< Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   ):: p             !< Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   ):: x             !< Continuous states at t
+   TYPE(BD_OtherStateType),      INTENT(INOUT):: OtherState    !< Other states at t
+   INTEGER(IntKi),               INTENT(  OUT):: ErrStat       !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT):: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi)                             :: ErrStat2                     ! Temporary Error status
    CHARACTER(ErrMsgLen)                       :: ErrMsg2                      ! Temporary Error message
@@ -5312,31 +5265,30 @@ SUBROUTINE BD_CalcForceAcc( u, p, x, OtherState, ErrStat, ErrMsg)
 
 END SUBROUTINE BD_CalcForceAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine calls other subroutines to apply the force, build the beam element
+!! stiffness and mass matrices, build nodal force vector.  The output of this subroutine
+!! is the second time derivative of state "q".
 SUBROUTINE BD_SolutionForceAcc(uuN,vvN,Stif0,Mass0,gravity,u,               &
                                damp_flag,beta,                                        &
                                quadrature,gw,hhx,hpx,Jacobian,uu0,E10,                           &
                                node_elem,dof_node,elem_total,dof_total,node_total,ngp,&
                                Acc,ErrStat,ErrMsg)
-!***************************************************************************************
-! This subroutine calls other subroutines to apply the force, build the beam element
-! stiffness and mass matrices, build nodal force vector.  The output of this subroutine
-! is the second time derivative of state "q".
-!***************************************************************************************
-   REAL(BDKi),                   INTENT(IN   ):: Stif0(:,:,:) ! Element stiffness matrix
-   REAL(BDKi),                   INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   REAL(BDKi),                   INTENT(IN   ):: gravity(:) !
-   TYPE(BD_InputType),           INTENT(IN   ):: u           ! Inputs at t
-   REAL(BDKi),                   INTENT(IN   ):: uuN(:) ! Displacement of Mass 1: m
-   REAL(BDKi),                   INTENT(IN   ):: vvN(:) ! Velocity of Mass 1: m/s
-   INTEGER(IntKi),               INTENT(IN   ):: damp_flag ! Total number of elements
+
+   REAL(BDKi),                   INTENT(IN   ):: Stif0(:,:,:)  !< Element stiffness matrix
+   REAL(BDKi),                   INTENT(IN   ):: Mass0(:,:,:)  !< Element stiffness matrix
+   REAL(BDKi),                   INTENT(IN   ):: gravity(:)    !<
+   TYPE(BD_InputType),           INTENT(IN   ):: u             !< Inputs at t
+   REAL(BDKi),                   INTENT(IN   ):: uuN(:)        !< Displacement of Mass 1: m
+   REAL(BDKi),                   INTENT(IN   ):: vvN(:)        !< Velocity of Mass 1: m/s
+   INTEGER(IntKi),               INTENT(IN   ):: damp_flag     !< Total number of elements
    REAL(BDKi),                   INTENT(IN   ):: beta(:)
-   INTEGER(IntKi),               INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),               INTENT(IN   ):: dof_node ! Degrees of freedom per element
-   INTEGER(IntKi),               INTENT(IN   ):: elem_total ! Total number of elements
-   INTEGER(IntKi),               INTENT(IN   ):: dof_total ! Total number of degrees of freedom
-   INTEGER(IntKi),               INTENT(IN   ):: node_total ! Total number of nodes
-   INTEGER(IntKi),               INTENT(IN   ):: ngp ! Number of Gauss points
-   INTEGER(IntKi),               INTENT(IN   ):: quadrature ! Number of Gauss points
+   INTEGER(IntKi),               INTENT(IN   ):: node_elem     !< Node per element
+   INTEGER(IntKi),               INTENT(IN   ):: dof_node      !< Degrees of freedom per element
+   INTEGER(IntKi),               INTENT(IN   ):: elem_total    !< Total number of elements
+   INTEGER(IntKi),               INTENT(IN   ):: dof_total     !< Total number of degrees of freedom
+   INTEGER(IntKi),               INTENT(IN   ):: node_total    !< Total number of nodes
+   INTEGER(IntKi),               INTENT(IN   ):: ngp           !< Number of Gauss points
+   INTEGER(IntKi),               INTENT(IN   ):: quadrature    !< Number of Gauss points
    REAL(BDKi),                   INTENT(IN   ):: gw(:)
    REAL(BDKi),                   INTENT(IN   ):: hhx(:,:)
    REAL(BDKi),                   INTENT(IN   ):: hpx(:,:)
@@ -5344,8 +5296,8 @@ SUBROUTINE BD_SolutionForceAcc(uuN,vvN,Stif0,Mass0,gravity,u,               &
    REAL(BDKi),                   INTENT(IN   ):: uu0(:,:)
    REAL(BDKi),                   INTENT(IN   ):: E10(:,:)
    REAL(BDKi),                   INTENT(  OUT):: Acc(:)
-   INTEGER(IntKi),               INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),               INTENT(  OUT):: ErrStat       !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT):: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi),                     ALLOCATABLE:: MassM(:,:)
    REAL(BDKi),                     ALLOCATABLE:: RHS(:)
@@ -5427,18 +5379,17 @@ contains
       end subroutine Cleanup
 END SUBROUTINE BD_SolutionForceAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE BD_InitAcc( t, u, p, x, OtherState, ErrStat, ErrMsg )
-   !
-   ! Routine for computing outputs, used in both loose and tight coupling.
-   !..................................................................................................................................
+!! Routine for computing outputs, used in both loose and tight coupling.
+SUBROUTINE BD_InitAcc( t, u, p, x, OtherState, m, ErrStat, ErrMsg )
 
-   REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(BD_InputType),           INTENT(INOUT)  :: u           ! Inputs at t
-   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
+   TYPE(BD_InputType),           INTENT(INOUT)  :: u           !< Inputs at t
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
+   TYPE(BD_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states at t
+   TYPE(BD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    TYPE(BD_OtherStateType)                      :: OS_tmp
    TYPE(BD_ContinuousStateType)                 :: x_tmp
@@ -5465,7 +5416,7 @@ SUBROUTINE BD_InitAcc( t, u, p, x, OtherState, ErrStat, ErrMsg )
       
    CALL BD_InputGlobalLocal(p,u_tmp,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   CALL BD_BoundaryGA2(x_tmp,p,u_tmp,t,OS_tmp,ErrStat2,ErrMsg2)
+   CALL BD_BoundaryGA2(x_tmp,p,u_tmp,t,OS_tmp,m,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
    CALL BD_CalcForceAcc(u_tmp,p,x_tmp,OS_tmp,ErrStat2,ErrMsg2)
@@ -5487,27 +5438,26 @@ contains
    end subroutine cleanup 
 END SUBROUTINE BD_InitAcc
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine computes Global mass matrix and force vector for the beam.
 SUBROUTINE BD_ComputeBladeMassNew(Mass0,GaussPos,         &
                                   elem_total,node_elem,dof_node,&
                                   quadrature,ngp,gw,Jaco,&
                                   blade_mass,blade_CG,blade_IN,ErrStat,ErrMsg)
-!----------------------------------------------------------------------------------------
-! This subroutine computes Global mass matrix and force vector for the beam.
-!----------------------------------------------------------------------------------------
-   REAL(BDKi),        INTENT(IN   ):: Mass0(:,:,:) ! Element stiffness matrix
-   REAL(BDKi),        INTENT(IN   ):: GaussPos(:,:) ! Initial position vector
-   INTEGER(IntKi),    INTENT(IN   ):: elem_total ! Total number of elements
-   INTEGER(IntKi),    INTENT(IN   ):: node_elem ! Node per element
-   INTEGER(IntKi),    INTENT(IN   ):: dof_node ! Degrees of freedom per node
+
+   REAL(BDKi),        INTENT(IN   ):: Mass0(:,:,:)    !< Element stiffness matrix
+   REAL(BDKi),        INTENT(IN   ):: GaussPos(:,:)   !< Initial position vector
+   INTEGER(IntKi),    INTENT(IN   ):: elem_total      !< Total number of elements
+   INTEGER(IntKi),    INTENT(IN   ):: node_elem       !< Node per element
+   INTEGER(IntKi),    INTENT(IN   ):: dof_node        !< Degrees of freedom per node
    INTEGER(IntKi),    INTENT(IN   ):: quadrature
-   INTEGER(IntKi),    INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),    INTENT(IN   ):: ngp             !< Number of Gauss points
    REAL(BDKi),        INTENT(IN   ):: gw(:) 
    REAL(BDKi),        INTENT(IN   ):: Jaco(:,:) 
-   REAL(BDKi),        INTENT(  OUT):: blade_mass ! Mass matrix
-   REAL(BDKi),        INTENT(  OUT):: blade_CG(:) ! Mass matrix
-   REAL(BDKi),        INTENT(  OUT):: blade_IN(:,:) ! Mass matrix
-   INTEGER(IntKi),    INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),      INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   REAL(BDKi),        INTENT(  OUT):: blade_mass      !< Mass matrix
+   REAL(BDKi),        INTENT(  OUT):: blade_CG(:)     !< Mass matrix
+   REAL(BDKi),        INTENT(  OUT):: blade_IN(:,:)   !< Mass matrix
+   INTEGER(IntKi),    INTENT(  OUT):: ErrStat         !< Error status of the operation
+   CHARACTER(*),      INTENT(  OUT):: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi),          ALLOCATABLE:: NGPpos(:,:)
    REAL(BDKi)                      :: elem_mass
@@ -5584,25 +5534,22 @@ contains
       end subroutine Cleanup
 
 END SUBROUTINE BD_ComputeBladeMassNew
-
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine total element forces and mass matrices
 SUBROUTINE BD_ComputeElementMass(NGPpos,EMass0_GL,&
                                  ngp,gw,Jaco,&
                                  elem_mass,elem_CG,elem_IN,ErrStat,ErrMsg)
 
-!-------------------------------------------------------------------------------
-! This subroutine total element forces and mass matrices
-!-------------------------------------------------------------------------------
-
    REAL(BDKi),INTENT(IN   )    :: NGPpos(:,:)
-   REAL(BDKi),INTENT(IN   )    :: EMass0_GL(:,:,:) ! Nodal material properties for each element
-   REAL(BDKi),INTENT(  OUT)    :: elem_mass  ! Total element force (Fd, Fc, Fb)
+   REAL(BDKi),INTENT(IN   )    :: EMass0_GL(:,:,:) !< Nodal material properties for each element
+   REAL(BDKi),INTENT(  OUT)    :: elem_mass        !< Total element force (Fd, Fc, Fb)
    REAL(BDKi),INTENT(  OUT)    :: elem_CG(:)
    REAL(BDKi),INTENT(  OUT)    :: elem_IN(:,:)
-   INTEGER(IntKi),INTENT(IN   ):: ngp ! Number of Gauss points
+   INTEGER(IntKi),INTENT(IN   ):: ngp              !< Number of Gauss points
    REAL(BDKi),    INTENT(IN   ):: gw(:)
    REAL(BDKi),    INTENT(IN   ):: Jaco(:)
-   INTEGER(IntKi),INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),  INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),INTENT(  OUT):: ErrStat          !< Error status of the operation
+   CHARACTER(*),  INTENT(  OUT):: ErrMsg           !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi)                  :: mmm
    INTEGER(IntKi)              :: igp
@@ -5633,29 +5580,29 @@ SUBROUTINE BD_ComputeElementMass(NGPpos,EMass0_GL,&
    RETURN
 
 END SUBROUTINE BD_ComputeElementMass
-
+!-----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
                node_elem,elem_total,dof_node,ngp,&
                refine,kp_member,&
                hhx,hpx,TZw,Jacobian,&
                ErrStat,ErrMsg)
 
-   REAL(BDKi),         INTENT(INOUT):: GL(:)     ! GL(Gauss) point locations
-   REAL(BDKi),         INTENT(IN   ):: GLL(:)     ! GLL point locations
-   REAL(BDKi),         INTENT(IN   ):: uuN0(:,:) ! Initial position vector
-   INTEGER(IntKi),     INTENT(IN   ):: quadrature ! Quadrature method
-   INTEGER(IntKi),     INTENT(IN   ):: node_elem  ! Nodes per element
-   INTEGER(IntKi),     INTENT(IN   ):: elem_total ! Total number of elements
+   REAL(BDKi),         INTENT(INOUT):: GL(:)          !< GL(Gauss) point locations
+   REAL(BDKi),         INTENT(IN   ):: GLL(:)         !< GLL point locations
+   REAL(BDKi),         INTENT(IN   ):: uuN0(:,:)      !< Initial position vector
+   INTEGER(IntKi),     INTENT(IN   ):: quadrature     !< Quadrature method
+   INTEGER(IntKi),     INTENT(IN   ):: node_elem      !< Nodes per element
+   INTEGER(IntKi),     INTENT(IN   ):: elem_total     !< Total number of elements
    INTEGER(IntKi),     INTENT(IN   ):: dof_node
-   INTEGER(IntKi),     INTENT(IN   ):: ngp        ! Number of quadrature points
-   INTEGER(IntKi),     INTENT(IN   ):: refine     ! TZ refinement parameter
-   INTEGER(IntKi),     INTENT(IN   ):: kp_member(:) !Number of key points in each member
-   REAL(BDKi),         INTENT(  OUT):: hhx(:,:)   ! Shape function matrix
-   REAL(BDKi),         INTENT(  OUT):: hpx(:,:)   ! Derivative of shape function matrix
-   REAL(BDKi),         INTENT(  OUT):: TZw(:)     ! TZ weight functions 
-   REAL(BDKi),         INTENT(  OUT):: Jacobian(:,:) ! Jacobians at each quadrature point
-   INTEGER(IntKi),     INTENT(  OUT):: ErrStat       ! Error status of the operation
-   CHARACTER(*),       INTENT(  OUT):: ErrMsg        ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),     INTENT(IN   ):: ngp            !< Number of quadrature points
+   INTEGER(IntKi),     INTENT(IN   ):: refine         !< TZ refinement parameter
+   INTEGER(IntKi),     INTENT(IN   ):: kp_member(:)   !< Number of key points in each member
+   REAL(BDKi),         INTENT(  OUT):: hhx(:,:)       !< Shape function matrix
+   REAL(BDKi),         INTENT(  OUT):: hpx(:,:)       !< Derivative of shape function matrix
+   REAL(BDKi),         INTENT(  OUT):: TZw(:)         !< TZ weight functions 
+   REAL(BDKi),         INTENT(  OUT):: Jacobian(:,:)  !< Jacobians at each quadrature point
+   INTEGER(IntKi),     INTENT(  OUT):: ErrStat        !< Error status of the operation
+   CHARACTER(*),       INTENT(  OUT):: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
    REAL(BDKi)                       :: temp1
    REAL(BDKi)                       :: temp2
@@ -5726,14 +5673,14 @@ SUBROUTINE BD_InitShpDerJaco(quadrature,GL,GLL,uuN0,&
    ENDDO
 
 END SUBROUTINE BD_InitshpDerJaco
-
+!-----------------------------------------------------------------------------------------------------------------------------------
+!> This routine alters the RootMotion inputs based on the pitch-actuator parameters and discrete states
 SUBROUTINE PitchActuator_SetBC(p, u, xd, AllOuts)
-! this routine alters the RootMotion inputs based on the pitch-actuator parameters and discrete states
 
-   TYPE(BD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
-   TYPE(BD_InputType),        INTENT(INOUT)  :: u                                 ! inputs
-   TYPE(BD_DiscreteStateType),INTENT(IN   )  :: xd                                ! The module discrete states
-   REAL(ReKi),       OPTIONAL,INTENT(INOUT)  :: AllOuts(0:)                       ! all output array for writing to file
+   TYPE(BD_ParameterType),    INTENT(IN   )  :: p                                 !< The module parameters
+   TYPE(BD_InputType),        INTENT(INOUT)  :: u                                 !< inputs
+   TYPE(BD_DiscreteStateType),INTENT(IN   )  :: xd                                !< The module discrete states
+   REAL(ReKi),       OPTIONAL,INTENT(INOUT)  :: AllOuts(0:)                       !< all output array for writing to file
    ! local variables
    REAL(BDKi)                                :: temp_R(3,3)
    REAL(BDKi)                                :: temp_cc(3)
@@ -5770,5 +5717,5 @@ SUBROUTINE PitchActuator_SetBC(p, u, xd, AllOuts)
    
    
 END SUBROUTINE PitchActuator_SetBC
-
+!-----------------------------------------------------------------------------------------------------------------------------------
 END MODULE BeamDyn
