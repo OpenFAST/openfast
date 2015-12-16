@@ -277,6 +277,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
              BD%p(           p_FAST%nBeams  ), &
              BD%u(           p_FAST%nBeams  ), &
              BD%y(           p_FAST%nBeams  ), &
+             BD%m(           p_FAST%nBeams  ), &
              InitOutData_BD( p_FAST%nBeams  ), &
                                              STAT = ErrStat2 )                                                  
       IF (ErrStat2 /= 0) THEN
@@ -310,7 +311,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          InitInData_BD%RootVel(4:6) = ED%Output(1)%BladeRootMotion(k)%RotationVel(:,1)       ! {:}    - - "Initial root velocities and angular veolcities"                  
                            
          CALL BD_Init( InitInData_BD, BD%Input(1,k), BD%p(k),  BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), &
-                           BD%OtherSt(k,STATE_CURR), BD%y(k), dt_BD, InitOutData_BD(k), ErrStat2, ErrMsg2 )
+                           BD%OtherSt(k,STATE_CURR), BD%y(k),  BD%m(k), dt_BD, InitOutData_BD(k), ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)                        
             
          !bjj: we're going to force this to have the same timestep because I don't want to have to deal with n BD modules with n timesteps.
@@ -2561,7 +2562,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
    TYPE(IceFloe_Data),       INTENT(INOUT) :: IceF                !< IceFloe data
    TYPE(IceDyn_Data),        INTENT(INOUT) :: IceD                !< All the IceDyn data used in time-step loop
 
-   TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         ! Data for mapping between modules
+   TYPE(FAST_ModuleMapType), INTENT(INOUT) :: MeshMapData         !< Data for mapping between modules
       
    INTEGER(IntKi),           INTENT(  OUT) :: ErrStat             !< Error status of the operation
    CHARACTER(*),             INTENT(  OUT) :: ErrMsg              !< Error message if ErrStat /= ErrID_None
@@ -3742,8 +3743,8 @@ SUBROUTINE WriteInputMeshesToFile(u_ED, u_AD, u_SD, u_HD, u_MAP, u_BD, FileName,
    TYPE(BD_InputType),        INTENT(IN)  :: u_BD(:)        !< BeamDyn inputs
    CHARACTER(*),              INTENT(IN)  :: FileName       !< Name of file to write this information to
    
-   INTEGER(IntKi)                         :: ErrStat          ! Error status of the operation
-   CHARACTER(*)                           :: ErrMsg           ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi)                         :: ErrStat        !< Error status of the operation
+   CHARACTER(*)                           :: ErrMsg         !< Error message if ErrStat /= ErrID_None
    
    
       !FileName = TRIM(p_FAST%OutFileRoot)//'.InputMeshes.bin'
@@ -3831,8 +3832,8 @@ SUBROUTINE WriteMotionMeshesToFile(time, y_ED, u_SD, y_SD, u_HD, u_MAP, y_BD, u_
    INTEGER(IntKi) ,            INTENT(INOUT) :: unOut          !< Unit number to write where this info should be written. If unOut < 0, a new file will be opened and the opened unit number will be returned.
    CHARACTER(*),               INTENT(IN)    :: FileName       !< If unOut < 0, FileName will be opened for writing this mesh information.
    
-   INTEGER(IntKi), INTENT(OUT)               :: ErrStat          ! Error status of the operation
-   CHARACTER(*)  , INTENT(OUT)               :: ErrMsg           ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi), INTENT(OUT)               :: ErrStat        !< Error status of the operation
+   CHARACTER(*)  , INTENT(OUT)               :: ErrMsg         !< Error message if ErrStat /= ErrID_None
    
    
    REAL(R8Ki)               :: t
@@ -4135,7 +4136,7 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD
          
       DO k=1,p_FAST%nBeams                     
          CALL BD_End(BD%Input(1,k),  BD%p(k),  BD%x(k,STATE_CURR),  BD%xd(k,STATE_CURR),  BD%z(k,STATE_CURR), &
-                        BD%OtherSt(k,STATE_CURR),  BD%y(k),  ErrStat2, ErrMsg2)
+                        BD%OtherSt(k,STATE_CURR),  BD%y(k),  BD%m(k), ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)            
       END DO
          

@@ -921,8 +921,8 @@ SUBROUTINE Transfer_ED_to_HD( y_ED, u_HD, MeshMapData, ErrStat, ErrMsg )
    TYPE(HydroDyn_InputType),    INTENT(INOUT) :: u_HD                         !< HydroDyn input
    TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData                  !< data for mapping meshes between modules
 
-   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                      ! Error status of the operation
-   CHARACTER(*),                INTENT(OUT)   :: ErrMsg                       ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                      !< Error status of the operation
+   CHARACTER(*),                INTENT(OUT)   :: ErrMsg                       !< Error message if ErrStat /= ErrID_None
    
       ! local variables
    INTEGER(IntKi)                             :: ErrStat2                     ! temporary Error status of the operation
@@ -978,8 +978,8 @@ SUBROUTINE Transfer_ED_to_HD_SD_BD_Mooring( p_FAST, y_ED, u_HD, u_SD, u_MAP, u_F
    TYPE(BD_InputType),          INTENT(INOUT) :: u_BD(:)                      !< BeamDyn inputs
    TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData                  !< data for mapping meshes between modules
 
-   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                      ! Error status of the operation
-   CHARACTER(*),                INTENT(OUT)   :: ErrMsg                       ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),              INTENT(OUT)   :: ErrStat                      !< Error status of the operation
+   CHARACTER(*),                INTENT(OUT)   :: ErrMsg                       !< Error message if ErrStat /= ErrID_None
    
       ! local variables
    INTEGER(IntKi)                             :: ErrStat2                     ! temporary Error status of the operation
@@ -1069,8 +1069,8 @@ SUBROUTINE FEAM_InputSolve( u_FEAM, y_ED, MeshMapData, ErrStat, ErrMsg )
    TYPE(ED_OutputType),         INTENT(IN   ) :: y_ED                         !< The outputs of the structural dynamics module
    TYPE(FAST_ModuleMapType),    INTENT(INOUT) :: MeshMapData                  !< data for mapping meshes between modules
 
-   INTEGER(IntKi),              INTENT(  OUT) :: ErrStat                      ! Error status of the operation
-   CHARACTER(*)  ,              INTENT(  OUT) :: ErrMsg                       ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),              INTENT(  OUT) :: ErrStat                      !< Error status of the operation
+   CHARACTER(*)  ,              INTENT(  OUT) :: ErrMsg                       !< Error message if ErrStat /= ErrID_None
 
 
       !----------------------------------------------------------------------------------------------------
@@ -1771,7 +1771,7 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve( this_time, p_FAST, calcJacobian &
                                      , u_ED,  p_ED,  x_ED,  xd_ED,  z_ED,  OtherSt_ED,  y_ED,  m_ED   &
                                      , u_SD,  p_SD,  x_SD,  xd_SD,  z_SD,  OtherSt_SD,  y_SD          & 
                                      , u_HD,  p_HD,  x_HD,  xd_HD,  z_HD,  OtherSt_HD,  y_HD          & 
-                                     , u_BD,  p_BD,  x_BD,  xd_BD,  z_BD,  OtherSt_BD,  y_BD          & 
+                                     , u_BD,  p_BD,  x_BD,  xd_BD,  z_BD,  OtherSt_BD,  y_BD,  m_BD   & 
                                      , u_Orca,p_Orca,x_Orca,xd_Orca,z_Orca,OtherSt_Orca,y_Orca        & 
                                      , u_MAP,  y_MAP  &
                                      , u_FEAM, y_FEAM & 
@@ -1797,7 +1797,7 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve( this_time, p_FAST, calcJacobian &
    TYPE(ED_ContinuousStateType)      , INTENT(IN   ) :: x_ED                      !< Continuous states
    TYPE(ED_DiscreteStateType)        , INTENT(IN   ) :: xd_ED                     !< Discrete states
    TYPE(ED_ConstraintStateType)      , INTENT(IN   ) :: z_ED                      !< Constraint states
-   TYPE(ED_OtherStateType)           , INTENT(INOUT) :: OtherSt_ED                !< Other states
+   TYPE(ED_OtherStateType)           , INTENT(IN   ) :: OtherSt_ED                !< Other states
    TYPE(ED_ParameterType)            , INTENT(IN   ) :: p_ED                      !< Parameters
    TYPE(ED_InputType)                , INTENT(INOUT) :: u_ED                      !< System inputs
    TYPE(ED_OutputType)               , INTENT(INOUT) :: y_ED                      !< System outputs
@@ -1807,10 +1807,11 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve( this_time, p_FAST, calcJacobian &
    TYPE(BD_ContinuousStateType)      , INTENT(IN   ) :: x_BD(:)                   !< Continuous states
    TYPE(BD_DiscreteStateType)        , INTENT(IN   ) :: xd_BD(:)                  !< Discrete states
    TYPE(BD_ConstraintStateType)      , INTENT(IN   ) :: z_BD(:)                   !< Constraint states
-   TYPE(BD_OtherStateType)           , INTENT(INOUT) :: OtherSt_BD(:)             !< Other/optimization states
+   TYPE(BD_OtherStateType)           , INTENT(IN   ) :: OtherSt_BD(:)             !< Other/optimization states
    TYPE(BD_ParameterType)            , INTENT(IN   ) :: p_BD(:)                   !< Parameters
    TYPE(BD_InputType)                , INTENT(INOUT) :: u_BD(:)                   !< System inputs
    TYPE(BD_OutputType)               , INTENT(INOUT) :: y_BD(:)                   !< System outputs
+   TYPE(BD_MiscVarType)              , INTENT(INOUT) :: m_BD(:)                   !< misc/optimization variables
    
       !SubDyn:                                                                    
    TYPE(SD_ContinuousStateType)      , INTENT(IN   ) :: x_SD                      !< Continuous states
@@ -1999,7 +2000,7 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve( this_time, p_FAST, calcJacobian &
          
          IF ( p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) THEN 
             do nb=1,p_FAST%nBeams
-               CALL BD_CalcOutput( this_time, u_BD(nb), p_BD(nb), x_BD(nb), xd_BD(nb), z_BD(nb), OtherSt_BD(nb), y_BD(nb), ErrStat2, ErrMsg2 )
+               CALL BD_CalcOutput( this_time, u_BD(nb), p_BD(nb), x_BD(nb), xd_BD(nb), z_BD(nb), OtherSt_BD(nb), y_BD(nb), m_BD(nb), ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
             end do            
          END IF
@@ -2143,7 +2144,7 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve( this_time, p_FAST, calcJacobian &
                   CALL Perturb_u_ED_SD_HD_BD_Orca( p_FAST, MeshMapData%Jac_u_indx, i, u_perturb, u_BD_perturb=u_BD_perturb, perturb=ThisPerturb ) ! perturb u and u_HD by ThisPerturb [routine sets ThisPerturb]
                   
                   ! calculate outputs with perturbed inputs:
-                  CALL BD_CalcOutput( this_time, u_BD_perturb, p_BD(nb), x_BD(nb), xd_BD(nb), z_BD(nb), OtherSt_BD(nb), y_BD_perturb(nb), ErrStat2, ErrMsg2 )
+                  CALL BD_CalcOutput( this_time, u_BD_perturb, p_BD(nb), x_BD(nb), xd_BD(nb), z_BD(nb), OtherSt_BD(nb), y_BD_perturb(nb), m_BD(nb), ErrStat2, ErrMsg2 )
                      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                   CALL U_ED_SD_HD_BD_Orca_Residual(y_ED, y_SD, y_HD, y_BD_perturb, y_Orca, u_perturb, Fn_U_perturb) ! get this perturbation  
                
@@ -4408,7 +4409,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
                                     , ED%Input(1),   ED%p,   ED%x(  this_state),  ED%xd(  this_state),  ED%z(  this_state),  ED%OtherSt(  this_state), ED%Output(1), ED%m &
                                     , SD%Input(1),   SD%p,   SD%x(  this_state),  SD%xd(  this_state),  SD%z(  this_state),  SD%OtherSt,               SD%y & 
                                     , HD%Input(1),   HD%p,   HD%x(  this_state),  HD%xd(  this_state),  HD%z(  this_state),  HD%OtherSt,               HD%y & 
-                                    , BD%Input(1,:), BD%p,   BD%x(:,this_state),  BD%xd(:,this_state),  BD%z(:,this_state),  BD%OtherSt(:,this_state), BD%y & 
+                                    , BD%Input(1,:), BD%p,   BD%x(:,this_state),  BD%xd(:,this_state),  BD%z(:,this_state),  BD%OtherSt(:,this_state), BD%y        , BD%m & 
                                     , Orca%Input(1), Orca%p,Orca%x( this_state),Orca%xd(  this_state),Orca%z(  this_state),Orca%OtherSt,             Orca%y & 
                                     , MAPp%Input(1),   MAPp%y &
                                     , FEAM%Input(1),   FEAM%y &   
@@ -4549,7 +4550,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
          
       do k=1,p_FAST%nBeams
          CALL BD_CalcOutput( this_time, BD%Input(1,k), BD%p(k), BD%x(k,this_state), BD%xd(k,this_state),&
-                              BD%z(k,this_state), BD%OtherSt(k,this_state), BD%y(k), ErrStat2, ErrMsg2 )
+                              BD%z(k,this_state), BD%OtherSt(k,this_state), BD%y(k), BD%m(k), ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       end do
    END IF   
@@ -4734,7 +4735,7 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
             t_module   = n_t_module*p_FAST%dt_module( Module_BD ) + t_initial
                            
             CALL BD_UpdateStates( t_module, n_t_module, BD%Input(:,k), BD%InputTimes(:,k), BD%p(k), BD%x(k,STATE_PRED), &
-                                       BD%xd(k,STATE_PRED), BD%z(k,STATE_PRED), BD%OtherSt(k,STATE_PRED), ErrStat2, ErrMsg2 )
+                                       BD%xd(k,STATE_PRED), BD%z(k,STATE_PRED), BD%OtherSt(k,STATE_PRED), BD%m(k), ErrStat2, ErrMsg2 )
                CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END DO !j_ss
                
@@ -5452,7 +5453,7 @@ SUBROUTINE WriteMappingTransferToFile(Mesh1_I,Mesh1_O,Mesh2_I,Mesh2_O,Map_Mod1_M
    TYPE(MeshMapType), intent(in) :: Map_Mod1_Mod2        !< Data for mapping meshes from mesh 1 (outputs) to mesh 2 (inputs)
    TYPE(MeshMapType), intent(in) :: Map_Mod2_Mod1        !< Data for mapping meshes from mesh 2 (outputs) to mesh 1 (inputs)
 
-   CHARACTER(*),      INTENT(IN) :: BinOutputName
+   CHARACTER(*),      INTENT(IN) :: BinOutputName        !< name of binary output file
    
    
    ! local variables:

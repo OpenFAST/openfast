@@ -145,10 +145,11 @@ typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Arr
 typedef	FAST	BeamDyn_Data	BD_ContinuousStateType	x	{:}{:}	-	-	"Continuous states"
 typedef	^	^	BD_DiscreteStateType	xd	{:}{:}	-	-	"Discrete states"
 typedef	^	^	BD_ConstraintStateType	z	{:}{:}	-	-	"Constraint states"
-typedef	^	^	BD_OtherStateType	OtherSt	{:}{:}	-	-	"Other/optimization states"
+typedef	^	^	BD_OtherStateType	OtherSt	{:}{:}	-	-	"Other states"
 typedef	^	^	BD_ParameterType	p	{:}	-	-	"Parameters"
 typedef	^	^	BD_InputType	u	{:}	-	-	"System inputs"
 typedef	^	^	BD_OutputType	y	{:}	-	-	"System outputs"
+typedef	^	^	BD_MiscVarType	m	{:}	-	-	"Misc/optimization variables"
 typedef	^	^	BD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
 
