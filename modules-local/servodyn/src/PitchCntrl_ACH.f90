@@ -4,7 +4,8 @@
    !       routine was written by Craig Hansen (ACH) of Windward Engineering
    !       LLC.  Questions related to the use of this routine should be
    !       addressed to Craig Hansen.
-
+module PitchCntrl_ACH
+contains
 !=======================================================================
 SUBROUTINE PitchCntrl ( BlPitch, ElecPwr, LSS_Spd, TwrAccel, NB, ZTime, DT, DirRoot, TFOutput )
 
@@ -288,11 +289,6 @@ CHARACTER( 8)                :: Frmt1 = '(20(:A))'
 CHARACTER(14)                :: Frmt2 = '(20(:G12.5,A))'
 INTEGER(IntKi)               :: ErrStat
 CHARACTER(ErrMsgLen)         :: ErrMsg
-
-
-   ! Global functions:
-
-REAL(ReKi), EXTERNAL         :: SAT2
 
 
 SAVE  ! mlb - Do we need to save everything?
@@ -759,3 +755,5 @@ ENDIF
 RETURN
 END FUNCTION DEADBAND
 !=======================================================================
+end module PitchCntrl_ACH
+   

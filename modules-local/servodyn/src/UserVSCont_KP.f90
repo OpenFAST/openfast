@@ -1,12 +1,14 @@
-   ! NOTE: This source file contains an example UserVSCont() user-specified
-   !       routine for computing variable-speed controlled generator torque
-   !       based on a table look-up of LSS speed and LSS torque provided in a
-   !       spd_trq.dat input file.  It also contains an example UserGen, which
-   !       calls UserVSCont.  These routines were written by Kirk Pierce (KP),
-   !       formerly of NREL/NWTC, and now with GE Wind Energy.  Questions
-   !       related to the use of these routines should be addressed to Kirk
-   !       Pierce.
-
+   !> NOTE: This source file contains an example UserVSCont() user-specified
+   !!       routine for computing variable-speed controlled generator torque
+   !!       based on a table look-up of LSS speed and LSS torque provided in a
+   !!       spd_trq.dat input file.  It also contains an example UserGen, which
+   !!       calls UserVSCont.  These routines were written by Kirk Pierce (KP),
+   !!       formerly of NREL/NWTC, and now with GE Wind Energy.  Questions
+   !!       related to the use of these routines should be addressed to Kirk
+   !!       Pierce.
+module UserVSCont_KP
+contains
+   
 !=======================================================================
 SUBROUTINE UserGen ( HSS_Spd, LSS_Spd, NumBl, ZTime, DT, GenEff, DelGenTrq, DirRoot, GenTrq, ElecPwr )
 
@@ -238,3 +240,4 @@ ENDIF
 RETURN
 END SUBROUTINE UserVSCont
 !=======================================================================
+end module UserVSCont_KP

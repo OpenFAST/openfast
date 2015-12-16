@@ -24,6 +24,10 @@ MODULE ServoDyn
    USE NWTC_Library
    USE BladedInterface
    USE TMD
+   
+   USE UserVSCont_KP    ! <- module not in the FAST Framework!
+   USE PitchCntrl_ACH   ! <- module not in the FAST Framework!
+   USE UserSubs         ! <- module not in the FAST Framework!
 
    IMPLICIT NONE
 
