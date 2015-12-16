@@ -798,8 +798,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_Orca%RootName  = p_FAST%OutFileRoot
       InitInData_Orca%TMax      = p_FAST%TMax 
                   
-      CALL Orca_Init( InitInData_Orca, Orca%Input(1), Orca%p,  Orca%x(STATE_CURR), Orca%xd(STATE_CURR), Orca%z(STATE_CURR), Orca%OtherSt, &
-                      Orca%y, p_FAST%dt_module( MODULE_Orca ), InitOutData_Orca, ErrStat2, ErrMsg2 )
+      CALL Orca_Init( InitInData_Orca, Orca%Input(1), Orca%p,  Orca%x(STATE_CURR), Orca%xd(STATE_CURR), Orca%z(STATE_CURR), Orca%OtherSt(STATE_CURR), &
+                      Orca%y, Orca%m, p_FAST%dt_module( MODULE_Orca ), InitOutData_Orca, ErrStat2, ErrMsg2 )
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          
       p_FAST%ModuleInitialized(MODULE_Orca) = .TRUE.
@@ -3024,10 +3024,8 @@ SUBROUTINE FAST_InitIOarrays( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, A
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL Orca_CopyConstrState (Orca%z( STATE_CURR), Orca%z( STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF ( p_FAST%n_substeps( MODULE_Orca ) > 1 ) THEN
-         CALL Orca_CopyOtherState( Orca%OtherSt, Orca%OtherSt_old, MESH_NEWCOPY, Errstat2, ErrMsg2)
-            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
-      END IF           
+      CALL Orca_CopyOtherState( Orca%OtherSt(STATE_CURR), Orca%OtherSt(STATE_PRED), MESH_NEWCOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )   
    END IF ! CompMooring
                  
    
@@ -3249,9 +3247,6 @@ SUBROUTINE FAST_Solution(t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED, BD, 
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          ELSEIF ( p_FAST%n_substeps( Module_FEAM ) > 1 ) THEN
             CALL FEAM_CopyOtherState( FEAM%OtherSt_old, FEAM%OtherSt, MESH_UPDATECOPY, Errstat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         ELSEIF ( p_FAST%n_substeps( Module_Orca ) > 1 ) THEN
-            CALL Orca_CopyOtherState( Orca%OtherSt_old, Orca%OtherSt, MESH_UPDATECOPY, Errstat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END IF
          
@@ -4189,8 +4184,8 @@ SUBROUTINE FAST_EndMods( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, HD
                         FEAM%y,  ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    ELSEIF ( p_FAST%ModuleInitialized(Module_Orca) ) THEN
-      CALL Orca_End(   Orca%Input(1),  Orca%p,  Orca%x(STATE_CURR),  Orca%xd(STATE_CURR),  Orca%z(STATE_CURR),  Orca%OtherSt,  &
-                        Orca%y,  ErrStat2, ErrMsg2)
+      CALL Orca_End(   Orca%Input(1),  Orca%p,  Orca%x(STATE_CURR),  Orca%xd(STATE_CURR),  Orca%z(STATE_CURR),  Orca%OtherSt(STATE_CURR),  &
+                        Orca%y,  Orca%m, ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    END IF
       

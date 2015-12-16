@@ -1772,7 +1772,7 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve( this_time, p_FAST, calcJacobian &
                                      , u_SD,  p_SD,  x_SD,  xd_SD,  z_SD,  OtherSt_SD,  y_SD          & 
                                      , u_HD,  p_HD,  x_HD,  xd_HD,  z_HD,  OtherSt_HD,  y_HD          & 
                                      , u_BD,  p_BD,  x_BD,  xd_BD,  z_BD,  OtherSt_BD,  y_BD,  m_BD   & 
-                                     , u_Orca,p_Orca,x_Orca,xd_Orca,z_Orca,OtherSt_Orca,y_Orca        & 
+                                     , u_Orca,p_Orca,x_Orca,xd_Orca,z_Orca,OtherSt_Orca,y_Orca,m_Orca & 
                                      , u_MAP,  y_MAP  &
                                      , u_FEAM, y_FEAM & 
                                      , u_MD,   y_MD   & 
@@ -1835,10 +1835,11 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve( this_time, p_FAST, calcJacobian &
    TYPE(Orca_ContinuousStateType),     INTENT(IN   ) :: x_Orca                    !< Continuous states
    TYPE(Orca_DiscreteStateType)  ,     INTENT(IN   ) :: xd_Orca                   !< Discrete states
    TYPE(Orca_ConstraintStateType),     INTENT(IN   ) :: z_Orca                    !< Constraint states
-   TYPE(Orca_OtherStateType)     ,     INTENT(INOUT) :: OtherSt_Orca              !< Other/optimization states
+   TYPE(Orca_OtherStateType)     ,     INTENT(IN   ) :: OtherSt_Orca              !< Other states
    TYPE(Orca_ParameterType)      ,     INTENT(IN   ) :: p_Orca                    !< Parameters
    TYPE(Orca_InputType)          ,     INTENT(INOUT) :: u_Orca                    !< System inputs
    TYPE(Orca_OutputType)         ,     INTENT(INOUT) :: y_Orca                    !< System outputs
+   TYPE(Orca_MiscVarType)        ,     INTENT(INOUT) :: m_Orca                    !< misc/optimization variables
    
    
       ! MAP/FEAM/MoorDyn/IceFloe/IceDyn:
@@ -2006,7 +2007,7 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve( this_time, p_FAST, calcJacobian &
          END IF
          
          IF ( p_FAST%CompMooring == Module_Orca ) THEN 
-            CALL Orca_CalcOutput( this_time, u_Orca, p_Orca, x_Orca, xd_Orca, z_Orca, OtherSt_Orca, y_Orca, ErrStat2, ErrMsg2 )
+            CALL Orca_CalcOutput( this_time, u_Orca, p_Orca, x_Orca, xd_Orca, z_Orca, OtherSt_Orca, y_Orca, m_Orca, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          END IF
          
@@ -2173,7 +2174,7 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve( this_time, p_FAST, calcJacobian &
                CALL Perturb_u_ED_SD_HD_BD_Orca( p_FAST, MeshMapData%Jac_u_indx, i, u_perturb, u_Orca_perturb=u_Orca_perturb, perturb=ThisPerturb ) ! perturb u and u_HD by ThisPerturb [routine sets ThisPerturb]
                   
                ! calculate outputs with perturbed inputs:
-               CALL Orca_CalcOutput( this_time, u_Orca_perturb, p_Orca, x_Orca, xd_Orca, z_Orca, OtherSt_Orca, y_Orca_perturb, ErrStat2, ErrMsg2 )
+               CALL Orca_CalcOutput( this_time, u_Orca_perturb, p_Orca, x_Orca, xd_Orca, z_Orca, OtherSt_Orca, y_Orca_perturb, m_Orca, ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                   
                CALL U_ED_SD_HD_BD_Orca_Residual(y_ED, y_SD, y_HD, y_BD, y_Orca_perturb, u_perturb, Fn_U_perturb) ! get this perturbation  
@@ -4406,11 +4407,11 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
    IF ( p_FAST%CompSub == Module_SD .OR. (p_FAST%CompElast == Module_BD .and. BD_Solve_Option1) .OR. p_FAST%CompMooring == Module_Orca ) THEN !.OR. p_FAST%CompHydro == Module_HD ) THEN
                                  
       CALL ED_SD_HD_BD_Orca_InputOutputSolve(  this_time, p_FAST, calcJacobian &
-                                    , ED%Input(1),   ED%p,   ED%x(  this_state),  ED%xd(  this_state),  ED%z(  this_state),  ED%OtherSt(  this_state), ED%Output(1), ED%m &
+                                    , ED%Input(1),   ED%p,   ED%x(  this_state),  ED%xd(  this_state),  ED%z(  this_state),  ED%OtherSt(  this_state), ED%Output(1), ED%m   &
                                     , SD%Input(1),   SD%p,   SD%x(  this_state),  SD%xd(  this_state),  SD%z(  this_state),  SD%OtherSt,               SD%y & 
                                     , HD%Input(1),   HD%p,   HD%x(  this_state),  HD%xd(  this_state),  HD%z(  this_state),  HD%OtherSt,               HD%y & 
-                                    , BD%Input(1,:), BD%p,   BD%x(:,this_state),  BD%xd(:,this_state),  BD%z(:,this_state),  BD%OtherSt(:,this_state), BD%y        , BD%m & 
-                                    , Orca%Input(1), Orca%p,Orca%x( this_state),Orca%xd(  this_state),Orca%z(  this_state),Orca%OtherSt,             Orca%y & 
+                                    , BD%Input(1,:), BD%p,   BD%x(:,this_state),  BD%xd(:,this_state),  BD%z(:,this_state),  BD%OtherSt(:,this_state), BD%y        , BD%m   & 
+                                    , Orca%Input(1), Orca%p,Orca%x( this_state),Orca%xd(  this_state),Orca%z(  this_state),Orca%OtherSt(  this_state), Orca%y      , Orca%m & 
                                     , MAPp%Input(1),   MAPp%y &
                                     , FEAM%Input(1),   FEAM%y &   
                                     , MD%Input(1),     MD%y   &   
@@ -4952,18 +4953,16 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
       CALL Orca_CopyDiscState   (Orca%xd(STATE_CURR), Orca%xd(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL Orca_CopyConstrState (Orca%z( STATE_CURR), Orca%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )         
+      CALL Orca_CopyOtherState( Orca%OtherSt(STATE_CURR), Orca%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         
-      IF ( p_FAST%n_substeps( Module_Orca ) > 1 ) THEN
-         CALL Orca_CopyOtherState( Orca%OtherSt, Orca%OtherSt_old, MESH_UPDATECOPY, Errstat2, ErrMsg2)
-            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      END IF
             
       DO j_ss = 1, p_FAST%n_substeps( Module_Orca )
          n_t_module = n_t_global*p_FAST%n_substeps( Module_Orca ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( Module_Orca ) + t_initial
                
-         CALL Orca_UpdateStates( t_module, n_t_module, Orca%Input, Orca%InputTimes, Orca%p, Orca%x(STATE_PRED), Orca%xd(STATE_PRED), Orca%z(STATE_PRED), Orca%OtherSt, ErrStat2, ErrMsg2 )
+         CALL Orca_UpdateStates( t_module, n_t_module, Orca%Input, Orca%InputTimes, Orca%p, Orca%x(STATE_PRED), &
+                                 Orca%xd(STATE_PRED), Orca%z(STATE_PRED), Orca%OtherSt(STATE_PRED), Orca%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss
                
