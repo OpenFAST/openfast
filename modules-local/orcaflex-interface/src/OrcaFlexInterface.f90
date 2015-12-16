@@ -3,7 +3,7 @@
 ! FAST Modularization Framework. OrcaFlexInterface_Types is auto-generated based on FAST_Registry.txt.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2012-2014  National Renewable Energy Laboratory
+! Copyright (C) 2015  National Renewable Energy Laboratory
 !
 !    This file is part of OrcaFlexInterface.
 !
@@ -24,18 +24,15 @@
 ! (File) Revision #: $Rev: 1045 $
 ! URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/OrcaFlexCoupling/Source/OrcaFlexInterface.f90 $
 !**********************************************************************************************************************************
-
+!> This module contains definitions of compile-time PARAMETERS for the OrcaFlex Interface module.
+!! Every variable defined here MUST have the PARAMETER attribute.
 MODULE OrcaFlexInterface_Parameters
-
-      ! This module contains definitions of compile-time PARAMETERS for the StrucyDyn module.
-      ! Every variable defined here MUST have the PARAMETER attribute.
-
 
    USE NWTC_Library
 
    IMPLICIT                      NONE
 
-   TYPE(ProgDesc), PARAMETER  :: Orca_Ver = ProgDesc( 'OrcaFlexInterface', 'v1.00.01a-adp', '14-Oct-2015' )
+   TYPE(ProgDesc), PARAMETER  :: Orca_Ver = ProgDesc( 'OrcaFlexInterface', 'v1.01.00a-adp', '16-Dec-2015' )
    CHARACTER(*),   PARAMETER  :: Orca_Nickname = 'Orca'
 
 
@@ -92,6 +89,8 @@ MODULE OrcaFlexInterface_Parameters
 
 END MODULE OrcaFlexInterface_Parameters
 !**********************************************************************************************************************************
+!> This module is an interface between FAST and OrcaFlex, a commercial software package developed by Orcina. This interfaces calls
+!! an OrcaFlex DLL once per time step, and is valid for loose coupling. Tight coupling is not supported.
 MODULE OrcaFlexInterface
 
    USE NWTC_Library
@@ -166,50 +165,34 @@ MODULE OrcaFlexInterface
                                                    !   continuous states, and updating discrete states
    PUBLIC :: Orca_CalcOutput                       ! Routine for computing outputs
 
-   PUBLIC :: Orca_CalcConstrStateResidual          ! Tight coupling routine for returning the constraint state residual
-   PUBLIC :: Orca_CalcContStateDeriv               ! Tight coupling routine for computing derivatives of continuous states
-   PUBLIC :: Orca_UpdateDiscState                  ! Tight coupling routine for updating discrete states
-
-   !PUBLIC :: Orca_JacobianPInput                  ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                               !   (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
-   !PUBLIC :: Orca_JacobianPContState              ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                               !   (Xd), and constraint-state (Z) equations all with respect to the continuous
-   !                                               !   states (x)
-   !PUBLIC :: Orca_JacobianPDiscState              ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                               !   (Xd), and constraint-state (Z) equations all with respect to the discrete
-   !                                               !   states (xd)
-   !PUBLIC :: Orca_JacobianPConstrState            ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                               !   (Xd), and constraint-state (Z) equations all with respect to the constraint
-   !                                               !   states (z)
-
-
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
-! This routine is called at the start of the simulation to perform initialization steps.
-! The parameters are set here and not changed during the simulation.
-! The initial states and initial guess for the input are defined.
-!..................................................................................................................................
+!> This routine is called at the start of the simulation to perform initialization steps.
+!! The parameters are set here and not changed during the simulation.
+!! The initial states and initial guess for the input are defined.
+SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
+
    USE, INTRINSIC             :: ISO_C_Binding
 
-   TYPE(Orca_InitInputType),        INTENT(IN   )  :: InitInp           ! Input data for initialization routine
-   TYPE(Orca_InputType),            INTENT(  OUT)  :: u                 ! An initial guess for the input; input mesh must be defined
-   TYPE(Orca_ParameterType),        INTENT(  OUT)  :: p                 ! Parameters
-   TYPE(Orca_ContinuousStateType),  INTENT(  OUT)  :: x                 ! Initial continuous states
-   TYPE(Orca_DiscreteStateType),    INTENT(  OUT)  :: xd                ! Initial discrete states
-   TYPE(Orca_ConstraintStateType),  INTENT(  OUT)  :: z                 ! Initial guess of the constraint states
-   TYPE(Orca_OtherStateType),       INTENT(  OUT)  :: OtherState        ! Initial other/optimization states
-   TYPE(Orca_OutputType),           INTENT(  OUT)  :: y                 ! Initial system outputs (outputs are not calculated;
-                                                                        !   only the output mesh is initialized)
-   REAL(DbKi),                      INTENT(INOUT)  :: Interval          ! Coupling interval in seconds: the rate that
-                                                                        !   (1) Orca_UpdateStates() is called in loose coupling &
-                                                                        !   (2) Orca_UpdateDiscState() is called in tight coupling.
-                                                                        !   Input is the suggested time from the glue code;
-                                                                        !   Output is the actual coupling interval that will be used
-                                                                        !   by the glue code.
-   TYPE(Orca_InitOutputType),       INTENT(  OUT)  :: InitOut           ! Output for initialization routine
-   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat           ! Error status of the operation
-   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg            ! Error message if ErrStat /= ErrID_None
+   TYPE(Orca_InitInputType),        INTENT(IN   )  :: InitInp           !< Input data for initialization routine
+   TYPE(Orca_InputType),            INTENT(  OUT)  :: u                 !< An initial guess for the input; input mesh must be defined
+   TYPE(Orca_ParameterType),        INTENT(  OUT)  :: p                 !< Parameters
+   TYPE(Orca_ContinuousStateType),  INTENT(  OUT)  :: x                 !< Initial continuous states
+   TYPE(Orca_DiscreteStateType),    INTENT(  OUT)  :: xd                !< Initial discrete states
+   TYPE(Orca_ConstraintStateType),  INTENT(  OUT)  :: z                 !< Initial guess of the constraint states
+   TYPE(Orca_OtherStateType),       INTENT(  OUT)  :: OtherState        !< Initial other states
+   TYPE(Orca_OutputType),           INTENT(  OUT)  :: y                 !< Initial system outputs (outputs are not calculated;
+                                                                        !!   only the output mesh is initialized)
+   TYPE(Orca_MiscVarType),          INTENT(INOUT)  :: m                 !<  Misc variables for optimization (not copied in glue code)
+   REAL(DbKi),                      INTENT(INOUT)  :: Interval          !< Coupling interval in seconds: the rate that
+                                                                        !!   (1) Orca_UpdateStates() is called in loose coupling &
+                                                                        !!   (2) Orca_UpdateDiscState() is called in tight coupling.
+                                                                        !!   Input is the suggested time from the glue code;
+                                                                        !!   Output is the actual coupling interval that will be used
+                                                                        !!   by the glue code.
+   TYPE(Orca_InitOutputType),       INTENT(  OUT)  :: InitOut           !< Output for initialization routine
+   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat           !< Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -234,7 +217,7 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    ErrMsg                  = ""
    ErrStatTmp              = ErrID_None
    ErrMsgTmp               = ""
-   OtherState%Initialized  =  .FALSE.     ! Set to true when we finish the _Init routine
+   m%Initialized  =  .FALSE.     ! Set to true when we finish the _Init routine
 
 
       ! Set some things for the DLL
@@ -264,10 +247,10 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
 
       ! Allocate array for AllOuts
-   CALL AllocAry( OtherState%AllOuts, p%NumOuts, 'AllOuts', ErrStatTmp, ErrMsgTmp )
+   CALL AllocAry( m%AllOuts, p%NumOuts, 'AllOuts', ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
    IF ( ErrStat>= AbortErrLev ) RETURN
-   OtherState%AllOuts = 0.0_ReKi
+   m%AllOuts = 0.0_ReKi
   
 
       ! Allocate arrays for the WriteOutput
@@ -319,7 +302,7 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       CALL CleanUp
       RETURN
    END IF
-   OtherState%Initialized  =  .TRUE.  ! set this flag immediately after the library was successfully loaded
+   m%Initialized  =  .TRUE.  ! set this flag immediately after the library was successfully loaded
 
    CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(1), OrcaDLL_Init )
 #endif
@@ -395,10 +378,10 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
 
 
 
-      ! Set zero values for the OtherState arrays
-   OtherState%PtfmAM       =  0.0_ReKi
-   OtherState%PtfmFt       =  0.0_ReKi
-   OtherState%LastTimeStep =  -1.0_DbKi
+      ! Set zero values for the MiscVar arrays
+   m%PtfmAM       =  0.0_ReKi
+   m%PtfmFt       =  0.0_ReKi
+   m%LastTimeStep =  -1.0_DbKi
 
    InitOut%Ver =  Orca_Ver
 
@@ -417,22 +400,20 @@ CONTAINS
 END SUBROUTINE Orca_Init
 
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine reads in the primary OrcaFlex Interface input file and places the values it reads in the InputFileData structure.
+!!   It opens an echo file if requested.
 SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, ErrStat, ErrMsg )
-! This routine reads in the primary OrcaFlex Interface input file and places the values it reads in the InputFileData structure.
-!   It opens an echo file if requested.
-!..................................................................................................................................
-
 
    IMPLICIT                        NONE
 
       ! Passed variables
-   INTEGER(IntKi),       INTENT(OUT)    :: ErrStat                             ! Error status
+   INTEGER(IntKi),       INTENT(OUT)    :: ErrStat                             !< Error status
                          
-   CHARACTER(*),         INTENT(IN)     :: InputFile                           ! Name of the file containing the primary input data
-   CHARACTER(*),         INTENT(OUT)    :: ErrMsg                              ! Error message
-   CHARACTER(*),         INTENT(IN)     :: OutFileRoot                         ! The rootname of the echo file, possibly opened in this routine
+   CHARACTER(*),         INTENT(IN)     :: InputFile                           !< Name of the file containing the primary input data
+   CHARACTER(*),         INTENT(OUT)    :: ErrMsg                              !< Error message
+   CHARACTER(*),         INTENT(IN)     :: OutFileRoot                         !< The rootname of the echo file, possibly opened in this routine
                          
-   TYPE(Orca_InputFile), INTENT(INOUT)  :: InputFileData                     ! All the data in the OrcaFlex Interface input file
+   TYPE(Orca_InputFile), INTENT(INOUT)  :: InputFileData                     !< All the data in the OrcaFlex Interface input file
 
       ! Local variables:
    INTEGER(IntKi)               :: I                                         ! loop counter
@@ -617,17 +598,18 @@ END SUBROUTINE ReadPrimaryFile
 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
-SUBROUTINE Orca_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+SUBROUTINE Orca_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
-   TYPE(Orca_InputType),            INTENT(INOUT)  :: u           ! System inputs
-   TYPE(Orca_ParameterType),        INTENT(INOUT)  :: p           ! Parameters
-   TYPE(Orca_ContinuousStateType),  INTENT(INOUT)  :: x           ! Continuous states
-   TYPE(Orca_DiscreteStateType),    INTENT(INOUT)  :: xd          ! Discrete states
-   TYPE(Orca_ConstraintStateType),  INTENT(INOUT)  :: z           ! Constraint states
-   TYPE(Orca_OtherStateType),       INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(Orca_OutputType),           INTENT(INOUT)  :: y           ! System outputs
-   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(Orca_InputType),            INTENT(INOUT)  :: u           !< System inputs
+   TYPE(Orca_ParameterType),        INTENT(INOUT)  :: p           !< Parameters
+   TYPE(Orca_ContinuousStateType),  INTENT(INOUT)  :: x           !< Continuous states
+   TYPE(Orca_DiscreteStateType),    INTENT(INOUT)  :: xd          !< Discrete states
+   TYPE(Orca_ConstraintStateType),  INTENT(INOUT)  :: z           !< Constraint states
+   TYPE(Orca_OtherStateType),       INTENT(INOUT)  :: OtherState  !< Other states
+   TYPE(Orca_OutputType),           INTENT(INOUT)  :: y           !< System outputs
+   TYPE(Orca_MiscVarType),          INTENT(INOUT)  :: m           !<  Misc variables for optimization (not copied in glue code)
+   INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    PROCEDURE(OrcaFlexUserPtfmLdFinalise),  POINTER :: OrcaDLL_End
 
@@ -649,7 +631,7 @@ SUBROUTINE Orca_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 #ifdef NO_LibLoad
    CALL SetErrStat( ErrID_Warn,'   -->  Skipping OrcaDLL_End call',ErrStat,ErrMsg,RoutineName )
 #else
-   if (OtherState%Initialized) then
+   if (m%Initialized) then
          ! Release the DLL
       CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(3), OrcaDLL_End )
       CALL OrcaDLL_End        ! No error handling here.  Just have to assume it worked.
@@ -685,25 +667,28 @@ SUBROUTINE Orca_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    CALL Orca_DestroyOtherState(  OtherState,  ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName )
 
+      ! Destroy misc variables:
+   CALL Orca_DestroyMisc(  m,  ErrStatTmp, ErrMsgTmp )
+   CALL SetErrStat( ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName )
 
+   
       ! Destroy the output data:
    CALL Orca_DestroyOutput( y, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName )
 
-   OtherState%Initialized = .FALSE.
+   m%Initialized = .FALSE.
 
 
 END SUBROUTINE Orca_End
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-! Routine for computing outputs, used in both loose and tight coupling.
-! This SUBROUTINE is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
-! NOTE: the descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
-! for a complete description of each output parameter.
-! NOTE: no matter how many channels are selected for output, all of the outputs are calcalated
-! All of the calculated output channels are placed into the OtherState%AllOuts(:), while the channels selected for outputs are
-! placed in the y%WriteOutput(:) array.
-!..................................................................................................................................
+!> Routine for computing outputs, used in both loose and tight coupling.
+!! This SUBROUTINE is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
+!! NOTE: the descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
+!! for a complete description of each output parameter.
+!! NOTE: no matter how many channels are selected for output, all of the outputs are calcalated
+!! All of the calculated output channels are placed into the m%AllOuts(:), while the channels selected for outputs are
+!! placed in the y%WriteOutput(:) array.
+SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 
    REAL(DbKi),                      INTENT(IN   )  :: t                 !< Current simulation time in seconds
    TYPE(Orca_InputType),            INTENT(IN   )  :: u                 !< Inputs at Time t
@@ -711,9 +696,10 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    TYPE(Orca_ContinuousStateType),  INTENT(IN   )  :: x                 !< Continuous states at t
    TYPE(Orca_DiscreteStateType),    INTENT(IN   )  :: xd                !< Discrete states at t
    TYPE(Orca_ConstraintStateType),  INTENT(IN   )  :: z                 !< Constraint states at t
-   TYPE(Orca_OtherStateType),       INTENT(INOUT)  :: OtherState        !< Other/optimization states
+   TYPE(Orca_OtherStateType),       INTENT(IN   )  :: OtherState        !< Other states at t
    TYPE(Orca_OutputType),           INTENT(INOUT)  :: y                 !< Outputs computed at t (Input only so that mesh con-
                                                                         !!   nectivity information does not have to be recalculated)
+   TYPE(Orca_MiscVarType),          INTENT(INOUT)  :: m                 !<  Misc variables for optimization (not copied in glue code)
    INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat           !< Error status of the operation
    CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg            !< Error message if ErrStat /= ErrID_None
 
@@ -750,7 +736,7 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
 
       ! Check that we actually initialized things
-   IF ( .NOT. OtherState%Initialized ) THEN
+   IF ( .NOT. m%Initialized ) THEN
       CALL SetErrStat( ErrID_Fatal, ' Programming error.  Call Orca_Init before calling Orca_CalcOutput.',ErrStat,ErrMsg,RoutineName )
       RETURN
    ENDIF
@@ -787,18 +773,18 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
       ! We do not want to call OrcaDLL twice in one timestep.  If _CalcOutput is called twice in a timestep, the second
       ! call is different from the first only with the accelerations, which OrcaFlex does not do anything with.
-   IF ( t > OtherState%LastTimeStep .and. .not. EqualRealNos(t,OtherState%LastTimeStep) ) THEN
+   IF ( t > m%LastTimeStep .and. .not. EqualRealNos(t,m%LastTimeStep) ) THEN
          ! Setup the pointer to the DLL procedure
       CALL C_F_PROCPOINTER( p%DLL_Orca%ProcAddr(2), OrcaDLL_Calc )
          ! Call OrcaFlex to run the calculation.  There is no error trapping on the OrcaFlex side, so we will have to do some checks on what receive back
       CALL OrcaDLL_Calc( DLL_X, DLL_Xdot, DLL_ZTime, DLL_DirRootName, DLL_PtfmAM, DLL_PtfmFt )
-      OtherState%LastTimeStep =  t
+      m%LastTimeStep =  t
 
-         ! Copy data over from the DLL output to the OtherState
+         ! Copy data over from the DLL output to the m
       DO I=1,6
-         OtherState%PtfmFT(I) =  DLL_PtfmFT(I)
+         m%PtfmFT(I) =  DLL_PtfmFT(I)
          DO J=1,6
-            OtherState%PtfmAM(J,I)  =  DLL_PtfmAM(J,I)
+            m%PtfmAM(J,I)  =  DLL_PtfmAM(J,I)
          ENDDO
       ENDDO
 
@@ -807,7 +793,7 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          ! Perform some quick QA/QC on the DLL results.  There isn't much we can check, so just check that things are symmetric within some tolerance
       DO I = 1,5        ! Loop through the 1st 5 rows (columns) of PtfmAM
          DO J = (I+1),6 ! Loop through all columns (rows) passed I
-            IF ( ABS( OtherState%PtfmAM(I,J) - OtherState%PtfmAM(J,I) ) > SymmetryTol )  &
+            IF ( ABS( m%PtfmAM(I,J) - m%PtfmAM(J,I) ) > SymmetryTol )  &
                ErrStatTmp  =  ErrID_Fatal
                ErrMsgTmp   =  ' The platform added mass matrix returned from OrcaFlex is unsymmetric.'// &
                               '  There may be issues with the OrcaFlex calculations.'
@@ -821,14 +807,14 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
 
       ! Now calculate the forces with what OrcaFlex returned
-   OtherState%F_PtfmAM     =  -matmul(OtherState%PtfmAM, qdotdot)
+   m%F_PtfmAM     =  -matmul(m%PtfmAM, qdotdot)
 
 
 
       ! Update the Mesh with values from OrcaFlex
    DO I=1,3
-      y%PtfmMesh%Force(I,1)  =  OtherState%F_PtfmAM(I)   +  OtherState%PtfmFT(I)
-      y%PtfmMesh%Moment(I,1) =  OtherState%F_PtfmAM(I+3) +  OtherState%PtfmFT(I+3)
+      y%PtfmMesh%Force(I,1)  =  m%F_PtfmAM(I)   +  m%PtfmFT(I)
+      y%PtfmMesh%Moment(I,1) =  m%F_PtfmAM(I+3) +  m%PtfmFT(I+3)
    ENDDO
 
 !#ifdef NO_LibLoad
@@ -838,7 +824,7 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    
 
       ! Set all the outputs
-   CALL SetAllOuts( p, y, OtherState, ErrStatTmp, ErrMsgTmp )
+   CALL SetAllOuts( p, y, m, ErrStatTmp, ErrMsgTmp )
    CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
    IF ( ErrStat >= ErrID_Fatal) RETURN
 
@@ -849,25 +835,26 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
 END SUBROUTINE Orca_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Orca_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
-! Constraint states are solved for input Time t; Continuous and discrete states are updated for t + Interval
-!..................................................................................................................................
+!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other 
+!! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
+SUBROUTINE Orca_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
-      REAL(DbKi),                         INTENT(IN   ) :: t          ! Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   ) :: n          ! Current simulation time step n = 0,1,...
-      TYPE(Orca_InputType),                 INTENT(INOUT) :: u(:)       ! Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
-      REAL(DbKi),                         INTENT(IN   ) :: utimes(:)  ! Times associated with u(:), in seconds
-      TYPE(Orca_ParameterType),             INTENT(IN   ) :: p          ! Parameters
-      TYPE(Orca_ContinuousStateType),       INTENT(INOUT) :: x          ! Input: Continuous states at t;
-                                                                      !   Output: Continuous states at t + Interval
-      TYPE(Orca_DiscreteStateType),         INTENT(INOUT) :: xd         ! Input: Discrete states at t;
-                                                                      !   Output: Discrete states at t  + Interval
-      TYPE(Orca_ConstraintStateType),       INTENT(INOUT) :: z          ! Input: Initial guess of constraint states at t+dt;
-                                                                      !   Output: Constraint states at t+dt
-      TYPE(Orca_OtherStateType),            INTENT(INOUT) :: OtherState ! Other/optimization states
-      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    ! Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                         INTENT(IN   ) :: t          !< Current simulation time in seconds
+      INTEGER(IntKi),                     INTENT(IN   ) :: n          !< Current simulation time step n = 0,1,...
+      TYPE(Orca_InputType),               INTENT(INOUT) :: u(:)       !< Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
+      REAL(DbKi),                         INTENT(IN   ) :: utimes(:)  !< Times associated with u(:), in seconds
+      TYPE(Orca_ParameterType),           INTENT(IN   ) :: p          !< Parameters
+      TYPE(Orca_ContinuousStateType),     INTENT(INOUT) :: x          !< Input: Continuous states at t;
+                                                                      !!   Output: Continuous states at t + Interval
+      TYPE(Orca_DiscreteStateType),       INTENT(INOUT) :: xd         !< Input: Discrete states at t;
+                                                                      !!   Output: Discrete states at t  + Interval
+      TYPE(Orca_ConstraintStateType),     INTENT(INOUT) :: z          !< Input: Initial guess of constraint states at t+dt;
+                                                                      !!   Output: Constraint states at t+dt
+      TYPE(Orca_OtherStateType),          INTENT(INOUT) :: OtherState !< Other states: Other states at t;
+                                                                      !!   Output: Other states at t + Interval
+      TYPE(Orca_MiscVarType),             INTENT(INOUT) :: m          !<  Misc variables for optimization (not copied in glue code)
+      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    !< Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
 
          ! Initialize ErrStat
@@ -877,87 +864,7 @@ SUBROUTINE Orca_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
 
 
 END SUBROUTINE Orca_UpdateStates
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Orca_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-! Tight coupling routine for computing derivatives of continuous states
-!..................................................................................................................................
-
-   REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-   TYPE(Orca_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-   TYPE(Orca_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   TYPE(Orca_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-   TYPE(Orca_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-   TYPE(Orca_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-   TYPE(Orca_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-   TYPE(Orca_ContinuousStateType), INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at t
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-
-   ErrStat = ErrID_None
-   ErrMsg = ""
-
-END SUBROUTINE Orca_CalcContStateDeriv
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Orca_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-! Tight coupling routine for updating discrete states
-!..................................................................................................................................
-
-      REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),               INTENT(IN   )  :: n           ! Current step of the simulation: t = n*Interval
-      TYPE(Orca_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(Orca_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(Orca_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(Orca_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at t;
-                                                                  !   Output: Discrete states at t + Interval
-      TYPE(Orca_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(Orca_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = ""
-
-
-         ! Update discrete states here:
-
-      ! StateData%DiscState =
-
-END SUBROUTINE Orca_UpdateDiscState
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Orca_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_residual, ErrStat, ErrMsg )
-! Tight coupling routine for solving for the residual of the constraint state equations
-!..................................................................................................................................
-
-      REAL(DbKi),                   INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(Orca_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
-      TYPE(Orca_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(Orca_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(Orca_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(Orca_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time (possibly a guess)
-      TYPE(Orca_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(Orca_ConstraintStateType), INTENT(  OUT)  :: z_residual  ! Residual of the constraint state equations using
-                                                                  !     the input values described above
-      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMsg  = ""
-
-
-         ! Solve for the constraint states here:
-
-      z_residual%DummyConstrState = 0.
-
-END SUBROUTINE Orca_CalcConstrStateResidual
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! WE ARE NOT YET IMPLEMENTING THE JACOBIANS...
 
 
 
@@ -1115,7 +1022,7 @@ END SUBROUTINE SetOutParam
 !End of code generated by Matlab script
 !**********************************************************************************************************************************
 
-SUBROUTINE SetAllOuts( ParamData, OutData, OtherState, ErrStat, ErrMsg )
+SUBROUTINE SetAllOuts( ParamData, OutData, m, ErrStat, ErrMsg )
 
    IMPLICIT                                              NONE
 
@@ -1124,7 +1031,7 @@ SUBROUTINE SetAllOuts( ParamData, OutData, OtherState, ErrStat, ErrMsg )
 
    TYPE(Orca_ParameterType),           INTENT(IN   )  :: ParamData            !< The parameters for Orca
    TYPE(Orca_OutputType),              INTENT(INOUT)  :: OutData              !< Outputs
-   TYPE(Orca_OtherStateType),          INTENT(INOUT)  :: OtherState           !< The OtherStates info for Orca
+   TYPE(Orca_MiscVarType),             INTENT(INOUT)  :: m                    !< The MiscVars info for Orca
    INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat              !< Error status  from this subroutine
    CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg               !< Error message from this subroutine
 
@@ -1139,26 +1046,26 @@ SUBROUTINE SetAllOuts( ParamData, OutData, OtherState, ErrStat, ErrMsg )
 
 
       ! Set the values
-   OtherState%AllOuts(  OrcaFxi  )  =  OutData%PtfmMesh%Force(1,1)/1000_ReKi
-   OtherState%AllOuts(  OrcaFyi  )  =  OutData%PtfmMesh%Force(2,1)/1000_ReKi
-   OtherState%AllOuts(  OrcaFzi  )  =  OutData%PtfmMesh%Force(3,1)/1000_ReKi
-   OtherState%AllOuts(  OrcaMxi  )  =  OutData%PtfmMesh%Moment(1,1)/1000_ReKi
-   OtherState%AllOuts(  OrcaMyi  )  =  OutData%PtfmMesh%Moment(2,1)/1000_ReKi
-   OtherState%AllOuts(  OrcaMzi  )  =  OutData%PtfmMesh%Moment(3,1)/1000_ReKi
+   m%AllOuts(  OrcaFxi  )  =  OutData%PtfmMesh%Force(1,1)/1000_ReKi
+   m%AllOuts(  OrcaFyi  )  =  OutData%PtfmMesh%Force(2,1)/1000_ReKi
+   m%AllOuts(  OrcaFzi  )  =  OutData%PtfmMesh%Force(3,1)/1000_ReKi
+   m%AllOuts(  OrcaMxi  )  =  OutData%PtfmMesh%Moment(1,1)/1000_ReKi
+   m%AllOuts(  OrcaMyi  )  =  OutData%PtfmMesh%Moment(2,1)/1000_ReKi
+   m%AllOuts(  OrcaMzi  )  =  OutData%PtfmMesh%Moment(3,1)/1000_ReKi
 
-   OtherState%AllOuts(  OrcaHMFxi  )  =  OtherState%PtfmFT(1)/1000_ReKi
-   OtherState%AllOuts(  OrcaHMFyi  )  =  OtherState%PtfmFT(2)/1000_ReKi
-   OtherState%AllOuts(  OrcaHMFzi  )  =  OtherState%PtfmFT(3)/1000_ReKi
-   OtherState%AllOuts(  OrcaHMMxi  )  =  OtherState%PtfmFT(4)/1000_ReKi
-   OtherState%AllOuts(  OrcaHMMyi  )  =  OtherState%PtfmFT(5)/1000_ReKi
-   OtherState%AllOuts(  OrcaHMMzi  )  =  OtherState%PtfmFT(6)/1000_ReKi
+   m%AllOuts(  OrcaHMFxi  )  =  m%PtfmFT(1)/1000_ReKi
+   m%AllOuts(  OrcaHMFyi  )  =  m%PtfmFT(2)/1000_ReKi
+   m%AllOuts(  OrcaHMFzi  )  =  m%PtfmFT(3)/1000_ReKi
+   m%AllOuts(  OrcaHMMxi  )  =  m%PtfmFT(4)/1000_ReKi
+   m%AllOuts(  OrcaHMMyi  )  =  m%PtfmFT(5)/1000_ReKi
+   m%AllOuts(  OrcaHMMzi  )  =  m%PtfmFT(6)/1000_ReKi
 
-   OtherState%AllOuts(  OrcaAMFxi  )  =  OtherState%F_PtfmAM(1)/1000_ReKi
-   OtherState%AllOuts(  OrcaAMFyi  )  =  OtherState%F_PtfmAM(2)/1000_ReKi
-   OtherState%AllOuts(  OrcaAMFzi  )  =  OtherState%F_PtfmAM(3)/1000_ReKi
-   OtherState%AllOuts(  OrcaAMMxi  )  =  OtherState%F_PtfmAM(4)/1000_ReKi
-   OtherState%AllOuts(  OrcaAMMyi  )  =  OtherState%F_PtfmAM(5)/1000_ReKi
-   OtherState%AllOuts(  OrcaAMMzi  )  =  OtherState%F_PtfmAM(6)/1000_ReKi
+   m%AllOuts(  OrcaAMFxi  )  =  m%F_PtfmAM(1)/1000_ReKi
+   m%AllOuts(  OrcaAMFyi  )  =  m%F_PtfmAM(2)/1000_ReKi
+   m%AllOuts(  OrcaAMFzi  )  =  m%F_PtfmAM(3)/1000_ReKi
+   m%AllOuts(  OrcaAMMxi  )  =  m%F_PtfmAM(4)/1000_ReKi
+   m%AllOuts(  OrcaAMMyi  )  =  m%F_PtfmAM(5)/1000_ReKi
+   m%AllOuts(  OrcaAMMzi  )  =  m%F_PtfmAM(6)/1000_ReKi
 
       ! Set the values for the WriteOutput array
    OutData%WriteOutput(  OrcaFxi  )  =  OutData%PtfmMesh%Force(1,1)/1000_ReKi
@@ -1168,19 +1075,19 @@ SUBROUTINE SetAllOuts( ParamData, OutData, OtherState, ErrStat, ErrMsg )
    OutData%WriteOutput(  OrcaMyi  )  =  OutData%PtfmMesh%Moment(2,1)/1000_ReKi
    OutData%WriteOutput(  OrcaMzi  )  =  OutData%PtfmMesh%Moment(3,1)/1000_ReKi
 
-   OutData%WriteOutput(  OrcaHMFxi  )  =  OtherState%PtfmFT(1)/1000_ReKi
-   OutData%WriteOutput(  OrcaHMFyi  )  =  OtherState%PtfmFT(2)/1000_ReKi
-   OutData%WriteOutput(  OrcaHMFzi  )  =  OtherState%PtfmFT(3)/1000_ReKi
-   OutData%WriteOutput(  OrcaHMMxi  )  =  OtherState%PtfmFT(4)/1000_ReKi
-   OutData%WriteOutput(  OrcaHMMyi  )  =  OtherState%PtfmFT(5)/1000_ReKi
-   OutData%WriteOutput(  OrcaHMMzi  )  =  OtherState%PtfmFT(6)/1000_ReKi
+   OutData%WriteOutput(  OrcaHMFxi  )  =  m%PtfmFT(1)/1000_ReKi
+   OutData%WriteOutput(  OrcaHMFyi  )  =  m%PtfmFT(2)/1000_ReKi
+   OutData%WriteOutput(  OrcaHMFzi  )  =  m%PtfmFT(3)/1000_ReKi
+   OutData%WriteOutput(  OrcaHMMxi  )  =  m%PtfmFT(4)/1000_ReKi
+   OutData%WriteOutput(  OrcaHMMyi  )  =  m%PtfmFT(5)/1000_ReKi
+   OutData%WriteOutput(  OrcaHMMzi  )  =  m%PtfmFT(6)/1000_ReKi
 
-   OutData%WriteOutput(  OrcaAMFxi  )  =  OtherState%F_PtfmAM(1)/1000_ReKi
-   OutData%WriteOutput(  OrcaAMFyi  )  =  OtherState%F_PtfmAM(2)/1000_ReKi
-   OutData%WriteOutput(  OrcaAMFzi  )  =  OtherState%F_PtfmAM(3)/1000_ReKi
-   OutData%WriteOutput(  OrcaAMMxi  )  =  OtherState%F_PtfmAM(4)/1000_ReKi
-   OutData%WriteOutput(  OrcaAMMyi  )  =  OtherState%F_PtfmAM(5)/1000_ReKi
-   OutData%WriteOutput(  OrcaAMMzi  )  =  OtherState%F_PtfmAM(6)/1000_ReKi
+   OutData%WriteOutput(  OrcaAMFxi  )  =  m%F_PtfmAM(1)/1000_ReKi
+   OutData%WriteOutput(  OrcaAMFyi  )  =  m%F_PtfmAM(2)/1000_ReKi
+   OutData%WriteOutput(  OrcaAMFzi  )  =  m%F_PtfmAM(3)/1000_ReKi
+   OutData%WriteOutput(  OrcaAMMxi  )  =  m%F_PtfmAM(4)/1000_ReKi
+   OutData%WriteOutput(  OrcaAMMyi  )  =  m%F_PtfmAM(5)/1000_ReKi
+   OutData%WriteOutput(  OrcaAMMzi  )  =  m%F_PtfmAM(6)/1000_ReKi
 
 
 END SUBROUTINE SetAllOuts

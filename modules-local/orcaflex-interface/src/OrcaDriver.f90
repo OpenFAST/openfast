@@ -37,7 +37,7 @@ PROGRAM OrcaDriver
    IMPLICIT NONE
 
       ! Info on this code
-   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("Orca_Driver","v1.01.00a-adp","22-Apr-2015")
+   TYPE( ProgDesc ), PARAMETER                        :: ProgInfo = ProgDesc("Orca_Driver","v1.01.00a-adp","16-Dec-2015")
    INTEGER(IntKi)                                     :: OrcaDriver_Verbose =  5  ! Verbose level.  0 = none, 5 = some, 10 = lots
 
       ! Types needed here (from Orca module)
@@ -47,7 +47,8 @@ PROGRAM OrcaDriver
    TYPE(Orca_ContinuousStateType)               :: Orca_x            ! Continous State Data  (not used here)
    TYPE(Orca_DiscreteStateType)                 :: Orca_xd           ! Discrete State Data   (not used here)
    TYPE(Orca_ConstraintStateType)               :: Orca_z            ! Constraint State Data (not used here)
-   TYPE(Orca_OtherStateType)                    :: Orca_OtherState   ! Other State Data      (Wind data is stored in here)
+   TYPE(Orca_OtherStateType)                    :: Orca_OtherState   ! Other State Data
+   TYPE(Orca_MiscVarType)                       :: Orca_m            ! Misc/optimization data
    TYPE(Orca_OutputType)                        :: Orca_y            ! Output Data -- contains the velocities at xyz -- set 1
    TYPE(Orca_InitOutputType)                    :: Orca_InitOut      ! Output Data -- contains the names and units
 
@@ -351,7 +352,7 @@ PROGRAM OrcaDriver
 
    CALL Orca_Init( Orca_InitInp, Orca_u, Orca_p, &
                Orca_x, Orca_xd, Orca_z, Orca_OtherState, &
-               Orca_y,    Settings%DT,  Orca_InitOut, ErrStat, ErrMsg )
+               Orca_y, Orca_m, Settings%DT,  Orca_InitOut, ErrStat, ErrMsg )
 
 
       ! Make sure no errors occured that give us reason to terminate now.
@@ -437,7 +438,7 @@ PROGRAM OrcaDriver
             ! Get results for Points data from Orca
          CALL Orca_CalcOutput( TimeNow,  Orca_u, Orca_p, &
                   Orca_x, Orca_xd, Orca_z, Orca_OtherState, &
-                  Orca_y, ErrStat, ErrMsg)
+                  Orca_y, Orca_m, ErrStat, ErrMsg)
 
 !debug_print_unit = 80
 !call WrNumAryFileNR(debug_print_unit,(/TimeNow/), "1x,ES15.5E3", ErrStat, ErrMsg  )
@@ -501,7 +502,7 @@ PROGRAM OrcaDriver
             ! Get results for Points data from Orca
          CALL Orca_CalcOutput( TimeNow,  Orca_u, Orca_p, &
                   Orca_x, Orca_xd, Orca_z, Orca_OtherState, &
-                  Orca_y, ErrStat, ErrMsg)
+                  Orca_y, Orca_m, ErrStat, ErrMsg)
 
 
             ! Make sure no errors occured that give us reason to terminate now.
@@ -574,14 +575,14 @@ PROGRAM OrcaDriver
 
       ! AddedMass output to command line
    IF ( SettingsFlags%AddedMass ) THEN
-      CALL AddedMassMessage( Orca_OtherState%PtfmAM, .FALSE., ErrMsgTmp, LenErrMsgTmp )         ! .FALSE. for no comment characters.  ErrMsgTmp holds the message.
+      CALL AddedMassMessage( Orca_m%PtfmAM, .FALSE., ErrMsgTmp, LenErrMsgTmp )         ! .FALSE. for no comment characters.  ErrMsgTmp holds the message.
       CALL WrScr(NewLine//TRIM(ErrMsgTmp)//NewLine)
    ENDIF
 
       ! AddedMass output to file
    IF ( SettingsFlags%AddedMassFile ) THEN
       CALL AddedMass_OutputWrite( Settings, SettingsFlags%AddedMassOutputInit, &
-            Orca_OtherState%PtfmAM, ErrStat, ErrMsg )
+            Orca_m%PtfmAM, ErrStat, ErrMsg )
          ! Make sure no errors occured that give us reason to terminate now.
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL DriverCleanup()
@@ -608,7 +609,7 @@ PROGRAM OrcaDriver
 
    CALL Orca_End( Orca_u, Orca_p, &
                   Orca_x, Orca_xd, Orca_z, Orca_OtherState, &
-                  Orca_y,    ErrStat, ErrMsg )
+                  Orca_y, Orca_m,  ErrStat, ErrMsg )
 
       ! Make sure no errors occured that give us reason to terminate now.
    IF ( ErrStat >= AbortErrLev ) THEN
