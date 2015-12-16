@@ -1994,8 +1994,8 @@ SUBROUTINE IfW_BladedFFWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrS
 
 
       ! Error Handling
-   INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat        ! determines if an error has been encountered
-   CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg         ! Message about errors
+   INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat        !< determines if an error has been encountered
+   CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg         !< Message about errors
 
 
       ! Local Variables
