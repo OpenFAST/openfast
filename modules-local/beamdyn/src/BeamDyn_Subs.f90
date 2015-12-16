@@ -29,7 +29,7 @@ CONTAINS
 !> This subroutine determines the (N+1) Gauss-Lobatto-Legendre points x and weights w
 !!
 !! For details, see
-!! @book{Deville-etal:2002,
+!! \@book{Deville-etal:2002,
 !!  author =    {M. O. Deville and P. F. Fischer and E. H. Mund},
 !!  title =     {High-Order Methods for Incompressible Fluid Flow},
 !!  publisher = {Cambridge University Press},

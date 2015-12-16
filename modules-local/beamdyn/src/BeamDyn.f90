@@ -1394,8 +1394,8 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
    TYPE(BD_OtherStateType),         INTENT(INOUT) :: OtherState !< Other states: Other states at t;
                                                                 !!   Output: Other states at t + dt
    TYPE(BD_MiscVarType),            INTENT(INOUT) :: m          !< misc/optimization variables
-   INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat    ! Error status of the operation
-   CHARACTER(*),                    INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
    
    
@@ -3229,7 +3229,7 @@ contains
 END SUBROUTINE BD_GenerateDynamicElementForce
 !-----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine calculates the finite-element nodal forces along the beam
-!! Nodal forces = C \dot{u} + K u
+!! Nodal forces = \f$C \dot{u} + K u\f$
 SUBROUTINE BD_DynamicSolutionForce(uuN,vvN,aaN,                                   &
                                    Stif0,Mass0,u,                                 &
                                    damp_flag,beta,                                &
