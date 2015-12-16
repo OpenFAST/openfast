@@ -101,8 +101,8 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OutData, MiscV
 
 
       ! Error handling
-   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           ! determines if an error has been encountered
-   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            ! A message about the error
+   INTEGER(IntKi),                              INTENT(  OUT)  :: ErrStat           !< determines if an error has been encountered
+   CHARACTER(*),                                INTENT(  OUT)  :: ErrMsg            !< A message about the error
 
       ! local variables
 
