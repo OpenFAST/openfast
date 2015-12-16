@@ -49,6 +49,7 @@ PROGRAM BeamDyn_Driver_Program
    TYPE(BD_DiscreteStateType)       :: BD_DiscreteState
    TYPE(BD_ConstraintStateType)     :: BD_ConstraintState
    TYPE(BD_OtherStateType)          :: BD_OtherState
+   TYPE(BD_MiscVarType)             :: BD_MiscVar
    TYPE(BD_InputType) ,ALLOCATABLE  :: BD_Input(:)
    REAL(DbKi),         ALLOCATABLE  :: BD_InputTimes(:)
    TYPE(BD_OutputType),ALLOCATABLE  :: BD_Output(:)
@@ -108,6 +109,7 @@ PROGRAM BeamDyn_Driver_Program
                    , BD_ConstraintState  &
                    , BD_OtherState       &
                    , BD_Output(1)        &
+                   , BD_MiscVar          &
                    , dt_global           &
                    , BD_InitOutput       &
                    , ErrStat             &
@@ -149,7 +151,7 @@ PROGRAM BeamDyn_Driver_Program
 
      CALL BD_CalcOutput( t_global, BD_Input(2), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
                              BD_ConstraintState, &
-                             BD_OtherState,  BD_Output(2), ErrStat, ErrMsg)
+                             BD_OtherState,  BD_Output(2), BD_MiscVar, ErrStat, ErrMsg)
         CALL CheckError()
 
      CALL Dvr_WriteOutputLine(t_global,DvrOut,BD_Parameter%OutFmt,BD_Output(2),ErrStat,ErrMsg)
@@ -160,7 +162,7 @@ PROGRAM BeamDyn_Driver_Program
      CALL BD_UpdateStates( t_global, n_t_global, BD_Input, BD_InputTimes, BD_Parameter, &
                                BD_ContinuousState, &
                                BD_DiscreteState, BD_ConstraintState, &
-                               BD_OtherState, ErrStat, ErrMsg )
+                               BD_OtherState, BD_MiscVar, ErrStat, ErrMsg )
         CALL CheckError()
 
       t_global = REAL(n_t_global+1,DbKi) * dt_global + t_initial
@@ -187,7 +189,7 @@ CONTAINS
 
       DO i=1,BD_interp_order + 1
           CALL BD_End( BD_Input(i), BD_Parameter, BD_ContinuousState, BD_DiscreteState, &
-                           BD_ConstraintState, BD_OtherState, BD_Output(i), ErrStat2, ErrMsg2 )
+                           BD_ConstraintState, BD_OtherState, BD_Output(i), BD_MiscVar, ErrStat2, ErrMsg2 )
       ENDDO 
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
