@@ -1370,6 +1370,9 @@ SUBROUTINE BD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    CALL BD_DestroyConstrState( z,           ErrStat, ErrMsg )
    CALL BD_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
 
+   ! Destroy misc data
+   CALL BD_DestroyMisc(  m,  ErrStat, ErrMsg )
+   
    ! Destroy the output data:
 
    CALL BD_DestroyOutput( y, ErrStat, ErrMsg )
