@@ -99,44 +99,59 @@ typedef   ^                            HD_ModuleMapType              MeshMapType
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 #
-typedef   ^                            ContinuousStateType           WAMIT_ContinuousStateType            WAMIT               -          -          -         "continuous states from the State Space radiation module"        -
-typedef   ^                            ContinuousStateType           WAMIT2_ContinuousStateType           WAMIT2              -          -          -         "continuous states from the State Space radiation module"        -
-typedef   ^                            ContinuousStateType           Waves2_ContinuousStateType           Waves2              -          -          -         "continuous states from the State Space radiation module"        -
+typedef   ^                            ContinuousStateType           WAMIT_ContinuousStateType            WAMIT               -          -          -         "continuous states from the wamit module"        -
+typedef   ^                            ContinuousStateType           WAMIT2_ContinuousStateType           WAMIT2              -          -          -         "continuous states from the wamit2 module"        -
+typedef   ^                            ContinuousStateType           Waves2_ContinuousStateType           Waves2              -          -          -         "continuous states from the waves2 module"        -
+typedef   ^                            ContinuousStateType           Morison_ContinuousStateType          Morison             -          -          -         "continuous states from the Morison module"        -
 #
 #
 # Define discrete (nondifferentiable) states here:
 #
-typedef   ^                            DiscreteStateType             WAMIT_DiscreteStateType              WAMIT               -          -          -         "discrete states from the convolution radiation module"        -
-typedef   ^                            DiscreteStateType             WAMIT2_DiscreteStateType             WAMIT2              -          -          -         "discrete states from the convolution radiation module"        -
+typedef   ^                            DiscreteStateType             WAMIT_DiscreteStateType              WAMIT               -          -          -         "discrete states from the wamit module"        -
+typedef   ^                            DiscreteStateType             WAMIT2_DiscreteStateType             WAMIT2              -          -          -         "discrete states from the wamit2 module"        -
 #typedef   ^                            DiscreteStateType             FIT_DiscreteStateType                FIT                 -          -          -         "discrete states from the FIT module"        -
-typedef   ^                            DiscreteStateType             Waves2_DiscreteStateType             Waves2              -          -          -         "discrete states from the convolution radiation module"        -
+typedef   ^                            DiscreteStateType             Waves2_DiscreteStateType             Waves2              -          -          -         "discrete states from the waves2 module"        -
+typedef   ^                            DiscreteStateType             Morison_DiscreteStateType            Morison             -          -          -         "discrete states from the Morison module"        -
 #
 #
 # Define constraint states here:
 #
-typedef   ^                            ConstraintStateType           SiKi                     DummyConstrState                -          -          -         "Remove this variable if you have constraint states"        -
+typedef   ^                            ConstraintStateType           WAMIT_ConstraintStateType           WAMIT  -          -          -                      "constraint states from WAMIT (may be empty)"        -
+typedef   ^                            ConstraintStateType           WAMIT2_ConstraintStateType          WAMIT2 -          -          -                      "constraint states from WAMIT2 (may be empty)"        -
+typedef   ^                            ConstraintStateType           Waves2_ConstraintStateType          Waves2 -          -          -                      "constraint states from the waves2 module"        -
+typedef   ^                            ConstraintStateType           Morison_ConstraintStateType         Morison -         -          -                      "constraint states from the Morison module"        -
 #
 #
-# Define any data that are not considered actual states here:
-#   e.g. data used only for efficiency purposes (indices for searching in an array,  copies of previous calculations of output at a given time, etc.)
+# Define any other states here:
 #
 typedef   ^                            OtherStateType                WAMIT_OtherStateType     WAMIT                           -          -          -         "OtherState information from the WAMIT module"   -
 typedef   ^                            OtherStateType                WAMIT2_OtherStateType    WAMIT2                          -          -          -         "OtherState information from the WAMIT2 module"   -
 #typedef   ^                            OtherStateType                FIT_OtherStateType       FIT                             -          -          -         "OtherState information from the FIT module"   -
 typedef   ^                            OtherStateType                Waves2_OtherStateType    Waves2                          -          -          -         "OtherState information from the Waves2 module"   -
 typedef   ^                            ^                             Morison_OtherStateType   Morison                         -          -          -         "OtherState information from the Morison module"   -
-typedef   ^                            OtherStateType                INTEGER                  LastIndWave                     -          -          -         "The last index used in the wave kinematics arrays, used to optimize interpolation"   -
-typedef   ^                            ^                             ReKi                     F_PtfmAdd                       {6}        -          -         "The total forces and moments due to additional pre-load, stiffness, and damping"   -
-typedef   ^                            ^                             ReKi                     F_Hydro                         {6}        -          -         "The total hydrodynamic forces and moments integrated about the WAMIT reference point"   -
-typedef   ^                            ^                             ReKi                     F_Waves                         {6}        -          -         "The total waves forces on a WAMIT body calculated by first and second order methods (WAMIT and WAMIT2 modules)"   -
-typedef   ^                            ^                             MeshType                 y_mapped                        -          -          -         "An intermediate mesh used to transfer hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef   ^                            MiscVarType                   MeshType                 y_mapped                        -          -          -         "An intermediate mesh used to transfer hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
 typedef   ^                            ^                             MeshType                 AllHdroOrigin_position          -          -          -         "A motions mesh which has all translational displacements set to zero.  Used in the transfer of hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
 typedef   ^                            ^                             MeshType                 MrsnLumpedMesh_position         -          -          -         "A motions mesh which has all translational displacements set to zero.  Used in the transfer of hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
 typedef   ^                            ^                             MeshType                 MrsnDistribMesh_position        -          -          -         "A motions mesh which has all translational displacements set to zero.  Used in the transfer of hydrodynamic loads from the various HD-related meshes to the AllHdroOrigin mesh" -
-typedef   ^                            ^                             HD_ModuleMapType         HD_MeshMap
+typedef   ^                            ^                             HD_ModuleMapType         HD_MeshMap                      -          -          -
 typedef   ^                            ^                             INTEGER                  Decimate                        -          -          -         "The output decimation counter" -
 typedef   ^                            ^                             DbKi                     LastOutTime                     -          -          -         "Last time step which was written to the output file (sec)"    -
-#typedef   ^                            ^                             ReKi                     WriteOutput                    {:}         -          -         "Write output buffer; used to prevent writing of multiples of the same time step."  -
+typedef   ^                            ^                             INTEGER                  LastIndWave                     -          -          -         "The last index used in the wave kinematics arrays, used to optimize interpolation"   -
+typedef   ^                            ^                             ReKi                     F_PtfmAdd                       {6}        -          -         "The total forces and moments due to additional pre-load, stiffness, and damping"   -
+typedef   ^                            ^                             ReKi                     F_Hydro                         {6}        -          -         "The total hydrodynamic forces and moments integrated about the WAMIT reference point"   -
+typedef   ^                            ^                             ReKi                     F_Waves                         {6}        -          -         "The total waves forces on a WAMIT body calculated by first and second order methods (WAMIT and WAMIT2 modules)"   -
+typedef   ^                            ^                             WAMIT_MiscVarType        WAMIT                           -          -          -          "misc var information from the WAMIT module"   -
+typedef   ^                            ^                             WAMIT2_MiscVarType       WAMIT2                          -          -          -         "misc var information from the WAMIT2 module"   -
+typedef   ^                            ^                             Waves2_MiscVarType       Waves2                          -          -          -         "misc var information from the Waves2 module"   -
+typedef   ^                            ^                             Morison_MiscVarType      Morison                         -          -          -         "misc var information from the Morison module"   -
+typedef   ^                            ^                             WAMIT_InputType          u_WAMIT                           -          -          -         "WAMIT module inputs" -
+typedef   ^                            ^                             WAMIT2_InputType         u_WAMIT2                        -          -          -         "WAMIT2 module inputs" -
+typedef   ^                            ^                             Waves2_InputType         u_Waves2                        -          -          -         "Waves2 module inputs" -
+
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
@@ -171,10 +186,7 @@ typedef   ^                            ^                             INTEGER    
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
 #
-typedef   ^                            InputType                     WAMIT_InputType          WAMIT                           -          -          -         "WAMIT module inputs" -
-typedef   ^                            InputType                     WAMIT2_InputType         WAMIT2                          -          -          -         "WAMIT2 module inputs" -
-typedef   ^                            InputType                     Waves2_InputType         Waves2                          -          -          -         "Waves2 module inputs" -
-typedef   ^                            ^                             Morison_InputType        Morison                         -          -          -         "Morison module inputs" -
+typedef   ^                            InputType                     Morison_InputType        Morison                         -          -          -         "Morison module inputs" -
 typedef   ^                            InputType                     MeshType                 Mesh                            -          -          -         "Displacements at the WAMIT reference point in the inertial frame" -
 #
 #

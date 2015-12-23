@@ -1,12 +1,9 @@
 !**********************************************************************************************************************************
 ! The Morison and Morison_Types modules make up a template for creating user-defined calculations in the FAST Modularization 
-! Framework. Morisons_Types will be auto-generated based on a description of the variables for the module.
-!
-! "Morison" should be replaced with the name of your module. Example: HydroDyn
-! "Morison" (in Morison_*) should be replaced with the module name or an abbreviation of it. Example: HD
+! Framework. Morison_Types will be auto-generated based on a description of the variables for the module.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2012  National Renewable Energy Laboratory
+! Copyright (C) 2012-2015  National Renewable Energy Laboratory
 !
 !    This file is part of Morison.
 !
@@ -38,8 +35,7 @@ MODULE Morison
    
    PRIVATE
 
-!   INTEGER(IntKi), PARAMETER            :: DataFormatID = 1   ! Update this value if the data types change (used in Morison_Pack)
-   TYPE(ProgDesc), PARAMETER            :: Morison_ProgDesc = ProgDesc( 'Morison', 'v1.00.01', '1-Apr-2013' )
+   TYPE(ProgDesc), PARAMETER            :: Morison_ProgDesc = ProgDesc( 'Morison', 'v1.01.00', '23-Dec-2015' )
 
    
       ! ..... Public Subroutines ...................................................................................................
@@ -56,17 +52,6 @@ MODULE Morison
    PUBLIC :: Morison_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: Morison_UpdateDiscState                ! Tight coupling routine for updating discrete states
       
-   !PUBLIC :: Morison_JacobianPInput                 ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
-   !PUBLIC :: Morison_JacobianPContState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the continuous 
-   !                                                 !   states (x)
-   !PUBLIC :: Morison_JacobianPDiscState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the discrete 
-   !                                                 !   states (xd)
-   !PUBLIC :: Morison_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the constraint 
-                                                    !   states (z)
    
    
 CONTAINS
@@ -3195,7 +3180,6 @@ subroutine ComputeDistributedLoadsAtNode( elementWaterState, densWater, JointZPo
    REAL(ReKi),                             INTENT(   OUT )  ::  D_AM_M(6,6)                   ! Added mass of member
    
    REAL(ReKi),                             INTENT(   OUT )  ::  D_dragConst                   ! 
-   !bjj: this is only size 3: REAL(ReKi),                             INTENT(   OUT )  ::  D_F_I(6)                      ! Inertial force associated with the member
    REAL(ReKi),                             INTENT(   OUT )  ::  D_F_I(3)                      ! Inertial force associated with the member
    INTEGER,                                INTENT(   OUT )  ::  ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                           INTENT(   OUT )  ::  ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -3986,30 +3970,31 @@ SUBROUTINE Morison_ProcessMorisonGeometry( InitInp, ErrStat, ErrMsg )
 END SUBROUTINE Morison_ProcessMorisonGeometry
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
-! This routine is called at the start of the simulation to perform initialization steps. 
-! The parameters are set here and not changed during the simulation.
-! The initial states and initial guess for the input are defined.
+!> This routine is called at the start of the simulation to perform initialization steps. 
+!! The parameters are set here and not changed during the simulation.
+!! The initial states and initial guess for the input are defined.
+SUBROUTINE Morison_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(Morison_InitInputType),       INTENT(INOUT)  :: InitInp     ! Input data for initialization routine !intent out because of MOVE_ALLOC
-      TYPE(Morison_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
-      TYPE(Morison_ParameterType),       INTENT(  OUT)  :: p           ! Parameters      
-      TYPE(Morison_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
-      TYPE(Morison_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
-      TYPE(Morison_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-      TYPE(Morison_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states            
-      TYPE(Morison_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated; 
-                                                                       !   only the output mesh is initialized)
-      REAL(DbKi),                        INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that 
-                                                                       !   (1) Morison_UpdateStates() is called in loose coupling &
-                                                                       !   (2) Morison_UpdateDiscState() is called in tight coupling.
-                                                                       !   Input is the suggested time from the glue code; 
-                                                                       !   Output is the actual coupling interval that will be used 
-                                                                       !   by the glue code.
-      TYPE(Morison_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(Morison_InitInputType),       INTENT(INOUT)  :: InitInp     !< Input data for initialization routine !intent out because of MOVE_ALLOC
+      TYPE(Morison_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
+      TYPE(Morison_ParameterType),       INTENT(  OUT)  :: p           !< Parameters      
+      TYPE(Morison_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
+      TYPE(Morison_DiscreteStateType),   INTENT(  OUT)  :: xd          !< Initial discrete states
+      TYPE(Morison_ConstraintStateType), INTENT(  OUT)  :: z           !< Initial guess of the constraint states
+      TYPE(Morison_OtherStateType),      INTENT(  OUT)  :: OtherState  !< Initial other states            
+      TYPE(Morison_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated; 
+                                                                       !!   only the output mesh is initialized)
+      TYPE(Morison_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables            
+      REAL(DbKi),                        INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that 
+                                                                       !!   (1) Morison_UpdateStates() is called in loose coupling &
+                                                                       !!   (2) Morison_UpdateDiscState() is called in tight coupling.
+                                                                       !!   Input is the suggested time from the glue code; 
+                                                                       !!   Output is the actual coupling interval that will be used 
+                                                                       !!   by the glue code.
+      TYPE(Morison_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       
      ! TYPE(Morison_InitInputType)                       :: InitLocal   ! Local version of the input data for the geometry processing routine
@@ -4152,16 +4137,17 @@ IF (ALLOCATED(InitInp%JOutLst) ) &
       x%DummyContState           = 0
       xd%DummyDiscState          = 0
       z%DummyConstrState         = 0
-      OtherState%LastIndWave     = 1
+      OtherState%DummyOtherState = 0
+      m%LastIndWave              = 1
 
    IF ( p%OutSwtch > 0 ) THEN
-      ALLOCATE ( OtherState%D_F_D(3,y%DistribMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%D_F_D(3,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_F_D array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ALLOCATE ( OtherState%D_F_I(3,y%DistribMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%D_F_I(3,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_F_I array.'
          ErrStat = ErrID_Fatal
@@ -4170,86 +4156,86 @@ IF (ALLOCATED(InitInp%JOutLst) ) &
       
            
       
-      ALLOCATE ( OtherState%D_F_AM(6,y%DistribMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%D_F_AM(6,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_F_AM array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ALLOCATE ( OtherState%D_F_AM_M(6,y%DistribMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%D_F_AM_M(6,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_F_AM_M array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ALLOCATE ( OtherState%D_F_AM_MG(6,y%DistribMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%D_F_AM_MG(6,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_F_AM_MG array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ALLOCATE ( OtherState%D_F_AM_F(6,y%DistribMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%D_F_AM_F(6,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_F_AM_F array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ALLOCATE ( OtherState%D_FV(3,y%DistribMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%D_FV(3,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_FV array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ALLOCATE ( OtherState%D_FA(3,y%DistribMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%D_FA(3,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_FA array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ALLOCATE ( OtherState%D_FDynP(y%DistribMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%D_FDynP(y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_FDynP array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
       
-      ALLOCATE ( OtherState%L_F_D(3,y%LumpedMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%L_F_D(3,y%LumpedMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for L_F_D array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ALLOCATE ( OtherState%L_F_I(6,y%LumpedMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%L_F_I(6,y%LumpedMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for L_F_I array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ALLOCATE ( OtherState%L_F_DP(6,y%LumpedMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%L_F_DP(6,y%LumpedMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for L_F_DP array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ALLOCATE ( OtherState%L_FV(3,y%LumpedMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%L_FV(3,y%LumpedMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for L_FV array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ALLOCATE ( OtherState%L_FA(3,y%LumpedMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%L_FA(3,y%LumpedMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for L_FA array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ALLOCATE ( OtherState%L_FDynP(y%LumpedMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%L_FDynP(y%LumpedMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for L_FDynP array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      ALLOCATE ( OtherState%L_F_AM(6,y%LumpedMesh%Nnodes), STAT = ErrStat )
+      ALLOCATE ( m%L_F_AM(6,y%LumpedMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for L_F_AM array.'
          ErrStat = ErrID_Fatal
@@ -4299,19 +4285,20 @@ END SUBROUTINE Morison_Init
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Morison_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-! This routine is called at the end of the simulation.
+!> This routine is called at the end of the simulation.
+SUBROUTINE Morison_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(Morison_InputType),           INTENT(INOUT)  :: u           ! System inputs
-      TYPE(Morison_ParameterType),       INTENT(INOUT)  :: p           ! Parameters     
-      TYPE(Morison_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
-      TYPE(Morison_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
-      TYPE(Morison_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-      TYPE(Morison_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states            
-      TYPE(Morison_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(Morison_InputType),           INTENT(INOUT)  :: u           !< System inputs
+      TYPE(Morison_ParameterType),       INTENT(INOUT)  :: p           !< Parameters     
+      TYPE(Morison_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
+      TYPE(Morison_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
+      TYPE(Morison_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
+      TYPE(Morison_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states            
+      TYPE(Morison_OutputType),          INTENT(INOUT)  :: y           !< System outputs
+      TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
 
@@ -4352,6 +4339,7 @@ SUBROUTINE Morison_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       CALL Morison_DestroyConstrState( z,           ErrStat, ErrMsg )
       CALL Morison_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
          
+      CALL Morison_DestroyMisc( m, ErrStat, ErrMsg )
 
          ! Destroy the output data:
          
@@ -4362,29 +4350,28 @@ SUBROUTINE Morison_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
 END SUBROUTINE Morison_End
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Morison_UpdateStates( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
-! Constraint states are solved for input Time; Continuous and discrete states are updated for Time + Interval
+!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other 
+!! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
+SUBROUTINE Morison_UpdateStates( Time, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
    
-      REAL(DbKi),                         INTENT(IN   ) :: Time        ! Current simulation time in seconds
-      TYPE(Morison_InputType),            INTENT(IN   ) :: u           ! Inputs at Time                    
-      TYPE(Morison_ParameterType),        INTENT(IN   ) :: p           ! Parameters                              
-      TYPE(Morison_ContinuousStateType),  INTENT(INOUT) :: x           ! Input: Continuous states at Time; 
-                                                                       !   Output: Continuous states at Time + Interval
-      TYPE(Morison_DiscreteStateType),    INTENT(INOUT) :: xd          ! Input: Discrete states at Time; 
-                                                                       !   Output: Discrete states at Time  + Interval
-      TYPE(Morison_ConstraintStateType),  INTENT(INOUT) :: z           ! Input: Initial guess of constraint states at Time;
-                                                                       !   Output: Constraint states at Time
-      TYPE(Morison_OtherStateType),       INTENT(INOUT) :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat     ! Error status of the operation     
-      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                         INTENT(IN   ) :: Time        !< Current simulation time in seconds
+      TYPE(Morison_InputType),            INTENT(IN   ) :: u           !< Inputs at Time                    
+      TYPE(Morison_ParameterType),        INTENT(IN   ) :: p           !< Parameters                              
+      TYPE(Morison_ContinuousStateType),  INTENT(INOUT) :: x           !< Input: Continuous states at Time; 
+                                                                       !!   Output: Continuous states at Time + Interval
+      TYPE(Morison_DiscreteStateType),    INTENT(INOUT) :: xd          !< Input: Discrete states at Time; 
+                                                                       !!   Output: Discrete states at Time + Interval
+      TYPE(Morison_ConstraintStateType),  INTENT(INOUT) :: z           !< Input: Constraint states at Time;
+                                                                       !!   Output: Constraint states at Time + Interval
+      TYPE(Morison_OtherStateType),       INTENT(INOUT) :: OtherState  !< Input: Other states at Time;
+                                                                       !!   Output: Other states at Time + Interval
+      TYPE(Morison_MiscVarType),          INTENT(INOUT) :: m           !< Misc/optimization variables            
+      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat     !< Error status of the operation     
+      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
          ! Local variables
-         
-      TYPE(Morison_ContinuousStateType)                 :: dxdt        ! Continuous state derivatives at Time
-      TYPE(Morison_ConstraintStateType)                 :: z_Residual  ! Residual of the constraint state equations (Z)
-         
+                  
       INTEGER(IntKi)                                    :: ErrStat2    ! Error status of the operation (occurs after initial error)
       CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
                         
@@ -4395,91 +4382,27 @@ SUBROUTINE Morison_UpdateStates( Time, u, p, x, xd, z, OtherState, ErrStat, ErrM
       
            
       
-         ! Solve for the constraint states (z) here:
-                           
-         ! Check if the z guess is correct and update z with a new guess.
-         ! Iterate until the value is within a given tolerance. 
-                                    
-      CALL Morison_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_Residual, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) THEN      
-         CALL Morison_DestroyConstrState( z_Residual, ErrStat2, ErrMsg2)
-         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
-         RETURN      
-      END IF
-         
-      ! DO WHILE ( z_Residual% > tolerance )
-      !
-      !  z = 
-      !
-      !  CALL Morison_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_Residual, ErrStat, ErrMsg )
-      !  IF ( ErrStat >= AbortErrLev ) THEN      
-      !     CALL Morison_DestroyConstrState( z_Residual, ErrStat2, ErrMsg2)
-      !     ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
-      !     RETURN      
-      !  END IF
-      !           
-      ! END DO         
-      
-      
-         ! Destroy z_Residual because it is not necessary for the rest of the subroutine:
-            
-      CALL Morison_DestroyConstrState( z_Residual, ErrStat, ErrMsg)
-      IF ( ErrStat >= AbortErrLev ) RETURN      
-         
-         
-         
-         ! Get first time derivatives of continuous states (dxdt):
-      
-      CALL Morison_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-      IF ( ErrStat >= AbortErrLev ) THEN      
-         CALL Morison_DestroyContState( dxdt, ErrStat2, ErrMsg2)
-         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
-         RETURN
-      END IF
-               
-               
-         ! Update discrete states:
-         !   Note that xd [discrete state] is changed in Morison_UpdateDiscState(), so Morison_CalcOutput(),  
-         !   Morison_CalcContStateDeriv(), and Morison_CalcConstrStates() must be called first (see above).
-      
-      CALL Morison_UpdateDiscState(Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )   
-      IF ( ErrStat >= AbortErrLev ) THEN      
-         CALL Morison_DestroyContState( dxdt, ErrStat2, ErrMsg2)
-         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
-         RETURN      
-      END IF
-         
-         
-         ! Integrate (update) continuous states (x) here:
-         
-      !x = function of dxdt and x
 
-
-         ! Destroy dxdt because it is not necessary for the rest of the subroutine
-            
-      CALL Morison_DestroyContState( dxdt, ErrStat, ErrMsg)
-      IF ( ErrStat >= AbortErrLev ) RETURN      
-     
-   
       
 END SUBROUTINE Morison_UpdateStates
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )   
-! Routine for computing outputs, used in both loose and tight coupling.
+!> Routine for computing outputs, used in both loose and tight coupling.
+SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(Morison_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
-      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(Morison_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(Morison_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(Morison_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(Morison_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(Morison_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at Time (Input only so that mesh con-
-                                                                       !   nectivity information does not have to be recalculated)
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds
+      TYPE(Morison_InputType),           INTENT(IN   )  :: u           !< Inputs at Time
+      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(Morison_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(Morison_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(Morison_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(Morison_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time
+      TYPE(Morison_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at Time (Input only so that mesh con-
+                                                                       !!   nectivity information does not have to be recalculated)
+      TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       REAL(ReKi)                                        :: F_D(6), F_DP(6), D_F_I(3), kvec(3), v(3),  vf(3), vrel(3), vmag
       INTEGER                                           :: I, J, K, nodeIndx, elementWaterState
@@ -4502,7 +4425,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
       
          ! Compute outputs here:
       
-      ! We need to attach the distributed drag force (D_F_D), distributed inertial force (D_F_I), and distributed dynamic pressure force (D_F_DP) to the OtherState type so that we don't need to
+      ! We need to attach the distributed drag force (D_F_D), distributed inertial force (D_F_I), and distributed dynamic pressure force (D_F_DP) to the Misc type so that we don't need to
       ! allocate their data storage at each time step!  If we could make them static local variables (like in C) then we could avoid adding them to the OtherState datatype.  
       ! The same is true for the lumped drag (L_F_D) and the lumped dynamic pressure (L_F_DP)
          
@@ -4515,21 +4438,21 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
             ! NOTE: This will find the closest WaveTime index (wvIndx) which is has waveTime(wvIndx) > = Time.  If WaveDT = DT then waveTime(wvIndx) will equal Time
             ! For WaveMod = 6 or WaveMod = 5 WaveDT must equal DT for the returned value of elementWaterState to be meaningful, for other WaveMod, 
             ! elementWaterState is the same for all time for a given node, J.
-        elementWaterState = InterpWrappedStpInt( REAL(Time, SiKi), p%WaveTime(:), p%elementWaterState(:,J), OtherState%LastIndWave, p%NStepWave + 1 )
+        elementWaterState = InterpWrappedStpInt( REAL(Time, SiKi), p%WaveTime(:), p%elementWaterState(:,J), m%LastIndWave, p%NStepWave + 1 )
          
          
          ! Determine the dynamic pressure at the marker
-         OtherState%D_FDynP(J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveDynP0(:,nodeIndx), &
-                                    OtherState%LastIndWave, p%NStepWave + 1 )
+         m%D_FDynP(J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveDynP0(:,nodeIndx), &
+                                    m%LastIndWave, p%NStepWave + 1 )
          
             
          DO I=1,3
                ! Determine the fluid acceleration and velocity at the marker
-            OtherState%D_FA(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveAcc0(:,nodeIndx,I), &
-                                    OtherState%LastIndWave, p%NStepWave + 1       )
-            OtherState%D_FV(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVel0(:,nodeIndx,I), &
-                                    OtherState%LastIndWave, p%NStepWave + 1       )
-            vrel(I) =  OtherState%D_FV(I,J) - u%DistribMesh%TranslationVel(I,J)
+            m%D_FA(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveAcc0(:,nodeIndx,I), &
+                                    m%LastIndWave, p%NStepWave + 1       )
+            m%D_FV(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVel0(:,nodeIndx,I), &
+                                    m%LastIndWave, p%NStepWave + 1       )
+            vrel(I) =  m%D_FV(I,J) - u%DistribMesh%TranslationVel(I,J)
          END DO
          
             ! (k x vrel x k)
@@ -4545,18 +4468,18 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
                            p%nodes(I)%PropPot, p%nodes(nodeIndx)%R, p%nodes(nodeIndx)%dRdz, p%nodes(nodeIndx)%t, p%nodes(nodeIndx)%tMG, &
                            p%nodes(nodeIndx)%MGdensity, p%nodes(nodeIndx)%R_LToG, p%nodes(nodeIndx)%Ca, p%nodes(nodeIndx)%Cp, &
                            p%nodes(nodeIndx)%AxCa, p%nodes(nodeIndx)%AxCp, p%nodes(nodeIndx)%Cd, &
-                           OtherState%D_FA(:,J), OtherState%D_FDynP(J), p%D_dragConst(J), &
+                           m%D_FA(:,J), m%D_FDynP(J), p%D_dragConst(J), &
                            D_AM_M, D_dragConst, D_F_I, ErrStat, ErrMsg )   
         
                            
             ! Distributed added mass loads
             
          qdotdot              = reshape((/u%DistribMesh%TranslationAcc(:,J),u%DistribMesh%RotationAcc(:,J)/),(/6/))   
-         OtherState%D_F_AM_MG(:,J) = -matmul( p%D_AM_MG(:,:,J), qdotdot )  !bjj: these lines take up a lot of time. are the matrices sparse?
-         !OtherState%D_F_AM_M(:,J)  = -matmul( p%D_AM_M(:,:,J) , qdotdot )  !bjj: these lines take up a lot of time. are the matrices sparse?
-         OtherState%D_F_AM_M(:,J)  = -matmul( D_AM_M, qdotdot )  !bjj: these lines take up a lot of time. are the matrices sparse?
-         OtherState%D_F_AM_F(:,J)  = -matmul( p%D_AM_F(:,:,J) , qdotdot )  !bjj: these lines take up a lot of time. are the matrices sparse?
-         OtherState%D_F_AM(:,J)    = OtherState%D_F_AM_M(:,J) + OtherState%D_F_AM_MG(:,J) + OtherState%D_F_AM_F(:,J)    ! vector-based addition
+         m%D_F_AM_MG(:,J) = -matmul( p%D_AM_MG(:,:,J), qdotdot )  !bjj: these lines take up a lot of time. are the matrices sparse?
+         !m%D_F_AM_M(:,J)  = -matmul( p%D_AM_M(:,:,J) , qdotdot )  !bjj: these lines take up a lot of time. are the matrices sparse?
+         m%D_F_AM_M(:,J)  = -matmul( D_AM_M, qdotdot )  !bjj: these lines take up a lot of time. are the matrices sparse?
+         m%D_F_AM_F(:,J)  = -matmul( p%D_AM_F(:,:,J) , qdotdot )  !bjj: these lines take up a lot of time. are the matrices sparse?
+         m%D_F_AM(:,J)    = m%D_F_AM_M(:,J) + m%D_F_AM_MG(:,J) + m%D_F_AM_F(:,J)    ! vector-based addition
          
         
          
@@ -4568,26 +4491,26 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
          DO I=1,6
             
             
-           ! OtherState%D_F_DP(I,J)   = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%D_F_DP(:,I,J), &
-           !                         OtherState%LastIndWave, p%NStepWave + 1       )
+           ! m%D_F_DP(I,J)   = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%D_F_DP(:,I,J), &
+           !                         m%LastIndWave, p%NStepWave + 1       )
             IF (I < 4 ) THEN
                   ! We are now combining the dynamic pressure term into the inertia term
-               OtherState%D_F_I(I,J) = D_F_I(I)
-               !OtherState%D_F_I(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%D_F_I(:,I,J), &
-               !                     OtherState%LastIndWave, p%NStepWave + 1       ) !+ OtherState%D_F_DP(I,J)
+               m%D_F_I(I,J) = D_F_I(I)
+               !m%D_F_I(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%D_F_I(:,I,J), &
+               !                     m%LastIndWave, p%NStepWave + 1       ) !+ m%D_F_DP(I,J)
                
                ! TODO: Verify the following 9/29/13 GJH
-               OtherState%D_F_D(I,J) = vmag*v(I) * D_dragConst
-               !OtherState%D_F_D(I,J) = vmag*v(I) * p%D_dragConst(J)
+               m%D_F_D(I,J) = vmag*v(I) * D_dragConst
+               !m%D_F_D(I,J) = vmag*v(I) * p%D_dragConst(J)
                
-               !y%DistribMesh%Force(I,J) = OtherState%D_F_D(I,J)  + OtherState%D_F_I(I,J) + p%D_F_B(I,J) + OtherState%D_F_DP(I,J) + p%D_F_MG(I,J) + p%D_F_BF(I,J)
-               y%DistribMesh%Force(I,J) = OtherState%D_F_AM(I,J) + OtherState%D_F_D(I,J)  + OtherState%D_F_I(I,J) + p%D_F_B(I,J) +  p%D_F_MG(I,J) + p%D_F_BF(I,J)
-               !y%DistribMesh%Force(I,J) =  OtherState%D_F_D(I,J)  + OtherState%D_F_I(I,J) +  OtherState%D_F_DP(I,J) + p%D_F_MG(I,J) 
+               !y%DistribMesh%Force(I,J) = m%D_F_D(I,J)  + m%D_F_I(I,J) + p%D_F_B(I,J) + m%D_F_DP(I,J) + p%D_F_MG(I,J) + p%D_F_BF(I,J)
+               y%DistribMesh%Force(I,J) = m%D_F_AM(I,J) + m%D_F_D(I,J)  + m%D_F_I(I,J) + p%D_F_B(I,J) +  p%D_F_MG(I,J) + p%D_F_BF(I,J)
+               !y%DistribMesh%Force(I,J) =  m%D_F_D(I,J)  + m%D_F_I(I,J) +  m%D_F_DP(I,J) + p%D_F_MG(I,J) 
             ELSE
                
                !y%DistribMesh%Moment(I-3,J) =   p%D_F_B(I,J) + p%D_F_BF(I,J)
-                y%DistribMesh%Moment(I-3,J) =   OtherState%D_F_AM(I,J) + p%D_F_B(I,J) + p%D_F_BF(I,J)
-               ! y%DistribMesh%Moment(I-3,J) =  0.0 ! OtherState%D_F_AM(I,J) 
+                y%DistribMesh%Moment(I-3,J) =   m%D_F_AM(I,J) + p%D_F_B(I,J) + p%D_F_BF(I,J)
+               ! y%DistribMesh%Moment(I-3,J) =  0.0 ! m%D_F_AM(I,J) 
                
             END IF
            
@@ -4604,18 +4527,18 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
       !   nodeIndx = p%lumpedToNodeIndx(J)
       !   
       !      ! Determine the dynamic pressure at the marker
-      !   OtherState%L_FDynP(J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveDynP0(:,nodeIndx), &
-      !                              OtherState%LastIndWave, p%NStepWave + 1       )
+      !   m%L_FDynP(J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveDynP0(:,nodeIndx), &
+      !                              m%LastIndWave, p%NStepWave + 1       )
       !   
       !   
       !   DO I=1,3
       !         ! Determine the fluid acceleration and velocity at the marker
-      !      OtherState%L_FA(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveAcc0(:,nodeIndx,I), &
-      !                              OtherState%LastIndWave, p%NStepWave + 1       )
+      !      m%L_FA(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveAcc0(:,nodeIndx,I), &
+      !                              m%LastIndWave, p%NStepWave + 1       )
       !         
-      !      OtherState%L_FV(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveVel0(:,nodeIndx,I), &
-      !                              OtherState%LastIndWave, p%NStepWave + 1       )
-      !      vrel(I) =  OtherState%L_FV(I,J) - u%LumpedMesh%TranslationVel(I,J)
+      !      m%L_FV(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveVel0(:,nodeIndx,I), &
+      !                              m%LastIndWave, p%NStepWave + 1       )
+      !      vrel(I) =  m%L_FV(I,J) - u%LumpedMesh%TranslationVel(I,J)
       !   END DO
       !   
       !   
@@ -4636,7 +4559,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
       !   
       !      ! Lumped added mass loads
       !   qdotdot                 = reshape((/u%LumpedMesh%TranslationAcc(:,J),u%LumpedMesh%RotationAcc(:,J)/),(/6/))   
-      !   accel_fluid             = reshape((/OtherState%L_FA(:,J),[0.0,0.0,0.0]/),(/6/))  ! Add rotational accelerations of fluid which are zero 
+      !   accel_fluid             = reshape((/m%L_FA(:,J),[0.0,0.0,0.0]/),(/6/))  ! Add rotational accelerations of fluid which are zero 
       !   OtherState%L_F_AM(:,J)  = matmul( p%L_AM_M(:,:,J) , ( - qdotdot) )
       !   
       !   
@@ -4648,24 +4571,24 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
       !
       !   DO I=1,6
       !      
-      !      OtherState%L_F_DP(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%L_F_DP(:,I,J), &
-      !                              OtherState%LastIndWave, p%NStepWave + 1       )
+      !      m%L_F_DP(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%L_F_DP(:,I,J), &
+      !                              m%LastIndWave, p%NStepWave + 1       )
       !      
       !      ! We are now combining the dynamic pressure term into the inertia term
-      !      OtherState%L_F_I(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%L_F_I(:,I,J), &
-      !                              OtherState%LastIndWave, p%NStepWave + 1       ) + OtherState%L_F_DP(I,J)
+      !      m%L_F_I(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%L_F_I(:,I,J), &
+      !                              m%LastIndWave, p%NStepWave + 1       ) + m%L_F_DP(I,J)
       !      
       !      IF (I < 4 ) THEN
       !
-      !         OtherState%L_F_D(I,J) =  p%L_An(I,J)*dragFactor !vmag*v(I) * p%L_dragConst(J)   ! TODO: Verify newly added axial drag GJH 11/07/13
+      !         m%L_F_D(I,J) =  p%L_An(I,J)*dragFactor !vmag*v(I) * p%L_dragConst(J)   ! TODO: Verify newly added axial drag GJH 11/07/13
       !         
-      !         !y%LumpedMesh%Force(I,J) = OtherState%L_F_D(I,J) +  p%L_F_B(I,J) + OtherState%L_F_DP(I,J) +  p%L_F_BF(I,J)
-      !         y%LumpedMesh%Force(I,J) = OtherState%L_F_AM(I,J) + OtherState%L_F_D(I,J) +  p%L_F_B(I,J) + OtherState%L_F_I(I,J)  +  p%L_F_BF(I,J)
-      !         !y%LumpedMesh%Force(I,J) =  OtherState%L_F_DP(I,J) 
+      !         !y%LumpedMesh%Force(I,J) = m%L_F_D(I,J) +  p%L_F_B(I,J) + m%L_F_DP(I,J) +  p%L_F_BF(I,J)
+      !         y%LumpedMesh%Force(I,J) = m%L_F_AM(I,J) + m%L_F_D(I,J) +  p%L_F_B(I,J) + m%L_F_I(I,J)  +  p%L_F_BF(I,J)
+      !         !y%LumpedMesh%Force(I,J) =  m%L_F_DP(I,J) 
       !      ELSE
       !         !y%LumpedMesh%Moment(I-3,J) =  p%L_F_B(I,J) +   p%L_F_BF(I,J)
-      !         y%LumpedMesh%Moment(I-3,J) =   OtherState%L_F_AM(I,J) + p%L_F_B(I,J) +   p%L_F_BF(I,J)
-      !         !y%LumpedMesh%Moment(I-3,J) =   0.0 !OtherState%L_F_AM(I,J)
+      !         y%LumpedMesh%Moment(I-3,J) =   m%L_F_AM(I,J) + p%L_F_B(I,J) +   p%L_F_BF(I,J)
+      !         !y%LumpedMesh%Moment(I-3,J) =   0.0 !m%L_F_AM(I,J)
       !      END IF
       !      
       !      
@@ -4681,21 +4604,21 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
          
             ! Obtain the node index because WaveVel0, WaveAcc0, and WaveDynP0 are defined in the node indexing scheme, not the markers
          nodeIndx    = p%lumpedToNodeIndx(J)
-         nodeInWater = InterpWrappedStpLogical( REAL(Time, SiKi), p%WaveTime(:), p%nodeInWater(:,nodeIndx), OtherState%LastIndWave, p%NStepWave + 1 )
+         nodeInWater = InterpWrappedStpLogical( REAL(Time, SiKi), p%WaveTime(:), p%nodeInWater(:,nodeIndx), m%LastIndWave, p%NStepWave + 1 )
             ! Determine the dynamic pressure at the marker
          IF ( nodeInWater ) THEN
-            OtherState%L_FDynP(J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveDynP0(:,nodeIndx), &
-                                       OtherState%LastIndWave, p%NStepWave + 1       )
+            m%L_FDynP(J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveDynP0(:,nodeIndx), &
+                                       m%LastIndWave, p%NStepWave + 1       )
          
          
             DO I=1,3
                   ! Determine the fluid acceleration and velocity at the marker
-               OtherState%L_FA(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveAcc0(:,nodeIndx,I), &
-                                       OtherState%LastIndWave, p%NStepWave + 1       )
+               m%L_FA(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveAcc0(:,nodeIndx,I), &
+                                       m%LastIndWave, p%NStepWave + 1       )
                
-               OtherState%L_FV(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVel0(:,nodeIndx,I), &
-                                       OtherState%LastIndWave, p%NStepWave + 1       )
-               vrel(I) =  OtherState%L_FV(I,J) - u%LumpedMesh%TranslationVel(I,J)
+               m%L_FV(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVel0(:,nodeIndx,I), &
+                                       m%LastIndWave, p%NStepWave + 1       )
+               vrel(I) =  m%L_FV(I,J) - u%LumpedMesh%TranslationVel(I,J)
             END DO
          
          
@@ -4716,15 +4639,15 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
          
                ! Lumped added mass loads
             qdotdot                 = reshape((/u%LumpedMesh%TranslationAcc(:,J),u%LumpedMesh%RotationAcc(:,J)/),(/6/))   
-            accel_fluid             = reshape((/OtherState%L_FA(:,J),[0.0_ReKi,0.0_ReKi,0.0_ReKi]/),(/6/))  ! Add rotational accelerations of fluid which are zero 
-            OtherState%L_F_AM(:,J)  = matmul( p%L_AM_M(:,:,J) , ( - qdotdot) )
+            accel_fluid             = reshape((/m%L_FA(:,J),[0.0_ReKi,0.0_ReKi,0.0_ReKi]/),(/6/))  ! Add rotational accelerations of fluid which are zero 
+            m%L_F_AM(:,J)  = matmul( p%L_AM_M(:,:,J) , ( - qdotdot) )
          
          ELSE
-            OtherState%L_FDynP(J)   = 0.0_ReKi
-            OtherState%L_FA(:,J)    = 0.0_ReKi
-            OtherState%L_FV(:,J)    = 0.0_ReKi
+            m%L_FDynP(J)   = 0.0_ReKi
+            m%L_FA(:,J)    = 0.0_ReKi
+            m%L_FV(:,J)    = 0.0_ReKi
             dragFactor              = 0.0_ReKi
-            OtherState%L_F_AM(:,J)  = 0.0_ReKi
+            m%L_F_AM(:,J)  = 0.0_ReKi
          END IF
          
             ! Time-varying Buoyancy loads
@@ -4733,33 +4656,33 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
          !CALL LumpBuoyancy( sgn, 1025.0, p%Nodes(nodeIndx)%R, p%Nodes(nodeIndx)%tMG, p%Nodes(nodeIndx)%JointPos(3)+u%LumpedMesh%TranslationDisp(3,J), C, 9.80665, F_B  )
          
       
-         DO I=1,6
-            IF ( nodeInWater ) THEN
-               OtherState%L_F_DP(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), REAL(p%WaveTime,ReKi), p%L_F_DP(:,I,J), &
-                                       OtherState%LastIndWave, p%NStepWave + 1       )
+         IF ( nodeInWater ) THEN
+            DO I=1,6
+               m%L_F_DP(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), REAL(p%WaveTime,ReKi), p%L_F_DP(:,I,J), &
+                                       m%LastIndWave, p%NStepWave + 1       )
             
                ! We are now combining the dynamic pressure term into the inertia term
-               OtherState%L_F_I(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), REAL(p%WaveTime,ReKi), p%L_F_I(:,I,J), &
-                                       OtherState%LastIndWave, p%NStepWave + 1       ) + OtherState%L_F_DP(I,J)
-            ELSE
-               OtherState%L_F_DP(I,J) = 0.0_ReKi
-               OtherState%L_F_I(I,J)  = 0.0_ReKi              
-            END IF
-            
-            IF (I < 4 ) THEN
-      
-               OtherState%L_F_D(I,J) =  p%L_An(I,J)*dragFactor !vmag*v(I) * p%L_dragConst(J)   ! TODO: Verify newly added axial drag GJH 11/07/13
+               m%L_F_I(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), REAL(p%WaveTime,ReKi), p%L_F_I(:,I,J), &
+                                       m%LastIndWave, p%NStepWave + 1       ) + m%L_F_DP(I,J)
+            END DO            
+         ELSE
+            DO I=1,6            
+               m%L_F_DP(I,J) = 0.0_ReKi
+               m%L_F_I(I,J)  = 0.0_ReKi              
+            END DO            
+         END IF
+         
+         DO I=1,3      
+               m%L_F_D(I,J) =  p%L_An(I,J)*dragFactor !vmag*v(I) * p%L_dragConst(J)   ! TODO: Verify newly added axial drag GJH 11/07/13
                
-               !y%LumpedMesh%Force(I,J) = OtherState%L_F_D(I,J) +  p%L_F_B(I,J) + OtherState%L_F_DP(I,J) +  p%L_F_BF(I,J)
-               y%LumpedMesh%Force(I,J) = OtherState%L_F_AM(I,J) + OtherState%L_F_D(I,J) +  p%L_F_B(I,J) + OtherState%L_F_I(I,J)  +  p%L_F_BF(I,J)
-               !y%LumpedMesh%Force(I,J) =  OtherState%L_F_DP(I,J) 
-            ELSE
+               !y%LumpedMesh%Force(I,J) = m%L_F_D(I,J) +  p%L_F_B(I,J) + OtherState%L_F_DP(I,J) +  p%L_F_BF(I,J)
+               y%LumpedMesh%Force(I,J) = m%L_F_AM(I,J) + m%L_F_D(I,J) +  p%L_F_B(I,J) + m%L_F_I(I,J)  +  p%L_F_BF(I,J)
+               !y%LumpedMesh%Force(I,J) =  m%L_F_DP(I,J) 
+         END DO
+         DO I=4,6
                !y%LumpedMesh%Moment(I-3,J) =  p%L_F_B(I,J) +   p%L_F_BF(I,J)
-               y%LumpedMesh%Moment(I-3,J) =   OtherState%L_F_AM(I,J) + p%L_F_B(I,J) +   p%L_F_BF(I,J)
-               !y%LumpedMesh%Moment(I-3,J) =   0.0 !OtherState%L_F_AM(I,J)
-            END IF
-            
-            
+               y%LumpedMesh%Moment(I-3,J) =   m%L_F_AM(I,J) + p%L_F_B(I,J) +   p%L_F_BF(I,J)
+               !y%LumpedMesh%Moment(I-3,J) =   0.0 !m%L_F_AM(I,J)                        
          END DO      
       ENDDO
       
@@ -4781,7 +4704,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, Err
       IF ( p%OutSwtch > 0 ) THEN
      
             ! Map calculated results into the AllOuts Array
-         CALL MrsnOut_MapOutputs(Time, y, p, u, OtherState, AllOuts, ErrStat, ErrMsg)
+         CALL MrsnOut_MapOutputs(Time, y, p, u, m, AllOuts, ErrStat, ErrMsg)
                
       
             ! Put the output data in the WriteOutput array
@@ -4805,20 +4728,21 @@ END SUBROUTINE Morison_CalcOutput
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Morison_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )  
-! Tight coupling routine for computing derivatives of continuous states
+!> Tight coupling routine for computing derivatives of continuous states
+SUBROUTINE Morison_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )  
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(Morison_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                    
-      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           ! Parameters                             
-      TYPE(Morison_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(Morison_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(Morison_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(Morison_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
-      TYPE(Morison_ContinuousStateType), INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at Time
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation     
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds
+      TYPE(Morison_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                    
+      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters                             
+      TYPE(Morison_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(Morison_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(Morison_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(Morison_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time                   
+      TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
+      TYPE(Morison_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at Time
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation     
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
                
          ! Initialize ErrStat
@@ -4834,20 +4758,21 @@ SUBROUTINE Morison_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, E
 
 END SUBROUTINE Morison_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )   
-! Tight coupling routine for updating discrete states
+!> Tight coupling routine for updating discrete states
+SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds   
-      TYPE(Morison_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                       
-      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           ! Parameters                                 
-      TYPE(Morison_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(Morison_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at Time; 
-                                                                       !   Output: Discrete states at Time + Interval
-      TYPE(Morison_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(Morison_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states           
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds   
+      TYPE(Morison_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                       
+      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters                                 
+      TYPE(Morison_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(Morison_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Input: Discrete states at Time; 
+                                                                       !!   Output: Discrete states at Time + Interval
+      TYPE(Morison_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(Morison_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time          
+      TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
                
          ! Initialize ErrStat
@@ -4862,21 +4787,22 @@ SUBROUTINE Morison_UpdateDiscState( Time, u, p, x, xd, z, OtherState, ErrStat, E
 
 END SUBROUTINE Morison_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Morison_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_residual, ErrStat, ErrMsg )   
-! Tight coupling routine for solving for the residual of the constraint state equations
+!> Tight coupling routine for solving for the residual of the constraint state equations
+SUBROUTINE Morison_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds   
-      TYPE(Morison_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                       
-      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           ! Parameters                           
-      TYPE(Morison_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(Morison_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(Morison_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time (possibly a guess)
-      TYPE(Morison_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
-      TYPE(Morison_ConstraintStateType), INTENT(  OUT)  :: z_residual  ! Residual of the constraint state equations using  
-                                                                       !     the input values described above      
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds   
+      TYPE(Morison_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                       
+      TYPE(Morison_ParameterType),       INTENT(IN   )  :: p           !< Parameters                           
+      TYPE(Morison_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(Morison_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(Morison_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(Morison_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time       
+      TYPE(Morison_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
+      TYPE(Morison_ConstraintStateType), INTENT(  OUT)  :: z_residual  !< Residual of the constraint state equations using  
+                                                                       !!     the input values described above      
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
                
          ! Initialize ErrStat
@@ -4890,281 +4816,6 @@ SUBROUTINE Morison_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_
       z_residual%DummyConstrState = 0.0_ReKi
 
 END SUBROUTINE Morison_CalcConstrStateResidual
-!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE Morison_JacobianPInput( Time, u, p, x, xd, z, OtherState, dYdu, dXdu, dXddu, dZdu, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations 
-!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(Morison_InputType),                   INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(Morison_ParameterType),               INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(Morison_ContinuousStateType),         INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(Morison_DiscreteStateType),           INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(Morison_ConstraintStateType),         INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(Morison_OtherStateType),              INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(Morison_PartialOutputPInputType),     INTENT(  OUT), OPTIONAL :: dYdu       ! Partial derivatives of output equations
-!                                                                                       !   (Y) with respect to the inputs (u)
-!      TYPE(Morison_PartialContStatePInputType),  INTENT(  OUT), OPTIONAL :: dXdu       ! Partial derivatives of continuous state
-!                                                                                       !   equations (X) with respect to inputs (u)
-!      TYPE(Morison_PartialDiscStatePInputType),  INTENT(  OUT), OPTIONAL :: dXddu      ! Partial derivatives of discrete state 
-!                                                                                       !   equations (Xd) with respect to inputs (u)
-!      TYPE(Morison_PartialConstrStatePInputType),INTENT(  OUT), OPTIONAL :: dZdu       ! Partial derivatives of constraint state 
-!                                                                                       !   equations (Z) with respect to inputs (u)
-!      INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!      IF ( PRESENT( dYdu ) ) THEN
-!      
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the inputs (u) here:
-!
-!!         dYdu%DummyOutput%DummyInput = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdu ) ) THEN
-!      
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the inputs (u) here:
-!      
-!   !      dXdu%DummyContState%DummyInput = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddu ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the inputs (u) here:
-!
-!  !       dXddu%DummyDiscState%DummyInput = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdu ) ) THEN
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the inputs (u) here:
-!      
-! !        dZdu%DummyConstrState%DummyInput = 0
-!
-!      END IF
-!
-!
-!END SUBROUTINE Morison_JacobianPInput
-!!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE Morison_JacobianPContState( Time, u, p, x, xd, z, OtherState, dYdx, dXdx, dXddx, dZdx, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                    INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(Morison_InputType),                       INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(Morison_ParameterType),                   INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(Morison_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(Morison_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(Morison_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(Morison_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(Morison_PartialOutputPContStateType),     INTENT(  OUT), OPTIONAL :: dYdx       ! Partial derivatives of output equations
-!                                                                                           !   (Y) with respect to the continuous 
-!                                                                                           !   states (x)
-!      TYPE(Morison_PartialContStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXdx       ! Partial derivatives of continuous state
-!                                                                                           !   equations (X) with respect to 
-!                                                                                           !   the continuous states (x)
-!      TYPE(Morison_PartialDiscStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXddx      ! Partial derivatives of discrete state 
-!                                                                                           !   equations (Xd) with respect to 
-!                                                                                           !   the continuous states (x)
-!      TYPE(Morison_PartialConstrStatePContStateType),INTENT(  OUT), OPTIONAL :: dZdx       ! Partial derivatives of constraint state
-!                                                                                           !   equations (Z) with respect to 
-!                                                                                           !   the continuous states (x)
-!      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!     
-!      IF ( PRESENT( dYdx ) ) THEN
-!
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the continuous states (x) here:
-!
-!         dYdx%DummyOutput%DummyContState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdx ) ) THEN
-!      
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the continuous states (x) here:
-!      
-!         dXdx%DummyContState%DummyContState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddx ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the continuous states (x) here:
-!
-!         dXddx%DummyDiscState%DummyContState = 0
-!         
-!      END IF
-!      
-!      IF ( PRESENT( dZdx ) ) THEN
-!
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the continuous states (x) here:
-!      
-!         dZdx%DummyConstrState%DummyContState = 0
-!
-!      END IF
-!      
-!
-!   END SUBROUTINE Morison_JacobianPContState
-!!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE Morison_JacobianPDiscState( Time, u, p, x, xd, z, OtherState, dYdxd, dXdxd, dXddxd, dZdxd, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
-!!..................................................................................................................................
-!
-!      REAL(DbKi),                                    INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(Morison_InputType),                       INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(Morison_ParameterType),                   INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(Morison_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(Morison_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(Morison_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(Morison_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(Morison_PartialOutputPDiscStateType),     INTENT(  OUT), OPTIONAL :: dYdxd      ! Partial derivatives of output equations
-!                                                                                           !  (Y) with respect to the discrete 
-!                                                                                           !  states (xd)
-!      TYPE(Morison_PartialContStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXdxd      ! Partial derivatives of continuous state
-!                                                                                           !   equations (X) with respect to the 
-!                                                                                           !   discrete states (xd)
-!      TYPE(Morison_PartialDiscStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXddxd     ! Partial derivatives of discrete state 
-!                                                                                           !   equations (Xd) with respect to the
-!                                                                                           !   discrete states (xd)
-!      TYPE(Morison_PartialConstrStatePDiscStateType),INTENT(  OUT), OPTIONAL :: dZdxd      ! Partial derivatives of constraint state
-!                                                                                           !   equations (Z) with respect to the 
-!                                                                                           !   discrete states (xd)
-!      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!      IF ( PRESENT( dYdxd ) ) THEN
-!      
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the discrete states (xd) here:
-!
-!         dYdxd%DummyOutput%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the discrete states (xd) here:
-!      
-!         dXdxd%DummyContState%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the discrete states (xd) here:
-!
-!         dXddxd%DummyDiscState%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the discrete states (xd) here:
-!      
-!         dZdxd%DummyConstrState%DummyDiscState = 0
-!
-!      END IF
-!      
-!
-!
-!END SUBROUTINE Morison_JacobianPDiscState
-!!----------------------------------------------------------------------------------------------------------------------------------    
-!SUBROUTINE Morison_JacobianPConstrState( Time, u, p, x, xd, z, OtherState, dYdz, dXdz, dXddz, dZdz, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                      INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(Morison_InputType),                         INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(Morison_ParameterType),                     INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(Morison_ContinuousStateType),               INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(Morison_DiscreteStateType),                 INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(Morison_ConstraintStateType),               INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(Morison_OtherStateType),                    INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(Morison_PartialOutputPConstrStateType),     INTENT(  OUT), OPTIONAL :: dYdz       ! Partial derivatives of output 
-!                                                                                             !  equations (Y) with respect to the 
-!                                                                                             !  constraint states (z)
-!      TYPE(Morison_PartialContStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXdz       ! Partial derivatives of continuous
-!                                                                                             !  state equations (X) with respect to 
-!                                                                                             !  the constraint states (z)
-!      TYPE(Morison_PartialDiscStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXddz      ! Partial derivatives of discrete state
-!                                                                                             !  equations (Xd) with respect to the 
-!                                                                                             !  constraint states (z)
-!      TYPE(Morison_PartialConstrStatePConstrStateType),INTENT(  OUT), OPTIONAL :: dZdz       ! Partial derivatives of constraint 
-!                                                                                             ! state equations (Z) with respect to 
-!                                                                                             !  the constraint states (z)
-!      INTEGER(IntKi),                                  INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                    INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      IF ( PRESENT( dYdz ) ) THEN
-!      
-!            ! Calculate the partial derivative of the output equations (Y) with respect to the constraint states (z) here:
-!        
-!         dYdz%DummyOutput%DummyConstrState = 0
-!         
-!      END IF
-!      
-!      IF ( PRESENT( dXdz ) ) THEN
-!      
-!            ! Calculate the partial derivative of the continuous state equations (X) with respect to the constraint states (z) here:
-!         
-!         dXdz%DummyContState%DummyConstrState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddz ) ) THEN
-!
-!            ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the constraint states (z) here:
-!
-!         dXddz%DummyDiscState%DummyConstrState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdz ) ) THEN
-!
-!            ! Calculate the partial derivative of the constraint state equations (Z) with respect to the constraint states (z) here:
-!         
-!         dZdz%DummyConstrState%DummyConstrState = 0
-!
-!      END IF
-!      
-!
-!END SUBROUTINE Morison_JacobianPConstrState
-
 !----------------------------------------------------------------------------------------------------------------------------------
    
 END MODULE Morison

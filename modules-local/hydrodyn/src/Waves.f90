@@ -1,12 +1,9 @@
 !**********************************************************************************************************************************
 ! The Waves and Waves_Types modules make up a template for creating user-defined calculations in the FAST Modularization 
-! Framework. Wavess_Types will be auto-generated based on a description of the variables for the module.
-!
-! "Waves" should be replaced with the name of your module. Example: HydroDyn
-! "Waves" (in Waves_*) should be replaced with the module name or an abbreviation of it. Example: HD
+! Framework. Waves_Types will be auto-generated based on a description of the variables for the module.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013  National Renewable Energy Laboratory
+! Copyright (C) 2013-2015  National Renewable Energy Laboratory
 !
 !    This file is part of Waves.
 !
@@ -38,35 +35,14 @@ MODULE Waves
    
    PRIVATE
 
-!   INTEGER(IntKi), PARAMETER            :: DataFormatID = 1   ! Update this value if the data types change (used in Waves_Pack)
-   TYPE(ProgDesc), PARAMETER            :: Waves_ProgDesc = ProgDesc( 'Waves', 'v1.00.02', '22-Jun-2014' )
+   TYPE(ProgDesc), PARAMETER            :: Waves_ProgDesc = ProgDesc( 'Waves', 'v1.01.00', '23-Dec-2015' )
 
    
       ! ..... Public Subroutines ...................................................................................................
    PUBLIC :: WavePkShpDefault                     ! Return the default value of the peak shape parameter of the incident wave spectrum
    PUBLIC :: Waves_Init                           ! Initialization routine
    PUBLIC :: Waves_End                            ! Ending routine (includes clean up)
-   
-   PUBLIC :: Waves_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating 
-                                                    !   continuous states, and updating discrete states
-   PUBLIC :: Waves_CalcOutput                     ! Routine for computing outputs
-   
-   PUBLIC :: Waves_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
-   PUBLIC :: Waves_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
-   PUBLIC :: Waves_UpdateDiscState                ! Tight coupling routine for updating discrete states
-      
-   !PUBLIC :: Waves_JacobianPInput                 ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
-   !PUBLIC :: Waves_JacobianPContState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the continuous 
-   !                                                 !   states (x)
-   !PUBLIC :: Waves_JacobianPDiscState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the discrete 
-   !                                                 !   states (xd)
-   !PUBLIC :: Waves_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the constraint 
-   !                                                 !   states (z)
-   
+            
    
    PRIVATE:: WheelerStretching                    ! This FUNCTION applies the principle of Wheeler stretching to (1-Forward) find the elevation where the wave kinematics are to be applied using Wheeler stretching or (2-Backword)   
    PRIVATE:: BoxMuller
@@ -2084,30 +2060,31 @@ END SUBROUTINE VariousWaves_Init
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
-! This routine is called at the start of the simulation to perform initialization steps. 
-! The parameters are set here and not changed during the simulation.
-! The initial states and initial guess for the input are defined.
+!> This routine is called at the start of the simulation to perform initialization steps. 
+!! The parameters are set here and not changed during the simulation.
+!! The initial states and initial guess for the input are defined.
+SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
-      TYPE(Waves_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
-      TYPE(Waves_ParameterType),       INTENT(  OUT)  :: p           ! Parameters      
-      TYPE(Waves_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
-      TYPE(Waves_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
-      TYPE(Waves_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-      TYPE(Waves_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states            
-      TYPE(Waves_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated; 
-                                                                     !   only the output mesh is initialized)
-      REAL(DbKi),                      INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that 
-                                                                     !   (1) Waves_UpdateStates() is called in loose coupling &
-                                                                     !   (2) Waves_UpdateDiscState() is called in tight coupling.
-                                                                     !   Input is the suggested time from the glue code; 
-                                                                     !   Output is the actual coupling interval that will be used 
-                                                                     !   by the glue code.
-      TYPE(Waves_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
-      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(Waves_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+      TYPE(Waves_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
+      TYPE(Waves_ParameterType),       INTENT(  OUT)  :: p           !< Parameters      
+      TYPE(Waves_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
+      TYPE(Waves_DiscreteStateType),   INTENT(  OUT)  :: xd          !< Initial discrete states
+      TYPE(Waves_ConstraintStateType), INTENT(  OUT)  :: z           !< Initial guess of the constraint states
+      TYPE(Waves_OtherStateType),      INTENT(  OUT)  :: OtherState  !< Initial other states            
+      TYPE(Waves_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated; 
+                                                                     !!   only the output mesh is initialized)
+      TYPE(Waves_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables            
+      REAL(DbKi),                      INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that 
+                                                                     !!   (1) Waves_UpdateStates() is called in loose coupling &
+                                                                     !!   (2) Waves_UpdateDiscState() is called in tight coupling.
+                                                                     !!   Input is the suggested time from the glue code; 
+                                                                     !!   Output is the actual coupling interval that will be used 
+                                                                     !!   by the glue code.
+      TYPE(Waves_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
+      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       
       
@@ -2197,6 +2174,7 @@ SUBROUTINE Waves_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
    xd%DummyDiscState = 0.0
    z%DummyConstrState = 0.0
    OtherState%DummyOtherState = 0
+   m%DummyMiscVar = 0
    y%DummyOutput = 0.0
       
       
@@ -2205,31 +2183,30 @@ END SUBROUTINE Waves_Init
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Waves_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-! This routine is called at the end of the simulation.
+!> This routine is called at the end of the simulation.
+SUBROUTINE Waves_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(Waves_InputType),           INTENT(INOUT)  :: u           ! System inputs
-      TYPE(Waves_ParameterType),       INTENT(INOUT)  :: p           ! Parameters     
-      TYPE(Waves_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
-      TYPE(Waves_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
-      TYPE(Waves_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-      TYPE(Waves_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states            
-      TYPE(Waves_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(Waves_InputType),           INTENT(INOUT)  :: u           !< System inputs
+      TYPE(Waves_ParameterType),       INTENT(INOUT)  :: p           !< Parameters     
+      TYPE(Waves_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
+      TYPE(Waves_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
+      TYPE(Waves_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
+      TYPE(Waves_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states            
+      TYPE(Waves_OutputType),          INTENT(INOUT)  :: y           !< System outputs
+      TYPE(Waves_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
+      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
          ! Local error handling variables
       INTEGER(IntKi)                                  :: ErrStatTmp
-      CHARACTER(1024)                                 :: ErrMsgTmp
-
+      CHARACTER(ErrMsgLen)                            :: ErrMsgTmp
+      CHARACTER(*), PARAMETER                         :: RoutineName = 'Waves_End'
 
          ! Initialize ErrStat
          
       ErrStat = ErrID_None         
-      ErrStatTmp  = ErrID_None
       ErrMsg  = ""               
-      ErrMsgTmp   = ""
       
       
          ! Place any last minute operations or calculations here:
@@ -2242,538 +2219,39 @@ SUBROUTINE Waves_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          ! Destroy the input data:
          
       CALL Waves_DestroyInput( u, ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
 
 
          ! Destroy the parameter data:
          
       CALL Waves_DestroyParam( p, ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
 
 
          ! Destroy the state data:
          
       CALL Waves_DestroyContState(   x,           ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL Waves_DestroyDiscState(   xd,          ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL Waves_DestroyConstrState( z,           ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
       CALL Waves_DestroyOtherState(  OtherState,  ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
-         
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+
+      CALL Waves_DestroyMisc(  m,  ErrStatTmp, ErrMsgTmp )
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
+      
 
          ! Destroy the output data:
          
       CALL Waves_DestroyOutput( y, ErrStatTmp, ErrMsgTmp )
-      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,'Waves_End')
+      CALL  SetErrStat(ErrStatTmp,ErrMsgTmp,ErrStat,ErrMsg,RoutineName)
 
 
       
 
 END SUBROUTINE Waves_End
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Waves_UpdateStates( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
-! Constraint states are solved for input Time; Continuous and discrete states are updated for Time + Interval
-!..................................................................................................................................
-   
-      REAL(DbKi),                       INTENT(IN   ) :: Time        ! Current simulation time in seconds
-      TYPE(Waves_InputType),            INTENT(IN   ) :: u           ! Inputs at Time                    
-      TYPE(Waves_ParameterType),        INTENT(IN   ) :: p           ! Parameters                              
-      TYPE(Waves_ContinuousStateType),  INTENT(INOUT) :: x           ! Input: Continuous states at Time; 
-                                                                       !   Output: Continuous states at Time + Interval
-      TYPE(Waves_DiscreteStateType),    INTENT(INOUT) :: xd          ! Input: Discrete states at Time; 
-                                                                      !   Output: Discrete states at Time  + Interval
-      TYPE(Waves_ConstraintStateType),  INTENT(INOUT) :: z           ! Input: Initial guess of constraint states at Time;
-                                                                      !   Output: Constraint states at Time
-      TYPE(Waves_OtherStateType),       INTENT(INOUT) :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                   INTENT(  OUT) :: ErrStat     ! Error status of the operation     
-      CHARACTER(*),                     INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-         ! Local variables
-         
-      TYPE(Waves_ContinuousStateType)                 :: dxdt        ! Continuous state derivatives at Time
-      TYPE(Waves_ConstraintStateType)                 :: z_Residual  ! Residual of the constraint state equations (Z)
-         
-      INTEGER(IntKi)                                  :: ErrStatTmp  ! Temporary Error status  for calls
-      CHARACTER(1024)                                 :: ErrMsgTmp   ! Temporary Error message for calls
-                        
-         ! Initialize ErrStat
-         
-      ErrStat     = ErrID_None         
-      ErrMsg      = ""               
-      
-      ErrStatTmp  = ErrID_None         
-      ErrMsgTmp   = ""               
-           
-      
-         ! Solve for the constraint states (z) here:
-                           
-         ! Check if the z guess is correct and update z with a new guess.
-         ! Iterate until the value is within a given tolerance. 
-                                    
-      CALL Waves_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_Residual, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
-      IF ( ErrStat >= AbortErrLev ) THEN
-         CALL Waves_DestroyConstrState( z_Residual, ErrStatTmp, ErrMsgTmp)
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
-         RETURN      
-      END IF
-         
-      ! DO WHILE ( z_Residual% > tolerance )
-      !
-      !  z = 
-      !
-      !  CALL Waves_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_Residual, ErrStatTmp, ErrMsgTmp )
-      !  CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
-      !  IF ( ErrStat >= AbortErrLev ) THEN      
-      !     CALL Waves_DestroyConstrState( z_Residual, ErrStatTmp, ErrMsgTmp)
-      !     CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
-      !     RETURN      
-      !  END IF
-      !           
-      ! END DO         
-      
-      
-         ! Destroy z_Residual because it is not necessary for the rest of the subroutine:
-            
-      CALL Waves_DestroyConstrState( z_Residual, ErrStatTmp, ErrMsgTmp)
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
-      IF ( ErrStat >= AbortErrLev ) RETURN      
-         
-         
-         
-         ! Get first time derivatives of continuous states (dxdt):
-      
-      CALL Waves_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStatTmp, ErrMsgTmp )
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
-      IF ( ErrStat >= AbortErrLev ) THEN      
-         CALL Waves_DestroyContState( dxdt, ErrStatTmp, ErrMsgTmp)
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates')
-         RETURN
-      END IF
-               
-               
-         ! Update discrete states:
-         !   Note that xd [discrete state] is changed in Waves_UpdateDiscState(), so Waves_CalcOutput(),  
-         !   Waves_CalcContStateDeriv(), and Waves_CalcConstrStates() must be called first (see above).
-      
-      CALL Waves_UpdateDiscState(Time, u, p, x, xd, z, OtherState, ErrStatTmp, ErrMsgTmp )   
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
-      IF ( ErrStat >= AbortErrLev ) THEN      
-         CALL Waves_DestroyContState( dxdt, ErrStatTmp, ErrMsgTmp)
-         CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
-         RETURN      
-      END IF
-         
-         
-         ! Integrate (update) continuous states (x) here:
-         
-      !x = function of dxdt and x
-
-
-         ! Destroy dxdt because it is not necessary for the rest of the subroutine
-            
-      CALL Waves_DestroyContState( dxdt, ErrStatTmp, ErrMsgTmp)
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, 'Waves_UpdateStates' )
-      IF ( ErrStat >= AbortErrLev ) RETURN      
-     
-   
-      
-END SUBROUTINE Waves_UpdateStates
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Waves_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )   
-! Routine for computing outputs, used in both loose and tight coupling.
-!..................................................................................................................................
-   
-      REAL(DbKi),                      INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(Waves_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
-      TYPE(Waves_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(Waves_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(Waves_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(Waves_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(Waves_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(Waves_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at Time (Input only so that mesh con-
-                                                                     !   nectivity information does not have to be recalculated)
-      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-      
-         ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
-      
-      
-         ! Compute outputs here:
-      y%DummyOutput    = 2.0_SiKi
-
-     
-               
-
-END SUBROUTINE Waves_CalcOutput
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Waves_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )  
-! Tight coupling routine for computing derivatives of continuous states
-!..................................................................................................................................
-   
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(Waves_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                    
-      TYPE(Waves_ParameterType),       INTENT(IN   )  :: p           ! Parameters                             
-      TYPE(Waves_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(Waves_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(Waves_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(Waves_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
-      TYPE(Waves_ContinuousStateType), INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at Time
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation     
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-               
-         ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
-      
-      
-         ! Compute the first time derivatives of the continuous states here:
-      
-      dxdt%DummyContState = 0.0_SiKi
-         
-
-END SUBROUTINE Waves_CalcContStateDeriv
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Waves_UpdateDiscState( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )   
-! Tight coupling routine for updating discrete states
-!..................................................................................................................................
-   
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds   
-      TYPE(Waves_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                       
-      TYPE(Waves_ParameterType),       INTENT(IN   )  :: p           ! Parameters                                 
-      TYPE(Waves_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(Waves_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at Time; 
-                                                                       !   Output: Discrete states at Time + Interval
-      TYPE(Waves_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(Waves_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states           
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-               
-         ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
-      
-      
-         ! Update discrete states here:
-      
-      ! StateData%DiscState = 
-
-END SUBROUTINE Waves_UpdateDiscState
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Waves_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_residual, ErrStat, ErrMsg )   
-! Tight coupling routine for solving for the residual of the constraint state equations
-!..................................................................................................................................
-   
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds   
-      TYPE(Waves_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                       
-      TYPE(Waves_ParameterType),       INTENT(IN   )  :: p           ! Parameters                           
-      TYPE(Waves_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(Waves_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(Waves_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time (possibly a guess)
-      TYPE(Waves_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
-      TYPE(Waves_ConstraintStateType), INTENT(  OUT)  :: z_residual  ! Residual of the constraint state equations using  
-                                                                       !     the input values described above      
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-               
-         ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
-      
-      
-         ! Solve for the constraint states here:
-      
-      z_residual%DummyConstrState = 0.0_SiKi
-
-END SUBROUTINE Waves_CalcConstrStateResidual
-!!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE Waves_JacobianPInput( Time, u, p, x, xd, z, OtherState, dYdu, dXdu, dXddu, dZdu, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations 
-!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(Waves_InputType),                   INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(Waves_ParameterType),               INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(Waves_ContinuousStateType),         INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(Waves_DiscreteStateType),           INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(Waves_ConstraintStateType),         INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(Waves_OtherStateType),              INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      !TYPE(Waves_PartialOutputPInputType),     INTENT(  OUT), OPTIONAL :: dYdu       ! Partial derivatives of output equations
-!      !                                                                                 !   (Y) with respect to the inputs (u)
-!      !TYPE(Waves_PartialContStatePInputType),  INTENT(  OUT), OPTIONAL :: dXdu       ! Partial derivatives of continuous state
-!      !                                                                                 !   equations (X) with respect to inputs (u)
-!      !TYPE(Waves_PartialDiscStatePInputType),  INTENT(  OUT), OPTIONAL :: dXddu      ! Partial derivatives of discrete state 
-!      !                                                                                 !   equations (Xd) with respect to inputs (u)
-!      !TYPE(Waves_PartialConstrStatePInputType),INTENT(  OUT), OPTIONAL :: dZdu       ! Partial derivatives of constraint state 
-!                                                                                       !   equations (Z) with respect to inputs (u)
-!      INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!      IF ( PRESENT( dYdu ) ) THEN
-!      
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the inputs (u) here:
-!
-!         dYdu%DummyOutput%DummyInput = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdu ) ) THEN
-!      
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the inputs (u) here:
-!      
-!         dXdu%DummyContState%DummyInput = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddu ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the inputs (u) here:
-!
-!         dXddu%DummyDiscState%DummyInput = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdu ) ) THEN
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the inputs (u) here:
-!      
-!         dZdu%DummyConstrState%DummyInput = 0
-!
-!      END IF
-!
-!
-!END SUBROUTINE Waves_JacobianPInput
-!!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE Waves_JacobianPContState( Time, u, p, x, xd, z, OtherState, dYdx, dXdx, dXddx, dZdx, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                    INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(Waves_InputType),                       INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(Waves_ParameterType),                   INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(Waves_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(Waves_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(Waves_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(Waves_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      !TYPE(Waves_PartialOutputPContStateType),     INTENT(  OUT), OPTIONAL :: dYdx       ! Partial derivatives of output equations
-!      !                                                                                     !   (Y) with respect to the continuous 
-!      !                                                                                     !   states (x)
-!      !TYPE(Waves_PartialContStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXdx       ! Partial derivatives of continuous state
-!      !                                                                                     !   equations (X) with respect to 
-!      !                                                                                     !   the continuous states (x)
-!      !TYPE(Waves_PartialDiscStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXddx      ! Partial derivatives of discrete state 
-!      !                                                                                     !   equations (Xd) with respect to 
-!      !                                                                                     !   the continuous states (x)
-!      !TYPE(Waves_PartialConstrStatePContStateType),INTENT(  OUT), OPTIONAL :: dZdx       ! Partial derivatives of constraint state
-!                                                                                           !   equations (Z) with respect to 
-!                                                                                           !   the continuous states (x)
-!      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!     
-!      IF ( PRESENT( dYdx ) ) THEN
-!
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the continuous states (x) here:
-!
-!         dYdx%DummyOutput%DummyContState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdx ) ) THEN
-!      
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the continuous states (x) here:
-!      
-!         dXdx%DummyContState%DummyContState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddx ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the continuous states (x) here:
-!
-!         dXddx%DummyDiscState%DummyContState = 0
-!         
-!      END IF
-!      
-!      IF ( PRESENT( dZdx ) ) THEN
-!
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the continuous states (x) here:
-!      
-!         dZdx%DummyConstrState%DummyContState = 0
-!
-!      END IF
-!      
-!
-!   END SUBROUTINE Waves_JacobianPContState
-!!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE Waves_JacobianPDiscState( Time, u, p, x, xd, z, OtherState, dYdxd, dXdxd, dXddxd, dZdxd, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
-!!..................................................................................................................................
-!
-!      REAL(DbKi),                                    INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(Waves_InputType),                       INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(Waves_ParameterType),                   INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(Waves_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(Waves_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(Waves_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(Waves_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      !TYPE(Waves_PartialOutputPDiscStateType),     INTENT(  OUT), OPTIONAL :: dYdxd      ! Partial derivatives of output equations
-!      !                                                                                     !  (Y) with respect to the discrete 
-!      !                                                                                     !  states (xd)
-!      !TYPE(Waves_PartialContStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXdxd      ! Partial derivatives of continuous state
-!      !                                                                                     !   equations (X) with respect to the 
-!      !                                                                                     !   discrete states (xd)
-!      !TYPE(Waves_PartialDiscStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXddxd     ! Partial derivatives of discrete state 
-!      !                                                                                     !   equations (Xd) with respect to the
-!      !                                                                                     !   discrete states (xd)
-!      !TYPE(Waves_PartialConstrStatePDiscStateType),INTENT(  OUT), OPTIONAL :: dZdxd      ! Partial derivatives of constraint state
-!                                                                                           !   equations (Z) with respect to the 
-!                                                                                           !   discrete states (xd)
-!      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!      IF ( PRESENT( dYdxd ) ) THEN
-!      
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the discrete states (xd) here:
-!
-!         dYdxd%DummyOutput%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the discrete states (xd) here:
-!      
-!         dXdxd%DummyContState%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the discrete states (xd) here:
-!
-!         dXddxd%DummyDiscState%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the discrete states (xd) here:
-!      
-!         dZdxd%DummyConstrState%DummyDiscState = 0
-!
-!      END IF
-!      
-!
-!
-!END SUBROUTINE Waves_JacobianPDiscState
-!!----------------------------------------------------------------------------------------------------------------------------------    
-!SUBROUTINE Waves_JacobianPConstrState( Time, u, p, x, xd, z, OtherState, dYdz, dXdz, dXddz, dZdz, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                      INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(Waves_InputType),                         INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(Waves_ParameterType),                     INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(Waves_ContinuousStateType),               INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(Waves_DiscreteStateType),                 INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(Waves_ConstraintStateType),               INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(Waves_OtherStateType),                    INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      !TYPE(Waves_PartialOutputPConstrStateType),     INTENT(  OUT), OPTIONAL :: dYdz       ! Partial derivatives of output 
-!                                                                                             !  equations (Y) with respect to the 
-!                                                                                             !  constraint states (z)
-!      !TYPE(Waves_PartialContStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXdz       ! Partial derivatives of continuous
-!      !                                                                                       !  state equations (X) with respect to 
-!      !                                                                                       !  the constraint states (z)
-!      !TYPE(Waves_PartialDiscStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXddz      ! Partial derivatives of discrete state
-!      !                                                                                       !  equations (Xd) with respect to the 
-!      !                                                                                       !  constraint states (z)
-!      !TYPE(Waves_PartialConstrStatePConstrStateType),INTENT(  OUT), OPTIONAL :: dZdz       ! Partial derivatives of constraint 
-!                                                                                             ! state equations (Z) with respect to 
-!                                                                                             !  the constraint states (z)
-!      INTEGER(IntKi),                                  INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                    INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      IF ( PRESENT( dYdz ) ) THEN
-!      
-!            ! Calculate the partial derivative of the output equations (Y) with respect to the constraint states (z) here:
-!        
-!         dYdz%DummyOutput%DummyConstrState = 0
-!         
-!      END IF
-!      
-!      IF ( PRESENT( dXdz ) ) THEN
-!      
-!            ! Calculate the partial derivative of the continuous state equations (X) with respect to the constraint states (z) here:
-!         
-!         dXdz%DummyContState%DummyConstrState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddz ) ) THEN
-!
-!            ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the constraint states (z) here:
-!
-!         dXddz%DummyDiscState%DummyConstrState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdz ) ) THEN
-!
-!            ! Calculate the partial derivative of the constraint state equations (Z) with respect to the constraint states (z) here:
-!         
-!         dZdz%DummyConstrState%DummyConstrState = 0
-!
-!      END IF
-!      
-!
-!END SUBROUTINE Waves_JacobianPConstrState
-
 !----------------------------------------------------------------------------------------------------------------------------------
 
 !=======================================================================

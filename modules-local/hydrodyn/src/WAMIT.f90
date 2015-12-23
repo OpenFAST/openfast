@@ -1,12 +1,9 @@
 !**********************************************************************************************************************************
 ! The WAMIT and WAMIT_Types modules make up a template for creating user-defined calculations in the FAST Modularization 
 ! Framework. WAMITs_Types will be auto-generated based on a description of the variables for the module.
-!
-! "WAMIT" should be replaced with the name of your module. Example: HydroDyn
-! "WAMIT" (in WAMIT_*) should be replaced with the module name or an abbreviation of it. Example: HD
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2012  National Renewable Energy Laboratory
+! Copyright (C) 2012-2015  National Renewable Energy Laboratory
 !
 !    This file is part of WAMIT.
 !
@@ -44,8 +41,7 @@ MODULE WAMIT
    
    REAL(DbKi), PARAMETER, PRIVATE       :: OnePlusEps  = 1.0 + EPSILON(OnePlusEps)   ! The number slighty greater than unity in the precision of DbKi.
 
-!   INTEGER(IntKi), PARAMETER            :: DataFormatID = 1   ! Update this value if the data types change (used in WAMIT_Pack)
-   TYPE(ProgDesc), PARAMETER            :: WAMIT_ProgDesc = ProgDesc( 'WAMIT', 'v1.00.01', '05-Mar-2013' )
+   TYPE(ProgDesc), PARAMETER            :: WAMIT_ProgDesc = ProgDesc( 'WAMIT', 'v1.01.00', '23-Dec-2015' )
 
    
       ! ..... Public Subroutines ...................................................................................................
@@ -60,46 +56,35 @@ MODULE WAMIT
    PUBLIC :: WAMIT_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
    PUBLIC :: WAMIT_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: WAMIT_UpdateDiscState                ! Tight coupling routine for updating discrete states
-      
-   !PUBLIC :: WAMIT_JacobianPInput                 ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
-   !PUBLIC :: WAMIT_JacobianPContState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the continuous 
-   !                                                 !   states (x)
-   !PUBLIC :: WAMIT_JacobianPDiscState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the discrete 
-   !                                                 !   states (xd)
-   !PUBLIC :: WAMIT_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-                                                    !   (Xd), and constraint-state (Z) equations all with respect to the constraint 
-                                                    !   states (z)
-   
+        
    
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
-! This routine is called at the start of the simulation to perform initialization steps. 
-! The parameters are set here and not changed during the simulation.
-! The initial states and initial guess for the input are defined.
+!> This routine is called at the start of the simulation to perform initialization steps. 
+!! The parameters are set here and not changed during the simulation.
+!! The initial states and initial guess for the input are defined.
+SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(WAMIT_InitInputType),       INTENT(IN   )  :: InitInp       ! Input data for initialization routine
-      TYPE(WAMIT_InputType),           INTENT(  OUT)  :: u             ! An initial guess for the input; input mesh must be defined
-      TYPE(WAMIT_ParameterType),       INTENT(  OUT)  :: p             ! Parameters      
-      TYPE(WAMIT_ContinuousStateType), INTENT(  OUT)  :: x             ! Initial continuous states
-      TYPE(WAMIT_DiscreteStateType),   INTENT(  OUT)  :: xd            ! Initial discrete states
-      TYPE(WAMIT_ConstraintStateType), INTENT(  OUT)  :: z             ! Initial guess of the constraint states
-      TYPE(WAMIT_OtherStateType),      INTENT(  OUT)  :: OtherState    ! Initial other/optimization states            
-      TYPE(WAMIT_OutputType),          INTENT(  OUT)  :: y             ! Initial system outputs (outputs are not calculated; 
-                                                                       !   only the output mesh is initialized)
-      REAL(DbKi),                      INTENT(INOUT)  :: Interval      ! Coupling interval in seconds: the rate that 
-                                                                       !   (1) WAMIT_UpdateStates() is called in loose coupling &
-                                                                       !   (2) WAMIT_UpdateDiscState() is called in tight coupling.
-                                                                       !   Input is the suggested time from the glue code; 
-                                                                       !   Output is the actual coupling interval that will be used 
-                                                                       !   by the glue code.
-      TYPE(WAMIT_InitOutputType),      INTENT(  OUT)  :: InitOut       ! Output for initialization routine
-      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat       ! Error status of the operation
-      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg        ! Error message if ErrStat /= ErrID_None
+      TYPE(WAMIT_InitInputType),       INTENT(IN   )  :: InitInp       !< Input data for initialization routine
+      TYPE(WAMIT_InputType),           INTENT(  OUT)  :: u             !< An initial guess for the input; input mesh must be defined
+      TYPE(WAMIT_ParameterType),       INTENT(  OUT)  :: p             !< Parameters      
+      TYPE(WAMIT_ContinuousStateType), INTENT(  OUT)  :: x             !< Initial continuous states
+      TYPE(WAMIT_DiscreteStateType),   INTENT(  OUT)  :: xd            !< Initial discrete states
+      TYPE(WAMIT_ConstraintStateType), INTENT(  OUT)  :: z             !< Initial guess of the constraint states
+      TYPE(WAMIT_OtherStateType),      INTENT(  OUT)  :: OtherState    !< Initial other states            
+      TYPE(WAMIT_OutputType),          INTENT(  OUT)  :: y             !< Initial system outputs (outputs are not calculated; 
+                                                                       !!   only the output mesh is initialized)
+      TYPE(WAMIT_MiscVarType),         INTENT(  OUT)  :: m             !< Initial misc/optimization variables            
+      REAL(DbKi),                      INTENT(INOUT)  :: Interval      !< Coupling interval in seconds: the rate that 
+                                                                       !!   (1) WAMIT_UpdateStates() is called in loose coupling &
+                                                                       !!   (2) WAMIT_UpdateDiscState() is called in tight coupling.
+                                                                       !!   Input is the suggested time from the glue code; 
+                                                                       !!   Output is the actual coupling interval that will be used 
+                                                                       !!   by the glue code.
+      TYPE(WAMIT_InitOutputType),      INTENT(  OUT)  :: InitOut       !< Output for initialization routine
+      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat       !< Error status of the operation
+      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg        !< Error message if ErrStat /= ErrID_None
 
 
      
@@ -107,23 +92,9 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
       
          ! These are dummy variables to satisfy the framework, but are not used 
       TYPE(Conv_Rdtn_InitInputType)            :: Conv_Rdtn_InitInp                     ! Local version of the intialization data for the radiation module
-      TYPE(Conv_Rdtn_InputType)                :: Conv_Rdtn_u                           ! Conv_Rdtn module initial guess for the input; the input mesh is not defined because it is not used by the waves module
-      !TYPE(Conv_Rdtn_ParameterType)           :: Conv_Rdtn_p                           ! Conv_Rdtn module parameters
-      TYPE(Conv_Rdtn_ContinuousStateType)      :: Conv_Rdtn_x                           ! Conv_Rdtn module initial continuous states
-      !TYPE(Conv_Rdtn_DiscreteStateType)       :: Conv_Rdtn_xd                          ! Conv_Rdtn module discrete states
-      TYPE(Conv_Rdtn_ConstraintStateType)      :: Conv_Rdtn_z                           ! Conv_Rdtn module initial guess of the constraint states
-      TYPE(Conv_Rdtn_OtherStateType)           :: Conv_RdtnOtherState                   ! Conv_Rdtn module other/optimization states 
-      TYPE(Conv_Rdtn_OutputType)               :: Conv_Rdtn_y                           ! Module module outputs
       TYPE(Conv_Rdtn_InitOutputType)           :: Conv_Rdtn_InitOut                     ! Initialization Outputs from the Conv_Rdtn module initialization
       !TYPE(Conv_Rdtn_InitOutputType)          :: Conv_RdtnInitOutData                     
       TYPE(SS_Rad_InitInputType)               :: SS_Rdtn_InitInp                       ! Local version of the intialization data for the radiation module
-      TYPE(SS_Rad_InputType)                   :: SS_Rdtn_u                             ! SS_Rdtn module initial guess for the input; the input mesh is not defined because it is not used by the waves module
-      !TYPE(SS_Rad_ParameterType)              :: SS_Rdtn_p                             ! SS_Rdtn module parameters
-      !TYPE(SS_Rad_ContinuousStateType)        :: SS_Rdtn_x                             ! SS_Rdtn module initial continuous states
-      TYPE(SS_Rad_DiscreteStateType)           :: SS_Rdtn_xd                            ! SS_Rdtn module discrete states
-      TYPE(SS_Rad_ConstraintStateType)         :: SS_Rdtn_z                             ! SS_Rdtn module initial guess of the constraint states
-      !TYPE(SS_Rad_OtherStateType)             :: SS_RdtnOtherState                     ! SS_Rdtn module other/optimization states 
-      TYPE(SS_Rad_OutputType)                  :: SS_Rdtn_y                             ! Module outputs
       TYPE(SS_Rad_InitOutputType)              :: SS_Rdtn_InitOut                       ! Initialization Outputs from the SS_Rdtn module initialization
      
        
@@ -1072,8 +1043,8 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
             Conv_Rdtn_InitInp%UnSum               = InitInp%Conv_Rdtn%UnSum
     
          
-            CALL Conv_Rdtn_Init(Conv_Rdtn_InitInp, Conv_Rdtn_u, p%Conv_Rdtn, Conv_Rdtn_x, xd%Conv_Rdtn, Conv_Rdtn_z, Conv_RdtnOtherState, &
-                                   Conv_Rdtn_y, Interval, Conv_Rdtn_InitOut, ErrStat2, ErrMsg2)
+            CALL Conv_Rdtn_Init(Conv_Rdtn_InitInp, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, z%Conv_Rdtn, OtherState%Conv_Rdtn, &
+                                   m%Conv_Rdtn_y, m%Conv_Rdtn, Interval, Conv_Rdtn_InitOut, ErrStat2, ErrMsg2)
             
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
                IF ( ErrStat >= AbortErrLev ) THEN
@@ -1086,8 +1057,8 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
             
             SS_Rdtn_InitInp%InputFile    = InitInp%WAMITFile    
             SS_Rdtn_InitInp%DOFs         = 1
-            CALL SS_Rad_Init(SS_Rdtn_InitInp, SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, SS_Rdtn_xd, SS_Rdtn_z, OtherState%SS_Rdtn, &
-                                   SS_Rdtn_y, Interval, SS_Rdtn_InitOut, ErrStat2, ErrMsg2)
+            CALL SS_Rad_Init(SS_Rdtn_InitInp, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, &
+                                   m%SS_Rdtn_y, m%SS_Rdtn, Interval, SS_Rdtn_InitOut, ErrStat2, ErrMsg2)
             
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'WAMIT_Init')
                IF ( ErrStat >= AbortErrLev ) THEN
@@ -1212,10 +1183,9 @@ SUBROUTINE WAMIT_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut
          
        !Interval = p%DT                                               
 
+      ! initialize misc vars:      
+   m%LastIndWave = 1
        
-       ! initialize variables that we aren't going to use, just so the compiler doesn't warn us about them:
-       z%DummyConstrState = 0.0
-
        CALL Cleanup()
        
 CONTAINS
@@ -1226,18 +1196,9 @@ CONTAINS
       ! destroy local variables that are types in the framework:
       
       CALL Conv_Rdtn_DestroyInitInput(  Conv_Rdtn_InitInp,  ErrStat2, ErrMsg2 )
-      CALL Conv_Rdtn_DestroyInput(      Conv_Rdtn_u,        ErrStat2, ErrMsg2 )
-      CALL Conv_Rdtn_DestroyContState(  Conv_Rdtn_x,        ErrStat2, ErrMsg2 )
-      CALL Conv_Rdtn_DestroyConstrState(Conv_Rdtn_z,        ErrStat2, ErrMsg2 )
-      CALL Conv_Rdtn_DestroyOtherState( Conv_RdtnOtherState,ErrStat2, ErrMsg2 )
-      CALL Conv_Rdtn_DestroyOutput(     Conv_Rdtn_y,        ErrStat2, ErrMsg2 )
       CALL Conv_Rdtn_DestroyInitOutput( Conv_Rdtn_InitOut,  ErrStat2, ErrMsg2 )
 
       CALL SS_Rad_DestroyInitInput(     SS_Rdtn_InitInp,    ErrStat2, ErrMsg2 )
-      CALL SS_Rad_DestroyInput(         SS_Rdtn_u,          ErrStat2, ErrMsg2 )
-      CALL SS_Rad_DestroyDiscState(     SS_Rdtn_xd,         ErrStat2, ErrMsg2 )
-      CALL SS_Rad_DestroyConstrState(   SS_Rdtn_z,          ErrStat2, ErrMsg2 )
-      CALL SS_Rad_DestroyOutput(        SS_Rdtn_y,          ErrStat2, ErrMsg2 )
       CALL SS_Rad_DestroyInitOutput(    SS_Rdtn_InitOut,    ErrStat2, ErrMsg2 )
       
       
@@ -1262,19 +1223,20 @@ CONTAINS
             
 END SUBROUTINE WAMIT_Init
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WAMIT_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-! This routine is called at the end of the simulation.
+!> This routine is called at the end of the simulation.
+SUBROUTINE WAMIT_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(WAMIT_InputType),             INTENT(INOUT)  :: u           ! System inputs
-      TYPE(WAMIT_ParameterType),         INTENT(INOUT)  :: p           ! Parameters     
-      TYPE(WAMIT_ContinuousStateType),   INTENT(INOUT)  :: x           ! Continuous states
-      TYPE(WAMIT_DiscreteStateType),     INTENT(INOUT)  :: xd          ! Discrete states
-      TYPE(WAMIT_ConstraintStateType),   INTENT(INOUT)  :: z           ! Constraint states
-      TYPE(WAMIT_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states            
-      TYPE(WAMIT_OutputType),            INTENT(INOUT)  :: y           ! System outputs
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(WAMIT_InputType),             INTENT(INOUT)  :: u           !< System inputs
+      TYPE(WAMIT_ParameterType),         INTENT(INOUT)  :: p           !< Parameters     
+      TYPE(WAMIT_ContinuousStateType),   INTENT(INOUT)  :: x           !< Continuous states
+      TYPE(WAMIT_DiscreteStateType),     INTENT(INOUT)  :: xd          !< Discrete states
+      TYPE(WAMIT_ConstraintStateType),   INTENT(INOUT)  :: z           !< Constraint states
+      TYPE(WAMIT_OtherStateType),        INTENT(INOUT)  :: OtherState  !< Other states            
+      TYPE(WAMIT_OutputType),            INTENT(INOUT)  :: y           !< System outputs
+      TYPE(WAMIT_MiscVarType),           INTENT(INOUT)  :: m           !< Initial misc/optimization variables            
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
 
@@ -1308,7 +1270,9 @@ SUBROUTINE WAMIT_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       CALL WAMIT_DestroyConstrState( z,           ErrStat, ErrMsg )
       CALL WAMIT_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
          
-
+         ! Destroy misc vars:
+      CALL WAMIT_DestroyMisc(  m,  ErrStat, ErrMsg )
+      
          ! Destroy the output data:
          
       CALL WAMIT_DestroyOutput( y, ErrStat, ErrMsg )
@@ -1318,25 +1282,27 @@ SUBROUTINE WAMIT_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
 END SUBROUTINE WAMIT_End
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-! Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
-! Continuous, constraint, and discrete states are updated to values at t + Interval.
+!> Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
+!! Continuous, constraint, and discrete states are updated to values at t + Interval.
+SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                         INTENT(IN   ) :: t               ! Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   ) :: n               ! Current step of the simulation: t = n*Interval
-      TYPE(WAMIT_InputType),              INTENT(IN   ) :: Inputs(:)       ! Inputs at InputTimes
-      REAL(DbKi),                         INTENT(IN   ) :: InputTimes(:)   ! Times in seconds associated with Inputs
-      TYPE(WAMIT_ParameterType),          INTENT(IN   ) :: p               ! Parameters
-      TYPE(WAMIT_ContinuousStateType),    INTENT(INOUT) :: x               ! Input: Continuous states at t;
-                                                                           !   Output: Continuous states at t + Interval
-      TYPE(WAMIT_DiscreteStateType),      INTENT(INOUT) :: xd              ! Input: Discrete states at t;
-                                                                           !   Output: Discrete states at t + Interval
-      TYPE(WAMIT_ConstraintStateType),    INTENT(INOUT) :: z               ! Input: Constraint states at t;
-                                                                           !   Output: Constraint states at t + Interval
-      TYPE(WAMIT_OtherStateType),         INTENT(INOUT) :: OtherState      ! Other/optimization states
-      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat         ! Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                         INTENT(IN   ) :: t               !< Current simulation time in seconds
+      INTEGER(IntKi),                     INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
+      TYPE(WAMIT_InputType),              INTENT(IN   ) :: Inputs(:)       !< Inputs at InputTimes
+      REAL(DbKi),                         INTENT(IN   ) :: InputTimes(:)   !< Times in seconds associated with Inputs
+      TYPE(WAMIT_ParameterType),          INTENT(IN   ) :: p               !< Parameters
+      TYPE(WAMIT_ContinuousStateType),    INTENT(INOUT) :: x               !< Input: Continuous states at t;
+                                                                           !!   Output: Continuous states at t + Interval
+      TYPE(WAMIT_DiscreteStateType),      INTENT(INOUT) :: xd              !< Input: Discrete states at t;
+                                                                           !!   Output: Discrete states at t + Interval
+      TYPE(WAMIT_ConstraintStateType),    INTENT(INOUT) :: z               !< Input: Constraint states at t;
+                                                                           !!   Output: Constraint states at t + Interval
+      TYPE(WAMIT_OtherStateType),         INTENT(INOUT) :: OtherState      !< Input: Other states at t;
+                                                                           !!   Output: Other states at t + Interval
+      TYPE(WAMIT_MiscVarType),            INTENT(INOUT) :: m               !< Misc/optimization variables            
+      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat         !< Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
          ! Local variables
 
@@ -1349,13 +1315,8 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
           ! Create dummy variables required by framework but which are not used by the module
       
       TYPE(Conv_Rdtn_InputType), ALLOCATABLE :: Conv_Rdtn_u(:)         ! Inputs
-      TYPE(Conv_Rdtn_ContinuousStateType)    :: Conv_Rdtn_x            ! continuous states
-      TYPE(Conv_Rdtn_ConstraintStateType)    :: Conv_Rdtn_z            ! constraint states
-     ! TYPE(Conv_Rdtn_OtherStateType)         :: Conv_Rdtn_OtherState   ! other states
       
       TYPE(SS_Rad_InputType), ALLOCATABLE    :: SS_Rdtn_u(:)           ! Inputs
-      TYPE(SS_Rad_DiscreteStateType)         :: SS_Rdtn_xd             ! discrete states
-      TYPE(SS_Rad_ConstraintStateType)       :: SS_Rdtn_z              ! constraint states
 
       
                         
@@ -1385,7 +1346,8 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
             Conv_Rdtn_u(I)%Velocity = (/Inputs(I)%Mesh%TranslationVel(:,1), Inputs(I)%Mesh%RotationVel(:,1)/)   
          END DO
                  
-         CALL Conv_Rdtn_UpdateStates( t, n, Conv_Rdtn_u, InputTimes, p%Conv_Rdtn, Conv_Rdtn_x, xd%Conv_Rdtn, Conv_Rdtn_z, OtherState%Conv_Rdtn, ErrStat, ErrMsg )
+         CALL Conv_Rdtn_UpdateStates( t, n, Conv_Rdtn_u, InputTimes, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, &
+                                      z%Conv_Rdtn, OtherState%Conv_Rdtn, m%Conv_Rdtn, ErrStat, ErrMsg )
          
          DEALLOCATE(Conv_Rdtn_u)
          
@@ -1400,10 +1362,12 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
          END IF
          
          DO I=1,nTime
-            SS_Rdtn_u(I)%dq = reshape((/Inputs(I)%Mesh%TranslationVel(:,1), Inputs(I)%Mesh%RotationVel(:,1)/), (/6,1/)) !reshape(u%Velocity, (/6,1/)) ! dq is a 6x1 matrix
+            SS_Rdtn_u(I)%dq(1:3) = Inputs(I)%Mesh%TranslationVel(:,1)
+            SS_Rdtn_u(I)%dq(4:6) = Inputs(I)%Mesh%RotationVel(:,1)
+            !SS_Rdtn_u(I)%dq = reshape((/Inputs(I)%Mesh%TranslationVel(:,1), Inputs(I)%Mesh%RotationVel(:,1)/), (/6,1/)) !reshape(u%Velocity, (/6,1/)) ! dq is a 6x1 matrix
          END DO
          
-         CALL SS_Rad_UpdateStates( t, n, SS_Rdtn_u, InputTimes, p%SS_Rdtn, x%SS_Rdtn, SS_Rdtn_xd, SS_Rdtn_z, OtherState%SS_Rdtn, ErrStat, ErrMsg )
+         CALL SS_Rad_UpdateStates( t, n, SS_Rdtn_u, InputTimes, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn, ErrStat, ErrMsg )
          
          DEALLOCATE(SS_Rdtn_u)
          
@@ -1412,24 +1376,23 @@ SUBROUTINE WAMIT_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState
       
       
 END SUBROUTINE WAMIT_UpdateStates
-
-
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )   
-! Routine for computing outputs, used in both loose and tight coupling.
+!> Routine for computing outputs, used in both loose and tight coupling.
+SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                      INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(WAMIT_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
-      TYPE(WAMIT_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(WAMIT_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(WAMIT_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(WAMIT_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(WAMIT_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(WAMIT_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at Time (Input only so that mesh con-
-                                                                     !   nectivity information does not have to be recalculated)
-      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                      INTENT(IN   )  :: Time        !< Current simulation time in seconds
+      TYPE(WAMIT_InputType),           INTENT(IN   )  :: u           !< Inputs at Time
+      TYPE(WAMIT_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(WAMIT_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(WAMIT_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(WAMIT_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(WAMIT_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time
+      TYPE(WAMIT_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at Time (Input only so that mesh con-
+                                                                     !!   nectivity information does not have to be recalculated)
+      TYPE(WAMIT_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables            
+      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       
             
@@ -1444,19 +1407,6 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
       REAL(ReKi)                           :: rotdisp(3)                              ! small angle rotational displacements
       REAL(ReKi)                           :: AllOuts(MaxWAMITOutputs)  
       
-         ! Create dummy variables required by framework but which are not used by the module
-         ! TODO Think about adding the types below to the WAMIT type to avoid instantiation at every time step
-      TYPE(Conv_Rdtn_InputType)           :: Conv_Rdtn_u           ! Inputs
-      TYPE(Conv_Rdtn_ContinuousStateType) :: Conv_Rdtn_x           ! continuous states
-      TYPE(Conv_Rdtn_ConstraintStateType) :: Conv_Rdtn_z           ! constraint states
-      !TYPE(Conv_Rdtn_OtherStateType)      :: Conv_RdtnOtherState   ! other/optimization states
-      TYPE(Conv_Rdtn_OutputType)          :: Conv_Rdtn_y           ! Outputs
-      
-      TYPE(SS_Rad_InputType)              :: SS_Rdtn_u             ! Inputs
-      TYPE(SS_Rad_DiscreteStateType)      :: SS_Rdtn_xd            ! discrete states
-      TYPE(SS_Rad_ConstraintStateType)    :: SS_Rdtn_z             ! constraint states
-      !TYPE(SS_Rad_OtherStateType)         :: SS_RdtnOtherState     ! other/optimization states
-      TYPE(SS_Rad_OutputType)             :: SS_Rdtn_y             ! Outputs
       
          ! Initialize ErrStat
          
@@ -1478,8 +1428,8 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
          ! Compute the load contribution from incident waves (i.e., the diffraction problem):
 
       DO I = 1,6     ! Loop through all wave excitation forces and moments
-         OtherState%F_Waves1(I) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveExctn(:,I), &
-                                                  OtherState%LastIndWave, p%NStepWave + 1       )
+         m%F_Waves1(I) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveExctn(:,I), &
+                                                  m%LastIndWave, p%NStepWave + 1       )
       END DO          ! I - All wave excitation forces and moments
       
       
@@ -1495,7 +1445,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
       
          ! Compute the load contirbution from user-supplied added stiffness and damping
       ! This is being done by the HydroDyn Module now.  GJH 1/6/14  
-      OtherState%F_PtfmAdd = 0.0  !  p%AddF0 - matmul(p%AddCLin, q) - matmul(p%AddBLin, qdot) - matmul(p%AddBQuad, qdotsq)
+      m%F_PtfmAdd = 0.0  !  p%AddF0 - matmul(p%AddCLin, q) - matmul(p%AddBLin, qdot) - matmul(p%AddBQuad, qdotsq)
       
       
       
@@ -1503,14 +1453,14 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
       
          ! Compute the load contribution from hydrostatics:
 
-      OtherState%F_HS(:) =  0.0                             ! Initialize to zero...
-      OtherState%F_HS(3) =  p%RhoXg*p%PtfmVol0              ! except for the hydrostatic buoyancy force from Archimede's Principle when the support platform is in its undisplaced position
-      OtherState%F_HS(4) =  p%RhoXg*p%PtfmVol0*p%PtfmCOByt   ! and the moment about X due to the COB being offset from the WAMIT reference point
-      OtherState%F_HS(5) = -p%RhoXg*p%PtfmVol0*p%PtfmCOBxt   ! and the moment about Y due to the COB being offset from the WAMIT reference point
+      m%F_HS(:) =  0.0                              ! Initialize to zero...
+      m%F_HS(3) =  p%RhoXg*p%PtfmVol0               ! except for the hydrostatic buoyancy force from Archimede's Principle when the support platform is in its undisplaced position
+      m%F_HS(4) =  p%RhoXg*p%PtfmVol0*p%PtfmCOByt   ! and the moment about X due to the COB being offset from the WAMIT reference point
+      m%F_HS(5) = -p%RhoXg*p%PtfmVol0*p%PtfmCOBxt   ! and the moment about Y due to the COB being offset from the WAMIT reference point
       
       DO I = 1,6     ! Loop through all hydrostatic forces and moments
          DO J = 1,6  ! Loop through all platform DOFs
-            OtherState%F_HS(I) = OtherState%F_HS(I) - p%HdroSttc(I,J)*q(J)
+            m%F_HS(I) = m%F_HS(I) - p%HdroSttc(I,J)*q(J)
          END DO       ! J -  platform DOFs
    
       END DO          ! I - All hydrostatic forces and moments
@@ -1523,23 +1473,22 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
          !   (i.e., the radiation problem):
 
       IF ( p%RdtnMod == 1 )  THEN ! .TRUE. when we will be modeling wave radiation damping.
-         Conv_Rdtn_u%Velocity = qdot
-         CALL Conv_Rdtn_CalcOutput( Time, Conv_Rdtn_u, p%Conv_Rdtn, Conv_Rdtn_x, xd%Conv_Rdtn,  &
-                                Conv_Rdtn_z, OtherState%Conv_Rdtn, Conv_Rdtn_y, ErrStat, ErrMsg )
-         OtherState%F_Rdtn  (:) = Conv_Rdtn_y%F_Rdtn       
+         m%Conv_Rdtn_u%Velocity = qdot
+         CALL Conv_Rdtn_CalcOutput( Time, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn,  &
+                                z%Conv_Rdtn, OtherState%Conv_Rdtn, m%Conv_Rdtn_y, m%Conv_Rdtn, ErrStat, ErrMsg )
+         m%F_Rdtn  (:) = m%Conv_Rdtn_y%F_Rdtn       
 
       ELSE IF ( p%RdtnMod == 2 )  THEN 
-            ! TODO: we have an array shape issue.  Velocity and F_Rdtn are 1x6, but dq is a 6x1 
-         SS_Rdtn_u%dq = reshape(qdot, (/6,1/)) !reshape(u%Velocity, (/6,1/)) ! dq is a 6x1 matrix
-         CALL SS_Rad_CalcOutput( Time, SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, SS_Rdtn_xd,  &
-                                SS_Rdtn_z, OtherState%SS_Rdtn, SS_Rdtn_y, ErrStat, ErrMsg )
-         OtherState%F_Rdtn  (:) = reshape(SS_Rdtn_y%y, (/6/))
+         m%SS_Rdtn_u%dq = qdot
+         CALL SS_Rad_CalcOutput( Time, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn,  &
+                                z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn_y, m%SS_Rdtn, ErrStat, ErrMsg )
+         m%F_Rdtn  (:) = m%SS_Rdtn_y%y
       ELSE ! We must not be modeling wave radiation damping.
 
 
       ! Set the total load contribution from radiation damping to zero:
 
-         OtherState%F_Rdtn        (:) = 0.0
+         m%F_Rdtn        (:) = 0.0
 
 
       END IF       
@@ -1553,16 +1502,16 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
          
          !added mass:
 
-      OtherState%F_PtfmAM     =   -matmul(p%HdroAdMsI, qdotdot)
+      m%F_PtfmAM     =   -matmul(p%HdroAdMsI, qdotdot)
 
       
       
          ! Compute outputs here:
       DO I=1,3
-         y%Mesh%Force(I,1)    = OtherState%F_PtfmAM(I) + OtherState%F_Rdtn(I)   + OtherState%F_Waves1(I)   + OtherState%F_HS(I)    + OtherState%F_PtfmAdd(I)    
+         y%Mesh%Force(I,1)    = m%F_PtfmAM(I) + m%F_Rdtn(I)   + m%F_Waves1(I)   + m%F_HS(I)    + m%F_PtfmAdd(I)    
       END DO
       DO I=1,3
-         y%Mesh%Moment(I,1)   = OtherState%F_PtfmAM(I+3) + OtherState%F_Rdtn(I+3) + OtherState%F_Waves1(I+3) + OtherState%F_HS(I+3)  + OtherState%F_PtfmAdd(I+3)   
+         y%Mesh%Moment(I,1)   = m%F_PtfmAM(I+3) + m%F_Rdtn(I+3) + m%F_Waves1(I+3) + m%F_HS(I+3)  + m%F_PtfmAdd(I+3)   
       END DO
       
       
@@ -1572,7 +1521,7 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
       
       
          ! Map calculated results into the AllOuts Array
-      CALL WMTOut_MapOutputs(Time, y, OtherState%F_Waves1, OtherState%F_HS, OtherState%F_Rdtn, OtherState%F_PtfmAM, AllOuts, ErrStat, ErrMsg)
+      CALL WMTOut_MapOutputs(Time, y, m%F_Waves1, m%F_HS, m%F_Rdtn, m%F_PtfmAM, AllOuts, ErrStat, ErrMsg)
       
 
               ! Put the output data in the OutData array
@@ -1586,20 +1535,21 @@ SUBROUTINE WAMIT_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMs
 
 END SUBROUTINE WAMIT_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WAMIT_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )  
-! Tight coupling routine for computing derivatives of continuous states
+!> Tight coupling routine for computing derivatives of continuous states
+SUBROUTINE WAMIT_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )  
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(WAMIT_InputType),             INTENT(IN   )  :: u           ! Inputs at Time                    
-      TYPE(WAMIT_ParameterType),         INTENT(IN   )  :: p           ! Parameters                             
-      TYPE(WAMIT_ContinuousStateType),   INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(WAMIT_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(WAMIT_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(WAMIT_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
-      TYPE(WAMIT_ContinuousStateType),   INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at Time
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation     
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds
+      TYPE(WAMIT_InputType),             INTENT(IN   )  :: u           !< Inputs at Time                    
+      TYPE(WAMIT_ParameterType),         INTENT(IN   )  :: p           !< Parameters                             
+      TYPE(WAMIT_ContinuousStateType),   INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(WAMIT_DiscreteStateType),     INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(WAMIT_ConstraintStateType),   INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(WAMIT_OtherStateType),        INTENT(IN   )  :: OtherState  !< Other states                    
+      TYPE(WAMIT_MiscVarType),           INTENT(INOUT)  :: m           !< Misc/optimization variables            
+      TYPE(WAMIT_ContinuousStateType),   INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at Time
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation     
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
                
          ! Initialize ErrStat
@@ -1609,35 +1559,30 @@ SUBROUTINE WAMIT_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, Err
       
       
          ! Compute the first time derivatives of the continuous states here:
+   m%SS_Rdtn_u%dq(1:3) = u%Mesh%TranslationVel(:,1) 
+   m%SS_Rdtn_u%dq(4:6) = u%Mesh%RotationVel(:,1) 
       
-      
+   CALL SS_Rad_CalcContStateDeriv( Time, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn, dxdt%SS_Rdtn, ErrStat, ErrMsg )      
          
 
 END SUBROUTINE WAMIT_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WAMIT_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )   
-! Tight coupling routine for updating discrete states
+!> Tight coupling routine for updating discrete states
+SUBROUTINE WAMIT_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                         INTENT(IN   )  :: Time        ! Current simulation time in seconds 
-      INTEGER(IntKi),                     INTENT(IN   )  :: n           ! Current step of the simulation: t = n*Interval
-      TYPE(WAMIT_InputType),              INTENT(IN   )  :: u           ! Inputs at Time                       
-      TYPE(WAMIT_ParameterType),          INTENT(IN   )  :: p           ! Parameters                                 
-      TYPE(WAMIT_ContinuousStateType),    INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(WAMIT_DiscreteStateType),      INTENT(INOUT)  :: xd          ! Input: Discrete states at Time; 
-                                                                        !   Output: Discrete states at Time + Interval
-      TYPE(WAMIT_ConstraintStateType),    INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(WAMIT_OtherStateType),         INTENT(INOUT)  :: OtherState  ! Other/optimization states           
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-         ! These are dummy variables to satisfy the framework, but are not used 
-      TYPE(Conv_Rdtn_InputType)                :: Conv_Rdtn_u                           ! Conv_Rdtn module initial guess for the input; the input mesh is not defined because it is not used by the waves module
-      !TYPE(Conv_Rdtn_ParameterType)            :: Conv_Rdtn_p                           ! Conv_Rdtn module parameters
-      TYPE(Conv_Rdtn_ContinuousStateType)      :: Conv_Rdtn_x                           ! Conv_Rdtn module initial continuous states
-      !TYPE(Conv_Rdtn_DiscreteStateType)        :: Conv_Rdtn_xd                          ! Conv_Rdtn module discrete states
-      TYPE(Conv_Rdtn_ConstraintStateType)      :: Conv_Rdtn_z                           ! Conv_Rdtn module initial guess of the constraint states
-      TYPE(Conv_Rdtn_OtherStateType)           :: Conv_RdtnOtherState                   ! Conv_Rdtn module other/optimization states 
+      REAL(DbKi),                         INTENT(IN   )  :: Time        !< Current simulation time in seconds 
+      INTEGER(IntKi),                     INTENT(IN   )  :: n           !< Current step of the simulation: t = n*Interval
+      TYPE(WAMIT_InputType),              INTENT(IN   )  :: u           !< Inputs at Time                       
+      TYPE(WAMIT_ParameterType),          INTENT(IN   )  :: p           !< Parameters                                 
+      TYPE(WAMIT_ContinuousStateType),    INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(WAMIT_DiscreteStateType),      INTENT(INOUT)  :: xd          !< Input: Discrete states at Time; 
+                                                                        !<   Output: Discrete states at Time + Interval
+      TYPE(WAMIT_ConstraintStateType),    INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(WAMIT_OtherStateType),         INTENT(INOUT)  :: OtherState  !< Other states at Time (THIS [intent out] VIOLATES THE FRAMEWORK)          
+      TYPE(WAMIT_MiscVarType),            INTENT(INOUT)  :: m           !< Misc/optimization variables            
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       
       
          ! Initialize ErrStat
@@ -1649,30 +1594,32 @@ SUBROUTINE WAMIT_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, ErrStat, 
          ! Update discrete states here:
       IF ( p%RdtnMod == 1 )  THEN ! .TRUE. when we will be modeling wave radiation damping.   
          
-         Conv_Rdtn_u%Velocity = (/u%Mesh%TranslationVel(:,1), u%Mesh%RotationVel(:,1)/)
+         m%Conv_Rdtn_u%Velocity = (/u%Mesh%TranslationVel(:,1), u%Mesh%RotationVel(:,1)/)
       
-         CALL Conv_Rdtn_UpdateDiscState( Time, n, Conv_Rdtn_u, p%Conv_Rdtn, Conv_Rdtn_x, xd%Conv_Rdtn, Conv_Rdtn_z, Conv_RdtnOtherState, ErrStat, ErrMsg )
+         CALL Conv_Rdtn_UpdateDiscState( Time, n, m%Conv_Rdtn_u, p%Conv_Rdtn, x%Conv_Rdtn, xd%Conv_Rdtn, z%Conv_Rdtn, &
+                                         OtherState%Conv_Rdtn, m%Conv_Rdtn, ErrStat, ErrMsg )
          
       END IF
          
        
 END SUBROUTINE WAMIT_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE WAMIT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_residual, ErrStat, ErrMsg )   
-! Tight coupling routine for solving for the residual of the constraint state equations
+!> Tight coupling routine for solving for the residual of the constraint state equations
+SUBROUTINE WAMIT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds   
-      TYPE(WAMIT_InputType),             INTENT(IN   )  :: u           ! Inputs at Time                       
-      TYPE(WAMIT_ParameterType),         INTENT(IN   )  :: p           ! Parameters                           
-      TYPE(WAMIT_ContinuousStateType),   INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(WAMIT_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(WAMIT_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at Time (possibly a guess)
-      TYPE(WAMIT_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
-      TYPE(WAMIT_ConstraintStateType),   INTENT(  OUT)  :: z_residual  ! Residual of the constraint state equations using  
-                                                                       !     the input values described above      
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds   
+      TYPE(WAMIT_InputType),             INTENT(IN   )  :: u           !< Inputs at Time                       
+      TYPE(WAMIT_ParameterType),         INTENT(IN   )  :: p           !< Parameters                           
+      TYPE(WAMIT_ContinuousStateType),   INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(WAMIT_DiscreteStateType),     INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(WAMIT_ConstraintStateType),   INTENT(IN   )  :: z           !< Constraint states at Time (possibly a guess)
+      TYPE(WAMIT_OtherStateType),        INTENT(IN   )  :: OtherState  !< Other states                    
+      TYPE(WAMIT_MiscVarType),           INTENT(INOUT)  :: m           !< Misc/optimization variables            
+      TYPE(WAMIT_ConstraintStateType),   INTENT(  OUT)  :: z_residual  !< Residual of the constraint state equations using  
+                                                                       !!     the input values described above      
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
                
          ! Initialize ErrStat
@@ -1682,286 +1629,9 @@ SUBROUTINE WAMIT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_re
       
       
          ! Solve for the constraint states here:
-      
-      z_residual%DummyConstrState = 0.0_ReKi
+      call SS_Rad_CalcConstrStateResidual( Time, m%SS_Rdtn_u, p%SS_Rdtn, x%SS_Rdtn, xd%SS_Rdtn, z%SS_Rdtn, OtherState%SS_Rdtn, m%SS_Rdtn, z_residual%SS_Rdtn, ErrStat, ErrMsg ) 
 
 END SUBROUTINE WAMIT_CalcConstrStateResidual
 !----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE WAMIT_JacobianPInput( Time, u, p, x, xd, z, OtherState, dYdu, dXdu, dXddu, dZdu, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations 
-!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(WAMIT_InputType),                   INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(WAMIT_ParameterType),               INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(WAMIT_ContinuousStateType),         INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(WAMIT_DiscreteStateType),           INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(WAMIT_ConstraintStateType),         INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(WAMIT_OtherStateType),              INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(WAMIT_PartialOutputPInputType),     INTENT(  OUT), OPTIONAL :: dYdu       ! Partial derivatives of output equations
-!                                                                                       !   (Y) with respect to the inputs (u)
-!      TYPE(WAMIT_PartialContStatePInputType),  INTENT(  OUT), OPTIONAL :: dXdu       ! Partial derivatives of continuous state
-!                                                                                       !   equations (X) with respect to inputs (u)
-!      TYPE(WAMIT_PartialDiscStatePInputType),  INTENT(  OUT), OPTIONAL :: dXddu      ! Partial derivatives of discrete state 
-!                                                                                       !   equations (Xd) with respect to inputs (u)
-!      TYPE(WAMIT_PartialConstrStatePInputType),INTENT(  OUT), OPTIONAL :: dZdu       ! Partial derivatives of constraint state 
-!                                                                                       !   equations (Z) with respect to inputs (u)
-!      INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!      IF ( PRESENT( dYdu ) ) THEN
-!      
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the inputs (u) here:
-!
-!!         dYdu%DummyOutput%DummyInput = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdu ) ) THEN
-!      
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the inputs (u) here:
-!      
-! !        dXdu%DummyContState%DummyInput = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddu ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the inputs (u) here:
-!
-! !        dXddu%DummyDiscState%DummyInput = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdu ) ) THEN
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the inputs (u) here:
-!      
-!  !       dZdu%DummyConstrState%DummyInput = 0
-!
-!      END IF
-!
-!
-!END SUBROUTINE WAMIT_JacobianPInput
-!!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE WAMIT_JacobianPContState( Time, u, p, x, xd, z, OtherState, dYdx, dXdx, dXddx, dZdx, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                    INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(WAMIT_InputType),                       INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(WAMIT_ParameterType),                   INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(WAMIT_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(WAMIT_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(WAMIT_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(WAMIT_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(WAMIT_PartialOutputPContStateType),     INTENT(  OUT), OPTIONAL :: dYdx       ! Partial derivatives of output equations
-!                                                                                           !   (Y) with respect to the continuous 
-!                                                                                           !   states (x)
-!      TYPE(WAMIT_PartialContStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXdx       ! Partial derivatives of continuous state
-!                                                                                           !   equations (X) with respect to 
-!                                                                                           !   the continuous states (x)
-!      TYPE(WAMIT_PartialDiscStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXddx      ! Partial derivatives of discrete state 
-!                                                                                           !   equations (Xd) with respect to 
-!                                                                                           !   the continuous states (x)
-!      TYPE(WAMIT_PartialConstrStatePContStateType),INTENT(  OUT), OPTIONAL :: dZdx       ! Partial derivatives of constraint state
-!                                                                                           !   equations (Z) with respect to 
-!                                                                                           !   the continuous states (x)
-!      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!     
-!      IF ( PRESENT( dYdx ) ) THEN
-!
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the continuous states (x) here:
-!
-!         dYdx%DummyOutput%DummyContState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdx ) ) THEN
-!      
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the continuous states (x) here:
-!      
-!         dXdx%DummyContState%DummyContState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddx ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the continuous states (x) here:
-!
-!         dXddx%DummyDiscState%DummyContState = 0
-!         
-!      END IF
-!      
-!      IF ( PRESENT( dZdx ) ) THEN
-!
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the continuous states (x) here:
-!      
-!         dZdx%DummyConstrState%DummyContState = 0
-!
-!      END IF
-!      
-!
-!   END SUBROUTINE WAMIT_JacobianPContState
-!!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE WAMIT_JacobianPDiscState( Time, u, p, x, xd, z, OtherState, dYdxd, dXdxd, dXddxd, dZdxd, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
-!!..................................................................................................................................
-!
-!      REAL(DbKi),                                    INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(WAMIT_InputType),                       INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(WAMIT_ParameterType),                   INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(WAMIT_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(WAMIT_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(WAMIT_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(WAMIT_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(WAMIT_PartialOutputPDiscStateType),     INTENT(  OUT), OPTIONAL :: dYdxd      ! Partial derivatives of output equations
-!                                                                                           !  (Y) with respect to the discrete 
-!                                                                                           !  states (xd)
-!      TYPE(WAMIT_PartialContStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXdxd      ! Partial derivatives of continuous state
-!                                                                                           !   equations (X) with respect to the 
-!                                                                                           !   discrete states (xd)
-!      TYPE(WAMIT_PartialDiscStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXddxd     ! Partial derivatives of discrete state 
-!                                                                                           !   equations (Xd) with respect to the
-!                                                                                           !   discrete states (xd)
-!      TYPE(WAMIT_PartialConstrStatePDiscStateType),INTENT(  OUT), OPTIONAL :: dZdxd      ! Partial derivatives of constraint state
-!                                                                                           !   equations (Z) with respect to the 
-!                                                                                           !   discrete states (xd)
-!      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!      IF ( PRESENT( dYdxd ) ) THEN
-!      
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the discrete states (xd) here:
-!
-!         dYdxd%DummyOutput%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the discrete states (xd) here:
-!      
-!         dXdxd%DummyContState%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the discrete states (xd) here:
-!
-!         dXddxd%DummyDiscState%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the discrete states (xd) here:
-!      
-!         dZdxd%DummyConstrState%DummyDiscState = 0
-!
-!      END IF
-!      
-!
-!
-!END SUBROUTINE WAMIT_JacobianPDiscState
-!!----------------------------------------------------------------------------------------------------------------------------------    
-!SUBROUTINE WAMIT_JacobianPConstrState( Time, u, p, x, xd, z, OtherState, dYdz, dXdz, dXddz, dZdz, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                      INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(WAMIT_InputType),                         INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(WAMIT_ParameterType),                     INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(WAMIT_ContinuousStateType),               INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(WAMIT_DiscreteStateType),                 INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(WAMIT_ConstraintStateType),               INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(WAMIT_OtherStateType),                    INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(WAMIT_PartialOutputPConstrStateType),     INTENT(  OUT), OPTIONAL :: dYdz       ! Partial derivatives of output 
-!                                                                                             !  equations (Y) with respect to the 
-!                                                                                             !  constraint states (z)
-!      TYPE(WAMIT_PartialContStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXdz       ! Partial derivatives of continuous
-!                                                                                             !  state equations (X) with respect to 
-!                                                                                             !  the constraint states (z)
-!      TYPE(WAMIT_PartialDiscStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXddz      ! Partial derivatives of discrete state
-!                                                                                             !  equations (Xd) with respect to the 
-!                                                                                             !  constraint states (z)
-!      TYPE(WAMIT_PartialConstrStatePConstrStateType),INTENT(  OUT), OPTIONAL :: dZdz       ! Partial derivatives of constraint 
-!                                                                                             ! state equations (Z) with respect to 
-!                                                                                             !  the constraint states (z)
-!      INTEGER(IntKi),                                  INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                    INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      IF ( PRESENT( dYdz ) ) THEN
-!      
-!            ! Calculate the partial derivative of the output equations (Y) with respect to the constraint states (z) here:
-!        
-!         dYdz%DummyOutput%DummyConstrState = 0
-!         
-!      END IF
-!      
-!      IF ( PRESENT( dXdz ) ) THEN
-!      
-!            ! Calculate the partial derivative of the continuous state equations (X) with respect to the constraint states (z) here:
-!         
-!         dXdz%DummyContState%DummyConstrState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddz ) ) THEN
-!
-!            ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the constraint states (z) here:
-!
-!         dXddz%DummyDiscState%DummyConstrState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdz ) ) THEN
-!
-!            ! Calculate the partial derivative of the constraint state equations (Z) with respect to the constraint states (z) here:
-!         
-!         dZdz%DummyConstrState%DummyConstrState = 0
-!
-!      END IF
-!      
-!
-!END SUBROUTINE WAMIT_JacobianPConstrState
-
-!----------------------------------------------------------------------------------------------------------------------------------
-   
 END MODULE WAMIT
 !**********************************************************************************************************************************

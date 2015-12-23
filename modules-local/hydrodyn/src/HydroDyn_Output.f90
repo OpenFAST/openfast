@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2013  National Renewable Energy Laboratory
+! Copyright (C) 2013-2015  National Renewable Energy Laboratory
 !
 !    This file is part of HydroDyn.
 !
@@ -528,7 +528,7 @@ SUBROUTINE HDOut_WriteOutputs( Time, y, p, Decimate, ErrStat, ErrMsg )
 END SUBROUTINE HDOut_WriteOutputs
 
 !====================================================================================================
-SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, OtherState, InitOut, ErrStat, ErrMsg )
+SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, m, InitOut, ErrStat, ErrMsg )
 ! This subroutine initialized the output module, checking if the output parameter list (OutList)
 ! contains valid names, and opening the output file if there are any requested outputs
 ! NOTE: This routine must be called only after any sub-modules OUT_Init() subroutines have been called.
@@ -542,7 +542,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, OtherState, InitOut, E
    TYPE(HydroDyn_InitInputType ), INTENT( IN    ) :: InitInp              ! data needed to initialize the output module     
    TYPE(HydroDyn_OutputType),     INTENT( INOUT ) :: y                    ! This module's internal data
    TYPE(HydroDyn_ParameterType),  INTENT( INOUT ) :: p 
-   TYPE(HydroDyn_OtherStateType), INTENT( INOUT ) :: OtherState
+   TYPE(HydroDyn_MiscVarType),    INTENT( INOUT ) :: m
    TYPE(HydroDyn_InitOutputType), INTENT( INOUT ) :: InitOut
    INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
    CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -624,10 +624,10 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, OtherState, InitOut, E
          hasWAMIT2Outs  = .FALSE.
          hasWaves2Outs  = .FALSE.
          hasMorisonOuts = .FALSE.
-         p%NumTotalOuts   = p%NumOuts
-         OtherState%LastOutTime = 0.0_DbKi
-         OtherState%Decimate    = 0
-         p%OutDec               = 1             !TODO: Remove this once the parameter has been added to the HD input file GJH 7/8/2014
+         p%NumTotalOuts = p%NumOuts
+         m%LastOutTime  = 0.0_DbKi
+         m%Decimate     = 0
+         p%OutDec       = 1             !TODO: Remove this once the parameter has been added to the HD input file GJH 7/8/2014
          
          IF (ALLOCATED( p%WAMIT%OutParam ) .AND. p%WAMIT%NumOuts > 0) THEN
             hasWAMITOuts = .TRUE.
@@ -668,7 +668,7 @@ SUBROUTINE HDOUT_Init( HydroDyn_ProgDesc, InitInp, y,  p, OtherState, InitOut, E
             ErrStat = ErrID_Fatal
             RETURN
          END IF
-         y%WriteOutput = 0.0_ReKi  ! bjj added this only so the Intel Inspector wouldn't complaing about uninitialized memory access (was harmless)
+         y%WriteOutput = 0.0_ReKi  ! bjj added this only so the Intel Inspector wouldn't complain about uninitialized memory access (was harmless)
          
                   
             ! Initialize the HD-level Hdr and Unt elements

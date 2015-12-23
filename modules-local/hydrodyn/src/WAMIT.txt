@@ -58,29 +58,43 @@ typedef   ^                            ^                             CHARACTER(1
 # Define continuous (differentiable) states here:
 #
 typedef   ^                            ContinuousStateType           SS_Rad_ContinuousStateType            SS_Rdtn           -          -        -        "continuous states from the State Space radiation module"        -
+typedef   ^                            ^                             Conv_Rdtn_ContinuousStateType         Conv_Rdtn         -          -        -        "placeholder"   -
 #
 #
 # Define discrete (nondifferentiable) states here:
 #
 typedef   ^                            DiscreteStateType             Conv_Rdtn_DiscreteStateType           Conv_Rdtn         -          -         -       "discrete states from the convolution radiation module"        -
+typedef   ^                            DiscreteStateType             SS_Rad_DiscreteStateType              SS_Rdtn           -          -         -       "placeholder"        -
 #
 #
 # Define constraint states here:
 #
-typedef   ^                            ConstraintStateType           ReKi                     DummyConstrState         -         -         -         "Remove this variable if you have constraint states"        -
+typedef   ^                            ConstraintStateType           Conv_Rdtn_ConstraintStateType           Conv_Rdtn       -         -         -         "placeholder"        -
+typedef   ^                            ConstraintStateType           SS_Rad_ConstraintStateType              SS_Rdtn         -         -         -         "placeholder"        -
 #
 #
-# Define any data that are not considered actual states here:
-#   e.g. data used only for efficiency purposes (indices for searching in an array,  copies of previous calculations of output at a given time, etc.)
-#
-typedef   ^                            OtherStateType                INTEGER                  LastIndWave                     -              -         -         ""   -
-typedef   ^                            ^                             SS_Rad_OtherStateType    SS_Rdtn                         -              -         -         ""   -
+
+# Define any data that are integer or logical states here:
+typedef   ^                            OtherStateType                SS_Rad_OtherStateType    SS_Rdtn                         -              -         -         ""   -
 typedef   ^                            ^                             Conv_Rdtn_OtherStateType Conv_Rdtn                       -              -         -         ""   -
-typedef   ^                            ^                             ReKi                     F_HS                            {6}            -         -         ""   -
-typedef   ^                            ^                             ReKi                     F_Waves1                        {6}            -         -         ""   -
-typedef   ^                            ^                             ReKi                     F_Rdtn                          {6}            -         -         ""   -
-typedef   ^                            ^                             ReKi                     F_PtfmAdd                       {6}            -         -         ""   -
-typedef   ^                            ^                             ReKi                     F_PtfmAM                        {6}            -         -         ""   -
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef   ^                            MiscVarType                   INTEGER                  LastIndWave                     -              -         -         ""   -
+typedef   ^                            ^                             ReKi                     F_HS                            {6}            -         -         "local variable in CalcOutput:Total load contribution from hydrostatics, including the effects of waterplane area and the center of buoyancy"   "(N, N-m)"
+typedef   ^                            ^                             ReKi                     F_Waves1                        {6}            -         -         "local variable in CalcOutput:Total load contribution from incident waves (i.e., the diffraction problem)"   "(N, N-m)"
+typedef   ^                            ^                             ReKi                     F_Rdtn                          {6}            -         -         "local variable in CalcOutput:Total load contribution from wave radiation damping (i.e., the diffraction problem)"   "(N, N-m)"
+typedef   ^                            ^                             ReKi                     F_PtfmAdd                       {6}            -         -         "local variable in CalcOutput:set to zero because this is calculated in HydroDyn now"   -
+typedef   ^                            ^                             ReKi                     F_PtfmAM                        {6}            -         -         "local variable in CalcOutput:"   -
+typedef   ^                            ^                             SS_Rad_MiscVarType       SS_Rdtn                         -              -         -         ""   -
+typedef   ^                            ^                             SS_Rad_InputType         SS_Rdtn_u                       -              -         -         ""   -
+typedef   ^                            ^                             SS_Rad_OutputType        SS_Rdtn_y                       -              -         -         ""   -
+typedef   ^                            ^                             Conv_Rdtn_MiscVarType    Conv_Rdtn                       -              -         -         ""   -
+typedef   ^                            ^                             Conv_Rdtn_InputType      Conv_Rdtn_u                     -              -         -         ""   -
+typedef   ^                            ^                             Conv_Rdtn_OutputType     Conv_Rdtn_y                     -              -         -         ""   -
+
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:

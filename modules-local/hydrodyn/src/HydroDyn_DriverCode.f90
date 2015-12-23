@@ -2,7 +2,7 @@
 ! HydroDyn_DriverCode: This code tests the template modules
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2012  National Renewable Energy Laboratory
+! Copyright (C) 2012-2015  National Renewable Energy Laboratory
 !
 !    This file is part of HydroDyn.
 !
@@ -31,22 +31,22 @@ PROGRAM HydroDynDriver
    IMPLICIT NONE
    
    TYPE HD_Drvr_InitInput
-      LOGICAL         :: Echo
-      REAL(ReKi)      :: Gravity
-      CHARACTER(1024) :: HDInputFile
-      CHARACTER(1024) :: OutRootName
-      INTEGER         :: NSteps
-      REAL(DbKi)      :: TimeInterval
-      INTEGER         :: WAMITInputsMod
-      CHARACTER(1024) :: WAMITInputsFile
-      REAL(ReKi)      :: uWAMITInSteady(6)
-      REAL(ReKi)      :: uDotWAMITInSteady(6)
-      REAL(ReKi)      :: uDotDotWAMITInSteady(6)
-      INTEGER         :: MorisonInputsMod
-      CHARACTER(1024) :: MorisonInputsFile
-      REAL(ReKi)      :: uMorisonInSteady(6)
-      REAL(ReKi)      :: uDotMorisonInSteady(6)
-      REAL(ReKi)      :: uDotDotMorisonInSteady(6)
+      LOGICAL                 :: Echo
+      REAL(ReKi)              :: Gravity
+      CHARACTER(1024)         :: HDInputFile
+      CHARACTER(1024)         :: OutRootName
+      INTEGER                 :: NSteps
+      REAL(DbKi)              :: TimeInterval
+      INTEGER                 :: WAMITInputsMod
+      CHARACTER(1024)         :: WAMITInputsFile
+      REAL(ReKi)              :: uWAMITInSteady(6)
+      REAL(ReKi)              :: uDotWAMITInSteady(6)
+      REAL(ReKi)              :: uDotDotWAMITInSteady(6)
+      INTEGER                 :: MorisonInputsMod
+      CHARACTER(1024)         :: MorisonInputsFile
+      REAL(ReKi)              :: uMorisonInSteady(6)
+      REAL(ReKi)              :: uDotMorisonInSteady(6)
+      REAL(ReKi)              :: uDotDotMorisonInSteady(6)
       LOGICAL                 :: WaveElevSeriesFlag      !< Should we put together a wave elevation series and save it to file?
       REAL(ReKi)              :: WaveElevdX              !< Spacing in the X direction for wave elevation series              (m)
       REAL(ReKi)              :: WaveElevdY              !< Spacing in the Y direction for the wave elevation series          (m)
@@ -58,8 +58,6 @@ PROGRAM HydroDynDriver
 ! NOTE:  this module and the ModMesh.f90 modules must use the Fortran compiler flag:  
 !        /fpp                  because of they both have preprocessor statements
 ! ----------------------------------------------------------------------------------- 
-
-REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     ! Number of seconds per day
 
 
    INTEGER(IntKi), PARAMETER                           :: NumInp = 1           ! Number of inputs sent to HydroDyn_UpdateStates
@@ -81,7 +79,8 @@ REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     
    TYPE(HydroDyn_DiscreteStateType)                    :: xd_new               ! Discrete states at updated time
    TYPE(HydroDyn_ConstraintStateType)                  :: z                    ! Constraint states
    TYPE(HydroDyn_ConstraintStateType)                  :: z_residual           ! Residual of the constraint state equations (Z)
-   TYPE(HydroDyn_OtherStateType)                       :: OtherState           ! Other/optimization states
+   TYPE(HydroDyn_OtherStateType)                       :: OtherState           ! Other states
+   TYPE(HydroDyn_MiscVarType)                          :: m                    ! Misc/optimization variables
 
    TYPE(HydroDyn_ParameterType)                        :: p                    ! Parameters
    !TYPE(HydroDyn_InputType)                           :: u                    ! System inputs [OLD STYLE]
@@ -256,7 +255,7 @@ REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     
    IF ( drvrInitInp%WaveElevSeriesFlag ) THEN
       ALLOCATE ( InitInData%WaveElevXY(2,drvrInitInp%WaveElevNX*drvrInitInp%WaveElevNY), STAT=ErrStat )
       IF ( ErrStat >= ErrID_Fatal ) THEN
-         CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+         CALL HydroDyn_End( u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
          IF ( ErrStat /= ErrID_None ) THEN
             CALL WrScr( ErrMsg )     
          END IF
@@ -280,7 +279,7 @@ REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     
 
          ! Initialize the module
    Interval = drvrInitInp%TimeInterval
-   CALL HydroDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, Interval, InitOutData, ErrStat, ErrMsg )
+   CALL HydroDyn_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, Interval, InitOutData, ErrStat, ErrMsg )
    if (errStat >= AbortErrLev) then
          ! Clean up and exit
       call HD_DvrCleanup()
@@ -428,7 +427,7 @@ REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     
       
          ! Calculate outputs at n
 
-      CALL HydroDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+      CALL HydroDyn_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       if (errStat >= AbortErrLev) then
             ! Clean up and exit
          call HD_DvrCleanup()
@@ -438,7 +437,7 @@ REAL(ReKi), PARAMETER        :: SecPerDay = 24*60*60.0_ReKi                     
       
          ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
 
-      CALL HydroDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+      CALL HydroDyn_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       if (errStat >= AbortErrLev) then
             ! Clean up and exit
          call HD_DvrCleanup()
@@ -465,26 +464,7 @@ call HD_DvrCleanup()
 
    CONTAINS
 
-
-   
-   FUNCTION GetClockTime(StartClockTime, EndClockTime)
-   ! return the number of seconds between StartClockTime and EndClockTime
-   
-      REAL                         :: GetClockTime          ! Elapsed clock time for the simulation phase of the run.
-      INTEGER   , INTENT(IN)       :: StartClockTime (8)                                 ! Start time of simulation (after initialization)
-      INTEGER   , INTENT(IN)       :: EndClockTime (8)                                 ! Start time of simulation (after initialization)
-   
-   !bjj: This calculation will be wrong at certain times (e.g. if it's near midnight on the last day of the month), but to my knowledge, no one has complained...
-      GetClockTime =       0.001*( EndClockTime(8) - StartClockTime(8) ) &  ! Is the milliseconds of the second (range 0 to 999) - local time
-                     +           ( EndClockTime(7) - StartClockTime(7) ) &  ! Is the seconds of the minute (range 0 to 59) - local time
-                     +      60.0*( EndClockTime(6) - StartClockTime(6) ) &  ! Is the minutes of the hour (range 0 to 59) - local time
-                     +    3600.0*( EndClockTime(5) - StartClockTime(5) ) &  ! Is the hour of the day (range 0 to 23) - local time
-                     + SecPerDay*( EndClockTime(3) - StartClockTime(3) )    ! Is the day of the month
-   
-   
-   END FUNCTION
-
-   
+      
 !====================================================================================================
 SUBROUTINE CleanupEchoFile( EchoFlag, UnEcho)
 !     The routine cleans up the module echo file and resets the NWTC_Library, reattaching it to 
@@ -522,7 +502,7 @@ subroutine HD_DvrCleanup()
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
       call HydroDyn_DestroyContState( x_new, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
-      call HydroDyn_End( u(1), p, x, xd, z, OtherState, y, errStat2, errMsg2 )
+      call HydroDyn_End( u(1), p, x, xd, z, OtherState, y, m, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'HD_DvrCleanup' )
       
       if ( ErrStat /= ErrID_None ) then !This assumes PRESENT(ErrID) is also .TRUE. :

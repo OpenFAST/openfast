@@ -42,46 +42,16 @@ PROGRAM SS_Radiation_Driver
    TYPE(SS_Rad_DiscreteStateType)                    :: xd_new               ! Discrete states at updated time
    TYPE(SS_Rad_ConstraintStateType)                  :: z                    ! Constraint states
    TYPE(SS_Rad_ConstraintStateType)                  :: z_residual           ! Residual of the constraint state equations (Z)
-   TYPE(SS_Rad_OtherStateType)                       :: OtherState           ! Other/optimization states
+   TYPE(SS_Rad_OtherStateType)                       :: OtherState           ! Other states
 
    TYPE(SS_Rad_ParameterType)                        :: p                    ! Parameters
    TYPE(SS_Rad_InputType)                            :: u                    ! System inputs
    TYPE(SS_Rad_OutputType)                           :: y                    ! System outputs
+   TYPE(SS_Rad_MiscVarType)                          :: m                    ! misc/optimization variables
 
    TYPE(SS_Rad_ContinuousStateType)                  :: dxdt                 ! First time derivatives of the continuous states
 
-   !TYPE(SS_Rad_PartialOutputPInputType)              :: dYdu                 ! Partial derivatives of the output equations
-                                                                              !  (Y) with respect to the inputs (u)
-  ! TYPE(SS_Rad_PartialContStatePInputType)           :: dXdu                 ! Partial derivatives of the continuous state
-                                                                              !  equations (X) with respect to the inputs (u)
-  ! TYPE(SS_Rad_PartialDiscStatePInputType)           :: dXddu                ! Partial derivatives of the discrete state
-                                                                              !  equations (Xd) with respect to the inputs (u)
-   !TYPE(SS_Rad_PartialConstrStatePInputType)         :: dZdu                 ! Partial derivatives of the constraint state
-                                                                              !  equations (Z) with respect to the inputs (u)
-   !TYPE(SS_Rad_PartialOutputPContStateType)          :: dYdx                 ! Partial derivatives of the output equations (Y)
-                                                                              !  with respect to the continuous states (x)
-!   TYPE(SS_Rad_PartialContStatePContStateType)       :: dXdx                 ! Partial derivatives of the continuous state equat-
-                                                                              !  ions (X) with respect to the continuous states (x)
-   !TYPE(SS_Rad_PartialDiscStatePContStateType)       :: dXddx                ! Partial derivatives of the discrete state equat-
-                                                                              !  ions (Xd) with respect to continuous states (x)
-   !TYPE(SS_Rad_PartialConstrStatePContStateType)     :: dZdx                 ! Partial derivatives of the constraint state equat-
-                                                                              !  ions (Z) with respect to the continuous states (x)
-   !TYPE(SS_Rad_PartialOutputPDiscStateType)          :: dYdxd                ! Partial derivatives of the output equations (Y)
-                                                                              !  with respect to the discrete states (xd)
-  ! TYPE(SS_Rad_PartialContStatePDiscStateType)       :: dXdxd                ! Partial derivatives of the continuous state equat-
-                                                                              !  ions (X) with respect to the discrete states (xd)
- !  TYPE(SS_Rad_PartialDiscStatePDiscStateType)       :: dXddxd               ! Partial derivatives of the discrete state equat-
-                                                                              !  ions (Xd) with respect to the discrete states (xd)
-  ! TYPE(SS_Rad_PartialConstrStatePDiscStateType)     :: dZdxd                ! Partial derivatives of the constraint state equat-
-                                                                              !  ions (Z) with respect to the discrete states (xd)
-   !TYPE(SS_Rad_PartialOutputPConstrStateType)        :: dYdz                 ! Partial derivatives of the output equations (Y)
-                                                                              !  with respect to the constraint states (z)
-  ! TYPE(SS_Rad_PartialContStatePConstrStateType)     :: dXdz                 ! Partial derivatives of the continuous state equat-
-                                                                              !  ions (X) with respect to the constraint states (z)
- !  TYPE(SS_Rad_PartialDiscStatePConstrStateType)     :: dXddz                ! Partial derivatives of the discrete state equat-
-                                                                              !  ions (Xd) with respect to constraint states (z)
-!   TYPE(SS_Rad_PartialConstrStatePConstrStateType)   :: dZdz                 ! Partial derivatives of the constraint state equat-
-                                                                              !  ions (Z) with respect to the constraint states (z)
+
 
     !Local Variables
    INTEGER(IntKi)                                     :: n                    ! Loop counter (for time step)
@@ -125,7 +95,7 @@ PROGRAM SS_Radiation_Driver
    TimeInterval = 0.025                     ! Glue code's request for delta time (likely based on information from other modules)
     !!! GREG: This should be the Rdtn DT defined in the platform input file@
 
-   CALL SS_Rad_Init( InitInData, u, p,  x, xd, z, OtherState, y, TimeInterval, InitOutData, ErrStat, ErrMsg )
+   CALL SS_Rad_Init( InitInData, u, p,  x, xd, z, OtherState, y, m, TimeInterval, InitOutData, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
       CALL WrScr( ErrMsg )
    END IF
@@ -210,14 +180,14 @@ PROGRAM SS_Radiation_Driver
 
          ! Get state variables at next step: constraint states (z) at step n, continuous and discrete states at step n + 1
    
-      CALL SS_Rad_UpdateStates( Time, u, p, x_new, xd_new, z, OtherState, ErrStat, ErrMsg )
+      CALL SS_Rad_UpdateStates( Time, u, p, x_new, xd_new, z, OtherState, m, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( ErrMsg )
       END IF
    !print*, x%x
          ! Calculate outputs at n
    
-      CALL SS_Rad_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+      CALL SS_Rad_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( ErrMsg )
       END IF
@@ -257,161 +227,10 @@ PROGRAM SS_Radiation_Driver
    END IF
    
 
-!   !...............................................................................................................................
-!   ! Routines called in tight coupling -- time marching only
-!   !...............................................................................................................................
-!
-!   CALL WrScr( 'Runnig SS_Radiation in Loose Coupling using a Adams-Bashforth-Moulton Method'  ) 
-!   DO n=0,145200
-!
-!      Time = n * TimeInterval   ! Note that the discrete states must be updated only at the TimeInterval defined in initialization
-!
-!         ! set inputs (u) here:
-!        u%dq(1,1) = dq (n+1,1)
-!        u%dq(2,1) = dq (n+1,2)
-!        u%dq(3,1) = dq (n+1,3)
-!        u%dq(4,1) = dq (n+1,4)
-!        u%dq(5,1) = dq (n+1,5)
-!        u%dq(6,1) = dq (n+1,6)
-!
-!         ! Update constraint states at Time
-!      !
-!      !CALL SS_Rad_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_residual, ErrStat, ErrMsg )
-!      !IF ( ErrStat /= ErrID_None ) THEN      ! Check if there was an error and do something about it if necessary
-!      !   CALL WrScr( ErrMsg )
-!      !END IF
-!
-!      ! DO WHILE ( z_residual% > tolerance )
-!
-!         ! z =
-!
-!!         CALL SS_Rad_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_residual, ErrStat, ErrMsg )
-!!         IF ( ErrStat /= ErrID_None ) THEN      ! Check if there was an error and do something about it if necessary
-!!            CALL WrScr( ErrMsg )
-!!         END IF
-!
-!      ! END DO
-!
-!
-!
-!         ! Calculate the outputs at Time
-!
-!      CALL SS_Rad_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-!      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!         CALL WrScr( ErrMsg )
-!      END IF
-!
-!
-!         ! Calculate the continuous state derivatives at Time
-!
-!      CALL SS_Rad_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-!      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!         CALL WrScr( ErrMsg )
-!      END IF
-!
-!
-!         ! Update the discrete state from step n to step n+1
-!         ! Note that the discrete states must be updated only at the TimeInterval defined in initialization
-!
-!      !CALL SS_Rad_UpdateDiscState( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!      !IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!      !   CALL WrScr( ErrMsg )
-!      !END IF
-!
-!
-!         ! Driver should integrate (update) continuous states here:
-!
-!     ! 4th order solver
-!      
-!     !IF ( EqualRealNos(OtherState%LastTime + p%DT,Time)) THEN !Time must have been reduced TD: Function EqualRealNos only works for Single!
-!     IF ( OtherState%LastTime + p%DT/=Time) THEN !Time must have been reduced
-!         
-!         OtherState%dxdt = 0 ! Remove previous history and start from zero with a
-!                              ! runge-Kutta method
-!         OtherState%Step = 0
-!     ENDIF
-!     
-!    !Update time step
-!     OtherState%Step = OtherState%Step + 1 
-!    !Update the OtherStates matrices, with the previous dXdt Values
-!        OtherState%dxdt (:,4) = OtherState%dxdt (:,3)
-!        OtherState%dxdt (:,3) = OtherState%dxdt (:,2)
-!        OtherState%dxdt (:,2) = OtherState%dxdt (:,1)
-!        OtherState%dxdt (:,1) = dxdt%x (:,1)
-!    
-!     Call Solver (Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg)
-!       
-!     !Update LastTime
-!     OtherState%LastTime = Time
-!        
-!
-!
-!         ! Jacobians required:
-!
-!      CALL SS_Rad_JacobianPInput( Time, u, p, x, xd, z, OtherState, dYdu=dYdu, dZdu=dZdu, ErrStat=ErrStat, ErrMsg=ErrMsg )
-!      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!         CALL WrScr( ErrMsg )
-!      END IF
-!
-!      CALL SS_Rad_JacobianPConstrState( Time, u, p, x, xd, z, OtherState, dYdz=dYdz, dZdz=dZdz, ErrStat=ErrStat, ErrMsg=ErrMsg )
-!      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!         CALL WrScr( ErrMsg )
-!      END IF
-!
-!
-!   END DO
-!
-!
-!      ! Destroy z_residual and dxdt because they are not necessary anymore
-!
-!   CALL SS_Rad_DestroyConstrState( z_residual, ErrStat, ErrMsg )
-!   IF ( ErrStat /= ErrID_None ) THEN   ! Check if there was an error and do something about it if necessary
-!      CALL WrScr( ErrMsg )
-!   END IF
-!
-!   CALL SS_Rad_DestroyContState( dxdt, ErrStat, ErrMsg )
-!   IF ( ErrStat /= ErrID_None ) THEN   ! Check if there was an error and do something about it if necessary
-!      CALL WrScr( ErrMsg )
-!   END IF
-!
-!   !...............................................................................................................................
-!   ! Jacobian routines called in tight coupling
-!   !...............................................................................................................................
-!
-!   CALL SS_Rad_JacobianPInput( Time, u, p, x, xd, z, OtherState, dYdu, dXdu, dXddu, dZdu, ErrStat, ErrMsg )
-!   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!      CALL WrScr( ErrMsg )
-!   END IF
-!
-!   CALL SS_Rad_JacobianPContState( Time, u, p, x, xd, z, OtherState, dYdx, dXdx, dXddx, dZdx, ErrStat, ErrMsg )
-!   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!      CALL WrScr( ErrMsg )
-!   END IF
-!
-!   CALL SS_Rad_JacobianPDiscState( Time, u, p, x, xd, z, OtherState, dYdxd, dXdxd, dXddxd, dZdxd, ErrStat, ErrMsg )
-!   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!      CALL WrScr( ErrMsg )
-!   END IF
-!
-!   CALL SS_Rad_JacobianPConstrState( Time, u, p, x, xd, z, OtherState, dYdz, dXdz, dXddz, dZdz, ErrStat, ErrMsg )
-!   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!      CALL WrScr( ErrMsg )
-!   END IF
-
-!
-!   !!...............................................................................................................................
-!   !! Routines to pack data (to restart later)
-!   !!...............................................................................................................................
-!   !CALL SS_Rad_Pack(SaveAry, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg)
-!   !IF ( ErrStat /= ErrID_None ) THEN
-!   !   CALL WrScr( ErrMsg )
-!   !END IF
-!
-!
    !...............................................................................................................................
    ! Routine to terminate program execution
    !...............................................................................................................................
-   CALL SS_Rad_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+   CALL SS_Rad_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN
       CALL WrScr( ErrMsg )
    END IF
@@ -457,40 +276,6 @@ PROGRAM SS_Radiation_Driver
          ! Ending routines
    CLOSE( Outputy )
 
-!   !...............................................................................................................................
-!   ! Routines to retreive packed data (unpack for restart)
-!   !...............................................................................................................................
-!   !CALL SS_Rad_Unpack( SaveAry, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-!   !
-!   !IF ( ErrStat /= ErrID_None ) THEN
-!   !   CALL WrScr( ErrMsg )
-!   !END IF
-!   !
-!
-!   !...............................................................................................................................
-!   ! Routines to copy data (not already tested)
-!   !...............................................................................................................................
-!
-!
-!
-!   !...............................................................................................................................
-!   ! Routines to destroy data (not already tested)
-!   !...............................................................................................................................
-!
-!   IF ( ALLOCATED( SaveAry ) ) DEALLOCATE( SaveAry )
-!
-!!   CALL SS_Rad_DestroyPartialOutputPInput ( )  % Jacobian Routine not yet implemented
-!
-!
-!
-!   !...............................................................................................................................
-!   ! Routine to terminate program execution (again)
-!   !...............................................................................................................................
-!
-!   CALL SS_Rad_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-!   IF ( ErrStat /= ErrID_None ) THEN
-!      CALL WrScr( ErrMsg )
-!   END IF
 
 
 END PROGRAM SS_Radiation_Driver

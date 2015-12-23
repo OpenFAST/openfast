@@ -21,19 +21,24 @@ typedef   ^                 	^           ReKi	    DOFs      {1}{6} - -   "Vector
 typedef   ^              InitOutputType CHARACTER(10)    WriteOutputHdr  {7} - -  "Header of the output" -
 typedef   ^              InitOutputType CHARACTER(10)    WriteOutputUnt  {7} - -  "Units of the output" -
 
-typedef   ^              ContinuousStateType ReKi     x             {:}{:} - -  "Continuous States" -
+typedef   ^              ContinuousStateType ReKi     x             {:} - -  "Continuous States" -
 
 
-typedef   ^              DiscreteStateType   ReKi     DummyDiscState - - -  "" -
+typedef   ^              DiscreteStateType   SiKi     DummyDiscState - - -  "" -
 
 # Define constraint states here:
-typedef   ^              ConstraintStateType ReKi     DummyConstrState - - - "" -
+typedef   ^              ConstraintStateType SiKi     DummyConstrState - - - "" -
 
-# Define any data that are not considered actual states here:
-#   e.g. data used only for efficiency purposes
-#   at a given time, etc.)
+# Define any data that are other states, including integer or logical states here:
 typedef   ^              OtherStateType           IntKi                        n     -  - - "Current Time step" -
 typedef   ^              ^                        SS_Rad_ContinuousStateType   xdot {4} - - "Old Values of dxdt to used by the solver (multistep method)" -
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef    ^              MiscVarType          SiKi     DummyMiscVar - - -  "Remove this variable if you have misc/optimization variables" -
+
 
 # ..... Parameters .........................
 # Define parameters here:
@@ -47,12 +52,12 @@ typedef   ^               ^            INTEGER  N       -     - - "Number of sta
 
 # ..... Inputs .............................
 # Define inputs that are contained on the mesh here:
-typedef   ^             InputType      ReKi dq {6}{1} - -   "Body velocities" -
+typedef   ^             InputType      ReKi dq {6} - -   "Body velocities" -
 
 
 # ..... Outputs ............................
-typedef   ^             OutputType           ReKi y  {6}{1} - -   "Force" -
-typedef   ^             ^                    ReKi WriteOutput {1}{7} - -   "output Data" "kN" -
+typedef   ^             OutputType           ReKi y  {6} - -   "Force" -
+typedef   ^             ^                    ReKi WriteOutput {7} - -   "output Data" "kN" -
 
 
 

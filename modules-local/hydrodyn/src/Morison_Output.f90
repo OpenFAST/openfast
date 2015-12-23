@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2013  National Renewable Energy Laboratory
+! Copyright (C) 2013-2015  National Renewable Energy Laboratory
 !
 !    This file is part of HydroDyn.
 !
@@ -6885,7 +6885,7 @@ SUBROUTINE SetInvalidOutputs(NMOutputs, MOutLst, NJOutputs, JOutLst, InvalidOutp
 END SUBROUTINE SetInvalidOutputs
 
 !====================================================================================================
-SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, OtherState, AllOuts, ErrStat, ErrMsg )
+SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, m, AllOuts, ErrStat, ErrMsg )
 ! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
 ! This is called by HydroDyn_CalcOutput() at each time step.
 !---------------------------------------------------------------------------------------------------- 
@@ -6893,7 +6893,7 @@ SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, OtherState, AllOuts, ErrSta
    TYPE(Morison_OutputType),           INTENT( INOUT )  :: y                    ! Morison module's output data
    TYPE(Morison_ParameterType),        INTENT( IN    )  :: p                    ! Morison module's parameter data
    TYPE(Morison_InputType),            INTENT( IN    )  :: u                    ! Morison module's input data
-   TYPE(Morison_OtherStateType),       INTENT( INOUT )  :: OtherState           ! Other/optimization states
+   TYPE(Morison_MiscVarType),          INTENT( INOUT )  :: m                    ! Misc/optimization variables
    REAL(ReKi),                         INTENT(   OUT )  :: AllOuts(MaxMrsnOutputs)  ! Array of output data for all possible outputs
    INTEGER(IntKi),                     INTENT(   OUT )  :: ErrStat              ! Error status of the operation
    CHARACTER(*),                       INTENT(   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -6923,9 +6923,9 @@ SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, OtherState, AllOuts, ErrSta
                ! The member output is computed as a linear interpolation of the nearest two markers
             
                ! wave kinematics along the member
-            AllOuts(MNVi (:,I,J))     = OtherState%D_FV   (:  ,m1)*(1-s) + OtherState%D_FV   (:  ,m2)*s
-            AllOuts(MNAi (:,I,J))     = OtherState%D_FA   (:  ,m1)*(1-s) + OtherState%D_FA   (:  ,m2)*s
-            AllOuts(MNDynP(  I,J))    = OtherState%D_FDynP(    m1)*(1-s) + OtherState%D_FDynP(    m2)*s
+            AllOuts(MNVi (:,I,J))     = m%D_FV   (:  ,m1)*(1-s) + m%D_FV   (:  ,m2)*s
+            AllOuts(MNAi (:,I,J))     = m%D_FA   (:  ,m1)*(1-s) + m%D_FA   (:  ,m2)*s
+            AllOuts(MNDynP(  I,J))    = m%D_FDynP(    m1)*(1-s) + m%D_FDynP(    m2)*s
             
                ! Input motions
             AllOuts(MNSTVi(:,I,J))   =  u%DistribMesh%TranslationVel(:  ,m1)*(1-s) + u%DistribMesh%TranslationVel(:  ,m2)*s
@@ -6934,9 +6934,9 @@ SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, OtherState, AllOuts, ErrSta
            ! AllOuts(MNSRAi(:,I,J))   =  u%DistribMesh%RotationAcc   (:  ,m1)*(1-s) + u%DistribMesh%RotationAcc   (:  ,m2)*s
             
                ! transverse drag force   
-            AllOuts(MNFDi (:,I,J))    = OtherState%D_F_D  (:  ,m1)*(1-s) + OtherState%D_F_D  (:  ,m2)*s
+            AllOuts(MNFDi (:,I,J))    = m%D_F_D  (:  ,m1)*(1-s) + m%D_F_D  (:  ,m2)*s
                ! inertial force
-            AllOuts(MNFIi (:,I,J))    = OtherState%D_F_I  (:  ,m1)*(1-s) + OtherState%D_F_I  (:  ,m2)*s
+            AllOuts(MNFIi (:,I,J))    = m%D_F_I  (:  ,m1)*(1-s) + m%D_F_I  (:  ,m2)*s
            
                ! marine growth weight
             AllOuts(MNFMGi(:,I,J))    = p%D_F_MG (1:3,m1)*(1-s) + p%D_F_MG (1:3,m2)*s
@@ -6950,10 +6950,10 @@ SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, OtherState, AllOuts, ErrSta
             AllOuts(MNMBFi(:,I,J))    = p%D_F_BF (4:6,m1)*(1-s) + p%D_F_BF (4:6,m2)*s  
          
                ! added mass forces
-            AllOuts(MNFAGi(:,I,J))   = OtherState%D_F_AM_MG(:,m1)*(1-s) + OtherState%D_F_AM_MG(:,m2)*s   ! due to marine growth 
-            AllOuts(MNFAMi (:,I,J))  = OtherState%D_F_AM_M(: ,m1)*(1-s) + OtherState%D_F_AM_M(: ,m2)*s   ! due to the structural member moving the fluid
-            AllOuts(MNFAFi (:,I,J))  = OtherState%D_F_AM_F(: ,m1)*(1-s) + OtherState%D_F_AM_F(: ,m2)*s   ! due to the ballasted/flooded fluid
-            AllOuts(MNFAi  (:,I,J))  = OtherState%D_F_AM(:   ,m1)*(1-s) + OtherState%D_F_AM(:   ,m2)*s   ! the combined added mass force 
+            AllOuts(MNFAGi(:,I,J))   = m%D_F_AM_MG(:,m1)*(1-s) + m%D_F_AM_MG(:,m2)*s   ! due to marine growth 
+            AllOuts(MNFAMi (:,I,J))  = m%D_F_AM_M(: ,m1)*(1-s) + m%D_F_AM_M(: ,m2)*s   ! due to the structural member moving the fluid
+            AllOuts(MNFAFi (:,I,J))  = m%D_F_AM_F(: ,m1)*(1-s) + m%D_F_AM_F(: ,m2)*s   ! due to the ballasted/flooded fluid
+            AllOuts(MNFAi  (:,I,J))  = m%D_F_AM(:   ,m1)*(1-s) + m%D_F_AM(:   ,m2)*s   ! the combined added mass force 
          
          
          END DO   
@@ -6986,20 +6986,20 @@ SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, OtherState, AllOuts, ErrSta
             
                ! Do not accumulate the wave kinematics and structural kinematics quantities
             IF ( J == 1 ) THEN 
-               AllOuts(JVi (:,I))          = OtherState%L_FV   (1:3,m1)                       ! fluid velocity
-               AllOuts(JAi (:,I))          = OtherState%L_FA   (1:3,m1)                       ! fluid acceleration
-               AllOuts(JDynP(  I))         = OtherState%L_FDynP(    m1)                       ! fluid dynamic pressure
-               AllOuts(JSTVi (:,I))        = u%LumpedMesh%TranslationVel(:  ,m1)              ! structural velocity
-               AllOuts(JSTAi (:,I))        = u%LumpedMesh%TranslationAcc(:  ,m1)              ! structural acceleration
+               AllOuts(JVi (:,I))          = m%L_FV   (1:3,m1)                               ! fluid velocity
+               AllOuts(JAi (:,I))          = m%L_FA   (1:3,m1)                               ! fluid acceleration
+               AllOuts(JDynP(  I))         = m%L_FDynP(    m1)                               ! fluid dynamic pressure
+               AllOuts(JSTVi (:,I))        = u%LumpedMesh%TranslationVel(:  ,m1)             ! structural velocity
+               AllOuts(JSTAi (:,I))        = u%LumpedMesh%TranslationAcc(:  ,m1)             ! structural acceleration
             END IF
 
-            AllOuts(JFDi (:,I))          = AllOuts(JFDi (:,I)) + OtherState%L_F_D (1:3, m1)    ! axial drag force
-            AllOuts(JFBi (:,I))          = AllOuts(JFBi (:,I)) + p%         L_F_B (1:3, m1)    ! buoyancy force
-            AllOuts(JMBi (:,I))          = AllOuts(JMBi (:,I)) + p%         L_F_B (4:6, m1)    ! buoyancy moment
-            AllOuts(JFBFi(:,I))          = AllOuts(JFBFi(:,I)) + p%         L_F_BF(1:3, m1)    ! ballasted/filled buoyancy force
-            AllOuts(JMBFi(:,I))          = AllOuts(JMBFi(:,I)) + p%         L_F_BF(4:6, m1)    ! ballasted/filled buoyancy moment
-            AllOuts(JFIi (:,I))          = AllOuts(JFIi(:,I))  + OtherState%L_F_I (1:3, m1)    ! inertial force
-            AllOuts(JFAMi(:,I))          = AllOuts(JFAMi(:,I)) + OtherState%L_F_AM(1:3, m1)    ! added mass force
+            AllOuts(JFDi (:,I))          = AllOuts(JFDi (:,I)) + m%L_F_D (1:3, m1)           ! axial drag force
+            AllOuts(JFBi (:,I))          = AllOuts(JFBi (:,I)) + p%L_F_B (1:3, m1)           ! buoyancy force
+            AllOuts(JMBi (:,I))          = AllOuts(JMBi (:,I)) + p%L_F_B (4:6, m1)           ! buoyancy moment
+            AllOuts(JFBFi(:,I))          = AllOuts(JFBFi(:,I)) + p%L_F_BF(1:3, m1)           ! ballasted/filled buoyancy force
+            AllOuts(JMBFi(:,I))          = AllOuts(JMBFi(:,I)) + p%L_F_BF(4:6, m1)           ! ballasted/filled buoyancy moment
+            AllOuts(JFIi (:,I))          = AllOuts(JFIi(:,I))  + m%L_F_I (1:3, m1)           ! inertial force
+            AllOuts(JFAMi(:,I))          = AllOuts(JFAMi(:,I)) + m%L_F_AM(1:3, m1)           ! added mass force
             
          END DO
       END DO

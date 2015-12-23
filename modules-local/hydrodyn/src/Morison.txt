@@ -254,25 +254,28 @@ typedef   ^                            ^                             CHARACTER(1
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 #
-typedef   ^                            ContinuousStateType           ReKi                     DummyContState           -          -        -        "Remove this variable if you have continuous states"        -
+typedef   ^                            ContinuousStateType           SiKi                     DummyContState           -          -        -        "Remove this variable if you have continuous states"        -
 #
 #
 # Define discrete (nondifferentiable) states here:
 #
-typedef   ^                            DiscreteStateType             ReKi                     DummyDiscState           -          -         -         ""        -
+typedef   ^                            DiscreteStateType             SiKi                     DummyDiscState           -          -         -         ""        -
 #
 #
 # Define constraint states here:
 #
-typedef   ^                            ConstraintStateType           ReKi                     DummyConstrState         -         -         -         "Remove this variable if you have constraint states"        -
+typedef   ^                            ConstraintStateType           SiKi                     DummyConstrState         -         -         -         "Remove this variable if you have constraint states"        -
 #
 #
-# Define any data that are not considered actual states here:
-#   e.g. data used only for efficiency purposes (indices for searching in an array,  copies of previous calculations of output at a given time, etc.)
-#
-typedef   ^                            OtherStateType                ReKi                     D_F_D                           {:}{:}         -         -         "Distributed viscous drag loads"   -
+# Define any other states, including integer or logical states here:
+typedef   ^                            OtherStateType                IntKi                     DummyOtherState - - - "Remove this variable if you have other states" -
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef   ^                            MiscVarType                   ReKi                     D_F_D                           {:}{:}         -         -         "Distributed viscous drag loads"   -
 typedef   ^                            ^                             ReKi                     D_F_I                           {:}{:}         -         -         "Distributed inertial loads"   -
-typedef   ^                            ^                             ReKi                     D_F_DP                          {:}{:}         -         -         "Distributed dynamic pressure loads"   -
+#typedef   ^                            ^                             ReKi                     D_F_DP                          {:}{:}         -         -         "Distributed dynamic pressure loads"   -
 typedef   ^                            ^                             ReKi                     D_F_AM                          {:}{:}         -         -         "Distributed total added mass loads"   -
 typedef   ^                            ^                             ReKi                     D_F_AM_M                        {:}{:}         -         -         "Distributed member added mass loads"   -
 typedef   ^                            ^                             ReKi                     D_F_AM_MG                       {:}{:}         -         -         "Distributed marine growth added mass (weight) loads"   -
@@ -288,6 +291,7 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     L_FA                            {:}{:}         -         -         "Fluid acceleration at point element node"   -
 typedef   ^                            ^                             ReKi                     L_FDynP                         {:}            -         -         "Fluid dynamic pressure at point element node"   -
 typedef   ^                            ^                             INTEGER                  LastIndWave                     -              -         -         "Last time index used in the wave kinematics arrays"   -
+
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:

@@ -42,7 +42,7 @@ typedef   ^                            InitOutputType                INTEGER    
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 #
-typedef   ^                            ContinuousStateType           ReKi             DummyContState           -          -        -        "Remove this variable if you have continuous states"        -
+typedef   ^                            ContinuousStateType           SiKi             DummyContState           -          -        -        "Remove this variable if you have continuous states"        -
 #
 #
 # Define discrete (nondifferentiable) states here:
@@ -53,16 +53,16 @@ typedef   ^                            ^                             DbKi       
 #
 # Define constraint states here:
 #
-typedef   ^                            ConstraintStateType           ReKi             DummyConstrState         -         -         -         "Remove this variable if you have constraint states"        -
+typedef   ^                            ConstraintStateType           SiKi             DummyConstrState         -         -         -         "Remove this variable if you have constraint states"        -
 #
 #
-# Define any data that are not considered actual states here:
-#   e.g. data used only for efficiency purposes (indices for searching in an array,  copies of previous calculations of output at a given time, etc.)
-#
-#typedef   ^                            OtherStateType                INTEGER          DummyOtherState           -         -         -         "Remove this variable if you have other states"   -
-typedef   ^                            OtherStateType                INTEGER          LastIndRdtn              -           -         -         ""        -
-typedef   ^                            ^                             INTEGER          LastIndRdtn2             -           -         -         ""        -
-typedef   ^                            ^                             INTEGER          IndRdtn                  -           -         -         ""        -
+# Define any data that are integer or logical states here:
+typedef   ^                            OtherStateType               INTEGER          IndRdtn                  -           -         -         ""        -
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef   ^                            MiscVarType                   INTEGER          LastIndRdtn              -           -         -         ""        -
 
 
 # ..... Parameters ................................................................................................................

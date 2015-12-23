@@ -6,7 +6,7 @@
 ! "Conv_Rdtn" (in Conv_Rdtn_*) should be replaced with the module name or an abbreviation of it. Example: HD
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2012  National Renewable Energy Laboratory
+! Copyright (C) 2012-2015  National Renewable Energy Laboratory
 !
 !    This file is part of Conv_Radiation.
 !
@@ -37,11 +37,10 @@ MODULE Conv_Radiation
    
    PRIVATE
    
-   REAL(DbKi), PARAMETER, PRIVATE       :: OnePlusEps  = 1.0 + EPSILON(OnePlusEps)   ! The number slighty greater than unity in the precision of DbKi.
+   REAL(DbKi), PARAMETER, PRIVATE       :: OnePlusEps  = 1.0 + EPSILON(OnePlusEps)   !< The number slighty greater than unity in the precision of DbKi.
 
 
-!   INTEGER(IntKi), PARAMETER            :: DataFormatID = 1   ! Update this value if the data types change (used in Conv_Rdtn_Pack)
-   TYPE(ProgDesc), PARAMETER            :: Conv_Rdtn_ProgDesc = ProgDesc( 'Conv_Radiation', 'v1.00.00', '05-Mar-2013' )
+   TYPE(ProgDesc), PARAMETER            :: Conv_Rdtn_ProgDesc = ProgDesc( 'Conv_Radiation', 'v1.01.00', '23-Dec-2015' )
 
    
       ! ..... Public Subroutines ...................................................................................................
@@ -50,25 +49,13 @@ MODULE Conv_Radiation
    PUBLIC :: Conv_Rdtn_End                            ! Ending routine (includes clean up)
    
    PUBLIC :: Conv_Rdtn_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating 
-                                                    !   continuous states, and updating discrete states
+                                                      !   continuous states, and updating discrete states
    PUBLIC :: Conv_Rdtn_CalcOutput                     ! Routine for computing outputs
    
    PUBLIC :: Conv_Rdtn_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
    PUBLIC :: Conv_Rdtn_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: Conv_Rdtn_UpdateDiscState                ! Tight coupling routine for updating discrete states
-      
-   !PUBLIC :: Conv_Rdtn_JacobianPInput                 ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
-   !PUBLIC :: Conv_Rdtn_JacobianPContState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the continuous 
-   !                                                 !   states (x)
-   !PUBLIC :: Conv_Rdtn_JacobianPDiscState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                                 !   (Xd), and constraint-state (Z) equations all with respect to the discrete 
-   !                                                 !   states (xd)
-   !PUBLIC :: Conv_Rdtn_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-                                                    !   (Xd), and constraint-state (Z) equations all with respect to the constraint 
-                                                    !   states (z)
-   
+         
    
 CONTAINS
 
@@ -91,30 +78,31 @@ SUBROUTINE ShiftValuesLeft(XDHistory, NSteps)
 END SUBROUTINE ShiftValuesLeft
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
-! This routine is called at the start of the simulation to perform initialization steps. 
-! The parameters are set here and not changed during the simulation.
-! The initial states and initial guess for the input are defined.
+!> This routine is called at the start of the simulation to perform initialization steps. 
+!! The parameters are set here and not changed during the simulation.
+!! The initial states and initial guess for the input are defined.
+SUBROUTINE Conv_Rdtn_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(Conv_Rdtn_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
-      TYPE(Conv_Rdtn_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
-      TYPE(Conv_Rdtn_ParameterType),       INTENT(  OUT)  :: p           ! Parameters      
-      TYPE(Conv_Rdtn_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
-      TYPE(Conv_Rdtn_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
-      TYPE(Conv_Rdtn_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-      TYPE(Conv_Rdtn_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states            
-      TYPE(Conv_Rdtn_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated; 
-                                                                         !   only the output mesh is initialized)
-      REAL(DbKi),                          INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that 
-                                                                         !   (1) Conv_Rdtn_UpdateStates() is called in loose coupling &
-                                                                         !   (2) Conv_Rdtn_UpdateDiscState() is called in tight coupling.
-                                                                         !   Input is the suggested time from the glue code; 
-                                                                         !   Output is the actual coupling interval that will be used 
-                                                                         !   by the glue code.
-      TYPE(Conv_Rdtn_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
-      INTEGER(IntKi),                      INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                        INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(Conv_Rdtn_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+      TYPE(Conv_Rdtn_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
+      TYPE(Conv_Rdtn_ParameterType),       INTENT(  OUT)  :: p           !< Parameters      
+      TYPE(Conv_Rdtn_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
+      TYPE(Conv_Rdtn_DiscreteStateType),   INTENT(  OUT)  :: xd          !< Initial discrete states
+      TYPE(Conv_Rdtn_ConstraintStateType), INTENT(  OUT)  :: z           !< Initial guess of the constraint states
+      TYPE(Conv_Rdtn_OtherStateType),      INTENT(  OUT)  :: OtherState  !< Initial other states            
+      TYPE(Conv_Rdtn_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated; 
+                                                                         !!   only the output mesh is initialized)
+      TYPE(Conv_Rdtn_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables            
+      REAL(DbKi),                          INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that 
+                                                                         !!   (1) Conv_Rdtn_UpdateStates() is called in loose coupling &
+                                                                         !!   (2) Conv_Rdtn_UpdateDiscState() is called in tight coupling.
+                                                                         !!   Input is the suggested time from the glue code; 
+                                                                         !!   Output is the actual coupling interval that will be used 
+                                                                         !!   by the glue code.
+      TYPE(Conv_Rdtn_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
+      INTEGER(IntKi),                      INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                        INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       
          ! Local variables
@@ -413,32 +401,31 @@ RdtnFrmAM = .FALSE.
          
    Interval = p%RdtnDT                                              
 
-   OtherState%LastIndRdtn = 0
-   OtherState%LastIndRdtn2 = 0
+   m%LastIndRdtn = 0
    OtherState%IndRdtn = 0
    
-      ! these don't matter, but I don't like seeing the compilation warning in IVF:
+      ! bjj: these initializations don't matter, but I don't like seeing the compilation warning in IVF:
    x%DummyContState = 0.0
    z%DummyConstrState = 0.0
    y%F_Rdtn = 0.0  
    InitOut%DummyInitOut = 0   
-!<<<<< end bjj: initialized these
 
 END SUBROUTINE Conv_Rdtn_Init
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Conv_Rdtn_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-! This routine is called at the end of the simulation.
+!> This routine is called at the end of the simulation.
+SUBROUTINE Conv_Rdtn_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(Conv_Rdtn_InputType),           INTENT(INOUT)  :: u           ! System inputs
-      TYPE(Conv_Rdtn_ParameterType),       INTENT(INOUT)  :: p           ! Parameters     
-      TYPE(Conv_Rdtn_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
-      TYPE(Conv_Rdtn_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
-      TYPE(Conv_Rdtn_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-      TYPE(Conv_Rdtn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states            
-      TYPE(Conv_Rdtn_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(Conv_Rdtn_InputType),           INTENT(INOUT)  :: u           !< System inputs
+      TYPE(Conv_Rdtn_ParameterType),       INTENT(INOUT)  :: p           !< Parameters     
+      TYPE(Conv_Rdtn_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
+      TYPE(Conv_Rdtn_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
+      TYPE(Conv_Rdtn_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
+      TYPE(Conv_Rdtn_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other/optimization states            
+      TYPE(Conv_Rdtn_OutputType),          INTENT(INOUT)  :: y           !< System outputs
+      TYPE(Conv_Rdtn_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables            
+      INTEGER(IntKi),                      INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                        INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
 
@@ -472,6 +459,7 @@ SUBROUTINE Conv_Rdtn_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       CALL Conv_Rdtn_DestroyConstrState( z,           ErrStat, ErrMsg )
       CALL Conv_Rdtn_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
          
+      CALL Conv_Rdtn_DestroyMisc( m, ErrStat, ErrMsg )
 
          ! Destroy the output data:
          
@@ -481,135 +469,35 @@ SUBROUTINE Conv_Rdtn_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       
 
 END SUBROUTINE Conv_Rdtn_End
-!!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE Conv_Rdtn_UpdateStates( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
-!! Constraint states are solved for input Time; Continuous and discrete states are updated for Time + Interval
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                         INTENT(IN   ) :: Time        ! Current simulation time in seconds
-!      TYPE(Conv_Rdtn_InputType),            INTENT(IN   ) :: u           ! Inputs at Time                    
-!      TYPE(Conv_Rdtn_ParameterType),        INTENT(IN   ) :: p           ! Parameters                              
-!      TYPE(Conv_Rdtn_ContinuousStateType),  INTENT(INOUT) :: x           ! Input: Continuous states at Time; 
-!                                                                       !   Output: Continuous states at Time + Interval
-!      TYPE(Conv_Rdtn_DiscreteStateType),    INTENT(INOUT) :: xd          ! Input: Discrete states at Time; 
-!                                                                       !   Output: Discrete states at Time  + Interval
-!      TYPE(Conv_Rdtn_ConstraintStateType),  INTENT(INOUT) :: z           ! Input: Initial guess of constraint states at Time;
-!                                                                       !   Output: Constraint states at Time
-!      TYPE(Conv_Rdtn_OtherStateType),       INTENT(INOUT) :: OtherState  ! Other/optimization states
-!      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat     ! Error status of the operation     
-!      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-!
-!         ! Local variables
-!         
-!      TYPE(Conv_Rdtn_ContinuousStateType)                 :: dxdt        ! Continuous state derivatives at Time
-!      TYPE(Conv_Rdtn_ConstraintStateType)                 :: z_Residual  ! Residual of the constraint state equations (Z)
-!         
-!      INTEGER(IntKi)                                    :: ErrStat2    ! Error status of the operation (occurs after initial error)
-!      CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! Error message if ErrStat2 /= ErrID_None
-!                        
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!           
-!      
-!         ! Solve for the constraint states (z) here:
-!                           
-!         ! Check if the z guess is correct and update z with a new guess.
-!         ! Iterate until the value is within a given tolerance. 
-!                                    
-!      CALL Conv_Rdtn_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_Residual, ErrStat, ErrMsg )
-!      IF ( ErrStat >= AbortErrLev ) THEN      
-!         CALL Conv_Rdtn_DestroyConstrState( z_Residual, ErrStat2, ErrMsg2)
-!         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
-!         RETURN      
-!      END IF
-!         
-!      ! DO WHILE ( z_Residual% > tolerance )
-!      !
-!      !  z = 
-!      !
-!      !  CALL Conv_Rdtn_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_Residual, ErrStat, ErrMsg )
-!      !  IF ( ErrStat >= AbortErrLev ) THEN      
-!      !     CALL Conv_Rdtn_DestroyConstrState( z_Residual, ErrStat2, ErrMsg2)
-!      !     ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
-!      !     RETURN      
-!      !  END IF
-!      !           
-!      ! END DO         
-!      
-!      
-!         ! Destroy z_Residual because it is not necessary for the rest of the subroutine:
-!            
-!      CALL Conv_Rdtn_DestroyConstrState( z_Residual, ErrStat, ErrMsg)
-!      IF ( ErrStat >= AbortErrLev ) RETURN      
-!         
-!         
-!         
-!         ! Get first time derivatives of continuous states (dxdt):
-!      
-!      CALL Conv_Rdtn_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-!      IF ( ErrStat >= AbortErrLev ) THEN      
-!         CALL Conv_Rdtn_DestroyContState( dxdt, ErrStat2, ErrMsg2)
-!         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
-!         RETURN
-!      END IF
-!               
-!               
-!         ! Update discrete states:
-!         !   Note that xd [discrete state] is changed in Conv_Rdtn_UpdateDiscState(), so Conv_Rdtn_CalcOutput(),  
-!         !   Conv_Rdtn_CalcContStateDeriv(), and Conv_Rdtn_CalcConstrStates() must be called first (see above).
-!      
-!      CALL Conv_Rdtn_UpdateDiscState(Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )   
-!      IF ( ErrStat >= AbortErrLev ) THEN      
-!         CALL Conv_Rdtn_DestroyContState( dxdt, ErrStat2, ErrMsg2)
-!         ErrMsg = TRIM(ErrMsg)//' '//TRIM(ErrMsg2)
-!         RETURN      
-!      END IF
-!         
-!         
-!         ! Integrate (update) continuous states (x) here:
-!         
-!      !x = function of dxdt and x
-!
-!
-!         ! Destroy dxdt because it is not necessary for the rest of the subroutine
-!            
-!      CALL Conv_Rdtn_DestroyContState( dxdt, ErrStat, ErrMsg)
-!      IF ( ErrStat >= AbortErrLev ) RETURN      
-!     
-!   
-!      
-!END SUBROUTINE Conv_Rdtn_UpdateStates
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-! Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
-! Continuous, constraint, and discrete states are updated to values at t + Interval.
+!> Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
+!! Continuous, constraint, and discrete states are updated to values at t + Interval.
+SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                         INTENT(IN   ) :: t               ! Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   ) :: n               ! Current step of the simulation: t = n*Interval
-      TYPE(Conv_Rdtn_InputType),            INTENT(INOUT   ) :: Inputs(:)       ! Inputs at InputTimes
-      REAL(DbKi),                         INTENT(IN   ) :: InputTimes(:)   ! Times in seconds associated with Inputs
-      TYPE(Conv_Rdtn_ParameterType),        INTENT(IN   ) :: p               ! Parameters
-      TYPE(Conv_Rdtn_ContinuousStateType),  INTENT(INOUT) :: x               ! Input: Continuous states at t;
-                                                                           !   Output: Continuous states at t + Interval
-      TYPE(Conv_Rdtn_DiscreteStateType),    INTENT(INOUT) :: xd              ! Input: Discrete states at t;
-                                                                           !   Output: Discrete states at t + Interval
-      TYPE(Conv_Rdtn_ConstraintStateType),  INTENT(INOUT) :: z               ! Input: Constraint states at t;
-                                                                           !   Output: Constraint states at t + Interval
-      TYPE(Conv_Rdtn_OtherStateType),       INTENT(INOUT) :: OtherState      ! Other/optimization states
-      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat         ! Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                           INTENT(IN   ) :: t               !< Current simulation time in seconds
+      INTEGER(IntKi),                       INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
+      TYPE(Conv_Rdtn_InputType),            INTENT(INOUT) :: Inputs(:)       !< Inputs at InputTimes
+      REAL(DbKi),                           INTENT(IN   ) :: InputTimes(:)   !< Times in seconds associated with Inputs
+      TYPE(Conv_Rdtn_ParameterType),        INTENT(IN   ) :: p               !< Parameters
+      TYPE(Conv_Rdtn_ContinuousStateType),  INTENT(INOUT) :: x               !< Input: Continuous states at t;
+                                                                             !!   Output: Continuous states at t + Interval
+      TYPE(Conv_Rdtn_DiscreteStateType),    INTENT(INOUT) :: xd              !< Input: Discrete states at t;
+                                                                             !!   Output: Discrete states at t + Interval
+      TYPE(Conv_Rdtn_ConstraintStateType),  INTENT(INOUT) :: z               !< Input: Constraint states at t;
+                                                                             !!   Output: Constraint states at t + Interval
+      TYPE(Conv_Rdtn_OtherStateType),       INTENT(INOUT) :: OtherState      !< Input: Other states at t;
+                                                                             !!   Output: Other states at t + Interval
+      TYPE(Conv_Rdtn_MiscVarType),          INTENT(INOUT) :: m               !< Initial misc/optimization variables            
+      INTEGER(IntKi),                       INTENT(  OUT) :: ErrStat         !< Error status of the operation
+      CHARACTER(*),                         INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
          ! Local variables
     
-      TYPE(Conv_Rdtn_InputType)                           :: u               ! Instantaneous inputs
-      INTEGER(IntKi)                                    :: ErrStat2        ! Error status of the operation (secondary error)
-      CHARACTER(ErrMsgLen)                              :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
+      TYPE(Conv_Rdtn_InputType)                           :: u               !< Instantaneous inputs
+      INTEGER(IntKi)                                      :: ErrStat2        !< Error status of the operation (secondary error)
+      CHARACTER(ErrMsgLen)                                :: ErrMsg2         !< Error message if ErrStat2 /= ErrID_None
 
       
          ! Initialize variables
@@ -632,8 +520,7 @@ SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherS
          !   Note that xd [discrete state] is changed in Conv_Rdtn_UpdateDiscState() so xd will now contain values at t+Interval
          !   We'll first make a copy that contains xd at time t, which will be used in computing the constraint states
  
-
-      CALL Conv_Rdtn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+      CALL Conv_Rdtn_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
      
  
          ! Integrate (update) continuous states (x) here:
@@ -649,21 +536,22 @@ SUBROUTINE Conv_Rdtn_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherS
 END SUBROUTINE Conv_Rdtn_UpdateStates
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Conv_Rdtn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )   
-! Routine for computing outputs, used in both loose and tight coupling.
+!> Routine for computing outputs, used in both loose and tight coupling.
+SUBROUTINE Conv_Rdtn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(Conv_Rdtn_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
-      TYPE(Conv_Rdtn_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(Conv_Rdtn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(Conv_Rdtn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(Conv_Rdtn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(Conv_Rdtn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(Conv_Rdtn_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at Time (Input only so that mesh con-
-                                                                       !   nectivity information does not have to be recalculated)
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                          INTENT(IN   )  :: Time        !< Current simulation time in seconds
+      TYPE(Conv_Rdtn_InputType),           INTENT(IN   )  :: u           !< Inputs at Time
+      TYPE(Conv_Rdtn_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(Conv_Rdtn_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(Conv_Rdtn_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(Conv_Rdtn_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(Conv_Rdtn_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at Time
+      TYPE(Conv_Rdtn_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at Time (Input only so that mesh con-
+                                                                         !!   nectivity information does not have to be recalculated)
+      TYPE(Conv_Rdtn_MiscVarType),          INTENT(INOUT) :: m           !< Initial misc/optimization variables            
+      INTEGER(IntKi),                       INTENT(  OUT) :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                         INTENT(  OUT) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       
 !      REAL(ReKi)                           :: F_Rdtn (6)
       REAL(ReKi)                           :: F_RdtnDT (6)                            ! The portion of the total load contribution from wave radiation damping associated with the convolution integral proportional to ( RdtnDT - RdtnRmndr ) (N, N-m)
@@ -712,20 +600,21 @@ SUBROUTINE Conv_Rdtn_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, E
 
 END SUBROUTINE Conv_Rdtn_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Conv_Rdtn_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )  
-! Tight coupling routine for computing derivatives of continuous states
+!> Tight coupling routine for computing derivatives of continuous states.
+SUBROUTINE Conv_Rdtn_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )  
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(Conv_Rdtn_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                    
-      TYPE(Conv_Rdtn_ParameterType),       INTENT(IN   )  :: p           ! Parameters                             
-      TYPE(Conv_Rdtn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(Conv_Rdtn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(Conv_Rdtn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(Conv_Rdtn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
-      TYPE(Conv_Rdtn_ContinuousStateType), INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at Time
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation     
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                           INTENT(IN   )  :: Time        ! Current simulation time in seconds
+      TYPE(Conv_Rdtn_InputType),            INTENT(IN   )  :: u           ! Inputs at Time                    
+      TYPE(Conv_Rdtn_ParameterType),        INTENT(IN   )  :: p           ! Parameters                             
+      TYPE(Conv_Rdtn_ContinuousStateType),  INTENT(IN   )  :: x           ! Continuous states at Time
+      TYPE(Conv_Rdtn_DiscreteStateType),    INTENT(IN   )  :: xd          ! Discrete states at Time
+      TYPE(Conv_Rdtn_ConstraintStateType),  INTENT(IN   )  :: z           ! Constraint states at Time
+      TYPE(Conv_Rdtn_OtherStateType),       INTENT(IN   )  :: OtherState  ! Other states at Time                   
+      TYPE(Conv_Rdtn_MiscVarType),          INTENT(INOUT)  :: m           ! Initial misc/optimization variables            
+      TYPE(Conv_Rdtn_ContinuousStateType),  INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at Time
+      INTEGER(IntKi),                       INTENT(  OUT)  :: ErrStat     ! Error status of the operation     
+      CHARACTER(*),                         INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
                
          ! Initialize ErrStat
@@ -742,21 +631,23 @@ SUBROUTINE Conv_Rdtn_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt,
 END SUBROUTINE Conv_Rdtn_CalcContStateDeriv
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Conv_Rdtn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )   
-! Tight coupling routine for updating discrete states
+!> Tight coupling routine for updating discrete states.
+SUBROUTINE Conv_Rdtn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                          INTENT(IN   )  :: Time        ! Current simulation time in seconds 
-      INTEGER(IntKi),                      INTENT(IN   )  :: n           ! Current step of the simulation: t = n*Interval
-      TYPE(Conv_Rdtn_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                       
-      TYPE(Conv_Rdtn_ParameterType),       INTENT(IN   )  :: p           ! Parameters                                 
-      TYPE(Conv_Rdtn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(Conv_Rdtn_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at Time; 
-                                                                         ! Output: Discrete states at Time + Interval
-      TYPE(Conv_Rdtn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(Conv_Rdtn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states           
-      INTEGER(IntKi),                      INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                        INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                          INTENT(IN   )  :: Time        !< Current simulation time in seconds 
+      INTEGER(IntKi),                      INTENT(IN   )  :: n           !< Current step of the simulation: t = n*Interval
+      TYPE(Conv_Rdtn_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                       
+      TYPE(Conv_Rdtn_ParameterType),       INTENT(IN   )  :: p           !< Parameters                                 
+      TYPE(Conv_Rdtn_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(Conv_Rdtn_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Input: Discrete states at Time; 
+                                                                         !! Output: Discrete states at Time + Interval
+      TYPE(Conv_Rdtn_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(Conv_Rdtn_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states at Time (output: other states at Time + Interval)
+                                                                         !! THIS (intent out) BREAKS THE FRAMEWORK (but we don't care at this level)
+      TYPE(Conv_Rdtn_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables            
+      INTEGER(IntKi),                      INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                        INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
           ! Local Variables
       REAL(ReKi)                           :: IncrmntUD                  ! Incremental change in UD over a single radiation time step (m/s, rad/s)
@@ -863,21 +754,22 @@ SUBROUTINE Conv_Rdtn_UpdateDiscState( Time, n, u, p, x, xd, z, OtherState, ErrSt
 
 END SUBROUTINE Conv_Rdtn_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Conv_Rdtn_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_residual, ErrStat, ErrMsg )   
-! Tight coupling routine for solving for the residual of the constraint state equations
+!> Tight coupling routine for solving for the residual of the constraint state equations.
+SUBROUTINE Conv_Rdtn_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds   
-      TYPE(Conv_Rdtn_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                       
-      TYPE(Conv_Rdtn_ParameterType),       INTENT(IN   )  :: p           ! Parameters                           
-      TYPE(Conv_Rdtn_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(Conv_Rdtn_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(Conv_Rdtn_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time (possibly a guess)
-      TYPE(Conv_Rdtn_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
-      TYPE(Conv_Rdtn_ConstraintStateType), INTENT(  OUT)  :: z_residual  ! Residual of the constraint state equations using  
-                                                                       !     the input values described above      
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                          INTENT(IN   )  :: Time        !< Current simulation time in seconds   
+      TYPE(Conv_Rdtn_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                       
+      TYPE(Conv_Rdtn_ParameterType),       INTENT(IN   )  :: p           !< Parameters                           
+      TYPE(Conv_Rdtn_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(Conv_Rdtn_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(Conv_Rdtn_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time (possibly a guess)
+      TYPE(Conv_Rdtn_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states at Time
+      TYPE(Conv_Rdtn_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables            
+      TYPE(Conv_Rdtn_ConstraintStateType), INTENT(  OUT)  :: z_residual  !< Residual of the constraint state equations using  
+                                                                         !!     the input values described above      
+      INTEGER(IntKi),                      INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                        INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
                
          ! Initialize ErrStat
@@ -891,281 +783,6 @@ SUBROUTINE Conv_Rdtn_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, 
       z_residual%DummyConstrState = 0
 
 END SUBROUTINE Conv_Rdtn_CalcConstrStateResidual
-!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE Conv_Rdtn_JacobianPInput( Time, u, p, x, xd, z, OtherState, dYdu, dXdu, dXddu, dZdu, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations 
-!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(Conv_Rdtn_InputType),                   INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(Conv_Rdtn_ParameterType),               INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(Conv_Rdtn_ContinuousStateType),         INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(Conv_Rdtn_DiscreteStateType),           INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(Conv_Rdtn_ConstraintStateType),         INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(Conv_Rdtn_OtherStateType),              INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(Conv_Rdtn_PartialOutputPInputType),     INTENT(  OUT), OPTIONAL :: dYdu       ! Partial derivatives of output equations
-!                                                                                       !   (Y) with respect to the inputs (u)
-!      TYPE(Conv_Rdtn_PartialContStatePInputType),  INTENT(  OUT), OPTIONAL :: dXdu       ! Partial derivatives of continuous state
-!                                                                                       !   equations (X) with respect to inputs (u)
-!      TYPE(Conv_Rdtn_PartialDiscStatePInputType),  INTENT(  OUT), OPTIONAL :: dXddu      ! Partial derivatives of discrete state 
-!                                                                                       !   equations (Xd) with respect to inputs (u)
-!      TYPE(Conv_Rdtn_PartialConstrStatePInputType),INTENT(  OUT), OPTIONAL :: dZdu       ! Partial derivatives of constraint state 
-!                                                                                       !   equations (Z) with respect to inputs (u)
-!      INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!      IF ( PRESENT( dYdu ) ) THEN
-!      
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the inputs (u) here:
-!
-!!         dYdu%DummyOutput%DummyInput = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdu ) ) THEN
-!      
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the inputs (u) here:
-!      
-!!         dXdu%DummyContState%DummyInput = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddu ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the inputs (u) here:
-!
-!   !      dXddu%DummyDiscState%DummyInput = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdu ) ) THEN
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the inputs (u) here:
-!      
-!!         dZdu%DummyConstrState%DummyInput = 0
-!
-!      END IF
-!
-!
-!END SUBROUTINE Conv_Rdtn_JacobianPInput
-!!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE Conv_Rdtn_JacobianPContState( Time, u, p, x, xd, z, OtherState, dYdx, dXdx, dXddx, dZdx, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                    INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(Conv_Rdtn_InputType),                       INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(Conv_Rdtn_ParameterType),                   INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(Conv_Rdtn_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(Conv_Rdtn_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(Conv_Rdtn_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(Conv_Rdtn_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(Conv_Rdtn_PartialOutputPContStateType),     INTENT(  OUT), OPTIONAL :: dYdx       ! Partial derivatives of output equations
-!                                                                                           !   (Y) with respect to the continuous 
-!                                                                                           !   states (x)
-!      TYPE(Conv_Rdtn_PartialContStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXdx       ! Partial derivatives of continuous state
-!                                                                                           !   equations (X) with respect to 
-!                                                                                           !   the continuous states (x)
-!      TYPE(Conv_Rdtn_PartialDiscStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXddx      ! Partial derivatives of discrete state 
-!                                                                                           !   equations (Xd) with respect to 
-!                                                                                           !   the continuous states (x)
-!      TYPE(Conv_Rdtn_PartialConstrStatePContStateType),INTENT(  OUT), OPTIONAL :: dZdx       ! Partial derivatives of constraint state
-!                                                                                           !   equations (Z) with respect to 
-!                                                                                           !   the continuous states (x)
-!      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!     
-!      IF ( PRESENT( dYdx ) ) THEN
-!
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the continuous states (x) here:
-!
-!         dYdx%DummyOutput%DummyContState = 0.0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdx ) ) THEN
-!      
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the continuous states (x) here:
-!      
-!         dXdx%DummyContState%DummyContState = 0.0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddx ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the continuous states (x) here:
-!
-!         dXddx%DummyDiscState%DummyContState = 0.0
-!         
-!      END IF
-!      
-!      IF ( PRESENT( dZdx ) ) THEN
-!
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the continuous states (x) here:
-!      
-!         dZdx%DummyConstrState%DummyContState = 0.0
-!
-!      END IF
-!      
-!
-!   END SUBROUTINE Conv_Rdtn_JacobianPContState
-!!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE Conv_Rdtn_JacobianPDiscState( Time, u, p, x, xd, z, OtherState, dYdxd, dXdxd, dXddxd, dZdxd, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
-!!..................................................................................................................................
-!
-!      REAL(DbKi),                                    INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(Conv_Rdtn_InputType),                       INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(Conv_Rdtn_ParameterType),                   INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(Conv_Rdtn_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(Conv_Rdtn_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(Conv_Rdtn_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(Conv_Rdtn_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(Conv_Rdtn_PartialOutputPDiscStateType),     INTENT(  OUT), OPTIONAL :: dYdxd      ! Partial derivatives of output equations
-!                                                                                           !  (Y) with respect to the discrete 
-!                                                                                           !  states (xd)
-!      TYPE(Conv_Rdtn_PartialContStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXdxd      ! Partial derivatives of continuous state
-!                                                                                           !   equations (X) with respect to the 
-!                                                                                           !   discrete states (xd)
-!      TYPE(Conv_Rdtn_PartialDiscStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXddxd     ! Partial derivatives of discrete state 
-!                                                                                           !   equations (Xd) with respect to the
-!                                                                                           !   discrete states (xd)
-!      TYPE(Conv_Rdtn_PartialConstrStatePDiscStateType),INTENT(  OUT), OPTIONAL :: dZdxd      ! Partial derivatives of constraint state
-!                                                                                           !   equations (Z) with respect to the 
-!                                                                                           !   discrete states (xd)
-!      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!      IF ( PRESENT( dYdxd ) ) THEN
-!      
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the discrete states (xd) here:
-!
-!         dYdxd%DummyOutput%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the discrete states (xd) here:
-!      
-!         dXdxd%DummyContState%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the discrete states (xd) here:
-!
-!         dXddxd%DummyDiscState%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the discrete states (xd) here:
-!      
-!         dZdxd%DummyConstrState%DummyDiscState = 0
-!
-!      END IF
-!      
-!
-!
-!END SUBROUTINE Conv_Rdtn_JacobianPDiscState
-!!----------------------------------------------------------------------------------------------------------------------------------    
-!SUBROUTINE Conv_Rdtn_JacobianPConstrState( Time, u, p, x, xd, z, OtherState, dYdz, dXdz, dXddz, dZdz, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                      INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(Conv_Rdtn_InputType),                         INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(Conv_Rdtn_ParameterType),                     INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(Conv_Rdtn_ContinuousStateType),               INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(Conv_Rdtn_DiscreteStateType),                 INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(Conv_Rdtn_ConstraintStateType),               INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(Conv_Rdtn_OtherStateType),                    INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(Conv_Rdtn_PartialOutputPConstrStateType),     INTENT(  OUT), OPTIONAL :: dYdz       ! Partial derivatives of output 
-!                                                                                             !  equations (Y) with respect to the 
-!                                                                                             !  constraint states (z)
-!      TYPE(Conv_Rdtn_PartialContStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXdz       ! Partial derivatives of continuous
-!                                                                                             !  state equations (X) with respect to 
-!                                                                                             !  the constraint states (z)
-!      TYPE(Conv_Rdtn_PartialDiscStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXddz      ! Partial derivatives of discrete state
-!                                                                                             !  equations (Xd) with respect to the 
-!                                                                                             !  constraint states (z)
-!      TYPE(Conv_Rdtn_PartialConstrStatePConstrStateType),INTENT(  OUT), OPTIONAL :: dZdz       ! Partial derivatives of constraint 
-!                                                                                             ! state equations (Z) with respect to 
-!                                                                                             !  the constraint states (z)
-!      INTEGER(IntKi),                                  INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                    INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      IF ( PRESENT( dYdz ) ) THEN
-!      
-!            ! Calculate the partial derivative of the output equations (Y) with respect to the constraint states (z) here:
-!        
-!         dYdz%DummyOutput%DummyConstrState = 0
-!         
-!      END IF
-!      
-!      IF ( PRESENT( dXdz ) ) THEN
-!      
-!            ! Calculate the partial derivative of the continuous state equations (X) with respect to the constraint states (z) here:
-!         
-!         dXdz%DummyContState%DummyConstrState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddz ) ) THEN
-!
-!            ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the constraint states (z) here:
-!
-!         dXddz%DummyDiscState%DummyConstrState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdz ) ) THEN
-!
-!            ! Calculate the partial derivative of the constraint state equations (Z) with respect to the constraint states (z) here:
-!         
-!         dZdz%DummyConstrState%DummyConstrState = 0
-!
-!      END IF
-!      
-!
-!END SUBROUTINE Conv_Rdtn_JacobianPConstrState
-
 !----------------------------------------------------------------------------------------------------------------------------------
    
 END MODULE Conv_Radiation

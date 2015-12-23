@@ -7,7 +7,7 @@
 !!
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2014  National Renewable Energy Laboratory
+! Copyright (C) 2014-2015  National Renewable Energy Laboratory
 !
 !    This file is part of HydroDyn.
 !

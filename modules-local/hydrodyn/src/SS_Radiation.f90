@@ -1,12 +1,9 @@
 !**********************************************************************************************************************************
 ! The SS_Radiation and SS_Radiation_Types modules make up a template for creating user-defined calculations in the FAST Modularization 
 ! Framework. SS_Radiations_Types will be auto-generated based on a description of the variables for the module.
-!
-! "SS_Radiation" should be replaced with the name of your module. Example: HydroDyn
-! "SS_Rad" (in SS_Rad_*) should be replaced with the module name or an abbreviation of it. Example: HD
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2012  National Renewable Energy Laboratory
+! Copyright (C) 2012, 2015  National Renewable Energy Laboratory
 !
 !    This file is part of SS_Radiation.
 !
@@ -35,7 +32,7 @@ MODULE SS_Radiation
    
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: SS_Rad_ProgDesc = ProgDesc( 'SS_Radiation', 'v1.00.02', '27-May-2013' )
+   TYPE(ProgDesc), PARAMETER  :: SS_Rad_ProgDesc = ProgDesc( 'SS_Radiation', 'v1.01.00', '23-Dec-2015' )
 
    
       ! ..... Public Subroutines ...................................................................................................
@@ -44,52 +41,41 @@ MODULE SS_Radiation
    PUBLIC :: SS_Rad_End                            ! Ending routine (includes clean up)
    
    PUBLIC :: SS_Rad_UpdateStates                   ! Loose coupling routine for solving for constraint states, integrating 
-                                                    !   continuous states, and updating discrete states
+                                                   !   continuous states, and updating discrete states
    PUBLIC :: SS_Rad_CalcOutput                     ! Routine for computing outputs
    
    PUBLIC :: SS_Rad_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
    PUBLIC :: SS_Rad_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: SS_Rad_UpdateDiscState                ! Tight coupling routine for updating discrete states
-      
-  ! PUBLIC :: SS_Rad_JacobianPInput                 ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-                                                    !   (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
-   !PUBLIC :: SS_Rad_JacobianPContState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-                                                    !   (Xd), and constraint-state (Z) equations all with respect to the continuous 
-                                                    !   states (x)
- !  PUBLIC :: SS_Rad_JacobianPDiscState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-                                                    !   (Xd), and constraint-state (Z) equations all with respect to the discrete 
-                                                    !   states (xd)
-!   PUBLIC :: SS_Rad_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-                                                    !   (Xd), and constraint-state (Z) equations all with respect to the constraint 
-                                                    !   states (z)
-   
+         
    
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
-! This routine is called at the start of the simulation to perform initialization steps. 
-! The parameters are set here and not changed during the simulation.
-! The initial states and initial guess for the input are defined.
+!> This routine is called at the start of the simulation to perform initialization steps. 
+!! The parameters are set here and not changed during the simulation.
+!! The initial states and initial guess for the input are defined.
+SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-    TYPE(SS_Rad_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
-    TYPE(SS_Rad_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
-    TYPE(SS_Rad_ParameterType),       INTENT(  OUT)  :: p           ! Parameters      
-    TYPE(SS_Rad_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
-    TYPE(SS_Rad_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
-    TYPE(SS_Rad_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-    TYPE(SS_Rad_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states            
-    TYPE(SS_Rad_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated; 
-                                                                    !   only the output mesh is initialized)
-    REAL(DbKi),                       INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that 
-                                                                    !   (1) SS_Rad_UpdateStates() is called in loose coupling &
-                                                                    !   (2) SS_Rad_UpdateDiscState() is called in tight coupling.
-                                                                    !   Input is the suggested time from the glue code; 
-                                                                    !   Output is the actual coupling interval that will be used 
-                                                                    !   by the glue code.
-    TYPE(SS_Rad_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
-    INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-    CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+    TYPE(SS_Rad_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+    TYPE(SS_Rad_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
+    TYPE(SS_Rad_ParameterType),       INTENT(  OUT)  :: p           !< Parameters      
+    TYPE(SS_Rad_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
+    TYPE(SS_Rad_DiscreteStateType),   INTENT(  OUT)  :: xd          !< Initial discrete states
+    TYPE(SS_Rad_ConstraintStateType), INTENT(  OUT)  :: z           !< Initial guess of the constraint states
+    TYPE(SS_Rad_OtherStateType),      INTENT(  OUT)  :: OtherState  !< Initial other states            
+    TYPE(SS_Rad_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated; 
+                                                                    !!   only the output mesh is initialized)
+    TYPE(SS_Rad_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables            
+    REAL(DbKi),                       INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that 
+                                                                    !!   (1) SS_Rad_UpdateStates() is called in loose coupling &
+                                                                    !!   (2) SS_Rad_UpdateDiscState() is called in tight coupling.
+                                                                    !!   Input is the suggested time from the glue code; 
+                                                                    !!   Output is the actual coupling interval that will be used 
+                                                                    !!   by the glue code.
+    TYPE(SS_Rad_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
+    INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+    CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
     ! Local Variables:
          
@@ -274,7 +260,7 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       p%DT  = Interval
        
     ! Define initial system states here:
-    CALL AllocAry( x%x, p%N, 1,    'x%x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')      
+    CALL AllocAry( x%x, p%N,  'x%x', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SS_Rad_Init')      
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
          RETURN
@@ -291,6 +277,9 @@ SUBROUTINE SS_Rad_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOu
       END DO
       OtherState%n = -1
 
+   ! misc vars:
+      m%DummyMiscVar = 0
+      
      !Inputs     
       u%dq = 0 !6 DoF's velocities
 
@@ -325,19 +314,20 @@ CONTAINS
        
 END SUBROUTINE SS_Rad_Init
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SS_Rad_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-! This routine is called at the end of the simulation.
+!> This routine is called at the end of the simulation.
+SUBROUTINE SS_Rad_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(SS_Rad_InputType),           INTENT(INOUT)  :: u           ! System inputs
-      TYPE(SS_Rad_ParameterType),       INTENT(INOUT)  :: p           ! Parameters     
-      TYPE(SS_Rad_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
-      TYPE(SS_Rad_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
-      TYPE(SS_Rad_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-      TYPE(SS_Rad_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states            
-      TYPE(SS_Rad_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(SS_Rad_InputType),           INTENT(INOUT)  :: u           !< System inputs
+      TYPE(SS_Rad_ParameterType),       INTENT(INOUT)  :: p           !< Parameters     
+      TYPE(SS_Rad_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
+      TYPE(SS_Rad_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
+      TYPE(SS_Rad_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
+      TYPE(SS_Rad_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states            
+      TYPE(SS_Rad_OutputType),          INTENT(INOUT)  :: y           !< System outputs
+      TYPE(SS_Rad_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables            
+      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
 
@@ -365,7 +355,10 @@ SUBROUTINE SS_Rad_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       CALL SS_Rad_DestroyConstrState( z,           ErrStat, ErrMsg )
       CALL SS_Rad_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
          
-
+         ! Destroy misc vars:
+      CALL SS_Rad_DestroyMisc(  m,  ErrStat, ErrMsg )
+      
+      
          ! Destroy the output data:
          
       CALL SS_Rad_DestroyOutput( y, ErrStat, ErrMsg )
@@ -375,25 +368,27 @@ SUBROUTINE SS_Rad_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
 END SUBROUTINE SS_Rad_End
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SS_Rad_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-! Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
-! Continuous, constraint, and discrete states are updated to values at t + Interval.
+!> Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
+!! Continuous, constraint, and discrete states are updated to values at t + Interval.
+SUBROUTINE SS_Rad_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                         INTENT(IN   ) :: t               ! Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   ) :: n               ! Current step of the simulation: t = n*Interval
-      TYPE(SS_Rad_InputType),             INTENT(INOUT) :: Inputs(:)       ! Inputs at InputTimes
-      REAL(DbKi),                         INTENT(IN   ) :: InputTimes(:)   ! Times in seconds associated with Inputs
-      TYPE(SS_Rad_ParameterType),         INTENT(IN   ) :: p               ! Parameters
-      TYPE(SS_Rad_ContinuousStateType),   INTENT(INOUT) :: x               ! Input: Continuous states at t;
-                                                                           !   Output: Continuous states at t + Interval
-      TYPE(SS_Rad_DiscreteStateType),     INTENT(INOUT) :: xd              ! Input: Discrete states at t;
-                                                                           !   Output: Discrete states at t + Interval
-      TYPE(SS_Rad_ConstraintStateType),   INTENT(INOUT) :: z               ! Input: Constraint states at t;
-                                                                           !   Output: Constraint states at t + Interval
-      TYPE(SS_Rad_OtherStateType),        INTENT(INOUT) :: OtherState      ! Other/optimization states
-      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat         ! Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                         INTENT(IN   ) :: t               !< Current simulation time in seconds
+      INTEGER(IntKi),                     INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
+      TYPE(SS_Rad_InputType),             INTENT(INOUT) :: Inputs(:)       !< Inputs at InputTimes
+      REAL(DbKi),                         INTENT(IN   ) :: InputTimes(:)   !< Times in seconds associated with Inputs
+      TYPE(SS_Rad_ParameterType),         INTENT(IN   ) :: p               !< Parameters
+      TYPE(SS_Rad_ContinuousStateType),   INTENT(INOUT) :: x               !< Input: Continuous states at t;
+                                                                           !!   Output: Continuous states at t + Interval
+      TYPE(SS_Rad_DiscreteStateType),     INTENT(INOUT) :: xd              !< Input: Discrete states at t;
+                                                                           !!   Output: Discrete states at t + Interval
+      TYPE(SS_Rad_ConstraintStateType),   INTENT(INOUT) :: z               !< Input: Constraint states at t;
+                                                                           !!   Output: Constraint states at t + Interval
+      TYPE(SS_Rad_OtherStateType),        INTENT(INOUT) :: OtherState      !< Input: Other states at t;
+                                                                           !!   Output: Other states at t + Interval
+      TYPE(SS_Rad_MiscVarType),           INTENT(INOUT) :: m               !< Initial misc/optimization variables            
+      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat         !< Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
       INTEGER, PARAMETER :: IntegrationMethod = 3   
       
@@ -402,15 +397,15 @@ SUBROUTINE SS_Rad_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherStat
          
       CASE (1) ! RK4
       
-         CALL SS_Rad_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         CALL SS_Rad_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
          
       CASE (2) ! AB4
       
-         CALL SS_Rad_AB4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         CALL SS_Rad_AB4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       
       CASE (3) ! ABM4
       
-         CALL SS_Rad_ABM4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         CALL SS_Rad_ABM4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
          
       CASE DEFAULT  !bjj: we already checked this at initialization, but for completeness:
          
@@ -423,21 +418,22 @@ SUBROUTINE SS_Rad_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherStat
      
 END SUBROUTINE SS_Rad_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SS_Rad_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )   
-! Routine for computing outputs, used in both loose and tight coupling.
+!> Routine for computing outputs, used in both loose and tight coupling.
+SUBROUTINE SS_Rad_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(SS_Rad_InputType),           INTENT(IN   )   :: u           ! Inputs at Time
-      TYPE(SS_Rad_ParameterType),       INTENT(IN   )   :: p           ! Parameters
-      TYPE(SS_Rad_ContinuousStateType), INTENT(IN   )   :: x           ! Continuous states at Time
-      TYPE(SS_Rad_DiscreteStateType),   INTENT(IN   )   :: xd          ! Discrete states at Time
-      TYPE(SS_Rad_ConstraintStateType), INTENT(IN   )   :: z           ! Constraint states at Time
-      TYPE(SS_Rad_OtherStateType),      INTENT(INOUT)   :: OtherState  ! Other/optimization states
-      TYPE(SS_Rad_OutputType),          INTENT(INOUT)   :: y           ! Outputs computed at Time (Input only so that mesh con-
-                                                                       !   nectivity information does not have to be recalculated)
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                       INTENT(IN   )   :: Time        !< Current simulation time in seconds
+      TYPE(SS_Rad_InputType),           INTENT(IN   )   :: u           !< Inputs at Time
+      TYPE(SS_Rad_ParameterType),       INTENT(IN   )   :: p           !< Parameters
+      TYPE(SS_Rad_ContinuousStateType), INTENT(IN   )   :: x           !< Continuous states at Time
+      TYPE(SS_Rad_DiscreteStateType),   INTENT(IN   )   :: xd          !< Discrete states at Time
+      TYPE(SS_Rad_ConstraintStateType), INTENT(IN   )   :: z           !< Constraint states at Time
+      TYPE(SS_Rad_OtherStateType),      INTENT(IN   )   :: OtherState  !< Other states at Time
+      TYPE(SS_Rad_OutputType),          INTENT(INOUT)   :: y           !< Outputs computed at Time (Input only so that mesh con-
+                                                                       !!   nectivity information does not have to be recalculated)
+      TYPE(SS_Rad_MiscVarType),         INTENT(INOUT)   :: m           !< Initial misc/optimization variables            
+      INTEGER(IntKi),                   INTENT(  OUT)   :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)   :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 !      REAL(DbKi)  :: test(6,1)
       
       ! Initialize ErrStat    
@@ -451,25 +447,26 @@ SUBROUTINE SS_Rad_CalcOutput( Time, u, p, x, xd, z, OtherState, y, ErrStat, ErrM
       
       ! Compute outputs here:
       
-      y%WriteOutput(1,1)   = REAL(Time,ReKi)
-      y%WriteOutput(1,2:7) = y%y(:,1)
+      y%WriteOutput(1)   = REAL(Time,ReKi)
+      y%WriteOutput(2:7) = y%y
                    
 END SUBROUTINE SS_Rad_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SS_Rad_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )  
-! Tight coupling routine for computing derivatives of continuous states
+!> Tight coupling routine for computing derivatives of continuous states
+SUBROUTINE SS_Rad_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )  
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(SS_Rad_InputType),            INTENT(IN   )  :: u           ! Inputs at Time                    
-      TYPE(SS_Rad_ParameterType),        INTENT(IN   )  :: p           ! Parameters                             
-      TYPE(SS_Rad_ContinuousStateType),  INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(SS_Rad_DiscreteStateType),    INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(SS_Rad_ConstraintStateType),  INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(SS_Rad_OtherStateType),       INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
-      TYPE(SS_Rad_ContinuousStateType),  INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at Time
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation     
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                        INTENT(IN   )  :: Time        !< Current simulation time in seconds
+      TYPE(SS_Rad_InputType),            INTENT(IN   )  :: u           !< Inputs at Time                    
+      TYPE(SS_Rad_ParameterType),        INTENT(IN   )  :: p           !< Parameters                             
+      TYPE(SS_Rad_ContinuousStateType),  INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(SS_Rad_DiscreteStateType),    INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(SS_Rad_ConstraintStateType),  INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(SS_Rad_OtherStateType),       INTENT(IN   )  :: OtherState  !< Other states                    
+      TYPE(SS_Rad_MiscVarType),          INTENT(INOUT)  :: m           !< Initial misc/optimization variables            
+      TYPE(SS_Rad_ContinuousStateType),  INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at Time
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation     
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
    
          ! Initialize ErrStat
          
@@ -477,7 +474,7 @@ SUBROUTINE SS_Rad_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, Er
       ErrMsg  = ""               
       
       
-      CALL AllocAry( dxdt%x, p%N, 1, 'SS_Rad_CalcContStateDeriv:dxdt%x', ErrStat, ErrMsg)
+      CALL AllocAry( dxdt%x, p%N, 'SS_Rad_CalcContStateDeriv:dxdt%x', ErrStat, ErrMsg)
       IF ( ErrStat >= AbortErrLev) RETURN
             
       ! Compute the first time derivatives of the continuous states here:
@@ -489,20 +486,21 @@ SUBROUTINE SS_Rad_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, Er
         
 END SUBROUTINE SS_Rad_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SS_Rad_UpdateDiscState( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )   
-! Tight coupling routine for updating discrete states
+!> Tight coupling routine for updating discrete states
+SUBROUTINE SS_Rad_UpdateDiscState( Time, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds   
-      TYPE(SS_Rad_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                       
-      TYPE(SS_Rad_ParameterType),       INTENT(IN   )  :: p           ! Parameters                                 
-      TYPE(SS_Rad_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(SS_Rad_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at Time; 
-                                                                       !   Output: Discrete states at Time + Interval
-      TYPE(SS_Rad_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(SS_Rad_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states           
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                       INTENT(IN   )  :: Time        !< Current simulation time in seconds   
+      TYPE(SS_Rad_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                       
+      TYPE(SS_Rad_ParameterType),       INTENT(IN   )  :: p           !< Parameters                                 
+      TYPE(SS_Rad_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(SS_Rad_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Input: Discrete states at Time; 
+                                                                      !!   Output: Discrete states at Time + Interval
+      TYPE(SS_Rad_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time
+      TYPE(SS_Rad_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other/optimization states           
+      TYPE(SS_Rad_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables            
+      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
                
          ! Initialize ErrStat
@@ -516,21 +514,22 @@ SUBROUTINE SS_Rad_UpdateDiscState( Time, u, p, x, xd, z, OtherState, ErrStat, Er
 
 END SUBROUTINE SS_Rad_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SS_Rad_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_residual, ErrStat, ErrMsg )   
-! Tight coupling routine for solving for the residual of the constraint state equations
+!> Tight coupling routine for solving for the residual of the constraint state equations
+SUBROUTINE SS_Rad_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, ErrStat, ErrMsg )   
 !..................................................................................................................................
    
-      REAL(DbKi),                        INTENT(IN   )  :: Time        ! Current simulation time in seconds   
-      TYPE(SS_Rad_InputType),           INTENT(IN   )  :: u           ! Inputs at Time                       
-      TYPE(SS_Rad_ParameterType),       INTENT(IN   )  :: p           ! Parameters                           
-      TYPE(SS_Rad_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(SS_Rad_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(SS_Rad_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time (possibly a guess)
-      TYPE(SS_Rad_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states                    
-      TYPE(SS_Rad_ConstraintStateType), INTENT(  OUT)  :: z_residual  ! Residual of the constraint state equations using  
-                                                                       !     the input values described above      
-      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                       INTENT(IN   )  :: Time        !< Current simulation time in seconds   
+      TYPE(SS_Rad_InputType),           INTENT(IN   )  :: u           !< Inputs at Time                       
+      TYPE(SS_Rad_ParameterType),       INTENT(IN   )  :: p           !< Parameters                           
+      TYPE(SS_Rad_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at Time
+      TYPE(SS_Rad_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at Time
+      TYPE(SS_Rad_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at Time (possibly a guess)
+      TYPE(SS_Rad_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other/optimization states                    
+      TYPE(SS_Rad_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables            
+      TYPE(SS_Rad_ConstraintStateType), INTENT(  OUT)  :: z_residual  !< Residual of the constraint state equations using  
+                                                                      !!     the input values described above      
+      INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat    !< Error status of the operation
+      CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
                
          ! Initialize ErrStat
@@ -545,313 +544,37 @@ SUBROUTINE SS_Rad_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_r
 
 END SUBROUTINE SS_Rad_CalcConstrStateResidual
 !----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE SS_Rad_JacobianPInput( Time, u, p, x, xd, z, OtherState, dYdu, dXdu, dXddu, dZdu, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations 
-!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(SS_Rad_InputType),                   INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(SS_Rad_ParameterType),               INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(SS_Rad_ContinuousStateType),         INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(SS_Rad_DiscreteStateType),           INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(SS_Rad_ConstraintStateType),         INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(SS_Rad_OtherStateType),              INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(SS_Rad_PartialOutputPInputType),     INTENT(  OUT), OPTIONAL :: dYdu       ! Partial derivatives of output equations
-!                                                                                       !   (Y) with respect to the inputs (u)
-!      TYPE(SS_Rad_PartialContStatePInputType),  INTENT(  OUT), OPTIONAL :: dXdu       ! Partial derivatives of continuous state
-!                                                                                       !   equations (X) with respect to inputs (u)
-!      TYPE(SS_Rad_PartialConstrStatePInputType ),  INTENT(  OUT), OPTIONAL :: dXddu      ! Partial derivatives of discrete state 
-!                                                                                       !   equations (Xd) with respect to inputs (u)
-!      TYPE(SS_Rad_PartialConstrStatePInputType),INTENT(  OUT), OPTIONAL :: dZdu       ! Partial derivatives of constraint state 
-!                                                                                       !   equations (Z) with respect to inputs (u)
-!      INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!      IF ( PRESENT( dYdu ) ) THEN
-!      
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the inputs (u) here:
-!
-!         dYdu%dYdu = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdu ) ) THEN
-!      
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the inputs (u) here:
-!      
-!         dXdu%dXdu = p%B
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddu ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the inputs (u) here:
-!
-!         dXddu%DummyDiscState%DummyInput = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdu ) ) THEN
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the inputs (u) here:
-!      
-!         dZdu%DummyConstrState%DummyInput = 0
-!
-!      END IF
-!
-!
-!END SUBROUTINE SS_Rad_JacobianPInput
-!!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE SS_Rad_JacobianPContState( Time, u, p, x, xd, z, OtherState, dYdx, dXdx, dXddx, dZdx, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                    INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(SS_Rad_InputType),                       INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(SS_Rad_ParameterType),                   INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(SS_Rad_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(SS_Rad_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(SS_Rad_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(SS_Rad_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(SS_Rad_PartialOutputPContStateType),     INTENT(  OUT), OPTIONAL :: dYdx       ! Partial derivatives of output equations
-!                                                                                           !   (Y) with respect to the continuous 
-!                                                                                           !   states (x)
-!      TYPE(SS_Rad_PartialContStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXdx       ! Partial derivatives of continuous state
-!                                                                                           !   equations (X) with respect to 
-!                                                                                           !   the continuous states (x)
-!      TYPE(SS_Rad_PartialDiscStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXddx      ! Partial derivatives of discrete state 
-!                                                                                           !   equations (Xd) with respect to 
-!                                                                                           !   the continuous states (x)
-!      TYPE(SS_Rad_PartialConstrStatePContStateType),INTENT(  OUT), OPTIONAL :: dZdx       ! Partial derivatives of constraint state
-!                                                                                           !   equations (Z) with respect to 
-!                                                                                           !   the continuous states (x)
-!      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!     
-!      IF ( PRESENT( dYdx ) ) THEN
-!
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the continuous states (x) here:
-!
-!         dYdx%dYdx = p%C
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdx ) ) THEN
-!      
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the continuous states (x) here:
-!      
-!         dXdx%dXdx = p%A
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddx ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the continuous states (x) here:
-!
-!         dXddx%DummyDiscState%DummyContState = 0
-!         
-!      END IF
-!      
-!      IF ( PRESENT( dZdx ) ) THEN
-!
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the continuous states (x) here:
-!      
-!         dZdx%DummyConstrState%DummyContState = 0
-!
-!      END IF
-!      
-!
-!   END SUBROUTINE SS_Rad_JacobianPContState
-!!----------------------------------------------------------------------------------------------------------------------------------
-!SUBROUTINE SS_Rad_JacobianPDiscState( Time, u, p, x, xd, z, OtherState, dYdxd, dXdxd, dXddxd, dZdxd, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
-!!..................................................................................................................................
-!
-!      REAL(DbKi),                                    INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(SS_Rad_InputType),                       INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(SS_Rad_ParameterType),                   INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(SS_Rad_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(SS_Rad_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(SS_Rad_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(SS_Rad_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(SS_Rad_PartialOutputPDiscStateType),     INTENT(  OUT), OPTIONAL :: dYdxd      ! Partial derivatives of output equations
-!                                                                                           !  (Y) with respect to the discrete 
-!                                                                                           !  states (xd)
-!      TYPE(SS_Rad_PartialContStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXdxd      ! Partial derivatives of continuous state
-!                                                                                           !   equations (X) with respect to the 
-!                                                                                           !   discrete states (xd)
-!      TYPE(SS_Rad_PartialDiscStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXddxd     ! Partial derivatives of discrete state 
-!                                                                                           !   equations (Xd) with respect to the
-!                                                                                           !   discrete states (xd)
-!      TYPE(SS_Rad_PartialConstrStatePDiscStateType),INTENT(  OUT), OPTIONAL :: dZdxd      ! Partial derivatives of constraint state
-!                                                                                           !   equations (Z) with respect to the 
-!                                                                                           !   discrete states (xd)
-!      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      
-!      IF ( PRESENT( dYdxd ) ) THEN
-!      
-!         ! Calculate the partial derivative of the output equations (Y) with respect to the discrete states (xd) here:
-!
-!         dYdxd%DummyOutput%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXdxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the continuous state equations (X) with respect to the discrete states (xd) here:
-!      
-!         dXdxd%DummyContState%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the discrete states (xd) here:
-!
-!         dXddxd%DummyDiscState%DummyDiscState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdxd ) ) THEN
-!
-!         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the discrete states (xd) here:
-!      
-!         dZdxd%DummyConstrState%DummyDiscState = 0
-!
-!      END IF
-!      
-!
-!
-!END SUBROUTINE SS_Rad_JacobianPDiscState
-!!----------------------------------------------------------------------------------------------------------------------------------    
-!SUBROUTINE SS_Rad_JacobianPConstrState( Time, u, p, x, xd, z, OtherState, dYdz, dXdz, dXddz, dZdz, ErrStat, ErrMsg )   
-!! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
-!!..................................................................................................................................
-!   
-!      REAL(DbKi),                                      INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-!      TYPE(SS_Rad_InputType),                         INTENT(IN   )           :: u          ! Inputs at Time                       
-!      TYPE(SS_Rad_ParameterType),                     INTENT(IN   )           :: p          ! Parameters                           
-!      TYPE(SS_Rad_ContinuousStateType),               INTENT(IN   )           :: x          ! Continuous states at Time
-!      TYPE(SS_Rad_DiscreteStateType),                 INTENT(IN   )           :: xd         ! Discrete states at Time
-!      TYPE(SS_Rad_ConstraintStateType),               INTENT(IN   )           :: z          ! Constraint states at Time
-!      TYPE(SS_Rad_OtherStateType),                    INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-!      TYPE(SS_Rad_PartialOutputPConstrStateType),     INTENT(  OUT), OPTIONAL :: dYdz       ! Partial derivatives of output 
-!                                                                                             !  equations (Y) with respect to the 
-!                                                                                             !  constraint states (z)
-!      TYPE(SS_Rad_PartialContStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXdz       ! Partial derivatives of continuous
-!                                                                                             !  state equations (X) with respect to 
-!                                                                                             !  the constraint states (z)
-!      TYPE(SS_Rad_PartialDiscStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXddz      ! Partial derivatives of discrete state
-!                                                                                             !  equations (Xd) with respect to the 
-!                                                                                             !  constraint states (z)
-!      TYPE(SS_Rad_PartialConstrStatePConstrStateType),INTENT(  OUT), OPTIONAL :: dZdz       ! Partial derivatives of constraint 
-!                                                                                             ! state equations (Z) with respect to 
-!                                                                                             !  the constraint states (z)
-!      INTEGER(IntKi),                                  INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-!      CHARACTER(*),                                    INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-!
-!               
-!         ! Initialize ErrStat
-!         
-!      ErrStat = ErrID_None         
-!      ErrMsg  = ""               
-!      
-!      IF ( PRESENT( dYdz ) ) THEN
-!      
-!            ! Calculate the partial derivative of the output equations (Y) with respect to the constraint states (z) here:
-!        
-!         dYdz%DummyOutput%DummyConstrState = 0
-!         
-!      END IF
-!      
-!      IF ( PRESENT( dXdz ) ) THEN
-!      
-!            ! Calculate the partial derivative of the continuous state equations (X) with respect to the constraint states (z) here:
-!         
-!         dXdz%DummyContState%DummyConstrState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dXddz ) ) THEN
-!
-!            ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the constraint states (z) here:
-!
-!         dXddz%DummyDiscState%DummyConstrState = 0
-!
-!      END IF
-!      
-!      IF ( PRESENT( dZdz ) ) THEN
-!
-!            ! Calculate the partial derivative of the constraint state equations (Z) with respect to the constraint states (z) here:
-!         
-!         dZdz%DummyConstrState%DummyConstrState = 0
-!
-!      END IF
-!      
-!
-!END SUBROUTINE SS_Rad_JacobianPConstrState
-!----------------------------------------------------------------------------------------------------------------------------------
-   
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SS_Rad_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-!   Define constants k1, k2, k3, and k4 as 
-!        k1 = dt * f(t        , x_t        )
-!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
-!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
-!        k4 = dt * f(t + dt   , x_t + k3   ).
-!   Then the continuous states at t = t + dt are
-!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
-!
-! For details, see:
-! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
-!   Runge-Kutta." §16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
-!   Cambridge University Press, pp. 704-716, 1992.
-!
+!> This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!   Define constants k1, k2, k3, and k4 as 
+!!        k1 = dt * f(t        , x_t        )
+!!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
+!!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
+!!        k4 = dt * f(t + dt   , x_t + k3   ).
+!!   Then the continuous states at t = t + dt are
+!!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
+!!
+!! For details, see:
+!! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
+!!   Runge-Kutta." §16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
+!!   Cambridge University Press, pp. 704-716, 1992.
+!!
+SUBROUTINE SS_Rad_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                       INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                   INTENT(IN   )  :: n           ! time step number
-      TYPE(SS_Rad_InputType),           INTENT(INOUT)  :: u(:)        ! Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
-      REAL(DbKi),                       INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(SS_Rad_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(SS_Rad_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(SS_Rad_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(SS_Rad_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(SS_Rad_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                       INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),                   INTENT(IN   )  :: n           !< time step number
+      TYPE(SS_Rad_InputType),           INTENT(INOUT)  :: u(:)        !< Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+      REAL(DbKi),                       INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(SS_Rad_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(SS_Rad_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+      TYPE(SS_Rad_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(SS_Rad_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
+      TYPE(SS_Rad_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other/optimization states
+      TYPE(SS_Rad_MiscVarType),         INTENT(INOUT)  :: m           !< Initial misc/optimization variables            
+      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
          
@@ -894,7 +617,7 @@ SUBROUTINE SS_Rad_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg
          IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! find xdot at t
-      CALL SS_Rad_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+      CALL SS_Rad_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -907,7 +630,7 @@ SUBROUTINE SS_Rad_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg
          IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! find xdot at t + dt/2
-      CALL SS_Rad_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+      CALL SS_Rad_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -915,7 +638,7 @@ SUBROUTINE SS_Rad_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg
       x_tmp%x  = x%x  + 0.5 * k2%x
 
       ! find xdot at t + dt/2
-      CALL SS_Rad_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+      CALL SS_Rad_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -928,7 +651,7 @@ SUBROUTINE SS_Rad_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg
          IF ( ErrStat >= AbortErrLev ) RETURN
 
       ! find xdot at t + dt
-      CALL SS_Rad_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat2, ErrMsg2 )
+      CALL SS_Rad_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -995,35 +718,35 @@ CONTAINS
       
 END SUBROUTINE SS_Rad_RK4
 !-----------------------------------------------------------------------------
-SUBROUTINE SS_Rad_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential 
-! equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-!
-!   x(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
-!
-!  See, e.g.,
-!  http://en.wikipedia.org/wiki/Linear_multistep_method
-!
-!  or
-!
-!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
-!
+!! This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential 
+!! equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!
+!!   x(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!!
+!!  See, e.g.,
+!!  http://en.wikipedia.org/wiki/Linear_multistep_method
+!!
+!!  or
+!!
+!!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+!!
+SUBROUTINE SS_Rad_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                         INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   )  :: n           ! time step number
-      TYPE(SS_Rad_InputType),             INTENT(INOUT)  :: u(:)        ! Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
-      REAL(DbKi),                         INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(SS_Rad_ParameterType),         INTENT(IN   )  :: p           ! Parameters
-      TYPE(SS_Rad_ContinuousStateType),   INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(SS_Rad_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(SS_Rad_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(SS_Rad_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                         INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),                     INTENT(IN   )  :: n           !< time step number
+      TYPE(SS_Rad_InputType),             INTENT(INOUT)  :: u(:)        !< Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+      REAL(DbKi),                         INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(SS_Rad_ParameterType),         INTENT(IN   )  :: p           !< Parameters
+      TYPE(SS_Rad_ContinuousStateType),   INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+      TYPE(SS_Rad_DiscreteStateType),     INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(SS_Rad_ConstraintStateType),   INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
+      TYPE(SS_Rad_OtherStateType),        INTENT(INOUT)  :: OtherState  !< Other/optimization states
+      TYPE(SS_Rad_MiscVarType),           INTENT(INOUT)  :: m           !< Initial misc/optimization variables            
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
       ! local variables
@@ -1074,14 +797,14 @@ SUBROUTINE SS_Rad_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
          
-      CALL SS_Rad_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, OtherState%xdot ( 1 ), ErrStat2, ErrMsg2 ) ! initializes OtherState%xdot ( 1 )
+      CALL SS_Rad_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, OtherState%xdot ( 1 ), ErrStat2, ErrMsg2 ) ! initializes OtherState%xdot ( 1 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
                                                     
       if (n .le. 2) then
                                                
-         CALL SS_Rad_RK4(t, n, u, utimes, p, x, xd, z, OtherState, ErrStat2, ErrMsg2 )
+         CALL SS_Rad_RK4(t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -1146,39 +869,38 @@ CONTAINS
          
 END SUBROUTINE SS_Rad_AB4
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SS_Rad_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary 
-! differential equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-!
-!   Adams-Bashforth Predictor:
-!   x^p(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
-!
-!   Adams-Moulton Corrector:
-!   x(t+dt) = x(t)  + (dt / 24.) * ( 9.*f(t+dt,x^p) + 19.*f(t,x) - 5.*f(t-dt,x) + 1.*f(t-2.*dt,x) )
-!
-!  See, e.g.,
-!  http://en.wikipedia.org/wiki/Linear_multistep_method
-!
-!  or
-!
-!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
-!
+!> This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary 
+!! differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!
+!!   Adams-Bashforth Predictor:
+!!   x^p(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!!
+!!   Adams-Moulton Corrector:
+!!   x(t+dt) = x(t)  + (dt / 24.) * ( 9.*f(t+dt,x^p) + 19.*f(t,x) - 5.*f(t-dt,x) + 1.*f(t-2.*dt,x) )
+!!
+!!  See, e.g.,
+!!  http://en.wikipedia.org/wiki/Linear_multistep_method
+!!
+!!  or
+!!
+!!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+SUBROUTINE SS_Rad_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                         INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   )  :: n           ! time step number
-      TYPE(SS_Rad_InputType),             INTENT(INOUT)  :: u(:)        ! Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
-      REAL(DbKi),                         INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(SS_Rad_ParameterType),         INTENT(IN   )  :: p           ! Parameters
-      TYPE(SS_Rad_ContinuousStateType),   INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(SS_Rad_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(SS_Rad_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(SS_Rad_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                         INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),                     INTENT(IN   )  :: n           !< time step number
+      TYPE(SS_Rad_InputType),             INTENT(INOUT)  :: u(:)        !< Inputs at t (out only for mesh record-keeping in ExtrapInterp routine)
+      REAL(DbKi),                         INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(SS_Rad_ParameterType),         INTENT(IN   )  :: p           !< Parameters
+      TYPE(SS_Rad_ContinuousStateType),   INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+      TYPE(SS_Rad_DiscreteStateType),     INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(SS_Rad_ConstraintStateType),   INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
+      TYPE(SS_Rad_OtherStateType),        INTENT(INOUT)  :: OtherState  !< Other/optimization states
+      TYPE(SS_Rad_MiscVarType),           INTENT(INOUT)  :: m           !< Initial misc/optimization variables            
+      INTEGER(IntKi),                     INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
 
@@ -1199,7 +921,7 @@ SUBROUTINE SS_Rad_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMs
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
-      CALL SS_Rad_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, ErrStat2, ErrMsg2 )
+      CALL SS_Rad_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
          CALL CheckError(ErrStat2,ErrMsg2)
          IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -1213,7 +935,7 @@ SUBROUTINE SS_Rad_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMs
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
-         CALL SS_Rad_CalcContStateDeriv(t + p%dt, u_interp, p, x_pred, xd, z, OtherState, xdot_pred, ErrStat2, ErrMsg2 )
+         CALL SS_Rad_CalcContStateDeriv(t + p%dt, u_interp, p, x_pred, xd, z, OtherState, m, xdot_pred, ErrStat2, ErrMsg2 )
             CALL CheckError(ErrStat2,ErrMsg2)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
