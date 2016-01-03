@@ -45,7 +45,7 @@ TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< T
 REAL(ReKi),                  INTENT(IN)     :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
 REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
-REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+REAL(ReKi),                  INTENT(INOUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
 REAL(ReKi),                  INTENT(INOUT)  :: TRH (:)                      !< The transfer function matrix.  just used as a work array
 INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
 CHARACTER(*),                INTENT(OUT)    :: ErrMsg
@@ -183,7 +183,7 @@ TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< T
 REAL(ReKi),                  INTENT(IN)     :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
 REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
-REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+REAL(ReKi),                  INTENT(INOUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
 REAL(ReKi),                  INTENT(INOUT)  :: TRH (:)                      !< The transfer function matrix.  just used as a work array
 INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
 CHARACTER(*),                INTENT(OUT)    :: ErrMsg
@@ -373,7 +373,7 @@ TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< T
 REAL(ReKi),                  INTENT(IN)     :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
 REAL(ReKi),                  INTENT(IN)     :: PhaseAngles (:,:,:)          !< The array that holds the random phases [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi),                  INTENT(IN)     :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
-REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+REAL(ReKi),                  INTENT(INOUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
 REAL(ReKi),                  INTENT(INOUT)  :: TRH (:)                      !< The transfer function matrix.  just used as a work array
 INTEGER(IntKi),              INTENT(OUT)    :: ErrStat
 CHARACTER(*),                INTENT(OUT)    :: ErrMsg
@@ -487,7 +487,7 @@ TYPE(TurbSim_ParameterType), INTENT(IN   )  :: p                            !< T
 REAL(ReKi),                  INTENT(IN   )  :: U           (:)              !< The steady u-component wind speeds for the grid (NPoints).
 REAL(ReKi),                  INTENT(IN   )  :: PhaseAngles (:,:,:)          !< The array that holds the phase angles [number of points, number of frequencies, number of wind components=3].
 REAL(ReKi),                  INTENT(IN   )  :: S           (:,:,:)          !< The turbulence PSD array (NumFreq,NPoints,3).
-REAL(ReKi),                  INTENT(  OUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
+REAL(ReKi),                  INTENT(INOUT)  :: V           (:,:,:)          !< An array containing the summations of the rows of H (NumSteps,NPoints,3).
 REAL(ReKi),                  INTENT(INOUT)  :: TRH (:)                      !< The transfer function matrix.  just used as a work array
 INTEGER(IntKi),              INTENT(  OUT)  :: ErrStat
 CHARACTER(*),                INTENT(  OUT)  :: ErrMsg
@@ -873,7 +873,7 @@ SUBROUTINE Coeffs2TimeSeries( V, NumSteps, NPoints, NUsrPoints, ErrStat, ErrMsg 
    
    ! local variables
    TYPE(FFT_DataType)               :: FFT_Data                      ! data for applying FFT
-   REAL(ReKi)                       :: Work ( NumSteps )             ! working array to hold coefficients of fft  !bjj: is this going to use too much stack space?
+   REAL(SiKi)                       :: Work ( NumSteps )             ! working array to hold coefficients of fft  !bjj: is this going to use too much stack space?
 
    
    INTEGER(IntKi)                   :: ITime                         ! loop counter for time step/frequency 
@@ -2222,7 +2222,7 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
    
    ! local variables
    TYPE(FFT_DataType)                          :: FFT_Data                     ! data for applying FFT
-   real(reki),         allocatable             :: work (:)                     ! working array for converting fourier coefficients to spectra
+   real(siki),         allocatable             :: work (:)                     ! working array for converting fourier coefficients to spectra
    real(reki)                                  :: Re, Im                       ! real and imaginary parts of complex variable returned from fft
    
    REAL(ReKi)                                  :: meanU                        ! mean value of the U component

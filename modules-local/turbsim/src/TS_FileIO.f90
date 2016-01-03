@@ -2412,7 +2412,8 @@ INTEGER                      :: IZ
 CHARACTER(200)               :: FormStr5                                 ! String used to store format specifiers.
 
 INTEGER                      :: UFFF                                     ! I/O unit for formatted FF data.
-
+INTEGER(IntKi)               :: ErrStat
+CHARACTER(ErrMsgLen)         :: ErrMsg
 
    FormStr5 = "(1X,"//trim(num2lstr(max(p_grid%NumGrid_Z,p_grid%NumGrid_Y)))//"(F8.3),:)"
 
@@ -2424,8 +2425,12 @@ INTEGER                      :: UFFF                                     ! I/O u
    DO IVec=1,3
 
       CALL WrScr ( ' Generating full-field formatted file "'//TRIM(RootName)//'.'//Comp(IVec)//'".' )
-      CALL OpenFOutFile ( UFFF, TRIM( RootName )//'.'//Comp(IVec) )
-
+      CALL OpenFOutFile ( UFFF, TRIM( RootName )//'.'//Comp(IVec), ErrStat, ErrMsg )
+        IF (ErrStat /= ErrID_None) then
+           call WrScr(Trim(ErrMsg))
+           if (ErrStat >= AbortErrLev) cycle
+        end if
+        
 
          ! Create file header.
 
