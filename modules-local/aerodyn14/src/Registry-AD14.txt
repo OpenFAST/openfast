@@ -40,8 +40,6 @@ typedef	^	AeroConfig	^	SubStructure	-	-	-		-
 typedef	^	AeroConfig	^	Foundation	-	-	-		-
 typedef	^	AeroConfig	ReKi	BladeLength	-	-	-		-
 
-#AllAeroMarkers
-#typedef	AeroDyn14/AD14	AllAeroMarkers	MeshType	Blade	{:}	-	-		-
 
 #Airfoil
 typedef	AeroDyn14/AD14	AirFoil	ReKi	AL	{:}{:}	-	-		-
@@ -297,62 +295,66 @@ typedef	^	InitInputType	AeroConfig	TurbineComponents	-	-	-		-
 typedef	^	InitInputType	INTEGER	NumTwrNodes	-	-	-	"Number of ElastoDyn tower nodes.  Tower drag will be computed at those points."
 typedef	^	InitInputType	ReKi	TwrNodeLocs	{:}{:}	-	-	"Location of ElastoDyn tower nodes with respect to the inertial origin."	-
 typedef	^	InitInputType	ReKi	HubHt	-	-	-	"hub height wrt inertial origin"	m
-typedef	^	InitInputType	DWM_InitInputType	DWM_InitInputs	-	-	-		-
+typedef	^	InitInputType	DWM_InitInputType	DWM	-	-	-		-
 
 # Define outputs from the initialization routine here:
 typedef	AeroDyn14/AD14	InitOutputType	ProgDesc	Ver	-	-	-	"version information"
-typedef	^	InitOutputType	DWM_InitOutputType	DWM_InitOutput	-	-	-		-
+typedef	^	InitOutputType	DWM_InitOutputType	DWM	-	-	-		-
 typedef	^	InitOutputType	ReKi	AirDens	-	-	-	"Air density"	kg/m^3
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
-#typedef	^	ContinuousStateType	ReKi	DummyDiscState	-	-	-		-
-typedef	^	ContinuousStateType	DWM_ContinuousStateType	DWM_ContStates	-	-	-		-
+typedef	^	ContinuousStateType	DWM_ContinuousStateType	DWM	-	-	-		-
 
 # Define discrete (nondifferentiable) states here:
-#typedef	^	DiscreteStateType	ReKi	DummyDiscState	-	-	-		-
-typedef	^	DiscreteStateType	DWM_DiscreteStateType	DWM_DiscStates	-	-	-		-
+typedef	^	DiscreteStateType	DWM_DiscreteStateType	DWM	-	-	-		-
 
 # Define constraint states here:
-#typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-		-
-typedef	^	ConstraintStateType	DWM_ConstraintStateType	DWM_ConstrStates	-	-	-		-
+typedef	^	ConstraintStateType	DWM_ConstraintStateType	DWM	-	-	-		-
 
-# JM: At this point, I don't know which of these are actually discrete, continuous, or constraint, so they're all other states for now
-# Define "other" states (any data that are not considered actual states) here:
-#typedef	^	OtherStateType	IntKi	DummyOtherState	-	-	-		-
-typedef	^	OtherStateType	DbKi	DT	-	-	-	"Time step"	seconds
-typedef	^	OtherStateType	IntKi	ElPrNum	{:}	-	-		-
-typedef	^	OtherStateType	DbKi	OldTime	-	-	-
-typedef	^	OtherStateType	ReKi	HubLoss	-	1	-	# was saved in AXIND
-typedef	^	OtherStateType	ReKi	Loss	-	1	-	# was saved in AXIND
-typedef	^	OtherStateType	ReKi	TipLoss	-	1	-	# was saved in AXIND
-typedef	^	OtherStateType	ReKi	TLpt7	-	-	-	# was saved in GetTipLoss
-typedef	^	OtherStateType	LOGICAL	FirstPassGTL	-	.TRUE.	-	# was saved latch in GetTipLoss
-typedef	^	OtherStateType	LOGICAL	SuperSonic	-	.FALSE.	-	# was saved latch in Attach()
-typedef	^	OtherStateType	LOGICAL	AFLAGVinderr	-	.FALSE.	-	# was saved latch in GetTwrInfluence
-typedef	^	OtherStateType	LOGICAL	AFLAGTwrInflu	-	.FALSE.	-	# was saved latch in GetTwrInfluence
-typedef	^	OtherStateType	LOGICAL	OnePassDynDbg	-	.TRUE.	-	#
-typedef	^	OtherStateType	LOGICAL	NoLoadsCalculated	-	.TRUE.	-		-
-typedef	^	OtherStateType	IntKi	NERRORS	-	0	-	# was saved variable in vinderr
-typedef	^	OtherStateType	DWM_OtherStateType	DWM_OtherStates	-	-	-		-
-typedef	^	OtherStateType	AirFoil	AirFoil
-typedef	^	OtherStateType	Beddoes	Beddoes
-typedef	^	OtherStateType	DynInflow	DynInflow
-typedef	^	OtherStateType	Element	Element
-typedef	^	OtherStateType	Rotor	Rotor
-typedef	^	OtherStateType	Wind	Wind
-typedef	^	OtherStateType	InducedVel	InducedVel
-#### Stores previously calculated loads
-### MeshCopy for NewCopy is not working right and can not have more than one mesh sibling
-####For now, just store these in their own data structure for now
-###typedef	^	OtherStateType	AllAeroMarkers	StoredLoads	-	-	-	"Stores previously calculated loads"
-typedef	^	OtherStateType	Reki	StoredForces	{:}{:}{:}			#indices: force, ielm, iblade
-typedef	^	OtherStateType	Reki	StoredMoments	{:}{:}{:}			#indices: force, ielm, iblade
-typedef	^	OtherStateType	LOGICAL	FirstWarn	-	-	-	"If it's the first warning about AeroDyn not recalculating loads"
-typedef	^	OtherStateType	ElOutParms	ElOut
-typedef	^	OtherStateType	LOGICAL	Skew	-	-	-
-typedef	^	OtherStateType	LOGICAL	DynInit	-	-	-	"FALSE=EQUIL, TRUE=DYNIN"
-typedef	^	OtherStateType	DWM_InputType	DWM_Inputs	-	-	-		-
+
+# Define any other states, including integer or logical states here:
+typedef	^	OtherStateType	DWM_OtherStateType	DWM	-	-	-		"variables for DWM module"
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef	^	MiscVarType	DWM_MiscVarType	DWM	-	-	-		"variables for DWM module"
+typedef	^	MiscVarType	DWM_InputType	DWM_Inputs	-	-	-		-
+typedef	^	MiscVarType	DWM_OutputType	DWM_Outputs	-	-	-		-
+
+#
+# JM: At this point, I don't know which of these are actually discrete, continuous, or constraint, so they're all misc variables for now
+#
+typedef	^	MiscVarType	DbKi	DT	-	-	-	"actual Time step"	seconds
+typedef	^	MiscVarType	IntKi	ElPrNum	{:}	-	-		-
+typedef	^	MiscVarType	DbKi	OldTime	-	-	-
+typedef	^	MiscVarType	ReKi	HubLoss	-	1	-	# was saved in AXIND
+typedef	^	MiscVarType	ReKi	Loss	-	1	-	# was saved in AXIND
+typedef	^	MiscVarType	ReKi	TipLoss	-	1	-	# was saved in AXIND
+typedef	^	MiscVarType	ReKi	TLpt7	-	-	-	# was saved in GetTipLoss
+typedef	^	MiscVarType	LOGICAL	FirstPassGTL	-	.TRUE.	-	# was saved latch in GetTipLoss
+typedef	^	MiscVarType	LOGICAL	SuperSonic	-	.FALSE.	-	# was saved latch in Attach()
+typedef	^	MiscVarType	LOGICAL	AFLAGVinderr	-	.FALSE.	-	# was saved latch in GetTwrInfluence
+typedef	^	MiscVarType	LOGICAL	AFLAGTwrInflu	-	.FALSE.	-	# was saved latch in GetTwrInfluence
+typedef	^	MiscVarType	LOGICAL	OnePassDynDbg	-	.TRUE.	-	#
+typedef	^	MiscVarType	LOGICAL	NoLoadsCalculated	-	.TRUE.	-		-
+typedef	^	MiscVarType	IntKi	NERRORS	-	0	-	# was saved variable in vinderr
+typedef	^	MiscVarType	AirFoil	AirFoil
+typedef	^	MiscVarType	Beddoes	Beddoes
+typedef	^	MiscVarType	DynInflow	DynInflow
+typedef	^	MiscVarType	Element	Element
+typedef	^	MiscVarType	Rotor	Rotor
+typedef	^	MiscVarType	Wind	Wind
+typedef	^	MiscVarType	InducedVel	InducedVel
+typedef	^	MiscVarType	ElOutParms	ElOut
+typedef	^	MiscVarType	LOGICAL	Skew	-	-	-
+typedef	^	MiscVarType	LOGICAL	DynInit	-	-	-	"FALSE=EQUIL, TRUE=DYNIN"
+typedef	^	MiscVarType	LOGICAL	FirstWarn	-	-	-	"If it's the first warning about AeroDyn not recalculating loads"
+#### Stores previously calculated loads:
+typedef	^	MiscVarType	Reki	StoredForces	{:}{:}{:}			#indices: force, ielm, iblade
+typedef	^	MiscVarType	Reki	StoredMoments	{:}{:}{:}			#indices: force, ielm, iblade
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -394,7 +396,7 @@ typedef	^	ParameterType	TwrPropsParms	TwrProps
 typedef	^	ParameterType	InducedVelParms	InducedVel
 typedef	^	ParameterType	WindParms	Wind
 typedef	^	ParameterType	RotorParms	Rotor
-typedef	^	ParameterType	DWM_ParameterType	DWM_Params	-	-	-		-
+typedef	^	ParameterType	DWM_ParameterType	DWM	-	-	-		-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
@@ -413,4 +415,3 @@ typedef	^	InputType	ReKi	AvgInfVel	{3}	-	-	"an average disk velocity (depends on
 # Define outputs that are not on this mesh here:
 typedef	^	OutputType	MeshType	OutputLoads	{:}	-	-	"Output Loads (mesh) for each blade"	-
 typedef	^	OutputType	MeshType	Twr_OutputLoads	-	-	-	"Tower Output Loads (mesh)"	-
-typedef	^	OutputType	DWM_OutputType	DWM_Outputs	-	-	-		-

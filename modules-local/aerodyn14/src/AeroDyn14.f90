@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2012-2015  National Renewable Energy Laboratory
+! Copyright (C) 2012-2016  National Renewable Energy Laboratory
 !
 !    This file is part of AeroDyn.
 !
@@ -21,6 +21,8 @@
 ! (File) Revision #: $Rev$
 ! URL: $HeadURL$
 !**********************************************************************************************************************************
+!> Module for the old aerodynamic routines. This module is for loose coupling only, without linearization, because it does not
+!! fully conform to the FAST framework. This module will eventually be replaced by AeroDyn (i.e., AeroDyn v15 [aerodyn.f90])
 MODULE AeroDyn14
 
    USE AeroDyn14_Types
@@ -32,7 +34,7 @@ MODULE AeroDyn14
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: AD14_Ver = ProgDesc( 'AeroDyn14', 'v14.04.00a-bjj', '6-Oct-2015' )
+   TYPE(ProgDesc), PARAMETER            :: AD14_Ver = ProgDesc( 'AeroDyn14', 'v14.05.00a-bjj', '5-Jan-2016' )
 
       ! ..... Public Subroutines ............
 
@@ -43,14 +45,10 @@ MODULE AeroDyn14
                                                  !   continuous states, and updating discrete states
    PUBLIC :: AD14_CalcOutput                     ! Routine for computing outputs
 
-   PUBLIC :: AD14_CalcConstrStateResidual        ! Tight coupling routine for returning the constraint state residual
-   PUBLIC :: AD14_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
-   PUBLIC :: AD14_UpdateDiscState                ! Tight coupling routine for updating discrete states
-
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, Interval, InitOut, ErrStat, ErrMess )
+SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, m, Interval, InitOut, ErrStat, ErrMess )
 !..................................................................................................................................
    USE               AeroGenSubs,   ONLY: ElemOpen
    USE DWM
@@ -62,9 +60,10 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, Interval, InitOut, ErrStat,
    TYPE(AD14_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
    TYPE(AD14_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
    TYPE(AD14_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-   TYPE(AD14_OtherStateType),      INTENT(  OUT)  :: O !therState  Initial other/optimization states
+   TYPE(AD14_OtherStateType),      INTENT(  OUT)  :: O           ! Initial other states
    TYPE(AD14_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated;
-                                                               !   only the output mesh is initialized)
+                                                                 !   only the output mesh is initialized)
+   TYPE(AD14_MiscVarType),         INTENT(  OUT)  :: m           ! Misc/optimization variables
    REAL(DbKi),                     INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that
                                                                  !   (1) AD14_UpdateStates() is called in loose coupling &
                                                                  !   (2) AD14_UpdateDiscState() is called in tight coupling.
@@ -122,7 +121,7 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, Interval, InitOut, ErrStat,
    CALL DispNVD( AD14_Ver )
    
    InitOut%Ver = AD14_Ver
-   O%FirstWarn = .TRUE.
+   m%FirstWarn = .TRUE.
    !-------------------------------------------------------------------------------------------------
    ! Set up AD variables
    !-------------------------------------------------------------------------------------------------
@@ -149,7 +148,7 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, Interval, InitOut, ErrStat,
    ! Read the AeroDyn14 input file and open the output file if requested
    ! bjj: these should perhaps be combined
    !-------------------------------------------------------------------------------------------------
-   CALL AD14_GetInput(InitInp, P, x, xd, z, O, y, ErrStatLcl, ErrMessLcl )
+   CALL AD14_GetInput(InitInp, P, x, xd, z, m, y, ErrStatLcl, ErrMessLcl )
       CALL SetErrStat( ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,RoutineName)
       IF (ErrStat >= AbortErrLev ) RETURN 
 
@@ -160,22 +159,22 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, Interval, InitOut, ErrStat,
    Interval = p%DtAero
       
 
-   IF ( .NOT. ALLOCATED( o%StoredForces  )) THEN
-      CALL AllocAry(O%StoredForces, 3,p%Element%NELM,p%NumBl,'O%StoredForces',ErrStatLcl,ErrMessLcl  )
+   IF ( .NOT. ALLOCATED( m%StoredForces  )) THEN
+      CALL AllocAry(m%StoredForces, 3,p%Element%NELM,p%NumBl,'m%StoredForces',ErrStatLcl,ErrMessLcl  )
          CALL SetErrStat( ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,RoutineName)
    END IF
-   IF ( .NOT. ALLOCATED( o%StoredMoments ))  THEN
-      CALL AllocAry(O%StoredMoments, 3,p%Element%NELM,p%NumBl,'O%StoredForces',ErrStatLcl,ErrMessLcl  )
+   IF ( .NOT. ALLOCATED( m%StoredMoments ))  THEN
+      CALL AllocAry(m%StoredMoments, 3,p%Element%NELM,p%NumBl,'m%StoredForces',ErrStatLcl,ErrMessLcl  )
          CALL SetErrStat( ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,RoutineName)
    END IF
      
-   IF (.NOT. ALLOCATED(O%Element%W2) ) THEN
-      CALL AllocAry(O%Element%W2, p%Element%NELM, p%NumBl,'O%Element%W2',ErrStatLcl,ErrMessLcl  )
+   IF (.NOT. ALLOCATED(m%Element%W2) ) THEN
+      CALL AllocAry(m%Element%W2, p%Element%NELM, p%NumBl,'m%Element%W2',ErrStatLcl,ErrMessLcl  )
          CALL SetErrStat( ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,RoutineName)
    END IF
 
-   IF (.NOT. ALLOCATED(O%Element%Alpha) ) THEN
-      CALL AllocAry(O%Element%Alpha, p%Element%NELM, p%NumBl,'O%Element%Alpha',ErrStatLcl,ErrMessLcl  )
+   IF (.NOT. ALLOCATED(m%Element%Alpha) ) THEN
+      CALL AllocAry(m%Element%Alpha, p%Element%NELM, p%NumBl,'m%Element%Alpha',ErrStatLcl,ErrMessLcl  )
          CALL SetErrStat( ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,RoutineName)
    END IF
    IF (ErrStat >= AbortErrLev ) RETURN 
@@ -184,7 +183,7 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, Interval, InitOut, ErrStat,
    P%UnWndOut = -1
    P%UnElem = -1   
    IF ( p%ElemPrn )  THEN
-      CALL ElemOpen ( TRIM( InitInp%OutRootName )//'.AD.out', P, O, ErrStat, ErrMess, AD14_Ver )
+      CALL ElemOpen ( TRIM( InitInp%OutRootName )//'.AD.out', P, m, ErrStat, ErrMess, AD14_Ver )
          CALL SetErrStat( ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,RoutineName)
          IF (ErrStat >= AbortErrLev ) RETURN 
    END IF
@@ -231,7 +230,7 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, Interval, InitOut, ErrStat,
 
       ! Check that the AeroDyn input DR and RElm match (use the HubRadius and TipRadius to verify)
       ! before using them to calculate the tip- and hub-loss constants
-   CALL CheckRComp( P, x, xd, z, O, y, ErrStat, ErrMess, &
+   CALL CheckRComp( P, x, xd, z, m, y, ErrStat, ErrMess, &
                     InitInp%ADFileName, HubRadius, TipRadius )
 
    IF ( ErrStat /= ErrID_None ) RETURN
@@ -399,7 +398,7 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, Interval, InitOut, ErrStat,
 
    IF (p%WrOptFile) THEN
 
-      CALL ADOut(InitInp, P, O, AD14_Ver, TRIM(InitInp%OutRootName)//'.AD.sum', ErrStatLcl, ErrMessLcl )
+      CALL ADOut(InitInp, P, m, AD14_Ver, TRIM(InitInp%OutRootName)//'.AD.sum', ErrStatLcl, ErrMessLcl )
          CALL SetErrStat(ErrStatLcl,ErrMessLcl,ErrStat,ErrMess,RoutineName )
          IF ( ErrStat >= AbortErrLev )  RETURN
 
@@ -418,23 +417,23 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, Interval, InitOut, ErrStat,
    ! Calling the DWM
    !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    IF ( p%UseDWM ) THEN   
-      ! InitInp%DWM_InitInputs%InputFileName is already set in FAST
+      ! InitInp%DWM%IfW%InputFileName is already set in FAST
          
          ! bjj: all this stuff should be put in DWM_Init.....>
-      p%DWM_Params%RR              = p%Blade%R
-      p%DWM_Params%BNum            = p%NumBl
-      p%DWM_Params%ElementNum      = O%ElOut%NumElOut  !bjj: NumElOut is the number of elements to be printed in an output file. I really think you want the number of blade elements. I guess we should check that NumElOut is the same as p%Element%NElm
-      p%DWM_Params%air_density     = p%Wind%Rho
+      p%DWM%RR              = p%Blade%R
+      p%DWM%BNum            = p%NumBl
+      p%DWM%ElementNum      = m%ElOut%NumElOut  !bjj: NumElOut is the number of elements to be printed in an output file. I really think you want the number of blade elements. I guess we should check that NumElOut is the same as p%Element%NElm
+      p%DWM%air_density     = p%Wind%Rho
    
-      IF (.NOT. ALLOCATED(o%DWM_otherstates%Nforce  )) ALLOCATE ( o%DWM_otherstates%Nforce(  p%Element%NElm,p%NumBl),STAT=ErrStatLcl);CALL SetErrStat(ErrStatLcl, 'Error allocating DWM Nforce array', ErrStat,ErrMess,RoutineName )
-      IF (.NOT. ALLOCATED(o%DWM_otherstates%blade_dr)) ALLOCATE ( o%DWM_otherstates%blade_dr(p%Element%NElm),        STAT=ErrStatLcl);CALL SetErrStat(ErrStatLcl, 'Error allocating DWM blade_dr array', ErrStat,ErrMess,RoutineName )
-      IF (.NOT. ALLOCATED(p%DWM_Params%ElementRad   )) ALLOCATE ( p%DWM_Params%ElementRad(   p%Element%NElm),        STAT=ErrStatLcl);CALL SetErrStat(ErrStatLcl, 'Error allocating DWM ElementRad array', ErrStat,ErrMess,RoutineName )
-     
-      o%DWM_otherstates%blade_dr(:) = p%Blade%DR(:)
-      p%DWM_Params%ElementRad(:)    = p%Element%RELM(:)   
+      IF (.NOT. ALLOCATED(m%DWM%Nforce    )) ALLOCATE ( m%DWM%Nforce(    p%Element%NElm,p%NumBl),STAT=ErrStatLcl);CALL SetErrStat(ErrStatLcl, 'Error allocating DWM Nforce array', ErrStat,ErrMess,RoutineName )
+      IF (.NOT. ALLOCATED(m%DWM%blade_dr  )) ALLOCATE ( m%DWM%blade_dr(  p%Element%NElm),        STAT=ErrStatLcl);CALL SetErrStat(ErrStatLcl, 'Error allocating DWM blade_dr array', ErrStat,ErrMess,RoutineName )
+      IF (.NOT. ALLOCATED(p%DWM%ElementRad)) ALLOCATE ( p%DWM%ElementRad(p%Element%NElm),        STAT=ErrStatLcl);CALL SetErrStat(ErrStatLcl, 'Error allocating DWM ElementRad array', ErrStat,ErrMess,RoutineName )
+      if (errStat >= AbortErrLev) return
+      
+      m%DWM%blade_dr = p%Blade%DR(:)
+      p%DWM%ElementRad = p%Element%RELM(:)   
    
-      CALL DWM_Init( InitInp%DWM_InitInputs, O%DWM_Inputs, p%DWM_Params, x%DWM_ContStates, xd%DWM_DiscStates, z%DWM_ConstrStates, & 
-                     O%DWM_OtherStates, y%DWM_Outputs, Interval, InitOut%DWM_InitOutput, ErrStatLcl, ErrMessLcl )
+      CALL DWM_Init( InitInp%DWM, m%DWM_Inputs, p%DWM, x%DWM, xd%DWM, z%DWM, O%DWM, m%DWM_Outputs, m%DWM, Interval, InitOut%DWM, ErrStatLcl, ErrMessLcl)
    
 
       CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,RoutineName )
@@ -607,11 +606,11 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, Interval, InitOut, ErrStat,
    ! Initialize AeroDyn variables not initialized elsewhere (except in module initialization)
    ! and return
    !-------------------------------------------------------------------------------------------------
-   o%InducedVel%SumInfl  = 0.0_ReKi
-   o%Rotor%AvgInfl       = 0.0_ReKi
-   o%OldTime             = 0.0_DbKi
-   O%SuperSonic          = .FALSE.   
-   o%NoLoadsCalculated   = .TRUE.
+   m%InducedVel%SumInfl  = 0.0_ReKi
+   m%Rotor%AvgInfl       = 0.0_ReKi
+   m%OldTime             = 0.0_DbKi
+   m%SuperSonic          = .FALSE.   
+   m%NoLoadsCalculated   = .TRUE.
 
    p%TwoPiNB     = TwoPi / REAL( p%NumBl, ReKi )
 
@@ -630,9 +629,8 @@ SUBROUTINE AD14_Init( InitInp, u, p, x, xd, z, O, y, Interval, InitOut, ErrStat,
    RETURN
 
 END SUBROUTINE AD14_Init
-
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AD14_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMess )
+SUBROUTINE AD14_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMess )
 ! This routine is called at the end of the simulation.
 !..................................................................................................................................
       USE DWM_Types
@@ -643,8 +641,9 @@ SUBROUTINE AD14_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMess )
       TYPE(AD14_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
       TYPE(AD14_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
       TYPE(AD14_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-      TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other states
       TYPE(AD14_OutputType),          INTENT(INOUT)  :: y           ! System outputs
+      TYPE(AD14_MiscVarType),         INTENT(INOUT)  :: m           ! Misc/optimization variables
       INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
       CHARACTER(*),                   INTENT(  OUT)  :: ErrMess     ! Error message if ErrStat /= ErrID_None
 
@@ -661,8 +660,7 @@ SUBROUTINE AD14_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMess )
       IF (p%UseDWM ) THEN
          !----- Call the DWM ------- 
       
-         CALL DWM_End( OtherState%DWM_Inputs, p%DWM_Params, x%DWM_ContStates, xd%DWM_DiscStates, z%DWM_ConstrStates, &
-                                           OtherState%DWM_OtherStates, y%DWM_Outputs, ErrStat, ErrMess )
+         CALL DWM_End( m%DWM_Inputs, p%DWM, x%DWM, xd%DWM, z%DWM, OtherState%DWM, m%DWM_Outputs, m%DWM, ErrStat, ErrMess )
       END IF ! UseDWM
       
       !--------------------------
@@ -693,17 +691,16 @@ SUBROUTINE AD14_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMess )
       CALL AD14_DestroyConstrState( z,           ErrStat, ErrMess )
       CALL AD14_DestroyOtherState(  OtherState,  ErrStat, ErrMess )
 
+      CALL AD14_DestroyMisc( m, ErrStat, ErrMess )
 
          ! Destroy the output data:
 
       CALL AD14_DestroyOutput( y, ErrStat, ErrMess )
 
 
-
-
 END SUBROUTINE AD14_End
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AD14_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMess )
+SUBROUTINE AD14_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMess )
 ! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
 ! Constraint states are solved for input Time; Continuous and discrete states are updated for Time + Interval
 !..................................................................................................................................
@@ -714,12 +711,14 @@ SUBROUTINE AD14_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
       REAL(DbKi),                           INTENT(IN   ) :: utimes(:)   ! Times associated with u(:), in seconds
       TYPE(AD14_ParameterType),             INTENT(IN   ) :: p           ! Parameters
       TYPE(AD14_ContinuousStateType),       INTENT(INOUT) :: x           ! Input: Continuous states at t;
-                                                                       !   Output: Continuous states at t + Interval
+                                                                         !   Output: Continuous states at t + Interval
       TYPE(AD14_DiscreteStateType),         INTENT(INOUT) :: xd          ! Input: Discrete states at t;
-                                                                       !   Output: Discrete states at t  + Interval
-      TYPE(AD14_ConstraintStateType),       INTENT(INOUT) :: z           ! Input: Initial guess of constraint states at t;
-                                                                       !   Output: Constraint states at t
-      TYPE(AD14_OtherStateType),            INTENT(INOUT) :: OtherState  ! Other/optimization states
+                                                                         !   Output: Discrete states at t  + Interval
+      TYPE(AD14_ConstraintStateType),       INTENT(INOUT) :: z           ! Input: Constraint states at t;
+                                                                         !   Output: Constraint states at t + Interval
+      TYPE(AD14_OtherStateType),            INTENT(INOUT) :: OtherState  ! Input: Other states at t;
+                                                                         !   Output: Other states at t + Interval
+      TYPE(AD14_MiscVarType),               INTENT(INOUT) :: m           ! Misc/optimization variables
       INTEGER(IntKi),                       INTENT(  OUT) :: ErrStat     ! Error status of the operation
       CHARACTER(*),                         INTENT(  OUT) :: ErrMess     ! Error message if ErrStat /= ErrID_None
 
@@ -737,12 +736,12 @@ SUBROUTINE AD14_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
       ErrMess  = ""
 
 
-
-
-
+   ! AeroDyn v14 DOES actually have states, but they are updated in CalcOutput because no one ever took the time to 
+   ! identify which variables are states.
+      
 END SUBROUTINE AD14_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
+SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, m, ErrStat, ErrMess )
 ! Routine for computing outputs, used in both loose and tight coupling.
 !..................................................................................................................................
    
@@ -756,9 +755,10 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
       TYPE(AD14_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
       TYPE(AD14_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
       TYPE(AD14_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: O!therState ! Other/optimization states
+      TYPE(AD14_OtherStateType),      INTENT(IN   )  :: O           ! Other states at Time
       TYPE(AD14_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at Time (Input only so that mesh con-
                                                                        !   nectivity information does not have to be recalculated)
+      TYPE(AD14_MiscVarType),         INTENT(INOUT)  :: m           ! Misc/optimization variables
       INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
       CHARACTER(*),                   INTENT(  OUT)  :: ErrMess     ! Error message if ErrStat /= ErrID_None
 
@@ -818,13 +818,13 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
       ! NOTE: Time is scaled by OnePlusEps to ensure that loads are calculated at every
    !       time step when DTAero = DT, even in the presence of numerical precision errors.
 
-   IF ( o%NoLoadsCalculated .OR. ( Time*OnePlusEpsilon - o%OldTime ) >= p%DTAERO )  THEN
+   IF ( m%NoLoadsCalculated .OR. ( Time*OnePlusEpsilon - m%OldTime ) >= p%DTAERO )  THEN
          ! It's time to update the aero forces
 
          ! First we reset the DTAERO parameters for next time
-      o%DT      = Time - o%OldTime     !bjj: DT = 0 on first step,
+      m%DT      = Time - m%OldTime     !bjj: DT = 0 on first step,
                                        !but the subroutines that use DT check for NoLoadsCalculated (or time > 0)
-      o%OldTime = Time
+      m%OldTime = Time
 
    ELSE IF ( .NOT. p%LinearizeFlag ) THEN
 
@@ -834,16 +834,16 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
 
       DO IBlade=1,p%NumBl
        DO IElement=1,p%Element%Nelm
-         y%OutputLoads(IBlade)%Force(:,IElement)  = o%StoredForces(:,IElement,IBlade)
-         y%OutputLoads(IBlade)%Moment(:,IElement) = o%StoredMoments(:,IElement,IBlade)
+         y%OutputLoads(IBlade)%Force(:,IElement)  = m%StoredForces(:,IElement,IBlade)
+         y%OutputLoads(IBlade)%Moment(:,IElement) = m%StoredMoments(:,IElement,IBlade)
        ENDDO
       ENDDO
 
-      IF ( O%FirstWarn ) THEN
+      IF ( m%FirstWarn ) THEN
          CALL SetErrStat ( ErrID_Warn, 'AeroDyn was designed for an explicit-loose coupling scheme. '//&
             'Using last calculated values from AeroDyn on all subsequent calls until time is advanced. '//&
             'Warning will not be displayed again.', ErrStat,ErrMess,'AD14_CalcOutput' )
-         O%FirstWarn = .FALSE.       
+         m%FirstWarn = .FALSE.       
          IF (ErrStat >= AbortErrLev) THEN
             CALL CleanUp()
             RETURN
@@ -863,27 +863,27 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
       ! note: Subtracting the RotorFurl rotational velocity for REVS is needed to get the
       ! same answers as before v13.00.00. RotorFurl shouldn't be needed.
 
-   o%Rotor%REVS = ABS( DOT_PRODUCT( u%TurbineComponents%Hub%RotationVel(:) - u%TurbineComponents%RotorFurl%RotationVel(:), &
+   m%Rotor%REVS = ABS( DOT_PRODUCT( u%TurbineComponents%Hub%RotationVel(:) - u%TurbineComponents%RotorFurl%RotationVel(:), &
                                     u%TurbineComponents%Hub%Orientation(1,:) ) )
 
 
       ! calculate yaw angle
       ! note: YawAng should use the Hub instead of the RotorFurl, but it is calculated this way to
       ! get the same answers as previous version.
-   o%Rotor%YawAng = ATAN2( -1.*u%TurbineComponents%RotorFurl%Orientation(1,2), u%TurbineComponents%RotorFurl%Orientation(1,1) )
-   o%Rotor%SYaw   = SIN( o%Rotor%YawAng )
-   o%Rotor%CYaw   = COS( o%Rotor%YawAng )
+   m%Rotor%YawAng = ATAN2( -1.*u%TurbineComponents%RotorFurl%Orientation(1,2), u%TurbineComponents%RotorFurl%Orientation(1,1) )
+   m%Rotor%SYaw   = SIN( m%Rotor%YawAng )
+   m%Rotor%CYaw   = COS( m%Rotor%YawAng )
 
       ! tilt angle
       ! note: tilt angle should use the Hub instead of RotorFurl, but it needs hub to get the same
       ! answers as the version before v13.00.00
 
-   o%Rotor%Tilt = ATAN2( u%TurbineComponents%RotorFurl%Orientation(1,3), &
+   m%Rotor%Tilt = ATAN2( u%TurbineComponents%RotorFurl%Orientation(1,3), &
                          SQRT( u%TurbineComponents%RotorFurl%Orientation(1,1)**2 + &
                          u%TurbineComponents%RotorFurl%Orientation(1,2)**2 ) )
 
-   o%Rotor%CTilt     = COS( o%Rotor%Tilt )
-   o%Rotor%STilt     = SIN( o%Rotor%Tilt )
+   m%Rotor%CTilt     = COS( m%Rotor%Tilt )
+   m%Rotor%STilt     = SIN( m%Rotor%Tilt )
 
 
       ! HubVDue2Yaw - yaw velocity due solely to yaw
@@ -896,32 +896,32 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
   rNacelleHub(1:2)          = u%TurbineComponents%Hub%Position(1:2) - u%TurbineComponents%Nacelle%Position(1:2)
   rTowerBaseHub(1:2)        = u%TurbineComponents%Hub%Position(1:2) - u%TurbineComponents%Tower%Position(1:2)
 
-  o%Rotor%YawVel =   ( AvgVelNacelleRotorFurlYaw * rRotorFurlHub(2) + AvgVelTowerBaseNacelleYaw * rNacelleHub(2) &
-                         + AvgVelTowerBaseYaw * rTowerBaseHub(2) ) * o%Rotor%SYaw &
+  m%Rotor%YawVel =   ( AvgVelNacelleRotorFurlYaw * rRotorFurlHub(2) + AvgVelTowerBaseNacelleYaw * rNacelleHub(2) &
+                         + AvgVelTowerBaseYaw * rTowerBaseHub(2) ) * m%Rotor%SYaw &
                   - ( AvgVelNacelleRotorFurlYaw * rRotorFurlHub(1) + AvgVelTowerBaseNacelleYaw * rNacelleHub(1) &
-                         + AvgVelTowerBaseYaw * rTowerBaseHub(1) ) * o%Rotor%CYaw
+                         + AvgVelTowerBaseYaw * rTowerBaseHub(1) ) * m%Rotor%CYaw
 
 
    !.................................................................................................
    ! start of NewTime routine
    !.................................................................................................
 
-   o%Rotor%AvgInfl = o%InducedVel%SumInfl * 2.0 / (p%Blade%R*p%Blade%R*p%NumBl)  ! Average inflow from the previous time step
-   o%InducedVel%SumInfl = 0.0   ! reset to sum for the current time step
+   m%Rotor%AvgInfl = m%InducedVel%SumInfl * 2.0 / (p%Blade%R*p%Blade%R*p%NumBl)  ! Average inflow from the previous time step
+   m%InducedVel%SumInfl = 0.0   ! reset to sum for the current time step
 
-   CALL DiskVel(Time, P, O, u%AvgInfVel, ErrStatLcl, ErrMessLcl)  ! Get a sort of "Average velocity" - sets a bunch of stored variables...
+   CALL DiskVel(Time, P, m, u%AvgInfVel, ErrStatLcl, ErrMessLcl)  ! Get a sort of "Average velocity" - sets a bunch of stored variables...
       CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'AD14_CalcOutput/DiskVel' )
       IF (ErrStat >= AbortErrLev) THEN
          CALL CleanUp()
          RETURN
       END IF
          
-   IF ( P%DStall ) CALL BedUpdate( O )   ! that's an 'O' as in 'OtherState'
+   IF ( P%DStall ) CALL BedUpdate( m )
 
    ! Enter the dynamic inflow routines here
 
    IF ( p%Wake )  THEN
-      CALL Inflow(Time, P, O, ErrStatLcl, ErrMessLcl)
+      CALL Inflow(Time, P, m, ErrStatLcl, ErrMessLcl)
          CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'AD14_CalcOutput/Inflow' )
          IF (ErrStat >= AbortErrLev) THEN
             CALL CleanUp()
@@ -954,13 +954,13 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
 
             ! calculate element pitch
 
-         o%Element%PitNow    = -1.*ATAN2( -1.*DOT_PRODUCT( u%TurbineComponents%Blade(IBlade)%Orientation(1,:),    &
+         m%Element%PitNow    = -1.*ATAN2( -1.*DOT_PRODUCT( u%TurbineComponents%Blade(IBlade)%Orientation(1,:),    &
                                                            u%InputMarkers(IBlade)%Orientation(2,:,IElement) ) , &
                                               DOT_PRODUCT( u%TurbineComponents%Blade(IBlade)%Orientation(1,:),    &
                                                            u%InputMarkers(IBlade)%Orientation(1,:,IElement) )   )
 
-         SPitch    = SIN( o%Element%PitNow )
-         CPitch    = COS( o%Element%PitNow )
+         SPitch    = SIN( m%Element%PitNow )
+         CPitch    = COS( m%Element%PitNow )
 
 
             ! calculate distance between hub and element
@@ -971,14 +971,14 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
 
             ! determine if MulTabLoc should be set.  
      
-         IF (.not. p%Reynolds) O%AirFoil%MulTabLoc = u%MulTabLoc(IElement,IBlade)
+         IF (.not. p%Reynolds) m%AirFoil%MulTabLoc = u%MulTabLoc(IElement,IBlade)
          
          !-------------------------------------------------------------------------------------------
          ! Get wind velocity components; calculate velocity normal to the rotor squared
          ! Save variables for printing in a file later;
          !-------------------------------------------------------------------------------------------
          Node = Node + 1
-         VelocityVec(:)    = AD_WindVelocityWithDisturbance( Time, u, p, x, xd, z, O, y, ErrStatLcl, ErrMessLcl, &
+         VelocityVec(:)    = AD_WindVelocityWithDisturbance( Time, u, p, x, xd, z, m, y, ErrStatLcl, ErrMessLcl, &
                                                              u%InputMarkers(IBlade)%Position(:,IElement), &
                                                              u%InflowVelocity(:,Node) )
             CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'AD14_CalcOutput' )
@@ -992,22 +992,22 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
          !-------------------------------------------------------------------------------------------
          IF (p%UseDWM) THEN
             !bjj: FIX THIS!!!!         
-            !bjj: where do p%DWM_Params%RTPD%SimulationOrder_index and p%DWM_Params%RTPD%upwindturbine_number get set?
+            !bjj: where do p%DWM%RTPD%SimulationOrder_index and p%DWM%RTPD%upwindturbine_number get set?
          
-            IF ( p%DWM_Params%RTPD%SimulationOrder_index > 1) THEN
-               IF(  p%DWM_Params%RTPD%upwindturbine_number /= 0 ) THEN
+            IF ( p%DWM%RTPD%SimulationOrder_index > 1) THEN
+               IF(  p%DWM%RTPD%upwindturbine_number /= 0 ) THEN
                        
-                  o%DWM_otherstates%position_y = u%InputMarkers(IBlade)%Position(2,IElement)
+                  m%DWM%position_y = u%InputMarkers(IBlade)%Position(2,IElement)
                                          
-                  o%DWM_otherstates%position_z = u%InputMarkers(IBlade)%Position(3,IElement)
+                  m%DWM%position_z = u%InputMarkers(IBlade)%Position(3,IElement)
               
-                  o%DWM_otherstates%velocity_wake_mean = 1
+                  m%DWM%velocity_wake_mean = 1
               
-                  DO I = 1,p%DWM_Params%RTPD%upwindturbine_number
-                     o%DWM_otherstates%DWM_tb%Aerodyn_turbine_num = I
+                  DO I = 1,p%DWM%RTPD%upwindturbine_number
+                     m%DWM%DWM_tb%Aerodyn_turbine_num = I
                  
-                     CALL   DWM_phase1( Time, O%DWM_Inputs, p%DWM_Params, x%DWM_contstates, xd%DWM_discstates, z%DWM_constrstates, &
-                                           o%DWM_otherstates, y%DWM_outputs, ErrStatLcl, ErrMessLcl )
+                     CALL   DWM_phase1( Time, m%DWM_Inputs, p%DWM, x%DWM, xd%DWM, z%DWM, &
+                                           O%DWM, m%DWM_Outputs, m%DWM, ErrStatLcl, ErrMessLcl )
                  
                      CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'AD14_CalcOutput/DWM_phase1' )
                      IF (ErrStat >= AbortErrLev) THEN
@@ -1015,27 +1015,26 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
                         RETURN
                      END IF   
                                                            
-                     o%DWM_otherstates%velocity_wake_mean = (1-((1-o%DWM_otherstates%velocity_wake_mean)**2 + (1-o%DWM_otherstates%shifted_velocity_aerodyn)**2)**0.5)
+                     m%DWM%velocity_wake_mean = (1-((1-m%DWM%velocity_wake_mean)**2 + (1-m%DWM%shifted_velocity_aerodyn)**2)**0.5)
                   END DO
               
-                  o%DWM_otherstates%velocity_wake_mean    = o%DWM_otherstates%velocity_wake_mean * p%DWM_Params%Wind_file_Mean_u
+                  m%DWM%velocity_wake_mean    = m%DWM%velocity_wake_mean * p%DWM%Wind_file_Mean_u
               
-                  VelocityVec(1) = (VelocityVec(1) - p%DWM_Params%Wind_file_Mean_u)*(O%DWM_Inputs%Upwind_result%upwind_small_TI(1)/p%DWM_Params%TI_amb) &
-                                  + o%DWM_otherstates%velocity_wake_mean
+                  VelocityVec(1) = (VelocityVec(1) - p%DWM%Wind_file_Mean_u)*(m%DWM_Inputs%Upwind_result%upwind_small_TI(1)/p%DWM%TI_amb) &
+                                  + m%DWM%velocity_wake_mean
               
                END IF
             END IF
                                      
            !------------------------DWM PHASE 2-----------------------------------------------
             IF (Time > 50.00 ) THEN
-               o%DWM_otherstates%U_velocity           = VelocityVec(1)
-               o%DWM_otherstates%V_velocity           = VelocityVec(2)
-               o%DWM_otherstates%NacYaw               = o%Rotor%YawAng 
-               o%DWM_otherstates%DWM_tb%Blade_index   = IBlade
-               o%DWM_otherstates%DWM_tb%Element_index = IElement    
+               m%DWM%U_velocity           = VelocityVec(1)
+               m%DWM%V_velocity           = VelocityVec(2)
+               m%DWM%NacYaw               = m%Rotor%YawAng 
+               m%DWM%DWM_tb%Blade_index   = IBlade
+               m%DWM%DWM_tb%Element_index = IElement    
 
-               CALL   DWM_phase2( Time, O%DWM_Inputs, p%DWM_Params, x%DWM_contstates, xd%DWM_discstates, z%DWM_constrstates, &
-                                           o%DWM_otherstates, y%DWM_outputs, ErrStatLcl, ErrMessLcl )
+               CALL   DWM_phase2( Time, m%DWM_Inputs, p%DWM, x%DWM, xd%DWM, z%DWM, O%DWM, m%DWM_Outputs, m%DWM, ErrStatLcl, ErrMessLcl )
             
                      CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'AD14_CalcOutput/DWM_phase1' )
                      IF (ErrStat >= AbortErrLev) THEN
@@ -1044,9 +1043,9 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
                      END IF   
             
          
-               !CALL CalVelScale(VelocityVec(1),VelocityVec(2),O%o%DWM_otherstatesutputType,DWM_ConstraintStateType)
+               !CALL CalVelScale(VelocityVec(1),VelocityVec(2),m%DWM_Outputs,z%DWM)
          
-               !CALL turbine_average_velocity( VelocityVec(1), IBlade, IElement, O%o%DWM_otherstatesutputType,AD14_ParameterType,DWM_ConstraintStateType)
+               !CALL turbine_average_velocity( VelocityVec(1), IBlade, IElement, m%DWM_Outputs,x%DWM,z%DWM)
             END IF
          END IF ! UseDWM
             
@@ -1055,8 +1054,8 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
          
          
          
-         VelNormalToRotor2 = ( VelocityVec(3) * o%Rotor%STilt + (VelocityVec(1) * o%Rotor%CYaw               &
-                             - VelocityVec(2) * o%Rotor%SYaw) * o%Rotor%CTilt )**2
+         VelNormalToRotor2 = ( VelocityVec(3) * m%Rotor%STilt + (VelocityVec(1) * m%Rotor%CYaw               &
+                             - VelocityVec(2) * m%Rotor%SYaw) * m%Rotor%CTilt )**2
 
          !-------------------------------------------------------------------------------------------
          ! reproduce GetVNVT routine:
@@ -1073,9 +1072,9 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
          !-------------------------------------------------------------------------------------------
          ! Get blade element forces and induced velocity
          !-------------------------------------------------------------------------------------------
-         CALL ELEMFRC( p, O, ErrStatLcl, ErrMessLcl,                             &
+         CALL ELEMFRC( p, m, ErrStatLcl, ErrMessLcl,                             &
                        AzimuthAngle, rLocal, IElement, IBlade, VelNormalToRotor2, VTTotal, VNWind, &
-                       VNElement, DFN, DFT, PMA, o%NoLoadsCalculated )
+                       VNElement, DFN, DFT, PMA, m%NoLoadsCalculated )
             CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'AD14_CalcOutput' )
             IF (ErrStat >= AbortErrLev) THEN
                CALL CleanUp()
@@ -1085,8 +1084,8 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
          !-------------------------------------------------------------------------------------------
          ! Set up dynamic inflow parameters
          !-------------------------------------------------------------------------------------------
-         IF ( p%DynInfl .OR. O%DynInit ) THEN
-            CALL GetRM (P, O, ErrStatLcl, ErrMessLcl, &
+         IF ( p%DynInfl .OR. m%DynInit ) THEN
+            CALL GetRM (P, m, ErrStatLcl, ErrMessLcl, &
                         rLocal, DFN, DFT, AzimuthAngle, IElement, IBlade)
                CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'AD14_CalcOutput' )
                IF (ErrStat >= AbortErrLev) THEN
@@ -1097,51 +1096,51 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
          ENDIF
          
          IF (p%UseDWM) THEN
-             o%DWM_otherstates%Nforce(IElement,IBlade) = DFN              ! 12.4.2014 add by yh
+             m%DWM%Nforce(IElement,IBlade) = DFN              ! 12.4.2014 add by yh
          END IF ! UseDWM
 
-         o%StoredForces(1,IElement,IBlade)  = ( DFN*CPitch + DFT*SPitch ) / p%Blade%DR(IElement)
-         o%StoredForces(2,IElement,IBlade)  = ( DFN*SPitch - DFT*CPitch ) / p%Blade%DR(IElement)
-         o%StoredForces(3,IElement,IBlade)  = 0.0
+         m%StoredForces(1,IElement,IBlade)  = ( DFN*CPitch + DFT*SPitch ) / p%Blade%DR(IElement)
+         m%StoredForces(2,IElement,IBlade)  = ( DFN*SPitch - DFT*CPitch ) / p%Blade%DR(IElement)
+         m%StoredForces(3,IElement,IBlade)  = 0.0
 
-         o%StoredMoments(1,IElement,IBlade)  = 0.0
-         o%StoredMoments(2,IElement,IBlade)  = 0.0
-         o%StoredMoments(3,IElement,IBlade)  = PMA / p%Blade%DR(IElement)
+         m%StoredMoments(1,IElement,IBlade)  = 0.0
+         m%StoredMoments(2,IElement,IBlade)  = 0.0
+         m%StoredMoments(3,IElement,IBlade)  = PMA / p%Blade%DR(IElement)
 
 !      DO IBlade=1,p%NumBl
 !       DO IElement=1,p%Element%Nelm
-!         y%OutputLoads(IBlade)%Force(:,IElement)  = o%StoredForces(:,IElement,IBlade)
-!         y%OutputLoads(IBlade)%Moment(:,IElement) = o%StoredMoments(:,IElement,IBlade)
+!         y%OutputLoads(IBlade)%Force(:,IElement)  = m%StoredForces(:,IElement,IBlade)
+!         y%OutputLoads(IBlade)%Moment(:,IElement) = m%StoredMoments(:,IElement,IBlade)
 !       ENDDO
 !!      ENDDO
 
             ! save velocities for output, if requested
 
-         IF ( O%ElOut%WndElPrList(IElement) > 0 ) THEN
-            O%ElOut%SaveVX( O%ElOut%WndElPrList(IElement), IBlade ) = VelocityVec(1)
-            O%ElOut%SaveVY( O%ElOut%WndElPrList(IElement), IBlade ) = VelocityVec(2)
-            O%ElOut%SaveVZ( O%ElOut%WndElPrList(IElement), IBlade ) = VelocityVec(3)
+         IF ( m%ElOut%WndElPrList(IElement) > 0 ) THEN
+            m%ElOut%SaveVX( m%ElOut%WndElPrList(IElement), IBlade ) = VelocityVec(1)
+            m%ElOut%SaveVY( m%ElOut%WndElPrList(IElement), IBlade ) = VelocityVec(2)
+            m%ElOut%SaveVZ( m%ElOut%WndElPrList(IElement), IBlade ) = VelocityVec(3)
          ENDIF
 
 
       END DO !IElement
 
       IF ( IBlade == 1 .AND. p%ElemPrn ) THEN
-         O%ElOut%VXSAV  = VelocityVec(1)
-         O%ElOut%VYSAV  = VelocityVec(2)
-         O%ElOut%VZSAV  = VelocityVec(3)
+         m%ElOut%VXSAV  = VelocityVec(1)
+         m%ElOut%VYSAV  = VelocityVec(2)
+         m%ElOut%VZSAV  = VelocityVec(3)
       ENDIF
 
 
    END DO !IBlade
 
-   O%NoLoadsCalculated = .FALSE.
+   m%NoLoadsCalculated = .FALSE.
 
 
    DO IBlade=1,p%NumBl
      DO IElement=1,p%Element%Nelm
-       y%OutputLoads(IBlade)%Force(:,IElement)  = o%StoredForces(:,IElement,IBlade)
-       y%OutputLoads(IBlade)%Moment(:,IElement) = o%StoredMoments(:,IElement,IBlade)
+       y%OutputLoads(IBlade)%Force(:,IElement)  = m%StoredForces(:,IElement,IBlade)
+       y%OutputLoads(IBlade)%Moment(:,IElement) = m%StoredMoments(:,IElement,IBlade)
      ENDDO
    ENDDO
    
@@ -1151,9 +1150,8 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
    
       IF (Time > 50.00 ) THEN !BJJ: why is 50 hard-coded here and above???
             
-         !o%DWM_otherstates%Nforce(:,:)    = o%DWM_otherstates%DFN_DWM(:,:) 
-         CALL   DWM_phase3( Time, O%DWM_Inputs, p%DWM_Params, x%DWM_contstates, xd%DWM_discstates, z%DWM_constrstates, &
-                                o%DWM_otherstates, y%DWM_outputs, ErrStatLcl, ErrMessLcl )
+         !m%DWM%Nforce(:,:)    = m%DWM%DFN_DWM(:,:) 
+         CALL   DWM_phase3( Time, m%DWM_Inputs, p%DWM, x%DWM, xd%DWM, z%DWM, O%DWM, m%DWM_Outputs, m%DWM, ErrStatLcl, ErrMessLcl )
     
             CALL SetErrStat ( ErrStatLcl, ErrMessLcl, ErrStat,ErrMess,'AD14_CalcOutput/DWM_phase3' )
             IF (ErrStat >= AbortErrLev) THEN
@@ -1161,7 +1159,7 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
                RETURN
             END IF   
       
-         !CALL filter_average_induction_factor( AD14_ParameterType, DWM_ConstraintStateType, O%o%DWM_otherstatesutputType )
+         !CALL filter_average_induction_factor( AD14_ParameterType, DWM_ConstraintStateType, m%DWM_Outputs )
       END IF
    END IF !UseDWM
    
@@ -1191,7 +1189,7 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
    !................................................................................................
       
    
-   CALL ElemOut(time, P, O )
+   CALL ElemOut(time, P, m )
    
    CALL CleanUp (  )
 
@@ -1219,100 +1217,6 @@ SUBROUTINE AD14_CalcOutput( Time, u, p, x, xd, z, O, y, ErrStat, ErrMess )
 END SUBROUTINE AD14_CalcOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AD14_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMess )
-! Tight coupling routine for computing derivatives of continuous states
-!..................................................................................................................................
-
-      REAL(DbKi),                     INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(AD14_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
-      TYPE(AD14_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(AD14_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(AD14_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(AD14_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(AD14_ContinuousStateType), INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at Time
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMess     ! Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMess  = ""
-
-
-         ! Compute the first time derivatives of the continuous states here:
-
-!     dxdt%DummyDiscState = 0.
-
-
-END SUBROUTINE AD14_CalcContStateDeriv
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AD14_UpdateDiscState( Time, u, p, x, xd, z, OtherState, ErrStat, ErrMess )
-! Tight coupling routine for updating discrete states
-!..................................................................................................................................
-
-      REAL(DbKi),                     INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(AD14_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
-      TYPE(AD14_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(AD14_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(AD14_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at Time;
-                                                                    !   Output: Discrete states at Time + Interval
-      TYPE(AD14_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time
-      TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMess     ! Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMess  = ""
-
-
-         ! Update discrete states here:
-
-      ! StateData%DiscState =
-
-END SUBROUTINE AD14_UpdateDiscState
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AD14_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_residual, ErrStat, ErrMess )
-! Tight coupling routine for solving for the residual of the constraint state equations
-!..................................................................................................................................
-
-      REAL(DbKi),                     INTENT(IN   )  :: Time        ! Current simulation time in seconds
-      TYPE(AD14_InputType),           INTENT(IN   )  :: u           ! Inputs at Time
-      TYPE(AD14_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(AD14_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at Time
-      TYPE(AD14_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at Time
-      TYPE(AD14_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at Time (possibly a guess)
-      TYPE(AD14_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(AD14_ConstraintStateType), INTENT(  OUT)  :: z_residual  ! Residual of the constraint state equations using
-                                                                    !     the input values described above
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMess     ! Error message if ErrStat /= ErrID_None
-
-
-         ! Initialize ErrStat
-
-      ErrStat = ErrID_None
-      ErrMess  = ""
-
-
-         ! Solve for the constraint states here:
-
-!      z_residual%DummyConstrState = 0.
-
-END SUBROUTINE AD14_CalcConstrStateResidual
-
-
-
-!====================================================================================================
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! WE ARE NOT YET IMPLEMENTING THE JACOBIANS...
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-!----------------------------------------------------------------------------------------------------------------------------------
-
 END MODULE AeroDyn14
 !**********************************************************************************************************************************
 

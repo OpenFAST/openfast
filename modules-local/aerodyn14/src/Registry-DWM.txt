@@ -186,11 +186,16 @@ typedef  ^                    ^                  ^                         Eleme
 typedef  ^                    ^                IntKi                       Bnum                          - - -  " the number of blade" -
 typedef  ^                    ^                  ^                         ElementNum                    - - -  " the number of element" -
 typedef  ^                    ^               read_turbine_position_data   RTPD
-typedef	^	         ParameterType	InflowWind_ParameterType	IfW_Params	-	-	-		-
+typedef	^	         ParameterType	InflowWind_ParameterType	IfW	-	-	-		-
 
 # ....... OtherStateType ............
 # DWM_OtherStateType
-typedef  DWM/DWM          OtherStateType       Reki                         position_y                   - - -  "the y position of the blade node" -
+typedef	 ^	         OtherStateType	InflowWind_OtherStateType	IfW	-	-	-		-
+
+# ....... OtherStateType ............
+# DWM_MiscVarType
+typedef  ^           MiscVarType         InflowWind_MiscVarType             IfW	-	-	-		-
+typedef  DWM/DWM              ^                Reki                         position_y                   - - -  "the y position of the blade node" -
 typedef  ^                    ^                 ^                           position_z                   - - -  "the z position of the blade node" -
 typedef  ^                    ^                 ^                           velocity_wake_mean           - - -  "" -
 typedef  ^                    ^                 ^                           shifted_velocity_Aerodyn     - - -  "" -
@@ -215,16 +220,15 @@ typedef  ^                    ^                  ^                          FAST
 typedef  ^                    ^                IntKi                        SDtimestep                   - 0 -  "" -
 typedef  ^                    ^                DWM_turbine_blade            DWM_tb
 typedef  ^                    ^                wake_meandered_center        WMC
-typedef	 ^	         OtherStateType	InflowWind_OtherStateType	IfW_OtherStates	-	-	-		-
-typedef	 ^	         OtherStateType	InflowWind_MiscVarType	IfW_m	-	-	-		-
 
 # ........ Input ............
 # DWM_InputType
 typedef  DWM/DWM          InputType            read_upwind_result           Upwind_result
-typedef	^	          InputType	InflowWind_InputType	IfW_Inputs	-	-	-		-
+typedef	^	          InputType	InflowWind_InputType	IfW	-	-	-		-
 
 # ........ Output ............
 # DWM_OutputType
+
 typedef  DWM/DWM          OutputType           Reki                         turbine_thrust_force         : - -  "" N
 typedef  ^                    ^                  ^                          induction_factor             : - -  "" -
 typedef  ^                    ^                  ^                          r_initial                    : - -  "scaled rotor radius" -
@@ -241,34 +245,30 @@ typedef  ^                    ^                  ^                          du_d
 typedef  ^                    ^                  ^                          total_SDgenpwr               - 0.0 - "" -
 typedef  ^                    ^                  ^                          mean_SDgenpwr                - - -  "" -
 typedef  ^                    ^                  ^                          avg_ct                       - - -  "average Ct over the rotor" -
-typedef	^	          OutputType	  InflowWind_OutputType	IfW_Outputs	-	-	-		-
+typedef	^	          OutputType	  InflowWind_OutputType	IfW	-	-	-		-
 
 #.......... ContinuousStateType ......
 # DWM_ContinuousStateType
 typedef DWM/DWM       ContinuousStateType      Reki                         dummy                        - - - "" -
-typedef	^	      ContinuousStateType      InflowWind_ContinuousStateType	IfW_ContStates	-	-	-		-
+typedef	^	      ContinuousStateType      InflowWind_ContinuousStateType	IfW	-	-	-		-
 
 #.......... DiscreteStateType ......
 # DWM_DiscreteStateType
 typedef DWM/DWM       DiscreteStateType        Reki                         dummy                        - - - "" -
-typedef	^	      DiscreteStateType	InflowWind_DiscreteStateType	IfW_DiscStates	-	-	-		-
+typedef	^	      DiscreteStateType	InflowWind_DiscreteStateType	IfW	-	-	-		-
 
 #.......... ConstraintStateType ......
 # DWM_ConstraintStateType
 typedef DWM/DWM       ConstraintStateType      Reki                         dummy                        - - - "" -
-typedef	^	      ConstraintStateType	InflowWind_ConstraintStateType	IfW_ConstrStates	-	-	-		-
+typedef	^	      ConstraintStateType	InflowWind_ConstraintStateType	IfW	-	-	-		-
 
 
 #.......... InitInputType ......
 # DWM_InitInputType
 typedef DWM/DWM       InitInputType            Reki                         dummy                        - - - "" -
-typedef	^	      InitInputType	InflowWind_InitInputType	  IfW_InitInputs	-	-	-		-
-typedef  ^            InitInputType   CHARACTER(1024)  WindFileName      -     -     -     "Name of the wind file to use"                                 -
-typedef  ^             ^                       ReKi     ReferenceHeight   -     -     -     "Hub height of the turbine"                                    meters
-typedef  ^             ^                       ReKi     Width             -     -     -     "Width of the wind field to use"                               meters
-typedef  ^             ^                       IntKi    WindFileType      -     0     -     "Type of windfile"                                             -
+typedef	^	      InitInputType	InflowWind_InitInputType	  IfW	-	-	-		-
 
 #.......... InitOutputType ......
 # DWM_InitOutputType
 typedef DWM/DWM       InitOutputType           Reki                         dummy                        - - - "" -
-typedef	^	      InitOutputType	InflowWind_InitOutputType	IfW_InitOutput	-	-	-		-
+typedef	^	      InitOutputType	InflowWind_InitOutputType	IfW	-	-	-		-
