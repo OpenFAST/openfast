@@ -2,7 +2,7 @@
 ! The FAST_Prog.f90, FAST_Solver.f90, FAST_Subs.f90, and FAST_Mods.f90 make up the FAST glue code in the FAST Modularization Framework.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013-2015  National Renewable Energy Laboratory
+! Copyright (C) 2013-2016  National Renewable Energy Laboratory
 !
 !    This file is part of FAST.
 !
@@ -23,6 +23,7 @@
 ! (File) Revision #: $Rev: 1180 $
 ! URL: $HeadURL: https://windsvn.nrel.gov/FAST/branches/BJonkman/Source/FAST_Subs.f90 $
 !**********************************************************************************************************************************
+!> This module contains the routines used by FAST to solve input-output equations and to advance states.
 MODULE FAST_Solver
 
    USE NWTC_Library
@@ -4598,7 +4599,7 @@ SUBROUTINE SolveOption2(this_time, this_state, p_FAST, m_FAST, ED, BD, AD14, AD,
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
       CALL AD14_CalcOutput( this_time, AD14%Input(1), AD14%p, AD14%x(this_state), AD14%xd(this_state), AD14%z(this_state), &
-                       AD14%OtherSt, AD14%y, ErrStat2, ErrMsg2 )
+                       AD14%OtherSt(this_state), AD14%y, AD14%m, ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
         
    ELSE IF ( p_FAST%CompAero == Module_AD ) THEN 
@@ -4755,18 +4756,15 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL AD14_CopyConstrState (AD14%z( STATE_CURR), AD14%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-            
-      IF ( p_FAST%n_substeps( Module_AD14 ) > 1 ) THEN
-         CALL AD14_CopyOtherState( AD14%OtherSt, AD14%OtherSt_old, MESH_UPDATECOPY, Errstat2, ErrMsg2)
-            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      END IF
+      CALL AD14_CopyOtherState( AD14%OtherSt(STATE_CURR), AD14%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
       DO j_ss = 1, p_FAST%n_substeps( MODULE_AD14 )
          n_t_module = n_t_global*p_FAST%n_substeps( MODULE_AD14 ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( MODULE_AD14 ) + t_initial
             
          CALL AD14_UpdateStates( t_module, n_t_module, AD14%Input, AD14%InputTimes, AD14%p, AD14%x(STATE_PRED), &
-                                AD14%xd(STATE_PRED), AD14%z(STATE_PRED), AD14%OtherSt, ErrStat2, ErrMsg2 )
+                                AD14%xd(STATE_PRED), AD14%z(STATE_PRED), AD14%OtherSt(STATE_PRED), AD14%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss
    ELSEIF ( p_FAST%CompAero == Module_AD ) THEN
