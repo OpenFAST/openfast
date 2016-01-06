@@ -1,6 +1,6 @@
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013-2014  National Renewable Energy Laboratory
+! Copyright (C) 2013-2016  National Renewable Energy Laboratory
 !
 !    This file is part of SubDyn.   
 !
@@ -21,6 +21,10 @@
 ! (File) Revision #: $Rev$
 ! URL: $HeadURL$
 !**********************************************************************************************************************************
+!> SubDyn is a time-domain structural-dynamics module for multi-member fixed-bottom substructures.
+!! SubDyn relies on two main engineering schematizations: (1) a linear frame finite-element beam model (LFEB), and 
+!! (2) a dynamics system reduction via Craig-Bampton’s (C-B) method, together with a Static-Improvement method, greatly reducing 
+!!  the number of modes needed to obtain an accurate solution.   
 Module SubDyn
    
    USE NWTC_Library
@@ -38,7 +42,7 @@ Module SubDyn
    !       this will add additional matrices to the SubDyn summary file.
    !............................
 
-   TYPE(ProgDesc), PARAMETER  :: SD_ProgDesc = ProgDesc( 'SubDyn', 'v1.02.00a-rrd', '5-Oct-2015' )
+   TYPE(ProgDesc), PARAMETER  :: SD_ProgDesc = ProgDesc( 'SubDyn', 'v1.03.00a-bjj', '6-Jan-2016' )
       
    ! ..... Public Subroutines ...................................................................................................
 
@@ -52,17 +56,6 @@ Module SubDyn
 
    PUBLIC :: SD_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    
-   PUBLIC :: SD_JacobianPInput                 ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-                                                    !   (Xd), and constraint-state (Z) functions all with respect to the inputs (u)
-   PUBLIC :: SD_JacobianPContState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-                                                    !   (Xd), and constraint-state (Z) functions all with respect to the continuous
-                                                    !   states (x)
-   PUBLIC :: SD_JacobianPDiscState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-                                                    !   (Xd), and constraint-state (Z) functions all with respect to the discrete
-                                                    !   states (xd)
-   PUBLIC :: SD_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-                                                    !   (Xd), and constraint-state (Z) functions all with respect to the constraint
-                                                    !   states (z) 
    
 CONTAINS
    
@@ -282,14 +275,14 @@ SUBROUTINE CreateY2Meshes( NNode, Nodes, NNodes_I, IDI, NNodes_L, IDL, NNodes_C,
         
 END SUBROUTINE CreateY2Meshes
 !------------------------------------------------------------------------------------------------------
+!> this routine sets the index array that maps SD internal nodes to the Y2Mesh nodes.
+!! NOTE: SDtoMesh is not checked for size, nor are the index array values checked for validity, 
+!!       so this routine could easily have segmentation faults if any errors exist.
 SUBROUTINE SD_Y2Mesh_Mapping(p, SDtoMesh )
-! this routine sets the index array that maps SD internal nodes to the Y2Mesh nodes.
-! NOTE: SDtoMesh is not checked for size, nor are the index array values checked for validity, 
-!       so this routine could easily have segmentation faults if any errors exist.
 !.......................................................
    
-   TYPE(SD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-   INTEGER(IntKi),               INTENT(  OUT)  :: SDtoMesh(:) ! index/mapping of mesh nodes with SD mesh
+   TYPE(SD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   INTEGER(IntKi),               INTENT(  OUT)  :: SDtoMesh(:) !< index/mapping of mesh nodes with SD mesh
    
    ! locals
    INTEGER(IntKi)                               :: i
@@ -342,30 +335,31 @@ END SUBROUTINE SD_Y2Mesh_Mapping
 
 
 !---------------------------------------------------------------------------
-SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
-! This routine is called at the start of the simulation to perform initialization steps.
-! The parameters are set here and not changed during the simulation.
-! The initial states and initial guess for the input are defined.
+!> This routine is called at the start of the simulation to perform initialization steps.
+!! The parameters are set here and not changed during the simulation.
+!! The initial states and initial guess for the input are defined.
+SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   TYPE(SD_InitInputType),       INTENT(IN   )  :: InitInput   ! Input data for initialization routine         
-   TYPE(SD_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
-   TYPE(SD_ParameterType),       INTENT(  OUT)  :: p           ! Parameters
-   TYPE(SD_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
-   TYPE(SD_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
-   TYPE(SD_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-   TYPE(SD_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states
-   TYPE(SD_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated;
-                                                                  !    only the output mesh is initialized)
-   REAL(DbKi),                   INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that
-                                                                  !   (1) Mod1_UpdateStates() is called in loose coupling &
-                                                                  !   (2) Mod1_UpdateDiscState() is called in tight coupling.
-                                                                  !   Input is the suggested time from the glue code;
-                                                                  !   Output is the actual coupling interval that will be used
-                                                                  !   by the glue code.
-   TYPE(SD_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
-   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(SD_InitInputType),       INTENT(IN   )  :: InitInput   !< Input data for initialization routine         
+   TYPE(SD_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
+   TYPE(SD_ParameterType),       INTENT(  OUT)  :: p           !< Parameters
+   TYPE(SD_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
+   TYPE(SD_DiscreteStateType),   INTENT(  OUT)  :: xd          !< Initial discrete states
+   TYPE(SD_ConstraintStateType), INTENT(  OUT)  :: z           !< Initial guess of the constraint states
+   TYPE(SD_OtherStateType),      INTENT(  OUT)  :: OtherState  !< Initial other states
+   TYPE(SD_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated;
+                                                               !!    only the output mesh is initialized)
+   REAL(DbKi),                   INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that
+                                                               !!   (1) Mod1_UpdateStates() is called in loose coupling &
+                                                               !!   (2) Mod1_UpdateDiscState() is called in tight coupling.
+                                                               !!   Input is the suggested time from the glue code;
+                                                               !!   Output is the actual coupling interval that will be used
+                                                               !!   by the glue code.
+   TYPE(SD_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables
+   TYPE(SD_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       
       
          ! local variables
@@ -491,16 +485,16 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    !.................................
    IF ( p%qmL > 0 ) THEN
    
-      CALL AllocAry(x%qm,                p%qmL, 'x%qm',                ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Init' )
-      CALL AllocAry(x%qmdot,             p%qmL, 'x%qmdot',             ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Init' )
-      CALL AllocAry(OtherState%qmdotdot, p%qmL, 'OtherState%qmdotdot', ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Init' )
+      CALL AllocAry(x%qm,       p%qmL, 'x%qm',       ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Init' )
+      CALL AllocAry(x%qmdot,    p%qmL, 'x%qmdot',    ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Init' )
+      CALL AllocAry(m%qmdotdot, p%qmL, 'm%qmdotdot', ErrStat2, ErrMsg2 ); CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Init' )
          IF ( ErrStat >= AbortErrLev ) THEN
             CALL CleanUp()
             RETURN
          END IF   
-      x%qm               = 0.0_ReKi   
-      x%qmdot            = 0.0_ReKi
-      OtherState%qmdotdot= 0.0_ReKi
+      x%qm      = 0.0_ReKi   
+      x%qmdot   = 0.0_ReKi
+      m%qmdotdot= 0.0_ReKi
       
    END IF
    
@@ -521,8 +515,8 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    ENDIF
 
  
-      ! allocate miscellaneous variables (OtherStates), used only to avoid temporary copies of variables allocated/deallocated and sometimes recomputed each time
-   CALL AllocMiscVars(p, OtherState, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Init')
+      ! allocate miscellaneous variables, used only to avoid temporary copies of variables allocated/deallocated and sometimes recomputed each time
+   CALL AllocMiscVars(p, m, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_Init')
 
    !.................................
    ! Write the summary file
@@ -570,7 +564,7 @@ SUBROUTINE SD_Init( InitInput, u, p, x, xd, z, OtherState, y, Interval, InitOut,
    
          ! Initialize the outputs & Store mapping between nodes and elements  
          
-   CALL SDOUT_Init( Init, y, p, OtherState, InitOut, InitInput%WtrDpth, ErrStat2, ErrMsg2 )
+   CALL SDOUT_Init( Init, y, p, m, InitOut, InitInput%WtrDpth, ErrStat2, ErrMsg2 )
       CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_Init' )
       IF ( ErrStat >= AbortErrLev ) THEN
          CALL CleanUp()
@@ -612,26 +606,27 @@ END SUBROUTINE SD_Init
       
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
-! Constraint states are solved for input time, t; Continuous and discrete states are updated for t + Interval
-! A guess for the contstraint states at t + Interval is also calculated.
+!> Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete and other states.
+!! Continuous, discrete, constraint, and other states are updated for t + Interval.
+SUBROUTINE SD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                         INTENT(IN   ) :: t               ! Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   ) :: n               ! Current step of the simulation: t = n*Interval
-      TYPE(SD_InputType),                 INTENT(INOUT) :: Inputs(:)       ! Inputs at Times
-      REAL(DbKi),                         INTENT(IN   ) :: InputTimes(:)   ! Times in seconds associated with Inputs
-      TYPE(SD_ParameterType),             INTENT(IN   ) :: p               ! Parameters
-      TYPE(SD_ContinuousStateType),       INTENT(INOUT) :: x               ! Input: Continuous states at t;
-                                                                           !   Output: Continuous states at t + Interval
-      TYPE(SD_DiscreteStateType),         INTENT(INOUT) :: xd              ! Input: Discrete states at t;
-                                                                           !   Output: Discrete states at t + Interval
-      TYPE(SD_ConstraintStateType),       INTENT(INOUT) :: z               ! Input: Initial guess of constraint states at t;
-                                                                           !   Output: Constraint states at t
-      TYPE(SD_OtherStateType),            INTENT(INOUT) :: OtherState      ! Other/optimization states
-      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat         ! Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg          ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                         INTENT(IN   ) :: t               !< Current simulation time in seconds
+      INTEGER(IntKi),                     INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
+      TYPE(SD_InputType),                 INTENT(INOUT) :: Inputs(:)       !< Inputs at Times
+      REAL(DbKi),                         INTENT(IN   ) :: InputTimes(:)   !< Times in seconds associated with Inputs
+      TYPE(SD_ParameterType),             INTENT(IN   ) :: p               !< Parameters
+      TYPE(SD_ContinuousStateType),       INTENT(INOUT) :: x               !< Input: Continuous states at t;
+                                                                           !!   Output: Continuous states at t + Interval
+      TYPE(SD_DiscreteStateType),         INTENT(INOUT) :: xd              !< Input: Discrete states at t;
+                                                                           !!   Output: Discrete states at t + Interval
+      TYPE(SD_ConstraintStateType),       INTENT(INOUT) :: z               !< Input: Constraint states at t;
+                                                                           !!   Output: Constraint states at t + Interval
+      TYPE(SD_OtherStateType),            INTENT(INOUT) :: OtherState      !< Input: Other states at t;
+                                                                           !!   Output: Other states at t + Interval
+      TYPE(SD_MiscVarType),               INTENT(INOUT) :: m               !< Misc/optimization variables
+      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat         !< Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
     
       
@@ -645,19 +640,19 @@ SUBROUTINE SD_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, E
         
       IF (p%IntMethod .eq. 1) THEN
  
-         CALL SD_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         CALL SD_RK4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       ELSEIF (p%IntMethod .eq. 2) THEN
 
-         CALL SD_AB4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         CALL SD_AB4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       ELSEIF (p%IntMethod .eq. 3) THEN
           
-         CALL SD_ABM4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         CALL SD_ABM4( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       
       ELSE  
           
-         CALL SD_AM2( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         CALL SD_AM2( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       END IF
 
@@ -667,21 +662,22 @@ END SUBROUTINE SD_UpdateStates
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-! Routine for computing outputs, used in both loose and tight coupling.
+!> Routine for computing outputs, used in both loose and tight coupling.
+SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
-      TYPE(SD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(SD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(SD_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(SD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(SD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(SD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(SD_OutputType),          INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
-                                                                       !   nectivity information does not have to be recalculated)
-      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
+      TYPE(SD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
+      TYPE(SD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(SD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
+      TYPE(SD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(SD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
+      TYPE(SD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
+      TYPE(SD_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
+                                                                  !!   nectivity information does not have to be recalculated)
+      TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       
       !locals
@@ -712,11 +708,11 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
       
          ! Inputs at the transition piece:
-      OtherState%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
-      OtherState%udot_TP    = (/u%TPMesh%TranslationVel( :,1), u%TPMesh%RotationVel(:,1)/)
-      OtherState%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
+      m%u_TP       = (/REAL(u%TPMesh%TranslationDisp(:,1),ReKi), rotations/)
+      m%udot_TP    = (/u%TPMesh%TranslationVel( :,1), u%TPMesh%RotationVel(:,1)/)
+      m%udotdot_TP = (/u%TPMesh%TranslationAcc( :,1), u%TPMesh%RotationAcc(:,1)/)
          ! Inputs on interior nodes:
-      CALL ConstructUFL( u, p, OtherState%UFL )
+      CALL ConstructUFL( u, p, m%UFL )
 
       
    !________________________________________
@@ -725,32 +721,32 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
                         
          ! Y2 = C2*x + D2*u + F2 (Eq. 17)
 
-      OtherState%UR_bar        =                                               matmul( p%TI      , OtherState%u_TP       )  ! UR_bar         [ Y2(1) =       0*x(1) + D2(1,1)*u(1) ]      
-      OtherState%UR_bar_dot    =                                               matmul( p%TI      , OtherState%udot_TP    )  ! UR_bar_dot     [ Y2(3) =       0*x(1) + D2(3,2)*u(2) ]
-      OtherState%UR_bar_dotdot =                                               matmul( p%TI      , OtherState%udotdot_TP )  ! U_R_bar_dotdot [ Y2(5) =       0*x(2) + D2(5,3)*u(3) ] 
+      m%UR_bar        =                                               matmul( p%TI      , m%u_TP       )  ! UR_bar         [ Y2(1) =       0*x(1) + D2(1,1)*u(1) ]      
+      m%UR_bar_dot    =                                               matmul( p%TI      , m%udot_TP    )  ! UR_bar_dot     [ Y2(3) =       0*x(1) + D2(3,2)*u(2) ]
+      m%UR_bar_dotdot =                                               matmul( p%TI      , m%udotdot_TP )  ! U_R_bar_dotdot [ Y2(5) =       0*x(2) + D2(5,3)*u(3) ] 
                      
       IF ( p%qml > 0) THEN
-         OtherState%UL            = matmul( p%PhiM,  x%qm    )               + matmul( p%PhiRb_TI, OtherState%u_TP       )  ! UL             [ Y2(2) = C2(2,1)*x(1) + D2(2,1)*u(1) ] : IT MAY BE MODIFIED LATER IF STATIC IMPROVEMENT
-         OtherState%UL_dot        = matmul( p%PhiM,  x%qmdot )               + matmul( p%PhiRb_TI, OtherState%udot_TP    )  ! UL_dot         [ Y2(4) = C2(2,2)*x(2) + D2(4,2)*u(2) ]      
-         OtherState%UL_dotdot     = matmul( p%C2_61, x%qm    )               + matmul( p%C2_62   , x%qmdot )             &  ! UL_dotdot      [ Y2(6) = C2(6,1)*x(1) + C2(6,2)*x(2) ...
-                                  + matmul( p%D2_63, OtherState%udotdot_TP ) + matmul( p%D2_64,    OtherState%UFL      ) &  !                        + D2(6,3)*u(3) + D2(6,4)*u(4) ...  ! -> bjj: this line takes up a lot of time. are any matrices sparse?
+         m%UL            = matmul( p%PhiM,  x%qm    )               + matmul( p%PhiRb_TI, m%u_TP       )  ! UL             [ Y2(2) = C2(2,1)*x(1) + D2(2,1)*u(1) ] : IT MAY BE MODIFIED LATER IF STATIC IMPROVEMENT
+         m%UL_dot        = matmul( p%PhiM,  x%qmdot )               + matmul( p%PhiRb_TI, m%udot_TP    )  ! UL_dot         [ Y2(4) = C2(2,2)*x(2) + D2(4,2)*u(2) ]      
+         m%UL_dotdot     = matmul( p%C2_61, x%qm    )               + matmul( p%C2_62   , x%qmdot )    &  ! UL_dotdot      [ Y2(6) = C2(6,1)*x(1) + C2(6,2)*x(2) ...
+                                  + matmul( p%D2_63, m%udotdot_TP ) + matmul( p%D2_64,    m%UFL      ) &  !                        + D2(6,3)*u(3) + D2(6,4)*u(4) ...  ! -> bjj: this line takes up a lot of time. are any matrices sparse?
                                   + p%F2_61                                                                                 !                        + F2(6) ]                  
       ELSE ! There are no states when p%qml=0 (i.e., no retained modes: p%Nmodes=0), so we omit those portions of the equations
-         OtherState%UL            =                                            matmul( p%PhiRb_TI, OtherState%u_TP       )  ! UL             [ Y2(2) =       0*x(1) + D2(2,1)*u(1) ] : IT MAY BE MODIFIED LATER IF STATIC IMPROVEMENT
-         OtherState%UL_dot        =                                            matmul( p%PhiRb_TI, OtherState%udot_TP    )  ! UL_dot         [ Y2(4) =       0*x(2) + D2(4,2)*u(2) ]      
-         OtherState%UL_dotdot     =                                            matmul( p%PhiRb_TI, OtherState%udotdot_TP )  ! UL_dotdot      [ Y2(6) =       0*x(:) + D2(6,3)*u(3) + 0*u(4) + 0]
+         m%UL            =                                            matmul( p%PhiRb_TI, m%u_TP       )  ! UL             [ Y2(2) =       0*x(1) + D2(2,1)*u(1) ] : IT MAY BE MODIFIED LATER IF STATIC IMPROVEMENT
+         m%UL_dot        =                                            matmul( p%PhiRb_TI, m%udot_TP    )  ! UL_dot         [ Y2(4) =       0*x(2) + D2(4,2)*u(2) ]      
+         m%UL_dotdot     =                                            matmul( p%PhiRb_TI, m%udotdot_TP )  ! UL_dotdot      [ Y2(6) =       0*x(:) + D2(6,3)*u(3) + 0*u(4) + 0]
       END IF
       
                 
              !STATIC IMPROVEMENT METHOD  ( modify UL )
       IF (p%SttcSolve) THEN
-         FLt  = MATMUL(p%PhiL_T,                  OtherState%UFL + p%FGL)  ! -> bjj: todo: this line takes up A LOT of time. is PhiL sparse???? no (solution: don't call this routine thousands of time to calculate the jacobian)
-         ULS  = MATMUL(p%PhiLInvOmgL2,            FLt                   )  ! -> bjj: todo: this line takes up A LOT of time. is PhiL sparse????
-         OtherState%UL  = OtherState%UL + ULS 
+         FLt  = MATMUL(p%PhiL_T,                  m%UFL + p%FGL)  ! -> bjj: todo: this line takes up A LOT of time. is PhiL sparse???? no (solution: don't call this routine thousands of time to calculate the jacobian)
+         ULS  = MATMUL(p%PhiLInvOmgL2,            FLt          )  ! -> bjj: todo: this line takes up A LOT of time. is PhiL sparse????
+         m%UL = m%UL + ULS 
           
          IF ( p%qml > 0) THEN
             UL0M = MATMUL(p%PhiLInvOmgL2(:,1:p%qmL), FLt(1:p%qmL)       )
-            OtherState%UL   = OtherState%UL - UL0M 
+            m%UL = m%UL - UL0M 
          END IF          
       ENDIF    
       
@@ -764,15 +760,15 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          startDOF = (I-1)*6 + 1
          
             ! Construct the direction cosine matrix given the output angles
-         CALL SmllRotTrans( 'UR_bar input angles', OtherState%UR_bar(startDOF + 3), OtherState%UR_bar(startDOF + 4), OtherState%UR_bar(startDOF + 5), DCM, '', ErrStat2, ErrMsg2 )
+         CALL SmllRotTrans( 'UR_bar input angles', m%UR_bar(startDOF + 3), m%UR_bar(startDOF + 4), m%UR_bar(startDOF + 5), DCM, '', ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
 
-         y%Y2mesh%TranslationDisp (:,I)     = OtherState%UR_bar  (       startDOF     : startDOF + 2 )
+         y%Y2mesh%TranslationDisp (:,I)     = m%UR_bar  (       startDOF     : startDOF + 2 )
          y%Y2mesh%Orientation     (:,:,I)   = DCM
-         y%Y2mesh%TranslationVel  (:,I)     = OtherState%UR_bar_dot (    startDOF     : startDOF + 2 )
-         y%Y2mesh%RotationVel     (:,I)     = OtherState%UR_bar_dot (    startDOF + 3 : startDOF + 5 )
-         y%Y2mesh%TranslationAcc  (:,I)     = OtherState%UR_bar_dotdot ( startDOF     : startDOF + 2 )
-         y%Y2mesh%RotationAcc     (:,I)     = OtherState%UR_bar_dotdot ( startDOF + 3 : startDOF + 5 )
+         y%Y2mesh%TranslationVel  (:,I)     = m%UR_bar_dot (    startDOF     : startDOF + 2 )
+         y%Y2mesh%RotationVel     (:,I)     = m%UR_bar_dot (    startDOF + 3 : startDOF + 5 )
+         y%Y2mesh%TranslationAcc  (:,I)     = m%UR_bar_dotdot ( startDOF     : startDOF + 2 )
+         y%Y2mesh%RotationAcc     (:,I)     = m%UR_bar_dotdot ( startDOF + 3 : startDOF + 5 )
                   
      ENDDO
      
@@ -791,15 +787,15 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          J = p%NNodes_I + I
        
             ! Construct the direction cosine matrix given the output angles
-         CALL SmllRotTrans( 'UL input angles', OtherState%UL(startDOF + 3), OtherState%UL(startDOF + 4), OtherState%UL(startDOF + 5), DCM, '', ErrStat2, ErrMsg2 )
+         CALL SmllRotTrans( 'UL input angles', m%UL(startDOF + 3), m%UL(startDOF + 4), m%UL(startDOF + 5), DCM, '', ErrStat2, ErrMsg2 )
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
          
          
             ! Y2 = Interior node displacements and velocities  for use as inputs to HydroDyn
-         y%Y2mesh%TranslationDisp (:,J)     = OtherState%UL     ( startDOF     : startDOF + 2 )
+         y%Y2mesh%TranslationDisp (:,J)     = m%UL     ( startDOF     : startDOF + 2 )
          y%Y2mesh%Orientation     (:,:,J)   = DCM
-         y%Y2mesh%TranslationVel  (:,J)     = OtherState%UL_dot ( startDOF     : startDOF + 2 )
-         y%Y2mesh%RotationVel     (:,J)     = OtherState%UL_dot ( startDOF + 3 : startDOF + 5 )
+         y%Y2mesh%TranslationVel  (:,J)     = m%UL_dot ( startDOF     : startDOF + 2 )
+         y%Y2mesh%RotationVel     (:,J)     = m%UL_dot ( startDOF + 3 : startDOF + 5 )
          
       END DO
       
@@ -807,7 +803,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       
       L1 = p%NNodes_I+1
       L2 = p%NNodes_I+p%NNodes_L
-      junk=   RESHAPE(OtherState%UL_dotdot,(/6  ,p%NNodes_L/)) 
+      junk=   RESHAPE(m%UL_dotdot,(/6  ,p%NNodes_L/)) 
       y%Y2mesh%TranslationAcc (  :,L1:L2)   = junk(1:3,:) 
       y%Y2mesh%RotationAcc    (  :,L1:L2)   = junk(4:6,:) 
  
@@ -859,13 +855,13 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       ! note: matmul( HydroForces, p%TI ) = matmul( transpose(p%TI), HydroForces) because HydroForces is 1-D            
       IF ( p%qml > 0) THEN
       
-         Y1 = -(   matmul(p%C1_11, x%qm) + matmul(p%C1_12,x%qmdot)                                                               &  ! -(   C1(1,1)*x(1) + C1(1,2)*x(2)
-                 + matmul(p%KBB,   OtherState%u_TP) + matmul(p%D1_13, OtherState%udotdot_TP) + matmul(p%D1_14, OtherState%UFL)   &  !    + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
+         Y1 = -(   matmul(p%C1_11, x%qm) + matmul(p%C1_12,x%qmdot)                                    &  ! -(   C1(1,1)*x(1) + C1(1,2)*x(2)
+                 + matmul(p%KBB,   m%u_TP) + matmul(p%D1_13, m%udotdot_TP) + matmul(p%D1_14, m%UFL)   &  !    + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
                  - matmul( HydroForces, p%TI )  + p%FY )                                                                            !    + D1(1,5)*u(5) + Fy(1) )
                   
       ELSE ! No retained modes, so there are no states
-         Y1 = -( matmul(p%KBB,   OtherState%u_TP) + matmul(p%MBB, OtherState%udotdot_TP) + matmul(p%D1_14, OtherState%UFL)   &  ! -(  0*x + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
-                 - matmul( HydroForces, p%TI )  + p%FY )                                                                        !    + D1(1,5)*u(5) + Fy(1) )
+         Y1 = -( matmul(p%KBB,   m%u_TP) + matmul(p%MBB, m%udotdot_TP) + matmul(p%D1_14, m%UFL)   &  ! -(  0*x + D1(1,1)*u(1) + 0*u(2) + D1(1,3)*u(3) + D1(1,4)*u(4)
+                 - matmul( HydroForces, p%TI )  + p%FY )                                             !    + D1(1,5)*u(5) + Fy(1) )
 
       END IF
       
@@ -894,8 +890,8 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          !find xdot at t
          
          IF ( p%NModes > 0 ) THEN
-            ! note that this re-sets OtherState%udotdot_TP and OtherState%UFL, but they are the same values as earlier in this routine so it doesn't change results in SDOut_MapOutputs()
-            CALL SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat2, ErrMsg2 )
+            ! note that this re-sets m%udotdot_TP and m%UFL, but they are the same values as earlier in this routine so it doesn't change results in SDOut_MapOutputs()
+            CALL SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 )
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
 
                IF ( ErrStat >= AbortErrLev ) THEN
@@ -904,7 +900,7 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
                END IF
 
             !Assign the acceleration to the x variable since it will be used for output file purposes for SSqmdd01-99, and dxdt will disappear
-            OtherState%qmdotdot=dxdt%qmdot
+            m%qmdotdot=dxdt%qmdot
             ! Destroy dxdt because it is not necessary for the rest of the subroutine
             CALL SD_DestroyContState( dxdt, ErrStat2, ErrMsg2)
                CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
@@ -914,22 +910,22 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
           
                              
             ! Write the previous output data into the output file           
-         IF ( ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) .AND. ( t > OtherState%LastOutTime ) ) THEN
-            IF ((OtherState%Decimat .EQ. p%OutDec) .OR. (OtherState%Decimat .EQ. 0))  THEN
-               OtherState%Decimat=1  !reset counter
-               CALL SDOut_WriteOutputs( p%UnJckF, OtherState%LastOutTime, OtherState%SDWrOutput, p, ErrStat2, ErrMsg2 )   
+         IF ( ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) .AND. ( t > m%LastOutTime ) ) THEN
+            IF ((m%Decimat .EQ. p%OutDec) .OR. (m%Decimat .EQ. 0))  THEN
+               m%Decimat=1  !reset counter
+               CALL SDOut_WriteOutputs( p%UnJckF, m%LastOutTime, m%SDWrOutput, p, ErrStat2, ErrMsg2 )   
                   CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
                   IF ( ErrStat >= AbortErrLev ) THEN
                      CALL Cleanup
                      RETURN
                   END IF                        
             ELSE      
-               OtherState%Decimat=OtherState%Decimat+1
+               m%Decimat=m%Decimat+1
             ENDIF
          END IF        
          
             ! Map calculated results into the AllOuts Array + perform averaging and all necessary extra calculations
-         CALL SDOut_MapOutputs(t, u,p,x,y, OtherState, AllOuts, ErrStat2, ErrMsg2)
+         CALL SDOut_MapOutputs(t, u,p,x,y, m, AllOuts, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'SD_CalcOutput')
             IF ( ErrStat >= AbortErrLev ) THEN
                CALL Cleanup
@@ -940,11 +936,11 @@ SUBROUTINE SD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          DO I = 1,p%NumOuts+p%OutAllInt*p%OutAllDims
             y%WriteOutput(I) = p%OutParam(I)%SignM * AllOuts( p%OutParam(I)%Indx )
             IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN
-               OtherState%SDWrOutput(I) = y%WriteOutput(I)            
+               m%SDWrOutput(I) = y%WriteOutput(I)            
             END IF                        
          END DO
          
-         OtherState%LastOutTime   = t
+         m%LastOutTime   = t
                   
       ENDIF           
   
@@ -957,21 +953,22 @@ CONTAINS
 END SUBROUTINE SD_CalcOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-! Tight coupling routine for computing derivatives of continuous states
-! note that this also sets OtherState%UFL and OtherState%udotdot_TP
+!> Tight coupling routine for computing derivatives of continuous states
+!! note that this also sets m%UFL and m%udotdot_TP
+SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
-      TYPE(SD_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(SD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(SD_ContinuousStateType), INTENT(IN)     :: x           ! Continuous states at t -WHY IS THIS INOUT and not JUST IN? RRD, changed to IN on2/19/14 check with Greg
-      TYPE(SD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(SD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(SD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(SD_ContinuousStateType), INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at t
-      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                   INTENT(IN   )  :: t           !< Current simulation time in seconds
+      TYPE(SD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
+      TYPE(SD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(SD_ContinuousStateType), INTENT(IN)     :: x           !< Continuous states at t -WHY IS THIS INOUT and not JUST IN? RRD, changed to IN on2/19/14 check with Greg
+      TYPE(SD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(SD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
+      TYPE(SD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
+      TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+      TYPE(SD_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at t
+      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
           
       INTEGER(IntKi)                               :: ErrStat2
       CHARACTER(ErrMsgLen)                         :: ErrMsg2
@@ -995,20 +992,20 @@ SUBROUTINE SD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat, 
       IF ( p%qmL == 0 ) RETURN
       
 ! form u(3) in Eq. 10:
-      OtherState%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
+      m%udotdot_TP = (/u%TPMesh%TranslationAcc(:,1), u%TPMesh%RotationAcc(:,1)/)
       
 ! form u(4) in Eq. 10:
-      CALL ConstructUFL( u, p, OtherState%UFL )
+      CALL ConstructUFL( u, p, m%UFL )
       
 !Equation 12:
 
       !X=A*x + B*u + Fx (Eq 12)
       dxdt%qm= x%qmdot
 
-      ! NOTE: matmul( TRANSPOSE(p%PhiM), OtherState%UFL ) = matmul( OtherState%UFL, p%PhiM ) because UFL is 1-D
+      ! NOTE: matmul( TRANSPOSE(p%PhiM), m%UFL ) = matmul( m%UFL, p%PhiM ) because UFL is 1-D
                 != a(2,1) * x(1)   +   a(2,2) * x(2)         +  b(2,3) * u(3)                       + b(2,4) * u(4)                   + fx(2) 
-     !dxdt%qmdot = p%NOmegaM2*x%qm + p%N2OmegaMJDamp*x%qmdot - matmul(p%MMB,OtherState%udotdot_TP)  + matmul(p%PhiM_T,OtherState%UFL) + p%FX 
-      dxdt%qmdot = p%NOmegaM2*x%qm + p%N2OmegaMJDamp*x%qmdot - matmul(p%MMB,OtherState%udotdot_TP)  + matmul(OtherState%UFL, p%PhiM ) + p%FX 
+     !dxdt%qmdot = p%NOmegaM2*x%qm + p%N2OmegaMJDamp*x%qmdot - matmul(p%MMB,m%udotdot_TP)  + matmul(p%PhiM_T,m%UFL) + p%FX 
+      dxdt%qmdot = p%NOmegaM2*x%qm + p%N2OmegaMJDamp*x%qmdot - matmul(p%MMB,m%udotdot_TP)  + matmul(m%UFL, p%PhiM ) + p%FX 
       
            
 
@@ -1023,8 +1020,8 @@ SUBROUTINE SD_Input(SDInputFile, Init, p, ErrStat,ErrMsg)
    CHARACTER(*),            INTENT(IN)     :: SDInputFile
    TYPE(SD_InitType) ,      INTENT(INOUT)  :: Init
    TYPE(SD_ParameterType) , INTENT(INOUT)  :: p
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),          INTENT(  OUT)  :: ErrStat   ! Error status of the operation
+   CHARACTER(*),            INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
   
 ! local variable for input and output
 
@@ -2071,18 +2068,18 @@ END SUBROUTINE SD_Input
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE SubRotate(Joints,NJoints,SubRotZ)
 !This subroutine rotates the joint coordinates with respect to global z
-   REAL(ReKi), INTENT(IN)       ::SubRotZ    ! Rotational angle in degrees
-   INTEGER(IntKi), INTENT(IN)       ::NJOINTS    ! Row size of Joints 
-   REAL(ReKi), DIMENSION(NJOINTS,3), INTENT(INOUT)    ::JOINTS     ! Rotational angle in degrees (Njoints,4)
+   REAL(ReKi),                       INTENT(IN)       :: SubRotZ    ! Rotational angle in degrees
+   INTEGER(IntKi),                   INTENT(IN)       :: NJOINTS    ! Row size of Joints 
+   REAL(ReKi), DIMENSION(NJOINTS,3), INTENT(INOUT)    :: JOINTS     ! Rotational angle in degrees (Njoints,4)
    
    !locals
-   REAL(ReKi)              :: rot  !angle in rad
+   REAL(ReKi)                 :: rot  !angle in rad
    REAL(ReKi), DIMENSION(2,2) :: ROTM !rotational matrix (cos matrix with -theta)
    
    
    rot=pi*SubRotz/180.
    ROTM=transpose(reshape([ COS(rot),    -SIN(rot) , &
-                SIN(rot) ,      COS(rot)], [2,2] ))
+                            SIN(rot) ,    COS(rot)], [2,2] ))
    Joints(:,2:3)= transpose(matmul(ROTM,transpose(Joints(:,2:3))))
 
 END SUBROUTINE  SubRotate           
@@ -2090,19 +2087,20 @@ END SUBROUTINE  SubRotate
 !----------------------------------------------------------------------------------------------------------------------------------
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-! This routine is called at the end of the simulation.
+!> This routine is called at the end of the simulation.
+SUBROUTINE SD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(SD_InputType),           INTENT(INOUT)  :: u           ! System inputs
-      TYPE(SD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters     
-      TYPE(SD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
-      TYPE(SD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
-      TYPE(SD_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-      TYPE(SD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states            
-      TYPE(SD_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(SD_InputType),           INTENT(INOUT)  :: u           !< System inputs
+      TYPE(SD_ParameterType),       INTENT(INOUT)  :: p           !< Parameters     
+      TYPE(SD_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
+      TYPE(SD_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
+      TYPE(SD_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
+      TYPE(SD_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states            
+      TYPE(SD_OutputType),          INTENT(INOUT)  :: y           !< System outputs
+      TYPE(SD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
 
@@ -2127,9 +2125,9 @@ SUBROUTINE SD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
          ! Determine if we need to close the output file
          
       IF ( p%OutSwtch == 1 .OR. p%OutSwtch == 3 ) THEN   
-         IF ((OtherState%Decimat .EQ. p%OutDec) .OR. (OtherState%Decimat .EQ. 0))  THEN
+         IF ((m%Decimat .EQ. p%OutDec) .OR. (m%Decimat .EQ. 0))  THEN
                ! Write out the last stored set of outputs before closing
-            CALL SDOut_WriteOutputs( p%UnJckF, OtherState%LastOutTime, OtherState%SDWrOutput, p, ErrStat, ErrMsg )   
+            CALL SDOut_WriteOutputs( p%UnJckF, m%LastOutTime, m%SDWrOutput, p, ErrStat, ErrMsg )   
          ENDIF
          
          CALL SDOut_CloseOutput( p, ErrStat, ErrMsg )         
@@ -2148,6 +2146,7 @@ SUBROUTINE SD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       CALL SD_DestroyConstrState( z,           ErrStat, ErrMsg )
       CALL SD_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
          
+      CALL SD_DestroyMisc( m,  ErrStat, ErrMsg )
 
          ! Destroy the output data:
          
@@ -2157,315 +2156,37 @@ SUBROUTINE SD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       
 
 END SUBROUTINE SD_End
-
 !------------------------------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SD_JacobianPInput( Time, u, p, x, xd, z, OtherState, dYdu, dXdu, dXddu, dZdu, ErrStat, ErrMsg )   
-! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations 
-! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-!..................................................................................................................................
-   
-      REAL(DbKi),                                INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-      TYPE(SD_InputType),                   INTENT(IN   )           :: u          ! Inputs at Time                       
-      TYPE(SD_ParameterType),               INTENT(IN   )           :: p          ! Parameters                           
-      TYPE(SD_ContinuousStateType),         INTENT(IN   )           :: x          ! Continuous states at Time
-      TYPE(SD_DiscreteStateType),           INTENT(IN   )           :: xd         ! Discrete states at Time
-      TYPE(SD_ConstraintStateType),         INTENT(IN   )           :: z          ! Constraint states at Time
-      TYPE(SD_OtherStateType),              INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-      TYPE(SD_PartialOutputPInputType),     INTENT(  OUT), OPTIONAL :: dYdu       ! Partial derivatives of output equations
-                                                                                       !   (Y) with respect to the inputs (u)
-      TYPE(SD_PartialContStatePInputType),  INTENT(  OUT), OPTIONAL :: dXdu       ! Partial derivatives of continuous state
-                                                                                       !   equations (X) with respect to inputs (u)
-      TYPE(SD_PartialDiscStatePInputType),  INTENT(  OUT), OPTIONAL :: dXddu      ! Partial derivatives of discrete state 
-                                                                                       !   equations (Xd) with respect to inputs (u)
-      TYPE(SD_PartialConstrStatePInputType),INTENT(  OUT), OPTIONAL :: dZdu       ! Partial derivatives of constraint state 
-                                                                                       !   equations (Z) with respect to inputs (u)
-      INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-      CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-
-               
-         ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
-      
-      
-      IF ( PRESENT( dYdu ) ) THEN
-      
-         ! Calculate the partial derivative of the output equations (Y) with respect to the inputs (u) here:
-
-        ! dYdu%DummyOutput%UFL(:) = 0
-
-      END IF
-      
-      IF ( PRESENT( dXdu ) ) THEN
-      
-         ! Calculate the partial derivative of the continuous state equations (X) with respect to the inputs (u) here:
-      
-        !dXdu%DummyContState%UFL(:) = 0
-
-      END IF
-      
-      IF ( PRESENT( dXddu ) ) THEN
-
-         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the inputs (u) here:
-
-        ! dXddu%DummyDiscState%UFL(:) = 0
-
-      END IF
-      
-      IF ( PRESENT( dZdu ) ) THEN
-
-         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the inputs (u) here:
-      
-        ! dZdu%DummyConstrState%UFL(:) = 0
-
-      END IF
-
-
-END SUBROUTINE SD_JacobianPInput
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SD_JacobianPContState( Time, u, p, x, xd, z, OtherState, dYdx, dXdx, dXddx, dZdx, ErrStat, ErrMsg )   
-! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
-!..................................................................................................................................
-   
-      REAL(DbKi),                                    INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-      TYPE(SD_InputType),                       INTENT(IN   )           :: u          ! Inputs at Time                       
-      TYPE(SD_ParameterType),                   INTENT(IN   )           :: p          ! Parameters                           
-      TYPE(SD_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at Time
-      TYPE(SD_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at Time
-      TYPE(SD_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at Time
-      TYPE(SD_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-      TYPE(SD_PartialOutputPContStateType),     INTENT(  OUT), OPTIONAL :: dYdx       ! Partial derivatives of output equations
-                                                                                           !   (Y) with respect to the continuous 
-                                                                                           !   states (x)
-      TYPE(SD_PartialContStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXdx       ! Partial derivatives of continuous state
-                                                                                           !   equations (X) with respect to 
-                                                                                           !   the continuous states (x)
-      TYPE(SD_PartialDiscStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXddx      ! Partial derivatives of discrete state 
-                                                                                           !   equations (Xd) with respect to 
-                                                                                           !   the continuous states (x)
-      TYPE(SD_PartialConstrStatePContStateType),INTENT(  OUT), OPTIONAL :: dZdx       ! Partial derivatives of constraint state
-                                                                                           !   equations (Z) with respect to 
-                                                                                           !   the continuous states (x)
-      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-
-               
-         ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
-      
-      
-     
-      IF ( PRESENT( dYdx ) ) THEN
-
-         ! Calculate the partial derivative of the output equations (Y) with respect to the continuous states (x) here:
-
-         if (allocated(dYdx%DummyOutput%qm)) dYdx%DummyOutput%qm = 0.0_ReKi
-
-      END IF
-      
-      IF ( PRESENT( dXdx ) ) THEN
-      
-         ! Calculate the partial derivative of the continuous state equations (X) with respect to the continuous states (x) here:
-      
-         if (allocated(dXdx%DummyContState%qm)) dXdx%DummyContState%qm = 0.0_ReKi
-
-      END IF
-      
-      IF ( PRESENT( dXddx ) ) THEN
-
-         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the continuous states (x) here:
-
-         if (allocated(dXddx%DummyDiscState%qm)) dXddx%DummyDiscState%qm = 0.0_ReKi
-         
-      END IF
-      
-      IF ( PRESENT( dZdx ) ) THEN
-
-
-         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the continuous states (x) here:
-      
-         if (allocated(dZdx%DummyConstrState%qm)) dZdx%DummyConstrState%qm = 0.0_ReKi
-
-      END IF
-      
-
-   END SUBROUTINE SD_JacobianPContState
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SD_JacobianPDiscState( Time, u, p, x, xd, z, OtherState, dYdxd, dXdxd, dXddxd, dZdxd, ErrStat, ErrMsg )   
-! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
-!..................................................................................................................................
-
-      REAL(DbKi),                                    INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-      TYPE(SD_InputType),                       INTENT(IN   )           :: u          ! Inputs at Time                       
-      TYPE(SD_ParameterType),                   INTENT(IN   )           :: p          ! Parameters                           
-      TYPE(SD_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at Time
-      TYPE(SD_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at Time
-      TYPE(SD_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at Time
-      TYPE(SD_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-      TYPE(SD_PartialOutputPDiscStateType),     INTENT(  OUT), OPTIONAL :: dYdxd      ! Partial derivatives of output equations
-                                                                                           !  (Y) with respect to the discrete 
-                                                                                           !  states (xd)
-      TYPE(SD_PartialContStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXdxd      ! Partial derivatives of continuous state
-                                                                                           !   equations (X) with respect to the 
-                                                                                           !   discrete states (xd)
-      TYPE(SD_PartialDiscStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXddxd     ! Partial derivatives of discrete state 
-                                                                                           !   equations (Xd) with respect to the
-                                                                                           !   discrete states (xd)
-      TYPE(SD_PartialConstrStatePDiscStateType),INTENT(  OUT), OPTIONAL :: dZdxd      ! Partial derivatives of constraint state
-                                                                                           !   equations (Z) with respect to the 
-                                                                                           !   discrete states (xd)
-      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-
-               
-         ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
-      
-      
-      IF ( PRESENT( dYdxd ) ) THEN
-      
-         ! Calculate the partial derivative of the output equations (Y) with respect to the discrete states (xd) here:
-
-         dYdxd%DummyOutput%DummyDiscState = 0
-
-      END IF
-      
-      IF ( PRESENT( dXdxd ) ) THEN
-
-         ! Calculate the partial derivative of the continuous state equations (X) with respect to the discrete states (xd) here:
-      
-         dXdxd%DummyContState%DummyDiscState = 0
-
-      END IF
-      
-      IF ( PRESENT( dXddxd ) ) THEN
-
-         ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the discrete states (xd) here:
-
-         dXddxd%DummyDiscState%DummyDiscState = 0
-
-      END IF
-      
-      IF ( PRESENT( dZdxd ) ) THEN
-
-         ! Calculate the partial derivative of the constraint state equations (Z) with respect to the discrete states (xd) here:
-      
-         dZdxd%DummyConstrState%DummyDiscState = 0
-
-      END IF
-      
-
-
-END SUBROUTINE SD_JacobianPDiscState
-!----------------------------------------------------------------------------------------------------------------------------------    
-SUBROUTINE SD_JacobianPConstrState( Time, u, p, x, xd, z, OtherState, dYdz, dXdz, dXddz, dZdz, ErrStat, ErrMsg )   
-! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) equations
-! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
-!..................................................................................................................................
-   
-      REAL(DbKi),                                      INTENT(IN   )           :: Time       ! Current simulation time in seconds   
-      TYPE(SD_InputType),                         INTENT(IN   )           :: u          ! Inputs at Time                       
-      TYPE(SD_ParameterType),                     INTENT(IN   )           :: p          ! Parameters                           
-      TYPE(SD_ContinuousStateType),               INTENT(IN   )           :: x          ! Continuous states at Time
-      TYPE(SD_DiscreteStateType),                 INTENT(IN   )           :: xd         ! Discrete states at Time
-      TYPE(SD_ConstraintStateType),               INTENT(IN   )           :: z          ! Constraint states at Time
-      TYPE(SD_OtherStateType),                    INTENT(INOUT)           :: OtherState ! Other/optimization states                    
-      TYPE(SD_PartialOutputPConstrStateType),     INTENT(  OUT), OPTIONAL :: dYdz       ! Partial derivatives of output 
-                                                                                             !  equations (Y) with respect to the 
-                                                                                             !  constraint states (z)
-      TYPE(SD_PartialContStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXdz       ! Partial derivatives of continuous
-                                                                                             !  state equations (X) with respect to 
-                                                                                             !  the constraint states (z)
-      TYPE(SD_PartialDiscStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXddz      ! Partial derivatives of discrete state
-                                                                                             !  equations (Xd) with respect to the 
-                                                                                             !  constraint states (z)
-      TYPE(SD_PartialConstrStatePConstrStateType),INTENT(  OUT), OPTIONAL :: dZdz       ! Partial derivatives of constraint 
-                                                                                             ! state equations (Z) with respect to 
-                                                                                             !  the constraint states (z)
-      INTEGER(IntKi),                                  INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-      CHARACTER(*),                                    INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
-
-               
-         ! Initialize ErrStat
-         
-      ErrStat = ErrID_None         
-      ErrMsg  = ""               
-      
-      IF ( PRESENT( dYdz ) ) THEN
-      
-            ! Calculate the partial derivative of the output equations (Y) with respect to the constraint states (z) here:
-        
-         dYdz%DummyOutput%DummyConstrState = 0
-         
-      END IF
-      
-      IF ( PRESENT( dXdz ) ) THEN
-      
-            ! Calculate the partial derivative of the continuous state equations (X) with respect to the constraint states (z) here:
-         
-         dXdz%DummyContState%DummyConstrState = 0
-
-      END IF
-      
-      IF ( PRESENT( dXddz ) ) THEN
-
-            ! Calculate the partial derivative of the discrete state equations (Xd) with respect to the constraint states (z) here:
-
-         dXddz%DummyDiscState%DummyConstrState = 0
-
-      END IF
-      
-      IF ( PRESENT( dZdz ) ) THEN
-
-            ! Calculate the partial derivative of the constraint state equations (Z) with respect to the constraint states (z) here:
-         
-         dZdz%DummyConstrState%DummyConstrState = 0
-
-      END IF
-      
-
-END SUBROUTINE SD_JacobianPConstrState
 
 !----------------------------------------------------------------------------------------------------------------------------------
-
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential 
-! equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-!
-!   x(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
-!
-!  See, e.g.,
-!  http://en.wikipedia.org/wiki/Linear_multistep_method
-!
-!  or
-!
-!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
-!
+!> This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential 
+!! equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!
+!!   x(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!!
+!!  See, e.g.,
+!!  http://en.wikipedia.org/wiki/Linear_multistep_method
+!!
+!!  or
+!!
+!!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+SUBROUTINE SD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                 INTENT(IN   )  :: n           ! time step number
-      TYPE(SD_InputType),             INTENT(INOUT)  :: u(:)        ! Inputs at t
-      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(SD_ParameterType),         INTENT(IN   )  :: p           ! Parameters
-      TYPE(SD_ContinuousStateType),   INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(SD_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(SD_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(SD_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),                 INTENT(IN   )  :: n           !< time step number
+      TYPE(SD_InputType),             INTENT(INOUT)  :: u(:)        !< Inputs at t
+      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(SD_ParameterType),         INTENT(IN   )  :: p           !< Parameters
+      TYPE(SD_ContinuousStateType),   INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+      TYPE(SD_DiscreteStateType),     INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(SD_ConstraintStateType),   INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
+      TYPE(SD_OtherStateType),        INTENT(INOUT)  :: OtherState  !< Other states at t on input at t + dt on output
+      TYPE(SD_MiscVarType),           INTENT(INOUT)  :: m           !< Misc/optimization variables
+      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
       ! local variables
@@ -2481,7 +2202,7 @@ SUBROUTINE SD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       ! need xdot at t
       CALL SD_CopyInput(u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg  )  ! we need to allocate input arrays/meshes before calling ExtrapInterp...
       CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat, ErrMsg)
-      CALL SD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg ) ! initializes xdot
+      CALL SD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg ) ! initializes xdot
       CALL SD_DestroyInput( u_interp, ErrStat, ErrMsg)   ! we don't need this local copy anymore
 
       if (n .le. 2) then
@@ -2491,7 +2212,7 @@ SUBROUTINE SD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
          !OtherState%xdot ( 3 - n ) = xdot
          CALL SD_CopyContState( xdot, OtherState%xdot ( 3 - n ), MESH_UPDATECOPY, ErrStat, ErrMsg )
          
-         CALL SD_RK4(t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         CALL SD_RK4(t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       else
 
@@ -2530,39 +2251,38 @@ SUBROUTINE SD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       
 END SUBROUTINE SD_AB4
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary 
-! differential equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-!
-!   Adams-Bashforth Predictor:
-!   x^p(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
-!
-!   Adams-Moulton Corrector:
-!   x(t+dt) = x(t)  + (dt / 24.) * ( 9.*f(t+dt,x^p) + 19.*f(t,x) - 5.*f(t-dt,x) + 1.*f(t-2.*dt,x) )
-!
-!  See, e.g.,
-!  http://en.wikipedia.org/wiki/Linear_multistep_method
-!
-!  or
-!
-!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
-!
+!> This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary 
+!! differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!
+!!   Adams-Bashforth Predictor:
+!!   x^p(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!!
+!!   Adams-Moulton Corrector:
+!!   x(t+dt) = x(t)  + (dt / 24.) * ( 9.*f(t+dt,x^p) + 19.*f(t,x) - 5.*f(t-dt,x) + 1.*f(t-2.*dt,x) )
+!!
+!!  See, e.g.,
+!!  http://en.wikipedia.org/wiki/Linear_multistep_method
+!!
+!!  or
+!!
+!!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+SUBROUTINE SD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                 INTENT(IN   )  :: n           ! time step number
-      TYPE(SD_InputType),             INTENT(INOUT)  :: u(:)        ! Inputs at t
-      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(SD_ParameterType),         INTENT(IN   )  :: p           ! Parameters
-      TYPE(SD_ContinuousStateType),   INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(SD_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(SD_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(SD_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),                 INTENT(IN   )  :: n           !< time step number
+      TYPE(SD_InputType),             INTENT(INOUT)  :: u(:)        !< Inputs at t
+      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(SD_ParameterType),         INTENT(IN   )  :: p           !< Parameters
+      TYPE(SD_ContinuousStateType),   INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+      TYPE(SD_DiscreteStateType),     INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(SD_ConstraintStateType),   INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
+      TYPE(SD_OtherStateType),        INTENT(INOUT)  :: OtherState  !< Other states at t on input at t + dt on output
+      TYPE(SD_MiscVarType),           INTENT(INOUT)  :: m           !< Misc/optimization variables
+      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
 
@@ -2577,14 +2297,14 @@ SUBROUTINE SD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
       CALL SD_CopyContState(x, x_pred, MESH_NEWCOPY, ErrStat, ErrMsg) !initialize x_pred      
 
-      CALL SD_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, ErrStat, ErrMsg )
+      CALL SD_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       if (n .gt. 2) then
 
          CALL SD_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg) ! make copy so that arrays/meshes get initialized/allocated for ExtrapInterp
          CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t + p%SDDeltaT, ErrStat, ErrMsg)
 
-         CALL SD_CalcContStateDeriv(t + p%SDDeltaT, u_interp, p, x_pred, xd, z, OtherState, xdot_pred, ErrStat, ErrMsg ) ! initializes xdot_pred
+         CALL SD_CalcContStateDeriv(t + p%SDDeltaT, u_interp, p, x_pred, xd, z, OtherState, m, xdot_pred, ErrStat, ErrMsg ) ! initializes xdot_pred
          CALL SD_DestroyInput( u_interp, ErrStat, ErrMsg) ! local copy no longer needed
 
          x%qm    = x%qm    + (p%SDDeltaT / 24.) * ( 9. * xdot_pred%qm +  19. * OtherState%xdot(1)%qm - 5. * OtherState%xdot(2)%qm &
@@ -2607,37 +2327,36 @@ SUBROUTINE SD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 END SUBROUTINE SD_ABM4
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-!   Define constants k1, k2, k3, and k4 as 
-!        k1 = dt * f(t        , x_t        )
-!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
-!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
-!        k4 = dt * f(t + dt   , x_t + k3   ).
-!   Then the continuous states at t = t + dt are
-!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
-!
-! For details, see:
-! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
-!   Runge-Kutta." sections 16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
-!   Cambridge University Press, pp. 704-716, 1992.
-!
+!> This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!   Define constants k1, k2, k3, and k4 as 
+!!        k1 = dt * f(t        , x_t        )
+!!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
+!!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
+!!        k4 = dt * f(t + dt   , x_t + k3   ).
+!!   Then the continuous states at t = t + dt are
+!!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
+!!
+!! For details, see:
+!! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for 
+!!   Runge-Kutta." sections 16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England: 
+!!   Cambridge University Press, pp. 704-716, 1992.
+SUBROUTINE SD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                 INTENT(IN   )  :: n           ! time step number
-      TYPE(SD_InputType),             INTENT(INOUT)  :: u(:)        ! Inputs at t
-      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(SD_ParameterType),         INTENT(IN   )  :: p           ! Parameters
-      TYPE(SD_ContinuousStateType),   INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(SD_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(SD_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(SD_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),                 INTENT(IN   )  :: n           !< time step number
+      TYPE(SD_InputType),             INTENT(INOUT)  :: u(:)        !< Inputs at t
+      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(SD_ParameterType),         INTENT(IN   )  :: p           !< Parameters
+      TYPE(SD_ContinuousStateType),   INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+      TYPE(SD_DiscreteStateType),     INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(SD_ConstraintStateType),   INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
+      TYPE(SD_OtherStateType),        INTENT(INOUT)  :: OtherState  !< Other states at t on input at t + dt on output
+      TYPE(SD_MiscVarType),           INTENT(INOUT)  :: m           !< Misc/optimization variables
+      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
          
@@ -2667,7 +2386,7 @@ SUBROUTINE SD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
 
       ! find xdot at t
-      CALL SD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg ) !initializes xdot
+      CALL SD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg ) !initializes xdot
 
       k1%qm    = p%SDDeltaT * xdot%qm
       k1%qmdot = p%SDDeltaT * xdot%qmdot
@@ -2679,7 +2398,7 @@ SUBROUTINE SD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%SDDeltaT, ErrStat, ErrMsg)
 
       ! find xdot at t + dt/2
-      CALL SD_CalcContStateDeriv( t + 0.5*p%SDDeltaT, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+      CALL SD_CalcContStateDeriv( t + 0.5*p%SDDeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
 
       k2%qm    = p%SDDeltaT * xdot%qm
       k2%qmdot = p%SDDeltaT * xdot%qmdot
@@ -2688,7 +2407,7 @@ SUBROUTINE SD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       x_tmp%qmdot = x%qmdot + 0.5 * k2%qmdot
 
       ! find xdot at t + dt/2
-      CALL SD_CalcContStateDeriv( t + 0.5*p%SDDeltaT, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+      CALL SD_CalcContStateDeriv( t + 0.5*p%SDDeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
      
       k3%qm    = p%SDDeltaT * xdot%qm
       k3%qmdot = p%SDDeltaT * xdot%qmdot
@@ -2700,7 +2419,7 @@ SUBROUTINE SD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t + p%SDDeltaT, ErrStat, ErrMsg)
 
       ! find xdot at t + dt
-      CALL SD_CalcContStateDeriv( t + p%SDDeltaT, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+      CALL SD_CalcContStateDeriv( t + p%SDDeltaT, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
 
       k4%qm    = p%SDDeltaT * xdot%qm
       k4%qmdot = p%SDDeltaT * xdot%qmdot
@@ -2735,37 +2454,36 @@ CONTAINS
 END SUBROUTINE SD_RK4
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the 2nd-order Adams-Moulton Implicit Method (AM2,Trapezoidal rule) for numerically integrating ordinary differential equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
-!   Define constants k1, k2, k3, and k4 as 
-!        k1 =  f(t       , x_t         )
-!        k2 =  f(t + dt  , x_t+dt      )
-!   Then the continuous states at t = t + dt are
-!        x_(t+dt) =x_n+1 = x_t + deltat/2*(k1 + k2) + O(dt^3)
-!   Now this can be re-written as: 0=Z(x_n+1) = x_n - x_n+1 +dt/2 *(f_n + f_n+1) = 0
-!         f_n= A*x_n + B*u_n + Fx  from Eq. 1.12 of the manual
-!         So to solve this linear system, I can just use x(k)=x(k-1) -J^-1 * Z(x(k-1))  (this is a simple root solver of the linear equation)
-!         with J=dZ/dx_n+1 = -I +dt/2*A 
-!
-!   Thus x_n+1 = x_n - J^-1 *dt/2 * (2*A*x_n + B *(u_n + u_n+1) +2*Fx)
-!  or    J*( x_n - x_n+1 ) = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)
-!
+!> This subroutine implements the 2nd-order Adams-Moulton Implicit Method (AM2,Trapezoidal rule) for numerically integrating ordinary differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x). 
+!!   Define constants k1, k2, k3, and k4 as 
+!!        k1 =  f(t       , x_t         )
+!!        k2 =  f(t + dt  , x_t+dt      )
+!!   Then the continuous states at t = t + dt are
+!!        x_(t+dt) =x_n+1 = x_t + deltat/2*(k1 + k2) + O(dt^3)
+!!   Now this can be re-written as: 0=Z(x_n+1) = x_n - x_n+1 +dt/2 *(f_n + f_n+1) = 0
+!!         f_n= A*x_n + B*u_n + Fx  from Eq. 1.12 of the manual
+!!         So to solve this linear system, I can just use x(k)=x(k-1) -J^-1 * Z(x(k-1))  (this is a simple root solver of the linear equation)
+!!         with J=dZ/dx_n+1 = -I +dt/2*A 
+!!
+!!   Thus x_n+1 = x_n - J^-1 *dt/2 * (2*A*x_n + B *(u_n + u_n+1) +2*Fx)
+!!  or    J*( x_n - x_n+1 ) = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)
+SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   REAL(DbKi),                     INTENT(IN   )   :: t              ! Current simulation time in seconds
-   INTEGER(IntKi),                 INTENT(IN   )   :: n              ! time step number
-   TYPE(SD_InputType),             INTENT(INOUT)   :: u(:)           ! Inputs at t
-   REAL(DbKi),                     INTENT(IN   )   :: utimes(:)      ! times of input
-   TYPE(SD_ParameterType),         INTENT(IN   )   :: p              ! Parameters
-   TYPE(SD_ContinuousStateType),   INTENT(INOUT)   :: x              ! Continuous states at t on input at t + dt on output
-   TYPE(SD_DiscreteStateType),     INTENT(IN   )   :: xd             ! Discrete states at t
-   TYPE(SD_ConstraintStateType),   INTENT(IN   )   :: z              ! Constraint states at t (possibly a guess)
-   TYPE(SD_OtherStateType),        INTENT(INOUT)   :: OtherState     ! Other/optimization states
-   INTEGER(IntKi),                 INTENT(  OUT)   :: ErrStat        ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)   :: ErrMsg         ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                     INTENT(IN   )   :: t              !< Current simulation time in seconds
+   INTEGER(IntKi),                 INTENT(IN   )   :: n              !< time step number
+   TYPE(SD_InputType),             INTENT(INOUT)   :: u(:)           !< Inputs at t
+   REAL(DbKi),                     INTENT(IN   )   :: utimes(:)      !< times of input
+   TYPE(SD_ParameterType),         INTENT(IN   )   :: p              !< Parameters
+   TYPE(SD_ContinuousStateType),   INTENT(INOUT)   :: x              !< Continuous states at t on input at t + dt on output
+   TYPE(SD_DiscreteStateType),     INTENT(IN   )   :: xd             !< Discrete states at t
+   TYPE(SD_ConstraintStateType),   INTENT(IN   )   :: z              !< Constraint states at t (possibly a guess)
+   TYPE(SD_OtherStateType),        INTENT(INOUT)   :: OtherState     !< Other states at t on input at t + dt on output
+   TYPE(SD_MiscVarType),           INTENT(INOUT)   :: m              !< Misc/optimization variables
+   INTEGER(IntKi),                 INTENT(  OUT)   :: ErrStat        !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)   :: ErrMsg         !< Error message if ErrStat /= ErrID_None
 
    ! local variables
          
@@ -2791,8 +2509,8 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
      !Start by getting u_n and u_n+1 
      ! interpolate u to find u_interp = u(t) = u_n     
      CALL SD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
-     OtherState%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
-     CALL ConstructUFL( u_interp, p, OtherState%UFL )     
+     m%udotdot_TP = (/u_interp%TPMesh%TranslationAcc(:,1), u_interp%TPMesh%RotationAcc(:,1)/)
+     CALL ConstructUFL( u_interp, p, m%UFL )     
                    
       ! extrapolate u to find u_interp = u(t + dt)=u_n+1
       CALL SD_Input_ExtrapInterp(u, utimes, u_interp, t+p%SDDeltaT, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'SD_AM2')
@@ -2800,8 +2518,8 @@ SUBROUTINE SD_AM2( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       CALL ConstructUFL( u_interp, p, UFL2 )     
       
          ! calculate (u_n + u_n+1)/2
-      udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + OtherState%udotdot_TP )
-      UFL2        = 0.5_ReKi * ( UFL2        + OtherState%UFL        )
+      udotdot_TP2 = 0.5_ReKi * ( udotdot_TP2 + m%udotdot_TP )
+      UFL2        = 0.5_ReKi * ( UFL2        + m%UFL        )
              
          ! set junk2 = dt * ( A*x_n +  B *(u_n + u_n+1)/2 + Fx)   
       junk2(      1:  p%qml)=p%SDDeltaT * x%qmdot                                                                                                   !upper portion of array
@@ -3541,10 +3259,6 @@ END SUBROUTINE EigenSolve
 SUBROUTINE ReduceKMdofs(Kred,K,TDOF, Init,p, ErrStat, ErrMsg )
 !This routine calculates Kred from K after removing consstrained node DOFs from the full M and K matrices
 !Note it works for constrained nodes, still to see how to make it work for interface nodes if needed
-!
-!bjj: I wrote this to replace ReduceKMdofs without use of NaN and WHERE. Hopefully it's logically equivalent, 
-!     but I want someone else to check. It reduces the amount of stack space required and should be faster
-!     than the old routine.
 !......................
    IMPLICIT NONE
    
@@ -3964,7 +3678,7 @@ SUBROUTINE AllocMiscVars(p, Misc, ErrStat, ErrMsg)
 ! This routine allocates parameter arrays, based on the dimensions already set in the parameter data type.
 !......................................................................................................
 
-   TYPE(SD_OtherStateType), INTENT(INOUT)    :: Misc        ! Miscellaneous values, used to avoid local copies and/or multiple allocation/deallocation of same variables each call
+   TYPE(SD_MiscVarType),    INTENT(INOUT)    :: Misc        ! Miscellaneous values, used to avoid local copies and/or multiple allocation/deallocation of same variables each call
    TYPE(SD_ParameterType),  INTENT(IN)       :: p           ! Parameters
    
    
@@ -4144,7 +3858,6 @@ SUBROUTINE ConstructUFL( u, p, UFL )
 !......................................................................................................
    TYPE(SD_InputType),             INTENT(IN   )  :: u               ! Inputs
    TYPE(SD_ParameterType),         INTENT(IN   )  :: p               ! Parameters
-!  TYPE(SD_OtherStateType),        INTENT(INOUT)  :: OtherState      ! Other/optimization states
    REAL(ReKi)                                     :: UFL(p%DOFL)
    
    INTEGER                                        :: I, J, StartDOF  ! integers for indexing into mesh and UFL

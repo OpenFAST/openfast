@@ -121,25 +121,30 @@ typedef	^	ContinuousStateType	ReKi	qmdot	{:}	-	-	"Derivative of states, Nmod ele
 typedef	^	DiscreteStateType	ReKi	DummyDiscState	-	-	-	"Remove this variable if you have discrete states"
 # Define constraint states here:
 typedef	^	ConstraintStateType	ReKi	DummyConstrState	-	-	-	"Remove this variable if you have constraint states"
-# Define any data that are not considered actual states here:
-typedef	SubDyn/SD	OtherStateType	SD_ContinuousStateType	xdot	{:}	-	-	"previous state derivs for m-step time integrator"
-typedef	^	^	IntKi	n	-	-	-	"tracks time step for which OtherState was updated last"
-typedef	^	^	ReKi	SDWrOutput	{:}	-	-	"Data from previous step to be written to a SubDyn output file"
-typedef	^	^	DbKi	LastOutTime	-	-	-	"The time of the most recent stored output data"	"s"
-typedef	^	^	IntKi	Decimat	-	-	-	"Current output decimation counter"	"-"
 
-# Miscellaneous variables (optimization/temp storage)
-typedef	^	^	ReKi	qmdotdot	{:}	-	-	"2nd Derivative of states, used only for output-file purposes"
-typedef	^	^	ReKi	u_TP	6	-	-
-typedef	^	^	ReKi	udot_TP	6	-	-
-typedef	^	^	ReKi	udotdot_TP	6	-	-
-typedef	^	^	ReKi	UFL	{:}	-	-
-typedef	^	^	ReKi	UR_bar	{:}	-	-
-typedef	^	^	ReKi	UR_bar_dot	{:}	-	-
-typedef	^	^	ReKi	UR_bar_dotdot	{:}	-	-
-typedef	^	^	ReKi	UL	{:}	-	-
-typedef	^	^	ReKi	UL_dot	{:}	-	-
-typedef	^	^	ReKi	UL_dotdot	{:}	-	-
+# Define any other states, including integer or logical states here:
+typedef	SubDyn/SD	OtherStateType	SD_ContinuousStateType	 xdot       {:} -  -  "previous state derivs for m-step time integrator"
+typedef	^	          ^             IntKi                    n           -  -  -  "tracks time step for which OtherState was updated last"
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef  ^           MiscVarType    ReKi                     qmdotdot      {:}  -  -  "2nd Derivative of states, used only for output-file purposes"
+typedef  ^            ^             ReKi                     u_TP           6   -  -  
+typedef  ^            ^             ReKi                     udot_TP        6   -  -  
+typedef  ^            ^             ReKi                     udotdot_TP     6   -  -  
+typedef  ^            ^             ReKi                     UFL           {:}  -  -  
+typedef  ^            ^             ReKi                     UR_bar        {:}  -  -  
+typedef  ^            ^             ReKi                     UR_bar_dot    {:}  -  -  
+typedef  ^            ^             ReKi                     UR_bar_dotdot {:}  -  -  
+typedef  ^            ^             ReKi                     UL            {:}  -  -  
+typedef  ^            ^             ReKi                     UL_dot        {:}  -  -  
+typedef  ^            ^             ReKi                     UL_dotdot     {:}  -  -  
+### data for writing to an output file (this data is associated with time, but saved/written in CalcOutput so not stored as an other state) ###
+typedef	^	          ^             ReKi                     SDWrOutput {:} -  -  "Data from previous step to be written to a SubDyn output file"
+typedef	^	          ^             DbKi                     LastOutTime -  -  -  "The time of the most recent stored output data"	"s"
+typedef	^	          ^             IntKi                    Decimat     -  -  -  "Current output decimation counter"	"-"
 
 
 
@@ -219,58 +224,3 @@ typedef	^	InputType	MeshType	LMesh	-	-	-	"Point mesh for interior node inputs"
 typedef	^	OutputType	MeshType	Y1Mesh	-	-	-	"Transition piece outputs on a point mesh"
 typedef	^	OutputType	MeshType	Y2Mesh	-	-	-	"Interior+Interface nodes outputs on a point mesh"
 typedef	^	OutputType	ReKi	WriteOutput	{:}	-	-	"Data to be written to an output file"
-
-
-####################################################################################################################################
-# These are not necessary to define in the Registry, but are here to generate blank types until we do actually implement the
-# Jacobians in the FAST framework. In the final implementation, they will probably not contain subtypes, but instead be
-# square matrices of type ReKi or DbKi.
-####################################################################################################################################
-# ..... Jacobians .................................................................................................................
-# Define the Jacobian of the output equations (Y) with respect to the inputs (u), dY/du (or Partial Y / Partial u):
-typedef   ^               SD_PartialOutputPInputType            SD_InputType            DummyOutput        -     -     -  "If you have output equations and input data, update this variable" -
-
-# Define the Jacobian of the output equations (Y) with respect to the inputs (u), dY/du (or Partial Y / Partial u):
-typedef   ^               SD_PartialContStatePInputType         SD_InputType            DummyContState     -     -     -  "If you have continuous state equations and input data, update this variable" -
-
-#Define the Jacobian of the discrete state equations (Xd) with respect to the inputs (u), dXd/du (or Partial Xd / Partial u):
-typedef   ^               SD_PartialDiscStatePInputType         SD_InputType            DummyDiscState     -     -     -  "If you have discrete state equations and input data, update this variable" -
-
-# Define the Jacobian of the constraint state equations (Z) with respect to the inputs (u), dZ/du (or Partial Z / Partial u):
-typedef   ^               SD_PartialConstrStatePInputType       SD_InputType            DummyConstrState   -     -     -  "If you have constraint state equations and input data, update this variable" -
-
-# Define the Jacobian of the output equations (Y) with respect to the continuous states (x), dY/dx (or Partial Y / Partial x):
-typedef   ^               SD_PartialOutputPContStateType        SD_ContinuousStateType  DummyOutput        -     -     -  "If you have output equations and continuous states, update this variable" -
-
-# Define the Jacobian of the continuous state equations (X) with respect to the continuous states (x), dX/dx (or Partial X / Partial x):
-typedef   ^               SD_PartialContStatePContStateType     SD_ContinuousStateType  DummyContState     -     -     -  "If you have continuous state equations and continuous states, update this variable" -
-
-# Define the Jacobian of the discrete state equations (Xd) with respect to the continuous states (x), dXd/dx (or Partial Xd / Partial x):
-typedef   ^               SD_PartialDiscStatePContStateType     SD_ContinuousStateType  DummyDiscState     -     -     -  "If you have discrete state equations and continuous states, update this variable" -
-
-# Define the Jacobian of the constraint state equations (Z) with respect to the continuous states (x), dZ/dx (or Partial Z / Partial x):
-typedef   ^               SD_PartialConstrStatePContStateType   SD_ContinuousStateType  DummyConstrState   -     -     -  "If you have constraint state equations and continuous states, update this variable" -
-
-# Define the Jacobian of the output equations (Y) with respect to the discrete states (xd), dY/dxd (or Partial Y / Partial xd):
-typedef   ^               SD_PartialOutputPDiscStateType        SD_DiscreteStateType    DummyOutput        -     -     -  "If you have output equations and discrete states, update this variable" -
-
-# Define the Jacobian of the continuous state equations (X) with respect to the discrete states (xd), dX/dxd (or Partial X / Partial xd):
-typedef   ^               SD_PartialContStatePDiscStateType     SD_DiscreteStateType    DummyContState     -     -     -  "If you have continuous state equations and discrete states, update this variable" -
-
-# Define the Jacobian of the discrete state equations (Xd) with respect to the discrete states (xd), dXd/dxd (or Partial Xd / Partial xd):
-typedef   ^               SD_PartialDiscStatePDiscStateType     SD_DiscreteStateType    DummyDiscState     -     -     -  "If you have discrete state equations and discrete states, update this variable" -
-
-# Define the Jacobian of the constraint state equations (Z) with respect to the discrete states (xd), dZ/dxd (or Partial Z / Partial xd):
-typedef   ^               SD_PartialConstrStatePDiscStateType   SD_DiscreteStateType    DummyConstrState   -     -     -  "If you have constraint state equations and discrete states, update this variable" -
-
-# Define the Jacobian of the output equations (Y) with respect to the constraint states (z), dY/dz (or Partial Y / Partial z):
-typedef   ^               SD_PartialOutputPConstrStateType      SD_ConstraintStateType  DummyOutput        -     -     -  "If you have output equations and constraint states, update this variable" -
-
-# Define the Jacobian of the continuous state equations (X) with respect to the constraint states (z), dX/dz (or Partial X / Partial z):
-typedef   ^               SD_PartialContStatePConstrStateType   SD_ConstraintStateType  DummyContState     -     -     -  "If you have continuous state equations and constraint states, update this variable" -
-
-# Define the Jacobian of the discrete state equations (Xd) with respect to the constraint states (z), dXd/dz (or Partial Xd / Partial z):
-typedef   ^               SD_PartialDiscStatePConstrStateType   SD_ConstraintStateType  DummyDiscState     -     -     -  "If you have discrete state equations and constraint states, update this variable" -
-
-# Define the Jacobian of the constraint state equations (Z) with respect to the constraint states (z), dZ/dz (or Partial Z / Partial z):
-typedef   ^               SD_PartialConstrStatePConstrStateType SD_ConstraintStateType  DummyConstrState   -     -     -  "If you have constraint state equations and constraint states, update this variable" -

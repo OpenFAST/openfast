@@ -1,6 +1,6 @@
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013-2014  National Renewable Energy Laboratory
+! Copyright (C) 2013-2016  National Renewable Energy Laboratory
 !
 !    This file is part of SubDyn.
 !
@@ -3770,7 +3770,7 @@ INTEGER, PARAMETER             :: MNRDe (3,9,9) = reshape((/M1N1RDxe,M1N1RDye,M1
 CONTAINS
 
 
-SUBROUTINE SDOut_Init( Init, y,  p, OtherState, InitOut, WtrDpth, ErrStat, ErrMsg )
+SUBROUTINE SDOut_Init( Init, y,  p, misc, InitOut, WtrDpth, ErrStat, ErrMsg )
 ! This subroutine initializes the output module, checking if the output parameter list (OutList)
 ! contains valid names, and opening the output file if there are any requested outputs
 !----------------------------------------------------------------------------------------------------
@@ -3781,7 +3781,7 @@ SUBROUTINE SDOut_Init( Init, y,  p, OtherState, InitOut, WtrDpth, ErrStat, ErrMs
  TYPE(SD_InitType),        INTENT( INOUT ) :: Init                 ! data needed to initialize the output module     
  TYPE(SD_OutputType),      INTENT( INOUT ) :: y                    ! SubDyn module's output data
  TYPE(SD_ParameterType),   INTENT( INOUT ) :: p                    ! SubDyn module paramters
- TYPE(SD_OtherStateType),  INTENT( INOUT ) :: OtherState           ! SubDyn other states
+ TYPE(SD_MiscVarType),     INTENT( INOUT ) :: misc                 ! SubDyn misc/optimization variables
  TYPE(SD_InitOutputType ), INTENT( INOUT ) :: InitOut              ! SubDyn module initialization output data
  REAL(ReKi),               INTENT( IN    ) :: WtrDpth              ! water depth from initialization routine  
  INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred           
@@ -3826,15 +3826,15 @@ p%OutAllDims=12*p%Nmembers*2    !size of AllOut Member Joint forces
 
     
    ! Allocate SDWrOuput which is used to store a time step's worth of output channels, prior to writing to a file.
-   ALLOCATE( OtherState%SDWrOutput( p%NumOuts +p%OutAllInt*p%OutAllDims),  STAT = ErrStat )
+   ALLOCATE( misc%SDWrOutput( p%NumOuts +p%OutAllInt*p%OutAllDims),  STAT = ErrStat )
    IF ( ErrStat /= ErrID_None ) THEN
     ErrMsg  = ' Error allocating space for SDWrOutput array.'
     ErrStat = ErrID_Fatal
     RETURN
    END IF
-   OtherState%SDWrOutput  = 0.0_ReKi
-   OtherState%LastOutTime = 0.0_DbKi
-   OtherState%Decimat     = 0
+   misc%SDWrOutput  = 0.0_ReKi
+   misc%LastOutTime = 0.0_DbKi
+   misc%Decimat     = 0
    
    !Allocate WriteOuput  
    ALLOCATE( y%WriteOutput( p%NumOuts +p%OutAllInt*p%OutAllDims),  STAT = ErrStat )
@@ -4215,22 +4215,22 @@ SUBROUTINE ReactMatx(Init, p, WtrDpth, ErrStat, ErrMsg)
 END SUBROUTINE ReactMatx
 
 !====================================================================================================
-SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat, ErrMsg )
+SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, m, AllOuts, ErrStat, ErrMsg )
 ! This subroutine writes the data stored in the y variable to the correct indexed postions in WriteOutput
 ! This is called by SD_CalcOutput() at each time step.
 ! This routine does fill Allouts
-! note that this routine assumes OtherState%u_TP and OtherState%udotdot_TP have been set before calling 
+! note that this routine assumes m%u_TP and m%udotdot_TP have been set before calling 
 !     this routine (which is done in SD_CalcOutput() and SD CalcContStateDeriv)
 !---------------------------------------------------------------------------------------------------- 
    REAL(DbKi),                    INTENT( IN    )  :: CurrentTime          ! Current simulation time in seconds
    TYPE(SD_InputType),            INTENT( IN )     :: u                    ! SubDyn module's input data
-   TYPE(SD_ContinuousStateType), INTENT( IN )     :: x                    ! SubDyn module's states data
+   TYPE(SD_ContinuousStateType),  INTENT( IN )     :: x                    ! SubDyn module's states data
    TYPE(SD_OutputType),           INTENT( INOUT )  :: y                    ! SubDyn module's output data
    TYPE(SD_ParameterType),        INTENT( IN    )  :: p                    ! SubDyn module's parameter data
-   TYPE(SD_OtherStateType),       INTENT( INOUT )  :: OtherState           ! Other/optimization states
-   REAL(ReKi),                         INTENT(   OUT )  :: AllOuts(0:MaxOutPts+p%OutAllInt*p%OutAllDims) ! Array of output data for all possible outputs
-   INTEGER(IntKi),                     INTENT(   OUT )  :: ErrStat              ! Error status of the operation
-   CHARACTER(*),                       INTENT(   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   TYPE(SD_MiscVarType),          INTENT( INOUT )  :: m                    ! Misc/optimization variables
+   REAL(ReKi),                    INTENT(   OUT )  :: AllOuts(0:MaxOutPts+p%OutAllInt*p%OutAllDims) ! Array of output data for all possible outputs
+   INTEGER(IntKi),                INTENT(   OUT )  :: ErrStat              ! Error status of the operation
+   CHARACTER(*),                  INTENT(   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
    !locals
    INTEGER(IntKi)                           ::I,J,K,K2,L,L2      ! Counters
@@ -4252,13 +4252,13 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
    
    !Create a variable that lists Y2 and adds removed constrained nodes' dofs; we will be using it to carry out other calculations with a special indexing array
    yout =0 !Initialize and populate with Y2 data  
-   yout(1:         p%UrbarL       ) = OtherState%UR_bar
-   yout(p%URbarL+1:p%URbarL+p%DOFL) = OtherState%UL
+   yout(1:         p%UrbarL       ) = m%UR_bar
+   yout(p%URbarL+1:p%URbarL+p%DOFL) = m%UL
   
    !Same for a variable that deals with Udotdot
    uddout =0 !Initialize and populate with Udotdot data
-   uddout(1          : p%URbarL         ) = OtherState%UR_bar_dotdot
-   uddout(p%URbarL+1 : p%URbarL+p%DOFL  ) = OtherState%UL_dotdot
+   uddout(1          : p%URbarL         ) = m%UR_bar_dotdot
+   uddout(p%URbarL+1 : p%URbarL+p%DOFL  ) = m%UL_dotdot
          
       ! Only generate member-based outputs for the number of user-requested member outputs
       !Now store and identify needed output as requested by user
@@ -4380,10 +4380,10 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
    AllOuts(IntfSS(1:TPdofL))= - (/y%Y1Mesh%Force (:,1), y%Y1Mesh%Moment(:,1)/) !-y%Y1  !Note this is the force that the TP applies to the Jacket, opposite to what the GLue Code needs thus "-" sign
    
   !Assign interface translations and rotations at the TP ref point  
-  AllOuts(IntfTRss(1:TPdofL))=OtherState%u_TP 
+  AllOuts(IntfTRss(1:TPdofL))=m%u_TP 
   
   !Assign interface translations and rotations accelerations
-  AllOuts(IntfTRAss(1:TPdofL))= OtherState%udotdot_TP 
+  AllOuts(IntfTRAss(1:TPdofL))= m%udotdot_TP 
   
   ! Assign all SSqm, SSqmdot, SSqmdotdot
    ! We only have space for the first 99 values
@@ -4392,7 +4392,7 @@ SUBROUTINE SDOut_MapOutputs( CurrentTime, u,p,x, y, OtherState, AllOuts, ErrStat
       !BJJ: TODO: is there a check to see if we requested these channels but didn't request the modes? (i.e., retain 2 modes but asked for 75th mode?)
       Allouts(SSqm01  :SSqm01  +maxOutModes-1) = x%qm      (1:maxOutModes)
       Allouts(SSqmd01 :SSqmd01 +maxOutModes-1) = x%qmdot   (1:maxOutModes)
-      Allouts(SSqmdd01:SSqmdd01+maxOutModes-1) = OtherState%qmdotdot(1:maxOutModes)
+      Allouts(SSqmdd01:SSqmdd01+maxOutModes-1) = m%qmdotdot(1:maxOutModes)
    END IF
    
   !Need to Calculate Reaction Forces Now, but only if requested

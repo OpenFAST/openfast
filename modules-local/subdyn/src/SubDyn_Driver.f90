@@ -2,7 +2,7 @@
 ! SubDyn_DriverCode: This code tests the SubDyn modules
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013-2014  National Renewable Energy Laboratory
+! Copyright (C) 2013-2016  National Renewable Energy Laboratory
 !
 !    This file is part of SubDyn.
 !
@@ -61,47 +61,12 @@ PROGRAM TestSubDyn
    TYPE(SD_ContinuousStateType)                       :: x                    ! Continuous states
    TYPE(SD_DiscreteStateType)                         :: xd                   ! Discrete states
    TYPE(SD_ConstraintStateType)                       :: z                    ! Constraint states
-   TYPE(SD_ConstraintStateType)                       :: Z_residual           ! Residual of the constraint state functions (Z)
-   TYPE(SD_OtherStateType)                            :: OtherState           ! Other/optimization states
+   TYPE(SD_OtherStateType)                            :: OtherState           ! Other states
+   TYPE(SD_MiscVarType)                               :: m                    ! Misc/optimization variables
 
    TYPE(SD_ParameterType)                             :: p                    ! Parameters
    TYPE(SD_InputType)                                 :: u(NumInp)            ! System inputs
    TYPE(SD_OutputType)                                :: y                    ! System outputs
-
-   TYPE(SD_ContinuousStateType)                       :: dxdt                 ! First time derivatives of the continuous states
-
-   TYPE(SD_PartialOutputPInputType)                   :: dYdu                 ! Partial derivatives of the output functions
-                                                                                 !  (Y) with respect to the inputs (u)
-   TYPE(SD_PartialContStatePInputType)                :: dXdu                 ! Partial derivatives of the continuous state
-                                                                                 !  functions (X) with respect to the inputs (u)
-   TYPE(SD_PartialDiscStatePInputType)                :: dXddu                ! Partial derivatives of the discrete state
-                                                                                 !  functions (Xd) with respect to the inputs (u)
-   TYPE(SD_PartialConstrStatePInputType)              :: dZdu                 ! Partial derivatives of the constraint state
-                                                                                 !  functions (Z) with respect to the inputs (u)
-   TYPE(SD_PartialOutputPContStateType)               :: dYdx                 ! Partial derivatives of the output functions (Y)
-                                                                                 !  with respect to the continuous states (x)
-   TYPE(SD_PartialContStatePContStateType)            :: dXdx                 ! Partial derivatives of the continuous state funct-
-                                                                                 !  ions (X) with respect to the continuous states (x)
-   TYPE(SD_PartialDiscStatePContStateType)            :: dXddx                ! Partial derivatives of the discrete state funct-
-                                                                                 !  ions (Xd) with respect to continuous states (x)
-   TYPE(SD_PartialConstrStatePContStateType)          :: dZdx                 ! Partial derivatives of the constraint state funct-
-                                                                                 !  ions (Z) with respect to the continuous states (x)
-   TYPE(SD_PartialOutputPDiscStateType)               :: dYdxd                ! Partial derivatives of the output functions (Y)
-                                                                                 !  with respect to the discrete states (xd)
-   TYPE(SD_PartialContStatePDiscStateType)            :: dXdxd                ! Partial derivatives of the continuous state funct-
-                                                                                 !  ions (X) with respect to the discrete states (xd)
-   TYPE(SD_PartialDiscStatePDiscStateType)            :: dXddxd               ! Partial derivatives of the discrete state funct-
-                                                                                 !  ions (Xd) with respect to the discrete states (xd)
-   TYPE(SD_PartialConstrStatePDiscStateType)          :: dZdxd                ! Partial derivatives of the constraint state funct-
-                                                                                 !  ions (Z) with respect to the discrete states (xd)
-   TYPE(SD_PartialOutputPConstrStateType)             :: dYdz                 ! Partial derivatives of the output functions (Y)
-                                                                                 !  with respect to the constraint states (z)
-   TYPE(SD_PartialContStatePConstrStateType)          :: dXdz                 ! Partial derivatives of the continuous state funct-
-                                                                                 !  ions (X) with respect to the constraint states (z)
-   TYPE(SD_PartialDiscStatePConstrStateType)          :: dXddz                ! Partial derivatives of the discrete state funct-
-                                                                                 !  ions (Xd) with respect to constraint states (z)
-   TYPE(SD_PartialConstrStatePConstrStateType)        :: dZdz                 ! Partial derivatives of the constraint state funct-
-                                                                                 !  ions (Z) with respect to the constraint states (z)
 
 
    INTEGER(IntKi)                                     :: n                    ! Loop counter (for time step)
@@ -109,9 +74,6 @@ PROGRAM TestSubDyn
    CHARACTER(1024)                                    :: ErrMsg, ErrMsg1, ErrMsg2, ErrMsg3              ! Error message if ErrStat /= ErrID_None
 
 
-   REAL(ReKi), ALLOCATABLE                            :: Re_SaveAry  (:)      ! Array to store reals in packed data structure
-   REAL(DbKi), ALLOCATABLE                            :: Db_SaveAry  (:)      ! Array to store doubles in packed data structure
-   INTEGER(IntKi), ALLOCATABLE                        :: Int_SaveAry (:)      ! Array to store integers in packed data structure
    CHARACTER(1024)                                    :: drvrFilename         ! Filename and path for the driver input file.  This is passed in as a command line argument when running the Driver exe.
    TYPE(SD_Drvr_InitInput)                            :: drvrInitInp          ! Initialization data for the driver program
    INTEGER(IntKi)                                     :: UnInp                !  Inputs file identifier
@@ -192,7 +154,7 @@ PROGRAM TestSubDyn
    
          ! Initialize the module
    
-   CALL SD_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, TimeInterval, InitOutData, ErrStat1, ErrMsg1 )
+   CALL SD_Init( InitInData, u(1), p,  x, xd, z, OtherState, y, m, TimeInterval, InitOutData, ErrStat1, ErrMsg1 )
    IF ( ErrStat1 /= 0 ) THEN
       CALL WrScr( ErrMsg1 )
       STOP
@@ -321,7 +283,7 @@ PROGRAM TestSubDyn
       END IF   
          ! Calculate outputs at n
       
-      CALL SD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+      CALL SD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( ErrMsg )
          IF ( ErrStat >= AbortErrLev) STOP
@@ -330,7 +292,7 @@ PROGRAM TestSubDyn
          
          ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
                                   
-      CALL SD_UpdateStates( Time, n, u,      InputTime,  p, x, xd, z, OtherState, ErrStat, ErrMsg )
+      CALL SD_UpdateStates( Time, n, u, InputTime, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
       IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
          CALL WrScr( ErrMsg )
          IF ( ErrStat >= AbortErrLev) STOP
@@ -349,167 +311,10 @@ PROGRAM TestSubDyn
 
 
    !...............................................................................................................................
-   ! Routines called in tight coupling -- time marching only
-   !...............................................................................................................................
-
-!   DO n = 0,2
-!
-!      Time = n * TimeInterval   ! Note that the discrete states must be updated only at the TimeInterval defined in initialization
-!
-!         ! set inputs (u) here:
-!!      u =
-!
-!         ! Update constraint states at Time
-!
-!      ! DO 
-!
-!   !      CALL SD_CalcConstrStateResidual( Time, u(1), p, x, xd, z, OtherState, Z_residual, ErrStat, ErrMsg )
-!   !      IF ( ErrStat /= ErrID_None ) THEN      ! Check if there was an error and do something about it if necessary
-!   !         CALL WrScr( ErrMsg )
-!   !      END IF
-!
-!         ! z =
-!
-!      ! END DO
-!
-!
-!
-!         ! Calculate the outputs at Time
-!
-!      CALL SD_CalcOutput( Time, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-!      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!         CALL WrScr( ErrMsg )
-!      END IF
-!
-!
-!         ! Calculate the continuous state derivatives at Time
-!
-!   !   CALL SD_CalcContStateDeriv( Time, u(1), p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-!   !   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!   !      CALL WrScr( ErrMsg )
-!   !   END IF
-!
-!
-!         ! Update the discrete state from step n to step n+1
-!         ! Note that the discrete states must be updated only at the TimeInterval defined in initialization
-!
-!!      CALL SD_UpdateDiscState( Time, n, u(1), p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!!      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!!         CALL WrScr( ErrMsg )
-!!      END IF
-!
-!
-!         ! Driver should integrate (update) continuous states here:
-!
-!      !x = function of dxdt, x
-!
-!
-!         ! Jacobians required:
-!                              
-!      CALL SD_JacobianPInput( Time, u(1), p, x, xd, z, OtherState, dYdu, dXdu, dXddu, dZdu, ErrStat, ErrMsg )
-!      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!         CALL WrScr( ErrMsg )
-!      END IF
-!                                   
-!      CALL SD_JacobianPConstrState( Time, u(1), p, x, xd, z, OtherState, dYdz,dXdz, dXddz, dZdz, ErrStat, ErrMsg  )
-!      IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-!         CALL WrScr( ErrMsg )
-!      END IF
-!
-!
-!   END DO
-
-
-      ! Destroy Z_residual and dxdt because they are not necessary anymore
-
-   CALL SD_DestroyConstrState( Z_residual, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) THEN   ! Check if there was an error and do something about it if necessary
-      CALL WrScr( ErrMsg )
-   END IF
-
-   CALL SD_DestroyContState( dxdt, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) THEN   ! Check if there was an error and do something about it if necessary
-      CALL WrScr( ErrMsg )
-   END IF
-
-   !...............................................................................................................................
-   ! Jacobian routines called in tight coupling
-   !...............................................................................................................................
-
-   CALL SD_JacobianPInput( Time, u(1), p, x, xd, z, OtherState, dYdu, dXdu, dXddu, dZdu, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-      CALL WrScr( ErrMsg )
-   END IF
-
-   CALL SD_JacobianPContState( Time, u(1), p, x, xd, z, OtherState, dYdx, dXdx, dXddx, dZdx, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-      CALL WrScr( ErrMsg )
-   END IF
-
-   CALL SD_JacobianPDiscState( Time, u(1), p, x, xd, z, OtherState, dYdxd, dXdxd, dXddxd, dZdxd, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-      CALL WrScr( ErrMsg )
-   END IF
-
-   CALL SD_JacobianPConstrState( Time, u(1), p, x, xd, z, OtherState, dYdz, dXdz, dXddz, dZdz, ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) THEN          ! Check if there was an error and do something about it if necessary
-      CALL WrScr( ErrMsg )
-   END IF
-
-
-   !...............................................................................................................................
-   ! Routines to pack data (to restart later)
-   !...............................................................................................................................  
-   !CALL SD_Pack(Re_SaveAry, Db_SaveAry, Int_SaveAry, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg) 
-   !  
-   !IF ( ErrStat /= ErrID_None ) THEN
-   !   CALL WrScr( ErrMsg )
-   !END IF
-
-
-   !...............................................................................................................................
    ! Routine to terminate program execution
    !...............................................................................................................................
-   !CALL SD_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-   !
-   !IF ( ErrStat /= ErrID_None ) THEN
-   !   CALL WrScr( ErrMsg )
-   !END IF
 
-
-   !...............................................................................................................................
-   ! Routines to retreive packed data (unpack for restart)
-   !...............................................................................................................................
-   ! TODO:  BUG with Unpack and the added meshes?  GJH 6/12/13
-   !  CALL SD_Unpack( Re_SaveAry, Db_SaveAry, Int_SaveAry, u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-
-   IF ( ErrStat /= ErrID_None ) THEN
-      CALL WrScr( ErrMsg )
-   END IF
-
-
-   !...............................................................................................................................
-   ! Routines to copy data (not already tested)
-   !...............................................................................................................................
-
-
-
-   !...............................................................................................................................
-   ! Routines to destroy data (not already tested)
-   !...............................................................................................................................
-
-   IF ( ALLOCATED( Re_SaveAry  ) ) DEALLOCATE( Re_SaveAry )
-   IF ( ALLOCATED( Db_SaveAry  ) ) DEALLOCATE( Db_SaveAry )
-   IF ( ALLOCATED( Int_SaveAry ) ) DEALLOCATE( Int_SaveAry )
-
-!   CALL SD_DestroyPartialOutputPInput ( )  ! Jacobian Routine not yet implemented
-
-
-   !...............................................................................................................................
-   ! Routine to terminate program execution (again)
-   !...............................................................................................................................
-
-   CALL SD_End( u(1), p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
+   CALL SD_End( u(1), p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
    IF ( ErrStat /= ErrID_None ) THEN
       CALL WrScr( ErrMsg )
    END IF
