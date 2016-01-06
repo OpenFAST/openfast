@@ -21,38 +21,31 @@
 ! (File) Revision #: $Rev$
 ! URL: $HeadURL$
 !**********************************************************************************************************************************
+!> The modules ModMesh and ModMesh_Types provide data structures and subroutines for representing and manipulating meshes
+!! and meshed data in the FAST modular framework. 
+!!
+!! A mesh is comprised of a set of "nodes" (simple points in space) together with information specifying how they are connected 
+!! to form "elements"  representing spatial boundaries between components. ModMesh and ModMesh_Types define point, line, surface, 
+!! and volume elements in a standard isoparametric mapping from finite element analysis. Currently only points and straight line 
+!! (line2) elements are implemented.
+!!   
+!! Associated with a mesh are one or more "fields" that represent the values of variables or "degrees of freedom" at each node. 
+!! A mesh always has a named "Position" that specifies the location in three-dimensional space as an Xi,Yi,Zi triplet of each node 
+!! and a field named "RefOrientation" that specifies the orientation (as a direction cosine matrix) of the node. 
+!! The ModMesh_Types module predefines a number of other fields of triples representing velocities, forces, and moments as well as
+!! a field of nine values representing a direction cosine matrix. 
+!!   
+!! The operations on meshes defined in the ModMesh module are creation, spatio-location of nodes, construction, committing the 
+!! mesh definition, initialization of fields, accessing field data, updating field data, copying, deallocating, and destroying meshes. 
+!! See https://nwtc.nrel.gov/FAST-Developers and https://nwtc.nrel.gov/system/files/ProgrammingHandbook_Mod20130717.pdf
 MODULE ModMesh
-
- ! The modules ModMesh and ModMesh_Types provide data structures and subroutines for representing and manipulating meshes
- ! and meshed data in the FAST modular framework. 
- !
- ! A mesh is comprised of a set of "nodes" (simple points in space) together with information specifying how they are connected 
- ! to form "elements"  representing spatial boundaries between components. ModMesh and ModMesh_Types define point, line, surface, 
- ! and volume elements in a standard isoparametric mapping from finite element analysis. Currently only points and straight line 
- ! (line2) elements are implemented.
- ! Associated with a mesh are one or more "fields" that represent the values of variables or "degrees of freedom" at each node. 
- ! A mesh always has a named "Position" that specifies the location in three-dimensional space as an Xi,Yi,Zi triplet of each node 
- ! and a field named "RefOrientation" that specifies the orientation (as a direction cosine matrix) of the node. 
- ! The ModMesh_Types module predefines a number of other fields of triples representing velocities, forces, and moments as well as
- ! a field of nine values representing a direction cosine matrix. 
- ! The operations on meshes defined in the ModMesh module are creation, spatio-location of nodes, construction, committing the 
- ! mesh definition, initialization of fields, accessing field data, updating field data, copying, deallocating, and destroying meshes. 
- ! See https://wind.nrel.gov/designcodes/simulators/developers/docs/ProgrammingHandbook_Mod20130326.pdf
-
-!======================================================================================================================
-! WARNING:  Because this code uses some preprocessor directives to comment out code
-!           and because some lines go beyond column 132, you must specify the following compiler options:
-!
-!              Intel:   /fpp
-!              Gnu:     -x f95-cpp-input -ffree-line-length-none
-!======================================================================================================================
 
    USE ModMesh_Types
    IMPLICIT NONE
 !   INTEGER :: DEBUG_UNIT = 74
 
-   INTEGER,     PARAMETER, PRIVATE :: BUMPUP = 64  ! do not set to less than 2
-   CHARACTER(*),PARAMETER, PRIVATE :: VTK_AryFmt = '(3(F20.6))'  
+   INTEGER,     PARAMETER, PRIVATE :: BUMPUP = 64                !< size element list will be increased when adding an element that does not fit in the currently allocated space; do not set to less than 2
+   CHARACTER(*),PARAMETER, PRIVATE :: VTK_AryFmt = '(3(F20.6))'  !< text format for triplets written to VTK text files
 
 
    INTERFACE MeshConstructElement
@@ -69,22 +62,26 @@ MODULE ModMesh
 CONTAINS
 
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine writes mesh information in binary form. If UnIn is < 0, it gets a new unit number and opens the file,
+!! otherwise the file is appended. It is up to the caller of this routine to close the file when it's finished.
 SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
-   ! This routine writes mesh information in binary form. If UnIn is < 0, it gets a new unit number and opens the file,
-   ! otherwise the file is appended. It is up to the caller of this routine to close the file when it's finished.
 
       
-   INTEGER, INTENT(INOUT)                ::  UnIn     ! fortran output unit
-   TYPE(MeshType),  INTENT(IN)           ::  M        ! mesh to be reported on
+   INTEGER, INTENT(INOUT)                ::  UnIn     !< fortran output unit
+   TYPE(MeshType),  INTENT(IN)           ::  M        !< mesh to be reported on
 
-   INTEGER(IntKi),  INTENT(OUT)          :: ErrStat   ! Indicates whether an error occurred (see NWTC_Library)
-   CHARACTER(*),    INTENT(OUT)          :: ErrMsg    ! Error message associated with the ErrStat
-   CHARACTER(*),    INTENT(IN), OPTIONAL :: FileName  ! Name of the file to write the output in
+   INTEGER(IntKi),  INTENT(OUT)          :: ErrStat   !< Indicates whether an error occurred (see NWTC_Library)
+   CHARACTER(*),    INTENT(OUT)          :: ErrMsg    !< Error message associated with the ErrStat
+   CHARACTER(*),    INTENT(IN), OPTIONAL :: FileName  !< Name of the file to write the output in
 
    ! local variables
    INTEGER(IntKi)                        :: ErrStat2  ! Temporary storage for local errors
    INTEGER(IntKi)                        :: I         ! loop counter
+   CHARACTER(*), PARAMETER               :: RoutineName = 'MeshWrBin'
 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
    IF (UnIn < 0) THEN
       CALL GetNewUnit( UnIn, ErrStat, ErrMsg )
 
@@ -109,13 +106,13 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
       
    WRITE (UnIn, IOSTAT=ErrStat2)   M%Position
       IF ( ErrStat2 /= 0 ) THEN
-         CALL CheckError( ErrID_Fatal, 'Error writing Position to the mesh binary file.' )
+         CALL SetErrStat( ErrID_Fatal, 'Error writing Position to the mesh binary file.', ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
 
    WRITE (UnIn, IOSTAT=ErrStat2)   M%RefOrientation
       IF ( ErrStat2 /= 0 ) THEN
-         CALL CheckError( ErrID_Fatal, 'Error writing RefOrientation to the mesh binary file.' )
+         CALL SetErrStat( ErrID_Fatal, 'Error writing RefOrientation to the mesh binary file.', ErrStat, ErrMsg, RoutineName )
          RETURN
       END IF
 
@@ -125,7 +122,7 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
    IF ( M%fieldmask(MASKID_FORCE) .AND. ALLOCATED(M%Force) ) THEN
       WRITE (UnIn, IOSTAT=ErrStat2)   M%Force
          IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckError( ErrID_Fatal, 'Error writing Force to the mesh binary file.' )
+            CALL SetErrStat( ErrID_Fatal, 'Error writing Force to the mesh binary file.', ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
    END IF
@@ -133,7 +130,7 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
    IF ( M%fieldmask(MASKID_Moment) .AND. ALLOCATED(M%Moment)) THEN
       WRITE (UnIn, IOSTAT=ErrStat2)   M%Moment
          IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckError( ErrID_Fatal, 'Error writing Force to the mesh binary file.' )
+            CALL SetErrStat( ErrID_Fatal, 'Error writing Force to the mesh binary file.', ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
    END IF
@@ -141,7 +138,7 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
    IF ( M%fieldmask(MASKID_ORIENTATION) .AND. ALLOCATED(M%Orientation)) THEN
       WRITE (UnIn, IOSTAT=ErrStat2)   M%Orientation
          IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckError( ErrID_Fatal, 'Error writing Orientation to the mesh binary file.' )
+            CALL SetErrStat( ErrID_Fatal, 'Error writing Orientation to the mesh binary file.', ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
    END IF
@@ -149,7 +146,7 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
    IF ( M%fieldmask(MASKID_TRANSLATIONDISP) .AND. ALLOCATED(M%TranslationDisp)) THEN
       WRITE (UnIn, IOSTAT=ErrStat2)   M%TranslationDisp
          IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckError( ErrID_Fatal, 'Error writing TranslationDisp to the mesh binary file.' )
+            CALL SetErrStat( ErrID_Fatal, 'Error writing TranslationDisp to the mesh binary file.', ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
    END IF
@@ -157,7 +154,7 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
    IF ( M%fieldmask(MASKID_TRANSLATIONVEL) .AND. ALLOCATED(M%TranslationVel)) THEN
       WRITE (UnIn, IOSTAT=ErrStat2)   M%TranslationVel
          IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckError( ErrID_Fatal, 'Error writing TranslationVel to the mesh binary file.' )
+            CALL SetErrStat( ErrID_Fatal, 'Error writing TranslationVel to the mesh binary file.', ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
    END IF
@@ -165,7 +162,7 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
    IF ( M%fieldmask(MASKID_ROTATIONVEL) .AND. ALLOCATED(M%RotationVel)) THEN
       WRITE (UnIn, IOSTAT=ErrStat2)   M%RotationVel
          IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckError( ErrID_Fatal, 'Error writing RotationVel to the mesh binary file.' )
+            CALL SetErrStat( ErrID_Fatal, 'Error writing RotationVel to the mesh binary file.', ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
    END IF
@@ -173,7 +170,7 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
    IF ( M%fieldmask(MASKID_TRANSLATIONACC) .AND. ALLOCATED(M%TranslationAcc)) THEN
       WRITE (UnIn, IOSTAT=ErrStat2)   M%TranslationAcc
          IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckError( ErrID_Fatal, 'Error writing TranslationAcc to the mesh binary file.' )
+            CALL SetErrStat( ErrID_Fatal, 'Error writing TranslationAcc to the mesh binary file.', ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
    END IF
@@ -181,7 +178,7 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
    IF ( M%fieldmask(MASKID_ROTATIONACC) .AND. ALLOCATED(M%RotationAcc)) THEN
       WRITE (UnIn, IOSTAT=ErrStat2)   M%RotationAcc
          IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckError( ErrID_Fatal, 'Error writing RotationAcc to the mesh binary file.' )
+            CALL SetErrStat( ErrID_Fatal, 'Error writing RotationAcc to the mesh binary file.', ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
    END IF
@@ -189,7 +186,7 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
    IF ( M%fieldmask(MASKID_SCALAR) .AND. ALLOCATED(M%Scalars)) THEN
       WRITE (UnIn, IOSTAT=ErrStat2)   M%Scalars
          IF ( ErrStat2 /= 0 ) THEN
-            CALL CheckError( ErrID_Fatal, 'Error writing Scalars to the mesh binary file.' )
+            CALL SetErrStat( ErrID_Fatal, 'Error writing Scalars to the mesh binary file.', ErrStat, ErrMsg, RoutineName )
             RETURN
          END IF
    END IF
@@ -205,51 +202,17 @@ SUBROUTINE MeshWrBin ( UnIn, M, ErrStat, ErrMsg, FileName)
       WRITE (UnIn, IOSTAT=ErrStat2)   INT(M%ElemList(i)%Element%ElemNodes      ,B4Ki) ! which nodes
    END DO
 
-CONTAINS
-   !............................................................................................................................
-   SUBROUTINE CheckError(ErrID,Msg)
-   !............................................................................................................................
-   ! This subroutine sets the error message and level
-   !............................................................................................................................
-
-         ! Passed arguments
-      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
-      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
-
-
-      !.........................................................................................................................
-      ! Set error status/message;
-      !.........................................................................................................................
-
-      IF ( ErrID /= ErrID_None ) THEN
-
-         IF ( ErrStat /= ErrID_None ) ErrMsg = TRIM(ErrMsg)//NewLine
-         ErrMsg = TRIM(ErrMsg)//'MeshWrBin:'//TRIM(Msg)
-         ErrStat = MAX(ErrStat, ErrID)
-
-         !......................................................................................................................
-         ! Clean up if we're going to return on error: close file, deallocate local arrays
-         !......................................................................................................................
-         IF ( ErrStat >= AbortErrLev ) THEN
-         END IF
-
-      END IF
-
-   END SUBROUTINE CheckError
-   !............................................................................................................................
 END SUBROUTINE MeshWrBin
 !----------------------------------------------------------------------------------------------------------------------------------
-!   
-! VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf
-!
+!> This routine writes the reference position and orientations of a mesh in VTK format.
+!! see VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf
 SUBROUTINE MeshWrVTKreference ( M, FileRootName, ErrStat, ErrMsg )
-   ! This routine write the reference position and orientations of a mesh in VTK format
    
-   TYPE(MeshType),  INTENT(IN)           :: M             ! mesh to be written
-   CHARACTER(*),    INTENT(IN)           :: FileRootName  ! Name of the file to write the output in (excluding extension)
+   TYPE(MeshType),  INTENT(IN)           :: M             !< mesh to be written
+   CHARACTER(*),    INTENT(IN)           :: FileRootName  !< Name of the file to write the output in (excluding extension)
 
-   INTEGER(IntKi),  INTENT(OUT)          :: ErrStat       ! Indicates whether an error occurred (see NWTC_Library)
-   CHARACTER(*),    INTENT(OUT)          :: ErrMsg        ! Error message associated with the ErrStat
+   INTEGER(IntKi),  INTENT(OUT)          :: ErrStat       !< Indicates whether an error occurred (see NWTC_Library)
+   CHARACTER(*),    INTENT(OUT)          :: ErrMsg        !< Error message associated with the ErrStat
    
    ! local variables
    INTEGER(IntKi)                        :: Un            ! fortran unit number
@@ -319,15 +282,16 @@ SUBROUTINE MeshWrVTKreference ( M, FileRootName, ErrStat, ErrMsg )
       
 END SUBROUTINE MeshWrVTKreference   
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine writes mesh information in VTK format.
+!! see VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf
 SUBROUTINE MeshWrVTK ( M, FileRootName, VTKcount, ErrStat, ErrMsg )
-   ! This routine writes mesh information in VTK form. 
       
-   TYPE(MeshType),  INTENT(IN)           :: M             ! mesh to be written
-   CHARACTER(*),    INTENT(IN)           :: FileRootName  ! Name of the file to write the output in (excluding extension)
-   INTEGER(IntKi),  INTENT(IN)           :: VTKcount      ! Indicates number for VTK output file
+   TYPE(MeshType),  INTENT(IN)           :: M             !< mesh to be written
+   CHARACTER(*),    INTENT(IN)           :: FileRootName  !< Name of the file to write the output in (excluding extension)
+   INTEGER(IntKi),  INTENT(IN)           :: VTKcount      !< Indicates number for VTK output file (when 0, the routine will also write reference information)
 
-   INTEGER(IntKi),  INTENT(OUT)          :: ErrStat       ! Indicates whether an error occurred (see NWTC_Library)
-   CHARACTER(*),    INTENT(OUT)          :: ErrMsg        ! Error message associated with the ErrStat
+   INTEGER(IntKi),  INTENT(OUT)          :: ErrStat       !< Indicates whether an error occurred (see NWTC_Library)
+   CHARACTER(*),    INTENT(OUT)          :: ErrMsg        !< Error message associated with the ErrStat
 
    ! local variables
    INTEGER(IntKi)                        :: Un            ! fortran unit number
@@ -481,15 +445,13 @@ END IF
       
    END SUBROUTINE MeshWrVTK
    
-   !-------------------------------------------------------------------------------------------------------------------------------
+!-------------------------------------------------------------------------------------------------------------------------------
+!> This routine writes mesh information in text form. It is used for debugging.
    SUBROUTINE MeshPrintInfo ( U, M, N)
-   
-      ! This routine writes mesh information in text form. If is used for debugging.
-   
-   
-     INTEGER, INTENT(IN   )                ::      U  ! fortran output unit
-     TYPE(MeshType),INTENT(IN   )          ::      M  ! mesh to be reported on
-     INTEGER, OPTIONAL,INTENT(IN   )       ::      N  ! Number to print, default 5
+         
+     INTEGER, INTENT(IN   )                ::      U  !< fortran output unit
+     TYPE(MeshType),INTENT(IN   )          ::      M  !< mesh to be reported on
+     INTEGER, OPTIONAL,INTENT(IN   )       ::      N  !< Number to print, default is all nodes
     ! Local
      INTEGER isz,i,j,nn,Ielement,Xelement
 
@@ -667,6 +629,10 @@ END IF
 
    ! operations to create a mesh
 
+!> Takes a blank, uninitialized instance of Type(MeshType) and defines the number of nodes in the mesh. Optional 
+!! arguments indicate the fields that will be allocated and associated with the nodes of the mesh. The fields that may 
+!! be associated with the mesh nodes are Force, Moment, Orientation, Rotation, TranslationDisp, RotationVel, TranslationVel, 
+!! RotationAcc, TranslationAcc, and an arbitrary number of Scalars. See the definition of ModMeshType for descriptions of these fields.  
    SUBROUTINE MeshCreate ( BlankMesh                                                       &
                           ,IOS                                                             &
                           ,Nnodes                                                          &
@@ -685,32 +651,26 @@ END IF
                           ,nScalars                                                        &
                           ,IsNewSibling                                                    &
                          )
-
-   
-      ! Takes a blank, uninitialized instance of Type(MeshType) and defines the number of nodes in the mesh. Optional 
-      ! arguments indicate the fields that will be allocated and associated with the nodes of the mesh. The fields that may 
-      ! be associated with the mesh nodes are Force, Moment, Orientation, Rotation, TranslationDisp, RotationVel, TranslationVel, 
-      ! RotationAcc, TranslationAcc, and an arbitrary number of Scalars. See the definition of ModMeshType for descriptions of these fields.  
-   
-      TYPE(MeshType), INTENT(INOUT)   :: BlankMesh ! Mesh to be created
-      INTEGER,INTENT(IN)         :: IOS                  ! input (COMPONENT_INPUT), output(COMPONENT_OUTPUT), or state(COMPONENT_STATE)
-      INTEGER,INTENT(IN)         :: Nnodes               ! Number of nodes in mesh
-      INTEGER(IntKi),INTENT(OUT) :: ErrStat              ! error status/level
-      CHARACTER(*),INTENT(OUT)   :: ErrMess              ! error message
+      
+      TYPE(MeshType), INTENT(INOUT)   :: BlankMesh !< Mesh to be created
+      INTEGER,INTENT(IN)         :: IOS                  !< input (COMPONENT_INPUT), output(COMPONENT_OUTPUT), or state(COMPONENT_STATE)
+      INTEGER,INTENT(IN)         :: Nnodes               !< Number of nodes in mesh
+      INTEGER(IntKi),INTENT(OUT) :: ErrStat              !< error status/level
+      CHARACTER(*),INTENT(OUT)   :: ErrMess              !< error message
                                    ! optional arguments from here down
                                    ! optional arguments that say whether to allocate fields
                                    ! in the mesh. These are always dimensioned npoints
-      LOGICAL,OPTIONAL,INTENT(IN):: Force                ! If present and true, allocate Force field
-      LOGICAL,OPTIONAL,INTENT(IN):: Moment               ! If present and true, allocate Moment field
-      LOGICAL,OPTIONAL,INTENT(IN):: Orientation          ! If present and true, allocate Orientation field
-      LOGICAL,OPTIONAL,INTENT(IN):: TranslationDisp      ! If present and true, allocate TranslationDisp field
-      LOGICAL,OPTIONAL,INTENT(IN):: TranslationVel       ! If present and true, allocate TranslationVel field
-      LOGICAL,OPTIONAL,INTENT(IN):: RotationVel          ! If present and true, allocate RotationVel field
-      LOGICAL,OPTIONAL,INTENT(IN):: TranslationAcc       ! If present and true, allocate TranslationAcc field
-      LOGICAL,OPTIONAL,INTENT(IN):: RotationAcc          ! If present and true, allocate RotationAcc field
+      LOGICAL,OPTIONAL,INTENT(IN):: Force                !< If present and true, allocate Force field
+      LOGICAL,OPTIONAL,INTENT(IN):: Moment               !< If present and true, allocate Moment field
+      LOGICAL,OPTIONAL,INTENT(IN):: Orientation          !< If present and true, allocate Orientation field
+      LOGICAL,OPTIONAL,INTENT(IN):: TranslationDisp      !< If present and true, allocate TranslationDisp field
+      LOGICAL,OPTIONAL,INTENT(IN):: TranslationVel       !< If present and true, allocate TranslationVel field
+      LOGICAL,OPTIONAL,INTENT(IN):: RotationVel          !< If present and true, allocate RotationVel field
+      LOGICAL,OPTIONAL,INTENT(IN):: TranslationAcc       !< If present and true, allocate TranslationAcc field
+      LOGICAL,OPTIONAL,INTENT(IN):: RotationAcc          !< If present and true, allocate RotationAcc field
 !
-      INTEGER,OPTIONAL,INTENT(IN):: nScalars             ! If present and > 0, allocate nScalars Scalars
-      LOGICAL,OPTIONAL,INTENT(IN):: IsNewSibling         ! If present and true, this is an new sibling so don't allocate new shared fields (RemapFlag, position, RefOrientation, and ElemTable)
+      INTEGER,OPTIONAL,INTENT(IN):: nScalars             !< If present and > 0, allocate nScalars Scalars
+      LOGICAL,OPTIONAL,INTENT(IN):: IsNewSibling         !< If present and true, this is an new sibling so don't allocate new shared fields (RemapFlag, position, RefOrientation, and ElemTable)
 
     ! Local
       INTEGER i
@@ -901,6 +861,8 @@ END IF
          !........................
          ! Let's make sure that we have all the necessary fields:
          !........................
+      !! This routine will add any required fields that were not explicitly requested.
+      !! If the mesh has motion fields and it is an input mesh, it must always have the following fields: TranslationDisp, TranslationVel, TranslationAcc
       IF ( IsMotion .AND. IOS == COMPONENT_INPUT ) THEN
 
          IF ( .NOT. BlankMesh%FieldMask(MASKID_TRANSLATIONDISP)) THEN
@@ -932,6 +894,7 @@ END IF
                            
       END IF
       
+      !! If the mesh has load fields and it is an input mesh, it must always have the following fields: Moment
       IF ( IsLoad .AND. IOS == COMPONENT_INPUT ) THEN
                
          IF ( .NOT. BlankMesh%FieldMask(MASKID_MOMENT)) THEN
@@ -950,23 +913,23 @@ END IF
 
    END SUBROUTINE MeshCreate
 
+!> Destroy the given mesh and deallocate all of its data. If the optional IgnoreSibling argument 
+!! is set to TRUE, destroying a sibling in a set has no effect on the other siblings other than 
+!! to remove the victim from the list of siblings. If IgnoreSibling is omitted or is set to FALSE, 
+!! all of the other siblings in the set will be destroyed as well.
    RECURSIVE SUBROUTINE MeshDestroy ( Mesh, ErrStat, ErrMess, IgnoreSibling )
-    ! Destroy the given mesh and deallocate all of its data. If the optional IgnoreSibling argument 
-    ! is set to TRUE, destroying a sibling in a set has no effect on the other siblings other than 
-    ! to remove the victim from the list of siblings. If IgnoreSibling is omitted or is set to FALSE, 
-    ! all of the other siblings in the set will be destroyed as well.
 
-     TYPE(MeshType),  INTENT(INOUT) :: Mesh            ! Mesh to be vaporized
-     INTEGER(IntKi),  INTENT(OUT)   :: ErrStat         ! Error status/code
-     CHARACTER(*),    INTENT(OUT)   :: ErrMess         ! Error message
+     TYPE(MeshType),  INTENT(INOUT) :: Mesh            !< Mesh to be vaporized
+     INTEGER(IntKi),  INTENT(OUT)   :: ErrStat         !< Error status/code
+     CHARACTER(*),    INTENT(OUT)   :: ErrMess         !< Error message
     ! On a brand new mesh, the pointers to siblings may not be nullified and
     ! thus undefined (which may cause ASSOCIATED to report .true. erroneously)
-    ! This despite use of => NULL in declaration of this fields for MeshType. Sigh.
-    ! So if IgnoreSibling is present and true, don't follow the sibling pointers.
-    ! Instead just unconditionally nullify these.
-    ! Use this carefully, since it can leave dangling memory if used for a
-    ! mesh that already exists and has existing siblings.
-     LOGICAL, INTENT(IN), OPTIONAL :: IgnoreSibling
+    ! This despite use of => NULL in declaration of this fields for MeshType. Sigh. (15-dec-2015 bjj: not sure this is true; some fields didn't use => NULL)
+    ! So ...
+     LOGICAL, INTENT(IN), OPTIONAL :: IgnoreSibling    !< if IgnoreSibling is present and true, don't follow the sibling pointers.
+                                                       !! Instead just unconditionally nullify these.
+                                                       !! Use this carefully, since it can leave dangling memory if used for a
+                                                       !! mesh that already exists and has existing siblings. 
 
     ! Local
       LOGICAL IgSib
@@ -1094,15 +1057,15 @@ END IF
 !     7        FieldMask                           FIELDMASK_SIZE
 !     7+$7     Table Entries                       $5 * SIZE(ElemRecType)
 !
+!> Given a mesh and allocatable buffers of type INTEGER(IntKi), REAL(ReKi), and REAL(DbKi), 
+!! return the mesh information compacted into consecutive elements of the corresponding buffers. 
+!! This would be done to allow subsequent writing of the buffers to a file for restarting later. 
+!! The sense of the name is "pack the data from the mesh into buffers". IMPORTANT: MeshPack 
+!! allocates the three buffers. It is incumbent upon the calling program to deallocate the 
+!! buffers when they are no longer needed. For sibling meshes, MeshPack should be called 
+!! separately for each sibling, because the fields allocated with the siblings are separate 
+!! and unique to each sibling.
    SUBROUTINE MeshPack ( Mesh, ReKiBuf, DbKiBuf, IntKiBuf , ErrStat, ErrMess, SizeOnly )
-      ! Given a mesh and allocatable buffers of type INTEGER(IntKi), REAL(ReKi), and REAL(DbKi), 
-      ! return the mesh information compacted into consecutive elements of the corresponding buffers. 
-      ! This would be done to allow subsequent writing of the buffers to a file for restarting later. 
-      ! The sense of the name is "pack the data from the mesh into buffers". IMPORTANT: MeshPack 
-      ! allocates the three buffers. It is incumbent upon the calling program to deallocate the 
-      ! buffers when they are no longer needed. For sibling meshes, MeshPack should be called 
-      ! separately for each sibling, because the fields allocated with the siblings are separate 
-      ! and unique to each sibling.
    
      TYPE(MeshType),              INTENT(IN   ) :: Mesh        ! Mesh being packed
      REAL(ReKi),     ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)  ! Real buffer
@@ -1327,12 +1290,12 @@ END IF
      !bjj: where are we keeping track of which ones are siblings so that we can unpack them (set pointers) properly for restart?
    END SUBROUTINE MeshPack
 
+!> Given a blank, uncreated mesh and buffers of type INTEGER(IntKi), REAL(ReKi), and 
+!! REAL(DbKi), unpack the mesh information from the buffers. This would be done to 
+!! recreate a mesh after reading in the buffers on a restart of the program. The sense 
+!! of the name is "unpack the mesh from buffers." The resulting mesh will be returned 
+!! in the exact state as when the data in the buffers was packed using MeshPack. 
    SUBROUTINE MeshUnpack( Mesh, ReKiBuf, DbKiBuf, IntKiBuf, ErrStat, ErrMess )
-      ! Given a blank, uncreated mesh and buffers of type INTEGER(IntKi), REAL(ReKi), and 
-      ! REAL(DbKi), unpack the mesh information from the buffers. This would be done to 
-      ! recreate a mesh after reading in the buffers on a restart of the program. The sense 
-      ! of the name is "unpack the mesh from buffers." The resulting mesh will be returned 
-      ! in the exact state as when the data in the buffers was packed using MeshPack. 
       
       ! bjj: not implemented yet:  
       ! If the mesh has an already recreated sibling mesh from a previous call to MeshUnpack, specify 
@@ -1546,49 +1509,49 @@ END IF
 
    END SUBROUTINE MeshUnpack
 
+!> Given an existing mesh and a destination mesh, create a completely new copy, a sibling, or 
+!!   update the fields of a second existing mesh from the first mesh. When CtrlCode is 
+!!   MESH_NEWCOPY or MESH_SIBLING, the destination mesh must be a blank, uncreated mesh.
+!! 
+!! If CtrlCode is MESH_NEWCOPY, an entirely new copy of the mesh is created, including all fields, 
+!!   with the same data values as the original, but as an entirely separate copy in memory. The new 
+!!   copy is in the same state as the original--if the original has not been committed, neither is 
+!!   the copy; in this case, an all-new copy of the mesh must be committed separately.
+!!
+!! If CtrlCode is MESH_SIBLING, the destination mesh is created with the same mesh and position/reference 
+!!   orientation information of the source mesh, and this new sibling is added to the end of the list for 
+!!   the set of siblings. Siblings may have different fields (other than Position and RefOrientation). 
+!!   Therefore, for a sibling, it is necessary, as with MeshCreate, to indicate the fields the sibling 
+!!   will have using optional arguments. Sibling meshes should not be created unless the original mesh 
+!!   has been committed first.
+!!
+!! If CtrlCode is MESH_UPDATECOPY, all of the allocatable fields of the destination mesh are updated 
+!!   with the values of the fields in the source. (The underlying mesh is untouched.) The mesh and field 
+!!   definitions of the source and destination meshes must match and both must have been already committed. 
+!!   The destination mesh may be an entirely different copy or it may be a sibling of the source mesh.
    SUBROUTINE MeshCopy( SrcMesh, DestMesh, CtrlCode, ErrStat , ErrMess   &
                       ,IOS, Force, Moment, Orientation, TranslationDisp, TranslationVel &
                       ,RotationVel, TranslationAcc, RotationAcc, nScalars )
    
-   ! Given an existing mesh and a destination mesh, create a completely new copy, a sibling, or 
-   !   update the fields of a second existing mesh from the first mesh. When CtrlCode is 
-   !   MESH_NEWCOPY or MESH_SIBLING, the destination mesh must be a blank, uncreated mesh.
-   ! 
-   ! If CtrlCode is MESH_NEWCOPY, an entirely new copy of the mesh is created, including all fields, 
-   !   with the same data values as the original, but as an entirely separate copy in memory. The new 
-   !   copy is in the same state as the original--if the original has not been committed, neither is 
-   !   the copy; in this case, an all-new copy of the mesh must be committed separately.
-   !
-   ! If CtrlCode is MESH_SIBLING, the destination mesh is created with the same mesh and position/reference 
-   !   orientation information of the source mesh, and this new sibling is added to the end of the list for 
-   !   the set of siblings. Siblings may have different fields (other than Position and RefOrientation). 
-   !   Therefore, for a sibling, it is necessary, as with MeshCreate, to indicate the fields the sibling 
-   !   will have using optional arguments. Sibling meshes should not be created unless the original mesh 
-   !   has been committed first.
-   !
-   ! If CtrlCode is MESH_UPDATECOPY, all of the allocatable fields of the destination mesh are updated 
-   !   with the values of the fields in the source. (The underlying mesh is untouched.) The mesh and field 
-   !   definitions of the source and destination meshes must match and both must have been already committed. 
-   !   The destination mesh may be an entirely different copy or it may be a sibling of the source mesh.
+
    
-   
-     TYPE(MeshType), TARGET,      INTENT(INOUT) :: SrcMesh  ! Mesh being copied
-     TYPE(MeshType), TARGET,      INTENT(INOUT) :: DestMesh ! Copy of mesh
-     INTEGER(IntKi),              INTENT(IN)    :: CtrlCode ! MESH_NEWCOPY, MESH_SIBLING, or
-                                                            ! MESH_UPDATECOPY
-     INTEGER(IntKi),              INTENT(OUT)   :: ErrStat  ! Error code
-     CHARACTER(*),                INTENT(OUT)   :: ErrMess  ! Error message
+     TYPE(MeshType), TARGET,      INTENT(INOUT) :: SrcMesh           !< Mesh being copied
+     TYPE(MeshType), TARGET,      INTENT(INOUT) :: DestMesh          !< Copy of mesh
+     INTEGER(IntKi),              INTENT(IN)    :: CtrlCode          !< MESH_NEWCOPY, MESH_SIBLING, or
+                                                                     !! MESH_UPDATECOPY
+     INTEGER(IntKi),              INTENT(OUT)   :: ErrStat           !< Error code
+     CHARACTER(*),                INTENT(OUT)   :: ErrMess           !< Error message
     ! Optional arguments (used only if CtrlCode is MESH_SIBLING):
-     INTEGER(IntKi), OPTIONAL,    INTENT(IN)    :: IOS               ! If present, IOS of new sibling: input (COMPONENT_INPUT), output(COMPONENT_OUTPUT), or state(COMPONENT_STATE)
-     LOGICAL,        OPTIONAL,    INTENT(IN)    :: Force             ! If present and true, allocate Force field
-     LOGICAL,        OPTIONAL,    INTENT(IN)    :: Moment            ! If present and true, allocate Moment field
-     LOGICAL,        OPTIONAL,    INTENT(IN)    :: Orientation       ! If present and true, allocate Orientation field
-     LOGICAL,        OPTIONAL,    INTENT(IN)    :: TranslationDisp   ! If present and true, allocate TranslationDisp field
-     LOGICAL,        OPTIONAL,    INTENT(IN)    :: TranslationVel    ! If present and true, allocate TranslationVel field
-     LOGICAL,        OPTIONAL,    INTENT(IN)    :: RotationVel       ! If present and true, allocate RotationVel field
-     LOGICAL,        OPTIONAL,    INTENT(IN)    :: TranslationAcc    ! If present and true, allocate TranslationAcc field
-     LOGICAL,        OPTIONAL,    INTENT(IN)    :: RotationAcc       ! If present and true, allocate RotationAcc field
-     INTEGER(IntKi), OPTIONAL,    INTENT(IN)    :: nScalars          ! If present and > 0 , alloc n Scalars               
+     INTEGER(IntKi), OPTIONAL,    INTENT(IN)    :: IOS               !< If present, IOS of new sibling: input (COMPONENT_INPUT), output(COMPONENT_OUTPUT), or state(COMPONENT_STATE)
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: Force             !< If present and true, allocate Force field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: Moment            !< If present and true, allocate Moment field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: Orientation       !< If present and true, allocate Orientation field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: TranslationDisp   !< If present and true, allocate TranslationDisp field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: TranslationVel    !< If present and true, allocate TranslationVel field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: RotationVel       !< If present and true, allocate RotationVel field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: TranslationAcc    !< If present and true, allocate TranslationAcc field
+     LOGICAL,        OPTIONAL,    INTENT(IN)    :: RotationAcc       !< If present and true, allocate RotationAcc field
+     INTEGER(IntKi), OPTIONAL,    INTENT(IN)    :: nScalars          !< If present and > 0 , alloc n Scalars               
     ! Local
      INTEGER(IntKi)                             :: IOS_l               ! IOS of new sibling
      LOGICAL                                    :: Force_l           & ! If true, allocate Force field
@@ -1810,20 +1773,18 @@ END IF
 
    END SUBROUTINE MeshCopy
 
-! added 20130102 as stub for AeroDyn work
+!> For a given node in a mesh, assign the coordinates of the node in the global coordinate space. 
+!! If an Orient argument is included, the node will also be assigned the specified orientation 
+!! (orientation is assumed to be the identity matrix if omitted). Returns a non-zero value in  
+!! ErrStat if Inode is outside the range 1..Nnodes.     
    SUBROUTINE MeshPositionNode( Mesh, Inode, Pos, ErrStat, ErrMess, Orient )
-
-   ! For a given node in a mesh, assign the coordinates of the node in the global coordinate space. 
-   ! If an Orient argument is included, the node will also be assigned the specified orientation 
-   ! (orientation is assumed to be the identity matrix if omitted). Returns a non-zero value in  
-   ! ErrStat if Inode is outside the range 1..Nnodes.     
    
-     TYPE(MeshType),              INTENT(INOUT) :: Mesh         ! Mesh being spatio-located
-     INTEGER(IntKi),              INTENT(IN   ) :: Inode        ! Number of node being located
-     REAL(ReKi),                  INTENT(IN   ) :: Pos(3)       ! Xi,Yi,Zi, coordinates of node
-     INTEGER(IntKi),              INTENT(  OUT) :: ErrStat      ! Error code
-     CHARACTER(*),                INTENT(  OUT) :: ErrMess      ! Error message
-     REAL(R8Ki), OPTIONAL,        INTENT(IN   ) :: Orient(3,3)  ! Orientation (direction cosine matrix) of node; identity by default
+     TYPE(MeshType),              INTENT(INOUT) :: Mesh         !< Mesh being spatio-located
+     INTEGER(IntKi),              INTENT(IN   ) :: Inode        !< Number of node being located
+     REAL(ReKi),                  INTENT(IN   ) :: Pos(3)       !< Xi,Yi,Zi, coordinates of node
+     INTEGER(IntKi),              INTENT(  OUT) :: ErrStat      !< Error code
+     CHARACTER(*),                INTENT(  OUT) :: ErrMess      !< Error message
+     REAL(R8Ki), OPTIONAL,        INTENT(IN   ) :: Orient(3,3)  !< Orientation (direction cosine matrix) of node; identity by default
      
      ErrStat = ErrID_None
      ErrMess = ""
@@ -1881,17 +1842,16 @@ END IF
 
    END SUBROUTINE MeshPositionNode
 
+!> Given a mesh that has been created, spatio-located, and constructed, 
+!! commit the definition of the mesh, making it ready for initialization 
+!! and use. Explicitly committing a mesh provides the opportunity to precompute 
+!! traversal information, neighbor lists and other information about the mesh. 
+!! Returns non-zero in value of ErrStat on error.     
    SUBROUTINE MeshCommit( Mesh, ErrStat, ErrMess )
-     
-    ! Given a mesh that has been created, spatio-located, and constructed, 
-    ! commit the definition of the mesh, making it ready for initialization 
-    ! and use. Explicitly committing a mesh provides the opportunity to precompute 
-    ! traversal information, neighbor lists and other information about the mesh. 
-    ! Returns non-zero in value of ErrStat on error.     
-    
-     TYPE(MeshType),              INTENT(INOUT) :: Mesh ! Mesh being committed
-     INTEGER(IntKi),              INTENT(OUT)   :: ErrStat ! Error code
-     CHARACTER(*),                INTENT(OUT)   :: ErrMess ! Error message
+         
+     TYPE(MeshType),              INTENT(INOUT) :: Mesh              !< Mesh being committed
+     INTEGER(IntKi),              INTENT(OUT)   :: ErrStat           !< Error code
+     CHARACTER(*),                INTENT(OUT)   :: ErrMess           !< Error message
     ! Local
      REAL(ReKi)                                 :: n1_n2_vector(3)               ! vector going from node 1 to node 2 in a Line2 element
      INTEGER n0d, n1d, n2d, n3d, nn, i, j, NElem, n1,n2
@@ -2029,18 +1989,16 @@ END IF
 
    END SUBROUTINE MeshCommit
 
-! added 20130102 as stub for AeroDyn work
+!> Given a mesh and an element name, construct a point element whose vertex is the 
+!! node index listed as the remaining argument of the call to MeshConstructElement.
+!! Returns a non-zero ErrStat value on error.     
    SUBROUTINE MeshConstructElement_1PT( Mesh, Xelement, ErrStat, ErrMess, P1 )
-     
-   ! Given a mesh and an element name, construct an point element whose vertex is the 
-   ! node index listed as the remaining argument of the call to MeshConstructElement.
-   ! Returns a non-zero value on error.     
-     
-     TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
-     INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
-     INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
-     CHARACTER(*),                INTENT(OUT)   :: ErrMess   ! Error message
-     INTEGER,                     INTENT(IN   ) :: P1
+          
+     TYPE(MeshType),              INTENT(INOUT) :: Mesh      !< Mesh being constructed
+     INTEGER(IntKi),              INTENT(IN)    :: Xelement  !< See Element Names
+     INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   !< Error code
+     CHARACTER(*),                INTENT(OUT)   :: ErrMess   !< Error message
+     INTEGER,                     INTENT(IN   ) :: P1        !< node index for this point element
 
      IF ( mesh_debug ) print*,'Called MeshConstructElement_1PT'
      ErrStat = ErrID_None
@@ -2148,18 +2106,18 @@ END IF
      
    END SUBROUTINE BumpupElementTable_New
    
+!> This subroutine increases the allocated space for Mesh%ElemTable(Xelement)%Elements
+!! if adding a new element will exceed the pre-allocated space.
    SUBROUTINE BumpupElementTable( Mesh, Xelement, ErrStat, ErrMess )
-   ! This subroutine increases the allocated space for Mesh%ElemTable(Xelement)%Elements
-   ! if adding a new element will exceed the pre-allocated space.
 
    ! bjj: this is the old method of increasing the element table size.
    ! it was duplicated in MeshConstructElement_1PT and MeshConstructElement_2PT
    ! I have made it a subroutine so we don't have to duplicate it anymore.
    
-      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
-      INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
-      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
-      CHARACTER(*),                INTENT(OUT)   :: ErrMess   ! Error message
+      TYPE(MeshType),              INTENT(INOUT) :: Mesh      !< Mesh being constructed
+      INTEGER(IntKi),              INTENT(IN)    :: Xelement  !< type of element (See Element Names)
+      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   !< Error code
+      CHARACTER(*),                INTENT(OUT)   :: ErrMess   !< Error message
    
     ! Local
      TYPE(ElemRecType),             POINTER      :: tmp(:)
@@ -2191,20 +2149,19 @@ END IF
        
        
    END SUBROUTINE BumpupElementTable
-   
-   
-   SUBROUTINE MeshConstructElement_2PT( Mesh, Xelement, ErrStat, ErrMess, P1, P2 )
-     
-      ! Given a mesh and an element name, construct 2-point line (line2) element whose 
-      ! vertices are the node indices listed as the remaining arguments of the call to 
-      ! MeshConstructElement. The adjacency of elements is implied when elements are 
-      ! created that share some of the same nodes. Returns a non-zero value on error.     
       
-     TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
-     INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
-     INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
-     CHARACTER(*),                INTENT(OUT)   :: ErrMess   ! Error message
-     INTEGER,                     INTENT(IN   ) :: P1,  P2
+!> Given a mesh and an element name, construct 2-point line (line2) element whose 
+!! vertices are the node indices listed as the remaining arguments of the call to 
+!! MeshConstructElement. The adjacency of elements is implied when elements are 
+!! created that share some of the same nodes. Returns a non-zero value on error.     
+   SUBROUTINE MeshConstructElement_2PT( Mesh, Xelement, ErrStat, ErrMess, P1, P2 )
+      
+     TYPE(MeshType),              INTENT(INOUT) :: Mesh      !< Mesh being constructed
+     INTEGER(IntKi),              INTENT(IN)    :: Xelement  !< See Element Names
+     INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   !< Error code
+     CHARACTER(*),                INTENT(OUT)   :: ErrMess   !< Error message
+     INTEGER,                     INTENT(IN   ) :: P1        !< 1 of 2 points that make a 2-point line element
+     INTEGER,                     INTENT(IN   ) :: P2        !< 1 of 2 points that make a 2-point line element
      
      IF ( mesh_debug ) print*,'Called MeshConstructElement_2PT'
      ErrStat = ErrID_None
@@ -2364,16 +2321,16 @@ END IF
    END SUBROUTINE MeshConstructElement_20PT
 
 !................................................................                                                                                                                                                      
+!> This routine splits a line2 element into two separate elements, using p1 as
+!! the new node connecting the two new elements formed from E1.
    SUBROUTINE MeshSplitElement_2PT( Mesh, Xelement, ErrStat, ErrMess, E1, P1  )
-      ! routine splits a line2 element into two separate elements, using p1 as
-      ! the new node connecting the two new elements formed from E1
       
-      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
-      INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
-      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
-      CHARACTER(*),                INTENT(OUT)   :: ErrMess   ! Error message
-      INTEGER,                     INTENT(IN   ) :: E1        ! number of element in Element Table
-      INTEGER,                     INTENT(IN   ) :: P1        ! node number
+      TYPE(MeshType),              INTENT(INOUT) :: Mesh      !< Mesh being constructed
+      INTEGER(IntKi),              INTENT(IN)    :: Xelement  !< See Element Names
+      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   !< Error code
+      CHARACTER(*),                INTENT(OUT)   :: ErrMess   !< Error message
+      INTEGER,                     INTENT(IN   ) :: E1        !< number of element in Element Table
+      INTEGER,                     INTENT(IN   ) :: P1        !< node number
 
       INTEGER                                    :: p2        ! local copy of P2, in case we end up deallocating the array pointed to in the call to construct a new element
       
@@ -2423,15 +2380,14 @@ END IF
    END SUBROUTINE MeshSplitElement_2PT
 !................................................................                                                                           
                                                                            
+!> Given a control code and a mesh that has been committed, retrieve the next element in the mesh. 
+!!   Used to traverse mesh element by element. On entry, the CtrlCode argument contains a control code: 
+!!   zero indicates start from the beginning, an integer between 1 and Mesh%Nelemlist returns that element,
+!!   and MESH_NEXT means return the next element in traversal. On exit, CtrlCode contains the status of the 
+!!   traversal in (zero or MESH_NOMOREELEMS). The routine optionally outputs the index of the element in the
+!!   mesh's element list, the name of the element (see "Element Names"), and a pointer to the element.    
    SUBROUTINE MeshNextElement ( Mesh, CtrlCode, ErrStat, ErrMess, Ielement, Xelement, ElemRec )
-   
-      ! Given a control code and a mesh that has been committed, retrieve the next element in the mesh. 
-      !   Used to traverse mesh element by element. On entry, the CtrlCode argument contains a control code: 
-      !   zero indicates start from the beginning, an integer between 1 and Mesh%Nelemlist returns that element,
-      !   and MESH_NEXT means return the next element in traversal. On exit, CtrlCode contains the status of the 
-      !   traversal in (zero or MESH_NOMOREELEMS). The routine optionally outputs the index of the element in the
-      !   mesh's element list, the name of the element (see "Element Names"), and a pointer to the element.    
-   
+      
      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
      INTEGER(IntKi),              INTENT(INOUT) :: CtrlCode  ! CtrlCode
      INTEGER(IntKi),              INTENT(OUT)   :: ErrStat   ! Error code
@@ -2474,19 +2430,18 @@ END IF
    END SUBROUTINE MeshNextElement
 
 
-   !...............................................................................................................................
+!...............................................................................................................................
+!> This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
+!! values of u (which has values associated with times in t).  Order of the interpolation is 1.
     SUBROUTINE MeshExtrapInterp1(u1, u2, tin, u_out, tin_out, ErrStat, ErrMsg )
-   
-   ! This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
-   ! values of u (which has values associated with times in t).  Order of the interpolation is 1.
-   
-    TYPE(MeshType),      INTENT(IN)     :: u1                        ! Inputs at t1 > t2
-    TYPE(MeshType),      INTENT(IN)     :: u2                        ! Inputs at t2
-    REAL(DbKi),          INTENT(IN   )  :: tin(:)                    ! Times associated with the inputs
-    TYPE(MeshType),      INTENT(INOUT)  :: u_out                     ! Inputs at tin_out
-    REAL(DbKi),          INTENT(IN   )  :: tin_out                   ! time to be extrap/interp'd to
-    INTEGER(IntKi),      INTENT(  OUT)  :: ErrStat                   ! Error status of the operation
-    CHARACTER(*),        INTENT(  OUT)  :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
+      
+    TYPE(MeshType),      INTENT(IN)     :: u1                        !< Inputs at t1 > t2
+    TYPE(MeshType),      INTENT(IN)     :: u2                        !< Inputs at t2
+    REAL(DbKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+    TYPE(MeshType),      INTENT(INOUT)  :: u_out                     !< Inputs at tin_out
+    REAL(DbKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+    INTEGER(IntKi),      INTENT(  OUT)  :: ErrStat                   !< Error status of the operation
+    CHARACTER(*),        INTENT(  OUT)  :: ErrMsg                    !< Error message if ErrStat /= ErrID_None
                                                                      
       ! local variables                                              
     INTEGER(IntKi), parameter           :: order = 1                 ! order of polynomial fit (max 2)
@@ -2596,21 +2551,19 @@ END IF
 
    END SUBROUTINE MeshExtrapInterp1
 
-   !...............................................................................................................................
+!...............................................................................................................................
+!> This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
+!! values of u (which has values associated with times in t).  Order of the interpolation is 2.
     SUBROUTINE MeshExtrapInterp2(u1, u2, u3, tin, u_out, tin_out, ErrStat, ErrMsg )
    
-   ! This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
-   ! values of u (which has values associated with times in t).  Order of the interpolation is 2.
-      
-
-    TYPE(MeshType),      INTENT(IN)     :: u1                        ! Inputs at t1 > t2 > t3
-    TYPE(MeshType),      INTENT(IN)     :: u2                        ! Inputs at t2 > t3
-    TYPE(MeshType),      INTENT(IN)     :: u3                        ! Inputs at t3
-    REAL(DbKi),          INTENT(IN   )  :: tin(:)                    ! Times associated with the inputs
-    TYPE(MeshType),      INTENT(INOUT)  :: u_out                     ! Inputs at tin_out
-    REAL(DbKi),          INTENT(IN   )  :: tin_out                   ! time to be extrap/interp'd to
-    INTEGER(IntKi),      INTENT(  OUT)  :: ErrStat                   ! Error status of the operation
-    CHARACTER(*),        INTENT(  OUT)  :: ErrMsg                    ! Error message if ErrStat /= ErrID_None
+    TYPE(MeshType),      INTENT(IN)     :: u1                        !< Inputs at t1 > t2 > t3
+    TYPE(MeshType),      INTENT(IN)     :: u2                        !< Inputs at t2 > t3
+    TYPE(MeshType),      INTENT(IN)     :: u3                        !< Inputs at t3
+    REAL(DbKi),          INTENT(IN   )  :: tin(:)                    !< Times associated with the inputs
+    TYPE(MeshType),      INTENT(INOUT)  :: u_out                     !< Inputs at tin_out
+    REAL(DbKi),          INTENT(IN   )  :: tin_out                   !< time to be extrap/interp'd to
+    INTEGER(IntKi),      INTENT(  OUT)  :: ErrStat                   !< Error status of the operation
+    CHARACTER(*),        INTENT(  OUT)  :: ErrMsg                    !< Error message if ErrStat /= ErrID_None
                                                                      
       ! local variables                                              
     INTEGER(IntKi), parameter           :: order = 2                 ! order of polynomial fit (max 2)

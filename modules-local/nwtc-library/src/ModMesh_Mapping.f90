@@ -21,10 +21,10 @@
 ! (File) Revision #: $Rev$
 ! URL: $HeadURL$
 !**********************************************************************************************************************************
-! This code implements the spatial mapping algorithms described in 
-!    Sprague, Michael A.; Jonkman, Jason M.; and Jonkman, Bonnie J., "FAST Modular Wind Turbine CAE Tool: Nonmatching Spatial and  
-!    Temporal Meshes." Proceedings of the 52nd Aerospace Sciences Meeting, 2014, also published in tech report NREL/CP-2C00-60742
-!    National Renewable Energy Laboratory, Golden, CO. http://www.nrel.gov/docs/fy14osti/60742.pdf
+!> This code implements the spatial mapping algorithms described in 
+!!    Sprague, Michael A.; Jonkman, Jason M.; and Jonkman, Bonnie J., "FAST Modular Framework for Wind Turbine Simulation: New 
+!!    Algorithms and Numerical Examples." Proceedings of the 53rd Aerospace Sciences Meeting, 2015, also published in tech report 
+!!    NREL/CP-2C00-63203, National Renewable Energy Laboratory, Golden, CO.  http://www.nrel.gov/docs/fy16osti/63203.pdf
 !**********************************************************************************************************************************
 MODULE ModMesh_Mapping
 
@@ -37,31 +37,33 @@ MODULE ModMesh_Mapping
 
    !bjj: these types require the use of ModMesh.f90, thus they cannot be part of NWTC_Library_Types.f90 (though they are auto_generated with that code):
 
+      !> Type that describes characteristics of the mapping between two meshes
    TYPE, PUBLIC :: MapType
-      INTEGER(IntKi) :: OtherMesh_Element    ! Node (for point meshes) or Element (for line2 meshes) number on other mesh; for loads, other mesh is Dest, for motions/scalars, other mesh is Src
-      REAL(ReKi)     :: distance             ! magnitude of couple_arm
-      REAL(ReKi)     :: couple_arm(3)        ! Vector between a point and node 1 of an element (p_ODR - p_OSR)
-      REAL(ReKi)     :: shape_fn(2)          ! shape functions: 1-D element-level location [0,1] based on closest-line projection of point
+      INTEGER(IntKi) :: OtherMesh_Element    !< Node (for point meshes) or Element (for line2 meshes) number on other mesh; for loads, other mesh is Dest, for motions/scalars, other mesh is Src
+      REAL(ReKi)     :: distance             !< magnitude of couple_arm
+      REAL(ReKi)     :: couple_arm(3)        !< Vector between a point and node 1 of an element (p_ODR - p_OSR)
+      REAL(ReKi)     :: shape_fn(2)          !< shape functions: 1-D element-level location [0,1] based on closest-line projection of point
    END TYPE MapType
 
+      !> data structures to determine full mapping between fields on different meshes
    TYPE, PUBLIC :: MeshMapType
-      TYPE(MapType),  ALLOCATABLE :: MapLoads(:)
-      TYPE(MapType),  ALLOCATABLE :: MapMotions(:)
-      TYPE(MapType),  ALLOCATABLE :: MapSrcToAugmt(:)         ! for source line2 loads, we map between source and an augmented source mesh, then betweeN augmented source and destination
-      TYPE(MeshType)              :: Augmented_Ln2_Src
-      TYPE(MeshType)              :: Lumped_Points_Src        ! Stored here for efficiency
+      TYPE(MapType),  ALLOCATABLE :: MapLoads(:)               !< mapping for load fields
+      TYPE(MapType),  ALLOCATABLE :: MapMotions(:)             !< mapping for motion fields
+      TYPE(MapType),  ALLOCATABLE :: MapSrcToAugmt(:)          !< for source line2 loads, we map between source and an augmented source mesh, then between augmented source and destination
+      TYPE(MeshType)              :: Augmented_Ln2_Src         !< the augmented source mesh needed for some mapping types
+      TYPE(MeshType)              :: Lumped_Points_Src         !< a lumped mesh needed for some mapping types, stored here for efficiency
 #ifdef MESH_DEBUG     
       TYPE(MeshType)              :: Lumped_Points_Dest        
 #endif
-      INTEGER,        ALLOCATABLE :: LoadLn2_A_Mat_Piv(:)      ! The pivot values for the factorizatioin of LoadLn2_A_Mat
-      REAL(ReKi),     ALLOCATABLE :: DisplacedPosition(:,:,:)  ! couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency.)
-      REAL(ReKi),     ALLOCATABLE :: LoadLn2_A_Mat(:,:)        ! The 6-by-6 matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping
-      REAL(ReKi),     ALLOCATABLE :: LoadLn2_F(:,:)            ! The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)
-      REAL(ReKi),     ALLOCATABLE :: LoadLn2_M(:,:)            ! The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)
+      INTEGER,        ALLOCATABLE :: LoadLn2_A_Mat_Piv(:)      !< The pivot values for the factorizatioin of LoadLn2_A_Mat
+      REAL(ReKi),     ALLOCATABLE :: DisplacedPosition(:,:,:)  !< couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency.)
+      REAL(ReKi),     ALLOCATABLE :: LoadLn2_A_Mat(:,:)        !< The 6-by-6 matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping
+      REAL(ReKi),     ALLOCATABLE :: LoadLn2_F(:,:)            !< The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)
+      REAL(ReKi),     ALLOCATABLE :: LoadLn2_M(:,:)            !< The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)
    END TYPE
 
       ! note that these parameters must be negative (positive indicates the node/element it is mapped to)
-   INTEGER(IntKi),  PARAMETER   :: NODE_NOT_MAPPED = -1
+   INTEGER(IntKi),  PARAMETER   :: NODE_NOT_MAPPED = -1        !< constant that indicates a node is not mapped
 
    PUBLIC :: MeshMapCreate
    PUBLIC :: MeshMapDestroy
@@ -80,23 +82,21 @@ CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
 !bjj: maybe the MeshMapCreate routine shouldn't actually allocate arrays; allocate them in
 !   the "IF (RemapFlag)" sections so that if people add nodes during the simulation, the structures get reallocated to correct 
-!   size? allocMapping should maybe be MeshMapping_Init() and only check that fields are compatible, etc.  
+!   size? MeshMapCreate should maybe be MeshMapping_Init() and only check that fields are compatible, etc.  
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine takes two meshes, determines the sizes required for the mapping data structure, and then
+!! allocates the mappings (different for loads and motions/scalars).
 SUBROUTINE MeshMapCreate( Src, Dest, MeshMap, ErrStat, ErrMsg )
-! This subroutine takes two meshes, determines the sizes required for the mapping data structure, and then
-! allocates the mappings (different for loads and motions/scalars).
-!..................................................................................................................................
 
 ! note that MeshMap%MapSrcToAugmt is allocated in Create_Augmented_Ln2_Src_Mesh() along with the Augmented_Ln2_Src Mesh
 
-   TYPE(MeshType),           INTENT(IN)     ::  Src
-   TYPE(MeshType),           INTENT(IN)     ::  Dest
+   TYPE(MeshType),           INTENT(IN)     ::  Src         !< source mesh
+   TYPE(MeshType),           INTENT(IN)     ::  Dest        !< destination mesh
+ 
+   TYPE(MeshMapType),        INTENT(INOUT)  :: MeshMap      !< mapping data structure
 
-   TYPE(MeshMapType),        INTENT(INOUT)  :: MeshMap
-
-   INTEGER(IntKi),           INTENT(  OUT)  :: ErrStat      ! Error status of the operation
-   CHARACTER(*),             INTENT(  OUT)  :: ErrMsg       ! Error message if ErrStat /= ErrID_None
-
+   INTEGER(IntKi),           INTENT(  OUT)  :: ErrStat      !< Error status of the operation
+   CHARACTER(*),             INTENT(  OUT)  :: ErrMsg       !< Error message if ErrStat /= ErrID_None
 
       ! local variables:
 
@@ -105,6 +105,7 @@ SUBROUTINE MeshMapCreate( Src, Dest, MeshMap, ErrStat, ErrMsg )
    LOGICAL                                  :: MapCreated
    INTEGER(IntKi)                           :: ErrStat2
    CHARACTER(ErrMsgLen)                     :: ErrMsg2
+   CHARACTER(*), PARAMETER                  :: RoutineName = 'MeshMapCreate'
    
 
    ErrStat = ErrID_None
@@ -139,13 +140,13 @@ SUBROUTINE MeshMapCreate( Src, Dest, MeshMap, ErrStat, ErrMsg )
       PointsInTmpMap = MAX(PointsInTmpMap,PointsInMap)
 
       IF ( PointsInMap < 1 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'MeshMap%MapMotions not allocated because no nodes were found to map.', ErrStat, ErrMsg, 'MeshMapCreate')
+         CALL SetErrStat( ErrID_Fatal, 'MeshMap%MapMotions not allocated because no nodes were found to map.', ErrStat, ErrMsg, RoutineName)
       ELSE
 
             ! Allocate the mapping structure:
          ALLOCATE( MeshMap%MapMotions(PointsInMap), STAT=ErrStat2 )
          IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Error trying to allocate MeshMap%MapMotions.', ErrStat, ErrMsg, 'MeshMapCreate')
+            CALL SetErrStat( ErrID_Fatal, 'Error trying to allocate MeshMap%MapMotions.', ErrStat, ErrMsg, RoutineName)
          ELSE
             MapCreated = .TRUE.
             
@@ -154,20 +155,20 @@ SUBROUTINE MeshMapCreate( Src, Dest, MeshMap, ErrStat, ErrMsg )
                   
                IF ( Src%ElemTable(ELEMENT_LINE2)%nelem > 0 ) THEN ! Line2-to-Line2         
                   CALL CreateMotionMap_L2_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MeshMapCreate')
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                ELSEIF ( Src%ElemTable(ELEMENT_POINT)%nelem > 0 ) THEN ! point-to-Line2
                   CALL CreateMotionMap_P_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MeshMapCreate')
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                END IF
          
             ELSEIF ( Dest%ElemTable(ELEMENT_POINT)%nelem > 0 ) THEN ! point-to-point or Line2-to-point
          
                IF ( Src%ElemTable(ELEMENT_POINT)%nelem > 0 ) THEN ! point-to-point            
                   CALL CreateMotionMap_P_to_P( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MeshMapCreate')            
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)            
                ELSEIF ( Src%ElemTable(ELEMENT_LINE2)%nelem > 0 ) THEN ! Line2-to-point         
                   CALL CreateMotionMap_L2_to_P(Src, Dest, MeshMap, ErrStat2, ErrMsg2)         
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MeshMapCreate')            
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)            
                END IF         
                   
             END IF ! create initial mapping based on mesh element type
@@ -188,15 +189,15 @@ SUBROUTINE MeshMapCreate( Src, Dest, MeshMap, ErrStat, ErrMsg )
       ! check that the appropriate combinations of source/destination force/moments exist:
       IF ( Src%FieldMask(MASKID_Force) ) THEN
          IF (.NOT. Dest%FieldMask(MASKID_Force) ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Destination mesh does not contain force but source mesh does.', ErrStat, ErrMsg, 'MeshMapCreate')
+            CALL SetErrStat( ErrID_Fatal, 'Destination mesh does not contain force but source mesh does.', ErrStat, ErrMsg, RoutineName)
          END IF
          IF (.NOT. Dest%FieldMask(MASKID_Moment) ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Destination mesh must contain moment when source mesh contains force.', ErrStat, ErrMsg, 'MeshMapCreate')
+            CALL SetErrStat( ErrID_Fatal, 'Destination mesh must contain moment when source mesh contains force.', ErrStat, ErrMsg, RoutineName)
          END IF
       END IF
       IF ( Src%FieldMask(MASKID_Moment) ) THEN
          IF (.NOT. Dest%FieldMask(MASKID_Moment) ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Destination mesh does not contain moment but source mesh does.', ErrStat, ErrMsg, 'MeshMapCreate')
+            CALL SetErrStat( ErrID_Fatal, 'Destination mesh does not contain moment but source mesh does.', ErrStat, ErrMsg, RoutineName)
          END IF
       END IF
 
@@ -205,13 +206,13 @@ SUBROUTINE MeshMapCreate( Src, Dest, MeshMap, ErrStat, ErrMsg )
       PointsInMap = Src%Nnodes 
 
       IF ( PointsInMap < 1 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'MeshMap%MapLoads not allocated because no nodes were found to map.', ErrStat, ErrMsg, 'MeshMapCreate')
+         CALL SetErrStat( ErrID_Fatal, 'MeshMap%MapLoads not allocated because no nodes were found to map.', ErrStat, ErrMsg, RoutineName)
       ELSE
 
             ! Allocate the mapping structure:
          ALLOCATE( MeshMap%MapLoads(PointsInMap), STAT=ErrStat2 )
          IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Error trying to allocate MeshMap%MapLoads.', ErrStat, ErrMsg, 'MeshMapCreate')
+            CALL SetErrStat( ErrID_Fatal, 'Error trying to allocate MeshMap%MapLoads.', ErrStat, ErrMsg, RoutineName)
          ELSE
             MapCreated = .TRUE.
             
@@ -222,20 +223,20 @@ SUBROUTINE MeshMapCreate( Src, Dest, MeshMap, ErrStat, ErrMsg )
          
                IF ( Src%ElemTable(ELEMENT_LINE2)%nelem > 0 ) THEN ! Line2-to-Line2         
                   CALL CreateLoadMap_L2_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MeshMapCreate')
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                ELSEIF ( Src%ElemTable(ELEMENT_POINT)%nelem > 0 ) THEN ! point-to-Line2
                   CALL CreateLoadMap_P_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MeshMapCreate')
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                END IF
          
             ELSEIF ( Dest%ElemTable(ELEMENT_POINT)%nelem > 0 ) THEN ! point-to-point or Line2-to-point
          
                IF ( Src%ElemTable(ELEMENT_POINT)%nelem > 0 ) THEN ! point-to-point            
                   CALL CreateLoadMap_P_to_P( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MeshMapCreate')            
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)            
                ELSEIF ( Src%ElemTable(ELEMENT_LINE2)%nelem > 0 ) THEN ! Line2-to-point         
                   CALL CreateLoadMap_L2_to_P(Src, Dest, MeshMap, ErrStat2, ErrMsg2)         
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MeshMapCreate')            
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)            
                END IF         
                   
             END IF ! create initial mapping based on mesh element type
@@ -247,7 +248,7 @@ SUBROUTINE MeshMapCreate( Src, Dest, MeshMap, ErrStat, ErrMsg )
    END IF ! HasLoadFields
 
    IF ( .NOT. MapCreated ) THEN
-      CALL SetErrStat( ErrID_Fatal, 'Neither MapMotions or MapLoads was allocated. Meshes may not have compatible fields for mapping.', ErrStat, ErrMsg, 'MeshMapCreate')
+      CALL SetErrStat( ErrID_Fatal, 'Neither MapMotions or MapLoads was allocated. Meshes may not have compatible fields for mapping.', ErrStat, ErrMsg, RoutineName)
       RETURN
    END IF
 
@@ -258,15 +259,14 @@ SUBROUTINE MeshMapCreate( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
    IF (.NOT. ALLOCATED (MeshMap%DisplacedPosition)) THEN
       CALL AllocAry( MeshMap%DisplacedPosition, 3, PointsInTmpMap, ElementNodes, 'MeshMap%DisplacedPosition', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'MeshMapCreate')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    END IF
 
 
 END SUBROUTINE MeshMapCreate
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine destroys the elements of the MeshMapType
 SUBROUTINE MeshMapDestroy( MeshMap, ErrStat, ErrMsg )
-! This routine destroys the elements of the MeshMapType
-!..................................................................................................................................
 
    TYPE(MeshMapType),        INTENT(INOUT)  :: MeshMap
 
@@ -290,19 +290,18 @@ SUBROUTINE MeshMapDestroy( MeshMap, ErrStat, ErrMsg )
 
 END SUBROUTINE MeshMapDestroy
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This creates a matrix to write to a binary file (for debugging)
 SUBROUTINE MeshMapWrBin( UnIn, Src, Dest, MeshMap, ErrStat, ErrMsg, FileName )
-! This creates a matrix to write to a binary file (for debugging)
-!..................................................................................................................................
-   INTEGER,    INTENT(INOUT)                ::  UnIn     ! fortran output unit
 
+   INTEGER,                  INTENT(INOUT)  ::  UnIn     !< fortran output unit
 
-   TYPE(MeshType),           INTENT(IN   )  :: Src
-   TYPE(MeshType),           INTENT(IN   )  :: Dest
-   TYPE(MeshMapType),        INTENT(IN   )  :: MeshMap
+   TYPE(MeshType),           INTENT(IN   )  :: Src       !< source mesh
+   TYPE(MeshType),           INTENT(IN   )  :: Dest      !< destination mesh
+   TYPE(MeshMapType),        INTENT(IN   )  :: MeshMap   !< mapping data structure
 
-   INTEGER(IntKi),           INTENT(  OUT)  :: ErrStat      ! Error status of the operation
-   CHARACTER(*),             INTENT(  OUT)  :: ErrMsg       ! Error message if ErrStat /= ErrID_None
-   CHARACTER(*),       INTENT(IN), OPTIONAL :: FileName  ! Name of the file to write the output in
+   INTEGER(IntKi),           INTENT(  OUT)  :: ErrStat   !< Error status of the operation
+   CHARACTER(*),             INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+   CHARACTER(*), OPTIONAL,   INTENT(IN   )  :: FileName  !< Name of the file to write the output in
 
       ! local variables
    REAL(ReKi),                  allocatable :: MapMat(:,:)
@@ -423,21 +422,18 @@ SUBROUTINE MeshMapWrBin( UnIn, Src, Dest, MeshMap, ErrStat, ErrMsg, FileName )
 
 END SUBROUTINE MeshMapWrBin
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Routine for transfering data from Line2 mesh to Point Mesh
 SUBROUTINE Transfer_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
-! for transfering displacement/velocity/accerlation data from Line2 mesh to Point Mesh
-!
-! Also works for transfering
-!
-   TYPE(MeshType),         INTENT(IN   ) ::  Src
-   TYPE(MeshType),         INTENT(INOUT) ::  Dest
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  ! a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp ! a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),         INTENT(IN   ) ::  Src      !< source mesh
+   TYPE(MeshType),         INTENT(INOUT) ::  Dest     !< destination mesh
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh required for loads transfer; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh required for loads transfer; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
 
-   TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap
+   TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping data structure
 
-   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     ! Error status of the operation
-   CHARACTER(*),           INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat   !< Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
 
 
    REAL(ReKi)                            :: LoadsScaleFactor  ! bjj: added this scaling factor to get loads in a better numerical range 
@@ -579,17 +575,16 @@ SUBROUTINE Transfer_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
 END SUBROUTINE Transfer_Line2_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Given a mapping, this routine transfers the motions from nodes on Line2 elements to nodes on another mesh.
 SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg )
-! Given a mapping, this routine transfers the motions from nodes on Line2 elements to nodes on another mesh.
-!..................................................................................................................................
 
-   TYPE(MeshType),                 INTENT(IN   )  :: Src       ! The source (Line2) mesh with motion fields allocated
-   TYPE(MeshType),                 INTENT(INOUT)  :: Dest      ! The destination mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: Src       !< The source (Line2) mesh with motion fields allocated
+   TYPE(MeshType),                 INTENT(INOUT)  :: Dest      !< The destination mesh
 
-   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   ! The mapping data
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   !< The mapping data
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
 
       ! local variables
    INTEGER(IntKi)            :: i , j                          ! counter over the nodes
@@ -876,19 +871,19 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
 END SUBROUTINE Transfer_Motions_Line2_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, ErrMsg)
-!This routine projects Mesh1 onto a Line2 mesh (Mesh2) to find the element mappings between the two meshes.
-!..................................................................................................................................
-   TYPE(MeshType),                 INTENT(IN   )  :: Mesh1                           ! The mesh in the outer mapping loop (Dest for Motions/Scalars; Src for Loads)
-   TYPE(MeshType),                 INTENT(IN   )  :: Mesh2                           ! The mesh in the inner mapping loop (Src for Motions/Scalars; Dest for Loads)
+!> This routine projects Mesh1 onto a Line2 mesh (Mesh2) to find the element mappings between the two meshes.
+SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrStat, ErrMsg)
 
-   TYPE(MapType),                  INTENT(INOUT)  :: Map(:)                          ! The mapping from Src to Dest
+   TYPE(MeshType),                 INTENT(IN   )  :: Mesh1                          !< The mesh in the outer mapping loop (Dest for Motions/Scalars; Src for Loads)
+   TYPE(MeshType),                 INTENT(IN   )  :: Mesh2                          !< The mesh in the inner mapping loop (Src for Motions/Scalars; Dest for Loads)
 
-   INTEGER(IntKi),                 INTENT(IN   )  :: Mesh1_TYPE                      ! Type of Mesh1 elements to map
-   INTEGER(IntKi),   PARAMETER                    :: Mesh2_TYPE  = ELEMENT_LINE2     ! Type of Mesh2 elements on map (MUST BE ELEMENT_LINE2)
+   TYPE(MapType),                  INTENT(INOUT)  :: NodeMap(:)                     !< The mapping from Src to Dest
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                        ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                         ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                 INTENT(IN   )  :: Mesh1_TYPE                     !< Type of Mesh1 elements to map
+   INTEGER(IntKi),   PARAMETER                    :: Mesh2_TYPE  = ELEMENT_LINE2    !< Type of Mesh2 elements on map (MUST BE ELEMENT_LINE2)
+
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                        !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                         !< Error message if ErrStat /= ErrID_None
    
 
       ! local variables
@@ -922,8 +917,8 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
 
 
    ! Map the source nodes to destination nodes:
-   do n1=1,size(Map)
-      Map(n1)%OtherMesh_Element = NODE_NOT_MAPPED ! initialize this so we know if we've mapped this node already (done only because we may have different elements)
+   do n1=1,size(NodeMap)
+      NodeMap(n1)%OtherMesh_Element = NODE_NOT_MAPPED ! initialize this so we know if we've mapped this node already (done only because we may have different elements)
    end do !n1
       
 
@@ -931,7 +926,7 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
    do iElem = 1, Mesh1%ElemTable(Mesh1_TYPE)%nelem   ! number of Mesh1_TYPE elements on Mesh1
       do iNode = 1, SIZE( Mesh1%ElemTable(Mesh1_TYPE)%Elements(iElem)%ElemNodes )
          i = Mesh1%ElemTable(Mesh1_TYPE)%Elements(iElem)%ElemNodes(iNode)  ! the nodes on element iElem
-         IF ( Map(i)%OtherMesh_Element > 0 ) CYCLE  ! we already mapped this node; let's move on to the next iNode (or iElem)
+         IF ( NodeMap(i)%OtherMesh_Element > 0 ) CYCLE  ! we already mapped this node; let's move on to the next iNode (or iElem)
 
          ! destination point
          Mesh1_xyz = Mesh1%Position(:, i)
@@ -991,11 +986,11 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
                   found = .true.
                   min_dist = dist
 
-                  Map(i)%OtherMesh_Element = jElem
-                  Map(i)%shape_fn(1)       = 1.0_ReKi - elem_position
-                  Map(i)%shape_fn(2)       = elem_position
+                  NodeMap(i)%OtherMesh_Element = jElem
+                  NodeMap(i)%shape_fn(1)       = 1.0_ReKi - elem_position
+                  NodeMap(i)%shape_fn(2)       = elem_position
 
-                  !Map(i)%couple_arm        = n1_Point_vector
+                  !NodeMap(i)%couple_arm        = n1_Point_vector
 
                end if !the point is closest to this line2 element
 
@@ -1006,7 +1001,7 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
             ! if failed to find an element that the Point projected into, throw an error
          if (.not. found) then
 
-            if (Map(i)%OtherMesh_Element .lt. 1 )  then
+            if (NodeMap(i)%OtherMesh_Element .lt. 1 )  then
                CALL SetErrStat( ErrID_Fatal, 'Node '//trim(num2Lstr(i))//' does not project onto any line2 element.', ErrStat, ErrMsg, 'CreateMapping_ProjectToLine2')
                RETURN
             endif
@@ -1018,15 +1013,15 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, Map, Mesh1_TYPE, ErrStat, 
 
 END SUBROUTINE CreateMapping_ProjectToLine2
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine creates a new mesh with the same positions as the Src mesh, except all of the elements are points. It adds fields for
+!! forces, moments, and/or TranslationDisp, if they are part of the Src mesh.
 SUBROUTINE Create_PointMesh(Src, Temp_Point_Src, ErrStat, ErrMsg)
-!This routine creates a new mesh with the same positions as the Src mesh, except all of the elements are points. It adds fields for
-! forces, moments, and/or TranslationDisp, if they are part of the Src mesh
-!..................................................................................................................................
-   TYPE(MeshType),                 INTENT(IN   )  :: Src                             ! The source mesh
-   TYPE(MeshType),                 INTENT(INOUT)  :: Temp_Point_Src                  ! A blank mesh to be
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(MeshType),                 INTENT(IN   )  :: Src                !< The source mesh
+   TYPE(MeshType),                 INTENT(INOUT)  :: Temp_Point_Src     !< A blank mesh to be created
+
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg             !< Error message if ErrStat /= ErrID_None
 
       ! local variables
    INTEGER(IntKi)                                 :: i !loop over the nodes
@@ -1081,14 +1076,15 @@ SUBROUTINE Create_PointMesh(Src, Temp_Point_Src, ErrStat, ErrMsg)
 
 END SUBROUTINE Create_PointMesh
 !----------------------------------------------------------------------------------------------------------------------------------
+!> routine that creats a map of line2 loads to points
 SUBROUTINE CreateLoadMap_L2_to_P( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
-   TYPE(MeshType),                 INTENT(IN   )  :: Src                             ! The source mesh
-   TYPE(MeshType),                 INTENT(IN   )  :: Dest                            ! The destination mesh
-   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap
+   TYPE(MeshType),                 INTENT(IN   )  :: Src                            !< The source mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: Dest                           !< The destination mesh
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap                        !< mapping structure
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                         ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                          ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                        !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                         !< Error message if ErrStat /= ErrID_None
 
       ! Local variables:
    INTEGER(IntKi)                                 :: ErrStat2
@@ -1116,14 +1112,15 @@ SUBROUTINE CreateLoadMap_L2_to_P( Src, Dest, MeshMap, ErrStat, ErrMsg )
             
 END SUBROUTINE CreateLoadMap_L2_to_P
 !----------------------------------------------------------------------------------------------------------------------------------
+!> routine that creats a map of line2 motions to points
 SUBROUTINE CreateMotionMap_L2_to_P( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
-   TYPE(MeshType),                 INTENT(IN   )  :: Src                             ! The source mesh
-   TYPE(MeshType),                 INTENT(IN   )  :: Dest                            ! The destination mesh
-   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap
+   TYPE(MeshType),                 INTENT(IN   )  :: Src                             !< The source mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: Dest                            !< The destination mesh
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap                         !< mapping data structure
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                         ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                          ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                         !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
 
       ! Local variables:
    INTEGER(IntKi)                                 :: ErrStat2
@@ -1138,22 +1135,18 @@ SUBROUTINE CreateMotionMap_L2_to_P( Src, Dest, MeshMap, ErrStat, ErrMsg )
          
 END SUBROUTINE CreateMotionMap_L2_to_P        
 !----------------------------------------------------------------------------------------------------------------------------------
+! Routine that transfers data from a point mesh to a line2 mesh.
 SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
-! for transfering displacement/velocity/accerlation data from Point Mesh to Line2 Mesh
+   TYPE(MeshType),         INTENT(IN   ) :: Src       !< source (point) mesh
+   TYPE(MeshType),         INTENT(INOUT) :: Dest      !< destination (line2) mesh
+   TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping data structure
 
-! Example: SubDyn  Output: Point Mesh: Displacement/Orientation/TranslationVel, etc
-!          HyDroDyn Input: Line2 Mesh: "
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat   !< Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
 
-   TYPE(MeshType),         INTENT(IN   ) :: Src
-   TYPE(MeshType),         INTENT(INOUT) :: Dest
-   TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap
-
-   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     ! Error status of the operation
-   CHARACTER(*),           INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: SrcDisp  ! a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: DestDisp ! a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: SrcDisp   !< a "functional" sibling of the source mesh for load mapping; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: DestDisp  !< a "functional" sibling of the destination mesh for load mapping; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
 
    ! local variables
 
@@ -1428,13 +1421,13 @@ SUBROUTINE Transfer_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
 END SUBROUTINE Transfer_Point_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE CreateMapping_NearestNeighbor( Mesh1, Mesh2, Map, Mesh1_TYPE, Mesh2_TYPE, ErrStat, ErrMsg )
+SUBROUTINE CreateMapping_NearestNeighbor( Mesh1, Mesh2, NodeMap, Mesh1_TYPE, Mesh2_TYPE, ErrStat, ErrMsg )
 ! This routine creates the node-to-node (nearest neighbor). We map FROM Mesh1 to Mesh2
 !.......................................................................................
    TYPE(MeshType),                 INTENT(IN   )  :: Mesh1      ! The mesh in the outer mapping loop (Dest for Motions/Scalars; Src for Loads)
    TYPE(MeshType),                 INTENT(IN   )  :: Mesh2      ! The mesh in the inner mapping loop (Src for Motions/Scalars; Dest for Loads)
 
-   TYPE(MapType),                  INTENT(INOUT)  :: Map(:)      ! The mapping from Src to Dest
+   TYPE(MapType),                  INTENT(INOUT)  :: NodeMap(:)      ! The mapping from Src to Dest
 
    INTEGER(IntKi),                 INTENT(IN   )  :: Mesh1_TYPE  ! Type of Mesh1 elements to map
    INTEGER(IntKi),                 INTENT(IN   )  :: Mesh2_TYPE  ! Type of Mesh2 elements on map
@@ -1470,15 +1463,15 @@ SUBROUTINE CreateMapping_NearestNeighbor( Mesh1, Mesh2, Map, Mesh1_TYPE, Mesh2_T
    end do
 
    ! Map the source nodes to destination nodes:
-   do i=1,size(Map)
-      Map(i)%OtherMesh_Element = NODE_NOT_MAPPED ! initialize this so we know if we've mapped this node already (done only because we may have different elements)
+   do i=1,size(NodeMap)
+      NodeMap(i)%OtherMesh_Element = NODE_NOT_MAPPED ! initialize this so we know if we've mapped this node already (done only because we may have different elements)
    end do !n1
    
 
    do iElem = 1, Mesh1%ElemTable(Mesh1_TYPE)%nelem   ! number of Mesh1_TYPE elements on Mesh1 = number of points on Mesh1
       do iNode = 1, SIZE( Mesh1%ElemTable(Mesh1_TYPE)%Elements(iElem)%ElemNodes )
          i = Mesh1%ElemTable(Mesh1_TYPE)%Elements(iElem)%ElemNodes(iNode)  ! the nodes on element iElem
-         IF ( Map(i)%OtherMesh_Element > 0 ) CYCLE  ! we already mapped this node; let's move on
+         IF ( NodeMap(i)%OtherMesh_Element > 0 ) CYCLE  ! we already mapped this node; let's move on
 
 
          ! Find the nearest neighbor node for this particular node
@@ -1517,11 +1510,11 @@ SUBROUTINE CreateMapping_NearestNeighbor( Mesh1, Mesh2, Map, Mesh1_TYPE, Mesh2_T
             RETURN
          endif
 
-         Map(i)%OtherMesh_Element = point_with_min_dist
+         NodeMap(i)%OtherMesh_Element = point_with_min_dist
 
-         Map(i)%distance = min_dist
+         NodeMap(i)%distance = min_dist
 
-         Map(i)%couple_arm = Mesh2%Position(:, point_with_min_dist) - Mesh1_xyz
+         NodeMap(i)%couple_arm = Mesh2%Position(:, point_with_min_dist) - Mesh1_xyz
          !bjj: this is the negative of the case where it's Mesh2=src, so we'll have to multiply by -1 outside this routine if that's the case
 
       end do !iNode
@@ -1688,20 +1681,19 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
 END SUBROUTINE Transfer_Motions_Point_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Given a nearest-neighbor mapping, this routine transfers loads between point nodes on the mesh.
 SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp,LoadsScaleFactor )
-! Given a nearest-neighbor mapping, this routine transfers loads between nodes on the mesh.
-!..................................................................................................................................
 
-   TYPE(MeshType),                 INTENT(IN   )  :: Src        ! The source mesh with loads fields allocated
-   TYPE(MeshType),                 INTENT(INOUT)  :: Dest       ! The destination mesh
-   TYPE(MeshType),                 INTENT(IN   )  :: SrcDisp    ! A mesh that contains the displacements associated with the source mesh
-   TYPE(MeshType),                 INTENT(IN   )  :: DestDisp   ! A mesh that contains the displacements associated with the destination mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: Src                !< The source mesh with loads fields allocated
+   TYPE(MeshType),                 INTENT(INOUT)  :: Dest               !< The destination mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: SrcDisp            !< A mesh that contains the displacements associated with the source mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: DestDisp           !< A mesh that contains the displacements associated with the destination mesh
 
-   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap    ! The mapping data structure (from Dest to Src)
-   REAL(ReKi),                     INTENT(IN)     :: LoadsScaleFactor  ! Scaling factor for loads (to help with numerical issues)
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap            !< The mapping data structure (from Dest to Src)
+   REAL(ReKi),                     INTENT(IN)     :: LoadsScaleFactor   !< Scaling factor for loads (to help with numerical issues)
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat    ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg     ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg             !< Error message if ErrStat /= ErrID_None
 
       ! local variables
 !   REAL(R8Ki)                                     :: RotationMatrix(3,3)
@@ -1725,13 +1717,13 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, S
       do i = 1, Src%NNodes
          !if ( MeshMap%MapLoads(i)%OtherMesh_Element < 1 )  CYCLE ! would only happen if we had non-point elements (or nodes not contained in an element)
          
-         ! F_d += F_s
+         !! F_d += F_s
          Dest%Force(:,MeshMap%MapLoads(i)%OtherMesh_Element) = Dest%Force(:,MeshMap%MapLoads(i)%OtherMesh_Element) + (Src%Force(:,i) / LoadsScaleFactor)
       end do
       Dest%Force  =  Dest%Force  * LoadsScaleFactor
       
       
-      ! M_d += torque
+      !! M_d += torque
       if ( Dest%FieldMask(MASKID_MOMENT) ) then
          
             ! if the distance (which can never be less than zero) is greater than "zero" and there is a
@@ -1754,7 +1746,7 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, S
       
    if (Src%FieldMask(MASKID_MOMENT) ) then
 
-      ! M_d += M_s      
+      !! M_d += M_s      
       do i = 1, Src%NNodes
          !if ( MeshMap%MapLoads(i)%OtherMesh_Element < 1 )  CYCLE ! would only happen if we had non-point elements (or nodes not contained in an element)
 
@@ -1767,10 +1759,12 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, S
 
 END SUBROUTINE Transfer_Loads_Point_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
+! This routine computes a scaling factor for loads fields to reduce numerical problems in computions that involve accelerations 
+! and forces/moments.
 FUNCTION GetLoadsScaleFactor( Src )
 
-   TYPE(MeshType),                 INTENT(IN   )  :: Src        ! The source mesh with loads fields allocated
-   REAL(ReKi)                                     :: GetLoadsScaleFactor
+   TYPE(MeshType),                 INTENT(IN   )  :: Src        !< The source mesh with loads fields allocated
+   REAL(ReKi)                                     :: GetLoadsScaleFactor  !< scaling factor for loads fields
    
    
    ! LOCAL:
@@ -1974,20 +1968,19 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
 END SUBROUTINE Transfer_Line2_to_Line2
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Given a mapping, this routine transfers the loads from nodes on a point-element mesh to nodes on another Line2 mesh.
 SUBROUTINE Transfer_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp, LoadsScaleFactor )
-! Given a mapping, this routine transfers the loads from nodes on a point-element mesh to nodes on another Line2 mesh.
-!..................................................................................................................................
 
-   TYPE(MeshType),                 INTENT(IN   )  :: Src       ! The source (Line2) mesh with loads fields allocated
-   TYPE(MeshType),                 INTENT(INOUT)  :: Dest      ! The destination mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: Src       !< The source (Line2) mesh with loads fields allocated
+   TYPE(MeshType),                 INTENT(INOUT)  :: Dest      !< The destination mesh
 
-   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   ! The mapping data
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   !< The mapping data
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
-   TYPE(MeshType),                 INTENT(IN   )  :: SrcDisp   ! The source mesh's cooresponding position mesh
-   TYPE(MeshType),                 INTENT(IN   )  :: DestDisp  ! The destination mesh's cooresponding position mesh
-   REAL(ReKi),                     INTENT(IN)     :: LoadsScaleFactor  ! Scaling factor for loads (to help with numerical issues)
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+   TYPE(MeshType),                 INTENT(IN   )  :: SrcDisp   !< The source mesh's cooresponding position mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: DestDisp  !< The destination mesh's cooresponding position mesh
+   REAL(ReKi),                     INTENT(IN)     :: LoadsScaleFactor  !< Scaling factor for loads (to help with numerical issues)
 
       ! local variables
    REAL(ReKi)                                     :: torque(3), DisplacedPosition(3)
@@ -2099,17 +2092,15 @@ SUBROUTINE Transfer_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, S
       
 END SUBROUTINE Transfer_Loads_Point_to_Line2
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine takes the lumped loads on nodes of a (line2) mesh and converts them to loads distributed across the line2 elements.
 SUBROUTINE Convert_Point_To_Line2_Loads(Dest, MeshMap, ErrStat, ErrMsg, DestDisp)
-! This routine takes the lumped loads on nodes of a (line2) mesh and converts them to loads distributed across the line2 elements
-! 
-! Note that the matrix B is really just taking the cross product of terms.
-!..................................................................................................................................
-   TYPE(MeshType),                 INTENT(INOUT)  :: Dest                            ! The mesh (on input, the nodal loads values are lumped; on output they are distributed along the element)
-   TYPE(MeshType),                 INTENT(IN   )  :: DestDisp                        ! The mesh that contains the translation displacement for these loads
-   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                         ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                          ! Error message if ErrStat /= ErrID_None
+   TYPE(MeshType),                 INTENT(INOUT)  :: Dest                           !< The mesh (on input, the nodal loads values are lumped; on output they are distributed along the element)
+   TYPE(MeshType),                 INTENT(IN   )  :: DestDisp                       !< The mesh that contains the translation displacement for these loads
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap                        !< The mapping data
+
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                        !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                         !< Error message if ErrStat /= ErrID_None
 
    INTEGER(IntKi) :: jElem, n, i,j, n1, n2
    REAL(ReKi)     :: a_vec(3), sum_f(3), crossProd(3)

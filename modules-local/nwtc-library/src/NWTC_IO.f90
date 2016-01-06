@@ -37,8 +37,8 @@ MODULE NWTC_IO
 
       !> This type stores a linked list of file names, used in MLB-style input file parsing (currently used in AirfoilInfo)
    TYPE, PUBLIC   :: FNlist_Type                                
-      CHARACTER(1024)                        :: FileName                         !< A file name.
-      TYPE(FNlist_Type), POINTER             :: Next => NULL()                   !< The pointer to the next file name in the list.
+      CHARACTER(1024)                        :: FileName                         !< A file name
+      TYPE(FNlist_Type), POINTER             :: Next => NULL()                   !< The pointer to the next file name in the list
    END TYPE FNlist_Type
 
 

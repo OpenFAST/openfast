@@ -4990,7 +4990,7 @@ CONTAINS
 !!   matrix to the nonorthonormal, but skew-symmetric, Bernoulli-Euler
 !!   matrix:
 !! \f{equation}{   A =
-!!   \begin{bmatrix}    1      &  \theta_3 & -\theta_2 \\ 
+!!   \begin{bmatrix}    1      &  \theta_3 & -\theta_2 \\
 !!                   -\theta_3 &  1        &  \theta_1 \\
 !!                    \theta_2 & -\theta_1 &  1 \end{bmatrix}   
 !! \f}
