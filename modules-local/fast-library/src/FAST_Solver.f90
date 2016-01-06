@@ -1771,7 +1771,7 @@ END SUBROUTINE ED_HD_InputOutputSolve
 !! Note that this has been customized for the physics in the problems and is not a general solution.
 SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve( this_time, p_FAST, calcJacobian &
                                      , u_ED,  p_ED,  x_ED,  xd_ED,  z_ED,  OtherSt_ED,  y_ED,  m_ED   &
-                                     , u_SD,  p_SD,  x_SD,  xd_SD,  z_SD,  OtherSt_SD,  y_SD          & 
+                                     , u_SD,  p_SD,  x_SD,  xd_SD,  z_SD,  OtherSt_SD,  y_SD,  m_SD   & 
                                      , u_HD,  p_HD,  x_HD,  xd_HD,  z_HD,  OtherSt_HD,  y_HD,  m_HD   & 
                                      , u_BD,  p_BD,  x_BD,  xd_BD,  z_BD,  OtherSt_BD,  y_BD,  m_BD   & 
                                      , u_Orca,p_Orca,x_Orca,xd_Orca,z_Orca,OtherSt_Orca,y_Orca,m_Orca & 
@@ -1819,10 +1819,11 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve( this_time, p_FAST, calcJacobian &
    TYPE(SD_ContinuousStateType)      , INTENT(IN   ) :: x_SD                      !< Continuous states
    TYPE(SD_DiscreteStateType)        , INTENT(IN   ) :: xd_SD                     !< Discrete states
    TYPE(SD_ConstraintStateType)      , INTENT(IN   ) :: z_SD                      !< Constraint states
-   TYPE(SD_OtherStateType)           , INTENT(INOUT) :: OtherSt_SD                !< Other/optimization states
+   TYPE(SD_OtherStateType)           , INTENT(IN   ) :: OtherSt_SD                !< Other states
    TYPE(SD_ParameterType)            , INTENT(IN   ) :: p_SD                      !< Parameters
    TYPE(SD_InputType)                , INTENT(INOUT) :: u_SD                      !< System inputs
    TYPE(SD_OutputType)               , INTENT(INOUT) :: y_SD                      !< System outputs
+   TYPE(SD_MiscVarType)              , INTENT(INOUT) :: m_SD                      !< misc/optimization variables
           
       !HydroDyn: 
    TYPE(HydroDyn_ContinuousStateType), INTENT(IN   ) :: x_HD                      !< Continuous states
@@ -1993,7 +1994,7 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve( this_time, p_FAST, calcJacobian &
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                                  
          IF ( p_FAST%CompSub == Module_SD ) THEN            
-            CALL SD_CalcOutput( this_time, u_SD, p_SD, x_SD, xd_SD, z_SD, OtherSt_SD, y_SD, ErrStat2, ErrMsg2 )
+            CALL SD_CalcOutput( this_time, u_SD, p_SD, x_SD, xd_SD, z_SD, OtherSt_SD, y_SD, m_SD, ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
          END IF
             
@@ -2079,7 +2080,7 @@ SUBROUTINE ED_SD_HD_BD_Orca_InputOutputSolve( this_time, p_FAST, calcJacobian &
                CALL Perturb_u_ED_SD_HD_BD_Orca( p_FAST, MeshMapData%Jac_u_indx, i, u_perturb, u_SD_perturb=u_SD_perturb, perturb=ThisPerturb ) ! perturb u and u_SD by ThisPerturb [routine sets ThisPerturb]
                   
                ! calculate outputs with perturbed inputs:
-               CALL SD_CalcOutput( this_time, u_SD_perturb, p_SD, x_SD, xd_SD, z_SD, OtherSt_SD, y_SD_perturb, ErrStat2, ErrMsg2 )
+               CALL SD_CalcOutput( this_time, u_SD_perturb, p_SD, x_SD, xd_SD, z_SD, OtherSt_SD, y_SD_perturb, m_SD, ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName  )
                   
                   
@@ -4411,7 +4412,7 @@ SUBROUTINE SolveOption1(this_time, this_state, calcJacobian, p_FAST, ED, BD, HD,
                                  
       CALL ED_SD_HD_BD_Orca_InputOutputSolve(  this_time, p_FAST, calcJacobian &
                                     , ED%Input(1),   ED%p,   ED%x(  this_state),  ED%xd(  this_state),  ED%z(  this_state),  ED%OtherSt(  this_state), ED%Output(1), ED%m   &
-                                    , SD%Input(1),   SD%p,   SD%x(  this_state),  SD%xd(  this_state),  SD%z(  this_state),  SD%OtherSt,               SD%y & 
+                                    , SD%Input(1),   SD%p,   SD%x(  this_state),  SD%xd(  this_state),  SD%z(  this_state),  SD%OtherSt(  this_state), SD%y        , SD%m   & 
                                     , HD%Input(1),   HD%p,   HD%x(  this_state),  HD%xd(  this_state),  HD%z(  this_state),  HD%OtherSt(  this_state), HD%y        , HD%m   & 
                                     , BD%Input(1,:), BD%p,   BD%x(:,this_state),  BD%xd(:,this_state),  BD%z(:,this_state),  BD%OtherSt(:,this_state), BD%y        , BD%m   & 
                                     , Orca%Input(1), Orca%p,Orca%x( this_state),Orca%xd(  this_state),Orca%z(  this_state),Orca%OtherSt(  this_state), Orca%y      , Orca%m & 
@@ -4865,17 +4866,15 @@ SUBROUTINE FAST_AdvanceStates( t_initial, n_t_global, p_FAST, y_FAST, m_FAST, ED
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL SD_CopyConstrState (SD%z( STATE_CURR), SD%z( STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
          CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
-      IF ( p_FAST%n_substeps( Module_SD ) > 1 ) THEN
-         CALL SD_CopyOtherState( SD%OtherSt, SD%OtherSt_old, MESH_UPDATECOPY, Errstat2, ErrMsg2)
-            CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      END IF
+      CALL SD_CopyOtherState( SD%OtherSt(STATE_CURR), SD%OtherSt(STATE_PRED), MESH_UPDATECOPY, Errstat2, ErrMsg2)
+         CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             
       DO j_ss = 1, p_FAST%n_substeps( Module_SD )
          n_t_module = n_t_global*p_FAST%n_substeps( Module_SD ) + j_ss - 1
          t_module   = n_t_module*p_FAST%dt_module( Module_SD ) + t_initial
                
-         CALL SD_UpdateStates( t_module, n_t_module, SD%Input, SD%InputTimes, SD%p, SD%x(STATE_PRED), SD%xd(STATE_PRED), SD%z(STATE_PRED), SD%OtherSt, ErrStat2, ErrMsg2 )
+         CALL SD_UpdateStates( t_module, n_t_module, SD%Input, SD%InputTimes, SD%p, SD%x(STATE_PRED), SD%xd(STATE_PRED), & 
+                               SD%z(STATE_PRED), SD%OtherSt(STATE_PRED), SD%m, ErrStat2, ErrMsg2 )
             CALL SetErrStat( Errstat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END DO !j_ss
    END IF
