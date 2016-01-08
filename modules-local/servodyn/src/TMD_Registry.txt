@@ -74,6 +74,8 @@ typedef	^		MiscVarType  ReKi			F_fr	{2}	-	-	"Friction forces"	-
 typedef	^		MiscVarType  ReKi			C_ctrl	{2}	-	-	"Controlled Damping (On/Off)"	-
 typedef	^		MiscVarType  ReKi			C_Brake	{2}	-	-	"Braking Damping"	-
 typedef	^		MiscVarType  ReKi			F_table	{2}	-	-	"Tabled Stiffness"	-
+typedef	^		MiscVarType  ReKi			F_k_x	-	-	-	"Factor for x-component stiffness force"	-
+typedef	^		MiscVarType  ReKi			F_k_y	-	-	-	"Factor for y-component stiffness force"	-
 
 
 # ..... Parameters ................................................................................................................

@@ -12,7 +12,7 @@ MODULE TMD
    PRIVATE
 
   
-   TYPE(ProgDesc), PARAMETER            :: TMD_Ver = ProgDesc( 'TMD', 'v1.02.00-sp', '2-Dec-2015' )
+   TYPE(ProgDesc), PARAMETER            :: TMD_Ver = ProgDesc( 'TMD', 'v1.02.01-sp', '8-Jan-2016' )
 
     
    
@@ -691,14 +691,16 @@ SUBROUTINE TMD_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
            
       ELSE IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
 
+         !note: m%F_k_x and m%F_k_y are computed earlier in TMD_CalcContStateDeriv
+                        
          ! tmd external forces of dependent degrees:
          F_x_tmdXY_P_N = 0
          F_y_tmdXY_P_N = 0
          F_z_tmdXY_P_N = - p%M_XY * (a_G_N(3) - r_ddot_P_N(3) - (alpha_N_O_N(1) + omega_N_O_N(2)*omega_N_O_N(3))*x%tmd_x(3) + (alpha_N_O_N(2) - omega_N_O_N(1)*omega_N_O_N(3))*x%tmd_x(1) - 2*omega_N_O_N(1)*x%tmd_x(4) + 2*omega_N_O_N(2)*x%tmd_x(2))
       
          ! forces in local coordinates
-         F_P_N(1) =  p%K_X * x%tmd_x(1) + m%C_ctrl(1) * x%tmd_x(2) + m%C_Brake(1) * x%tmd_x(2) - m%F_stop(1) - m%F_ext(1) - m%F_fr(1) - F_x_tmdXY_P_N + m%F_table(1)
-         F_P_N(2) =  p%K_Y * x%tmd_x(3) + m%C_ctrl(2) * x%tmd_x(4) + m%C_Brake(2) * x%tmd_x(4) - m%F_stop(2) - m%F_ext(2) - m%F_fr(2) - F_y_tmdXY_P_N + m%F_table(2)
+         F_P_N(1) =  p%K_X * x%tmd_x(1) + m%C_ctrl(1) * x%tmd_x(2) + m%C_Brake(1) * x%tmd_x(2) - m%F_stop(1) - m%F_ext(1) - m%F_fr(1) - F_x_tmdXY_P_N + m%F_table(1)*(m%F_k_x)
+         F_P_N(2) =  p%K_Y * x%tmd_x(3) + m%C_ctrl(2) * x%tmd_x(4) + m%C_Brake(2) * x%tmd_x(4) - m%F_stop(2) - m%F_ext(2) - m%F_fr(2) - F_y_tmdXY_P_N + m%F_table(2)*(m%F_k_y)
          F_P_N(3) = - F_z_tmdXY_P_N
       
          ! inertial contributions from mass of TMDs and acceleration of nacelle
@@ -733,15 +735,16 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
       INTEGER(IntKi),                INTENT(  OUT)  :: ErrStat     !< Error status of the operation     
       CHARACTER(*),                  INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
          ! local variables
-      REAL(ReKi), dimension(3)                   :: a_G_O
-      REAL(ReKi), dimension(3)                   :: a_G_N
-      REAL(ReKi), dimension(3)                   :: rddot_N_N
-      REAL(ReKi), dimension(3)                   :: omega_P_N ! angular velocity of nacelle transformed to nacelle orientation
-      Real(ReKi), dimension(3)                   :: alpha_P_N
+      REAL(ReKi), dimension(3)                      :: a_G_O
+      REAL(ReKi), dimension(3)                      :: a_G_N
+      REAL(ReKi), dimension(3)                      :: rddot_N_N
+      REAL(ReKi), dimension(3)                      :: omega_P_N  ! angular velocity of nacelle transformed to nacelle orientation
+      Real(ReKi), dimension(3)                      :: alpha_P_N
      
-      REAL(ReKi)                                   :: B_X 
-      REAL(ReKi)                                   :: B_Y
-      REAL(ReKi), dimension(2)                     :: K  ! tmd stiffness
+      REAL(ReKi)                                    :: B_X 
+      REAL(ReKi)                                    :: B_Y
+      REAL(ReKi), dimension(2)                      :: K          ! tmd stiffness
+      Real(ReKi)                                    :: denom      ! denominator for omni-direction factors
 
          
          ! Initialize ErrStat
@@ -785,8 +788,18 @@ SUBROUTINE TMD_CalcContStateDeriv( Time, u, p, x, xd, z, OtherState, m, dxdt, Er
          B_X = - rddot_N_N(1) + a_G_N(1) + 1 / p%M_X * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
          B_Y = - rddot_N_N(2) + a_G_N(2) + 1 / p%M_Y * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2) )
       ELSE IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
-         B_X = - rddot_N_N(1) + a_G_N(1) + 1 / p%M_XY * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1) )
-         B_Y = - rddot_N_N(2) + a_G_N(2) + 1 / p%M_XY * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2) )
+         
+         denom = SQRT(x%tmd_x(1)**2+x%tmd_x(3)**2)         
+         IF ( EqualRealNos( denom, 0.0_ReKi) ) THEN
+             m%F_k_x = 0.0
+             m%F_k_y = 0.0
+         ELSE          
+             m%F_k_x = x%tmd_x(1)/denom
+             m%F_k_y = x%tmd_x(3)/denom
+         END IF
+                  
+         B_X = - rddot_N_N(1) + a_G_N(1) + 1 / p%M_XY * ( m%F_ext(1) + m%F_stop(1) - m%F_table(1)*(m%F_k_x) )
+         B_Y = - rddot_N_N(2) + a_G_N(2) + 1 / p%M_XY * ( m%F_ext(2) + m%F_stop(2) - m%F_table(2)*(m%F_k_y) )
       END IF
       
             
@@ -1109,43 +1122,58 @@ SUBROUTINE SpringForceExtrapInterp(x, p, F_table)
    !CHARACTER(*),                          INTENT(OUT)      :: ErrMsg         ! The error message, if an error occurred
 
    ! local variables
+   INTEGER(IntKi)                                           :: ErrStat2       ! error status
    INTEGER(IntKi)                                           :: I              ! Loop counter 
    INTEGER(IntKi), DIMENSION(2)                             :: J = (/1, 3/)   ! Loop counter 
    INTEGER(IntKi)                                           :: M              ! location of closest table position
-   INTEGER(IntKi)                                           :: Nrows        ! Number of rows in F_TBL
-   REAL(ReKi)                                               :: Slope             ! 
-   REAL(ReKi)                                               :: DX            ! 
-   REAL(ReKi)                                               :: Disp              ! Current displacement
+   INTEGER(IntKi)                                           :: Nrows          ! Number of rows in F_TBL
+   REAL(ReKi)                                               :: Slope          ! 
+   REAL(ReKi)                                               :: DX             ! 
+   REAL(ReKi)                                               :: Disp(2)        ! Current displacement
    REAL(ReKi), ALLOCATABLE                                  :: TmpRAry(:) 
 
-
-   Nrows = SIZE(p%F_TBL,1)
-   ALLOCATE(TmpRAry(Nrows))
-   DO I = 1,2
-      Disp = x%tmd_x(J(I))
-      TmpRAry = p%F_TBL(:,J(I))-Disp
-      TmpRAry = ABS(TmpRAry)
-      M = MINLOC(TmpRAry,1)
-    
-      !interpolate
-      IF ((x%tmd_x(J(I)) > p%F_TBL(M,J(I)) .AND. M /= Nrows ) .OR. (x%tmd_x(J(I)) < p%F_TBL(M,J(I)) .AND. M == 1)) THEN  
-      ! for displacements higher than the closest table value or lower than the lower bound
-         Slope = ( p%F_TBL(M+1,J(I)+1) - p%F_TBL(M,J(I)+1) ) / ( p%F_TBL(M+1,J(I)) - p%F_TBL(M,J(I)) )
-      
-      ELSE IF ((x%tmd_x(J(I)) < p%F_TBL(M,J(I)) .AND. M /= 1 ) .OR. (x%tmd_x(J(I)) > p%F_TBL(M,J(I)) .AND. M == Nrows)) THEN ! lower
-      ! for displacements lower than the closest table value or higher than the upper bound
-         Slope = ( p%F_TBL(M,J(I)+1) - p%F_TBL(M-1,J(I)+1) ) / ( p%F_TBL(M,J(I)) - p%F_TBL(M-1,J(I)) )
-      
-      ELSE ! equal
-         Slope = 0
+   IF (p%TMD_DOF_MODE == DOFMode_Indept .OR. p%TMD_DOF_MODE == DOFMode_Omni) THEN
+      Nrows = SIZE(p%F_TBL,1)
+      ALLOCATE(TmpRAry(Nrows),STAT=ErrStat2)
+      IF (ErrStat2 /= 0) then
+         CALL WrScr('Error allocating temp array. TMD stiffness results may be inaccurrate.')
+         RETURN
       END IF
       
-      F_table(I) = p%F_TBL(M,J(I)+1) + Slope * ( x%tmd_x(J(I)) - p%F_TBL(M,J(I)) )
+      IF (p%TMD_DOF_MODE == DOFMode_Indept) THEN
+         DO I = 1,2
+            Disp(I) = x%tmd_x(J(I))
+         END DO
+      ELSE !IF (p%TMD_DOF_MODE == DOFMode_Omni) THEN
+         Disp = SQRT(x%tmd_x(1)**2+x%tmd_x(3)**2) ! constant assignment to vector
+      END IF
+      
+      DO I = 1,2
+         TmpRAry = p%F_TBL(:,J(I))-Disp(I)
+         TmpRAry = ABS(TmpRAry)
+         M = MINLOC(TmpRAry,1)
+    
+         !interpolate
+         IF ( (Disp(I) > p%F_TBL(M,J(I)) .AND. M /= Nrows) .OR. (Disp(I) < p%F_TBL(M,J(I)) .AND. M == 1) ) THEN  
+         ! for displacements higher than the closest table value or lower than the lower bound
+            Slope = ( p%F_TBL(M+1,J(I)+1) - p%F_TBL(M,J(I)+1) ) / ( p%F_TBL(M+1,J(I)) - p%F_TBL(M,J(I)) )
+      
+         ELSE IF ( (Disp(I) < p%F_TBL(M,J(I)) .AND. M /= 1 ) .OR. (Disp(I) > p%F_TBL(M,J(I)) .AND. M == Nrows) ) THEN ! lower
+         ! for displacements lower than the closest table value or higher than the upper bound
+            Slope = ( p%F_TBL(M,J(I)+1) - p%F_TBL(M-1,J(I)+1) ) / ( p%F_TBL(M,J(I)) - p%F_TBL(M-1,J(I)) )
+      
+         ELSE ! equal
+            Slope = 0
+         END IF
+               
+         F_table(I) = p%F_TBL(M,J(I)+1) + Slope * ( Disp(I) - p%F_TBL(M,J(I)) )
             
-   END DO
+      END DO
+      
+      DEALLOCATE(TmpRAry)
+   
+   END IF
 
-
-   DEALLOCATE(TmpRAry)
 END SUBROUTINE SpringForceExtrapInterp
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine reads the input file and stores all the data in the TMD_InputFile structure.

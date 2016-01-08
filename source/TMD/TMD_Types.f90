@@ -114,6 +114,8 @@ IMPLICIT NONE
     REAL(ReKi) , DIMENSION(1:2)  :: C_ctrl      ! Controlled Damping (On/Off) [-]
     REAL(ReKi) , DIMENSION(1:2)  :: C_Brake      ! Braking Damping [-]
     REAL(ReKi) , DIMENSION(1:2)  :: F_table      ! Tabled Stiffness [-]
+    REAL(ReKi)  :: F_k_x      ! Factor for x-component stiffness force [-]
+    REAL(ReKi)  :: F_k_y      ! Factor for y-component stiffness force [-]
   END TYPE TMD_MiscVarType
 ! =======================
 ! =========  TMD_ParameterType  =======
@@ -1487,6 +1489,8 @@ ENDIF
     DstMiscData%C_ctrl = SrcMiscData%C_ctrl
     DstMiscData%C_Brake = SrcMiscData%C_Brake
     DstMiscData%F_table = SrcMiscData%F_table
+    DstMiscData%F_k_x = SrcMiscData%F_k_x
+    DstMiscData%F_k_y = SrcMiscData%F_k_y
  END SUBROUTINE TMD_CopyMisc
 
  SUBROUTINE TMD_DestroyMisc( MiscData, ErrStat, ErrMsg )
@@ -1541,6 +1545,8 @@ ENDIF
       Re_BufSz   = Re_BufSz   + SIZE(InData%C_ctrl)  ! C_ctrl
       Re_BufSz   = Re_BufSz   + SIZE(InData%C_Brake)  ! C_Brake
       Re_BufSz   = Re_BufSz   + SIZE(InData%F_table)  ! F_table
+      Re_BufSz   = Re_BufSz   + 1  ! F_k_x
+      Re_BufSz   = Re_BufSz   + 1  ! F_k_y
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1580,6 +1586,10 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(InData%C_Brake)
       ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%F_table))-1 ) = PACK(InData%F_table,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%F_table)
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%F_k_x
+      Re_Xferred   = Re_Xferred   + 1
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%F_k_y
+      Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE TMD_PackMisc
 
  SUBROUTINE TMD_UnPackMisc( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1681,6 +1691,10 @@ ENDIF
       OutData%F_table = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%F_table))-1 ), mask1, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%F_table)
     DEALLOCATE(mask1)
+      OutData%F_k_x = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
+      OutData%F_k_y = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE TMD_UnPackMisc
 
  SUBROUTINE TMD_CopyParam( SrcParamData, DstParamData, CtrlCode, ErrStat, ErrMsg )
