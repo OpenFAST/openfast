@@ -131,11 +131,11 @@ typedef	^	^	ProgDesc	Module_Ver	{NumModules}	-	-	"version information from all m
 typedef	FAST	IceDyn_Data	IceD_ContinuousStateType	x	{:}{:}	-	-	"Continuous states"
 typedef	^	^	IceD_DiscreteStateType	xd	{:}{:}	-	-	"Discrete states"
 typedef	^	^	IceD_ConstraintStateType	z	{:}{:}	-	-	"Constraint states"
-typedef	^	^	IceD_OtherStateType	OtherSt	{:}	-	-	"Other/optimization states"
+typedef	^	^	IceD_OtherStateType	OtherSt	{:}{:}	-	-	"Other states"
 typedef	^	^	IceD_ParameterType	p	{:}	-	-	"Parameters"
 typedef	^	^	IceD_InputType	u	{:}	-	-	"System inputs"
 typedef	^	^	IceD_OutputType	y	{:}	-	-	"System outputs"
-typedef	^	^	IceD_OtherStateType	OtherSt_old	{:}	-	-	"Other/optimization states (copied for the case of subcycling)"
+typedef	^	^	IceD_MiscVarType	m	{:}	-	-	"Misc/optimization variables"
 typedef	^	^	IceD_InputType	Input	{:}{:}	-	-	"Array of inputs associated with InputTimes"
 typedef	^	^	DbKi	InputTimes	{:}{:}	-	-	"Array of times associated with Input Array"
 
