@@ -115,35 +115,39 @@ typedef    ^           ^                 ProgDesc           Ver              -  
 
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
+# ..... Ice Model 6 ...............................................................................................................
 typedef    IceDyn/IceD  ContinuousStateType  ReKi                    q                -   -    -    "q - displacement of ice mass" m
 typedef      ^          ^                    ^                       dqdt             -   -    -    "dqdt - velocity of ice mass" m/s
 
 # Define discrete (nondifferentiable) states here:
-typedef    IceDyn/IceD  DiscreteStateType    ReKi                    DummyDiscState   -   -    -    "A variable, Replace if you have discrete states" -
+typedef    IceDyn/IceD  DiscreteStateType    SiKi                    DummyDiscState   -   -    -    "A variable, Replace if you have discrete states" -
 
 # Define constraint states here:
-typedef    IceDyn/IceD  ConstraintStateType  ReKi                    DummyConstrState -   -    -    "A variable, Replace if you have constraint states" -
+typedef    IceDyn/IceD  ConstraintStateType  SiKi                    DummyConstrState -   -    -    "A variable, Replace if you have constraint states" -
 
-# Define any data that are not considered actual states here:
-# e.g. data used only for efficiency purposes (indices for searching in an array, copies of previous calculations of output
-# at a given time, etc.)
-typedef     IceDyn/IceD  OtherStateType     IceD_ContinuousStateType xdot            {:}   -    -    "previous state deriv for multi-step" m
-typedef     ^            ^                    IntKi                  n                -    -    -    "tracks time step for which OtherState was updated" -
-typedef     ^            ^                    IntKi                  IceTthNo2        -    -    -    "Ice tooth number of the current ice tooth, for model 2" -
+# Define any other states, including integer or logical states here:
+# ..... Ice Model 2 ...............................................................................................................
+typedef     IceDyn/IceD  OtherStateType      IntKi                   IceTthNo2         -    -    -    "Ice tooth number of the current ice tooth, for model 2 (updated in UpdateStates; used in CalcOutput)" -
 # ..... Ice Model 3 ...............................................................................................................
-typedef     ^            ^                    IntKi                   Nc              {:}    -    -    "Number of the current ice tooths number (time series)" -
-typedef     ^            ^                    ReKi                    Psum            {:}    -    -    "The sum of pitches of all broken ice teeth (time series)" m
+typedef     ^            ^                   IntKi                   Nc              {:}    -    -    "Number of the current ice tooths number (time series)" -
+typedef     ^            ^                   ReKi                    Psum            {:}    -    -    "The sum of pitches of all broken ice teeth (time series)" m
 # ..... Ice Model 4 ...............................................................................................................
-typedef    IceDyn/IceD   ^                    IntKi                   IceTthNo        {:}  -    -    "IceTthNo - the current numbers of ice teeth of each zone" -
-
+typedef    IceDyn/IceD   ^                   IntKi                   IceTthNo        {:}    -    -    "IceTthNo - the current numbers of ice teeth of each zone" -
 # ..... Ice Model 5 ...............................................................................................................
-typedef    ^             ^                    ReKi                    Beta             -   -    -    "angel between broken ice sheet and level waterline" rad
-
-typedef    ^             ^                    DbKi                    Tinit            -    -    -   "Initial time of the current load cycle" s
+typedef    ^             ^                   ReKi                    Beta             -     -    -    "angle between broken ice sheet and level waterline" rad
+typedef    ^             ^                   DbKi                    Tinit            -     -    -    "Initial time of the current load cycle" s
 # ..... Ice Model 6 ...............................................................................................................
-typedef    ^             ^                    IntKi                   Splitf           -   -    -    "flag to indicate if the ice floe has splitted (0 not splitted, 1 splitted)" -
- 
-typedef    ^             ^                    ReKi                    dxc              -   -    -    "crushed depth of ice" m
+typedef    ^             ^                   IntKi                   Splitf           -     -    -    "flag to indicate if the ice floe has split (0 not splitted, 1 splitted)" - 
+typedef    ^             ^                   ReKi                    dxc              -     -    -    "crushed depth of ice" m
+typedef    ^             ^                  IceD_ContinuousStateType xdot            {:}    -    -    "previous state deriv for multi-step" m
+typedef    ^             ^                   IntKi                    n               -     -    -    "tracks time step for which OtherState was updated" -
+
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef    ^              MiscVarType        IntKi     DummyMiscVar - - -  "Remove this variable if you have misc/optimization variables" -
+
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:

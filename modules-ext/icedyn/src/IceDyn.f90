@@ -4,7 +4,7 @@
 ! URL: $HeadURL$
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013-2014  National Renewable Energy Laboratory
+! Copyright (C) 2013-2016  National Renewable Energy Laboratory
 !
 !    This file is part of module IceDyn.
 !
@@ -20,18 +20,17 @@
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
 !**********************************************************************************************************************************
-!    IceDyn is a module describing ice load on offshore wind turbine supporting structures.
-!
-!    The module is given the module name ModuleName = IceDyn and the abbreviated name ModName = ID. The mathematical
-!    formulation of this module is a subset of the most general form permitted by the FAST modularization framework in tight
-!    coupling, thus, the module is developed to support both loose and tight coupling (tight coupling for both time marching and
-!    linearization).
-!
-!
-!    References:
-!
-!    Ice Module Manual, by Bingbin Yu, Dale Karr.
-!
+!>    IceDyn is a module describing ice load on offshore wind turbine supporting structures.
+!!
+!!    The module is given the module name ModuleName = IceDyn and the abbreviated name ModName = IceD. The mathematical
+!!    formulation of this module is a subset of the most general form permitted by the FAST modularization framework in tight
+!!    coupling, thus, the module is developed to support both loose and tight coupling (tight coupling for both time marching and
+!!    linearization).
+!!   
+!!    References:
+!!
+!!    Ice Module Manual, by Bingbin Yu, Dale Karr.
+!!
 !**********************************************************************************************************************************
 MODULE IceDyn
 
@@ -42,7 +41,7 @@ MODULE IceDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', 'v1.01.01-by', '14-Apr-2015' )
+   TYPE(ProgDesc), PARAMETER  :: IceD_Ver = ProgDesc( 'IceDyn', 'v1.02.00', '8-Jan-2016' )
 
    ! ..... Public Subroutines ...................................................................................................
 
@@ -59,30 +58,31 @@ MODULE IceDyn
 
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, ErrStat, ErrMsg )
-! This routine is called at the start of the simulation to perform initialization steps.
-! The parameters are set here and not changed during the simulation.
-! The initial states and initial guess for the input are defined.
+!> This routine is called at the start of the simulation to perform initialization steps.
+!! The parameters are set here and not changed during the simulation.
+!! The initial states and initial guess for the input are defined.
+SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-   TYPE(IceD_InitInputType),       INTENT(IN   )  :: InitInp     ! Input data for initialization routine
-   TYPE(IceD_InputType),           INTENT(  OUT)  :: u           ! An initial guess for the input; input mesh must be defined
-   TYPE(IceD_ParameterType),       INTENT(  OUT)  :: p           ! Parameters
-   TYPE(IceD_ContinuousStateType), INTENT(  OUT)  :: x           ! Initial continuous states
-   TYPE(IceD_DiscreteStateType),   INTENT(  OUT)  :: xd          ! Initial discrete states
-   TYPE(IceD_ConstraintStateType), INTENT(  OUT)  :: z           ! Initial guess of the constraint states
-   TYPE(IceD_OtherStateType),      INTENT(  OUT)  :: OtherState  ! Initial other/optimization states
-   TYPE(IceD_OutputType),          INTENT(  OUT)  :: y           ! Initial system outputs (outputs are not calculated;
-                                                                 !   only the output mesh is initialized)
-   REAL(DbKi),                     INTENT(INOUT)  :: Interval    ! Coupling interval in seconds: the rate that
-                                                                 !   (1) IceD_UpdateStates() is called in loose coupling &
-                                                                 !   (2) IceD_UpdateDiscState() is called in tight coupling.
-                                                                 !   Input is the suggested time from the glue code;
-                                                                 !   Output is the actual coupling interval that will be used
-                                                                 !   by the glue code.
-   TYPE(IceD_InitOutputType),      INTENT(  OUT)  :: InitOut     ! Output for initialization routine
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   TYPE(IceD_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
+   TYPE(IceD_InputType),           INTENT(  OUT)  :: u           !< An initial guess for the input; input mesh must be defined
+   TYPE(IceD_ParameterType),       INTENT(  OUT)  :: p           !< Parameters
+   TYPE(IceD_ContinuousStateType), INTENT(  OUT)  :: x           !< Initial continuous states
+   TYPE(IceD_DiscreteStateType),   INTENT(  OUT)  :: xd          !< Initial discrete states
+   TYPE(IceD_ConstraintStateType), INTENT(  OUT)  :: z           !< Initial guess of the constraint states
+   TYPE(IceD_OtherStateType),      INTENT(  OUT)  :: OtherState  !< Initial other states
+   TYPE(IceD_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated;
+                                                                 !!   only the output mesh is initialized)
+   TYPE(IceD_MiscVarType),         INTENT(  OUT)  :: m           !< Initial misc/optimization variables
+   REAL(DbKi),                     INTENT(INOUT)  :: Interval    !! Coupling interval in seconds: the rate that
+                                                                 !!   (1) IceD_UpdateStates() is called in loose coupling &
+                                                                 !!   (2) IceD_UpdateDiscState() is called in tight coupling.
+                                                                 !!   Input is the suggested time from the glue code;
+                                                                 !!   Output is the actual coupling interval that will be used
+                                                                 !!   by the glue code.
+   TYPE(IceD_InitOutputType),      INTENT(  OUT)  :: InitOut     !< Output for initialization routine
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -174,7 +174,8 @@ SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut,
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
-
+    m%DummyMiscVar = 0
+    
       !............................................................................................
       ! Define initial guess for the system inputs and output (set up meshes) here:
       !............................................................................................
@@ -318,21 +319,20 @@ CONTAINS
 
 END SUBROUTINE IceD_Init
 !----------------------------------------------------------------------------------------------------------------------------------
-!----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE IceD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-!
-! This routine is called at the end of the simulation.
+!> This routine is called at the end of the simulation.
+SUBROUTINE IceD_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      TYPE(IceD_InputType),           INTENT(INOUT)  :: u           ! System inputs
-      TYPE(IceD_ParameterType),       INTENT(INOUT)  :: p           ! Parameters
-      TYPE(IceD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
-      TYPE(IceD_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
-      TYPE(IceD_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-      TYPE(IceD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(IceD_OutputType),          INTENT(INOUT)  :: y           ! System outputs
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      TYPE(IceD_InputType),           INTENT(INOUT)  :: u           !< System inputs
+      TYPE(IceD_ParameterType),       INTENT(INOUT)  :: p           !< Parameters
+      TYPE(IceD_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states
+      TYPE(IceD_DiscreteStateType),   INTENT(INOUT)  :: xd          !< Discrete states
+      TYPE(IceD_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
+      TYPE(IceD_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states
+      TYPE(IceD_OutputType),          INTENT(INOUT)  :: y           !< System outputs
+      TYPE(IceD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! Initialize ErrStat
 
@@ -358,6 +358,8 @@ SUBROUTINE IceD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       CALL IceD_DestroyConstrState( z,           ErrStat, ErrMsg )
       CALL IceD_DestroyOtherState(  OtherState,  ErrStat, ErrMsg )
 
+      CALL IceD_DestroyMisc( m, ErrStat, ErrMsg )
+      
       ! Destroy the output data:
 
       CALL IceD_DestroyOutput( y, ErrStat, ErrMsg )
@@ -365,27 +367,27 @@ SUBROUTINE IceD_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
 END SUBROUTINE IceD_End
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! Routine for solving for constraint states, integrating continuous states, and updating discrete states
-! Constraint states are solved for input t; Continuous and discrete states are updated for t + p%dt
-! (stepsize dt assumed to be in ModName parameter)
+!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other 
+!! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
+SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                         INTENT(IN   ) :: t          ! Current simulation time in seconds
-      INTEGER(IntKi),                     INTENT(IN   ) :: n          ! Current simulation time step n = 0,1,...
-      TYPE(IceD_InputType),               INTENT(INOUT) :: u(:)       ! Inputs at utimes
-      REAL(DbKi),                         INTENT(IN   ) :: utimes(:)  ! Times associated with u(:), in seconds
-      TYPE(IceD_ParameterType),           INTENT(IN   ) :: p          ! Parameters
-      TYPE(IceD_ContinuousStateType),     INTENT(INOUT) :: x          ! Input: Continuous states at t;
-                                                                      !   Output: Continuous states at t + Interval
-      TYPE(IceD_DiscreteStateType),       INTENT(INOUT) :: xd         ! Input: Discrete states at t;
-                                                                      !   Output: Discrete states at t  + Interval
-      TYPE(IceD_ConstraintStateType),     INTENT(INOUT) :: z          ! Input: Initial guess of constraint states at t+dt;
-                                                                      !   Output: Constraint states at t+dt
-      TYPE(IceD_OtherStateType),          INTENT(INOUT) :: OtherState ! Other/optimization states
-      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    ! Error status of the operation
-      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                         INTENT(IN   ) :: t          !< Current simulation time in seconds
+      INTEGER(IntKi),                     INTENT(IN   ) :: n          !< Current simulation time step n = 0,1,...
+      TYPE(IceD_InputType),               INTENT(INOUT) :: u(:)       !< Inputs at utimes
+      REAL(DbKi),                         INTENT(IN   ) :: utimes(:)  !< Times associated with u(:), in seconds
+      TYPE(IceD_ParameterType),           INTENT(IN   ) :: p          !< Parameters
+      TYPE(IceD_ContinuousStateType),     INTENT(INOUT) :: x          !< Input: Continuous states at t;
+                                                                      !!   Output: Continuous states at t + Interval
+      TYPE(IceD_DiscreteStateType),       INTENT(INOUT) :: xd         !< Input: Discrete states at t;
+                                                                      !!   Output: Discrete states at t  + Interval
+      TYPE(IceD_ConstraintStateType),     INTENT(INOUT) :: z          !< Input: Constraint states at t;
+                                                                      !!   Output: Constraint states at t+dt
+      TYPE(IceD_OtherStateType),          INTENT(INOUT) :: OtherState !< Input: Other states at t;
+                                                                      !!   Output: Other states at t+dt
+      TYPE(IceD_MiscVarType),             INTENT(INOUT) :: m          !< Misc/optimization variables
+      INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat    !< Error status of the operation
+      CHARACTER(*),                       INTENT(  OUT) :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
       ! local variables
 
@@ -498,7 +500,7 @@ SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
             OtherState%Beta   = SolveBeta( p%alphaR, p%v, t - OtherState%Tinit, p%Lbr)
             
             IF (OtherState%Beta >= p%alphaR) THEN
-            OtherState%Tinit = t
+               OtherState%Tinit = t
             END IF
       
       ENDIF
@@ -509,15 +511,15 @@ SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
 
            if (p%method .eq. 1) then
 
-               CALL IceD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+               CALL IceD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
             elseif (p%method .eq. 2) then
 
-               CALL IceD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+               CALL IceD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
             elseif (p%method .eq. 3) then
 
-               CALL IceD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+               CALL IceD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
             else
 
@@ -529,7 +531,7 @@ SUBROUTINE IceD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat,
             
             !IF ((x%q - u_interp%PointMesh%TranslationDisp(1,1)) >= OtherState%dxc) THEN
             !     OtherState%dxc = x%q - u_interp%PointMesh%TranslationDisp(1,1)
-            ! ENDIF
+            !ENDIF
             
             ! Determine whether the splitting failure happens
             IF (OtherState%Splitf == 0) THEN
@@ -551,34 +553,35 @@ CONTAINS
    
    FUNCTION SolveBeta (alpha, vice, t, l) Result (beta1)
          
-            !SOLVEBETA Solve for ice wedge uprising angle
+         !SOLVEBETA Solve for ice wedge uprising angle
          
-            IMPLICIT NONE
+         IMPLICIT NONE
             
-            ! Input values
-            REAL(ReKi) :: alpha     ! Cone angle (rad)
-            REAL(ReKi) :: vice           ! Ice velocity (m/s)
-            REAL(DbKi) :: t         ! Ice thickness
-            REAL(ReKi) :: l         ! Ice breaking length
-            REAL(ReKi) :: beta       ! Initial Ice wedge uprising angle
-               REAL(ReKi) :: beta1         ! Ice wedge uprising angle
+         ! Input values
+         REAL(ReKi), intent(in) :: alpha     ! Cone angle (rad)
+         REAL(ReKi), intent(in) :: vice      ! Ice velocity (m/s)
+         REAL(DbKi), intent(in) :: t         ! Ice time (s)
+         REAL(ReKi), intent(in) :: l         ! Ice breaking length (m)
             
-            REAL(ReKi) :: Equ    
-            REAL(ReKi) :: Derv
+         REAL(ReKi)             :: beta      ! Initial Ice wedge uprising angle
+         REAL(ReKi)             :: beta1     ! Ice wedge uprising angle
+                                   
+         REAL(ReKi)             :: Equ    
+         REAL(ReKi)             :: Derv
             
-            beta = 0
-            DO i = 1,100
+         beta = 0
+         DO i = 1,100
             
-               Equ = sin(beta) - tan(alpha) * cos(beta) + tan(alpha) * (1-vice*t/l);
-                 Derv = cos(beta) + tan(alpha) * sin(beta); 
+            Equ  = sin(beta) - tan(alpha) * cos(beta) + tan(alpha) * (1-vice*t/l);
+            Derv = cos(beta) + tan(alpha) * sin(beta); 
                  
-                 IF ( abs(Equ) <= p%tolerance) EXIT   
+            IF ( abs(Equ) <= p%tolerance) EXIT   
                  
-                 beta = beta - Equ / Derv
+            beta = beta - Equ / Derv
                   
-               END DO
+         END DO
          
-               beta1 = beta
+         beta1 = beta
                
     END FUNCTION SolveBeta
     
@@ -639,22 +642,22 @@ CONTAINS
       
 END SUBROUTINE IceD_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
-!
-! Routine for computing outputs, used in both loose and tight coupling.
+!> Routine for computing outputs, used in both loose and tight coupling.
+SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                      INTENT(IN   )  :: t           ! Current simulation time in seconds
-      TYPE(IceD_InputType),            INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(IceD_ParameterType),        INTENT(IN   )  :: p           ! Parameters
-      TYPE(IceD_ContinuousStateType),  INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(IceD_DiscreteStateType),    INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(IceD_ConstraintStateType),  INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(IceD_OtherStateType),       INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(IceD_OutputType),           INTENT(INOUT)  :: y           ! Outputs computed at t (Input only so that mesh con-
-                                                                    !   nectivity information does not have to be recalculated)
-      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                      INTENT(IN   )  :: t           !< Current simulation time in seconds
+      TYPE(IceD_InputType),            INTENT(IN   )  :: u           !< Inputs at t
+      TYPE(IceD_ParameterType),        INTENT(IN   )  :: p           !< Parameters
+      TYPE(IceD_ContinuousStateType),  INTENT(IN   )  :: x           !< Continuous states at t
+      TYPE(IceD_DiscreteStateType),    INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(IceD_ConstraintStateType),  INTENT(IN   )  :: z           !< Constraint states at t
+      TYPE(IceD_OtherStateType),       INTENT(IN   )  :: OtherState  !< Other states at t
+      TYPE(IceD_OutputType),           INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh 
+                                                                     !! connectivity information does not have to be recalculated)
+      TYPE(IceD_MiscVarType),          INTENT(INOUT)  :: m           !< Misc/optimization variables
+      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
       INTEGER(IntKi)                    :: I                        ! Loop count
@@ -986,21 +989,21 @@ SUBROUTINE IceD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       
 END SUBROUTINE IceD_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE IceD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
-!
-! Routine for computing derivatives of continuous states.
+!> Routine for computing derivatives of continuous states.
+SUBROUTINE IceD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                       INTENT(IN   )  :: t           ! Current simulation time in seconds
-      TYPE(IceD_InputType),             INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(IceD_ParameterType),         INTENT(IN   )  :: p           ! Parameters
-      TYPE(IceD_ContinuousStateType),   INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(IceD_DiscreteStateType),     INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(IceD_ConstraintStateType),   INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(IceD_OtherStateType),        INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(IceD_ContinuousStateType),   INTENT(  OUT)  :: xdot        ! Continuous state derivatives at t
-      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                       INTENT(IN   )  :: t           !< Current simulation time in seconds
+      TYPE(IceD_InputType),             INTENT(IN   )  :: u           !< Inputs at t
+      TYPE(IceD_ParameterType),         INTENT(IN   )  :: p           !< Parameters
+      TYPE(IceD_ContinuousStateType),   INTENT(IN   )  :: x           !< Continuous states at t
+      TYPE(IceD_DiscreteStateType),     INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(IceD_ConstraintStateType),   INTENT(IN   )  :: z           !< Constraint states at t
+      TYPE(IceD_OtherStateType),        INTENT(IN   )  :: OtherState  !< Other states at t
+      TYPE(IceD_MiscVarType),           INTENT(INOUT)  :: m           !< Misc/optimization variables
+      TYPE(IceD_ContinuousStateType),   INTENT(  OUT)  :: xdot        !< Continuous state derivatives at t
+      INTEGER(IntKi),                   INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                     INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
       ! REAL(ReKi) :: mass    ! Mass of ice feature (kg)
@@ -1017,9 +1020,9 @@ SUBROUTINE IceD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat
 
      ! When the ice and the structure is in contact, there is ice force.     
 
-        R = p%StrWd/2 
+         R = p%StrWd/2 
         
-       IF ( OtherState%Splitf == 0 ) THEN
+         IF ( OtherState%Splitf == 0 ) THEN
           
            IF ((x%q - u%PointMesh%TranslationDisp(1,1)) < OtherState%dxc) THEN
           
@@ -1039,11 +1042,11 @@ SUBROUTINE IceD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat
  
            ENDIF
 
-        ELSE
+         ELSE
 
               force = 0 
  
-        ENDIF
+         ENDIF
         
          xdot%q = x%dqdt
    
@@ -1054,22 +1057,22 @@ SUBROUTINE IceD_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot, ErrStat
 
 END SUBROUTINE IceD_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE IceD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! Routine for updating discrete states
+!> Routine for updating discrete states
+SUBROUTINE IceD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                      INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                  INTENT(IN   )  :: n           ! Current step of the simulation: t = n*Interval
-      TYPE(IceD_InputType),            INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(IceD_ParameterType),        INTENT(IN   )  :: p           ! Parameters
-      TYPE(IceD_ContinuousStateType),  INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(IceD_DiscreteStateType),    INTENT(INOUT)  :: xd          ! Input: Discrete states at t;
-                                                                    !   Output: Discrete states at t + Interval
-      TYPE(IceD_ConstraintStateType),  INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(IceD_OtherStateType),       INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                      INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),                  INTENT(IN   )  :: n           !< Current step of the simulation: t = n*Interval
+      TYPE(IceD_InputType),            INTENT(IN   )  :: u           !< Inputs at t
+      TYPE(IceD_ParameterType),        INTENT(IN   )  :: p           !< Parameters
+      TYPE(IceD_ContinuousStateType),  INTENT(IN   )  :: x           !< Continuous states at t
+      TYPE(IceD_DiscreteStateType),    INTENT(INOUT)  :: xd          !< Input: Discrete states at t;
+                                                                     !<   Output: Discrete states at t + Interval
+      TYPE(IceD_ConstraintStateType),  INTENT(IN   )  :: z           !< Constraint states at t
+      TYPE(IceD_OtherStateType),       INTENT(IN   )  :: OtherState  !< Other states at t
+      TYPE(IceD_MiscVarType),          INTENT(INOUT)  :: m           !< Misc/optimization variables
+      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
 
@@ -1083,22 +1086,22 @@ SUBROUTINE IceD_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrM
 
 END SUBROUTINE IceD_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE IceD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residual, ErrStat, ErrMsg )
-!
-! Routine for solving for the residual of the constraint state functions
+!> Routine for solving for the residual of the constraint state functions
+SUBROUTINE IceD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, Z_residual, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                      INTENT(IN   )  :: t           ! Current simulation time in seconds
-      TYPE(IceD_InputType),            INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(IceD_ParameterType),        INTENT(IN   )  :: p           ! Parameters
-      TYPE(IceD_ContinuousStateType),  INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(IceD_DiscreteStateType),    INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(IceD_ConstraintStateType),  INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(IceD_OtherStateType),       INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      TYPE(IceD_ConstraintStateType),  INTENT(  OUT)  :: Z_residual  ! Residual of the constraint state functions using
-                                                                    !     the input values described above
-      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                      INTENT(IN   )  :: t           !< Current simulation time in seconds
+      TYPE(IceD_InputType),            INTENT(IN   )  :: u           !< Inputs at t
+      TYPE(IceD_ParameterType),        INTENT(IN   )  :: p           !< Parameters
+      TYPE(IceD_ContinuousStateType),  INTENT(IN   )  :: x           !< Continuous states at t
+      TYPE(IceD_DiscreteStateType),    INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(IceD_ConstraintStateType),  INTENT(IN   )  :: z           !< Constraint states at t
+      TYPE(IceD_OtherStateType),       INTENT(IN   )  :: OtherState  !< Other states at t
+      TYPE(IceD_ConstraintStateType),  INTENT(  OUT)  :: Z_residual  !< Residual of the constraint state functions using
+                                                                     !!    the input values described above
+      TYPE(IceD_MiscVarType),          INTENT(INOUT)  :: m           !< Misc/optimization variables
+      INTEGER(IntKi),                  INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                    INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
       ! Initialize ErrStat
@@ -1113,18 +1116,17 @@ SUBROUTINE IceD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, Z_residu
 
 END SUBROUTINE IceD_CalcConstrStateResidual
 !----------------------------------------------------------------------------------------------------------------------------------
+!>     This public subroutine reads the input required for IceDyn from the file whose name is an
+!!     input parameter.
 SUBROUTINE IceD_ReadInput( InitInp, InputFileData, ErrStat, ErrMsg )
-!     This public subroutine reads the input required for IceDyn from the file whose name is an
-!     input parameter.
 !----------------------------------------------------------------------------------------------------
-
 
       ! Passed variables
 
-   TYPE(IceD_InitInputType),      INTENT( IN    )   :: InitInp              ! the IceDyn initial input data
-   TYPE(IceD_InputFile),          INTENT(   OUT )   :: InputFileData        ! Data stored in the IceDyn's input file
-   INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs
-   CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
+   TYPE(IceD_InitInputType),      INTENT( IN    )   :: InitInp              !< the IceDyn initial input data
+   TYPE(IceD_InputFile),          INTENT(   OUT )   :: InputFileData        !< Data stored in the IceDyn's input file
+   INTEGER,                       INTENT(   OUT )   :: ErrStat              !< returns a non-zero value when an error occurs
+   CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               !< Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -2007,10 +2009,11 @@ CONTAINS
 
 END SUBROUTINE IceD_ReadInput
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine performs validity checks on data from the input file.
 SUBROUTINE IceD_ValidateInput( InputFileData, ErrStat, ErrMsg )
-   TYPE(IceD_InputFile),     INTENT(IN)     :: InputFileData                ! Data stored in the module's input file
-   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      ! Error status
-   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       ! Error message
+   TYPE(IceD_InputFile),     INTENT(IN)     :: InputFileData                !< Data stored in the module's input file
+   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
+   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       !< Error message
 
    
    ErrStat = ErrID_None
@@ -2023,8 +2026,8 @@ SUBROUTINE IceD_ValidateInput( InputFileData, ErrStat, ErrMsg )
    
 END SUBROUTINE IceD_ValidateInput
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This takes the primary input file data and sets the corresponding parameters.
 SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat, ErrMsg  )
-! This takes the primary input file data and sets the corresponding parameters.
 !..................................................................................................................................
 
    IMPLICIT                        NONE
@@ -2032,13 +2035,13 @@ SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat
 
       ! Passed variables
 
-   TYPE(IceD_ParameterType), INTENT(INOUT)  :: p                            ! Parameters of the IceDyn module
-   TYPE(IceD_InputFile),     INTENT(IN)     :: InputFileData                ! Data stored in the module's input file
-   REAL(DbKi),               INTENT(IN)     :: Interval                     ! Coupling interval in seconds
-   REAL(DbKi),               INTENT(IN   )  :: Tmax                         ! Total simulation time 
-   INTEGER(IntKi),           INTENT(IN   )  :: LegNum                       ! Leg number of this IceDyn instance
-   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      ! Error status
-   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       ! Error message
+   TYPE(IceD_ParameterType), INTENT(INOUT)  :: p                            !< Parameters of the IceDyn module
+   TYPE(IceD_InputFile),     INTENT(IN)     :: InputFileData                !< Data stored in the module's input file
+   REAL(DbKi),               INTENT(IN)     :: Interval                     !< Coupling interval in seconds
+   REAL(DbKi),               INTENT(IN   )  :: Tmax                         !< Total simulation time 
+   INTEGER(IntKi),           INTENT(IN   )  :: LegNum                       !< Leg number of this IceDyn instance
+   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                      !< Error status
+   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                       !< Error message
 
      ! Local variables
    INTEGER (IntKi)                          :: I
@@ -2639,18 +2642,18 @@ SUBROUTINE IceD_SetParameters( InputFileData, p, Interval, Tmax, LegNum, ErrStat
         
 END SUBROUTINE IceD_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine initializes the other states of the module.
+!! It assumes the parameters are set and that InputFileData contains initial conditions for the other states.
 SUBROUTINE IceD_Init_OtherStates( OtherState, p, x, InputFileData, ErrStat, ErrMsg  )
-! This routine initializes the other states of the module.
-! It assumes the parameters are set and that InputFileData contains initial conditions for the other states.
 !..................................................................................................................................
    IMPLICIT                        NONE
 
-   TYPE(IceD_OtherStateType),      INTENT(  OUT)  :: OtherState        ! Initial other states
-   TYPE(IceD_ParameterType),       INTENT(IN)     :: p                 ! Parameters of the IceDyn module
-   TYPE(IceD_ContinuousStateType), INTENT(IN   )  :: x                 ! Initial continuous states
-   TYPE(IceD_InputFile),           INTENT(IN)     :: InputFileData     ! Data stored in the module's input file
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat           ! Error status
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg            ! Error message
+   TYPE(IceD_OtherStateType),      INTENT(  OUT)  :: OtherState        !< Initial other states
+   TYPE(IceD_ParameterType),       INTENT(IN)     :: p                 !< Parameters of the IceDyn module
+   TYPE(IceD_ContinuousStateType), INTENT(IN   )  :: x                 !< Initial continuous states
+   TYPE(IceD_InputFile),           INTENT(IN)     :: InputFileData     !< Data stored in the module's input file
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat           !< Error status
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg            !< Error message
 
       ! local variables
    INTEGER(IntKi)                                 :: I                 ! loop counter
@@ -2722,22 +2725,22 @@ SUBROUTINE IceD_Init_OtherStates( OtherState, p, x, InputFileData, ErrStat, ErrM
    
 END SUBROUTINE IceD_Init_OtherStates
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine generate random numbers for the module.
+!! It assumes the parameters are set and that InputFileData contains input for generating random numbers.
 SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrStat, ErrMsg)
-! This routine generate random numbers for the module.
-! It assumes the parameters are set and that InputFileData contains input for generating random numbers.
 !..................................................................................................................................
    IMPLICIT                        NONE
 
-   REAL(ReKi),                   INTENT(OUT)    :: h                 ! Random ice thickness (m)
-   REAL(ReKi),                   INTENT(OUT)    :: v                 ! Random ice velocity (m/s)
-   REAL(ReKi),                   INTENT(OUT)    :: t                 ! Random ice loading event time (s)
-   REAL(ReKi),                   INTENT(OUT)    :: s                 ! Random ice strength (Pa)
-   REAL(ReKi),                   INTENT(OUT)    :: Dm                ! Random ice tooth maximum displacement (m)
-   REAL(ReKi),                   INTENT(OUT)    :: Pch               ! Random ice tooth spacing (m)
-   TYPE(IceD_ParameterType),     INTENT(IN)     :: p                 ! Parameters of the IceDyn module
-   TYPE(IceD_InputFile),         INTENT(IN)     :: InputFileData     ! Data stored in the module's input file
-   INTEGER(IntKi),               INTENT(OUT)    :: ErrStat           ! Error status
-   CHARACTER(*),                 INTENT(OUT)    :: ErrMsg            ! Error message   
+   REAL(ReKi),                   INTENT(OUT)    :: h                 !< Random ice thickness (m)
+   REAL(ReKi),                   INTENT(OUT)    :: v                 !< Random ice velocity (m/s)
+   REAL(ReKi),                   INTENT(OUT)    :: t                 !< Random ice loading event time (s)
+   REAL(ReKi),                   INTENT(OUT)    :: s                 !< Random ice strength (Pa)
+   REAL(ReKi),                   INTENT(OUT)    :: Dm                !< Random ice tooth maximum displacement (m)
+   REAL(ReKi),                   INTENT(OUT)    :: Pch               !< Random ice tooth spacing (m)
+   TYPE(IceD_ParameterType),     INTENT(IN)     :: p                 !< Parameters of the IceDyn module
+   TYPE(IceD_InputFile),         INTENT(IN)     :: InputFileData     !< Data stored in the module's input file
+   INTEGER(IntKi),               INTENT(OUT)    :: ErrStat           !< Error status
+   CHARACTER(*),                 INTENT(OUT)    :: ErrMsg            !< Error message   
 
       ! local variables
 !   INTEGER(IntKi)                               :: I                 ! loop counter
@@ -2777,7 +2780,7 @@ SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrS
 
 !Functions that generate random number with respect to certain distributions
 
-         FUNCTION random_normal() RESULT(fn_val)
+      FUNCTION random_normal() RESULT(fn_val)
 
          ! Adapted from the following Fortran 77 code
          !      ALGORITHM 712, COLLECTED ALGORITHMS FROM ACM.
@@ -2944,7 +2947,7 @@ SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrS
 
         END FUNCTION wbpar
 
-        FUNCTION digamma(z) RESULT(phy)
+      FUNCTION digamma(z) RESULT(phy)
 
          !Calculate the value of digamma function of z
          REAL(ReKi), INTENT(IN) :: z
@@ -2956,37 +2959,36 @@ SUBROUTINE IceD_Generate_RandomNum ( h, v, t, s, Dm, Pch, p, InputFileData, ErrS
 
 END SUBROUTINE IceD_Generate_RandomNum
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE IceD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x).
-!   Define constants k1, k2, k3, and k4 as
-!        k1 = dt * f(t        , x_t        )
-!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
-!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
-!        k4 = dt * f(t + dt   , x_t + k3   ).
-!   Then the continuous states at t = t + dt are
-!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
-!
-! For details, see:
-! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for
-!   Runge-Kutta." §16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England:
-!   Cambridge University Press, pp. 704-716, 1992.
-!
+!> This subroutine implements the fourth-order Runge-Kutta Method (RK4) for numerically integrating ordinary differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x).
+!!   Define constants k1, k2, k3, and k4 as
+!!        k1 = dt * f(t        , x_t        )
+!!        k2 = dt * f(t + dt/2 , x_t + k1/2 )
+!!        k3 = dt * f(t + dt/2 , x_t + k2/2 ), and
+!!        k4 = dt * f(t + dt   , x_t + k3   ).
+!!   Then the continuous states at t = t + dt are
+!!        x_(t+dt) = x_t + k1/6 + k2/3 + k3/3 + k4/6 + O(dt^5)
+!!
+!! For details, see:
+!! Press, W. H.; Flannery, B. P.; Teukolsky, S. A.; and Vetterling, W. T. "Runge-Kutta Method" and "Adaptive Step Size Control for
+!!   Runge-Kutta." §16.1 and 16.2 in Numerical Recipes in FORTRAN: The Art of Scientific Computing, 2nd ed. Cambridge, England:
+!!   Cambridge University Press, pp. 704-716, 1992.
+SUBROUTINE IceD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                 INTENT(IN   )  :: n           ! time step number
-      TYPE(IceD_InputType),           INTENT(INOUT)  :: u(:)        ! Inputs at t
-      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(IceD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(IceD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(IceD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(IceD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(IceD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),                 INTENT(IN   )  :: n           !< time step number
+      TYPE(IceD_InputType),           INTENT(INOUT)  :: u(:)        !< Inputs at t
+      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(IceD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(IceD_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+      TYPE(IceD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(IceD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
+      TYPE(IceD_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states at t
+      TYPE(IceD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
 
@@ -3009,7 +3011,7 @@ SUBROUTINE IceD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       CALL IceD_Input_ExtrapInterp( u, utimes, u_interp, t, ErrStat, ErrMsg )
 
       ! find xdot at t
-      CALL IceD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+      CALL IceD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
 
       k1%q    = p%dt * xdot%q
       k1%dqdt = p%dt * xdot%dqdt
@@ -3021,7 +3023,7 @@ SUBROUTINE IceD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       CALL IceD_Input_ExtrapInterp(u, utimes, u_interp, t+0.5*p%dt, ErrStat, ErrMsg)
 
       ! find xdot at t + dt/2
-      CALL IceD_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+      CALL IceD_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
 
       k2%q    = p%dt * xdot%q
       k2%dqdt = p%dt * xdot%dqdt
@@ -3030,7 +3032,7 @@ SUBROUTINE IceD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       x_tmp%dqdt = x%dqdt + 0.5 * k2%dqdt
 
       ! find xdot at t + dt/2
-      CALL IceD_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+      CALL IceD_CalcContStateDeriv( t + 0.5*p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
 
       k3%q    = p%dt * xdot%q
       k3%dqdt = p%dt * xdot%dqdt
@@ -3042,7 +3044,7 @@ SUBROUTINE IceD_RK4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       CALL IceD_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
 
       ! find xdot at t + dt
-      CALL IceD_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+      CALL IceD_CalcContStateDeriv( t + p%dt, u_interp, p, x_tmp, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
 
       k4%q    = p%dt * xdot%q
       k4%dqdt = p%dt * xdot%dqdt
@@ -3066,35 +3068,34 @@ SUBROUTINE Cleanup()
 END SUBROUTINE Cleanup
 END SUBROUTINE IceD_RK4
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE IceD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential
-! equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x).
-!
-!   x(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
-!
-!  See, e.g.,
-!  http://en.wikipedia.org/wiki/Linear_multistep_method
-!
-!  or
-!
-!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
-!
+!> This subroutine implements the fourth-order Adams-Bashforth Method (RK4) for numerically integrating ordinary differential
+!! equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x).
+!!
+!!   x(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!!
+!!  See, e.g.,
+!!  http://en.wikipedia.org/wiki/Linear_multistep_method
+!!
+!!  or
+!!
+!!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+SUBROUTINE IceD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                 INTENT(IN   )  :: n           ! time step number
-      TYPE(IceD_InputType),           INTENT(INOUT)  :: u(:)        ! Inputs at t
-      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(IceD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(IceD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(IceD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(IceD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(IceD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),                 INTENT(IN   )  :: n           !< time step number
+      TYPE(IceD_InputType),           INTENT(INOUT)  :: u(:)        !< Inputs at t
+      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(IceD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(IceD_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+      TYPE(IceD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(IceD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
+      TYPE(IceD_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states at t
+      TYPE(IceD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
 
       ! local variables
@@ -3112,7 +3113,7 @@ SUBROUTINE IceD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
       
       ! need xdot at t
       CALL IceD_Input_ExtrapInterp(u, utimes, u_interp, t, ErrStat, ErrMsg)
-      CALL IceD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )
+      CALL IceD_CalcContStateDeriv( t, u_interp, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )
 
       if (n .le. 2) then
 
@@ -3120,7 +3121,7 @@ SUBROUTINE IceD_AB4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
 
          OtherState%xdot ( 3 - n ) = xdot
 
-         CALL IceD_RK4(t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+         CALL IceD_RK4(t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       else
 
@@ -3162,39 +3163,38 @@ END SUBROUTINE Cleanup
       
 END SUBROUTINE IceD_AB4
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE IceD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg )
-!
-! This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary
-! differential equations:
-!
-!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x).
-!
-!   Adams-Bashforth Predictor:
-!   x^p(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
-!
-!   Adams-Moulton Corrector:
-!   x(t+dt) = x(t)  + (dt / 24.) * ( 9.*f(t+dt,x^p) + 19.*f(t,x) - 5.*f(t-dt,x) + 1.*f(t-2.*dt,x) )
-!
-!  See, e.g.,
-!  http://en.wikipedia.org/wiki/Linear_multistep_method
-!
-!  or
-!
-!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
-!
+!> This subroutine implements the fourth-order Adams-Bashforth-Moulton Method (RK4) for numerically integrating ordinary
+!! differential equations:
+!!
+!!   Let f(t, x) = xdot denote the time (t) derivative of the continuous states (x).
+!!
+!!   Adams-Bashforth Predictor:
+!!   x^p(t+dt) = x(t)  + (dt / 24.) * ( 55.*f(t,x) - 59.*f(t-dt,x) + 37.*f(t-2.*dt,x) - 9.*f(t-3.*dt,x) )
+!!
+!!   Adams-Moulton Corrector:
+!!   x(t+dt) = x(t)  + (dt / 24.) * ( 9.*f(t+dt,x^p) + 19.*f(t,x) - 5.*f(t-dt,x) + 1.*f(t-2.*dt,x) )
+!!
+!!  See, e.g.,
+!!  http://en.wikipedia.org/wiki/Linear_multistep_method
+!!
+!!  or
+!!
+!!  K. E. Atkinson, "An Introduction to Numerical Analysis", 1989, John Wiley & Sons, Inc, Second Edition.
+SUBROUTINE IceD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),                 INTENT(IN   )  :: n           ! time step number
-      TYPE(IceD_InputType),           INTENT(INOUT)  :: u(:)        ! Inputs at t
-      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   ! times of input
-      TYPE(IceD_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(IceD_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states at t on input at t + dt on output
-      TYPE(IceD_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
-      TYPE(IceD_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t (possibly a guess)
-      TYPE(IceD_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
+      INTEGER(IntKi),                 INTENT(IN   )  :: n           !< time step number
+      TYPE(IceD_InputType),           INTENT(INOUT)  :: u(:)        !< Inputs at t
+      REAL(DbKi),                     INTENT(IN   )  :: utimes(:)   !< times of input
+      TYPE(IceD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+      TYPE(IceD_ContinuousStateType), INTENT(INOUT)  :: x           !< Continuous states at t on input at t + dt on output
+      TYPE(IceD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
+      TYPE(IceD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
+      TYPE(IceD_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states at t
+      TYPE(IceD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc/optimization variables
+      INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+      CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
       ! local variables
 
@@ -3209,14 +3209,14 @@ SUBROUTINE IceD_ABM4( t, n, u, utimes, p, x, xd, z, OtherState, ErrStat, ErrMsg 
 
       CALL IceD_CopyContState(x, x_pred, MESH_NEWCOPY, ErrStat, ErrMsg)
 
-      CALL IceD_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, ErrStat, ErrMsg )
+      CALL IceD_AB4( t, n, u, utimes, p, x_pred, xd, z, OtherState, m, ErrStat, ErrMsg )
 
       if (n .gt. 2) then
 
          CALL IceD_CopyInput( u(1), u_interp, MESH_NEWCOPY, ErrStat, ErrMsg) ! bjj: need to allocate space for u_interp so that IceD_Input_ExtrapInterp works
          CALL IceD_Input_ExtrapInterp(u, utimes, u_interp, t + p%dt, ErrStat, ErrMsg)
 
-         CALL IceD_CalcContStateDeriv(t + p%dt, u_interp, p, x_pred, xd, z, OtherState, xdot_pred, ErrStat, ErrMsg )
+         CALL IceD_CalcContStateDeriv(t + p%dt, u_interp, p, x_pred, xd, z, OtherState, m, xdot_pred, ErrStat, ErrMsg )
 
          x%q    = x%q    + (p%dt / 24.) * ( 9. * xdot_pred%q +  19. * OtherState%xdot(1)%q - 5. * OtherState%xdot(2)%q &
                                           + 1. * OtherState%xdot(3)%q )
@@ -3244,9 +3244,5 @@ END SUBROUTINE Cleanup
       
 END SUBROUTINE IceD_ABM4
 !----------------------------------------------------------------------------------------------------------------------------------
-!..................................................................................................................................
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! WE ARE NOT YET IMPLEMENTING THE JACOBIANS...
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 END MODULE IceDyn
 !**********************************************************************************************************************************

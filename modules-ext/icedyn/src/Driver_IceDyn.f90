@@ -1,23 +1,19 @@
-!..................................................................................................................................
-! LICENSING                                                                                                                         
-! Copyright (C) 2013  National Renewable Energy Laboratory
+! LICENSING
+! Copyright (C) 2013-2016  University of Michigan, National Renewable Energy Laboratory
 !
-!    Glue is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as
-!    published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+!    This file is part of module IceDyn.
 !
-!    This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty
-!    of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
+! Licensed under the Apache License, Version 2.0 (the "License");
+! you may not use this file except in compliance with the License.
+! You may obtain a copy of the License at
 !
-!    You should have received a copy of the GNU General Public License along with IceDyn.
-!    If not, see <http://www.gnu.org/licenses/>.
+!     http://www.apache.org/licenses/LICENSE-2.0
 !
-!**********************************************************************************************************************************
-!  
-!    ADD DESCRIPTION
-!	
-!    References:
-!
-!
+! Unless required by applicable law or agreed to in writing, software
+! distributed under the License is distributed on an "AS IS" BASIS,
+! WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+! See the License for the specific language governing permissions and
+! limitations under the License.
 !**********************************************************************************************************************************
 PROGRAM MAIN
 
@@ -56,12 +52,13 @@ PROGRAM MAIN
    TYPE(IceD_DiscreteStateType)       :: IceD_DiscreteState
    TYPE(IceD_ConstraintStateType)     :: IceD_ConstraintState
    TYPE(IceD_OtherStateType)          :: IceD_OtherState
+   TYPE(IceD_MiscVarType)             :: IceD_MiscVar
 
-   TYPE(IceD_InputType),Dimension(:),Allocatable  :: IceD_Input
-   REAL(DbKi) , DIMENSION(:), ALLOCATABLE           :: IceD_InputTimes
+   TYPE(IceD_InputType), Dimension(:),Allocatable :: IceD_Input
+   REAL(DbKi) ,          DIMENSION(:),ALLOCATABLE :: IceD_InputTimes
 
-   TYPE(IceD_OutputType),Dimension(:),Allocatable  :: IceD_Output
-   REAL(DbKi) , DIMENSION(:), ALLOCATABLE          :: IceD_OutputTimes
+   TYPE(IceD_OutputType),Dimension(:),Allocatable :: IceD_Output
+   REAL(DbKi) ,          DIMENSION(:),ALLOCATABLE :: IceD_OutputTimes
 
    TYPE(IceD_InputType)   :: u1    ! local variable for extrapolated inputs
    TYPE(IceD_OutputType)  :: y1    ! local variable for extrapolated outputs
@@ -71,6 +68,7 @@ PROGRAM MAIN
    TYPE(IceD_ContinuousStateType)     :: IceD_ContinuousState_pred
    TYPE(IceD_DiscreteStateType)       :: IceD_DiscreteState_pred
    TYPE(IceD_ConstraintStateType)     :: IceD_ConstraintState_pred
+   TYPE(IceD_OtherStateType)          :: IceD_OtherState_pred
 
    ! local variables
    Integer(IntKi)                     :: i               ! counter for various loops
@@ -146,6 +144,7 @@ PROGRAM MAIN
                    , IceD_ConstraintState  &
                    , IceD_OtherState       &
                    , IceD_Output(1)        &
+                   , IceD_MiscVar          &
                    , dt_global             &
                    , IceD_InitOutput       &
                    , ErrStat               &
@@ -175,6 +174,13 @@ PROGRAM MAIN
          call CheckError()
    enddo
 
+   
+   Call IceD_CopyContState   (IceD_ContinuousState, IceD_ContinuousState_pred, MESH_NEWCOPY, Errstat, ErrMsg); CALL CheckError()
+   Call IceD_CopyConstrState (IceD_ConstraintState, IceD_ConstraintState_pred, MESH_NEWCOPY, Errstat, ErrMsg); CALL CheckError()
+   Call IceD_CopyDiscState   (IceD_DiscreteState,   IceD_DiscreteState_pred,   MESH_NEWCOPY, Errstat, ErrMsg); CALL CheckError()
+   Call IceD_CopyOtherState  (IceD_OtherState,      IceD_OtherState_pred,      MESH_NEWCOPY, Errstat, ErrMsg); CALL CheckError()
+   
+   
    ! -------------------------------------------------------------------------
    ! Time-stepping loops
    ! -------------------------------------------------------------------------
@@ -218,8 +224,7 @@ PROGRAM MAIN
       CALL CheckError()
 
       CALL IceD_CalcOutput( t_global, IceD_Input(1), IceD_Parameter, IceD_ContinuousState, IceD_DiscreteState, &
-                              IceD_ConstraintState, &
-                              IceD_OtherState,  IceD_Output(1), ErrStat, ErrMsg)
+                              IceD_ConstraintState, IceD_OtherState,  IceD_Output(1), IceD_MiscVar, ErrStat, ErrMsg)
       CALL CheckError()
       
       Frmt = '(/ F8.3)'
@@ -262,19 +267,14 @@ PROGRAM MAIN
 
          ! copy ContinuousState to ContinuousState_pred; don't modify ContinuousState until completion of PC iterations
 
-         Call IceD_CopyContState   (IceD_ContinuousState, IceD_ContinuousState_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
-            CALL CheckError()
-
-         Call IceD_CopyConstrState (IceD_ConstraintState, IceD_ConstraintState_pred, MESH_UPDATECOPY, Errstat, ErrMsg)
-            CALL CheckError()
-
-         Call IceD_CopyDiscState   (IceD_DiscreteState,   IceD_DiscreteState_pred,   MESH_UPDATECOPY, Errstat, ErrMsg)
-            CALL CheckError()
-
+         Call IceD_CopyContState   (IceD_ContinuousState, IceD_ContinuousState_pred, MESH_UPDATECOPY, Errstat, ErrMsg); CALL CheckError()
+         Call IceD_CopyConstrState (IceD_ConstraintState, IceD_ConstraintState_pred, MESH_UPDATECOPY, Errstat, ErrMsg); CALL CheckError()
+         Call IceD_CopyDiscState   (IceD_DiscreteState,   IceD_DiscreteState_pred,   MESH_UPDATECOPY, Errstat, ErrMsg); CALL CheckError()
+         Call IceD_CopyOtherState  (IceD_OtherState,      IceD_OtherState_pred,      MESH_UPDATECOPY, Errstat, ErrMsg); CALL CheckError()
+                     
          CALL IceD_UpdateStates( t_global, n_t_global, IceD_Input, IceD_InputTimes, IceD_Parameter, &
-                                   IceD_ContinuousState_pred, &
-                                   IceD_DiscreteState_pred, IceD_ConstraintState_pred, &
-                                   IceD_OtherState, ErrStat, ErrMsg )
+                                   IceD_ContinuousState_pred, IceD_DiscreteState_pred, IceD_ConstraintState_pred, &
+                                   IceD_OtherState_pred, IceD_MiscVar, ErrStat, ErrMsg )
             CALL CheckError()
 
 
@@ -301,13 +301,11 @@ PROGRAM MAIN
       !write(*,*) t_global, IceD_ContinuousState%dqdt
 
       ! Save all final variables 
+      Call IceD_CopyContState   (IceD_ContinuousState_pred, IceD_ContinuousState, MESH_UPDATECOPY, Errstat, ErrMsg); CALL CheckError()
+      Call IceD_CopyConstrState (IceD_ConstraintState_pred, IceD_ConstraintState, MESH_UPDATECOPY, Errstat, ErrMsg); CALL CheckError()
+      Call IceD_CopyDiscState   (IceD_DiscreteState_pred,   IceD_DiscreteState,   MESH_UPDATECOPY, Errstat, ErrMsg); CALL CheckError()
+      Call IceD_CopyOtherState  (IceD_OtherState_pred,      IceD_OtherState,      MESH_UPDATECOPY, Errstat, ErrMsg); CALL CheckError()
 
-      Call IceD_CopyContState   (IceD_ContinuousState_pred,  IceD_ContinuousState, MESH_UPDATECOPY, Errstat, ErrMsg)
-         CALL CheckError()
-      Call IceD_CopyConstrState (IceD_ConstraintState_pred,  IceD_ConstraintState, MESH_UPDATECOPY, Errstat, ErrMsg)
-         CALL CheckError()
-      Call IceD_CopyDiscState   (IceD_DiscreteState_pred,    IceD_DiscreteState,   MESH_UPDATECOPY, Errstat, ErrMsg)
-         CALL CheckError()
 
       ! update the global time
 
@@ -358,7 +356,7 @@ PROGRAM MAIN
    
 
    CALL IceD_End( IceD_Input(1), IceD_Parameter, IceD_ContinuousState, IceD_DiscreteState, &
-                    IceD_ConstraintState, IceD_OtherState, IceD_Output(1), ErrStat, ErrMsg )
+                    IceD_ConstraintState, IceD_OtherState, IceD_Output(1), IceD_MiscVar, ErrStat, ErrMsg )
       CALL CheckError()
    
    do i = 2, IceD_interp_order+1
@@ -369,6 +367,11 @@ PROGRAM MAIN
    DEALLOCATE(IceD_InputTimes)
    DEALLOCATE(IceD_OutputTimes)
 
+   Call IceD_DestroyContState   (IceD_ContinuousState_pred, Errstat, ErrMsg)
+   Call IceD_DestroyConstrState (IceD_ConstraintState_pred, Errstat, ErrMsg)
+   Call IceD_DestroyDiscState   (IceD_DiscreteState_pred,   Errstat, ErrMsg)
+   Call IceD_DestroyOtherState  (IceD_OtherState_pred,      Errstat, ErrMsg)
+   
 
 CONTAINS
 
