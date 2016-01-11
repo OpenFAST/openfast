@@ -402,11 +402,8 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp, "  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)\n\n");
   
   if (sw_ccode) {
-
-     //if (!strcmp(make_lower_temp(nonick), "otherstate") || !strcmp(make_lower_temp(nonick), "initinput")){
      fprintf(fp, "  IF (C_ASSOCIATED(InData%%C_obj%%object)) ");
      fprintf(fp, "CALL SetErrStat(ErrID_Severe,'C_obj%%object cannot be packed.',ErrStat,ErrMsg,RoutineName)\n\n");
-     //}
   }
 
 
@@ -1902,7 +1899,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
   }
 
 
-  fprintf(fp," SUBROUTINE %s_RK4(t, u, u_next, p, x, xd, z, OtherState, xdot, ErrStat, ErrMsg )\n",
+  fprintf(fp," SUBROUTINE %s_RK4(t, u, u_next, p, x, xd, z, OtherState, m, xdot, ErrStat, ErrMsg )\n",
                                                                                               ModName->nickname) ;
   fprintf(fp,"  REAL(DbKi),                   INTENT(IN   ) :: t           ! Current simulation time in seconds\n") ;
   fprintf(fp,"  TYPE(%s_InputType),           INTENT(IN   ) :: u           ! Inputs at t\n",  ModName->nickname) ;
@@ -1913,8 +1910,9 @@ gen_rk4( FILE *fp , const node_t * ModName )
   fprintf(fp,"  TYPE(%s_DiscreteStateType),   INTENT(INOUT) :: xd          ! Discrete states at t\n",   ModName->nickname) ;
   fprintf(fp,"  TYPE(%s_ConstraintStateType), INTENT(IN   ) :: z           ! Constraint states at t (possibly a guess)\n",
                                                                                               ModName->nickname) ;
-  fprintf(fp,"  TYPE(%s_OtherStateType),      INTENT(INOUT) :: OtherState  ! Other/optimization states\n",  ModName->nickname) ;
-  fprintf(fp,"  TYPE(%s_ContinuousStateType), INTENT(IN   ) :: xdot        ! Continuous states at t on input at t + dt on output\n",
+  fprintf(fp,"  TYPE(%s_OtherStateType),      INTENT(INOUT) :: OtherState  ! Other states\n",  ModName->nickname) ;
+  fprintf(fp, "  TYPE(%s_MiscVarType),         INTENT(INOUT) :: m           ! Misc/optimization variables\n", ModName->nickname);
+  fprintf(fp, "  TYPE(%s_ContinuousStateType), INTENT(IN   ) :: xdot        ! Continuous states at t on input at t + dt on output\n",
                                                                                               ModName->nickname) ;
   fprintf(fp,"  INTEGER(IntKi),               INTENT(  OUT) :: ErrStat\n") ;
   fprintf(fp,"  CHARACTER(*),                 INTENT(  OUT) :: ErrMsg\n") ;
@@ -1939,7 +1937,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
 
   fprintf(fp,"  ErrStat = ErrID_None\n") ;
   fprintf(fp,"  ErrMsg  = \"\"\n") ;
-  fprintf(fp," !CALL %s_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, xdot_local, ErrStat, ErrMsg )\n",
+  fprintf(fp," !CALL %s_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, xdot_local, ErrStat, ErrMsg )\n",
                                                                                              ModName->nickname) ;
   fprintf(fp,"  alpha = 0.5\n") ;
   for ( k = 1 ; k <= 4 ; k++ )
@@ -1991,7 +1989,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
 
   if (k == 1)  fprintf(fp,"  CALL %s_LinearInterpInput(u, u_next, u_interp, alpha, ErrStat, ErrMsg)\n",
                                                                                              ModName->nickname) ;
-  if (k < 4 )fprintf(fp,"  CALL %s_CalcContStateDeriv( t+%sp%%dt, u_%s, p, x_tmp, xd, z, OtherState, xdot_local, ErrStat, ErrMsg )\n",
+  if (k < 4 )fprintf(fp,"  CALL %s_CalcContStateDeriv( t+%sp%%dt, u_%s, p, x_tmp, xd, z, OtherState, m, xdot_local, ErrStat, ErrMsg )\n",
                                                                                              ModName->nickname,
                                                                                              (k<3)?"0.5*":"",
                                                                                              (k<3)?"interp":"next") ;
@@ -2001,13 +1999,6 @@ gen_rk4( FILE *fp , const node_t * ModName )
 
 
 }
-
-static char *typenames[] = { "Input", "Param", "ContState", "DiscState", "ConstrState",
-                             "OtherState", "Output", 0L } ;
-static char **typename1 ;
-static char *argtypenames[] = { "InData", "ParamData", "ContStateData", "DiscStateData", "ConstrStateData",
-                                "OtherStateData", "OutData", 0L } ;
-static char **argtypename ;
 
 
 void

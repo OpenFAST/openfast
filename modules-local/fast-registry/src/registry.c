@@ -43,10 +43,8 @@ main( int argc, char *argv[], char *env[] )
   sw_norealloc_lsh   = 1 ;
   sw_ccode           = 0 ;
   sw_noextrap        = 0 ;
-  sw_embed_class_ptr = 0 ;
   sw_shownodes       = 0 ;
   strcpy( fname_in , "" ) ;
-  strcpy(sw_c2f_underscore,"_") ;
 
 #ifndef _WIN32
   rlim.rlim_cur = RLIM_INFINITY ;
@@ -54,7 +52,7 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
-   thisprog_ver = "FAST Registry (v2.08.03, 2-Oct-2015)";
+   thisprog_ver = "FAST Registry (v3.01.00, 11-Jan-2016)";
 
   fprintf(stderr,"\n") ;
   fprintf(stderr,"----- %s --------------\n", thisprog_ver) ;
@@ -88,20 +86,14 @@ main( int argc, char *argv[], char *env[] )
         argv++ ; if ( *argv )  { strcpy( OutDir, *argv ) ; } 
       } else if (!strcmp(*argv,"-I") || !strcmp(*argv,"/I") ) {
         argv++ ; if ( *argv ) { if( nincldirs < MAXINCLDIRS ) { strcpy( IncludeDirs[nincldirs++], *argv ) ; } }
-      } else if (!strcmp(*argv,"-ccode")) {
+      } else if (!strcmp(*argv, "-ccode") || !strcmp(*argv, "/ccode")) {
         sw_ccode = 1 ;
-      } else if (!strcmp(*argv, "-noextrap")) {
+      } else if (!strcmp(*argv, "-noextrap") || !strcmp(*argv, "/noextrap")) {
           sw_noextrap = 1;
-      } else if (!strncmp(*argv,"-shownodes",4)) {
+      } else if (!strncmp(*argv, "-shownodes", 4) || !strncmp(*argv, "/shownodes", 4)) {
         sw_shownodes = 1 ;
-      } else if (!strncmp(*argv,"-embed",6)) {
-        sw_embed_class_ptr = 1 ;
-      } else if (!strncmp(*argv,"-f2c",4)) {
-        strcpy(sw_c2f_underscore,"__") ;
-      } else if (!strncmp(*argv,"-nounderscore",6)) {
-        strcpy(sw_c2f_underscore,"") ;
       } else if (!strcmp(*argv,"-template") || !strcmp(*argv,"-registry") ||
-          !strcmp(*argv,"/template") || !strcmp(*argv,"/registry")  ) {
+                 !strcmp(*argv,"/template") || !strcmp(*argv,"/registry")  ) {
         char * arg ;
         arg = *argv ;
         argv++ ; if ( *argv ) { strcpy( sw_modname_subst,     *argv ) ; } else { goto usage ; }
@@ -121,8 +113,6 @@ usage:
         fprintf(stderr, "    -noextrap         do not generate ModName_Input_ExtrapInterp or ModName_Output_ExtrapInterp routines\n");
         fprintf(stderr, "    -D<SYM>           define symbol for conditional evaluation inside registry file\n");
         fprintf(stderr, "    -ccode            generate additional code for interfacing with C/C++\n") ;
-        fprintf(stderr, "      -f2c            use f2c convention for Fortran-callable C routines (double underscore)\n") ;
-        fprintf(stderr, "      -nound[erscore] use IBM C/Fortran interface specification (no underscore)\n") ;
         fprintf(stderr, "    -keep             do not delete temporary files from registry program\n") ;
         fprintf(stderr, "    -shownodes        output a listing of the nodes in registry's AST\n") ;
         fprintf(stderr, "  === alternate usage for generating templates ===\n") ;
@@ -228,14 +218,15 @@ output_template( char * sw_modname_subst, char * sw_modnickname_subst, int force
     char fname[NAMELEN] ;
     char tmp1[2096], tmp2[2096], tmp3[2096] ;
     if ( sw == 0 ) { sprintf(fname,"%s.f90",sw_modname_subst) ; }
-    else           { sprintf(fname,"Registry_%s.txt",sw_modname_subst) ; }
-    if ( ! force ) {
+    else           { sprintf(fname,"%s_Registry.txt",sw_modname_subst) ; }
+    
+    if ( ! force ) { // check if file exists by trying to open file for reading. If the read is successful, exit program:
       if ( (fp = fopen( fname,"r" )) != NULL ) {
-        fprintf(stderr,"Registry exiting. Attempt to overwrite file (%s) . Move out of the way or specify -f before -template option. \n", fname) ;
+        fprintf(stderr,"Registry exiting. Attempt to overwrite file (%s) . Move out of the way or specify -force before -template option. \n", fname) ;
         exit(1) ;
       }
-      fclose(fp) ;
     }
+    
     if ( (fp = fopen( fname,"w" )) == NULL ) {
       fprintf(stderr,"Registry exiting. Failure opening %s.\n", fname ) ;
       exit(1) ;
@@ -319,20 +310,3 @@ matches( char * str , char * match )   // both must be null terminated
    if ( n != strlen(match) ) return(0) ;
    return(1) ;
 }
-
-void
-make_fortran_callable( char *str )     // make a generated C subroutine name callable by Fortran
-{
-   char *p, tmp[NAMELEN] ;
-   int found = 0 ;
-   make_lower_temp(str) ;  // make string lower case
-   strcpy(tmp,sw_c2f_underscore) ;
-   if ( !strcmp(sw_c2f_underscore,"__")) // f2cstyle, dbl underscore if an underscore in name, single otherwise
-   {
-      for ( p=str ; *p ; p++ ) { if (*p == '_') found = 1 ; }
-      if ( found ) strcpy(tmp,"__") ;
-      else         strcpy(tmp,"_") ;
-   }
-   strcat(str,tmp) ;
-}
-
