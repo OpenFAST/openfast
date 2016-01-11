@@ -35,7 +35,7 @@ MODULE ModuleName
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: ModName_Ver = ProgDesc( 'ModuleName', 'v2.00.00', '13-November-2013' ) !< module date/version information
+   TYPE(ProgDesc), PARAMETER            :: ModName_Ver = ProgDesc( 'ModuleName', 'v2.00.00', '13-November-2015' ) !< module date/version information
 
 
       ! ..... Public Subroutines ...................................................................................................
@@ -50,7 +50,7 @@ MODULE ModuleName
    PUBLIC :: ModName_CalcConstrStateResidual        !  Tight coupling routine for returning the constraint state residual
    PUBLIC :: ModName_CalcContStateDeriv             !  Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: ModName_UpdateDiscState                !  Tight coupling routine for updating discrete states
-                                                      
+
    PUBLIC :: ModName_JacobianPInput                 !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
                                                     !    (Xd), and constraint-state (Z) functions all with respect to the inputs (u)
    PUBLIC :: ModName_JacobianPContState             !  Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
@@ -67,7 +67,7 @@ CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
-!! The initial states and initial guess for the input are defined.   
+!! The initial states and initial guess for the input are defined.
 SUBROUTINE ModName_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
@@ -92,12 +92,12 @@ SUBROUTINE ModName_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval,
       CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
          ! local variables
-         
+
       INTEGER(IntKi)                                    :: NumOuts     ! number of outputs; would probably be in the parameter type
       INTEGER(IntKi)                                    :: ErrStat2    ! local error status
       CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! local error message
       CHARACTER(*), PARAMETER                           :: RoutineName = 'ModName_Init'
-      
+
          !! Initialize variables
 
       ErrStat = ErrID_None
@@ -138,7 +138,7 @@ SUBROUTINE ModName_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval,
       call AllocAry( y%WriteOutput, NumOuts, 'WriteOutput', ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! set return error status based on local (concatenate errors)
          if (ErrStat >= AbortErrLev) return        ! if there are local variables that need to be deallocated, do so before early return
-         
+
       y%DummyOutput = 0
       y%WriteOutput = 0
 
@@ -151,7 +151,7 @@ SUBROUTINE ModName_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval,
       InitOut%WriteOutputHdr = (/ 'Time   ', 'Column2' /)
       InitOut%WriteOutputUnt = (/ '(s)',     '(-)'     /)
 
-      
+
          ! If you want to choose your own rate instead of using what the glue code suggests, tell the glue code the rate at which
          !   this module must be called here:
 
@@ -215,22 +215,22 @@ SUBROUTINE ModName_End( u, p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
 
       call ModName_DestroyOutput( y, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
-      
+
          !! Destroy the misc data:
 
       call ModName_DestroyMisc( misc, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-      
+
 
 END SUBROUTINE ModName_End
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other 
+!> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other
 !! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
 SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                         INTENT(IN   ) :: t               !< Current simulation time in seconds
       INTEGER(IntKi),                     INTENT(IN   ) :: n               !< Current step of the simulation: t = n*Interval
-      TYPE(ModName_InputType),            INTENT(INOUT) :: Inputs(:)       !< Inputs at InputTimes (output from this routine only 
+      TYPE(ModName_InputType),            INTENT(INOUT) :: Inputs(:)       !< Inputs at InputTimes (output from this routine only
                                                                            !!  because of record keeping in routines that copy meshes)
       REAL(DbKi),                         INTENT(IN   ) :: InputTimes(:)   !< Times in seconds associated with Inputs
       TYPE(ModName_ParameterType),        INTENT(IN   ) :: p               !< Parameters
@@ -252,23 +252,23 @@ SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
       TYPE(ModName_DiscreteStateType)                   :: xd_t            ! Discrete states at t (copy)
       TYPE(ModName_ConstraintStateType)                 :: z_Residual      ! Residual of the constraint state functions (Z)
       TYPE(ModName_InputType)                           :: u               ! Instantaneous inputs
-      
+
       INTEGER(IntKi)                                    :: ErrStat2        ! local error status
       CHARACTER(ErrMsgLen)                              :: ErrMsg2         ! local error message
       CHARACTER(*), PARAMETER                           :: RoutineName = 'ModName_UpdateStates'
 
-      
+
          ! Initialize variables
 
       ErrStat   = ErrID_None           ! no error has occurred
       ErrMsg    = ""
-            
-      
+
+
       ! This subroutine contains an example of how the states could be updated. Developers will
       ! want to adjust the logic as necessary for their own situations.
-      
-      
-      
+
+
+
          ! Get the inputs at time t, based on the array of values sent by the glue code:
 
       ! before calling ExtrapInterp routine, memory in u must be allocated; we can do that with a copy:
@@ -278,15 +278,15 @@ SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
             call cleanup()       ! to avoid memory leaks, we have to destroy the local variables that may have allocatable arrays or meshes
             return
          end if
-                     
-      call ModName_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat2, ErrMsg2 )  
+
+      call ModName_Input_ExtrapInterp( Inputs, InputTimes, u, t, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if ( ErrStat >= AbortErrLev ) then
             call cleanup()
             return
          end if
-      
-      
+
+
 
          ! Get first time derivatives of continuous states (dxdt):
 
@@ -296,8 +296,8 @@ SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
             call cleanup()
             return
          end if
-      
-      
+
+
          ! Update discrete states:
          !   Note that xd [discrete state] is changed in ModName_UpdateDiscState() so xd will now contain values at t+Interval
          !   We'll first make a copy that contains xd at time t, which will be used in computing the constraint states
@@ -320,7 +320,7 @@ SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
 
          ! Iterate until the value is within a given tolerance.
 
-      ! DO 
+      ! DO
 
          call ModName_CalcConstrStateResidual( t, u, p, x, xd_t, z, OtherState, misc, Z_Residual, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -328,13 +328,13 @@ SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
                call cleanup()
                return
             end if
-      
+
          !  z =
 
       ! END DO
-  
-            
-      
+
+
+
          ! Integrate (update) continuous states (x) here:
 
       !x = function of dxdt and x
@@ -342,18 +342,18 @@ SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
 
          ! Destroy local variables before returning
       call cleanup()
-      
-      
+
+
 CONTAINS
    SUBROUTINE cleanup()
       ! note that this routine inherits all of the data in ModName_UpdateStates
-   
-   
+
+
       CALL ModName_DestroyInput(       u,          ErrStat2, ErrMsg2)
       CALL ModName_DestroyConstrState( Z_Residual, ErrStat2, ErrMsg2)
       CALL ModName_DestroyContState(   dxdt,       ErrStat2, ErrMsg2)
-      CALL ModName_DestroyDiscState(   xd_t,       ErrStat2, ErrMsg2) 
-      
+      CALL ModName_DestroyDiscState(   xd_t,       ErrStat2, ErrMsg2)
+
    END SUBROUTINE cleanup
 END SUBROUTINE ModName_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------

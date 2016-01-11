@@ -34,7 +34,7 @@ typedef   ^               DiscreteStateType   ReKi     DummyDiscState - - -  "Re
 # Define constraint states here:
 typedef   ^               ConstraintStateType ReKi     DummyConstrState - - - "Remove this variable if you have constraint states" -
 
-# Define any data that are integer or logical states here:
+# Define any other states, including integer or logical states here:
 typedef   ^               OtherStateType      IntKi    DummyOtherState - - - "Remove this variable if you have other states" -
 
 
