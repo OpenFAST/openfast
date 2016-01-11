@@ -397,7 +397,7 @@ print_warning( FILE * fp , char * fname, char comment[] )
 {
 fprintf(fp,"%s!STARTOFREGISTRYGENERATEDFILE '%s'\n", comment, fname) ;
 fprintf(fp,"%s!\n", comment) ;
-fprintf(fp,"%s! WARNING This file is generated automatically by the FAST registry\n", comment) ;
+fprintf(fp,"%s! WARNING This file is generated automatically by the FAST registry.\n", comment) ;
 fprintf(fp,"%s! Do not edit.  Your changes to this file will be lost.\n", comment) ;
 fprintf(fp,"%s!\n", comment) ;
 return(0) ;

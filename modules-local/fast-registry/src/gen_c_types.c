@@ -359,11 +359,6 @@ gen_c_module( FILE * fph, node_t * ModName )
         //if (!strcmp(make_lower_temp(nonick), "otherstatetype") !strcmp(make_lower_temp(nonick), "initinputtype")){
            fprintf(fph, "    void * object ;\n");
         //}
-        if ( sw_embed_class_ptr ) {
-          fprintf(fph,"    %s * class ; // user must define a class named %s in C++ code\n",q->mapsto,q->mapsto) ;
-          fprintf(fph,"    int *index ;\n") ;
-          fprintf(fph,"    int indexLen ;\n") ;
-        }
         for ( r = q->fields ; r ; r = r->next )
         {
           if ( r->type != NULL ) {
