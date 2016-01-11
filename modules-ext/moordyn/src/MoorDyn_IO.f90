@@ -102,7 +102,7 @@ CONTAINS
 
 
    !====================================================================================================
-   SUBROUTINE MDIO_ReadInput( InitInp, p, other, ErrStat, ErrMsg )
+   SUBROUTINE MDIO_ReadInput( InitInp, p, m, ErrStat, ErrMsg )
 
    ! This subroutine reads the input required for MoorDyn from the file whose name is an
    ! input parameter.  It sets the size of p%NTypes, NConnects, and NLines,
@@ -112,9 +112,9 @@ CONTAINS
 
     ! Passed variables
 
-    TYPE(MD_InitInputType), INTENT( INOUT )   :: InitInp              ! the MoorDyn data
-    TYPE(MD_ParameterType),       INTENT(INOUT)     :: p           ! Parameters
-    TYPE(MD_OtherStateType),      INTENT(  OUT)     :: other       ! INTENT( OUT) : Initial other/optimization states
+    TYPE(MD_InitInputType),       INTENT( INOUT )   :: InitInp              ! the MoorDyn data
+    TYPE(MD_ParameterType),       INTENT(INOUT)     :: p                    ! Parameters
+    TYPE(MD_MiscVarType),         INTENT(  OUT)     :: m                    ! INTENT( OUT) : Initial misc/optimization vars
     INTEGER,                      INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs
     CHARACTER(*),                 INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -283,7 +283,7 @@ CONTAINS
     END IF
 
     ! Allocate memory for LineTypeList array to hold line type properties
-    ALLOCATE ( other%LineTypeList(p%NTypes), STAT = ErrStat2 )
+    ALLOCATE ( m%LineTypeList(p%NTypes), STAT = ErrStat2 )
     IF ( ErrStat2 /= 0 ) THEN
        CALL SetErrStat( ErrID_Fatal, 'Error allocating space for LineTypeList array.', ErrStat, ErrMsg, RoutineName )
        CALL CleanUp()
@@ -296,12 +296,12 @@ CONTAINS
        READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
 
        IF (ErrStat2 == 0) THEN
-          READ(Line,*,IOSTAT=ErrStat2) other%LineTypeList(I)%name, other%LineTypeList(I)%d,  &
-             other%LineTypeList(I)%w, other%LineTypeList(I)%EA, other%LineTypeList(I)%BA, &
-             other%LineTypeList(I)%Can, other%LineTypeList(I)%Cat, other%LineTypeList(I)%Cdn, other%LineTypeList(I)%Cdt
+          READ(Line,*,IOSTAT=ErrStat2) m%LineTypeList(I)%name, m%LineTypeList(I)%d,  &
+             m%LineTypeList(I)%w, m%LineTypeList(I)%EA, m%LineTypeList(I)%BA, &
+             m%LineTypeList(I)%Can, m%LineTypeList(I)%Cat, m%LineTypeList(I)%Cdn, m%LineTypeList(I)%Cdt
        END IF
 
-       other%LineTypeList(I)%IdNum = I  ! specify IdNum of line type for error checking
+       m%LineTypeList(I)%IdNum = I  ! specify IdNum of line type for error checking
 
 
        IF ( ErrStat2 /= ErrID_None ) THEN
@@ -356,7 +356,7 @@ CONTAINS
     END IF
 
      ! allocate ConnectList
-    ALLOCATE ( other%ConnectList(p%NConnects), STAT = ErrStat2 )
+    ALLOCATE ( m%ConnectList(p%NConnects), STAT = ErrStat2 )
     IF ( ErrStat2 /= 0 ) THEN
        CALL SetErrStat( ErrID_Fatal, 'Error allocating space for ConnectList array.', ErrStat, ErrMsg, RoutineName )
        CALL CleanUp()
@@ -369,22 +369,22 @@ CONTAINS
        READ(UnIn,'(A)',IOSTAT=ErrStat2) Line      !read into a line
 
        IF (ErrStat2 == 0) THEN
-          READ(Line,*,IOSTAT=ErrStat2) other%ConnectList(I)%IdNum, other%ConnectList(I)%type, other%ConnectList(I)%conX, &
-               other%ConnectList(I)%conY, other%ConnectList(I)%conZ, other%ConnectList(I)%conM, &
-               other%ConnectList(I)%conV, other%ConnectList(I)%conFX, other%ConnectList(I)%conFY, &
-                other%ConnectList(I)%conFZ, other%ConnectList(I)%conCdA, other%ConnectList(I)%conCa
+          READ(Line,*,IOSTAT=ErrStat2) m%ConnectList(I)%IdNum, m%ConnectList(I)%type, m%ConnectList(I)%conX, &
+               m%ConnectList(I)%conY, m%ConnectList(I)%conZ, m%ConnectList(I)%conM, &
+               m%ConnectList(I)%conV, m%ConnectList(I)%conFX, m%ConnectList(I)%conFY, &
+                m%ConnectList(I)%conFZ, m%ConnectList(I)%conCdA, m%ConnectList(I)%conCa
        END IF
 
        IF ( ErrStat2 /= 0 ) THEN
           CALL WrScr('   Unable to parse Connection '//trim(Num2LStr(I))//' row in input file.')  ! Specific screen output because errors likely
           CALL WrScr('   Ensure row has all 12 columns, including CdA and Ca.')           ! to be caused by non-updated input file formats.
-             CALL SetErrStat( ErrID_Fatal, 'Failed to read connects.' , ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line
+             CALL SetErrStat( ErrID_Fatal, 'Failed to read connects.' , ErrStat, ErrMsg, RoutineName ) ! would be nice to specify which line <<<<<<<<<
           CALL CleanUp()
           RETURN
        END IF
        
        ! check for sequential IdNums
-       IF ( other%ConnectList(I)%IdNum .NE. I ) THEN
+       IF ( m%ConnectList(I)%IdNum .NE. I ) THEN
          CALL SetErrStat( ErrID_Fatal, 'Node numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
          CALL CleanUp()
          RETURN
@@ -438,7 +438,7 @@ CONTAINS
     END IF
 
      ! allocate LineList
-    ALLOCATE ( other%LineList(p%NLines), STAT = ErrStat2 )
+    ALLOCATE ( m%LineList(p%NLines), STAT = ErrStat2 )
     IF ( ErrStat2 /= 0 ) THEN
        CALL SetErrStat( ErrID_Fatal, 'Error allocating space for LineList array.', ErrStat, ErrMsg, RoutineName )
        CALL CleanUp()
@@ -452,8 +452,8 @@ CONTAINS
 
 
        IF (ErrStat2 == 0) THEN
-          READ(Line,*,IOSTAT=ErrStat2) other%LineList(I)%IdNum, other%LineList(I)%type, other%LineList(I)%UnstrLen, &
-            other%LineList(I)%N, other%LineList(I)%AnchConnect, other%LineList(I)%FairConnect, LineOutString
+          READ(Line,*,IOSTAT=ErrStat2) m%LineList(I)%IdNum, m%LineList(I)%type, m%LineList(I)%UnstrLen, &
+            m%LineList(I)%N, m%LineList(I)%AnchConnect, m%LineList(I)%FairConnect, LineOutString
        END IF
 
        IF ( ErrStat2 /= 0 ) THEN
@@ -464,7 +464,7 @@ CONTAINS
        
        
        ! check for sequential IdNums
-       IF ( other%LineList(I)%IdNum .NE. I ) THEN
+       IF ( m%LineList(I)%IdNum .NE. I ) THEN
          CALL SetErrStat( ErrID_Fatal, 'Line numbers must be sequential starting from 1.', ErrStat, ErrMsg, RoutineName )
          CALL CleanUp()
          RETURN
@@ -472,8 +472,8 @@ CONTAINS
 
        ! identify index of line type
        DO J = 1,p%NTypes
-         IF (trim(other%LineList(I)%type) == trim(other%LineTypeList(J)%name)) THEN
-           other%LineList(I)%PropsIdNum = J
+         IF (trim(m%LineList(I)%type) == trim(m%LineTypeList(J)%name)) THEN
+           m%LineList(I)%PropsIdNum = J
            EXIT
            IF (J == p%NTypes) THEN   ! call an error if there is no match
                CALL SetErrStat( ErrID_Severe, 'Unable to find matching line type name for Line '//trim(Num2LStr(I)), ErrStat, ErrMsg, RoutineName )
@@ -482,22 +482,22 @@ CONTAINS
        END DO
        
        ! process output flag characters (LineOutString) and set line output flag array (OutFlagList)
-       other%LineList(I)%OutFlagList = 0  ! first set array all to zero
-       IF ( scan( LineOutString, 'p') > 0 )  other%LineList(I)%OutFlagList(2) = 1 
-       IF ( scan( LineOutString, 'v') > 0 )  other%LineList(I)%OutFlagList(3) = 1
-       IF ( scan( LineOutString, 'U') > 0 )  other%LineList(I)%OutFlagList(4) = 1
-       IF ( scan( LineOutString, 'D') > 0 )  other%LineList(I)%OutFlagList(5) = 1
-       IF ( scan( LineOutString, 't') > 0 )  other%LineList(I)%OutFlagList(6) = 1
-       IF ( scan( LineOutString, 'c') > 0 )  other%LineList(I)%OutFlagList(7) = 1
-       IF ( scan( LineOutString, 's') > 0 )  other%LineList(I)%OutFlagList(8) = 1
-       IF ( scan( LineOutString, 'd') > 0 )  other%LineList(I)%OutFlagList(9) = 1
-       IF (SUM(other%LineList(I)%OutFlagList) > 0)   other%LineList(I)%OutFlagList(1) = 1  ! this first entry signals whether to create any output file at all
+       m%LineList(I)%OutFlagList = 0  ! first set array all to zero
+       IF ( scan( LineOutString, 'p') > 0 )  m%LineList(I)%OutFlagList(2) = 1 
+       IF ( scan( LineOutString, 'v') > 0 )  m%LineList(I)%OutFlagList(3) = 1
+       IF ( scan( LineOutString, 'U') > 0 )  m%LineList(I)%OutFlagList(4) = 1
+       IF ( scan( LineOutString, 'D') > 0 )  m%LineList(I)%OutFlagList(5) = 1
+       IF ( scan( LineOutString, 't') > 0 )  m%LineList(I)%OutFlagList(6) = 1
+       IF ( scan( LineOutString, 'c') > 0 )  m%LineList(I)%OutFlagList(7) = 1
+       IF ( scan( LineOutString, 's') > 0 )  m%LineList(I)%OutFlagList(8) = 1
+       IF ( scan( LineOutString, 'd') > 0 )  m%LineList(I)%OutFlagList(9) = 1
+       IF (SUM(m%LineList(I)%OutFlagList) > 0)   m%LineList(I)%OutFlagList(1) = 1  ! this first entry signals whether to create any output file at all
        ! the above letter-index combinations define which OutFlagList entry corresponds to which output type
        
    
        ! check errors
        IF ( ErrStat /= ErrID_None ) THEN
-          ErrMsg  = ' Failed to read line data for Line '//trim(Num2LStr(I))  ! would be nice to specify which line
+          ErrMsg  = ' Failed to read line data for Line '//trim(Num2LStr(I))
           CALL CleanUp()
           RETURN
        END IF
@@ -621,7 +621,7 @@ CONTAINS
 
 
   ! ====================================================================================================
-  SUBROUTINE MDIO_ProcessOutList(OutList, p, other, y, InitOut, ErrStat, ErrMsg )
+  SUBROUTINE MDIO_ProcessOutList(OutList, p, m, y, InitOut, ErrStat, ErrMsg )
 
   ! This routine processes the output channels requested by OutList, checking for validity and setting
   ! the p%OutParam structures (of type MD_OutParmType) for each valid output.
@@ -633,7 +633,7 @@ CONTAINS
     ! Passed variables
     CHARACTER(ChanLen),        INTENT(IN)     :: OutList(:)                  ! The list of user-requested outputs
     TYPE(MD_ParameterType),    INTENT(INOUT)  :: p                           ! The module parameters
-    TYPE(MD_OtherStateType),   INTENT(INOUT)  :: other
+    TYPE(MD_MiscVarType),      INTENT(INOUT)  :: m
     TYPE(MD_OutputType),       INTENT(INOUT)  :: y                           ! Initial system outputs (outputs are not calculated; only the output mesh is initialized)
     TYPE(MD_InitOutputType),   INTENT(INOUT)  :: InitOut                     ! Output for initialization routine
     INTEGER(IntKi),            INTENT(OUT)    :: ErrStat                     ! The error status code
@@ -697,9 +697,9 @@ CONTAINS
 
       ! error check
       IF (i1 <= 1) THEN
-        CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
-        CALL WrScr('Warning: invalid output specifier.')
-        CONTINUE
+         CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
+         CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Starting character must be C or L.')
+         CYCLE    ! <<<<<<<<<<< check correct usage
       END IF
 
         p%OutParam(I)%Name = OutListTmp  ! label channel with whatever name was inputted, for now
@@ -713,8 +713,8 @@ CONTAINS
         p%OutParam(I)%QType = Ten                                   ! tension quantity type
         p%OutParam(I)%Units = UnitList(Ten)                         ! set units according to QType
         READ (OutListTmp(i1:),*) oID                                ! this is the line number
-        p%OutParam(I)%ObjID = other%LineList(oID)%FairConnect       ! get the connection ID of the fairlead
-        p%OutParam(I)%NodeID = -1                                   ! not used.    other%LineList(oID)%N  ! specify node N (fairlead)
+        p%OutParam(I)%ObjID = m%LineList(oID)%FairConnect           ! get the connection ID of the fairlead
+        p%OutParam(I)%NodeID = -1                                   ! not used.    m%LineList(oID)%N  ! specify node N (fairlead)
 
       ! achor tension case
       ELSE IF (OutListTmp(1:i1-1) == 'ANCHTEN') THEN
@@ -722,8 +722,8 @@ CONTAINS
         p%OutParam(I)%QType = Ten                                   ! tension quantity type
         p%OutParam(I)%Units = UnitList(Ten)                         ! set units according to QType
         READ (OutListTmp(i1:),*) oID                                ! this is the line number
-        p%OutParam(I)%ObjID = other%LineList(oID)%AnchConnect       ! get the connection ID of the fairlead
-        p%OutParam(I)%NodeID = -1                                   ! not used.    other%LineList(oID)%0  ! specify node 0 (anchor)
+        p%OutParam(I)%ObjID = m%LineList(oID)%AnchConnect           ! get the connection ID of the fairlead
+        p%OutParam(I)%NodeID = -1                                   ! not used.    m%LineList(oID)%0  ! specify node 0 (anchor)
 
       ! more general case
       ELSE
@@ -746,8 +746,8 @@ CONTAINS
         ! error
         ELSE
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
-          CALL WrScr('Warning: invalid output specifier - type must be L or C.')
-          CONTINUE
+          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Type must be L or C.')
+          CYCLE
         END IF
 
         ! object number
@@ -776,7 +776,7 @@ CONTAINS
         ELSE IF (qVal == 'AX') THEN
           p%OutParam(I)%QType = AccX
           p%OutParam(I)%Units = UnitList(AccX)
-        ELSE IF (qVal == 'Ay') THEN
+        ELSE IF (qVal == 'AY') THEN   ! fixed typo Nov 24
           p%OutParam(I)%QType = AccY
           p%OutParam(I)%Units = UnitList(AccY)
         ELSE IF (qVal == 'AZ') THEN
@@ -796,7 +796,7 @@ CONTAINS
           p%OutParam(I)%Units = UnitList(FZ)
         ELSE
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
-          CALL WrScr('Warning: invalid output specifier - quantity type not recognized.')  ! need to figure out how to add numbers/strings to these warning messages...
+          CALL WrScr('Warning: invalid output specifier '//trim(OutListTmp)//'.  Quantity type not recognized.')
           CONTINUE
         END IF
 
@@ -805,19 +805,19 @@ CONTAINS
       ! also check whether each object index and node index (if applicable) is in range
       IF (p%OutParam(I)%OType==2) THEN
         IF (p%OutParam(I)%ObjID > p%NConnects) THEN
-          call wrscr('warning, output Connect index excedes number of Connects')
+          CALL WrScr('Warning: output Connect index excedes number of Connects in requested output '//trim(OutListTmp)//'.')
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
         END IF
       ELSE IF (p%OutParam(I)%OType==1) THEN
         IF (p%OutParam(I)%ObjID > p%NLines) THEN
-          call wrscr('warning, output Line index excedes number of Line')
+          CALL WrScr('Warning: output Line index excedes number of Lines in requested output '//trim(OutListTmp)//'.')
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
         END IF
-        IF (p%OutParam(I)%NodeID > other%LineList(p%OutParam(I)%ObjID)%N) THEN
-          call wrscr('warning, output node index excedes number of nodes')
+        IF (p%OutParam(I)%NodeID > m%LineList(p%OutParam(I)%ObjID)%N) THEN
+          CALL WrScr('Warning: output node index excedes number of nodes in requested output '//trim(OutListTmp)//'.')
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
         ELSE IF (p%OutParam(I)%NodeID < 0) THEN
-          call wrscr('warning, output node index is less than zero')
+          CALL WrScr('Warning: output node index is less than zero in requested output '//trim(OutListTmp)//'.')
           CALL DenoteInvalidOutput(p%OutParam(I)) ! flag as invalid
         END IF
 
@@ -860,7 +860,7 @@ CONTAINS
 
       ! allocate output array in each Line
       DO I=1,p%NLines
-         ALLOCATE(other%LineList(I)%LineWrOutput( 1 + 3*(other%LineList(I)%N + 1)*SUM(other%LineList(I)%OutFlagList(2:5)) + other%LineList(I)%N*SUM(other%LineList(I)%OutFlagList(6:9)) ), STAT = ErrStat)  
+         ALLOCATE(m%LineList(I)%LineWrOutput( 1 + 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:5)) + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(6:9)) ), STAT = ErrStat)  
          IF ( ErrStat /= ErrID_None ) THEN
             ErrMsg  = ' Error allocating space for a LineWrOutput array'
             ErrStat = ErrID_Fatal
@@ -900,12 +900,12 @@ CONTAINS
 
 
    !====================================================================================================
-   SUBROUTINE MDIO_OpenOutput( OutRootName,  p, other, InitOut, ErrStat, ErrMsg )
+   SUBROUTINE MDIO_OpenOutput( OutRootName,  p, m, InitOut, ErrStat, ErrMsg )
    !----------------------------------------------------------------------------------------------------
 
       CHARACTER(*),                  INTENT( IN    ) :: OutRootName          ! Root name for the output file
       TYPE(MD_ParameterType),        INTENT( INOUT ) :: p
-      TYPE(MD_OtherStateType),       INTENT( INOUT ) :: other
+      TYPE(MD_MiscVarType),          INTENT( INOUT ) :: m
       TYPE(MD_InitOutPutType ),      INTENT( IN    ) :: InitOut              !
       INTEGER,                       INTENT(   OUT ) :: ErrStat              ! a non-zero value indicates an error occurred
       CHARACTER(*),                  INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -950,9 +950,9 @@ CONTAINS
 
          WRITE(p%MDUnOut,Frmt)  TRIM( '(s)' ), ( p%Delim, TRIM( p%OutParam(I)%Units ), I=1,p%NumOuts )
 
-      ELSE  ! if no outputs requested
+ !     ELSE  ! if no outputs requested
 
-         call wrscr('note, MDIO_OpenOutput thinks that no outputs have been requested.')
+ !        call wrscr('note, MDIO_OpenOutput thinks that no outputs have been requested.')
 
       END IF
 
@@ -966,13 +966,13 @@ CONTAINS
       DO I = 1,p%NLines
 
          
-         IF (other%LineList(I)%OutFlagList(1) == 1) THEN   ! only proceed if the line is flagged to output a file
+         IF (m%LineList(I)%OutFlagList(1) == 1) THEN   ! only proceed if the line is flagged to output a file
            
             ! Open the file for output
             OutFileName = TRIM(p%RootName)//'.Line'//TRIM(Int2LStr(I))//'.out'
-            CALL GetNewUnit( other%LineList(I)%LineUnOut )
+            CALL GetNewUnit( m%LineList(I)%LineUnOut )
 
-            CALL OpenFOutFile ( other%LineList(I)%LineUnOut, OutFileName, ErrStat, ErrMsg )
+            CALL OpenFOutFile ( m%LineList(I)%LineUnOut, OutFileName, ErrStat, ErrMsg )
             IF ( ErrStat > ErrID_None ) THEN
                ErrMsg = ' Error opening Line output file '//TRIM(ErrMsg)
                ErrStat = ErrID_Fatal
@@ -981,86 +981,86 @@ CONTAINS
 
                         
             ! calculate number of output entries (including time) to write for this line
-            LineNumOuts = 1 + 3*(other%LineList(I)%N + 1)*SUM(other%LineList(I)%OutFlagList(2:5)) + other%LineList(I)%N*SUM(other%LineList(I)%OutFlagList(6:9))
+            LineNumOuts = 1 + 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:5)) + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(6:9))
 
             Frmt = '(A10,'//TRIM(Int2LStr(LineNumOuts))//'(A1,A10))'   ! should evenutally use user specified format?
-            !Frmt = '(A10,'//TRIM(Int2LStr(3+3*other%LineList(I)%N))//'(A1,A10))'
+            !Frmt = '(A10,'//TRIM(Int2LStr(3+3*m%LineList(I)%N))//'(A1,A10))'
             
             ! Write the names of the output parameters:  (these use "implied DO" loops)
 
-            WRITE(other%LineList(I)%LineUnOut,'(A10)', advance='no', IOSTAT=ErrStat2)  TRIM( 'Time' )
-            IF (other%LineList(I)%OutFlagList(2) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'px', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'py', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'pz', J=0,(other%LineList(I)%N) )
+            WRITE(m%LineList(I)%LineUnOut,'(A10)', advance='no', IOSTAT=ErrStat2)  TRIM( 'Time' )
+            IF (m%LineList(I)%OutFlagList(2) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'px', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'py', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'pz', J=0,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(3) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'vx', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'vy', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'vz', J=0,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(3) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'vx', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'vy', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'vz', J=0,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(4) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Ux', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Uy', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Uz', J=0,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(4) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Ux', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Uy', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Uz', J=0,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(5) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Dx', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Dy', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Dz', J=0,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(5) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Dx', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Dy', p%Delim, 'Node'//TRIM(Int2Lstr(J))//'Dz', J=0,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(6) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, 'Seg'//TRIM(Int2Lstr(J))//'Ten', J=1,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(6) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, 'Seg'//TRIM(Int2Lstr(J))//'Ten', J=1,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(7) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, 'Seg'//TRIM(Int2Lstr(J))//'Dmp', J=1,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(7) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, 'Seg'//TRIM(Int2Lstr(J))//'Dmp', J=1,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(8) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, 'Seg'//TRIM(Int2Lstr(J))//'Str', J=1,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(8) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, 'Seg'//TRIM(Int2Lstr(J))//'Str', J=1,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(9) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, 'Seg'//TRIM(Int2Lstr(J))//'SRt', J=1,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(9) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, 'Seg'//TRIM(Int2Lstr(J))//'SRt', J=1,(m%LineList(I)%N) )
             END IF
             
-            WRITE(other%LineList(I)%LineUnOut,'(A1)', IOSTAT=ErrStat2) ' '  ! make line break at the end
+            WRITE(m%LineList(I)%LineUnOut,'(A1)', IOSTAT=ErrStat2) ' '  ! make line break at the end
             
             ! Now write the units line
 
-            WRITE(other%LineList(I)%LineUnOut,'(A10)', advance='no', IOSTAT=ErrStat2)  TRIM( '(s)' )
-            IF (other%LineList(I)%OutFlagList(2) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, '(m)', p%Delim, '(m)', p%Delim, '(m)', J=0,(other%LineList(I)%N) )
+            WRITE(m%LineList(I)%LineUnOut,'(A10)', advance='no', IOSTAT=ErrStat2)  TRIM( '(s)' )
+            IF (m%LineList(I)%OutFlagList(2) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, '(m)', p%Delim, '(m)', p%Delim, '(m)', J=0,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(3) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, '(m/s)', p%Delim, '(m/s)', p%Delim, '(m/s)', J=0,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(3) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, '(m/s)', p%Delim, '(m/s)', p%Delim, '(m/s)', J=0,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(4) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, '(m/s)', p%Delim, '(m/s)', p%Delim, '(m/s)', J=0,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(4) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, '(m/s)', p%Delim, '(m/s)', p%Delim, '(m/s)', J=0,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(5) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, '(N)', p%Delim, '(N)', p%Delim, '(N)', J=0,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(5) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((3+3*m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, '(N)', p%Delim, '(N)', p%Delim, '(N)', J=0,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(6) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, '(N)', J=1,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(6) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, '(N)', J=1,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(7) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, '(N)', J=1,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(7) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, '(N)', J=1,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(8) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, '(-)', J=1,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(8) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, '(-)', J=1,(m%LineList(I)%N) )
             END IF
-            IF (other%LineList(I)%OutFlagList(9) == 1) THEN
-               WRITE(other%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((other%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
-                  ( p%Delim, '(1/s)', J=1,(other%LineList(I)%N) )
+            IF (m%LineList(I)%OutFlagList(9) == 1) THEN
+               WRITE(m%LineList(I)%LineUnOut,'('//TRIM(Int2LStr((m%LineList(I)%N)))//'(A1,A10))', advance='no', IOSTAT=ErrStat2) &
+                  ( p%Delim, '(1/s)', J=1,(m%LineList(I)%N) )
             END IF
             
-            WRITE(other%LineList(I)%LineUnOut,'(A1)', IOSTAT=ErrStat2) ' '  ! make line break at the end
+            WRITE(m%LineList(I)%LineUnOut,'(A1)', IOSTAT=ErrStat2) ' '  ! make line break at the end
             
          END IF  ! if line is flagged for output file
          
@@ -1074,12 +1074,12 @@ CONTAINS
 
 
    !====================================================================================================
-   SUBROUTINE MDIO_CloseOutput ( p, other, ErrStat, ErrMsg )
+   SUBROUTINE MDIO_CloseOutput ( p, m, ErrStat, ErrMsg )
       ! This function cleans up after running the MoorDyn output module.
       ! It closes the output files and releases memory.
 
       TYPE(MD_ParameterType),       INTENT( INOUT )  :: p                    ! data for this instance of the floating platform module
-      TYPE(MD_OtherStateType),      INTENT( INOUT )  :: other                ! data for this instance of the floating platform module
+      TYPE(MD_MiscVarType),         INTENT( INOUT )  :: m                    ! data for this instance of the floating platform module
       INTEGER,                      INTENT(   OUT )  :: ErrStat              ! a non-zero value indicates an error occurred
       CHARACTER(*),                 INTENT(   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -1098,19 +1098,19 @@ CONTAINS
 
       ! close individual line output files
       DO I=1,p%NLines
-         CLOSE( other%LineList(I)%LineUnOut, IOSTAT = ErrStat )
+         CLOSE( m%LineList(I)%LineUnOut, IOSTAT = ErrStat )
             IF ( ErrStat /= 0 ) THEN
                ErrMsg = 'Error closing line output file'
             END IF
       END DO
 
       ! deallocate output arrays
-      IF (ALLOCATED(other%MDWrOutput)) THEN
-         DEALLOCATE(other%MDWrOutput)
+      IF (ALLOCATED(m%MDWrOutput)) THEN
+         DEALLOCATE(m%MDWrOutput)
       ENDIF
       DO I=1,p%NLines
-         IF (ALLOCATED(other%LineList(I)%LineWrOutput)) THEN
-            DEALLOCATE(other%LineList(I)%LineWrOutput)       ! this may be unnecessary and handled by Line destructor
+         IF (ALLOCATED(m%LineList(I)%LineWrOutput)) THEN
+            DEALLOCATE(m%LineList(I)%LineWrOutput)       ! this may be unnecessary and handled by Line destructor
          ENDIF
       END DO
 
@@ -1119,14 +1119,14 @@ CONTAINS
 
 
    !====================================================================================================
-   SUBROUTINE MDIO_WriteOutputs( Time, p, other, y, ErrStat, ErrMsg )
+   SUBROUTINE MDIO_WriteOutputs( Time, p, m, y, ErrStat, ErrMsg )
       ! This subroutine gathers the output data defined by the OutParams list and
       ! writes it to the output file opened in MDIO_OutInit()
 
       REAL(DbKi),                   INTENT( IN    ) :: Time                 ! Time for this output
       TYPE(MD_ParameterType),       INTENT( IN    ) :: p                    ! MoorDyn module's parameter data
       TYPE(MD_OutputType),          INTENT( INOUT ) :: y                    ! INTENT( OUT) : Initial system outputs (outputs are not calculated; only the output mesh is initialized)
-      TYPE(MD_OtherStateType),      INTENT( INOUT ) :: other                ! MoorDyn module's other data
+      TYPE(MD_MiscVarType),         INTENT( INOUT ) :: m                    ! MoorDyn module's m data
       INTEGER,                      INTENT(   OUT ) :: ErrStat              ! returns a non-zero value when an error occurs
       CHARACTER(*),                 INTENT(   OUT ) :: ErrMsg               ! Error message if ErrStat /= ErrID_None
 
@@ -1152,46 +1152,52 @@ CONTAINS
          IF (p%OutParam(I)%OType == 2) THEN  ! if dealing with a Connect output
             SELECT CASE (p%OutParam(I)%QType)
                CASE (PosX)
-                  y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%r(1)  ! x position
+                  y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%r(1)  ! x position
                CASE (PosY)
-                  y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%r(2) ! y position
+                  y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%r(2) ! y position
                CASE (PosZ)
-                  y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%r(3) ! z position
+                  y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%r(3) ! z position
                CASE (VelX)
-                  y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%rd(1) ! x velocity
+                  y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%rd(1) ! x velocity
                CASE (VelY)
-                  y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%rd(2) ! y velocity
+                  y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%rd(2) ! y velocity
                CASE (VelZ)
-                  y%WriteOutput(I) = other%ConnectList(p%OutParam(I)%ObjID)%rd(3) ! z velocity
+                  y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%rd(3) ! z velocity
                CASE (Ten)
-                  y%WriteOutput(I) = TwoNorm(other%ConnectList(p%OutParam(I)%ObjID)%Ftot)  ! total force magnitude on a connect (used eg. for fairlead and anchor tensions)
+                  y%WriteOutput(I) = TwoNorm(m%ConnectList(p%OutParam(I)%ObjID)%Ftot)  ! total force magnitude on a connect (used eg. for fairlead and anchor tensions)
+               CASE (FX)
+                  y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%Ftot(1)  ! total force in x - added Nov 24
+               CASE (FY)
+                  y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%Ftot(2)  ! total force in y
+               CASE (FZ)
+                  y%WriteOutput(I) = m%ConnectList(p%OutParam(I)%ObjID)%Ftot(3)  ! total force in z
                CASE DEFAULT
                   y%WriteOutput(I) = 0.0_ReKi
                   ErrStat = ErrID_Warn
-                  ErrMsg = ' Unsupported output quantity from Connect object requested.'
+                  ErrMsg = ' Unsupported output quantity '//TRIM(Num2Lstr(p%OutParam(I)%QType))//' requested from Connection '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
             END SELECT
 
          ELSE IF (p%OutParam(I)%OType == 1) THEN  ! if dealing with a Line output
 
             SELECT CASE (p%OutParam(I)%QType)
                CASE (PosX)
-                 y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%r(1,p%OutParam(I)%NodeID)  ! x position
+                 y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%r(1,p%OutParam(I)%NodeID)  ! x position
                CASE (PosY)
-                 y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%r(2,p%OutParam(I)%NodeID) ! y position
+                 y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%r(2,p%OutParam(I)%NodeID) ! y position
                CASE (PosZ)
-                 y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%r(3,p%OutParam(I)%NodeID) ! z position
+                 y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%r(3,p%OutParam(I)%NodeID) ! z position
                CASE (VelX)
-                 y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%rd(1,p%OutParam(I)%NodeID) ! x velocity
+                 y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%rd(1,p%OutParam(I)%NodeID) ! x velocity
                CASE (VelY)
-                 y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%rd(2,p%OutParam(I)%NodeID) ! y velocity
+                 y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%rd(2,p%OutParam(I)%NodeID) ! y velocity
                CASE (VelZ)
-                 y%WriteOutput(I) = other%LineList(p%OutParam(I)%ObjID)%rd(3,p%OutParam(I)%NodeID) ! z velocity
+                 y%WriteOutput(I) = m%LineList(p%OutParam(I)%ObjID)%rd(3,p%OutParam(I)%NodeID) ! z velocity
                CASE (Ten)
-                 y%WriteOutput(I) = TwoNorm(other%LineList(p%OutParam(I)%ObjID)%T(:,p%OutParam(I)%NodeID))  ! this is actually the segment tension ( 1 < NodeID < N )  Should deal with properly!
+                 y%WriteOutput(I) = TwoNorm(m%LineList(p%OutParam(I)%ObjID)%T(:,p%OutParam(I)%NodeID))  ! this is actually the segment tension ( 1 < NodeID < N )  Should deal with properly!
                CASE DEFAULT
                  y%WriteOutput(I) = 0.0_ReKi
                  ErrStat = ErrID_Warn
-                 ErrMsg = ' Unsupported output quantity from Line object requested.'
+                 ErrMsg = ' Unsupported output quantity '//TRIM(Num2Lstr(p%OutParam(I)%QType))//' requested from Line '//TRIM(Num2Lstr(p%OutParam(I)%ObjID))//'.'
             END SELECT
 
          ELSE  ! it must be an invalid output, so write zero
@@ -1217,10 +1223,10 @@ CONTAINS
       
       DO I=1,p%NLines
         
-        IF (other%LineList(I)%OutFlagList(1) == 1) THEN    ! only proceed if the line is flagged to output a file
+        IF (m%LineList(I)%OutFlagList(1) == 1) THEN    ! only proceed if the line is flagged to output a file
            
            ! calculate number of output entries to write for this line
-           LineNumOuts = 3*(other%LineList(I)%N + 1)*SUM(other%LineList(I)%OutFlagList(2:5)) + other%LineList(I)%N*SUM(other%LineList(I)%OutFlagList(6:9))
+           LineNumOuts = 3*(m%LineList(I)%N + 1)*SUM(m%LineList(I)%OutFlagList(2:5)) + m%LineList(I)%N*SUM(m%LineList(I)%OutFlagList(6:9))
            
            
            Frmt = '(F10.4,'//TRIM(Int2LStr(LineNumOuts))//'(A1,e10.4))'   ! should evenutally use user specified format?
@@ -1228,24 +1234,24 @@ CONTAINS
            L = 1 ! start of index of line output file at first entry
            
            ! Time
-      !     other%LineList(I)%LineWrOutput(L) = Time
+      !     m%LineList(I)%LineWrOutput(L) = Time
       !     L = L+1
            
            ! Node positions
-           IF (other%LineList(I)%OutFlagList(2) == 1) THEN
-              DO J = 0,other%LineList(I)%N  ! note index starts at zero because these are nodes
+           IF (m%LineList(I)%OutFlagList(2) == 1) THEN
+              DO J = 0,m%LineList(I)%N  ! note index starts at zero because these are nodes
                 DO K = 1,3
-                  other%LineList(I)%LineWrOutput(L) = other%LineList(I)%r(K,J)
+                  m%LineList(I)%LineWrOutput(L) = m%LineList(I)%r(K,J)
                   L = L+1
                 END DO
               END DO
            END IF         
            
            ! Node velocities
-           IF (other%LineList(I)%OutFlagList(3) == 1) THEN
-              DO J = 0,other%LineList(I)%N  ! note index starts at zero because these are nodes
+           IF (m%LineList(I)%OutFlagList(3) == 1) THEN
+              DO J = 0,m%LineList(I)%N  ! note index starts at zero because these are nodes
                 DO K = 1,3
-                  other%LineList(I)%LineWrOutput(L) = other%LineList(I)%rd(K,J)
+                  m%LineList(I)%LineWrOutput(L) = m%LineList(I)%rd(K,J)
                   L = L+1
                 END DO
               END DO
@@ -1253,10 +1259,10 @@ CONTAINS
            
            
            ! Node wave velocities (not implemented yet)
-           IF (other%LineList(I)%OutFlagList(4) == 1) THEN
-              DO J = 0,other%LineList(I)%N  ! note index starts at zero because these are nodes
+           IF (m%LineList(I)%OutFlagList(4) == 1) THEN
+              DO J = 0,m%LineList(I)%N  ! note index starts at zero because these are nodes
                 DO K = 1,3
-                  other%LineList(I)%LineWrOutput(L) = 0.0
+                  m%LineList(I)%LineWrOutput(L) = 0.0
                   L = L+1
                 END DO
               END DO
@@ -1264,10 +1270,10 @@ CONTAINS
            
            
            ! Node total hydrodynamic forces (except added mass - just drag for now)
-           IF (other%LineList(I)%OutFlagList(5) == 1) THEN
-              DO J = 0,other%LineList(I)%N  ! note index starts at zero because these are nodes
+           IF (m%LineList(I)%OutFlagList(5) == 1) THEN
+              DO J = 0,m%LineList(I)%N  ! note index starts at zero because these are nodes
                 DO K = 1,3
-                  other%LineList(I)%LineWrOutput(L) = other%LineList(I)%Dp(K,J) + other%LineList(I)%Dq(K,J)
+                  m%LineList(I)%LineWrOutput(L) = m%LineList(I)%Dp(K,J) + m%LineList(I)%Dq(K,J)
                   L = L+1
                 END DO
               END DO
@@ -1275,44 +1281,44 @@ CONTAINS
            
            
            ! Segment tension force (excludes damping term, just EA)
-           IF (other%LineList(I)%OutFlagList(6) == 1) THEN
-              DO J = 1,other%LineList(I)%N  
-                other%LineList(I)%LineWrOutput(L) = TwoNorm(other%LineList(I)%T(:,J) )
+           IF (m%LineList(I)%OutFlagList(6) == 1) THEN
+              DO J = 1,m%LineList(I)%N  
+                m%LineList(I)%LineWrOutput(L) = TwoNorm(m%LineList(I)%T(:,J) )
                 L = L+1
               END DO
            END IF
            
            ! Segment internal damping force
-           IF (other%LineList(I)%OutFlagList(7) == 1) THEN
-              DO J = 1,other%LineList(I)%N  
-                 IF (( other%LineList(I)%Td(3,J)*other%LineList(I)%T(3,J) ) > 0)  THEN  ! if statement for handling sign (positive = tension)
-                    other%LineList(I)%LineWrOutput(L) = TwoNorm(other%LineList(I)%Td(:,J) )
+           IF (m%LineList(I)%OutFlagList(7) == 1) THEN
+              DO J = 1,m%LineList(I)%N  
+                 IF (( m%LineList(I)%Td(3,J)*m%LineList(I)%T(3,J) ) > 0)  THEN  ! if statement for handling sign (positive = tension)
+                    m%LineList(I)%LineWrOutput(L) = TwoNorm(m%LineList(I)%Td(:,J) )
                  ELSE
-                    other%LineList(I)%LineWrOutput(L) = -TwoNorm(other%LineList(I)%Td(:,J) )
+                    m%LineList(I)%LineWrOutput(L) = -TwoNorm(m%LineList(I)%Td(:,J) )
                  END IF
                  L = L+1
               END DO
            END IF
            
            ! Segment strain
-           IF (other%LineList(I)%OutFlagList(8) == 1) THEN
-              DO J = 1,other%LineList(I)%N  
-                other%LineList(I)%LineWrOutput(L) = other%LineList(I)%lstr(J)/other%LineList(I)%l(J) - 1.0 
+           IF (m%LineList(I)%OutFlagList(8) == 1) THEN
+              DO J = 1,m%LineList(I)%N  
+                m%LineList(I)%LineWrOutput(L) = m%LineList(I)%lstr(J)/m%LineList(I)%l(J) - 1.0 
                 L = L+1
               END DO
            END IF
            
            ! Segment strain rate
-           IF (other%LineList(I)%OutFlagList(9) == 1) THEN
-              DO J = 1,other%LineList(I)%N  
-                other%LineList(I)%LineWrOutput(L) = other%LineList(I)%lstrd(J)/other%LineList(I)%l(J)
+           IF (m%LineList(I)%OutFlagList(9) == 1) THEN
+              DO J = 1,m%LineList(I)%N  
+                m%LineList(I)%LineWrOutput(L) = m%LineList(I)%lstrd(J)/m%LineList(I)%l(J)
                 L = L+1
               END DO
            END IF
                     
            
-           WRITE(other%LineList(I)%LineUnOut,Frmt) Time, ( p%Delim, other%LineList(I)%LineWrOutput(J), J=1,(LineNumOuts) )
-           !WRITE(other%LineList(I)%LineUnOut,Frmt)  Time, ( p%Delim, other%LineList(I)%LineWrOutput(J), J=1,(3+3*other%LineList(I)%N) )
+           WRITE(m%LineList(I)%LineUnOut,Frmt) Time, ( p%Delim, m%LineList(I)%LineWrOutput(J), J=1,(LineNumOuts) )
+           !WRITE(m%LineList(I)%LineUnOut,Frmt)  Time, ( p%Delim, m%LineList(I)%LineWrOutput(J), J=1,(3+3*m%LineList(I)%N) )
 
          END IF  ! if line output file flag is on
            

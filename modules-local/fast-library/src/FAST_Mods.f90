@@ -29,7 +29,7 @@ MODULE FAST_ModTypes
    USE FAST_Types
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.13.11a-bjj', '8-Jan-2016' ) !< The version number of this module
+                                ProgDesc( 'FAST', 'v8.13.12a-bjj', '11-Jan-2016' ) !< The version number of this module
          
    !..................................................................
    
