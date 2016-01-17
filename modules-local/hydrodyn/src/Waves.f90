@@ -615,8 +615,7 @@ SUBROUTINE StillWaterWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
       InitOut%WaveDOmega = 0.0
       InitOut%WaveTime   = (/ 0.0_DbKi, 1.0_DbKi, 2.0_DbKi /)   ! We must have at least two different time steps in the interpolation
-      InitOut%WaveElevC0(1,0) = 0.0
-      InitOut%WaveElevC0(2,0) = 0.0
+      InitOut%WaveElevC0 = 0.0
       InitOut%WaveElev   = 0.0
       InitOut%WaveDynP0  = 0.0
       InitOut%WaveVel0   = 0.0

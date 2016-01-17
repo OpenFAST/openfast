@@ -636,6 +636,7 @@ SUBROUTINE UserWaveElevations_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       InitOut%WaveElevC0     (1,I) = TmpFFTWaveElev(2*I-1)
       InitOut%WaveElevC0     (2,I) = TmpFFTWaveElev(2*I)
    ENDDO
+   InitOut%WaveElevC0(:,InitOut%NStepWave2) = 0.0_SiKi
 
    CALL  ExitFFT(FFT_Data, ErrStatTmp)
    CALL  SetErrStat(ErrStatTmp,'Error occured while cleaning up after the FFTs.', ErrStat,ErrMsg,RoutineName)

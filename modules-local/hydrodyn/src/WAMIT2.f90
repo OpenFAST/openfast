@@ -1166,7 +1166,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
                   ! Now put it all together... note the frequency stepsize is multiplied after the summation
-               MnDriftForce(I) = MnDriftForce(I) + REAL(aWaveElevC * CONJG(aWaveElevC) * QTF_Value)
+               MnDriftForce(I) = MnDriftForce(I) + REAL(QTF_Value * aWaveElevC * CONJG(aWaveElevC)) !bjj: put QTF_Value first so that if it's zero, the rest gets set to zero (to hopefully avoid overflow issues)
 
             ENDDO
 
@@ -2145,7 +2145,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
 
 
                ! Now we multiply the result by 2 and save it to the DiffQTFForce array and add the MnDrift term
-            DO K=0,InitInp%NStepWave
+            DO K=0,InitInp%NStepWave-1  ! bjj: added the "-1" here because TmpDiffQTFForce(InitInp%NStepWave) is not set and DiffQTFForce(InitInp%NStepWave,I) gets overwritten next, anyway
                DiffQTFForce(K,I) = 2.0_SiKi * TmpDiffQTFForce(K) + MnDriftForce(I)
             ENDDO
 
@@ -2445,7 +2445,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          IF (ALLOCATED(Term1ArrayC))      DEALLOCATE(Term1ArrayC,STAT=ErrStatTmp)
          IF (ALLOCATED(Term2ArrayC))      DEALLOCATE(Term2ArrayC,STAT=ErrStatTmp)
          IF (ALLOCATED(Term1Array))       DEALLOCATE(Term1Array,STAT=ErrStatTmp)
-         IF (ALLOCATED(Term2Array))      DEALLOCATE(Term2Array,STAT=ErrStatTmp)
+         IF (ALLOCATED(Term2Array))       DEALLOCATE(Term2Array,STAT=ErrStatTmp)
          RETURN
       ENDIF
 
@@ -2648,7 +2648,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
             ENDIF
 
                ! Now we add the two terms together.  The 0.5 multiplier on is because the double sided FFT was used.
-            DO J=0,InitInp%NStepWave
+            DO J=0,InitInp%NStepWave-1  !bjj: Term1Array and Term2Array don't set the last element, so we can get over-flow errors here. SumQTFForce(InitInp%NStepWave,I) gets overwritten later, so I'm setting the array bounds to be -1.
                SumQTFForce(J,I) = 0.5_SiKi*(REAL(Term1Array(J) + 2*Term2Array(J)))
             ENDDO
 
@@ -3681,7 +3681,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       
          ! add the two points for step-change after last entered frequency
       Data3D%WvFreq1( Data3D%NumWvFreq1-1 )     = Data3D%WvFreq1(Data3D%NumWvFreq1-2) + 10.0_SiKi*EPSILON(0.0_SiKi)
-      Data3D%WvFreq1( Data3D%NumWvFreq1   )     = HUGE(1.0_SiKi)
+      Data3D%WvFreq1( Data3D%NumWvFreq1   )     = HUGE(1.0_SiKi)/5 ! floating overflow occurs later with arithmetic so I divided by a small constant
 
 
 
@@ -4490,7 +4490,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       
          ! add the two points for step-change after last entered frequency
       Data4D%WvFreq1( Data4D%NumWvFreq1-1 )     = Data4D%WvFreq1(Data4D%NumWvFreq1-2) + 10.0_SiKi*EPSILON(0.0_SiKi)
-      Data4D%WvFreq1( Data4D%NumWvFreq1   )     = HUGE(1.0_SiKi)
+      Data4D%WvFreq1( Data4D%NumWvFreq1   )     = HUGE(1.0_SiKi)/5 ! floating overflow occurs later with arithmetic so I divided by a small constant
 
 
 
@@ -4505,7 +4505,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       
          ! add the two points for step-change after last entered frequency
       Data4D%WvFreq2( Data4D%NumWvFreq2-1 )     = Data4D%WvFreq2(Data4D%NumWvFreq2-2) + 10.0_SiKi*EPSILON(0.0_SiKi)
-      Data4D%WvFreq2( Data4D%NumWvFreq2   )     = HUGE(1.0_SiKi)
+      Data4D%WvFreq2( Data4D%NumWvFreq2   )     = HUGE(1.0_SiKi)/5 ! floating overflow occurs later with arithmetic so I divided by a small constant
 
 
          ! Now that we know how many frequencies and wave directions there are, we can allocate the array
