@@ -3734,19 +3734,18 @@ SUBROUTINE InitModuleMappings(p_FAST, ED, BD, AD14, AD, HD, SD, SrvD, MAPp, FEAM
    IF ( p_FAST%CompAero == Module_AD14 ) THEN ! ED-AD14
          
       ! Blade meshes: (allocate two mapping data structures to number of blades, then allocate data inside the structures)
-      ALLOCATE( MeshMapData%BDED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_BDED_B(NumBl), STAT=ErrStat2 )
-         IF ( ErrStat2 /= 0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%BDED_L_2_AD_L_B and MeshMapData%AD_L_2_BDED_B.', &
-                            ErrStat, ErrMsg, RoutineName )
-            RETURN
-         END IF
-         
-      DO K=1,NumBl         
-         CALL MeshMapCreate( ED%Output(1)%BladeLn2Mesh(K), AD14%Input(1)%InputMarkers(K), MeshMapData%BDED_L_2_AD_L_B(K), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':BDED_L_2_AD_L_B('//TRIM(Num2LStr(K))//')' )
-         CALL MeshMapCreate( AD14%y%OutputLoads(K), ED%Input(1)%BladePtLoads(K),  MeshMapData%AD_L_2_BDED_B(K), ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_BDED_B('//TRIM(Num2LStr(K))//')' )
-      END DO
+      ! AD14 does not properly set up its blade meshes, so we can't use this
+      !ALLOCATE( MeshMapData%BDED_L_2_AD_L_B(NumBl), MeshMapData%AD_L_2_BDED_B(NumBl), STAT=ErrStat2 )
+      !   IF ( ErrStat2 /= 0 ) THEN
+      !      CALL SetErrStat( ErrID_Fatal, 'Error allocating MeshMapData%BDED_L_2_AD_L_B and MeshMapData%AD_L_2_BDED_B.', &
+      !                      ErrStat, ErrMsg, RoutineName )
+      !      RETURN
+      !   END IF
+      !   
+      !DO K=1,NumBl         
+      !   CALL MeshMapCreate( AD14%y%OutputLoads(K), ED%Input(1)%BladePtLoads(K),  MeshMapData%AD_L_2_BDED_B(K), ErrStat2, ErrMsg2 )
+      !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName//':AD_L_2_BDED_B('//TRIM(Num2LStr(K))//')' )
+      !END DO
          
       ! Tower mesh:
       IF ( AD14%Input(1)%Twr_InputMarkers%Committed ) THEN
