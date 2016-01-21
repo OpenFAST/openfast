@@ -471,13 +471,14 @@ end if !(.not. OnlyPosition)
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes line2 mesh surface information in VTK format.
 !! see VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf
-SUBROUTINE MeshWrVTK_Ln2Surface ( M, FileRootName, VTKcount, NumSegments, Radius, ErrStat, ErrMsg )
+SUBROUTINE MeshWrVTK_Ln2Surface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, NumSegments, Radius, verts )
       
    TYPE(MeshType),  INTENT(IN)           :: M             !< mesh to be written
    CHARACTER(*),    INTENT(IN)           :: FileRootName  !< Name of the file to write the output in (excluding extension)
    INTEGER(IntKi),  INTENT(IN)           :: VTKcount      !< Indicates number for VTK output file (when 0, the routine will also write reference information)
-   INTEGER(IntKi),  INTENT(IN)           :: NumSegments   !< Number of segments to split the circle into
-   REAL(SiKi),      INTENT(IN)           :: Radius(:)     !< Radius of each node
+   INTEGER(IntKi),  INTENT(IN), OPTIONAL :: NumSegments   !< Number of segments to split the circle into
+   REAL(SiKi),      INTENT(IN), OPTIONAL :: Radius(:)     !< Radius of each node
+   REAL(SiKi),      INTENT(IN), OPTIONAL :: verts(:,:,:)  !< X-Y verticies (2x{NumSegs}xNNodes) of points that define a shape around each node
    
    INTEGER(IntKi),  INTENT(OUT)          :: ErrStat       !< Indicates whether an error occurred (see NWTC_Library)
    CHARACTER(*),    INTENT(OUT)          :: ErrMsg        !< Error message associated with the ErrStat
@@ -492,6 +493,7 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( M, FileRootName, VTKcount, NumSegments, Radius
    REAL(SiKi)                            :: delY
 
    INTEGER(IntKi)                        :: firstPntEnd, firstPntStart, secondPntStart, secondPntEnd  ! node indices for forming rectangle 
+   INTEGER(IntKi)                        :: NumSegments1
    
    
    
@@ -507,6 +509,15 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( M, FileRootName, VTKcount, NumSegments, Radius
    IF (.NOT. ALLOCATED(M%TranslationDisp) ) RETURN
    IF (.NOT. ALLOCATED(M%Orientation) ) RETURN
       
+   if (present(verts)) then
+      NumSegments1   = size(verts,2)            
+   elseif (present(Radius) .and. present(NumSegments)) then
+      NumSegments1 = NumSegments
+   else
+      call SetErrStat(ErrID_Fatal,'Incorrect number of arguments.',ErrStat,ErrMsg,RoutineName)
+      RETURN
+   end if   
+   
    !.................................................................
    ! write the data that potentially changes each time step:
    !.................................................................
@@ -524,22 +535,32 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( M, FileRootName, VTKcount, NumSegments, Radius
       WRITE(Un,'(A)')         '<?xml version="1.0"?>'
       WRITE(Un,'(A)')         '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">' ! bjj note: we don't have binary data in this file, so byte_order shouldn't matter, right?
       WRITE(Un,'(A)')         '  <PolyData>'
-      WRITE(Un,'(2(A,i7),A)') '    <Piece NumberOfPoints="', M%Nnodes*NumSegments, '" NumberOfVerts="  0" NumberOfLines="', M%ElemTable(ELEMENT_LINE2)%nelem, '"'
-      WRITE(Un,'(A,i7,A)')    '           NumberOfStrips="  0" NumberOfPolys="',  M%ElemTable(ELEMENT_LINE2)%nelem*NumSegments, '">'
+      WRITE(Un,'(2(A,i7),A)') '    <Piece NumberOfPoints="', M%Nnodes*NumSegments1, '" NumberOfVerts="  0" NumberOfLines="', M%ElemTable(ELEMENT_LINE2)%nelem, '"'
+      WRITE(Un,'(A,i7,A)')    '           NumberOfStrips="  0" NumberOfPolys="',  M%ElemTable(ELEMENT_LINE2)%nelem*NumSegments1, '">'
          
 ! points (nodes, augmented with NumSegments):   
       WRITE(Un,'(A)')         '      <Points>'
       WRITE(Un,'(A)')         '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
       
-      DO i=1,M%Nnodes
-         DO j=1,NumSegments
-            angle = TwoPi*(j-1.0_ReKi)/NumSegments
-            delX = radius(i)*COS(angle)
-            delY = radius(i)*SIN(angle)
-            WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + delX*M%Orientation(1,:,i) + delY*M%Orientation(2,:,i)
+      if (present(verts)) then
+         DO i=1,M%Nnodes
+            DO j=1,NumSegments1
+               delX = verts(1,j,i)
+               delY = verts(2,j,i)
+               WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + delX*M%Orientation(1,:,i) + delY*M%Orientation(2,:,i)
+            END DO
+         END DO         
+      else               
+         DO i=1,M%Nnodes
+            DO j=1,NumSegments1
+               angle = TwoPi*(j-1.0_ReKi)/NumSegments1
+               delX = radius(i)*COS(angle)
+               delY = radius(i)*SIN(angle)
+               WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + delX*M%Orientation(1,:,i) + delY*M%Orientation(2,:,i)
+            END DO
          END DO
-      END DO
-   
+      end if
+      
       WRITE(Un,'(A)')         '        </DataArray>'
       WRITE(Un,'(A)')         '      </Points>'
   
@@ -550,11 +571,11 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( M, FileRootName, VTKcount, NumSegments, Radius
       
       WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="connectivity" format="ascii">'      
       DO i=1,M%ElemTable(ELEMENT_LINE2)%nelem
-         firstPntStart  = (M%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)-1)*NumSegments
-         firstPntEnd    = firstPntStart + NumSegments - 1
-         secondPntStart = (M%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)-1)*NumSegments
-         secondPntEnd   = secondPntStart + NumSegments - 1
-         DO j=1,NumSegments-1
+         firstPntStart  = (M%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)-1)*NumSegments1
+         firstPntEnd    = firstPntStart + NumSegments1 - 1
+         secondPntStart = (M%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)-1)*NumSegments1
+         secondPntEnd   = secondPntStart + NumSegments1 - 1
+         DO j=1,NumSegments1-1
             WRITE(Un,'(4(i7))') firstPntStart + (j-1), firstPntStart + j, &
                                 secondPntStart + j,    secondPntStart + (j-1)
          END DO
@@ -564,8 +585,8 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( M, FileRootName, VTKcount, NumSegments, Radius
 
       WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="offsets" format="ascii">'
       DO i=1,M%ElemTable(ELEMENT_LINE2)%nelem
-         DO j=1,NumSegments
-            WRITE(Un,'(i7)') 4*NumSegments*(i - 1) + 4*j
+         DO j=1,NumSegments1
+            WRITE(Un,'(i7)') 4*NumSegments1*(i - 1) + 4*j
          END DO
       END DO
       WRITE(Un,'(A)')         '        </DataArray>'
@@ -632,7 +653,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, 
          NumberOfPolys = 1 ! per node
       else
          ! it would be nice if we could add this sometime, but ...
-         call SetErrStat(ErrID_Fatal,'When verticies are specified, there must be exactly 8.',ErrStat,ErrMsg,RoutineName)
+         call SetErrStat(ErrID_Fatal,'When verticies are specified, there must be exactly 4 or 8.',ErrStat,ErrMsg,RoutineName)
          RETURN
       end if
       
@@ -641,15 +662,22 @@ SUBROUTINE MeshWrVTK_PointSurface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, 
       
    elseif (present(Radius) ) then
       if (present(NumSegments)) then ! a volume
-         NumSegments1 = NumSegments
-         NumSegments2 = max(4,NumSegments1)
+         NumSegments1 = max(1,abs(NumSegments))
+         NumSegments2 = max(4,NumSegments1)         
+         
+         NumberOfPolys  = M%Nnodes * max(1,(NumSegments2-1))* NumSegments1
+         NumberOfPoints = M%Nnodes *  NumSegments2 * NumSegments1
+         
       else                           ! a plane
          NumSegments1 = 20
          NumSegments2 = 1
+         
+         NumberOfPolys  = M%Nnodes * (NumSegments1)
+         NumberOfPoints = M%Nnodes * (NumSegments1 + 1)
+         
       end if
       
-      NumberOfPoints = M%Nnodes *  NumSegments2   * NumSegments1
-      NumberOfPolys  = M%Nnodes * (NumSegments2-1)* NumSegments1
+      
    else
       call SetErrStat(ErrID_Fatal,'Incorrect number of arguments.',ErrStat,ErrMsg,RoutineName)
       RETURN
@@ -689,19 +717,25 @@ SUBROUTINE MeshWrVTK_PointSurface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, 
       else                           
          DO i=1,M%Nnodes
             DO j=1,NumSegments2
-               ratio  = 2.0_SiKi*REAL(j-1,SiKi)/REAL(NumSegments2-1,SiKi) - 1.0_SiKi  ! where we are in [-1, 1]
-               xyz(1) = radius*ratio
+               if (NumSegments2>1) then
+                  ratio  = 2.0_SiKi*REAL(j-1,SiKi)/REAL(NumSegments2-1,SiKi) - 1.0_SiKi  ! where we are in [-1, 1]
+               else
+                  ratio = 0.0_SiKi
+                  WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i)  ! write center of node
+               end if               
                
-               ! now calculate the radius of the y-z circle we're going to create at this x:              
-               !r = acos( radius / xyz(1) ) or r = sqrt( radius**2 - xyz(1)**2 ) = radius*sqrt(1 - ratio**2)
+               xyz(3) = radius*ratio
+               
+               ! now calculate the radius of the x-y circle we're going to create at this z:              
+               !r = acos( radius / xyz(3) ) or r = sqrt( radius**2 - xyz(3)**2 ) = radius*sqrt(1 - ratio**2)
                r = radius*sqrt(abs(1.0_SiKi - ratio**2))  ! note the abs in case ratio**2 gets slightly larger than 1 
                
                DO k=1,NumSegments1
                   angle = TwoPi*(k-1.0_ReKi)/NumSegments1
-                  xyz(2) = r*COS(angle)
-                  xyz(3) = r*SIN(angle)
-                  !WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + MATMUL(M%Orientation(:,:,i),xyz)
-                  WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + xyz
+                  xyz(1) = r*COS(angle)
+                  xyz(2) = r*SIN(angle)
+                  WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + MATMUL(M%Orientation(:,:,i),xyz)
+                  !WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + xyz
                END DO            
             END DO
          END DO         
@@ -745,20 +779,32 @@ SUBROUTINE MeshWrVTK_PointSurface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, 
          end if
       else
             
-         DO i=1,M%Nnodes
-            DO j=1,NumSegments2-1
-               firstPntStart  = (j-1)*NumSegments1 + (i-1)*NumSegments1*NumSegments2
-               firstPntEnd    = firstPntStart + NumSegments1 - 1
-               secondPntStart = j*NumSegments1 + (i-1)*NumSegments1*NumSegments2
-               secondPntEnd   = secondPntStart + NumSegments1 - 1
+         if (NumSegments2==1) then
+            DO i=1,M%Nnodes
+               firstPntStart  = (i-1)*(NumSegments1+1)
                DO k=1,NumSegments1-1
-                  WRITE(Un,'(4(i7))') firstPntStart + (k-1), firstPntStart + k, &
-                                      secondPntStart + k,    secondPntStart + (k-1)
+                  WRITE(Un,'(4(i7))') 0, firstPntStart + k, firstPntStart + k + 1,   0
                END DO
-               WRITE(Un,'(4(i7))')  firstPntEnd, firstPntStart, secondPntStart, secondPntEnd
-            END DO         
-         END DO      
-         
+               WRITE(Un,'(4(i7))')  0, NumSegments1, 1,   0
+            END DO 
+            
+         else
+            
+            DO i=1,M%Nnodes
+               DO j=1,NumSegments2-1
+                  firstPntStart  = (j-1)*NumSegments1 + (i-1)*NumSegments1*NumSegments2
+                  firstPntEnd    = firstPntStart + NumSegments1 - 1
+                  secondPntStart = j*NumSegments1 + (i-1)*NumSegments1*NumSegments2
+                  secondPntEnd   = secondPntStart + NumSegments1 - 1
+                  DO k=1,NumSegments1-1
+                     WRITE(Un,'(4(i7))') firstPntStart + (k-1), firstPntStart + k, &
+                                         secondPntStart + k,    secondPntStart + (k-1)
+                  END DO
+                  WRITE(Un,'(4(i7))')  firstPntEnd, firstPntStart, secondPntStart, secondPntEnd
+               END DO         
+            END DO      
+            
+         end if         
       end if
       
       WRITE(Un,'(A)')         '        </DataArray>'

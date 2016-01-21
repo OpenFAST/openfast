@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2013-2015  National Renewable Energy Laboratory
+! Copyright (C) 2013-2016  National Renewable Energy Laboratory
 !
 !    This file is part of the NWTC Subroutine Library.
 !
@@ -33,7 +33,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               
-          ProgDesc( 'NWTC Subroutine Library', 'v2.06.05a-bjj', '5-Oct-2015')    !< The name, version, and date of the NWTC Subroutine Library
+          ProgDesc( 'NWTC Subroutine Library', 'v2.07.00a-bjj', '21-Jan-2016')    !< The name, version, and date of the NWTC Subroutine Library
 
       !> This type stores a linked list of file names, used in MLB-style input file parsing (currently used in AirfoilInfo)
    TYPE, PUBLIC   :: FNlist_Type                                
@@ -3452,7 +3452,7 @@ CONTAINS
    END SUBROUTINE ParseInAry
 !=======================================================================
 !> This subroutine parses the include information that occurs after a "@" when processing an input file.
-   SUBROUTINE ParseInclInfo ( InclInfo, FileName, RangeBeg, RangeEnd, ErrStat, ErrMsg )
+   SUBROUTINE ParseInclInfo ( InclInfo, RelativePathFileName, FileName, RangeBeg, RangeEnd, ErrStat, ErrMsg )
 
          ! Arguments declarations.
 
@@ -3464,6 +3464,7 @@ CONTAINS
       CHARACTER(*),   INTENT(OUT)            :: ErrMsg                        !< The error message, if ErrStat /= 0.
       CHARACTER(*),   INTENT(OUT)            :: FileName                      !< The file name that was parsed from InclInfo.
       CHARACTER(*),   INTENT(INOUT)          :: InclInfo                      !< The text following the "@" on an input line being processed.
+      CHARACTER(*),   INTENT(IN)             :: RelativePathFileName          !< The name of the file that any new file is relative to.
 
 
          ! Local declarations.
@@ -3474,6 +3475,7 @@ CONTAINS
 
       CHARACTER( 20)                         :: InclInfoUC                    ! InclInfo converted to upper case.
       CHARACTER(512)                         :: Words       (2)               ! The two "words" parsed from the line.
+      CHARACTER(1024)                        :: PriPath                       ! path name of primary file (RelativePathFileName)
       CHARACTER(*), PARAMETER                :: RoutineName = 'ParseInclInfo'
 
       ErrStat = ErrID_None
@@ -3557,6 +3559,12 @@ CONTAINS
             RETURN
          ENDIF ! ( ErrStatLcl /= 0 )
       ENDIF ! ( INDEX( InclInfo, '"' )+INDEX( InclInfo, "'" ) > 0 )
+      
+      IF ( PathIsRelative( Filename ) ) then
+         CALL GetPath( RelativePathFileName, PriPath )     ! Input files will be relative to the path where the primary input file is located.
+         Filename = TRIM(PriPath)//TRIM(Filename)
+      END IF
+            
 
       RETURN
 
@@ -4716,7 +4724,7 @@ CONTAINS
 
                ! Parse the contents of everything after the "@" to determine the name of the include file and the optional line range.
 
-            CALL ParseInclInfo ( Line(2:), IncFileName, RangeBeg, RangeEnd, ErrStatLcl, ErrMsg2 )
+            CALL ParseInclInfo ( Line(2:), FileInfo%FileList(FileIndx), IncFileName, RangeBeg, RangeEnd, ErrStatLcl, ErrMsg2 )
                CALL SetErrStat( ErrStatLcl, TRIM( FileInfo%FileList(FileIndx) )//':Line#'//TRIM( Num2LStr( FileLine ) ) &
                                 //':'//TRIM(ErrMsg2), ErrStat, ErrMsg, RoutineName )
                IF ( ErrStat >= AbortErrLev )  THEN
@@ -6150,7 +6158,7 @@ CONTAINS
 
                   ! Parse the contents of everything after the "@" to determine the name of the include file and the optional line range.
 
-               CALL ParseInclInfo ( Line(2:), IncFileName, RangeBeg, RangeEnd, ErrStatLcl, ErrMsg2 )
+               CALL ParseInclInfo ( Line(2:), Filename, IncFileName, RangeBeg, RangeEnd, ErrStatLcl, ErrMsg2 )
                   CALL SetErrStat( ErrStatLcl, TRIM( FileName )//':Line#'//TRIM( Num2LStr( CurrLine ) )//':'//TRIM(ErrMsg2), ErrStat, ErrMsg, RoutineName )
                   IF (ErrStat >= AbortErrLev) THEN
                      CALL Cleanup()

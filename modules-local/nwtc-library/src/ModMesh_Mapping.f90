@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2013-2015  National Renewable Energy Laboratory
+! Copyright (C) 2013-2016  National Renewable Energy Laboratory
 !
 !    This file is part of the NWTC Subroutine Library.
 !
@@ -888,6 +888,12 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
 
       ! local variables
 
+   INTEGER(IntKi)                                 :: ErrStat2                       ! Error status of the operation
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2                        ! Error message if ErrStat2 /= ErrID_None
+   CHARACTER(200)                                 :: DebugFileName                  ! File name for debugging file
+   CHARACTER(*), PARAMETER                        :: RoutineName = 'CreateMapping_ProjectToLine2' 
+   
+   
    REAL(ReKi)      :: denom
    REAL(ReKi)      :: dist
    REAL(ReKi)      :: min_dist
@@ -908,6 +914,12 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
 
    LOGICAL         :: found
    LOGICAL         :: on_element
+   
+   INTEGER(IntKi)  :: Un               ! unit number for debugging
+#ifdef DEBUG_MESHMAPPING
+   REAL(ReKi)      :: closest_elem_position
+   INTEGER(IntKi)  :: closest_elem
+#endif
    
 
 
@@ -933,6 +945,12 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
 
          found = .false.
          min_dist = HUGE(min_dist)
+         
+#ifdef DEBUG_MESHMAPPING
+            ! some values for debugging
+         closest_elem_position = HUGE(min_dist)
+         closest_elem = 0
+#endif
 
          do jElem = 1, Mesh2%ElemTable(Mesh2_TYPE)%nelem  ! ELEMENT_LINE2 = Mesh2_TYPE
 
@@ -949,7 +967,7 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
 
             denom           = DOT_PRODUCT( n1_n2_vector, n1_n2_vector )
             IF ( EqualRealNos( denom, 0.0_ReKi ) ) THEN
-               CALL SetErrStat( ErrID_Fatal, 'Division by zero because Line2 element nodes are in same position.', ErrStat, ErrMsg, 'CreateMapping_ProjectToLine2')
+               CALL SetErrStat( ErrID_Fatal, 'Division by zero because Line2 element nodes are in same position.', ErrStat, ErrMsg, RoutineName)
                RETURN
             END IF
 
@@ -963,15 +981,28 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
             else
                elem_position_SiKi = REAL( elem_position, SiKi )
                if (EqualRealNos( elem_position_SiKi, 1.0_SiKi )) then !we're ON the element (at a node)
-               !if (elem_position_SiKi <= 1.0005_SiKi ) then !we'll say we're ON the element (at a node)
                   on_element = .true.
                   elem_position = 1.0_ReKi
                elseif (EqualRealNos( elem_position_SiKi,  0.0_SiKi )) then !we're ON the element (at a node)
-               !elseif (elem_position_SiKi >= -0.0005_SiKi ) then !we'll say we're ON the element (at a node)
                   on_element = .true.
                   elem_position = 0.0_ReKi
                else !we're not on the element
                   on_element = .false.
+                  
+#ifdef DEBUG_MESHMAPPING
+                  if ( elem_position_SiKi < 0.0_SiKi ) then
+                     if ( -elem_position_SiKi < closest_elem_position ) then
+                        closest_elem_position = -elem_position_SiKi
+                        closest_elem = jElem
+                     end if
+                  else
+                     if ( elem_position_SiKi-1.0_SiKi < closest_elem_position ) then
+                        closest_elem_position = elem_position_SiKi-1.0_SiKi
+                        closest_elem = jElem
+                     end if
+                  end if
+#endif                                
+                  
                end if               
             end if
 
@@ -1002,7 +1033,29 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
          if (.not. found) then
 
             if (NodeMap(i)%OtherMesh_Element .lt. 1 )  then
-               CALL SetErrStat( ErrID_Fatal, 'Node '//trim(num2Lstr(i))//' does not project onto any line2 element.', ErrStat, ErrMsg, 'CreateMapping_ProjectToLine2')
+               CALL SetErrStat( ErrID_Fatal, 'Node '//trim(num2Lstr(i))//' does not project onto any line2 element.', ErrStat, ErrMsg, RoutineName)
+               
+                  ! output some mesh information for debugging
+               CALL GetNewUnit(Un,ErrStat2,ErrMsg2)
+               DebugFileName='FAST_Meshes.'//trim(num2Lstr(Un))//'.dbg'
+               CALL OpenFOutFile(Un,DebugFileName,ErrStat2,ErrMsg2)
+               IF (ErrStat2 >= AbortErrLev) RETURN
+               
+               CALL SetErrStat( ErrID_Info, 'See '//trim(DebugFileName)//' for mesh debug information.', ErrStat, ErrMsg, RoutineName)               
+#ifdef DEBUG_MESHMAPPING
+               WRITE( Un, '(A,I5,A,I5,A,ES10.5,A)' ) 'Element ', closest_elem, ' is closest to node ', i, &
+                                                   '. It has a relative position of ', closest_elem_position, '.'
+#endif               
+               WRITE( Un, '(A)') '************************************************** Mesh1 ***************************************************'
+               WRITE( Un, '(A)' ) 'Mesh1 is the destination mesh for transfer of motions/scalars; it is the source mesh for transfer of loads.'
+               WRITE( Un, '(A)') '************************************************************************************************************'
+               CALL MeshPrintInfo ( Un, Mesh1 )
+               WRITE( Un, '(A)') '************************************************** Mesh2 ***************************************************'
+               WRITE( Un, '(A)' ) 'Mesh2 is the source mesh for transfer of motions/scalars; it is the destination mesh for transfer of loads.'
+               WRITE( Un, '(A)') '************************************************************************************************************'
+               CALL MeshPrintInfo ( Un, Mesh2 )
+               ! CLOSE(Un) ! by not closing this, I can ensure unique file names.
+               
                RETURN
             endif
 
