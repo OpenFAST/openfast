@@ -25,7 +25,7 @@
 #include "numeric.h"
 #include "jacobian.h"
 # ifdef WITH_LAPACK 
-#  include "lapack\lapacke.h"
+#  include "lapack/lapacke.h"
 #endif
 
 MAP_ERROR_CODE reset_node_force_to_zero(Domain* domain, char* map_msg, MAP_ERROR_CODE* ierr)
