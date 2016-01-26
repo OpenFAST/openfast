@@ -247,6 +247,7 @@ typedef   ^                            ^                             LOGICAL    
 #
 typedef   ^                            InitOutputType                MeshType                 DistribMesh                      -          -        -         ""  -
 typedef   ^                            ^                             MeshType                 LumpedMesh                       -          -        -         ""    -
+typedef   ^                            ^                             SiKi                     Morison_Rad                      {:}         -        -         "radius of node (for FAST visualization)" (m)
 typedef   ^                            ^                             CHARACTER(10)            WriteOutputHdr                   {:}        -        -         ""    -
 typedef   ^                            ^                             CHARACTER(10)            WriteOutputUnt                   {:}        -        -         ""    -
 #
