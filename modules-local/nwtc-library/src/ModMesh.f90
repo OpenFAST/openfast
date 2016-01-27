@@ -489,8 +489,7 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, Nu
    INTEGER(IntKi)                        :: i,j           ! loop counters
    CHARACTER(1024)                       :: FileName
    REAL(SiKi)                            :: angle
-   REAL(SiKi)                            :: delX
-   REAL(SiKi)                            :: delY
+   REAL(SiKi)                            :: xyz(3)
 
    INTEGER(IntKi)                        :: firstPntEnd, firstPntStart, secondPntStart, secondPntEnd  ! node indices for forming rectangle 
    INTEGER(IntKi)                        :: NumSegments1
@@ -542,21 +541,22 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, Nu
       WRITE(Un,'(A)')         '      <Points>'
       WRITE(Un,'(A)')         '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
       
+      xyz(3) = 0.0_SiKi
       if (present(verts)) then
+         
          DO i=1,M%Nnodes
             DO j=1,NumSegments1
-               delX = verts(1,j,i)
-               delY = verts(2,j,i)
-               WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + delX*M%Orientation(1,:,i) + delY*M%Orientation(2,:,i)
+               xyz(1:2) = verts(1:2,j,i)
+               WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + matmul(xyz,M%Orientation(:,:,i))
             END DO
          END DO         
       else               
          DO i=1,M%Nnodes
             DO j=1,NumSegments1
                angle = TwoPi*(j-1.0_ReKi)/NumSegments1
-               delX = radius(i)*COS(angle)
-               delY = radius(i)*SIN(angle)
-               WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + delX*M%Orientation(1,:,i) + delY*M%Orientation(2,:,i)
+               xyz(1) = radius(i)*COS(angle)
+               xyz(2) = radius(i)*SIN(angle)
+               WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + matmul(xyz,M%Orientation(:,:,i))
             END DO
          END DO
       end if
@@ -710,7 +710,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, 
       if ( present(verts) ) then
          do i=1,M%Nnodes
             do j=1,NumberOfPoints
-               WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + MATMUL(M%Orientation(:,:,i),verts(:,j))
+               WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + MATMUL(verts(:,j),M%Orientation(:,:,i))
             end do    
          end do
          
@@ -734,7 +734,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, 
                   angle = TwoPi*(k-1.0_ReKi)/NumSegments1
                   xyz(1) = r*COS(angle)
                   xyz(2) = r*SIN(angle)
-                  WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + MATMUL(M%Orientation(:,:,i),xyz)
+                  WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + MATMUL(xyz,M%Orientation(:,:,i))
                   !WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i) + xyz
                END DO            
             END DO
