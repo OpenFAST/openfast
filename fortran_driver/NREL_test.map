@@ -1,0 +1,33 @@
+---------------------- LINE DICTIONARY ---------------------------------------
+LineType     Diam     MassDenInAir    EA        CB    CIntDamp   Ca   Cdn   Cdt
+(-)          (m)      (kg/m)         (N)       (-)     (Pa-s)    (-)  (-)   (-)
+MatA         0.285     43.5        96700000      0.001   1.0E8    0.6  -1.0  0.05
+MatBC        0.285      3.8        96700000      0.001   1.0E8    0.6  -1.0  0.05
+---------------------- NODE PROPERTIES ---------------------------------------
+Node Type       X          Y          Z     M     B     FX    FY    FZ
+(-)  (-)       (m)        (m)        (m)   (kg)  (mˆ3)  (N)   (N)   (N)
+1    fix       445.0       0.0      -200      0     0      #    #    # 
+2    fix      -222.5     385.4      -200      0     0      #    #    #
+3    fix      -222.5    -385.4      -200      0     0      #    #    #
+4    connect   #30.9      #0.0      #-80      0     0      0    0    0
+5    connect  #-26.7     #15.4      #-80      0     0      0    0    0
+6    connect   #26.7    #-15.4      #-80      0     0      0    0    0
+7    vessel     -5.2       0.0       -70      0     0      #    #    #
+8    vessel      2.6      -4.5       -70      0     0      #    #    #
+9    vessel      2.6       4.5       -70      0     0      #    #    #
+---------------------- LINE PROPERTIES ---------------------------------------
+Line    LineType  UnstrLen    NodeAnch  NodeFair  Flags
+(-)      (-)       (m)         (-)       (-)       (-)
+1       MatA      424.4        1         4        tension_fair tension_anch
+2       MatA      424.4        2         5        tension_fair tension_anch
+3       MatA      424.4        3         6        tension_fair tension_anch
+4       MatBC      30.0        4         8        tension_fair tension_anch
+5       MatBC      30.0        4         9        tension_fair tension_anch
+6       MatBC      30.0        5         7        tension_fair tension_anch
+7       MatBC      30.0        5         9        tension_fair tension_anch
+8       MatBC      30.0        6         7        tension_fair tension_anch
+9       MatBC      30.0        6         8        tension_fair tension_anch
+---------------------- SOLVER OPTIONS-----------------------------------------
+Option
+(-)
+ help

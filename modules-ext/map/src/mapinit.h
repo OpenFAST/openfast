@@ -341,7 +341,6 @@ MAP_ERROR_CODE check_outer_epsilon_flag(struct bstrList* list, double* epsilon);
  */
 MAP_ERROR_CODE check_outer_bd_flag(struct bstrList* list, FdType* bd);
 
-
 /**
  * @brief   Sets FdType type to CENTRAL-DIFFERENCE 
  * @details Called by {@link set_model_option_list} to set the outer-loop finite-

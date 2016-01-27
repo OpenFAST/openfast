@@ -35,7 +35,7 @@ MAP_ERROR_CODE root_finding_step(OuterSolveAttributes* ns, const int n, MAP_Cons
   int i = 0;
 
   MAP_BEGIN_ERROR_LOG;
-
+  
   success = lu(ns, n, map_msg, ierr); CHECKERRQ(MAP_FATAL_74);
   success = lu_back_substitution(ns, n, map_msg, ierr); CHECKERRQ(MAP_FATAL_74);
   
@@ -80,12 +80,11 @@ int inner_function_evals(void* line_ptr, int m, int n, const __cminpack_real__* 
    * associated with having exactly vertical(so that HF is zero) or exactly horizontal(so that VF is zero) lines by setting the minimum values
    * equal to the tolerance.This prevents us from needing to implement the known limiting solutions for vertical or horizontal lines(and thus
    * complicating this routine):
-   *
+   * 
    * HF = MAX(HF, Tol)
    * XF = MAX(XF, Tol)
    * ZF = MAX(ZF, TOl)
    */  
-
   if (iflag!=2) {
     if (contactFlag==true || omega<0.0 || (Fv-omega*Lu)>0.0) { /* true when no portion of the line rests on the seabed */
       fvec[0] = residual_function_length_no_contact(Fv, Fh, omega, Lu, EA, length);

@@ -43,7 +43,7 @@ OBJ = $(PREC).o              \
 
 
 all : $(OBJ)
-	$(FC) $(OPT) -o f_driver $(OBJ) -L. ../src/libmap-1.10.00.so -lblas -llapack
+	$(FC) $(OPT) -o f_driver $(OBJ) -L. ../src/libmap-1.20.00.so -lblas -llapack
 
 map_glue.o : map_glue.f90
 	$(FC) $(OPT) $(FCFLAGS) -c map_glue.f90

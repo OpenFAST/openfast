@@ -1,0 +1,266 @@
+Outputs were generated using MAP++ 6e0d-dirty.
+
+    Wednesday November 18-2015 at 12:01:52 PM
+
+    Gravity constant          [m/s^2]  : 9.81
+    Sea density               [kg/m^3] : 1025.00
+    Water depth               [m]      : 200.00
+    Vessel reference position [m]      : 0.00 , 0.00 , 0.00
+
+    Cable Type          : MatA
+    Diameter     [m]    : 0.2850
+    Mass Density [kg/m] : 43.50
+    EA           [N]    : 96700000.00
+    omega        [N/m]  : -214.73
+    CB                  : 0.00
+
+    Cable Type          : MatBC
+    Diameter     [m]    : 0.2850
+    Mass Density [kg/m] : 3.80
+    EA           [N]    : 96700000.00
+    omega        [N/m]  : -604.19
+    CB                  : 0.00
+
+          | Node 1 Data            Node 2 Data            Node 3 Data            Node 4 Data
+          | -------------------------------------------------------------------------------------------
+Type      |  FIX                    FIX                    FIX                    CONNECT
+X  [m]    |   445.000               -222.500               -222.500              ( 31.583)
+Y  [m]    |  0.000                   385.400               -385.400              (-0.000)
+Z  [m]    |  -200.000               -200.000               -200.000              (-77.370)
+M  [kg]   |  0.000                   0.000                  0.000                  0.000
+B  [m^3]  |  0.000                   0.000                  0.000                  0.000
+FX [N]    | ( 1501931.205)         (-752743.194)          (-752743.194)          ( 0.000)
+FY [N]    | (-0.000)               ( 1303813.713)         (-1303813.713)         ( 0.000)
+FZ [N]    | (-491199.876)          (-492232.607)          (-492232.607)          (-0.000)
+
+
+          | Node 5 Data            Node 6 Data            Node 7 Data            Node 8 Data
+          | -------------------------------------------------------------------------------------------
+Type      |  CONNECT                CONNECT                VESSEL                 VESSEL
+X  [m]    | (-15.786)              (-15.786)               -5.200                  2.600
+Y  [m]    | ( 27.353)              (-27.353)                0.000                 -4.500
+Z  [m]    | (-77.372)              (-77.372)               -70.000                -70.000
+M  [kg]   |  0.000                   0.000                  0.000                  0.000
+B  [m^3]  |  0.000                   0.000                  0.000                  0.000
+FX [N]    | (-0.000)               (-0.000)               ( 549054.187)          (-272749.502)
+FY [N]    | (-0.000)               ( 0.000)               (-0.000)               ( 477831.633)
+FZ [N]    | ( 0.000)               (-0.000)               ( 364287.563)          ( 364615.336)
+
+
+          | Node 9 Data
+          | -------------------------------------------------------------------------------------------
+Type      |  VESSEL
+X  [m]    |   2.600
+Y  [m]    |   4.500
+Z  [m]    |  -70.000
+M  [kg]   |  0.000
+B  [m^3]  |  0.000
+FX [N]    | (-272749.502)
+FY [N]    | (-477831.633)
+FZ [N]    | ( 364615.336)
+
+
+                | Line 1
+                | ---------------------------------------
+Material        |  MatA
+Lu        [m]   |  424.400
+Lb        [m]   | 0.000
+H         [N]   |  1501931.205
+V         [N]   |  400068.769
+T         [N]   |  1554301.246
+Alpha     [deg] |  14.916
+HAnch     [N]   |  1501931.205
+VAnch     [N]   |  491199.876
+TAnch     [N]   |  1580213.486
+AlphaAnch [deg] |  18.110
+L^2-Norm        |  5.123797e-13
+Function Evals  |  2
+Jacobian Evals  |  1
+Term. criteria  |  2 : ||x_i - x_{i-1}||  <= INNER_XTOL.
+
+
+                | Line 2
+                | ---------------------------------------
+Material        |  MatA
+Lu        [m]   |  424.400
+Lb        [m]   | 0.000
+H         [N]   |  1505507.394
+V         [N]   |  401101.500
+T         [N]   |  1558022.762
+Alpha     [deg] |  14.918
+HAnch     [N]   |  1505507.394
+VAnch     [N]   |  492232.607
+TAnch     [N]   |  1583933.538
+AlphaAnch [deg] |  18.105
+L^2-Norm        |  3.981576e-13
+Function Evals  |  2
+Jacobian Evals  |  1
+Term. criteria  |  2 : ||x_i - x_{i-1}||  <= INNER_XTOL.
+
+
+                | Line 3
+                | ---------------------------------------
+Material        |  MatA
+Lu        [m]   |  424.400
+Lb        [m]   | 0.000
+H         [N]   |  1505507.394
+V         [N]   |  401101.500
+T         [N]   |  1558022.762
+Alpha     [deg] |  14.918
+HAnch     [N]   |  1505507.394
+VAnch     [N]   |  492232.607
+TAnch     [N]   |  1583933.538
+AlphaAnch [deg] |  18.105
+L^2-Norm        |  2.291431e-13
+Function Evals  |  3
+Jacobian Evals  |  2
+Term. criteria  |  2 : ||x_i - x_{i-1}||  <= INNER_XTOL.
+
+
+                | Line 4
+                | ---------------------------------------
+Material        |  MatBC
+Lu        [m]   |  30.000
+Lb        [m]   | 0.000
+H         [N]   |  759963.117
+V         [N]   |  181908.795
+T         [N]   |  781431.219
+Alpha     [deg] |  13.461
+HAnch     [N]   |  759963.117
+VAnch     [N]   |  200034.384
+TAnch     [N]   |  785848.392
+AlphaAnch [deg] |  14.747
+L^2-Norm        |  2.701523e-13
+Function Evals  |  2
+Jacobian Evals  |  1
+Term. criteria  |  2 : ||x_i - x_{i-1}||  <= INNER_XTOL.
+
+
+                | Line 5
+                | ---------------------------------------
+Material        |  MatBC
+Lu        [m]   |  30.000
+Lb        [m]   | 0.000
+H         [N]   |  759963.117
+V         [N]   |  181908.795
+T         [N]   |  781431.219
+Alpha     [deg] |  13.461
+HAnch     [N]   |  759963.117
+VAnch     [N]   |  200034.384
+TAnch     [N]   |  785848.392
+AlphaAnch [deg] |  14.747
+L^2-Norm        |  7.15025e-14
+Function Evals  |  2
+Jacobian Evals  |  1
+Term. criteria  |  2 : ||x_i - x_{i-1}||  <= INNER_XTOL.
+
+
+                | Line 6
+                | ---------------------------------------
+Material        |  MatBC
+Lu        [m]   |  30.000
+Lb        [m]   | 0.000
+H         [N]   |  760653.586
+V         [N]   |  182143.781
+T         [N]   |  782157.424
+Alpha     [deg] |  13.466
+HAnch     [N]   |  760653.586
+VAnch     [N]   |  200269.370
+TAnch     [N]   |  786575.934
+AlphaAnch [deg] |  14.750
+L^2-Norm        |  4.063938e-13
+Function Evals  |  2
+Jacobian Evals  |  1
+Term. criteria  |  2 : ||x_i - x_{i-1}||  <= INNER_XTOL.
+
+
+                | Line 7
+                | ---------------------------------------
+Material        |  MatBC
+Lu        [m]   |  30.000
+Lb        [m]   | 0.000
+H         [N]   |  762912.007
+V         [N]   |  182706.541
+T         [N]   |  784484.806
+Alpha     [deg] |  13.468
+HAnch     [N]   |  762912.007
+VAnch     [N]   |  200832.130
+TAnch     [N]   |  788903.210
+AlphaAnch [deg] |  14.748
+L^2-Norm        |  1.123467e-14
+Function Evals  |  2
+Jacobian Evals  |  1
+Term. criteria  |  2 : ||x_i - x_{i-1}||  <= INNER_XTOL.
+
+
+                | Line 8
+                | ---------------------------------------
+Material        |  MatBC
+Lu        [m]   |  30.000
+Lb        [m]   | 0.000
+H         [N]   |  760653.586
+V         [N]   |  182143.781
+T         [N]   |  782157.424
+Alpha     [deg] |  13.466
+HAnch     [N]   |  760653.586
+VAnch     [N]   |  200269.370
+TAnch     [N]   |  786575.934
+AlphaAnch [deg] |  14.750
+L^2-Norm        |  1.565035e-13
+Function Evals  |  3
+Jacobian Evals  |  2
+Term. criteria  |  2 : ||x_i - x_{i-1}||  <= INNER_XTOL.
+
+
+                | Line 9
+                | ---------------------------------------
+Material        |  MatBC
+Lu        [m]   |  30.000
+Lb        [m]   | 0.000
+H         [N]   |  762912.007
+V         [N]   |  182706.541
+T         [N]   |  784484.806
+Alpha     [deg] |  13.468
+HAnch     [N]   |  762912.007
+VAnch     [N]   |  200832.130
+TAnch     [N]   |  788903.210
+AlphaAnch [deg] |  14.748
+L^2-Norm        |  2.469983e-13
+Function Evals  |  3
+Jacobian Evals  |  2
+Term. criteria  |  2 : ||x_i - x_{i-1}||  <= INNER_XTOL.
+
+
+---------------------- LINE DICTIONARY ---------------------------------------
+LineType  Diam      MassDenInAir   EA            CB
+[-]       [m]       [kg/m]         [N]           [-]
+MatA         0.285     43.5        96700000      0.001   1.0E8    0.6  -1.0  0.05 
+MatBC        0.285      3.8        96700000      0.001   1.0E8    0.6  -1.0  0.05 
+---------------------- NODE PROPERTIES ---------------------------------------
+Node  Type       X       Y       Z      M     B     FX    FY    FZ
+[-]   [-]       [m]     [m]     [m]    [kg]  [mˆ3]  [N]   [N]   [N]
+1    fix       445.0       0.0      -200      0     0      #    #    # 
+2    fix      -222.5     385.4      -200      0     0      #    #    # 
+3    fix      -222.5    -385.4      -200      0     0      #    #    # 
+4    connect   #30.9      #0.0      #-80      0     0      0    0    0 
+5    connect  #-26.7     #15.4      #-80      0     0      0    0    0 
+6    connect   #26.7    #-15.4      #-80      0     0      0    0    0 
+7    vessel     -5.2       0.0       -70      0     0      #    #    # 
+8    vessel      2.6      -4.5       -70      0     0      #    #    # 
+9    vessel      2.6       4.5       -70      0     0      #    #    # 
+---------------------- LINE PROPERTIES ---------------------------------------
+Line  LineType  UnstrLen  NodeAnch  NodeFair  Flags
+[-]      [-]       [m]       [-]       [-]       [-]
+1       MatA      424.4        1         4        tension_fair tension_anch 
+2       MatA      424.4        2         5        tension_fair tension_anch 
+3       MatA      424.4        3         6        tension_fair tension_anch 
+4       MatBC      30.0        4         8        tension_fair tension_anch 
+5       MatBC      30.0        4         9        tension_fair tension_anch 
+6       MatBC      30.0        5         7        tension_fair tension_anch 
+7       MatBC      30.0        5         9        tension_fair tension_anch 
+8       MatBC      30.0        6         7        tension_fair tension_anch 
+9       MatBC      30.0        6         8        tension_fair tension_anch 
+---------------------- SOLVER OPTIONS-----------------------------------------
+Option 
+[-] 
+ help 

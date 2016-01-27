@@ -412,7 +412,7 @@ MODULE MAP
     status_from_MAP = 0
     message_from_MAP =  " "
   
-      ! copy the data so we can use it later  (need to allocate these original types inside the MAP DLL so we don't get errors on deallocation later)
+    ! copy the data so we can use it later  (need to allocate these original types inside the MAP DLL so we don't get errors on deallocation later)
     CALL MAP_CopyInput(         u,    u_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
     CALL MAP_CopyContState(     x,    x_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
     CALL MAP_CopyDiscState(    xd,   xd_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
@@ -420,7 +420,7 @@ MODULE MAP
     CALL MAP_CopyOtherState(other,other_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
     CALL MAP_CopyOutput(        y,    y_tmp, MESH_NEWCOPY, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
     
-      ! now we'll clear out these types for use in the MAP DLL    
+    ! now we'll clear out these types for use in the MAP DLL    
     CALL MAP_DestroyInput(         u, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
     CALL MAP_DestroyContState(     x, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)
     CALL MAP_DestroyDiscState(    xd, ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat,ErrMsg, RoutineName)

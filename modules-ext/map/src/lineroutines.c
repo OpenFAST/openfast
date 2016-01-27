@@ -548,7 +548,7 @@ MAP_ERROR_CODE node_solve_sequence(Domain* domain, MAP_ParameterType_t* p_type, 
   if (domain->outer_loop.krylov_accelerator) {
     success = krylov_solve_sequence(domain, p_type, u_type, z_type, other_type, time, map_msg, ierr); CHECKERRQ(MAP_FATAL_94);
   } else if (domain->outer_loop.powell) {
-
+    
   } else {
     success = newton_solve_sequence(domain, p_type, u_type, z_type, other_type, time, map_msg, ierr); CHECKERRQ(MAP_FATAL_93);
   };    

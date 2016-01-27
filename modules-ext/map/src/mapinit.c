@@ -209,6 +209,11 @@ void initialize_model_option_defaults(DomainOptions* options)
 }; 
 
 
+/*
+
+
+*/
+
 /* deallocated in free_outer_solve_data() */
 void initialize_outer_solve_data_defaults(OuterSolveAttributes* outer) 
 {
@@ -969,8 +974,6 @@ MAP_ERROR_CODE check_ref_position_flag(struct bstrList* list, Point* ref_positio
             ref_position->y.value = (double)atof(word);
             next++;
           } else {
-            checkpoint();
-            printf("%s\n",word);
             ref_position->z.value = (double)atof(word);
             return MAP_SAFE;
           };
@@ -1293,15 +1296,17 @@ MAP_ERROR_CODE initialize_cable_library_variables(Domain* domain, MAP_ParameterT
     library_iter->omega = g*(mu-area*rho_fluid);
 
     library_iter->a = area;
-    if (fabs(library_iter->omega)<=1) {
-      set_universal_error_with_message(map_msg, ierr, MAP_WARNING_5, "omega = %f <= 1.0", library_iter->omega);
+    if (fabs(library_iter->omega)<=1.0) {
+      set_universal_error_with_message(map_msg, ierr, MAP_WARNING_5, 
+                                       "omega = %f <= 1.0", library_iter->omega);
     };
   };
   list_iterator_stop(&domain->library); /* ending the iteration "session" */    
   
-  if (fabs(library_iter->omega)<=1e-3) {
+  if (fabs(library_iter->omega)<=1.0E-3) {
     return MAP_FATAL;
   }
+  /* end read */
   return MAP_SAFE;
 };
 
@@ -2104,90 +2109,6 @@ MAP_ERROR_CODE set_vartype_ptr(const char* unit, bstring alias, const int num, V
 };
 
 
-/**
-  .. c:var:: GX_POS
-
-  global X fairlead position [m]
-
-  .. c:var:: GY_POS
-
-  global X fairlead position [m]
-
-
-  .. c:var:: GZ_POS
-
-  global X fairlead position [m]
-
-  .. c:var:: GX_A_POS 
-
-  global X position of anchor [m]
-  
-  .. c:var:: GY_A_POS 
-  
-  global Y fairlead position [m]
-  
-  .. c:var:: GZ_A_POS 
-  
-  global Z fairlead position [m]
-  
-  .. c:var:: GX_FORCE 
-  
-  global X fairlead force [N]
-  
-  .. c:var:: GY_FORCE 
-
-  global Y fairlead force [N]
-  
-  .. c:var:: GZ_FORCE 
-
-  global Z fairlead force [N]
-  
-  .. c:var:: H_FAIR 
-  
-  horizontal (XY plane) fairlead force [N] 
-  
-  .. c:var:: H_ANCH
-
-  horizontal (XY plane) anchor force [N] 
-  
-  .. c:var:: V_FAIR 
-
-  vertical (Z axis) fairlead force [N]
-  
-  .. c:var:: V_ANCH 
-
-  vertical (Z axis) anchor force [N]
-  
-  .. c:var:: TENSION_FAIR 
-
-  fairlead force magnitude, [N] 
-  
-  .. c:var:: TENSION_ANCH 
-
-  anchor force magnitude, [N] 
-  
-  .. c:var:: X_EXCURSION 
-  
-  .. c:var:: Z_EXCURSION
-  
-  .. c:var:: AZIMUTH
-  
-  .. c:var:: ALTITUDE
-  
-  .. c:var:: ALTITUDE_ANCH
-  
-  .. c:var:: LINE_TENSION
-  
-  .. c:var:: OMIT_CONTACT
-  
-  .. c:var:: LINEAR_SPRING
-  
-  .. c:var:: LAY_LENGTH
-  
-  .. c:var:: DAMAGE_TIME
- 
-  .. c:var:: DIAGNOSTIC 
-*/
 MAP_ERROR_CODE set_line_option_flags(struct bstrList* words, int* i_parsed, Line* line_ptr, char* map_msg, MAP_ERROR_CODE* ierr)
 {
   // MAP_ERROR_CODE success = MAP_SAFE;
@@ -2956,3 +2877,38 @@ MAP_ERROR_CODE print_help_to_screen()
 };
 
 
+MAP_ERROR_CODE associate_constraint_states(Domain* domain, MAP_ConstraintStateType_t* z_type)
+{
+  Node* node_iter = NULL;
+  Line* line_iter = NULL;
+  int next = 0;
+  MAP_ERROR_CODE success = MAP_SAFE;
+  
+  MAP_BEGIN_ERROR_LOG;
+
+  list_iterator_start(&domain->line);            /* starting an iteration "session" */
+  while (list_iterator_hasnext(&domain->line)) { /* tell whether more values available */
+    line_iter = (Line*)list_iterator_next(&domain->line);
+    success = associate_vartype_ptr(&line_iter->H, z_type->H, next+1);
+    success = associate_vartype_ptr(&line_iter->V, z_type->V, next+1);
+    next++;
+  };
+  list_iterator_stop(&domain->line); /* ending the iteration "session" */    
+  
+  next = 0;
+  list_iterator_start(&domain->node);            /* starting an iteration "session" */
+  while (list_iterator_hasnext(&domain->node)) { /* tell whether more values available */
+    node_iter = (Node*)list_iterator_next(&domain->node);
+    if (node_iter->type==CONNECT) {
+      success = associate_vartype_ptr(&node_iter->position_ptr.x, z_type->x, next+1);
+      success = associate_vartype_ptr(&node_iter->position_ptr.y, z_type->y, next+1);
+      success = associate_vartype_ptr(&node_iter->position_ptr.z, z_type->z, next+1);
+      next++;
+    };
+  };
+  list_iterator_stop(&domain->node); /* ending the iteration "session" */    
+
+  MAP_END_ERROR_LOG;
+
+  return MAP_SAFE;
+}

@@ -1,27 +1,26 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
-'''
-  Copyright (C) 2014 mdm                                     
-  map[dot]plus[dot]plus[dot]help[at]gmail                     
-                                                             
-Licensed to the Apache Software Foundation (ASF) under one   
-or more contributor license agreements.  See the NOTICE file 
-distributed with this work for additional information        
-regarding copyright ownership.  The ASF licenses this file   
-to you under the Apache License, Version 2.0 (the            
-"License"); you may not use this file except in compliance   
-with the License.  You may obtain a copy of the License at   
-                                                             
-  http://www.apache.org/licenses/LICENSE-2.0                 
-                                                             
-Unless required by applicable law or agreed to in writing,   
-software distributed under the License is distributed on an  
-"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY       
-KIND, either express or implied.  See the License for the    
-specific language governing permissions and limitations            
-under the License.                                             
-'''  
+
+#   Copyright (C) 2014 mdm                                     
+#   map[dot]plus[dot]plus[dot]help[at]gmail                     
+#                                                              
+# Licensed to the Apache Software Foundation (ASF) under one   
+# or more contributor license agreements.  See the NOTICE file 
+# distributed with this work for additional information        
+# regarding copyright ownership.  The ASF licenses this file   
+# to you under the Apache License, Version 2.0 (the            
+# "License"); you may not use this file except in compliance   
+# with the License.  You may obtain a copy of the License at   
+#                                                              
+#   http://www.apache.org/licenses/LICENSE-2.0                 
+#                                                              
+# Unless required by applicable law or agreed to in writing,   
+# software distributed under the License is distributed on an  
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY       
+# KIND, either express or implied.  See the License for the    
+# specific language governing permissions and limitations            
+# under the License.                                             
 
 
 if __name__ == '__main__':      
@@ -38,8 +37,11 @@ if __name__ == '__main__':
     mooring_1.map_set_gravity(9.81)
     mooring_1.map_set_sea_density(1025.0)
     
+    # mooring_1.read_file("input.map")                                         # 350 m depth        
+    mooring_1.read_file("inwind.map")
+    # mooring_1.read_file("../test/test_for_nrel.map")
     #mooring_1.read_file("../test/baseline_1.map")                                         # 120 m depth    
-    mooring_1.read_file("../test/baseline_2.map")                                         # 350 m depth    
+    # mooring_1.read_file("../test/baseline_2.map")                                         # 350 m depth    
     # mooring_1.read_file("../test/baseline_5.map")                                       # 80 m depth
     # mooring_1.read_file("../test/NRELOffshrBsline5MW_Platform_OC3Hywind.map")           # 320 m depth
     # mooring_1.read_file("../test/NRELOffshrBsline5MW_Platform_OC3Hywind_segmented.map") # 320 m depth

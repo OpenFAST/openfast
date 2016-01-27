@@ -136,7 +136,7 @@ MAP_EXTERNCALL void map_init(MAP_InitInputType_t* init_type,
   print_machine_name_to_screen( );
 # endif 
      
-  printf("MAP environment properties (set externally)...\n");
+  printf("MAP++ environment properties (set externally)...\n");
   printf("    Gravity constant          [m/s^2]  : %1.2f\n", p_type->g ); 
   printf("    Sea density               [kg/m^3] : %1.2f\n", p_type->rho_sea );
   printf("    Water depth               [m]      : %1.2f\n", p_type->depth );
@@ -160,6 +160,13 @@ MAP_EXTERNCALL void map_init(MAP_InitInputType_t* init_type,
   free_init_data(init_data, map_msg, ierr); 
   MAP_InitInput_Delete(init_data);
   if (*ierr!=MAP_SAFE) printf("Intialization: %s\n", map_msg);
+
+  // checkpoint();
+  // printf("In initialization: %p\n",z_type);
+  // for (int i=0 ; i<z_type->H_Len ; i++){
+  //   printf("  H=%2.2f  V=%2.2f\n",z_type->H[i],z_type->V[i]);
+  // }   
+
 };
 
 
@@ -237,8 +244,9 @@ MAP_EXTERNCALL void map_calc_output(float t,
    ReferencePoint* point_iter = NULL;
    int i = 0;
 
-   map_reset_universal_error(map_msg, ierr);
 
+   map_reset_universal_error(map_msg, ierr);
+   
    MAP_BEGIN_ERROR_LOG;
 
    success = associate_constraint_states(domain, z_type); CHECKERRQ(MAP_FATAL_98);

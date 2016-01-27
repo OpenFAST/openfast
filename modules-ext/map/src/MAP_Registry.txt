@@ -13,17 +13,17 @@
 
 include Registry_NWTC_Library.txt
 
-
-## ============================== Define input types here: ============================================================================================================================================
-typedef         MAP    InitInputType        DbKi             gravity            -        -999.9               -            "gravity constant"   "[m/s^2]"
+														
+## ============================== Define input types here: ============================================================================================================================================				
+typedef         MAP    InitInputType        DbKi             gravity            -        -999.9               -            "gravity constant"   "[m/s^2]"	
 typedef         ^       ^                   DbKi             sea_density        -        -999.9               -            "sea density"        "[kg/m^3]"
-typedef	        ^       ^                   DbKi             depth              -        -999.9               -            "depth of water"     "[m]"
+typedef	        ^       ^                   DbKi             depth              -        -999.9               -            "depth of water"     "[m]"	
 typedef	        ^       ^                   CHARACTER(255)   file_name          -         ""                  -            "MAP input file"
 typedef	        ^       ^                   CHARACTER(255)   summary_file_name  -         ""                  -            "MAP summary file name"
-typedef         ^       ^                   CHARACTER(255)   library_input_str  -         ""                  -            "cable library string information (from input file)"
-typedef         ^       ^                   CHARACTER(255)   node_input_str     -         ""                  -            "node string information (from input file)"
-typedef         ^       ^                   CHARACTER(255)   line_input_str     -         ""                  -            "element library string information (from input file)"
-typedef	        ^       ^                   CHARACTER(255)   option_input_str   -         ""                  -            "solver options library string information (from input file)"
+typedef         ^       ^                   CHARACTER(255)   library_input_str  -         ""                  -            "cable library string information (from input file)"	
+typedef         ^       ^                   CHARACTER(255)   node_input_str     -         ""                  -            "node string information (from input file)"	
+typedef         ^       ^                   CHARACTER(255)   line_input_str     -         ""                  -            "element library string information (from input file)"	
+typedef	        ^       ^                   CHARACTER(255)   option_input_str   -         ""                  -            "solver options library string information (from input file)"	
 
 
 ## ============================== Define Initialization outputs here: ================================================================================================================================
@@ -44,9 +44,9 @@ typedef         ^       DiscreteStateType   DbKi             dummy              
 
 
 ## ============================== Define Other states here: =====================================================================================================================================
-typedef	       ^        OtherStateType      DbKi             H                 {:}        -                   -            "horizontal line force"   "[N]"
+typedef	       ^        OtherStateType      DbKi             H                 {:}        -                   -            "horizontal line force"   "[N]"	
 typedef	       ^        ^                   DbKi             V                 {:}        -                   -            "Vertical line force"     "[N]"
-typedef	       ^        ^                   DbKi             Ha                {:}        -                   -            "horizontal line force at anchor"   "[N]"
+typedef	       ^        ^                   DbKi             Ha                {:}        -                   -            "horizontal line force at anchor"   "[N]"	
 typedef	       ^        ^                   DbKi             Va                {:}        -                   -            "Vertical line force at anchor"     "[N]"
 typedef	       ^        ^                   DbKi             x                 {:}        -                   -            "x fairlead line position" "[m]"
 typedef	       ^        ^                   DbKi             y                 {:}        -                   -            "y fairlead line position" "[m]"
@@ -54,20 +54,20 @@ typedef	       ^        ^                   DbKi             z                 {
 typedef	       ^        ^                   DbKi             xa                {:}        -                   -            "x fairlead line position at anchor" "[m]"
 typedef	       ^        ^                   DbKi             ya                {:}        -                   -            "y fairlead line position at anchor" "[m]"
 typedef	       ^        ^                   DbKi             za                {:}        -                   -            "z fairlead line position at anchor" "[m]"
-typedef	       ^        ^                   DbKi             Fx_connect        {:}        -                   -            "horizontal x line force at connect node"  "[N]"
+typedef	       ^        ^                   DbKi             Fx_connect        {:}        -                   -            "horizontal x line force at connect node"  "[N]"	
 typedef	       ^        ^                   DbKi             Fy_connect        {:}        -                   -            "horizontal y line force at connect node"  "[N]"
-typedef	       ^        ^                   DbKi             Fz_connect        {:}        -                   -            "vertical z line force at connect node"    "[N]"
-typedef	       ^        ^                   DbKi             Fx_anchor         {:}        -                   -            "horizontal x line force at connect node"  "[N]"
+typedef	       ^        ^                   DbKi             Fz_connect        {:}        -                   -            "vertical z line force at connect node"    "[N]"	
+typedef	       ^        ^                   DbKi             Fx_anchor         {:}        -                   -            "horizontal x line force at connect node"  "[N]"	
 typedef	       ^        ^                   DbKi             Fy_anchor         {:}        -                   -            "horizontal y line force at connect node"  "[N]"
-typedef	       ^        ^                   DbKi             Fz_anchor         {:}        -                   -            "vertical z line force at connect node"    "[N]"
+typedef	       ^        ^                   DbKi             Fz_anchor         {:}        -                   -            "vertical z line force at connect node"    "[N]"	
 
 
 ## ============================== Define constraint states here: =====================================================================================================================================
-typedef	       ^        ConstraintStateType DbKi             H                 {:}        -                   -            "horizontal line force"   "[N]"
+typedef	       ^        ConstraintStateType DbKi             H                 {:}        -                   -            "horizontal line force"   "[N]"	
 typedef	       ^        ^                   DbKi             V                 {:}        -                   -            "Vertical line force"     "[N]"
-typedef	       ^        ^                   DbKi             x                 {:}        -                   -            "fairlead x displacement"  "[m]"
-typedef	       ^        ^                   DbKi             y                 {:}        -                   -            "fairlead y displacement"  "[m]"
-typedef	       ^        ^                   DbKi             z                 {:}        -                   -            "fairlead z displacement"  "[m]"
+typedef	       ^        ^                   DbKi             x                 {:}        -                   -            "fairlead x displacement"  "[m]"					
+typedef	       ^        ^                   DbKi             y                 {:}        -                   -            "fairlead y displacement"  "[m]"					
+typedef	       ^        ^                   DbKi             z                 {:}        -                   -            "fairlead z displacement"  "[m]"					
 
 
 ## ============================== Parameters ============================================================================================================================================
@@ -80,21 +80,20 @@ typedef         ^        ^                   DbKi             dt                
 #typedef         ^       ^                   DbKi             diam               -         -                   -            "cable diameter"                                  "[m]"
 #typedef         ^       ^                   DbKi             cb                 -         -                   -            "cable/seabed friction coefficient"
 #typedef         ^       ^                   DbKi             mu                 -         -                   -            "cable mass denity"                               "[kg/m]"
-typedef          ^       ^                   CHARACTER(255)   InputLines        {500}     -                   -            "input file line for restart"
-typedef          ^       ^                   CHARACTER(1)     InputLineType     {500}     -                   -            "input file line type for restart"
+typedef          ^       ^                   CHARACTER(255)   InputLines         {500}     -                   -            "input file line for restart"
+typedef          ^       ^                   CHARACTER(1)     InputLineType      {500}     -                   -            "input file line type for restart"
 
-
-# ============================== Inputs ============================================================================================================================================
-typedef	        ^       InputType           DbKi             x                 {:}        -                   -            "fairlead x displacement"  "[m]"
-typedef	        ^       ^                   DbKi             y                 {:}        -                   -            "fairlead y displacement"  "[m]"
-typedef	        ^       ^                   DbKi             z                 {:}        -                   -            "fairlead z displacement"  "[m]"
-typedef	        ^       ^                   MeshType         PtFairDisplacement -         -                   -            "position of each fairlead in X,Y,Z"  "[m]"
+# ============================== Inputs ============================================================================================================================================	
+typedef	        ^       InputType           DbKi             x                 {:}        -                   -            "fairlead x displacement"  "[m]"					
+typedef	        ^       ^                   DbKi             y                 {:}        -                   -            "fairlead y displacement"  "[m]"					
+typedef	        ^       ^                   DbKi             z                 {:}        -                   -            "fairlead z displacement"  "[m]"					
+typedef	        ^       ^                   MeshType         PtFairDisplacement -         -                   -            "position of each fairlead in X,Y,Z"  "[m]"		
 
 
 ## ============================== Outputs ============================================================================================================================================
-typedef	       ^        OutputType          DbKi             Fx                 {:}        -                   -            "horizontal line force"   "[N]"
+typedef	       ^        OutputType          DbKi             Fx                 {:}        -                   -            "horizontal line force"   "[N]"	
 typedef	       ^        ^                   DbKi             Fy                 {:}        -                   -            "Vertical line force"     "[N]"
-typedef	       ^        ^                   DbKi             Fz                 {:}        -                   -            "horizontal line force at anchor"   "[N]"
+typedef	       ^        ^                   DbKi             Fz                 {:}        -                   -            "horizontal line force at anchor"   "[N]"	
 typedef	       ^        ^                   ReKi             WriteOutput        {:}        -                   -            "outpur vector" ""
 typedef	       ^        ^                   DbKi             wrtOutput          {:}        -                   -            "outpur vector" ""
 typedef	       ^        ^                   MeshType         ptFairleadLoad      -         -                   -            "point mesh for forces in X,Y,Z"         "[N]"

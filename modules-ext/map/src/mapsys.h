@@ -53,12 +53,12 @@
 #  include <stdbool.h>
 #  define map_snprintf snprintf
 #  define map_strcat(a,b,c) strncat(a,c,b)
+#  if defined(_MINGW)
+#    define MAP_EXTERNCALL __declspec( dllexport )
+#  else
+#    define MAP_EXTERNCALL 
+#  endif  
 #  define MAP_STRCPY(a,b,c) strcpy(a,c)
-#if defined(_MINGW)
-#  define MAP_EXTERNCALL __declspec( dllexport )
-#else
-#  define MAP_EXTERNCALL 
-#endif
 #endif
 
 
@@ -103,7 +103,7 @@
 #define MAP_HORIZONTAL_TOL 1E-2
 
 #define PROGNAME "MAP++ (Mooring Analysis Program++)"
-#define PROGVERSION "1.10.02"
+#define PROGVERSION "1.20.00"
 #define CHECKERRQ(code) if(success!=MAP_SAFE) {set_universal_error(map_msg, ierr, code); break;} 
 #define CHECKERRK(code) if(success!=MAP_SAFE) {set_universal_error(map_msg, ierr, code);} 
 #define MAPFREE(obj) if(obj!=NULL) {free(obj); obj=NULL;} 
