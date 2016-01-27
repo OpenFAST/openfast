@@ -57,15 +57,16 @@ param	^	-	INTEGER	NumModules	-	15	-	"The number of modules available in FAST"	-
 # Other Constants
 param	^	-	INTEGER	MaxNBlades	-	3	-	"Maximum number of blades allowed on a turbine"	-
 param	^	-	INTEGER	IceD_MaxLegs	-	4	-	"because I don't know how many legs there are before calling IceD_Init and I don't want to copy the data because of sibling mesh issues, I'm going to allocate IceD based on this number"	-
-
+# ...... Data for VTK surface visualization ............................................................................
+typedef	^	FAST_VTK_BLSurfaceType	SiKi	AirfoilCoords	{:}{:}{:}	-	-	"x,y coordinates for airfoil around each blade node on a blade (relative to reference)"	-
 # ...... Data for VTK surface visualization ............................................................................
 typedef	^	FAST_VTK_SurfaceType	IntKi	NumSectors	-	-	-	"number of sectors in which to split circles (higher number gives smoother surface)"	-
 typedef	^	^	SiKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex to the blade root)"	m
 typedef	^	^	SiKi	GroundRad	-	-	-	"radius for plotting circle on ground"	m
 typedef	^	^	SiKi	NacelleBox	{3}{8}	-	-	"X-Y-Z locations of 8 points that define the nacelle box, relative to the nacelle position"	m
 typedef	^	^	SiKi	TowerRad	{:}	-	-	"radius of each ED tower node"	m
-typedef	^	^	SiKi	BladeShape	{:,:,:,:}	-	-	"x,y coordinate for each blade node on each blade (relative to reference"	m
-typedef	^	^	SiKi	SubRad	{:}	-	-	"radius of each substructure node (needs to be HD?)"	m
+typedef	^	^	FAST_VTK_BLSurfaceType	BladeShape	{:}	-	-	"AirfoilCoords for each blade"	m
+typedef	^	^	SiKi	MorisonRad	{:}	-	-	"radius of each Morison node"	m
 
 
 # ..... FAST_ParameterType data .......................................................................................................
@@ -116,7 +117,7 @@ typedef	^	^	IntKi	TurbineType	-	-	-	"Type_LandBased, Type_Offshore_Fixed, or Typ
 typedef	^	^	LOGICAL	WrBinOutFile	-	-	-	"Write a binary output file? (.outb)"	-
 typedef	^	^	LOGICAL	WrTxtOutFile	-	-	-	"Write a text (formatted) output file? (.out)"	-
 typedef	^	^	LOGICAL	SumPrint	-	-	-	"Print summary data to file? (.sum)"	-
-typedef	^	^	INTEGER	WrVTK	-	-	-	"Write VTK visualization data? (switch) (0=none;1=position/orientation only;2=all mesh fields)"	-
+typedef	^	^	INTEGER	WrVTK	-	-	-	"Write VTK visualization data? (switch) {0=none; 1=basic (position only); 2=surfaces; 3=all meshes (debug)}"	-
 typedef	^	^	CHARACTER(1)	Delim	-	-	-	"Delimiter between columns of text output file (.out): space or tab"	-
 typedef	^	^	CHARACTER(20)	OutFmt	-	-	-	"Format used for text tabular output (except time); resulting field should be 10 characters"	-
 typedef	^	^	CHARACTER(1024)	OutFileRoot	-	-	-	"The rootname of the output files"	-

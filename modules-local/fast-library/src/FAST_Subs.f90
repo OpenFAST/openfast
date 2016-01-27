@@ -958,7 +958,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! -------------------------------------------------------------------------
             
    if ( p_FAST%WrVTK == VTK_Surf ) then
-      call SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, ED, BD, AD, ErrStat2, ErrMsg2)      
+      call SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitOutData_HD, ED, BD, AD, HD, ErrStat2, ErrMsg2)      
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
    
@@ -1139,7 +1139,6 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax, TurbI
    INTEGER(IntKi),           INTENT(IN), OPTIONAL  :: TurbID            !< an ID for naming the tubine output file
       ! Local variables
 
-   REAL(DbKi)                   :: TmpTime                              ! A temporary variable for error checking
    INTEGER                      :: i                                    ! loop counter
    !CHARACTER(1024)              :: DirName                              ! A CHARACTER string containing the path of the current working directory
    CHARACTER(1024)              :: LastArg                              ! A second command-line argument that will allow DWM module to be used in AeroDyn
@@ -1278,7 +1277,46 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax, TurbI
 
    !...............................................................................................................................
    ! Do some error checking on the inputs (validation):
-   !...............................................................................................................................    
+   !...............................................................................................................................   
+   call ValidateInputData(p, ErrStat2, ErrMsg2)    
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+    
+
+   
+   IF ( ErrStat >= AbortErrLev ) RETURN
+
+   
+   !...............................................................................................................................
+
+      ! temporary check on p_FAST%DT_out (bjj: fix this later)
+
+   IF ( .NOT. EqualRealNos( p%DT_out, p%DT ) ) THEN
+      IF ( p%DT_out < p%DT ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'DT_out must be at least DT ('//TRIM(Num2LStr(p%DT))//' s).', ErrStat, ErrMsg, RoutineName )
+      ELSEIF ( .NOT. EqualRealNos( p%DT_out, p%DT * NINT(p%DT_out / p%DT ) )  ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'DT_out must currently be an integer multiple of DT.', ErrStat, ErrMsg, RoutineName )
+      END IF
+   END IF
+
+   
+   RETURN
+END SUBROUTINE FAST_Init
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine validates FAST data.
+SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
+
+   TYPE(FAST_ParameterType), INTENT(INOUT)         :: p                 !< The parameter data for the FAST (glue-code) simulation
+   INTEGER(IntKi),           INTENT(  OUT)         :: ErrStat           !< Error status
+   CHARACTER(*),             INTENT(  OUT)         :: ErrMsg            !< Error message
+
+   REAL(DbKi)                                      :: TmpTime           ! A temporary variable for error checking
+   
+   CHARACTER(*), PARAMETER                         :: RoutineName='ValidateInputData'
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   
    IF ( p%TMax < 0.0_DbKi  )  THEN
       CALL SetErrStat( ErrID_Fatal, 'TMax must not be a negative number.', ErrStat, ErrMsg, RoutineName )
    ELSE IF ( p%TMax < p%TStart )  THEN
@@ -1349,24 +1387,13 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax, TurbI
    END IF   
    
    
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
+   if ( p%WrVTK == VTK_Unknown ) then
+      call SetErrStat(ErrID_Fatal, 'WrVTK must be 0 (none), 1 (basic), 2 (surfaces), or 3 (all).', ErrStat, ErrMsg, RoutineName)
+      ! note I'm not going to write that 4 (old) is an option
+   end if
    
-   !...............................................................................................................................
 
-      ! temporary check on p_FAST%DT_out (bjj: fix this later)
-
-   IF ( .NOT. EqualRealNos( p%DT_out, p%DT ) ) THEN
-      IF ( p%DT_out < p%DT ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'DT_out must be at least DT ('//TRIM(Num2LStr(p%DT))//' s).', ErrStat, ErrMsg, RoutineName )
-      ELSEIF ( .NOT. EqualRealNos( p%DT_out, p%DT * NINT(p%DT_out / p%DT ) )  ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'DT_out must currently be an integer multiple of DT.', ErrStat, ErrMsg, RoutineName )
-      END IF
-   END IF
-
-   
-   RETURN
-END SUBROUTINE FAST_Init
+END SUBROUTINE ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine initializes the output for the glue code, including writing the header for the primary output file.
 SUBROUTINE FAST_InitOutput( p_FAST, y_FAST, InitOutData_ED, InitOutData_BD, InitOutData_SrvD, InitOutData_AD14, InitOutData_AD, &
@@ -2084,6 +2111,54 @@ END DO
          p%n_ChkptTime = NINT( TmpTime / p%DT )
       END IF
 
+      
+!>>>>>>>> fix me!      
+      ! WrVTK - Write VTK visualization data? (switch) {0=none; 1=basic (position only); 2=surfaces; 3=all meshes (debug)}:
+   CALL ReadVar( UnIn, InputFile, p%WrVTK, "WrVTK", "Write VTK visualization files (0=none; 1=basic; 2=surface; 3=all)", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+      
+          ! immediately convert to values used inside the code:
+         !IF ( p%WrVTK == 0 ) THEN 
+         !   p%WrVTK = VTK_None
+         !ELSEIF ( p%WrVTK == 1 ) THEN
+         !   p%WrVTK = VTK_Basic
+         !ELSEIF ( p%WrVTK == 2 ) THEN
+         !   p%WrVTK = VTK_Surface
+         !ELSEIF ( p%WrVTK == 3 ) THEN
+         !   p%WrVTK = VTK_All
+         !ELSEIF ( p%WrVTK == 4 ) THEN
+         !   p%WrVTK = VTK_Old
+         !ELSE
+         !   p%WrVTK = VTK_Unknown
+         !END IF
+         !
+         ! equivalent:
+         IF ( p%WrVTK < 0 .OR. p%WrVTK > 4 ) THEN 
+            p%WrVTK = VTK_Unknown
+         END IF
+         
+      
+      ! DT_VTK - Amount of time between consecutive visualization output files (s) {frame rate; will use closest integer multiple of DT} 
+   CALL ReadVar( UnIn, InputFile, TmpTime, "DT_VTK", "Amount of time between consecutive visualization files (s)", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN        
+    
+      IF (TmpTime > p%TMax) THEN
+         p%n_VTKTime = HUGE(p%n_VTKTime)
+      ELSE         
+         p%n_VTKTime = NINT( TmpTime / p%DT )
+         ! I'll warn if p%n_VTKTime*p%DT is necessarially TmpTime 
+         IF (p%WrVTK > VTK_None) THEN
+            if (.not. EqualRealNos(p%n_VTKTime*p%DT, TmpTime)) then
+               call CheckError(ErrID_Info, 'DT_VTK is not an integer multiple of DT. FAST will output VTK information at the closest rate possible.')
+            end if            
+         END IF
+                  
+      END IF            
+!<<<<<<<<<<<<<< fix me!      
+      
+      
       ! DT_Out - Time step for tabular output (s):
    CALL ReadVar( UnIn, InputFile, Line, "DT_Out", "Time step for tabular output (s)", ErrStat2, ErrMsg2, UnEc)
    !CALL ReadVar( UnIn, InputFile, p%DT_Out, "DT_Out", "Time step for tabular output (s)", ErrStat2, ErrMsg2, UnEc)
@@ -2098,26 +2173,7 @@ END DO
             CALL CheckIOS ( IOS, InputFile, 'DT_Out', NumType, ErrStat2, ErrMsg2 )
             CALL CheckError( ErrStat2, ErrMsg2 )
       END IF
-
     
-! hard code some values for VTK output; will add to input file later
-      
-    p%WrVTK = VTK_None !VTK_Surf  ! 
-    TmpTime = 0.04 ! close to 24 frames per second
-    
-      IF (TmpTime > p%TMax) THEN
-         p%n_VTKTime = HUGE(p%n_VTKTime)
-      ELSE         
-         p%n_VTKTime = NINT( TmpTime / p%DT )
-         ! should I warn that p%n_VTKTime*p%DT is not necessarially TmpTime when 
-         IF (p%WrVTK /= VTK_None) THEN
-            if (.not. EqualRealNos(p%n_VTKTime*p%DT, 0.0_DbKi)) then
-               call CheckError(ErrID_Info, 'DT_VTK is not an integer multiple of DT_Out. FAST will output VTK information at the closest rate possible.')
-            end if            
-         END IF
-                  
-      END IF
-      
       
       ! TStart - Time to begin tabular output (s):
    CALL ReadVar( UnIn, InputFile, p%TStart, "TStart", "Time to begin tabular output (s)", ErrStat2, ErrMsg2, UnEc)
@@ -2211,25 +2267,36 @@ CONTAINS
 END SUBROUTINE FAST_ReadPrimaryFile
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up the information needed for plotting VTK surfaces.
-SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, ED, BD, AD, ErrStat, ErrMsg)
+SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitOutData_HD, ED, BD, AD, HD, ErrStat, ErrMsg)
 
-   TYPE(FAST_ParameterType), INTENT(INOUT) :: p_FAST           !< The parameters of the glue code
-   TYPE(ED_InitOutputType),  INTENT(INOUT) :: InitOutData_ED   !< The initialization output from structural dynamics module
-   TYPE(ElastoDyn_Data),     INTENT(IN   ) :: ED               !< ElastoDyn data
-   TYPE(BeamDyn_Data),       INTENT(IN   ) :: BD               !< BeamDyn data
-   TYPE(AeroDyn_Data),       INTENT(IN   ) :: AD               !< AeroDyn data
-   TYPE(AD_InitOutputType),  INTENT(INOUT) :: InitOutData_AD   !< The initialization output from AeroDyn
-   INTEGER(IntKi)                          :: ErrStat          !< Error status of the operation
-   CHARACTER(*)                            :: ErrMsg           !< Error message if ErrStat /= ErrID_None
+   TYPE(FAST_ParameterType),     INTENT(INOUT) :: p_FAST           !< The parameters of the glue code
+   TYPE(ED_InitOutputType),      INTENT(INOUT) :: InitOutData_ED   !< The initialization output from structural dynamics module
+   TYPE(AD_InitOutputType),      INTENT(INOUT) :: InitOutData_AD   !< The initialization output from AeroDyn
+   TYPE(HydroDyn_InitOutputType),INTENT(INOUT) :: InitOutData_HD   !< The initialization output from HydroDyn
+   TYPE(ElastoDyn_Data),         INTENT(IN   ) :: ED               !< ElastoDyn data
+   TYPE(BeamDyn_Data),           INTENT(IN   ) :: BD               !< BeamDyn data
+   TYPE(AeroDyn_Data),           INTENT(IN   ) :: AD               !< AeroDyn data
+   TYPE(HydroDyn_Data),          INTENT(IN   ) :: HD               !< HydroDyn data
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat          !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
 
+      
    REAL(SiKi)                              :: x, y                
+   REAL(SiKi)                              :: TwrDiam_top, TwrDiam_base, TwrRatio, TwrLength
+   INTEGER(IntKi)                          :: topNode, baseNode
+   INTEGER(IntKi)                          :: tipNode, rootNode, cylNode
+   INTEGER(IntKi)                          :: NumBl, k
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'SetVTKParameters'
    
    
+   
+   
    ErrStat = ErrID_None
    ErrMsg  = ""
+   
+   NumBl = SIZE(ED%Output(1)%BladeRootMotion,1) 
    
    p_FAST%VTK_Surface%NumSectors = 18   
    p_FAST%VTK_Surface%HubRad     = InitOutData_ED%HubRad
@@ -2253,42 +2320,185 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, ED, BD, AD, 
    p_FAST%VTK_Surface%NacelleBox(:,7) = (/  x,  y, 2*y      /)
    p_FAST%VTK_Surface%NacelleBox(:,8) = (/ -x,  y, 2*y      /) 
    
+   !.......................
+   ! tapered tower
+   !.......................
+      
+   CALL AllocAry(p_FAST%VTK_Surface%TowerRad,ED%Output(1)%TowerLn2Mesh%NNodes,'VTK_Surface%TowerRad',ErrStat2,ErrMsg2)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      IF (ErrStat >= AbortErrLev) RETURN
    
-   if (allocated(InitOutData_ED%TowerRad)) then
-      call move_alloc(InitOutData_ED%TowerRad, p_FAST%VTK_Surface%TowerRad)
-   else
-      if (p_FAST%WrVTK > VTK_None) then
-         CALL AllocAry(p_FAST%VTK_Surface%TowerRad,ED%Output(1)%TowerLn2Mesh%NNodes,'VTK_Surface%TowerRad',ErrStat2,ErrMsg2)
-         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         IF (ErrStat >= AbortErrLev) RETURN
-         p_FAST%VTK_Surface%TowerRad = p_FAST%VTK_Surface%HubRad
-      end if
+   topNode   = ED%Output(1)%TowerLn2Mesh%NNodes - 1
+   baseNode  = ED%Output(1)%TowerLn2Mesh%NNodes  
+   TwrLength = TwoNorm( ED%Output(1)%TowerLn2Mesh%position(:,topNode) - ED%Output(1)%TowerLn2Mesh%position(:,baseNode) ) ! this is the assumed length of the tower
+   TwrRatio  = TwrLength / 87.6_SiKi  ! this ratio of the tower length to the length of the 5MW tower
+   TwrDiam_top  = 3.87*TwrRatio
+   TwrDiam_base = 6.0*TwrRatio
+   
+   TwrRatio = 0.5 * (TwrDiam_top - TwrDiam_base) / TwrLength
+   do k=1,ED%Output(1)%TowerLn2Mesh%NNodes
+      TwrLength = TwoNorm( ED%Output(1)%TowerLn2Mesh%position(:,k) - ED%Output(1)%TowerLn2Mesh%position(:,baseNode) ) 
+      p_FAST%VTK_Surface%TowerRad(k) = 0.5*TwrDiam_Base + TwrRatio*TwrLength
+   end do
+   
+   !.......................
+   ! blade surfaces
+   !.......................
+         
+   allocate(p_FAST%VTK_Surface%BladeShape(NumBl),stat=ErrStat2)
+   if (errStat2/=0) then
+      call setErrStat(ErrID_Fatal,'Error allocating VTK_Surface%BladeShape.',ErrStat,ErrMsg,RoutineName)
+      return
    end if
    
-         
+   
       ! p_FAST%VTK_Surface%BladeShape
-   IF ( p_FAST%CompAero == Module_AD ) THEN  ! These meshes may have airfoil data associated with nodes...
-      !IF (ALLOCATED()) THEN
-      !ELSE
-      !END IF
+   !IF ( p_FAST%CompAero == Module_AD .AND. WE have AFI x,y coord data ) THEN  ! These meshes may have airfoil data associated with nodes...
+   !ELSE
       
-      !DO K=1,NumBl   
-      !   call MeshWrVTK(AD%Input(1)%BladeMotion(K), trim(p_FAST%OutFileRoot)//'.AD_BladeMotion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
-      !END DO                  
+   IF ( p_FAST%CompAero == Module_AD ) THEN  ! These meshes may have airfoil data associated with nodes...
+      ! if we have afi data, we should use it
+      !ELSE
+                  
+      !END IF
+                     
+      rootNode = 1
+      
+      DO K=1,NumBl   
+         tipNode  = AD%Input(1)%BladeMotion(K)%NNodes
+         cylNode  = min(3,AD%Input(1)%BladeMotion(K)%Nnodes)
+         
+         call SetVTKDefaultBladeParams(AD%Input(1)%BladeMotion(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      END DO                  
+      
    ELSE IF ( p_FAST%CompElast == Module_BD ) THEN
-      !DO K=1,NumBl                 
-      !   call MeshWrVTK(BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.BD_BldMotion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )         
-      !END DO  
+      rootNode = 1      
+      DO K=1,NumBl   
+         tipNode  = BD%y(k)%BldMotion%NNodes
+         cylNode  = min(3,BD%y(k)%BldMotion%NNodes)
+         
+         call SetVTKDefaultBladeParams(BD%y(k)%BldMotion, p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      END DO      
    ELSE
-      !DO K=1,NumBl        
-      !   call MeshWrVTK(ED%Output(1)%BladeLn2Mesh(K), trim(p_FAST%OutFileRoot)//'.ED_BladeLn2Mesh_motion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )
-      !END DO  
+      DO K=1,NumBl   
+         rootNode = ED%Output(1)%BladeLn2Mesh(K)%NNodes     
+         tipNode  = ED%Output(1)%BladeLn2Mesh(K)%NNodes-1
+         cylNode  = min(2,ED%Output(1)%BladeLn2Mesh(K)%NNodes)
+         
+         call SetVTKDefaultBladeParams(ED%Output(1)%BladeLn2Mesh(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      END DO      
    END IF   
    
    
-   !p_FAST%VTK_Surface%SubRad =
+   !.......................
+   ! morison surfaces
+   !.......................
+   
+   IF ( HD%Input(1)%Morison%DistribMesh%Committed ) THEN      
+      
+      call move_alloc(InitOutData_HD%Morison%Morison_Rad, p_FAST%VTK_Surface%MorisonRad)
+      
+   END IF
    
 END SUBROUTINE SetVTKParameters
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine comes up with some default airfoils for blade surfaces for a given blade mesh, M.
+SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, ErrStat, ErrMsg)
+
+   TYPE(MeshType),               INTENT(IN   ) :: M                !< The Mesh the defaults should be calculated for
+   TYPE(FAST_VTK_BLSurfaceType), INTENT(INOUT) :: BladeShape       !< BladeShape to set to default values
+   INTEGER(IntKi),               INTENT(IN   ) :: rootNode         !< Index of root node (innermost node) for this mesh
+   INTEGER(IntKi),               INTENT(IN   ) :: tipNode          !< Index of tip node (outermost node) for this mesh
+   INTEGER(IntKi),               INTENT(IN   ) :: cylNode          !< Index of last node to have a cylinder shape
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat          !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
+
+      
+   REAL(SiKi)                                  :: bladeLength, chord, pitchAxis
+   REAL(SiKi)                                  :: bladeLengthFract, bladeLengthFract2, ratio, posLength ! temporary quantities               
+   REAL(SiKi)                                  :: cylinderLength, x, y, angle               
+   INTEGER(IntKi)                              :: i, j
+   INTEGER(IntKi)                              :: ErrStat2
+   CHARACTER(ErrMsgLen)                        :: ErrMsg2
+   CHARACTER(*), PARAMETER                     :: RoutineName = 'SetVTKDefaultBladeParams'
+   
+   !Note: jmj does not like this default option
+
+   integer, parameter :: N = 66
+   
+   ! default airfoil shape coordinates; uses S809 values from http://wind.nrel.gov/airfoils/Shapes/S809_Shape.html:   
+   real, parameter, dimension(N) :: xc=(/ 1.0,0.996203,0.98519,0.967844,0.945073,0.917488,0.885293,0.848455,0.80747,0.763042,0.715952,0.667064,0.617331,0.56783,0.519832,0.474243,0.428461,0.382612,0.33726,0.29297,0.250247,0.209576,0.171409,0.136174,0.104263,0.076035,0.051823,0.03191,0.01659,0.006026,0.000658,0.000204,0.0,0.000213,0.001045,0.001208,0.002398,0.009313,0.02323,0.04232,0.065877,0.093426,0.124111,0.157653,0.193738,0.231914,0.271438,0.311968,0.35337,0.395329,0.438273,0.48192,0.527928,0.576211,0.626092,0.676744,0.727211,0.776432,0.823285,0.86663,0.905365,0.938474,0.965086,0.984478,0.996141,1.0 /)
+   real, parameter, dimension(N) :: yc=(/ 0.0,0.000487,0.002373,0.00596,0.011024,0.017033,0.023458,0.03028,0.037766,0.045974,0.054872,0.064353,0.074214,0.084095,0.093268,0.099392,0.10176,0.10184,0.10007,0.096703,0.091908,0.085851,0.078687,0.07058,0.061697,0.052224,0.042352,0.032299,0.02229,0.012615,0.003723,0.001942,-0.00002,-0.001794,-0.003477,-0.003724,-0.005266,-0.011499,-0.020399,-0.030269,-0.040821,-0.051923,-0.063082,-0.07373,-0.083567,-0.092442,-0.099905,-0.105281,-0.108181,-0.108011,-0.104552,-0.097347,-0.086571,-0.073979,-0.060644,-0.047441,-0.0351,-0.024204,-0.015163,-0.008204,-0.003363,-0.000487,0.000743,0.000775,0.00029,0.0 /)
+
+   call AllocAry(BladeShape%AirfoilCoords, 2, N, M%NNodes, 'BladeShape%AirfoilCoords', ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      IF (ErrStat >= AbortErrLev) RETURN
+   
+         !bjj: we need to see which direction the rotor is rotating for these defaults to work properly (from ED?)...
+      
+
+   ! Chord length and pitch axis location are given by scaling law
+   bladeLength       = TwoNorm( M%position(:,tipNode) - M%Position(:,rootNode) )
+   cylinderLength    = TwoNorm( M%Position(:,cylNode) - M%Position(:,rootNode) )
+   bladeLengthFract  = 0.22*bladeLength
+   bladeLengthFract2 = bladeLength-bladeLengthFract != 0.78*bladeLength
+   
+   DO i=1,M%Nnodes
+      posLength = TwoNorm( M%Position(:,i) - M%Position(:,rootNode) )
+         
+      IF (posLength .LE. bladeLengthFract) THEN
+         ratio     = posLength/bladeLengthFract
+         chord     =  (0.06 + 0.02*ratio)*bladeLength
+         pitchAxis =   0.25 + 0.125*ratio
+      ELSE
+         chord     = (0.08 - 0.06*(posLength-bladeLengthFract)/bladeLengthFract2)*bladeLength
+         pitchAxis = 0.375
+      END IF
+         
+      IF (posLength .LE. cylinderLength) THEN 
+         ! create a cylinder for this node
+         
+         chord = chord/2.0_SiKi
+         
+         DO j=1,N
+            ! normalized x,y coordinates for airfoil, assuming an upwind turbine
+            x =  yc(j)
+            y = -xc(j) + pitchAxis
+                     
+            angle = ATAN2( y, x)
+         
+               ! x,y coordinates for cylinder
+            BladeShape%AirfoilCoords(1,j,i) =  chord*COS(angle) ! x (note that "chord" is really representing chord/2 here)
+            BladeShape%AirfoilCoords(2,j,i) = -chord*SIN(angle) ! y (note that "chord" is really representing chord/2 here)
+         END DO                                                     
+         
+      ELSE
+         ! create an airfoil for this node
+            
+         DO j=1,N                  
+            ! normalized x,y coordinates for airfoil, assuming an upwind turbine
+            x =  yc(j)
+            y = -xc(j) + pitchAxis
+                  
+               ! x,y coordinates for airfoil
+            BladeShape%AirfoilCoords(1,j,i) =  chord*x
+            BladeShape%AirfoilCoords(2,j,i) = -chord*y                        
+         END DO
+         
+      END IF
+      
+   END DO ! nodes on mesh
+   
+   ! if we're rotating in the opposite direction, let's switch x and y:
+   !CALL WrScr1('Fix direction of rotation!')
+      
+END SUBROUTINE SetVTKDefaultBladeParams
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up the information needed to initialize AeroDyn, then initializes AeroDyn
 SUBROUTINE AD_SetInitInput(InitInData_AD14, InitOutData_ED, y_ED, p_FAST, ErrStat, ErrMsg)
@@ -3586,6 +3796,7 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
    IF ( p_FAST%WrVTK > VTK_None ) THEN
       IF ( MOD( n_t_global, p_FAST%n_VTKTime ) == 0 ) THEN
 
+            ! bjj: add p%TurbinePos (turbine number should be accounted for in RootName, I believe) to allow vtk graphics in wind farm simulations
          IF ( p_FAST%WrVTK == VTK_Basic ) THEN
             CALL WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
          ELSE IF ( p_FAST%WrVTK == VTK_Surf ) THEN
@@ -4112,7 +4323,8 @@ SUBROUTINE WrVTK_Surfaces(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, Op
 
 ! Ground
 !   call MeshWrVTK_PointSurface ( ED%Output(1)%PlatformPtMesh, trim(p_FAST%OutFileRoot)//'.GroundSurface', y_FAST%VTK_count, ErrStat2, ErrMsg2, Radius = p_FAST%VTK_Surface%GroundRad )
-! We really don't want this mesh; we want something that does not move if we're going to plot the ground
+
+   
    
 ! Nacelle
    call MeshWrVTK_PointSurface ( ED%Output(1)%NacelleMotion, trim(p_FAST%OutFileRoot)//'.NacelleSurface', y_FAST%VTK_count, ErrStat2, ErrMsg2, verts = p_FAST%VTK_Surface%NacelleBox )
@@ -4124,21 +4336,24 @@ SUBROUTINE WrVTK_Surfaces(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, Op
    
 ! Blades
    IF ( p_FAST%CompAero == Module_AD ) THEN  ! These meshes may have airfoil data associated with nodes...
-      DO K=1,NumBl   
-         call MeshWrVTK(AD%Input(1)%BladeMotion(K), trim(p_FAST%OutFileRoot)//'.BladeSurface'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
+      DO K=1,NumBl
+         call MeshWrVTK_Ln2Surface ( AD%Input(1)%BladeMotion(K), trim(p_FAST%OutFileRoot)//'.Blade'//trim(num2lstr(k))//'Surface', y_FAST%VTK_count, ErrStat2, ErrMsg2, verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords )
       END DO                  
    ELSE IF ( p_FAST%CompElast == Module_BD ) THEN
       DO K=1,NumBl                 
-         call MeshWrVTK(BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.BladeSurface'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )         
+         call MeshWrVTK_Ln2Surface ( BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.Blade'//trim(num2lstr(k))//'Surface', y_FAST%VTK_count, ErrStat2, ErrMsg2, verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords )
       END DO  
    ELSE
       DO K=1,NumBl        
-         call MeshWrVTK(ED%Output(1)%BladeLn2Mesh(K), trim(p_FAST%OutFileRoot)//'.BladeSurface'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )
+         call MeshWrVTK_Ln2Surface ( ED%Output(1)%BladeLn2Mesh(K), trim(p_FAST%OutFileRoot)//'.Blade'//trim(num2lstr(k))//'Surface', y_FAST%VTK_count, ErrStat2, ErrMsg2, verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords )
       END DO  
    END IF   
          
 ! Tower motions
-   call MeshWrVTK_Ln2Surface ( ED%Output(1)%TowerLn2Mesh, trim(p_FAST%OutFileRoot)//'.TowerSurface', y_FAST%VTK_count, p_FAST%VTK_Surface%NumSectors, p_FAST%VTK_Surface%TowerRad, ErrStat2, ErrMsg2 )
+   call MeshWrVTK_Ln2Surface ( ED%Output(1)%TowerLn2Mesh, trim(p_FAST%OutFileRoot)//'.TowerSurface', y_FAST%VTK_count, ErrStat2, ErrMsg2, p_FAST%VTK_Surface%NumSectors, p_FAST%VTK_Surface%TowerRad )
+   
+! Platform
+   call MeshWrVTK_PointSurface ( ED%Output(1)%PlatformPtMesh, trim(p_FAST%OutFileRoot)//'.PlatformSurface', y_FAST%VTK_count, ErrStat2, ErrMsg2, Radius = p_FAST%VTK_Surface%GroundRad )
    
    
 ! Substructure   
@@ -4148,8 +4363,8 @@ SUBROUTINE WrVTK_Surfaces(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, Op
 !      call MeshWrVTK(SD%y%y2Mesh, trim(p_FAST%OutFileRoot)//'.SD_y2Mesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )        
 !   END IF     
       
-   IF ( p_FAST%CompHydro == Module_HD ) THEN       
-      call MeshWrVTK(HD%Input(1)%Morison%DistribMesh, trim(p_FAST%OutFileRoot)//'.HD_MorisonDistrib_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )           
+   IF ( HD%Input(1)%Morison%DistribMesh%Committed ) THEN       
+      call MeshWrVTK_Ln2Surface ( HD%Input(1)%Morison%DistribMesh, trim(p_FAST%OutFileRoot)//'.MorisonSurface', y_FAST%VTK_count, ErrStat2, ErrMsg2, p_FAST%VTK_Surface%NumSectors, p_FAST%VTK_Surface%MorisonRad )
    END IF
    
    

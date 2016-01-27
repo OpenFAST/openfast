@@ -37,7 +37,9 @@ contains
 subroutine FAST_Sizes(TMax, InitInpAry, InputFileName_c, AbortErrLev_c, NumOuts_c, dt_c, ErrStat_c, ErrMsg_c, ChannelNames_c) BIND (C, NAME='FAST_Sizes')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Sizes
    IMPLICIT NONE 
+#ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Sizes
+#endif
    REAL(C_DOUBLE),         INTENT(IN   ) :: TMax      
    REAL(C_DOUBLE),         INTENT(IN   ) :: InitInpAry(MAXInitINPUTS)      
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: InputFileName_c(IntfStrLen)      
@@ -109,7 +111,9 @@ end subroutine FAST_Sizes
 subroutine FAST_Start(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Start')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Start
    IMPLICIT NONE 
+#ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Start
+#endif
    INTEGER(C_INT),         INTENT(IN   ) :: NumInputs_c      
    INTEGER(C_INT),         INTENT(IN   ) :: NumOutputs_c      
    REAL(C_DOUBLE),         INTENT(IN   ) :: InputAry(NumInputs_c)
@@ -167,7 +171,9 @@ end subroutine FAST_Start
 subroutine FAST_Update(NumInputs_c, NumOutputs_c, InputAry, OutputAry, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Update')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Update
    IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Update
+#endif
    INTEGER(C_INT),         INTENT(IN   ) :: NumInputs_c      
    INTEGER(C_INT),         INTENT(IN   ) :: NumOutputs_c      
    REAL(C_DOUBLE),         INTENT(IN   ) :: InputAry(NumInputs_c)
@@ -264,7 +270,9 @@ end subroutine FAST_SetExternalInputs
 subroutine FAST_End() BIND (C, NAME='FAST_End')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_End
    IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_End
+#endif
 
    CALL ExitThisProgram_T( Turbine, ErrID_None )
    
@@ -273,7 +281,9 @@ end subroutine FAST_End
 subroutine FAST_CreateCheckpoint(CheckpointRootName_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_CreateCheckpoint')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_CreateCheckpoint
    IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_CreateCheckpoint
+#endif
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
@@ -312,7 +322,9 @@ end subroutine FAST_CreateCheckpoint
 subroutine FAST_Restart(CheckpointRootName_c, AbortErrLev_c, NumOuts_c, dt_c, n_t_global_c, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_Restart')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_Restart
    IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_Restart
+#endif
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
    INTEGER(C_INT),         INTENT(  OUT) :: NumOuts_c      
@@ -363,7 +375,9 @@ subroutine FAST_OpFM_Init(TMax, InputFileName_c, TurbID, NumSC2Ctrl, NumCtrl2SC,
                           OpFM_Input_from_FAST, OpFM_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Init')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_OpFM_Init
    IMPLICIT NONE 
+#ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Init
+#endif
    REAL(C_DOUBLE),         INTENT(IN   ) :: TMax      
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: InputFileName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(IN   ) :: TurbID      
@@ -430,7 +444,9 @@ end subroutine
 subroutine FAST_OpFM_Solution0(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Solution0')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_OpFM_Solution0
    IMPLICIT NONE 
+#ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Solution0
+#endif
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen) 
       
@@ -449,7 +465,9 @@ subroutine FAST_OpFM_Restart(CheckpointRootName_c, AbortErrLev_c, dt_c, n_t_glob
                       OpFM_Input_from_FAST, OpFM_Output_to_FAST, ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Restart')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_OpFM_Restart
    IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Restart
+#endif
    CHARACTER(KIND=C_CHAR), INTENT(IN   ) :: CheckpointRootName_c(IntfStrLen)      
    INTEGER(C_INT),         INTENT(  OUT) :: AbortErrLev_c      
    REAL(C_DOUBLE),         INTENT(  OUT) :: dt_c      
@@ -496,7 +514,9 @@ end subroutine SetOpenFOAM_pointers
 subroutine FAST_OpFM_Step(ErrStat_c, ErrMsg_c) BIND (C, NAME='FAST_OpFM_Step')
 !DEC$ ATTRIBUTES DLLEXPORT::FAST_OpFM_Step
    IMPLICIT NONE
+#ifndef IMPLICIT_DLLEXPORT
 !GCC$ ATTRIBUTES DLLEXPORT :: FAST_OpFM_Step
+#endif
    INTEGER(C_INT),         INTENT(  OUT) :: ErrStat_c      
    CHARACTER(KIND=C_CHAR), INTENT(  OUT) :: ErrMsg_c(IntfStrLen)      
                     

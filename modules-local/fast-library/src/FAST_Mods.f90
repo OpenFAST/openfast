@@ -29,7 +29,7 @@ MODULE FAST_ModTypes
    USE FAST_Types
 
    TYPE(ProgDesc), PARAMETER :: FAST_Ver    = &
-                                ProgDesc( 'FAST', 'v8.13.13a-bjj', '16-Jan-2016' ) !< The version number of this module
+                                ProgDesc( 'FAST', 'v8.13.14a-bjj', '21-Jan-2016' ) !< The version number of this module
          
    !..................................................................
    
@@ -42,11 +42,12 @@ MODULE FAST_ModTypes
    INTEGER(IntKi), PARAMETER :: STATE_PRED              = 2
    
    ! VTK visualization
-   INTEGER(IntKi), PARAMETER :: VTK_None                = 0    !< none (no VTK output)
-   INTEGER(IntKi), PARAMETER :: VTK_Basic               = 1    !< output minimal number of meshes with motion fields only
-   INTEGER(IntKi), PARAMETER :: VTK_Surf                = 2    !< output surfaces
-   INTEGER(IntKi), PARAMETER :: VTK_All                 = 3    !< output all mesh fields
-   INTEGER(IntKi), PARAMETER :: VTK_Old                 = 4    !< output in old binary format (for Matlab viewing)
+   INTEGER(IntKi), PARAMETER :: VTK_Unknown             = -1    !< unknown option (will produce error)
+   INTEGER(IntKi), PARAMETER :: VTK_None                =  0    !< none (no VTK output)
+   INTEGER(IntKi), PARAMETER :: VTK_Basic               =  1    !< output minimal number of meshes with motion fields only
+   INTEGER(IntKi), PARAMETER :: VTK_Surf                =  2    !< output surfaces
+   INTEGER(IntKi), PARAMETER :: VTK_All                 =  3    !< output all mesh fields
+   INTEGER(IntKi), PARAMETER :: VTK_Old                 =  4    !< output in old binary format (for Matlab viewing)
          
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
    
