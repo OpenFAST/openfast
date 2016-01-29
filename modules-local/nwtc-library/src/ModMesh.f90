@@ -487,6 +487,7 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, Nu
    ! local variables
    INTEGER(IntKi)                        :: Un            ! fortran unit number
    INTEGER(IntKi)                        :: i,j           ! loop counters
+   INTEGER(IntKi)                        :: offset_cnt    ! counter for offsets (corresponding to number of nodes in polygons written)
    CHARACTER(1024)                       :: FileName
    REAL(SiKi)                            :: angle
    REAL(SiKi)                            :: xyz(3)
@@ -535,7 +536,7 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, Nu
       WRITE(Un,'(A)')         '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">' ! bjj note: we don't have binary data in this file, so byte_order shouldn't matter, right?
       WRITE(Un,'(A)')         '  <PolyData>'
       WRITE(Un,'(2(A,i7),A)') '    <Piece NumberOfPoints="', M%Nnodes*NumSegments1, '" NumberOfVerts="  0" NumberOfLines="', M%ElemTable(ELEMENT_LINE2)%nelem, '"'
-      WRITE(Un,'(A,i7,A)')    '           NumberOfStrips="  0" NumberOfPolys="',  M%ElemTable(ELEMENT_LINE2)%nelem*NumSegments1, '">'
+      WRITE(Un,'(A,i7,A)')    '           NumberOfStrips="  0" NumberOfPolys="',  M%ElemTable(ELEMENT_LINE2)%nelem*(NumSegments1+2), '">'
          
 ! points (nodes, augmented with NumSegments):   
       WRITE(Un,'(A)')         '      <Points>'
@@ -580,13 +581,24 @@ SUBROUTINE MeshWrVTK_Ln2Surface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, Nu
                                 secondPntStart + j,    secondPntStart + (j-1)
          END DO
          WRITE(Un,'(4(i7))')  firstPntEnd, firstPntStart, secondPntStart, secondPntEnd
+         
+         ! make top and bottom of this element
+         WRITE(Un,'('//trim(num2lstr(NumSegments1))//'(i7))') (j, j=firstPntStart,firstPntEnd)               
+         WRITE(Un,'('//trim(num2lstr(NumSegments1))//'(i7))') (j, j=secondPntStart,secondPntEnd)              
+                  
       END DO      
       WRITE(Un,'(A)')         '        </DataArray>'
 
       WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="offsets" format="ascii">'
+      offset_cnt = 0
       DO i=1,M%ElemTable(ELEMENT_LINE2)%nelem
          DO j=1,NumSegments1
-            WRITE(Un,'(i7)') 4*NumSegments1*(i - 1) + 4*j
+            offset_cnt = offset_cnt + 4 ! number of nodes in polygon
+            WRITE(Un,'(i7)') offset_cnt
+         END DO
+         DO j=1,2 ! top and bottom
+            offset_cnt = offset_cnt + NumSegments1 ! number of nodes in this polygon
+            WRITE(Un,'(i7)') offset_cnt
          END DO
       END DO
       WRITE(Un,'(A)')         '        </DataArray>'
@@ -621,6 +633,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, 
    ! local variables
    INTEGER(IntKi)                        :: Un            ! fortran unit number
    INTEGER(IntKi)                        :: i,j,k         ! loop counters
+   INTEGER(IntKi)                        :: offset_cnt    ! counter for offsets (corresponding to number of nodes in polygons written)
    INTEGER(IntKi)                        :: NumberOfPoints
    INTEGER(IntKi)                        :: NumberOfPolys
    INTEGER(IntKi)                        :: NumSegments1   
@@ -672,8 +685,8 @@ SUBROUTINE MeshWrVTK_PointSurface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, 
          NumSegments1 = 20
          NumSegments2 = 1
          
-         NumberOfPolys  = M%Nnodes * (NumSegments1)
-         NumberOfPoints = M%Nnodes * (NumSegments1 + 1)
+         NumberOfPolys  = M%Nnodes 
+         NumberOfPoints = M%Nnodes * NumSegments1
          
       end if
       
@@ -721,7 +734,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, 
                   ratio  = 2.0_SiKi*REAL(j-1,SiKi)/REAL(NumSegments2-1,SiKi) - 1.0_SiKi  ! where we are in [-1, 1]
                else
                   ratio = 0.0_SiKi
-                  WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i)  ! write center of node
+                  !WRITE(Un,VTK_AryFmt) M%Position(:,i) + M%TranslationDisp(:,i)  ! write center of node
                end if               
                
                xyz(3) = radius*ratio
@@ -749,6 +762,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, 
       
       WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="connectivity" format="ascii">'   
       
+      offset_cnt = 4
       if ( present(verts) ) then
          if (size(verts,2)==8) then
             
@@ -780,14 +794,11 @@ SUBROUTINE MeshWrVTK_PointSurface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, 
       else
             
          if (NumSegments2==1) then
-            DO i=1,M%Nnodes
-               firstPntStart  = (i-1)*(NumSegments1+1)
-               DO k=1,NumSegments1-1
-                  WRITE(Un,'(4(i7))') 0, firstPntStart + k, firstPntStart + k + 1,   0
-               END DO
-               WRITE(Un,'(4(i7))')  0, NumSegments1, 1,   0
-            END DO 
+            offset_cnt = NumSegments1 ! number of nodes in this polygon
             
+            DO i=1,M%Nnodes
+               WRITE(Un,'('//trim(num2lstr(NumSegments1))//'(i7))') (k, k=0,NumSegments1-1)               
+            END DO             
          else
             
             DO i=1,M%Nnodes
@@ -810,8 +821,9 @@ SUBROUTINE MeshWrVTK_PointSurface ( M, FileRootName, VTKcount, ErrStat, ErrMsg, 
       WRITE(Un,'(A)')         '        </DataArray>'
       
       WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="offsets" format="ascii">'      
+      
       do i=1,NumberOfPolys
-         WRITE(Un,'(i7)') 4*i
+         WRITE(Un,'(i7)') offset_cnt*i
       end do      
       WRITE(Un,'(A)')         '        </DataArray>'
       WRITE(Un,'(A)')         '      </Polys>'      
