@@ -50,9 +50,10 @@ module AeroDyn
   
 contains    
 !----------------------------------------------------------------------------------------------------------------------------------   
-subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
+subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
 
    type(AD_InitOutputType),       intent(  out)  :: InitOut          ! output data
+   type(AD_InputFile),            intent(in   )  :: InputFileData    ! input file data (for setting airfoil shape outputs)
    type(AD_ParameterType),        intent(in   )  :: p                ! Parameters
    integer(IntKi),                intent(inout)  :: errStat          ! Error status of the operation
    character(*),                  intent(inout)  :: errMsg           ! Error message if ErrStat /= ErrID_None
@@ -65,9 +66,10 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
    
    
    
-   integer(IntKi)                               :: i
+   integer(IntKi)                               :: i, j, k, f
+   integer(IntKi)                               :: NumCoords
 #ifdef DBG_OUTS
-   integer(IntKi)                               :: j, k, m
+   integer(IntKi)                               :: m
    character(5)                                 ::chanPrefix
 #endif   
       ! Initialize variables for this routine
@@ -83,6 +85,8 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
    call AllocAry( InitOut%WriteOutputUnt, p%numOuts, 'WriteOutputUnt', errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
+   if (ErrStat >= AbortErrLev) return
+      
    
 #ifdef DBG_OUTS
    ! Loop over blades and nodes to populate the output channel names and units
@@ -148,14 +152,56 @@ subroutine AD_SetInitOut(p, InitOut, errStat, errMsg)
       InitOut%WriteOutputUnt(i) = p%OutParam(i)%Units
    end do
 #endif
-  
-        
-      
-   if (ErrStat >= AbortErrLev) return
-   
-   
+                      
    
    InitOut%Ver = AD_Ver
+   
+! set visualization data:
+      ! this check is overly restrictive, but it would be a lot of work to ensure that only the *used* airfoil 
+      ! tables have the same number of coordinates.
+   if ( allocated(p%AFI%AFInfo) ) then  
+      
+      if ( p%AFI%AFInfo(1)%NumCoords > 0 ) then
+         NumCoords = p%AFI%AFInfo(1)%NumCoords
+         do i=2,size(p%AFI%AFInfo)
+            if (p%AFI%AFInfo(1)%NumCoords /= NumCoords) then
+               call SetErrStat( ErrID_Info, 'Airfoil files do not contain the same number of x-y coordinates.', ErrStat, ErrMsg, RoutineName )
+               NumCoords = -1
+               exit
+            end if            
+         end do
+            
+         if (NumCoords > 0) then
+            allocate( InitOut%BladeShape( p%numBlades ), STAT=ErrStat2 )
+            if (ErrStat2 /= 0) then
+               call SetErrStat( ErrID_Info, 'Error allocationg InitOut%AD_BladeShape', ErrStat, ErrMsg, RoutineName )
+               return
+            end if     
+            
+            do k=1,p%numBlades
+               call allocAry(  InitOut%BladeShape(k)%AirfoilCoords, 2, NumCoords-1, InputFileData%BladeProps(k)%NumBlNds, 'AirfoilCoords', ErrStat2, ErrMsg2)
+                  call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  if (ErrStat >= AbortErrLev) return
+                  
+               do j=1,InputFileData%BladeProps(k)%NumBlNds
+                  f = InputFileData%BladeProps(k)%BlAFID(j)
+                  
+                  do i=1,NumCoords-1                                                     
+                     InitOut%BladeShape(k)%AirfoilCoords(1,i,j) = InputFileData%BladeProps(k)%BlChord(j)*( p%AFI%AFInfo(f)%Y_Coord(i+1) - p%AFI%AFInfo(f)%Y_Coord(1) )
+                     InitOut%BladeShape(k)%AirfoilCoords(2,i,j) = InputFileData%BladeProps(k)%BlChord(j)*( p%AFI%AFInfo(f)%X_Coord(i+1) - p%AFI%AFInfo(f)%X_Coord(1) )
+                  end do                  
+               end do
+                                 
+            end do
+            
+         end if                  
+      end if
+      
+   end if
+   
+   
+   
+   
    
 end subroutine AD_SetInitOut
 !----------------------------------------------------------------------------------------------------------------------------------   
@@ -186,6 +232,8 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
    
 
       ! Local variables
+   integer(IntKi)                              :: i             ! loop counter
+   
    integer(IntKi)                              :: errStat2      ! temporary error status of the operation
    character(ErrMsgLen)                        :: errMsg2       ! temporary error message 
       
@@ -303,8 +351,17 @@ subroutine AD_Init( InitInp, u, p, x, xd, z, OtherState, y, Interval, InitOut, E
       !............................................................................................
       ! Define initialization output here
       !............................................................................................
-   call AD_SetInitOut(p, InitOut, errStat2, errMsg2)
+   call AD_SetInitOut(p, InputFileData, InitOut, errStat2, errMsg2)
       call SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName ) 
+   
+      ! after setting InitOut variables, we really don't need the airfoil coordinates taking up
+      ! space in AeroDyn
+   if ( allocated(p%AFI%AFInfo) ) then  
+      do i=1,size(p%AFI%AFInfo)
+         if (allocated(p%AFI%AFInfo(i)%X_Coord)) deallocate( p%AFI%AFInfo(i)%X_Coord) 
+         if (allocated(p%AFI%AFInfo(i)%Y_Coord)) deallocate( p%AFI%AFInfo(i)%Y_Coord) 
+      end do
+   end if
    
       
       !............................................................................................
@@ -1355,7 +1412,7 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
            
    
          ! validate the AFI input data because it doesn't appear to be done in AFI
-   if (InputFileData%NumAFfiles < 1) call SetErrStat( ErrID_Fatal, 'The number of unique airfoil tables (NumAFfiles) must be greater than zero.', ErrStat, ErrMsg, RoutineName )   
+   if (InputFileData%NumAFfiles  < 1) call SetErrStat( ErrID_Fatal, 'The number of unique airfoil tables (NumAFfiles) must be greater than zero.', ErrStat, ErrMsg, RoutineName )   
    if (InputFileData%InCol_Alfa  < 0) call SetErrStat( ErrID_Fatal, 'InCol_Alfa must not be a negative number.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%InCol_Cl    < 0) call SetErrStat( ErrID_Fatal, 'InCol_Cl must not be a negative number.', ErrStat, ErrMsg, RoutineName )
    if (InputFileData%InCol_Cd    < 0) call SetErrStat( ErrID_Fatal, 'InCol_Cd must not be a negative number.', ErrStat, ErrMsg, RoutineName )
