@@ -2350,28 +2350,36 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitOutData_
       call setErrStat(ErrID_Fatal,'Error allocating VTK_Surface%BladeShape.',ErrStat,ErrMsg,RoutineName)
       return
    end if
-   
-   
-      ! p_FAST%VTK_Surface%BladeShape
-   !IF ( p_FAST%CompAero == Module_AD .AND. WE have AFI x,y coord data ) THEN  ! These meshes may have airfoil data associated with nodes...
-   !ELSE
-      
+            
    IF ( p_FAST%CompAero == Module_AD ) THEN  ! These meshes may have airfoil data associated with nodes...
-      ! if we have afi data, we should use it
-      !ELSE
-                  
-      !END IF
-                     
-      rootNode = 1
+
+      IF (ALLOCATED(InitOutData_AD%BladeShape)) THEN
+         do k=1,NumBl   
+            call move_alloc( InitOutData_AD%BladeShape(k)%AirfoilCoords, p_FAST%VTK_Surface%BladeShape(k)%AirfoilCoords )
+         end do
+      ELSE
+#ifndef USE_DEFAULT_BLADE_SURFACE
+         call setErrStat(ErrID_Fatal,'Cannot do surface visualization without airfoil coordinates defined in AeroDyn.',ErrStat,ErrMsg,RoutineName)
+         return
+      END IF
+   ELSE
+      call setErrStat(ErrID_Fatal,'Cannot do surface visualization without using AeroDyn.',ErrStat,ErrMsg,RoutineName)
+      return
+   END IF      
+#else
+      ! AD used without airfoil coordinates specified
+
+         rootNode = 1
       
-      DO K=1,NumBl   
-         tipNode  = AD%Input(1)%BladeMotion(K)%NNodes
-         cylNode  = min(3,AD%Input(1)%BladeMotion(K)%Nnodes)
+         DO K=1,NumBl   
+            tipNode  = AD%Input(1)%BladeMotion(K)%NNodes
+            cylNode  = min(3,AD%Input(1)%BladeMotion(K)%Nnodes)
          
-         call SetVTKDefaultBladeParams(AD%Input(1)%BladeMotion(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-            IF (ErrStat >= AbortErrLev) RETURN
-      END DO                  
+            call SetVTKDefaultBladeParams(AD%Input(1)%BladeMotion(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
+               CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+               IF (ErrStat >= AbortErrLev) RETURN
+         END DO                           
+      END IF
       
    ELSE IF ( p_FAST%CompElast == Module_BD ) THEN
       rootNode = 1      
@@ -2392,8 +2400,9 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitOutData_
          call SetVTKDefaultBladeParams(ED%Output(1)%BladeLn2Mesh(K), p_FAST%VTK_Surface%BladeShape(K), tipNode, rootNode, cylNode, ErrStat2, ErrMsg2)
             CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
-      END DO      
+      END DO  
    END IF   
+#endif 
    
    
    !.......................
@@ -2439,10 +2448,7 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, E
    call AllocAry(BladeShape%AirfoilCoords, 2, N, M%NNodes, 'BladeShape%AirfoilCoords', ErrStat2, ErrMsg2)
       CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN
-   
-         !bjj: we need to see which direction the rotor is rotating for these defaults to work properly (from ED?)...
-      
-
+         
    ! Chord length and pitch axis location are given by scaling law
    bladeLength       = TwoNorm( M%position(:,tipNode) - M%Position(:,rootNode) )
    cylinderLength    = TwoNorm( M%Position(:,cylNode) - M%Position(:,rootNode) )
@@ -2467,15 +2473,15 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, E
          chord = chord/2.0_SiKi
          
          DO j=1,N
-            ! normalized x,y coordinates for airfoil, assuming an upwind turbine
-            x =  yc(j)
-            y = -xc(j) + pitchAxis
+            ! normalized x,y coordinates for airfoil
+            x = yc(j)
+            y = xc(j) - 0.5
                      
             angle = ATAN2( y, x)
          
                ! x,y coordinates for cylinder
-            BladeShape%AirfoilCoords(1,j,i) =  chord*COS(angle) ! x (note that "chord" is really representing chord/2 here)
-            BladeShape%AirfoilCoords(2,j,i) = -chord*SIN(angle) ! y (note that "chord" is really representing chord/2 here)
+            BladeShape%AirfoilCoords(1,j,i) = chord*COS(angle) ! x (note that "chord" is really representing chord/2 here)
+            BladeShape%AirfoilCoords(2,j,i) = chord*SIN(angle) ! y (note that "chord" is really representing chord/2 here)
          END DO                                                     
          
       ELSE
@@ -2483,21 +2489,18 @@ SUBROUTINE SetVTKDefaultBladeParams(M, BladeShape, tipNode, rootNode, cylNode, E
             
          DO j=1,N                  
             ! normalized x,y coordinates for airfoil, assuming an upwind turbine
-            x =  yc(j)
-            y = -xc(j) + pitchAxis
+            x = yc(j)
+            y = xc(j) - pitchAxis
                   
                ! x,y coordinates for airfoil
             BladeShape%AirfoilCoords(1,j,i) =  chord*x
-            BladeShape%AirfoilCoords(2,j,i) = -chord*y                        
+            BladeShape%AirfoilCoords(2,j,i) =  chord*y                        
          END DO
          
       END IF
       
    END DO ! nodes on mesh
-   
-   ! if we're rotating in the opposite direction, let's switch x and y:
-   !CALL WrScr1('Fix direction of rotation!')
-      
+         
 END SUBROUTINE SetVTKDefaultBladeParams
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up the information needed to initialize AeroDyn, then initializes AeroDyn
