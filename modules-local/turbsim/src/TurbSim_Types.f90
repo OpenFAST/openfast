@@ -3,7 +3,7 @@ MODULE TurbSim_Types
 
 use NWTC_Library
 
-   TYPE(ProgDesc), PARAMETER :: TurbSim_Ver = ProgDesc( 'TurbSim', 'v2.00.02a-bjj', '2-Jan-2016' )
+   TYPE(ProgDesc), PARAMETER :: TurbSim_Ver = ProgDesc( 'TurbSim', 'v2.00.03a-bjj', '30-Jan-2016' )
 
    LOGICAL,        PARAMETER :: MVK         = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
    LOGICAL,        PARAMETER :: PeriodicY   = .FALSE. !.TRUE.

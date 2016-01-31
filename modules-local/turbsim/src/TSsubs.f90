@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2014  National Renewable Energy Laboratory
+! Copyright (C) 2014, 2016  National Renewable Energy Laboratory
 !
 !    This file is part of TurbSim.
 !
@@ -1438,15 +1438,17 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
       GenerateExtraHubPoint = .TRUE.      
       ! Is it a user-defined point?
       DO iPointUsr = 1,p_usr%NPoints
-      
-         iPoint = iPointUsr
-         IF (iPointUsr == p_usr%RefPtID ) THEN
-            iPoint = p_usr%NPoints
-         ELSEIF (iPointUsr == p_usr%NPoints) THEN
-            iPoint = p_usr%RefPtID
-         END IF
-      
+            
          IF ( EqualRealNos( p_usr%pointyi(iPointUsr), 0.0_ReKi ) .AND. EqualRealNos( p_usr%pointzi(iPointUsr), p_grid%HubHt ) ) THEN
+                        
+            IF (iPointUsr == p_usr%RefPtID ) THEN
+               iPoint = p_usr%NPoints
+            ELSEIF (iPointUsr == p_usr%NPoints) THEN
+               iPoint = p_usr%RefPtID
+            ELSE
+               iPoint = iPointUsr
+            END IF
+                     
             p_grid%HubIndx = iPoint
             GenerateExtraHubPoint = .FALSE.
             EXIT  ! we found it
@@ -1463,7 +1465,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    
    ! we now know how many points there are going to be, so let's create the arrays that contains their locations and finish updating our index arrays
    
-   CALL AllocAry(p_grid%Y, p_grid%NPoints, 'Y (lateral locations of the grid points)',   ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(p_grid%Y, p_grid%NPoints, 'Y (lateral locations of the grid points)',  ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
    CALL AllocAry(p_grid%Z, p_grid%NPoints, 'Z (vertical locations of the grid points)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
    IF (ErrStat >= AbortErrLev) RETURN
    
@@ -1487,7 +1489,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    DO IZ = 1,p_grid%NumGrid_Z
       DO IY = 1,p_grid%NumGrid_Y
          
-         TmpIndex = (IZ-1)*p_grid%NumGrid_Z + IY
+         TmpIndex = (IZ-1)*p_grid%NumGrid_Y + IY
          
          IF ( p_grid%GridPtIndx(TmpIndex) < 1 ) THEN ! we didn't find this grid point in the set of user-defined points, so create a new point
             iPoint = iPoint + 1
