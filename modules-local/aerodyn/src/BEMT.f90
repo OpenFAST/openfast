@@ -27,12 +27,12 @@ module BEMT
    
    use BEMT_Types
    use BEMTUncoupled
-   use BEMTCoupled
-   use Brent
+
+   
    use UnsteadyAero
    !USE AeroDyn_Types
    use AirfoilInfo
-   use BladeElement
+   
 
    implicit none
    
@@ -129,9 +129,7 @@ subroutine BEMT_SetParameters( InitInp, p, errStat, errMsg )
    character(ErrMsgLen)                          :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
    integer(IntKi)                                :: i, j
-   INTEGER(IntKi)                                :: i1
-   INTEGER(IntKi)                                :: i1_l  ! lower bounds for an array dimension
-   INTEGER(IntKi)                                :: i1_u  ! upper bounds for an array dimension
+
    
       ! Initialize variables for this routine
 
@@ -241,26 +239,7 @@ subroutine BEMT_InitContraintStates( z, p, errStat, errMsg )
    end if 
    z%phi = 0.0_ReKi
    
-   allocate ( z%axInduction( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for z%axInduction.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_InitContraintStates' )
-      return
-   end if 
-   z%axInduction = 0.0_ReKi
-   
-   allocate ( z%tanInduction( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for z%tanInduction.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_InitContraintStates' )
-      return
-   end if 
-   z%tanInduction = 0.0_ReKi
-   
-   
-   
+  
 end subroutine BEMT_InitContraintStates
 
 
@@ -417,17 +396,7 @@ subroutine BEMT_AllocInput( u, p, errStat, errMsg )
       return
    end if 
    u%Vy = 0.0_ReKi
-   
-   allocate ( u%Vinf( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
-   if ( errStat2 /= 0 ) then
-      errStat2 = ErrID_Fatal
-      errMsg2  = 'Error allocating memory for u%Vinf.'
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_AllocInput' )
-      return
-   end if 
-   u%Vinf = 0.0_ReKi
-   
-   
+ 
    
    allocate ( u%rLocal( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
@@ -468,7 +437,7 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
    errStat = ErrID_None
    errMsg  = ""
 
-   call allocAry( y%inducedVel, p%numBladeNodes, p%numBlades, 'y%inducedVel', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call allocAry( y%Vrel, p%numBladeNodes, p%numBlades, 'y%Vrel', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%phi, p%numBladeNodes, p%numBlades, 'y%phi', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%chi, p%numBladeNodes, p%numBlades, 'y%chi', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call allocAry( y%Re, p%numBladeNodes, p%numBlades, 'y%Re', errStat2, errMsg2); call setErrStat(errStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -484,7 +453,7 @@ subroutine BEMT_AllocOutput( y, p, errStat, errMsg )
    if (ErrStat >= AbortErrLev) RETURN
    
       ! outputs documented in AeroDyn
-   y%inducedVel = 0.0_ReKi
+   y%Vrel = 0.0_ReKi
    y%phi = 0.0_ReKi   
    y%Cx = 0.0_ReKi
    y%Cy = 0.0_ReKi
@@ -564,8 +533,8 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, Interval, 
    real(ReKi)                                             :: eta_e
    real(ReKi)                                             :: St_sh
 
-   real(ReKi)                                     :: M, alpha1, alpha2, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, b1,b2,b5,A1,A2,A5,S1,S2,S3,S4,k1_hat,f, k2_hat
-   
+   real(ReKi)                                     :: M, alpha1, alpha2, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, b1,b2,b5,A1,A2,A5,S1,S2,S3,S4,k1_hat
+   character(64)                                  :: chanPrefix
       ! Initialize variables for this routine
    errStat = ErrID_None
    errMsg  = ""
@@ -610,9 +579,95 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, Interval, 
       call BEMT_Set_UA_InitData( InitInp, interval, Init_UA_Data, errStat, errMsg )
       if (errStat >= AbortErrLev) return
       
-      call UA_Init( Init_UA_Data, u_UA, p%UA, xd%UA, OtherState%UA, y_UA, interval, InitOutData_UA, errStat, errMsg )       
+      call UA_Init( Init_UA_Data, u_UA, p%UA, xd%UA, OtherState%UA, OtherState%y_UA, interval, InitOutData_UA, errStat, errMsg )       
       if (errStat >= AbortErrLev) return
       
+#ifdef UA_OUTS   
+   !CALL GetNewUnit( UnUAOuts, ErrStat, ErrMsg )
+   !IF ( ErrStat /= ErrID_None ) RETURN
+
+   CALL OpenFOutFile ( 69, 'Debug.UA.out', errStat, errMsg )
+         IF (ErrStat >= AbortErrLev) RETURN
+
+   
+      ! Heading:
+   WRITE (69,'(/,A)')  'This output information was generated by '//TRIM( GetNVD(BEMT_Ver) )// &
+                         ' on '//CurDate()//' at '//CurTime()//'.'
+   WRITE (69,'(:,A11))', ADVANCE='no' ) 'Time   '
+   do j = 1, p%numBlades
+      do i = 1, p%numBladeNodes  
+         chanPrefix = "B"//trim(num2lstr(j))//"N"//trim(num2lstr(i))  
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'ALPHA'//chanPrefix      
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'VREL'//chanPrefix  
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CN'//chanPrefix      
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CC'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CL'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CD'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CM'//chanPrefix     
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CNCP'//chanPrefix    
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CNIQ'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CNPOT'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'DPP'//chanPrefix       
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CNP'//chanPrefix        
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'FSP'//chanPrefix       
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'DF'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CNV'//chanPrefix         
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'TAUV'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'LESF'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'TESF'//chanPrefix 
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'VRTX'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CVN'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CMI'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CMQ'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'CMV'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'AFEP'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'DFAF'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'PMC'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'T_f'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'T_V'//chanPrefix
+         WRITE (69,'(:,A11))', ADVANCE='no' )  'dS'//chanPrefix
+      end do
+   end do  
+   write (69,'(A)')    ' '
+   
+   WRITE (69,'(:,A9))', ADVANCE='no' ) '      (s)'
+   do j = 1, p%numBlades
+      do i = 1, p%numBladeNodes  
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(deg)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(m/s)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+         WRITE (69,'(:,A11))', ADVANCE='no' ) '(-)'
+      end do
+   end do
+   write (69,'(A)')    ' '
+   
+#endif
+
 
       do j = 1,p%numBlades
          do i = 1,p%numBladeNodes ! Loop over blades and nodes
@@ -770,151 +825,144 @@ subroutine BEMT_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
 
       CALL BEMT_DestroyOutput( y, ErrStat, ErrMsg )
 
-
+#ifdef UA_OUTS
+   CLOSE(69)
+#endif
 
 
 END SUBROUTINE BEMT_End
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine BEMT_UpdateStates( t, n, u,  p, x, xd, z, OtherState, AFInfo, errStat, errMsg )
+subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, errStat, errMsg )
 ! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
 ! Constraint states are solved for input Time t; Continuous and discrete states are updated for t + Interval
 !
 ! NOTE:  This is a non-standard framework interface!!!!!  GJH
 !..................................................................................................................................
 
-      real(DbKi),                          intent(in   ) :: t          ! Current simulation time in seconds
-      integer(IntKi),                      intent(in   ) :: n          ! Current simulation time step n = 0,1,...
-      type(BEMT_InputType),                intent(inout) :: u          ! Input at t 
-      !real(DbKi),                         intent(in   ) :: utime      ! Times associated with u(:), in seconds
-      type(BEMT_ParameterType),            intent(in   ) :: p          ! Parameters   
-      type(BEMT_ContinuousStateType),      intent(inout) :: x          ! Input: Continuous states at t;
-                                                                       !   Output: Continuous states at t + Interval
-      type(BEMT_DiscreteStateType),        intent(inout) :: xd         ! Input: Discrete states at t;
-                                                                       !   Output: Discrete states at t  + Interval
-      type(BEMT_ConstraintStateType),      intent(inout) :: z          ! Input: Initial guess of constraint states at t+dt;
-                                                                       !   Output: Constraint states at t+dt
-      type(BEMT_OtherStateType),           intent(inout) :: OtherState ! Other/optimization states
-      type(AFInfoType),                    intent(in   ) :: AFInfo(:)  ! The airfoil parameter data
-      integer(IntKi),                      intent(  out) :: errStat    ! Error status of the operation
-      character(*),                        intent(  out) :: errMsg     ! Error message if ErrStat /= ErrID_None
+   real(DbKi),                          intent(in   ) :: t          ! Current simulation time in seconds
+   integer(IntKi),                      intent(in   ) :: n          ! Current simulation time step n = 0,1,...
+   type(BEMT_InputType),                intent(inout) :: u1,u2          ! Input at t and t+ dt 
+   !real(DbKi),                         intent(in   ) :: utime      ! Times associated with u(:), in seconds
+   type(BEMT_ParameterType),            intent(in   ) :: p          ! Parameters   
+   type(BEMT_ContinuousStateType),      intent(inout) :: x          ! Input: Continuous states at t;
+                                                                     !   Output: Continuous states at t + Interval
+   type(BEMT_DiscreteStateType),        intent(inout) :: xd         ! Input: Discrete states at t;
+                                                                     !   Output: Discrete states at t  + Interval
+   type(BEMT_ConstraintStateType),      intent(inout) :: z          ! Input: Initial guess of constraint states at t+dt;
+                                                                     !   Output: Constraint states at t+dt
+   type(BEMT_OtherStateType),           intent(inout) :: OtherState ! Other/optimization states
+   type(AFInfoType),                    intent(in   ) :: AFInfo(:)  ! The airfoil parameter data
+   integer(IntKi),                      intent(  out) :: errStat    ! Error status of the operation
+   character(*),                        intent(  out) :: errMsg     ! Error message if ErrStat /= ErrID_None
 
       
-      integer(IntKi)                                    :: i,j
-      type(UA_InputType)                                :: u_UA
-      real(ReKi)                                        :: phi, phiOut, chi, Rtip, AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, fzero, phitemp
+   integer(IntKi)                                    :: i,j
+   type(UA_InputType)                                :: u_UA
+   real(ReKi)                                        :: chi, Rtip, Rtip2, AOA, Re, Vrel, axInduction, tanInduction, fzero, phitemp
       
+      
+         
+   do j = 1,p%numBlades
+            
+         ! Locate the maximum rlocal value for this time step and this blade.  This is passed to the solve as Rtip
       if ( p%useInduction ) then
-         
-         do j = 1,p%numBlades
-            
-               ! Locate the maximum rlocal value for this time step and this blade.  This is passed to the solve as Rtip
-            Rtip = 0.0_ReKi
-            do i = 1,p%numBladeNodes
-               Rtip = max( Rtip, u%rlocal(i,j) ) 
-            end do
-            
-            do i = 1,p%numBladeNodes 
-            
-                  ! Set the active blade element for UnsteadyAero
-               OtherState%UA%iBladeNode = i
-               OtherState%UA%iBlade     = j
-               
-               if ( p%SkewWakeMod < SkewMod_Coupled ) then
-                     ! Solve this without any skewed wake correction and without UA
-                  call BEMT_UnCoupledSolve(z%phi(i,j), p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), Rtip, p%chord(i,j), u%theta(i,j),  &
-                              u%Vx(i,j), u%Vy(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), SkewMod_Uncoupled, &
-                              .FALSE., p%UA, xd%UA, OtherState%UA, &  !p%UA_Flag
-                              p%numReIterations, p%maxIndIterations, p%aTol,  &
-                              phiOut, errStat, errMsg) 
-                
-                  if (errStat >= AbortErrLev) return
-                  
-                  phitemp=z%phi(i,j)  ! Store this time step phi before updating it for the next time step, so that UA does not get messed up - RRD  
-                  z%phi(i,j) = phiOut
-                  
-               else if ( p%SkewWakeMod == SkewMod_Coupled ) then
-         
-                  call BEMT_CoupledSolve(p%numBlades, p%numBladeNodes, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u%rlocal(i,j), Rtip, p%chord(i,j), u%theta(i,j), &
-                              u%Vx(i,j), u%Vy(i,j), u%Vinf(i,j), u%omega, u%chi0, u%psi(j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
-                              .FALSE., p%UA, xd%UA, OtherState%UA, & !p%UA_Flag
-                              p%maxIndIterations, p%aTol, z%axInduction(i,j), z%tanInduction(i,j), errStat, errMsg)       
-        
-               end if 
-               
-               if (OtherState%UA_Flag(i,j)) then
-                  ! Need to generate the inputs for the unsteady aero module for time t
-                  ! These are the local relative wind velocity, the angle of attack, and the Reynolds number
-                  ! We can get all of these from the BEMT Wind routines
-
-                  ! Need to get the induction factors for these conditions without skewed wake correction and without UA
-                  fzero = BEMTU_InductionWithResidual(phitemp, u%psi(j), u%chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), Rtip, p%chord(i,j), u%theta(i,j),  AFInfo(p%AFIndx(i,j)), &
-                              u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), SkewMod_Uncoupled, &
-                              .FALSE., p%UA, xd%UA, OtherState%UA, &
-                              AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, chi, ErrStat, ErrMsg)
-                  if (errStat >= AbortErrLev) return 
-                  
-                     ! Apply the skewed wake correction to the axial induction and recompute phi and alpha - RRD: where is the new AOA?
-                  if ( p%skewWakeMod == SkewMod_PittPeters ) then
-                     call ApplySkewedWakeCorrection( u%Vx(i,j), u%Vy(i,j), u%psi(j), u%chi0, axInduction, tanInduction, u%rlocal(i,j)/Rtip, phitemp, chi, ErrStat, ErrMsg ) !replaced phiOut with phitemp  RRD
-                  end if
-                  
-                  if ( p%SkewWakeMod < SkewMod_Coupled ) then
-                        ! Need to compute local velocity including both axial and tangential induction
-                     call BEMTU_Wind(phitemp, axInduction, tanInduction, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u_UA%alpha,  u_UA%U, u_UA%Re) !replaced phiOut with phitemp  RRD
-                  else
-                     phi = ComputePhiWithInduction(u%Vx(i,j), u%Vy(i,j), z%axInduction(i,j), z%tanInduction(i,j), errStat, errMsg)  
-                     u_UA%U = BEMTC_Wind(z%axInduction(i,j), z%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u%chi0, u%psi(j), phi, u_UA%alpha, u_UA%Re, chi)! left phi as it seems to be the one associated with previous statesreplaced phi with phitemp RRD
-                  end if
-
-                  if ( abs(u_UA%alpha) > AFInfo(p%AFIndx(i,j))%Table(1)%UA_BL%UACutout*D2R ) then ! p%UACutout ) then
-                     OtherState%UA_Flag(i,j) = .FALSE.
-                     call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to high angle-of-attack.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
-                  elseif (EqualRealNos(u_UA%U, 0.0_ReKi) ) then
-                     OtherState%UA_Flag(i,j) = .FALSE.
-                     call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to zero relative velocity.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
-                  
-                  else
-                     
-                     call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), errStat, errMsg )
-                  end if
-               end if
-               
-            end do
+         Rtip = 0.0_ReKi
+         do i = 1,p%numBladeNodes
+            Rtip = max( Rtip, u1%rlocal(i,j) ) 
          end do
          
-      else  ! NO INDUCTION 
-         
-         z%axInduction  = 0.0_ReKi
-         z%tanInduction = 0.0_ReKi
-         do j = 1,p%numBlades       
-            do i = 1,p%numBladeNodes 
-                
-                phitemp=z%phi(i,j)  ! Store this time step phi before updating it for the next time step, so that UA does not get messed up - RRD
-                z%phi(i,j) = ComputePhiWithInduction(u%Vx(i,j), u%Vy(i,j),  0.0_ReKi, 0.0_ReKi, errStat, errMsg)
-                
-               if (OtherState%UA_Flag(i,j)) then
-                     ! Set the active blade element for UnsteadyAero
-                  OtherState%UA%iBladeNode = i
-                  OtherState%UA%iBlade     = j
-                  
-                 ! u_UA%U = BEMTC_Wind(z%axInduction(i,j), z%tanInduction(i,j), u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u%chi0, u%psi(j), z%phi(i,j), u_UA%alpha, u_UA%Re, chi)
-                     ! Uncoupled wind for determining alpha, and U, and Re
-                  call BEMTU_Wind(phitemp, 0.0_ReKi, 0.0_ReKi, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, u_UA%alpha,  u_UA%U, u_UA%Re)
-                      
-                  if ( abs(u_UA%alpha) > AFInfo(p%AFIndx(i,j))%Table(1)%UA_BL%UACutout*D2R ) then ! p%UACutout ) 
-                     OtherState%UA_Flag(i,j) = .FALSE.
-                     !write( tmpStr, '(F15.4)' ) t
-                     call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to high angle-of-attack.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
-                  else
-                     
-                     call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), errStat, errMsg )
-                  end if
-               end if
-            end do
+         Rtip2 = 0.0_ReKi
+         do i = 1,p%numBladeNodes
+            Rtip2 = max( Rtip, u2%rlocal(i,j) ) 
          end do
          
       end if
       
+      do i = 1,p%numBladeNodes 
+
+            ! We only update the UnsteadyAero states if we have unsteady aero turned on for this node      
+         if (OtherState%UA_Flag(i,j)) then
+            
+               ! Set the active blade element for UnsteadyAero
+            OtherState%UA%iBladeNode = i
+            OtherState%UA%iBlade     = j
+            
+               ! Initialize these variables
+            u_UA%alpha   = z%phi(i,j) - u1%theta(i,j)
+            axInduction  = 0.0_ReKi
+            tanInduction = 0.0_ReKi
+            
+            
+            if ( p%useInduction ) then
+               
+                  ! Compute Re based on zero inductions (axInduction, tanInduction), this would needed for the airfoil lookups 
+                  !    which occur within BEMTU_InductionWithResidual if we had implemented airfoil tables which are dependent on Reynold's number: Currently unused, 4-Nov-2015
+               call BEMTU_Wind( 0.0_ReKi, 0.0_ReKi, u1%Vx(i,j), u1%Vy(i,j), p%chord(i,j), p%airDens, p%kinVisc, Vrel, Re )
+               
+                  ! Need to get the induction factors for these conditions without skewed wake correction and without UA
+                  ! COMPUTE: axInduction, tanInduction   
+               fzero = BEMTU_InductionWithResidual(z%phi(i,j), u_UA%alpha, Re, p%numBlades, u1%rlocal(i,j), Rtip, p%chord(i,j), AFInfo(p%AFIndx(i,j)), &
+                           u1%Vx(i,j), u1%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
+                           axInduction, tanInduction, ErrStat, ErrMsg)
+               if (errStat >= AbortErrLev) return 
+                  
+                  ! Apply the skewed wake correction to the axial induction and recompute phi and alpha - RRD: where is the new AOA?
+               if ( p%skewWakeMod == SkewMod_PittPeters ) then
+                  
+                     ! Correct for skewed wake, by recomputing axInduction
+                     ! NOTE: tanInduction and axInduction may be set to zero by this routine if the local induced velocities are zero.
+                  call ApplySkewedWakeCorrection( u1%Vx(i,j), u1%Vy(i,j), u1%psi(j), u1%chi0, u1%rlocal(i,j)/Rtip, axInduction, tanInduction, chi, ErrStat, ErrMsg ) !replaced phiOut with phitemp  RRD
+                  if (errStat >= AbortErrLev) return
+                  
+                     ! We'll simply compute a geometrical phi based on both induction factors
+                  phitemp = ComputePhiWithInduction( u1%Vx(i,j), u1%Vy(i,j),  axInduction, tanInduction, errStat, errMsg )  
+                     ! angle of attack
+                  u_UA%alpha = phitemp - u1%theta(i,j)
+                  
+               end if
+            
+            end if
+                  
+            
+               ! Need to compute local velocity including both axial and tangential induction
+               ! COMPUTE: u_UA%U, u_UA%Re
+            call BEMTU_Wind( axInduction, tanInduction, u1%Vx(i,j), u1%Vy(i,j), p%chord(i,j), p%airDens, p%kinVisc, u_UA%U, u_UA%Re) !replaced phiOut with phitemp  RRD
+               if (errStat >= AbortErrLev) return      
+
+            if ( abs(u_UA%alpha) >= AFInfo(p%AFIndx(i,j))%Table(1)%UA_BL%UACutout*D2R ) then  ! Is the angle of attack larger than the UA cut-out for this airfoil?
+               OtherState%UA_Flag(i,j) = .FALSE.
+               call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to high angle-of-attack.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
+            elseif (EqualRealNos(u_UA%U, 0.0_ReKi) ) then
+               OtherState%UA_Flag(i,j) = .FALSE.
+               call WrScr( 'Warning: Turning off Unsteady Aerodynamics due to zero relative velocity.  BladeNode = '//trim(num2lstr(i))//', Blade = '//trim(num2lstr(j)) )
+                  
+            else    
+                  ! COMPUTE: xd%UA, OtherState%UA
+               call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), errStat, errMsg )
+                  if (errStat >= AbortErrLev) return
+            end if
+            
+         end if      ! if (OtherState%UA_Flag(i,j)) then
+               
+            ! Now we need to update the inflow angle state, z%phi, independent of UnsteadyAero
+         if ( p%useInduction ) then
+               ! Solve this without any skewed wake correction and without UA
+            ! call BEMT_UnCoupledSolve2(i, j, u, p, z, Rtip, AFInfo, phiOut, axIndOut, tanIndOut, errStat, errMsg)
+               ! COMPUTE:  z%phi(i,j)     
+            call BEMT_UnCoupledSolve(z%phi(i,j), p%numBlades, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u2%rlocal(i,j), Rtip2, p%chord(i,j), u2%theta(i,j),  &
+                        u2%Vx(i,j), u2%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
+                        p%maxIndIterations, p%aTol,  &
+                        z%phi(i,j), errStat, errMsg)  
+         else
+               ! We'll simply compute a geometrical phi based on both induction factors being 0.0
+            z%phi(i,j) = ComputePhiWithInduction(u2%Vx(i,j), u2%Vy(i,j),  0.0_ReKi, 0.0_ReKi, errStat, errMsg)            
+         end if
+    
+      end do  
+   end do
+   
 end subroutine BEMT_UpdateStates
 
 
@@ -928,7 +976,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
 ! All of the calculated output channels are placed into the OtherState%AllOuts(:), while the channels selected for outputs are
 ! placed in the y%WriteOutput(:) array.
 !..................................................................................................................................
-   use BEMTCoupled
+
    
    real(DbKi),                     intent(in   )  :: t           ! Current simulation time in seconds
    type(BEMT_InputType),           intent(in   )  :: u           ! Inputs at Time t
@@ -948,21 +996,20 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
 
   
 
-   real(ReKi)                     :: chi0, axInduction, tanInduction, theta, Vx, Vy, Vinf, Cx, Cy, Cm, lambdar
-   real(ReKi)                     :: psi, AOA, Re, Cl, Cd, fzero, coupledResidual(2), degAOA, phitemp, r, phi, chi
+   real(ReKi)                     :: chi0, theta, Vx, Vy
+   real(ReKi)                     :: psi, Re, fzero,  r
    real(ReKi)                     :: Rtip
 
    integer(IntKi)                 :: i                                               ! Generic index
    integer(IntKi)                 :: j                                               ! Loops through nodes / elements
-   integer(IntKi)                 :: count
    
-   integer(IntKi)                 :: ErrStat2                                        ! Temporary Error code
-   character(ErrMsgLen)           :: ErrMsg2                                         ! Temporary error message
-   
+#ifdef UA_OUTS
+   integer(IntKi)                 :: k
+#endif
 
    logical, parameter             :: UpdateValues  = .TRUE.                          ! determines if the OtherState values need to be updated
    type(BEMT_ContinuousStateType) :: dxdt                                            ! Continuous state derivs at t
-
+   real(ReKi)                     :: Vrel
          ! Initialize some output values
    errStat = ErrID_None
    errMsg  = ""
@@ -989,7 +1036,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
    !...............................................................................................................................
 
    chi0 = u%chi0
-    
+  
    
    do j = 1,p%numBlades ! Loop through all blades
       
@@ -1006,82 +1053,84 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
          Vx    = u%Vx(i,j)
          Vy    = u%Vy(i,j)
          theta = u%theta(i,j)
-         Vinf  = u%Vinf(i,j)  !FIX ME Is this used at all RRD?
+         
+         
             ! Set the active blade element for UnsteadyAero
          OtherState%UA%iBladeNode = i
          OtherState%UA%iBlade     = j
+         
             ! Copy the current state to the outputs structure
+         y%phi(i,j) = z%phi(i,j)     
+            ! angle of attack
+         y%AOA(i,j) = y%phi(i,j) - theta
          
-         
-        
-         if (p%skewWakeMod < SkewMod_Coupled) then
-            y%phi(i,j) = z%phi(i,j)
-         
-         end if
-         
-         
+            ! initialize other outputs assuming no induction or skewed wake corrections
+         y%axInduction(i,j)  = 0.0_ReKi
+         y%tanInduction(i,j) = 0.0_ReKi             
+         y%chi(i,j) = chi0   ! with no induction, chi = chi0
+            
          if ( p%useInduction ) then
+            
             r = u%rlocal(i,j)
-            if (p%skewWakeMod < SkewMod_Coupled) then
-               ! Turn off unsteady to compute inductions, and then call ComputeAirfoilCoefs with UA on for calculating the Cx, Cy, Cl, Cd values
-               fzero = BEMTU_InductionWithResidual(y%phi(i,j), psi, chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), Rtip, p%chord(i,j), u%theta(i,j),  AFInfo(p%AFindx(i,j)), &
-                              Vx, Vy, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), SkewMod_Uncoupled, &
-                              .FALSE., p%UA, xd%UA, OtherState%UA, &
-                              y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%Cm(i,j), y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), errStat, errMsg)
-               
-               ! Apply the skewed wake correction to the axial induction and recompute phi and alpha
-               if ( p%skewWakeMod == SkewMod_PittPeters ) then
-                  call ApplySkewedWakeCorrection( Vx, Vy, u%psi(j), u%chi0, y%axInduction(i,j), y%tanInduction(i,j), u%rlocal(i,j)/Rtip, y%phi(i,j), y%chi(i,j), ErrStat, ErrMsg )
-               else
-                     ! With no yaw correction, chi = chi0
-                  y%chi(i,j) = chi0
+               ! Compute Re based on zero inductions (axInduction, tanInduction), this would needed for the airfoil lookups 
+               !    which occur within BEMTU_InductionWithResidual if we had implemented airfoil tables which are dependent on Reynold's number: Currently unused, 4-Nov-2015
+            call BEMTU_Wind( 0.0_ReKi, 0.0_ReKi, Vx, Vy, p%chord(i,j), p%airDens, p%kinVisc, Vrel, Re )
+            
+               ! Compute inductions using steady aero.  NOTE: When we use Re, we are using uninduced Re for Steady Airfoil Coef looks here
+            fzero = BEMTU_InductionWithResidual(y%phi(i,j), y%AOA(i,j), Re, p%numBlades, u%rlocal(i,j), Rtip, p%chord(i,j), AFInfo(p%AFindx(i,j)), &
+                           Vx, Vy, p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
+                           y%axInduction(i,j), y%tanInduction(i,j), errStat, errMsg)
+               if (errStat >= AbortErrLev) then   
+                  return
                end if
-                  ! Now turn on the option for UA and use inductions when calculating the coefficients an AOA
-               call ComputeAirfoilCoefs( y%phi(i,j), y%axInduction(i,j), y%tanInduction(i,j), Vx, Vy, p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, .TRUE., .TRUE., AFInfo(p%AFindx(i,j)), &
-                                         OtherState%UA_Flag(i,j), p%UA, xd%UA, OtherState%UA, &
-                                         y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%Cm(i,j), errStat, errMsg ) 
                
-            else if (p%skewWakeMod == SkewMod_Coupled) then
-               y%axInduction(i,j)  = z%axInduction(i,j)
-               y%tanInduction(i,j) = z%tanInduction(i,j)
-               coupledResidual = BEMTC_Elemental( z%axInduction(i,j), z%tanInduction(i,j), psi, chi0, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), Rtip, p%chord(i,j), u%theta(i,j),  AFInfo(p%AFindx(i,j)), &
-                              Vx, Vy, Vinf, p%useTanInd, .TRUE.,.TRUE., p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
-                              OtherState%UA_Flag(i,j), p%UA, xd%UA, OtherState%UA, &
-                              y%phi(i,j), y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%Cm(i,j), y%chi(i,j), ErrStat, ErrMsg)
+               ! Apply the skewed wake correction to the axial induction (y%axInduction) and recompute y%phi, y%AOA
+            if ( p%skewWakeMod == SkewMod_PittPeters ) then
+               call ApplySkewedWakeCorrection( Vx, Vy, u%psi(j), u%chi0, u%rlocal(i,j)/Rtip, y%axInduction(i,j), y%tanInduction(i,j), y%chi(i,j), ErrStat, ErrMsg )           
+                  ! We'll simply compute a geometrical phi based on both induction factors being 0.0
+               y%phi(i,j) = ComputePhiWithInduction( u%Vx(i,j), u%Vy(i,j),  y%axInduction(i,j), y%tanInduction(i,j), errStat, errMsg )  
+                  ! angle of attack
+               y%AOA(i,j) = y%phi(i,j) - theta
             end if
-         else
-            y%axInduction(i,j)  = 0.0_ReKi
-            y%tanInduction(i,j) = 0.0_ReKi
-            if (p%skewWakeMod < SkewMod_Coupled) then
-               call ComputeAirfoilCoefs( y%phi(i,j), 0.0_ReKi, 0.0_ReKi, Vx, Vy, p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, .TRUE., .TRUE., AFInfo(p%AFindx(i,j)), &
-                                         OtherState%UA_Flag(i,j), p%UA, xd%UA, OtherState%UA, &
-                                         y%AOA(i,j), y%Re(i,j), y%Cl(i,j), y%Cd(i,j), y%Cx(i,j), y%Cy(i,j), y%Cm(i,j), errStat, errMsg )       
-                  ! with no induction, chi = chi0
-               y%chi(i,j) = chi0
-            else if (p%skewWakeMod == SkewMod_Coupled) then
-               y%phi(i,j) = ComputePhiWithInduction( Vx, Vy, 0.0_ReKi, 0.0_ReKi, errStat, errMsg )
-            end if
+            
+         end if        
+            
+            ! Compute Re, Vrel based on current values of axInduction, tanInduction
+         call BEMTU_Wind( y%axInduction(i,j), y%tanInduction(i,j), Vx, Vy, p%chord(i,j), p%airDens, p%kinVisc, y%Vrel(I,J), y%Re(i,j) )
+  
+            ! Now depending on the option for UA get the airfoil coefs, Cl, Cd, Cm for unsteady or steady implementation
+         if (OtherState%UA_Flag(i,j)) then            
+            call Compute_UA_AirfoilCoefs( y%AOA(i,j), y%Vrel(I,J), y%Re(i,j),  AFInfo(p%AFindx(i,j)), p%UA, xd%UA, OtherState%UA, OtherState%y_UA, &
+                                         y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), errStat, errMsg ) 
+
+         else 
+               ! TODO: When we start using Re, should we use the uninduced Re since we used uninduced Re to solve for the inductions!? Probably this won't change, instead create a Re loop up above.
+            call ComputeSteadyAirfoilCoefs( y%AOA(i,j), y%Re(i,j),  AFInfo(p%AFindx(i,j)), &
+                                         y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), errStat, errMsg ) 
          end if
-         
          if (errStat >= AbortErrLev) then
-            call SetErrStat( errStat, errMsg, errStat, errMsg, 'BEMTU_InductionWithResidual' ) 
+            call SetErrStat( errStat, errMsg, errStat, errMsg, 'BEMT_CalcOutput' ) 
             return
          end if
-        
-         if ( p%SkewWakeMod == SkewMod_Coupled ) then !Use the coupled velocity equation
-            y%inducedVel(I,J) = BEMTC_Wind(y%axInduction(i,j), y%tanInduction(i,j), Vx, Vy, p%chord(i,j), u%theta(i,j), p%airDens, p%kinVisc, chi0, psi, phi , AOA, Re, chi)
-           ! y%inducedVel(I,J) = sqrt( ( Vx*( cos(chi0) - y%axInduction(i,j) + Vy*y%tanInduction(i,j)*sin(y%chi(i,j))*cos(psi)*( 1 + sin(y%chi(i,j))*sin(psi) ) ) )**2 + &
-           !           ( Vy*( 1 + y%tanInduction(i,j)*cos(y%chi(i,j))*( 1 + sin(y%chi(i,j))*sin(psi) ) ) + Vx*cos(psi)*( y%axInduction(i,j)*tan(y%chi(i,j)/2.0) - sin(chi0) ) )**2 )
-         else
-            y%inducedVel(I,J) = sqrt( ( Vx*( 1-y%axInduction(i,j)) )**2 + ( Vy*( 1+y%tanInduction(i,j) ) )**2 )  !FIX ME RRD: Please change nomenclature ASAP induced Vel should be Vrel
-         end if
-        
-
+         
+            ! Compute Cx, Cy given Cl, Cd and phi
+            ! NOTE: For these calculations we force the useAIDrag and useTIDrag flags to .TRUE.
+         call Transform_ClCd_to_CxCy( y%phi(i,j), .TRUE., .TRUE., y%Cl(i,j), y%Cd(i,j),y%Cx(i,j), y%Cy(i,j) )
+            
       enddo             ! I - Blade nodes / elements
 
    enddo          ! J - All blades
 
-  
+#ifdef UA_OUTS
+
+            WRITE (69, '(F9.4,'//trim(num2lstr(p%numBladeNodes*p%numBlades*p%UA%NumOuts))//'(:,A,ES10.3E2))') t, (' ', OtherState%y_UA%WriteOutput(k), k=1,p%UA%NumOuts*p%numBladeNodes*p%numBlades)
+            !WRITE (69, '((F8.3,'//TRIM(num2lstr(13*p%numBladeNodes*p%numBlades))//'(:,A,ES10.3E2))')
+            !Frmt = '(F8.3,'//TRIM(Int2LStr(p%WAMIT%NumOuts+p%Morison%NumOuts))//'(:,A,'//TRIM( p%OutFmt )//'))'
+   !Frmt = '('ES10.3E2,'//TRIM(13*p%numBladeNodes*p%numBlades)//'(:,A,'ES10.3E2'))'
+   
+   !WRITE(p%UnOutFile,Frmt) Time, ( p%Delim, y%WAMIT%WriteOutput(I), I=1,p%WAMIT%NumOuts), ( p%Delim, y%Morison%WriteOutput(I), I=1,p%Morison%NumOuts)
+            
+#endif 
    
    !...............................................................................................................................
    ! Place the selected output channels into the WriteOutput(:) array with the proper sign:
@@ -1191,7 +1240,7 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_res
    
       ! Local variables
    INTEGER    :: i,j
-   real(ReKi)  axInduction, tanInduction
+   real(ReKi)  axInduction, tanInduction, Vrel, Re, AOA
   
    
    ErrStat = ErrID_None
@@ -1206,19 +1255,18 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_res
                ! Need to initialize the inductions to zero for this calculation (NOTE: They are actually computed within UnCpldReFn(), but still need to be intialized to zero!)
             axInduction  = 0.0_ReKi
             tanInduction = 0.0_ReKi
-         
+            AOA = z%phi(i,j) - u%theta(i,j)
+            
+               ! Need to call BEMTU_Wind to obtain Re, even though we aren't using it in this version.
+            call BEMTU_Wind( axInduction, tanInduction, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%airDens, p%kinVisc, Vrel, Re )
+            
                ! Solve for the constraint states here:
-         
-            IF ( p%SkewWakeMod < SkewMod_Coupled ) THEN
-               z%phi(i,j) = UncoupledErrFn(z%phi(i,j), u%psi(j), u%chi0, p%numReIterations, p%airDens, p%kinVisc, p%numBlades, u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j), u%theta(i,j), AFInfo(p%AFindx(i,j)), &
-                                 u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), p%SkewWakeMod, &
-                                 OtherState%UA_Flag(i,j), p%UA, xd%UA, OtherState%UA, &
+            z%phi(i,j) = UncoupledErrFn(z%phi(i,j), AOA, Re, p%numBlades, u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j),  AFInfo(p%AFindx(i,j)), &
+                                 u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
                                  ErrStat, ErrMsg)
          
          
-            ELSE IF ( p%SkewWakeMod == SkewMod_Coupled ) THEN
-             !z_residual%Residuals(i,j) = CpldResFn()
-            END IF
+           
          end do
       end do
    else
@@ -1253,17 +1301,14 @@ subroutine GetSolveRegionOrdering(epsilon2, phiIn, test_lower, test_upper)
    
 end subroutine GetSolveRegionOrdering
    
-integer function TestRegion(epsilon2, phiLower, phiUpper, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
+integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+                        Vx, Vy, Re, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst,  &
                         errStat, errMsg)
-   real(ReKi),             intent(in   ) :: epsilon2
+
    real(ReKi),             intent(in   ) :: phiLower
    real(ReKi),             intent(in   ) :: phiUpper
    integer,                intent(in   ) :: numBlades
    !integer,                intent(in   ) :: numBladeNodes
-   real(ReKi),             intent(in   ) :: airDens
-   real(ReKi),             intent(in   ) :: mu
    type(AFInfoType),       intent(in   ) :: AFInfo
    real(ReKi),             intent(in   ) :: rlocal         
    real(ReKi),             intent(in   ) :: rtip           
@@ -1271,9 +1316,7 @@ integer function TestRegion(epsilon2, phiLower, phiUpper, psi, chi0, numReIterat
    real(ReKi),             intent(in   ) :: theta           
    real(ReKi),             intent(in   ) :: Vx             
    real(ReKi),             intent(in   ) :: Vy             
-   !real(ReKi),             intent(in   ) :: omega
-   real(ReKi),             intent(in   ) :: chi0
-   real(ReKi),             intent(in   ) :: psi            
+   real(ReKi),             intent(in   ) :: Re            
    logical,                intent(in   ) :: useTanInd 
    logical,                intent(in   ) :: useAIDrag
    logical,                intent(in   ) :: useTIDrag
@@ -1281,36 +1324,31 @@ integer function TestRegion(epsilon2, phiLower, phiUpper, psi, chi0, numReIterat
    logical,                intent(in   ) :: useTipLoss
    real(ReKi),             intent(in   ) :: hubLossConst
    real(ReKi),             intent(in   ) :: tipLossConst
-   integer,                intent(in   ) :: SkewWakeMod   ! Skewed wake model
-   logical,                intent(in   ) :: UA_Flag
-   type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
-   type(UA_DiscreteStateType),   intent(in   ) :: xd_UA          ! Discrete states at Time
-   type(UA_OtherStateType),      intent(in   ) :: OtherState_UA  ! Other/optimization states
-   integer,                intent(in   ) :: numReIterations
    integer(IntKi),         intent(  out) :: ErrStat       ! Error status of the operation
    character(*),           intent(  out) :: ErrMsg        ! Error message if ErrStat /= ErrID_None
    
       ! Local variables  
    character(len(errMsg))                        :: errMsg2                 ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
+   real(ReKi) :: AOA
    real(ReKi) :: f1, f2
    ErrStat = ErrID_None
    ErrMsg  = ""
    ErrStat2 = ErrID_None
    ErrMsg2  = ""
-   
-   f1 = UncoupledErrFn(phiLower, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
+   AOA = phiLower - theta
+   f1 = UncoupledErrFn(phiLower, AOA, Re, numBlades, rlocal, rtip, chord, AFInfo, &
+                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, &
                         errStat2, errMsg2)
    
    if (errStat2 >= AbortErrLev) then
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'TestRegion' ) 
       return
-   end if                  
-   f2 = UncoupledErrFn(phiUpper, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-                     UA_Flag, p_UA, xd_UA, OtherState_UA, &
+   end if    
+   
+   AOA = phiUpper - theta
+   f2 = UncoupledErrFn(phiUpper, AOA, Re, numBlades, rlocal, rtip, chord, AFInfo, &
+                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, &
                      errStat2, errMsg2)
    if (errStat2 >= AbortErrLev) then
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'TestRegion' ) 
@@ -1331,10 +1369,8 @@ integer function TestRegion(epsilon2, phiLower, phiUpper, psi, chi0, numReIterat
    
 end function TestRegion
       
-logical function DeterminePhiBounds(epsilon2, phiIn, numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
-                           Vx, Vy, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
-                           UA_Flag, p_UA, xd_UA, OtherState_UA, &
-                           numReIterations, maxIndIterations, aTol, &
+logical function DeterminePhiBounds(epsilon2, phiIn, numBlades, AFInfo, rlocal, rtip, chord, theta,  &
+                           Vx, Vy, Re, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
                            phi_lower,phi_upper, ErrStat, ErrMsg)
 
    use fminfcn
@@ -1342,19 +1378,14 @@ logical function DeterminePhiBounds(epsilon2, phiIn, numBlades, numBladeNodes, a
    real(ReKi),             intent(in   ) :: epsilon2
    real(ReKi),             intent(in   ) :: phiIn
    integer,                intent(in   ) :: numBlades
-   integer,                intent(in   ) :: numBladeNodes
-   real(ReKi),             intent(in   ) :: airDens
-   real(ReKi),             intent(in   ) :: mu
    type(AFInfoType),       intent(in   ) :: AFInfo
    real(ReKi),             intent(in   ) :: rlocal         
    real(ReKi),             intent(in   ) :: rtip           
    real(ReKi),             intent(in   ) :: chord          
    real(ReKi),             intent(in   ) :: theta           
    real(ReKi),             intent(in   ) :: Vx             
-   real(ReKi),             intent(in   ) :: Vy             
-   real(ReKi),             intent(in   ) :: omega
-   real(ReKi),             intent(in   ) :: chi0
-   real(ReKi),             intent(in   ) :: psi            
+   real(ReKi),             intent(in   ) :: Vy
+   real(ReKi),             intent(in   ) :: Re          
    logical,                intent(in   ) :: useTanInd 
    logical,                intent(in   ) :: useAIDrag
    logical,                intent(in   ) :: useTIDrag
@@ -1362,14 +1393,6 @@ logical function DeterminePhiBounds(epsilon2, phiIn, numBlades, numBladeNodes, a
    logical,                intent(in   ) :: useTipLoss
    real(ReKi),             intent(in   ) :: hubLossConst
    real(ReKi),             intent(in   ) :: tipLossConst
-   integer,                intent(in   ) :: SkewWakeMod   ! Skewed wake model
-   logical,                intent(in   ) :: UA_Flag
-   type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
-   type(UA_DiscreteStateType),   intent(in   ) :: xd_UA          ! Discrete states at Time
-   type(UA_OtherStateType),      intent(in   ) :: OtherState_UA  ! Other/optimization states
-   integer,                intent(in   ) :: numReIterations
-   integer,                intent(in   ) :: maxIndIterations
-   real(ReKi),             intent(in   ) :: aTol
    real(ReKi),             intent(  out) :: phi_lower,phi_upper
    integer(IntKi),         intent(  out) :: errStat       ! Error status of the operation
    character(*),           intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
@@ -1380,8 +1403,6 @@ logical function DeterminePhiBounds(epsilon2, phiIn, numBlades, numBladeNodes, a
    integer(IntKi)                                :: errStat2                ! temporary Error status of the operation
    integer(IntKi)                                :: i
    integer                 :: result
-   REAL(ReKi) :: f1, f2
-   REAL(ReKi) :: fzero        ! wake skew angle (rad)
    real(ReKi) :: test_lower(3), test_upper(3)
    
    ErrStat = ErrID_None
@@ -1395,9 +1416,8 @@ logical function DeterminePhiBounds(epsilon2, phiIn, numBlades, numBladeNodes, a
    call GetSolveRegionOrdering(epsilon2, phiIn, test_lower, test_upper)
    
    do i = 1,3   ! Need to potentially test 3 regions
-      result = TestRegion(epsilon2, test_lower(i), test_upper(i), psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
+      result = TestRegion(test_lower(i), test_upper(i), numBlades, rlocal, rtip, chord, theta, AFInfo, &
+                        Vx, Vy, Re, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, &
                         errStat2, errMsg2)
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'DeterminePhiBounds' )   
       if ( result == 0 ) then
@@ -1411,101 +1431,16 @@ logical function DeterminePhiBounds(epsilon2, phiIn, numBlades, numBladeNodes, a
    end do
       
    errStat2 = 4
-   errMsg2  = 'There is no valid value of phi for these operating conditions!  psi = '//TRIM(Num2Lstr(psi))//', Vx = '//TRIM(Num2Lstr(Vx))//', Vy = '//TRIM(Num2Lstr(Vy))//', rlocal = '//TRIM(Num2Lstr(rLocal))//', theta = '//TRIM(Num2Lstr(theta))
+   errMsg2  = 'There is no valid value of phi for these operating conditions!  Vx = '//TRIM(Num2Lstr(Vx))//', Vy = '//TRIM(Num2Lstr(Vy))//', rlocal = '//TRIM(Num2Lstr(rLocal))//', theta = '//TRIM(Num2Lstr(theta))
    call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'DeterminePhiBounds' )            
    return 
-   
-   
-   !f1 = UncoupledErrFn(epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-   !                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-   !                     UA_Flag, p_UA, xd_UA, OtherState_UA, &
-   !                     errStat2, errMsg2)
-   !if (errStat2 >= AbortErrLev) then
-   !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-   !   return
-   !end if
-   !
-   !
-   !   ! If epsilon satisfies the residual equation, set phi to epsilon and return 
-   !if ( abs(f1) < aTol ) then 
-   !   DeterminePhiBounds = .true.
-   !   return
-   !end if
-   !
-   !f2 = UncoupledErrFn(pi/2.0, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta,  AFInfo, &
-   !                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
-   !                     UA_Flag, p_UA, xd_UA, OtherState_UA, &
-   !                     errStat2, errMsg2)
-   !if (errStat2 >= AbortErrLev) then
-   !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-   !   return
-   !end if
-   !      
-   !if (f1*f2 < 0.0_ReKi) then  !# an uncommon but possible case
-   !   phi_lower = epsilon2
-   !   phi_upper = pi/2.0
-   !else 
-   !      
-   !   f1 = UncoupledErrFn(-pi/4.0, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-   !                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-   !                     UA_Flag, p_UA, xd_UA, OtherState_UA, &
-   !                     errStat2, errMsg2)
-   !   if (errStat2 >= AbortErrLev) then
-   !      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-   !      return
-   !   end if                  
-   !   f2 = UncoupledErrFn(-epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-   !                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-   !                     UA_Flag, p_UA, xd_UA, OtherState_UA, &
-   !                     errStat2, errMsg2)
-   !   if (errStat2 >= AbortErrLev) then
-   !      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-   !      return
-   !   end if                  
-   !   if  (f1*f2  < 0.0_ReKi) then
-   !      phi_lower = -pi/4.0
-   !      phi_upper = -epsilon2
-   !   else
-   !      
-   !      f1 = UncoupledErrFn(pi/2.0, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-   !                     Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-   !                     UA_Flag, p_UA, xd_UA, OtherState_UA, &
-   !                     errStat2, errMsg2)
-   !      if (errStat2 >= AbortErrLev) then
-   !         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-   !         return
-   !      end if                  
-   !      f2 = UncoupledErrFn(pi - epsilon2, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-   !                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-   !                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
-   !                        errStat2, errMsg2)
-   !      if (errStat2 >= AbortErrLev) then
-   !         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-   !         return
-   !      end if 
-   !      if  (f1*f2  < 0.0_ReKi) then
-   !         phi_lower = pi/2.0
-   !         phi_upper = pi - epsilon2
-   !      else
-   !
-   !         errStat2 = 4
-   !         errMsg2  = 'There is no valid value of phi for these operating conditions!  psi = '//TRIM(Num2Lstr(psi))//', Vx = '//TRIM(Num2Lstr(Vx))//', Vy = '//TRIM(Num2Lstr(Vy))//', rlocal = '//TRIM(Num2Lstr(rLocal))//', theta = '//TRIM(Num2Lstr(theta))
-   !         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' )     
-   !         
-   !         
-   !         return
-   !      end if
-   !      
-   !   end if
-   !            
-   !end if
+ 
    
 end function DeterminePhiBounds
 
-subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
-                           Vx, Vy, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
-                           UA_Flag, p_UA, xd_UA, OtherState_UA, &
-                           numReIterations, maxIndIterations, aTol, &
+subroutine BEMT_UnCoupledSolve( phiIn, numBlades, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
+                           Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
+                           maxIndIterations, aTol, &
                            phiStar, ErrStat, ErrMsg)
 
    use fminfcn
@@ -1513,7 +1448,6 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
    !use fminMod
    real(ReKi),             intent(in   ) :: phiIn
    integer,                intent(in   ) :: numBlades
-   integer,                intent(in   ) :: numBladeNodes
    real(ReKi),             intent(in   ) :: airDens
    real(ReKi),             intent(in   ) :: mu
    TYPE(AFInfoType),       INTENT(IN   ) :: AFInfo
@@ -1522,10 +1456,7 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
    real(ReKi),             intent(in   ) :: chord          
    real(ReKi),             intent(in   ) :: theta           
    real(ReKi),             intent(in   ) :: Vx             
-   real(ReKi),             intent(in   ) :: Vy             
-   real(ReKi),             intent(in   ) :: omega
-   real(ReKi),             intent(in   ) :: chi0
-   real(ReKi),             intent(in   ) :: psi            
+   real(ReKi),             intent(in   ) :: Vy                        
    logical,                intent(in   ) :: useTanInd 
    logical,                intent(in   ) :: useAIDrag
    logical,                intent(in   ) :: useTIDrag
@@ -1533,12 +1464,6 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
    logical,                intent(in   ) :: useTipLoss
    real(ReKi),             intent(in   ) :: hubLossConst
    real(ReKi),             intent(in   ) :: tipLossConst
-   integer,                intent(in   ) :: SkewWakeMod   ! Skewed wake model
-   logical,                intent(in   ) :: UA_Flag
-   type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
-   type(UA_DiscreteStateType),   intent(in   ) :: xd_UA          ! Discrete states at Time
-   type(UA_OtherStateType),      intent(in   ) :: OtherState_UA  ! Other/optimization states
-   integer,                intent(in   ) :: numReIterations
    integer,                intent(in   ) :: maxIndIterations
    real(ReKi),             intent(in   ) :: aTol
    real(ReKi),             intent(  out) :: phiStar
@@ -1554,12 +1479,11 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
    character(ErrMsgLen)                          :: errMsg2, errMsg3        ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                :: errStat2, errStat3      ! temporary Error status of the operation
 
-   integer    :: i,j, niter
-   real(ReKi) :: f1, f2, axInduction, tanInduction, phiStar2, phiStar3, residual, fmin1,fmin2, testPhi
-   real(ReKi) :: phi_lower, phi_upper, fzero, epsilon2         ! wake skew angle (rad)
+
+   real(ReKi) :: f1
+   real(ReKi) :: phi_lower, phi_upper, epsilon2         ! wake skew angle (rad)
    logical    :: isEpsilon
-   integer    :: tmpSkewWakeMod
-   real(ReKi) :: AOA, Re, Cl, Cd, Cx, Cy, Cm, chi
+   real(ReKi) :: AOA, Re, Vrel
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -1568,8 +1492,7 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
    ErrStat3 = ErrID_None
    ErrMsg3  = ""
    epsilon2 = sqrt(epsilon(1.0_ReKi)) ! 1e-6 !
-   ! turnOffSkewWake = .FALSE.
-   tmpSkewWakeMod  = SkewWakeMod
+
   
           
          !   ! Check for validity of inputs
@@ -1587,14 +1510,18 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
       return
    end if
    
+      ! Need to call BEMTU_Wind to obtain Re, even though we aren't using it in this version.
+      ! inductions are set to zero!
+   call BEMTU_Wind( 0.0_ReKi, 0.0_ReKi, Vx, Vy, chord, airDens, mu, Vrel, Re )
+   
    
    !# ------ BEM solution method see (Ning, doi:10.1002/we.1636) ------
    
       ! See if the previous value of phi still satisfies the residual equation
    if ( .NOT. EqualRealNos(phiIn, 0.0_ReKi) ) then  ! If the previous phi was 0.0, then we need to perform the solve, because we simply bail if phi is 0.0!
-      f1 = UncoupledErrFn(phiIn, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta, AFInfo, &
-                           Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, SkewWakeMod, &
-                           UA_Flag, p_UA, xd_UA, OtherState_UA, &
+      AOA = phiIn - theta
+      f1 = UncoupledErrFn(phiIn, AOA, Re, numBlades, rlocal, rtip, chord, AFInfo, &
+                           Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, &               
                            errStat2, errMsg2)
       if (errStat2 >= AbortErrLev) then
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
@@ -1610,31 +1537,14 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
    
       
       ! Find out what bracketed region we are going to look for the solution to the residual equation
-   isEpsilon =  DeterminePhiBounds(epsilon2, phiIn, numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
-                           Vx, Vy, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
-                           UA_Flag, p_UA, xd_UA, OtherState_UA, &
-                           numReIterations, maxIndIterations, aTol, &
+   isEpsilon =  DeterminePhiBounds(epsilon2, phiIn, numBlades, AFInfo, rlocal, rtip, chord, theta,  &
+                           Vx, Vy, Re, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
                            phi_lower, phi_upper, errStat2, errMsg2)
    
    if (errStat2 >= AbortErrLev) then
-      !if ( SkewWakeMod == 2 ) then
-      !   tmpSkewWakeMod = 1
-      !   call DeterminePhiBounds(numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
-      !                     Vx, Vy, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, tmpSkewWakeMod, &
-      !                     UA_Flag, p_UA, xd_UA, OtherState_UA, &
-      !                     numReIterations, maxIndIterations, aTol, &
-      !                     phi_lower, phi_upper, errStat2, errMsg2)   
-      !   if (errStat2 >= AbortErrLev) then
-      !      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-      !      return
-         !else
-         !   turnOffSkewWake = .TRUE.
-      !   end if
-      !else
-      
-         call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-         return
-     ! end if
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
+      return
+   
       
    else if ( isEpsilon ) then ! espilon satisfies the residual equation
       phiStar = epsilon2
@@ -1645,8 +1555,6 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
    
       ! Set up the fcn argument settings
 
-   fcnArgs%psi             = psi
-   fcnArgs%chi0            = chi0 
    fcnArgs%airDens         = airDens
    fcnArgs%mu              = mu
    fcnArgs%numBlades       = numBlades
@@ -1657,58 +1565,17 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
    call AFI_Copyafinfotype( AFInfo, fcnArgs%AFInfo, MESH_NEWCOPY, errStat, errMsg )  
    fcnArgs%Vx              = Vx
    fcnArgs%Vy              = Vy
+   fcnArgs%Re              = Re
    fcnArgs%useTanInd       = useTanInd
    fcnArgs%useAIDrag       = useAIDrag
    fcnArgs%useTIDrag       = useTIDrag
    fcnArgs%useHubLoss      = useHubLoss
    fcnArgs%useTipLoss      = useTipLoss
    fcnArgs%hubLossConst    = hubLossConst
-   fcnArgs%tipLossConst    = tipLossConst
-   fcnArgs%SkewWakeMod     = SkewWakeMod   
-   fcnArgs%UA_Flag         = UA_Flag
-      ! Need to copy the following
-   call UA_CopyParam( p_UA, fcnArgs%p_UA, MESH_NEWCOPY, errStat, errMsg ) 
-   call UA_CopyDiscState( xd_UA, fcnArgs%xd_UA, MESH_NEWCOPY, errStat, errMsg )  
-   call UA_CopyOtherState( OtherState_UA, fcnArgs%OtherState_UA, MESH_NEWCOPY, errStat, errMsg )
-   
+   fcnArgs%tipLossConst    = tipLossConst   
 
+      ! TODO:  Add error checking 
    call sub_brent(phiStar,fmin_fcn,phi_lower,phi_upper, aTol,maxIndIterations,fcnArgs)
-   !if (errStat2 >= AbortErrLev) then
-   !   call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
-   !   return
-   !end if
-   
-   if (tmpSkewWakeMod /= SkewWakeMod) then
-      
-      call WrScr(" F , "//num2lstr(chi0)//" , "//num2lstr(rlocal/rtip)//" , "//num2lstr(psi)//" , "//num2lstr(Vx)//" , "//num2lstr(Vy))
-      
-      ! test either side of phiStar and look for a sign change
-      !testPhi = max(epsilon2, phiStar - .1_ReKi)
-      !fmin1     = fmin_fcn(testPhi, fcnArgs)
-      !testPhi = phiStar + .1_ReKi
-      !fmin2     = fmin_fcn(testPhi, fcnArgs)
-      !residual = BEMTU_InductionWithResidual(phiStar, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta,  AFInfo, &
-      !                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, tmpSkewWakeMod, &
-      !                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
-      !                        AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, chi, ErrStat3, ErrMsg3)
-      !call WrScr("Turning off skewWakeMod = 2, phiStar = "//trim(num2lstr(phiStar))//", residual = "//trim(num2lstr(residual)))
-      !call WrScr("   and, a = "//trim(num2lstr(axInduction))//" and a' = "//trim(num2lstr(tanInduction)))
-      !
-      !! Now test everything again but using the original skewWakMod
-      !fcnArgs%SkewWakeMod     = SkewWakeMod   
-      !testPhi = epsilon2 !max(epsilon2, phiStar - .1_ReKi)
-      !fmin1     = fmin_fcn(testPhi, fcnArgs)
-      !testPhi = pi/2.0 !phiStar + .1_ReKi
-      !fmin2     = fmin_fcn(testPhi, fcnArgs)
-      !residual = BEMTU_InductionWithResidual(phiStar, psi, chi0, numReIterations, airDens, mu, numBlades, rlocal, rtip, chord, theta,  AFInfo, &
-      !                        Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
-      !                        UA_Flag, p_UA, xd_UA, OtherState_UA, &
-      !                        AOA, Re, Cl, Cd, Cx, Cy, Cm, axInduction, tanInduction, chi, ErrStat3, ErrMsg3)     
-      !call WrScr("   with skewWakeMod = 2 for this phiStar, residual = "//trim(num2lstr(residual))//" and chi = "//trim(num2lstr(chi)))
-      !call WrScr("   and, a = "//trim(num2lstr(axInduction))//" and a' = "//trim(num2lstr(tanInduction)))
-   else
-   !   call WrScr(" T , "//num2lstr(chi0)//" , "//num2lstr(rlocal/rtip)//" , "//num2lstr(psi)//" , "//num2lstr(Vx)//" , "//num2lstr(Vy))
-   end if
    
    if (errStat2 > ErrID_None) then
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'BEMT_UnCoupledSolve' ) 
@@ -1717,118 +1584,6 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, numBladeNodes, airDens, mu, AF
          
 end subroutine BEMT_UnCoupledSolve
 
-!------------------------------------------------------------------------------
-subroutine BEMT_CoupledSolve( numBlades, numBladeNodes, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
-                           Vx, Vy, Vinf, omega, chi0, psi, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, SkewWakeMod, &
-                           UA_Flag, p_UA, xd_UA, OtherState_UA, maxIndIterations, aTol, &
-                           axInduction, tanInduction, ErrStat, ErrMsg)
-!  Since this subroutine uses the hybrd_fcn module, we cannot include it within 
-!    the BEMTCoupled module, because it would generate circular references
-!------------------------------------------------------------------------------
-   use nwtc_bemt_minpack
-
-   integer,                intent(in   ) :: numBlades
-   integer,                intent(in   ) :: numBladeNodes
-   real(ReKi),             intent(in   ) :: airDens
-   real(ReKi),             intent(in   ) :: mu 
-   TYPE(AFInfoType),       intent(in   ) :: AFInfo
-   real(ReKi),             intent(in   ) :: rlocal         
-   real(ReKi),             intent(in   ) :: rtip           
-   real(ReKi),             intent(in   ) :: chord          
-   real(ReKi),             intent(in   ) :: theta           
-   real(ReKi),             intent(in   ) :: Vx             
-   real(ReKi),             intent(in   ) :: Vy 
-   real(ReKi),             intent(in   ) :: Vinf
-   real(ReKi),             intent(in   ) :: omega
-   real(ReKi),             intent(in   ) :: chi0
-   real(ReKi),             intent(in   ) :: psi            
-   logical,                intent(in   ) :: useTanInd 
-   logical,                intent(in   ) :: useAIDrag
-   logical,                intent(in   ) :: useTIDrag
-   logical,                intent(in   ) :: useHubLoss
-   logical,                intent(in   ) :: useTipLoss
-   real(ReKi),             intent(in   ) :: hubLossConst
-   real(ReKi),             intent(in   ) :: tipLossConst
-   integer,                intent(in   ) :: SkewWakeMod   ! Skewed wake model
-   integer,                intent(in   ) :: maxIndIterations   
-   type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
-   type(UA_DiscreteStateType),   intent(in   ) :: xd_UA          ! Discrete states at Time
-   type(UA_OtherStateType),      intent(in   ) :: OtherState_UA  ! Other/optimization states
-   real(ReKi),             intent(in   ) :: aTol
-   logical,                intent(in   ) :: UA_Flag
-   real(ReKi),             intent(  out) :: axInduction
-   real(ReKi),             intent(  out) :: tanInduction
-
-   integer(IntKi),         intent(  out) :: errStat       ! Error status of the operation
-   character(*),           intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
- 
-   type(hybrd_fcnArgs)                   :: fcnArgs
-   real(ReKi)                            :: x(2), fvec(2)
-   integer                               :: info, lwa, n
-   real(ReKi), allocatable               :: wa(:)
-   
-   
-   axInduction  = 0.0_ReKi
-   tanInduction = 0.0_ReKi
-
-   errStat      = ErrID_None
-   errMsg       = ''
-   
-   ! initial guess of a, ap
-   x(1) = 0.0
-   x(2) = 0.0
-   
-      ! Establish working array wa
-      !   lwa is a positive integer input variable not less than
-   n = 2
-   lwa = ceiling((n*(3*n+13))/2.0)
-   allocate(wa(lwa), stat = errStat)
-   
-      ! Set up the fcn argument settings
-
-   fcnArgs%psi             = psi
-   fcnArgs%chi0            = chi0 
-   fcnArgs%airDens         = airDens
-   fcnArgs%mu              = mu
-   fcnArgs%numBlades       = numBlades
-   fcnArgs%rlocal          = rlocal
-   fcnArgs%rtip            = rtip
-   fcnArgs%chord           = chord
-   fcnArgs%theta           = theta
-   
-   
-   
-      ! Can not use AFI_Copyafinfotype() because it would force AFInfo to be INOUT and that doesn't work with the framework
-
-   call AFI_Copyafinfotype( AFInfo, fcnArgs%AFInfo, MESH_NEWCOPY, errStat, errMsg )
-   
-   fcnArgs%Vx              = Vx
-   fcnArgs%Vy              = Vy
-   fcnArgs%Vinf            = Vinf
-   fcnArgs%useTanInd       = useTanInd
-   fcnArgs%useAIDrag       = useAIDrag
-   fcnArgs%useTIDrag       = useTIDrag
-   fcnArgs%useHubLoss      = useHubLoss
-   fcnArgs%useTipLoss      = useTipLoss
-   fcnArgs%hubLossConst    = hubLossConst
-   fcnArgs%tipLossConst    = tipLossConst
-   fcnArgs%SkewWakeMod     = SkewWakeMod
-   fcnArgs%UA_Flag         = UA_Flag
-   
-      ! Need to copy the following
-   call UA_CopyParam( p_UA, fcnArgs%p_UA, MESH_NEWCOPY, errStat, errMsg ) 
-   call UA_CopyDiscState( xd_UA, fcnArgs%xd_UA, MESH_NEWCOPY, errStat, errMsg )  
-   call UA_CopyOtherState( OtherState_UA, fcnArgs%OtherState_UA, MESH_NEWCOPY, errStat, errMsg )
-   
-      ! call root finding hybrd1 alogorithm
-   call NWTC_MINPACK_hybrd1(2, x, fvec, aTol, info, wa, lwa, fcnArgs )
-   
-   deallocate(wa)
-   
-   axInduction  = x(1)
-   tanInduction = x(2)
-   
-end subroutine BEMT_CoupledSolve
 
 
 end module BEMT
