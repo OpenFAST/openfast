@@ -75,8 +75,6 @@ typedef   ^                            ^                             UA_Discrete
 # Define constraint states here:
 #
 typedef   ^                            ConstraintStateType           ReKi                     phi                             {:}{:}         -         -         "angle between the plane of rotation and the direction of the local wind" rad
-typedef   ^                            ConstraintStateType           ReKi                     axInduction                     {:}{:}         -         -         "axial induction factor" -
-typedef   ^                            ConstraintStateType           ReKi                     tanInduction                    {:}{:}         -         -         "tangential induction factor" -
 #
 # Define any data that are not considered actual states here:
 #   e.g. data used only for efficiency purposes (indices for searching in an array,  copies of previous calculations of output at a given time, etc.)
@@ -84,7 +82,7 @@ typedef   ^                            ConstraintStateType           ReKi       
 typedef   ^                            OtherStateType                ReKi                     DummyOtherState                     -           -         -         ""   -
 typedef   ^                            ^                             UA_OtherStateType        UA                                  -             -         -        "other states for UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         {:}{:}          -         -        "logical flag indicating whether to use UnsteadyAero"        -
-#typedef   ^                            ^                             UA_OutputType            y_UA                                -             -         -        "other states for UnsteadyAero"        -
+typedef   ^                            ^                             UA_OutputType            y_UA                                -             -         -        "other states for UnsteadyAero"        -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
@@ -124,12 +122,11 @@ typedef   ^                            ^                             ReKi       
 typedef   ^                            ^                             ReKi                     omega                           -              -         -         "Angular velocity of rotor" rad/s
 typedef   ^                            ^                             ReKi                     Vx                              {:}{:}         -         -         "Local axial velocity at node" m/s
 typedef   ^                            ^                             ReKi                     Vy                              {:}{:}         -         -         "Local tangential velocity at node" m/s
-typedef   ^                            ^                             ReKi                     Vinf                            {:}{:}         -         -         "Local upstream velocity at node" m/s
 typedef   ^                            ^                             ReKi                     rLocal                          {:}{:}         -         -         "Radial distance from center-of-rotation to node" m
 #
 # ..... Outputs ...................................................................................................................
 # Define outputs that are contained on the mesh here:
-typedef   ^                            OutputType                    ReKi                     inducedVel                      {:}{:}         -         -         "Total local induced velocity" m/s
+typedef   ^                            OutputType                    ReKi                     Vrel                            {:}{:}         -         -         "Total local relative velocity" m/s
 typedef   ^                            ^                             ReKi                     phi                             {:}{:}         -         -         "angle between the plane of rotation and the direction of the local wind" rad
 typedef   ^                            ^                             ReKi                     axInduction                     {:}{:}         -         -         "Distributed viscous drag loads"   -
 typedef   ^                            ^                             ReKi                     tanInduction                    {:}{:}         -         -         "Distributed inertial loads"   -

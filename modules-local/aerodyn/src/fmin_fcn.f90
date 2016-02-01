@@ -29,8 +29,6 @@ module fminfcn
    use BEMTUnCoupled
    
    type, public :: fmin_fcnArgs 
-      real(ReKi)        :: psi
-      real(ReKi)        :: chi0
       real(ReKi)        :: airDens
       real(ReKi)        :: mu
       integer           :: numBlades
@@ -41,6 +39,7 @@ module fminfcn
       type(AFInfoType)  :: AFInfo
       real(ReKi)        :: Vx
       real(ReKi)        :: Vy
+      real(ReKi)        :: Re
       logical           :: useTanInd 
       logical           :: useAIDrag
       logical           :: useTIDrag
@@ -48,11 +47,6 @@ module fminfcn
       logical           :: useTipLoss 
       real(ReKi)        :: hubLossConst 
       real(ReKi)        :: tipLossConst    
-      integer(IntKi)    :: SkewWakeMod
-      logical                     :: UA_Flag
-      type(UA_ParameterType)      :: p_UA           ! Parameters
-      type(UA_DiscreteStateType)  :: xd_UA          ! Discrete states at Time
-      type(UA_OtherStateType)     :: OtherState_UA  ! Other/optimization states
       integer(IntKi)    :: errStat       ! Error status of the operation
       character(ErrMsgLen)   :: errMsg        ! Error message if ErrStat /= ErrID_None
    end type fmin_fcnArgs
@@ -65,19 +59,26 @@ module fminfcn
 !   real(ReKi),           intent(in   )   :: x
 !   integer   ,           intent(  out)   :: iflag   
 !   type(fmin_fcnArgs),  intent(inout)    :: fcnArgs
+   
 real(ReKi) function fmin_fcn(x, fcnArgs)
    real(ReKi),           intent(in   )   :: x
    type(fmin_fcnArgs),  intent(inout)    :: fcnArgs
    
    integer(IntKi)       :: errStat       ! Error status of the operation
    character(ErrMsgLen) :: errMsg        ! Error message if ErrStat /= ErrID_None
-   !iflag = 0
+   real(ReKi)           :: AOA
    
-   ! Call the UncoupledErrFn subroutine to compute the residual
-   fmin_fcn = UncoupledErrFn( x,  fcnArgs%psi, fcnArgs%chi0, 1, fcnArgs%airDens, fcnArgs%mu, fcnArgs%numBlades, fcnArgs%rlocal, fcnArgs%rtip, fcnArgs%chord, fcnArgs%theta, fcnArgs%AFInfo, &
-                              fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst, fcnArgs%SkewWakeMod, &
-                              fcnArgs%UA_Flag, fcnArgs%p_UA, fcnArgs%xd_UA, fcnArgs%OtherState_UA, &
+   
+      ! Call the UncoupledErrFn subroutine to compute the residual
+   AOA      = x - fcnArgs%theta
+   fmin_fcn = UncoupledErrFn( x,  AOA, fcnArgs%Re, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%rtip, fcnArgs%chord, fcnArgs%AFInfo, &
+                              fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &
                               errStat, errMsg)  
+   
+  ! fmin_fcn = UncoupledErrFn( x,  AOA, fcnArgs%psi, fcnArgs%Re, 1, fcnArgs%airDens, fcnArgs%mu, fcnArgs%numBlades, fcnArgs%rlocal, fcnArgs%rtip, fcnArgs%chord, fcnArgs%theta, fcnArgs%AFInfo, &
+  !                            fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &
+  !                            errStat, errMsg)  
+   
    
    fcnArgs%errStat = errStat
    fcnArgs%errMsg  = errMsg

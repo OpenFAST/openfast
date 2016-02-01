@@ -25,12 +25,12 @@ MODULE AeroDyn_IO
  
    use NWTC_Library
    use AeroDyn_Types
-   use BladeElement, only : SkewMod_Uncoupled, SkewMod_PittPeters, SkewMod_Coupled
+   use BEMTUncoupled, only : SkewMod_Uncoupled, SkewMod_PittPeters
 
    
    implicit none
    
-   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.00.01a-bjj', '29-Jan-2016' )
+   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.01.01a-gjh', '1-Feb-2016' )
    character(*),   parameter  :: AD_Nickname = 'AD'
       
 ! ===================================================================================================
@@ -1424,7 +1424,7 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, OtherState, y, ErrStat, ErrMsg )
                                  
          OtherState%AllOuts( i+4  ) =  OtherState%BEMT_y%axInduction(j,k)
          OtherState%AllOuts( i+5  ) =  OtherState%BEMT_y%tanInduction(j,k)
-         OtherState%AllOuts( i+6  ) =  OtherState%BEMT_y%inducedVel(j,k)
+         OtherState%AllOuts( i+6  ) =  OtherState%BEMT_y%Vrel(j,k)
          OtherState%AllOuts( i+7  ) =  OtherState%BEMT_y%phi(j,k)*R2D   
          OtherState%AllOuts( i+8  ) =  (OtherState%BEMT_y%phi(j,k) - OtherState%BEMT_u%theta(j,k))*R2D         
                                       
@@ -1512,6 +1512,7 @@ SUBROUTINE Calc_WriteOutput( p, u, OtherState, y, ErrStat, ErrMsg )
          
          j=p%BlOutNd(beta)
          
+         
          tmp = matmul( OtherState%WithoutSweepPitchTwist(:,:,j,k), u%InflowOnBlade(:,j,k) )
          OtherState%AllOuts( BNVUndx(beta,k) ) = tmp(1)
          OtherState%AllOuts( BNVUndy(beta,k) ) = tmp(2)
@@ -1527,10 +1528,10 @@ SUBROUTINE Calc_WriteOutput( p, u, OtherState, y, ErrStat, ErrMsg )
          OtherState%AllOuts( BNSTVy( beta,k) ) = tmp(2)
          OtherState%AllOuts( BNSTVz( beta,k) ) = tmp(3)
          
-         OtherState%AllOuts( BNVrel( beta,k) ) = OtherState%BEMT_y%inducedVel(j,k)
-         OtherState%AllOuts( BNDynP( beta,k) ) = 0.5 * p%airDens * OtherState%BEMT_y%inducedVel(j,k)**2
-         OtherState%AllOuts( BNRe(   beta,k) ) = p%BEMT%chord(j,k) * OtherState%BEMT_y%inducedVel(j,k) / p%KinVisc / 1.0E6
-         OtherState%AllOuts( BNM(    beta,k) ) = OtherState%BEMT_y%inducedVel(j,k) / p%SpdSound
+         OtherState%AllOuts( BNVrel( beta,k) ) = OtherState%BEMT_y%Vrel(j,k)
+         OtherState%AllOuts( BNDynP( beta,k) ) = 0.5 * p%airDens * OtherState%BEMT_y%Vrel(j,k)**2
+         OtherState%AllOuts( BNRe(   beta,k) ) = p%BEMT%chord(j,k) * OtherState%BEMT_y%Vrel(j,k) / p%KinVisc / 1.0E6
+         OtherState%AllOuts( BNM(    beta,k) ) = OtherState%BEMT_y%Vrel(j,k) / p%SpdSound
 
          OtherState%AllOuts( BNVIndx(beta,k) ) = - OtherState%BEMT_u%Vx(j,k) * OtherState%BEMT_y%axInduction( j,k)
          OtherState%AllOuts( BNVIndy(beta,k) ) =   OtherState%BEMT_u%Vy(j,k) * OtherState%BEMT_y%tanInduction(j,k)
@@ -2382,9 +2383,7 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, OtherState, ErrStat, ErrMsg )
          case (SkewMod_Uncoupled)
             Msg = 'uncoupled'
          case (SkewMod_PittPeters)
-            Msg = 'Pitt/Peters'
-         case (SkewMod_Coupled)
-            Msg = 'coupled'      
+            Msg = 'Pitt/Peters' 
          case default      
             Msg = 'unknown'      
       end select

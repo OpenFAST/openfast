@@ -115,6 +115,7 @@ program AeroDyn_Driver
          call Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
             call CheckError()
    
+         
             
             ! Calculate outputs at n
 
@@ -127,7 +128,7 @@ program AeroDyn_Driver
             
             ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
 
-         call AD_UpdateStates( time, n, AD%u, AD%InputTime, AD%p, AD%x, AD%xd, AD%z, AD%OtherState, errStat, errMsg )
+         call AD_UpdateStates( time, nt, AD%u, AD%InputTime, AD%p, AD%x, AD%xd, AD%z, AD%OtherState, errStat, errMsg )
             call CheckError()
       
                   

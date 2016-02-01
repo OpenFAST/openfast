@@ -945,8 +945,8 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, errStat, e
    character(*),                   intent(  out) :: errMsg     ! Error message if ErrStat /= ErrID_None
 
    ! local variables
-   type(AD_InputType)                           :: uInterp     ! Interpolated/Extrapolated input
-   
+   type(AD_InputType)                           :: uInterp(2)     ! Interpolated/Extrapolated input
+   type(AD_OtherStateType)                      :: OtherState2     ! Second timestep's Other/optimization states
    integer(intKi)                               :: ErrStat2          ! temporary Error status
    character(ErrMsgLen)                         :: ErrMsg2           ! temporary Error message
    character(*), parameter                      :: RoutineName = 'AD_UpdateStates'
@@ -955,24 +955,42 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, errStat, e
    ErrMsg  = ""
      
 
-   call AD_CopyInput( u(1), uInterp, MESH_NEWCOPY, errStat2, errMsg2)
+   call AD_CopyInput( u(1), uInterp(1), MESH_NEWCOPY, errStat2, errMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      end if
+   call AD_CopyInput( u(1), uInterp(2), MESH_NEWCOPY, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
          return
       end if
       
-   call AD_Input_ExtrapInterp(u,utimes,uInterp,t, errStat2, errMsg2)
+   call AD_CopyOtherState( OtherState, OtherState2, MESH_NEWCOPY, errStat2, errMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         call Cleanup()
+         return
+      end if
+      
+      
+   call AD_Input_ExtrapInterp(u,utimes,uInterp(1),t, errStat2, errMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      
+   call AD_Input_ExtrapInterp(u,utimes,uInterp(2),t+p%DT, errStat2, errMsg2)
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-   call SetInputs(p, uInterp, OtherState, errStat2, errMsg2)      
+   call SetInputs(p, uInterp(1), OtherState, errStat2, errMsg2)      
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
-   
+   call SetInputs(p, uInterp(2), OtherState2, errStat2, errMsg2)      
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    !if ( p%WakeMod == WakeMod_BEMT ) then
                   
          ! Call into the BEMT update states    NOTE:  This is a non-standard framework interface!!!!!  GJH
-      call BEMT_UpdateStates(t, n, OtherState%BEMT_u,  p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI%AFInfo, errStat2, errMsg2)
+      call BEMT_UpdateStates(t, n, OtherState%BEMT_u, OtherState2%BEMT_u,  p%BEMT, x%BEMT, xd%BEMT, z%BEMT, OtherState%BEMT, p%AFI%AFInfo, errStat2, errMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
    !end if
@@ -981,7 +999,9 @@ subroutine AD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, errStat, e
    
 contains
    subroutine Cleanup()
-      call AD_DestroyInput( uInterp, errStat2, errMsg2)
+      call AD_DestroyInput( uInterp(1), errStat2, errMsg2)
+      call AD_DestroyInput( uInterp(2), errStat2, errMsg2)
+      call AD_DestroyOtherState( OtherState2, errStat2, errMsg2)
    end subroutine Cleanup
 end subroutine AD_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1291,19 +1311,8 @@ subroutine SetInputsForBEMT(p, u, OtherState, errStat, errMsg)
          OtherState%BEMT_u%rLocal(j,k) = sqrt( tmp_sz + tmp_sz_y )
          
       end do !j=nodes      
-   end do !k=blades
-   
-   
-   ! values for coupled model:
-! FIX ME!!!!
- !???  ! "Local upstream velocity at node" m/s
-   !do k=1,p%NumBlades
-   !   do j=1,p%NumBlNds
-   !      OtherState%BEMT_u%Vinf(j,k) = TwoNorm( OtherState%DisturbedInflow(:,j,k) ) 
-   !   end do
-   !end do
-   
-      
+   end do !k=blades  
+  
 end subroutine SetInputsForBEMT
 !----------------------------------------------------------------------------------------------------------------------------------
 subroutine SetOutputsFromBEMT(p, OtherState, y )
@@ -1327,7 +1336,7 @@ subroutine SetOutputsFromBEMT(p, OtherState, y )
    do k=1,p%NumBlades
       do j=1,p%NumBlNds
                       
-         q = 0.5 * p%airDens * OtherState%BEMT_y%inducedVel(j,k)**2        ! dynamic pressure of the jth node in the kth blade
+         q = 0.5 * p%airDens * OtherState%BEMT_y%Vrel(j,k)**2        ! dynamic pressure of the jth node in the kth blade
          force(1) =  OtherState%BEMT_y%cx(j,k) * q * p%BEMT%chord(j,k)     ! X = normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade
          force(2) = -OtherState%BEMT_y%cy(j,k) * q * p%BEMT%chord(j,k)     ! Y = tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade
          moment(3)=  OtherState%BEMT_y%cm(j,k) * q * p%BEMT%chord(j,k)**2  ! M = pitching moment per unit length of the jth node in the kth blade
@@ -1369,7 +1378,7 @@ SUBROUTINE ValidateInputData( InputFileData, NumBl, ErrStat, ErrMsg )
    ErrMsg  = ""
    
 !bjj >>> added for release (UA not producing the results we want, yet)   
-   if (InputFileData%AFAeroMod == AFAeroMod_BL_unsteady) call SetErrStat ( ErrID_Fatal, 'Unsteady aerodynamics module is not enabled in this version of AeroDyn. Set AFAeroMod to 1.', ErrStat, ErrMsg, RoutineName ) 
+!   if (InputFileData%AFAeroMod == AFAeroMod_BL_unsteady) call SetErrStat ( ErrID_Fatal, 'Unsteady aerodynamics module is not enabled in this version of AeroDyn. Set AFAeroMod to 1.', ErrStat, ErrMsg, RoutineName ) 
 !bjj <<<      
    
    if (NumBl > MaxBl .or. NumBl < 1) call SetErrStat( ErrID_Fatal, 'Number of blades must be between 1 and '//trim(num2lstr(MaxBl))//'.', ErrSTat, ErrMsg, RoutineName )

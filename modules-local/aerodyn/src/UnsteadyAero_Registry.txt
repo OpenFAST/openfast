@@ -78,9 +78,12 @@ typedef   ^                            DiscreteStateType             ReKi       
 typedef   ^                            DiscreteStateType             ReKi                     fprime_minus1                   {:}{:}        -         -        "separation point distance from leading edge, expressed in cord fraction, previous time step"        -                 
 typedef   ^                            DiscreteStateType             ReKi                     fprime_c_minus1                 {:}{:}        -         -        "separation point distance from leading edge, expressed in cord fraction, previous time step"        -                 
 typedef   ^                            DiscreteStateType             ReKi                     tau_V                           {:}{:}        -         -        "time variable, tracking the travel of the LE vortex over the airfoil suction surface"        -                 
+typedef   ^                            DiscreteStateType             ReKi                     tau_V_minus1                    {:}{:}        -         -        "time variable, tracking the travel of the LE vortex over the airfoil suction surface"        -                 
 typedef   ^                            DiscreteStateType             ReKi                     Cn_v_minus1                     {:}{:}        -         -        "normal force coefficient due to the presence of LE vortex, previous time step"        -                 
 typedef   ^                            DiscreteStateType             ReKi                     C_V_minus1                      {:}{:}        -         -        "contribution to the normal force coefficient due to accumulated vorticity in the LE vortex, previous time step"        -                 
 typedef   ^                            DiscreteStateType             ReKi                     Dfalpha_minus1                  {:}{:}        -         -        "deficiency function used in the development of alpha_f_prime, previous time step"       rad
+typedef   ^                            DiscreteStateType             ReKi                     Cn_prime_diff_minus1            {:}{:}        -         -        "difference between Cn_prime and Cn_prime_minus1, previous time step"       rad
+typedef   ^                            DiscreteStateType             ReKi                     Cn_prime_minus1                 {:}{:}        -         -        "difference between Cn_prime and Cn_prime_minus1, previous time step"       rad
 #
 #
 # Define constraint states here:
@@ -96,6 +99,7 @@ typedef   ^                            OtherStateType                LOGICAL    
 typedef   ^                            OtherStateType                LOGICAL                  LESF                            {:}{:}        -         -        "logical flag indicating if leading edge separation is possible"   -
 typedef   ^                            OtherStateType                LOGICAL                  VRTX                            {:}{:}        -         -        "logical flag indicating if a vortex is being processed"   -
 typedef   ^                            OtherStateType                LOGICAL                  FirstPass                       {:}{:}        -         -        "logical flag indicating if this is the first time step"   -
+typedef   ^                            OtherStateType                LOGICAL                  BEDSEP                          {:}{:}        -         -        "logical flag indicating if this is undergoing separated flow"   -
 typedef   ^                            OtherStateType                INTEGER                  iBladeNode                      -             -         -        "index for the blade node being operated on (within the current blade)" -
 typedef   ^                            OtherStateType                INTEGER                  iBlade                          -             -         -        "index for the blade being operated on" -
 # ..... Parameters ................................................................................................................
