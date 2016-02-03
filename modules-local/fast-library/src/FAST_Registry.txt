@@ -68,7 +68,6 @@ typedef	^	^	SiKi	TowerRad	{:}	-	-	"radius of each ED tower node"	m
 typedef	^	^	FAST_VTK_BLSurfaceType	BladeShape	{:}	-	-	"AirfoilCoords for each blade"	m
 typedef	^	^	SiKi	MorisonRad	{:}	-	-	"radius of each Morison node"	m
 
-
 # ..... FAST_ParameterType data .......................................................................................................
 # Misc data for coupling:
 typedef	FAST	FAST_ParameterType	DbKi	DT	-	-	-	"Integration time step [global time]"	s
@@ -123,6 +122,7 @@ typedef	^	^	CHARACTER(20)	OutFmt	-	-	-	"Format used for text tabular output (exc
 typedef	^	^	CHARACTER(1024)	OutFileRoot	-	-	-	"The rootname of the output files"	-
 typedef	^	^	CHARACTER(1024)	FTitle	-	-	-	"The description line from the FAST (glue-code) input file"	-
 typedef	^	^	FAST_VTK_SurfaceType	VTK_surface	-	-	-	"Data for VTK surface visualization"
+typedef	^	^	SiKi	TurbinePos	{3}	-	-	"Initial position of turbine base (origin used for graphics)"	m
 
 # ..... FAST_OutputFileType data .......................................................................................................
 typedef	FAST	FAST_OutputFileType	DbKi	TimeData	{:}	-	-	"Array to contain the time output data for the binary file (first output time and a time [fixed] increment)"
