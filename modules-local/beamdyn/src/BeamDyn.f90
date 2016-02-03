@@ -1408,9 +1408,9 @@ SUBROUTINE BD_UpdateStates( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat
    ErrMsg  = ""
    
          
-   IF(p%analysis_type == 2) THEN
+   IF(p%analysis_type == BD_DYNAMIC_ANALYSIS) THEN
        CALL BD_GA2( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
-   ELSEIF(p%analysis_type == 1) THEN
+   ELSEIF(p%analysis_type == BD_STATIC_ANALYSIS) THEN
        CALL BD_Static( t, n, u, utimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
    ENDIF
 
@@ -1520,7 +1520,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_BoundaryGA2(x_tmp,p,u_tmp,t,OS_tmp,m,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   IF(p%analysis_type .EQ. 2) THEN
+   IF(p%analysis_type .EQ. BD_DYNAMIC_ANALYSIS) THEN
        CALL BD_CalcForceAcc(u_tmp,p,x_tmp,OS_tmp,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
        DO i=1,p%elem_total
@@ -1551,7 +1551,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
                                     p%ngp,p%quadrature,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
                                     temp_Force,ErrStat2,ErrMsg2)
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   ELSEIF(p%analysis_type .EQ. 1) THEN
+   ELSEIF(p%analysis_type .EQ. BD_STATIC_ANALYSIS) THEN
        CALL BD_StaticSolutionForce( x%q,x%dqdt,p%Stif0_GL,p%Mass0_GL,&
                u_tmp,p%node_elem,p%dof_node,p%elem_total,&
                p%ngp,p%quadrature,p%GLw,p%Shp,p%Der,p%Jacobian,p%uu0,p%E10,&
@@ -1559,7 +1559,7 @@ SUBROUTINE BD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    ENDIF
 
-   IF(p%analysis_type .EQ. 2) THEN
+   IF(p%analysis_type .EQ. BD_DYNAMIC_ANALYSIS) THEN
        temp6(1:6) = -OS_tmp%Acc(1:6)
        temp_cc(:) = MATMUL(p%GlbRot,temp6(1:3))
        y%ReactionForce%Force(1,1) = temp_cc(2)

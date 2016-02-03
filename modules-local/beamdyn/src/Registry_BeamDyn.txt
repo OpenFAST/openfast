@@ -8,6 +8,11 @@
 ##################################################################################################################################
 include Registry_NWTC_Library.txt
 
+# BeamDyn Constants
+param   BeamDyn/BD   -           IntKi    BD_STATIC_ANALYSIS   -  1  -  "Constant for static analysis" -
+param   BeamDyn/BD   -           IntKi    BD_DYNAMIC_ANALYSIS  -  2  -  "Constant for dynamic analysis" -
+
+
 # ..... Initialization data
 # .......................................................................................................
 # Define inputs that the initialization routine may need here:
