@@ -1726,9 +1726,9 @@ SUBROUTINE BD_PrintSum( p, u, y, x, m, RootName, ErrStat, ErrMsg )
    WRITE (UnSu,'(A)')  'Gravity vector (m/s^2):' 
    WRITE (UnSu,'(3ES18.5)' ) p%gravity(:)
 
-   IF(p%analysis_type .EQ. 1) THEN
+   IF(p%analysis_type .EQ. BD_STATIC_ANALYSIS) THEN
        WRITE (UnSu,'(A)')  'Analysis type: STATIC' 
-   ELSEIF(p%analysis_type .EQ. 2) THEN
+   ELSEIF(p%analysis_type .EQ. BD_DYNAMIC_ANALYSIS) THEN
        WRITE (UnSu,'(A)')  'Analysis type: DYNAMIC' 
    ENDIF
 
