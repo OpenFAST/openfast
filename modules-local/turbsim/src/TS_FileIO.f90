@@ -2999,6 +2999,7 @@ INTEGER(IntKi),              intent(  out)   :: ErrStat                         
 CHARACTER(*),                intent(  out)   :: ErrMsg                           ! Message describing error
 
 
+REAL(DbKi)                   ::  denom                           ! denominator of equation
 REAL(DbKi)                   ::  SumS                            ! Sum of the velocity-squared, used for calculating standard deviations in the summary file
 REAL(DbKi)                   ::  UBar                            ! The mean u-component wind speed at the hub
 REAL(DbKi)                   ::  UHBar                           ! The mean horizontal wind speed at the hub
@@ -3333,10 +3334,27 @@ INTEGER(IntKi)               :: IT, IVec, IY, IZ, II
 
 
       ! Calculate Cross-component correlation coefficients
-   UWcor = ( UW_RS ) / (USig * WSig) ! this definition assumes u' and w' have zero mean
-   UVcor = ( UV_RS ) / (USig * VSig)
-   VWcor = ( VW_RS ) / (VSig * WSig)
+   denom = USig * WSig
+   if ( EqualRealNos( denom, 0.0_DbKi ) ) then
+      UWcor = 0.0
+   else
+      UWcor = UW_RS / denom ! this definition assumes u' and w' have zero mean
+   end if
 
+   denom = USig * VSig
+   if ( EqualRealNos( denom, 0.0_DbKi ) ) then
+      UVcor = 0.0
+   else
+      UVcor = UV_RS / denom
+   end if
+   
+   denom = VSig * WSig
+   if ( EqualRealNos( denom, 0.0_DbKi ) ) then
+      VWcor = 0.0
+   else
+      VWcor = VW_RS / denom
+   end if
+      
 
       ! Calculate turbulence intensities.
    U_TI = USig/UBar    

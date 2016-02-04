@@ -109,18 +109,18 @@ CALL GetRoot( InFile, p%RootName )
    ! Open input file and summary file.
 
 CALL OpenSummaryFile( p%RootName, p%US, p%DescStr, ErrStat, ErrMsg )
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
    ! Get input parameters.
 
 CALL ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
 CALL WrSum_EchoInputs(p) 
 call WrSum_UserInput(p%met,p%usr, p%US)
 
 CALL TS_ValidateInput(p, ErrStat, ErrMsg)
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
 
 !..................................................................................................................................
@@ -129,7 +129,7 @@ CALL CheckError()
 
    ! Define the other parameters for the time series.
 CALL CreateGrid( p%grid, p%usr, p%UHub, p%WrFile(FileExt_TWR), ErrStat, ErrMsg )
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
       
 !..................................................................................................................................
 ! Calculate mean velocity and direction profiles:
@@ -137,24 +137,24 @@ CALL CheckError()
 
    !  Wind speed:
 CALL AllocAry(U,     SIZE(p%grid%Z), 'u (steady, u-component winds)', ErrStat, ErrMsg )
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
 IF ( p%met%WindProfileType(1:3) == 'API' )  THEN
    CALL getVelocityProfile( p, p%met%URef, p%met%RefHt,  p%grid%Z, U, ErrStat, ErrMsg)
 ELSE 
    CALL getVelocityProfile( p, p%UHub,     p%grid%HubHt, p%grid%Z, U, ErrStat, ErrMsg) 
 ENDIF
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
    ! Wind Direction:
 CALL AllocAry(HWindDir, SIZE(p%grid%Z), 'HWindDir (wind direction profile)', ErrStat, ErrMsg )                  ! Allocate the array for the wind direction profile      
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
 CALL AllocAry(VWindDir, SIZE(p%grid%Z), 'VWindDir (vertical wind angle profile)', ErrStat, ErrMsg )             ! Allocate the array for the vertical wind profile      
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
 CALL getDirectionProfile(p, p%grid%Z, HWindDir, VWindDir, ErrStat, ErrMsg)
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
    
 p%met%HH_HFlowAng = HWindDir( p%grid%HubIndx )
 p%met%HH_VFlowAng = VWindDir( p%grid%HubIndx )
@@ -169,9 +169,9 @@ IF ( p%met%TurbModel_ID == SpecModel_GP_LLJ) THEN
       ! Allocate the arrays for the z/l and ustar profile
       
    CALL AllocAry(p%met%ZL_profile,    SIZE(p%grid%Z), 'ZL_profile (z/l profile)', ErrStat, ErrMsg )
-   CALL CheckError()
+   CALL CheckError(ErrStat, ErrMsg)
    CALL AllocAry(p%met%Ustar_profile, SIZE(p%grid%Z), 'Ustar_profile (friction velocity profile)', ErrStat, ErrMsg )         
-   CALL CheckError()
+   CALL CheckError(ErrStat, ErrMsg)
 
    p%met%ZL_profile(:)    = getZLProfile(       U, p%grid%Z, p%met%Rich_No, p%met%ZL, p%met%L, p%met%ZLOffset, p%met%WindProfileType )
    p%met%Ustar_profile(:) = getUStarProfile( p, U, p%grid%Z, p%met%UStarOffset, p%met%UStarSlope )
@@ -180,7 +180,7 @@ END IF
 
            
 CALL WrSum_SpecModel( p, U, HWindDir, VWindDir, ErrStat, ErrMsg )
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
 
 !..................................................................................................................................
@@ -188,10 +188,10 @@ CALL CheckError()
 !..................................................................................................................................
 
 CALL AllocAry( S,    p%grid%NumFreq,p%grid%NPoints,3, 'S (turbulence PSD)',ErrStat, ErrMsg )
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
 CALL CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
    ! we don't need these arrays any more, so deallocate to save some space
 IF ( ALLOCATED( p%met%USR_Z         ) )  DEALLOCATE( p%met%USR_Z           )
@@ -214,10 +214,10 @@ IF ( ALLOCATED( p%usr%meanVAng      ) )  DEALLOCATE( p%usr%meanVAng        )
 !..................................................................................................................................
    
 CALL AllocAry( PhaseAngles, p%grid%NPoints, p%grid%NumFreq, 3, 'Random Phases', ErrStat, ErrMsg )
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
         
 CALL SetPhaseAngles( p, OtherSt_RandNum, PhaseAngles, ErrStat, ErrMsg )
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
    ! we don't need these arrays any more, so deallocate to save some space
 IF ( ALLOCATED(OtherSt_RandNum%nextSeed ) ) DEALLOCATE( OtherSt_RandNum%nextSeed )  
@@ -228,7 +228,7 @@ IF ( ALLOCATED(p%usr%f                  ) ) DEALLOCATE( p%usr%f                 
 ! Get the Fourier Coefficients
 !..................................................................................................................................
 CALL AllocAry( V, p%grid%NumSteps, p%grid%NPoints, 3, 'V (velocity)', ErrStat, ErrMsg) !  Allocate the array that contains the velocities.
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
 
    ! Calculate the transfer function matrices from the spectral matrix (the fourier coefficients).
@@ -236,6 +236,7 @@ CALL CheckError()
 CALL WrScr ( ' Calculating the spectral and transfer function matrices:' )
 
 CALL CalcFourierCoeffs(  p, U, PhaseAngles, S, V, ErrStat, ErrMsg )
+CALL CheckError(ErrStat, ErrMsg)
 
 
    ! we don't need these arrays any more, so deallocate to save some space
@@ -247,20 +248,20 @@ IF ( ALLOCATED( PhaseAngles ) )  DEALLOCATE( PhaseAngles )
 ! Create the time series
 !..................................................................................................................................  
 CALL Coeffs2TimeSeries( V, p%grid%NumSteps, p%grid%NPoints, p%usr%NPoints, ErrStat, ErrMsg)
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
 !..................................................................................................................................
 ! Scale time series (if desired) for cross-component correlation or IEC statistics:
 !..................................................................................................................................  
 CALL ScaleTimeSeries(p, V, ErrStat, ErrMsg)
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
 
 !..................................................................................................................................
 ! Write statistics of the run to the summary file:
 !..................................................................................................................................
 CALL WrSum_Stats(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
-CALL CheckError()
+CALL CheckError(ErrStat, ErrMsg)
 
 !..................................................................................................................................
 ! Write hub-height output files (before adding mean and rotating final results)
@@ -268,17 +269,17 @@ CALL CheckError()
 
 IF ( p%WrFile(FileExt_HH) )  THEN
    CALL WrHH_ADtxtfile(p, V, p%IEC%TurbInt, ErrStat, ErrMsg)   
-   CALL CheckError()
+   CALL CheckError(ErrStat, ErrMsg)
 END IF
 
 IF ( p%WrFile(FileExt_BIN) )  THEN
    CALL WrHH_binary(p, V, ErrStat, ErrMsg)
-   CALL CheckError()
+   CALL CheckError(ErrStat, ErrMsg)
 END IF
 
 IF ( p%WrFile(FileExt_DAT) )  THEN
    CALL WrHH_text(p, V, ErrStat, ErrMsg )   
-   CALL CheckError()
+   CALL CheckError(ErrStat, ErrMsg)
 END IF
 
 
@@ -299,7 +300,7 @@ IF ( ALLOCATED( VWindDir       ) )  DEALLOCATE( VWindDir       )
 IF ( p%WrFile(FileExt_CTS) ) THEN
    
    CALL CohStr_WriteCTS(p, WSig, OtherSt_RandNum, ErrStat, ErrMsg)
-   CALL CheckError()
+   CALL CheckError(ErrStat, ErrMsg)
                
 ENDIF !WrACT
 
@@ -313,12 +314,12 @@ IF ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) ) THEN
       
    IF ( p%WrFile(FileExt_BTS) ) THEN
       CALL WrBinTURBSIM(p, V, ErrStat, ErrMsg)
-      CALL CheckError()
+      CALL CheckError(ErrStat, ErrMsg)
    END IF   
    
    IF ( p%WrFile(FileExt_WND) ) THEN      
       CALL WrBinBLADED(p, V, USig, VSig, WSig, ErrStat, ErrMsg)
-      CALL CheckError()
+      CALL CheckError(ErrStat, ErrMsg)
    END IF
 END IF
 
@@ -347,10 +348,14 @@ CALL NormStop
 
 CONTAINS
 !..................................................................................................................................
-SUBROUTINE CheckError()
-   IF (ErrStat /= ErrID_None) THEN
+SUBROUTINE CheckError(ErrID,Msg)
+   INTEGER(IntKi), INTENT(IN)           :: ErrID       ! The error identifier (ErrStat)
+   CHARACTER(*),   INTENT(IN)           :: Msg         ! The error message (ErrMsg)
+
+
+   IF (ErrID /= ErrID_None) THEN
    
-      IF (ErrStat >= AbortErrLev) THEN
+      IF (ErrID >= AbortErrLev) THEN
 
          IF (ALLOCATED(PhaseAngles)) DEALLOCATE(PhaseAngles)
          IF (ALLOCATED(S          )) DEALLOCATE(S          )
@@ -360,15 +365,15 @@ SUBROUTINE CheckError()
          IF (ALLOCATED(VWindDir   )) DEALLOCATE(VWindDir   )
          
          
-         WRITE (p%US, "(/'ERROR:  ', A / )") TRIM(ErrMSg)
+         WRITE (p%US, "(/'ERROR:  ', A / )") TRIM(Msg)
          WRITE (p%US, "('ABORTING PROGRAM.')" )
 
          CALL TS_end(p, OtherSt_RandNum)
          
-         CALL ProgAbort ( TRIM(ErrMSg), .FALSE., 5.0_ReKi )
+         CALL ProgAbort ( TRIM(Msg), .FALSE., 5.0_ReKi )
          
       ELSE
-         CALL WrScr(TRIM(ErrMsg))
+         CALL WrScr(TRIM(Msg))
       END IF
       
    END IF
