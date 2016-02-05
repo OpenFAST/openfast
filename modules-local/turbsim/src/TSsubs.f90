@@ -1560,7 +1560,7 @@ FUNCTION IndexOnGrid( p_grid, y, z )
       ! local variables
    INTEGER(IntKi)                              :: YIndx           !  Index on regularly spaced grid
    INTEGER(IntKi)                              :: ZIndx           !  Index on regularly spaced grid
-   INTEGER(IntKi)                              :: y1              !  left-most location on grid
+   REAL(ReKi)                                  :: y1              !  left-most location on grid
 
       
    y1 = -0.5_ReKi * p_grid%GridWidth
