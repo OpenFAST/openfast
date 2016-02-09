@@ -1297,20 +1297,7 @@ SUBROUTINE FAST_Init( p, y_FAST, t_initial, ErrStat, ErrMsg, InFile, TMax, TurbI
 
    
    IF ( ErrStat >= AbortErrLev ) RETURN
-
    
-   !...............................................................................................................................
-
-      ! temporary check on p_FAST%DT_out (bjj: fix this later)
-
-   IF ( .NOT. EqualRealNos( p%DT_out, p%DT ) ) THEN
-      IF ( p%DT_out < p%DT ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'DT_out must be at least DT ('//TRIM(Num2LStr(p%DT))//' s).', ErrStat, ErrMsg, RoutineName )
-      ELSEIF ( .NOT. EqualRealNos( p%DT_out, p%DT * NINT(p%DT_out / p%DT ) )  ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'DT_out must currently be an integer multiple of DT.', ErrStat, ErrMsg, RoutineName )
-      END IF
-   END IF
-
    
    RETURN
 END SUBROUTINE FAST_Init
@@ -1404,6 +1391,19 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
       call SetErrStat(ErrID_Fatal, 'WrVTK must be 0 (none), 1 (basic), 2 (surfaces), or 3 (all).', ErrStat, ErrMsg, RoutineName)
       ! note I'm not going to write that 4 (old) is an option
    end if
+   
+   !...............................................................................................................................
+
+      ! temporary check on p_FAST%DT_out (bjj: fix this later?)
+
+   IF ( .NOT. EqualRealNos( p%DT_out, p%DT ) ) THEN
+      IF ( p%DT_out < p%DT ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'DT_out must be at least DT ('//TRIM(Num2LStr(p%DT))//' s).', ErrStat, ErrMsg, RoutineName )
+      ELSEIF ( .NOT. EqualRealNos( p%DT_out, p%DT * NINT(p%DT_out / p%DT ) )  ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'DT_out must currently be an integer multiple of DT.', ErrStat, ErrMsg, RoutineName )
+      END IF
+   END IF
+   
    
 
 END SUBROUTINE ValidateInputData
@@ -4238,9 +4238,9 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
                      
          
       DO K=1,NumBl   
-         call MeshWrVTK(p_FAST%TurbinePos, AD%y%BladeLoad(K), trim(p_FAST%OutFileRoot)//'.AD_BladeLoad'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2, AD%Input(1)%BladeRootMotion(k) )     
+         call MeshWrVTK(p_FAST%TurbinePos, AD%y%BladeLoad(K), trim(p_FAST%OutFileRoot)//'.AD_BladeLoad'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2, AD%Input(1)%BladeMotion(k) )     
       END DO            
-      call MeshWrVTK(p_FAST%TurbinePos, AD%y%TowerLoad, trim(p_FAST%OutFileRoot)//'.AD_BladeLoad', y_FAST%VTK_count, ErrStat2, ErrMsg2, AD%Input(1)%TowerMotion )     
+      call MeshWrVTK(p_FAST%TurbinePos, AD%y%TowerLoad, trim(p_FAST%OutFileRoot)//'.AD_TowerLoad', y_FAST%VTK_count, ErrStat2, ErrMsg2, AD%Input(1)%TowerMotion )     
             
    END IF
    
