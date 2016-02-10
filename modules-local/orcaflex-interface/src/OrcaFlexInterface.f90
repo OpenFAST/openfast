@@ -115,8 +115,7 @@ MODULE OrcaFlexInterface
       SUBROUTINE OrcaFlexUserPtfmLdInitialise(DT,TMax)   !!!BIND(C)
 #endif
          USE, INTRINSIC :: ISO_C_BINDING, ONLY: C_FLOAT
-         !DEC$ ATTRIBUTES STDCALL::OrcaFlexUserPtfmLdInitialise
-         !DEC$ ATTRIBUTES ALIAS:'_OrcaFlexUserPtfmLdInitialise@8'::OrcaFlexUserPtfmLdInitialise
+         !DEC$ ATTRIBUTES DEFAULT, STDCALL, DECORATE, ALIAS:'OrcaFlexUserPtfmLdInitialise'::OrcaFlexUserPtfmLdInitialise
          !GCC$ ATTRIBUTES STDCALL :: OrcaFlexUserPtfmInitialise
          REAL(C_FLOAT),             INTENT(IN   )  :: DT
          REAL(C_FLOAT),             INTENT(IN   )  :: TMax
@@ -129,8 +128,7 @@ MODULE OrcaFlexInterface
       SUBROUTINE OrcaFlexUserPtfmLd( X, XD, ZTime, DirRoot, PtfmAM, PtfmFt) !!!BIND(C)
 #endif
          USE, INTRINSIC :: ISO_C_Binding, ONLY: C_FLOAT, C_CHAR
-         !DEC$ ATTRIBUTES STDCALL::OrcaFlexUserPtfmLd
-         !DEC$ ATTRIBUTES ALIAS:'_OrcaFlexUserPtfmLd@24'::OrcaFlexUserPtfmLd
+         !DEC$ ATTRIBUTES DEFAULT, STDCALL, DECORATE, ALIAS:'OrcaFlexUserPtfmLd'::OrcaFlexUserPtfmLd
          !GCC$ ATTRIBUTES STDCALL :: OrcaFlexUserPtfmLd
          CHARACTER(KIND=C_CHAR),    INTENT(IN   )  :: DirRoot
          REAL(C_FLOAT),             INTENT(IN   )  :: X(6)           !< Translational and rotational displacement (m, radians) relative to inertial frame.
