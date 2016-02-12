@@ -524,7 +524,7 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, cn, ct, B, &
 
    else  ! propeller brake region (a and ap not directly used but update anyway)
 
-      if (k > 1.0_ReKi) then
+      if (k > 1.0_ReKi .and. .not. EqualRealNos(k, 1.0_ReKi) ) then
       !if (sigma_pcn > Fsphi) then
          a =   k/(k-1.0_ReKi) !sigma_pcn / (sigma_pcn - Fsphi )  !
       else

@@ -88,8 +88,9 @@ subroutine Dvr_Init(DvrData,errStat,errMsg )
       
 end subroutine Dvr_Init 
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
+subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
 
+   integer(IntKi),               intent(in   ) :: iCase         ! driver case
    type(Dvr_SimData),            intent(inout) :: DvrData       ! Input data for initialization
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
    real(DbKi),                   intent(inout) :: dt            ! interval
@@ -99,7 +100,7 @@ subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
 
       ! locals
    real(reKi)                                  :: theta(3)
-   integer(IntKi)                              :: k   
+   integer(IntKi)                              :: j, k   
    integer(IntKi)                              :: errStat2      ! local status of error message
    character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
    character(*), parameter                     :: RoutineName = 'Init_AeroDyn'
@@ -151,12 +152,23 @@ subroutine Init_AeroDyn(DvrData, AD, dt, errStat, errMsg)
    call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, dt, InitOutData, ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       
-   call AD_CopyInput( AD%u(1), AD%u(2), MESH_NEWCOPY, errStat2, errMsg2)
-      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      if (ErrStat >= AbortErrLev) then
-         call Cleanup()
-         return
-      end if
+      
+   do j = 2, numInp
+      call AD_CopyInput (AD%u(1),  AD%u(j),  MESH_NEWCOPY, errStat2, errMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   end do
+   if (ErrStat >= AbortErrLev) then
+      call Cleanup()
+      return
+   end if
+   
+      ! we know exact values, so we're going to initialize inputs this way (instead of using the input guesses from AD_Init)
+   AD%InputTime = -999
+   DO j = 1-numInp, 0
+      call Set_AD_Inputs(iCase,j,DvrData,AD,errStat2,errMsg2)   
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   END DO              
+   
       
       ! move AD initOut data to AD Driver
    call move_alloc( InitOutData%WriteOutputHdr, DvrData%OutFileData%WriteOutputHdr )
@@ -172,11 +184,12 @@ contains
    
 end subroutine Init_AeroDyn
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
+!> this routine returns time=(nt-1) * DvrData%Cases(iCase)%dT, and cycles values in the input array AD%InputTime and AD%u.
+!! it then sets the inputs for nt * DvrData%Cases(iCase)%dT, which are index values 1 in the arrays.
+subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
 
    integer(IntKi)              , intent(in   ) :: iCase         ! case number 
    integer(IntKi)              , intent(in   ) :: nt            ! time step number
-   real(DbKi)                  , intent(  out) :: time          ! time in seconds
    
    type(Dvr_SimData),            intent(inout) :: DvrData       ! Driver data 
    type(AeroDyn_Data),           intent(inout) :: AD            ! AeroDyn data 
@@ -184,8 +197,8 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
    character(*)                , intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None
 
       ! local variables
-   !integer(IntKi)                              :: errStat2      ! local status of error message
-   !character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
+   integer(IntKi)                              :: errStat2      ! local status of error message
+   character(ErrMsgLen)                        :: errMsg2       ! local error message if ErrStat /= ErrID_None
    character(*), parameter                     :: RoutineName = 'Set_AD_Inputs'
 
    integer(intKi)                              :: j             ! loop counter for nodes
@@ -202,22 +215,30 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
    errStat = ErrID_None
    errMsg  = ""
    
-      time = (nt-1) * DvrData%Cases(iCase)%dT
-      AD%inputTime(1) = time
-      AD%inputTime(2) = time + DvrData%Cases(iCase)%dT
+      ! note that this initialization is a little different than the general algorithm in FAST because here
+      ! we can get exact values, so we are going to ignore initial guesses and not extrapolate
       
+   !................
+   ! shift previous calculations:
+   !................
+   do j = numInp-1,1,-1
+      call AD_CopyInput (AD%u(j),  AD%u(j+1),  MESH_UPDATECOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            
+      AD%InputTime(j+1) = AD%InputTime(j)
+   end do
+   AD%inputTime(1) = nt * DvrData%Cases(iCase)%dT
+         
+   !................
+   ! calculate new values
+   !................
+   
       ! Tower motions:
       do j=1,AD%u(1)%TowerMotion%nnodes
          AD%u(1)%TowerMotion%Orientation(  :,:,j) = AD%u(1)%TowerMotion%RefOrientation(:,:,j) ! identity
          AD%u(1)%TowerMotion%TranslationDisp(:,j) = 0.0_ReKi
          AD%u(1)%TowerMotion%TranslationVel( :,j) = 0.0_ReKi
          AD%u(1)%TowerMotion%RotationVel(    :,j) = 0.0_ReKi
-         
-         AD%u(2)%TowerMotion%Orientation(  :,:,j) = AD%u(1)%TowerMotion%RefOrientation(:,:,j) ! identity
-         AD%u(2)%TowerMotion%TranslationDisp(:,j) = 0.0_ReKi
-         AD%u(2)%TowerMotion%TranslationVel( :,j) = 0.0_ReKi
-         AD%u(2)%TowerMotion%RotationVel(    :,j) = 0.0_ReKi
-         
       end do !j=nnodes
       
       ! Hub motions:
@@ -227,9 +248,8 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
       orientation = EulerConstruct(theta)
             
       AD%u(1)%HubMotion%TranslationDisp(:,1) = matmul( AD%u(1)%HubMotion%Position(:,1), orientation ) - AD%u(1)%HubMotion%Position(:,1) ! = matmul( transpose(orientation) - eye(3), AD%u(1)%HubMotion%Position(:,1) )
-      AD%u(2)%HubMotion%TranslationDisp(:,1) = AD%u(1)%HubMotion%TranslationDisp(:,1)
       
-      theta(1) = time * DvrData%Cases(iCase)%RotSpeed
+      theta(1) = AD%inputTime(1) * DvrData%Cases(iCase)%RotSpeed
       theta(2) = 0.0_ReKi
       theta(3) = 0.0_ReKi
       AD%u(1)%HubMotion%Orientation(  :,:,1) = matmul( AD%u(1)%HubMotion%RefOrientation(:,:,1), orientation )
@@ -238,25 +258,7 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
       
       AD%u(1)%HubMotion%TranslationVel( :,1) = 0.0_ReKi
       AD%u(1)%HubMotion%RotationVel(    :,1) = AD%u(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed
-      
-      
-      !-----------------------------
-      theta(1) = 0.0_ReKi
-      theta(2) = 0.0_ReKi
-      theta(3) = DvrData%Cases(iCase)%Yaw
-      orientation = EulerConstruct(theta)
-      
-      theta(1) = AD%inputTime(2)  * DvrData%Cases(iCase)%RotSpeed
-      theta(2) = 0.0_ReKi
-      theta(3) = 0.0_ReKi
-      AD%u(2)%HubMotion%Orientation(  :,:,1) = matmul( AD%u(2)%HubMotion%RefOrientation(:,:,1), orientation )
-      orientation = EulerConstruct( theta )      
-      AD%u(2)%HubMotion%Orientation(  :,:,1) = matmul( orientation, AD%u(2)%HubMotion%Orientation(  :,:,1) )
-      
-      AD%u(2)%HubMotion%TranslationVel( :,1) = 0.0_ReKi
-      AD%u(2)%HubMotion%RotationVel(    :,1) = AD%u(2)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed
-      !-----------------------------
-      
+                  
       ! Blade root motions:
       do k=1,DvrData%numBlades         
          theta(1) = (k-1)*TwoPi/real(DvrData%numBlades,ReKi)
@@ -268,11 +270,6 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
          AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) = 0.0_R8Ki
          AD%u(1)%BladeRootMotion(k)%TranslationVel( :,1) = 0.0_ReKi
          AD%u(1)%BladeRootMotion(k)%RotationVel(    :,1) = 0.0_ReKi
-         
-         AD%u(2)%BladeRootMotion(k)%Orientation(  :,:,1) = matmul( orientation, AD%u(2)%HubMotion%Orientation(  :,:,1) )
-         AD%u(2)%BladeRootMotion(k)%TranslationDisp(:,1) = 0.0_ReKi
-         AD%u(2)%BladeRootMotion(k)%TranslationVel( :,1) = 0.0_ReKi
-         AD%u(2)%BladeRootMotion(k)%RotationVel(    :,1) = 0.0_ReKi
          
       end do !k=numBlades
             
@@ -299,29 +296,7 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
 
             AD%u(1)%BladeMotion(k)%RotationVel(    :,j) = 0.0_ReKi
          end do !j=nnodes
-         
-         rotateMat = transpose( AD%u(2)%BladeRootMotion(k)%Orientation(  :,:,1) )
-         rotateMat = matmul( rotateMat, AD%u(2)%BladeRootMotion(k)%RefOrientation(  :,:,1) ) 
-         orientation = transpose(rotateMat)
-         
-         rotateMat(1,1) = rotateMat(1,1) - 1.0_ReKi
-         rotateMat(2,2) = rotateMat(2,2) - 1.0_ReKi
-         rotateMat(3,3) = rotateMat(3,3) - 1.0_ReKi
-                  
-         do j=1,AD%u(2)%BladeMotion(k)%nnodes        
-            position = AD%u(2)%BladeMotion(k)%Position(:,j) - AD%u(2)%HubMotion%Position(:,1) 
-            AD%u(2)%BladeMotion(k)%TranslationDisp(:,j) = AD%u(2)%HubMotion%TranslationDisp(:,1) + matmul( rotateMat, position )
-            
-            AD%u(2)%BladeMotion(k)%Orientation(  :,:,j) = matmul( AD%u(2)%BladeMotion(k)%RefOrientation(:,:,j), orientation )
-            
-            
-            position =  AD%u(2)%BladeMotion(k)%Position(:,j) + AD%u(2)%BladeMotion(k)%TranslationDisp(:,j) &
-                      - AD%u(2)%HubMotion%Position(:,1) - AD%u(2)%HubMotion%TranslationDisp(:,1)
-            AD%u(2)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(2)%HubMotion%RotationVel(:,1), position )
-
-            AD%u(2)%BladeMotion(k)%RotationVel(    :,j) = 0.0_ReKi
-            
-         end do !j=nnodes
+                                    
       end do !k=numBlades       
       
       ! Inflow wind velocities:
@@ -332,12 +307,6 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
             AD%u(1)%InflowOnBlade(1,j,k) = GetU(  DvrData%Cases(iCase)%WndSpeed, DvrData%HubHt, DvrData%Cases(iCase)%ShearExp, z )
             AD%u(1)%InflowOnBlade(2,j,k) = 0.0_ReKi !V
             AD%u(1)%InflowOnBlade(3,j,k) = 0.0_ReKi !W      
-            
-            z = AD%u(2)%BladeMotion(k)%Position(3,j) + AD%u(2)%BladeMotion(k)%TranslationDisp(3,j)
-            AD%u(2)%InflowOnBlade(1,j,k) = GetU(  DvrData%Cases(iCase)%WndSpeed, DvrData%HubHt, DvrData%Cases(iCase)%ShearExp, z )
-            AD%u(2)%InflowOnBlade(2,j,k) = 0.0_ReKi !V
-            AD%u(2)%InflowOnBlade(3,j,k) = 0.0_ReKi !W      
-            
          end do !j=nnodes
       end do !k=numBlades
       
@@ -347,12 +316,6 @@ subroutine Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
          AD%u(1)%InflowOnTower(1,j) = GetU(  DvrData%Cases(iCase)%WndSpeed, DvrData%HubHt, DvrData%Cases(iCase)%ShearExp, z )
          AD%u(1)%InflowOnTower(2,j) = 0.0_ReKi !V
          AD%u(1)%InflowOnTower(3,j) = 0.0_ReKi !W         
-         
-         z = AD%u(2)%TowerMotion%Position(3,j) + AD%u(2)%TowerMotion%TranslationDisp(3,j)
-         AD%u(2)%InflowOnTower(1,j) = GetU(  DvrData%Cases(iCase)%WndSpeed, DvrData%HubHt, DvrData%Cases(iCase)%ShearExp, z )
-         AD%u(2)%InflowOnTower(2,j) = 0.0_ReKi !V
-         AD%u(2)%InflowOnTower(3,j) = 0.0_ReKi !W         
-         
       end do !j=nnodes
                      
 end subroutine Set_AD_Inputs

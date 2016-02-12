@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015  National Renewable Energy Laboratory
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
 !    This file is part of AeroDyn.
 !
@@ -35,7 +35,9 @@ program AeroDyn_Driver
    type(Dvr_SimData)                              :: DvrData              ! The data required for running the AD driver
    type(AeroDyn_Data)                             :: AD                   ! AeroDyn data 
                                                   
-   integer(IntKi)                                 :: n                    ! loop counter (for time step)
+   integer(IntKi)                                 :: iCase                ! loop counter (for driver case)
+   integer(IntKi)                                 :: nt                   ! loop counter (for time step)
+   integer(IntKi)                                 :: j                    ! loop counter (for array of inputs)
    integer(IntKi)                                 :: numSteps             ! number of time steps in the simulation
    integer(IntKi)                                 :: errStat              ! Status of error message
    character(ErrMsgLen)                           :: errMsg               ! Error message if ErrStat /= ErrID_None
@@ -49,7 +51,6 @@ program AeroDyn_Driver
    !real(DbKi)                                     :: TiLstPrn                                ! The simulation time of the last print
    !real(DbKi)                                     :: SttsTime                                ! Amount of time between screen status messages (sec)
    !integer                                        :: n_SttsTime                              ! Number of time steps between screen status messages (-)
-   integer                                        :: nt, iCase
    logical                                        :: AD_Initialized
    
                             
@@ -91,7 +92,8 @@ program AeroDyn_Driver
       
       
          ! Set the Initialization input data for AeroDyn based on the Driver input file data, and initialize AD
-      call Init_AeroDyn(DvrData, AD, dT_Dvr, errStat, errMsg)
+         ! (this also initializes inputs to AD for first time step)
+      call Init_AeroDyn(iCase, DvrData, AD, dT_Dvr, errStat, errMsg)
          call CheckError()
          AD_Initialized = .true.
          
@@ -109,26 +111,26 @@ program AeroDyn_Driver
       do nt = 1, numSteps
          
          !...............................
-         ! set AD inputs
+         ! set AD inputs for nt (and keep values at nt-1 as well)
          !...............................
          
-         call Set_AD_Inputs(iCase,nt,time,DvrData,AD,errStat,errMsg)
+         call Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
             call CheckError()
    
-         
+         time = AD%InputTime(2)
             
-            ! Calculate outputs at n
+            ! Calculate outputs at nt - 1
 
-         call AD_CalcOutput( time, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, errStat, errMsg )
+         call AD_CalcOutput( time, AD%u(2), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, errStat, errMsg )
             call CheckError()
    
          call Dvr_WriteOutputLine(DvrData%OutFileData, time, AD%y%WriteOutput, errStat, errMsg)
             call CheckError()
             
             
-            ! Get state variables at next step: INPUT at step n, OUTPUT at step n + 1
+            ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
 
-         call AD_UpdateStates( time, nt, AD%u, AD%InputTime, AD%p, AD%x, AD%xd, AD%z, AD%OtherState, errStat, errMsg )
+         call AD_UpdateStates( time, nt-1, AD%u, AD%InputTime, AD%p, AD%x, AD%xd, AD%z, AD%OtherState, errStat, errMsg )
             call CheckError()
       
                   
@@ -139,6 +141,11 @@ program AeroDyn_Driver
          call CheckError()
          close( DvrData%OutFileData%unOutFile )
                
+      do j = 2, numInp
+         call AD_DestroyInput (AD%u(j),  errStat, errMsg)
+            call CheckError()
+      end do
+         
    end do !iCase = 1, DvrData%NumCases
    
    
