@@ -861,10 +861,20 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_
    real(ReKi)                :: alphaf_minus1
    logical                   :: SHIFT
  
-
+   integer(IntKi)            :: ErrStat2
+   character(ErrMsgLen)      :: ErrMsg2
+   character(*), parameter   :: RoutineName = 'ComputeKelvinChain'
+   
+   ErrStat = ErrID_None
+   ErrMsg = ""
+   
    fprimeprime_m = 0
 
    M           = u%U / p%a_s
+   call UA_CheckMachNumber(M, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
+      
    beta_M_Sqrd = Get_Beta_M_Sqrd(M)
    beta_M      = Get_Beta_M(M)
    T_I         = p%c(i,j) / p%a_s                                                  ! Eqn 1.11c
@@ -872,7 +882,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_
    
    ! Lookup values using Airfoil Info module
    call AFI_GetAirfoilParams( AFInfo, M, u%Re, u%alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
-                              T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, ErrMsg, ErrStat )           
+                              T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, ErrMsg2, ErrStat2 )           
+      ! AFI_GetAirfoilParams doesn't return error, so I will not check
    
       ! Override eta_e if we are using Flookup
    if ( p%Flookup ) then
@@ -1021,7 +1032,9 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_
    
       ! Compute fprime using Eqn 1.30 and Eqn 1.31
    if (p%flookup) then
-      fprime        = Get_f_from_Lookup( p%UAMod, u%Re, alpha_f, alpha0, C_nalpha_circ, AFInfo, ErrStat, ErrMsg)
+      fprime        = Get_f_from_Lookup( p%UAMod, u%Re, alpha_f, alpha0, C_nalpha_circ, AFInfo, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
    else   
       fprime        = Get_f( alpha_f, alpha0, alpha1, alpha2, S1, S2, S3, S4)
    end if
@@ -1040,7 +1053,9 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_
    
    if (p%Flookup) then
          ! Compute fprime using Eqn 1.30 and Eqn 1.31
-      fprime_c   = Get_f_c_from_Lookup( u%Re, alpha_f, alpha0, C_nalpha_circ, AFInfo, ErrStat, ErrMsg)
+      fprime_c   = Get_f_c_from_Lookup( u%Re, alpha_f, alpha0, C_nalpha_circ, AFInfo, ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      if (ErrStat >= AbortErrLev) return
      
       if (OtherState%FirstPass(i,j)) then
          fprime_c_minus1 = fprime_c       
@@ -1880,6 +1895,7 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
                                      St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
                                      Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c,Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
                                      Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat, ErrMsg )
+      if (ErrStat>= AbortErrLev) return
       
       xd%Cn_prime_diff_minus1(i,j) = Cn_prime_diff
       
@@ -2272,7 +2288,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
 ! Routine for computing outputs, used in both loose and tight coupling.
 !..............................................................................
    
-   type(UA_InputType),           intent(inout)  :: u           ! Inputs at Time
+   type(UA_InputType),           intent(in   )  :: u           ! Inputs at Time
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
    type(UA_DiscreteStateType),   intent(in   )  :: xd          ! Discrete states at Time
    type(UA_OtherStateType),      intent(in   )  :: OtherState  ! Other/optimization states
@@ -2285,6 +2301,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
    
    integer(IntKi)                                         :: errStat2        ! Error status of the operation (secondary error)
    character(ErrMsgLen)                                   :: errMsg2         ! Error message if ErrStat2 /= ErrID_None
+   character(*), parameter                                :: RoutineName = 'UA_CalcOutput'
    real(ReKi)                                             :: Cn_prime
    real(ReKi)                                             :: Cn1             ! critical value of Cn_prime at LE separation for alpha >= alpha0    
    real(ReKi)                                             :: Cn2             ! critical value of Cn_prime at LE separation for alpha < alpha0
@@ -2366,14 +2383,21 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
             
    else
       M           = u%U / p%a_s
+      
+      call UA_CheckMachNumber(M, ErrStat2, ErrMsg2 )
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat >= AbortErrLev) return
+      
       call AFI_GetAirfoilParams( AFInfo, M, u%Re, u%alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
-                              T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, ErrMsg, ErrStat )           
-   
+                              T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, ErrMsg2, ErrStat2 )           
+            !AFI_GetAirfoilParams doens't return error, so I won't check. ! call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
       
       call ComputeKelvinChain( OtherState%iBladeNode, OtherState%iBlade, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                  St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
                                  Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c, Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
-                                 Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat, ErrMsg )
+                                 Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
             
          ! Eqn 1.50(a or b depending on UAMod)
@@ -2599,7 +2623,30 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
    
 end subroutine UA_CalcOutput
 !==============================================================================   
+!> This subroutine checks that the Mach number is valid. If M > 0.3, the theory 
+!! is invalid. If M > 1, numerical issues result in the code.
+subroutine UA_CheckMachNumber(M, ErrStat, ErrMsg )
 
+   real(ReKi),                   intent(in   )  :: M           !< Mach number (-)
+   integer(IntKi),               intent(  out)  :: ErrStat     !< Error status of the operation
+   character(*),                 intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   if (abs(M) > 0.3_ReKi) then
+      if (abs(M) >= 1.0_ReKi) then
+         ErrStat = ErrID_Fatal
+         ErrMsg  = 'Mach number exceeds 1.0. Unsteady aero equations cannot be evaluated.'
+      else         
+         ErrStat = ErrID_Warn
+         ErrMsg  = 'Mach number exceeds 0.3. Unsteady aero theory is invalid.'
+         !misc%FirstWarn_M = .false.
+      end if      
+   else
+      ErrStat = ErrID_None
+      ErrMsg = ""
+   end if
+   
+   
+end subroutine UA_CheckMachNumber
 
 !============================================================================== 
 subroutine UA_CalcOutput2( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )   
@@ -2989,7 +3036,7 @@ end subroutine UA_CalcOutput2
  !end function Test_Cn
  !  
    
-   
+!==============================================================================   
    
    
 end module UnsteadyAero
