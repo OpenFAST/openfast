@@ -55,8 +55,8 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
    type(AD_InitOutputType),       intent(  out)  :: InitOut          ! output data
    type(AD_InputFile),            intent(in   )  :: InputFileData    ! input file data (for setting airfoil shape outputs)
    type(AD_ParameterType),        intent(in   )  :: p                ! Parameters
-   integer(IntKi),                intent(inout)  :: errStat          ! Error status of the operation
-   character(*),                  intent(inout)  :: errMsg           ! Error message if ErrStat /= ErrID_None
+   integer(IntKi),                intent(  out)  :: errStat          ! Error status of the operation
+   character(*),                  intent(  out)  :: errMsg           ! Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -390,8 +390,8 @@ subroutine Init_OtherStates(OtherState, p, u, y, errStat, errMsg)
    type(AD_ParameterType),        intent(in   )  :: p                ! Parameters
    type(AD_InputType),            intent(inout)  :: u                ! input for HubMotion mesh (create sibling mesh here)
    type(AD_OutputType),           intent(in   )  :: y                ! output (create mapping between output and otherstate mesh here)
-   integer(IntKi),                intent(inout)  :: errStat          ! Error status of the operation
-   character(*),                  intent(inout)  :: errMsg           ! Error message if ErrStat /= ErrID_None
+   integer(IntKi),                intent(  out)  :: errStat          ! Error status of the operation
+   character(*),                  intent(  out)  :: errMsg           ! Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -479,8 +479,8 @@ subroutine Init_y(y, u, p, errStat, errMsg)
    type(AD_OutputType),           intent(  out)  :: y               ! Module outputs
    type(AD_InputType),            intent(inout)  :: u               ! Module inputs -- intent(out) because of mesh sibling copy
    type(AD_ParameterType),        intent(in   )  :: p               ! Parameters
-   integer(IntKi),                intent(inout)  :: errStat         ! Error status of the operation
-   character(*),                  intent(inout)  :: errMsg          ! Error message if ErrStat /= ErrID_None
+   integer(IntKi),                intent(  out)  :: errStat         ! Error status of the operation
+   character(*),                  intent(  out)  :: errMsg          ! Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -555,8 +555,8 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
    type(AD_ParameterType),       intent(in   )  :: p                 ! Parameters
    type(AD_InputFile),           intent(in   )  :: InputFileData     ! Data stored in the module's input file
    type(AD_InitInputType),       intent(in   )  :: InitInp           ! Input data for AD initialization routine
-   integer(IntKi),               intent(inout)  :: errStat           ! Error status of the operation
-   character(*),                 intent(inout)  :: errMsg            ! Error message if ErrStat /= ErrID_None
+   integer(IntKi),               intent(  out)  :: errStat           ! Error status of the operation
+   character(*),                 intent(  out)  :: errMsg            ! Error message if ErrStat /= ErrID_None
 
 
       ! Local variables
@@ -1059,10 +1059,11 @@ subroutine AD_CalcOutput( t, u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
    !-------------------------------------------------------   
    if (p%NumOuts > 0) then
 #ifdef DBG_OUTS
-      call Calc_WriteDbgOutput( p, u, OtherState, y, ErrStat, ErrMsg ) 
+      call Calc_WriteDbgOutput( p, u, OtherState, y, ErrStat2, ErrMsg2 ) 
 #else
-      call Calc_WriteOutput( p, u, OtherState, y, ErrStat, ErrMsg )   
+      call Calc_WriteOutput( p, u, OtherState, y, ErrStat2, ErrMsg2 )   
 #endif   
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
    
       !...............................................................................................................................   
       ! Place the selected output channels into the WriteOutput(:) array with the proper sign:

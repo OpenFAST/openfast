@@ -176,6 +176,11 @@ subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
    integer(IntKi),         intent(  out) :: errStat       ! Error status of the operation
    character(*),           intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None 
    
+   integer(intKi)                        :: ErrStat2          ! temporary Error status
+   character(ErrMsgLen)                  :: ErrMsg2           ! temporary Error message
+   character(*), parameter               :: RoutineName = 'Compute_UA_AirfoilCoefs'
+  
+   
    type(UA_InputType)              :: u_UA
    type(UA_OutputType)             :: y_UA          !
       
@@ -188,23 +193,17 @@ subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
    
    !bjj: TODO: this gets called element-by-element (not all at once). Are OtherState%iBladeNode and OtherState%iBlade set properly?
 #ifdef DEBUG_v14
-   call UA_CalcOutput2(u_UA, p_UA, xd_UA, OtherState_UA, AFInfo, OtherState_y_UA, errStat, errMsg )
+   call UA_CalcOutput2(u_UA, p_UA, xd_UA, OtherState_UA, AFInfo, OtherState_y_UA, errStat2, errMsg2 )
 #else
-   call UA_CalcOutput(u_UA, p_UA, xd_UA, OtherState_UA, AFInfo, OtherState_y_UA, errStat, errMsg )
+   call UA_CalcOutput(u_UA, p_UA, xd_UA, OtherState_UA, AFInfo, OtherState_y_UA, errStat2, errMsg2 )
 #endif
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'Compute_UA_AirfoilCoefs' ) 
+      if (errStat >= AbortErrLev) return
 
    Cl         = OtherState_y_UA%Cl
    Cd         = OtherState_y_UA%Cd
    Cm         = OtherState_y_UA%Cm
-      
-   
-   if (errStat >= AbortErrLev) then
-      call SetErrStat( errStat, errMsg, errStat, errMsg, 'Compute_UA_AirfoilCoefs' ) 
-      return
-   end if   
-      
-
-   
+                  
        
 end subroutine Compute_UA_AirfoilCoefs
 
