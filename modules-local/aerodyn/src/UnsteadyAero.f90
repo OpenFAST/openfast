@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015  National Renewable Energy Laboratory
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
 !    This file is part of AeroDyn.
 !
@@ -105,7 +105,7 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
                                              , AFInfo%Table(1)%Coefs &
                                              , AFInfo%Table(1)%SplineCoefs &
                                              , ErrStat, ErrMsg )
-   if (ErrStat > ErrID_None) return
+   if (ErrStat >= AbortErrLev) return
       
    Cl = IntAFCoefs(1)
    Cd = IntAFCoefs(2)
@@ -371,7 +371,7 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, alpha, alpha0, C_nalpha_circ, 
    !end if
    
    call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
-      if (ErrStat > ErrID_None) return
+      if (ErrStat >= AbortErrLev ) return
    
    Cn =  Cl*cos(alpha) + (Cd-Cd0)*sin(alpha)
    
@@ -419,7 +419,7 @@ real(ReKi) function Get_f_c_from_Lookup( Re, alpha, alpha0, C_nalpha, AFInfo, Er
   
    
    call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
-      if (ErrStat > ErrID_None) return
+      if (ErrStat >= AbortErrLev) return
    
    denom = ( alpha-alpha0 )*tan(alpha)  !NOTE,NOTE: On 8/27/15 GJH Added back tan(alpha) because results for Fy did not match steady state without it. ! NOTE: We removed the tan(alpha) term from the equation and repace with another (alpha-alpha0) term, per Rick's suggestion 8/13/2015.    *tan(alpha)
    
@@ -688,6 +688,8 @@ real(ReKi) function Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime
    
    real(ReKi)                :: Cd0
 
+   ErrStat = ErrID_None
+   ErrMsg = ""
    
       ! Eqn 1.21 + 1.23 + 1.25a
    Cm_alpha_nc = - Cn_alpha_nc / 4.0_ReKi 
@@ -1493,13 +1495,20 @@ subroutine UA_SetParameters( dt, InitInp, p, ErrStat, ErrMsg )
    integer(IntKi),                         intent(  out)  :: ErrStat     ! error status of the operation
    character(*),                           intent(  out)  :: ErrMsg      ! error message if ErrStat /= ErrID_None
 
+   integer(IntKi)            :: ErrStat2
+   character(ErrMsgLen)      :: ErrMsg2
+   character(*), parameter   :: RoutineName = 'UA_SetParameters'
+   
+   
+   
       ! Initialize variables for this routine
    ErrStat = ErrID_None
    ErrMsg  = ""
    p%dt         = dt
    
-   allocate(p%c(InitInp%nNodesPerBlade,InitInp%numBlades), stat = ErrStat)
-   if (ErrStat > ErrID_None) then
+   allocate(p%c(InitInp%nNodesPerBlade,InitInp%numBlades), stat = ErrStat2)
+   if (ErrStat2 /= 0) then
+      call SetErrStat( ErrID_Fatal, 'Error allocating p%c.', ErrStat, ErrMsg, RoutineName )
       ! Set errmessage and return
       return
    end if
@@ -1527,49 +1536,56 @@ subroutine UA_InitStates( p, xd, OtherState, ErrStat, ErrMsg )
    type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Initial other/optimization states
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-                                                                         
-   
+
+   integer(IntKi)            :: ErrStat2
+   character(ErrMsgLen)      :: ErrMsg2
+   character(*), parameter   :: RoutineName = 'UA_InitStates'
+         
    ErrMsg  = ""
    ErrStat = ErrID_None
    
+   
       ! allocate all the state arrays
-   allocate(xd%alpha_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%alpha_minus2(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%q_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%q_minus2(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%X1_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%X2_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%X3_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%X4_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%Kprime_alpha_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%Kprime_q_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%Kprimeprime_q_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%K3prime_q_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%Dp_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
+   call AllocAry( xd%alpha_minus1,        p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%alpha_minus2,        p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus2', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%q_minus1,            p%nNodesPerBlade,p%numBlades, 'xd%q_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%q_minus2,            p%nNodesPerBlade,p%numBlades, 'xd%q_minus2', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%X1_minus1,           p%nNodesPerBlade,p%numBlades, 'xd%X1_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%X2_minus1,           p%nNodesPerBlade,p%numBlades, 'xd%X2_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%X3_minus1,           p%nNodesPerBlade,p%numBlades, 'xd%X3_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%X4_minus1,           p%nNodesPerBlade,p%numBlades, 'xd%X4_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%Kprime_alpha_minus1, p%nNodesPerBlade,p%numBlades, 'xd%Kprime_alpha_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%Kprime_q_minus1,     p%nNodesPerBlade,p%numBlades, 'xd%Kprime_q_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%Kprimeprime_q_minus1,p%nNodesPerBlade,p%numBlades, 'xd%Kprimeprime_q_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%K3prime_q_minus1,    p%nNodesPerBlade,p%numBlades, 'xd%K3prime_q_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%Dp_minus1,           p%nNodesPerBlade,p%numBlades, 'xd%Dp_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      
+   call AllocAry(xd%Cn_prime_minus1     ,p%nNodesPerBlade,p%numBlades,'xd%Cn_prime_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%Cn_prime_diff_minus1,p%nNodesPerBlade,p%numBlades,'xd%Cn_prime_diff_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%Cn_pot_minus1       ,p%nNodesPerBlade,p%numBlades,'xd%Cn_pot_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%fprimeprime_minus1  ,p%nNodesPerBlade,p%numBlades,'xd%fprimeprime_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%fprimeprime_c_minus1,p%nNodesPerBlade,p%numBlades,'xd%fprimeprime_c_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%Df_minus1           ,p%nNodesPerBlade,p%numBlades,'xd%Df_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%Df_c_minus1         ,p%nNodesPerBlade,p%numBlades,'xd%Df_c_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%Dalphaf_minus1      ,p%nNodesPerBlade,p%numBlades,'xd%Dalphaf_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%alphaf_minus1       ,p%nNodesPerBlade,p%numBlades,'xd%alphaf_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%fprime_minus1       ,p%nNodesPerBlade,p%numBlades,'xd%fprime_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%fprime_c_minus1     ,p%nNodesPerBlade,p%numBlades,'xd%fprime_c_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%tau_V               ,p%nNodesPerBlade,p%numBlades,'xd%tau_V',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%tau_V_minus1        ,p%nNodesPerBlade,p%numBlades,'xd%tau_V_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%Cn_v_minus1         ,p%nNodesPerBlade,p%numBlades,'xd%Cn_v_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(xd%C_V_minus1          ,p%nNodesPerBlade,p%numBlades,'xd%C_V_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
-   allocate(xd%Cn_prime_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%Cn_prime_diff_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%Cn_pot_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%fprimeprime_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%fprimeprime_c_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%Df_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%Df_c_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%Dalphaf_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%alphaf_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%fprime_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%fprime_c_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%tau_V(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%tau_V_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%Cn_v_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(xd%C_V_minus1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(OtherState%sigma1(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(OtherState%sigma3(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(OtherState%TESF(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(OtherState%LESF(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(OtherState%VRTX(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
-   allocate(OtherState%FirstPass(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
+   call AllocAry(OtherState%sigma1   ,p%nNodesPerBlade,p%numBlades,'OtherState%sigma1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(OtherState%sigma3   ,p%nNodesPerBlade,p%numBlades,'OtherState%sigma3',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(OtherState%TESF     ,p%nNodesPerBlade,p%numBlades,'OtherState%TESF',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(OtherState%LESF     ,p%nNodesPerBlade,p%numBlades,'OtherState%LESF',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(OtherState%VRTX     ,p%nNodesPerBlade,p%numBlades,'OtherState%VRTX',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(OtherState%FirstPass,p%nNodesPerBlade,p%numBlades,'OtherState%FirstPass',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
-   allocate(OtherState%BEDSEP(p%nNodesPerBlade,p%numBlades), stat = ErrStat)
+   call AllocAry(OtherState%BEDSEP,p%nNodesPerBlade,p%numBlades,'OtherState%BEDSEP',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   
+   if (ErrStat >= AbortErrLev) return
    
    OtherState%sigma1    = 1.0_ReKi
    OtherState%sigma3    = 1.0_ReKi
@@ -1627,13 +1643,13 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
    type(UA_DiscreteStateType),   intent(  out)  :: xd          ! Initial discrete states
    type(UA_OtherStateType),      intent(  out)  :: OtherState  ! Initial other/optimization states
    type(UA_OutputType),          intent(  out)  :: y           ! Initial system outputs (outputs are not calculated;
-                                                                         !   only the output mesh is initialized)
+                                                               !   only the output mesh is initialized)
    real(DbKi),                   intent(inout)  :: interval    ! Coupling interval in seconds: the rate that
-                                                                         !   (1) BEMT_UpdateStates() is called in loose coupling &
-                                                                         !   (2) BEMT_UpdateDiscState() is called in tight coupling.
-                                                                         !   Input is the suggested time from the glue code;
-                                                                         !   Output is the actual coupling interval that will be used
-                                                                         !   by the glue code.
+                                                               !   (1) BEMT_UpdateStates() is called in loose coupling &
+                                                               !   (2) BEMT_UpdateDiscState() is called in tight coupling.
+                                                               !   Input is the suggested time from the glue code;
+                                                               !   Output is the actual coupling interval that will be used
+                                                               !   by the glue code.
    type(UA_InitOutputType),      intent(  out)  :: InitOut     ! Output for initialization routine
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
@@ -1642,6 +1658,7 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
       ! Local variables
    character(ErrMsgLen)                         :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                               :: errStat2    ! temporary Error status of the operation
+   character(*), parameter                      :: RoutineName = 'UA_Init'
    integer(IntKi)                               :: i,j, iNode, iOffset
    character(64)                                :: chanPrefix
    
@@ -1657,12 +1674,14 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
    !call DispNVD( UA_Ver )
    
       ! Allocate and set parameter data structure using initialization data
-   call UA_SetParameters( interval, InitInp, p, ErrStat, ErrMsg )
-   if (ErrStat >= AbortErrLev) return
+   call UA_SetParameters( interval, InitInp, p, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return    
    
       ! initialize the discrete states
-   call UA_InitStates( p, xd, OtherState, ErrStat, ErrMsg )     ! initialize the continuous states
-   if (ErrStat >= AbortErrLev) return    
+   call UA_InitStates( p, xd, OtherState, ErrStat2, ErrMsg2 )     ! initialize the continuous states
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return    
    
 ! TODO: Wrap all of this output handling in a  #ifdef block to avoid allocating arrays when coupled to FAST
    
@@ -1670,26 +1689,20 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
    p%NumOuts = 29
    
    
-   allocate(InitOut%WriteOutputHdr(p%NumOuts*p%numBlades*p%nNodesPerBlade))   
-   allocate(InitOut%WriteOutputUnt(p%NumOuts*p%numBlades*p%nNodesPerBlade))
+   allocate(InitOut%WriteOutputHdr(p%NumOuts*p%numBlades*p%nNodesPerBlade),STAT=ErrStat2)
+      if (ErrStat2 /= 0) call SetErrStat(ErrID_Fatal,'Error allocating WriteOutputHdr.',ErrStat,ErrMsg,RoutineName)
+   allocate(InitOut%WriteOutputUnt(p%NumOuts*p%numBlades*p%nNodesPerBlade),STAT=ErrStat2)
+      if (ErrStat2 /= 0) call SetErrStat(ErrID_Fatal,'Error allocating WriteOutputUnt.',ErrStat,ErrMsg,RoutineName)
+   allocate(y%WriteOutput(p%NumOuts*p%numBlades*p%nNodesPerBlade),STAT=ErrStat2)
+      if (ErrStat2 /= 0) call SetErrStat(ErrID_Fatal,'Error allocating y%WriteOutput.',ErrStat,ErrMsg,RoutineName)
+   if (ErrStat >= AbortErrLev) return
+         
    
    iNode = 0
    do j = 1,p%numBlades
       do i = 1,p%nNodesPerBlade
          
          iOffset = (i-1)*p%NumOuts + (j-1)*p%nNodesPerBlade*p%NumOuts 
-         
-         
-         
-         
-         
-         
-         
-         
-         
-         
-         
-         
          
          
          chanPrefix = "B"//trim(num2lstr(j))//"N"//trim(num2lstr(i))  
@@ -1812,7 +1825,6 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
       end do
    end do
    
-   allocate(y%WriteOutput(p%NumOuts*p%numBlades*p%nNodesPerBlade))
    
 end subroutine UA_Init
 !==============================================================================     
@@ -1828,7 +1840,7 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
    type(UA_InputType),           intent(in   )  :: u           ! Inputs at Time                       
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters                                 
    type(UA_DiscreteStateType),   intent(inout)  :: xd          ! Input: Discrete states at Time; 
-                                                                           ! Output: Discrete states at Time + Interval
+                                                               ! Output: Discrete states at Time + Interval
    type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Other/optimization states  
    type(AFInfoType),             intent(in   )  :: AFInfo      ! The airfoil parameter data
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
@@ -1885,7 +1897,13 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
    real(ReKi)                                   :: St_sh
    real(ReKi)                                   :: T_sh, T_f, T_V
    real(ReKi)                                   :: Cn_alpha_q_nc
-   real(ReKi)                                   :: Cn_prime_diff          
+   real(ReKi)                                   :: Cn_prime_diff
+      
+   character(ErrMsgLen)                         :: errMsg2
+   integer(IntKi)                               :: errStat2
+   character(*), parameter                      :: RoutineName = 'UA_UpdateDiscState'
+   
+   
       ! Initialize ErrStat
          
    ErrStat = ErrID_None         
@@ -1894,7 +1912,8 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
       call ComputeKelvinChain(i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                      St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
                                      Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c,Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
-                                     Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat, ErrMsg )
+                                     Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat2, ErrMsg2 )
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat>= AbortErrLev) return
       
       xd%Cn_prime_diff_minus1(i,j) = Cn_prime_diff
@@ -2251,11 +2270,11 @@ subroutine UA_UpdateStates( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg 
    character(*),                  intent(  out) :: ErrMsg          ! Error message if ErrStat /= ErrID_None
 
       ! Local variables  
-   
-   
-   integer(IntKi)                               :: errStat2        ! Error status of the operation (secondary error)
-   character(ErrMsgLen)                         :: errMsg2         ! Error message if ErrStat2 /= ErrID_None
-   
+      
+   character(ErrMsgLen)                         :: errMsg2
+   integer(IntKi)                               :: errStat2
+   character(*), parameter                      :: RoutineName = 'UA_UpdateStates'
+
       ! Initialize variables
 
    ErrStat   = ErrID_None           ! no error has occurred
@@ -2275,10 +2294,11 @@ subroutine UA_UpdateStates( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg 
    
       ! Update discrete states:
 #ifdef DEBUG_v14
-   call UA_UpdateDiscState2( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg )
+   call UA_UpdateDiscState2( i, j, u, p, xd, OtherState, AFInfo, ErrStat2, ErrMsg2 )
 #else
-   call UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg )
+   call UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat2, ErrMsg2 )
 #endif
+   call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
 
 end subroutine UA_UpdateStates
 !==============================================================================   
@@ -2361,7 +2381,9 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
    if (OtherState%FirstPass(OtherState%iBladeNode, OtherState%iBlade)) then
       
       
-      call GetSteadyOutputs(AFInfo, u%alpha, y%Cl, y%Cd, y%Cm, Cd0, ErrStat, ErrMsg)
+      call GetSteadyOutputs(AFInfo, u%alpha, y%Cl, y%Cd, y%Cm, Cd0, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+      
       
       y%Cn = y%Cl*cos(u%alpha) + (y%Cd-Cd0)*sin(u%alpha)
       y%Cc = y%Cl*sin(u%alpha) - (y%Cd-Cd0)*cos(u%alpha)
@@ -2467,7 +2489,8 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
             end if
          end if
          
-         call GetSteadyOutputs(AFInfo, alpha_f, Cl_static, Cd_static, Cm_static, Cd0, ErrStat, ErrMsg)
+         call GetSteadyOutputs(AFInfo, alpha_f, Cl_static, Cd_static, Cm_static, Cd0, ErrStat2, ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          Cn_static = Cl_static*cos(alpha_f) + (Cd_static-Cd0)*sin(alpha_f)
          ! TODO: What about when Cn = 0  GJH 5/22/2015
          fprimeprime_m = (Cm_static - Cm0) / Cn_static 
@@ -2475,7 +2498,8 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
          fprimeprime_m = 0.0
       end if
       
-      Cm_FS = Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Dalphaf, alpha_f, Cn_FS, fprimeprime_m, AFInfo, p%UAMod, Cm_alpha_nc, Cm_Lookup, alpha_prime_f, ErrStat, ErrMsg )
+      Cm_FS = Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Dalphaf, alpha_f, Cn_FS, fprimeprime_m, AFInfo, p%UAMod, Cm_alpha_nc, Cm_Lookup, alpha_prime_f, ErrStat2, ErrMsg2 )
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
       y%Cm = Get_Cm( Cm_FS, T_VL, x_cp_bar, Cn_v, xd%tau_v(OtherState%iBladeNode, OtherState%iBlade), Cm_v )
                   
@@ -2634,10 +2658,10 @@ subroutine UA_CheckMachNumber(M, ErrStat, ErrMsg )
    if (abs(M) > 0.3_ReKi) then
       if (abs(M) >= 1.0_ReKi) then
          ErrStat = ErrID_Fatal
-         ErrMsg  = 'Mach number exceeds 1.0. Unsteady aero equations cannot be evaluated.'
+         ErrMsg  = 'Mach number exceeds 1.0. Equations cannot be evaluated.'
       else         
          ErrStat = ErrID_Warn
-         ErrMsg  = 'Mach number exceeds 0.3. Unsteady aero theory is invalid.'
+         ErrMsg  = 'Mach number exceeds 0.3. Theory is invalid.'
          !misc%FirstWarn_M = .false.
       end if      
    else
