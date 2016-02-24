@@ -1,9 +1,9 @@
 !STARTOFREGISTRYGENERATEDFILE 'ElastoDyn_Types.f90'
 !
-! WARNING This file is generated automatically by the FAST registry
+! WARNING This file is generated automatically by the FAST registry.
 ! Do not edit.  Your changes to this file will be lost.
 !
-! FAST Registry (v3.00.00, 13-Nov-2015)
+! FAST Registry (v3.01.00, 11-Jan-2016)
 !*********************************************************************************************************************************
 ! ElastoDyn_Types
 !.................................................................................................................................
@@ -54,6 +54,7 @@ IMPLICIT NONE
     REAL(ReKi)  :: HubHt      ! Height of the hub [meters]
     REAL(ReKi) , DIMENSION(1:6)  :: PlatformPos      ! Initial platform position (6 DOFs) [-]
     REAL(ReKi) , DIMENSION(1:3)  :: TwrBasePos      ! initial position of the tower base (for SrvD) [m]
+    REAL(ReKi)  :: HubRad      ! radius of hub [m]
   END TYPE ED_InitOutputType
 ! =======================
 ! =========  BladeInputData  =======
@@ -1073,6 +1074,7 @@ ENDIF
     DstInitOutputData%HubHt = SrcInitOutputData%HubHt
     DstInitOutputData%PlatformPos = SrcInitOutputData%PlatformPos
     DstInitOutputData%TwrBasePos = SrcInitOutputData%TwrBasePos
+    DstInitOutputData%HubRad = SrcInitOutputData%HubRad
  END SUBROUTINE ED_CopyInitOutput
 
  SUBROUTINE ED_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
@@ -1170,6 +1172,7 @@ ENDIF
       Re_BufSz   = Re_BufSz   + 1  ! HubHt
       Re_BufSz   = Re_BufSz   + SIZE(InData%PlatformPos)  ! PlatformPos
       Re_BufSz   = Re_BufSz   + SIZE(InData%TwrBasePos)  ! TwrBasePos
+      Re_BufSz   = Re_BufSz   + 1  ! HubRad
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -1284,6 +1287,8 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(InData%PlatformPos)
       ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%TwrBasePos))-1 ) = PACK(InData%TwrBasePos,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%TwrBasePos)
+      ReKiBuf ( Re_Xferred:Re_Xferred+(1)-1 ) = InData%HubRad
+      Re_Xferred   = Re_Xferred   + 1
  END SUBROUTINE ED_PackInitOutput
 
  SUBROUTINE ED_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -1466,6 +1471,8 @@ ENDIF
       OutData%TwrBasePos = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%TwrBasePos))-1 ), mask1, 0.0_ReKi )
       Re_Xferred   = Re_Xferred   + SIZE(OutData%TwrBasePos)
     DEALLOCATE(mask1)
+      OutData%HubRad = ReKiBuf( Re_Xferred )
+      Re_Xferred   = Re_Xferred + 1
  END SUBROUTINE ED_UnPackInitOutput
 
  SUBROUTINE ED_CopyBladeInputData( SrcBladeInputDataData, DstBladeInputDataData, CtrlCode, ErrStat, ErrMsg )
