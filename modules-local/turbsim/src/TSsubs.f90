@@ -340,7 +340,7 @@ CHARACTER(MaxMsgLen)          :: ErrMsg2
          ! -----------------------------------------------
          
          CALL Coh2H(    p, IVec, IFreq, TRH, S, ErrStat2, ErrMsg2 )       
-            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs')
+            CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_General')
             IF (ErrStat >= AbortErrLev) THEN
                CALL Cleanup()
                RETURN
@@ -873,7 +873,7 @@ SUBROUTINE Coeffs2TimeSeries( V, NumSteps, NPoints, NUsrPoints, ErrStat, ErrMsg 
    
    ! local variables
    TYPE(FFT_DataType)               :: FFT_Data                      ! data for applying FFT
-   REAL(SiKi)                       :: Work ( NumSteps )             ! working array to hold coefficients of fft  !bjj: is this going to use too much stack space?
+   REAL(SiKi), ALLOCATABLE          :: Work ( : )                    ! working array to hold coefficients of fft  !bjj: made it allocatable so it doesn't take stack space
 
    
    INTEGER(IntKi)                   :: ITime                         ! loop counter for time step/frequency 
@@ -886,9 +886,11 @@ SUBROUTINE Coeffs2TimeSeries( V, NumSteps, NPoints, NUsrPoints, ErrStat, ErrMsg 
 
    ! initialize variables
 
-ErrStat = ErrID_None
-ErrMsg  = ""
+ !ErrStat = ErrID_None
+ !ErrMsg = ""
    
+   CALL AllocAry(Work, NumSteps, 'Work',ErrStat,ErrMsg)
+   if (ErrStat >= AbortErrLev) return
    
    !  Allocate the FFT working storage and initialize its variables
 
@@ -953,10 +955,12 @@ RETURN
 CONTAINS
 !...........................................
 SUBROUTINE Cleanup()
-
+   
    CALL ExitFFT( FFT_Data, ErrStat2 )
    CALL SetErrStat(ErrStat2, 'Error in ExitFFT', ErrStat, ErrMsg, 'Coeffs2TimeSeries' )
 
+   if (allocated(work)) deallocate(work)
+   
    END SUBROUTINE Cleanup
 END SUBROUTINE Coeffs2TimeSeries
 !=======================================================================
