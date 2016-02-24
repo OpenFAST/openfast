@@ -365,9 +365,11 @@ SUBROUTINE CheckError(ErrID,Msg)
          IF (ALLOCATED(VWindDir   )) DEALLOCATE(VWindDir   )
          
          
-         WRITE (p%US, "(/'ERROR:  ', A / )") TRIM(Msg)
-         WRITE (p%US, "('ABORTING PROGRAM.')" )
-
+         if (p%US > 0) then
+            WRITE (p%US, "(/'ERROR:  ', A / )") TRIM(Msg)
+            WRITE (p%US, "('ABORTING PROGRAM.')" )
+         end if
+         
          CALL TS_end(p, OtherSt_RandNum)
          
          CALL ProgAbort ( TRIM(Msg), .FALSE., 5.0_ReKi )

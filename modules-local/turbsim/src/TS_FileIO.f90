@@ -1142,7 +1142,11 @@ IMPLICIT         NONE
    ! Open summary file.
 CALL GetNewUnit( US, ErrStat, ErrMsg )
 CALL OpenFOutFile( US, TRIM( RootName )//'.sum', ErrStat, ErrMsg ) ! Formatted output file
-IF (ErrStat >= AbortErrLev) RETURN
+if (ErrStat >= AbortErrLev) then
+   US = -1
+   RETURN
+end if
+
 
 
 
