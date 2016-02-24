@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015  National Renewable Energy Laboratory
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
 !    This file is part of AeroDyn.
 !
@@ -147,12 +147,7 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
    Cd = IntAFCoefs(2)
    Cm = IntAFCoefs(3)
      
- 
-   if (errStat >= AbortErrLev) then
-      call SetErrStat( errStat, errMsg, errStat, errMsg, 'ComputeSteadyAirfoilCoefs' ) 
-      return
-   end if   
-  
+   
        
 end subroutine ComputeSteadyAirfoilCoefs
 
@@ -164,21 +159,21 @@ subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
 ! This routine is called from BEMTU_InductionWithResidual and possibly BEMT_CalcOutput.
 ! Determine the Cl, Cd, Cm coeficients for a given angle of attack
 !..................................................................................................................................
-   real(ReKi),             intent(in   ) :: AOA
-   real(ReKi),             intent(in   ) :: U
-   real(ReKi),             intent(in   ) :: Re                   ! Unused in the current version!
-   type(AFInfoType),       intent(in   ) :: AFInfo
-   type(UA_ParameterType),       intent(in   ) :: p_UA           ! Parameters
-   type(UA_DiscreteStateType),   intent(in   ) :: xd_UA          ! Discrete states at Time
-   type(UA_OtherStateType),      intent(in   ) :: OtherState_UA  ! Other/optimization states
-   type(UA_OutputType),      intent(inout) :: OtherState_y_UA  !
-   real(ReKi),             intent(  out) :: Cl, Cd, Cm
-   integer(IntKi),         intent(  out) :: errStat       ! Error status of the operation
-   character(*),           intent(  out) :: errMsg        ! Error message if ErrStat /= ErrID_None 
+   real(ReKi),                   intent(in   ) :: AOA
+   real(ReKi),                   intent(in   ) :: U
+   real(ReKi),                   intent(in   ) :: Re                 ! Unused in the current version!
+   type(AFInfoType),             intent(in   ) :: AFInfo
+   type(UA_ParameterType),       intent(in   ) :: p_UA               ! Parameters
+   type(UA_DiscreteStateType),   intent(in   ) :: xd_UA              ! Discrete states at Time
+   type(UA_OtherStateType),      intent(in   ) :: OtherState_UA      ! Other/optimization states
+   type(UA_OutputType),          intent(inout) :: OtherState_y_UA    !
+   real(ReKi),                   intent(  out) :: Cl, Cd, Cm
+   integer(IntKi),               intent(  out) :: errStat            ! Error status of the operation
+   character(*),                 intent(  out) :: errMsg             ! Error message if ErrStat /= ErrID_None 
    
-   integer(intKi)                        :: ErrStat2          ! temporary Error status
-   character(ErrMsgLen)                  :: ErrMsg2           ! temporary Error message
-   character(*), parameter               :: RoutineName = 'Compute_UA_AirfoilCoefs'
+   integer(intKi)                              :: ErrStat2           ! temporary Error status
+   character(ErrMsgLen)                        :: ErrMsg2            ! temporary Error message
+   character(*), parameter                     :: RoutineName = 'Compute_UA_AirfoilCoefs'
   
    
    type(UA_InputType)              :: u_UA
@@ -197,7 +192,7 @@ subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
 #else
    call UA_CalcOutput(u_UA, p_UA, xd_UA, OtherState_UA, AFInfo, OtherState_y_UA, errStat2, errMsg2 )
 #endif
-      call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'Compute_UA_AirfoilCoefs' ) 
+      call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
       if (errStat >= AbortErrLev) return
 
    Cl         = OtherState_y_UA%Cl
@@ -237,10 +232,15 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal,
   
    ! Local variables
    
+   integer(intKi)                        :: ErrStat2           ! temporary Error status
+   character(ErrMsgLen)                  :: ErrMsg2            ! temporary Error message
+   character(*), parameter               :: RoutineName = 'BEMTU_InductionWithResidual'
    
    real(ReKi)                            :: fzero
 
    real(ReKi)                            :: Cl, Cd, Cx, Cy, Cm
+   
+   
    ErrStat = ErrID_None
    ErrMsg  = ""
    BEMTU_InductionWithResidual = 0.0_ReKi
@@ -252,11 +252,9 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal,
          
    if (( .NOT. EqualRealNos(Vx, 0.0_ReKi) ) .AND. ( .NOT. EqualRealNos(Vy, 0.0_ReKi) ) ) then 
       
-      call ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, Cl, Cd, Cm, errStat, errMsg )       
-         if (errStat >= AbortErrLev) then
-            call SetErrStat( errStat, errMsg, errStat, errMsg, 'BEMTU_InductionWithResidual' ) 
-            return
-         end if
+      call ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, Cl, Cd, Cm, errStat2, errMsg2 )       
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
+         if (ErrStat >= AbortErrLev) return
       
          ! Compute Cx, Cy given Cl, Cd and phi, we honor the useAIDrag and useTIDrag flag because Cx,Cy are only used for the solution of inductions
       call Transform_ClCd_to_CxCy( phi, useAIDrag, useTIDrag, Cl, Cd, Cx, Cy )  
@@ -264,11 +262,9 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal,
          ! Determine axInduction, tanInduction for the current Cl, Cd, phi
       call inductionFactors( rlocal, rtip, chord, phi, Cx, Cy, numBlades, &
                               Vx, Vy, useTanInd, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, &
-                              fzero, axInduction, tanInduction, errStat, errMsg)
-         if (errStat >= AbortErrLev) then
-            call SetErrStat( errStat, errMsg, errStat, errMsg, 'BEMTU_InductionWithResidual' ) 
-            return
-         end if
+                              fzero, axInduction, tanInduction, errStat2, errMsg2)
+         call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
+         if (ErrStat >= AbortErrLev) return
       BEMTU_InductionWithResidual = fzero  ! the residual
       
    end if
@@ -477,13 +473,13 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, cn, ct, B, &
    Ftip = 1.0
    if ( tipLoss ) then
       factortip = tipLossConst/abs(sphi)
-      Ftip = (2.0/pi)*acos(exp(-factortip))
+      Ftip = (2.0/pi)*acos(min(1.0_ReKi,exp(-factortip)))
    end if
 
    Fhub = 1.0
    if ( hubLoss ) then
       factorhub = hubLossConst/abs(sphi)
-      Fhub = (2.0/pi)*acos(exp(-factorhub))
+      Fhub = (2.0/pi)*acos(min(1.0_ReKi,exp(-factorhub)))
    end if
       
    F = Ftip * Fhub
