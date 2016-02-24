@@ -119,6 +119,8 @@ typedef	^	^	LOGICAL	SumPrint	-	-	-	"Print summary data to file? (.sum)"	-
 typedef	^	^	INTEGER	WrVTK	-	-	-	"Write VTK visualization data? (switch) {0=none; 1=basic (position only); 2=surfaces; 3=all meshes (debug)}"	-
 typedef	^	^	CHARACTER(1)	Delim	-	-	-	"Delimiter between columns of text output file (.out): space or tab"	-
 typedef	^	^	CHARACTER(20)	OutFmt	-	-	-	"Format used for text tabular output (except time); resulting field should be 10 characters"	-
+typedef	^	^	CHARACTER(20)	OutFmt_t	-	-	-	"Format used for time channel in text tabular output; resulting field should be 10 characters"	-
+typedef	^	^	IntKi	TChanLen	-	-	-	"width of the time channel"	-
 typedef	^	^	CHARACTER(1024)	OutFileRoot	-	-	-	"The rootname of the output files"	-
 typedef	^	^	CHARACTER(1024)	FTitle	-	-	-	"The description line from the FAST (glue-code) input file"	-
 typedef	^	^	FAST_VTK_SurfaceType	VTK_surface	-	-	-	"Data for VTK surface visualization"
