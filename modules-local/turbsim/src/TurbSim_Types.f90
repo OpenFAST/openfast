@@ -3,7 +3,7 @@ MODULE TurbSim_Types
 
 use NWTC_Library
 
-   TYPE(ProgDesc), PARAMETER :: TurbSim_Ver = ProgDesc( 'TurbSim', 'v2.00.05b-bjj', '24-Feb-2016' )
+   TYPE(ProgDesc), PARAMETER :: TurbSim_Ver = ProgDesc( 'TurbSim', 'v2.00.05c-bjj', '25-Feb-2016' )
 
    LOGICAL,        PARAMETER :: MVK         = .FALSE.                       ! This parameter has been added to replace the NON-STANDARD compiler directive previously used
    LOGICAL,        PARAMETER :: PeriodicY   = .FALSE. !.TRUE.
@@ -250,6 +250,7 @@ use NWTC_Library
                      
       integer(intKi)               :: nComp                                   ! number of velocity components in the file (1=u; 2=u&v; 3=u,v,w)
       integer(intKi)               :: nFreq                                   ! number of frequencies in the calculated spectra
+      real(dbKi)                   :: DelF                                    ! delta frequenc of the calculated spectra (same as f(1) in double precision)
       integer(intKi)               :: nPoints                                 ! number of points in the time series input
       integer(intKi)               :: RefPtID                                 ! Index of the reference point (1-nPoints)
       integer(intKi)               :: nTimes                                  ! number of rows in the time series input

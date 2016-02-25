@@ -995,7 +995,7 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
    
    INTEGER(IntKi)                   :: ErrStat2                         ! Error level (local)
    CHARACTER(MaxMsgLen)             :: ErrMsg2                          ! Message describing error (local)
-   
+   CHARACTER(*), PARAMETER          :: RoutineName = 'CalcTargetPSD'
 
       ! initialize variables
 
@@ -1006,7 +1006,7 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
       !  Allocate the array to hold the single-sided velocity spectrum.
 
    CALL AllocAry( SSVS, p%grid%NumFreq,3, 'SSVS', ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -1080,7 +1080,7 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
             ZTmp = p%grid%Z(IPoint) + p%grid%GridRes_Z
             
             CALL getVelocity(p, p%UHub,p%grid%HubHt, ZTmp, UTmp, ErrStat2, ErrMsg2)   !get velocity Utmp at height ZTmp
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD')            
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)            
             
             DUDZ = ( UTmp - U(IPoint) ) / p%grid%GridRes_Z
             CALL Spec_TIDAL  ( p, p%grid%Z(IPoint), DUDZ, SSVS, p%met%TurbModel_ID )
@@ -1111,7 +1111,7 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
             ELSEIF (iPointUsr  == p%usr%NPoints) THEN
                iPoint = p%usr%RefPtID
             END IF
-            
+       !bjj: make sure size(ssvs,1) = p%grid%NumFreq <= p%usr%nFreq = size(p%usr%S,1)
             CALL Spec_TimeSer_Extrap ( p, p%grid%Z(iPoint), U(iPoint), SSVS )            
             SSVS(1:p%usr%nFreq,:) = p%usr%S(:,iPointUsr,:)                         
                         
@@ -1141,7 +1141,7 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
       CASE ( SpecModel_WF_07D, SpecModel_WF_14D )
          DO IPoint=1,p%grid%NPoints
             CALL Spec_WF_DW ( p, p%grid%Z(IPoint), U(IPoint), SSVS, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
             S(:,IPoint,:) = SSVS*HalfDelF               
          ENDDO       
          
@@ -1157,13 +1157,13 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
          !     S(:,IPoint,:) = SSVS*HalfDelF               
          !  ENDDO       
          ELSE
-            CALL SetErrStat( ErrID_Fatal, 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.', ErrStat, ErrMsg, 'CalcTargetPSD')
+            CALL SetErrStat( ErrID_Fatal, 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.', ErrStat, ErrMsg, RoutineName)
             CALL Cleanup()
             RETURN
          ENDIF
 
       CASE DEFAULT
-         CALL SetErrStat( ErrID_Fatal, 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.', ErrStat, ErrMsg, 'CalcTargetPSD')
+         CALL SetErrStat( ErrID_Fatal, 'Specified turbulence PSD, "'//TRIM( p%met%TurbModel )//'", not availible.', ErrStat, ErrMsg, RoutineName)
          CALL Cleanup()
          RETURN
       END SELECT          
@@ -1172,9 +1172,9 @@ SUBROUTINE CalcTargetPSD(p, S, U, ErrStat, ErrMsg)
    !IF (PSD_OUT) THEN
    !   UP = -1
    !   CALL GetNewUnit( UP, ErrStat2, ErrMsg2 )
-   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
+   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !   CALL OpenFOutFile ( UP, TRIM( p%RootName )//'.psd', ErrStat2, ErrMsg2)
-   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcTargetPSD' )
+   !      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    !      IF (ErrStat >= AbortErrLev) THEN
    !         CALL Cleanup()
    !         RETURN
@@ -1232,7 +1232,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    CHARACTER(*),                    intent(  out) :: ErrMsg                          ! Message describing error
    
    ! local variables:
-   REAL(ReKi)                                     :: DelF                            ! Delta frequency
+   REAL(DbKi)                                     :: DelF                            ! Delta frequency
    INTEGER(IntKi)                                 :: IY, IZ, IFreq                   ! loop counters 
    INTEGER(IntKi)                                 :: NTwrPts                         ! number of extra tower points
    INTEGER(IntKi)                                 :: NTwrIndx                        ! number of tower points to be placed in output file
@@ -1247,7 +1247,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    
    INTEGER(IntKi)                                 :: ErrStat2                        ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
-   
+   CHARACTER(*), PARAMETER                        :: RoutineName = 'CreateGrid'
    LOGICAL                                        :: GenerateExtraHubPoint
    
    ErrStat = ErrID_None
@@ -1284,25 +1284,32 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
 
    !IF (p_grid%NumSteps < 2 )  THEN
    !   CALL SetErrStat( ErrID_Fatal, 'There must be at least 2 time steps. '//&
-   !                    'Increase the usable length of the time series or decrease the time step.', ErrStat, ErrMsg, 'CreateGrid' )
+   !                    'Increase the usable length of the time series or decrease the time step.', ErrStat, ErrMsg, RoutineName )
    !   RETURN
    !END IF
    
    p_grid%NumFreq = p_grid%NumSteps / 2
-   DelF           = 1.0/( p_grid%NumSteps*p_grid%TimeStep )
+   DelF           = 1.0_DbKi/( p_grid%NumSteps*p_grid%TimeStep )
       
       ! quick check that the frequency contents are the same as the user-input time series. (necessary because we want to keep the exact time series)  
    IF (p_usr%NPoints > 0) THEN
-      IF ( .NOT. EqualRealNos( DelF, p_usr%f(1) ) ) THEN
+      ! IF ( .NOT. EqualRealNos( DelF, p_usr%f(1) ) .or. .not. EqualRealNos(p_grid%AnalysisTime,p_usr%f(1)*p_usr%NFreq ) .or. p_grid%NumFreq > size(p_usr%f) ) THEN
+      IF ( .NOT. EqualRealNos( DelF, p_usr%DelF ) ) THEN
          CALL SetErrStat(ErrID_Fatal, 'Delta frequency in the user-input time series must be the same as the delta frequency in the simulated series. '//&
-            'Change AnalysisTime or number of rows entered in user-defined time series file.', ErrStat, ErrMsg,'CreateGrid')
+            'Change AnalysisTime or number of rows entered in user-defined time series file.', ErrStat, ErrMsg,RoutineName)
          RETURN
       END IF      
+      
+      if ( p_grid%NumFreq > p_usr%nFreq ) then
+         CALL SetErrStat(ErrID_Fatal, 'Cannot output more frequency values than were entered in user-defined time series file.', ErrStat, ErrMsg,RoutineName)
+         RETURN         
+      end if
+      
    END IF
    
             
    CALL AllocAry( p_grid%Freq, p_grid%NumFreq, 'Freq (frequency array)', ErrStat2, ErrMsg2)
-      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN
 
    DO IFreq=1,p_grid%NumFreq
@@ -1328,7 +1335,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
 
    IF ( p_grid%Zbottom <= 0.0_ReKi ) THEN
       CALL SetErrStat(ErrID_Fatal,'The lowest grid point ('//TRIM(Num2LStr(p_grid%Zbottom))// ' m) must be above the ground. '//&
-                      'Adjust the appropriate values in the input file.',ErrStat,ErrMsg,'CreateGrid')
+                      'Adjust the appropriate values in the input file.',ErrStat,ErrMsg,RoutineName)
       RETURN
    ENDIF   
    
@@ -1349,7 +1356,7 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
       NTwrIndx = NTwrPts + 1
 
       IF ( NTwrPts < 1 ) THEN        
-         CALL SetErrStat(ErrID_Warn, ' There are no extra tower data points below the grid. Tower output will be turned off.',ErrStat,ErrMsg,'CreateGrid')
+         CALL SetErrStat(ErrID_Warn, ' There are no extra tower data points below the grid. Tower output will be turned off.',ErrStat,ErrMsg,RoutineName)
          AddTower = .FALSE.  ! bjj: change this so it doesn't actually modify this variable inside this routine???
          NTwrPts  = 0
          NTwrIndx = 0
@@ -1365,8 +1372,8 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    ENDIF   
    
          ! we will set these index arrays to point to the grid/tower points or user-specified points
-   CALL AllocAry(p_grid%GridPtIndx,p_grid%NumGrid_Y*p_grid%NumGrid_Z, 'GridPtIndx', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   CALL AllocAry(p_grid%TwrPtIndx, NTwrIndx,                          'TwrPtIndx',  ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')   
+   CALL AllocAry(p_grid%GridPtIndx,p_grid%NumGrid_Y*p_grid%NumGrid_Z, 'GridPtIndx', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   CALL AllocAry(p_grid%TwrPtIndx, NTwrIndx,                          'TwrPtIndx',  ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)   
    IF (ErrStat >= AbortErrLev) RETURN
 
    
@@ -1469,8 +1476,8 @@ SUBROUTINE CreateGrid( p_grid, p_usr, UHub, AddTower, ErrStat, ErrMsg )
    
    ! we now know how many points there are going to be, so let's create the arrays that contains their locations and finish updating our index arrays
    
-   CALL AllocAry(p_grid%Y, p_grid%NPoints, 'Y (lateral locations of the grid points)',  ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
-   CALL AllocAry(p_grid%Z, p_grid%NPoints, 'Z (vertical locations of the grid points)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'CreateGrid')
+   CALL AllocAry(p_grid%Y, p_grid%NPoints, 'Y (lateral locations of the grid points)',  ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   CALL AllocAry(p_grid%Z, p_grid%NPoints, 'Z (vertical locations of the grid points)', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    IF (ErrStat >= AbortErrLev) RETURN
    
    ! (1) User-defined points 
@@ -2235,6 +2242,8 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
    REAL(ReKi)                                  :: meanV                        ! mean value of the V component
    REAL(ReKi)                                  :: meanW                        ! mean value of the W component
 
+   REAL(DbKi)                                  :: DelF                         ! delta frequency
+
    REAL(ReKi)                                  :: cosH, sinH                   ! cosine and sin of horizontal angles
    REAL(ReKi)                                  :: cosV, sinV                   ! cosine and sin of vertical angles
    REAL(ReKi)                                  :: rotateMatrix(3,3)            ! rotation matrix to align with direction of mean velocity
@@ -2249,7 +2258,7 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
          
    INTEGER(IntKi)                              :: ErrStat2                     ! Error level (local)
    CHARACTER(MaxMsgLen)                        :: ErrMsg2                      ! error message (local)
-   
+   CHARACTER(*), parameter                     :: RoutineName = 'TimeSeriesToSpectra'
    
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -2259,13 +2268,13 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
    p%usr%nFreq  = PSF ( p%usr%NTimes/2, 9, .TRUE.)
    NumSteps     = p%usr%nFreq*2
          
-   CALL AllocAry(p%usr%meanU,                   p%usr%NPoints,p%usr%nComp,'meanU',      ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
-   CALL AllocAry(p%usr%meanDir,                 p%usr%NPoints,            'meanDir',    ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
-   CALL AllocAry(p%usr%meanVAng,                p%usr%NPoints,            'meanVAng',   ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
-   CALL AllocAry(p%usr%S,          p%usr%nFreq ,p%usr%NPoints,p%usr%nComp,'S',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
-   CALL AllocAry(p%usr%f,          p%usr%nFreq ,                          'f',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
-   CALL AllocAry(p%usr%phaseAngles,p%usr%nFreq ,p%usr%NPoints,p%usr%nComp,'phaseAngles',ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
-   CALL AllocAry(work,             NumSteps,                              'work',       ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,'TimeSeriesToSpectra')
+   CALL AllocAry(p%usr%meanU,                   p%usr%NPoints,p%usr%nComp,'meanU',      ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   CALL AllocAry(p%usr%meanDir,                 p%usr%NPoints,            'meanDir',    ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   CALL AllocAry(p%usr%meanVAng,                p%usr%NPoints,            'meanVAng',   ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   CALL AllocAry(p%usr%S,          p%usr%nFreq ,p%usr%NPoints,p%usr%nComp,'S',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   CALL AllocAry(p%usr%f,          p%usr%nFreq ,                          'f',          ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   CALL AllocAry(p%usr%phaseAngles,p%usr%nFreq ,p%usr%NPoints,p%usr%nComp,'phaseAngles',ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   CALL AllocAry(work,             NumSteps,                              'work',       ErrStat2,ErrMsg2); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
@@ -2350,7 +2359,7 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
    
    
    CALL InitFFT( NumSteps, FFT_Data, NormalizeIn=.TRUE., ErrStat=ErrStat2 )
-      CALL SetErrStat(ErrStat2, 'Error in InitFFT', ErrStat, ErrMsg, 'TimeSeriesToSpectra' )
+      CALL SetErrStat(ErrStat2, 'Error in InitFFT', ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -2367,7 +2376,7 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
 
          CALL ApplyFFT_f( work, FFT_Data, ErrStat2 )
             IF (ErrStat2 /= ErrID_None ) THEN
-               CALL SetErrStat(ErrStat2, 'Error in ApplyFFT_f for point '//TRIM(Num2LStr(iPoint))//'.', ErrStat, ErrMsg, 'TimeSeriesToSpectra' )
+               CALL SetErrStat(ErrStat2, 'Error in ApplyFFT_f for point '//TRIM(Num2LStr(iPoint))//'.', ErrStat, ErrMsg, RoutineName )
                IF (ErrStat >= AbortErrLev) EXIT
             END IF
             
@@ -2396,12 +2405,12 @@ SUBROUTINE TimeSeriesToSpectra( p, ErrStat, ErrMsg )
    ENDDO ! IVec 
    
    ! calculate associated frequencies:
-   p%usr%f(1) = 1.0_ReKi / ( NumSteps * ( p%usr%t(2) - p%usr%t(1) ) )
-   do iFreq=2,p%usr%nFreq
-      p%usr%f(iFreq) = p%usr%f(1) * iFreq
+   p%usr%DelF = 1.0_DbKi / ( NumSteps * ( p%usr%t(2) - p%usr%t(1) ) ) !store frequency in double precision for cases of very long time series
+   do iFreq=1,p%usr%nFreq
+      p%usr%f(iFreq) = p%usr%DelF * iFreq
    end do
    
-   p%usr%S = p%usr%S*2.0_ReKi/p%usr%f(1)  ! make this the single-sided velocity spectra we're using in the rest of the code
+   p%usr%S = p%usr%S*real(2.0_DbKi/p%usr%DelF,ReKi) ! p%usr%S*2.0_ReKi/p%usr%f(1)  ! make this the single-sided velocity spectra we're using in the rest of the code
       
 
    CALL Cleanup()
@@ -2412,10 +2421,14 @@ CONTAINS
    SUBROUTINE Cleanup()
 
    CALL ExitFFT( FFT_Data, ErrStat2 )         
-   CALL SetErrStat(ErrStat2, 'Error in ExitFFT', ErrStat, ErrMsg, 'TimeSeriesToSpectra' )
+   CALL SetErrStat(ErrStat2, 'Error in ExitFFT', ErrStat, ErrMsg, RoutineName )
    
    IF ( ALLOCATED(work) ) DEALLOCATE(work)
-
+   
+   ! we don't need these anymore:
+   IF ( ALLOCATED( p%usr%t             ) )  DEALLOCATE( p%usr%t             )
+   IF ( ALLOCATED( p%usr%v             ) )  DEALLOCATE( p%usr%v             )
+   
    END SUBROUTINE Cleanup   
             
 END SUBROUTINE TimeSeriesToSpectra

@@ -84,7 +84,8 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
 
    CHARACTER(1024)               :: UserFile                         ! Name of file containing user-defined spectra or time-series files
    CHARACTER(1024)               :: ProfileFile                      ! Name of the file containing profile data for user-defined velocity profiles and/or USRVKM model
-
+   CHARACTER(*), PARAMETER       :: RoutineName = 'ReadInputFile'
+   
       ! Initialize some variables:
    ErrStat = ErrID_None
    ErrMsg  = ""
@@ -102,10 +103,10 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
    !===============================================================================================================================
 
    CALL GetNewUnit( UI, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
    CALL OpenFInpFile( UI, InFile, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -127,16 +128,16 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
       !===============================================================================================================================
 
       CALL ReadCom( UI, InFile, "File Heading Line 1",    ErrStat2, ErrMsg2, UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       CALL ReadCom( UI, InFile, "File Heading Line 2",    ErrStat2, ErrMsg2, UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       CALL ReadCom( UI, InFile, "Runtime Options Heading",ErrStat2, ErrMsg2, UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                   
       CALL ReadVar( UI, InFile, Echo, 'Echo', 'Echo switch', ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
             RETURN
@@ -151,7 +152,7 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
       
       
       CALL OpenEcho ( UnEc, TRIM(p%RootName)//'.ech', ErrStat2, ErrMsg2, TurbSim_Ver )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -161,7 +162,7 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
       
       REWIND( UI, IOSTAT=ErrStat2 )  
          IF (ErrStat2 /= 0_IntKi ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(InFile)//'".', ErrStat, ErrMsg, 'ReadInputFile')    
+            CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(InFile)//'".', ErrStat, ErrMsg, RoutineName)    
             RETURN
          END IF         
                   
@@ -171,11 +172,11 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
    
       ! RandSeed(1)
    CALL ReadVar( UI, InFile, p%RNG%RandSeed(1), "RandSeed(1)", "Random seed #1",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! RandSeed(2)
    CALL ReadVar( UI, InFile, Line, "RandSeed(2)", "Random seed #2",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -187,7 +188,7 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
 
       CALL Conv2UC( Line1 )
       IF ( (Line1 == 'T') .OR.  (Line1 == 'F') ) THEN
-         CALL SetErrStat( ErrID_Fatal, ' RandSeed(2): Invalid RNG type.', ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrID_Fatal, ' RandSeed(2): Invalid RNG type.', ErrStat, ErrMsg, RoutineName)
          CALL Cleanup()
          RETURN
       ENDIF
@@ -207,7 +208,7 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
          ELSE IF ( p%RNG%RNG_type == "RNSNLW") THEN
             p%RNG%pRNG = pRNG_SNLW3
          ELSE         
-            CALL SetErrStat( ErrID_Fatal, ' RandSeed(2): Invalid alternative random number generator.', ErrStat, ErrMsg, 'ReadInputFile')
+            CALL SetErrStat( ErrID_Fatal, ' RandSeed(2): Invalid alternative random number generator.', ErrStat, ErrMsg, RoutineName)
             CALL Cleanup()
             RETURN
          ENDIF
@@ -219,44 +220,44 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
 
       ! --------- Read the flag for writing the binary HH (GenPro) turbulence parameters. -------------
    CALL ReadVar( UI, InFile, p%WrFile(FileExt_BIN), "WrBHHTP", "Output binary HH turbulence parameters? [RootName.bin]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! --------- Read the flag for writing the formatted turbulence parameters. ----------------------
    CALL ReadVar( UI, InFile, p%WrFile(FileExt_DAT), "WrFHHTP", "Output formatted turbulence parameters? [RootName.dat]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ---------- Read the flag for writing the AeroDyn HH files. -------------------------------------
    CALL ReadVar( UI, InFile, p%WrFile(FileExt_HH), "WrADHH", "Output AeroDyn HH files? [RootName.hh]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ---------- Read the flag for writing the AeroDyn FF files. ---------------------------------------
    CALL ReadVar( UI, InFile, p%WrFile(FileExt_BTS), "WrADFF", "Output AeroDyn FF files? [RootName.bts]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ---------- Read the flag for writing the BLADED FF files. -----------------------------------------
    CALL ReadVar( UI, InFile, p%WrFile(FileExt_WND) , "WrBLFF", "Output BLADED FF files? [RootName.wnd]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ---------- Read the flag for writing the AeroDyn tower files. --------------------------------------
    CALL ReadVar( UI, InFile, p%WrFile(FileExt_TWR), "WrADTWR", "Output tower data? [RootName.twr]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ---------- Read the flag for writing the formatted FF files. ---------------------------------------
    CALL ReadVar( UI, InFile, p%WrFile(FileExt_UVW), "WrFMTFF", "Output formatted FF files? [RootName.u, .v, .w]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ---------- Read the flag for writing coherent time series files. --------------------------------------
    CALL ReadVar( UI, InFile, p%WrFile(FileExt_CTS), "WrACT", "Output coherent time series files? [RootName.cts]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ---------- Read the flag for turbine rotation. -----------------------------------------------------------
    CALL ReadVar( UI, InFile, p%grid%Clockwise, "Clockwise", "Clockwise rotation when looking downwind?",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ---------- Read the flag for determining IEC scaling -----------------------------------------------------
    CALL ReadVar( UI, InFile, p%IEC%ScaleIEC, "ScaleIEC", "Scale IEC turbulence models to specified standard deviation?",&
                                  ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       
       ! we'll check the errors before going to the next section of the input file
@@ -270,30 +271,30 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
    !===============================================================================================================================
 
    CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 1",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
    CALL ReadCom( UI, InFile, "Turbine/Model Specifications Heading Line 2",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the vertical matrix dimension. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%grid%NumGrid_Z, "NumGrid_Z", "Vertical grid-point matrix dimension [-]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the lateral matrix dimension. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%grid%NumGrid_Y, "NumGrid_Y", "Horizontal grid-point matrix dimension [-]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the time step. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%grid%TimeStep, "TimeStep", "Time step [seconds]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the analysis time. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%grid%AnalysisTime, "AnalysisTime", "Analysis time [seconds]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the usable time. ---------------------------------------------
    CALL ReadVar( UI, InFile, Line, "UsableTime", "Usable output time [seconds]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -309,7 +310,7 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
                p%grid%UsableTime = p%grid%AnalysisTime
             ELSE
                CALL SetErrStat( ErrID_Fatal, 'The usable output time must be a number greater than zero (or the string "ALL").', &
-                                ErrStat, ErrMsg, 'ReadInputFile' )
+                                ErrStat, ErrMsg, RoutineName )
                CALL Cleanup()
                RETURN
             END IF
@@ -320,47 +321,47 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
 
       ! ------------ Read in the hub height. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%grid%HubHt, "HubHt", "Hub height [m]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the grid height. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%grid%GridHeight, "GridHeight", "Grid height [m]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the grid width. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%grid%GridWidth, "GridWidth", "Grid width [m]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the vertical flow angle. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%met%VFlowAng, "VFlowAng", "Vertical flow angle [degrees]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the horizontal flow angle. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%met%HFlowAng, "HFlowAng", "Horizontal flow angle [degrees]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
 
 !..................................................................................................................................
 !  Do some error checking on the runtime options and turbine/model specifications before we read the meteorology data
 !..................................................................................................................................
 
-   IF ( p%IEC%ScaleIEC > 2 .OR. p%IEC%ScaleIEC < 0 ) CALL SetErrStat( ErrID_Fatal, 'The value for parameter ScaleIEC must be 0, 1, or 2.',    ErrStat, ErrMsg, 'ReadInputFile')
-   IF ( p%grid%NumGrid_Z < 2 )                       CALL SetErrStat( ErrID_Fatal, 'The matrix must be >= 2x2.',                              ErrStat, ErrMsg, 'ReadInputFile')
-   IF ( p%grid%NumGrid_Y < 2 )                       CALL SetErrStat( ErrID_Fatal, 'The matrix must be >= 2x2.',                              ErrStat, ErrMsg, 'ReadInputFile') 
-   IF ( 0.5*p%grid%GridHeight > p%grid%HubHt  )      CALL SetErrStat( ErrID_Fatal, 'The hub must be higher than half of the grid height.',    ErrStat, ErrMsg, 'ReadInputFile')
-   IF ( p%grid%GridWidth <=  0.0_ReKi )              CALL SetErrStat( ErrID_Fatal, 'The grid width must be greater than zero.',               ErrStat, ErrMsg, 'ReadInputFile')
-   IF ( p%grid%HubHt <=  0.0 )                       CALL SetErrStat( ErrID_Fatal, 'The hub height must be greater than zero.',               ErrStat, ErrMsg, 'ReadInputFile')
-   IF ( p%grid%AnalysisTime <=  0.0 )                CALL SetErrStat( ErrID_Fatal, 'The analysis time must be greater than zero.',            ErrStat, ErrMsg, 'ReadInputFile')
-   IF ( p%grid%TimeStep <=  0.0 )                    CALL SetErrStat( ErrID_Fatal, 'The time step must be greater than zero.',                ErrStat, ErrMsg, 'ReadInputFile')
-   IF ( ABS( p%met%VFlowAng ) > 45.0 )               CALL SetErrStat( ErrID_Fatal, 'The vertical flow angle must not exceed +/- 45 degrees.', ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( p%IEC%ScaleIEC > 2 .OR. p%IEC%ScaleIEC < 0 ) CALL SetErrStat( ErrID_Fatal, 'The value for parameter ScaleIEC must be 0, 1, or 2.',    ErrStat, ErrMsg, RoutineName)
+   IF ( p%grid%NumGrid_Z < 2 )                       CALL SetErrStat( ErrID_Fatal, 'The matrix must be >= 2x2.',                              ErrStat, ErrMsg, RoutineName)
+   IF ( p%grid%NumGrid_Y < 2 )                       CALL SetErrStat( ErrID_Fatal, 'The matrix must be >= 2x2.',                              ErrStat, ErrMsg, RoutineName) 
+   IF ( 0.5*p%grid%GridHeight > p%grid%HubHt  )      CALL SetErrStat( ErrID_Fatal, 'The hub must be higher than half of the grid height.',    ErrStat, ErrMsg, RoutineName)
+   IF ( p%grid%GridWidth <=  0.0_ReKi )              CALL SetErrStat( ErrID_Fatal, 'The grid width must be greater than zero.',               ErrStat, ErrMsg, RoutineName)
+   IF ( p%grid%HubHt <=  0.0 )                       CALL SetErrStat( ErrID_Fatal, 'The hub height must be greater than zero.',               ErrStat, ErrMsg, RoutineName)
+   IF ( p%grid%AnalysisTime <=  0.0 )                CALL SetErrStat( ErrID_Fatal, 'The analysis time must be greater than zero.',            ErrStat, ErrMsg, RoutineName)
+   IF ( p%grid%TimeStep <=  0.0 )                    CALL SetErrStat( ErrID_Fatal, 'The time step must be greater than zero.',                ErrStat, ErrMsg, RoutineName)
+   IF ( ABS( p%met%VFlowAng ) > 45.0 )               CALL SetErrStat( ErrID_Fatal, 'The vertical flow angle must not exceed +/- 45 degrees.', ErrStat, ErrMsg, RoutineName)
    IF ( p%grid%UsableTime <=  0.0 )                  CALL SetErrStat( ErrID_Fatal, 'The usable output time must be a number greater than zero'&
-                                                                                                                   //' or the string "ALL".', ErrStat, ErrMsg, 'ReadInputFile')
+                                                                                                                   //' or the string "ALL".', ErrStat, ErrMsg, RoutineName)
       
 !..................................................................................................................................
 !  initialize secondary parameters that will be used to calculate default values in the meteorological boundary conditions section
 !..................................................................................................................................
       ! Initialize the RNG (for computing "default" values that contain random variates)
    CALL RandNum_Init(p%RNG, OtherSt_RandNum, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
    ! ***** Calculate the diameter of the rotor disk *****
    p%grid%RotorDiameter = MIN( p%grid%GridWidth, p%grid%GridHeight )
@@ -376,18 +377,18 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
    !===============================================================================================================================
    
    CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 1",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
    CALL ReadCom( UI, InFile, "Meteorological Boundary Conditions Heading Line 2",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the turbulence model. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%met%TurbModel, "TurbModel", "spectral model",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       ! ------------ Read in the UserFile------------------- ---------------------------------------------
    CALL ReadVar( UI, InFile, UserFile, "UserFile", "Name of the input file for user-defined spectra or time-series inputs",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    IF ( PathIsRelative( UserFile ) ) UserFile = TRIM(PriPath)//TRIM(UserFile)
 
    IF (ErrStat >= AbortErrLev) THEN
@@ -454,26 +455,26 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
             p%met%TurbModel_ID = SpecModel_USER
             
             CALL GetUSRspec(UserFile, p, UnEc, ErrStat2, ErrMsg2)
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
          CASE ( 'TIMESR' )
             p%met%TMName = 'User-input time series'
             p%met%TurbModel_ID = SpecModel_TimeSer 
             
             CALL GetUSRTimeSeries(UserFile, p, UnEc, ErrStat2, ErrMsg2)
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, 'ReadInputFile')
+               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, RoutineName)
                IF (ErrStat >= AbortErrLev) THEN
                   CALL Cleanup()
                   RETURN
                END IF
                
             CALL TimeSeriesToSpectra( p, ErrStat2, ErrMsg2 )
-               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, 'ReadInputFile')
+               CALL SetErrStat(ErrStat2,ErrMsg2, ErrStat,ErrMsg, RoutineName)
 
          CASE DEFAULT
    !BONNIE: todo: add the UsrVKM model to this list when the model is complete 
             CALL SetErrStat( ErrID_Fatal, 'The turbulence model must be one of the following: "IECKAI", "IECVKM", "SMOOTH",' &
-                       //' "WF_UPW", "WF_07D", "WF_14D", "NWTCUP", "GP_LLJ", "TIDAL", "RIVER", "API", "USRINP", "TIMESR" "NONE".', ErrStat, ErrMsg, 'ReadInputFile')
+                       //' "WF_UPW", "WF_07D", "WF_14D", "NWTCUP", "GP_LLJ", "TIDAL", "RIVER", "API", "USRINP", "TIMESR" "NONE".', ErrStat, ErrMsg, RoutineName)
             CALL Cleanup()
             RETURN
 
@@ -485,7 +486,7 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
 
       ! ------------ Read in the IEC standard and edition numbers. ---------------------------------------------
    CALL ReadVar( UI, InFile, Line, "IECstandard", "Number of the IEC standard",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -493,7 +494,7 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
 
       ! Process this line for IEC standard & edition & IECeditionStr >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       CALL ProcessLine_IECstandard( Line, p%met%IsIECModel, p%met%TurbModel_ID, p%IEC%IECstandard, p%IEC%IECedition, p%IEC%IECeditionStr, ErrStat2, ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
             RETURN
@@ -502,12 +503,12 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
 
       ! ------------ Read in the IEC turbulence characteristic. ---------------------------------------------
    CALL ReadVar( UI, InFile, Line, "IECturbc", "IEC turbulence characteristic",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! Process this line for NumTurbInp, IECPerTurbInt, IECTurbC, and KHtest >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       CALL ProcessLine_IECTurbc(Line, p%met%IsIECModel, p%IEC%IECstandard, p%IEC%IECedition, p%IEC%IECeditionStr, &
                                 p%IEC%NumTurbInp, p%IEC%IECTurbC, p%IEC%PerTurbInt, p%met%KHtest, ErrStat2, ErrMsg2)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) THEN
             CALL Cleanup()
             RETURN
@@ -516,12 +517,12 @@ SUBROUTINE ReadInputFile(InFile, p, OtherSt_RandNum, ErrStat, ErrMsg)
    
       ! ------------ Read in the IEC wind turbulence type ---------------------------------------------
    CALL ReadVar( UI, InFile, Line, "IEC_WindType", "IEC turbulence type",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    
          ! Process this line for IECTurbE, Vref, IEC_WindType, and IEC_WindDes >>>>>>>>>>>>>>>>>>>>>>>>>>>>>
       CALL ProcessLine_IEC_WindType(Line, p, ErrStat2, ErrMsg2)
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             IF (ErrStat >= AbortErrLev) THEN
                CALL Cleanup()
                RETURN
@@ -539,26 +540,26 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    ! ------------ Read in the ETM c parameter (IEC 61400-1, Ed 3: Section 6.3.2.3, Eq. 19) ----------------------
    CALL ReadRVarDefault( UI, InFile, p%IEC%ETMc, "ETMc", 'IEC Extreme Turbulence Model (ETM) "c" parameter [m/s]', UnEc, &
                          UseDefault, ErrStat2, ErrMsg2, IGNORE=(p%IEC%IEC_WindType /= IEC_ETM ))
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
    ! ------------ Read in the wind profile type -----------------------------------------------------------------
    CALL ReadCVarDefault( UI, InFile, p%met%WindProfileType, "WindProfileType", "Wind profile type", UnEc, UseDefault, ErrStat2, ErrMsg2) !converts WindProfileType to upper case
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the ProfileFile------------------- ---------------------------------------------
    CALL ReadVar( UI, InFile, ProfileFile, "ProfileFile", 'Name of the input file for profiles used with WindProfileType="USR" or TurbModel="USRVKM"',ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    IF ( PathIsRelative( ProfileFile ) ) ProfileFile = TRIM(PriPath)//TRIM(ProfileFile)
             
    ! ------------ Read in the height for the reference wind speed. ---------------------------------------------
    CALL ReadVar( UI, InFile, p%met%RefHt, "RefHt", "Reference height [m]",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    ! ------------ Read in the reference wind speed. -----------------------------------------------------
    IsUnusedParameter = p%IEC%IEC_WindType > IEC_ETM  .OR. INDEX('TU',p%met%WindProfileType(1:1)) > 0 ! p%IEC%IEC_WindType > IEC_ETM == EWM models   
    CALL ReadRVarDefault( UI, InFile, p%met%URef, "URef", "Reference wind speed [m/s]", UnEc, getDefaultURef, ErrStat2, ErrMsg2, &
                      IGNORE=IsUnusedParameter ) ! p%IEC%IEC_WindType > IEC_ETM == EWM models
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
    getDefaultURef = getDefaultURef .AND. .NOT. IsUnusedParameter
    
@@ -566,14 +567,14 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    ! ------------ Read in the jet height -------------------------------------------------------------
    IsUnUsedParameter = TRIM(p%met%WindProfileType) /= 'JET'
    CALL ReadRVarDefault( UI, InFile, p%met%ZJetMax, "ZJetMax", "Jet height [m]", UnEc, getDefaultZJetMax, ErrStat2, ErrMsg2, IGNORE=IsUnusedParameter)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    getDefaultZJetMax = getDefaultZJetMax .AND. .NOT. IsUnusedParameter ! Jet height for 
 
    ! ------------ Read in the power law exponent, PLExp ---------------------------------------------
    IsUnusedParameter = (TRIM(p%met%WindProfileType) /= "PL" .AND. TRIM(p%met%WindProfileType) /= "IEC")  .OR. p%IEC%IEC_WindType > IEC_ETM
    CALL ReadRVarDefault( UI, InFile, p%met%PLExp, "PLExp", "Power law exponent [-]", UnEc, getDefaultPLExp, ErrStat2, ErrMsg2, IGNORE=IsUnusedParameter)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    getDefaultPLExp = getDefaultPLExp .AND. .NOT. IsUnusedParameter  ! we need RICH_NO before we can calculate a default for this value RICH_NO
                       
@@ -581,59 +582,59 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    IsUnusedParameter = p%met%TurbModel_ID==SpecModel_TIDAL
    CALL ReadRVarDefault( UI, InFile, p%met%Z0, "Z0", "Surface roughness length [m]", UnEc, UseDefault, ErrStat2, ErrMsg2, &
                                        IGNORE=IsUnusedParameter)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
 !..................................................................................................................................
 !  Do some error checking on the meteorology before we read the non-IEC meteorology data
 !..................................................................................................................................   
-   IF ( p%IEC%IEC_WindType == IEC_ETM .AND. p%IEC%ETMc <= 0. ) CALL SetErrStat( ErrID_Fatal, 'The ETM "c" parameter must be a positive number', ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( p%IEC%IEC_WindType == IEC_ETM .AND. p%IEC%ETMc <= 0. ) CALL SetErrStat( ErrID_Fatal, 'The ETM "c" parameter must be a positive number', ErrStat, ErrMsg, RoutineName)
       
       ! Make sure WindProfileType is valid for this turbulence model
    SELECT CASE ( TRIM(p%met%WindProfileType) )
       CASE ( 'JET' )
-         IF ( p%met%TurbModel_ID /= SpecModel_GP_LLJ ) CALL SetErrStat( ErrID_Fatal, 'The jet wind profile is available with the GP_LLJ spectral model only.', ErrStat, ErrMsg, 'ReadInputFile')
+         IF ( p%met%TurbModel_ID /= SpecModel_GP_LLJ ) CALL SetErrStat( ErrID_Fatal, 'The jet wind profile is available with the GP_LLJ spectral model only.', ErrStat, ErrMsg, RoutineName)
       CASE ( 'LOG')
-         IF (p%IEC%IEC_WindType /= IEC_NTM ) CALL SetErrStat( ErrID_Fatal, 'The IEC turbulence type must be NTM for the logarithmic wind profile.', ErrStat, ErrMsg, 'ReadInputFile')
+         IF (p%IEC%IEC_WindType /= IEC_NTM ) CALL SetErrStat( ErrID_Fatal, 'The IEC turbulence type must be NTM for the logarithmic wind profile.', ErrStat, ErrMsg, RoutineName)
       CASE ( 'PL'  ) !this is a valid WindProfileType
       CASE ( 'H2L' )
-         IF ( p%met%TurbModel_ID /= SpecModel_TIDAL ) CALL SetErrStat( ErrID_Fatal, 'The "H2L" mean profile type can be used with only the "TIDAL" spectral model.', ErrStat, ErrMsg, 'ReadInputFile')
+         IF ( p%met%TurbModel_ID /= SpecModel_TIDAL ) CALL SetErrStat( ErrID_Fatal, 'The "H2L" mean profile type can be used with only the "TIDAL" spectral model.', ErrStat, ErrMsg, RoutineName)
       CASE ( 'IEC' )
       CASE ( 'USR' )
          !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>         
          ! Get parameters for USR wind profile (so that we can use these parameters to get the wind speed later):
             CALL GetUSRProfiles( ProfileFile, p%met, UnEc, ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          !<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<         
          
       CASE ( 'TS' )
-         IF ( p%met%TurbModel_ID /= SpecModel_TimeSer ) CALL SetErrStat( ErrID_Fatal, 'The "TS" mean profile type is valid only with the "TIMESR" spectral model.', ErrStat, ErrMsg, 'ReadInputFile')
+         IF ( p%met%TurbModel_ID /= SpecModel_TimeSer ) CALL SetErrStat( ErrID_Fatal, 'The "TS" mean profile type is valid only with the "TIMESR" spectral model.', ErrStat, ErrMsg, RoutineName)
       CASE ( 'API' )   ! ADDED BY Y.GUO
 !bjj: I think we need to add some checks here??? MLB has comments about difference between RefHt and HubHt and 10 m         
       CASE DEFAULT
-         CALL SetErrStat( ErrID_Fatal, 'The wind profile type must be "JET", "LOG", "PL", "IEC", "USR", "H2L", "TS", or default.' , ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrID_Fatal, 'The wind profile type must be "JET", "LOG", "PL", "IEC", "USR", "H2L", "TS", or default.' , ErrStat, ErrMsg, RoutineName)
    END SELECT
 
    IF ( p%met%TurbModel_ID == SpecModel_TIDAL .AND. TRIM(p%met%WindProfileType) /= "H2L" ) THEN
       p%met%WindProfileType = 'H2L'
-      CALL SetErrStat( ErrID_Warn, 'Overwriting wind profile type to "H2L" for the "TIDAL" spectral model.', ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrID_Warn, 'Overwriting wind profile type to "H2L" for the "TIDAL" spectral model.', ErrStat, ErrMsg, RoutineName)
    ENDIF
         
 
    IF (p%met%KHtest) THEN
-      IF ( p%met%TurbModel_ID /= SpecModel_NWTCUP ) CALL SetErrStat( ErrID_Fatal, 'The KH test can be used with the "NWTCUP" spectral model only.', ErrStat, ErrMsg, 'ReadInputFile')
+      IF ( p%met%TurbModel_ID /= SpecModel_NWTCUP ) CALL SetErrStat( ErrID_Fatal, 'The KH test can be used with the "NWTCUP" spectral model only.', ErrStat, ErrMsg, RoutineName)
 
       IF ( TRIM(p%met%WindProfileType) /= 'IEC' .AND. TRIM(p%met%WindProfileType) /= 'PL' ) THEN
-         CALL SetErrStat( ErrID_Warn, 'Overwriting wind profile type for the KH test.', ErrStat, ErrMsg, 'ReadInputFile')         
+         CALL SetErrStat( ErrID_Warn, 'Overwriting wind profile type for the KH test.', ErrStat, ErrMsg, RoutineName)         
          p%met%WindProfileType = 'IEC'
       ENDIF
       
       IF ( .NOT. p%WrFile(FileExt_CTS) ) THEN
-         CALL SetErrStat( ErrID_Warn, 'Coherent turbulence time step files must be generated when using the "KHTEST" option.', ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrID_Warn, 'Coherent turbulence time step files must be generated when using the "KHTEST" option.', ErrStat, ErrMsg, RoutineName)
          p%WrFile(FileExt_CTS)  = .TRUE.
       ENDIF           
       
       IF ( .NOT. EqualRealNos(p%met%PLExp, 0.3_ReKi) ) THEN
-         CALL SetErrStat( ErrID_Warn, 'Overwriting the power law exponent for KH test.', ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrID_Warn, 'Overwriting the power law exponent for KH test.', ErrStat, ErrMsg, RoutineName)
          p%met%PLExp = 0.3
       ENDIF            
    END IF
@@ -646,16 +647,16 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
          getDefaultURef = .FALSE.
       ELSEIF( TRIM(p%met%WindProfileType) /= 'JET' ) THEN
          ! Also note that if we specify a "default for Ustar , we cannot enter "default" for URef. Otherwise, we get circular logic. Will check for that later.
-         CALL SetErrStat( ErrID_Fatal, 'URef can be "default" for only the "JET" WindProfileType.', ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrID_Fatal, 'URef can be "default" for only the "JET" WindProfileType.', ErrStat, ErrMsg, RoutineName)
       END IF
    END IF
          
-   IF ( p%met%Z0 <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'The surface roughness length must be a positive number or "default".', ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( p%met%Z0 <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'The surface roughness length must be a positive number or "default".', ErrStat, ErrMsg, RoutineName)
    
    IF ( TRIM(p%met%WindProfileType) == 'JET' .AND. .NOT. getDefaultZJetMax ) THEN
       IF ( p%met%ZJetMax <  ZJetMax_LB .OR. p%met%ZJetMax > ZJetMax_UB )  THEN
          CALL SetErrStat( ErrID_Fatal, 'The height of the maximum jet wind speed must be between '//TRIM(num2lstr(ZJetMax_LB))//&
-                                       ' and '//TRIM(num2lstr(ZJetMax_UB))//' m.', ErrStat, ErrMsg, 'ReadInputFile')
+                                       ' and '//TRIM(num2lstr(ZJetMax_UB))//' m.', ErrStat, ErrMsg, RoutineName)
       ENDIF
    ENDIF
    
@@ -675,7 +676,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
          ! note that the 2 "ref" values in the subroutine arguments aren't used for the USR wind profile type.
          ! (also, we do not necessarially know PLExp, yet, so we can't call this routine when we have "PL" or "IEC" wind profile types.)
       CALL getVelocity(p, p%met%URef, p%met%RefHt, p%met%RefHt, tmp, ErrStat2, ErrMsg2) 
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          
      !p%met%RefHt = p%grid%HubHt         bjj changed this on 23-sep-2014
       p%met%URef  = tmp      
@@ -685,9 +686,9 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    ENDIF   
       
       ! check that RefHt and URef are appropriate values:
-   IF ( p%met%RefHt <=  0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'The reference height must be greater than zero.', ErrStat, ErrMsg, 'ReadInputFile')         
+   IF ( p%met%RefHt <=  0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'The reference height must be greater than zero.', ErrStat, ErrMsg, RoutineName)         
    IF ( .NOT. getDefaultURef ) THEN
-      IF ( p%met%URef <=  0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'The reference wind speed must be greater than zero.', ErrStat, ErrMsg, 'ReadInputFile')
+      IF ( p%met%URef <=  0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'The reference wind speed must be greater than zero.', ErrStat, ErrMsg, RoutineName)
    ENDIF   ! Otherwise, we're using a Jet profile with default wind speed (for now it's -999.9)
    
    
@@ -701,20 +702,20 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    !===============================================================================================================================
 
    CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 1", ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    CALL ReadCom( UI, InFile, "Non-IEC Meteorological Boundary Conditions Heading Line 2", ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the site latitude, LATITUDE ---------------------------------------------   
    IsUnusedParameter =  p%met%IsIECModel .AND. p%met%TurbModel_ID /= SpecModel_MODVKM  ! Used to caluculte z0 in ModVKM model; also used for default ZI
    CALL ReadRVarDefault( UI, InFile, p%met%Latitude, "Latitude", "Site latitude [degrees]", UnEc, UseDefault, ErrStat2, ErrMsg2, &
                                        IGNORE=IsUnusedParameter)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
       ! ------------ Read in the gradient Richardson number, RICH_NO ---------------------------------------------
    CALL ReadVar( UI, InFile, p%met%Rich_No, "RICH_NO", "Gradient Richardson number",ErrStat2, ErrMsg2, UnEc)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
 !>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>  
       
@@ -723,11 +724,11 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
       IF ( p%met%KHtest ) THEN
          IF ( .NOT. EqualRealNos(p%met%Rich_No, 0.02_ReKi) ) THEN
             p%met%Rich_No = 0.02
-            CALL SetErrStat( ErrID_Warn, 'Overwriting the Richardson Number for KH test.', ErrStat, ErrMsg, 'ReadInputFile')
+            CALL SetErrStat( ErrID_Warn, 'Overwriting the Richardson Number for KH test.', ErrStat, ErrMsg, RoutineName)
          ENDIF
       ELSEIF ( p%met%TurbModel_ID == SpecModel_USRVKM ) THEN
          IF ( .NOT. EqualRealNos(p%met%Rich_No, 0.0_ReKi) ) THEN
-            CALL SetErrStat( ErrID_Warn, 'Overwriting the Richardson Number for the '//TRIM(p%met%TurbModel)//' model.', ErrStat, ErrMsg, 'ReadInputFile')
+            CALL SetErrStat( ErrID_Warn, 'Overwriting the Richardson Number for the '//TRIM(p%met%TurbModel)//' model.', ErrStat, ErrMsg, RoutineName)
             p%met%Rich_No = 0.0
          ENDIF
       ELSEIF ( p%met%TurbModel_ID == SpecModel_NWTCUP .OR. p%met%TurbModel_ID == SpecModel_GP_LLJ ) THEN
@@ -743,14 +744,14 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
          
       ! ------------ Read in the shear/friction velocity, Ustar ------------------------
    CALL ReadRVarDefault( UI, InFile, p%met%Ustar, "UStar", "Friction or shear velocity [m/s]", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORE=p%met%IsIECModel )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       !IF ( p%met%IsIECModel ) THEN     
       !   p%met%Ustar   = 0.0                       ! Shear or friction velocity
       !ELSE
          IF ( UseDefault ) THEN
             IF ( getDefaultURef ) THEN ! This occurs if "default" was entered for both GP_LLJ wind speed and UStar
-               CALL SetErrStat( ErrID_Fatal, 'The reference wind speed and friction velocity cannot both be "default."', ErrStat, ErrMsg, 'ReadInputFile')
+               CALL SetErrStat( ErrID_Fatal, 'The reference wind speed and friction velocity cannot both be "default."', ErrStat, ErrMsg, RoutineName)
             ELSE
                CALL DefaultUStar(p)
             END IF
@@ -773,7 +774,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    IF ( TRIM(p%met%WindProfileType) == 'JET' ) THEN      
       IF ( getDefaultZJetMax ) CALL DefaultZJetMax(p, OtherSt_RandNum)       ! requires Rich_No, ZL, Ustar
       CALL getJetCoeffs( p, getDefaultURef, OtherSt_RandNum, ErrStat2, ErrMsg2) ! getDefault
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    END IF
       
       ! now that we know URef (in case getDefaultURef was true), set UstarDiab (used in ustar profile and default ZI):
@@ -786,7 +787,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    
    CALL getVelocity(p, p%met%URef, p%met%RefHt, p%grid%HubHt, tmp, ErrStat2, ErrMsg2)  
       p%UHub = tmp
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       
       ! We need the (local) Ustar at the hub-height; while we're at it, we'll 
@@ -803,7 +804,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
       p%met%UstarSlope = 1.0_ReKi         
 
       CALL getVelocityProfile(p, p%met%URef, p%met%RefHt, RotorDiskHeights, TmpUary, ErrStat2, ErrMsg2)    ! Set TmpUary
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')         
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)         
       TmpUstar  = getUStarProfile( P, TmpUary, RotorDiskHeights, 0.0_ReKi, p%met%UstarSlope )  ! set offset to 0 here <-
             
       p%met%UstarOffset = p%met%Ustar - SUM(TmpUstar) / SIZE(TmpUstar)    ! Ustar minus the average of those 3 points
@@ -824,11 +825,11 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
       ! Get the default mean Reynolds stresses
       ! (requires uHub, Ustar, Rich_No, ZL, TmpUStar)
    CALL GetDefaultRS(  p, OtherSt_RandNum, TmpUStar(2), ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       
       ! Default coherence parameters and IEC scaling parameters   
    CALL CalcIECScalingParams(p%IEC, p%grid%HubHt, p%UHub, p%met%InCDec, p%met%InCohB, p%met%TurbModel_ID, p%met%IsIECModel, ErrStat2, ErrMsg2)                  
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')      
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
       
    IF ( .NOT. p%met%IsIECModel  ) THEN
       CALL GetDefaultCoh( p%met%TurbModel_ID, p%met%RICH_NO, p%UHub, p%grid%HubHt, p%met%IncDec, p%met%InCohB )
@@ -839,7 +840,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
       ! ------------- Read in the mixing layer depth, ZI ---------------------------------------------
    IsUnusedParameter = p%met%ZL >= 0.0_ReKi .AND. p%met%TurbModel_ID /= SpecModel_GP_LLJ ! used for unstable flows; GP_LLJ model may have both stable and unstable flows in its ZL_Profile      
    CALL ReadRVarDefault( UI, InFile, p%met%ZI, "ZI", "Mixing layer depth [m]", UnEc, UseDefault, ErrStat2, ErrMsg2, IGNORE=IsUnusedParameter )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    IF ( IsUnusedParameter ) THEN
       p%met%ZI = 999.9_ReKi ! set to a value > 0 that we don't care about
@@ -851,17 +852,17 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
        ! ----------- Read in the mean hub u'w' Reynolds stress, PC_UW ---------------------------------------------
    CALL ReadRVarDefault( UI, InFile, p%met%PC_UW, "PC_UW", "Mean hub u'w' Reynolds stress", UnEc, UseDefault, &
                                             ErrStat2, ErrMsg2, IGNORE=p%met%IsIECModel, IGNORESTR = p%met%UWskip )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the mean hub u'v' Reynolds stress, PC_UV ---------------------------------------------
    CALL ReadRVarDefault( UI, InFile, p%met%PC_UV, "PC_UV", "Mean hub u'v' Reynolds stress", UnEc, UseDefault, &
                                             ErrStat2, ErrMsg2, IGNORE=p%met%IsIECModel, IGNORESTR = p%met%UVskip )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the mean hub v'w' Reynolds stress, PC_VW ---------------------------------------------
    CALL ReadRVarDefault( UI, InFile, p%met%PC_VW, "PC_VW", "Mean hub v'w' Reynolds stress", UnEc, UseDefault, &
                                             ErrStat2, ErrMsg2, IGNORE=p%met%IsIECModel, IGNORESTR = p%met%VWskip )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
             
    !===============================================================================================================================
@@ -869,16 +870,16 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
    !===============================================================================================================================
 
    CALL ReadCom( UI, InFile, "Spatial Coherence Models Heading Line 1", ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    CALL ReadCom( UI, InFile, "Spatial Coherence Models Heading Line 2", ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       ! ------------ Read in the spatial coherence models, SCMod(1), SCMod(2), SCMod(3). ---------------------------------------------   
 
    DO I=1,3
       CALL ReadCVarDefault ( UI, InFile, Line, "SCMod"//TRIM(Num2LStr(I)), Comp(I)//"-component coherence model", UnEc, UseDefault, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF ( .NOT. UseDefault ) THEN
             SELECT CASE ( TRIM(Line) )
                CASE("GENERAL")
@@ -889,13 +890,13 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
                   p%met%SCMod(I) = CohMod_NONE
                CASE ("API")
                   p%met%SCMOD(I) = CohMod_API
-                  IF (I /= 1) CALL SetErrStat( ErrID_Fatal, "API coherence model is valid only for the u-component", ErrStat, ErrMsg, 'ReadInputFile')
+                  IF (I /= 1) CALL SetErrStat( ErrID_Fatal, "API coherence model is valid only for the u-component", ErrStat, ErrMsg, RoutineName)
                CASE DEFAULT
                   p%met%SCMod(I) = CohMod_NONE
                   IF (I==1) THEN
-                     CALL SetErrStat( ErrID_Fatal, 'Unknown value for SCMod'//TRIM(Num2LStr(I))//'. Valid entries are "GENERAL","IEC","API", or "NONE".', ErrStat, ErrMsg, 'ReadInputFile')
+                     CALL SetErrStat( ErrID_Fatal, 'Unknown value for SCMod'//TRIM(Num2LStr(I))//'. Valid entries are "GENERAL","IEC","API", or "NONE".', ErrStat, ErrMsg, RoutineName)
                   ELSE               
-                     CALL SetErrStat( ErrID_Fatal, 'Unknown value for SCMod'//TRIM(Num2LStr(I))//'. Valid entries are "GENERAL","IEC", or "NONE".', ErrStat, ErrMsg, 'ReadInputFile')
+                     CALL SetErrStat( ErrID_Fatal, 'Unknown value for SCMod'//TRIM(Num2LStr(I))//'. Valid entries are "GENERAL","IEC", or "NONE".', ErrStat, ErrMsg, RoutineName)
                   END IF 
             END SELECT
          END IF
@@ -903,7 +904,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
          
       ! ------------ Read in the u component coherence parameters, InCDec(1) and InCohB(1) ------------
    CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec1", "u-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF ( .NOT. UseDefault ) THEN         
          p%met%InCDec(1) = InCVar(1)
          p%met%InCohB(1) = InCVar(2)
@@ -911,7 +912,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
 
       ! ------------ Read in the v component coherence parameters, InCDec(2) and InCohB(2) ----------
    CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec2", "v-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF ( .NOT. UseDefault ) THEN       ! these are the values we just read in  
          p%met%InCDec(2) = InCVar(1)
          p%met%InCohB(2) = InCVar(2)
@@ -919,7 +920,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
 
       ! ------------ Read in the w component coherence parameters, InCDec(3) and InCohB(3) -------
    CALL ReadRAryDefault( UI, InFile, InCVar, "InCDec3", "w-component coherence parameters", UnEc, UseDefault, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF ( .NOT. UseDefault ) THEN         
          p%met%InCDec(3) = InCVar(1)
          p%met%InCohB(3) = InCVar(2)
@@ -927,7 +928,7 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
 
       ! ------------ Read in the coherence exponent, COHEXP -----------------------------------
    CALL ReadRVarDefault( UI, InFile, p%met%CohExp, "CohExp", "Coherence exponent", UnEc, UseDefault, ErrStat2, ErrMsg2 )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       
 !..................................................................................................................................
@@ -936,17 +937,17 @@ CALL DefaultMetBndryCndtns(p)     ! Requires turbModel (some require RICH_NO, wh
       
    IF ( .NOT. p%met%IsIECModel ) THEN
       IF ( ABS(p%met%Latitude) < 5.0 .OR. ABS(p%met%Latitude) > 90.0 ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'The latitude must be between -90 and 90 degrees but not between -5 and 5 degrees.', ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrID_Fatal, 'The latitude must be between -90 and 90 degrees but not between -5 and 5 degrees.', ErrStat, ErrMsg, RoutineName)
       ENDIF
 
-      IF (p%met%Ustar   <= 0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The friction velocity must be a positive number.', ErrStat, ErrMsg, 'ReadInputFile')
-      IF ( p%met%ZI     <= 0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The mixing layer depth must be a positive number for unstable flows.', ErrStat, ErrMsg, 'ReadInputFile')         
+      IF (p%met%Ustar   <= 0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The friction velocity must be a positive number.', ErrStat, ErrMsg, RoutineName)
+      IF ( p%met%ZI     <= 0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The mixing layer depth must be a positive number for unstable flows.', ErrStat, ErrMsg, RoutineName)         
    END IF
    
-   IF ( p%met%COHEXP <  0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The coherence exponent must be non-negative.', ErrStat, ErrMsg, 'ReadInputFile')
+   IF ( p%met%COHEXP <  0.0_ReKi) CALL SetErrStat( ErrID_Fatal, 'The coherence exponent must be non-negative.', ErrStat, ErrMsg, RoutineName)
 
    DO I = 1,3
-      IF ( p%met%InCDec(I) <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'The '//Comp(I)//'-component coherence decrement must be a positive number.', ErrStat, ErrMsg, 'ReadInputFile')
+      IF ( p%met%InCDec(I) <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'The '//Comp(I)//'-component coherence decrement must be a positive number.', ErrStat, ErrMsg, RoutineName)
    END DO
            
 !..................................................................................................................................
@@ -979,19 +980,19 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
    IF ( p%WrFile(FileExt_CTS) ) THEN
 
       CALL ReadCom( UI, InFile, "Coherent Turbulence Scaling Parameters Heading Line 1", ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       CALL ReadCom( UI, InFile, "Coherent Turbulence Scaling Parameters Heading Line 2", ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
 
          ! ------------ Read the name of the path containg event file definitions, CTEventPath --------------------------
 
       CALL ReadVar( UI, InFile, p%CohStr%CTEventPath, "CTEventPath", "Coherence events path",ErrStat2, ErrMsg2, UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       CALL ReadVar( UI, InFile, Line, "CTEventFile", "Event file type",ErrStat2, ErrMsg2, UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
 
       IF ( p%met%KHtest ) THEN
@@ -1024,26 +1025,26 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
          ! ------------ Read the Randomization Flag, Randomize -----------------------------------
       CALL ReadVar( UI, InFile, Randomize, "Randomize", "Randomize CT Scaling",ErrStat2, ErrMsg2, UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
          ! ------------ Read the Disturbance Scale, DistScl ---------------------------------------------
       CALL ReadVar( UI, InFile, p%CohStr%DistScl, "DistScl", "Disturbance scale",ErrStat2, ErrMsg2, UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
          ! ------------ Read the Lateral Fractional Location of tower centerline in wave, CTLy ----------
       CALL ReadVar( UI, InFile, p%CohStr%CTLy, "CTLy", "Location of tower centerline",ErrStat2, ErrMsg2, UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
          ! ------------ Read the Vertical Fraction Location of hub in wave, CTLz ------------------------
       CALL ReadVar( UI, InFile, p%CohStr%CTLz, "CTLz", "Location of hub height",ErrStat2, ErrMsg2, UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       IF ( p%met%KHtest ) THEN
          p%CohStr%DistScl = 1.0
          p%CohStr%CTLy    = 0.5
          p%CohStr%CTLz    = 0.5
          Randomize = .FALSE.
-         CALL SetErrStat( ErrID_Info, 'Billow will cover rotor disk for KH test.', ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrID_Info, 'Billow will cover rotor disk for KH test.', ErrStat, ErrMsg, RoutineName)
             
       ELSEIF ( Randomize ) THEN
 
@@ -1076,12 +1077,12 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
       ELSE  !Don't randomize:
 
          IF ( p%CohStr%DistScl < 0.0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'The disturbance scale must be a positive.', ErrStat, ErrMsg, 'ReadInputFile')         
+            CALL SetErrStat( ErrID_Fatal, 'The disturbance scale must be a positive.', ErrStat, ErrMsg, RoutineName)         
          ELSEIF ( p%grid%RotorDiameter <= 30.0 .AND. p%CohStr%DistScl < 1.0 ) THEN
-            CALL SetErrStat( ErrID_Fatal, 'The disturbance scale must be at least 1.0 for rotor diameters less than 30.', ErrStat, ErrMsg, 'ReadInputFile')         
+            CALL SetErrStat( ErrID_Fatal, 'The disturbance scale must be at least 1.0 for rotor diameters less than 30.', ErrStat, ErrMsg, RoutineName)         
          ELSEIF ( p%grid%RotorDiameter*p%CohStr%DistScl <= 15.0  ) THEN
             CALL SetErrStat( ErrID_Fatal, 'The coherent turbulence must be greater than 15 meters in height.  '//&
-                        'Increase the rotor diameter or the disturbance scale. ', ErrStat, ErrMsg, 'ReadInputFile')         
+                        'Increase the rotor diameter or the disturbance scale. ', ErrStat, ErrMsg, RoutineName)         
          ENDIF
 
       ENDIF
@@ -1089,7 +1090,7 @@ IF ( .NOT. p%met%IsIECModel  ) THEN
 
          ! ---------- Read the Minimum event start time, CTStartTime --------------------------------------------
       CALL ReadVar( UI, InFile, p%CohStr%CTStartTime, "CTStartTime", "CTS Start Time",ErrStat2, ErrMsg2, UnEc)
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'ReadInputFile')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
       p%CohStr%CTStartTime = MAX( p%CohStr%CTStartTime, 0.0_ReKi ) ! A Negative start time doesn't really make sense...
 
@@ -1456,7 +1457,7 @@ SUBROUTINE GetUSRSpec(FileName, p, UnEc, ErrStat, ErrMsg)
          CALL Cleanup()
          RETURN
          
-!      ELSEIF ( p%usr%f(I) <= REAL( 0., ReKi ) ) THEN
+!      ELSEIF ( p%usr%f(I) <= 0.0_ReKi ) THEN
 !         CALL SetErrStat(ErrID_Fatal, 'The frequencies must be positive numbers.' , ErrStat, ErrMsg, 'GetUSRSpec')
 !         CALL Cleanup()
 !         RETURN
@@ -1544,6 +1545,7 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    INTEGER(IntKi)                                 :: IVec                           ! loop counter on velocity components being read
    INTEGER(IntKi)                                 :: ErrStat2                       ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                        ! Message describing error (local)
+   CHARACTER(*), parameter                        :: RoutineName = 'GetUSRTimeSeries'
    
    CHARACTER(200)                                 :: FormStr          
    CHARACTER(1)                                   :: tmpChar          
@@ -1554,10 +1556,10 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
       ! --------- Open the file ---------------
 
    CALL GetNewUnit( UnIn, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
       
    CALL OpenFInpFile( UnIn, FileName, ErrStat2, ErrMsg2 )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -1571,17 +1573,17 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    
    do i=1,3
       CALL ReadCom( UnIn, FileName, "Header #"//TRIM(Num2Lstr(i))//"for user time-series input", ErrStat2, ErrMsg2, UnEc )   
-         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
+         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
    end do
       
    CALL ReadVar( UnIn, FileName, p%usr%nComp, 'nComp', 'How many velocity components will be input? (1=u component only; 2=u&v components; 3=u,v,and w)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
          
    CALL ReadVar( UnIn, FileName, p%usr%nPoints, 'nPoints', 'Number of time series points contained in this file', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
          
    CALL ReadVar( UnIn, FileName, p%usr%RefPtID, 'RefPtID', 'Index of the reference point (1-nPoints)', ErrStat2, ErrMsg2, UnEc )
-      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
+      CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
 
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
@@ -1589,14 +1591,14 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    END IF
          
    IF ( p%usr%RefPtID < 1 .OR. p%usr%RefPtID > p%usr%nPoints ) THEN
-      CALL SetErrStat(ErrID_Fatal, 'RefPtID must be between 1 and nPoints (inclusive).', ErrStat, ErrMsg, 'GetUSRTimeSeries')
+      CALL SetErrStat(ErrID_Fatal, 'RefPtID must be between 1 and nPoints (inclusive).', ErrStat, ErrMsg, RoutineName)
       CALL Cleanup()
       RETURN
    END IF
          
    
-   CALL AllocAry(p%usr%Pointyi, p%usr%nPoints, 'Pointyi', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
-   CALL AllocAry(p%usr%Pointzi, p%usr%nPoints, 'Pointzi', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
+   CALL AllocAry(p%usr%Pointyi, p%usr%nPoints, 'Pointyi', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(p%usr%Pointzi, p%usr%nPoints, 'Pointzi', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
 
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
@@ -1605,12 +1607,12 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
       
    do i=1,2
       CALL ReadCom( UnIn, FileName, "Point location header #"//TRIM(Num2Lstr(i)), ErrStat2, ErrMsg2, UnEc )   
-         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
+         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
    end do
       
    do iPoint=1,p%usr%nPoints
       CALL ReadAry( UnIn, FileName, TmpAry, 2, "point"//trim(Num2Lstr(iPoint)), "locations of points", ErrStat2, ErrMsg2, UnEc )
-         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
+         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
          
       p%usr%Pointyi(iPoint) = TmpAry(1)
       p%usr%Pointzi(iPoint) = TmpAry(2)         
@@ -1619,7 +1621,7 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
          
    do i=1,3
       CALL ReadCom( UnIn, FileName, "Time Series header #"//TRIM(Num2Lstr(i)), ErrStat2, ErrMsg2, UnEc )   
-         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
+         CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
    end do      
       
    IF (ErrStat >= AbortErrLev) THEN
@@ -1644,7 +1646,7 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    CALL WrScr( '   Found '//TRIM(Num2LStr(p%usr%NTimes))//' lines of time-series data.' )
    
    IF (p%usr%NTimes < 2) THEN
-      CALL SetErrStat(ErrID_Fatal, 'The user time-series input file must contain at least 2 rows of time data.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
+      CALL SetErrStat(ErrID_Fatal, 'The user time-series input file must contain at least 2 rows of time data.', ErrStat, ErrMsg, RoutineName)
       CALL Cleanup()
       RETURN
    END IF
@@ -1652,7 +1654,7 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
       ! now rewind and skip the first few lines. 
    REWIND( UnIn, IOSTAT=ErrStat2 )  
       IF (ErrStat2 /= 0_IntKi ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(FileName)//'".', ErrStat, ErrMsg, 'GetUSRTimeSeries')   
+         CALL SetErrStat( ErrID_Fatal, 'Error rewinding file "'//TRIM(FileName)//'".', ErrStat, ErrMsg, RoutineName)   
          CALL Cleanup()
       END IF 
 
@@ -1664,14 +1666,14 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    !.......
    
    if (p%usr%nComp < 1 .OR. p%usr%nComp > 3) then
-      CALL SetErrStat( ErrID_Fatal, 'Number of velocity components in file must be 1, 2 or 3.', ErrStat, ErrMsg, 'GetUSRTimeSeries')   
+      CALL SetErrStat( ErrID_Fatal, 'Number of velocity components in file must be 1, 2 or 3.', ErrStat, ErrMsg, RoutineName)   
       CALL Cleanup()
    END IF 
    
    
    
-   CALL AllocAry(p%usr%t, p%usr%nTimes,                             't', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
-   CALL AllocAry(p%usr%v, p%usr%nTimes, p%usr%nPoints, p%usr%nComp, 'v', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, 'GetUSRTimeSeries')
+   CALL AllocAry(p%usr%t, p%usr%nTimes,                             't', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
+   CALL AllocAry(p%usr%v, p%usr%nTimes, p%usr%nPoints, p%usr%nComp, 'v', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2 , ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) THEN
          CALL Cleanup()
          RETURN
@@ -1681,7 +1683,7 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    DO i=1,p%usr%nTimes
       READ( UnIn, *, IOSTAT=ErrStat2 ) p%usr%t(i), ( (p%usr%v(i,iPoint,iVec), iVec=1,p%usr%nComp), iPoint=1,p%usr%nPoints )
       IF (ErrStat2 /=0) THEN
-         CALL SetErrStat( ErrID_Fatal, 'Error reading from time series line '//trim(num2lstr(i))//'.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
+         CALL SetErrStat( ErrID_Fatal, 'Error reading from time series line '//trim(num2lstr(i))//'.', ErrStat, ErrMsg, RoutineName)
          CALL Cleanup()
          RETURN
       END IF      
@@ -1703,7 +1705,7 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    do i=2,p%usr%nPoints
       do j=1,i-1
          IF ( EqualRealNos( p%usr%Pointyi(i), p%usr%Pointyi(j) ) .AND. EqualRealNos( p%usr%Pointzi(i), p%usr%Pointzi(j) ) ) THEN            
-            CALL SetErrStat(ErrID_Fatal, 'Locations of points specified in the user time-series input file must be unique.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
+            CALL SetErrStat(ErrID_Fatal, 'Locations of points specified in the user time-series input file must be unique.', ErrStat, ErrMsg, RoutineName)
             CALL Cleanup()
             RETURN
          END IF
@@ -1711,7 +1713,7 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
       
       !bjj: fix this in the future. Currently the interpolation routine won't work if z is not ordered properly. Also, interpolation doesn't take y into account, so we may want to fix that.
       IF ( p%usr%Pointzi(i) < p%usr%Pointzi(i-1) ) THEN
-         CALL SetErrStat(ErrID_Fatal, 'The current implementation of user time-series input requires that the points be entered in the order of increasing height.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
+         CALL SetErrStat(ErrID_Fatal, 'The current implementation of user time-series input requires that the points be entered in the order of increasing height.', ErrStat, ErrMsg, RoutineName)
          CALL Cleanup()
          RETURN
       END IF      
@@ -1721,7 +1723,7 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    
    !DO i = 2,p%usr%nTimes
    !   IF (.NOT. EqualRealNos( p%usr%t(i-1) + p%grid%TimeStep, p%usr%t(i) ) ) THEN
-   !      call SetErrStat(ErrID_Fatal, 'the delta time in the file must be constant and must be equal to input file variable TimeStep.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
+   !      call SetErrStat(ErrID_Fatal, 'the delta time in the file must be constant and must be equal to input file variable TimeStep.', ErrStat, ErrMsg, RoutineName)
    !      EXIT
    !   END IF
    !END DO
@@ -1732,14 +1734,14 @@ SUBROUTINE GetUSRTimeSeries(FileName, p, UnEc, ErrStat, ErrMsg)
    
    DO i = 3,p%usr%nTimes
       IF (.NOT. EqualRealNos( p%usr%t(i-1) + dt, p%usr%t(i) ) ) THEN
-         call SetErrStat(ErrID_Fatal, 'The time between each row in the file must be constant.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
+         call SetErrStat(ErrID_Fatal, 'The time between each row in the file must be constant.', ErrStat, ErrMsg, RoutineName)
          EXIT
       END IF
    END DO
    
    
    if ( .NOT. EqualRealNos( dt, p%grid%TimeStep ) ) THEN
-      call SetErrStat(ErrID_Fatal, 'In this version of TurbSim, TimeStep must be the same as the delta time in the user-input time series file.', ErrStat, ErrMsg, 'GetUSRTimeSeries')
+      call SetErrStat(ErrID_Fatal, 'In this version of TurbSim, TimeStep must be the same as the delta time in the user-input time series file.', ErrStat, ErrMsg, RoutineName)
    end if
    
    

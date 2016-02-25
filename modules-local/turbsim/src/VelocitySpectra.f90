@@ -637,7 +637,7 @@ SUBROUTINE Spec_TimeSer ( p, Ht, Ucmp, LastIndex, Spec )
 
    InCoord(2) = Ht
    
-   DO I=1,p%usr%nFreq !p%grid%NumFreq 
+   DO I=1,p%usr%nFreq !p%grid%NumFreq ! note that this assumes TMax = AnalysisTime (i.e., we have the same delta frequencies)
       
       InCoord(1) = p%grid%Freq(i)      
       CALL UserSpec_Interp2D( InCoord, p%usr, LastIndex, Spec(I,:) )  ! sets only Spec(1:p%usr%nFreq, 1:p%usr%nComp) values
