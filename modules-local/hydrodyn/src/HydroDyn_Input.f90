@@ -2924,9 +2924,9 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       IF ( PathIsRelative( InitInp%PotFile ) ) THEN
          CALL GetPath( TRIM(InitInp%InputFile), TmpPath )
          InitInp%PotFile            = TRIM(TmpPath)//TRIM(InitInp%PotFile)
-         InitInp%WAMIT%WAMITFile    = InitInp%PotFile
-         InitInp%WAMIT2%WAMITFile   = InitInp%PotFile
       END IF
+      InitInp%WAMIT%WAMITFile    = InitInp%PotFile
+      InitInp%WAMIT2%WAMITFile   = InitInp%PotFile
       
          ! Set the flag for multidirectional waves for WAMIT2 module.  It needs to know since the Newman approximation
          ! can only use uni-directional waves.
@@ -3212,7 +3212,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          TmpExtension = TRIM(Num2LStr(InitInp%WAMIT2%MnDrift))//'d'
          INQUIRE( file=TRIM(InitInp%WAMIT2%WAMITFile)//'.'//TRIM(TmpExtension), exist=TmpFileExist )
       ENDIF
-      IF ( TmpFileExist .eqv. .FALSE. ) THEN
+      IF ( .not. TmpFileExist ) THEN
          CALL SetErrStat( ErrID_Fatal,'Cannot find the WAMIT file '//TRIM(InitInp%WAMIT2%WAMITFile)//'.'//TRIM(TmpExtension)// &
                     ' required by the MnDrift option.',ErrStat,ErrMsg,RoutineName)
          RETURN
@@ -3229,7 +3229,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
          TmpExtension = TRIM(Num2LStr(InitInp%WAMIT2%NewmanApp))//'d'
          INQUIRE( file=TRIM(InitInp%WAMIT2%WAMITFile)//'.'//TRIM(TmpExtension), exist=TmpFileExist )
       ENDIF
-      IF ( TmpFileExist .eqv. .FALSE. ) THEN
+      IF ( .not. TmpFileExist ) THEN
          CALL SetErrStat( ErrID_Fatal,'Cannot find the WAMIT file '//TRIM(InitInp%WAMIT2%WAMITFile)//'.'//TRIM(TmpExtension)// &
                     ' required by the NewmanApp option.',ErrStat,ErrMsg,RoutineName)
          RETURN
@@ -3239,7 +3239,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    IF ( InitInp%WAMIT2%DiffQTF /= 0) THEN
       TmpExtension = TRIM(Num2LStr(InitInp%WAMIT2%DiffQTF))//'d'
       INQUIRE( file=TRIM(InitInp%WAMIT2%WAMITFile)//'.'//TRIM(TmpExtension), exist=TmpFileExist )
-      IF ( TmpFileExist .eqv. .FALSE. ) THEN
+      IF ( .not. TmpFileExist ) THEN
          CALL SetErrStat( ErrID_Fatal,'Cannot find the WAMIT file '//TRIM(InitInp%WAMIT2%WAMITFile)//'.'//TRIM(TmpExtension)// &
                     ' required by the DiffQTF option.',ErrStat,ErrMsg,RoutineName)
          RETURN
@@ -3249,7 +3249,7 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
    IF ( InitInp%WAMIT2%SumQTF /= 0) THEN
       TmpExtension = TRIM(Num2LStr(InitInp%WAMIT2%SumQTF))//'s'
       INQUIRE( file=TRIM(InitInp%WAMIT2%WAMITFile)//'.'//TRIM(TmpExtension), exist=TmpFileExist )
-      IF ( TmpFileExist .eqv. .FALSE. ) THEN
+      IF ( .not. TmpFileExist ) THEN
          CALL SetErrStat( ErrID_Fatal,'Cannot find the WAMIT file '//TRIM(InitInp%WAMIT2%WAMITFile)//'.'//TRIM(TmpExtension)// &
                     ' required by the SumQTF option.',ErrStat,ErrMsg,RoutineName)
          RETURN

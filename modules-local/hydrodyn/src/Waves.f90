@@ -1355,7 +1355,7 @@ SUBROUTINE VariousWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
          !! 6. Cleanup
          !!
 
-         !> ### Code Implimentation order
+         !> ### Code Implementation order
          !! 1. Discretize the spreading function range and calculate the values of the wave spreading function
 
             ! Now that we have the value for _WaveNDir_ found above, we set the value of _WvSpreadNDir_ to be 15x as

@@ -2777,13 +2777,13 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> 2. Check that we have a valid values for MnDrift, check flag status
 
       IF ( InitInp%MnDrift == 0 ) THEN             ! We are not doing anything
-         IF ( InitInp%MnDriftF .eqv. .TRUE. ) THEN    ! Should be false in this case, so if true there is a problem
+         IF ( InitInp%MnDriftF ) THEN    ! Should be false in this case, so if true there is a problem
             CALL SetErrStat( ErrID_Fatal, ' Programming error in call to WAMIT2_Init: '//NewLine// &
                   '           MnDriftF flag should be set to false by calling program for MnDrift = 0.'//NewLine// &
                   '              --> This should have been checked by the calling program.',ErrStat, ErrMsg, 'CheckInitInput')
          END IF
       ELSE IF( InitInp%MnDrift >= 7 .AND. InitInp%MnDrift <= 12 ) THEN              ! Valid values
-         IF ( InitInp%MnDriftF .eqv. .FALSE. ) THEN    ! Should be true in this case, so if false there is a problem
+         IF ( .not. InitInp%MnDriftF ) THEN    ! Should be true in this case, so if false there is a problem
             CALL SetErrStat( ErrID_Fatal, ' Programming error in call to WAMIT2_Init: '//NewLine// &
                   '           MnDriftF flag should be set to true by calling program for MnDrift /= 0.'//NewLine// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, 'CheckInitInput')
@@ -2801,7 +2801,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
          !> 3. Check that we have a valid values for NewmanApp, check flag status
 
       IF ( InitInp%NewmanApp == 0 ) THEN             ! We are not doing anything
-         IF ( InitInp%NewmanAppF .eqv. .TRUE. ) THEN    ! Should be false in this case, so if true there is a problem
+         IF ( InitInp%NewmanAppF ) THEN    ! Should be false in this case, so if true there is a problem
             CALL SetErrStat( ErrID_Fatal, ' Programming error in call to WAMIT2_Init: '//NewLine// &
                   '           NewmanAppF flag should be set to false by calling program for NewmanApp = 0.'//NewLine// &
                   '              --> This should have been checked by the calling program.', ErrStat, ErrMsg, 'CheckInitInput')
@@ -2986,7 +2986,7 @@ SUBROUTINE WAMIT2_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, Ini
       IF ( InitInp%SumQTF /= 0) THEN
          SumQTFData%Filename  = TRIM(InitInp%WAMITFile)//'.'//TRIM(Num2LStr(InitInp%SumQTF))//'s'
          INQUIRE( file=TRIM(SumQTFData%Filename), exist=TmpFileExist )
-         IF ( TmpFileExist .eqv. .FALSE. ) THEN
+         IF ( .not. TmpFileExist ) THEN
             CALL SetErrStat( ErrID_Fatal, ' Cannot find the WAMIT file '//TRIM(SumQTFData%Filename)// &
                         ' required by the SumQTF option.', ErrStat, ErrMsg, 'CheckInitInput')
             CALL CleanUp
