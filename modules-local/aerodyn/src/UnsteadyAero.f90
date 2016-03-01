@@ -763,7 +763,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_
    type(UA_InputType),                     intent(in   ) :: u                 ! Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
    type(UA_ParameterType),                 intent(in   ) :: p                 ! Parameters   
    type(UA_DiscreteStateType),             intent(in   ) :: xd                ! Input: Discrete states at t;
-   type(UA_OtherStateType),                intent(in   ) :: OtherState        ! Other/optimization states
+   type(UA_OtherStateType),                intent(inout) :: OtherState        ! Other/optimization states
    type(AFInfoType),                       intent(in   ) :: AFInfo            ! The airfoil parameter data
    real(ReKi),                             intent(  out) :: Cn_prime          !
    real(ReKi),                             intent(  out) :: Cn_prime_diff
@@ -873,7 +873,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_
    fprimeprime_m = 0
 
    M           = u%U / p%a_s
-   call UA_CheckMachNumber(M, ErrStat2, ErrMsg2 )
+   call UA_CheckMachNumber(M, OtherState%FirstWarn_M, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
       
@@ -1683,6 +1683,7 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return    
    
+   OtherState%FirstWarn_M = .true.
 ! TODO: Wrap all of this output handling in a  #ifdef block to avoid allocating arrays when coupled to FAST
    
       ! Allocate and set the InitOut data
@@ -2311,7 +2312,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
    type(UA_InputType),           intent(in   )  :: u           ! Inputs at Time
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
    type(UA_DiscreteStateType),   intent(in   )  :: xd          ! Discrete states at Time
-   type(UA_OtherStateType),      intent(in   )  :: OtherState  ! Other/optimization states
+   type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Other/optimization states
    type(AFInfoType),             intent(in   )  :: AFInfo      ! The airfoil parameter data
    type(UA_OutputType),          intent(inout)  :: y           ! Outputs computed at Time (Input only so that mesh con-
                                                                      !   nectivity information does not have to be recalculated)
@@ -2406,7 +2407,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
    else
       M           = u%U / p%a_s
       
-      call UA_CheckMachNumber(M, ErrStat2, ErrMsg2 )
+      call UA_CheckMachNumber(M, OtherState%FirstWarn_M, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
       
@@ -2649,9 +2650,10 @@ end subroutine UA_CalcOutput
 !==============================================================================   
 !> This subroutine checks that the Mach number is valid. If M > 0.3, the theory 
 !! is invalid. If M > 1, numerical issues result in the code.
-subroutine UA_CheckMachNumber(M, ErrStat, ErrMsg )
+subroutine UA_CheckMachNumber(M, FirstWarn_M, ErrStat, ErrMsg )
 
    real(ReKi),                   intent(in   )  :: M           !< Mach number (-)
+   logical,                      intent(inout)  :: FirstWarn_M !< is this the first warning about Mach number?
    integer(IntKi),               intent(  out)  :: ErrStat     !< Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -2660,9 +2662,14 @@ subroutine UA_CheckMachNumber(M, ErrStat, ErrMsg )
          ErrStat = ErrID_Fatal
          ErrMsg  = 'Mach number exceeds 1.0. Equations cannot be evaluated.'
       else         
-         ErrStat = ErrID_Warn
-         ErrMsg  = 'Mach number exceeds 0.3. Theory is invalid.'
-         !misc%FirstWarn_M = .false.
+         if ( FirstWarn_M ) then
+            ErrStat = ErrID_Warn
+            ErrMsg  = 'Mach number exceeds 0.3. Theory is invalid. This warning will not be repeated though the condition may persist.'
+            FirstWarn_M = .false.
+         else
+            ErrStat = ErrID_None
+            ErrMsg = "" 
+         end if         
       end if      
    else
       ErrStat = ErrID_None
