@@ -165,7 +165,7 @@ subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
    type(AFInfoType),             intent(in   ) :: AFInfo
    type(UA_ParameterType),       intent(in   ) :: p_UA               ! Parameters
    type(UA_DiscreteStateType),   intent(in   ) :: xd_UA              ! Discrete states at Time
-   type(UA_OtherStateType),      intent(in   ) :: OtherState_UA      ! Other/optimization states
+   type(UA_OtherStateType),      intent(inout) :: OtherState_UA      ! Other/optimization states
    type(UA_OutputType),          intent(inout) :: OtherState_y_UA    !
    real(ReKi),                   intent(  out) :: Cl, Cd, Cm
    integer(IntKi),               intent(  out) :: errStat            ! Error status of the operation
@@ -517,11 +517,15 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, cn, ct, B, &
 
       end if
 
-   else  ! propeller brake region (a and ap not directly used but update anyway)
+   else  ! propeller brake region (a and ap not directly used but update anyway) !bjj: huh? when k is slightly larger than 1, a is definitely getting used (and causing issues)...
 
       if (k > 1.0_ReKi .and. .not. EqualRealNos(k, 1.0_ReKi) ) then
       !if (sigma_pcn > Fsphi) then
          a =   k/(k-1.0_ReKi) !sigma_pcn / (sigma_pcn - Fsphi )  !
+
+         ! axial induction is blowing up, so I'm putting a band-aid here. BJJ 25-Feb-2016
+         a = min(a, 10.0_ReKi ) 
+      
       else
          a = 0.0_ReKi  ! dummy value
       end if
@@ -550,6 +554,7 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, cn, ct, B, &
    if ( abs(ap) > 10.0_ReKi ) then
       ap = sign( 10.0_ReKi, ap )
    end if
+      
    
 !bjj: 3-jun-2015: TODO: was able to trigger divide-by-zero here using ccBlade_UAE.dvr without tiploss or hubloss
     

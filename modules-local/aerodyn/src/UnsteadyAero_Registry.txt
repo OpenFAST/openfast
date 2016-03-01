@@ -102,6 +102,8 @@ typedef   ^                            OtherStateType                LOGICAL    
 typedef   ^                            OtherStateType                LOGICAL                  BEDSEP                          {:}{:}        -         -        "logical flag indicating if this is undergoing separated flow"   -
 typedef   ^                            OtherStateType                INTEGER                  iBladeNode                      -             -         -        "index for the blade node being operated on (within the current blade)" -
 typedef   ^                            OtherStateType                INTEGER                  iBlade                          -             -         -        "index for the blade being operated on" -
+typedef   ^                            OtherStateType                Logical                  FirstWarn_M                     -             -         -        "flag so Mach number warning doesn't get repeated forever" -
+
 # ..... Parameters ................................................................................................................
 # Define parameters here:
 # Time step for integration of continuous states (if a fixed-step integrator is used) and update of discrete states:
