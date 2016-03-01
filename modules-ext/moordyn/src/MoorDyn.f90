@@ -27,7 +27,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v1.00.02F-mth', '11-Jan-2016' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v1.01.00F-mth', '11-Jan-2016' )
 
 
    PUBLIC :: MD_Init
@@ -74,7 +74,7 @@ CONTAINS
       TYPE(MD_InputType)    :: uArray(1)    ! a size-one array for u to make call to TimeStep happy
       REAL(DbKi)            :: utimes(1)    ! a size-one array saying time is 0 to make call to TimeStep happy  
 
-
+      CHARACTER(MaxWrScrLen)                       :: Message
 
 
       ErrStat = ErrID_None
@@ -414,8 +414,10 @@ CONTAINS
          END DO
 
          ! provide status message
-         CALL WrOver('   t='//trim(Num2LStr(t))//'  FairTen 1: '//trim(Num2LStr(FairTensIC(1,1)))// &
-                        ', '//trim(Num2LStr(FairTensIC(1,2)))//', '//trim(Num2LStr(FairTensIC(1,3))))
+         ! bjj: putting this in a string so we get blanks to cover up previous values (if current string is shorter than previous one)
+         Message = '   t='//trim(Num2LStr(t))//'  FairTen 1: '//trim(Num2LStr(FairTensIC(1,1)))// &
+                        ', '//trim(Num2LStr(FairTensIC(1,2)))//', '//trim(Num2LStr(FairTensIC(1,3))) 
+         CALL WrOver( Message )
 
          ! check for convergence (compare current tension at each fairlead with previous two values)
          IF (I > 2) THEN
@@ -1277,7 +1279,7 @@ CONTAINS
       
       ! check for NaNs - is this a good place/way to do it?
       DO J = 1, Nx
-         IF (Is_NaN(DBLE(x%states(J)))) THEN
+         IF (Is_NaN(REAL(x%states(J),DbKi))) THEN
             ErrStat = ErrID_Fatal
             ErrMsg = ' NaN state detected.'
          END IF
@@ -1498,7 +1500,6 @@ CONTAINS
                              WetWeight    , SeabedCD,    TenTol,     (N+1)     , &
                              LSNodes, LNodesX, LNodesZ , ErrStat2, ErrMsg2)
 
-
       IF (ErrStat2 == ErrID_None) THEN ! if it worked, use it
           ! Transform the positions of each node on the current line from the local
           !   coordinate system of the current line to the inertial frame coordinate
@@ -1669,46 +1670,74 @@ CONTAINS
          ZF     = REAL( ZF_In    , DbKi )
 
 
+         
+      !  HF and VF cannot be initialized to zero when a  portion of the line rests on the seabed and the anchor tension is nonzero
+         
+      ! Generate the initial guess values for the horizontal and vertical tensions
+      !   at the fairlead in the Newton-Raphson iteration for the catenary mooring
+      !   line solution.  Use starting values documented in: Peyrot, Alain H. and
+      !   Goulois, A. M., "Analysis Of Cable Structures," Computers & Structures,
+      !   Vol. 10, 1979, pp. 805-813:
+         XF2     = XF*XF
+         ZF2     = ZF*ZF
+
+         IF     ( XF           == 0.0_DbKi    )  THEN ! .TRUE. if the current mooring line is exactly vertical
+            Lamda0 = 1.0D+06
+         ELSEIF ( L <= SQRT( XF2 + ZF2 ) )  THEN ! .TRUE. if the current mooring line is taut
+            Lamda0 = 0.2_DbKi
+         ELSE                                    ! The current mooring line must be slack and not vertical
+            Lamda0 = SQRT( 3.0_DbKi*( ( L**2 - ZF2 )/XF2 - 1.0_DbKi ) )
+         ENDIF
+
+         HF = ABS( 0.5_DbKi*W*  XF/     Lamda0      )
+         VF =      0.5_DbKi*W*( ZF/TANH(Lamda0) + L )         
+                                    
 
             ! Abort when there is no solution or when the only possible solution is
             !   illogical:
 
-         IF (    Tol <= 0.0_DbKi )  THEN   ! .TRUE. when the convergence tolerance is specified incorrectly
+         IF (    Tol <= EPSILON(TOL) )  THEN   ! .TRUE. when the convergence tolerance is specified incorrectly
            ErrStat = ErrID_Warn
            ErrMsg = ' Convergence tolerance must be greater than zero in routine Catenary().'
-
+           return
          ELSEIF ( XF <  0.0_DbKi )  THEN   ! .TRUE. only when the local coordinate system is not computed correctly
            ErrStat = ErrID_Warn
            ErrMsg =  ' The horizontal distance between an anchor and its'// &
                          ' fairlead must not be less than zero in routine Catenary().'
+           return
 
          ELSEIF ( ZF <  0.0_DbKi )  THEN   ! .TRUE. if the fairlead has passed below its anchor
            ErrStat = ErrID_Warn
            ErrMsg =  ' A fairlead has passed below its anchor.'
+           return
 
          ELSEIF ( L  <= 0.0_DbKi )  THEN   ! .TRUE. when the unstretched line length is specified incorrectly
            ErrStat = ErrID_Warn
            ErrMsg =  ' Unstretched length of line must be greater than zero in routine Catenary().'
+           return
 
          ELSEIF ( EA <= 0.0_DbKi )  THEN   ! .TRUE. when the unstretched line length is specified incorrectly
            ErrStat = ErrID_Warn
            ErrMsg =  ' Extensional stiffness of line must be greater than zero in routine Catenary().'
+           return
 
          ELSEIF ( W  == 0.0_DbKi )  THEN   ! .TRUE. when the weight of the line in fluid is zero so that catenary solution is ill-conditioned
            ErrStat = ErrID_Warn
            ErrMsg = ' The weight of the line in fluid must not be zero. '// &
                          ' Routine Catenary() cannot solve quasi-static mooring line solution.'
+           return
 
 
          ELSEIF ( W  >  0.0_DbKi )  THEN   ! .TRUE. when the line will sink in fluid
 
             LMax      = XF - EA/W + SQRT( (EA/W)*(EA/W) + 2.0_DbKi*ZF*EA/W )  ! Compute the maximum stretched length of the line with seabed interaction beyond which the line would have to double-back on itself; here the line forms an "L" between the anchor and fairlead (i.e. it is horizontal along the seabed from the anchor, then vertical to the fairlead)
 
-            IF ( ( L  >=  LMax   ) .AND. ( CB >= 0.0_DbKi ) )  &  ! .TRUE. if the line is as long or longer than its maximum possible value with seabed interaction
-           ErrStat = ErrID_Warn
-           ErrMsg =  ' Unstretched mooring line length too large. '// &
+            IF ( ( L  >=  LMax   ) .AND. ( CB >= 0.0_DbKi ) )  then  ! .TRUE. if the line is as long or longer than its maximum possible value with seabed interaction
+               ErrStat = ErrID_Warn
+               ErrMsg =  ' Unstretched mooring line length too large. '// &
                             ' Routine Catenary() cannot solve quasi-static mooring line solution.'
-
+               return
+            END IF
 
          ENDIF
 
@@ -1834,9 +1863,19 @@ CONTAINS
 
             ! Compute the determinant of the Jacobian matrix and the incremental
             !   tensions predicted by Newton-Raphson:
-
+            
+            
             DET = dXFdHF*dZFdVF - dXFdVF*dZFdHF
+            
+            if ( EqualRealNos( DET, 0.0_DbKi ) ) then               
+!bjj: there is a serious problem with the debugger here when DET = 0
+                ErrStat = ErrID_Warn
+                ErrMsg =  ' Iteration not convergent (DET is 0). '// &
+                          ' Routine Catenary() cannot solve quasi-static mooring line solution.'
+                return
+            endif
 
+               
             dHF = ( -dZFdVF*EXF + dXFdVF*EZF )/DET    ! This is the incremental change in horizontal tension at the fairlead as predicted by Newton-Raphson
             dVF = (  dZFdHF*EXF - dXFdHF*EZF )/DET    ! This is the incremental change in vertical   tension at the fairlead as predicted by Newton-Raphson
 
@@ -1844,7 +1883,6 @@ CONTAINS
             dVF = dVF*( 1.0_DbKi - Tol*I )            ! Reduce dHF by factor (between 1 at I = 1 and 0 at I = MaxIter) that reduces linearly with iteration count to ensure that we converge on a solution even in the case were we obtain a nonconvergent cycle about the correct solution (this happens, for example, if we jump to quickly between a taut and slack catenary)
 
             dHF = MAX( dHF, ( Tol - 1.0_DbKi )*HF )   ! To avoid an ill-conditioned situation, make sure HF does not go less than or equal to zero by having a lower limit of Tol*HF [NOTE: the value of dHF = ( Tol - 1.0_DbKi )*HF comes from: HF = HF + dHF = Tol*HF when dHF = ( Tol - 1.0_DbKi )*HF]
-
 
             ! Check if we have converged on a solution, or restart the iteration, or
             !   Abort if we cannot find a solution:
@@ -1927,7 +1965,7 @@ CONTAINS
             DO I = 1,N  ! Loop through all nodes where the line position and tension are to be computed
 
                IF ( ( s(I) <  0.0_DbKi ) .OR. ( s(I) >  L ) )  THEN
-                  ErrStat = ErrID_Warn
+                 ErrStat = ErrID_Warn
                  ErrMsg = ' All line nodes must be located between the anchor ' &
                                  //'and fairlead (inclusive) in routine Catenary().'
                  RETURN
