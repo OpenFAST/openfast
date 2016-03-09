@@ -88,7 +88,7 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
    ErrMsg  = ''
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
    
-   
+   IntAFCoefs(4) = 0.0_ReKi  ! Initialize in case all columns are not present in Airfoil tables
       
       ! NOTE: we use Table(1) because the right now we can only interpolate with AOA and not Re or other variables.  If we had multiple tables stored
       ! for changes in other variables (Re, Mach #, etc) then then we would need to interpolate across tables.
@@ -594,7 +594,7 @@ end function Get_C_V2
 !==============================================================================   
 
 !==============================================================================
-real(ReKi) function Get_Cn_v ( ds, T_V, Cn_v_minus1, C_V, C_V_minus1, tau_V, T_VL, T_V0, Kalpha, alpha, alpha0, SHIFT ) ! do I pass VRTX flag or tau_V?
+real(ReKi) function Get_Cn_v ( ds, T_V, Cn_v_minus1, C_V, C_V_minus1, tau_V, T_VL, T_V0, Kalpha, alpha, alpha0 ) ! do I pass VRTX flag or tau_V?
 ! Implements Equation 1.45 or 1.49 
 ! Called by : ComputeKelvinChain
 ! Calls  to : NONE
@@ -611,7 +611,6 @@ real(ReKi) function Get_Cn_v ( ds, T_V, Cn_v_minus1, C_V, C_V_minus1, tau_V, T_V
    real(ReKi), intent(in   ) :: Kalpha                 ! backwards finite difference of alpha
    real(ReKi), intent(in   ) :: alpha                  ! angle of attack (rad)
    real(ReKi), intent(in   ) :: alpha0                 ! zero lift angle of attack (rad)
-   logical,    intent(in   ) :: SHIFT
    real(ReKi)                :: factor
    
    factor = (alpha - alpha0) * Kalpha
@@ -861,7 +860,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_
    real(ReKi)                :: Kprimeprime_q                                 !
    real(ReKi)                :: fprime_c_minus1
    real(ReKi)                :: alphaf_minus1
-   logical                   :: SHIFT
+
  
    integer(IntKi)            :: ErrStat2
    character(ErrMsgLen)      :: ErrMsg2
@@ -1022,10 +1021,10 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_
    
       
    IF ( u%alpha * Cn_prime_diff < 0. ) THEN
-      SHIFT = .TRUE.
+
       T_f   = T_f0*1.5
    ELSE
-      SHIFT = .FALSE.
+
       T_f   = T_f0
    ENDIF
    
@@ -1095,7 +1094,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_
    C_V           = Get_C_V  ( Cn_alpha_q_circ, fprimeprime, p%UAMod )
    
       ! Compute Cn_v using either Eqn 1.45 or 1.49 depending on operating conditions
-   Cn_v          = Get_Cn_v ( ds, T_V, xd%Cn_v_minus1(i,j), C_V, xd%C_V_minus1(i,j), xd%tau_V(i,j), T_VL, T_V0, Kalpha, u%alpha, alpha0, SHIFT ) ! do I pass VRTX flag or tau_V?
+   Cn_v          = Get_Cn_v ( ds, T_V, xd%Cn_v_minus1(i,j), C_V, xd%C_V_minus1(i,j), xd%tau_V(i,j), T_VL, T_V0, Kalpha, u%alpha, alpha0 ) ! do I pass VRTX flag or tau_V?
    
    if ( Cn_v < 0.0_ReKi ) then
       Cn_v = 0.0_ReKi

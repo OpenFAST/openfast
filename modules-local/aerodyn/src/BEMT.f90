@@ -880,7 +880,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, er
          
          Rtip2 = 0.0_ReKi
          do i = 1,p%numBladeNodes
-            Rtip2 = max( Rtip, u2%rlocal(i,j) ) 
+            Rtip2 = max( Rtip2, u2%rlocal(i,j) ) 
          end do
          
       end if
@@ -1013,7 +1013,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
 
    real(ReKi)                     :: chi0, theta, Vx, Vy
    real(ReKi)                     :: psi, Re, fzero,  r
-   real(ReKi)                     :: Rtip
+   real(ReKi)                     :: Rtip, localCl, localCd
 
    integer(IntKi)                 :: i                                               ! Generic index
    integer(IntKi)                 :: j                                               ! Loops through nodes / elements
@@ -1128,6 +1128,13 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
          if (OtherState%UA_Flag(i,j)) then            
             call Compute_UA_AirfoilCoefs( y%AOA(i,j), y%Vrel(I,J), y%Re(i,j),  AFInfo(p%AFindx(i,j)), p%UA, xd%UA, OtherState%UA, OtherState%y_UA, &
                                          y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), errStat2, errMsg2 ) 
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
+               if (errStat >= AbortErrLev) return 
+               
+            ! NOTE: In this version, we are disabling the UA Cm values only we have performed further validation.  GJH 3/9/2016
+               ! Obtain the steady state Cm value from the static tables
+            call ComputeSteadyAirfoilCoefs( y%AOA(i,j), y%Re(i,j),  AFInfo(p%AFindx(i,j)), &
+                                         localCl, localCd, y%Cm(i,j), errStat2, errMsg2 ) 
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
                if (errStat >= AbortErrLev) return 
 
