@@ -107,6 +107,7 @@ subroutine Transform_ClCd_to_CxCy( phi, useAIDrag, useTIDrag, Cl, Cd, Cx, Cy )
    end if
    
 end subroutine Transform_ClCd_to_CxCy
+
 !----------------------------------------------------------------------------------------------------------------------------------  
 subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
                       Cl, Cd, Cm, errStat, errMsg )
@@ -150,6 +151,7 @@ subroutine ComputeSteadyAirfoilCoefs( AOA, Re, AFInfo, &
    
        
 end subroutine ComputeSteadyAirfoilCoefs
+
 
 
 !----------------------------------------------------------------------------------------------------------------------------------  
