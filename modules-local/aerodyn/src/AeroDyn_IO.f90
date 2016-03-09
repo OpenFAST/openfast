@@ -30,7 +30,7 @@ MODULE AeroDyn_IO
    
    implicit none
    
-   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.01.02b-gjh', '9-Mar-2016' )
+   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.02.01a-bjj', '8-Mar-2016' )
    character(*),   parameter  :: AD_Nickname = 'AD'
       
 ! ===================================================================================================
@@ -1382,16 +1382,17 @@ contains
    
    
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteDbgOutput( p, u, OtherState, y, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteDbgOutput( p, u, m, y, ErrStat, ErrMsg )
    
    TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
    TYPE(AD_InputType),        INTENT(IN   )  :: u                                 ! inputs
-   TYPE(AD_OtherStateType),   INTENT(INOUT)  :: OtherState                        ! other states
+   TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
    TYPE(AD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
 
       ! local variables
+   integer, parameter                        :: indx = 1  ! m%BEMT_u(1) is at t; m%BEMT_u(2) is t+dt
    CHARACTER(*), PARAMETER                   :: RoutineName = 'Calc_WriteOutput'
    INTEGER(intKi)                            :: ErrStat2
    CHARACTER(ErrMsgLen)                      :: ErrMsg2
@@ -1411,44 +1412,44 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, OtherState, y, ErrStat, ErrMsg )
       ! blade outputs
    do k=1,p%numBlades
       
-    ! OtherState%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
+    ! m%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
       
       do j=1,p%NumBlNds
          
          i = (k-1)*p%NumBlNds*23 + (j-1)*23 + 1
 
-         OtherState%AllOuts( i    ) =  OtherState%BEMT_u%theta(j,k)*R2D     
-         OtherState%AllOuts( i+1  ) =  OtherState%BEMT_u%psi(k)*R2D 
-         OtherState%AllOuts( i+2  ) = -OtherState%BEMT_u%Vx(j,k) 
-         OtherState%AllOuts( i+3  ) =  OtherState%BEMT_u%Vy(j,k) 
+         m%AllOuts( i    ) =  m%BEMT_u(indx)%theta(j,k)*R2D     
+         m%AllOuts( i+1  ) =  m%BEMT_u(indx)%psi(k)*R2D 
+         m%AllOuts( i+2  ) = -m%BEMT_u(indx)%Vx(j,k) 
+         m%AllOuts( i+3  ) =  m%BEMT_u(indx)%Vy(j,k) 
                                  
-         OtherState%AllOuts( i+4  ) =  OtherState%BEMT_y%axInduction(j,k)
-         OtherState%AllOuts( i+5  ) =  OtherState%BEMT_y%tanInduction(j,k)
-         OtherState%AllOuts( i+6  ) =  OtherState%BEMT_y%Vrel(j,k)
-         OtherState%AllOuts( i+7  ) =  OtherState%BEMT_y%phi(j,k)*R2D   
-         OtherState%AllOuts( i+8  ) =  (OtherState%BEMT_y%phi(j,k) - OtherState%BEMT_u%theta(j,k))*R2D         
+         m%AllOuts( i+4  ) =  m%BEMT_y%axInduction(j,k)
+         m%AllOuts( i+5  ) =  m%BEMT_y%tanInduction(j,k)
+         m%AllOuts( i+6  ) =  m%BEMT_y%Vrel(j,k)
+         m%AllOuts( i+7  ) =  m%BEMT_y%phi(j,k)*R2D   
+         m%AllOuts( i+8  ) =  (m%BEMT_y%phi(j,k) - m%BEMT_u(indx)%theta(j,k))*R2D         
                                       
                                       
-         OtherState%AllOuts( i+9  ) =  OtherState%BEMT_y%Cl(j,k)         
-         OtherState%AllOuts( i+10 ) =  OtherState%BEMT_y%Cd(j,k)         
-         OtherState%AllOuts( i+11 ) =  OtherState%BEMT_y%Cm(j,k)  
-         OtherState%AllOuts( i+12 ) =  OtherState%BEMT_y%Cx(j,k)  
-         OtherState%AllOuts( i+13 ) =  OtherState%BEMT_y%Cy(j,k)  
+         m%AllOuts( i+9  ) =  m%BEMT_y%Cl(j,k)         
+         m%AllOuts( i+10 ) =  m%BEMT_y%Cd(j,k)         
+         m%AllOuts( i+11 ) =  m%BEMT_y%Cm(j,k)  
+         m%AllOuts( i+12 ) =  m%BEMT_y%Cx(j,k)  
+         m%AllOuts( i+13 ) =  m%BEMT_y%Cy(j,k)  
          
-         ct=cos(OtherState%BEMT_u%theta(j,k))
-         st=sin(OtherState%BEMT_u%theta(j,k))
-         OtherState%AllOuts( i+14 ) =  OtherState%BEMT_y%Cx(j,k)*ct + OtherState%BEMT_y%Cy(j,k)*st
-         OtherState%AllOuts( i+15 ) = -OtherState%BEMT_y%Cx(j,k)*st + OtherState%BEMT_y%Cy(j,k)*ct
+         ct=cos(m%BEMT_u(indx)%theta(j,k))
+         st=sin(m%BEMT_u(indx)%theta(j,k))
+         m%AllOuts( i+14 ) =  m%BEMT_y%Cx(j,k)*ct + m%BEMT_y%Cy(j,k)*st
+         m%AllOuts( i+15 ) = -m%BEMT_y%Cx(j,k)*st + m%BEMT_y%Cy(j,k)*ct
          
-         cp=cos(OtherState%BEMT_y%phi(j,k))
-         sp=sin(OtherState%BEMT_y%phi(j,k))
-         OtherState%AllOuts( i+16 ) =  OtherState%X(j,k)*cp - OtherState%Y(j,k)*sp
-         OtherState%AllOuts( i+17 ) =  OtherState%X(j,k)*sp + OtherState%Y(j,k)*cp
-         OtherState%AllOuts( i+18 ) =  OtherState%M(j,k)
-         OtherState%AllOuts( i+19 ) =  OtherState%X(j,k)
-         OtherState%AllOuts( i+20 ) = -OtherState%Y(j,k)
-         OtherState%AllOuts( i+21 ) =  OtherState%X(j,k)*ct - OtherState%Y(j,k)*st
-         OtherState%AllOuts( i+22 ) = -OtherState%X(j,k)*st - OtherState%Y(j,k)*ct
+         cp=cos(m%BEMT_y%phi(j,k))
+         sp=sin(m%BEMT_y%phi(j,k))
+         m%AllOuts( i+16 ) =  m%X(j,k)*cp - m%Y(j,k)*sp
+         m%AllOuts( i+17 ) =  m%X(j,k)*sp + m%Y(j,k)*cp
+         m%AllOuts( i+18 ) =  m%M(j,k)
+         m%AllOuts( i+19 ) =  m%X(j,k)
+         m%AllOuts( i+20 ) = -m%Y(j,k)
+         m%AllOuts( i+21 ) =  m%X(j,k)*ct - m%Y(j,k)*st
+         m%AllOuts( i+22 ) = -m%X(j,k)*st - m%Y(j,k)*ct
                   
       end do ! nodes
    end do ! blades 
@@ -1456,12 +1457,13 @@ SUBROUTINE Calc_WriteDbgOutput( p, u, OtherState, y, ErrStat, ErrMsg )
 END SUBROUTINE Calc_WriteDbgOutput
 
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE Calc_WriteOutput( p, u, OtherState, y, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteOutput( p, u, m, y, indx, ErrStat, ErrMsg )
    
    TYPE(AD_ParameterType),    INTENT(IN   )  :: p                                 ! The module parameters
    TYPE(AD_InputType),        INTENT(IN   )  :: u                                 ! inputs
-   TYPE(AD_OtherStateType),   INTENT(INOUT)  :: OtherState                        ! other states
+   TYPE(AD_MiscVarType),      INTENT(INOUT)  :: m                                 ! misc variables
    TYPE(AD_OutputType),       INTENT(IN   )  :: y                                 ! outputs
+   integer,                   intent(in   )  :: indx                              ! index into m%BEMT_u(indx) array; 1=t and 2=t+dt (but not checked here)
    INTEGER(IntKi),            INTENT(  OUT)  :: ErrStat                           ! The error status code
    CHARACTER(*),              INTENT(  OUT)  :: ErrMsg                            ! The error message, if an error occurred
 
@@ -1489,83 +1491,83 @@ SUBROUTINE Calc_WriteOutput( p, u, OtherState, y, ErrStat, ErrMsg )
       j = p%TwOutNd(beta)
       
       tmp = matmul( u%TowerMotion%Orientation(:,:,j) , u%InflowOnTower(:,j) )
-      OtherState%AllOuts( TwNVUnd(:,beta) ) = tmp
+      m%AllOuts( TwNVUnd(:,beta) ) = tmp
       
       tmp = matmul( u%TowerMotion%Orientation(:,:,j) , u%TowerMotion%TranslationVel(:,j) )
-      OtherState%AllOuts( TwNSTV(:,beta) ) = tmp
+      m%AllOuts( TwNSTV(:,beta) ) = tmp
       
-      OtherState%AllOuts( TwNVrel(beta) ) = OtherState%W_Twr(j)                           ! relative velocity   
-      OtherState%AllOuts( TwNDynP(beta) ) = 0.5 * p%AirDens * OtherState%W_Twr(j)**2      ! dynamic pressure
-      OtherState%AllOuts( TwNRe(  beta) ) = p%TwrDiam(j) * OtherState%W_Twr(j) / p%KinVisc / 1.0E6 ! reynolds number (in millions)
-      OtherState%AllOuts( TwNM(   beta) ) = OtherState%W_Twr(j) / p%SpdSound               ! Mach number
-      OtherState%AllOuts( TwNFdx( beta) ) = OtherState%X_Twr(j)         
-      OtherState%AllOuts( TwNFdy( beta) ) = OtherState%Y_Twr(j)         
+      m%AllOuts( TwNVrel(beta) ) = m%W_Twr(j)                           ! relative velocity   
+      m%AllOuts( TwNDynP(beta) ) = 0.5 * p%AirDens * m%W_Twr(j)**2      ! dynamic pressure
+      m%AllOuts( TwNRe(  beta) ) = p%TwrDiam(j) * m%W_Twr(j) / p%KinVisc / 1.0E6 ! reynolds number (in millions)
+      m%AllOuts( TwNM(   beta) ) = m%W_Twr(j) / p%SpdSound               ! Mach number
+      m%AllOuts( TwNFdx( beta) ) = m%X_Twr(j)         
+      m%AllOuts( TwNFdy( beta) ) = m%Y_Twr(j)         
       
    end do ! out nodes
    
       ! blade outputs
    do k=1,p%numBlades
-      OtherState%AllOuts( BAzimuth(k) ) = OtherState%BEMT_u%psi(k)*R2D 
-    ! OtherState%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
+      m%AllOuts( BAzimuth(k) ) = m%BEMT_u(indx)%psi(k)*R2D 
+    ! m%AllOuts( BPitch(  k) ) = calculated in SetInputsForBEMT
       
       do beta=1,p%NBlOuts
          
          j=p%BlOutNd(beta)
          
          
-         tmp = matmul( OtherState%WithoutSweepPitchTwist(:,:,j,k), u%InflowOnBlade(:,j,k) )
-         OtherState%AllOuts( BNVUndx(beta,k) ) = tmp(1)
-         OtherState%AllOuts( BNVUndy(beta,k) ) = tmp(2)
-         OtherState%AllOuts( BNVUndz(beta,k) ) = tmp(3)
+         tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), u%InflowOnBlade(:,j,k) )
+         m%AllOuts( BNVUndx(beta,k) ) = tmp(1)
+         m%AllOuts( BNVUndy(beta,k) ) = tmp(2)
+         m%AllOuts( BNVUndz(beta,k) ) = tmp(3)
          
-         tmp = matmul( OtherState%WithoutSweepPitchTwist(:,:,j,k), OtherState%DisturbedInflow(:,j,k) )
-         OtherState%AllOuts( BNVDisx(beta,k) ) = tmp(1)
-         OtherState%AllOuts( BNVDisy(beta,k) ) = tmp(2)
-         OtherState%AllOuts( BNVDisz(beta,k) ) = tmp(3)
+         tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), m%DisturbedInflow(:,j,k) )
+         m%AllOuts( BNVDisx(beta,k) ) = tmp(1)
+         m%AllOuts( BNVDisy(beta,k) ) = tmp(2)
+         m%AllOuts( BNVDisz(beta,k) ) = tmp(3)
                   
-         tmp = matmul( OtherState%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%TranslationVel(:,j) )
-         OtherState%AllOuts( BNSTVx( beta,k) ) = tmp(1)
-         OtherState%AllOuts( BNSTVy( beta,k) ) = tmp(2)
-         OtherState%AllOuts( BNSTVz( beta,k) ) = tmp(3)
+         tmp = matmul( m%WithoutSweepPitchTwist(:,:,j,k), u%BladeMotion(k)%TranslationVel(:,j) )
+         m%AllOuts( BNSTVx( beta,k) ) = tmp(1)
+         m%AllOuts( BNSTVy( beta,k) ) = tmp(2)
+         m%AllOuts( BNSTVz( beta,k) ) = tmp(3)
          
-         OtherState%AllOuts( BNVrel( beta,k) ) = OtherState%BEMT_y%Vrel(j,k)
-         OtherState%AllOuts( BNDynP( beta,k) ) = 0.5 * p%airDens * OtherState%BEMT_y%Vrel(j,k)**2
-         OtherState%AllOuts( BNRe(   beta,k) ) = p%BEMT%chord(j,k) * OtherState%BEMT_y%Vrel(j,k) / p%KinVisc / 1.0E6
-         OtherState%AllOuts( BNM(    beta,k) ) = OtherState%BEMT_y%Vrel(j,k) / p%SpdSound
+         m%AllOuts( BNVrel( beta,k) ) = m%BEMT_y%Vrel(j,k)
+         m%AllOuts( BNDynP( beta,k) ) = 0.5 * p%airDens * m%BEMT_y%Vrel(j,k)**2
+         m%AllOuts( BNRe(   beta,k) ) = p%BEMT%chord(j,k) * m%BEMT_y%Vrel(j,k) / p%KinVisc / 1.0E6
+         m%AllOuts( BNM(    beta,k) ) = m%BEMT_y%Vrel(j,k) / p%SpdSound
 
-         OtherState%AllOuts( BNVIndx(beta,k) ) = - OtherState%BEMT_u%Vx(j,k) * OtherState%BEMT_y%axInduction( j,k)
-         OtherState%AllOuts( BNVIndy(beta,k) ) =   OtherState%BEMT_u%Vy(j,k) * OtherState%BEMT_y%tanInduction(j,k)
+         m%AllOuts( BNVIndx(beta,k) ) = - m%BEMT_u(indx)%Vx(j,k) * m%BEMT_y%axInduction( j,k)
+         m%AllOuts( BNVIndy(beta,k) ) =   m%BEMT_u(indx)%Vy(j,k) * m%BEMT_y%tanInduction(j,k)
          
-         OtherState%AllOuts( BNAxInd(beta,k) ) = OtherState%BEMT_y%axInduction(j,k)
-         OtherState%AllOuts( BNTnInd(beta,k) ) = OtherState%BEMT_y%tanInduction(j,k)
+         m%AllOuts( BNAxInd(beta,k) ) = m%BEMT_y%axInduction(j,k)
+         m%AllOuts( BNTnInd(beta,k) ) = m%BEMT_y%tanInduction(j,k)
 
-         OtherState%AllOuts( BNAlpha(beta,k) ) = (OtherState%BEMT_y%phi(j,k) - OtherState%BEMT_u%theta(j,k))*R2D         
-         OtherState%AllOuts( BNTheta(beta,k) ) = OtherState%BEMT_u%theta(j,k)*R2D         
-         OtherState%AllOuts( BNPhi(  beta,k) ) = OtherState%BEMT_y%phi(j,k)*R2D         
-         OtherState%AllOuts( BNCurve(beta,k) ) = OtherState%Curve(j,k)*R2D         
+         m%AllOuts( BNAlpha(beta,k) ) = (m%BEMT_y%phi(j,k) - m%BEMT_u(indx)%theta(j,k))*R2D         
+         m%AllOuts( BNTheta(beta,k) ) = m%BEMT_u(indx)%theta(j,k)*R2D         
+         m%AllOuts( BNPhi(  beta,k) ) = m%BEMT_y%phi(j,k)*R2D         
+         m%AllOuts( BNCurve(beta,k) ) = m%Curve(j,k)*R2D         
          
-         !OtherState%AllOuts( BNCl(   beta,k) ) = OtherState%BEMT_y%Cl(j,k)         
-         !OtherState%AllOuts( BNCd(   beta,k) ) = OtherState%BEMT_y%Cd(j,k)   
-         cp=cos(OtherState%BEMT_y%phi(j,k))
-         sp=sin(OtherState%BEMT_y%phi(j,k))
-         OtherState%AllOuts( BNCl(   beta,k) ) = OtherState%BEMT_y%Cx(j,k)*cp + OtherState%BEMT_y%Cy(j,k)*sp         
-         OtherState%AllOuts( BNCd(   beta,k) ) = OtherState%BEMT_y%Cx(j,k)*sp - OtherState%BEMT_y%Cy(j,k)*cp           
-         OtherState%AllOuts( BNCm(   beta,k) ) = OtherState%BEMT_y%Cm(j,k)  
-         OtherState%AllOuts( BNCx(   beta,k) ) = OtherState%BEMT_y%Cx(j,k)  
-         OtherState%AllOuts( BNCy(   beta,k) ) = OtherState%BEMT_y%Cy(j,k)  
+         !m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cl(j,k)         
+         !m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cd(j,k)   
+         cp=cos(m%BEMT_y%phi(j,k))
+         sp=sin(m%BEMT_y%phi(j,k))
+         m%AllOuts( BNCl(   beta,k) ) = m%BEMT_y%Cx(j,k)*cp + m%BEMT_y%Cy(j,k)*sp         
+         m%AllOuts( BNCd(   beta,k) ) = m%BEMT_y%Cx(j,k)*sp - m%BEMT_y%Cy(j,k)*cp           
+         m%AllOuts( BNCm(   beta,k) ) = m%BEMT_y%Cm(j,k)  
+         m%AllOuts( BNCx(   beta,k) ) = m%BEMT_y%Cx(j,k)  
+         m%AllOuts( BNCy(   beta,k) ) = m%BEMT_y%Cy(j,k)  
          
-         ct=cos(OtherState%BEMT_u%theta(j,k))
-         st=sin(OtherState%BEMT_u%theta(j,k))
-         OtherState%AllOuts( BNCn(   beta,k) ) = OtherState%BEMT_y%Cx(j,k)*ct + OtherState%BEMT_y%Cy(j,k)*st
-         OtherState%AllOuts( BNCt(   beta,k) ) =-OtherState%BEMT_y%Cx(j,k)*st + OtherState%BEMT_y%Cy(j,k)*ct
+         ct=cos(m%BEMT_u(indx)%theta(j,k))
+         st=sin(m%BEMT_u(indx)%theta(j,k))
+         m%AllOuts( BNCn(   beta,k) ) = m%BEMT_y%Cx(j,k)*ct + m%BEMT_y%Cy(j,k)*st
+         m%AllOuts( BNCt(   beta,k) ) =-m%BEMT_y%Cx(j,k)*st + m%BEMT_y%Cy(j,k)*ct
          
-         OtherState%AllOuts( BNFl(   beta,k) ) =  OtherState%X(j,k)*cp - OtherState%Y(j,k)*sp
-         OtherState%AllOuts( BNFd(   beta,k) ) =  OtherState%X(j,k)*sp + OtherState%Y(j,k)*cp
-         OtherState%AllOuts( BNMm(   beta,k) ) =  OtherState%M(j,k)
-         OtherState%AllOuts( BNFx(   beta,k) ) =  OtherState%X(j,k)
-         OtherState%AllOuts( BNFy(   beta,k) ) = -OtherState%Y(j,k)
-         OtherState%AllOuts( BNFn(   beta,k) ) =  OtherState%X(j,k)*ct - OtherState%Y(j,k)*st
-         OtherState%AllOuts( BNFt(   beta,k) ) = -OtherState%X(j,k)*st - OtherState%Y(j,k)*ct
+         m%AllOuts( BNFl(   beta,k) ) =  m%X(j,k)*cp - m%Y(j,k)*sp
+         m%AllOuts( BNFd(   beta,k) ) =  m%X(j,k)*sp + m%Y(j,k)*cp
+         m%AllOuts( BNMm(   beta,k) ) =  m%M(j,k)
+         m%AllOuts( BNFx(   beta,k) ) =  m%X(j,k)
+         m%AllOuts( BNFy(   beta,k) ) = -m%Y(j,k)
+         m%AllOuts( BNFn(   beta,k) ) =  m%X(j,k)*ct - m%Y(j,k)*st
+         m%AllOuts( BNFt(   beta,k) ) = -m%X(j,k)*st - m%Y(j,k)*ct
                   
       end do ! nodes
    end do ! blades
@@ -1574,53 +1576,53 @@ SUBROUTINE Calc_WriteOutput( p, u, OtherState, y, ErrStat, ErrMsg )
    rmax = 0.0_ReKi
    do k=1,p%NumBlades
       do j=1,p%NumBlNds
-         rmax = max(rmax, OtherState%BEMT_u%rLocal(j,k) )
+         rmax = max(rmax, m%BEMT_u(indx)%rLocal(j,k) )
       end do !j=nodes      
    end do !k=blades   
    
-   OtherState%AllOuts( RtSpeed ) = OtherState%BEMT_u%omega*RPS2RPM
-   OtherState%AllOuts( RtArea  ) = pi*rmax**2
+   m%AllOuts( RtSpeed ) = m%BEMT_u(indx)%omega*RPS2RPM
+   m%AllOuts( RtArea  ) = pi*rmax**2
    
-   tmp = matmul( u%HubMotion%Orientation(:,:,1), OtherState%V_DiskAvg )
-   OtherState%AllOuts( RtVAvgxh ) = tmp(1)
-   OtherState%AllOuts( RtVAvgyh ) = tmp(2)
-   OtherState%AllOuts( RtVAvgzh ) = tmp(3)
+   tmp = matmul( u%HubMotion%Orientation(:,:,1), m%V_DiskAvg )
+   m%AllOuts( RtVAvgxh ) = tmp(1)
+   m%AllOuts( RtVAvgyh ) = tmp(2)
+   m%AllOuts( RtVAvgzh ) = tmp(3)
 
-   OtherState%AllOuts( RtSkew  ) = OtherState%BEMT_u%chi0*R2D
+   m%AllOuts( RtSkew  ) = m%BEMT_u(indx)%chi0*R2D
 
       ! integrate force/moments over blades by performing mesh transfer to hub point:
    force  = 0.0_ReKi
    moment = 0.0_ReKi
    do k=1,p%NumBlades
-      call Transfer_Line2_to_Point( y%BladeLoad(k), OtherState%HubLoad, OtherState%B_L_2_H_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
-      force  = force  + OtherState%HubLoad%force( :,1)
-      moment = moment + OtherState%HubLoad%moment(:,1)
+      call Transfer_Line2_to_Point( y%BladeLoad(k), m%HubLoad, m%B_L_2_H_P(k), ErrStat2, ErrMsg2, u%BladeMotion(k), u%HubMotion )
+      force  = force  + m%HubLoad%force( :,1)
+      moment = moment + m%HubLoad%moment(:,1)
    end do
    tmp = matmul( u%HubMotion%Orientation(:,:,1), force )
-   OtherState%AllOuts( RtAeroFxh ) = tmp(1)
-   OtherState%AllOuts( RtAeroFyh ) = tmp(2)
-   OtherState%AllOuts( RtAeroFzh ) = tmp(3)
+   m%AllOuts( RtAeroFxh ) = tmp(1)
+   m%AllOuts( RtAeroFyh ) = tmp(2)
+   m%AllOuts( RtAeroFzh ) = tmp(3)
    
    tmp = matmul( u%HubMotion%Orientation(:,:,1), moment )
-   OtherState%AllOuts( RtAeroMxh ) = tmp(1)
-   OtherState%AllOuts( RtAeroMyh ) = tmp(2)
-   OtherState%AllOuts( RtAeroMzh ) = tmp(3)
+   m%AllOuts( RtAeroMxh ) = tmp(1)
+   m%AllOuts( RtAeroMyh ) = tmp(2)
+   m%AllOuts( RtAeroMzh ) = tmp(3)
    
-   OtherState%AllOuts( RtAeroPwr ) = OtherState%BEMT_u%omega * OtherState%AllOuts( RtAeroMxh )
+   m%AllOuts( RtAeroPwr ) = m%BEMT_u(indx)%omega * m%AllOuts( RtAeroMxh )
 
    
-   if ( EqualRealNos( OtherState%V_dot_x, 0.0_ReKi ) ) then
-      OtherState%AllOuts( RtTSR    ) = 0.0_ReKi
-      OtherState%AllOuts( RtAeroCp ) = 0.0_ReKi
-      OtherState%AllOuts( RtAeroCq ) = 0.0_ReKi
-      OtherState%AllOuts( RtAeroCt ) = 0.0_ReKi
+   if ( EqualRealNos( m%V_dot_x, 0.0_ReKi ) ) then
+      m%AllOuts( RtTSR    ) = 0.0_ReKi
+      m%AllOuts( RtAeroCp ) = 0.0_ReKi
+      m%AllOuts( RtAeroCq ) = 0.0_ReKi
+      m%AllOuts( RtAeroCt ) = 0.0_ReKi
    else
-      denom = 0.5*p%AirDens*OtherState%AllOuts( RtArea )*OtherState%V_dot_x**2
-      OtherState%AllOuts( RtTSR )    = OtherState%BEMT_u%omega * rmax / OtherState%V_dot_x
+      denom = 0.5*p%AirDens*m%AllOuts( RtArea )*m%V_dot_x**2
+      m%AllOuts( RtTSR )    = m%BEMT_u(indx)%omega * rmax / m%V_dot_x
       
-      OtherState%AllOuts( RtAeroCp ) = OtherState%AllOuts( RtAeroPwr ) / (denom * OtherState%V_dot_x)
-      OtherState%AllOuts( RtAeroCq ) = OtherState%AllOuts( RtAeroMxh ) / (denom * rmax)
-      OtherState%AllOuts( RtAeroCt ) = OtherState%AllOuts( RtAeroFxh ) /  denom            
+      m%AllOuts( RtAeroCp ) = m%AllOuts( RtAeroPwr ) / (denom * m%V_dot_x)
+      m%AllOuts( RtAeroCq ) = m%AllOuts( RtAeroMxh ) / (denom * rmax)
+      m%AllOuts( RtAeroCt ) = m%AllOuts( RtAeroFxh ) /  denom            
    end if              
    
    
@@ -2284,7 +2286,7 @@ CONTAINS
 
 END SUBROUTINE ReadBladeInputs      
 !----------------------------------------------------------------------------------------------------------------------------------
-SUBROUTINE AD_PrintSum( InputFileData, p, u, y, OtherState, ErrStat, ErrMsg )
+SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
 ! This routine generates the summary file, which contains a summary of input file options.
 
       ! passed variables
@@ -2292,7 +2294,6 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, OtherState, ErrStat, ErrMsg )
    TYPE(AD_ParameterType),    INTENT(IN)  :: p                                    ! Parameters
    TYPE(AD_InputType),        INTENT(IN)  :: u                                    ! inputs 
    TYPE(AD_OutputType),       INTENT(IN)  :: y                                    ! outputs
-   TYPE(AD_OtherStateType),   INTENT(IN)  :: OtherState                           ! Other/optimization states  
    INTEGER(IntKi),            INTENT(OUT) :: ErrStat
    CHARACTER(*),              INTENT(OUT) :: ErrMsg
 

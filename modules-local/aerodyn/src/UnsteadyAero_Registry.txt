@@ -90,19 +90,24 @@ typedef   ^                            DiscreteStateType             ReKi       
 #
 typedef   ^                            ConstraintStateType           ReKi                     DummyConstraintState            -             -         -        "" -
 #
-# Define any data that are not considered actual states here:
-#   e.g. data used only for efficiency purposes (indices for searching in an array,  copies of previous calculations of output at a given time, etc.)
 #
+# Define any other states, including integer or logical states here:
+typedef   ^                            OtherStateType                LOGICAL                  FirstPass                       {:}{:}        -         -        "logical flag indicating if this is the first time step"   -
 typedef   ^                            OtherStateType                ReKi                     sigma1                          {:}{:}        -         -        "multiplier for T_f"   -
 typedef   ^                            OtherStateType                ReKi                     sigma3                          {:}{:}        -         -        "multiplier for T_V"   -
-typedef   ^                            OtherStateType                LOGICAL                  TESF                            {:}{:}        -         -        "logical flag indicating if trailing edge separation is possible"   -
-typedef   ^                            OtherStateType                LOGICAL                  LESF                            {:}{:}        -         -        "logical flag indicating if leading edge separation is possible"   -
-typedef   ^                            OtherStateType                LOGICAL                  VRTX                            {:}{:}        -         -        "logical flag indicating if a vortex is being processed"   -
-typedef   ^                            OtherStateType                LOGICAL                  FirstPass                       {:}{:}        -         -        "logical flag indicating if this is the first time step"   -
-typedef   ^                            OtherStateType                LOGICAL                  BEDSEP                          {:}{:}        -         -        "logical flag indicating if this is undergoing separated flow"   -
-typedef   ^                            OtherStateType                INTEGER                  iBladeNode                      -             -         -        "index for the blade node being operated on (within the current blade)" -
-typedef   ^                            OtherStateType                INTEGER                  iBlade                          -             -         -        "index for the blade being operated on" -
-typedef   ^                            OtherStateType                Logical                  FirstWarn_M                     -             -         -        "flag so Mach number warning doesn't get repeated forever" -
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef   ^                            MiscVarType                   Logical                  FirstWarn_M                     -             -         -        "flag so Mach number warning doesn't get repeated forever" -
+typedef   ^                            MiscVarType                   INTEGER                  iBladeNode                      -             -         -        "index for the blade node being operated on (within the current blade)" -
+typedef   ^                            MiscVarType                   INTEGER                  iBlade                          -             -         -        "index for the blade being operated on" -
+# these COULD be OtherStates or just scalar local variables (they are calcaulted/used in UpdateDiscState and written to WriteOutput in CalcOutput)
+typedef   ^                            MiscVarType                   LOGICAL                  TESF                            {:}{:}        -         -        "logical flag indicating if trailing edge separation is possible"   -
+typedef   ^                            MiscVarType                   LOGICAL                  LESF                            {:}{:}        -         -        "logical flag indicating if leading edge separation is possible"   -
+typedef   ^                            MiscVarType                   LOGICAL                  VRTX                            {:}{:}        -         -        "logical flag indicating if a vortex is being processed"   -
+typedef   ^                            MiscVarType                   LOGICAL                  BEDSEP                          {:}{:}        -         -        "logical flag indicating if this is undergoing separated flow (for compison with AD14)"   -
+
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:

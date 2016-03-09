@@ -102,24 +102,27 @@ typedef	^	DiscreteStateType	BEMT_DiscreteStateType	BEMT	-	-	-	"Discrete states f
 # Define constraint states here:
 typedef	^	ConstraintStateType	BEMT_ConstraintStateType	BEMT	-	-	-	"Constraint states from the BEMT module"	-
 
-# Define "other" states (any data that are not considered actual states) here:
+# Define "other" states here:
 typedef	^	OtherStateType	BEMT_OtherStateType	BEMT	-	-	-	"OtherStates from the BEMT module"	-
-typedef	^	OtherStateType	BEMT_OutputType	BEMT_y	-	-	-	"Outputs from the BEMT module"	-
-typedef	^	OtherStateType	BEMT_InputType	BEMT_u	-	-	-	"Inputs to the BEMT module"	-
-typedef	^	OtherStateType	ReKi	DisturbedInflow	{:}{:}{:}	-	-	"InflowOnBlade values modified by tower influence"	m/s
-typedef	^	OtherStateType	ReKi	WithoutSweepPitchTwist	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
-typedef	^	OtherStateType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	-
-typedef	^	OtherStateType	ReKi	W_Twr	{:}	-	-	"relative wind speed normal to the tower at node j"	m/s
-typedef	^	OtherStateType	ReKi	X_Twr	{:}	-	-	"local x-component of force per unit length of the jth node in the tower"	m/s
-typedef	^	OtherStateType	ReKi	Y_Twr	{:}	-	-	"local y-component of force per unit length of the jth node in the tower"	m/s
-typedef	^	OtherStateType	ReKi	Curve	{:}{:}	-	-	"curvature angle, saved for possible output to file"	rad
-typedef	^	OtherStateType	ReKi	X	{:}{:}	-	-	"normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade"	N/m
-typedef	^	OtherStateType	ReKi	Y	{:}{:}	-	-	"tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade"	N/m
-typedef	^	OtherStateType	ReKi	M	{:}{:}	-	-	"pitching moment per unit length of the jth node in the kth blade"	Nm/m
-typedef	^	OtherStateType	ReKi	V_DiskAvg	{3}	-	-	"disk-average relative wind speed"	m/s
-typedef	^	OtherStateType	ReKi	V_dot_x	-	-	-
-typedef	^	OtherStateType	MeshType	HubLoad	-	-	-	"mesh at hub; used to compute an integral for mapping the output blade loads to a single point (for writing to file only)"	-
-typedef	^	OtherStateType	MeshMapType	B_L_2_H_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to the OtherState%HubLoad mesh"
+
+# Define misc/optimization variables (any data that are not considered actual states) here:
+typedef	^	MiscVarType	BEMT_MiscVarType	BEMT	-	-	-	"MiscVars from the BEMT module"	-
+typedef	^	MiscVarType	BEMT_OutputType	BEMT_y	-	-	-	"Outputs from the BEMT module"	-
+typedef	^	MiscVarType	BEMT_InputType	BEMT_u	2	-	-	"Inputs to the BEMT module"	-
+typedef	^	MiscVarType	ReKi	DisturbedInflow	{:}{:}{:}	-	-	"InflowOnBlade values modified by tower influence"	m/s
+typedef	^	MiscVarType	ReKi	WithoutSweepPitchTwist	{:}{:}{:}{:}	-	-	"Coordinate system equivalent to BladeMotion Orientation, but without live sweep, blade-pitch, and twist angles"	-
+typedef	^	MiscVarType	ReKi	AllOuts	{:}	-	-	"An array holding the value of all of the calculated (not only selected) output channels"	-
+typedef	^	MiscVarType	ReKi	W_Twr	{:}	-	-	"relative wind speed normal to the tower at node j"	m/s
+typedef	^	MiscVarType	ReKi	X_Twr	{:}	-	-	"local x-component of force per unit length of the jth node in the tower"	m/s
+typedef	^	MiscVarType	ReKi	Y_Twr	{:}	-	-	"local y-component of force per unit length of the jth node in the tower"	m/s
+typedef	^	MiscVarType	ReKi	Curve	{:}{:}	-	-	"curvature angle, saved for possible output to file"	rad
+typedef	^	MiscVarType	ReKi	X	{:}{:}	-	-	"normal force per unit length (normal to the plane, not chord) of the jth node in the kth blade"	N/m
+typedef	^	MiscVarType	ReKi	Y	{:}{:}	-	-	"tangential force per unit length (tangential to the plane, not chord) of the jth node in the kth blade"	N/m
+typedef	^	MiscVarType	ReKi	M	{:}{:}	-	-	"pitching moment per unit length of the jth node in the kth blade"	Nm/m
+typedef	^	MiscVarType	ReKi	V_DiskAvg	{3}	-	-	"disk-average relative wind speed"	m/s
+typedef	^	MiscVarType	ReKi	V_dot_x	-	-	-
+typedef	^	MiscVarType	MeshType	HubLoad	-	-	-	"mesh at hub; used to compute an integral for mapping the output blade loads to a single point (for writing to file only)"	-
+typedef	^	MiscVarType	MeshMapType	B_L_2_H_P	{:}	-	-	"mapping data structure to map each bladeLoad output mesh to the OtherState%HubLoad mesh"
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
