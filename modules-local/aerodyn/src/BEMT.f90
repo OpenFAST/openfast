@@ -41,7 +41,7 @@ module BEMT
    
    private
    
-   type(ProgDesc), parameter  :: BEMT_Ver = ProgDesc( 'BEM', 'v0.01.00a-gjh', '10-July-2014' )
+   type(ProgDesc), parameter  :: BEMT_Ver = ProgDesc( 'BEM', 'v1.00.00a-gjh', '8-March-2016' )
    character(*),   parameter  :: BEMT_Nickname = 'BEM'
    
    ! ..... Public Subroutines ...................................................................................................
@@ -469,7 +469,7 @@ end subroutine BEMT_AllocOutput
 subroutine BEMT_MapOutputs(p, OtherState, y, errStat, errMsg)
 
    type(BEMT_ParameterType),       intent(in   )  :: p           ! Parameters
-   type(BEMT_OtherStateType),      intent(in   )  :: OtherState  ! Initial other/optimization states
+   type(BEMT_OtherStateType),      intent(in   )  :: OtherState  ! other states
    type(BEMT_OutputType),          intent(inout)  :: y           ! system outputs 
    integer(IntKi),                intent(  out)  :: errStat     ! Error status of the operation
    character(*),                  intent(  out)  :: errMsg      ! Error message if ErrStat /= ErrID_None
@@ -481,7 +481,7 @@ end subroutine BEMT_MapOutputs
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, Interval, InitOut, ErrStat, ErrMsg )
+subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Interval, InitOut, ErrStat, ErrMsg )
 ! This routine is called at the start of the simulation to perform initialization steps.
 ! The parameters are set here and not changed during the simulation.
 ! The initial states and initial guess for the input are defined.
@@ -493,7 +493,8 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, Interval, 
    type(BEMT_ContinuousStateType), intent(  out)  :: x           ! Initial continuous states
    type(BEMT_DiscreteStateType),   intent(  out)  :: xd          ! Initial discrete states
    type(BEMT_ConstraintStateType), intent(  out)  :: z           ! Initial guess of the constraint states
-   type(BEMT_OtherStateType),      intent(  out)  :: OtherState  ! Initial other/optimization states
+   type(BEMT_OtherStateType),      intent(  out)  :: OtherState  ! Initial other states
+   type(BEMT_MiscVarType),         intent(  out)  :: misc        ! Initial misc/optimization variables
    type(AFInfoType),               intent(in   )  :: AFInfo(:)   ! The airfoil parameter data
    type(BEMT_OutputType),          intent(  out)  :: y           ! Initial system outputs (outputs are not calculated;
                                                                  !   only the output mesh is initialized)
@@ -515,7 +516,6 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, Interval, 
    type(UA_InputType)                             :: u_UA
    type(UA_InitInputType)                         :: Init_UA_Data
    type(UA_InitOutputType)                        :: InitOutData_UA
-   type(UA_OutputType)                            :: y_UA
    integer(IntKi)                                 :: i,j
    real(ReKi)                                             :: Cn1             ! critical value of Cn_prime at LE separation for alpha >= alpha0    
    real(ReKi)                                             :: Cn2             ! critical value of Cn_prime at LE separation for alpha < alpha0
@@ -554,7 +554,11 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, Interval, 
    call BEMT_SetParameters( InitInp, p, errStat, errMsg )
    if (errStat >= AbortErrLev) return
 
-      ! We need to set an other state version so that we can change this during executin if the AOA is too large!
+      !............................................................................................
+      ! Define states here
+      !............................................................................................
+   
+      ! We need to set an other state version so that we can change this during execution if the AOA is too large!
    allocate ( OtherState%UA_Flag( p%numBladeNodes, p%numBlades ), STAT = errStat2 )
    if ( errStat2 /= 0 ) then
       errStat2 = ErrID_Fatal
@@ -569,6 +573,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, Interval, 
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       if (errStat >= AbortErrLev) return
    
+   x%DummyContState = 0.0_SiKi
    
       ! Initialize other states
    !call BEMT_InitOtherStates( OtherState, p,  errStat, errMsg )    ! initialize the other states
@@ -583,7 +588,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, Interval, 
          end if
       
       
-      call UA_Init( Init_UA_Data, u_UA, p%UA, xd%UA, OtherState%UA, OtherState%y_UA, interval, InitOutData_UA, errStat2, errMsg2 )       
+      call UA_Init( Init_UA_Data, u_UA, p%UA, xd%UA, OtherState%UA, misc%y_UA, misc%UA, interval, InitOutData_UA, errStat2, errMsg2 )       
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
          if (errStat >= AbortErrLev) then
             call cleanup()
@@ -683,7 +688,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, Interval, 
 
             M = 0.1
             !M           = u_UA%U / p%UA%a_s
-            !call UA_CheckMachNumber(M, OtherState%UA%FirstWarn_M, ErrStat2, ErrMsg2 )
+            !call UA_CheckMachNumber(M, misc%UA%FirstWarn_M, ErrStat2, ErrMsg2 )
             
             call AFI_GetAirfoilParams( AFInfo(p%AFindx(i,j)), M, u_UA%Re, u_UA%alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
                                     T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, errMsg2, errStat2 )           
@@ -766,7 +771,6 @@ CONTAINS
    call UA_DestroyInput( u_UA, ErrStat2, ErrMsg2 )
    call UA_DestroyInitInput( Init_UA_Data, ErrStat2, ErrMsg2 )
    call UA_DestroyInitOutput( InitOutData_UA, ErrStat2, ErrMsg2 )
-   call UA_DestroyOutput( y_UA, ErrStat2, ErrMsg2 )
 
    END SUBROUTINE Cleanup
 
@@ -781,7 +785,7 @@ subroutine BEMT_End( u, p, x, xd, z, OtherState, y, ErrStat, ErrMsg )
       TYPE(BEMT_ContinuousStateType), INTENT(INOUT)  :: x           ! Continuous states
       TYPE(BEMT_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Discrete states
       TYPE(BEMT_ConstraintStateType), INTENT(INOUT)  :: z           ! Constraint states
-      TYPE(BEMT_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+      TYPE(BEMT_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other states
       TYPE(BEMT_OutputType),          INTENT(INOUT)  :: y           ! System outputs
       INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
       CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
@@ -832,25 +836,27 @@ END SUBROUTINE BEMT_End
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, errStat, errMsg )
+subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m, errStat, errMsg )
 ! Loose coupling routine for solving for constraint states, integrating continuous states, and updating discrete states
-! Constraint states are solved for input Time t; Continuous and discrete states are updated for t + Interval
+! Continuous, constraint, discrete, and other states are updated for t + Interval
 !
 ! NOTE:  This is a non-standard framework interface!!!!!  GJH
 !..................................................................................................................................
 
    real(DbKi),                          intent(in   ) :: t          ! Current simulation time in seconds
    integer(IntKi),                      intent(in   ) :: n          ! Current simulation time step n = 0,1,...
-   type(BEMT_InputType),                intent(inout) :: u1,u2          ! Input at t and t+ dt 
+   type(BEMT_InputType),                intent(in   ) :: u1,u2      ! Input at t and t+ dt 
    !real(DbKi),                         intent(in   ) :: utime      ! Times associated with u(:), in seconds
    type(BEMT_ParameterType),            intent(in   ) :: p          ! Parameters   
    type(BEMT_ContinuousStateType),      intent(inout) :: x          ! Input: Continuous states at t;
-                                                                     !   Output: Continuous states at t + Interval
+                                                                    !   Output: Continuous states at t + Interval
    type(BEMT_DiscreteStateType),        intent(inout) :: xd         ! Input: Discrete states at t;
-                                                                     !   Output: Discrete states at t  + Interval
-   type(BEMT_ConstraintStateType),      intent(inout) :: z          ! Input: Initial guess of constraint states at t+dt;
-                                                                     !   Output: Constraint states at t+dt
-   type(BEMT_OtherStateType),           intent(inout) :: OtherState ! Other/optimization states
+                                                                    !   Output: Discrete states at t  + Interval
+   type(BEMT_ConstraintStateType),      intent(inout) :: z          ! Input: Constraint states at t;
+                                                                    !   Output: Constraint states at t + Interval
+   type(BEMT_OtherStateType),           intent(inout) :: OtherState ! Input: Other states at t;
+                                                                    !   Output: Other states at t + Interval
+   type(BEMT_MiscVarType),              intent(inout) :: m          ! Misc/optimization variables
    type(AFInfoType),                    intent(in   ) :: AFInfo(:)  ! The airfoil parameter data
    integer(IntKi),                      intent(  out) :: errStat    ! Error status of the operation
    character(*),                        intent(  out) :: errMsg     ! Error message if ErrStat /= ErrID_None
@@ -893,8 +899,8 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, er
          if (OtherState%UA_Flag(i,j)) then
             
                ! Set the active blade element for UnsteadyAero
-            OtherState%UA%iBladeNode = i
-            OtherState%UA%iBlade     = j
+            m%UA%iBladeNode = i
+            m%UA%iBlade     = j
             
                ! Initialize these variables
             u_UA%alpha   = z%phi(i,j) - u1%theta(i,j)
@@ -950,7 +956,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, er
                   
             else    
                   ! COMPUTE: xd%UA, OtherState%UA
-               call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), errStat2, errMsg2 )
+               call UA_UpdateStates( i, j, u_UA, p%UA, xd%UA, OtherState%UA, AFInfo(p%AFIndx(i,j)), m%UA, errStat2, errMsg2 )
                   call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
                   if (errStat >= AbortErrLev) return 
             end if
@@ -982,7 +988,7 @@ end subroutine BEMT_UpdateStates
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, errMsg )
+subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat, errMsg )
 ! Routine for computing outputs, used in both loose and tight coupling.
 ! This SUBROUTINE is used to compute the output channels (motions and loads) and place them in the WriteOutput() array.
 ! NOTE: the descriptions of the output channels are not given here. Please see the included OutListParameters.xlsx sheet for
@@ -999,7 +1005,8 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
    type(BEMT_ContinuousStateType), intent(in   )  :: x           ! Continuous states at t
    type(BEMT_DiscreteStateType),   intent(in   )  :: xd          ! Discrete states at t
    type(BEMT_ConstraintStateType), intent(in   )  :: z           ! Constraint states at t
-   type(BEMT_OtherStateType),      intent(inout)  :: OtherState  ! Other/optimization states
+   type(BEMT_OtherStateType),      intent(in   )  :: OtherState  ! Other states at t
+   type(BEMT_MiscVarType),         intent(inout)  :: m           ! Misc/optimization variables
    type(AFInfoType),               intent(in   )  :: AFInfo(:)   ! The airfoil parameter data
    type(BEMT_OutputType),          intent(inout)  :: y           ! Outputs computed at t (Input only so that mesh con-
                                                                  !   nectivity information does not have to be recalculated)
@@ -1035,18 +1042,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
          ! Initialize some output values
    errStat = ErrID_None
    errMsg  = ""
-
-      
-      ! SEE IF THESE NEED TO BE CALLED (i.e., if UpdateStates was called, these values are already calculated)
-   !IF ( UpdateValues ) THEN    
-   !      ! Update the OtherState data by calculating the derivative...
-   !   CALL BEMT_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
-   !   CALL BEMT_DestroyContState( dxdt, ErrStat2, ErrMsg2 )
-   !   IF (ErrStat >= AbortErrLev) RETURN
-   !END IF      
-
-
-   
+           
    
    ! Array OtherState%AllOuts() is initialized to 0.0 in initialization, so we are not going to reinitialize it here.
 
@@ -1080,8 +1076,8 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
          
          
             ! Set the active blade element for UnsteadyAero
-         OtherState%UA%iBladeNode = i
-         OtherState%UA%iBlade     = j
+         m%UA%iBladeNode = i
+         m%UA%iBlade     = j
          
             ! Copy the current state to the outputs structure
          y%phi(i,j) = z%phi(i,j)     
@@ -1126,7 +1122,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, errStat, e
   
             ! Now depending on the option for UA get the airfoil coefs, Cl, Cd, Cm for unsteady or steady implementation
          if (OtherState%UA_Flag(i,j)) then            
-            call Compute_UA_AirfoilCoefs( y%AOA(i,j), y%Vrel(I,J), y%Re(i,j),  AFInfo(p%AFindx(i,j)), p%UA, xd%UA, OtherState%UA, OtherState%y_UA, &
+            call Compute_UA_AirfoilCoefs( y%AOA(i,j), y%Vrel(I,J), y%Re(i,j),  AFInfo(p%AFindx(i,j)), p%UA, xd%UA, OtherState%UA, m%y_UA, m%UA, &
                                          y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), errStat2, errMsg2 ) 
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
                if (errStat >= AbortErrLev) return 
@@ -1197,7 +1193,7 @@ end subroutine BEMT_CalcOutput
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine BEMT_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat, ErrMsg )
+subroutine BEMT_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
 ! Tight coupling routine for computing derivatives of continuous states
 !..................................................................................................................................
 
@@ -1207,7 +1203,8 @@ subroutine BEMT_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat
    TYPE(BEMT_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
    TYPE(BEMT_DiscreteStateType),   INTENT(IN   )  :: xd          ! Discrete states at t
    TYPE(BEMT_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-   TYPE(BEMT_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
+   TYPE(BEMT_OtherStateType),      INTENT(IN   )  :: OtherState  ! Other states at t
+   type(BEMT_MiscVarType),         intent(inout)  :: m           ! Misc/optimization variables
    TYPE(BEMT_ContinuousStateType), INTENT(  OUT)  :: dxdt        ! Continuous state derivatives at t
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
@@ -1219,26 +1216,27 @@ subroutine BEMT_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, dxdt, ErrStat
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   
+   dxdt%DummyContState = 0.0_ReKi
       
    
 END SUBROUTINE BEMT_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine BEMT_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrMsg )
+subroutine BEMT_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 ! Tight coupling routine for updating discrete states
 !..................................................................................................................................
 
-      REAL(DbKi),                   INTENT(IN   )  :: t           ! Current simulation time in seconds
-      INTEGER(IntKi),               INTENT(IN   )  :: n           ! Current step of the simulation: t = n*Interval
-      TYPE(BEMT_InputType),           INTENT(IN   )  :: u           ! Inputs at t
-      TYPE(BEMT_ParameterType),       INTENT(IN   )  :: p           ! Parameters
-      TYPE(BEMT_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
-      TYPE(BEMT_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at t;
-                                                                  !   Output: Discrete states at t + Interval
-      TYPE(BEMT_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
-      TYPE(BEMT_OtherStateType),      INTENT(INOUT)  :: OtherState  ! Other/optimization states
-      INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-      CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   REAL(DbKi),                     INTENT(IN   )  :: t           ! Current simulation time in seconds
+   INTEGER(IntKi),                 INTENT(IN   )  :: n           ! Current step of the simulation: t = n*Interval
+   TYPE(BEMT_InputType),           INTENT(IN   )  :: u           ! Inputs at t
+   TYPE(BEMT_ParameterType),       INTENT(IN   )  :: p           ! Parameters
+   TYPE(BEMT_ContinuousStateType), INTENT(IN   )  :: x           ! Continuous states at t
+   TYPE(BEMT_DiscreteStateType),   INTENT(INOUT)  :: xd          ! Input: Discrete states at t;
+                                                                 !   Output: Discrete states at t + Interval
+   TYPE(BEMT_ConstraintStateType), INTENT(IN   )  :: z           ! Constraint states at t
+   TYPE(BEMT_OtherStateType),      INTENT(IN   )  :: OtherState  ! Other states at t
+   type(BEMT_MiscVarType),         intent(inout)  :: m           ! Misc/optimization variables
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
 
          ! Initialize ErrStat
@@ -1253,22 +1251,23 @@ subroutine BEMT_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, ErrStat, ErrM
 
 END SUBROUTINE BEMT_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
-subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_residual, AFInfo, ErrStat, ErrMsg )
+subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_residual, AFInfo, ErrStat, ErrMsg )
 ! Tight coupling routine for solving for the residual of the constraint state equations
 !..................................................................................................................................
 
-      real(DbKi),                     intent(in   )  :: Time        ! Current simulation time in seconds
-      type(BEMT_InputType),           intent(in   )  :: u           ! Inputs at Time
-      type(BEMT_ParameterType),       intent(in   )  :: p           ! Parameters
-      type(BEMT_ContinuousStateType), intent(in   )  :: x           ! Continuous states at Time
-      type(BEMT_DiscreteStateType),   intent(in   )  :: xd          ! Discrete states at Time
-      type(BEMT_ConstraintStateType), intent(inout)  :: z           ! Constraint states at Time (possibly a guess)
-      type(BEMT_OtherStateType),      intent(inout)  :: OtherState  ! Other/optimization states
-      type(BEMT_ConstraintStateType), intent(  out)  :: z_residual  ! Residual of the constraint state equations using
-                                                                   !     the input values described above
-      type(AFInfoType),               intent(in   )  :: AFInfo(:)  ! The airfoil parameter data
-      integer(IntKi),                 intent(  out)  :: ErrStat     ! Error status of the operation
-      character(*),                   intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   real(DbKi),                     intent(in   )  :: Time        ! Current simulation time in seconds
+   type(BEMT_InputType),           intent(in   )  :: u           ! Inputs at Time
+   type(BEMT_ParameterType),       intent(in   )  :: p           ! Parameters
+   type(BEMT_ContinuousStateType), intent(in   )  :: x           ! Continuous states at Time
+   type(BEMT_DiscreteStateType),   intent(in   )  :: xd          ! Discrete states at Time
+   type(BEMT_ConstraintStateType), intent(in   )  :: z           ! Constraint states at Time (possibly a guess)
+   type(BEMT_OtherStateType),      intent(in   )  :: OtherState  ! Other states at Time
+   type(BEMT_MiscVarType),         intent(inout)  :: m           ! Misc/optimization variables
+   type(BEMT_ConstraintStateType), intent(inout)  :: z_residual  ! Residual of the constraint state equations using
+                                                                 !     the input values described above
+   type(AFInfoType),               intent(in   )  :: AFInfo(:)   ! The airfoil parameter data
+   integer(IntKi),                 intent(  out)  :: ErrStat     ! Error status of the operation
+   character(*),                   intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
 
       !# set epsilon
@@ -1300,7 +1299,7 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_res
             call BEMTU_Wind( axInduction, tanInduction, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%airDens, p%kinVisc, Vrel, Re )
             
                ! Solve for the constraint states here:
-            z%phi(i,j) = UncoupledErrFn(z%phi(i,j), AOA, Re, p%numBlades, u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j),  AFInfo(p%AFindx(i,j)), &
+            z_residual%phi(i,j) = UncoupledErrFn(z%phi(i,j), AOA, Re, p%numBlades, u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j),  AFInfo(p%AFindx(i,j)), &
                                  u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
                                  ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1311,7 +1310,7 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, z_res
          end do
       end do
    else
-      z%phi = 0.0_ReKi  ! residual is zero for the case where we do not use induction
+      z_residual%phi = 0.0_ReKi  ! residual is zero for the case where we do not use induction
    end if
    
    

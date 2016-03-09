@@ -33,8 +33,8 @@ private
 
 
    public :: UA_Init
-   public :: UA_UpdateDiscState
-   public :: UA_UpdateDiscState2
+   public :: UA_UpdateDiscOtherState
+   public :: UA_UpdateDiscOtherState2
    public :: UA_UpdateStates
    public :: UA_CalcOutput
    public :: UA_CalcOutput2
@@ -84,11 +84,14 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
    
    real                            :: IntAFCoefs(4)         ! The interpolated airfoil coefficients.
    integer                         :: s1                    ! Number of columns in the AFInfo structure
-   ErrStat = ErrID_None
-   ErrMsg  = ''
+
+   
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
    
-   IntAFCoefs(4) = 0.0_ReKi  ! Initialize in case all columns are not present in Airfoil tables
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   IntAFCoefs = 0.0_ReKi ! initialize in case we only don't have 4 columns in the airfoil data (i.e., so cm is zero if not in the file)
+   
       
       ! NOTE: we use Table(1) because the right now we can only interpolate with AOA and not Re or other variables.  If we had multiple tables stored
       ! for changes in other variables (Re, Mach #, etc) then then we would need to interpolate across tables.
@@ -100,7 +103,7 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
    !   return
    !end if
    Cd0 =   AFInfo%Table(1)%UA_BL%Cd0
-   IntAFCoefs(1:s1) = CubicSplineInterpM( real( AOA*180.0/PI, ReKi ) &
+   IntAFCoefs(1:s1) = CubicSplineInterpM( real( AOA*180.0_ReKi/PI, ReKi ) &
                                              , AFInfo%Table(1)%Alpha &
                                              , AFInfo%Table(1)%Coefs &
                                              , AFInfo%Table(1)%SplineCoefs &
@@ -747,7 +750,7 @@ end function Get_Cm
 
 
 !==============================================================================                              
-subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
+subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
                                Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c, Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
                                Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat, ErrMsg )
@@ -762,7 +765,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_
    type(UA_InputType),                     intent(in   ) :: u                 ! Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
    type(UA_ParameterType),                 intent(in   ) :: p                 ! Parameters   
    type(UA_DiscreteStateType),             intent(in   ) :: xd                ! Input: Discrete states at t;
-   type(UA_OtherStateType),                intent(inout) :: OtherState        ! Other/optimization states
+   type(UA_OtherStateType),                intent(in   ) :: OtherState        ! Other states at t
+   type(UA_MiscVarType),                   intent(inout) :: misc              ! Misc/optimization variables
    type(AFInfoType),                       intent(in   ) :: AFInfo            ! The airfoil parameter data
    real(ReKi),                             intent(  out) :: Cn_prime          !
    real(ReKi),                             intent(  out) :: Cn_prime_diff
@@ -872,7 +876,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_
    fprimeprime_m = 0
 
    M           = u%U / p%a_s
-   call UA_CheckMachNumber(M, OtherState%FirstWarn_M, ErrStat2, ErrMsg2 )
+   call UA_CheckMachNumber(M, misc%FirstWarn_M, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
       
@@ -1110,7 +1114,7 @@ end subroutine ComputeKelvinChain
 !==============================================================================   
      
 !==============================================================================                              
-subroutine ComputeKelvinChain2( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
+subroutine ComputeKelvinChain2( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
                                Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c, Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
                                Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, tau_V, SHIFT, VOR, ErrStat, ErrMsg )
@@ -1125,7 +1129,8 @@ subroutine ComputeKelvinChain2( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn
    type(UA_InputType),                     intent(in   ) :: u                 ! Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
    type(UA_ParameterType),                 intent(in   ) :: p                 ! Parameters   
    type(UA_DiscreteStateType),             intent(in   ) :: xd                ! Input: Discrete states at t;
-   type(UA_OtherStateType),                intent(in   ) :: OtherState        ! Other/optimization states
+   type(UA_OtherStateType),                intent(in   ) :: OtherState        ! Other states
+   type(UA_MiscVarType),                   intent(in   ) :: misc              ! Misc/optimization variables
    type(AFInfoType),                       intent(in   ) :: AFInfo            ! The airfoil parameter data
    real(ReKi),                             intent(  out) :: Cn_prime          !
    real(ReKi),                             intent(  out) :: Cn_prime_diff          !
@@ -1450,7 +1455,7 @@ subroutine ComputeKelvinChain2( i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn
       ! Compute C_V using Eqn 1.47 or 1.48 depending on option selected
    C_V           = Get_C_V2  ( Cn_alpha_q_circ, fprimeprime, p%UAMod )
    
-   if ( OtherState%BEDSEP(i,j) )  then
+   if ( misc%BEDSEP(i,j) )  then
       tau_V = xd%tau_V_minus1(i,j) + 2.0_ReKi*p%dt*u%U / p%c(i,j)
    else
       tau_V = xd%tau_V_minus1(i,j)
@@ -1525,14 +1530,15 @@ end subroutine UA_SetParameters
 !==============================================================================   
 
 !==============================================================================
-subroutine UA_InitStates( p, xd, OtherState, ErrStat, ErrMsg )  
+subroutine UA_InitStates_Misc( p, xd, OtherState, m, ErrStat, ErrMsg )  
 ! Called by : UA_Init
 ! Calls  to : NONE
 !..............................................................................
 
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
    type(UA_DiscreteStateType),   intent(inout)  :: xd          ! Initial discrete states
-   type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Initial other/optimization states
+   type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Initial other states
+   type(UA_MiscVarType),         intent(inout)  :: m           ! Initial misc/optimization variables
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -1575,24 +1581,37 @@ subroutine UA_InitStates( p, xd, OtherState, ErrStat, ErrMsg )
    call AllocAry(xd%Cn_v_minus1         ,p%nNodesPerBlade,p%numBlades,'xd%Cn_v_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry(xd%C_V_minus1          ,p%nNodesPerBlade,p%numBlades,'xd%C_V_minus1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    
+   call AllocAry(OtherState%FirstPass,p%nNodesPerBlade,p%numBlades,'OtherState%FirstPass',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry(OtherState%sigma1   ,p%nNodesPerBlade,p%numBlades,'OtherState%sigma1',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry(OtherState%sigma3   ,p%nNodesPerBlade,p%numBlades,'OtherState%sigma3',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call AllocAry(OtherState%TESF     ,p%nNodesPerBlade,p%numBlades,'OtherState%TESF',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call AllocAry(OtherState%LESF     ,p%nNodesPerBlade,p%numBlades,'OtherState%LESF',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call AllocAry(OtherState%VRTX     ,p%nNodesPerBlade,p%numBlades,'OtherState%VRTX',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call AllocAry(OtherState%FirstPass,p%nNodesPerBlade,p%numBlades,'OtherState%FirstPass',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+
+#ifdef UA_OUTS
+   call AllocAry(m%TESF     ,p%nNodesPerBlade,p%numBlades,'m%TESF',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(m%LESF     ,p%nNodesPerBlade,p%numBlades,'m%LESF',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry(m%VRTX     ,p%nNodesPerBlade,p%numBlades,'m%VRTX',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+#endif
    
-   call AllocAry(OtherState%BEDSEP,p%nNodesPerBlade,p%numBlades,'OtherState%BEDSEP',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+#ifdef DEBUG_v14   
+   call AllocAry(m%BEDSEP,p%nNodesPerBlade,p%numBlades,'OtherState%BEDSEP',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+#endif   
    
    if (ErrStat >= AbortErrLev) return
    
+   m%FirstWarn_M = .true.   
+   
    OtherState%sigma1    = 1.0_ReKi
    OtherState%sigma3    = 1.0_ReKi
-   OtherState%TESF      = .FALSE.  
-   OtherState%LESF      = .FALSE.   
-   OtherState%VRTX      = .FALSE.  
+   
+#ifdef UA_OUTS
+   m%TESF      = .FALSE.  
+   m%LESF      = .FALSE.   
+   m%VRTX      = .FALSE. 
+#endif   
+#ifdef DEBUG_v14   
+   m%BEDSEP    = .false.
+#endif   
+   
    OtherState%FirstPass = .true.
-   OtherState%BEDSEP    = .false.
    
    xd%Cn_prime_diff_minus1 = 0.0_ReKi
    xd%Cn_prime_minus1      = 0.0_ReKi
@@ -1623,12 +1642,12 @@ subroutine UA_InitStates( p, xd, OtherState, ErrStat, ErrMsg )
    xd%Cn_v_minus1          = 0.0_ReKi
    xd%C_V_minus1           = 0.0_ReKi  ! This probably should not be set to 0.0, but should be set 
 
-end subroutine UA_InitStates 
+end subroutine UA_InitStates_Misc 
 !==============================================================================   
 
 !==============================================================================
-subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
-                              InitOut, ErrStat, ErrMsg )
+subroutine UA_Init( InitInp, u, p, xd, OtherState, y,  m, Interval, &
+                              InitOut,ErrStat, ErrMsg )
 ! This routine is called at the start of the simulation to perform initialization steps.
 ! The parameters are set here and not changed during the simulation.
 ! The initial states and initial guess for the input are defined.
@@ -1640,9 +1659,10 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
    type(UA_InputType),           intent(in   )  :: u           ! An initial guess for the input; input mesh must be defined
    type(UA_ParameterType),       intent(  out)  :: p           ! Parameters
    type(UA_DiscreteStateType),   intent(  out)  :: xd          ! Initial discrete states
-   type(UA_OtherStateType),      intent(  out)  :: OtherState  ! Initial other/optimization states
+   type(UA_OtherStateType),      intent(  out)  :: OtherState  ! Initial other states
    type(UA_OutputType),          intent(  out)  :: y           ! Initial system outputs (outputs are not calculated;
                                                                !   only the output mesh is initialized)
+   type(UA_MiscVarType),         intent(  out)  :: m           ! Initial misc/optimization variables
    real(DbKi),                   intent(inout)  :: interval    ! Coupling interval in seconds: the rate that
                                                                !   (1) BEMT_UpdateStates() is called in loose coupling &
                                                                !   (2) BEMT_UpdateDiscState() is called in tight coupling.
@@ -1677,12 +1697,11 @@ subroutine UA_Init( InitInp, u, p, xd, OtherState, y, Interval, &
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return    
    
-      ! initialize the discrete states
-   call UA_InitStates( p, xd, OtherState, ErrStat2, ErrMsg2 )     ! initialize the continuous states
+      ! initialize the discrete states, other states, and misc variables
+   call UA_InitStates_Misc( p, xd, OtherState, m, ErrStat2, ErrMsg2 )     ! initialize the continuous states
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat >= AbortErrLev) return    
-   
-   OtherState%FirstWarn_M = .true.
+      
 ! TODO: Wrap all of this output handling in a  #ifdef block to avoid allocating arrays when coupled to FAST
    
       ! Allocate and set the InitOut data
@@ -1831,8 +1850,8 @@ end subroutine UA_Init
                               
                               
 !============================================================================== 
-subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg )   
-! Tight coupling routine for updating discrete states
+subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )   
+! Routine for updating discrete states and other states (note it breaks the framework)
 !..............................................................................
    
    integer   ,                   intent(in   )  :: i           ! node index within a blade
@@ -1841,13 +1860,18 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters                                 
    type(UA_DiscreteStateType),   intent(inout)  :: xd          ! Input: Discrete states at Time; 
                                                                ! Output: Discrete states at Time + Interval
-   type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Other/optimization states  
+   type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Other states  
+   type(UA_MiscVarType),         intent(inout)  :: m           ! Misc/optimization variables
    type(AFInfoType),             intent(in   )  :: AFInfo      ! The airfoil parameter data
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
          ! Local Variables
   
+   LOGICAL                                     :: LESF      ! logical flag indicating if leading edge separation is possible [-]
+   LOGICAL                                     :: VRTX      ! logical flag indicating if a vortex is being processed [-]
+   LOGICAL                                     :: TESF      ! logical flag indicating if trailing edge separation is possible [-]
+      
    real(ReKi)                                   :: Cn_prime
    real(ReKi)                                   :: Cn1               ! critical value of Cn_prime at LE separation for alpha >= alpha0    
    real(ReKi)                                   :: Cn2               ! critical value of Cn_prime at LE separation for alpha < alpha0
@@ -1901,7 +1925,7 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
       
    character(ErrMsgLen)                         :: errMsg2
    integer(IntKi)                               :: errStat2
-   character(*), parameter                      :: RoutineName = 'UA_UpdateDiscState'
+   character(*), parameter                      :: RoutineName = 'UA_UpdateDiscOtherState'
    
    
       ! Initialize ErrStat
@@ -1909,7 +1933,9 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
    ErrStat = ErrID_None         
    ErrMsg  = ""               
 
-      call ComputeKelvinChain(i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
+!bjj: use sigma1 and sigma3 states values from t      
+   
+      call ComputeKelvinChain(i, j, u, p, xd, OtherState, m, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                      St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
                                      Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c,Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
                                      Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat2, ErrMsg2 )
@@ -1924,42 +1950,28 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
       ! Update the OtherStates
       !---------------------------------------------------------
    
-      if ( (Cn_prime > Cn1) .or. ( Cn_prime < Cn2 ) ) then  ! assumption is that Cn2 <  0.0 and Cn1 > 0
-         OtherState%LESF(i,j) = .true.  ! LE separation can occur
-      else
-         OtherState%LESF(i,j) = .false.
-      end if
-                                 
-      if ( fprimeprime < xd%fprimeprime_minus1(i,j)) then
-         OtherState%TESF(i,j) = .true.  ! Separation point is moving towards the Leading Edge
-      else
-         OtherState%TESF(i,j) = .false. ! Separation point is moving towards the Trailing Edge
-      end if
-   
+      LESF = (Cn_prime > Cn1) .or. ( Cn_prime < Cn2 ) ! LE separation can occur when this is .true.; assumption is that Cn2 <  0.0 and Cn1 > 0
+      TESF = fprimeprime < xd%fprimeprime_minus1(i,j) ! Separation point is moving towards the Leading Edge when .true.; otherwise separation point is moving toward trailing edge   
+            
       ! Process VRTX-related quantities
       !!!!!!!!!!!!!!!!!!!!!
       !! NEW CODE 2/19/2015
+      VRTX = (xd%tau_V(i,j) <= 2.0_ReKi*T_VL) .and. (xd%tau_V(i,j) > 0.0_ReKi)
       
       
-      if ( (xd%tau_V(i,j) <= 2.0_ReKi*T_VL) .and. (xd%tau_V(i,j) > 0.0_ReKi) ) then
-         OtherState%VRTX(i,j) = .true.
-      else
-         OtherState%VRTX(i,j) = .false.
-         
-      end if
-      
-      if (( xd%tau_V(i,j) >= (T_VL + T_sh) ) .and. (OtherState%TESF(i,j)))  then !.and. (OtherState%TESF(i,j))RRD added 
+      if (( xd%tau_V(i,j) >= (T_VL + T_sh) ) .and. TESF)  then !.and. (TESF) RRD added 
          xd%tau_V(i,j)     = 0.0_ReKi
-        ! OtherState%LESF(i,j)=.FALSE. !also added this
+        ! LESF=.FALSE. !also added this
       end if
       
+!bjj: update sigma1 to value at t + dt      
       OtherState%sigma1(i,j) = 1.0_ReKi
-      Kafactor             = Kalpha*dalpha0
+      Kafactor      = Kalpha*dalpha0
      ! if ( fprimeprime < 0.7 .AND.  fprimeprime > 0.3 ) then 
-         if ( OtherState%TESF(i,j) ) then  ! Separating flow
+         if ( TESF ) then  ! Separating flow
             if (Kafactor < 0.0_ReKi) then
                OtherState%sigma1(i,j) = 2.0_ReKi  ! This must be the first check
-            else if (.not. OtherState%LESF(i,j) ) then
+            else if (.not. LESF ) then
                OtherState%sigma1(i,j) = 1.0_ReKi !.4_ReKi    ! Leading edge separation has not occurred
             else if (xd%fprimeprime_minus1(i,j) <= 0.7_ReKi) then ! For this else, LESF = True
                OtherState%sigma1(i,j) = 2.0_ReKi !1.0_ReKi 
@@ -1967,28 +1979,30 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
                OtherState%sigma1(i,j) = 1.75_ReKi
             end if
          else ! Reattaching flow
-            if (.not. OtherState%LESF(i,j) ) then
+            if (.not. LESF ) then
                OtherState%sigma1(i,j) = 0.5_ReKi
             end if
          
-            if ( OtherState%VRTX(i,j) .and. (xd%tau_V(i,j) <= T_VL) ) then  ! Still shedding a vortex?
+            if ( VRTX .and. (xd%tau_V(i,j) <= T_VL) ) then  ! Still shedding a vortex?
                OtherState%sigma1(i,j) = 0.25_ReKi
             end if
             if (Kafactor > 0.0_ReKi) then
                OtherState%sigma1(i,j) = 0.75_ReKi
             end if
          end if
-      !!!if (.not. OtherState%LESF(i,j) ) then  !RRD: trying to emulate the old AD14 SEPAR.f90 with SHIFT=NOT(LESF), go back to original commented!!! out above when done
+      !!!if (.not. LESF ) then  !RRD: trying to emulate the old AD14 SEPAR.f90 with SHIFT=NOT(LESF), go back to original commented!!! out above when done
       !!!        OtherState%sigma1(i,j) = 0.667_ReKi
       !!!end if
       
+!bjj: update sigma3 to value at t + dt      
+         
       OtherState%sigma3(i,j) = 1.0_ReKi
       
       if ( (xd%tau_V(i,j) <= 2.0_ReKi*T_VL) .and. (xd%tau_V(i,j) >= T_VL) ) then
          OtherState%sigma3(i,j) = 3.0_ReKi
-         if (.not. OtherState%TESF(i,j)) then
+         if (.not. TESF) then
             OtherState%sigma3(i,j) = 4.0_ReKi
-            if ( OtherState%VRTX(i,j) .and. (xd%tau_V(i,j) <= T_VL) ) then
+            if ( VRTX .and. (xd%tau_V(i,j) <= T_VL) ) then
                if (Kafactor < 0.0_ReKi) then
                   OtherState%sigma3(i,j) = 2.0_ReKi
                else
@@ -2003,9 +2017,9 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
       !   ! We are testing this heirarchical logic instead of the above block 5/29/2015
       !if ( (xd%tau_V(i,j) <= 2.0_ReKi*T_VL) .and. (xd%tau_V(i,j) >= T_VL) ) then
       !   OtherState%sigma3(i,j) =  3.0_ReKi
-      !else if (.not. OtherState%TESF(i,j)) then
+      !else if (.not. TESF) then
       !   OtherState%sigma3(i,j) =  4.0_ReKi
-      !else if ( OtherState%VRTX(i,j) .and. (xd%tau_V(i,j) <= T_VL) ) then
+      !else if ( VRTX .and. (xd%tau_V(i,j) <= T_VL) ) then
       !   if (Kafactor < 0.0_ReKi) then
       !      OtherState%sigma3(i,j) =  2.0_ReKi
       !   else
@@ -2015,13 +2029,13 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
       !   OtherState%sigma3(i,j) =  4.0_ReKi
       !end if
       
-      !!!if ( (.not. OtherState%VRTX(i,j)) .OR. (.not. OtherState%TESF(i,j)) ) then !RRD: trying to emulate the old AD14 SEPAR.f90 with SHIFT=NOT(TESF), go back to original commented!!! out above when done
+      !!!if ( (.not. VRTX) .OR. (.not. TESF) ) then !RRD: trying to emulate the old AD14 SEPAR.f90 with SHIFT=NOT(TESF), go back to original commented!!! out above when done
       !!!       OtherState%sigma3(i,j) =  2_ReKi
       !!!   else
       !!!      OtherState%sigma3(i,j) = 1.0_ReKi
       !!!endif
       
-      if ((.not. OtherState%TESF(i,j)) .and. (Kq*dalpha0 < 0.0_ReKi)) then
+      if ((.not. TESF) .and. (Kq*dalpha0 < 0.0_ReKi)) then
          OtherState%sigma3(i,j) = 1.0_ReKi
       end if
    
@@ -2061,17 +2075,25 @@ subroutine UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrM
       xd%alphaf_minus1(i,j)       = alpha_f
       xd%Cn_v_minus1(i,j)         = Cn_v
       xd%C_V_minus1(i,j)          = C_V
-      OtherState%FirstPass(i,j)        = .false.
+      OtherState%FirstPass(i,j)   = .false.
    
-      if ( xd%tau_V(i,j) > 0.0 .or. OtherState%LESF(i,j) ) then                !! TODO:  Verify this condition 2/20/2015 GJH
+      if ( xd%tau_V(i,j) > 0.0 .or. LESF ) then                !! TODO:  Verify this condition 2/20/2015 GJH
          xd%tau_V(i,j)          = xd%tau_V(i,j) + 2.0_ReKi*p%dt*u%U / p%c(i,j)  
       end if
    
-end subroutine UA_UpdateDiscState
+      
+#ifdef UA_OUTS
+   m%TESF(i,j) = TESF  
+   m%LESF(i,j) = LESF   
+   m%VRTX(i,j) = VRTX 
+#endif
+      
+      
+end subroutine UA_UpdateDiscOtherState
 !==============================================================================   
 
 !============================================================================== 
-subroutine UA_UpdateDiscState2( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg )   
+subroutine UA_UpdateDiscOtherState2( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )   
 ! Tight coupling routine for updating discrete states
 !..............................................................................
    
@@ -2081,7 +2103,8 @@ subroutine UA_UpdateDiscState2( i, j, u, p, xd, OtherState, AFInfo, ErrStat, Err
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters                                 
    type(UA_DiscreteStateType),   intent(inout)  :: xd          ! Input: Discrete states at Time; 
                                                                            ! Output: Discrete states at Time + Interval
-   type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Other/optimization states  
+   type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Other states  
+   type(UA_MiscVarType),         intent(inout)  :: m           ! Misc/optimization variables
    type(AFInfoType),             intent(in   )  :: AFInfo      ! The airfoil parameter data
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
@@ -2144,7 +2167,7 @@ subroutine UA_UpdateDiscState2( i, j, u, p, xd, OtherState, AFInfo, ErrStat, Err
    ErrStat = ErrID_None         
    ErrMsg  = ""               
 
-   call ComputeKelvinChain2(i, j, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
+   call ComputeKelvinChain2(i, j, u, p, xd, OtherState, m, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                      St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
                                      Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c,Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
                                      Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, tau_V, SHIFT, VOR, ErrStat, ErrMsg )
@@ -2157,10 +2180,10 @@ subroutine UA_UpdateDiscState2( i, j, u, p, xd, OtherState, AFInfo, ErrStat, Err
       
       ! This is the check in ADv14 on line 3647 of AeroSubs.f90
    if ( (Cn_prime > Cn1) .or. ( Cn_prime < Cn2 ) ) then  ! assumption is that Cn2 <  0.0 and Cn1 > 0
-      OtherState%BEDSEP(i,j) = .true.  ! LE separation can occur
+      m%BEDSEP(i,j) = .true.  ! LE separation can occur
          
    else
-      OtherState%BEDSEP(i,j) = .false.
+      m%BEDSEP(i,j) = .false.
    end if
       
       
@@ -2174,31 +2197,31 @@ subroutine UA_UpdateDiscState2( i, j, u, p, xd, OtherState, AFInfo, ErrStat, Err
 
    IF ( (tau_V .GT. (T_VL + T_sh)) .AND. (.NOT. SHIFT)) THEN
       tau_V = 0.
-      OtherState%BEDSEP(i,j) = .FALSE.
+      m%BEDSEP(i,j) = .FALSE.
    ENDIF
 
    IF ( tau_V .GT. T_VL ) THEN
       IF ( u%alpha .LT. 0. ) THEN
 
          IF (Cn_prime_diff .LE. 0. .AND. xd%Cn_prime_diff_minus1(i,j) .GE. 0.) THEN
-            OtherState%BEDSEP(i,j) = .FALSE.
+            m%BEDSEP(i,j) = .FALSE.
             tau_V = 0.
          ENDIF
 
          IF (xd%alpha_minus1(i,j) .GT. 0.) THEN
-            OtherState%BEDSEP(i,j) = .FALSE.
+            m%BEDSEP(i,j) = .FALSE.
             tau_V = 0.
          ENDIF
 
       ELSE
 
          IF (Cn_prime_diff .GE. 0. .AND. xd%Cn_prime_diff_minus1(i,j) .LE. 0.) THEN
-            OtherState%BEDSEP(i,j) = .FALSE.
+            m%BEDSEP(i,j) = .FALSE.
             tau_V = 0.
          ENDIF
 
          IF (xd%alpha_minus1(i,j) .LT. 0.) THEN
-            OtherState%BEDSEP(i,j) = .FALSE.
+            m%BEDSEP(i,j) = .FALSE.
             tau_V = 0.
          ENDIF
 
@@ -2245,26 +2268,29 @@ subroutine UA_UpdateDiscState2( i, j, u, p, xd, OtherState, AFInfo, ErrStat, Err
    xd%Cn_v_minus1(i,j)         = Cn_v
    xd%C_V_minus1(i,j)          = C_V
    xd%tau_V_minus1(i,j)        = tau_V
-   OtherState%FirstPass(i,j)        = .false.
+   
+   OtherState%FirstPass(i,j)   = .false.
    
    
-end subroutine UA_UpdateDiscState2
+end subroutine UA_UpdateDiscOtherState2
 !==============================================================================   
 
 
 !============================================================================== 
-subroutine UA_UpdateStates( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg )
+subroutine UA_UpdateStates( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )
 ! Loose coupling routine for solving constraint states, integrating continuous states, and updating discrete states.
-! Continuous, constraint, and discrete states are updated to values at t + Interval.
+! Continuous, constraint, discrete, and other states are updated to values at t + Interval.
 !..............................................................................
 
    integer(IntKi),                intent(in   ) :: i               ! node index within a blade
    integer(IntKi),                intent(in   ) :: j               ! blade index 
-   type(UA_InputType),            intent(inout) :: u               ! Input at current timestep, t
+   type(UA_InputType),            intent(in   ) :: u               ! Input at current timestep, t
    type(UA_ParameterType),        intent(in   ) :: p               ! Parameters
    type(UA_DiscreteStateType),    intent(inout) :: xd              ! Input: Discrete states at t;
                                                                    !   Output: Discrete states at t + Interval
-   type(UA_OtherStateType),       intent(inout) :: OtherState      ! Other/optimization states
+   type(UA_OtherStateType),       intent(inout) :: OtherState      ! Input: Other states at t;
+                                                                   !   Output: Other states at t + Interval
+   type(UA_MiscVarType),          intent(inout) :: m               ! Misc/optimization variables
    type(AFInfoType),              intent(in   ) :: AFInfo          ! The airfoil parameter data
    integer(IntKi),                intent(  out) :: ErrStat         ! Error status of the operation
    character(*),                  intent(  out) :: ErrMsg          ! Error message if ErrStat /= ErrID_None
@@ -2281,8 +2307,8 @@ subroutine UA_UpdateStates( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg 
    ErrMsg    = ""
          
    
-   OtherState%iBladeNode = i; 
-   OtherState%iBlade = j
+   m%iBladeNode = i; 
+   m%iBlade = j
 
       !BJJ: this seems to be the root cause of all sorts of numerical problems....
    IF (EqualRealNos(u%u, 0.0_ReKi) ) THEN
@@ -2294,9 +2320,9 @@ subroutine UA_UpdateStates( i, j, u, p, xd, OtherState, AFInfo, ErrStat, ErrMsg 
    
       ! Update discrete states:
 #ifdef DEBUG_v14
-   call UA_UpdateDiscState2( i, j, u, p, xd, OtherState, AFInfo, ErrStat2, ErrMsg2 )
+   call UA_UpdateDiscOtherState2( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
 #else
-   call UA_UpdateDiscState( i, j, u, p, xd, OtherState, AFInfo, ErrStat2, ErrMsg2 )
+   call UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat2, ErrMsg2 )
 #endif
    call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
 
@@ -2304,17 +2330,18 @@ end subroutine UA_UpdateStates
 !==============================================================================   
 
 !============================================================================== 
-subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )   
+subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg )   
 ! Routine for computing outputs, used in both loose and tight coupling.
 !..............................................................................
    
    type(UA_InputType),           intent(in   )  :: u           ! Inputs at Time
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
    type(UA_DiscreteStateType),   intent(in   )  :: xd          ! Discrete states at Time
-   type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Other/optimization states
+   type(UA_OtherStateType),      intent(in   )  :: OtherState  ! Other states at Time
    type(AFInfoType),             intent(in   )  :: AFInfo      ! The airfoil parameter data
    type(UA_OutputType),          intent(inout)  :: y           ! Outputs computed at Time (Input only so that mesh con-
-                                                                     !   nectivity information does not have to be recalculated)
+                                                               !   nectivity information does not have to be recalculated)
+   type(UA_MiscVarType),         intent(inout)  :: misc        ! Misc/optimization variables
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -2370,15 +2397,15 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
    real(ReKi)                                             :: M, alpha1, alpha2, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, b1,b2,b5,A1,A2,A5,S1,S2,S3,S4,k1_hat,f, k2_hat
    integer                                                :: iOffset
    real(ReKi)                                             :: Cn_alpha_q_nc, Cm_v, Cm_Lookup, alpha_prime_f, Cn_prime_diff
-   !BJJ: what are OtherState%iBladeNode, OtherState%iBlade here? I don't see them set in the routine that calls UA_CalcOutput
+   !BJJ: what are misc%iBladeNode, misc%iBlade here? I don't see them set in the routine that calls UA_CalcOutput
    
    ErrStat   = ErrID_None           ! no error has occurred
    ErrMsg    = ""
    
   
-   iOffset = (OtherState%iBladeNode-1)*p%NumOuts + (OtherState%iBlade-1)*p%nNodesPerBlade*p%NumOuts 
+   iOffset = (misc%iBladeNode-1)*p%NumOuts + (misc%iBlade-1)*p%nNodesPerBlade*p%NumOuts 
    
-   if (OtherState%FirstPass(OtherState%iBladeNode, OtherState%iBlade)) then
+   if (OtherState%FirstPass(misc%iBladeNode, misc%iBlade)) then
       
       
       call GetSteadyOutputs(AFInfo, u%alpha, y%Cl, y%Cd, y%Cm, Cd0, ErrStat2, ErrMsg2)
@@ -2406,7 +2433,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
    else
       M           = u%U / p%a_s
       
-      call UA_CheckMachNumber(M, OtherState%FirstWarn_M, ErrStat2, ErrMsg2 )
+      call UA_CheckMachNumber(M, misc%FirstWarn_M, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
       
@@ -2415,7 +2442,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
             !AFI_GetAirfoilParams doens't return error, so I won't check. ! call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       
-      call ComputeKelvinChain( OtherState%iBladeNode, OtherState%iBlade, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
+      call ComputeKelvinChain( misc%iBladeNode, misc%iBlade, u, p, xd, OtherState, misc, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                  St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
                                  Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c, Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
                                  Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat2, ErrMsg2 )
@@ -2423,7 +2450,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       
             
          ! Eqn 1.50(a or b depending on UAMod)
-      if (xd%tau_v(OtherState%iBladeNode, OtherState%iBlade) > 0.0) then
+      if (xd%tau_v(misc%iBladeNode, misc%iBlade) > 0.0) then
          y%Cn= Cn_FS + Cn_v
       else
          y%Cn= Cn_FS
@@ -2440,11 +2467,11 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
             ! Eqn 1.52a   TODO: NOTE:  This is what is used in AD v14, so we may need a way to use this when we want to match v14 as much as possible! GJH 5/21/2015
         ! TODO: Look at eliminating this vortex related contribution under reversing AOA and perhaps when VRTX = F
         ! Kafactor             = Kalpha*dalpha0
-        ! if  ( Kafactor < 0.0_ReKi ) then ! .AND.  .NOT. OtherState%VRTX(OtherState%iBladeNode, OtherState%iBlade )  )then
+        ! if  ( Kafactor < 0.0_ReKi ) then ! .AND.  .NOT. misc%VRTX(misc%iBladeNode, misc%iBlade )  )then
         !    y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset)
         ! else         
-            !y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*tan(alpha_e)*(1-xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)/(2.0*T_VL))
-            y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*alpha_e*(1-xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)/(T_VL)) !testing without tan 9/16/15
+            !y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*tan(alpha_e)*(1-xd%tau_v(misc%iBladeNode, misc%iBlade)/(2.0*T_VL))
+            y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*alpha_e*(1-xd%tau_v(misc%iBladeNode, misc%iBlade)/(T_VL)) !testing without tan 9/16/15
         ! end if
          
       elseif ( p%UAMod == 2 ) then
@@ -2501,7 +2528,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       Cm_FS = Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Dalphaf, alpha_f, Cn_FS, fprimeprime_m, AFInfo, p%UAMod, Cm_alpha_nc, Cm_Lookup, alpha_prime_f, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
-      y%Cm = Get_Cm( Cm_FS, T_VL, x_cp_bar, Cn_v, xd%tau_v(OtherState%iBladeNode, OtherState%iBlade), Cm_v )
+      y%Cm = Get_Cm( Cm_FS, T_VL, x_cp_bar, Cn_v, xd%tau_v(misc%iBladeNode, misc%iBlade), Cm_v )
                   
    end if
    
@@ -2522,20 +2549,20 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       y%WriteOutput(iOffset+13)    = fprime                                                              
       y%WriteOutput(iOffset+14)    = Df                                                                  
       y%WriteOutput(iOffset+15)    = Cn_V                                                                
-      y%WriteOutput(iOffset+16)    = xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)                  
+      y%WriteOutput(iOffset+16)    = xd%tau_v(misc%iBladeNode, misc%iBlade)                  
                                                                                                          
-      if ( OtherState%LESF(OtherState%iBladeNode, OtherState%iBlade) ) then  ! BEDSEP in v14             
+      if ( misc%LESF(misc%iBladeNode, misc%iBlade) ) then  ! BEDSEP in v14 !bjj: note that this output is calculated in UpdateDiscState, so it may be out of sync here.
          y%WriteOutput(iOffset+17) = 1.0_ReKi                                                            
       else                                                                                               
          y%WriteOutput(iOffset+17) = 0.0_ReKi                                                            
       end if                                                                                             
                                                                                                          
-      if ( OtherState%TESF(OtherState%iBladeNode, OtherState%iBlade) ) then  !SHIFT in v14               
+      if ( misc%TESF(misc%iBladeNode, misc%iBlade) ) then  !SHIFT in v14   !bjj: note that this output is calculated in UpdateDiscState, so it may be out of sync here.
          y%WriteOutput(iOffset+18) = 1.0_ReKi                                                            
       else                                                                                               
          y%WriteOutput(iOffset+18) = 0.0_ReKi                                                            
       end if                                                                                             
-      if ( OtherState%VRTX(OtherState%iBladeNode, OtherState%iBlade) ) then  ! VOR in v14                
+      if ( misc%VRTX(misc%iBladeNode, misc%iBlade) ) then  ! VOR in v14    !bjj: note that this output is calculated in UpdateDiscState, so it may be out of sync here.
          y%WriteOutput(iOffset+19) = 1.0_ReKi
       else
          y%WriteOutput(iOffset+19) = 0.0_ReKi
@@ -2549,7 +2576,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       y%WriteOutput(iOffset+26)    = Cm_Lookup
       y%WriteOutput(iOffset+27)    = T_f
       y%WriteOutput(iOffset+28)    = T_V
-      y%WriteOutput(iOffset+29)    = Get_ds       ( u%U, p%c(OtherState%iBladeNode, OtherState%iBlade), p%dt ) 
+      y%WriteOutput(iOffset+29)    = Get_ds       ( u%U, p%c(misc%iBladeNode, misc%iBlade), p%dt ) 
    
       !y%WriteOutput(iOffset+1) = u%alpha*180.0/pi
       !y%WriteOutput(iOffset+2) = y%Cn
@@ -2573,23 +2600,23 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       !y%WriteOutput(iOffset+20) = fprimeprime_m
       !y%WriteOutput(iOffset+21) = T_f
       !y%WriteOutput(iOffset+22) = T_V
-      !if ( OtherState%LESF(OtherState%iBladeNode, OtherState%iBlade) ) then
+      !if ( OtherState%LESF(misc%iBladeNode, misc%iBlade) ) then
       !   y%WriteOutput(iOffset+23) = 1.0_ReKi
       !else
       !   y%WriteOutput(iOffset+23) = 0.0_ReKi
       !end if
       !
-      !if ( OtherState%TESF(OtherState%iBladeNode, OtherState%iBlade) ) then
+      !if ( misc%TESF(misc%iBladeNode, misc%iBlade) ) then
       !   y%WriteOutput(iOffset+24) = 1.0_ReKi
       !else
       !   y%WriteOutput(iOffset+24) = 0.0_ReKi
       !end if
-      !if ( OtherState%VRTX(OtherState%iBladeNode, OtherState%iBlade) ) then
+      !if ( misc%VRTX(misc%iBladeNode, misc%iBlade) ) then
       !   y%WriteOutput(iOffset+25) = 1.0_ReKi
       !else
       !   y%WriteOutput(iOffset+25) = 0.0_ReKi
       !end if
-      !y%WriteOutput(iOffset+26) = xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)
+      !y%WriteOutput(iOffset+26) = xd%tau_v(misc%iBladeNode, misc%iBlade)
       !y%WriteOutput(iOffset+27) = Cn_v         
       !y%WriteOutput(iOffset+28) = C_V          
       !y%WriteOutput(iOffset+29) = Cn_FS 
@@ -2621,23 +2648,23 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
 !      y%WriteOutput(iOffset+20) = fprimeprime_m
 !      y%WriteOutput(iOffset+21) = T_f
 !      y%WriteOutput(iOffset+22) = T_V
-!      if ( OtherState%LESF(OtherState%iBladeNode, OtherState%iBlade) ) then
+!      if ( misc%LESF(misc%iBladeNode, misc%iBlade) ) then
 !         y%WriteOutput(iOffset+23) = 1.0_ReKi
 !      else
 !         y%WriteOutput(iOffset+23) = 0.0_ReKi
 !      end if
 !      
-!      if ( OtherState%TESF(OtherState%iBladeNode, OtherState%iBlade) ) then
+!      if ( misc%TESF(misc%iBladeNode, misc%iBlade) ) then
 !         y%WriteOutput(iOffset+24) = 1.0_ReKi
 !      else
 !         y%WriteOutput(iOffset+24) = 0.0_ReKi
 !      end if
-!      if ( OtherState%VRTX(OtherState%iBladeNode, OtherState%iBlade) ) then
+!      if ( misc%VRTX(misc%iBladeNode, misc%iBlade) ) then
 !         y%WriteOutput(iOffset+25) = 1.0_ReKi
 !      else
 !         y%WriteOutput(iOffset+25) = 0.0_ReKi
 !      end if
-!      y%WriteOutput(iOffset+26) = xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)
+!      y%WriteOutput(iOffset+26) = xd%tau_v(misc%iBladeNode, misc%iBlade)
 !      y%WriteOutput(iOffset+27) = Cn_v         
 !      y%WriteOutput(iOffset+28) = C_V          
 !      y%WriteOutput(iOffset+29) = Cn_FS 
@@ -2679,17 +2706,18 @@ subroutine UA_CheckMachNumber(M, FirstWarn_M, ErrStat, ErrMsg )
 end subroutine UA_CheckMachNumber
 
 !============================================================================== 
-subroutine UA_CalcOutput2( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )   
+subroutine UA_CalcOutput2( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg )   
 ! Routine for computing outputs, used in both loose and tight coupling.
 !..............................................................................
    
    type(UA_InputType),           intent(inout)  :: u           ! Inputs at Time
    type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
    type(UA_DiscreteStateType),   intent(in   )  :: xd          ! Discrete states at Time
-   type(UA_OtherStateType),      intent(in   )  :: OtherState  ! Other/optimization states
+   type(UA_OtherStateType),      intent(in   )  :: OtherState  ! Other states
    type(AFInfoType),             intent(in   )  :: AFInfo      ! The airfoil parameter data
    type(UA_OutputType),          intent(inout)  :: y           ! Outputs computed at Time (Input only so that mesh con-
-                                                                     !   nectivity information does not have to be recalculated)
+                                                               !   nectivity information does not have to be recalculated)
+   type(UA_MiscVarType),         intent(inout)  :: misc        ! Misc/optimization variables
    integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
    character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
@@ -2746,15 +2774,15 @@ subroutine UA_CalcOutput2( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
    real(ReKi)                                             :: tau_V, Cn_prime_diff, Cm_v, Cm_Lookup, alpha_prime_f
    logical                                                :: SHIFT, VOR
    
-   !BJJ: what are OtherState%iBladeNode, OtherState%iBlade here? I don't see them set in the routine that calls UA_CalcOutput
+   !BJJ: what are misc%iBladeNode, misc%iBlade here? I don't see them set in the routine that calls UA_CalcOutput
    
    ErrStat   = ErrID_None           ! no error has occurred
    ErrMsg    = ""
    
   
-   iOffset = (OtherState%iBladeNode-1)*p%NumOuts + (OtherState%iBlade-1)*p%nNodesPerBlade*p%NumOuts 
+   iOffset = (misc%iBladeNode-1)*p%NumOuts + (misc%iBlade-1)*p%nNodesPerBlade*p%NumOuts 
    
-   if (OtherState%FirstPass(OtherState%iBladeNode, OtherState%iBlade)) then
+   if (OtherState%FirstPass(misc%iBladeNode, misc%iBlade)) then
       
       
       call GetSteadyOutputs(AFInfo, u%alpha, y%Cl, y%Cd, y%Cm, Cd0, ErrStat, ErrMsg)
@@ -2768,7 +2796,7 @@ subroutine UA_CalcOutput2( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
                               T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, ErrMsg, ErrStat )           
    
       
-      call ComputeKelvinChain2( OtherState%iBladeNode, OtherState%iBlade, u, p, xd, OtherState, AFInfo, Cn_prime, Cn_prime_Diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
+      call ComputeKelvinChain2( misc%iBladeNode, misc%iBlade, u, p, xd, OtherState, misc, AFInfo, Cn_prime, Cn_prime_Diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
                                  St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
                                  Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c, Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
                                  Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, tau_V, SHIFT, VOR, ErrStat, ErrMsg )
@@ -2792,10 +2820,10 @@ subroutine UA_CalcOutput2( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
             ! Eqn 1.52a   TODO: NOTE:  This is what is used in AD v14, so we may need a way to use this when we want to match v14 as much as possible! GJH 5/21/2015
         ! TODO: Look at eliminating this vortex related contribution under reversing AOA and perhaps when VRTX = F
      !    Kafactor             = Kalpha*dalpha0
-     !    if  ( Kafactor < 0.0_ReKi ) then ! .AND.  .NOT. OtherState%VRTX(OtherState%iBladeNode, OtherState%iBlade )  )then
+     !    if  ( Kafactor < 0.0_ReKi ) then ! .AND.  .NOT. misc%VRTX(misc%iBladeNode, misc%iBlade )  )then
      !       y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset)
      !    else         
-            !y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*tan(alpha_e)*(1-xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)/(2.0*T_VL))
+            !y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*tan(alpha_e)*(1-xd%tau_v(misc%iBladeNode, misc%iBlade)/(2.0*T_VL))
             y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*alpha_e*(1-tau_V/(T_VL)) !testing without tan 9/16/15
      !    end if
          
@@ -2867,8 +2895,8 @@ subroutine UA_CalcOutput2( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       y%WriteOutput(iOffset+9) = Df
       y%WriteOutput(iOffset+10)= Cn_V
       y%WriteOutput(iOffset+11) = y%Cn
-      y%WriteOutput(iOffset+12) = xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)
-      if ( OtherState%BEDSEP(OtherState%iBladeNode, OtherState%iBlade) ) then
+      y%WriteOutput(iOffset+12) = xd%tau_v(misc%iBladeNode, misc%iBlade)
+      if ( misc%BEDSEP(misc%iBladeNode, misc%iBlade) ) then !bjj: note this is set in UpdateDiscState2, so it may be out of sync here
          y%WriteOutput(iOffset+13) = 1.0_ReKi
       else
          y%WriteOutput(iOffset+13) = 0.0_ReKi
@@ -2895,7 +2923,7 @@ subroutine UA_CalcOutput2( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       y%WriteOutput(iOffset+24)= Cm_Lookup
       y%WriteOutput(iOffset+25)= T_f
       y%WriteOutput(iOffset+26)= T_V
-      y%WriteOutput(iOffset+27)= Get_ds       ( u%U, p%c(OtherState%iBladeNode, OtherState%iBlade), p%dt ) 
+      y%WriteOutput(iOffset+27)= Get_ds       ( u%U, p%c(misc%iBladeNode, misc%iBlade), p%dt ) 
       y%WriteOutput(iOffset+28)= tau_V
       !y%WriteOutput(iOffset+1) = u%alpha*180.0/pi
       !y%WriteOutput(iOffset+2) = y%Cn
@@ -2919,23 +2947,23 @@ subroutine UA_CalcOutput2( u, p, xd, OtherState, AFInfo, y, ErrStat, ErrMsg )
       !y%WriteOutput(iOffset+20) = fprimeprime_m
       !y%WriteOutput(iOffset+21) = T_f
       !y%WriteOutput(iOffset+22) = T_V
-      !if ( OtherState%LESF(OtherState%iBladeNode, OtherState%iBlade) ) then
+      !if ( OtherState%LESF(misc%iBladeNode, misc%iBlade) ) then
       !   y%WriteOutput(iOffset+23) = 1.0_ReKi
       !else
       !   y%WriteOutput(iOffset+23) = 0.0_ReKi
       !end if
       !
-      !if ( OtherState%TESF(OtherState%iBladeNode, OtherState%iBlade) ) then
+      !if ( OtherState%TESF(misc%iBladeNode, misc%iBlade) ) then
       !   y%WriteOutput(iOffset+24) = 1.0_ReKi
       !else
       !   y%WriteOutput(iOffset+24) = 0.0_ReKi
       !end if
-      !if ( OtherState%VRTX(OtherState%iBladeNode, OtherState%iBlade) ) then
+      !if ( OtherState%VRTX(misc%iBladeNode, misc%iBlade) ) then
       !   y%WriteOutput(iOffset+25) = 1.0_ReKi
       !else
       !   y%WriteOutput(iOffset+25) = 0.0_ReKi
       !end if
-      !y%WriteOutput(iOffset+26) = xd%tau_v(OtherState%iBladeNode, OtherState%iBlade)
+      !y%WriteOutput(iOffset+26) = xd%tau_v(misc%iBladeNode, misc%iBlade)
       !y%WriteOutput(iOffset+27) = Cn_v         
       !y%WriteOutput(iOffset+28) = C_V          
       !y%WriteOutput(iOffset+29) = Cn_FS 

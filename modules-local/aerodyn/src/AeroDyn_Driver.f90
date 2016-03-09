@@ -121,7 +121,7 @@ program AeroDyn_Driver
             
             ! Calculate outputs at nt - 1
 
-         call AD_CalcOutput( time, AD%u(2), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, errStat, errMsg )
+         call AD_CalcOutput( time, AD%u(2), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat, errMsg )
             call CheckError()
    
          call Dvr_WriteOutputLine(DvrData%OutFileData, time, AD%y%WriteOutput, errStat, errMsg)
@@ -130,13 +130,13 @@ program AeroDyn_Driver
             
             ! Get state variables at next step: INPUT at step nt - 1, OUTPUT at step nt
 
-         call AD_UpdateStates( time, nt-1, AD%u, AD%InputTime, AD%p, AD%x, AD%xd, AD%z, AD%OtherState, errStat, errMsg )
+         call AD_UpdateStates( time, nt-1, AD%u, AD%InputTime, AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%m, errStat, errMsg )
             call CheckError()
       
                   
       end do !nt=1,numSteps
       
-      call AD_End( AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, errStat, errMsg )
+      call AD_End( AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat, errMsg )
          AD_Initialized = .false.         
          call CheckError()
          close( DvrData%OutFileData%unOutFile )
@@ -176,7 +176,7 @@ contains
       if (DvrData%OutFileData%unOutFile > 0) close(DvrData%OutFileData%unOutFile)
             
       if ( AD_Initialized ) then
-         call AD_End( AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, errStat2, errMsg2 )
+         call AD_End( AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, errStat2, errMsg2 )
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       end if
            

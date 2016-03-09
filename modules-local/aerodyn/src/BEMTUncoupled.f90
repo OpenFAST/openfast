@@ -156,7 +156,7 @@ end subroutine ComputeSteadyAirfoilCoefs
 
 !----------------------------------------------------------------------------------------------------------------------------------  
 subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
-                      p_UA, xd_UA, OtherState_UA, OtherState_y_UA, &
+                      p_UA, xd_UA, OtherState_UA, y_UA, m_UA, &
                       Cl, Cd, Cm, errStat, errMsg )
 ! This routine is called from BEMTU_InductionWithResidual and possibly BEMT_CalcOutput.
 ! Determine the Cl, Cd, Cm coeficients for a given angle of attack
@@ -167,8 +167,9 @@ subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
    type(AFInfoType),             intent(in   ) :: AFInfo
    type(UA_ParameterType),       intent(in   ) :: p_UA               ! Parameters
    type(UA_DiscreteStateType),   intent(in   ) :: xd_UA              ! Discrete states at Time
-   type(UA_OtherStateType),      intent(inout) :: OtherState_UA      ! Other/optimization states
-   type(UA_OutputType),          intent(inout) :: OtherState_y_UA    !
+   type(UA_OtherStateType),      intent(in   ) :: OtherState_UA      ! Other states at Time
+   type(UA_OutputType),          intent(inout) :: y_UA               !
+   type(UA_MiscVarType),         intent(inout) :: m_UA               ! misc/optimization variables
    real(ReKi),                   intent(  out) :: Cl, Cd, Cm
    integer(IntKi),               intent(  out) :: errStat            ! Error status of the operation
    character(*),                 intent(  out) :: errMsg             ! Error message if ErrStat /= ErrID_None 
@@ -179,7 +180,6 @@ subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
   
    
    type(UA_InputType)              :: u_UA
-   type(UA_OutputType)             :: y_UA          !
       
    ErrStat = ErrID_None
    ErrMsg  = ''
@@ -188,18 +188,18 @@ subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
    u_UA%Re    = Re
    u_UA%U     = U
    
-   !bjj: TODO: this gets called element-by-element (not all at once). Are OtherState%iBladeNode and OtherState%iBlade set properly?
+   !bjj: TODO: this gets called element-by-element (not all at once). Are m%iBladeNode and m%iBlade set properly?
 #ifdef DEBUG_v14
-   call UA_CalcOutput2(u_UA, p_UA, xd_UA, OtherState_UA, AFInfo, OtherState_y_UA, errStat2, errMsg2 )
+   call UA_CalcOutput2(u_UA, p_UA, xd_UA, OtherState_UA, AFInfo, y_UA, m_UA, errStat2, errMsg2 )
 #else
-   call UA_CalcOutput(u_UA, p_UA, xd_UA, OtherState_UA, AFInfo, OtherState_y_UA, errStat2, errMsg2 )
+   call UA_CalcOutput(u_UA, p_UA, xd_UA, OtherState_UA, AFInfo, y_UA, m_UA, errStat2, errMsg2 )
 #endif
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
       if (errStat >= AbortErrLev) return
 
-   Cl         = OtherState_y_UA%Cl
-   Cd         = OtherState_y_UA%Cd
-   Cm         = OtherState_y_UA%Cm
+   Cl         = y_UA%Cl
+   Cd         = y_UA%Cd
+   Cm         = y_UA%Cm
                   
        
 end subroutine Compute_UA_AirfoilCoefs

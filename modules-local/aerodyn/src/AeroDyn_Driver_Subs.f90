@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015  National Renewable Energy Laboratory
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
 !    This file is part of AeroDyn.
 !
@@ -28,7 +28,7 @@ module AeroDyn_Driver_Subs
     
    implicit none   
    
-   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'AeroDyn_driver', 'v1.00.01-gjh', '26-Jan-2016' )  ! The version number of this program.
+   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'AeroDyn_driver', 'v1.01.00-bjj', '8-Mar-2016' )  ! The version number of this program.
                                                     
    contains
 
@@ -149,7 +149,7 @@ subroutine Init_AeroDyn(iCase, DvrData, AD, dt, errStat, errMsg)
    end do
       
       
-   call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, dt, InitOutData, ErrStat2, ErrMsg2 )
+   call AD_Init(InitInData, AD%u(1), AD%p, AD%x, AD%xd, AD%z, AD%OtherState, AD%y, AD%m, dt, InitOutData, ErrStat2, ErrMsg2 )
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
       
       

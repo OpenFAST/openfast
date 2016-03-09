@@ -49,6 +49,7 @@ program UnsteadyAero_Driver
    type(UA_InitOutputType)                       :: InitOutData          ! Output data from initialization
    type(UA_DiscreteStateType)                    :: xd                   ! Discrete states
    type(UA_OtherStateType)                       :: OtherState           ! Other/optimization states
+   type(UA_MiscVarType)                          :: m                    ! Misc/optimization variables
    type(UA_ParameterType)                        :: p                    ! Parameters
    type(UA_InputType)                            :: u(NumInp)            ! System inputs
    type(UA_OutputType)                           :: y                    ! System outputs
@@ -184,7 +185,7 @@ program UnsteadyAero_Driver
       end if
    
     ! Initialize UnsteadyAero
-   call UA_Init( InitInData, u(1), p, xd, OtherState, y, dt, InitOutData, errStat2, errMsg2 ) 
+   call UA_Init( InitInData, u(1), p, xd, OtherState, y, m, dt, InitOutData, errStat2, errMsg2 ) 
       call SetErrStat( errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
       if (ErrStat >= AbortErrLev) then
          call Cleanup()
@@ -251,12 +252,12 @@ program UnsteadyAero_Driver
       do j = 1,InitInData%numBlades
          do i = 1,InitInData%nNodesPerBlade
      
-               ! Need to use OtherState to store which element we are operating on
-            OtherState%iBladeNode = i
-            OtherState%iBlade     = j
+               ! Need to use MiscVar to store which element we are operating on
+            m%iBladeNode = i
+            m%iBlade     = j
             
                ! Use existing states to compute the outputs
-            call UA_CalcOutput(u(1),  p, xd, OtherState, AFI_Params%AFInfo(AFIndx(i,j)), y, errStat2, errMsg2 )
+            call UA_CalcOutput(u(1),  p, xd, OtherState, AFI_Params%AFInfo(AFIndx(i,j)), y, m, errStat2, errMsg2 )
                call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
                if (ErrStat >= AbortErrLev) then
                   call Cleanup()
@@ -265,7 +266,7 @@ program UnsteadyAero_Driver
             
  
                ! Prepare states for next time step
-            call UA_UpdateStates(i,j,u(1), p, xd, OtherState, AFI_Params%AFInfo(AFIndx(i,j)), errStat2, errMsg2 )
+            call UA_UpdateStates(i,j,u(1), p, xd, OtherState, AFI_Params%AFInfo(AFIndx(i,j)), m, errStat2, errMsg2 )
                call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
                if (ErrStat >= AbortErrLev) then
                   call Cleanup()

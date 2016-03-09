@@ -63,26 +63,30 @@ typedef   ^                            InitOutputType                ProgDesc   
 # ..... States ....................................................................................................................
 # Define continuous (differentiable) states here:
 #
-typedef   ^                            ContinuousStateType           ReKi                     DummyContState           -          -        -        "Remove this variable if you have continuous states"        -
+typedef   ^                            ContinuousStateType           SiKi                     DummyContState           -          -        -        "Remove this variable if you have continuous states"        -
 #
 #
 # Define discrete (non-differentiable) states here:
 #
-typedef   ^                            DiscreteStateType             ReKi                     DummyDiscState           -          -         -         ""        -
-typedef   ^                            ^                             UA_DiscreteStateType     UA                        -             -         -        "states for UnsteadyAero"        -
+typedef   ^                            DiscreteStateType             UA_DiscreteStateType     UA                        -             -         -        "states for UnsteadyAero"        -
 #
 #
 # Define constraint states here:
 #
 typedef   ^                            ConstraintStateType           ReKi                     phi                             {:}{:}         -         -         "angle between the plane of rotation and the direction of the local wind" rad
 #
-# Define any data that are not considered actual states here:
-#   e.g. data used only for efficiency purposes (indices for searching in an array,  copies of previous calculations of output at a given time, etc.)
 #
-typedef   ^                            OtherStateType                ReKi                     DummyOtherState                     -           -         -         ""   -
-typedef   ^                            ^                             UA_OtherStateType        UA                                  -             -         -        "other states for UnsteadyAero"        -
+# Define any other states, including integer or logical states here:
+#
+typedef   ^                            OtherStateType                UA_OtherStateType        UA                                  -           -         -        "other states for UnsteadyAero"        -
 typedef   ^                            ^                             LOGICAL                  UA_Flag                         {:}{:}          -         -        "logical flag indicating whether to use UnsteadyAero"        -
-typedef   ^                            ^                             UA_OutputType            y_UA                                -             -         -        "other states for UnsteadyAero"        -
+
+# ..... Misc/Optimization variables.................................................................................................
+# Define any data that are used only for efficiency purposes (these variables are not associated with time):
+#   e.g. indices for searching in an array, large arrays that are local variables in any routine called multiple times, etc.
+typedef   ^                            MiscVarType                   Logical                  FirstWarn_M                     -             -         -        "flag so Mach number warning doesn't get repeated forever" -
+typedef   ^                            MiscVarType                   UA_MiscVarType           UA                              -             -         -        "misc vars for UnsteadyAero"        -
+typedef   ^                            MiscVarType                   UA_OutputType            y_UA                            -             -         -        "outputs from UnsteadyAero"        -
 
 # ..... Parameters ................................................................................................................
 # Define parameters here:
