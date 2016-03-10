@@ -205,7 +205,7 @@ subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
 end subroutine Compute_UA_AirfoilCoefs
 
                            ! This is the residual calculation for the uncoupled BEM solve
-real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal, rtip, chord, AFInfo, &
+real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal, chord, AFInfo, &
                               Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst,  &
                               axInduction, tanInduction,  ErrStat, ErrMsg)
       
@@ -215,8 +215,7 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal,
    real(ReKi),             intent(in   ) :: AOA
    real(ReKi),             intent(in   ) :: Re
    integer,                intent(in   ) :: numBlades
-   real(ReKi),             intent(in   ) :: rlocal   
-   real(ReKi),             intent(in   ) :: rtip   
+   real(ReKi),             intent(in   ) :: rlocal      
    real(ReKi),             intent(in   ) :: chord         
    type(AFInfoType),       intent(in   ) :: AFInfo
    real(ReKi),             intent(in   ) :: Vx
@@ -262,7 +261,7 @@ real(ReKi) function BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal,
       call Transform_ClCd_to_CxCy( phi, useAIDrag, useTIDrag, Cl, Cd, Cx, Cy )  
       
          ! Determine axInduction, tanInduction for the current Cl, Cd, phi
-      call inductionFactors( rlocal, rtip, chord, phi, Cx, Cy, numBlades, &
+      call inductionFactors( rlocal, chord, phi, Cx, Cy, numBlades, &
                               Vx, Vy, useTanInd, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, &
                               fzero, axInduction, tanInduction, errStat2, errMsg2)
          call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
@@ -276,7 +275,7 @@ end function BEMTU_InductionWithResidual
 
       ! This is the residual calculation for the uncoupled BEM solve
 
-real(ReKi) function UncoupledErrFn(phi, AOA, Re, numBlades, rlocal, rtip, chord, AFInfo, &
+real(ReKi) function UncoupledErrFn(phi, AOA, Re, numBlades, rlocal, chord, AFInfo, &
                               Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
                               ErrStat, ErrMsg)
       
@@ -286,8 +285,7 @@ real(ReKi) function UncoupledErrFn(phi, AOA, Re, numBlades, rlocal, rtip, chord,
    real(ReKi),             intent(in   ) :: AOA
    real(ReKi),             intent(in   ) :: Re
    integer,                intent(in   ) :: numBlades
-   real(ReKi),             intent(in   ) :: rlocal   
-   real(ReKi),             intent(in   ) :: rtip   
+   real(ReKi),             intent(in   ) :: rlocal      
    real(ReKi),             intent(in   ) :: chord         
    type(AFInfoType),       intent(in   ) :: AFInfo
    real(ReKi),             intent(in   ) :: Vx
@@ -310,7 +308,7 @@ real(ReKi) function UncoupledErrFn(phi, AOA, Re, numBlades, rlocal, rtip, chord,
    ErrStat = ErrID_None
    ErrMsg  = ""
     
-   UncoupledErrFn = BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal, rtip, chord, AFInfo, &
+   UncoupledErrFn = BEMTU_InductionWithResidual(phi, AOA, Re, numBlades, rlocal, chord, AFInfo, &
                            Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
                            axInduction, tanInduction, ErrStat, ErrMsg)
 
@@ -377,14 +375,14 @@ subroutine ApplySkewedWakeCorrection( Vx, Vy, azimuth, chi0, tipRatio, a, ap, ch
    
 end subroutine ApplySkewedWakeCorrection
                               
-recursive subroutine inductionFactors(r , Rtip, chord, phi, cn, ct, B, &
+recursive subroutine inductionFactors(r ,  chord, phi, cn, ct, B, &
                               Vx, Vy, wakerotation, hubLoss, tipLoss, hubLossConst, tipLossConst, &
                               fzero, a, ap, ErrStat, ErrMsg)
 
    implicit none
 
    ! in
-   real(ReKi), intent(in) :: r, chord, Rtip, phi, cn, ct
+   real(ReKi), intent(in) :: r, chord, phi, cn, ct
    integer, intent(in) :: B
    real(ReKi), intent(in) :: Vx, Vy
    real(ReKi), intent(in) :: hubLossConst, tipLossConst
@@ -443,33 +441,6 @@ recursive subroutine inductionFactors(r , Rtip, chord, phi, cn, ct, B, &
    cphi = cos(phi)
    
     
-   
-    
-      ! resolve into normal and tangential forces
-      !if ( .not. useCd ) then
-      !    cn = cl*cphi
-      !    ct = cl*sphi
-      !else
-      !    cn = cl*cphi + cd*sphi
-      !    ct = cl*sphi - cd*cphi
-      !end if
-
-      ! Prandtl's tip and hub loss factor
-   !Ftip = 1.0_ReKi
-   !! NOTE: check below isn't good enough: at tip Ftip should = 0.0, not 1.0
-   !! if ( tipLoss .AND. (.NOT.(EqualRealNos(sphi, 0.0_DbKi))) ) then
-   !if ( tipLoss  ) then
-   !   factortip = B/2.0_ReKi*(Rtip - r)/(r*abs(sphi))
-   !   Ftip      = 2.0_ReKi/pi*acos(exp(-factortip))
-   !end if
-   !
-   !Fhub = 1.0_ReKi
-   !!if ( hubLoss .AND. (.NOT.(EqualRealNos(sphi, 0.0_DbKi))) ) then
-   !if ( hubLoss ) then
-   !   factorhub = B/2.0_ReKi*(r - Rhub)/(Rhub*abs(sphi))
-   !   Fhub      = 2.0_ReKi/pi*acos(exp(-factorhub))
-   !end if
-   !
    
          ! Prandtl's tip and hub loss factor
    Ftip = 1.0
