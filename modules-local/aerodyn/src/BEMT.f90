@@ -864,7 +864,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
       
    integer(IntKi)                                    :: i,j
    type(UA_InputType)                                :: u_UA
-   real(ReKi)                                        :: chi, Rtip, Rtip2, AOA, Re, Vrel, axInduction, tanInduction, fzero, phitemp
+   real(ReKi)                                        :: chi, Rtip, AOA, Re, Vrel, axInduction, tanInduction, fzero, phitemp
       
    character(ErrMsgLen)                           :: errMsg2     ! temporary Error message if ErrStat /= ErrID_None
    integer(IntKi)                                 :: errStat2    ! temporary Error status of the operation
@@ -884,10 +884,6 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
             Rtip = max( Rtip, u1%rlocal(i,j) ) 
          end do
          
-         Rtip2 = 0.0_ReKi
-         do i = 1,p%numBladeNodes
-            Rtip2 = max( Rtip2, u2%rlocal(i,j) ) 
-         end do
          
       end if
       
@@ -916,7 +912,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
                
                   ! Need to get the induction factors for these conditions without skewed wake correction and without UA
                   ! COMPUTE: axInduction, tanInduction   
-               fzero = BEMTU_InductionWithResidual(z%phi(i,j), u_UA%alpha, Re, p%numBlades, u1%rlocal(i,j), Rtip, p%chord(i,j), AFInfo(p%AFIndx(i,j)), &
+               fzero = BEMTU_InductionWithResidual(z%phi(i,j), u_UA%alpha, Re, p%numBlades, u1%rlocal(i,j), p%chord(i,j), AFInfo(p%AFIndx(i,j)), &
                            u1%Vx(i,j), u1%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
                            axInduction, tanInduction, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
@@ -968,7 +964,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
                ! Solve this without any skewed wake correction and without UA
             ! call BEMT_UnCoupledSolve2(i, j, u, p, z, Rtip, AFInfo, phiOut, axIndOut, tanIndOut, errStat, errMsg)
                ! COMPUTE:  z%phi(i,j)     
-            call BEMT_UnCoupledSolve(z%phi(i,j), p%numBlades, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u2%rlocal(i,j), Rtip2, p%chord(i,j), u2%theta(i,j),  &
+            call BEMT_UnCoupledSolve(z%phi(i,j), p%numBlades, p%airDens, p%kinVisc, AFInfo(p%AFIndx(i,j)), u2%rlocal(i,j), p%chord(i,j), u2%theta(i,j),  &
                         u2%Vx(i,j), u2%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
                         p%maxIndIterations, p%aTol,  &
                         z%phi(i,j), errStat2, errMsg2)  
@@ -1097,7 +1093,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
             call BEMTU_Wind( 0.0_ReKi, 0.0_ReKi, Vx, Vy, p%chord(i,j), p%airDens, p%kinVisc, Vrel, Re )
             
                ! Compute inductions using steady aero.  NOTE: When we use Re, we are using uninduced Re for Steady Airfoil Coef looks here
-            fzero = BEMTU_InductionWithResidual(y%phi(i,j), y%AOA(i,j), Re, p%numBlades, u%rlocal(i,j), Rtip, p%chord(i,j), AFInfo(p%AFindx(i,j)), &
+            fzero = BEMTU_InductionWithResidual(y%phi(i,j), y%AOA(i,j), Re, p%numBlades, u%rlocal(i,j), p%chord(i,j), AFInfo(p%AFindx(i,j)), &
                            Vx, Vy, p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
                            y%axInduction(i,j), y%tanInduction(i,j), errStat2, errMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
@@ -1299,7 +1295,7 @@ subroutine BEMT_CalcConstrStateResidual( Time, u, p, x, xd, z, OtherState, m, z_
             call BEMTU_Wind( axInduction, tanInduction, u%Vx(i,j), u%Vy(i,j), p%chord(i,j), p%airDens, p%kinVisc, Vrel, Re )
             
                ! Solve for the constraint states here:
-            z_residual%phi(i,j) = UncoupledErrFn(z%phi(i,j), AOA, Re, p%numBlades, u%rlocal(i,j), u%rlocal(p%numBladeNodes,j), p%chord(i,j),  AFInfo(p%AFindx(i,j)), &
+            z_residual%phi(i,j) = UncoupledErrFn(z%phi(i,j), AOA, Re, p%numBlades, u%rlocal(i,j), p%chord(i,j),  AFInfo(p%AFindx(i,j)), &
                                  u%Vx(i,j), u%Vy(i,j), p%useTanInd, p%useAIDrag, p%useTIDrag, p%useHubLoss, p%useTipLoss, p%hubLossConst(i,j), p%tipLossConst(i,j), &
                                  ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1341,7 +1337,7 @@ subroutine GetSolveRegionOrdering(epsilon2, phiIn, test_lower, test_upper)
    
 end subroutine GetSolveRegionOrdering
    
-integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, rtip, chord, theta, AFInfo, &
+integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, chord, theta, AFInfo, &
                         Vx, Vy, Re, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst,  &
                         errStat, errMsg)
 
@@ -1350,8 +1346,7 @@ integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, rtip, chord, 
    integer,                intent(in   ) :: numBlades
    !integer,                intent(in   ) :: numBladeNodes
    type(AFInfoType),       intent(in   ) :: AFInfo
-   real(ReKi),             intent(in   ) :: rlocal         
-   real(ReKi),             intent(in   ) :: rtip           
+   real(ReKi),             intent(in   ) :: rlocal                    
    real(ReKi),             intent(in   ) :: chord          
    real(ReKi),             intent(in   ) :: theta           
    real(ReKi),             intent(in   ) :: Vx             
@@ -1376,7 +1371,7 @@ integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, rtip, chord, 
    ErrMsg  = ""
 
    AOA = phiLower - theta
-   f1 = UncoupledErrFn(phiLower, AOA, Re, numBlades, rlocal, rtip, chord, AFInfo, &
+   f1 = UncoupledErrFn(phiLower, AOA, Re, numBlades, rlocal, chord, AFInfo, &
                         Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, &
                         errStat2, errMsg2)
    
@@ -1384,7 +1379,7 @@ integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, rtip, chord, 
    if (errStat >= AbortErrLev) return
    
    AOA = phiUpper - theta
-   f2 = UncoupledErrFn(phiUpper, AOA, Re, numBlades, rlocal, rtip, chord, AFInfo, &
+   f2 = UncoupledErrFn(phiUpper, AOA, Re, numBlades, rlocal, chord, AFInfo, &
                      Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, &
                      errStat2, errMsg2)
    call SetErrStat( errStat2, errMsg2, errStat, errMsg, 'TestRegion' ) 
@@ -1404,7 +1399,7 @@ integer function TestRegion(phiLower, phiUpper, numBlades, rlocal, rtip, chord, 
    
 end function TestRegion
       
-logical function DeterminePhiBounds(epsilon2, phiIn, numBlades, AFInfo, rlocal, rtip, chord, theta,  &
+logical function DeterminePhiBounds(epsilon2, phiIn, numBlades, AFInfo, rlocal, chord, theta,  &
                            Vx, Vy, Re, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
                            phi_lower,phi_upper, ErrStat, ErrMsg)
 
@@ -1415,7 +1410,6 @@ logical function DeterminePhiBounds(epsilon2, phiIn, numBlades, AFInfo, rlocal, 
    integer,                intent(in   ) :: numBlades
    type(AFInfoType),       intent(in   ) :: AFInfo
    real(ReKi),             intent(in   ) :: rlocal         
-   real(ReKi),             intent(in   ) :: rtip           
    real(ReKi),             intent(in   ) :: chord          
    real(ReKi),             intent(in   ) :: theta           
    real(ReKi),             intent(in   ) :: Vx             
@@ -1450,7 +1444,7 @@ logical function DeterminePhiBounds(epsilon2, phiIn, numBlades, AFInfo, rlocal, 
    call GetSolveRegionOrdering(epsilon2, phiIn, test_lower, test_upper)
    
    do i = 1,3   ! Need to potentially test 3 regions
-      result = TestRegion(test_lower(i), test_upper(i), numBlades, rlocal, rtip, chord, theta, AFInfo, &
+      result = TestRegion(test_lower(i), test_upper(i), numBlades, rlocal, chord, theta, AFInfo, &
                         Vx, Vy, Re, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, &
                         errStat2, errMsg2)
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )   
@@ -1471,7 +1465,7 @@ logical function DeterminePhiBounds(epsilon2, phiIn, numBlades, AFInfo, rlocal, 
    
 end function DeterminePhiBounds
 
-subroutine BEMT_UnCoupledSolve( phiIn, numBlades, airDens, mu, AFInfo, rlocal, rtip, chord, theta,  &
+subroutine BEMT_UnCoupledSolve( phiIn, numBlades, airDens, mu, AFInfo, rlocal, chord, theta,  &
                            Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
                            maxIndIterations, aTol, &
                            phiStar, ErrStat, ErrMsg)
@@ -1484,8 +1478,7 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, airDens, mu, AFInfo, rlocal, r
    real(ReKi),             intent(in   ) :: airDens
    real(ReKi),             intent(in   ) :: mu
    TYPE(AFInfoType),       INTENT(IN   ) :: AFInfo
-   real(ReKi),             intent(in   ) :: rlocal         
-   real(ReKi),             intent(in   ) :: rtip           
+   real(ReKi),             intent(in   ) :: rlocal                    
    real(ReKi),             intent(in   ) :: chord          
    real(ReKi),             intent(in   ) :: theta           
    real(ReKi),             intent(in   ) :: Vx             
@@ -1550,7 +1543,7 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, airDens, mu, AFInfo, rlocal, r
       ! See if the previous value of phi still satisfies the residual equation
    if ( .NOT. EqualRealNos(phiIn, 0.0_ReKi) ) then  ! If the previous phi was 0.0, then we need to perform the solve, because we simply bail if phi is 0.0!
       AOA = phiIn - theta
-      f1 = UncoupledErrFn(phiIn, AOA, Re, numBlades, rlocal, rtip, chord, AFInfo, &
+      f1 = UncoupledErrFn(phiIn, AOA, Re, numBlades, rlocal, chord, AFInfo, &
                            Vx, Vy, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss,  hubLossConst, tipLossConst, &               
                            errStat2, errMsg2)
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
@@ -1565,7 +1558,7 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, airDens, mu, AFInfo, rlocal, r
    
       
       ! Find out what bracketed region we are going to look for the solution to the residual equation
-   isEpsilon =  DeterminePhiBounds(epsilon2, phiIn, numBlades, AFInfo, rlocal, rtip, chord, theta,  &
+   isEpsilon =  DeterminePhiBounds(epsilon2, phiIn, numBlades, AFInfo, rlocal, chord, theta,  &
                            Vx, Vy, Re, useTanInd, useAIDrag, useTIDrag, useHubLoss, useTipLoss, hubLossConst, tipLossConst, &
                            phi_lower, phi_upper, errStat2, errMsg2)
    
@@ -1586,7 +1579,6 @@ subroutine BEMT_UnCoupledSolve( phiIn, numBlades, airDens, mu, AFInfo, rlocal, r
    fcnArgs%mu              = mu
    fcnArgs%numBlades       = numBlades
    fcnArgs%rlocal          = rlocal
-   fcnArgs%rtip            = rtip
    fcnArgs%chord           = chord
    fcnArgs%theta           = theta   
    call AFI_Copyafinfotype( AFInfo, fcnArgs%AFInfo, MESH_NEWCOPY, errStat3, errMsg3 )  

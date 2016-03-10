@@ -32,8 +32,7 @@ module fminfcn
       real(ReKi)        :: airDens
       real(ReKi)        :: mu
       integer           :: numBlades
-      real(ReKi)        :: rlocal   
-      real(ReKi)        :: rtip   
+      real(ReKi)        :: rlocal      
       real(ReKi)        :: chord 
       real(ReKi)        :: theta         
       type(AFInfoType)  :: AFInfo
@@ -71,11 +70,11 @@ real(ReKi) function fmin_fcn(x, fcnArgs)
    
       ! Call the UncoupledErrFn subroutine to compute the residual
    AOA      = x - fcnArgs%theta
-   fmin_fcn = UncoupledErrFn( x,  AOA, fcnArgs%Re, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%rtip, fcnArgs%chord, fcnArgs%AFInfo, &
+   fmin_fcn = UncoupledErrFn( x,  AOA, fcnArgs%Re, fcnArgs%numBlades,  fcnArgs%rlocal, fcnArgs%chord, fcnArgs%AFInfo, &
                               fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &
                               errStat, errMsg)  
    
-  ! fmin_fcn = UncoupledErrFn( x,  AOA, fcnArgs%psi, fcnArgs%Re, 1, fcnArgs%airDens, fcnArgs%mu, fcnArgs%numBlades, fcnArgs%rlocal, fcnArgs%rtip, fcnArgs%chord, fcnArgs%theta, fcnArgs%AFInfo, &
+  ! fmin_fcn = UncoupledErrFn( x,  AOA, fcnArgs%psi, fcnArgs%Re, 1, fcnArgs%airDens, fcnArgs%mu, fcnArgs%numBlades, fcnArgs%rlocal, fcnArgs%chord, fcnArgs%theta, fcnArgs%AFInfo, &
   !                            fcnArgs%Vx, fcnArgs%Vy, fcnArgs%useTanInd, fcnArgs%useAIDrag, fcnArgs%useTIDrag, fcnArgs%useHubLoss, fcnArgs%useTipLoss,  fcnArgs%hubLossConst, fcnArgs%tipLossConst,  &
   !                            errStat, errMsg)  
    
