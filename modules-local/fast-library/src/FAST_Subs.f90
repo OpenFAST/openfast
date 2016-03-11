@@ -324,7 +324,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
                            
          CALL BD_Init( InitInData_BD, BD%Input(1,k), BD%p(k),  BD%x(k,STATE_CURR), BD%xd(k,STATE_CURR), BD%z(k,STATE_CURR), &
                            BD%OtherSt(k,STATE_CURR), BD%y(k),  BD%m(k), dt_BD, InitOutData_BD(k), ErrStat2, ErrMsg2 )
-            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)                        
+            CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)  
             
          !bjj: we're going to force this to have the same timestep because I don't want to have to deal with n BD modules with n timesteps.
          IF ( k == 1 ) THEN
@@ -341,6 +341,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
          if (BD%p(k)%analysis_type == BD_STATIC_ANALYSIS) then! static
             CALL SetErrStat(ErrID_Fatal,"BeamDyn cannot perform static analysis when coupled with FAST.",ErrStat,ErrMsg,RoutineName)
          end if         
+         
+         if (ErrStat>=AbortErrLev) exit !exit this loop so we don't get p_FAST%nBeams of the same errors
          
       END DO
                
