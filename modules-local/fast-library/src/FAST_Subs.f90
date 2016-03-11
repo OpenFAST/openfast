@@ -172,7 +172,8 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    y_FAST%UnGra = -1                                                    ! set the binary graphics output file unit to -1 to indicate it's not open
    
    p_FAST%WrVTK = VTK_Unknown                                           ! set this so that we can potentially output VTK information on initialization error
-   !p_FAST%VTK_Type = VTK_Unknown                                           ! set this so that we can potentially output VTK information on initialization error
+!   p_FAST%VTK_Type = VTK_Unknown                                        ! set this so that we can potentially output VTK information on initialization error
+!   p_FAST%VTK_fields = .false.                                          ! set this so that we can potentially output VTK information on initialization error
    y_FAST%VTK_count = 0                                                 ! first VTK file has 0 as output      
    y_FAST%n_Out = 0                                                     ! set the number of ouptut channels to 0 to indicate there's nothing to write to the binary file
    p_FAST%ModuleInitialized = .FALSE.                                   ! (array initialization) no modules are initialized 
@@ -970,10 +971,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       
       
    ! -------------------------------------------------------------------------
-   ! Initialize data for VTK output
+   ! Initialize surface data for VTK output
    ! -------------------------------------------------------------------------
             
-   if ( p_FAST%WrVTK == VTK_Surf ) then
+   if ( p_FAST%WrVTK > VTK_None .and. p_FAST%VTK_Type == VTK_Surf ) then
       call SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitOutData_HD, ED, BD, AD, HD, ErrStat2, ErrMsg2)      
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
@@ -1405,14 +1406,14 @@ SUBROUTINE ValidateInputData(p, ErrStat, ErrMsg)
    
    
    if ( p%WrVTK == VTK_Unknown ) then
-      call SetErrStat(ErrID_Fatal, 'WrVTK must be 0 (none), 1 (basic), 2 (surfaces), or 3 (all).', ErrStat, ErrMsg, RoutineName)
-      !call SetErrStat(ErrID_Fatal, 'WrVTK must be 0 (none), 1 (initialization only), or 2 (animation).', ErrStat, ErrMsg, RoutineName)
+      call SetErrStat(ErrID_Fatal, 'WrVTK must be 0 (none), 1 (initialization only), or 2 (animation).', ErrStat, ErrMsg, RoutineName)
+   else
+      if ( p%VTK_type == VTK_Unknown ) then
+         call SetErrStat(ErrID_Fatal, 'VTK_type must be 1 (surfaces), 2 (basic meshes:lines/points), or 3 (all meshes).', ErrStat, ErrMsg, RoutineName)
+         ! note I'm not going to write that 4 (old) is an option
+      end if      
    end if
 
-   !if ( p%VTK_type == VTK_Unknown ) then
-   !   call SetErrStat(ErrID_Fatal, 'VTK_type must be 1=surfaces; 2=basic meshes (lines/points); 3=all meshes (debug).', ErrStat, ErrMsg, RoutineName)
-   !   ! note I'm not going to write that 4 (old) is an option
-   !end if
       
    
    !...............................................................................................................................
@@ -1788,6 +1789,8 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
    CHARACTER(*),             INTENT(OUT)   :: ErrMsg                          !< Error message
 
       ! Local variables:
+   REAL(DbKi)                    :: TmpRate                                   ! temporary variable to read VTK_fps before converting to #steps based on DT
+   REAL(DbKi)                    :: VTK_fps                                   ! temporary variable to read VTK_fps before converting to #steps based on DT
    REAL(DbKi)                    :: TmpTime                                   ! temporary variable to read SttsTime and ChkptTime before converting to #steps based on DT
    INTEGER(IntKi)                :: I                                         ! loop counter
    INTEGER(IntKi)                :: UnIn                                      ! Unit number for reading file
@@ -1908,7 +1911,14 @@ SUBROUTINE FAST_ReadPrimaryFile( InputFile, p, ErrStat, ErrMsg )
    CALL ReadVar( UnIn, InputFile, p%DT, "DT", "Recommended module time step (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
-
+      
+      if ( EqualRealNos(p%DT, 0.0_DbKi) ) then
+         ! add a fatal error here because we're going to divide by DT later in this routine:
+         call CheckError(ErrID_Fatal,'DT cannot be zero.')
+         return
+      end if
+      
+      
       ! InterpOrder - Interpolation order for inputs and outputs {0=nearest neighbor ,1=linear, 2=quadratic}
    CALL ReadVar( UnIn, InputFile, p%InterpOrder, "InterpOrder", "Interpolation order "//&
                    "for inputs and outputs {0=nearest neighbor ,1=linear, 2=quadratic} (-)", ErrStat2, ErrMsg2, UnEc)
@@ -2145,54 +2155,6 @@ END DO
       ELSE         
          p%n_ChkptTime = NINT( TmpTime / p%DT )
       END IF
-
-      
-!>>>>>>>> fix me!      
-      ! WrVTK - Write VTK visualization data? (switch) {0=none; 1=basic (position only); 2=surfaces; 3=all meshes (debug)}:
-   CALL ReadVar( UnIn, InputFile, p%WrVTK, "WrVTK", "Write VTK visualization files (0=none; 1=basic; 2=surface; 3=all)", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN
-      
-          ! immediately convert to values used inside the code:
-         !IF ( p%WrVTK == 0 ) THEN 
-         !   p%WrVTK = VTK_None
-         !ELSEIF ( p%WrVTK == 1 ) THEN
-         !   p%WrVTK = VTK_Basic
-         !ELSEIF ( p%WrVTK == 2 ) THEN
-         !   p%WrVTK = VTK_Surface
-         !ELSEIF ( p%WrVTK == 3 ) THEN
-         !   p%WrVTK = VTK_All
-         !ELSEIF ( p%WrVTK == 4 ) THEN
-         !   p%WrVTK = VTK_Old
-         !ELSE
-         !   p%WrVTK = VTK_Unknown
-         !END IF
-         !
-         ! equivalent:
-         IF ( p%WrVTK < 0 .OR. p%WrVTK > 4 ) THEN 
-            p%WrVTK = VTK_Unknown
-         END IF
-         
-      
-      ! DT_VTK - Amount of time between consecutive visualization output files (s) {frame rate; will use closest integer multiple of DT} 
-   CALL ReadVar( UnIn, InputFile, TmpTime, "DT_VTK", "Amount of time between consecutive visualization files (s)", ErrStat2, ErrMsg2, UnEc)
-      CALL CheckError( ErrStat2, ErrMsg2 )
-      IF ( ErrStat >= AbortErrLev ) RETURN        
-    
-      IF (TmpTime > p%TMax) THEN
-         p%n_VTKTime = HUGE(p%n_VTKTime)
-      ELSE         
-         p%n_VTKTime = NINT( TmpTime / p%DT )
-         ! I'll warn if p%n_VTKTime*p%DT is necessarially TmpTime 
-         IF (p%WrVTK > VTK_None) THEN
-            if (.not. EqualRealNos(p%n_VTKTime*p%DT, TmpTime)) then
-               call CheckError(ErrID_Info, 'DT_VTK is not an integer multiple of DT. FAST will output VTK information at the closest rate possible.')
-            end if            
-         END IF
-                  
-      END IF            
-!<<<<<<<<<<<<<< fix me!      
-      
       
       ! DT_Out - Time step for tabular output (s):
    CALL ReadVar( UnIn, InputFile, Line, "DT_Out", "Time step for tabular output (s)", ErrStat2, ErrMsg2, UnEc)
@@ -2208,8 +2170,7 @@ END DO
             CALL CheckIOS ( IOS, InputFile, 'DT_Out', NumType, ErrStat2, ErrMsg2 )
             CALL CheckError( ErrStat2, ErrMsg2 )
       END IF
-    
-      
+          
       ! TStart - Time to begin tabular output (s):
    CALL ReadVar( UnIn, InputFile, p%TStart, "TStart", "Time to begin tabular output (s)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
@@ -2246,13 +2207,85 @@ END DO
          p%Delim = ' '
       END IF
 
-
       ! OutFmt - Format used for text tabular output (except time).  Resulting field should be 10 characters. (-):
    CALL ReadVar( UnIn, InputFile, p%OutFmt, "OutFmt", "Format used for text tabular output (except time).  Resulting field should be 10 characters. (-)", ErrStat2, ErrMsg2, UnEc)
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
 
+   !---------------------- VISUALIZATION -----------------------------------------------
+   CALL ReadCom( UnIn, InputFile, 'Section Header: Visualization', ErrStat2, ErrMsg2, UnEc )
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
 
+      ! WrVTK - VTK Visualization data output: (switch) {0=none; 1=initialization data only; 2=animation}:
+   CALL ReadVar( UnIn, InputFile, p%WrVTK, "WrVTK", "Write VTK visualization files (0=none; 1=initialization data only; 2=animation)", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+      
+      IF ( p%WrVTK < 0 .OR. p%WrVTK > 2 ) THEN 
+         p%WrVTK = VTK_Unknown
+      END IF
+      
+      ! VTK_Type - Type of  VTK visualization data: (switch) {1=surfaces; 2=basic meshes (lines/points); 3=all meshes (debug)}:
+   CALL ReadVar( UnIn, InputFile, p%VTK_Type, "VTK_Type", "Type of  VTK visualization data: (1=surfaces; 2=basic meshes (lines/points); 3=all meshes)", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+            
+          ! immediately convert to values used inside the code:
+         IF ( p%VTK_Type == 0 ) THEN 
+            p%VTK_Type = VTK_None
+         ELSEIF ( p%VTK_Type == 1 ) THEN
+            p%VTK_Type = VTK_Surf
+         ELSEIF ( p%VTK_Type == 2 ) THEN
+            p%VTK_Type = VTK_Basic
+         ELSEIF ( p%VTK_Type == 3 ) THEN
+            p%VTK_Type = VTK_All
+         ELSEIF ( p%VTK_Type == 4 ) THEN
+            p%VTK_Type = VTK_Old
+         ELSE
+            p%VTK_Type = VTK_Unknown
+         END IF
+         
+         !! equivalent:
+         !IF ( p%VTK_Type < 0 .OR. p%VTK_Type > 4 ) THEN 
+         !   p%VTK_Type = VTK_Unknown
+         !END IF
+         
+      ! VTK_fields - Write mesh fields to VTK data files? (flag) {true/false}:
+   CALL ReadVar( UnIn, InputFile, p%VTK_fields, "VTK_fields", "Write mesh fields to VTK data files? (flag)", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
+      
+      ! VTK_fps - Frame rate for VTK output (frames per second) {will use closest integer multiple of DT} 
+   CALL ReadVar( UnIn, InputFile, VTK_fps, "VTK_fps", "Frame rate for VTK output(fps)", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN        
+    
+      ! convert frames-per-second to seconds per sample:
+      if ( EqualRealNos(VTK_fps, 0.0_DbKi) ) then
+         TmpTime = p%TMax + p%DT
+      else
+         TmpTime = 1.0_DbKi / VTK_fps
+      end if
+      
+      ! now save the number of time steps between VTK file output:      
+      IF (TmpTime > p%TMax) THEN
+         p%n_VTKTime = HUGE(p%n_VTKTime)
+      ELSE         
+         p%n_VTKTime = NINT( TmpTime / p%DT )
+         ! I'll warn if p%n_VTKTime*p%DT is necessarially TmpTime 
+         IF (p%WrVTK > VTK_None) THEN
+            TmpRate = p%n_VTKTime*p%DT
+            if (.not. EqualRealNos(TmpRate, TmpTime)) then
+               call CheckError(ErrID_Info, '1/VTK_fps is not an integer multiple of DT. FAST will output VTK information at '//&
+                              trim(num2lstr(1.0_DbKi/TmpRate))//' fps, the closest rate possible.')
+            end if            
+         END IF
+                  
+      END IF            
+      
+            
+      
    !---------------------- END OF FILE -----------------------------------------
 
    CLOSE ( UnIn )
@@ -2556,6 +2589,8 @@ SUBROUTINE WrVTK_Ground ( RefPoint, Lengths, FileRootName, ErrStat, ErrMsg )
    INTEGER(IntKi)                        :: iy, ix        ! loop counters
    CHARACTER(1024)                       :: FileName
    INTEGER(IntKi), parameter             :: NumberOfPoints = 4
+   INTEGER(IntKi), parameter             :: NumberOfLines = 0
+   INTEGER(IntKi), parameter             :: NumberOfPolys = 1
         
    INTEGER(IntKi)                        :: ErrStat2 
    CHARACTER(ErrMsgLen)                  :: ErrMsg2
@@ -2572,18 +2607,9 @@ SUBROUTINE WrVTK_Ground ( RefPoint, Lengths, FileRootName, ErrStat, ErrMsg )
    ! PolyData (.vtp) — Serial vtkPolyData (unstructured) file
    FileName = TRIM(FileRootName)//'.vtp'
       
-   CALL GetNewUnit( Un, ErrStat2, ErrMsg2 )      
-   CALL OpenFOutFile ( Un, TRIM(FileName), ErrStat2, ErrMsg2 )
+   call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, ErrStat2, ErrMsg2 )    
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
-      
-      ! Write a VTP mesh file (Polygonal VTK file) with positions and polygons (surfaces)
-      ! (note alignment of WRITE statements to make sure spaces are lined up in XML file)
-      WRITE(Un,'(A)')         '<?xml version="1.0"?>'
-      WRITE(Un,'(A)')         '<VTKFile type="PolyData" version="0.1" byte_order="LittleEndian">' ! bjj note: we don't have binary data in this file, so byte_order shouldn't matter, right?
-      WRITE(Un,'(A)')         '  <PolyData>'
-      WRITE(Un,'(2(A,i7),A)') '    <Piece NumberOfPoints="', NumberOfPoints, '" NumberOfVerts="  0" NumberOfLines="', 0, '"'
-      WRITE(Un,'(A,i7,A)')    '           NumberOfStrips="  0" NumberOfPolys="',  1, '">'
          
 ! points (nodes, augmented with NumSegments):   
       WRITE(Un,'(A)')         '      <Points>'
@@ -2608,10 +2634,7 @@ SUBROUTINE WrVTK_Ground ( RefPoint, Lengths, FileRootName, ErrStat, ErrMsg )
       WRITE(Un,'(A)')         '        </DataArray>'
       WRITE(Un,'(A)')         '      </Polys>'      
             
-      WRITE(Un,'(A)')         '    </Piece>'
-      WRITE(Un,'(A)')         '  </PolyData>'
-      WRITE(Un,'(A)')         '</VTKFile>'
-      CLOSE(Un)         
+      call WrVTK_footer( Un )       
                      
    END SUBROUTINE WrVTK_Ground
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -2755,6 +2778,7 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
    CHARACTER(*),             INTENT(OUT)   :: ErrMsg                             !< Message describing error reported in ErrStat
 
       ! local variables
+   REAL(ReKi)                              :: TmpRate                            ! temporary rate for vtk output
    INTEGER(IntKi)                          :: I                                  ! temporary counter
    INTEGER(IntKi)                          :: J                                  ! temporary counter
    INTEGER(IntKi)                          :: Module_Number                      ! loop counter through the modules
@@ -2916,11 +2940,24 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
    END IF
 
    IF (p_FAST%WrVTK /= VTK_None) THEN
+      
+      TmpRate = p_FAST%DT_out*p_FAST%n_VTKTime
+      
       IF ( p_FAST%n_VTKTime == 1_IntKi ) THEN
          WRITE (y_FAST%UnSum, Fmt ) "VTK output files ", p_FAST%DT_out, 1_IntKi   ! we'll write "1" instead of "1^-1"
       ELSE
-         WRITE (y_FAST%UnSum, Fmt ) "VTK output files ", p_FAST%DT_out*p_FAST%n_VTKTime, p_FAST%n_VTKTime,"^-1"
+         WRITE (y_FAST%UnSum, Fmt ) "VTK output files ", TmpRate, p_FAST%n_VTKTime,"^-1"
       END IF
+      
+      ! bjj: fix this; possibly add names of which files will be generated?
+      if (p_FAST%WrVTK == VTK_Animate) then
+         Fmt = '(2X,A17,2X,'//TRIM(p_FAST%OutFmt)//',:,T37,:,A)'
+
+         WRITE (y_FAST%UnSum,'(//,2X,A)') " Requested Visualization Output"
+         WRITE (y_FAST%UnSum,   '(2X,A)') "-------------------------------------------------"
+         WRITE (y_FAST%UnSum,     Fmt   ) "Frame rate", 1.0_DbKi/TmpRate, " fps"
+      end if
+      
    END IF
 
    
@@ -3057,7 +3094,30 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
    CALL WriteOutputToFile(0, m_FAST%t_global, p_FAST, y_FAST, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD, MeshMapData, ErrStat2, ErrMsg2)   
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      
+      ! turn off VTK output when
+   if (p_FAST%WrVTK == VTK_InitOnly) then
+      ! Write visualization data for initialization (and also note that we're ignoring any errors that occur doing so)
+
+      IF ( p_FAST%VTK_Type == VTK_Surf ) THEN
+         CALL WrVTK_Surfaces(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
+      ELSE IF ( p_FAST%VTK_Type == VTK_Basic ) THEN
+         CALL WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
+      ELSE IF ( p_FAST%VTK_Type == VTK_All ) THEN
+         CALL WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)                                 
+      ELSE IF (p_FAST%VTK_Type==VTK_Old) THEN
+         CALL WriteInputMeshesToFile( ED%Input(1), AD%Input(1), SD%Input(1), HD%Input(1), MAPp%Input(1), BD%Input(1,:), TRIM(p_FAST%OutFileRoot)//'.InputMeshes.bin', ErrStat2, ErrMsg2)                                    
+   !unOut = -1
+   !CALL MeshWrBin ( unOut, AD%y%BladeLoad(2), ErrStat2, ErrMsg2, 'AD_2_ED_loads.bin');  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
+   !CALL MeshWrBin ( unOut, ED%Input(1)%BladePtLoads(2),ErrStat2, ErrMsg2, 'AD_2_ED_loads.bin');  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))            
+   !CALL MeshMapWrBin( unOut, AD%y%BladeLoad(2), ED%Input(1)%BladePtLoads(2), MeshMapData%AD_L_2_BDED_B(2), ErrStat2, ErrMsg2, 'AD_2_ED_loads.bin' );  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
+   !close( unOut )
+      END IF
+         
+      y_FAST%VTK_count = y_FAST%VTK_count + 1
+         
+   end if      
+
+                  
    !...............
    ! Copy values of these initial guesses for interpolation/extrapolation and 
    ! initialize predicted states for j_pc loop (use MESH_NEWCOPY here so we can use MESH_UPDATE copy later)
@@ -3866,7 +3926,6 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
 
 
    REAL(DbKi)                              :: OutTime             ! Used to determine if output should be generated at this simulation time
-   INTEGER(IntKi)                          :: unOut
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMSg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'WriteOutputToFile'
@@ -3894,34 +3953,20 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
    ENDIF
       
       ! Write visualization data (and also note that we're ignoring any errors that occur doing so)
-   IF ( p_FAST%WrVTK > VTK_None ) THEN
+   IF ( p_FAST%WrVTK == VTK_Animate ) THEN
       IF ( MOD( n_t_global, p_FAST%n_VTKTime ) == 0 ) THEN
-
-         IF ( p_FAST%WrVTK == VTK_Basic ) THEN
-            CALL WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
-         ELSE IF ( p_FAST%WrVTK == VTK_Surf ) THEN
+         
+         IF ( p_FAST%VTK_Type == VTK_Surf ) THEN
             CALL WrVTK_Surfaces(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
-         ELSE IF ( p_FAST%WrVTK == VTK_All ) THEN
+         ELSE IF ( p_FAST%VTK_Type == VTK_Basic ) THEN
+            CALL WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
+         ELSE IF ( p_FAST%VTK_Type == VTK_All ) THEN
             CALL WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)                                 
-         ELSE IF (p_FAST%WrVTK==VTK_Old) THEN
-            IF (n_t_global==0) THEN
-               CALL WriteInputMeshesToFile( ED%Input(1), AD%Input(1), SD%Input(1), HD%Input(1), MAPp%Input(1), BD%Input(1,:), TRIM(p_FAST%OutFileRoot)//'.InputMeshes.bin', ErrStat2, ErrMsg2)
-                  CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-                                    
-   unOut = -1
-   !CALL MeshWrBin ( unOut, AD%y%BladeLoad(2), ErrStat2, ErrMsg2, 'AD_2_ED_loads.bin');  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
-   !CALL MeshWrBin ( unOut, ED%Input(1)%BladePtLoads(2),ErrStat2, ErrMsg2, 'AD_2_ED_loads.bin');  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))            
-   !CALL MeshMapWrBin( unOut, AD%y%BladeLoad(2), ED%Input(1)%BladePtLoads(2), MeshMapData%AD_L_2_BDED_B(2), ErrStat2, ErrMsg2, 'AD_2_ED_loads.bin' );  IF (ErrStat2 /= ErrID_None) CALL WrScr(TRIM(ErrMsg2))
-   !close( unOut )
-                                       
-            END IF
-                           
+         ELSE IF (p_FAST%VTK_Type==VTK_Old) THEN                           
             CALL WriteMotionMeshesToFile(t_global, ED%Output(1), SD%Input(1), SD%y, HD%Input(1), MAPp%Input(1), BD%y, BD%Input(1,:), y_FAST%UnGra, ErrStat2, ErrMsg2, TRIM(p_FAST%OutFileRoot)//'.gra') 
-               CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          END IF
          
-         y_FAST%VTK_count = y_FAST%VTK_count + 1
-         
+         y_FAST%VTK_count = y_FAST%VTK_count + 1         
       END IF
    END IF
    
@@ -4192,21 +4237,23 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
    
          !  ElastoDyn outputs (motions)
       DO K=1,NumBl        
-         call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%BladeLn2Mesh(K), trim(p_FAST%OutFileRoot)//'.ED_BladeLn2Mesh_motion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )
-         call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%BladeRootMotion(K), trim(p_FAST%OutFileRoot)//'.ED_BladeRootMotion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )
+         call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%BladeLn2Mesh(K), trim(p_FAST%OutFileRoot)//'.ED_BladeLn2Mesh_motion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
+         call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%BladeRootMotion(K), trim(p_FAST%OutFileRoot)//'.ED_BladeRootMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
       END DO
       
-      call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%TowerLn2Mesh, trim(p_FAST%OutFileRoot)//'.ED_TowerLn2Mesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
-      call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%HubPtMotion, trim(p_FAST%OutFileRoot)//'.ED_HubPtMotion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
-      call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%NacelleMotion, trim(p_FAST%OutFileRoot)//'.ED_NacelleMotion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
-      call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%PlatformPtMesh, trim(p_FAST%OutFileRoot)//'.ED_PlatformPtMesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
+      call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%TowerLn2Mesh, trim(p_FAST%OutFileRoot)//'.ED_TowerLn2Mesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
+
+! these will get output with their sibling input meshes
+      !call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%HubPtMotion, trim(p_FAST%OutFileRoot)//'.ED_HubPtMotion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
+      !call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%NacelleMotion, trim(p_FAST%OutFileRoot)//'.ED_NacelleMotion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
+      !call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%PlatformPtMesh, trim(p_FAST%OutFileRoot)//'.ED_PlatformPtMesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
       
          !  ElastoDyn inputs (loads)
-      !%BladePtLoads used only when not BD
-      call MeshWrVTK(p_FAST%TurbinePos, ED%Input(1)%TowerPtLoads, trim(p_FAST%OutFileRoot)//'.ED_TowerPtLoads', y_FAST%VTK_count, ErrStat2, ErrMsg2, ED%Output(1)%TowerLn2Mesh )     
-      call MeshWrVTK(p_FAST%TurbinePos, ED%Input(1)%HubPtLoad, trim(p_FAST%OutFileRoot)//'.ED_HubPtLoad', y_FAST%VTK_count, ErrStat2, ErrMsg2, ED%Output(1)%HubPtMotion )
-      call MeshWrVTK(p_FAST%TurbinePos, ED%Input(1)%NacelleLoads, trim(p_FAST%OutFileRoot)//'.ED_NacelleLoads' ,y_FAST%VTK_count, ErrStat2, ErrMsg2, ED%Output(1)%NacelleMotion )     
-      call MeshWrVTK(p_FAST%TurbinePos, ED%Input(1)%PlatformPtMesh, trim(p_FAST%OutFileRoot)//'.ED_PlatformPtMesh_loads', y_FAST%VTK_count, ErrStat2, ErrMsg2, ED%Output(1)%PlatformPtMesh )     
+      ! %BladePtLoads used only when not BD (see below)
+      call MeshWrVTK(p_FAST%TurbinePos, ED%Input(1)%TowerPtLoads, trim(p_FAST%OutFileRoot)//'.ED_TowerPtLoads', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, ED%Output(1)%TowerLn2Mesh )     
+      call MeshWrVTK(p_FAST%TurbinePos, ED%Input(1)%HubPtLoad, trim(p_FAST%OutFileRoot)//'.ED_Hub', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, ED%Output(1)%HubPtMotion )
+      call MeshWrVTK(p_FAST%TurbinePos, ED%Input(1)%NacelleLoads, trim(p_FAST%OutFileRoot)//'.ED_Nacelle' ,y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, ED%Output(1)%NacelleMotion )     
+      call MeshWrVTK(p_FAST%TurbinePos, ED%Input(1)%PlatformPtMesh, trim(p_FAST%OutFileRoot)//'.ED_PlatformPtMesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, ED%Output(1)%PlatformPtMesh )     
    end if
    
    
@@ -4215,34 +4262,34 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
             
       do K=1,NumBl        
             ! BeamDyn inputs
-         call MeshWrVTK(p_FAST%TurbinePos, BD%Input(1,k)%RootMotion, trim(p_FAST%OutFileRoot)//'.BD_RootMotion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )
-         call MeshWrVTK(p_FAST%TurbinePos, BD%Input(1,k)%HubMotion, trim(p_FAST%OutFileRoot)//'.BD_HubMotion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )    
-         call MeshWrVTK(p_FAST%TurbinePos, BD%Input(1,k)%DistrLoad, trim(p_FAST%OutFileRoot)//'.BD_DistrLoad'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2, MeshMapData%y_BD_BldMotion_4Loads(k) )
+         !call MeshWrVTK(p_FAST%TurbinePos, BD%Input(1,k)%RootMotion, trim(p_FAST%OutFileRoot)//'.BD_RootMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
+         call MeshWrVTK(p_FAST%TurbinePos, BD%Input(1,k)%HubMotion, trim(p_FAST%OutFileRoot)//'.BD_HubMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )    
+         call MeshWrVTK(p_FAST%TurbinePos, BD%Input(1,k)%DistrLoad, trim(p_FAST%OutFileRoot)//'.BD_DistrLoad'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, MeshMapData%y_BD_BldMotion_4Loads(k) )
          ! skipping PointLoad
       end do
       
       do K=1,NumBl        
             ! BeamDyn outputs
-         call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%ReactionForce, trim(p_FAST%OutFileRoot)//'.BD_ReactionForce'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2, BD%Input(1,k)%RootMotion )
-         call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.BD_BldMotion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )
+         call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%ReactionForce, trim(p_FAST%OutFileRoot)//'.BD_ReactionForce_RootMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, BD%Input(1,k)%RootMotion )
+         call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.BD_BldMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
          ! skipping BldForce         
       end do  
       
    ELSE if (allocated(ED%Input) .and. allocated(ED%Output)) then
       DO K=1,NumBl        
-         call MeshWrVTK(p_FAST%TurbinePos, ED%Input(1)%BladePtLoads(K), trim(p_FAST%OutFileRoot)//'.ED_BladePtLoads'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2, ED%Output(1)%BladeLn2Mesh(K) )
+         call MeshWrVTK(p_FAST%TurbinePos, ED%Input(1)%BladePtLoads(K), trim(p_FAST%OutFileRoot)//'.ED_BladePtLoads'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, ED%Output(1)%BladeLn2Mesh(K) )
       END DO      
    END IF
             
 !  ServoDyn
    if (allocated(SrvD%Input)) then
       IF ( SrvD%Input(1)%NTMD%Mesh%Committed ) THEN         
-         call MeshWrVTK(p_FAST%TurbinePos, SrvD%Input(1)%NTMD%Mesh, trim(p_FAST%OutFileRoot)//'.SrvD_NTMD_Motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
-         call MeshWrVTK(p_FAST%TurbinePos, SrvD%y%NTMD%Mesh, trim(p_FAST%OutFileRoot)//'.SrvD_NTMD_Loads', y_FAST%VTK_count, ErrStat2, ErrMsg2, SrvD%Input(1)%TTMD%Mesh )                
+         !call MeshWrVTK(p_FAST%TurbinePos, SrvD%Input(1)%NTMD%Mesh, trim(p_FAST%OutFileRoot)//'.SrvD_NTMD_Motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
+         call MeshWrVTK(p_FAST%TurbinePos, SrvD%y%NTMD%Mesh, trim(p_FAST%OutFileRoot)//'.SrvD_NTMD_Loads', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, SrvD%Input(1)%TTMD%Mesh )                
       END IF      
       IF ( SrvD%Input(1)%TTMD%Mesh%Committed ) THEN 
-         call MeshWrVTK(p_FAST%TurbinePos, SrvD%Input(1)%TTMD%Mesh, trim(p_FAST%OutFileRoot)//'.SrvD_TTMD_Motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
-         call MeshWrVTK(p_FAST%TurbinePos, SrvD%y%TTMD%Mesh, trim(p_FAST%OutFileRoot)//'.SrvD_TTMD_Loads', y_FAST%VTK_count, ErrStat2, ErrMsg2, SrvD%Input(1)%TTMD%Mesh )         
+         !call MeshWrVTK(p_FAST%TurbinePos, SrvD%Input(1)%TTMD%Mesh, trim(p_FAST%OutFileRoot)//'.SrvD_TTMD_Motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
+         call MeshWrVTK(p_FAST%TurbinePos, SrvD%y%TTMD%Mesh, trim(p_FAST%OutFileRoot)//'.SrvD_TTMD_Loads', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, SrvD%Input(1)%TTMD%Mesh )         
       END IF   
    end if
    
@@ -4253,16 +4300,16 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
       if (allocated(AD%Input(1)%BladeRootMotion)) then      
       
          DO K=1,NumBl   
-            call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%BladeRootMotion(K), trim(p_FAST%OutFileRoot)//'.AD_BladeRootMotion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
-            call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%BladeMotion(K), trim(p_FAST%OutFileRoot)//'.AD_BladeMotion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
+            call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%BladeRootMotion(K), trim(p_FAST%OutFileRoot)//'.AD_BladeRootMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
+            !call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%BladeMotion(K), trim(p_FAST%OutFileRoot)//'.AD_BladeMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
          END DO            
-         call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%HubMotion, trim(p_FAST%OutFileRoot)//'.AD_HubMotion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
-         call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%TowerMotion, trim(p_FAST%OutFileRoot)//'.AD_TowerMotion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
+         call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%HubMotion, trim(p_FAST%OutFileRoot)//'.AD_HubMotion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
+         !call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%TowerMotion, trim(p_FAST%OutFileRoot)//'.AD_TowerMotion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
                
          DO K=1,NumBl   
-            call MeshWrVTK(p_FAST%TurbinePos, AD%y%BladeLoad(K), trim(p_FAST%OutFileRoot)//'.AD_BladeLoad'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2, AD%Input(1)%BladeMotion(k) )     
+            call MeshWrVTK(p_FAST%TurbinePos, AD%y%BladeLoad(K), trim(p_FAST%OutFileRoot)//'.AD_BladeLoad_BladeMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, AD%Input(1)%BladeMotion(k) )     
          END DO            
-         call MeshWrVTK(p_FAST%TurbinePos, AD%y%TowerLoad, trim(p_FAST%OutFileRoot)//'.AD_TowerLoad', y_FAST%VTK_count, ErrStat2, ErrMsg2, AD%Input(1)%TowerMotion )     
+         call MeshWrVTK(p_FAST%TurbinePos, AD%y%TowerLoad, trim(p_FAST%OutFileRoot)//'.AD_TowerLoad_TowerMotion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, AD%Input(1)%TowerMotion )     
          
       end if
       
@@ -4270,52 +4317,52 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
    
 ! HydroDyn            
    IF ( p_FAST%CompHydro == Module_HD .and. allocated(HD%Input)) THEN       
-      call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Mesh, trim(p_FAST%OutFileRoot)//'.HD_Mesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
-      call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%LumpedMesh, trim(p_FAST%OutFileRoot)//'.HD_MorisonLumped_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
-      call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%OutFileRoot)//'.HD_MorisonDistrib_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
+      call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Mesh, trim(p_FAST%OutFileRoot)//'.HD_Mesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
+      !call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%LumpedMesh, trim(p_FAST%OutFileRoot)//'.HD_MorisonLumped_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
+      !call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%OutFileRoot)//'.HD_MorisonDistrib_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
       
-      call MeshWrVTK(p_FAST%TurbinePos, HD%y%AllHdroOrigin, trim(p_FAST%OutFileRoot)//'.HD_AllHdroOrigin_load', y_FAST%VTK_count, ErrStat2, ErrMsg2, HD%Input(1)%Mesh )     
-      call MeshWrVTK(p_FAST%TurbinePos, HD%y%Mesh, trim(p_FAST%OutFileRoot)//'.HD_Mesh_load', y_FAST%VTK_count, ErrStat2, ErrMsg2, HD%Input(1)%Mesh )     
+      call MeshWrVTK(p_FAST%TurbinePos, HD%y%AllHdroOrigin, trim(p_FAST%OutFileRoot)//'.HD_AllHdroOrigin_load', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, HD%Input(1)%Mesh )     
+      call MeshWrVTK(p_FAST%TurbinePos, HD%y%Mesh, trim(p_FAST%OutFileRoot)//'.HD_Mesh_load', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, HD%Input(1)%Mesh )     
                   
-      call MeshWrVTK(p_FAST%TurbinePos, HD%y%Morison%LumpedMesh, trim(p_FAST%OutFileRoot)//'.HD_MorisonLumped_loads', y_FAST%VTK_count, ErrStat2, ErrMsg2, HD%Input(1)%Morison%LumpedMesh )     
-      call MeshWrVTK(p_FAST%TurbinePos, HD%y%Morison%DistribMesh, trim(p_FAST%OutFileRoot)//'.HD_MorisonDistrib_loads', y_FAST%VTK_count, ErrStat2, ErrMsg2, HD%Input(1)%Morison%DistribMesh )     
+      call MeshWrVTK(p_FAST%TurbinePos, HD%y%Morison%LumpedMesh, trim(p_FAST%OutFileRoot)//'.HD_MorisonLumped', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, HD%Input(1)%Morison%LumpedMesh )     
+      call MeshWrVTK(p_FAST%TurbinePos, HD%y%Morison%DistribMesh, trim(p_FAST%OutFileRoot)//'.HD_MorisonDistrib', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, HD%Input(1)%Morison%DistribMesh )     
    END IF
    
 ! SubDyn   
    IF ( p_FAST%CompSub == Module_SD .and. allocated(SD%Input)) THEN
-      call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%TPMesh, trim(p_FAST%OutFileRoot)//'.SD_TPMesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
-      call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%LMesh, trim(p_FAST%OutFileRoot)//'.SD_LMesh_loads', y_FAST%VTK_count, ErrStat2, ErrMsg2, SD%y%y2Mesh )     
+      !call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%TPMesh, trim(p_FAST%OutFileRoot)//'.SD_TPMesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
+      call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%LMesh, trim(p_FAST%OutFileRoot)//'.SD_LMesh_y2Mesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, SD%y%y2Mesh )     
       
-      call MeshWrVTK(p_FAST%TurbinePos, SD%y%y1Mesh, trim(p_FAST%OutFileRoot)//'.SD_y1Mesh_loads', y_FAST%VTK_count, ErrStat2, ErrMsg2, SD%Input(1)%TPMesh )     
-      call MeshWrVTK(p_FAST%TurbinePos, SD%y%y2Mesh, trim(p_FAST%OutFileRoot)//'.SD_y2Mesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )        
+      call MeshWrVTK(p_FAST%TurbinePos, SD%y%y1Mesh, trim(p_FAST%OutFileRoot)//'.SD_y1Mesh_TPMesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, SD%Input(1)%TPMesh )     
+      !call MeshWrVTK(p_FAST%TurbinePos, SD%y%y2Mesh, trim(p_FAST%OutFileRoot)//'.SD_y2Mesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )        
    END IF     
        
 ! MAP
    IF ( p_FAST%CompMooring == Module_MAP ) THEN
       if (allocated(MAPp%Input)) then
-         call MeshWrVTK(p_FAST%TurbinePos, MAPp%y%PtFairleadLoad, trim(p_FAST%OutFileRoot)//'.MAP_PtFair_loads', y_FAST%VTK_count, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement )     
-         call MeshWrVTK(p_FAST%TurbinePos, MAPp%Input(1)%PtFairDisplacement, trim(p_FAST%OutFileRoot)//'.MAP_PtFair_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )        
+         call MeshWrVTK(p_FAST%TurbinePos, MAPp%y%PtFairleadLoad, trim(p_FAST%OutFileRoot)//'.MAP_PtFairlead', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, MAPp%Input(1)%PtFairDisplacement )     
+         !call MeshWrVTK(p_FAST%TurbinePos, MAPp%Input(1)%PtFairDisplacement, trim(p_FAST%OutFileRoot)//'.MAP_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )        
       end if
       
 ! MoorDyn      
    ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
       if (allocated(MD%Input)) then
-         call MeshWrVTK(p_FAST%TurbinePos, MD%y%PtFairleadLoad, trim(p_FAST%OutFileRoot)//'.MD_PtFair_loads', y_FAST%VTK_count, ErrStat2, ErrMsg2, MD%Input(1)%PtFairleadDisplacement )     
-         call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )        
+         call MeshWrVTK(p_FAST%TurbinePos, MD%y%PtFairleadLoad, trim(p_FAST%OutFileRoot)//'.MD_PtFairlead', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, MD%Input(1)%PtFairleadDisplacement )     
+         !call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )        
       end if
       
 ! FEAMooring                   
    ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
       if (allocated(FEAM%Input)) then
-         call MeshWrVTK(p_FAST%TurbinePos, FEAM%y%PtFairleadLoad, trim(p_FAST%OutFileRoot)//'.FEAM_PtFair_loads', y_FAST%VTK_count, ErrStat2, ErrMsg2, FEAM%Input(1)%PtFairleadDisplacement )     
-         call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'.FEAM_PtFair_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )        
+         call MeshWrVTK(p_FAST%TurbinePos, FEAM%y%PtFairleadLoad, trim(p_FAST%OutFileRoot)//'.FEAM_PtFairlead', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, FEAM%Input(1)%PtFairleadDisplacement )     
+         !call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'.FEAM_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )        
       end if
       
 ! Orca      
    ELSEIF ( p_FAST%CompMooring == Module_Orca ) THEN
       if (allocated(Orca%Input)) then
-         call MeshWrVTK(p_FAST%TurbinePos, Orca%y%PtfmMesh, trim(p_FAST%OutFileRoot)//'.Orca_PtfmMesh_loads', y_FAST%VTK_count, ErrStat2, ErrMsg2, Orca%Input(1)%PtfmMesh )     
-         call MeshWrVTK(p_FAST%TurbinePos, Orca%Input(1)%PtfmMesh, trim(p_FAST%OutFileRoot)//'.Orca_PtfmMesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )
+         call MeshWrVTK(p_FAST%TurbinePos, Orca%y%PtfmMesh, trim(p_FAST%OutFileRoot)//'.Orca_PtfmMesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Orca%Input(1)%PtfmMesh )     
+         !call MeshWrVTK(p_FAST%TurbinePos, Orca%Input(1)%PtfmMesh, trim(p_FAST%OutFileRoot)//'.Orca_PtfmMesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
       end if
    END IF
             
@@ -4323,8 +4370,8 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
 ! IceFloe      
    IF ( p_FAST%CompIce == Module_IceF ) THEN
       if (allocated(IceF%Input)) then
-         call MeshWrVTK(p_FAST%TurbinePos, IceF%y%iceMesh, trim(p_FAST%OutFileRoot)//'.IceF_iceMesh_loads', y_FAST%VTK_count, ErrStat2, ErrMsg2, IceF%Input(1)%iceMesh )     
-         call MeshWrVTK(p_FAST%TurbinePos, IceF%Input(1)%iceMesh, trim(p_FAST%OutFileRoot)//'.IceF_iceMesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )
+         call MeshWrVTK(p_FAST%TurbinePos, IceF%y%iceMesh, trim(p_FAST%OutFileRoot)//'.IceF_iceMesh', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, IceF%Input(1)%iceMesh )     
+         !call MeshWrVTK(p_FAST%TurbinePos, IceF%Input(1)%iceMesh, trim(p_FAST%OutFileRoot)//'.IceF_iceMesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
       end if
       
 ! IceDyn
@@ -4332,8 +4379,8 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
       if (allocated(IceD%Input)) then
             
          DO k = 1,p_FAST%numIceLegs
-            call MeshWrVTK(p_FAST%TurbinePos, IceD%y(k)%PointMesh, trim(p_FAST%OutFileRoot)//'.IceD_PointMesh_loads'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2, IceD%Input(1,k)%PointMesh )     
-            call MeshWrVTK(p_FAST%TurbinePos, IceD%Input(1,k)%PointMesh, trim(p_FAST%OutFileRoot)//'.IceD_PointMesh_motion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2 )
+            call MeshWrVTK(p_FAST%TurbinePos, IceD%y(k)%PointMesh, trim(p_FAST%OutFileRoot)//'.IceD_PointMesh'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, IceD%Input(1,k)%PointMesh )     
+            !call MeshWrVTK(p_FAST%TurbinePos, IceD%Input(1,k)%PointMesh, trim(p_FAST%OutFileRoot)//'.IceD_PointMesh_motion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
          END DO
       end if
       
@@ -4376,49 +4423,54 @@ SUBROUTINE WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW,
    NumBl = SIZE(ED%Output(1)%BladeRootMotion)            
 
 ! Nacelle
-!   call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%NacelleMotion, trim(p_FAST%OutFileRoot)//'.ED_NacelleMotion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
+!   call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%NacelleMotion, trim(p_FAST%OutFileRoot)//'.ED_NacelleMotion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
    
 ! Hub
-!   call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%HubPtMotion, trim(p_FAST%OutFileRoot)//'.ED_HubPtMotion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
+!   call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%HubPtMotion, trim(p_FAST%OutFileRoot)//'.ED_HubPtMotion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
    
 ! Blades
    IF ( p_FAST%CompAero == Module_AD ) THEN  ! These meshes may have airfoil data associated with nodes...
       DO K=1,NumBl   
-         call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%BladeMotion(K), trim(p_FAST%OutFileRoot)//'.AD_BladeMotion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2, PositionOnly=.true. )     
+         call MeshWrVTK(p_FAST%TurbinePos, AD%Input(1)%BladeMotion(K), trim(p_FAST%OutFileRoot)//'.AD_BladeMotion'//trim(num2lstr(k)), &
+                        y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Sib=AD%y%BladeLoad(K) )     
       END DO                  
    ELSE IF ( p_FAST%CompElast == Module_BD ) THEN
       DO K=1,NumBl                 
-         call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.BD_BldMotion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2, PositionOnly=.true. )         
+         call MeshWrVTK(p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.BD_BldMotion'//trim(num2lstr(k)), &
+                        y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )         
       END DO  
    ELSE
       DO K=1,NumBl        
-         call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%BladeLn2Mesh(K), trim(p_FAST%OutFileRoot)//'.ED_BladeLn2Mesh_motion'//trim(num2lstr(k)), y_FAST%VTK_count, ErrStat2, ErrMsg2, PositionOnly=.true. )
+         call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%BladeLn2Mesh(K), trim(p_FAST%OutFileRoot)//'.ED_BladeLn2Mesh_motion'//trim(num2lstr(k)), &
+                        y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
       END DO  
    END IF   
          
 ! Tower motions
-   call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%TowerLn2Mesh, trim(p_FAST%OutFileRoot)//'.ED_TowerLn2Mesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2, PositionOnly=.true. )     
+   call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%TowerLn2Mesh, trim(p_FAST%OutFileRoot)//'.ED_TowerLn2Mesh_motion', &
+                  y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
    
    
 ! Substructure   
-!   call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%PlatformPtMesh, trim(p_FAST%OutFileRoot)//'.ED_PlatformPtMesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
+!   call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%PlatformPtMesh, trim(p_FAST%OutFileRoot)//'.ED_PlatformPtMesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
 !   IF ( p_FAST%CompSub == Module_SD ) THEN
-!     call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%TPMesh, trim(p_FAST%OutFileRoot)//'.SD_TPMesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
+!     call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%TPMesh, trim(p_FAST%OutFileRoot)//'.SD_TPMesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
 !      call MeshWrVTK(p_FAST%TurbinePos, SD%y%y2Mesh, trim(p_FAST%OutFileRoot)//'.SD_y2Mesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )        
 !   END IF     
       
    IF ( p_FAST%CompHydro == Module_HD ) THEN       
-      call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%OutFileRoot)//'.HD_MorisonDistrib_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2, PositionOnly=.true. )           
+      call MeshWrVTK(p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%OutFileRoot)//'.HD_MorisonDistrib', &
+                     y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Sib=HD%y%Morison%DistribMesh )           
    END IF
    
    
 ! Mooring Lines?            
 !   IF ( p_FAST%CompMooring == Module_MAP ) THEN
-!      call MeshWrVTK(p_FAST%TurbinePos, MAPp%Input(1)%PtFairDisplacement, trim(p_FAST%OutFileRoot)//'.MAP_PtFair_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )        
+!      call MeshWrVTK(p_FAST%TurbinePos, MAPp%Input(1)%PtFairDisplacement, trim(p_FAST%OutFileRoot)//'.MAP_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )        
 !   ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-!      call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )        
+!      call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )        
 !   ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
-!      call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'FEAM_PtFair_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )        
+!      call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'FEAM_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )        
 !   END IF
          
    
@@ -4457,60 +4509,67 @@ SUBROUTINE WrVTK_Surfaces(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, Op
    
    NumBl = SIZE(ED%Output(1)%BladeRootMotion)            
 
-! Ground
-!   call MeshWrVTK_PointSurface (p_FAST%TurbinePos, ED%Output(1)%PlatformPtMesh, trim(p_FAST%OutFileRoot)//'.GroundSurface', y_FAST%VTK_count, ErrStat2, ErrMsg2, Radius = p_FAST%VTK_Surface%GroundRad )
-
+! Ground (written at initialization)
    
    
 ! Nacelle
-   call MeshWrVTK_PointSurface (p_FAST%TurbinePos, ED%Output(1)%NacelleMotion, trim(p_FAST%OutFileRoot)//'.NacelleSurface', y_FAST%VTK_count, ErrStat2, ErrMsg2, verts = p_FAST%VTK_Surface%NacelleBox )
+   call MeshWrVTK_PointSurface (p_FAST%TurbinePos, ED%Output(1)%NacelleMotion, trim(p_FAST%OutFileRoot)//'.NacelleSurface', &
+                                y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, verts = p_FAST%VTK_Surface%NacelleBox, Sib=ED%Input(1)%NacelleLoads )
    
    
 ! Hub
-   call MeshWrVTK_PointSurface (p_FAST%TurbinePos, ED%Output(1)%HubPtMotion, trim(p_FAST%OutFileRoot)//'.HubSurface', y_FAST%VTK_count, ErrStat2, ErrMsg2, &
-                                 NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTK_Surface%HubRad )
+   call MeshWrVTK_PointSurface (p_FAST%TurbinePos, ED%Output(1)%HubPtMotion, trim(p_FAST%OutFileRoot)//'.HubSurface', &
+                                y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, &
+                                NumSegments=p_FAST%VTK_Surface%NumSectors, radius=p_FAST%VTK_Surface%HubRad, Sib=ED%Input(1)%HubPtLoad )
    
 ! Blades
    IF ( p_FAST%CompAero == Module_AD ) THEN  ! These meshes may have airfoil data associated with nodes...
       DO K=1,NumBl
-         call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, AD%Input(1)%BladeMotion(K), trim(p_FAST%OutFileRoot)//'.Blade'//trim(num2lstr(k))//'Surface', y_FAST%VTK_count, ErrStat2, ErrMsg2, verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords )
+         call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, AD%Input(1)%BladeMotion(K), trim(p_FAST%OutFileRoot)//'.Blade'//trim(num2lstr(k))//'Surface', &
+                                    y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords &
+                                    ,Sib=AD%y%BladeLoad(k) )
       END DO                  
    ELSE IF ( p_FAST%CompElast == Module_BD ) THEN
       DO K=1,NumBl                 
-         call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.Blade'//trim(num2lstr(k))//'Surface', y_FAST%VTK_count, ErrStat2, ErrMsg2, verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords )
+         call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, BD%y(k)%BldMotion, trim(p_FAST%OutFileRoot)//'.Blade'//trim(num2lstr(k))//'Surface', &
+                                    y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords )
       END DO  
    ELSE
       DO K=1,NumBl        
-         call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, ED%Output(1)%BladeLn2Mesh(K), trim(p_FAST%OutFileRoot)//'.Blade'//trim(num2lstr(k))//'Surface', y_FAST%VTK_count, ErrStat2, ErrMsg2, verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords )
+         call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, ED%Output(1)%BladeLn2Mesh(K), trim(p_FAST%OutFileRoot)//'.Blade'//trim(num2lstr(k))//'Surface', &
+                                    y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, verts=p_FAST%VTK_Surface%BladeShape(K)%AirfoilCoords )
       END DO  
    END IF   
          
 ! Tower motions
-   call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, ED%Output(1)%TowerLn2Mesh, trim(p_FAST%OutFileRoot)//'.TowerSurface', y_FAST%VTK_count, ErrStat2, ErrMsg2, p_FAST%VTK_Surface%NumSectors, p_FAST%VTK_Surface%TowerRad )
+   call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, ED%Output(1)%TowerLn2Mesh, trim(p_FAST%OutFileRoot)//'.TowerSurface', &
+                              y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_Surface%NumSectors, p_FAST%VTK_Surface%TowerRad )
    
 ! Platform
-! call MeshWrVTK_PointSurface (p_FAST%TurbinePos, ED%Output(1)%PlatformPtMesh, trim(p_FAST%OutFileRoot)//'.PlatformSurface', y_FAST%VTK_count, ErrStat2, ErrMsg2, Radius = p_FAST%VTK_Surface%GroundRad )
+! call MeshWrVTK_PointSurface (p_FAST%TurbinePos, ED%Output(1)%PlatformPtMesh, trim(p_FAST%OutFileRoot)//'.PlatformSurface', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, Radius = p_FAST%VTK_Surface%GroundRad )
    
    
 ! Substructure   
-!   call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%PlatformPtMesh, trim(p_FAST%OutFileRoot)//'.ED_PlatformPtMesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
+!   call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%PlatformPtMesh, trim(p_FAST%OutFileRoot)//'.ED_PlatformPtMesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
 !   IF ( p_FAST%CompSub == Module_SD ) THEN
-!     call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%TPMesh, trim(p_FAST%OutFileRoot)//'.SD_TPMesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )     
-!      call MeshWrVTK(p_FAST%TurbinePos, SD%y%y2Mesh, trim(p_FAST%OutFileRoot)//'.SD_y2Mesh_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )        
+!     call MeshWrVTK(p_FAST%TurbinePos, SD%Input(1)%TPMesh, trim(p_FAST%OutFileRoot)//'.SD_TPMesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )     
+!      call MeshWrVTK(p_FAST%TurbinePos, SD%y%y2Mesh, trim(p_FAST%OutFileRoot)//'.SD_y2Mesh_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )        
 !   END IF     
       
    IF ( HD%Input(1)%Morison%DistribMesh%Committed ) THEN       
-      call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%OutFileRoot)//'.MorisonSurface', y_FAST%VTK_count, ErrStat2, ErrMsg2, p_FAST%VTK_Surface%NumSectors, p_FAST%VTK_Surface%MorisonRad )
+      call MeshWrVTK_Ln2Surface (p_FAST%TurbinePos, HD%Input(1)%Morison%DistribMesh, trim(p_FAST%OutFileRoot)//'.MorisonSurface', &
+                                 y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, p_FAST%VTK_Surface%NumSectors, &
+                                 p_FAST%VTK_Surface%MorisonRad, Sib=HD%y%Morison%DistribMesh )
    END IF
    
    
 ! Mooring Lines?            
 !   IF ( p_FAST%CompMooring == Module_MAP ) THEN
-!      call MeshWrVTK(p_FAST%TurbinePos, MAPp%Input(1)%PtFairDisplacement, trim(p_FAST%OutFileRoot)//'.MAP_PtFair_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )        
+!      call MeshWrVTK(p_FAST%TurbinePos, MAPp%Input(1)%PtFairDisplacement, trim(p_FAST%OutFileRoot)//'.MAP_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )        
 !   ELSEIF ( p_FAST%CompMooring == Module_MD ) THEN
-!      call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )        
+!      call MeshWrVTK(p_FAST%TurbinePos, MD%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'.MD_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )        
 !   ELSEIF ( p_FAST%CompMooring == Module_FEAM ) THEN
-!      call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'FEAM_PtFair_motion', y_FAST%VTK_count, ErrStat2, ErrMsg2 )        
+!      call MeshWrVTK(p_FAST%TurbinePos, FEAM%Input(1)%PtFairleadDisplacement, trim(p_FAST%OutFileRoot)//'FEAM_PtFair_motion', y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )        
 !   END IF
          
    
@@ -4753,10 +4812,11 @@ SUBROUTINE ExitThisProgram( p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW,
       
    ErrorLevel = ErrLevel_in
       
-      ! for debugging, let's output the meshes
+      ! for debugging, let's output the meshes and all of their fields
    IF ( ErrorLevel >= AbortErrLev .AND. p_FAST%WrVTK > VTK_None) THEN
       TmpOutFileRoot = p_FAST%OutFileRoot
       p_FAST%OutFileRoot = trim(p_FAST%OutFileRoot)//'.DebugError'
+      p_FAST%VTK_fields = .true.
       CALL WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)                                 
       p_FAST%OutFileRoot = TmpOutFileRoot
    end if

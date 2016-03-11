@@ -116,7 +116,9 @@ typedef	^	^	IntKi	TurbineType	-	-	-	"Type_LandBased, Type_Offshore_Fixed, or Typ
 typedef	^	^	LOGICAL	WrBinOutFile	-	-	-	"Write a binary output file? (.outb)"	-
 typedef	^	^	LOGICAL	WrTxtOutFile	-	-	-	"Write a text (formatted) output file? (.out)"	-
 typedef	^	^	LOGICAL	SumPrint	-	-	-	"Print summary data to file? (.sum)"	-
-typedef	^	^	INTEGER	WrVTK	-	-	-	"Write VTK visualization data? (switch) {0=none; 1=basic (position only); 2=surfaces; 3=all meshes (debug)}"	-
+typedef	^	^	INTEGER	WrVTK	-	-	-	"VTK Visualization data output: (switch) {0=none; 1=initialization data only; 2=animation}"	-
+typedef	^	^	INTEGER	VTK_Type	-	-	-	"Type of  VTK visualization data: (switch) {1=surfaces; 2=basic meshes (lines/points); 3=all meshes (debug)}"	-
+typedef	^	^	LOGICAL	VTK_fields	-	-	-	"Write mesh fields to VTK data files? (flag) {true/false}"	-
 typedef	^	^	CHARACTER(1)	Delim	-	-	-	"Delimiter between columns of text output file (.out): space or tab"	-
 typedef	^	^	CHARACTER(20)	OutFmt	-	-	-	"Format used for text tabular output (except time); resulting field should be 10 characters"	-
 typedef	^	^	CHARACTER(20)	OutFmt_t	-	-	-	"Format used for time channel in text tabular output; resulting field should be 10 characters"	-

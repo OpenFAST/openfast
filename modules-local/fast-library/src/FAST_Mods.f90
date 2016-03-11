@@ -46,11 +46,9 @@ MODULE FAST_ModTypes
    INTEGER(IntKi), PARAMETER :: VTK_None                =  0    !< none (no VTK output)
    INTEGER(IntKi), PARAMETER :: VTK_InitOnly            =  1    !< VTK output only at initialization
    INTEGER(IntKi), PARAMETER :: VTK_Animate             =  2    !< VTK animation output
-   INTEGER(IntKi), PARAMETER :: VTK_Basic               =  1    !< output minimal number of meshes with motion fields only
-   INTEGER(IntKi), PARAMETER :: VTK_Surf                =  2    !< output surfaces
       
-   !INTEGER(IntKi), PARAMETER :: VTK_Surf                =  1    !< output surfaces
-   !INTEGER(IntKi), PARAMETER :: VTK_Basic               =  2    !< output minimal number of point/line meshes
+   INTEGER(IntKi), PARAMETER :: VTK_Surf                =  1    !< output surfaces
+   INTEGER(IntKi), PARAMETER :: VTK_Basic               =  2    !< output minimal number of point/line meshes
    INTEGER(IntKi), PARAMETER :: VTK_All                 =  3    !< output all point/line meshes
    INTEGER(IntKi), PARAMETER :: VTK_Old                 =  4    !< output in old binary format (for Matlab viewing)
          
