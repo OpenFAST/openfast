@@ -52,7 +52,8 @@ typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing out
 typedef		^		^				ReKi			Gravity	-	-	-	"Gravitational acceleration"	m/s^2
 typedef	^		^				ReKi			r_N_O_G		{3}	-	-	"nacelle origin for setting up mesh"	-
 # Define outputs from the initialization routine here:
-typedef ^ InitOutputType CHARACTER(10) WriteOutputHdr {:} - - "Names of the output-to-file channels" -
+typedef ^ InitOutputType SiKi DummyInitOut - - - "dummy init output" -
+#typedef ^ InitOutputType CHARACTER(10) WriteOutputHdr {:} - - "Names of the output-to-file channels" -
 #typedef ^ InitOutputType CHARACTER(10) WriteOutputUnt {:}- - "Units of the output-to-file channels" -
 
 # ..... States ....................................................................................................................

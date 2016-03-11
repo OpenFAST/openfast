@@ -103,14 +103,13 @@ SUBROUTINE TMD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOu
       ErrStat = ErrID_None         
       ErrMsg  = ''               
       NumOuts = 0
-      !p%NumBl = 3
-      !p%NumOuts = 4
+      
+   InitOut%dummyInitOut = 0.0_SiKi  ! initialize this so compiler doesn't warn about un-set intent(out) variables
+      
      ! Initialize the NWTC Subroutine Library
-
    CALL NWTC_Init( EchoLibVer=.FALSE. )
 
       ! Display the module information
-
    CALL DispNVD( TMD_Ver )
    
     !............................................................................................      
