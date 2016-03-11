@@ -747,7 +747,6 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
          end if
          
    InputFileData%kp_member = 0
-   InputFileData%kp_coordinate = 0.0_BDKi
    temp_int = 0
    DO i=1,InputFileData%member_total
       ! bjj: we cannot read j, InputFileData%kp_member(j) because j could be outside the valid range:
@@ -778,6 +777,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
    CALL ReadCom(UnIn,InputFile,'key point and initial twist units',ErrStat2,ErrMsg2,UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
+   !InputFileData%kp_coordinate = 0.0_BDKi
    DO i=1,InputFileData%kp_total
        CALL ReadAry( UnIn, InputFile, TmpReAry, 4, 'kp_coordinate', 'Key point coordinates and initial twist', ErrStat2, ErrMsg2, UnEc )       
           CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
@@ -786,6 +786,7 @@ SUBROUTINE BD_ReadPrimaryFile(InputFile,InputFileData,OutFileRoot,UnEc,ErrStat,E
        InputFileData%kp_coordinate(i,1) =  TmpReAry(3)
        InputFileData%kp_coordinate(i,4) = -TmpReAry(4)
    ENDDO
+   
    
    !---------------------- MESH PARAMETER -----------------------------------------
    CALL ReadCom(UnIn,InputFile,'Section Header: Mesh Parameter',ErrStat2,ErrMsg2,UnEc)
@@ -1345,6 +1346,7 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ""
          
+      
    IF(InputFileData%analysis_type .NE. 1 .AND. InputFileData%analysis_type .NE. 2) &
        CALL SetErrStat ( ErrID_Fatal, 'Analysis type must be 1 (static) or 2 (dynamic)', ErrStat, ErrMsg, RoutineName )
    IF(InputFileData%rhoinf .LT. 0.0_BDKi .OR. InputFileData%rhoinf .GT. 1.0_BDKi) &
@@ -1359,8 +1361,12 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
        CALL SetErrStat ( ErrID_Fatal, 'member_total must be greater than 0', ErrStat, ErrMsg, RoutineName )
    IF(InputFileData%member_total .NE. 1 .AND. InputFileData%quadrature .EQ. 2) &
        CALL SetErrStat ( ErrID_Fatal, 'Trapzoidal quadrature only allows one member (element)', ErrStat, ErrMsg, RoutineName )
-   IF(InputFileData%kp_total .LT. 3 ) &
+   IF(InputFileData%kp_total .LT. 3 ) then
        CALL SetErrStat ( ErrID_Fatal, 'kp_total must be greater than or equal to 3', ErrStat, ErrMsg, RoutineName )
+   else IF ( .not. EqualRealNos( InputFileData%kp_coordinate(1,1), 0.0_BDKi ) ) then ! added this in the "else" in case InputFileData%kp_coordinate isn't allocated with at least 1 point
+      CALL SetErrStat(ErrID_Fatal, 'kp_zr on first key point must be 0.', ErrStat, ErrMsg, RoutineName )
+   end if
+   
    DO i=1,InputFileData%member_total
        IF(InputFileData%kp_member(i) .LT. 3) THEN
           CALL SetErrStat(ErrID_Fatal,'There must be at least three key points in '//TRIM(Num2LStr(i))//'th member.', ErrStat, ErrMsg,RoutineName)
