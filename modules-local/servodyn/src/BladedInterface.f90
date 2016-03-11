@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2013-2015  National Renewable Energy Laboratory
+! Copyright (C) 2013-2016  National Renewable Energy Laboratory
 !
 !    This file is part of FAST's Controls and Electrical Drive Module, "ServoDyn".
 !
@@ -202,7 +202,7 @@ SUBROUTINE BladedInterface_Init(u,p,m,y,InputFileData, ErrStat, ErrMsg)
    !IF (ALLOCATED(y%SuperController)) THEN   
    !   InputFileData%DLL_ProcName      = 'DISCON_SC'                  ! The name of the procedure in the DLL that will be called.
    !ELSE
-      InputFileData%DLL_ProcName      = 'DISCON'                    ! The name of the procedure in the DLL that will be called.
+   !   InputFileData%DLL_ProcName      = 'DISCON'                    ! The name of the procedure in the DLL that will be called.
    !END IF
    
    ErrStat = ErrID_None

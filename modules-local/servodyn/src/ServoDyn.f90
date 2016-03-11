@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2013-2015  National Renewable Energy Laboratory
+! Copyright (C) 2013-2016  National Renewable Energy Laboratory
 !
 !    This file is part of FAST's Controls and Electrical Drive Module, "ServoDyn".
 !
@@ -33,7 +33,7 @@ MODULE ServoDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: SrvD_Ver = ProgDesc( 'ServoDyn', 'v1.04.00a-bjj', '5-Nov-2015' )
+   TYPE(ProgDesc), PARAMETER            :: SrvD_Ver = ProgDesc( 'ServoDyn', 'v1.05.00a-bjj', '11-Mar-2016' )
    CHARACTER(*),   PARAMETER            :: SrvD_Nickname = 'SrvD'
    
 #ifdef COMPILE_SIMULINK
@@ -1612,6 +1612,11 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF ( ErrStat >= AbortErrLev ) RETURN
    IF ( PathIsRelative( InputFileData%DLL_InFile ) ) InputFileData%DLL_InFile = TRIM(PriPath)//TRIM(InputFileData%DLL_InFile)   
+
+      ! DLL_ProcName - Name of procedure to be called in DLL [used only with DLL Interface] (-):
+   CALL ReadVar( UnIn, InputFile, InputFileData%DLL_ProcName, "DLL_ProcName", "Name of procedure to be called in DLL [used only with DLL Interface] (-)", ErrStat2, ErrMsg2, UnEc)
+      CALL CheckError( ErrStat2, ErrMsg2 )
+      IF ( ErrStat >= AbortErrLev ) RETURN
    
       ! DLL_DT - Communication interval for dynamic library (s):
    InputFileData%DLL_DT = InputFileData%DT
