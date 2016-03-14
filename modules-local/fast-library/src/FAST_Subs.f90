@@ -4239,7 +4239,7 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
    
          !  ElastoDyn outputs (motions)
       DO K=1,NumBl        
-         call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%BladeLn2Mesh(K), trim(p_FAST%OutFileRoot)//'.ED_BladeLn2Mesh_motion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
+         !%BladeLn2Mesh(K) used only when not BD (see below)
          call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%BladeRootMotion(K), trim(p_FAST%OutFileRoot)//'.ED_BladeRootMotion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
       END DO
       
@@ -4278,7 +4278,9 @@ SUBROUTINE WrVTK_AllMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, O
       end do  
       
    ELSE if (allocated(ED%Input) .and. allocated(ED%Output)) then
+      ! ElastoDyn
       DO K=1,NumBl        
+         call MeshWrVTK(p_FAST%TurbinePos, ED%Output(1)%BladeLn2Mesh(K), trim(p_FAST%OutFileRoot)//'.ED_BladeLn2Mesh_motion'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2 )
          call MeshWrVTK(p_FAST%TurbinePos, ED%Input(1)%BladePtLoads(K), trim(p_FAST%OutFileRoot)//'.ED_BladePtLoads'//trim(num2lstr(k)), y_FAST%VTK_count, p_FAST%VTK_fields, ErrStat2, ErrMsg2, ED%Output(1)%BladeLn2Mesh(K) )
       END DO      
    END IF
