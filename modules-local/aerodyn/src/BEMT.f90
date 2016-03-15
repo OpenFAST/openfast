@@ -892,7 +892,7 @@ subroutine BEMT_UpdateStates( t, n, u1, u2,  p, x, xd, z, OtherState, AFInfo, m,
          NodeTxt = '(node '//trim(num2lstr(i))//', blade '//trim(num2lstr(j))//')'
          
             ! We only update the UnsteadyAero states if we have unsteady aero turned on for this node      
-         if (OtherState%UA_Flag(i,j)) then
+         if (OtherState%UA_Flag(i,j) .and. n > 0) then
             
                ! Set the active blade element for UnsteadyAero
             m%UA%iBladeNode = i
@@ -1117,7 +1117,7 @@ subroutine BEMT_CalcOutput( t, u, p, x, xd, z, OtherState, AFInfo, y, m, errStat
          call BEMTU_Wind( y%axInduction(i,j), y%tanInduction(i,j), Vx, Vy, p%chord(i,j), p%airDens, p%kinVisc, y%Vrel(I,J), y%Re(i,j) )
   
             ! Now depending on the option for UA get the airfoil coefs, Cl, Cd, Cm for unsteady or steady implementation
-         if (OtherState%UA_Flag(i,j)) then            
+         if (OtherState%UA_Flag(i,j) .and. t > 0.0_DbKi) then            
             call Compute_UA_AirfoilCoefs( y%AOA(i,j), y%Vrel(I,J), y%Re(i,j),  AFInfo(p%AFindx(i,j)), p%UA, xd%UA, OtherState%UA, m%y_UA, m%UA, &
                                          y%Cl(i,j), y%Cd(i,j), y%Cm(i,j), errStat2, errMsg2 ) 
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName//trim(NodeTxt))
