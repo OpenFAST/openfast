@@ -32,7 +32,7 @@ MODULE OrcaFlexInterface_Parameters
 
    IMPLICIT                      NONE
 
-   TYPE(ProgDesc), PARAMETER  :: Orca_Ver = ProgDesc( 'OrcaFlexInterface', 'v1.01.00a-adp', '16-Dec-2015' )
+   TYPE(ProgDesc), PARAMETER  :: Orca_Ver = ProgDesc( 'OrcaFlexInterface', 'v1.01.00b-adp', '15-Mar-2016' )
    CHARACTER(*),   PARAMETER  :: Orca_Nickname = 'Orca'
 
 
@@ -116,7 +116,7 @@ MODULE OrcaFlexInterface
 #endif
          USE, INTRINSIC :: ISO_C_BINDING, ONLY: C_FLOAT
          !DEC$ ATTRIBUTES DEFAULT, STDCALL, DECORATE, ALIAS:'OrcaFlexUserPtfmLdInitialise'::OrcaFlexUserPtfmLdInitialise
-         !GCC$ ATTRIBUTES STDCALL :: OrcaFlexUserPtfmInitialise
+         !GCC$ ATTRIBUTES STDCALL :: OrcaFlexUserPtfmLdInitialise
          REAL(C_FLOAT),             INTENT(IN   )  :: DT
          REAL(C_FLOAT),             INTENT(IN   )  :: TMax
       END SUBROUTINE OrcaFlexUserPtfmLdInitialise
