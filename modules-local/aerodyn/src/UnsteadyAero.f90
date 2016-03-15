@@ -856,6 +856,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    real(ReKi)                :: alpha_minus2                                  !
    real(ReKi)                :: q_minus1                                      !
    real(ReKi)                :: q_minus2                                      !
+   real(ReKi)                :: U_minus1                                      !
    real(ReKi)                :: fprime_minus1                                 !
    real(ReKi)                :: Cn_pot_minus1                                 !
    real(ReKi)                :: k1_hat                                        !
@@ -913,8 +914,10 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    
    if (OtherState%FirstPass(i,j)) then
       q_minus1 = q_cur   
-      q_minus2 = q_cur 
+      q_minus2 = q_cur
+      U_minus1 = u%U
    else
+      U_minus1 = xd%U_minus1(i,j)
       q_minus1 = xd%q_minus1(i,j)   
       q_minus2 = xd%q_minus2(i,j) 
    end if
@@ -933,8 +936,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
  
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 ! TODO 1/25/2016 GJH: This should be adjusted to limit the difference, like q_minus1 is limited but to do this we need U_minus1 as a state
-   ! Kalpha_minus1= q_minus1*u%U/p%c(i,j)  ! This could be a fix, but only uses the current value of U
-   Kalpha_minus1 = Get_Kupper( p%dt, alpha_minus1, alpha_minus2 ) 
+   Kalpha_minus1= q_minus1*xd%U_minus1(i,j)/p%c(i,j)  ! This could be a fix, but only uses the current value of U
+   !Kalpha_minus1 = Get_Kupper( p%dt, alpha_minus1, alpha_minus2 ) 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
    
       ! Compute Kq using Eqn 1.19b and Kq_minus1 using Eqn 1.19b but with time-shifted alphas
@@ -1555,6 +1558,7 @@ subroutine UA_InitStates_Misc( p, xd, OtherState, m, ErrStat, ErrMsg )
    call AllocAry( xd%alpha_minus2,        p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus2', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry( xd%q_minus1,            p%nNodesPerBlade,p%numBlades, 'xd%q_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry( xd%q_minus2,            p%nNodesPerBlade,p%numBlades, 'xd%q_minus2', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%U_minus1,            p%nNodesPerBlade,p%numBlades, 'xd%U_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry( xd%X1_minus1,           p%nNodesPerBlade,p%numBlades, 'xd%X1_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry( xd%X2_minus1,           p%nNodesPerBlade,p%numBlades, 'xd%X2_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry( xd%X3_minus1,           p%nNodesPerBlade,p%numBlades, 'xd%X3_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1619,6 +1623,7 @@ subroutine UA_InitStates_Misc( p, xd, OtherState, m, ErrStat, ErrMsg )
    xd%alpha_minus2         = 0.0_ReKi
    xd%q_minus1             = 0.0_ReKi
    xd%q_minus2             = 0.0_ReKi
+   xd%U_minus1             = 0.0_ReKi
    xd%X1_minus1            = 0.0_ReKi
    xd%X2_minus1            = 0.0_ReKi
    xd%X3_minus1            = 0.0_ReKi
@@ -2054,6 +2059,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
            
       xd%alpha_minus1(i,j)        = u%alpha
       xd%q_minus1(i,j)            = q_cur
+      xd%U_minus1(i,j)            = u%U
       xd%X1_minus1(i,j)           = X1
       xd%X2_minus1(i,j)           = X2
       xd%X3_minus1(i,j)           = X3
