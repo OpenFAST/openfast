@@ -3265,6 +3265,7 @@ SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWav
    TYPE(Morison_NodeType)     ::  node1, node2
    REAL(ReKi)                 ::  L
    REAL(ReKi)                 ::  k(3)
+   REAL(R8Ki)                 :: orientation(3,3)
   
   ! REAL(ReKi),ALLOCATABLE     ::  F_DP(:,:)
    REAL(ReKi)                 ::  F_B(6)
@@ -3537,11 +3538,12 @@ SUBROUTINE CreateDistributedMesh( densWater, gravity, MSL2SWL, wtrDpth, NStepWav
          
             ! Create the node on the mesh
             
+         orientation = transpose(nodes(I)%R_LToG )
          CALL MeshPositionNode (distribMeshIn           &
                               , count                   &
                               , nodes(I)%JointPos       &  ! this info comes from FAST
                               , ErrStat                 &
-                              , ErrMsg                  &
+                              , ErrMsg                  & ! , orient = orientation  & ! bjj: I need this orientation set for visualization. but, will it mess up calculations (because loads are in different positions?)
                               ) !, transpose(nodes(I)%R_LToG )     )
          IF ( ErrStat >= AbortErrLev ) RETURN
          
