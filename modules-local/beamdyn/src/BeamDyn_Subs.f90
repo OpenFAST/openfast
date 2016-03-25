@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015  National Renewable Energy Laboratory
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
@@ -461,5 +461,72 @@ SUBROUTINE BD_MotionTensor(RotTen,Pos,MotTen,flag)
 
 END SUBROUTINE BD_MotionTensor
 !-----------------------------------------------------------------------------------------------------------------------------------
+!> This routine calculates y%BldMotion%TranslationDisp, y%BldMotion%Orientation, y%BldMotion%TranslationVel, and
+!! y%BldMotion%RotationVel, which depend only on states and parameters.
+SUBROUTINE Set_BldMotion_NoAcc(p, x, y, ErrStat, ErrMsg)
 
+   TYPE(BD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(BD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
+   TYPE(BD_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
+                                                               !!   nectivity information does not have to be recalculated)
+   INTEGER(IntKi),               INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   INTEGER(IntKi)                               :: i
+   INTEGER(IntKi)                               :: j
+   INTEGER(IntKi)                               :: temp_id
+   INTEGER(IntKi)                               :: temp_id2
+   REAL(BDKi)                                   :: cc(3)
+   REAL(BDKi)                                   :: cc0(3)
+   REAL(BDKi)                                   :: temp_cc(3)
+   REAL(BDKi)                                   :: temp_R(3,3)
+   INTEGER(IntKi)                               :: ErrStat2                     ! Temporary Error status
+   CHARACTER(ErrMsgLen)                         :: ErrMsg2                      ! Temporary Error message
+   CHARACTER(*), PARAMETER                      :: RoutineName = 'Set_BldMotion_NoAcc'
+   
+   ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   DO i=1,p%elem_total
+       DO j=1,p%node_elem
+           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+           temp_id2= (i-1)*p%node_elem+j
+           
+           temp_cc = MATMUL(p%GlbRot,x%q(temp_id+1:temp_id+3))
+           y%BldMotion%TranslationDisp(1,temp_id2) = temp_cc(2)
+           y%BldMotion%TranslationDisp(2,temp_id2) = temp_cc(3)
+           y%BldMotion%TranslationDisp(3,temp_id2) = temp_cc(1)
+           
+           cc = MATMUL(p%GlbRot,x%q(temp_id+4:temp_id+6))
+           temp_id = (j-1)*p%dof_node
+           cc0 = p%uuN0(temp_id+4:temp_id+6,i)
+           cc0 = MATMUL(p%GlbRot,cc0)
+           CALL BD_CrvCompose(temp_cc,p%Glb_crv,cc0,0,ErrStat2,ErrMsg2) ! set temp_cc
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           CALL BD_CrvCompose(cc0,cc,temp_cc,0,ErrStat2,ErrMsg2) ! set cc0
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           temp_cc(1) = cc0(2)
+           temp_cc(2) = cc0(3)
+           temp_cc(3) = cc0(1)
+           CALL BD_CrvMatrixR(temp_cc,temp_R,ErrStat2,ErrMsg2)
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+           y%BldMotion%Orientation(1:3,1:3,temp_id2) = TRANSPOSE(temp_R(1:3,1:3))
+
+           temp_id = ((i-1)*(p%node_elem-1)+j-1)*p%dof_node
+           temp_cc = MATMUL(p%GlbRot,x%dqdt(temp_id+1:temp_id+3))
+           y%BldMotion%TranslationVel(1,temp_id2) = temp_cc(2)
+           y%BldMotion%TranslationVel(2,temp_id2) = temp_cc(3)
+           y%BldMotion%TranslationVel(3,temp_id2) = temp_cc(1)
+           
+           temp_cc(:) = MATMUL(p%GlbRot,x%dqdt(temp_id+4:temp_id+6))
+           y%BldMotion%RotationVel(1,temp_id2) = temp_cc(2)
+           y%BldMotion%RotationVel(2,temp_id2) = temp_cc(3)
+           y%BldMotion%RotationVel(3,temp_id2) = temp_cc(1)
+       ENDDO
+   ENDDO
+   
+END SUBROUTINE Set_BldMotion_NoAcc
+!-----------------------------------------------------------------------------------------------------------------------------------
 END MODULE BeamDyn_Subs
