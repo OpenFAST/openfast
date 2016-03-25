@@ -1,6 +1,6 @@
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015  National Renewable Energy Laboratory
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ MODULE BeamDyn_IO
 
    IMPLICIT NONE
 
-   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v1.01.00','15-Dec-2015')
+   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v1.01.01','24-Mar-2016')
 
 
 ! ===================================================================================================
@@ -1421,11 +1421,10 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
 END SUBROUTINE BD_ValidateInputData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> this routine fills the AllOuts array, which is used to send data to the glue code to be written to an output file.
-SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, m, ErrStat, ErrMsg )
+SUBROUTINE Calc_WriteOutput( p, AllOuts, y, m, ErrStat, ErrMsg )
    
 
    TYPE(BD_ParameterType),    INTENT(IN   )  :: p                                 !< The module parameters
-   TYPE(BD_InputType),        INTENT(IN   )  :: u                                 !< inputs
    REAL(ReKi),                INTENT(INOUT)  :: AllOuts(0:)                       !< array of values to potentially write to file
    TYPE(BD_OutputType),       INTENT(IN   )  :: y                                 !< outputs
    TYPE(BD_MiscVarType),      INTENT(INOUT)  :: m                                 !< misc/optimization variables (for computing mesh transfers)
@@ -1461,12 +1460,12 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, m, ErrStat, ErrMsg )
    ErrMsg  = ""
    
    
-   temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1),y%ReactionForce%Force(:,1))
+   temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),y%ReactionForce%Force(:,1))
    AllOuts( RootFxr ) = temp_vec(1)
    AllOuts( RootFyr ) = temp_vec(2)
    AllOuts( RootFzr ) = temp_vec(3) 
 
-   temp_vec = MATMUL(u%RootMotion%Orientation(:,:,1),y%ReactionForce%Moment(:,1))
+   temp_vec = MATMUL(m%u2%RootMotion%Orientation(:,:,1),y%ReactionForce%Moment(:,1))
    AllOuts( RootMxr ) = temp_vec(1)
    AllOuts( RootMyr ) = temp_vec(2)
    AllOuts( RootMzr ) = temp_vec(3) 
@@ -1491,8 +1490,8 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, m, ErrStat, ErrMsg )
    temp_tip0(2) = temp_vec(3)
    temp_tip0(3) = temp_vec(1)
    temp_ini(:) = temp_glbp(:) + temp_tip0(:)
-   temp_roott(:) = temp_glbp(:) + u%RootMotion%TranslationDisp(:,1)
-   temp33_2=TRANSPOSE(u%RootMotion%Orientation(1:3,1:3,1))  ! possible type conversion here
+   temp_roott(:) = temp_glbp(:) + m%u2%RootMotion%TranslationDisp(:,1)
+   temp33_2=TRANSPOSE(m%u2%RootMotion%Orientation(1:3,1:3,1))  ! possible type conversion here
    CALL BD_CrvExtractCrv(temp33_2,temp_vec,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CrvCompose(temp_cc,temp_vec,temp_glb,2,ErrStat2,ErrMsg2)
@@ -1502,7 +1501,7 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, m, ErrStat, ErrMsg )
    temp_vec = MATMUL(temp_R,temp_tip0)
    temp_cur = temp_roott + temp_vec
    temp_vec = y%BldMotion%TranslationDisp(1:3,p%node_elem*p%elem_total) - (temp_cur(:) - temp_ini(:))
-   temp_vec = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec)
+   temp_vec = MATMUL(m%u2%RootMotion%Orientation(1:3,1:3,1),temp_vec)
    AllOuts( TipTDxr ) = temp_vec(1)
    AllOuts( TipTDyr ) = temp_vec(2)
    AllOuts( TipTDzr ) = temp_vec(3)
@@ -1522,7 +1521,7 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, m, ErrStat, ErrMsg )
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
    CALL BD_CrvCompose(temp_vec2,temp_cur,temp_vec,2,ErrStat2,ErrMsg2)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-   temp_vec(:) = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec2)
+   temp_vec(:) = MATMUL(m%u2%RootMotion%Orientation(1:3,1:3,1),temp_vec2)
    AllOuts( TipRDxr ) = temp_vec(1)
    AllOuts( TipRDyr ) = temp_vec(2)
    AllOuts( TipRDzr ) = temp_vec(3)
@@ -1579,7 +1578,7 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, m, ErrStat, ErrMsg )
       temp_vec = MATMUL(temp_R,temp_tip0)
       temp_cur = temp_roott + temp_vec
       temp_vec = y%BldMotion%TranslationDisp(1:3,p%node_elem*(elem_no-1)+node_no) - (temp_cur - temp_ini)
-      temp_vec = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec)
+      temp_vec = MATMUL(m%u2%RootMotion%Orientation(1:3,1:3,1),temp_vec)
       AllOuts( NTDr( beta,1 ) ) = temp_vec(1) 
       AllOuts( NTDr( beta,2 ) ) = temp_vec(2)
       AllOuts( NTDr( beta,3 ) ) = temp_vec(3)
@@ -1598,7 +1597,7 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, m, ErrStat, ErrMsg )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       CALL BD_CrvCompose(temp_vec2,temp_cur,temp_vec,2,ErrStat2,ErrMsg2)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      temp_vec = MATMUL(u%RootMotion%Orientation(1:3,1:3,1),temp_vec2)
+      temp_vec = MATMUL(m%u2%RootMotion%Orientation(1:3,1:3,1),temp_vec2)
       AllOuts( NRDr( beta,1 ) ) = temp_vec(1)
       AllOuts( NRDr( beta,2 ) ) = temp_vec(2) 
       AllOuts( NRDr( beta,3 ) ) = temp_vec(3)
@@ -1620,12 +1619,12 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, m, ErrStat, ErrMsg )
       AllOuts( NRAg( beta,3 ) ) = y%BldMotion%RotationAcc(3,j)*R2D
             
       !
-      temp_vec = MATMUL(temp33,u%PointLoad%Force(:,j))
+      temp_vec = MATMUL(temp33,m%u2%PointLoad%Force(:,j))
       AllOuts( NPFl( beta,1 ) ) = temp_vec(1) 
       AllOuts( NPFl( beta,2 ) ) = temp_vec(2) 
       AllOuts( NPFl( beta,3 ) ) = temp_vec(3)     
       !
-      temp_vec = MATMUL(temp33,u%PointLoad%Moment(:,j))
+      temp_vec = MATMUL(temp33,m%u2%PointLoad%Moment(:,j))
       AllOuts( NPMl( beta,1 ) ) = temp_vec(1) 
       AllOuts( NPMl( beta,2 ) ) = temp_vec(2) 
       AllOuts( NPMl( beta,3 ) ) = temp_vec(3) 
@@ -1641,7 +1640,7 @@ SUBROUTINE Calc_WriteOutput( p, u, AllOuts, y, m, ErrStat, ErrMsg )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       
          ! transfer the input loads to the output nodes for writing output
-      CALL Transfer_Line2_to_Line2( u%DistrLoad, m%u_DistrLoad_at_y, m%Map_u_DistrLoad_to_y, ErrStat2, ErrMsg2, m%y_BldMotion_at_u, y%BldMotion)
+      CALL Transfer_Line2_to_Line2( m%u2%DistrLoad, m%u_DistrLoad_at_y, m%Map_u_DistrLoad_to_y, ErrStat2, ErrMsg2, m%y_BldMotion_at_u, y%BldMotion)
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
          
       
