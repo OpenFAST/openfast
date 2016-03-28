@@ -108,9 +108,9 @@ PROGRAM HydroDynDriver
    integer                                        :: StrtTime (8)                            ! Start time of simulation (including intialization)
    integer                                        :: SimStrtTime (8)                         ! Start time of simulation (after initialization)
    real(ReKi)                                     :: PrevClockTime                           ! Clock time at start of simulation in seconds
-   real                                           :: UsrTime1                                ! User CPU time for simulation initialization
-   real                                           :: UsrTime2                                ! User CPU time for simulation (without intialization)
-   real                                           :: UsrTimeDiff                             ! Difference in CPU time from start to finish of program execution
+   real(ReKi)                                     :: UsrTime1                                ! User CPU time for simulation initialization
+   real(ReKi)                                     :: UsrTime2                                ! User CPU time for simulation (without intialization)
+   real(ReKi)                                     :: UsrTimeDiff                             ! Difference in CPU time from start to finish of program execution
    real(DbKi)                                     :: TiLstPrn                                ! The simulation time of the last print
    real(DbKi)                                     :: t_global                                ! Current simulation time (for global/FAST simulation)
    real(DbKi)                                     :: SttsTime                                ! Amount of time between screen status messages (sec)
@@ -318,7 +318,7 @@ PROGRAM HydroDynDriver
             
             
             ! Compute direction cosine matrix from the rotation angles
-         CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uWAMITInSteady(4)), REAL(drvrInitInp%uWAMITInSteady(5)), REAL(drvrInitInp%uWAMITInSteady(6)), dcm, 'Junk', ErrStat, ErrMsg )            
+         CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uWAMITInSteady(4), ReKi), REAL(drvrInitInp%uWAMITInSteady(5), ReKi), REAL(drvrInitInp%uWAMITInSteady(6), ReKi), dcm, 'Junk', ErrStat, ErrMsg )            
          u(1)%Mesh%Orientation(:,:,1)     = dcm
             
          u(1)%Mesh%TranslationVel(:,1)    = drvrInitInp%uDotWAMITInSteady(1:3)  
@@ -337,7 +337,7 @@ PROGRAM HydroDynDriver
          u(1)%Morison%DistribMesh%TranslationDisp(3,:)   = drvrInitInp%uMorisonInSteady(3) 
                       
             ! Compute direction cosine matrix from the rotation angles
-         CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uMorisonInSteady(4)), REAL(drvrInitInp%uMorisonInSteady(5)), REAL(drvrInitInp%uMorisonInSteady(6)), dcm, 'Junk', ErrStat, ErrMsg )            
+         CALL SmllRotTrans( 'InputRotation', REAL(drvrInitInp%uMorisonInSteady(4),ReKi), REAL(drvrInitInp%uMorisonInSteady(5),ReKi), REAL(drvrInitInp%uMorisonInSteady(6),ReKi), dcm, 'Junk', ErrStat, ErrMsg )            
          DO I = 1, u(1)%Morison%DistribMesh%nNodes
             u(1)%Morison%DistribMesh%Orientation(:,:,I)  = dcm 
          END DO
@@ -403,7 +403,7 @@ PROGRAM HydroDynDriver
             IF ( abs(WAMITin(n,6)) > maxAngle ) maxAngle = abs(WAMITin(n,6))
             IF ( abs(WAMITin(n,7)) > maxAngle ) maxAngle = abs(WAMITin(n,7))
             
-            CALL SmllRotTrans( 'InputRotation', REAL(WAMITin(n,5)), REAL(WAMITin(n,6)), REAL(WAMITin(n,7)), dcm, 'Junk', ErrStat, ErrMsg )            
+            CALL SmllRotTrans( 'InputRotation', REAL(WAMITin(n,5),ReKi), REAL(WAMITin(n,6),ReKi), REAL(WAMITin(n,7),ReKi), dcm, 'Junk', ErrStat, ErrMsg )            
             u(1)%Mesh%Orientation(:,:,1)     = dcm 
             
             
@@ -522,7 +522,7 @@ subroutine HD_DvrCleanup()
       end if
       
      ! Print *, time
-      call RunTimes( StrtTime, UsrTime1, SimStrtTime, UsrTime2, time, UsrTimeDiff )
+      call RunTimes( StrtTime, REAL(UsrTime1,ReKi), SimStrtTime, REAL(UsrTime2,ReKi), time, UsrTimeDiff )
       call NormStop()
       
 end subroutine HD_DvrCleanup

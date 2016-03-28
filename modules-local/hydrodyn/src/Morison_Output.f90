@@ -6942,11 +6942,11 @@ SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, m, AllOuts, ErrStat, ErrMsg
             AllOuts(MNFMGi(:,I,J))    = p%D_F_MG (1:3,m1)*(1-s) + p%D_F_MG (1:3,m2)*s
             
                ! buoyancy forces
-            AllOuts(MNFBi (:,I,J))    = p%D_F_B  (1:3,m1)*(1-s) + p%D_F_B  (1:3,m2)*s
+            AllOuts(MNFBi (:,I,J))    = m%D_F_B  (1:3,m1)*(1-s) + m%D_F_B  (1:3,m2)*s
             AllOuts(MNFBFi(:,I,J))    = p%D_F_BF (1:3,m1)*(1-s) + p%D_F_BF (1:3,m2)*s            
          
                ! buoyancy moments
-            AllOuts(MNMBi (:,I,J))    = p%D_F_B  (4:6,m1)*(1-s) + p%D_F_B  (4:6,m2)*s
+            AllOuts(MNMBi (:,I,J))    = m%D_F_B  (4:6,m1)*(1-s) + m%D_F_B  (4:6,m2)*s
             AllOuts(MNMBFi(:,I,J))    = p%D_F_BF (4:6,m1)*(1-s) + p%D_F_BF (4:6,m2)*s  
          
                ! added mass forces
@@ -6994,8 +6994,8 @@ SUBROUTINE MrsnOut_MapOutputs( CurrentTime, y, p, u, m, AllOuts, ErrStat, ErrMsg
             END IF
 
             AllOuts(JFDi (:,I))          = AllOuts(JFDi (:,I)) + m%L_F_D (1:3, m1)           ! axial drag force
-            AllOuts(JFBi (:,I))          = AllOuts(JFBi (:,I)) + p%L_F_B (1:3, m1)           ! buoyancy force
-            AllOuts(JMBi (:,I))          = AllOuts(JMBi (:,I)) + p%L_F_B (4:6, m1)           ! buoyancy moment
+            AllOuts(JFBi (:,I))          = AllOuts(JFBi (:,I)) + m%L_F_B (1:3, m1)           ! buoyancy force
+            AllOuts(JMBi (:,I))          = AllOuts(JMBi (:,I)) + m%L_F_B (4:6, m1)           ! buoyancy moment
             AllOuts(JFBFi(:,I))          = AllOuts(JFBFi(:,I)) + p%L_F_BF(1:3, m1)           ! ballasted/filled buoyancy force
             AllOuts(JMBFi(:,I))          = AllOuts(JMBFi(:,I)) + p%L_F_BF(4:6, m1)           ! ballasted/filled buoyancy moment
             AllOuts(JFIi (:,I))          = AllOuts(JFIi(:,I))  + m%L_F_I (1:3, m1)           ! inertial force

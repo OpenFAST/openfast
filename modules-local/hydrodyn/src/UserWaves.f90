@@ -721,14 +721,14 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
 
    InitOut%NStepWave2 = InitOut%NStepWave/2
          
-   ALLOCATE ( WaveDataStr  (0:InitOut%NStepWave,InitInp%NWaveKin0  ) , STAT=ErrStatTmp )
+   ALLOCATE ( WaveDataStr  (0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveDataStr.',  ErrStat,ErrMsg,RoutineName)
    
-   ALLOCATE ( InitOut%nodeInWater  (0:InitOut%NStepWave,InitInp%NWaveKin0  ) , STAT=ErrStatTmp )
+   ALLOCATE ( InitOut%nodeInWater  (0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array outOfWaterFlag.',  ErrStat,ErrMsg,RoutineName)
-   InitOut%nodeInWater = .TRUE.
+   InitOut%nodeInWater = 1
    
-   ALLOCATE ( WaveData     (0:InitOut%NStepWave,InitInp%NWaveKin0  ) , STAT=ErrStatTmp )
+   ALLOCATE ( WaveData     (0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array WaveData.',  ErrStat,ErrMsg,RoutineName)
    WaveData = 0.0_SiKi
    
@@ -739,14 +739,14 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveElev.',  ErrStat,ErrMsg,RoutineName)
    InitOut%WaveElev = 0.0_SiKi
    
-   ALLOCATE ( InitOut%WaveDynP0  (0:InitOut%NStepWave,InitInp%NWaveKin0  ) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP0.', ErrStat,ErrMsg,RoutineName)
+   ALLOCATE ( InitOut%WaveDynP  (0:InitOut%NStepWave,InitInp%NWaveKin  ) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP.', ErrStat,ErrMsg,RoutineName)
 
-   ALLOCATE ( InitOut%WaveVel0   (0:InitOut%NStepWave,InitInp%NWaveKin0,3) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel0.',  ErrStat,ErrMsg,RoutineName)
+   ALLOCATE ( InitOut%WaveVel   (0:InitOut%NStepWave,InitInp%NWaveKin,3) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel.',  ErrStat,ErrMsg,RoutineName)
 
-   ALLOCATE ( InitOut%WaveAcc0   (0:InitOut%NStepWave,InitInp%NWaveKin0,3) , STAT=ErrStatTmp )
-   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc0.',  ErrStat,ErrMsg,RoutineName)
+   ALLOCATE ( InitOut%WaveAcc   (0:InitOut%NStepWave,InitInp%NWaveKin,3) , STAT=ErrStatTmp )
+   IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc.',  ErrStat,ErrMsg,RoutineName)
 
    
    
@@ -756,7 +756,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       RETURN
    END IF
 
-   Frmt = '('//TRIM(Int2LStr(InitInp%NWaveKin0))//'(:,A,A11))'
+   Frmt = '('//TRIM(Int2LStr(InitInp%NWaveKin))//'(:,A,A11))'
    
    
    ! Read the first file and set the initial values of the 
@@ -782,16 +782,17 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       END IF
    
    DO i = 0,InitOut%NStepWave-1
-      CALL ReadCAry ( UnWv, FileName, WaveDataStr(i,:), InitInp%NWaveKin0, 'junk', 'junk', ErrStatTmp, ErrMsgTmp )
-      !Read(UnWv,Frmt)   ( Delim,  WaveDataStr(i,j)  , j=1,InitInp%NWaveKin0 ) 
+      CALL ReadCAry ( UnWv, FileName, WaveDataStr(i,:), InitInp%NWaveKin, 'junk', 'junk', ErrStatTmp, ErrMsgTmp )
+      !Read(UnWv,Frmt)   ( Delim,  WaveDataStr(i,j)  , j=1,InitInp%NWaveKin ) 
          
-      DO j = 1, InitInp%NWaveKin0
+      DO j = 1, InitInp%NWaveKin
             
          isNumeric = is_numeric(WaveDataStr(i,j), WaveData(i,j))
          IF (.NOT. isNumeric )THEN
-            InitOut%nodeInWater(i,j) = .FALSE.
+            InitOut%nodeInWater(i,j) = 0
+            WaveData(i,j)            = 0.0
          ELSE              
-            InitOut%nodeInWater(i,j) = .TRUE.
+            InitOut%nodeInWater(i,j) = 1
          END IF
             
               
@@ -799,7 +800,7 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       
    END DO
    
-   InitOut%WaveVel0 (:,:,1)  = WaveData(:,:)
+   InitOut%WaveVel (:,:,1)  = WaveData(:,:)
    
    ! Now read the remaining files and check that the elements are consistent with the first file
    DO iFile = 2,7
@@ -826,15 +827,15 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
      
       DO i = 0,InitOut%NStepWave-1
          
-         !Read(UnWv,Frmt)   ( Delim,  WaveDataStr(i,j)  , j=1,InitInp%NWaveKin0 ) 
-         CALL ReadCAry ( UnWv, FileName, WaveDataStr(i,:), InitInp%NWaveKin0, 'junk', 'junk', ErrStatTmp, ErrMsgTmp )
-         !CALL ReadAry ( UnF, FileName, WaveDataStr(i,:), InitInp%NWaveKin0, 'WaveData', &
+         !Read(UnWv,Frmt)   ( Delim,  WaveDataStr(i,j)  , j=1,InitInp%NWaveKin ) 
+         CALL ReadCAry ( UnWv, FileName, WaveDataStr(i,:), InitInp%NWaveKin, 'junk', 'junk', ErrStatTmp, ErrMsgTmp )
+         !CALL ReadAry ( UnF, FileName, WaveDataStr(i,:), InitInp%NWaveKin, 'WaveData', &
          !                     'Wave kinematics data for one time step', ErrStatTmp, ErrMsgTmp )
-         DO j = 1, InitInp%NWaveKin0
+         DO j = 1, InitInp%NWaveKin
             !CALL ReadVar ( UnF, FileName, WaveData(i,j), 'WaveData', &
             !                  'Wave kinematics data for one time step', ErrStatTmp, ErrMsgTmp )
             isNumeric = is_numeric(WaveDataStr(i,j), WaveData(i,j))
-            IF ( isNumeric .neqv. InitOut%nodeInWater(i,j) ) THEN  ! Problem: this check does not identify first file is .TRUE. and then second file is .FALSE., only the reverse!!!!
+            IF ( ( isNumeric .AND. (InitOut%nodeInWater(i,j) == 0) ) .OR. ( .NOT. isNumeric .AND. ( InitOut%nodeInWater(i,j) == 1 ) ) ) THEN  
                   ErrStatTmp = ErrID_Fatal
                   ErrMsgTmp  = 'Element of wave kinematics file must be numerical or non-numerical across all files.  Problem was found in ' // TRIM(FileName) // ' on row ' // Num2LStr(i+1) // ' and column ' // Num2LStr(j)
                   CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
@@ -843,9 +844,10 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
             END IF
             
             IF (.NOT. isNumeric ) THEN
-               InitOut%nodeInWater(i,j) = .FALSE.
+               InitOut%nodeInWater(i,j) = 0
+               WaveData(i,j)            = 0.0
             ELSE              
-               InitOut%nodeInWater(i,j) = .TRUE.
+               InitOut%nodeInWater(i,j) = 1
             END IF
             
                !CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
@@ -858,19 +860,19 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
       END DO
       SELECT CASE (iFile)
          CASE (1)              
-            InitOut%WaveVel0 (:,:,1)  = WaveData(:,:)
-         CASE (2)              
-            InitOut%WaveVel0 (:,:,2)  = WaveData(:,:)
-         CASE (3)              
-            InitOut%WaveVel0 (:,:,3)  = WaveData(:,:) 
-         CASE (4)              
-            InitOut%WaveAcc0 (:,:,1)  = WaveData(:,:)
-         CASE (5)              
-            InitOut%WaveAcc0 (:,:,2)  = WaveData(:,:)
-         CASE (6)              
-            InitOut%WaveAcc0 (:,:,3)  = WaveData(:,:) 
+            InitOut%WaveVel (:,:,1)  = WaveData(:,:)
+         CASE (2)             
+            InitOut%WaveVel (:,:,2)  = WaveData(:,:)
+         CASE (3)             
+            InitOut%WaveVel (:,:,3)  = WaveData(:,:) 
+         CASE (4)             
+            InitOut%WaveAcc (:,:,1)  = WaveData(:,:)
+         CASE (5)             
+            InitOut%WaveAcc (:,:,2)  = WaveData(:,:)
+         CASE (6)             
+            InitOut%WaveAcc (:,:,3)  = WaveData(:,:) 
          CASE (7)              
-            InitOut%WaveDynP0         = WaveData
+            InitOut%WaveDynP         = WaveData
       END SELECT
                   
       CLOSE(UnWv)
@@ -911,9 +913,9 @@ SUBROUTINE UserWaves_Init ( InitInp, InitOut, ErrStat, ErrMsg )
    CALL CleanUp( )
    
    ! Need to append the first time step record to the end of each array for periodic waves
-   InitOut%WaveVel0 (InitOut%NStepWave,:,:)  = InitOut%WaveVel0 (0,:,:)
-   InitOut%WaveAcc0 (InitOut%NStepWave,:,:)  = InitOut%WaveAcc0 (0,:,:)
-   InitOut%WaveDynP0(InitOut%NStepWave,:)    = InitOut%WaveDynP0(0,:  )
+   InitOut%WaveVel (InitOut%NStepWave,:,:)  = InitOut%WaveVel (0,:,:)
+   InitOut%WaveAcc (InitOut%NStepWave,:,:)  = InitOut%WaveAcc (0,:,:)
+   InitOut%WaveDynP(InitOut%NStepWave,:)    = InitOut%WaveDynP(0,:  )
    InitOut%WaveElev(InitOut%NStepWave,:)     = InitOut%WaveElev(0,:)
    InitOut%nodeInWater(InitOut%NStepWave,:)  = InitOut%nodeInWater(0,:)
    

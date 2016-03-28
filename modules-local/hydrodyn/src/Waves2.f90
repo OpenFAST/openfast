@@ -369,21 +369,21 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
       !   which incident wave kinematics stretching method is being used:
 
 
-      SELECT CASE ( InitInp%WaveStMod )  ! Which model are we using to extrapolate the incident wave kinematics to the instantaneous free surface?
+     ! SELECT CASE ( InitInp%WaveStMod )  ! Which model are we using to extrapolate the incident wave kinematics to the instantaneous free surface?
 
-      CASE ( 0 )                 ! None=no stretching.
+     ! CASE ( 0 )                 ! None=no stretching.
 
 
          ! Since we have no stretching, NWaveKin0Prime and WaveKinzi0Prime(:) are
          !   equal to the number of, and the zi-coordinates for, the points in the
-         !   WaveKinzi0(:) array between, and including, -WtrDpth and 0.0.
+         !   WaveKinzi(:) array between, and including, -WtrDpth and 0.0.
 
          ! Determine NWaveKin0Prime here:
 
          NWaveKin0Prime = 0
-         DO J = 1,InitInp%NWaveKin0   ! Loop through all mesh points  where the incident wave kinematics will be computed
-               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi0 and WtrDpth have already been adjusted using MSL2SWL
-            IF (    InitInp%WaveKinzi0(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi0(J) <= 0 )  THEN
+         DO J = 1,InitInp%NWaveKin   ! Loop through all mesh points  where the incident wave kinematics will be computed
+               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
+            IF (    InitInp%WaveKinzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi(J) <= 0 )  THEN
                NWaveKin0Prime = NWaveKin0Prime + 1
             END IF
          END DO                ! J - All Morison nodes where the incident wave kinematics will be computed
@@ -406,11 +406,11 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
          I = 1
 
-         DO J = 1,InitInp%NWaveKin0 ! Loop through all points where the incident wave kinematics will be computed without stretching
-               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi0 and WtrDpth have already been adjusted using MSL2SWL
-            IF (    InitInp%WaveKinzi0(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi0(J) <= 0 )  THEN
+         DO J = 1,InitInp%NWaveKin ! Loop through all points where the incident wave kinematics will be computed without stretching
+               ! NOTE: We test to 0 instead of MSL2SWL because the locations of WaveKinzi and WtrDpth have already been adjusted using MSL2SWL
+            IF (    InitInp%WaveKinzi(J) >= -InitInp%WtrDpth .AND. InitInp%WaveKinzi(J) <= 0 )  THEN
 
-               WaveKinzi0Prime(I) =  InitInp%WaveKinzi0(J)
+               WaveKinzi0Prime(I) =  InitInp%WaveKinzi(J)
                WaveKinPrimeMap(I) =  J
                I = I + 1
 
@@ -420,18 +420,18 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
 
 
 
-      CASE ( 1, 2 )              ! Vertical stretching or extrapolation stretching.
-         CALL SetErrStat(ErrID_Fatal,' Vertical and extrapolation stretching not supported in second order calculations.',ErrStat,ErrMsg,'Waves2_Init')
-
-
-      CASE ( 3 )                 ! Wheeler stretching.
-         CALL SetErrStat(ErrID_Fatal,' Wheeler stretching not supported in second order calculations.',ErrStat,ErrMsg,'Waves2_Init')
-
-      CASE DEFAULT
-         CALL SetErrStat(ErrID_Fatal,' Stretching is not supported in the second order waves kinematics calculations.',ErrStat,ErrMsg,'Waves2_Init')
-
-
-      ENDSELECT
+      !CASE ( 1, 2 )              ! Vertical stretching or extrapolation stretching.
+      !   CALL SetErrStat(ErrID_Fatal,' Vertical and extrapolation stretching not supported in second order calculations.',ErrStat,ErrMsg,'Waves2_Init')
+      !
+      !
+      !CASE ( 3 )                 ! Wheeler stretching.
+      !   CALL SetErrStat(ErrID_Fatal,' Wheeler stretching not supported in second order calculations.',ErrStat,ErrMsg,'Waves2_Init')
+      !
+      !CASE DEFAULT
+      !   CALL SetErrStat(ErrID_Fatal,' Stretching is not supported in the second order waves kinematics calculations.',ErrStat,ErrMsg,'Waves2_Init')
+      !
+      !
+      !ENDSELECT
 
 
       IF ( ErrStat >= AbortErrLev ) THEN
@@ -450,22 +450,22 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
       ALLOCATE ( p%WaveElev2 (0:InitInp%NStepWave,InitInp%NWaveElev  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array p%WaveElev2.', ErrStat,ErrMsg,'Waves2_Init')
 
-      ALLOCATE ( InitOut%WaveVel2D  (0:InitInp%NStepWave,InitInp%NWaveKin0,3), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveVel2D  (0:InitInp%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel2D.',  ErrStat,ErrMsg,'Waves2_Init')
 
-      ALLOCATE ( InitOut%WaveAcc2D  (0:InitInp%NStepWave,InitInp%NWaveKin0,3), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveAcc2D  (0:InitInp%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc2D.',  ErrStat,ErrMsg,'Waves2_Init')
 
-      ALLOCATE ( InitOut%WaveDynP2D (0:InitInp%NStepWave,InitInp%NWaveKin0  ), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveDynP2D (0:InitInp%NStepWave,InitInp%NWaveKin  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP2D.', ErrStat,ErrMsg,'Waves2_Init')
 
-      ALLOCATE ( InitOut%WaveVel2S  (0:InitInp%NStepWave,InitInp%NWaveKin0,3), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveVel2S  (0:InitInp%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveVel2S.',  ErrStat,ErrMsg,'Waves2_Init')
 
-      ALLOCATE ( InitOut%WaveAcc2S  (0:InitInp%NStepWave,InitInp%NWaveKin0,3), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveAcc2S  (0:InitInp%NStepWave,InitInp%NWaveKin,3), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveAcc2S.',  ErrStat,ErrMsg,'Waves2_Init')
 
-      ALLOCATE ( InitOut%WaveDynP2S (0:InitInp%NStepWave,InitInp%NWaveKin0  ), STAT=ErrStatTmp )
+      ALLOCATE ( InitOut%WaveDynP2S (0:InitInp%NStepWave,InitInp%NWaveKin  ), STAT=ErrStatTmp )
       IF (ErrStatTmp /= 0) CALL SetErrStat(ErrID_Fatal,'Cannot allocate array InitOut%WaveDynP2S.', ErrStat,ErrMsg,'Waves2_Init')
 
          ! Now check if all the allocations worked properly
@@ -692,8 +692,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                         !!             +  \left( |\vec{k_n}| \sin \theta_n - |\vec{k_m}| sin \theta_m \right) ~ y \right] \right) \f$
 
                      WaveElevxyPrime0  = exp( - ImagNmbr &
-                              *  (  ( k_n * COS( D2R*InitInp%WaveDirArr(n) ) - k_m * COS( D2R*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinxi0(WaveKinPrimeMap(I))  &
-                                 +  ( k_n * SIN( D2R*InitInp%WaveDirArr(n) ) - k_m * SIN( D2R*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinyi0(WaveKinPrimeMap(I))  ))
+                              *  (  ( k_n * COS( D2R*InitInp%WaveDirArr(n) ) - k_m * COS( D2R*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinxi(WaveKinPrimeMap(I))  &
+                                 +  ( k_n * SIN( D2R*InitInp%WaveDirArr(n) ) - k_m * SIN( D2R*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinyi(WaveKinPrimeMap(I))  ))
 
 
                         ! Get value for \f$ B^- \f$ for the n,m index pair
@@ -1078,8 +1078,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                      !!             +  |\vec{k_n}| \sin \theta_n ~ y \right] \right) \f$
 
                   WaveElevxyPrime0  = exp( - ImagNmbr &
-                           *  (  2.0_SiKi * k_n * COS( D2R*InitInp%WaveDirArr(n) ) * InitInp%WaveKinxi0(WaveKinPrimeMap(I))  &
-                              +  2.0_SiKi * k_n * SIN( D2R*InitInp%WaveDirArr(n) ) * InitInp%WaveKinyi0(WaveKinPrimeMap(I))  ))
+                           *  (  2.0_SiKi * k_n * COS( D2R*InitInp%WaveDirArr(n) ) * InitInp%WaveKinxi(WaveKinPrimeMap(I))  &
+                              +  2.0_SiKi * k_n * SIN( D2R*InitInp%WaveDirArr(n) ) * InitInp%WaveKinyi(WaveKinPrimeMap(I))  ))
 
 
                      ! Get value for \f$ B+ \f$ for the n,m index pair
@@ -1180,8 +1180,8 @@ SUBROUTINE Waves2_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, 
                         !!             +  \left( |\vec{k_n}| \sin \theta_n + |\vec{k_m}| sin \theta_m \right) ~ y \right] \right) \f$
 
                      WaveElevxyPrime0  = exp( - ImagNmbr &
-                              *  (  ( k_n * COS( D2R*InitInp%WaveDirArr(n) ) + k_m * COS( D2R*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinxi0(WaveKinPrimeMap(I))  &
-                                 +  ( k_n * SIN( D2R*InitInp%WaveDirArr(n) ) + k_m * SIN( D2R*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinyi0(WaveKinPrimeMap(I))  ))
+                              *  (  ( k_n * COS( D2R*InitInp%WaveDirArr(n) ) + k_m * COS( D2R*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinxi(WaveKinPrimeMap(I))  &
+                                 +  ( k_n * SIN( D2R*InitInp%WaveDirArr(n) ) + k_m * SIN( D2R*InitInp%WaveDirArr(m) ) ) * InitInp%WaveKinyi(WaveKinPrimeMap(I))  ))
 
 
                         ! Get value for \f$ B+ \f$ for the n,m index pair

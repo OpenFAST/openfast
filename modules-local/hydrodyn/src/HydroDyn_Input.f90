@@ -2412,36 +2412,38 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
       RETURN
    END IF
 
-   !IF ( InitInp%HasWAMIT == .FALSE. .AND. InitInp%Waves%WaveMod > 0 ) THEN
-   !
-   !   IF ( ( InitInp%Waves%WaveStMod /= 0 ) .AND. ( InitInp%Waves%WaveStMod /= 1 ) .AND. &
-   !        ( InitInp%Waves%WaveStMod /= 2 ) .AND. ( InitInp%Waves%WaveStMod /= 3 ) )  THEN
-   !      ErrMsg  = ' WaveStMod must be 0, 1, 2, or 3.'
-   !      ErrStat = ErrID_Fatal
-   !
-   !      RETURN
-   !   END IF
-   !
-   !   IF ( ( InitInp%Waves%WaveStMod /= 3 ) .AND. ( InitInp%Waves%WaveMod == 5 ) )  THEN
-   !      ErrMsg  = ' WaveStMod must be set to 3 when WaveMod is set to 5.'
-   !      ErrStat = ErrID_Fatal
-   !
-   !      RETURN
-   !   END IF
-   !
-   !ELSE !don't use this one
-   !
-   !      ! NOTE: Do not read in WaveStMod for floating platforms since it is
-   !      !       inconsistent to use stretching (which is a nonlinear correction) for
-   !      !       the viscous drag term in Morison's equation while not accounting for
-   !      !       stretching in the diffraction and radiation problems (according to
-   !      !       Paul Sclavounos, there are such corrections).  Instead, the viscous
-   !      !       drag term from Morison's equation is computed by integrating up to
-   !      !       the MSL, regardless of the instantaneous free surface elevation.
-   !
-   !   InitInp%Waves%WaveStMod = 0
-   !
-   !END IF
+   IF ( InitInp%Waves%WaveMod /= 6 .AND. InitInp%Morison%NMembers > 0 .AND. InitInp%Waves%WaveMod > 0 ) THEN
+      
+      IF ( ( InitInp%Waves%WaveStMod /= 0 ) .AND. ( InitInp%Waves%WaveStMod /= 1 ) .AND. &
+            ( InitInp%Waves%WaveStMod /= 2 ) ) THEN ! (TODO: future version will support 3) .AND. ( InitInp%Waves%WaveStMod /= 3 ) )  THEN
+         ErrMsg  = ' WaveStMod must be 0, 1, or 2.' !, or 3.'
+         ErrStat = ErrID_Fatal
+   
+         RETURN
+      END IF
+   
+      !IF ( ( InitInp%Waves%WaveStMod /= 3 ) .AND. ( InitInp%Waves%WaveMod == 5 ) )  THEN
+      !   ErrMsg  = ' WaveStMod must be set to 3 when WaveMod is set to 5.'
+      !   ErrStat = ErrID_Fatal
+      !
+      !   RETURN
+      !END IF
+      
+         
+   
+   ELSE !don't use this one
+   
+         ! NOTE: Do not read in WaveStMod for floating platforms since it is
+         !       inconsistent to use stretching (which is a nonlinear correction) for
+         !       the viscous drag term in Morison's equation while not accounting for
+         !       stretching in the diffraction and radiation problems (according to
+         !       Paul Sclavounos, there are such corrections).  Instead, the viscous
+         !       drag term from Morison's equation is computed by integrating up to
+         !       the MSL, regardless of the instantaneous free surface elevation.
+   
+      InitInp%Waves%WaveStMod = 0
+   
+   END IF
 
 
       ! WaveTMax - Analysis time for incident wave calculations.
@@ -4114,54 +4116,54 @@ SUBROUTINE HydroDynInput_ProcessInitData( InitInp, ErrStat, ErrMsg )
 
 
          ! Establish the number and locations where the wave kinematics will be computed
-      InitInp%Waves%NWaveKin0   = InitInp%Morison%NNodes                          ! Number of points where the incident wave kinematics will be computed (-)
-      ALLOCATE ( InitInp%Waves%WaveKinxi0(InitInp%Waves%NWaveKin0), STAT = ErrStat2 )
+      InitInp%Waves%NWaveKin   = InitInp%Morison%NNodes                          ! Number of points where the incident wave kinematics will be computed (-)
+      ALLOCATE ( InitInp%Waves%WaveKinxi(InitInp%Waves%NWaveKin), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinxi0 array.',ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinxi array.',ErrStat,ErrMsg,RoutineName)
 
          RETURN
       END IF
-      ALLOCATE ( InitInp%Waves%WaveKinyi0(InitInp%Waves%NWaveKin0), STAT = ErrStat2 )
+      ALLOCATE ( InitInp%Waves%WaveKinyi(InitInp%Waves%NWaveKin), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinyi0 array.',ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinyi array.',ErrStat,ErrMsg,RoutineName)
          RETURN
       END IF
-      ALLOCATE ( InitInp%Waves%WaveKinzi0(InitInp%Waves%NWaveKin0), STAT = ErrStat2 )
+      ALLOCATE ( InitInp%Waves%WaveKinzi(InitInp%Waves%NWaveKin), STAT = ErrStat2 )
       IF ( ErrStat2 /= ErrID_None ) THEN
-         CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinzi0 array.',ErrStat,ErrMsg,RoutineName)
+         CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinzi array.',ErrStat,ErrMsg,RoutineName)
          RETURN
       END IF
       DO I=1,InitInp%Morison%NNodes
-         InitInp%Waves%WaveKinxi0(I)      = InitInp%Morison%Nodes(I)%JointPos(1)                          ! xi-coordinates for points where the incident wave kinematics will be computed;
-         InitInp%Waves%WaveKinyi0(I)      = InitInp%Morison%Nodes(I)%JointPos(2)                          ! yi-coordinates for points where the incident wave kinematics will be computed;
-         InitInp%Waves%WaveKinzi0(I)      = InitInp%Morison%Nodes(I)%JointPos(3) - InitInp%Morison%MSL2SWL   ! zi-coordinates for points where the incident wave kinematics will be computed, adjusted to the still water level(meters)     
-         InitInp%Current%MorisonNodezi(I) = InitInp%Waves%WaveKinzi0(I)
+         InitInp%Waves%WaveKinxi(I)      = InitInp%Morison%Nodes(I)%JointPos(1)                          ! xi-coordinates for points where the incident wave kinematics will be computed;
+         InitInp%Waves%WaveKinyi(I)      = InitInp%Morison%Nodes(I)%JointPos(2)                          ! yi-coordinates for points where the incident wave kinematics will be computed;
+         InitInp%Waves%WaveKinzi(I)      = InitInp%Morison%Nodes(I)%JointPos(3) - InitInp%Morison%MSL2SWL   ! zi-coordinates for points where the incident wave kinematics will be computed, adjusted to the still water level(meters)     
+         InitInp%Current%MorisonNodezi(I) = InitInp%Waves%WaveKinzi(I)
       END DO
 
 
             ! If we are using the Waves module, the node information must be copied over.
-      InitInp%Waves2%NWaveKin0   = InitInp%Waves%NWaveKin0                          ! Number of points where the incident wave kinematics will be computed (-)
+      InitInp%Waves2%NWaveKin   = InitInp%Waves%NWaveKin                          ! Number of points where the incident wave kinematics will be computed (-)
       IF ( InitInp%Waves2%WvDiffQTFF .OR. InitInp%Waves2%WvSumQTFF ) THEN
-         ALLOCATE ( InitInp%Waves2%WaveKinxi0(InitInp%Waves2%NWaveKin0), STAT = ErrStat2 )
+         ALLOCATE ( InitInp%Waves2%WaveKinxi(InitInp%Waves2%NWaveKin), STAT = ErrStat2 )
          IF ( ErrStat2 /= ErrID_None ) THEN
-            CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinxi0 array for Waves2 module.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinxi array for Waves2 module.',ErrStat,ErrMsg,RoutineName)
 
             RETURN
          END IF
-         ALLOCATE ( InitInp%Waves2%WaveKinyi0(InitInp%Waves2%NWaveKin0), STAT = ErrStat2 )
+         ALLOCATE ( InitInp%Waves2%WaveKinyi(InitInp%Waves2%NWaveKin), STAT = ErrStat2 )
          IF ( ErrStat2 /= ErrID_None ) THEN
-            CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinyi0 array for Waves2 module.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinyi array for Waves2 module.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
-         ALLOCATE ( InitInp%Waves2%WaveKinzi0(InitInp%Waves2%NWaveKin0), STAT = ErrStat2 )
+         ALLOCATE ( InitInp%Waves2%WaveKinzi(InitInp%Waves2%NWaveKin), STAT = ErrStat2 )
          IF ( ErrStat2 /= ErrID_None ) THEN
-            CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinzi0 array for Waves2 module.',ErrStat,ErrMsg,RoutineName)
+            CALL SetErrStat( ErrID_Fatal,'Error allocating space for WaveKinzi array for Waves2 module.',ErrStat,ErrMsg,RoutineName)
             RETURN
          END IF
 
-         InitInp%Waves2%WaveKinxi0  = InitInp%Waves%WaveKinxi0
-         InitInp%Waves2%WaveKinyi0  = InitInp%Waves%WaveKinyi0
-         InitInp%Waves2%WaveKinzi0  = InitInp%Waves%WaveKinzi0
+         InitInp%Waves2%WaveKinxi  = InitInp%Waves%WaveKinxi
+         InitInp%Waves2%WaveKinyi  = InitInp%Waves%WaveKinyi
+         InitInp%Waves2%WaveKinzi  = InitInp%Waves%WaveKinzi
 
       ENDIF
 

@@ -273,8 +273,8 @@ SUBROUTINE HDOut_OpenSum( UnSum, SummaryName, HD_Prog, ErrStat, ErrMsg )
 END SUBROUTINE HDOut_OpenSum 
 
 !====================================================================================================
-SUBROUTINE HDOut_WriteWvKinFiles( Rootname, HD_Prog, NStepWave, NNodes, NWaveElev, nodeInWater, WaveElev, WaveKinzi0, &
-                                    WaveTime, WaveVel0, WaveAcc0, WaveDynP0, ErrStat, ErrMsg )
+SUBROUTINE HDOut_WriteWvKinFiles( Rootname, HD_Prog, NStepWave, NNodes, NWaveElev, nodeInWater, WaveElev, WaveKinzi, &
+                                    WaveTime, WaveVel, WaveAcc, WaveDynP, ErrStat, ErrMsg )
 
       ! Passed variables
    CHARACTER(*),                  INTENT( IN    )   :: Rootname             ! filename including full path, minus any file extension.
@@ -282,13 +282,13 @@ SUBROUTINE HDOut_WriteWvKinFiles( Rootname, HD_Prog, NStepWave, NNodes, NWaveEle
    INTEGER,                       INTENT( IN    )   :: NStepWave            ! Number of time steps for the wave kinematics arrays
    INTEGER,                       INTENT( IN    )   :: NNodes               ! Number of simulation nodes for the wave kinematics arrays
    INTEGER,                       INTENT( IN    )   :: NWaveElev            ! Number of locations where wave elevations were requested
-   LOGICAL,                       INTENT( IN    )   :: nodeInWater(0:,: )     !
+   INTEGER,                       INTENT( IN    )   :: nodeInWater(0:,: )     !
    REAL(SiKi),                    INTENT( IN    )   :: WaveElev  (0:,: )     ! Instantaneous wave elevations at requested locations
-   REAL(SiKi),                    INTENT( IN    )   :: WaveKinzi0(:    )     ! The z-location of all the nodes
+   REAL(SiKi),                    INTENT( IN    )   :: WaveKinzi(:    )     ! The z-location of all the nodes
    REAL(SiKi),                    INTENT( IN    )   :: WaveTime (0:    )     ! The time values for the wave kinematics  (time)
-   REAL(SiKi),                    INTENT( IN    )   :: WaveVel0 (0:,:,:)     ! The wave velocities (time,node,component)
-   REAL(SiKi),                    INTENT( IN    )   :: WaveAcc0 (0:,:,:)     ! The wave accelerations (time,node,component)
-   REAL(SiKi),                    INTENT( IN    )   :: WaveDynP0(0:,:)       ! The wave dynamic pressure (time,node)
+   REAL(SiKi),                    INTENT( IN    )   :: WaveVel (0:,:,:)     ! The wave velocities (time,node,component)
+   REAL(SiKi),                    INTENT( IN    )   :: WaveAcc (0:,:,:)     ! The wave accelerations (time,node,component)
+   REAL(SiKi),                    INTENT( IN    )   :: WaveDynP(0:,:)       ! The wave dynamic pressure (time,node)
    INTEGER,                       INTENT(   OUT )   :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),                  INTENT(   OUT )   :: ErrMsg               ! Error message if ErrStat /= ErrID_None
       
@@ -329,25 +329,25 @@ SUBROUTINE HDOut_WriteWvKinFiles( Rootname, HD_Prog, NStepWave, NNodes, NWaveEle
       
       DO i= 0,NStepWave-1
          DO j = 1, NNodes
-            IF (   .NOT. nodeInWater(i,j) )  THEN
+            IF ( nodeInWater(i,j) == 0 )  THEN
                WRITE(UnWv,Sfrmt,ADVANCE='no')   Delim,  '##########'
             ELSE
                   
                SELECT CASE (iFile)
                   CASE (1)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel0 (i,j,1)  
+                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (i,j,1)  
                   CASE (2)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel0 (i,j,2)  
+                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (i,j,2)  
                   CASE (3)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel0 (i,j,3)  
+                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveVel (i,j,3)  
                   CASE (4)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc0 (i,j,1)  
+                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (i,j,1)  
                   CASE (5)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc0 (i,j,2)  
+                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (i,j,2)  
                   CASE (6)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc0 (i,j,3)  
+                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveAcc (i,j,3)  
                   CASE (7)              
-                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveDynP0(i,j  )  
+                     WRITE(UnWv,Frmt,ADVANCE='no')   Delim,  WaveDynP(i,j  )  
                   END SELECT
             END IF
          END DO
