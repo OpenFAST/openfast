@@ -1967,6 +1967,7 @@ SUBROUTINE BD_GaussPointDataAt0(hhx,hpx,Jaco,Nuu0,Nrr0,node_elem,dof_node,uu0,E1
    REAL(BDKi)                  :: rot0_temp(3)
    REAL(BDKi)                  :: rotu_temp(3)
    REAL(BDKi)                  :: rot_temp(3)
+   REAL(BDKi)                  :: R0_temp(3,3)
    INTEGER(IntKi)              :: inode
    INTEGER(IntKi)              :: temp_id
    INTEGER(IntKi)              :: temp_id2
@@ -1988,7 +1989,7 @@ SUBROUTINE BD_GaussPointDataAt0(hhx,hpx,Jaco,Nuu0,Nrr0,node_elem,dof_node,uu0,E1
        DO i=1,3
            uu0(i) = uu0(i) + hhi*Nuu0(temp_id+i)
            uu0(i+3) = uu0(i+3) + hhi*Nrr0(temp_id2+i)
-           E10(i) = E10(i) + hpi*Nuu0(temp_id+i)
+!           E10(i) = E10(i) + hpi*Nuu0(temp_id+i)
        ENDDO
    ENDDO
 
@@ -2004,6 +2005,11 @@ SUBROUTINE BD_GaussPointDataAt0(hhx,hpx,Jaco,Nuu0,Nrr0,node_elem,dof_node,uu0,E1
    DO i=1,3
        uu0(i+3) = rot_temp(i)
    ENDDO
+
+   R0_temp = 0.0_BDKi
+   CALL BD_CrvMatrixR(uu0(4:6),R0_temp,ErrStat2,ErrMsg2)
+       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+   E10(:) = R0_temp(:,1)
 
 END SUBROUTINE BD_GaussPointDataAt0
 !-----------------------------------------------------------------------------------------------------------------------------------
