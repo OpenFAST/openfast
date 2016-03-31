@@ -157,7 +157,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    INTEGER(IntKi)                          :: IceDim              ! dimension we're pre-allocating for number of IceDyn legs/instances
    INTEGER(IntKi)                          :: I                   ! generic loop counter
    INTEGER(IntKi)                          :: k                   ! blade loop counter
-                                           
+   
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
                                            
    CHARACTER(*), PARAMETER                 :: RoutineName = 'FAST_InitializeAll'       
@@ -174,6 +174,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    p_FAST%WrVTK = VTK_Unknown                                           ! set this so that we can potentially output VTK information on initialization error
 !   p_FAST%VTK_Type = VTK_Unknown                                        ! set this so that we can potentially output VTK information on initialization error
 !   p_FAST%VTK_fields = .false.                                          ! set this so that we can potentially output VTK information on initialization error
+   y_FAST%VTK_LastWaveIndx = 1                                          ! Start looking for wave data at the first index
    y_FAST%VTK_count = 0                                                 ! first VTK file has 0 as output      
    y_FAST%n_Out = 0                                                     ! set the number of ouptut channels to 0 to indicate there's nothing to write to the binary file
    p_FAST%ModuleInitialized = .FALSE.                                   ! (array initialization) no modules are initialized 
@@ -617,6 +618,19 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       END IF          
    END IF
 
+   ! ........................
+   ! set some VTK parameters required before HydroDyn init (so we can get wave elevations for visualization)
+   ! ........................
+   
+      ! get wave elevation data for visualization
+   if ( p_FAST%WrVTK > VTK_None .and. p_FAST%VTK_Type == VTK_Surf ) then   
+      call SetVTKParameters_B4HD(p_FAST, InitOutData_ED, InitInData_HD, BD, ErrStat2, ErrMsg2)
+         CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         IF (ErrStat >= AbortErrLev) THEN
+            CALL Cleanup()
+            RETURN
+         END IF       
+   end if
    
    
    ! ........................
@@ -637,10 +651,11 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       InitInData_HD%OutRootName   = p_FAST%OutFileRoot
       InitInData_HD%TMax          = p_FAST%TMax
       InitInData_HD%hasIce        = p_FAST%CompIce /= Module_None
+            
       
          ! if wave field needs an offset, modify these values (added at request of SOWFA developers):
-      InitInData_HD%PtfmLocationX = 0.0_ReKi  
-      InitInData_HD%PtfmLocationY = 0.0_ReKi
+      InitInData_HD%PtfmLocationX = p_FAST%TurbinePos(1) 
+      InitInData_HD%PtfmLocationY = p_FAST%TurbinePos(2)
       
       CALL HydroDyn_Init( InitInData_HD, HD%Input(1), HD%p,  HD%x(STATE_CURR), HD%xd(STATE_CURR), HD%z(STATE_CURR), &
                           HD%OtherSt(STATE_CURR), HD%y, HD%m, p_FAST%dt_module( MODULE_HD ), InitOutData_HD, ErrStat2, ErrMsg2 )
@@ -977,7 +992,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! -------------------------------------------------------------------------
             
    if ( p_FAST%WrVTK > VTK_None .and. p_FAST%VTK_Type == VTK_Surf ) then
-      call SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitOutData_HD, ED, BD, AD, HD, ErrStat2, ErrMsg2)      
+      call SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_HD, InitOutData_HD, ED, BD, AD, HD, ErrStat2, ErrMsg2)      
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
    
@@ -2327,12 +2342,74 @@ CONTAINS
    !...............................................................................................................................
 END SUBROUTINE FAST_ReadPrimaryFile
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine sets up some of the information needed for plotting VTK surfaces. It initializes only the data needed before 
+!! HD initialization. (HD needs some of this data so it can return the wave elevation data we want.)
+SUBROUTINE SetVTKParameters_B4HD(p_FAST, InitOutData_ED, InitInData_HD, BD, ErrStat, ErrMsg)
+
+   TYPE(FAST_ParameterType),     INTENT(INOUT) :: p_FAST           !< The parameters of the glue code
+   TYPE(ED_InitOutputType),      INTENT(INOUT) :: InitOutData_ED   !< The initialization output from structural dynamics module
+   TYPE(HydroDyn_InitInputType), INTENT(INOUT) :: InitInData_HD    !< The initialization input toHydroDyn
+   TYPE(BeamDyn_Data),           INTENT(IN   ) :: BD               !< BeamDyn data
+   INTEGER(IntKi),               INTENT(  OUT) :: ErrStat          !< Error status of the operation
+   CHARACTER(*),                 INTENT(  OUT) :: ErrMsg           !< Error message if ErrStat /= ErrID_None
+
+      
+   REAL(SiKi)                              :: BladeLength, Width, WidthBy2
+   REAL(SiKi)                              :: dx, dy                
+   INTEGER(IntKi)                          :: i, j, n
+   INTEGER(IntKi)                          :: ErrStat2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'SetVTKParameters_B4HD'
+   
+         
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+      ! Get radius for ground (blade length + hub radius):
+   if ( p_FAST%CompElast == Module_BD ) then  
+      BladeLength = TwoNorm(BD%y(1)%BldMotion%Position(:,1) - BD%y(1)%BldMotion%Position(:,BD%y(1)%BldMotion%Nnodes))
+   else
+      BladeLength = InitOutData_ED%BladeLength 
+   end if
+   p_FAST%VTK_Surface%GroundRad =  BladeLength + InitOutData_ED%HubRad 
+
+   
+      ! initialize wave elevation data:
+   if ( p_FAST%CompHydro == Module_HD ) then
+      
+      p_FAST%VTK_surface%NWaveElevPts(1) = 25
+      p_FAST%VTK_surface%NWaveElevPts(2) = 25
+            
+      call allocAry( InitInData_HD%WaveElevXY, 2, p_FAST%VTK_surface%NWaveElevPts(1)*p_FAST%VTK_surface%NWaveElevPts(2), 'WaveElevXY', ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return
+
+      Width = p_FAST%VTK_Surface%GroundRad * VTK_GroundFactor
+      dx = Width / (p_FAST%VTK_surface%NWaveElevPts(1) - 1)
+      dy = Width / (p_FAST%VTK_surface%NWaveElevPts(2) - 1)
+            
+      WidthBy2 = Width / 2.0_SiKi
+      n = 1
+      do i=1,p_FAST%VTK_surface%NWaveElevPts(1)
+         do j=1,p_FAST%VTK_surface%NWaveElevPts(2)
+            InitInData_HD%WaveElevXY(1,n) = dx*(i-1) - WidthBy2 !+ p_FAST%TurbinePos(1) ! HD takes p_FAST%TurbinePos into account already
+            InitInData_HD%WaveElevXY(2,n) = dy*(j-1) - WidthBy2 !+ p_FAST%TurbinePos(2)
+            n = n+1
+         end do
+      end do
+      
+   end if
+         
+      
+END SUBROUTINE SetVTKParameters_B4HD
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets up the information needed for plotting VTK surfaces.
-SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitOutData_HD, ED, BD, AD, HD, ErrStat, ErrMsg)
+SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_HD, InitOutData_HD, ED, BD, AD, HD, ErrStat, ErrMsg)
 
    TYPE(FAST_ParameterType),     INTENT(INOUT) :: p_FAST           !< The parameters of the glue code
    TYPE(ED_InitOutputType),      INTENT(INOUT) :: InitOutData_ED   !< The initialization output from structural dynamics module
    TYPE(AD_InitOutputType),      INTENT(INOUT) :: InitOutData_AD   !< The initialization output from AeroDyn
+   TYPE(HydroDyn_InitInputType), INTENT(INOUT) :: InitInData_HD    !< The initialization input to HydroDyn
    TYPE(HydroDyn_InitOutputType),INTENT(INOUT) :: InitOutData_HD   !< The initialization output from HydroDyn
    TYPE(ElastoDyn_Data),         INTENT(IN   ) :: ED               !< ElastoDyn data
    TYPE(BeamDyn_Data),           INTENT(IN   ) :: BD               !< BeamDyn data
@@ -2361,19 +2438,21 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitOutData_
    p_FAST%VTK_Surface%NumSectors = 18   
    p_FAST%VTK_Surface%HubRad     = InitOutData_ED%HubRad
 
-   if ( p_FAST%CompElast == Module_BD ) then      
-      p_FAST%VTK_Surface%GroundRad = TwoNorm(BD%y(1)%BldMotion%Position(:,1)-BD%y(1)%BldMotion%Position(:,BD%y(1)%BldMotion%Nnodes)) + InitOutData_ED%HubRad 
-   else
-      p_FAST%VTK_Surface%GroundRad = InitOutData_ED%BladeLength + InitOutData_ED%HubRad 
-   end if
-
+   ! NOTE: we set p_FAST%VTK_Surface%GroundRad in SetVTKParameters_B4HD
+   
+   
    ! write the ground or seabed reference polygon:
    RefPoint = p_FAST%TurbinePos
-   RefLengths = p_FAST%VTK_Surface%GroundRad*2.0  ! will make a square for now
    if (p_FAST%CompHydro == MODULE_HD) then
-      RefPoint(3) = RefPoint(3) - InitOutData_HD%WtrDpth      
+      RefLengths = p_FAST%VTK_Surface%GroundRad*VTK_GroundFactor/2.0_SiKi
+      
+      RefPoint(3) = p_FAST%TurbinePos(3) - InitOutData_HD%WtrDpth      
       call WrVTK_Ground ( RefPoint, RefLengths, trim(p_FAST%OutFileRoot)//'.SeabedSurface', ErrStat2, ErrMsg2 )   
+      
+      RefPoint(3) = p_FAST%TurbinePos(3) - InitOutData_HD%MSL2SWL    
+      call WrVTK_Ground ( RefPoint, RefLengths, trim(p_FAST%OutFileRoot)//'.StillWaterSurface', ErrStat2, ErrMsg2 )       
    else
+      RefLengths = p_FAST%VTK_Surface%GroundRad !array = scalar
       call WrVTK_Ground ( RefPoint, RefLengths, trim(p_FAST%OutFileRoot)//'.GroundSurface', ErrStat2, ErrMsg2 )         
    end if
    
@@ -2477,6 +2556,21 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitOutData_
    
    
    !.......................
+   ! wave elevation 
+   !.......................
+
+   !bjj: interpolate here instead of each time step?
+   if ( allocated(InitOutData_HD%WaveElevSeries) ) then
+      call move_alloc( InitInData_HD%WaveElevXY, p_FAST%VTK_Surface%WaveElevXY )
+      call move_alloc( InitOutData_HD%WaveElevSeries, p_FAST%VTK_Surface%WaveElev )
+      
+      p_FAST%VTK_Surface%WaveElevXY(1,:) = p_FAST%VTK_Surface%WaveElevXY(1,:) + p_FAST%TurbinePos(1)
+      p_FAST%VTK_Surface%WaveElevXY(2,:) = p_FAST%VTK_Surface%WaveElevXY(2,:) + p_FAST%TurbinePos(2)
+      p_FAST%VTK_Surface%WaveElev        = p_FAST%VTK_Surface%WaveElev + p_FAST%TurbinePos(3)  ! not sure this is really accurrate if p_FAST%TurbinePos(3) is non-zero
+      
+   end if
+   
+   !.......................
    ! morison surfaces
    !.......................
    
@@ -2576,14 +2670,14 @@ END SUBROUTINE SetVTKDefaultBladeParams
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes the ground or seabed reference surface information in VTK format.
 !! see VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf
-SUBROUTINE WrVTK_Ground ( RefPoint, Lengths, FileRootName, ErrStat, ErrMsg )
+SUBROUTINE WrVTK_Ground ( RefPoint, HalfLengths, FileRootName, ErrStat, ErrMsg )
       
-   REAL(SiKi),      INTENT(IN)           :: RefPoint(3)   !< reference point (plane will be created around it)
-   REAL(SiKi),      INTENT(IN)           :: Lengths(2)    !< X-Y lengths of plane surrounding RefPoint
-   CHARACTER(*),    INTENT(IN)           :: FileRootName  !< Name of the file to write the output in (excluding extension)
+   REAL(SiKi),      INTENT(IN)           :: RefPoint(3)     !< reference point (plane will be created around it)
+   REAL(SiKi),      INTENT(IN)           :: HalfLengths(2)  !< half of the X-Y lengths of plane surrounding RefPoint
+   CHARACTER(*),    INTENT(IN)           :: FileRootName    !< Name of the file to write the output in (excluding extension)
    
-   INTEGER(IntKi),  INTENT(OUT)          :: ErrStat       !< Indicates whether an error occurred (see NWTC_Library)
-   CHARACTER(*),    INTENT(OUT)          :: ErrMsg        !< Error message associated with the ErrStat
+   INTEGER(IntKi),  INTENT(OUT)          :: ErrStat         !< Indicates whether an error occurred (see NWTC_Library)
+   CHARACTER(*),    INTENT(OUT)          :: ErrMsg          !< Error message associated with the ErrStat
 
 
    ! local variables
@@ -2617,10 +2711,10 @@ SUBROUTINE WrVTK_Ground ( RefPoint, Lengths, FileRootName, ErrStat, ErrMsg )
       WRITE(Un,'(A)')         '      <Points>'
       WRITE(Un,'(A)')         '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
                
-      WRITE(Un,'(3(F20.6))') RefPoint(1) + Lengths(1)/2.0 , RefPoint(2) + Lengths(2)/2.0, RefPoint(3)
-      WRITE(Un,'(3(F20.6))') RefPoint(1) + Lengths(1)/2.0 , RefPoint(2) - Lengths(2)/2.0, RefPoint(3)
-      WRITE(Un,'(3(F20.6))') RefPoint(1) - Lengths(1)/2.0 , RefPoint(2) - Lengths(2)/2.0, RefPoint(3)
-      WRITE(Un,'(3(F20.6))') RefPoint(1) - Lengths(1)/2.0 , RefPoint(2) + Lengths(2)/2.0, RefPoint(3)
+      WRITE(Un,VTK_AryFmt) RefPoint(1) + HalfLengths(1) , RefPoint(2) + HalfLengths(2), RefPoint(3)
+      WRITE(Un,VTK_AryFmt) RefPoint(1) + HalfLengths(1) , RefPoint(2) - HalfLengths(2), RefPoint(3)
+      WRITE(Un,VTK_AryFmt) RefPoint(1) - HalfLengths(1) , RefPoint(2) - HalfLengths(2), RefPoint(3)
+      WRITE(Un,VTK_AryFmt) RefPoint(1) - HalfLengths(1) , RefPoint(2) + HalfLengths(2), RefPoint(3)
             
       WRITE(Un,'(A)')         '        </DataArray>'
       WRITE(Un,'(A)')         '      </Points>'
@@ -3101,7 +3195,7 @@ SUBROUTINE FAST_Solution0(p_FAST, y_FAST, m_FAST, ED, BD, SrvD, AD14, AD, IfW, O
       ! Write visualization data for initialization (and also note that we're ignoring any errors that occur doing so)
 
       IF ( p_FAST%VTK_Type == VTK_Surf ) THEN
-         CALL WrVTK_Surfaces(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
+         CALL WrVTK_Surfaces(m_FAST%t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
       ELSE IF ( p_FAST%VTK_Type == VTK_Basic ) THEN
          CALL WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
       ELSE IF ( p_FAST%VTK_Type == VTK_All ) THEN
@@ -3959,7 +4053,7 @@ SUBROUTINE WriteOutputToFile(n_t_global, t_global, p_FAST, y_FAST, ED, BD, AD14,
       IF ( MOD( n_t_global, p_FAST%n_VTKTime ) == 0 ) THEN
          
          IF ( p_FAST%VTK_Type == VTK_Surf ) THEN
-            CALL WrVTK_Surfaces(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
+            CALL WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
          ELSE IF ( p_FAST%VTK_Type == VTK_Basic ) THEN
             CALL WrVTK_BasicMeshes(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)            
          ELSE IF ( p_FAST%VTK_Type == VTK_All ) THEN
@@ -4482,10 +4576,11 @@ END SUBROUTINE WrVTK_BasicMeshes
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes a minimal subset of meshes with surfaces to VTK-formatted files. It doesn't bother with 
 !! returning an error code.
-SUBROUTINE WrVTK_Surfaces(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
+SUBROUTINE WrVTK_Surfaces(t_global, p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, OpFM, HD, SD, SrvD, MAPp, FEAM, MD, Orca, IceF, IceD)
 
+   REAL(DbKi),               INTENT(IN   ) :: t_global            !< Current global time
    TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
-   TYPE(FAST_OutputFileType),INTENT(IN   ) :: y_FAST              !< Output variables for the glue code
+   TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code (only because we're updating VTK_LastWaveIndx)
    TYPE(FAST_ModuleMapType), INTENT(IN   ) :: MeshMapData         !< Data for mapping between modules
 
    TYPE(ElastoDyn_Data),     INTENT(IN   ) :: ED                  !< ElastoDyn data
@@ -4514,6 +4609,9 @@ SUBROUTINE WrVTK_Surfaces(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, Op
    NumBl = SIZE(ED%Output(1)%BladeRootMotion)            
 
 ! Ground (written at initialization)
+   
+! Wave elevation
+   if ( allocated( p_FAST%VTK_Surface%WaveElev ) ) call WrVTK_WaveElev( t_global, p_FAST, y_FAST, HD)
    
    
 ! Nacelle
@@ -4578,6 +4676,157 @@ SUBROUTINE WrVTK_Surfaces(p_FAST, y_FAST, MeshMapData, ED, BD, AD14, AD, IfW, Op
          
    
 END SUBROUTINE WrVTK_Surfaces 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine writes the wave elevation data for a given time step
+SUBROUTINE WrVTK_WaveElev(t_global, p_FAST, y_FAST, HD)
+
+   REAL(DbKi),               INTENT(IN   ) :: t_global            !< Current global time
+   TYPE(FAST_ParameterType), INTENT(IN   ) :: p_FAST              !< Parameters for the glue code
+   TYPE(FAST_OutputFileType),INTENT(INOUT) :: y_FAST              !< Output variables for the glue code
+
+   TYPE(HydroDyn_Data),      INTENT(IN   ) :: HD                  !< HydroDyn data
+
+   ! local variables
+   INTEGER(IntKi)                        :: Un                    ! fortran unit number
+   INTEGER(IntKi)                        :: n, iy, ix, it         ! loop counters
+   REAL(SiKi)                            :: t
+   CHARACTER(1024)                       :: FileName
+   INTEGER(IntKi)                        :: NumberOfPoints 
+   INTEGER(IntKi), parameter             :: NumberOfLines = 0
+   INTEGER(IntKi)                        :: NumberOfPolys 
+        
+   INTEGER(IntKi)                        :: ErrStat2 
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2
+   CHARACTER(*),PARAMETER                :: RoutineName = 'WrVTK_WaveElev'
+
+   
+   NumberOfPoints = size(p_FAST%VTK_surface%WaveElevXY,2)
+      ! I'm going to make triangles for now. we should probably just make this a structured file at some point
+   NumberOfPolys  = ( p_FAST%VTK_surface%NWaveElevPts(1) - 1 ) * &
+                    ( p_FAST%VTK_surface%NWaveElevPts(2) - 1 ) * 2
+   
+   !.................................................................
+   ! write the data that potentially changes each time step:
+   !.................................................................
+      
+   ! PolyData (.vtp) — Serial vtkPolyData (unstructured) file
+   FileName = TRIM(p_FAST%OutFileRoot)//'.WaveSurface.t'//TRIM(Num2LStr(y_FAST%VTK_count))//'.vtp'
+      
+   call WrVTK_header( FileName, NumberOfPoints, NumberOfLines, NumberOfPolys, Un, ErrStat2, ErrMsg2 )    
+      if (ErrStat2 >= AbortErrLev) return
+         
+! points (nodes, augmented with NumSegments):   
+      WRITE(Un,'(A)')         '      <Points>'
+      WRITE(Un,'(A)')         '        <DataArray type="Float32" NumberOfComponents="3" format="ascii">'
+
+      ! I'm not going to interpolate in time; I'm just going to get the index of the closest wave time value
+      t = REAL(t_global,SiKi)
+      call GetWaveElevIndx( t, HD%p%WaveTime, y_FAST%VTK_LastWaveIndx )
+      
+      n = 1
+      do ix=1,p_FAST%VTK_surface%NWaveElevPts(1)
+         do iy=1,p_FAST%VTK_surface%NWaveElevPts(2)            
+            WRITE(Un,VTK_AryFmt) p_FAST%VTK_surface%WaveElevXY(:,n), p_FAST%VTK_surface%WaveElev(y_FAST%VTK_LastWaveIndx,n) 
+            n = n+1
+         end do
+      end do
+                     
+      WRITE(Un,'(A)')         '        </DataArray>'
+      WRITE(Un,'(A)')         '      </Points>'
+  
+                  
+      WRITE(Un,'(A)')         '      <Polys>'      
+      WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="connectivity" format="ascii">'         
+      
+      do ix=1,p_FAST%VTK_surface%NWaveElevPts(1)-1
+         do iy=1,p_FAST%VTK_surface%NWaveElevPts(2)-1
+            n = p_FAST%VTK_surface%NWaveElevPts(1)*(ix-1)+iy - 1 ! points start at 0
+            
+            WRITE(Un,'(3(i7))') n,   n+1,                                    n+p_FAST%VTK_surface%NWaveElevPts(2)
+            WRITE(Un,'(3(i7))') n+1, n+1+p_FAST%VTK_surface%NWaveElevPts(2), n+p_FAST%VTK_surface%NWaveElevPts(2)
+            
+         end do
+      end do            
+      WRITE(Un,'(A)')         '        </DataArray>'      
+      
+      WRITE(Un,'(A)')         '        <DataArray type="Int32" Name="offsets" format="ascii">'                  
+      do n=1,NumberOfPolys
+         WRITE(Un,'(i7)') 3*n
+      end do      
+      WRITE(Un,'(A)')         '        </DataArray>'
+      WRITE(Un,'(A)')         '      </Polys>'      
+                  
+      call WrVTK_footer( Un )       
+      
+END SUBROUTINE WrVTK_WaveElev  
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This function returns the index, Ind, of the XAry closest to XValIn, where XAry is assumed to be periodic. It starts
+!! searching at the value of Ind from a previous step.
+SUBROUTINE GetWaveElevIndx( XValIn, XAry, Ind )
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(INOUT)       :: Ind                ! Initial and final index into the arrays.
+
+   REAL(SiKi), INTENT(IN)       :: XAry    (:)        !< Array of X values to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XValIn             !< X value to be found
+
+   
+   INTEGER                      :: AryLen             ! Length of the arrays.
+   REAL(SiKi)                   :: XVal               !< X to be found (wrapped/periodic)
+   
+   
+   AryLen = size(XAry)
+   
+      ! Wrap XValIn into the range XAry(1) to XAry(AryLen)
+   XVal = MOD(XValIn, XAry(AryLen))
+
+   
+   
+        ! Let's check the limits first.
+
+   IF ( XVal <= XAry(1) )  THEN
+      Ind = 1
+      RETURN
+   ELSE IF ( XVal >= XAry(AryLen) )  THEN
+      Ind = AryLen
+      RETURN
+   ELSE
+      ! Set the Ind to the first index if we are at the beginning of XAry
+      IF ( XVal <= XAry(2) )  THEN  
+         Ind = 1
+      END IF      
+   END IF
+
+
+     ! Let's interpolate!
+
+   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
+
+   DO
+
+      IF ( XVal < XAry(Ind) )  THEN
+
+         Ind = Ind - 1
+
+      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
+
+         Ind = Ind + 1
+
+      ELSE
+         
+         ! XAry(Ind) <= XVal < XAry(Ind+1)
+         ! this would make it the "closest" node, but I'm not going to worry about that for visualization purposes
+         !if ( XVal > (XAry(Ind+1) + XAry(Ind))/2.0_SiKi ) Ind = Ind + 1
+
+         RETURN
+
+      END IF
+
+   END DO
+
+   RETURN
+END SUBROUTINE GetWaveElevIndx   
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes Input Mesh information to a binary file (for debugging). It both opens and closes the file.
 SUBROUTINE WriteInputMeshesToFile(u_ED, u_AD, u_SD, u_HD, u_MAP, u_BD, FileName, ErrStat, ErrMsg) 

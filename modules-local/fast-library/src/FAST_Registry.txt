@@ -65,6 +65,9 @@ typedef	^	^	SiKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex
 typedef	^	^	SiKi	GroundRad	-	-	-	"radius for plotting circle on ground"	m
 typedef	^	^	SiKi	NacelleBox	{3}{8}	-	-	"X-Y-Z locations of 8 points that define the nacelle box, relative to the nacelle position"	m
 typedef	^	^	SiKi	TowerRad	{:}	-	-	"radius of each ED tower node"	m
+typedef	^	^	IntKi	NWaveElevPts	{2}	-	-	"number of points for wave elevation visualization"	-
+typedef	^	^	SiKi	WaveElevXY	{:}{:}	-	-	"X-Y locations for WaveElev output (for visualization).  First dimension is the X (1) and Y (2) coordinate.  Second dimension is the point number."	"m,-"
+typedef	^	^	SiKi	WaveElev	{:}{:}	-	-	"wave elevation at WaveElevXY; first dimension is time step; second dimension is point number"	"m,-"
 typedef	^	^	FAST_VTK_BLSurfaceType	BladeShape	{:}	-	-	"AirfoilCoords for each blade"	m
 typedef	^	^	SiKi	MorisonRad	{:}	-	-	"radius of each Morison node"	m
 
@@ -142,6 +145,7 @@ typedef	^	^	CHARACTER(ChanLen)	ChannelNames	{:}	-	-	"Names of the output channel
 typedef	^	^	CHARACTER(ChanLen)	ChannelUnits	{:}	-	-	"Units for the output channels"
 typedef	^	^	ProgDesc	Module_Ver	{NumModules}	-	-	"version information from all modules"
 typedef	^	^	IntKi	VTK_count	-	-	-	"Number of VTK files written (for naming output files)"
+typedef	^	^	IntKi	VTK_LastWaveIndx	-	-	-	"last index into wave array"	-
 
 # ..... IceDyn data .......................................................................................................
 # [ the last dimension of each allocatable array is for the instance of IceDyn being used ]

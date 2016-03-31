@@ -38,19 +38,20 @@ MODULE FAST_ModTypes
    INTEGER(IntKi), PARAMETER :: Type_Offshore_Floating  = 3
    
    ! state array indexes
-   INTEGER(IntKi), PARAMETER :: STATE_CURR              = 1
-   INTEGER(IntKi), PARAMETER :: STATE_PRED              = 2
+   INTEGER(IntKi), PARAMETER :: STATE_CURR              = 1          !< index for "current" (t_global) states
+   INTEGER(IntKi), PARAMETER :: STATE_PRED              = 2          !< index for "predicted" (t_global_next) states
    
    ! VTK visualization
-   INTEGER(IntKi), PARAMETER :: VTK_Unknown             = -1    !< unknown option (will produce error)
-   INTEGER(IntKi), PARAMETER :: VTK_None                =  0    !< none (no VTK output)
-   INTEGER(IntKi), PARAMETER :: VTK_InitOnly            =  1    !< VTK output only at initialization
-   INTEGER(IntKi), PARAMETER :: VTK_Animate             =  2    !< VTK animation output
+   INTEGER(IntKi), PARAMETER :: VTK_Unknown             = -1         !< unknown option (will produce error)
+   INTEGER(IntKi), PARAMETER :: VTK_None                =  0         !< none (no VTK output)
+   INTEGER(IntKi), PARAMETER :: VTK_InitOnly            =  1         !< VTK output only at initialization
+   INTEGER(IntKi), PARAMETER :: VTK_Animate             =  2         !< VTK animation output
       
-   INTEGER(IntKi), PARAMETER :: VTK_Surf                =  1    !< output surfaces
-   INTEGER(IntKi), PARAMETER :: VTK_Basic               =  2    !< output minimal number of point/line meshes
-   INTEGER(IntKi), PARAMETER :: VTK_All                 =  3    !< output all point/line meshes
-   INTEGER(IntKi), PARAMETER :: VTK_Old                 =  4    !< output in old binary format (for Matlab viewing)
+   INTEGER(IntKi), PARAMETER :: VTK_Surf                =  1         !< output surfaces
+   INTEGER(IntKi), PARAMETER :: VTK_Basic               =  2         !< output minimal number of point/line meshes
+   INTEGER(IntKi), PARAMETER :: VTK_All                 =  3         !< output all point/line meshes
+   INTEGER(IntKi), PARAMETER :: VTK_Old                 =  4         !< output in old binary format (for Matlab viewing)
+   REAL(SiKi),     PARAMETER :: VTK_GroundFactor        =  4.0_SiKi  !< factor for number of rotor radii -- sets width of seabed, waves, and still water in VTK surface visualization
          
    INTEGER(IntKi), PARAMETER :: SizeJac_ED_HD  = 12
    
