@@ -1396,6 +1396,22 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
       if ( EqualRealNos(InputFileData%pitchJ, 0.0_BDKi) ) call SetErrStat(ErrID_Fatal,'Pitch actuator inertia must not be 0.',ErrStat,ErrMsg,RoutineName)
    end if
    
+   DO j=1,InputFileData%InpBl%station_total   
+      DO i=2,3
+         IF ( .not. EqualRealNos( InputFileData%InpBl%mass0(i,i,j), InputFileData%InpBl%mass0(1,1,j) ) ) then
+            call SetErrStat( ErrID_Fatal, 'Input station '//trim(num2lstr(j))//' mass densities are not the same (i.e., first 3 diagonal elements in mass matrix must be equal).', ErrStat, ErrMsg, RoutineName )
+            exit
+         END IF
+      END DO
+
+      !............
+      ! NOTE: InputFileData%InpBl%mass0 is in internal BD coordinates; error message refers to IEC coordinates in input file
+      IF ( .not. EqualRealNos( InputFileData%InpBl%mass0(4,4,j), InputFileData%InpBl%mass0(5,5,j) + InputFileData%InpBl%mass0(6,6,j)) ) then
+         call SetErrStat( ErrID_Fatal, 'Input station '//trim(num2lstr(j))//' i_plr must equal i_Edg + i_Flp (i.e., sum of 4th and 5th diagonal elements in mass matrix must equal the 6th diagonal element).', ErrStat, ErrMsg, RoutineName )
+      END IF
+      !............
+   END DO
+   
    
       ! .............................
       ! check outputs:
