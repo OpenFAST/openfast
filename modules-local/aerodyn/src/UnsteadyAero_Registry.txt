@@ -56,10 +56,11 @@ typedef   ^                            ContinuousStateType           ReKi       
 # Define discrete (non-differentiable) states here:
 #
 typedef   ^                            DiscreteStateType             ReKi                     alpha_minus1                    {:}{:}        -         -        "angle of attack, previous time step"      rad
-typedef   ^                            DiscreteStateType             ReKi                     alpha_minus2                    {:}{:}        -         -        "angle of attack, two time steps ago"      rad
+typedef   ^                            DiscreteStateType             ReKi                     alpha_filt_minus1                  {:}{:}        -         -        "filtered angle of attack, previous time step"      rad
 typedef   ^                            DiscreteStateType             ReKi                     q_minus1                        {:}{:}        -         -        "non-dimensional pitching rate, previous time step"        -
-typedef   ^                            DiscreteStateType             ReKi                     q_minus2                        {:}{:}        -         -        "non-dimensional pitching rate, two time steps ago"        -
-typedef   ^                            DiscreteStateType             ReKi                     U_minus1                        {:}{:}        -         -        "relative local velocity, previous time step"        m/s
+typedef   ^                            DiscreteStateType             ReKi                     Kalpha_f_minus1                 {:}{:}        -         -        "filtered pitching rate, previous time step"        -
+typedef   ^                            DiscreteStateType             ReKi                     Kq_f_minus1                     {:}{:}        -         -        "filtered pitching acceleration, previous time step"        -
+typedef   ^                            DiscreteStateType             ReKi                     q_f_minus1                      {:}{:}        -         -        "filtered non-dimensional pitching rate, previous time step"        -
 typedef   ^                            DiscreteStateType             ReKi                     X1_minus1                       {:}{:}        -         -        "deficiency function used in the development of Cn_alpha_q_circ, previous time step" rad       
 typedef   ^                            DiscreteStateType             ReKi                     X2_minus1                       {:}{:}        -         -        "deficiency function used in the development of Cn_alpha_q_circ, previous time step" rad
 typedef   ^                            DiscreteStateType             ReKi                     X3_minus1                       {:}{:}        -         -        "deficiency function used in the development of Cn_q_circ, previous time step" rad       
