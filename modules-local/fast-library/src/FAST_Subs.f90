@@ -623,7 +623,7 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
    ! ........................
    
       ! get wave elevation data for visualization
-   if ( p_FAST%WrVTK > VTK_None .and. p_FAST%VTK_Type == VTK_Surf ) then   
+   if ( p_FAST%WrVTK > VTK_None ) then   
       call SetVTKParameters_B4HD(p_FAST, InitOutData_ED, InitInData_HD, BD, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          IF (ErrStat >= AbortErrLev) THEN
@@ -988,10 +988,10 @@ SUBROUTINE FAST_InitializeAll( t_initial, p_FAST, y_FAST, m_FAST, ED, BD, SrvD, 
       
       
    ! -------------------------------------------------------------------------
-   ! Initialize surface data for VTK output
+   ! Initialize data for VTK output
    ! -------------------------------------------------------------------------
             
-   if ( p_FAST%WrVTK > VTK_None .and. p_FAST%VTK_Type == VTK_Surf ) then
+   if ( p_FAST%WrVTK > VTK_None ) then
       call SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_HD, InitOutData_HD, ED, BD, AD, HD, ErrStat2, ErrMsg2)      
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    end if
@@ -2373,7 +2373,11 @@ SUBROUTINE SetVTKParameters_B4HD(p_FAST, InitOutData_ED, InitInData_HD, BD, ErrS
    end if
    p_FAST%VTK_Surface%GroundRad =  BladeLength + InitOutData_ED%HubRad 
 
-   
+   !........................................................................................................
+   ! We don't use the rest of this routine for stick-figure output
+   if (p_FAST%VTK_Type /= VTK_Surf) return  
+   !........................................................................................................
+      
       ! initialize wave elevation data:
    if ( p_FAST%CompHydro == Module_HD ) then
       
@@ -2456,6 +2460,11 @@ SUBROUTINE SetVTKParameters(p_FAST, InitOutData_ED, InitOutData_AD, InitInData_H
       call WrVTK_Ground ( RefPoint, RefLengths, trim(p_FAST%OutFileRoot)//'.GroundSurface', ErrStat2, ErrMsg2 )         
    end if
    
+   
+   !........................................................................................................
+   ! We don't use the rest of this routine for stick-figure output
+   if (p_FAST%VTK_Type /= VTK_Surf) return  
+   !........................................................................................................
             
       ! we're going to create a box using these dimensions
    y  =          ED%Output(1)%HubPtMotion%Position(3,  1) - ED%Output(1)%NacelleMotion%Position(3,  1)
