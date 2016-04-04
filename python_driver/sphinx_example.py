@@ -2,19 +2,20 @@
 # -*- coding: utf-8 -*-
 
 '''
-  Copyright (C) 2015 
-  map[dot]plus[dot]plus[dot]help[at]gmail                     
-  License: http://www.apache.org/licenses/LICENSE-2.0                 
+Copyright (C) 2015 
+map[dot]plus[dot]plus[dot]help[at]gmail                     
+License: http://www.apache.org/licenses/LICENSE-2.0                 
 '''  
 
-if __name__ == '__main__':      
-    from mapsys import *
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    import numpy as np
-    np.set_printoptions(precision=2)
-    np.set_printoptions(suppress=True)
+from mapsys import *
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import numpy as np
+np.set_printoptions(precision=2)
+np.set_printoptions(suppress=True)
 
+
+if __name__ == '__main__':      
     mooring_1 = Map()
     
     mooring_1.map_set_sea_depth(350)      # m
@@ -30,15 +31,18 @@ if __name__ == '__main__':
     K = mooring_1.linear(epsilon)    
     print "\nLinearized stiffness matrix with 0.0 vessel displacement:\n"
     print np.array(K)
-
+     
     surge = 5.0 # 5 meter surge displacements
     mooring_1.displace_vessel(surge,0,0,0,0,0)
     mooring_1.update_states(0.0,0)
-
+     
     K = mooring_1.linear(epsilon)    
     print "\nLinearized stiffness matrix with %2.2f surge vessel displacement:\n"%(surge)
     print np.array(K)
 
+    # We need to call update states after linearization to find the equilibrium
+    mooring_1.update_states(0.0,0)
+     
     line_number = 0
     H,V = mooring_1.get_fairlead_force_2d(line_number)    
     print "Line %d: H = %2.2f [N]  V = %2.2f [N]"%(line_number, H, V)

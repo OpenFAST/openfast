@@ -1,6 +1,11 @@
 #! /usr/bin/env python
 # -*- coding: utf-8 -*-
 
+'''
+Copyright (C) 2015 
+map[dot]plus[dot]plus[dot]help[at]gmail                     
+License: http://www.apache.org/licenses/LICENSE-2.0                 
+'''  
 
 from mapsys import *
 import math
@@ -87,22 +92,13 @@ def start():
         X[i] = (amplitude)*(math.sin(i*0.05))
         theta[i] = (amplitude)*(math.sin(i*0.025))
 
-    # Optional: plot the vessel displacement (surge=X and pitch=theta) as a function of time
-    plt.figure(2)
-    plt.plot(time,X,lw=2,label='Surge displacement')
-    plt.plot(time,theta,lw=2,label='Pitch displacement')
-    plt.title('Vessel Translation/Rotation')
-    plt.ylabel('Amplitude [m,deg]')
-    plt.xlabel('Time [sec]')
-    plt.legend()
-
     # create an empty list of the line tension. We will store result from MAP in these lists
     line1_fx, line1_fy, line1_fz = ([] for _ in xrange(3))
     line2_fx, line2_fy, line2_fz = ([] for _ in xrange(3))
     line3_fx, line3_fy, line3_fz = ([] for _ in xrange(3))
     line4_fx, line4_fy, line4_fz = ([] for _ in xrange(3))
 
-    # Step 3) 
+    # Step 3) Time marching
     for i in xrange(len(X)):        
         # Step 4) 
 
@@ -136,6 +132,15 @@ def start():
         line4_fx.append(fx)
         line4_fy.append(fy)
         line4_fz.append(fz)        
+
+    # Optional: plot the vessel displacement (surge=X and pitch=theta) as a function of time
+    plt.figure(2)
+    plt.plot(time,X,lw=2,label='Surge displacement')
+    plt.plot(time,theta,lw=2,label='Pitch displacement')
+    plt.title('Vessel Translation/Rotation')
+    plt.ylabel('Amplitude [m,deg]')
+    plt.xlabel('Time [sec]')
+    plt.legend()
 
     # Optional: plot line tension time history
     plt.figure(3)

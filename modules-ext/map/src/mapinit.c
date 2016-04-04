@@ -2670,9 +2670,10 @@ void log_initialization_information(MAP_InitInputType_t* init_type, MAP_Paramete
 
   MAP_BEGIN_ERROR_LOG; 
   if ( init_data->summary_file_name->data[0] ) { // don't write this file if the file name isn't specified
-     success = write_summary_file(init_data, p_type, domain, map_msg, ierr); CHECKERRQ(MAP_FATAL_37);           
+    success = write_summary_file(init_data, p_type, domain, map_msg, ierr); CHECKERRQ(MAP_FATAL_37); 
   }
 
+  success = write_summary_file(init_data, p_type, domain, map_msg, ierr); CHECKERRQ(MAP_FATAL_37);           
   success = get_iteration_output_stream(y_type, other_type, map_msg, ierr); // @todo CHECKERRQ()    
   MAP_END_ERROR_LOG; 
 };
@@ -2745,46 +2746,11 @@ const char* remove_first_character(const char* string)
 };
 
 
-MAP_ERROR_CODE associate_constraint_states(Domain* domain, MAP_ConstraintStateType_t* z_type)
-{
-  Node* node_iter = NULL;
-  Line* line_iter = NULL;
-  int next = 0;
-  MAP_ERROR_CODE success = MAP_SAFE;
-  
-  MAP_BEGIN_ERROR_LOG;
-
-  list_iterator_start(&domain->line);            /* starting an iteration "session" */
-  while (list_iterator_hasnext(&domain->line)) { /* tell whether more values available */
-    line_iter = (Line*)list_iterator_next(&domain->line);
-    success = associate_vartype_ptr(&line_iter->H, z_type->H, next+1);
-    success = associate_vartype_ptr(&line_iter->V, z_type->V, next+1);
-    next++;
-  };
-  list_iterator_stop(&domain->line); /* ending the iteration "session" */    
-  
-  next = 0;
-  list_iterator_start(&domain->node);            /* starting an iteration "session" */
-  while (list_iterator_hasnext(&domain->node)) { /* tell whether more values available */
-    node_iter = (Node*)list_iterator_next(&domain->node);
-    if (node_iter->type==CONNECT) {
-      success = associate_vartype_ptr(&node_iter->position_ptr.x, z_type->x, next+1);
-      success = associate_vartype_ptr(&node_iter->position_ptr.y, z_type->y, next+1);
-      success = associate_vartype_ptr(&node_iter->position_ptr.z, z_type->z, next+1);
-      next++;
-    };
-  };
-  list_iterator_stop(&domain->node); /* ending the iteration "session" */    
-
-  MAP_END_ERROR_LOG;
-
-  return MAP_SAFE;
-}
 MAP_ERROR_CODE print_help_to_screen()
 {
   print_machine_name_to_screen( );
 
-  printf("MAP Input File section definitions:\n");
+  printf("MAP Input file section definitions:\n");
   printf("  Line dictionary definitions:\n");   
   printf("    -LineType, --User-defined name of line [-]  \n");   
   printf("    -Diam,     --Line diameter, used to calculate area and line displacement per unit length [m]  \n");   

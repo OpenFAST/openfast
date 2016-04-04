@@ -370,9 +370,10 @@ MAP_EXTERNCALL void map_offset_vessel(MAP_OtherStateType_t* other_type, MAP_Inpu
     rz = vessel->zi[i];
 
     /* matrix-vector product */
-    u_type->x[i] = x + rx*R[0][0] + ry*R[0][1] + rz*R[0][2];
-    u_type->y[i] = y + rx*R[1][0] + ry*R[1][1] + rz*R[1][2];
-    u_type->z[i] = z + rx*R[2][0] + ry*R[2][1] + rz*R[2][2];
+    /* r_{u_i} = r + r_{ref} + R*r_i */
+    u_type->x[i] = x /* + vessel->ref_origin.x.value*/ + (rx*R[0][0] + ry*R[0][1] + rz*R[0][2]);
+    u_type->y[i] = y /* + vessel->ref_origin.y.value*/ + (rx*R[1][0] + ry*R[1][1] + rz*R[1][2]);
+    u_type->z[i] = z /* + vessel->ref_origin.z.value*/ + (rx*R[2][0] + ry*R[2][1] + rz*R[2][2]);
   };
 };
 
@@ -382,7 +383,7 @@ MAP_EXTERNCALL double** map_linearize_matrix(MAP_InputType_t* u_type, MAP_Parame
   double* x_original = NULL;
   double* y_original = NULL;
   double* z_original = NULL;
-  Domain* data = other_type->object;
+  Domain* domain = other_type->object;
   MAP_ERROR_CODE success = MAP_SAFE;
   const int n = u_type->x_Len;
   const int SIX = 6;
@@ -462,14 +463,18 @@ MAP_EXTERNCALL double** map_linearize_matrix(MAP_InputType_t* u_type, MAP_Parame
     };
   };
   
-  MAP_END_ERROR_LOG; 
-  
   success = reset_force_to_zero(force.fx, force.fy, force.fz, force.mx, force.my, force.mz, n);
   success = restore_original_displacement(u_type->x, x_original, n);
   success = restore_original_displacement(u_type->y, y_original, n);
   success = restore_original_displacement(u_type->z, z_original, n);
-  success = line_solve_sequence(data, p_type, 0.0, map_msg, ierr); 
-  
+  if (domain->MAP_SOLVE_TYPE==MONOLITHIC) {
+    success = line_solve_sequence(domain, p_type, 0.0, map_msg, ierr);
+  } else {
+    success = node_solve_sequence(domain, p_type, u_type, z_type, other_type, (float)-999.9, map_msg, ierr); // @todo CHECKERRQ()
+  };    
+
+  MAP_END_ERROR_LOG; 
+
   MAPFREE(force.fx);
   MAPFREE(force.fy);
   MAPFREE(force.fz);
@@ -539,7 +544,7 @@ MAP_EXTERNCALL double* map_plot_x_array(MAP_OtherStateType_t* other_type, int i,
     w = line->line_property->omega;
     cb = line->line_property->cb;
     dS = Lu/(double)(num_points-1) ;
-    
+
     /* If the cable is not resting on the seabed, we use the classic catenary equation
      * for a hanging chain to plot the mooring line profile. Otherwise if it is, we 
      * the modified version as done in the FAST wind turbine program. 

@@ -28,32 +28,32 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     from mpl_toolkits.mplot3d import Axes3D
     import numpy as np
-    np.set_printoptions(precision=2)
-    np.set_printoptions(suppress=True)
+    np.set_printoptions(formatter={'float': '{: 13.1f}'.format},linewidth=100)
 
     mooring_1 = Map( )
     
-    mooring_1.map_set_sea_depth(350)
+    mooring_1.map_set_sea_depth(320)
     mooring_1.map_set_gravity(9.81)
     mooring_1.map_set_sea_density(1025.0)
     
     # mooring_1.read_file("input.map")                                         # 350 m depth        
-    mooring_1.read_file("inwind.map")
+    # mooring_1.read_file("inwind_new.map")
     # mooring_1.read_file("../test/test_for_nrel.map")
-    #mooring_1.read_file("../test/baseline_1.map")                                         # 120 m depth    
-    # mooring_1.read_file("../test/baseline_2.map")                                         # 350 m depth    
+    # mooring_1.read_file("../test/baseline_1.map")                                        # 120 m depth    
+    # mooring_1.read_file("../test/baseline_2.map")                                       # 350 m depth    
     # mooring_1.read_file("../test/baseline_5.map")                                       # 80 m depth
     # mooring_1.read_file("../test/NRELOffshrBsline5MW_Platform_OC3Hywind.map")           # 320 m depth
-    # mooring_1.read_file("../test/NRELOffshrBsline5MW_Platform_OC3Hywind_segmented.map") # 320 m depth
+    # mooring_1.read_file("../test/NRELOffshrBsline5MW_Platform_OC3Hywind_segmented.map")   # 320 m depth
+    mooring_1.read_file("../test/NRELOffshrBsLine5MW_OC4.map")                            # 200 m depth
     # mooring_1.read_file("../test/NRELOffshrBsLine5MW_TLP.map")                          # 200 m depth
 
     # mooring_1.summary_file('name_me.txt')
     mooring_1.init( )
 
-    #epsilon = 1e-3
-    #K = mooring_1.linear(epsilon)    
-    #print "\nHere is the linearized stiffness matrix with zero vessel displacement:"
-    #print np.array(K)
+    epsilon = 1e-5
+    K = mooring_1.linear(epsilon)    
+    print "\nHere is the linearized stiffness matrix with zero vessel displacement:"
+    print np.array(K)
 
     #mooring_1.displace_vessel(5,0,0,0,0,0)
     #mooring_1.update_states(0.0,0)

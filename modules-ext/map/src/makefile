@@ -18,24 +18,16 @@
 # specific language governing permissions and limitations            
 # under the License.                                             
 
-MAP_VER:=1.20.00
+MAP_VER:=1.20.10
 
-#BITS = -m64
-BITS = -m32
-
-
-# CMINPACK_DIR = cminpack
-# BSTRING_DIR = bstring
-# SIMCLIST_DIR = simclist
-# LAPACK_DIR = lapack
-
+BITS = -m64
+PLATFORM = $(shell uname -s)
 VPATH = cminpack:simclist:bstring:lapack
+
 
 ifeq ($(OS),Windows_NT)
   DEL_CMD   = del
   LIB_EXT   = dll
-
-  CC_TOOLS  = gcc
   CFLAGS    = $(BITS) -g -std=c99 -DMAP_DLL_EXPORTS -DCMINPACK_NO_DLL  -DNDEBUG -D_WINDOWS -D_USRDLL -D_MINGW
   LDFLAGS   = $(BITS) -g -shared -Wl,--export-all-symbols
   LIB_FLAGS :=
@@ -59,10 +51,7 @@ else
     LDFLAGS   = $(BITS) -g -shared -llapacke
     LIB_FLAGS := -lm -llapacke
   endif
-
 endif
-
-
 
 DEBUG     = 
 OBJ       = lmder.o \
@@ -86,8 +75,9 @@ OBJ       = lmder.o \
 	jacobian.o \
 	residual.o \
 
+
 all : $(OBJ)
-	$(CC_TOOLS) $(LDFLAGS) -o libmap-$(MAP_VER).$(LIB_EXT) $(DEBUG) $(OBJ) $(LIB_FLAGS)
+	$(CC_TOOLS) $(LDFLAGS) -o libmap-$(MAP_VER).$(LIB_EXT) $(DEBUG) $(OBJ) $(LIB_FLAGS) 
 
 .c.o :
 	$(CC_TOOLS) -c $(CFLAGS) $<
@@ -95,5 +85,5 @@ all : $(OBJ)
 clean:
 	$(DEL_CMD) *.$(LIB_EXT) *.o *~
 
-memcheck:
-	valgrind --tool=memcheck --leak-check=yes python -E -tt ./main.py
+memcheck:	
+	valgrind --tool=memcheck --leak-check=yes python -E -tt ./main.py	
