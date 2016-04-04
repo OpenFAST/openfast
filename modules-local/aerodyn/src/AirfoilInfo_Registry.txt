@@ -49,6 +49,7 @@ typedef   ^                     ^                ReKi                k3         
 typedef   ^                     ^                ReKi                k1_hat      -  -  - "" =
 typedef   ^                     ^                ReKi                x_cp_bar    -  -  - "" =
 typedef   ^                     ^                ReKi                UACutout    -  -  - "" =
+typedef   ^                     ^                ReKi                filtCutOff  -  -  - "low pass filter cut-off frequency for the pitching rate and accelerations"       Hz
 # The following derived type stores data for an airfoil at a single combination of Re and control setting.
 typedef	AirfoilInfo/AFI	AFI_Table_Type	ReKi	Alpha   	{:}	-	-	"Angle-of-attack vector that matches the Coefs matrix"
 typedef	^	^	ReKi	Coefs	{:}{:}	-	-	"Airfoil coefficients for Cd, Cl,  and maybe Cm and/or Cpmin"	-
