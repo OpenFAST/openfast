@@ -736,6 +736,9 @@ CONTAINS
                CALL ParseVarWDefault ( FileInfo, CurLine, 'UACutout', AFInfo%Table(Table)%UA_BL%UACutout, 45.0_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'filtCutOff', AFInfo%Table(Table)%UA_BL%filtCutOff, 10.0_ReKi, ErrStat2, ErrMsg2, UnEc )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+                  
                IF (ErrStat >= AbortErrLev) THEN
                   CALL Cleanup()
                   RETURN
@@ -862,7 +865,7 @@ CONTAINS
       
       
    subroutine AFI_GetAirfoilParams( AFInfo, M, Re, alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, T_VL, St_sh, &
-                                    b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, errMsg, errStat )     
+                                    b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, filtCutOff, errMsg, errStat )     
 
    type(AFInfoType), intent(in   )       :: AFInfo                        ! The derived type for holding the constant parameters for this airfoil.
    real(ReKi),       intent(in   )       :: M                             ! mach number
@@ -900,6 +903,7 @@ CONTAINS
    real(ReKi),       intent(  out)       :: k3                            ! airfoil parameter in the x_cp_hat curve best-fit
    real(ReKi),       intent(  out)       :: k1_hat                        !
    real(ReKi),       intent(  out)       :: x_cp_bar                      ! airfoil parameter for calulating x_cp_v
+   real(ReKi),       intent(  out)       :: filtCutOff                    ! airfoil parameter for the low-pass cut-off frequency for pitching rate and accelerations (Hz)
    integer(IntKi),   intent(  out)       :: errStat                       ! Error status. 
    character(*),     intent(  out)       :: errMsg                        ! Error message.
       
@@ -938,7 +942,7 @@ CONTAINS
    k3             =  AFInfo%Table(1)%UA_BL%k3            !0.0_ReKi
    k1_hat         =  AFInfo%Table(1)%UA_BL%k1_hat        !0.0_ReKi
    x_cp_bar       =  AFInfo%Table(1)%UA_BL%x_cp_bar      !0.2_ReKi
-   
+   filtCutOff     =  AFInfo%Table(1)%UA_BL%filtCutOff    ! 5.0_ReKi  Hz
    
    C_nalpha_circ  =  C_nalpha / sqrt(1.0_ReKi-M**2)
      ! Cn1=1.9 Tp=1.7 Tf=3., Tv=6 Tvl=11, Cd0=0.012
