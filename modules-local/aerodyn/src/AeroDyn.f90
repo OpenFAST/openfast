@@ -175,6 +175,11 @@ subroutine AD_SetInitOut(p, InputFileData, InitOut, errStat, errMsg)
          end do
             
          if (NumCoords > 0) then
+            if (NumCoords < 3) then
+               call SetErrStat( ErrID_Info, 'Airfoil files with NumCoords > 0 must contain at least 2 coordinates.', ErrStat, ErrMsg, RoutineName )
+               return
+            end if     
+               
             allocate( InitOut%BladeShape( p%numBlades ), STAT=ErrStat2 )
             if (ErrStat2 /= 0) then
                call SetErrStat( ErrID_Info, 'Error allocationg InitOut%AD_BladeShape', ErrStat, ErrMsg, RoutineName )
@@ -615,7 +620,6 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
                        ,Orientation     = .true.    &
                        ,TranslationDisp = .true.    &
                        ,TranslationVel  = .true.    &
-                       ,RotationVel     = .true.    &
                       )
             call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
@@ -645,7 +649,6 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
       u%TowerMotion%Orientation     = u%TowerMotion%RefOrientation
       u%TowerMotion%TranslationDisp = 0.0_R8Ki
       u%TowerMotion%TranslationVel  = 0.0_ReKi
-      u%TowerMotion%RotationVel     = 0.0_ReKi
       
    end if ! we compute tower loads
    
@@ -660,7 +663,6 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
                        ,ErrMess   = ErrMsg2         &
                        ,Orientation     = .true.    &
                        ,TranslationDisp = .true.    &
-                       ,TranslationVel  = .true.    &
                        ,RotationVel     = .true.    &
                       )
             call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
@@ -681,7 +683,6 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
          
       u%HubMotion%Orientation     = u%HubMotion%RefOrientation
       u%HubMotion%TranslationDisp = 0.0_R8Ki
-      u%HubMotion%TranslationVel  = 0.0_ReKi
       u%HubMotion%RotationVel     = 0.0_ReKi   
       
    
@@ -702,9 +703,6 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
                           ,ErrStat   = ErrStat2                              &
                           ,ErrMess   = ErrMsg2                               &
                           ,Orientation     = .true.                          &
-                          ,TranslationDisp = .true.                          &
-                          ,TranslationVel  = .true.                          &
-                          ,RotationVel     = .true.                          &
                          )
                call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 
@@ -723,9 +721,6 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
 
       
          u%BladeRootMotion(k)%Orientation     = u%BladeRootMotion(k)%RefOrientation
-         u%BladeRootMotion(k)%TranslationDisp = 0.0_R8Ki
-         u%BladeRootMotion(k)%TranslationVel  = 0.0_ReKi
-         u%BladeRootMotion(k)%RotationVel     = 0.0_ReKi
    
    end do !k=numBlades      
       
@@ -749,7 +744,6 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
                           ,Orientation     = .true.                         &
                           ,TranslationDisp = .true.                         &
                           ,TranslationVel  = .true.                         &
-                          ,RotationVel     = .true.                         &
                          )
                call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName )
 

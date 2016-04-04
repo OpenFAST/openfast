@@ -238,7 +238,6 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
          AD%u(1)%TowerMotion%Orientation(  :,:,j) = AD%u(1)%TowerMotion%RefOrientation(:,:,j) ! identity
          AD%u(1)%TowerMotion%TranslationDisp(:,j) = 0.0_ReKi
          AD%u(1)%TowerMotion%TranslationVel( :,j) = 0.0_ReKi
-         AD%u(1)%TowerMotion%RotationVel(    :,j) = 0.0_ReKi
       end do !j=nnodes
       
       ! Hub motions:
@@ -256,7 +255,6 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
       orientation = EulerConstruct( theta )      
       AD%u(1)%HubMotion%Orientation(  :,:,1) = matmul( orientation, AD%u(1)%HubMotion%Orientation(  :,:,1) )
       
-      AD%u(1)%HubMotion%TranslationVel( :,1) = 0.0_ReKi
       AD%u(1)%HubMotion%RotationVel(    :,1) = AD%u(1)%HubMotion%Orientation(1,:,1) * DvrData%Cases(iCase)%RotSpeed
                   
       ! Blade root motions:
@@ -267,9 +265,6 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
          orientation = EulerConstruct(theta)
          
          AD%u(1)%BladeRootMotion(k)%Orientation(  :,:,1) = matmul( orientation, AD%u(1)%HubMotion%Orientation(  :,:,1) )
-         AD%u(1)%BladeRootMotion(k)%TranslationDisp(:,1) = 0.0_R8Ki
-         AD%u(1)%BladeRootMotion(k)%TranslationVel( :,1) = 0.0_ReKi
-         AD%u(1)%BladeRootMotion(k)%RotationVel(    :,1) = 0.0_ReKi
          
       end do !k=numBlades
             
@@ -294,7 +289,6 @@ subroutine Set_AD_Inputs(iCase,nt,DvrData,AD,errStat,errMsg)
                       - AD%u(1)%HubMotion%Position(:,1) - AD%u(1)%HubMotion%TranslationDisp(:,1)
             AD%u(1)%BladeMotion(k)%TranslationVel( :,j) = cross_product( AD%u(1)%HubMotion%RotationVel(:,1), position )
 
-            AD%u(1)%BladeMotion(k)%RotationVel(    :,j) = 0.0_ReKi
          end do !j=nnodes
                                     
       end do !k=numBlades       
