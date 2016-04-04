@@ -34,40 +34,12 @@ private
 
    public :: UA_Init
    public :: UA_UpdateDiscOtherState
-   public :: UA_UpdateDiscOtherState2
    public :: UA_UpdateStates
    public :: UA_CalcOutput
-   public :: UA_CalcOutput2
 
 
 contains
-! **************************************************
-   FUNCTION SAT( X, VAL, SLOPE )
- !  AOA saturation function 02/15/98
- ! **************************************************
 
-IMPLICIT                      NONE
-
-
-   ! Passed Variables:
-
-REAL(ReKi)                 :: SAT
-REAL(ReKi),INTENT(IN)       :: SLOPE
-REAL(ReKi),INTENT(IN)       :: VAL
-REAL(ReKi),INTENT(IN)       :: X
-
-
-IF ( ABS(X) <= VAL )  THEN
-    SAT = X
-ELSEIF ( X > VAL)  THEN
-    SAT = SLOPE * X + VAL * ( 1. - SLOPE )
-ELSE
-    SAT = SLOPE * X - VAL * ( 1. - SLOPE )
-ENDIF
-
-
-RETURN
-END FUNCTION SAT
 !==============================================================================   
 subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
 ! Called by : UA_CalcOutput
@@ -117,82 +89,8 @@ subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
 end subroutine GetSteadyOutputs
 !==============================================================================
 
-!==============================================================================
-real(ReKi) function Get_ds( U, c, dt )
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-   real(ReKi), intent(in   ) :: U       ! air velocity magnitude relative to the airfoil (m/s)
-   real(ReKi), intent(in   ) :: c       ! cord length (m)
-   real(DbKi), intent(in   ) :: dt      ! time step length (s)
-   
-   Get_ds = 2.0_ReKi*U*dt/c
-   
-end function Get_ds
-!==============================================================================   
 
-!==============================================================================
-real(ReKi) function Get_Kupper( dt, x, x_minus1 )
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-   real(DbKi), intent(in   ) :: dt          ! time step length (s)
-   real(ReKi), intent(in   ) :: x           ! quantity at current timestep
-   real(ReKi), intent(in   ) :: x_minus1    ! quantity at previous timestep
-   
-      ! Implements eqn 1.18b or 1.19b
-   Get_Kupper = (x - x_minus1) / dt
-   
-end function Get_Kupper
-!==============================================================================   
 
-!==============================================================================
-real(ReKi) function Get_Beta_M( M ) 
-! Compute the Prandlt-Glauert compressibility correction factor
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-   real(ReKi), intent(in   ) :: M   ! Mach number (-)
-   
-   Get_Beta_M = sqrt(1 - M**2)
-   
-end function Get_Beta_M
-!==============================================================================   
-
-!==============================================================================
-real(ReKi) function Get_Beta_M_Sqrd( M ) 
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-
-   real(ReKi), intent(in   ) :: M   ! Mach number (-)
-   
-   Get_Beta_M_Sqrd = 1 - M**2
-   
-end function Get_Beta_M_Sqrd
-!==============================================================================   
-
-!==============================================================================
-real(ReKi) function Get_k_( M, beta_M, C_nalpha, A1, A2, b1, b2          )
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-
-   real(ReKi), intent(in   ) :: M               ! Mach number
-   real(ReKi), intent(in   ) :: beta_M          ! Prandtl-Glauert compressibility correction factor,  sqrt(1-M**2)
-   real(ReKi), intent(in   ) :: C_nalpha        ! slope of the 2D pitching moment curve 
-   real(ReKi)                :: A1              ! airfoil constant derived from experimental results, usually 0.3
-   real(ReKi)                :: A2              ! airfoil constant derived from experimental results, usually 0.7
-   real(ReKi)                :: b1              ! airfoil constant derived from experimental results, usually 0.14
-   real(ReKi)                :: b2              ! airfoil constant derived from experimental results, usually 0.53
-
-      ! Implements equation 1.11a/b
-    ! in v14 instead of beta_M it was beta_M**2
-   Get_k_   = 1.0_ReKi / ( (1.0_ReKi - M) + C_nalpha * M**2 * beta_M * (A1*b1 + A2*b2) / 2.0  )
-   !Get_k_   = 1.0_ReKi / ( (1.0_ReKi - M) + C_nalpha * M**2 * beta_M *  0.413_ReKi  )
-   
-end function Get_k_
-!==============================================================================   
 
 !==============================================================================
 real(ReKi) function Get_ExpEqn( dt, T, Y_minus1, x, x_minus1 )
@@ -210,135 +108,7 @@ real(ReKi) function Get_ExpEqn( dt, T, Y_minus1, x, x_minus1 )
    Get_ExpEqn = Y_minus1*exp(-dt/T) + (x - x_minus1)*exp(-0.5_ReKi*dt/T)
 
 end function Get_ExpEqn
-!==============================================================================   
-
-!==============================================================================  
-real(ReKi) function Get_Pitchrate( dt, alpha_cur, alpha_minus1, U, c )
-! This is the non-dimensional pitching rate, given as q in the documentation: equation 1.8  
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-
-   real(DbKi), intent(in   ) :: dt                              ! time step length (s)
-   real(ReKi), intent(in   ) :: alpha_cur                       ! angle of attack, current timestep  (radians)
-   real(ReKi), intent(in   ) :: alpha_minus1                    ! angle of attack, previous timestep  (radians)
-   real(ReKi), intent(in   ) :: U                               ! air velocity magnitude relative to the airfoil (m/s)
-   real(ReKi), intent(in   ) :: c                               ! chord length (m)
-
-!IF (EqualRealNos(U,0.0_ReKi)) then
-!   call ProgWarn('GetPitchRate: division by zero.')
-!   Get_Pitchrate = HUGE(Get_Pitchrate)
-!   RETURN
-!END IF
-
-      ! Implements equation 1.8
-   Get_Pitchrate = ( alpha_cur - alpha_minus1 ) * c / (U*dt)  
-
-  
-
-
-end function Get_Pitchrate
-!==============================================================================   
-
-!==============================================================================
-real(ReKi) function Get_Cn_nc( M, T, K, Kprime )
-!  Compute either Cn_alpha_nc or Cn_q_nc
-!  Eqn 1.18a or 1.19a
-!  Called by : ComputeKelvinChain
-!  Calls  to : NONE
-!..............................................................................
-
-   real(ReKi)                :: M              ! mach number
-   real(ReKi), intent(in   ) :: T              ! mach-dependent time constant related to alpha and non-circulatory terms (???)
-   real(ReKi)                :: K              ! Either K_alpha or K_q, backward finite difference of either alpha or q
-   real(ReKi)                :: Kprime         ! Either Kprime_alpha or Kprime_q, deficiency functions
-   
-      ! Implements equation 1.18a or 1.19a  
-   Get_Cn_nc =  T * ( K - Kprime ) / M
-   
-end function Get_Cn_nc 
-!==============================================================================   
-
-!==============================================================================
-real(ReKi) function Get_Cm_q_circ( C_nalpha, beta_M, q_cur, K3prime_q, c, U )
-! Implements eqn 1.21
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-
-   real(ReKi), intent(in   ) :: C_nalpha                       ! slope of the 2D pitching moment curve     
-   real(ReKi), intent(in   ) :: beta_M                         ! Prandtl-Glauert compressibility correction factor,  sqrt(1-M**2) 
-   real(ReKi), intent(in   ) :: q_cur                          ! non-dimensional pitching rate, current timestep   
-   real(ReKi), intent(in   ) :: K3prime_q                      ! deficiency function
-   real(ReKi), intent(in   ) :: c                              ! chord length (m)   
-   real(ReKi), intent(in   ) :: U                              ! air velocity magnitude relative to the airfoil (m/s)
-
-   Get_Cm_q_circ = -C_nalpha*(q_cur -K3prime_q)*c/(16.0*beta_M*U)  ! TODO: Check units
-   
-end function Get_Cm_q_circ
-!==============================================================================   
-
-
-!==============================================================================
-real(ReKi) function Get_Cn_q_circ(q_cur, C_nalpha_circ, X3, X4)
-! Called by : ComputeKelvinChain
-! Calls  to : NONE   
-!..............................................................................
-   real(ReKi), intent(in   )     :: q_cur
-   real(ReKi), intent(in   )     :: C_nalpha_circ           ! slope of the circulatory normal force coefficient vs alpha curve
-   real(ReKi), intent(in   )     :: X3                      ! Exponential decay function associated with Cn_q_circ
-   real(ReKi), intent(in   )     :: X4                      ! Exponential decay function associated with Cn_q_circ
-
-      ! Implements eqn 1.16a
-   Get_Cn_q_circ = C_nalpha_circ*q_cur/2.0 - X3 - X4
-   
-end function Get_Cn_q_circ
-!==============================================================================
-
-
-!==============================================================================
-real(ReKi) function Get_Cm_q_nc( UAMod, M, k_mq, T_I, Cn_q_nc, k_alpha, Kq, Kprimeprime_q )
-! Called by : ComputeKelvinChain
-! Calls  to : NONE   
-!..............................................................................
-
-   integer,    intent(in   ) :: UAMod                 ! UA model
-   real(ReKi), intent(in   ) :: M                     ! Mach number
-   real(ReKi), intent(in   ) :: k_mq                  ! airfoil parameter                     
-   real(ReKi), intent(in   ) :: T_I                   ! time constant        
-   real(ReKi), intent(in   ) :: Cn_q_nc               !    
-   real(ReKi), intent(in   ) :: k_alpha               !     
-   real(ReKi), intent(in   ) :: Kq                    ! backward finite difference of q    
-   real(ReKi), intent(in   ) :: Kprimeprime_q         ! deficiency function             
-    
-   if ( UAMod == 3 ) then
-      ! Implements eqn 1.27
-      Get_Cm_q_nc =  -Cn_q_nc/4.0 - (k_alpha**2)*T_I*(Kq-Kprimeprime_q)/(3.0*M)
-   else  
-         ! Implements eqn 1.25a
-      Get_Cm_q_nc = -7*(k_mq**2)*T_I*(Kq-Kprimeprime_q)/(12.0*M)
-      
-   end if
-   
-end function Get_Cm_q_nc
-!==============================================================================   
-
-!==============================================================================
-real(ReKi) function Get_alpha_e( alpha, alpha0, X1, X2 )
-! Called by : ComputeKelvinChain
-! Calls  to : NONE   
-!..............................................................................
-   
-   real(ReKi), intent(in   ) :: alpha          ! angle of attack (radians)
-   real(ReKi), intent(in   ) :: alpha0         ! zero lift angle of attack (radians)
-   real(ReKi), intent(in   ) :: X1             ! deficiency function 
-   real(ReKi), intent(in   ) :: X2             ! deficiency function 
-   
-   ! Implements equation 1.14
-   Get_Alpha_e   = (alpha - alpha0) - X1 - X2
-   
-end function Get_Alpha_e
-!==============================================================================   
+!==============================================================================     
 
    
 !==============================================================================
@@ -361,24 +131,28 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, alpha, alpha0, C_nalpha_circ, 
    character(*),     intent(  out) :: ErrMsg                ! Error message if ErrStat /= ErrID_None
    
    !real                            :: IntAFCoefs(4)         ! The interpolated airfoil coefficients.
-   real(ReKi)                       :: Cn, Cl, Cd, Cm, Cd0, tmpRoot
+   real(ReKi)                       :: Cn, Cl, Cd, Cm, Cd0, tmpRoot, denom
    !integer                         :: s1                    ! Number of columns in the AFInfo structure
    ErrStat = ErrID_None
    ErrMsg  = ''
       ! NOTE:  This subroutine call cannot live in Blade Element because BE module calls UnsteadyAero module.
     
    
-   !if (abs(alpha-alpha0) < .01) then
-   !   Get_f_from_Lookup = 1.0_ReKi
-   !   return
-   !end if
+   
    
    call GetSteadyOutputs(AFInfo, alpha, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
       if (ErrStat >= AbortErrLev ) return
    
    Cn =  Cl*cos(alpha) + (Cd-Cd0)*sin(alpha)
+   denom = (C_nalpha_circ*(alpha-alpha0))
    
-   tmpRoot  = Cn/(C_nalpha_circ*(alpha-alpha0))
+   if (abs(denom) < .01) then
+       Get_f_from_Lookup = 1.0_ReKi
+       return
+   end if
+   
+   tmpRoot  = Cn/denom
+   
    if (tmpRoot < 0.0_ReKi) then
       Get_f_from_Lookup = 1.0_ReKi
       return
@@ -481,277 +255,15 @@ real(ReKi) function Get_f( alpha, alpha0, alpha1, alpha2, S1, S2, S3, S4 )
 end function Get_f
 !==============================================================================   
 
-!==============================================================================   
-real(ReKi) function Get_Cn_FS( Cn_alpha_q_nc, Cn_alpha_q_circ, fprimeprime, UAMod )
-!  
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-
-    
-   real(ReKi), intent(in   ) :: Cn_alpha_q_nc       ! non-circulatory component of normal force coefficient response to step change in alpha and q
-   real(ReKi), intent(in   ) :: Cn_alpha_q_circ     ! circulatory component of normal force coefficient response to step change in alpha and q
-   real(ReKi), intent(in   ) :: fprimeprime         ! lagged version of fprime accounting for unsteady boundary layer response
-   integer   , intent(in   ) :: UAMod               ! model for the dynamic stall equations.  [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]
-   
-   if ( UAMod == 2 ) then
-      ! use equation 1.36
-      Get_Cn_FS   = Cn_alpha_q_nc + Cn_alpha_q_circ *  ( (1.0_ReKi + 2.0_ReKi*sqrt(fprimeprime) ) / 3.0_ReKi  )**2
-   else
-      ! use equation 1.35
-      Get_Cn_FS   = Cn_alpha_q_nc + Cn_alpha_q_circ *  ( (1.0_ReKi + sqrt(fprimeprime)          ) / 2.0_ReKi )**2
-   
-   end if
-
-
-end function Get_Cn_FS
-!==============================================================================   
-
-!==============================================================================
-real(ReKi) function Get_Cc_FS( eta_e, alpha_e, alpha0, Cn_alpha_q_circ, fprimeprime, UAMod )
-!  
-! Called by : NONE
-! Calls  to : NONE
-!..............................................................................
-   
-   real(ReKi), intent(in   ) :: eta_e
-   real(ReKi), intent(in   ) :: alpha_e                    ! effective angle of attack at 3/4 chord  TODO: verify 3/4 and not 1/4
-   real(ReKi), intent(in   ) :: alpha0                     ! zero lift angle of attack (radians)
-   real(ReKi), intent(in   ) :: Cn_alpha_q_circ            ! circulatory component of normal force coefficient response to step change in alpha and q
-   real(ReKi), intent(in   ) :: fprimeprime                ! lagged version of fprime accounting for unsteady boundary layer response
-   integer   , intent(in   ) :: UAMod                      ! model for the dynamic stall equations.  [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]
-   
-   if ( UAMod == 1 ) then
-      ! use equation 1.37
-      Get_Cc_FS   = Cn_alpha_q_circ * sqrt(fprimeprime) * tan(alpha_e + alpha0) * eta_e
-   else if ( UAMod == 2 ) then
-      ! use equation 1.38
-     ! Get_Cc_FS   = Cn_alpha_q_circ * (sqrt(fprimeprime) - 0.2_ReKi) * tan(alpha_e + alpha0) * eta_e
-      Get_Cc_FS   = Cn_alpha_q_circ * (sqrt(fprimeprime) - 0.2_ReKi) * alpha_e * eta_e !testing this version without tan here and in fc retrieval
-   else
-      ! implementation error!  Cannot have UAMod other than 0,1,2
-   end if
-
-end function Get_Cc_FS
-!==============================================================================   
-
-
-!==============================================================================
-! Dynamic Stall Equations                                                     !
-!==============================================================================
-
-!==============================================================================
-real(ReKi) function Get_C_V( Cn_alpha_q_circ, fprimeprime, UAMod )
-! 
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-
-   real(ReKi), intent(in   ) :: Cn_alpha_q_circ               ! circulatory component of normal force coefficient response to step change in alpha and q
-   real(ReKi), intent(in   ) :: fprimeprime                   ! lagged version of fprime accounting for unsteady boundary layer response
-   integer   , intent(in   ) :: UAMod                         ! model for the dynamic stall equations.  [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]
-   
-   if ( UAMod == 2 ) then
-      ! use equation 1.48
-      Get_C_V   = Cn_alpha_q_circ * ( 1.0_ReKi - ((1.0_ReKi + 2.0_ReKi*sqrt(fprimeprime) )/3.0_ReKi)**2  )
-      ! Following is a BUG!!!!!!!! square is in the wrong place GJH Nov20 2015
-      !Get_C_V   = Cn_alpha_q_circ * ( 1.0_ReKi - ((1.0_ReKi + 2.0_ReKi*sqrt(fprimeprime) )/3.0_ReKi)  )**2
-   else
-      ! use equation 1.47
-      Get_C_V   = Cn_alpha_q_circ *  ( 1.0_ReKi - ( 0.5_ReKi + 0.5_ReKi*sqrt(fprimeprime) )**2 )
-      ! Following is a BUG!!!!!!!! square is in the wrong place GJH Nov20 2015
-      !Get_C_V   = Cn_alpha_q_circ *  ( 1.0_ReKi - ( 0.5_ReKi + 0.5_ReKi*sqrt(fprimeprime) ) )**2
-
-   end if
-   
-
-end function Get_C_V
-
-!==============================================================================
-real(ReKi) function Get_C_V2( Cn_alpha_q_circ, fprimeprime, UAMod )
-! 
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-
-   real(ReKi), intent(in   ) :: Cn_alpha_q_circ               ! circulatory component of normal force coefficient response to step change in alpha and q
-   real(ReKi), intent(in   ) :: fprimeprime                   ! lagged version of fprime accounting for unsteady boundary layer response
-   integer   , intent(in   ) :: UAMod                         ! model for the dynamic stall equations.  [1 = Leishman/Beddoes, 2 = Gonzalez, 3 = Minnema]
-   
-   real(ReKi)  :: SRFP, FK
-   if ( UAMod == 2 ) then
-      ! use equation 1.48
-      Get_C_V2   = Cn_alpha_q_circ * ( 1.0_ReKi - ((1.0_ReKi + 2.0_ReKi*sqrt(fprimeprime) )/3.0_ReKi)**2  )
-   else
-      ! use equation 1.47
-      !Get_C_V   = Cn_alpha_q_circ *  ( 1.0_ReKi - ( 0.5_ReKi + 0.5_ReKi*sqrt(fprimeprime) )**2 )
-      ! Testing v14 implementation of sqrt(fprimeprime)
-      SRFP = SQRT( ABS( fprimeprime )) * SIGN( 1.0_ReKi, fprimeprime ) + 1.
-      FK   = 0.25 * SRFP * SRFP
-      Get_C_V2   = Cn_alpha_q_circ * ( 1. - FK )
-
-   end if
-   
-
-end function Get_C_V2
-!==============================================================================   
-
-!==============================================================================
-real(ReKi) function Get_Cn_v ( ds, T_V, Cn_v_minus1, C_V, C_V_minus1, tau_V, T_VL, T_V0, Kalpha, alpha, alpha0 ) ! do I pass VRTX flag or tau_V?
-! Implements Equation 1.45 or 1.49 
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-   
-   real(ReKi), intent(in   ) :: ds                     ! non-dimensionalized distance parameter
-   real(ReKi), intent(in   ) :: T_V                    ! backwards finite difference of the non-dimensionalized distance parameter
-   real(ReKi), intent(in   ) :: Cn_v_minus1            ! normal force coefficient due to the presence of LE vortex, previous time step (-)
-   real(ReKi), intent(in   ) :: C_V                    ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex
-   real(ReKi), intent(in   ) :: C_V_minus1             ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex, previous time step (-)
-   real(ReKi), intent(in   ) :: tau_V                  ! time variable, tracking the travel of the LE vortex over the airfoil suction surface (-)
-   real(ReKi), intent(in   ) :: T_VL                   ! time variable associated with the vortex advection process; it represents the non-dimensional time in semi-chords needed for a vortex to travel from leading edge to trailing edge
-   real(ReKi), intent(in   ) :: T_V0                   !
-   real(ReKi), intent(in   ) :: Kalpha                 ! backwards finite difference of alpha
-   real(ReKi), intent(in   ) :: alpha                  ! angle of attack (rad)
-   real(ReKi), intent(in   ) :: alpha0                 ! zero lift angle of attack (rad)
-   real(ReKi)                :: factor
-   
-   factor = (alpha - alpha0) * Kalpha
-   
-   if (tau_V > T_VL .AND. (factor > 0)) then !factor >= 0.0_ReKi ) then     
-      Get_Cn_v = Cn_v_minus1*exp(-ds/T_V)   ! Eqn 1.49    
-   else      
-      Get_Cn_v = Get_ExpEqn( ds, T_V, Cn_v_minus1, C_V, C_V_minus1 )   ! Eqn 1.45
-   end if
-   
-end function Get_Cn_v
-!==============================================================================   
-
-!==============================================================================
-real(ReKi) function Get_Cn_v2 ( ds, Cn_v_minus1, C_V, C_V_minus1, VOR, T_V0 ) ! do I pass VRTX flag or tau_V?
-! Implements Equation 1.45 or 1.49 
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-   
-   real(ReKi), intent(in   ) :: ds                     ! non-dimensionalized distance parameter
-   real(ReKi), intent(in   ) :: Cn_v_minus1            ! normal force coefficient due to the presence of LE vortex, previous time step (-)
-   real(ReKi), intent(in   ) :: C_V                    ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex
-   real(ReKi), intent(in   ) :: C_V_minus1             ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex, previous time step (-)
-   logical,    intent(in   ) :: VOR
-   real(ReKi), intent(in   ) :: T_V0                   !
-
-  
-
-   if (VOR) then  
-      Get_Cn_v2 = Get_ExpEqn( ds, T_V0, Cn_v_minus1, C_V, C_V_minus1 )   ! Eqn 1.45
-   else 
-      Get_Cn_v2 = Cn_v_minus1*exp(-2.0*ds/T_V0)   ! Eqn 1.49  alternative using T_V0 and forcing sigma3 for this eqn = 2.0  
-   end if
-   
-end function Get_Cn_v2
-!==============================================================================   
-
-
-!==============================================================================
-real(ReKi) function Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Dalphaf, alpha_f, Cn_FS, fprimeprime_m, AFInfo, UAMod, Cm_alpha_nc, Cm_Lookup, alpha_prime_f, ErrStat, ErrMsg )
-! Leishman's pitching moment coefficient about the 1/4 chord
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-   
-   real(ReKi),       intent(in   ) :: Cm0                           ! 2D pitching moment coefficient at zero lift, positive if nose is up
-   real(ReKi),       intent(in   ) :: k0                            ! airfoil parameter in the x_cp_hat curve best-fit
-   real(ReKi),       intent(in   ) :: k1                            ! airfoil parameter in the x_cp_hat curve best-fit
-   real(ReKi),       intent(in   ) :: k2                            ! airfoil parameter in the x_cp_hat curve best-fit
-   real(ReKi),       intent(in   ) :: k3                            ! airfoil parameter in the x_cp_hat curve best-fit
-   real(ReKi),       intent(in   ) :: Cn_alpha_q_circ               ! circulatory component of normal force coefficient response to step change in alpha and q
-   real(ReKi),       intent(in   ) :: fprimeprime                   ! lagged version of fprime accounting for unsteady boundary layer response
-   real(ReKi),       intent(in   ) :: Cm_q_circ                     ! circulatory component of the pitching moment coefficient response to a step change in q
-   real(ReKi),       intent(in   ) :: Cn_alpha_nc                   ! non-circulatory component of the normal force coefficient response to step change in alpha
-   real(ReKi),       intent(in   ) :: Cm_q_nc                       ! non-circulatory component of the moment coefficient response to step change in q
-   real(ReKi),       intent(in   ) :: Dalphaf
-   real(ReKi),       intent(in   ) :: alpha_f
-   real(ReKi),       intent(in   ) :: Cn_FS
-   real(ReKi),       intent(in   ) :: fprimeprime_m
-   type(AFInfoType), intent(in   ) :: AFInfo
-   integer,          intent(in   ) :: UAMod                         ! UA model
-   real(ReKi),       intent(  out) :: Cm_alpha_nc
-   real(ReKi),       intent(  out) :: Cm_Lookup, alpha_prime_f
-   integer(IntKi),   intent(  out) :: ErrStat           ! Error status of the operation
-   character(*),     intent(  out) :: ErrMsg            ! Error message if ErrStat /= ErrID_None
-  
-      ! local variables
-   real(ReKi)                :: x_cp_hat                      ! center-of-pressure distance from LE in chord fraction
-   real(ReKi)                :: Cm_common                     !
-   !real(ReKi)                :: alpha_prime_f
-   real(ReKi)                :: Cl
-   real(ReKi)                :: Cd
-   
-   real(ReKi)                :: Cd0
-
-   ErrStat = ErrID_None
-   ErrMsg = ""
-   
-      ! Eqn 1.21 + 1.23 + 1.25a
-   Cm_alpha_nc = - Cn_alpha_nc / 4.0_ReKi 
-   Cm_common = Cm_q_circ + Cm_alpha_nc + Cm_q_nc
-   Cm_Lookup = 0.0_ReKi
-   
-   if ( UAMod == 1 ) then
-         ! Eqn 1.40
-      x_cp_hat = k0 + k1*(1-fprimeprime) + k2*sin(pi*fprimeprime**k3) 
-         ! Eqn 1.39
-      Get_Cm_FS  = Cm0 - Cn_alpha_q_circ*(x_cp_hat - 0.25_ReKi) + Cm_common
-      
-   elseif ( UAMod == 3 ) then
-      
-         ! Eqn 1.41a
-      alpha_prime_f = alpha_f - Dalphaf
-         ! Look up Cm using alpha_prime_f
-      call GetSteadyOutputs(AFInfo, alpha_prime_f, Cl, Cd, Cm_Lookup, Cd0, ErrStat, ErrMsg)
-      
-      Get_Cm_FS = Cm_Lookup + Cm_common
-      
-   else ! UAMod == 2
-      Get_Cm_FS = Cm0 + Cn_FS*fprimeprime_m + Cm_common
-   end if
-   
-end function Get_Cm_FS
+ 
 
 
 
-!==============================================================================
-real(ReKi) function Get_Cm( Cm_FS, T_VL, x_cp_bar, Cn_v, tau_v, Cm_v )
-! Leishman's pitching moment coefficient about the 1/4 chord
-! Called by : ComputeKelvinChain
-! Calls  to : NONE
-!..............................................................................
-   real(ReKi), intent(in   ) :: Cm_FS                         ! 
-   real(ReKi), intent(in   ) :: T_VL                          ! time variable associated with the vortex advection process; it represents the non-dimensional time in semi-chords needed for a vortex to travel from leading edge to trailing edge
-   real(ReKi), intent(in   ) :: x_cp_bar                      ! airfoil parameter for calulating x_cp_v
-   real(ReKi), intent(in   ) :: Cn_v                          ! normal force coefficient due to the presence of LE vortex
-   real(ReKi), intent(in   ) :: tau_v                         ! time variable, tracking the travel of the LE vortex over the airfoil suction surface (-)
-   real(ReKi), intent(  out) :: Cm_v                          ! pitching moment coefficient due to the presence of LE vortex
-      ! local variables
-   
-                      
-   
-   
-      ! Eqn 1.54
-   Cm_v     = -x_cp_bar*( 1-cos( pi*tau_v/T_VL ) )*Cn_v
-   
-      ! Eqn 1.55 = (1.39 or 1.42 or 1.43) +  1.54  
-   Get_Cm   = Cm_FS + Cm_v
-   
-   
-end function Get_Cm
-!==============================================================================   
 
 
 !==============================================================================                              
 subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
-                               St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
+                               St_sh, Kalpha_f, Kq_f, alpha_filt_cur, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, q_f_cur, X1, X2, X3, X4, &
                                Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c, Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
                                Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat, ErrMsg )
 ! 
@@ -781,7 +293,9 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    real(ReKi),                             intent(  out) :: T_VL              ! time variable associated with the vortex advection process; it represents the non-dimensional time in semi-chords needed for a vortex to travel from leading edge to trailing edge
    real(ReKi),                             intent(  out) :: x_cp_bar          ! airfoil parameter for calulating x_cp_v
    real(ReKi),                             intent(  out) :: St_sh             !
-   real(ReKi),                             intent(  out) :: Kalpha            ! backwards finite difference of alpha
+   real(ReKi),                             intent(  out) :: Kalpha_f          ! filtered  backwards finite difference of alpha
+   real(ReKi),                             intent(  out) :: Kq_f              ! filtered  backwards finite difference of q
+   real(ReKi),                             intent(  out) :: alpha_filt_cur    ! filtered angle of attack                          
    real(ReKi),                             intent(  out) :: alpha_e           ! effective angle of attack at 3/4 chord  TODO: verify 3/4 and not 1/4                          
    real(ReKi),                             intent(  out) :: alpha0            ! zero lift angle of attack (radians)
    real(ReKi),                             intent(  out) :: dalpha0           !
@@ -789,6 +303,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    real(ReKi),                             intent(  out) :: eta_e             !
    real(ReKi),                             intent(  out) :: Kq                !
    real(ReKi),                             intent(  out) :: q_cur             !
+   real(ReKi),                             intent(  out) :: q_f_cur             !
    real(ReKi),                             intent(  out) :: X1                !
    real(ReKi),                             intent(  out) :: X2                !
    real(ReKi),                             intent(  out) :: X3                !
@@ -850,13 +365,13 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    real(ReKi)                :: S3                                            ! constant in the f-curve best-fit, alpha <  alpha0
    real(ReKi)                :: S4                                            ! constant in the f-curve best-fit, alpha <  alpha0
    real(ReKi)                :: k_q                                           !
-   real(ReKi)                :: Kalpha_minus1                                 !
-   real(ReKi)                :: Kq_minus1                                     !
+   real(ReKi)                :: Kalpha                                        !
+   real(ReKi)                :: Kalpha_f_minus1                               !
+   real(ReKi)                :: Kq_f_minus1                                   !
    real(ReKi)                :: alpha_minus1                                  !
-   real(ReKi)                :: alpha_minus2                                  !
+   real(ReKi)                :: alpha_filt_minus1                                  !
    real(ReKi)                :: q_minus1                                      !
-   real(ReKi)                :: q_minus2                                      !
-   real(ReKi)                :: U_minus1                                      !
+   real(ReKi)                :: q_f_minus1
    real(ReKi)                :: fprime_minus1                                 !
    real(ReKi)                :: Cn_pot_minus1                                 !
    real(ReKi)                :: k1_hat                                        !
@@ -865,8 +380,10 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    real(ReKi)                :: Kprimeprime_q                                 !
    real(ReKi)                :: fprime_c_minus1
    real(ReKi)                :: alphaf_minus1
+   real(ReKi)                :: LowPassConst
+   real(ReKi)                :: filtCutOff
+   real(ReKi)                :: factor
 
- 
    integer(IntKi)            :: ErrStat2
    character(ErrMsgLen)      :: ErrMsg2
    character(*), parameter   :: RoutineName = 'ComputeKelvinChain'
@@ -881,14 +398,14 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       if (ErrStat >= AbortErrLev) return
       
-   beta_M_Sqrd = Get_Beta_M_Sqrd(M)
-   beta_M      = Get_Beta_M(M)
+   beta_M_Sqrd = 1 - M**2
+   beta_M      = sqrt(1 - M**2) 
    T_I         = p%c(i,j) / p%a_s                                                  ! Eqn 1.11c
-   ds          = Get_ds       ( u%U, p%c(i,j), p%dt )                              ! Eqn 1.5b
+   ds          = 2.0_ReKi*u%U*p%dt/p%c(i,j)                             ! Eqn 1.5b
    
    ! Lookup values using Airfoil Info module
    call AFI_GetAirfoilParams( AFInfo, M, u%Re, u%alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
-                              T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, ErrMsg2, ErrStat2 )           
+                              T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, filtCutOff, ErrMsg2, ErrStat2 )           
       ! AFI_GetAirfoilParams doesn't return error, so I will not check
    
       ! Override eta_e if we are using Flookup
@@ -897,33 +414,53 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    end if
    
    if (OtherState%FirstPass(i,j)) then
-      alpha_minus1 = u%alpha
-      alpha_minus2 = u%alpha
+      alpha_minus1 = u%alpha      
+      alpha_filt_minus1 = u%alpha     
    else
-      alpha_minus1 = xd%alpha_minus1(i,j)
-      alpha_minus2 = xd%alpha_minus2(i,j)
+      alpha_minus1 = xd%alpha_minus1(i,j)     
+      alpha_filt_minus1 = xd%alpha_filt_minus1(i,j)   
    end if
    
-   dalpha0  = u%alpha - alpha0
+   LowPassConst  =  exp(-2.0_ReKi*PI*p%dt*filtCutOff)
    
-  
-   q_cur    = Get_Pitchrate( p%dt, u%alpha, alpha_minus1, u%U, p%c(i,j)  )  ! Eqn 1.8
+   alpha_filt_cur = LowPassConst*alpha_filt_minus1 + (1.0_ReKi-LowPassConst)*u%alpha
    
-      ! Change found in ADv14
-   q_cur = SAT( q_cur, 0.03_ReKi, 0.1_ReKi )
+   
+   dalpha0  = alpha_filt_cur - alpha0
+   
+    
+      ! Compute Kalpha using Eqn 1.18b and Kalpha_minus1 using Eqn 1.18b but with time-shifted alphas
+  ! Kalpha        = ( u%alpha - alpha_minus1 ) / p%dt ! Use SAT() processed version of q_cur to compute Kalpha, to limit spikes in Kalpha 
+   
+   Kalpha        = ( alpha_filt_cur - alpha_filt_minus1 ) / p%dt
    
    if (OtherState%FirstPass(i,j)) then
-      q_minus1 = q_cur   
-      q_minus2 = q_cur
-      U_minus1 = u%U
+      Kalpha_f_minus1 = 0.0_ReKi
    else
-      U_minus1 = xd%U_minus1(i,j)
-      q_minus1 = xd%q_minus1(i,j)   
-      q_minus2 = xd%q_minus2(i,j) 
+      Kalpha_f_minus1 = xd%Kalpha_f_minus1(i,j)
    end if
    
-   k_alpha  = Get_k_       ( M, beta_M, C_nalpha/2.0_ReKi, A1, A2, b1, b2 )                 ! Eqn 1.11a
-   k_q      = Get_k_       ( M, beta_M, C_nalpha         , A1, A2, b1, b2 )                 ! Eqn 1.11b
+   q_cur         = Kalpha   * p%c(i,j) / u%U   
+   
+       ! Compute Kq using Eqn 1.19b and Kq_minus1 using Eqn 1.19b but with time-shifted alphas
+   if (OtherState%FirstPass(i,j)) then
+      q_minus1   = q_cur 
+      q_f_minus1 = q_cur    
+   else    
+      q_minus1   = xd%q_minus1(i,j) 
+      q_f_minus1 = xd%q_f_minus1(i,j) 
+   end if  
+   
+   q_f_cur       = LowPassConst*q_f_minus1 + (1.0_ReKi-LowPassConst)*q_cur
+   Kalpha_f      = q_f_cur * u%U / p%c(i,j) 
+
+   !if ( EqualRealNos(q_f_cur, 0.0_ReKi) ) q_f_cur = 0.0_ReKi
+      ! Change found in ADv14
+   !q_cur = SAT( q_f_cur, 0.03_ReKi, 0.1_ReKi )
+   
+
+   k_alpha  = 1.0_ReKi / ( (1.0_ReKi - M) + (C_nalpha/2.0_ReKi) * M**2 * beta_M * (A1*b1 + A2*b2) / 2.0  )                 ! Eqn 1.11a
+   k_q      = 1.0_ReKi / ( (1.0_ReKi - M) + C_nalpha            * M**2 * beta_M * (A1*b1 + A2*b2) / 2.0  )                 ! Eqn 1.11b
    T_alpha  = T_I * k_alpha * 0.75                                                 ! Eqn 1.10a -RRD 9/28 added *0.75 that seemed to be missing
    T_q      = T_I * k_q * 0.75                                                     ! Eqn 1.10b -RRD 9/28 added *0.75
       
@@ -931,63 +468,67 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    T_f           = T_f0 / OtherState%sigma1(i,j)       ! Eqn 1.34
    T_V           = T_V0 / OtherState%sigma3(i,j)       ! Eqn 1.46
    
-      ! Compute Kalpha using Eqn 1.18b and Kalpha_minus1 using Eqn 1.18b but with time-shifted alphas
-   Kalpha        = q_cur*u%U/p%c(i,j)  ! Use SAT() processed version of q_cur to compute Kalpha, to limit spikes in Kalpha
- 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! TODO 1/25/2016 GJH: This should be adjusted to limit the difference, like q_minus1 is limited but to do this we need U_minus1 as a state
-   Kalpha_minus1= q_minus1*xd%U_minus1(i,j)/p%c(i,j)  ! This could be a fix, but only uses the current value of U
-   !Kalpha_minus1 = Get_Kupper( p%dt, alpha_minus1, alpha_minus2 ) 
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+    
+    
+  
    
-      ! Compute Kq using Eqn 1.19b and Kq_minus1 using Eqn 1.19b but with time-shifted alphas
-   Kq            = Get_Kupper( p%dt, q_cur   , q_minus1     )
-   Kq_minus1     = Get_Kupper( p%dt, q_minus1, q_minus2     )
+   Kq            = ( q_cur  - q_minus1 ) / p%dt
    
+   if (OtherState%FirstPass(i,j)) then
+      Kq_f_minus1 = 0.0_ReKi
+   else
+      Kq_f_minus1 = xd%Kq_f_minus1(i,j)
+   end if
+   
+   Kq_f          =  LowPassConst*Kq_f_minus1 + (1.0_ReKi-LowPassConst)*Kq
+   
+  
       ! Compute Kprime_alpha using Eqn 1.18c
-   Kprime_alpha  = Get_ExpEqn( real(p%dt,ReKi), T_alpha, xd%Kprime_alpha_minus1(i,j), Kalpha, Kalpha_minus1 )
+   Kprime_alpha  = Get_ExpEqn( real(p%dt,ReKi), T_alpha, xd%Kprime_alpha_minus1(i,j), Kalpha_f, Kalpha_f_minus1 )
    
       ! Compute Kprime_q using Eqn 1.19c    
-   Kprime_q      = Get_ExpEqn( real(p%dt,ReKi), T_q    , xd%Kprime_q_minus1(i,j)    ,  Kq   , Kq_minus1     )
+   Kprime_q      = Get_ExpEqn( real(p%dt,ReKi), T_q    , xd%Kprime_q_minus1(i,j)    ,  Kq_f   , Kq_f_minus1     )
    
       ! Compute Cn_alpha_nc using Eqn 1.18a
       ! Depends on T_alpha, M, alpha (1.18b), Kprime_alpha (1.18c), xd%alpha_minus1, xd%Kprime_alpha_minus1
-   Cn_alpha_nc   = Get_Cn_nc( M, 4.0_ReKi*T_alpha, Kalpha, Kprime_alpha )
+   
+   Cn_alpha_nc   = 4.0_ReKi*T_alpha * ( Kalpha_f - Kprime_alpha ) / M
    
       ! Compute Cn_alpha_nc using Eqn 1.19a
-   Cn_q_nc       = -1.0_ReKi*Get_Cn_nc( M,          T_q    , Kq    , Kprime_q     )
+   
+   Cn_q_nc       = -1.0_ReKi*T_q * ( Kq_f - Kprime_q ) / M
    
       ! Compute Cn_alpha_q_nc using Eqn 1.17
       ! Depends on Cn_alpha_nc (1.18a), Cn_q_nc (1.19a)
    Cn_alpha_q_nc = Cn_alpha_nc + Cn_q_nc  
    
       ! Compute X1 using Eqn 1.15a   
-   X1            = Get_ExpEqn( ds*beta_M_Sqrd*b1, 1.0_ReKi, xd%X1_minus1(i,j), A1*(u%alpha - alpha_minus1), 0.0_ReKi )
+   X1            = Get_ExpEqn( ds*beta_M_Sqrd*b1, 1.0_ReKi, xd%X1_minus1(i,j), A1*(alpha_filt_cur - alpha_filt_minus1), 0.0_ReKi )
    
       ! Compute X2 using Eqn 1.15b
-   X2            = Get_ExpEqn( ds*beta_M_Sqrd*b2, 1.0_ReKi, xd%X2_minus1(i,j), A2*(u%alpha - alpha_minus1), 0.0_ReKi )
+   X2            = Get_ExpEqn( ds*beta_M_Sqrd*b2, 1.0_ReKi, xd%X2_minus1(i,j), A2*(alpha_filt_cur - alpha_filt_minus1), 0.0_ReKi )
    
       ! Compute alpha_e using Eqn 1.14
-   alpha_e       = Get_alpha_e( u%alpha, alpha0, X1, X2 )
+   alpha_e       = (alpha_filt_cur - alpha0) - X1 - X2  
    
       ! Compute Cn_alpha_q_circ using Eqn 1.13  
    Cn_alpha_q_circ = C_nalpha_circ * alpha_e
    
    if ( p%UAMod == 2 ) then
          ! Compute X3 and X4 using Eqn 1.16b  and then add Cn_q_circ to the previously computed Cn_alpha_q_circ
-      X3              = Get_ExpEqn( ds*beta_M_Sqrd*b1, 1.0_ReKi, xd%X3_minus1(i,j), A1*(q_cur - q_minus1), 0.0_ReKi )
-      X4              = Get_ExpEqn( ds*beta_M_Sqrd*b2, 1.0_ReKi, xd%X4_minus1(i,j), A2*(q_cur - q_minus1), 0.0_ReKi )
-      Cn_q_circ       = Get_Cn_q_circ( q_cur, C_nalpha_circ, X3, X4  )
+      X3              = Get_ExpEqn( ds*beta_M_Sqrd*b1, 1.0_ReKi, xd%X3_minus1(i,j), A1*(q_f_cur - q_f_minus1), 0.0_ReKi )
+      X4              = Get_ExpEqn( ds*beta_M_Sqrd*b2, 1.0_ReKi, xd%X4_minus1(i,j), A2*(q_f_cur - q_f_minus1), 0.0_ReKi )
+      Cn_q_circ       = C_nalpha_circ*q_f_cur/2.0 - X3 - X4  
       Cn_alpha_q_circ = Cn_alpha_q_circ + Cn_q_circ
    else
       Cn_q_circ       = 0.0
    end if
    
       ! Compute K3prime_q using Eqn 1.22
-   K3prime_q       = Get_ExpEqn( b5*beta_M_Sqrd*ds, 1.0_ReKi, xd%K3prime_q_minus1(i,j),  A5*Kq*real(p%dt), A5*Kq_minus1*real(p%dt) )
+   K3prime_q       = Get_ExpEqn( b5*beta_M_Sqrd*ds, 1.0_ReKi, xd%K3prime_q_minus1(i,j),  A5*(q_f_cur - q_f_minus1), 0.0_ReKi )
    
       ! Compute Cm_q_circ using Eqn 1.21
-   Cm_q_circ       = Get_Cm_q_circ( C_nalpha, beta_M, q_cur, K3prime_q, p%c(i,j), u%U )
+   Cm_q_circ       = -C_nalpha*(q_f_cur -K3prime_q)*p%c(i,j)/(16.0*beta_M*u%U)
    
       ! Compute Cn_pot using eqn 1.20
       ! Depends on Cn_alpha_q_circ (1.13) , Cn_alpha_q_nc (1.17)
@@ -997,15 +538,20 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    k_mq            = 7.0/(15.0*(1.0-M)+1.5*C_nalpha*A5*b5*beta_M*M**2)
    
       ! Eqn 1.25d
-   Kprimeprime_q   = Get_ExpEqn( real(p%dt,ReKi), k_mq**2*T_I   , xd%Kprimeprime_q_minus1(i,j)    ,  Kq   , Kq_minus1     )
+   Kprimeprime_q   = Get_ExpEqn( real(p%dt,ReKi), k_mq**2*T_I   , xd%Kprimeprime_q_minus1(i,j)    ,  Kq_f   , Kq_f_minus1     )
    
       ! Compute Cm_q_nc using eqn 1.25a
-   Cm_q_nc         = Get_Cm_q_nc( p%UAMod, M, k_mq, T_I, Cn_q_nc, k_alpha, Kq, Kprimeprime_q )
-   
+   if ( p%UAMod == 3 ) then
+      ! Implements eqn 1.27
+      Cm_q_nc =  -Cn_q_nc/4.0 - (k_alpha**2)*T_I*(Kq_f-Kprimeprime_q)/(3.0*M)
+   else  
+         ! Implements eqn 1.25a
+      Cm_q_nc = -7*(k_mq**2)*T_I*(Kq-Kprimeprime_q)/(12.0*M)
+      
+   end if
    
       ! Compute Cc_pot using eqn 1.28
    Cc_pot          = Cn_alpha_q_circ*tan(alpha_e+alpha0)
-!  Cc_pot          = Cn_alpha_q_circ*(alpha_e+alpha0)  !we were testing 9/16/15 without tangent
    
    if (OtherState%FirstPass(i,j)) then
       Cn_pot_minus1 = Cn_pot
@@ -1027,7 +573,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    end if
    
       
-   IF ( u%alpha * Cn_prime_diff < 0. ) THEN
+   IF ( alpha_filt_cur * Cn_prime_diff < 0. ) THEN
 
       T_f   = T_f0*1.5
    ELSE
@@ -1081,8 +627,15 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    end if
    
       ! Compute Cn_FS using Eqn 1.35 or 1.36 depending on option selected
-   Cn_FS         = Get_Cn_FS( Cn_alpha_q_nc, Cn_alpha_q_circ, fprimeprime, p%UAMod )
    
+   if ( p%UAMod == 2 ) then
+      ! use equation 1.36
+      Cn_FS   = Cn_alpha_q_nc + Cn_alpha_q_circ *  ( (1.0_ReKi + 2.0_ReKi*sqrt(fprimeprime) ) / 3.0_ReKi  )**2
+   else
+      ! use equation 1.35
+      Cn_FS   = Cn_alpha_q_nc + Cn_alpha_q_circ *  ( (1.0_ReKi + sqrt(fprimeprime)          ) / 2.0_ReKi )**2
+   
+   end if
    
       
    if ( p%UAMod == 3 ) then
@@ -1092,16 +645,29 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
          alphaf_minus1   = xd%alphaf_minus1(i,j)
       end if
          ! Eqn 1.41b
-      Dalphaf    = Get_ExpEqn( ds, 0.1*T_f, xd%Dalphaf_minus1(i,j), alpha_f, alphaf_minus1 )
+      Dalphaf    = Get_ExpEqn( ds, 0.1_ReKi*T_f, xd%Dalphaf_minus1(i,j), alpha_f, alphaf_minus1 )
    else
       Dalphaf    = 0.0_ReKi
    end if
    
       ! Compute C_V using Eqn 1.47 or 1.48 depending on option selected
-   C_V           = Get_C_V  ( Cn_alpha_q_circ, fprimeprime, p%UAMod )
+   if ( p%UAMod == 2 ) then
+      ! use equation 1.48
+      C_V   = Cn_alpha_q_circ * ( 1.0_ReKi - ((1.0_ReKi + 2.0_ReKi*sqrt(fprimeprime) )/3.0_ReKi)**2  )
+   else
+      ! use equation 1.47
+      C_V   = Cn_alpha_q_circ *  ( 1.0_ReKi - ( 0.5_ReKi + 0.5_ReKi*sqrt(fprimeprime) )**2 )
+   end if
    
       ! Compute Cn_v using either Eqn 1.45 or 1.49 depending on operating conditions
-   Cn_v          = Get_Cn_v ( ds, T_V, xd%Cn_v_minus1(i,j), C_V, xd%C_V_minus1(i,j), xd%tau_V(i,j), T_VL, T_V0, Kalpha, u%alpha, alpha0 ) ! do I pass VRTX flag or tau_V?
+
+   factor = (alpha_filt_cur - alpha0) * Kalpha_f
+   
+   if (xd%tau_V(i,j) > T_VL .AND. (factor > 0)) then !factor >= 0.0_ReKi ) then     
+      Cn_v = xd%Cn_v_minus1(i,j)*exp(-ds/T_V)   ! Eqn 1.49    
+   else      
+      Cn_v = Get_ExpEqn( ds, T_V, xd%Cn_v_minus1(i,j), C_V, xd%C_V_minus1(i,j) )   ! Eqn 1.45
+   end if
    
    if ( Cn_v < 0.0_ReKi ) then
       Cn_v = 0.0_ReKi
@@ -1113,375 +679,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
 
 end subroutine ComputeKelvinChain
 
-                               
-!==============================================================================   
-     
-!==============================================================================                              
-subroutine ComputeKelvinChain2( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
-                               St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
-                               Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c, Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
-                               Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, tau_V, SHIFT, VOR, ErrStat, ErrMsg )
-! 
-! Called by : DRIVER
-! Calls  to : Get_Beta_M_Sqrd, Get_Beta_M, AFI_GetAirfoilParams, Get_ds, Get_Pitchrate, Get_k_, Get_Kupper, Get_ExpEqn
-!             Get_Cn_nc, Get_alpha_e, Get_Cm_q_circ, Get_Cm_q_nc, Get_f, Get_Cn_FS, Get_C_V, Get_Cn_v
-!...............................................................................
 
-      
-   integer(IntKi),                         intent(in   ) :: i,j               ! Blade node indices
-   type(UA_InputType),                     intent(in   ) :: u                 ! Inputs at utimes (out only for mesh record-keeping in ExtrapInterp routine)
-   type(UA_ParameterType),                 intent(in   ) :: p                 ! Parameters   
-   type(UA_DiscreteStateType),             intent(in   ) :: xd                ! Input: Discrete states at t;
-   type(UA_OtherStateType),                intent(in   ) :: OtherState        ! Other states
-   type(UA_MiscVarType),                   intent(in   ) :: misc              ! Misc/optimization variables
-   type(AFInfoType),                       intent(in   ) :: AFInfo            ! The airfoil parameter data
-   real(ReKi),                             intent(  out) :: Cn_prime          !
-   real(ReKi),                             intent(  out) :: Cn_prime_diff          !
-   real(ReKi),                             intent(  out) :: Cn1               ! critical value of Cn_prime at LE separation for alpha >= alpha0
-   real(ReKi),                             intent(  out) :: Cn2               ! critical value of Cn_prime at LE separation for alpha < alpha0
-   real(ReKi),                             intent(  out) :: Cd0               !
-   real(ReKi),                             intent(  out) :: Cm0               ! 2D pitching moment coefficient at zero lift, positive if nose is up
-   real(ReKi),                             intent(  out) :: k0                ! airfoil parameter in the x_cp_hat curve best-fit
-   real(ReKi),                             intent(  out) :: k1                ! airfoil parameter in the x_cp_hat curve best-fit
-   real(ReKi),                             intent(  out) :: k2                ! airfoil parameter in the x_cp_hat curve best-fit
-   real(ReKi),                             intent(  out) :: k3                ! airfoil parameter in the x_cp_hat curve best-fit
-   real(ReKi),                             intent(  out) :: T_VL              ! time variable associated with the vortex advection process; it represents the non-dimensional time in semi-chords needed for a vortex to travel from leading edge to trailing edge
-   real(ReKi),                             intent(  out) :: x_cp_bar          ! airfoil parameter for calulating x_cp_v
-   real(ReKi),                             intent(  out) :: St_sh             !
-   real(ReKi),                             intent(  out) :: Kalpha            ! backwards finite difference of alpha
-   real(ReKi),                             intent(  out) :: alpha_e           ! effective angle of attack at 3/4 chord  TODO: verify 3/4 and not 1/4                          
-   real(ReKi),                             intent(  out) :: alpha0            ! zero lift angle of attack (radians)
-   real(ReKi),                             intent(  out) :: dalpha0           !
-   real(ReKi),                             intent(  out) :: alpha_f           !
-   real(ReKi),                             intent(  out) :: eta_e             !
-   real(ReKi),                             intent(  out) :: Kq                !
-   real(ReKi),                             intent(  out) :: q_cur             !
-   real(ReKi),                             intent(  out) :: X1                !
-   real(ReKi),                             intent(  out) :: X2                !
-   real(ReKi),                             intent(  out) :: X3                !
-   real(ReKi),                             intent(  out) :: X4                !
-   real(ReKi),                             intent(  out) :: Kprime_alpha      !
-   real(ReKi),                             intent(  out) :: Kprime_q          !
-   real(ReKi),                             intent(  out) :: Dp                !
-   real(ReKi),                             intent(  out) :: Cn_pot            !
-   real(ReKi),                             intent(  out) :: Cc_pot            !
-   real(ReKi),                             intent(  out) :: Cn_alpha_q_nc     ! non-circulatory component of normal force coefficient response to step change in alpha and q
-   real(ReKi),                             intent(  out) :: Cn_alpha_q_circ   !
-   real(ReKi),                             intent(  out) :: Cm_q_circ         !
-   real(ReKi),                             intent(  out) :: Cn_alpha_nc       ! non-circulatory component of the normal force coefficient response to step change in alpha
-   real(ReKi),                             intent(  out) :: Cn_q_circ
-   real(ReKi),                             intent(  out) :: Cn_q_nc
-   real(ReKi),                             intent(  out) :: Cm_q_nc           ! non-circulatory component of the moment coefficient response to step change in q
-   real(ReKi),                             intent(  out) :: fprimeprime       !
-   real(ReKi),                             intent(  out) :: Df                !
-   real(ReKi),                             intent(  out) :: Df_c              !
-   real(ReKi),                             intent(  out) :: Dalphaf           !
-   real(ReKi),                             intent(  out) :: fprime            !
-   real(ReKi),                             intent(  out) :: fprime_c          !
-   real(ReKi),                             intent(  out) :: fprimeprime_c     !
-   real(ReKi),                             intent(  out) :: fprimeprime_m     !
-   real(ReKi),                             intent(  out) :: Cn_v              ! normal force coefficient due to the presence of LE vortex
-   real(ReKi),                             intent(  out) :: C_V               ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex
-   real(ReKi),                             intent(  out) :: Cn_FS             !
-   real(ReKi),                             intent(  out) :: T_f                                           !
-   real(ReKi),                             intent(  out) :: T_V                                           ! backwards finite difference of the non-dimensionalized distance parameter
-   real(ReKi),                             intent(  out) :: tau_V
-   logical,                                intent(  out) :: SHIFT                                                                          !
-   logical,                                intent(  out) :: VOR 
-   integer(IntKi),                         intent(  out) :: ErrStat           ! Error status of the operation
-   character(*),                           intent(  out) :: ErrMsg            ! Error message if ErrStat /= ErrID_None
-
-
-   real(ReKi)                :: ds                                            ! non-dimensionalized distance parameter
-   real(ReKi)                :: M                                             ! Mach number (-)
-   real(ReKi)                :: beta_M                                        ! Prandtl-Glauert compressibility correction factor,  sqrt(1-M**2)
-   real(ReKi)                :: beta_M_Sqrd                                   ! square of the Prandtl-Glauert compressibility correction factor,  (1-M**2)
-   real(ReKi)                :: k_alpha                                       !
-   real(ReKi)                :: T_alpha                                       !
-   real(ReKi)                :: T_q                                           !
-   real(ReKi)                :: T_I                                           !
-   real(ReKi)                :: C_nalpha_circ                                 ! slope of the circulatory normal force coefficient vs alpha curve
-   real(ReKi)                :: T_f0                                          ! initial value of T_f, airfoil specific, used to compute D_f and fprimeprime
-   real(ReKi)                :: T_V0                                          ! initial value of T_V, airfoil specific, time parameter associated with the vortex lift decay process, used in Cn_v
-   real(ReKi)                :: T_p                                           ! boundary-layer, leading edge pressure gradient time parameter; used in D_p; airfoil specific
-   real(ReKi)                :: b1                                            ! airfoil constant derived from experimental results, usually 0.14
-   real(ReKi)                :: b2                                            ! airfoil constant derived from experimental results, usually 0.53
-   real(ReKi)                :: b5                                            ! airfoil constant derived from experimental results, usually 5.0
-   real(ReKi)                :: A1                                            ! airfoil constant derived from experimental results, usually 0.3
-   real(ReKi)                :: A2                                            ! airfoil constant derived from experimental results, usually 0.7
-   real(ReKi)                :: A5                                            ! airfoil constant derived from experimental results, usually 1.0
-   real(ReKi)                :: C_nalpha                                      !
-   real(ReKi)                :: alpha1                                        ! angle of attack at f = 0.7, approximately the stall angle; for alpha >= alpha0 (radians)
-   real(ReKi)                :: alpha2                                        ! angle of attack at f = 0.7, approximately the stall angle; for alpha < alpha0 (radians)
-   real(ReKi)                :: S1                                            ! constant in the f-curve best-fit, alpha >= alpha0
-   real(ReKi)                :: S2                                            ! constant in the f-curve best-fit, alpha >= alpha0
-   real(ReKi)                :: S3                                            ! constant in the f-curve best-fit, alpha <  alpha0
-   real(ReKi)                :: S4                                            ! constant in the f-curve best-fit, alpha <  alpha0
-   real(ReKi)                :: k_q                                           !
-   real(ReKi)                :: Kalpha_minus1                                 !
-   real(ReKi)                :: Kq_minus1                                     !
-   real(ReKi)                :: alpha_minus1                                  !
-   real(ReKi)                :: alpha_minus2                                  !
-   real(ReKi)                :: q_minus1                                      !
-   real(ReKi)                :: q_minus2                                      !
-   real(ReKi)                :: fprime_minus1                                 !
-   real(ReKi)                :: Cn_pot_minus1                                 !
-   real(ReKi)                :: k1_hat                                        !
-   real(ReKi)                :: K3prime_q                                     !
-   real(ReKi)                :: k_mq                                          !
-   real(ReKi)                :: Kprimeprime_q                                 !
-   real(ReKi)                :: fprime_c_minus1
-   real(ReKi)                :: alphaf_minus1
-   
-   
-
-   fprimeprime_m = 0
-
-   M           = u%U / p%a_s
-   beta_M_Sqrd = Get_Beta_M_Sqrd(M)
-   beta_M      = Get_Beta_M(M)
-   T_I         = p%c(i,j) / p%a_s                                                  ! Eqn 1.11c
-   ds          = Get_ds       ( u%U, p%c(i,j), p%dt )                              ! Eqn 1.5b
-   
-   ! Lookup values using Airfoil Info module
-   call AFI_GetAirfoilParams( AFInfo, M, u%Re, u%alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
-                              T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, ErrMsg, ErrStat )           
-   
-      ! Override eta_e if we are using Flookup
-   if ( p%Flookup ) then
-      eta_e = 1.0
-   end if
-   
-   if (OtherState%FirstPass(i,j)) then
-      alpha_minus1 = u%alpha
-      alpha_minus2 = u%alpha
-   else
-      alpha_minus1 = xd%alpha_minus1(i,j)
-      alpha_minus2 = xd%alpha_minus2(i,j)
-   end if
-   
-   dalpha0  = u%alpha - alpha0
-   q_cur    = Get_Pitchrate( p%dt, u%alpha, alpha_minus1, u%U, p%c(i,j)  )  ! Eqn 1.8
-   
-      ! Change found in ADv14
-   q_cur = SAT( q_cur, 0.03_ReKi, 0.1_ReKi )
-   
-   if (OtherState%FirstPass(i,j)) then
-      q_minus1 = q_cur   
-      q_minus2 = q_cur 
-   else
-      q_minus1 = xd%q_minus1(i,j)   
-      q_minus2 = xd%q_minus2(i,j) 
-   end if
-      ! NOTE: v14 uses the second parameter for both k_alpha and k_q as 2*pi, and hence k_alpha = k_q
-   !k_alpha  = Get_k_       ( M, beta_M, C_nalpha/2.0_ReKi, A1, A2, b1, b2 )                 ! Eqn 1.11a
-   !k_q      = Get_k_       ( M, beta_M, C_nalpha         , A1, A2, b1, b2 )                 ! Eqn 1.11b
-      ! TESTING v14 
-   k_alpha  = Get_k_       ( M, beta_M, 2.0_ReKi*pi, A1, A2, b1, b2 )                 ! Eqn 1.11a
-   k_q      = Get_k_       ( M, beta_M, 2.0_ReKi*pi, A1, A2, b1, b2 )                 ! Eqn 1.11b
-   T_alpha  = T_I * k_alpha * 0.75                                                 ! Eqn 1.10a -RRD 9/28 added *0.75 that seemed to be missing
-   T_q      = T_I * k_q     * 0.75                                                     ! Eqn 1.10b -RRD 9/28 added *0.75
-      
-      ! These quantities are needed for the update state calculations, but are then updated themselves based on the logic which follows
-   T_f           = T_f0 / OtherState%sigma1(i,j)       ! Eqn 1.34
-   T_V           = T_V0 / OtherState%sigma3(i,j)       ! Eqn 1.46
-   
-      ! Compute Kalpha using Eqn 1.18b and Kalpha_minus1 using Eqn 1.18b but with time-shifted alphas
-   Kalpha          = q_cur*u%U/p%c(i,j) 
-   !Kalpha          = Get_Kupper( p%dt, u%alpha     , alpha_minus1 )
-   Kalpha_minus1   = Get_Kupper( p%dt, alpha_minus1, alpha_minus2 ) 
-   
-      ! Compute Kq using Eqn 1.19b and Kq_minus1 using Eqn 1.19b but with time-shifted alphas
-   Kq              = Get_Kupper( p%dt, q_cur   , q_minus1     )
-   Kq_minus1       = Get_Kupper( p%dt, q_minus1, q_minus2     )
-   
-      ! Compute Kprime_alpha using Eqn 1.18c
-   Kprime_alpha = Get_ExpEqn( real(p%dt,ReKi), T_alpha, xd%Kprime_alpha_minus1(i,j), Kalpha, Kalpha_minus1 )
-   
-      ! Compute Kprime_q using Eqn 1.19c    
-   Kprime_q     = Get_ExpEqn( real(p%dt,ReKi), T_q    , xd%Kprime_q_minus1(i,j)    ,  Kq   , Kq_minus1     )
-   
-      ! Compute Cn_alpha_nc using Eqn 1.18a
-      ! Depends on T_alpha, M, alpha (1.18b), Kprime_alpha (1.18c), xd%alpha_minus1, xd%Kprime_alpha_minus1
-   Cn_alpha_nc     = Get_Cn_nc( M, 4.0_ReKi*T_alpha, Kalpha, Kprime_alpha )
-   
-      ! Compute Cn_alpha_nc using Eqn 1.19a
-   !Cn_q_nc         = Get_Cn_nc( M,          T_q    , Kq    , Kprime_q     )
-    ! TESTING v14 sign change
-   Cn_q_nc         = -1.0_ReKi*Get_Cn_nc( M,          T_q    , Kq    , Kprime_q     )
-      ! Compute Cn_alpha_q_nc using Eqn 1.17
-      ! Depends on Cn_alpha_nc (1.18a), Cn_q_nc (1.19a)
-   Cn_alpha_q_nc   = Cn_alpha_nc + Cn_q_nc  
-   
-      ! Compute X1 using Eqn 1.15a   
-   X1           = Get_ExpEqn( ds*beta_M_Sqrd*b1, 1.0_ReKi, xd%X1_minus1(i,j), A1*(u%alpha - alpha_minus1), 0.0_ReKi )
-   
-      ! Compute X2 using Eqn 1.15b
-   X2           = Get_ExpEqn( ds*beta_M_Sqrd*b2, 1.0_ReKi, xd%X2_minus1(i,j), A2*(u%alpha - alpha_minus1), 0.0_ReKi )
-   
-      ! Compute alpha_e using Eqn 1.14
-   alpha_e         = Get_alpha_e( u%alpha, alpha0, X1, X2 )
-   
-      ! Compute Cn_alpha_q_circ using Eqn 1.13
-   
-   Cn_alpha_q_circ = C_nalpha_circ * alpha_e
-   if ( p%UAMod == 2 ) then
-         ! Compute X3 and X4 using Eqn 1.16b  and then add Cn_q_circ to the previously computed Cn_alpha_q_circ
-      X3              = Get_ExpEqn( ds*beta_M_Sqrd*b1, 1.0_ReKi, xd%X3_minus1(i,j), A1*(q_cur - q_minus1), 0.0_ReKi )
-      X4              = Get_ExpEqn( ds*beta_M_Sqrd*b2, 1.0_ReKi, xd%X4_minus1(i,j), A2*(q_cur - q_minus1), 0.0_ReKi )
-      Cn_q_circ       = Get_Cn_q_circ( q_cur, C_nalpha_circ, X3, X4  )
-      Cn_alpha_q_circ = Cn_alpha_q_circ + Cn_q_circ
-   else
-      Cn_q_circ       = 0.0
-   end if
-   
-      ! Compute K3prime_q using Eqn 1.22
-   K3prime_q       = Get_ExpEqn( b5*beta_M_Sqrd*ds, 1.0_ReKi, xd%K3prime_q_minus1(i,j),  A5*Kq*real(p%dt), A5*Kq_minus1*real(p%dt) )
-   
-      ! Compute Cm_q_circ using Eqn 1.21
-   Cm_q_circ       =  Get_Cm_q_circ( C_nalpha, beta_M, q_cur, K3prime_q, p%c(i,j), u%U )
-   
-      ! Compute Cn_pot using eqn 1.20
-      ! Depends on Cn_alpha_q_circ (1.13) , Cn_alpha_q_nc (1.17)
-   Cn_pot          = Cn_alpha_q_circ + Cn_alpha_q_nc
-   
-      ! Eqn 1.25b
-   k_mq            = 7.0/(15.0*(1.0-M)+1.5*C_nalpha*A5*b5*beta_M*M**2)
-   
-   
-      ! Eqn 1.25d
-   Kprimeprime_q   = Get_ExpEqn( real(p%dt,ReKi), k_mq**2*T_I   , xd%Kprimeprime_q_minus1(i,j)    ,  Kq   , Kq_minus1     )
-   
-      ! Compute Cm_q_nc using eqn 1.25a
-   Cm_q_nc         = Get_Cm_q_nc( p%UAMod, M, k_mq, T_I, Cn_q_nc, k_alpha, Kq, Kprimeprime_q )
-   
-   
-      ! Compute Cc_pot using eqn 1.28
-   !Cc_pot          = Cn_alpha_q_circ*tan(alpha_e+alpha0)
-   Cc_pot          = Cn_alpha_q_circ*alpha_e !testing 9/16/15 without tangent
-   
-   if (OtherState%FirstPass(i,j)) then
-      Cn_pot_minus1 = Cn_pot
-   else
-      Cn_pot_minus1 = xd%Cn_pot_minus1(i,j)
-   end if
-   
-      ! Compute Dp using Eqn 1.32b
-   Dp            = Get_ExpEqn( ds, T_p, xd%Dp_minus1(i,j), Cn_pot, Cn_pot_minus1 )
-   
-      ! Compute Cn_prime using Eqn 1.32a
-      ! Depends on Cn_pot (1.20) and Dp (1.32b)
-   Cn_prime      = Cn_Pot - Dp
-   
-   if (OtherState%FirstPass(i,j)) then
-      Cn_prime_diff = 0.0_ReKi
-   else
-      Cn_prime_diff = Cn_prime - xd%Cn_prime_minus1(i,j)
-   end if
-   
-      
-   IF ( u%alpha * Cn_prime_diff < 0. ) THEN
-      SHIFT = .TRUE.
-      T_f   = T_f0*1.5
-   ELSE
-      SHIFT = .FALSE.
-      T_f   = T_f0
-   ENDIF
-
-  
-   
-   
-      ! Compute alpha_f using Eqn 1.31
-   alpha_f       = Cn_prime / C_nalpha_circ + alpha0
-   
-      ! Compute fprime using Eqn 1.30 and Eqn 1.31
-   if (p%flookup) then
-      fprime        = Get_f_from_Lookup( p%UAMod, u%Re, alpha_f, alpha0, C_nalpha_circ, AFInfo, ErrStat, ErrMsg)
-   else   
-      fprime        = Get_f( alpha_f, alpha0, alpha1, alpha2, S1, S2, S3, S4)
-   end if
-   
-   if (OtherState%FirstPass(i,j)) then
-      fprime_minus1 = fprime
-   else
-      fprime_minus1 = xd%fprime_minus1(i,j)
-   end if
-   
-      ! Compute Df using Eqn 1.33b   
-   Df            = Get_ExpEqn( ds, T_f, xd%Df_minus1(i,j), fprime, fprime_minus1 )
-   
-      ! Compute fprimeprime using Eqn 1.33a
-   fprimeprime   = fprime - Df
-   
-   if (p%Flookup) then
-         ! Compute fprime using Eqn 1.30 and Eqn 1.31
-      !if (p%UAMod == 1) then
-      !   fprime_c   = Get_f_from_Lookup( p%UAMod, u%Re, alpha_f, alpha0, C_nalpha_circ, AFInfo, ErrStat, ErrMsg)
-      !else   
-         fprime_c   = Get_f_c_from_Lookup( u%Re, alpha_f, alpha0, C_nalpha_circ, AFInfo, ErrStat, ErrMsg)
-      !end if
-      
-   
-      if (OtherState%FirstPass(i,j)) then
-         fprime_c_minus1 = fprime_c
-         alphaf_minus1   = alpha_f
-      else
-         fprime_c_minus1 = xd%fprime_c_minus1(i,j)
-         alphaf_minus1   = xd%alphaf_minus1(i,j)
-      end if
-   
-         ! Compute Df using Eqn 1.33b   
-      Df_c            = Get_ExpEqn( ds, T_f, xd%Df_c_minus1(i,j), fprime_c, fprime_c_minus1 )
-   
-         ! Compute fprimeprime using Eqn 1.33a
-      fprimeprime_c   = fprime_c - Df_c
-   else
-      fprimeprime_c   = fprimeprime
-   end if
-   
-      ! Compute Cn_FS using Eqn 1.35 or 1.36 depending on option selected
-   Cn_FS         = Get_Cn_FS( Cn_alpha_q_nc, Cn_alpha_q_circ, fprimeprime, p%UAMod )
-   
-   if ( p%UAMod == 3 ) then
-         ! Eqn 1.41b
-      ! BUG FIX??? original theory did not have 0.1*T_F, but v14 does  GJH Dec 1, 2015
-      Dalphaf    = Get_ExpEqn( ds, 0.1*T_f, xd%Dalphaf_minus1(i,j), alpha_f, alphaf_minus1 )
-   else
-      Dalphaf    = 0.0_ReKi
-   end if
-   
-   
-      ! Compute Cc_FS usign Eqn 1.37 or 1.38, but this is not used in the final value of Cc and does not contribute to any states!  
-      ! So we will leave it commented out. GJH 2/23/2015
-   !Cc_FS         = Get_Cc_FS( eta_e, alpha_e, alpha0, Cn_alpha_q_circ, fprimeprime, p%UAMod )
-   
-      ! Compute C_V using Eqn 1.47 or 1.48 depending on option selected
-   C_V           = Get_C_V2  ( Cn_alpha_q_circ, fprimeprime, p%UAMod )
-   
-   if ( misc%BEDSEP(i,j) )  then
-      tau_V = xd%tau_V_minus1(i,j) + 2.0_ReKi*p%dt*u%U / p%c(i,j)
-   else
-      tau_V = xd%tau_V_minus1(i,j)
-   end if
-   
-      ! Compute local VOR flag
-   IF ( tau_V < T_VL ) THEN
-      VOR = .TRUE.
-      IF (SHIFT) VOR = .FALSE.
-   ELSE
-      VOR = .FALSE.
-   ENDIF
-
-
-      ! Compute Cn_v using either Eqn 1.45 or 1.49 depending on operating conditions
-   if (OtherState%FirstPass(i,j)) then
-      Cn_v = 0.0_ReKi
-   else     
-      Cn_v          = Get_Cn_v2 ( ds, xd%Cn_v_minus1(i,j), C_V, xd%C_V_minus1(i,j), VOR, T_V0 )   
-   end if
-  
-
- end subroutine ComputeKelvinChain2
 !==============================================================================   
 
 !==============================================================================
@@ -1503,7 +701,6 @@ subroutine UA_SetParameters( dt, InitInp, p, ErrStat, ErrMsg )
    character(*),                           intent(  out)  :: ErrMsg      ! error message if ErrStat /= ErrID_None
 
    integer(IntKi)            :: ErrStat2
-   character(ErrMsgLen)      :: ErrMsg2
    character(*), parameter   :: RoutineName = 'UA_SetParameters'
    
    
@@ -1519,7 +716,7 @@ subroutine UA_SetParameters( dt, InitInp, p, ErrStat, ErrMsg )
       ! Set errmessage and return
       return
    end if
-
+   
    p%c          = InitInp%c        
    p%numBlades  = InitInp%numBlades
    p%nNodesPerBlade  = InitInp%nNodesPerBlade
@@ -1555,10 +752,11 @@ subroutine UA_InitStates_Misc( p, xd, OtherState, m, ErrStat, ErrMsg )
    
       ! allocate all the state arrays
    call AllocAry( xd%alpha_minus1,        p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call AllocAry( xd%alpha_minus2,        p%nNodesPerBlade,p%numBlades, 'xd%alpha_minus2', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%alpha_filt_minus1,      p%nNodesPerBlade,p%numBlades, 'xd%alpha_filt_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry( xd%q_minus1,            p%nNodesPerBlade,p%numBlades, 'xd%q_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call AllocAry( xd%q_minus2,            p%nNodesPerBlade,p%numBlades, 'xd%q_minus2', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-   call AllocAry( xd%U_minus1,            p%nNodesPerBlade,p%numBlades, 'xd%U_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%q_f_minus1,          p%nNodesPerBlade,p%numBlades, 'xd%q_f_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%Kq_f_minus1,         p%nNodesPerBlade,p%numBlades, 'xd%Kq_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   call AllocAry( xd%Kalpha_f_minus1,     p%nNodesPerBlade,p%numBlades, 'xd%Kalpha_f_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry( xd%X1_minus1,           p%nNodesPerBlade,p%numBlades, 'xd%X1_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry( xd%X2_minus1,           p%nNodesPerBlade,p%numBlades, 'xd%X2_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry( xd%X3_minus1,           p%nNodesPerBlade,p%numBlades, 'xd%X3_minus1', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -1593,11 +791,7 @@ subroutine UA_InitStates_Misc( p, xd, OtherState, m, ErrStat, ErrMsg )
    call AllocAry(m%TESF     ,p%nNodesPerBlade,p%numBlades,'m%TESF',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry(m%LESF     ,p%nNodesPerBlade,p%numBlades,'m%LESF',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
    call AllocAry(m%VRTX     ,p%nNodesPerBlade,p%numBlades,'m%VRTX',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-#endif
-   
-#ifdef DEBUG_v14   
-   call AllocAry(m%BEDSEP,p%nNodesPerBlade,p%numBlades,'OtherState%BEDSEP',ErrStat2,ErrMsg2); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-#endif   
+#endif  
    
    if (ErrStat >= AbortErrLev) return
    
@@ -1611,19 +805,17 @@ subroutine UA_InitStates_Misc( p, xd, OtherState, m, ErrStat, ErrMsg )
    m%LESF      = .FALSE.   
    m%VRTX      = .FALSE. 
 #endif   
-#ifdef DEBUG_v14   
-   m%BEDSEP    = .false.
-#endif   
    
    OtherState%FirstPass = .true.
    
    xd%Cn_prime_diff_minus1 = 0.0_ReKi
    xd%Cn_prime_minus1      = 0.0_ReKi
    xd%alpha_minus1         = 0.0_ReKi
-   xd%alpha_minus2         = 0.0_ReKi
+   xd%alpha_filt_minus1    = 0.0_ReKi
    xd%q_minus1             = 0.0_ReKi
-   xd%q_minus2             = 0.0_ReKi
-   xd%U_minus1             = 0.0_ReKi
+   xd%q_f_minus1           = 0.0_ReKi
+   xd%Kq_f_minus1          = 0.0_ReKi
+   xd%Kalpha_f_minus1      = 0.0_ReKi
    xd%X1_minus1            = 0.0_ReKi
    xd%X2_minus1            = 0.0_ReKi
    xd%X3_minus1            = 0.0_ReKi
@@ -1647,6 +839,7 @@ subroutine UA_InitStates_Misc( p, xd, OtherState, m, ErrStat, ErrMsg )
    xd%Cn_v_minus1          = 0.0_ReKi
    xd%C_V_minus1           = 0.0_ReKi  ! This probably should not be set to 0.0, but should be set 
 
+   
 end subroutine UA_InitStates_Misc 
 !==============================================================================   
 
@@ -1888,9 +1081,11 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
    real(ReKi)                                   :: k3
    real(ReKi)                                   :: T_VL
    real(ReKi)                                   :: x_cp_bar  
-   real(ReKi)                                   :: Kalpha            ! backwards finite difference of alpha
+   real(ReKi)                                   :: Kalpha_f          ! filtered backwards finite difference of alpha
+   real(ReKi)                                   :: Kq_f              ! filtered backwards finite difference of q
    real(ReKi)                                   :: Kq
    real(ReKi)                                   :: q_cur
+   real(ReKi)                                   :: q_f_cur
    real(ReKi)                                   :: X1
    real(ReKi)                                   :: X2
    real(ReKi)                                   :: X3
@@ -1916,6 +1111,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
    real(ReKi)                                   :: C_V               ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex
    real(ReKi)                                   :: Cn_FS
    real(ReKi)                                   :: alpha_e
+   real(ReKi)                                   :: alpha_filt_cur
    real(ReKi)                                   :: alpha0            ! zero lift angle of attack (radians)
    real(ReKi)                                   :: dalpha0
    real(ReKi)                                   :: alpha_f
@@ -1941,7 +1137,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
 !bjj: use sigma1 and sigma3 states values from t      
    
       call ComputeKelvinChain(i, j, u, p, xd, OtherState, m, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
-                                     St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
+                                     St_sh, Kalpha_f, Kq_f, alpha_filt_cur, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, q_f_cur, X1, X2, X3, X4, &
                                      Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c,Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
                                      Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -1971,7 +1167,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       
 !bjj: update sigma1 to value at t + dt      
       OtherState%sigma1(i,j) = 1.0_ReKi
-      Kafactor      = Kalpha*dalpha0
+      Kafactor      = Kalpha_f*dalpha0
      ! if ( fprimeprime < 0.7 .AND.  fprimeprime > 0.3 ) then 
          if ( TESF ) then  ! Separating flow
             if (Kafactor < 0.0_ReKi) then
@@ -2049,17 +1245,14 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       !---------------------------------------------------------
       ! Update the Discrete States, xd
       !---------------------------------------------------------
-      if (OtherState%FirstPass(i,j)) then
-         xd%alpha_minus2(i,j)      = u%alpha
-         xd%q_minus2(i,j)          = q_cur
-      else
-         xd%alpha_minus2(i,j)      = xd%alpha_minus1(i,j)
-         xd%q_minus2(i,j)          = xd%q_minus1(i,j)
-      end if
+     
            
       xd%alpha_minus1(i,j)        = u%alpha
+      xd%alpha_filt_minus1(i,j)   = alpha_filt_cur
+      xd%Kalpha_f_minus1(i,j)     = Kalpha_f
+      xd%Kq_f_minus1(i,j)         = Kq_f     
+      xd%q_f_minus1(i,j)          = q_f_cur    
       xd%q_minus1(i,j)            = q_cur
-      xd%U_minus1(i,j)            = u%U
       xd%X1_minus1(i,j)           = X1
       xd%X2_minus1(i,j)           = X2
       xd%X3_minus1(i,j)           = X3
@@ -2099,188 +1292,6 @@ end subroutine UA_UpdateDiscOtherState
 !==============================================================================   
 
 !============================================================================== 
-subroutine UA_UpdateDiscOtherState2( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )   
-! Tight coupling routine for updating discrete states
-!..............................................................................
-   
-   integer   ,                   intent(in   )  :: i           ! node index within a blade
-   integer   ,                   intent(in   )  :: j           ! blade index    
-   type(UA_InputType),           intent(in   )  :: u           ! Inputs at Time                       
-   type(UA_ParameterType),       intent(in   )  :: p           ! Parameters                                 
-   type(UA_DiscreteStateType),   intent(inout)  :: xd          ! Input: Discrete states at Time; 
-                                                                           ! Output: Discrete states at Time + Interval
-   type(UA_OtherStateType),      intent(inout)  :: OtherState  ! Other states  
-   type(UA_MiscVarType),         intent(inout)  :: m           ! Misc/optimization variables
-   type(AFInfoType),             intent(in   )  :: AFInfo      ! The airfoil parameter data
-   integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
-   character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
-
-         ! Local Variables
-  
-   real(ReKi)                                   :: Cn_prime
-   real(ReKi)                                   :: Cn_prime_diff
-   real(ReKi)                                   :: Cn1               ! critical value of Cn_prime at LE separation for alpha >= alpha0    
-   real(ReKi)                                   :: Cn2               ! critical value of Cn_prime at LE separation for alpha < alpha0
-   real(ReKi)                                   :: Cd0
-   real(ReKi)                                   :: Cm0
-   real(ReKi)                                   :: k0
-   real(ReKi)                                   :: k1
-   real(ReKi)                                   :: k2
-   real(ReKi)                                   :: k3
-   real(ReKi)                                   :: T_VL
-   real(ReKi)                                   :: x_cp_bar  
-   real(ReKi)                                   :: Kalpha            ! backwards finite difference of alpha
-   real(ReKi)                                   :: Kq
-   real(ReKi)                                   :: q_cur
-   real(ReKi)                                   :: X1
-   real(ReKi)                                   :: X2
-   real(ReKi)                                   :: X3
-   real(ReKi)                                   :: X4
-   real(ReKi)                                   :: Kprime_alpha
-   real(ReKi)                                   :: Kprime_q
-   real(ReKi)                                   :: Dp
-   real(ReKi)                                   :: Cn_pot
-   real(ReKi)                                   :: Cc_pot
-   real(ReKi)                                   :: Cn_alpha_q_nc
-   real(ReKi)                                   :: Cn_alpha_q_circ
-   real(ReKi)                                   :: Cm_q_circ
-   real(ReKi)                                   :: Cn_alpha_nc
-   real(ReKi)                                   :: Cm_q_nc
-   real(ReKi)                                   :: fprimeprime
-   real(ReKi)                                   :: fprimeprime_c
-   real(ReKi)                                   :: fprimeprime_m
-   real(ReKi)                                   :: Df
-   real(ReKi)                                   :: Df_c
-   real(ReKi)                                   :: Dalphaf
-   real(ReKi)                                   :: fprime
-   real(ReKi)                                   :: fprime_c
-   real(ReKi)                                   :: Cn_v              ! normal force coefficient due to the presence of LE vortex
-   real(ReKi)                                   :: C_V               ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex
-   real(ReKi)                                   :: Cn_FS
-   real(ReKi)                                   :: alpha_e
-   real(ReKi)                                   :: alpha0            ! zero lift angle of attack (radians)
-   real(ReKi)                                   :: dalpha0
-   real(ReKi)                                   :: alpha_f
-   real(ReKi)                                   :: eta_e
-   real(ReKi)                                   :: Kafactor
-   real(ReKi)                                   :: Cn_q_circ
-   real(ReKi)                                   :: Cn_q_nc
-   real(ReKi)                                   :: St_sh
-   real(ReKi)                                   :: T_sh, T_f, T_V, tau_V
-   logical                                      :: SHIFT, VOR
-            
-      ! Initialize ErrStat       
-   ErrStat = ErrID_None         
-   ErrMsg  = ""               
-
-   call ComputeKelvinChain2(i, j, u, p, xd, OtherState, m, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
-                                     St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
-                                     Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c,Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
-                                     Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, tau_V, SHIFT, VOR, ErrStat, ErrMsg )
-      
-    
-      !---------------------------------------------------------
-      ! Update the OtherStates
-      !---------------------------------------------------------
-      
-      
-      ! This is the check in ADv14 on line 3647 of AeroSubs.f90
-   if ( (Cn_prime > Cn1) .or. ( Cn_prime < Cn2 ) ) then  ! assumption is that Cn2 <  0.0 and Cn1 > 0
-      m%BEDSEP(i,j) = .true.  ! LE separation can occur
-         
-   else
-      m%BEDSEP(i,j) = .false.
-   end if
-      
-      
-      ! Process VRTX-related quantities
-      !!!!!!!!!!!!!!!!!!!!!
-      !! NEW CODE 2/19/2015
-      
-
-   
-   T_sh = 2.0_ReKi*(1.0_ReKi-fprimeprime) / St_sh   
-
-   IF ( (tau_V .GT. (T_VL + T_sh)) .AND. (.NOT. SHIFT)) THEN
-      tau_V = 0.
-      m%BEDSEP(i,j) = .FALSE.
-   ENDIF
-
-   IF ( tau_V .GT. T_VL ) THEN
-      IF ( u%alpha .LT. 0. ) THEN
-
-         IF (Cn_prime_diff .LE. 0. .AND. xd%Cn_prime_diff_minus1(i,j) .GE. 0.) THEN
-            m%BEDSEP(i,j) = .FALSE.
-            tau_V = 0.
-         ENDIF
-
-         IF (xd%alpha_minus1(i,j) .GT. 0.) THEN
-            m%BEDSEP(i,j) = .FALSE.
-            tau_V = 0.
-         ENDIF
-
-      ELSE
-
-         IF (Cn_prime_diff .GE. 0. .AND. xd%Cn_prime_diff_minus1(i,j) .LE. 0.) THEN
-            m%BEDSEP(i,j) = .FALSE.
-            tau_V = 0.
-         ENDIF
-
-         IF (xd%alpha_minus1(i,j) .LT. 0.) THEN
-            m%BEDSEP(i,j) = .FALSE.
-            tau_V = 0.
-         ENDIF
-
-      ENDIF
-   ENDIF
-      
-      
- 
-     
-      !---------------------------------------------------------
-      ! Update the Discrete States, xd
-      !---------------------------------------------------------
-   if (OtherState%FirstPass(i,j)) then
-      xd%alpha_minus2(i,j)      = u%alpha
-      xd%q_minus2(i,j)          = q_cur
-   else
-      xd%alpha_minus2(i,j)      = xd%alpha_minus1(i,j)
-      xd%q_minus2(i,j)          = xd%q_minus1(i,j)
-   end if
-           
-   xd%alpha_minus1(i,j)        = u%alpha
-   xd%q_minus1(i,j)            = q_cur
-   xd%X1_minus1(i,j)           = X1
-   xd%X2_minus1(i,j)           = X2
-   xd%X3_minus1(i,j)           = X3
-   xd%X4_minus1(i,j)           = X4
-   xd%Kprime_alpha_minus1(i,j) = Kprime_alpha
-   xd%Kprime_q_minus1(i,j)     = Kprime_q
-   xd%Dp_minus1(i,j)           = Dp
-   xd%Cn_pot_minus1(i,j)       = Cn_pot
-   xd%Cn_prime_minus1(i,j)       = Cn_prime
-   xd%Cn_prime_diff_minus1(i,j) = Cn_prime_diff
-   xd%fprimeprime_minus1(i,j)  = fprimeprime
-   xd%Df_minus1(i,j)           = Df
-   if (p%Flookup) then
-      xd%Df_c_minus1(i,j)           = Df_c
-      xd%fprimeprime_c_minus1(i,j)  = fprimeprime_c
-      xd%fprime_c_minus1(i,j)       = fprime_c
-   end if
-      
-   xd%Dalphaf_minus1(i,j)      = Dalphaf
-   xd%fprime_minus1(i,j)       = fprime
-   xd%alphaf_minus1(i,j)       = alpha_f
-   xd%Cn_v_minus1(i,j)         = Cn_v
-   xd%C_V_minus1(i,j)          = C_V
-   xd%tau_V_minus1(i,j)        = tau_V
-   
-   OtherState%FirstPass(i,j)   = .false.
-   
-   
-end subroutine UA_UpdateDiscOtherState2
-!==============================================================================   
-
 
 !============================================================================== 
 subroutine UA_UpdateStates( i, j, u, p, xd, OtherState, AFInfo, m, ErrStat, ErrMsg )
@@ -2366,7 +1377,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
    real(ReKi)                                             :: k3
    real(ReKi)                                             :: T_VL
    real(ReKi)                                             :: x_cp_bar 
-   real(ReKi)                                             :: Kalpha             ! backwards finite difference of alpha
+   real(ReKi)                                             :: Kalpha_f             ! backwards finite difference of alpha
    real(ReKi)                                             :: Kq
    real(ReKi)                                             :: q_cur
    real(ReKi)                                             :: X1
@@ -2394,22 +1405,28 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
    real(ReKi)                                             :: C_V                 ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex
    real(ReKi)                                             :: Cn_FS, Cm_FS  
    real(ReKi)                                             :: alpha_e
+   real(ReKi)                                             :: alpha_filt_cur
    real(ReKi)                                             :: alpha0              ! zero lift angle of attack (radians)
    real(ReKi)                                             :: dalpha0
    real(ReKi)                                             :: alpha_f
    real(ReKi)                                             :: eta_e
-   real(ReKi)                                             :: St_sh, Kafactor, f_c_offset
-   real(ReKi)                                             :: Cl_static, Cd_static, Cm_static, Cn_static, Cm_alpha_nc, Cn_q_circ, Cn_q_nc, T_f, T_V
+   real(ReKi)                                             :: St_sh, f_c_offset
+   real(ReKi)                                             :: Cl_temp, Cd_temp, Cm_temp, Cn_temp, Cm_alpha_nc, Cn_q_circ, Cn_q_nc, T_f, T_V
    real(ReKi)                                             :: M, alpha1, alpha2, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, b1,b2,b5,A1,A2,A5,S1,S2,S3,S4,k1_hat,f, k2_hat
    integer                                                :: iOffset
-   real(ReKi)                                             :: Cn_alpha_q_nc, Cm_v, Cm_Lookup, alpha_prime_f, Cn_prime_diff
+   real(ReKi)                                             :: Cn_alpha_q_nc, Cm_v, Cm_Lookup, alpha_prime_f, Cn_prime_diff, Kq_f,q_f_cur
+   real(ReKi)                                             :: filtCutOff                    ! airfoil parameter for the low-pass cut-off frequency for pitching rate and accelerations (Hz)  
+   real(ReKi)                                             :: x_cp_hat                      ! center-of-pressure distance from LE in chord fraction
+   real(ReKi)                                             :: Cm_common                     ! 
+
+   
    !BJJ: what are misc%iBladeNode, misc%iBlade here? I don't see them set in the routine that calls UA_CalcOutput
    
    ErrStat   = ErrID_None           ! no error has occurred
    ErrMsg    = ""
    
   
-   iOffset = (misc%iBladeNode-1)*p%NumOuts + (misc%iBlade-1)*p%nNodesPerBlade*p%NumOuts 
+  
    
    if (OtherState%FirstPass(misc%iBladeNode, misc%iBlade)) then
       
@@ -2435,7 +1452,12 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       Cm_alpha_nc       = 0.0_ReKi
       Cm_q_circ         = 0.0_ReKi
       Cn_prime_diff     = 0.0_ReKi
-            
+      Cm_q_nc           = 0.0_ReKi
+      alpha_prime_f     = 0.0_ReKi
+      Dalphaf           = 0.0_ReKi
+      Cm_temp         = 0.0_ReKi
+      T_f               = 0.0_ReKi
+      T_V               = 0.0_ReKi
    else
       M           = u%U / p%a_s
       
@@ -2444,12 +1466,12 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
          if (ErrStat >= AbortErrLev) return
       
       call AFI_GetAirfoilParams( AFInfo, M, u%Re, u%alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
-                              T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, ErrMsg2, ErrStat2 )           
+                              T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, filtCutOff, ErrMsg2, ErrStat2 )           
             !AFI_GetAirfoilParams doens't return error, so I won't check. ! call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
       
       call ComputeKelvinChain( misc%iBladeNode, misc%iBlade, u, p, xd, OtherState, misc, AFInfo, Cn_prime, Cn_prime_diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
-                                 St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
+                                 St_sh, Kalpha_f, Kq_f, alpha_filt_cur, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, q_f_cur, X1, X2, X3, X4, &
                                  Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c, Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
                                  Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
@@ -2493,11 +1515,11 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
               !    f      = Get_f_from_Lookup( p%UAMod, u%Re, u%alpha, alpha0, C_nalpha_circ, AFInfo, ErrStat, ErrMsg)
               ! else   
                ! TODO: Need to understand the effect of the offset on this f in the following equations and fprimeprime_c.
-                  f      = Get_f_c_from_Lookup( u%Re, u%alpha, alpha0, C_nalpha_circ, AFInfo, ErrStat, ErrMsg)
+                  f      = Get_f_c_from_Lookup( u%Re, alpha_filt_cur, alpha0, C_nalpha_circ, AFInfo, ErrStat, ErrMsg)
               ! endif
                
             else
-               f      = Get_f( u%alpha, alpha0, alpha1, alpha2, S1, S2, S3, S4 )
+               f      = Get_f( alpha_filt_cur, alpha0, alpha1, alpha2, S1, S2, S3, S4 )
             end if
             
             k2_hat = 2*(Cn_prime-Cn1) + fprimeprime_c - f
@@ -2522,33 +1544,64 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
             end if
          end if
          
-         call GetSteadyOutputs(AFInfo, alpha_f, Cl_static, Cd_static, Cm_static, Cd0, ErrStat2, ErrMsg2)
+         call GetSteadyOutputs(AFInfo, alpha_f, Cl_temp, Cd_temp, Cm_temp, Cd0, ErrStat2, ErrMsg2)
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         Cn_static = Cl_static*cos(alpha_f) + (Cd_static-Cd0)*sin(alpha_f)
+         Cn_temp = Cl_temp*cos(alpha_f) + (Cd_temp-Cd0)*sin(alpha_f)
          ! TODO: What about when Cn = 0  GJH 5/22/2015
-         fprimeprime_m = (Cm_static - Cm0) / Cn_static 
+         if (abs(Cn_temp) < 0.01 ) then
+            fprimeprime_m = 1.0
+         else            
+            fprimeprime_m = (Cm_temp - Cm0) / Cn_temp 
+         end if
+         
       else
          fprimeprime_m = 0.0
       end if
       
-      Cm_FS = Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Dalphaf, alpha_f, Cn_FS, fprimeprime_m, AFInfo, p%UAMod, Cm_alpha_nc, Cm_Lookup, alpha_prime_f, ErrStat2, ErrMsg2 )
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         ! Eqn 1.21 + 1.23 + 1.25a
+      Cm_alpha_nc = - Cn_alpha_nc / 4.0_ReKi 
+      Cm_common = Cm_q_circ + Cm_alpha_nc + Cm_q_nc
+      Cm_Lookup = 0.0_ReKi
+   
+      if ( p%UAMod == 1 ) then
+            ! Eqn 1.40
+         x_cp_hat = k0 + k1*(1-fprimeprime) + k2*sin(pi*fprimeprime**k3) 
+            ! Eqn 1.39
+         Cm_FS  = Cm0 - Cn_alpha_q_circ*(x_cp_hat - 0.25_ReKi) + Cm_common
       
-      y%Cm = Get_Cm( Cm_FS, T_VL, x_cp_bar, Cn_v, xd%tau_v(misc%iBladeNode, misc%iBlade), Cm_v )
-                  
+      elseif ( p%UAMod == 3 ) then
+      
+            ! Eqn 1.41a
+         alpha_prime_f = alpha_f - Dalphaf
+            ! Look up Cm using alpha_prime_f
+         call GetSteadyOutputs(AFInfo, alpha_prime_f, Cl_temp, Cd_temp, Cm_temp, Cd0, ErrStat, ErrMsg)
+      
+         Cm_FS = Cm_temp + Cm_common
+      
+      else ! UAMod == 2
+         Cm_FS = Cm0 + Cn_FS*fprimeprime_m + Cm_common
+      end if   
+      
+         ! Eqn 1.54
+      Cm_v     = -x_cp_bar*( 1-cos( pi*xd%tau_v(misc%iBladeNode, misc%iBlade)/T_VL ) )*Cn_v
+   
+         ! Eqn 1.55 = (1.39 or 1.42 or 1.43) +  1.54  
+      y%Cm   = Cm_FS + Cm_v 
+      
    end if
    
 #ifdef UA_OUTS
+   iOffset = (misc%iBladeNode-1)*p%NumOuts + (misc%iBlade-1)*p%nNodesPerBlade*p%NumOuts 
    if (allocated(y%WriteOutput)) then  !bjj: because BEMT uses local variables for UA output, y%WriteOutput is not necessarially allocated. Need to figure out a better solution.
-      y%WriteOutput(iOffset+ 1)    = u%alpha*180.0/pi                                                    
+      y%WriteOutput(iOffset+ 1)    = alpha_filt_cur*180.0/pi                                                    
       y%WriteOutput(iOffset+ 2)    = u%U                                                                 
       y%WriteOutput(iOffset+ 3)    = y%Cn                                                                
       y%WriteOutput(iOffset+ 4)    = y%Cc                                                                
-      y%WriteOutput(iOffset+ 5)    = y%Cl                                                                
-      y%WriteOutput(iOffset+ 6)    = y%Cd                                                                
+      y%WriteOutput(iOffset+ 5)    = Kalpha_f !y%Cl                                                                
+      y%WriteOutput(iOffset+ 6)    = Kq_f     !y%Cd                                                                
       y%WriteOutput(iOffset+ 7)    = y%Cm                                                                
-      y%WriteOutput(iOffset+ 8)    = Cn_alpha_q_circ                                                     
-      y%WriteOutput(iOffset+ 9)    = Cn_alpha_q_nc                                                       
+      y%WriteOutput(iOffset+ 8)    = Cn_alpha_nc !Cn_alpha_q_circ               ! CNCP in ADv14                                      
+      y%WriteOutput(iOffset+ 9)    = Cn_q_nc !Cn_alpha_q_nc                 ! CNIQ in ADv14                                      
       y%WriteOutput(iOffset+10)    = Cn_pot                                                              
       y%WriteOutput(iOffset+11)    = Dp                                                                  
       y%WriteOutput(iOffset+12)    = Cn_prime                                                            
@@ -2582,7 +1635,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       y%WriteOutput(iOffset+26)    = Cm_Lookup
       y%WriteOutput(iOffset+27)    = T_f
       y%WriteOutput(iOffset+28)    = T_V
-      y%WriteOutput(iOffset+29)    = Get_ds       ( u%U, p%c(misc%iBladeNode, misc%iBlade), p%dt ) 
+      y%WriteOutput(iOffset+29)    = 2.0_ReKi*u%U*p%dt/p%c(misc%iBladeNode, misc%iBlade)   
    
       !y%WriteOutput(iOffset+1) = u%alpha*180.0/pi
       !y%WriteOutput(iOffset+2) = y%Cn
@@ -2711,396 +1764,8 @@ subroutine UA_CheckMachNumber(M, FirstWarn_M, ErrStat, ErrMsg )
    
 end subroutine UA_CheckMachNumber
 
-!============================================================================== 
-subroutine UA_CalcOutput2( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg )   
-! Routine for computing outputs, used in both loose and tight coupling.
-!..............................................................................
-   
-   type(UA_InputType),           intent(inout)  :: u           ! Inputs at Time
-   type(UA_ParameterType),       intent(in   )  :: p           ! Parameters
-   type(UA_DiscreteStateType),   intent(in   )  :: xd          ! Discrete states at Time
-   type(UA_OtherStateType),      intent(in   )  :: OtherState  ! Other states
-   type(AFInfoType),             intent(in   )  :: AFInfo      ! The airfoil parameter data
-   type(UA_OutputType),          intent(inout)  :: y           ! Outputs computed at Time (Input only so that mesh con-
-                                                               !   nectivity information does not have to be recalculated)
-   type(UA_MiscVarType),         intent(inout)  :: misc        ! Misc/optimization variables
-   integer(IntKi),               intent(  out)  :: ErrStat     ! Error status of the operation
-   character(*),                 intent(  out)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
 
-   
-   integer(IntKi)                                         :: errStat2        ! Error status of the operation (secondary error)
-   character(ErrMsgLen)                                   :: errMsg2         ! Error message if ErrStat2 /= ErrID_None
-   real(ReKi)                                             :: Cn_prime
-   real(ReKi)                                             :: Cn1             ! critical value of Cn_prime at LE separation for alpha >= alpha0    
-   real(ReKi)                                             :: Cn2             ! critical value of Cn_prime at LE separation for alpha < alpha0
-   real(ReKi)                                             :: Cd0
-   real(ReKi)                                             :: Cm0
-   real(ReKi)                                             :: k0
-   real(ReKi)                                             :: k1
-   real(ReKi)                                             :: k2
-   real(ReKi)                                             :: k3
-   real(ReKi)                                             :: T_VL
-   real(ReKi)                                             :: x_cp_bar 
-   real(ReKi)                                             :: Kalpha             ! backwards finite difference of alpha
-   real(ReKi)                                             :: Kq
-   real(ReKi)                                             :: q_cur
-   real(ReKi)                                             :: X1
-   real(ReKi)                                             :: X2
-   real(ReKi)                                             :: X3
-   real(ReKi)                                             :: X4
-   real(ReKi)                                             :: Kprime_alpha
-   real(ReKi)                                             :: Kprime_q
-   real(ReKi)                                             :: Dp
-   real(ReKi)                                             :: Cn_pot
-   real(ReKi)                                             :: Cc_pot
-   real(ReKi)                                             :: Cn_alpha_q_circ
-   real(ReKi)                                             :: Cm_q_circ
-   real(ReKi)                                             :: Cn_alpha_nc
-   real(ReKi)                                             :: Cm_q_nc
-   real(ReKi)                                             :: fprimeprime
-   real(ReKi)                                             :: fprimeprime_c
-   real(ReKi)                                             :: fprimeprime_m
-   real(ReKi)                                             :: Df
-   real(ReKi)                                             :: Df_c
-   real(ReKi)                                             :: Dalphaf
-   real(ReKi)                                             :: fprime
-   real(ReKi)                                             :: fprime_c
-   real(ReKi)                                             :: Cn_v                ! normal force coefficient due to the presence of LE vortex
-   real(ReKi)                                             :: C_V                 ! contribution to the normal force coefficient due to accumulated vorticity in the LE vortex
-   real(ReKi)                                             :: Cn_FS, Cm_FS  
-   real(ReKi)                                             :: alpha_e
-   real(ReKi)                                             :: alpha0              ! zero lift angle of attack (radians)
-   real(ReKi)                                             :: dalpha0
-   real(ReKi)                                             :: alpha_f
-   real(ReKi)                                             :: eta_e
-   real(ReKi)                                             :: St_sh, Kafactor, f_c_offset
-   real(ReKi)                                             :: Cl_static, Cd_static, Cm_static, Cn_static, Cm_alpha_nc, Cn_q_circ, Cn_q_nc, T_f, T_V
-   real(ReKi)                                             :: M, alpha1, alpha2, C_nalpha, Cn_alpha_q_nc, C_nalpha_circ, T_f0, T_V0, T_p, b1,b2,b5,A1,A2,A5,S1,S2,S3,S4,k1_hat,f, k2_hat
-   integer                                                :: iOffset
-   real(ReKi)                                             :: tau_V, Cn_prime_diff, Cm_v, Cm_Lookup, alpha_prime_f
-   logical                                                :: SHIFT, VOR
-   
-   !BJJ: what are misc%iBladeNode, misc%iBlade here? I don't see them set in the routine that calls UA_CalcOutput
-   
-   ErrStat   = ErrID_None           ! no error has occurred
-   ErrMsg    = ""
-   
-  
-   iOffset = (misc%iBladeNode-1)*p%NumOuts + (misc%iBlade-1)*p%nNodesPerBlade*p%NumOuts 
-   
-   if (OtherState%FirstPass(misc%iBladeNode, misc%iBlade)) then
-      
-      
-      call GetSteadyOutputs(AFInfo, u%alpha, y%Cl, y%Cd, y%Cm, Cd0, ErrStat, ErrMsg)
-      
-      y%Cn = y%Cl*cos(u%alpha) + (y%Cd-Cd0)*sin(u%alpha)
-      y%Cc = y%Cl*sin(u%alpha) - (y%Cd-Cd0)*cos(u%alpha)
-            
-   else
-      M           = u%U / p%a_s
-      call AFI_GetAirfoilParams( AFInfo, M, u%Re, u%alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
-                              T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, ErrMsg, ErrStat )           
-   
-      
-      call ComputeKelvinChain2( misc%iBladeNode, misc%iBlade, u, p, xd, OtherState, misc, AFInfo, Cn_prime, Cn_prime_Diff, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, T_VL, x_cp_bar, &
-                                 St_sh, Kalpha, alpha_e, alpha0, dalpha0, alpha_f, eta_e, Kq, q_cur, X1, X2, X3, X4, &
-                                 Kprime_alpha, Kprime_q, Dp, Cn_pot, Cc_pot, fprimeprime, Df, Df_c, Dalphaf, fprime, fprime_c, fprimeprime_c, fprimeprime_m, &
-                                 Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, tau_V, SHIFT, VOR, ErrStat, ErrMsg )
-      
-            
-         ! Eqn 1.50(a or b depending on UAMod)
-      !if (tau_V > 0.0) then
-         y%Cn= Cn_FS + Cn_v
-      !else
-      !   y%Cn= Cn_FS
-      !end if
-      
-         ! This offset is to account for a correction for negative values of f_c which we cannot return due to a squaring of the quantity when using a lookup.
-      if (p%Flookup) then
-         f_c_offset = 0.2_ReKi
-      else
-         f_c_offset = 0.0_ReKi
-      end if
-      
-      if ( p%UAMod == 3 .OR. p%UAMod == 4) then
-            ! Eqn 1.52a   TODO: NOTE:  This is what is used in AD v14, so we may need a way to use this when we want to match v14 as much as possible! GJH 5/21/2015
-        ! TODO: Look at eliminating this vortex related contribution under reversing AOA and perhaps when VRTX = F
-     !    Kafactor             = Kalpha*dalpha0
-     !    if  ( Kafactor < 0.0_ReKi ) then ! .AND.  .NOT. misc%VRTX(misc%iBladeNode, misc%iBlade )  )then
-     !       y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset)
-     !    else         
-            !y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*tan(alpha_e)*(1-xd%tau_v(misc%iBladeNode, misc%iBlade)/(2.0*T_VL))
-            y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*alpha_e*(1-tau_V/(T_VL)) !testing without tan 9/16/15
-     !    end if
-         
-      elseif ( p%UAMod == 2 ) then
-            ! Eqn 1.52b
-         y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset)
-      else
-         !if ( Cn_prime <= Cn1 ) then
-         !   y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) !*sin(alpha_e + alpha0)
-         !else
-         !   if ( p%flookup ) then 
-         !     ! if (p%UAMod == 1) then
-         !     !    f      = Get_f_from_Lookup( p%UAMod, u%Re, u%alpha, alpha0, C_nalpha_circ, AFInfo, ErrStat, ErrMsg)
-         !     ! else   
-         !      ! TODO: Need to understand the effect of the offset on this f in the following equations and fprimeprime_c.
-         !         f      = Get_f_c_from_Lookup( u%Re, u%alpha, alpha0, C_nalpha_circ, AFInfo, ErrStat, ErrMsg)
-         !     ! endif
-         !      
-         !   else
-         !      f      = Get_f( u%alpha, alpha0, alpha1, alpha2, S1, S2, S3, S4 )
-         !   end if
-         !   
-         !   k2_hat = 2*(Cn_prime-Cn1) + fprimeprime_c - f
-         !   y%Cc   = k1_hat + Cc_pot*sqrt(fprimeprime_c)*fprimeprime_c**k2_hat !*sin(alpha_e + alpha0)
-         !   
-         !end if
-         
-      end if
-      
-         ! Eqn 1.2
-      y%Cl = y%Cn*cos(u%alpha) + y%Cc*sin(u%alpha)
-      y%Cd = y%Cn*sin(u%alpha) - y%Cc*cos(u%alpha) + Cd0
-            
-         ! Eqn 1.55
-         ! Compute Cn_FS using Eqn 1.35 or 1.36 depending on option selected
-      if ( p%UAMod == 2 ) then
-         if (abs(alpha_f-alpha0) < .01) then
-            if (alpha_f < alpha0) then
-               alpha_f = alpha_f - .01
-            else
-               alpha_f = alpha_f + .01
-            end if
-         end if
-         
-         call GetSteadyOutputs(AFInfo, alpha_f, Cl_static, Cd_static, Cm_static, Cd0, ErrStat, ErrMsg)
-         Cn_static = Cl_static*cos(alpha_f) + (Cd_static-Cd0)*sin(alpha_f)
-         ! TODO: What about when Cn = 0  GJH 5/22/2015
-         fprimeprime_m = (Cm_static - Cm0) / Cn_static 
-      else
-         fprimeprime_m = 0.0
-      end if
-      
-      Cm_FS = Get_Cm_FS( Cm0, k0, k1, k2, k3, Cn_alpha_q_circ, fprimeprime, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Dalphaf, alpha_f, Cn_FS, fprimeprime_m, AFInfo, p%UAMod, Cm_alpha_nc, Cm_Lookup, alpha_prime_f, ErrStat, ErrMsg )
-      
-      y%Cm = Get_Cm( Cm_FS, T_VL, x_cp_bar, Cn_v, tau_V, Cm_v )
-                  
-   end if
  
-#ifdef UA_OUTS
-   if (allocated(y%WriteOutput)) then  !bjj: because BEMT uses local variables for UA output, y%WriteOutput is not necessarially allocated. Need to figure out a better solution.
-      y%WriteOutput(iOffset+1) = u%alpha
-      y%WriteOutput(iOffset+2) = u%U
-      y%WriteOutput(iOffset+3) = Cn_alpha_q_circ
-      y%WriteOutput(iOffset+4) = Cn_alpha_q_nc
-      y%WriteOutput(iOffset+5) = Cn_pot
-      y%WriteOutput(iOffset+6) = Dp
-      y%WriteOutput(iOffset+7) = Cn_prime
-      y%WriteOutput(iOffset+8) = fprime
-      y%WriteOutput(iOffset+9) = Df
-      y%WriteOutput(iOffset+10)= Cn_V
-      y%WriteOutput(iOffset+11) = y%Cn
-      y%WriteOutput(iOffset+12) = xd%tau_v(misc%iBladeNode, misc%iBlade)
-      if ( misc%BEDSEP(misc%iBladeNode, misc%iBlade) ) then !bjj: note this is set in UpdateDiscState2, so it may be out of sync here
-         y%WriteOutput(iOffset+13) = 1.0_ReKi
-      else
-         y%WriteOutput(iOffset+13) = 0.0_ReKi
-      end if
-      
-      if ( SHIFT ) then
-         y%WriteOutput(iOffset+14) = 1.0_ReKi
-      else
-         y%WriteOutput(iOffset+14) = 0.0_ReKi
-      end if
-      if ( VOR ) then
-         y%WriteOutput(iOffset+15) = 1.0_ReKi
-      else
-         y%WriteOutput(iOffset+15) = 0.0_ReKi
-      end if
-      y%WriteOutput(iOffset+16)= C_V
-      y%WriteOutput(iOffset+17)= y%Cc
-      y%WriteOutput(iOffset+18)= y%Cm
-      y%WriteOutput(iOffset+19)= Cm_alpha_nc
-      y%WriteOutput(iOffset+20)= Cm_q_nc ! Cm_q_circ
-      y%WriteOutput(iOffset+21)= Cm_v
-      y%WriteOutput(iOffset+22)= alpha_prime_f
-      y%WriteOutput(iOffset+23)= Dalphaf
-      y%WriteOutput(iOffset+24)= Cm_Lookup
-      y%WriteOutput(iOffset+25)= T_f
-      y%WriteOutput(iOffset+26)= T_V
-      y%WriteOutput(iOffset+27)= Get_ds       ( u%U, p%c(misc%iBladeNode, misc%iBlade), p%dt ) 
-      y%WriteOutput(iOffset+28)= tau_V
-      !y%WriteOutput(iOffset+1) = u%alpha*180.0/pi
-      !y%WriteOutput(iOffset+2) = y%Cn
-      !y%WriteOutput(iOffset+3) = y%Cc
-      !y%WriteOutput(iOffset+4) = y%Cm
-      !y%WriteOutput(iOffset+5) = y%Cl
-      !y%WriteOutput(iOffset+6) = y%Cd
-      !y%WriteOutput(iOffset+7) = C_nalpha_circ*alpha_e  ! = Cn_alpha_circ
-      !y%WriteOutput(iOffset+8) = Cn_alpha_nc
-      !y%WriteOutput(iOffset+9) = Cn_q_circ
-      !y%WriteOutput(iOffset+10) = Cn_q_nc
-      !y%WriteOutput(iOffset+11) = 0.0  ! = Cm_alpha_circ  NOTE: we do not use this quantity
-      !y%WriteOutput(iOffset+12) = Cm_alpha_nc
-      !y%WriteOutput(iOffset+13) = Cm_q_circ
-      !y%WriteOutput(iOffset+14) = Cm_q_nc
-      !y%WriteOutput(iOffset+15) = alpha_e*180/pi
-      !y%WriteOutput(iOffset+16) = fprime
-      !y%WriteOutput(iOffset+17) = fprime_c
-      !y%WriteOutput(iOffset+18) = fprimeprime
-      !y%WriteOutput(iOffset+19) = fprimeprime_c
-      !y%WriteOutput(iOffset+20) = fprimeprime_m
-      !y%WriteOutput(iOffset+21) = T_f
-      !y%WriteOutput(iOffset+22) = T_V
-      !if ( OtherState%LESF(misc%iBladeNode, misc%iBlade) ) then
-      !   y%WriteOutput(iOffset+23) = 1.0_ReKi
-      !else
-      !   y%WriteOutput(iOffset+23) = 0.0_ReKi
-      !end if
-      !
-      !if ( OtherState%TESF(misc%iBladeNode, misc%iBlade) ) then
-      !   y%WriteOutput(iOffset+24) = 1.0_ReKi
-      !else
-      !   y%WriteOutput(iOffset+24) = 0.0_ReKi
-      !end if
-      !if ( OtherState%VRTX(misc%iBladeNode, misc%iBlade) ) then
-      !   y%WriteOutput(iOffset+25) = 1.0_ReKi
-      !else
-      !   y%WriteOutput(iOffset+25) = 0.0_ReKi
-      !end if
-      !y%WriteOutput(iOffset+26) = xd%tau_v(misc%iBladeNode, misc%iBlade)
-      !y%WriteOutput(iOffset+27) = Cn_v         
-      !y%WriteOutput(iOffset+28) = C_V          
-      !y%WriteOutput(iOffset+29) = Cn_FS 
-      !y%WriteOutput(iOffset+30) = Cm_FS
-!      y%WriteOutput(iOffset+31) = u%U
-   end if
-#endif
-
-end subroutine UA_CalcOutput2
-!==============================================================================   
-
-
- !integer function Test_Cn()
- !
- !  ! Driver constants /  parameters
- !  real(DbKi)  :: dt                = 1.0_DbKi
- !  real(ReKi)  :: a_s               = 1000.0_ReKi  ! speed of sound
- !  
- !  ! Inputs
- !  real(ReKi)  :: alpha_cur
- !  real(ReKi)  :: q_cur
- !  real(ReKi)  :: M  
- !  real(ReKi)  :: U
- !  
- !  
- !  ! States
- !  real(ReKi)  :: alpha_minus1
- !  real(ReKi)  :: alpha_minus2
- !  real(ReKi)  :: q_minus1
- !  real(ReKi)  :: q_minus2
- !  real(ReKi)  :: X_1_minus1
- !  real(ReKi)  :: X_2_minus1
- !  real(ReKi)  :: Kprime_alpha_minus1
- !  real(ReKi)  :: Kprime_q_minus1
- !  real(ReKi)  :: Dp_minus1
- !  real(ReKi)  :: Cn_pot_minus1
- !  real(ReKi)  :: Df_minus1
- !  real(ReKi)  :: fprime_minus1
- !  
- !  
- !  
- !  ! Parameters
- !  real(ReKi)  :: c   
- !  
- !  real(ReKi)  :: T_p           ! empirical, specific to a given Airfoil ??  
- !  real(ReKi)  :: T_f           ! function of M, Re, and specific for a given Airfoil
- !  real(ReKi)  :: C_nalpha_circ ! function of s, M, and airfoil
- !  real(ReKi)  :: b1
- !  real(ReKi)  :: b2
- !  real(ReKi)  :: A1
- !  real(ReKi)  :: A2
- !  real(ReKi)  :: C_nalpha
- !  real(ReKi)  :: alpha1
- !  real(ReKi)  :: alpha0
- !  real(ReKi)  :: S1
- !  real(ReKi)  :: S2
- !  real(ReKi)  :: beta_M_sqrd
- !  real(ReKi)  :: T_I
- !  integer     :: UAMod
- !
- !  
- !  
- !  ! Local derived quantities
- !  
- !  real(ReKi)  :: ds
- !  real(ReKi)  :: T_alpha       
- !  real(ReKi)  :: T_q           
- !  real(ReKi)  :: dalpha
- !  real(ReKi)  :: Cn
- !  
- !  real(ReKi)  :: T_alphaVer
- !  
- !  ! Set Parameters
- !  c             = 1.0_ReKi
- !  T_p           = 1.0_ReKi
- !  T_f           = 1.0_ReKi
- !  C_nalpha_circ = 1.0_ReKi
- !  b1            = 1.0_ReKi
- !  b2            = 1.0_ReKi
- !  A1            = 1.0_ReKi
- !  A2            = 1.0_ReKi
- !  C_nalpha      = 1.0_ReKi
- !  alpha1        = 1.0_ReKi
- !  alpha0        = 1.0_ReKi
- !  S1            = 1.0_ReKi
- !  S2            = 1.0_ReKi
- !  UAMod         = 1
- !  
- !  ! Initialize states
- !  alpha_minus1    = 0.0_ReKi
- !  alpha_minus2  = 0.0_ReKi
- !  q_minus1        = 0.0_ReKi
- !  q_minus2      = 0.0_ReKi
- !  X_1_minus1      = 0.0_ReKi
- !  X_2_minus1      = 0.0_ReKi
- !  Kprime_alpha_minus1 = 0.0_ReKi
- !  Kprime_q_minus1 = 0.0_ReKi
- !  Dp_minus1       = 0.0_ReKi
- !  Cn_pot_minus1   = 0.0_ReKi
- !  Df_minus1       = 0.0_ReKi
- !  fprime_minus1   = 0.0_ReKi
- !  
- !  
- !  ! set inputs
- !  alpha_cur     = 0.1_ReKi
- !  
- !  
- !  U             = 10.0_ReKi
- !  M             = U / a_s
- !  T_I           = c / a_s
- !  beta_M_sqrd   = Get_Beta_M_Sqrd(M)
- !  q_cur         = Get_Pitchrate( alpha_cur, alpha_minus1, U, c )
- !  dalpha   = alpha_cur - alpha_minus1
- !  ds      = Get_ds(U, c, dt)
- !  !T_alpha = Get_T_Alpha( M, a_s, c, C_nalpha )
- !  T_alphaVer = 1/ ( (1-M) + .5*M**2*(1-M**2)*.413)* c / a_s
- !  T_q     = Get_T_q( M, beta_M_sqrd, T_I, a_s, c, C_nalpha) 
- !  
- !  !Cn = Get_Cn( dt, ds, U, M, beta_M_sqrd, c, C_nalpha_circ, alpha_cur, alpha_minus1, alpha_minus2, alpha0, q_cur, &
- !  !            q_minus1, q_minus2, T_alpha, T_q, T_p, T_f, X_1_minus1, X_2_minus1, Kprime_alpha_minus1, Kprime_q_minus1, Dp_minus1, Cn_pot_minus1, Df_minus1, fprime_minus1, b1, b2, A1, A2, C_nalpha, &
- !  !            alpha1, S1, S2, UAMod )
- !              !dt, ds, U, M, c, C_nalpha_circ, alpha_cur, alpha_minus1, alpha_minus2, alpha0, q_cur, &
- !              !              q_minus1, q_minus2, T_alpha, T_q, T_p, T_f, X_1_minus1, X_2_minus1, Kprime_alpha_minus1, Kprime_q_minus1, Dp_minus1, Cn_pot_minus1, Df_minus1, fprime_minus1, b1, b2, A1, A2, C_nalpha, &
- !              !              alpha1, S1, S2, UAMod )
- !  
- !  Test_Cn = 1
- !  
- !end function Test_Cn
- !  
-   
-!==============================================================================   
    
    
 end module UnsteadyAero
