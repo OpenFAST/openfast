@@ -190,6 +190,12 @@ MODULE NWTC_Num
       MODULE PROCEDURE LocateStpR16
    END INTERFACE
 
+   !> \copydoc nwtc_num::skewsymmatr4
+   INTERFACE SkewSymMat
+      MODULE PROCEDURE SkewSymMatR4
+      MODULE PROCEDURE SkewSymMatR8
+      MODULE PROCEDURE SkewSymMatR16
+   END INTERFACE
    
 
 CONTAINS
@@ -999,6 +1005,7 @@ CONTAINS
    ELSE   
       
          ! convert lambda to skew-symmetric matrix:
+      !tmp_mat = -SkewSymMat(lambda)
       tmp_mat(1,1) =  0.0_ReKi                                            
       tmp_mat(2,1) = -lambda(3)                                           
       tmp_mat(3,1) =  lambda(2)                                           
@@ -4029,7 +4036,7 @@ CONTAINS
       
    
    q_norm       = Quaternion_Norm( q )     
-   theta        = acos( q%q0 / q_norm )
+   theta        = acos( max(-1.0_ReKi, min(1.0_ReKi, q%q0 / q_norm)) )
    n            = q%v / TwoNorm(q%v)
    
    greek        = alpha * theta
@@ -5405,10 +5412,10 @@ CONTAINS
 
       ! Argument declarations:
 
-   INTEGER, INTENT(IN)          :: AryLen                                       ! Length of the array.
+   INTEGER, INTENT(IN)          :: AryLen                                       !< Length of the array.
 
-   REAL(ReKi), INTENT(IN)       :: Ary  (AryLen)                                ! Input array.
-   REAL(ReKi), INTENT(IN)       :: Mean                                         ! The previously calculated mean of the array.
+   REAL(ReKi), INTENT(IN)       :: Ary  (AryLen)                                !< Input array.
+   REAL(ReKi), INTENT(IN)       :: Mean                                         !< The previously calculated mean of the array.
 
 
       ! Local declarations.
@@ -5429,7 +5436,86 @@ CONTAINS
 
 
    RETURN
-   END FUNCTION StdDevFn ! ( Ary, AryLen, Mean )
+   END FUNCTION StdDevFn
+!=======================================================================
+!> This function returns the 3x3 skew-symmetric matrix for cross-product
+!! calculation of vector \f$\vec{x}\f$ via matrix multiplication, defined as
+!! \f{equation}{
+!!   f_{_\times}\left( \vec{x} \right) = 
+!!  \begin{bmatrix}
+!!       0  & -x_3 &  x_2 \\
+!!      x_3 &  0   & -x_1 \\
+!!     -x_2 &  x_1 &  0          
+!! \end{bmatrix}
+!! \f}   
+!> Use SkewSymMat (nwtc_num::skewsymmat) instead of directly calling a specific routine in the generic interface.
+   FUNCTION SkewSymMatR4 ( x ) RESULT(M)
+
+      ! Function arguments
+
+   REAL(SiKi)                   :: M(3,3)                          !< skew-symmetric matrix formed from input vector \f$x\f$
+   REAL(SiKi), INTENT(IN)       :: x(3)                            !< input vector \f$x\f$
+
+   M(1,1) =    0.0_SiKi
+   M(2,1) =  x(3)
+   M(3,1) = -x(2)
+
+   M(2,1) = -x(3)
+   M(2,2) =    0.0_SiKi
+   M(2,3) =  x(1)
+
+   M(3,1) =  x(2)
+   M(3,2) = -x(1)
+   M(3,3) =    0.0_SiKi
+   
+   RETURN
+   END FUNCTION SkewSymMatR4 
+!=======================================================================
+!> \copydoc nwtc_num::skewsymmatr4
+   FUNCTION SkewSymMatR8 ( x ) RESULT(M)
+
+      ! Function arguments
+
+   REAL(R8Ki)                   :: M(3,3)                          ! skew-symmetric matrix formed from input vector \f$x\f$
+   REAL(R8Ki), INTENT(IN)       :: x(3)                            ! input vector \f$x\f$
+
+   M(1,1) =    0.0_R8Ki
+   M(2,1) =  x(3)
+   M(3,1) = -x(2)
+
+   M(2,1) = -x(3)
+   M(2,2) =    0.0_R8Ki
+   M(2,3) =  x(1)
+
+   M(3,1) =  x(2)
+   M(3,2) = -x(1)
+   M(3,3) =    0.0_R8Ki
+   
+   RETURN
+   END FUNCTION SkewSymMatR8
+!=======================================================================
+!> \copydoc nwtc_num::skewsymmatr4
+   FUNCTION SkewSymMatR16 ( x ) RESULT(M)
+
+      ! Function arguments
+
+   REAL(QuKi)                   :: M(3,3)                          ! skew-symmetric matrix formed from input vector \f$x\f$
+   REAL(QuKi), INTENT(IN)       :: x(3)                            ! input vector \f$x\f$
+
+   M(1,1) =    0.0_QuKi
+   M(2,1) =  x(3)
+   M(3,1) = -x(2)
+
+   M(2,1) = -x(3)
+   M(2,2) =    0.0_QuKi
+   M(2,3) =  x(1)
+
+   M(3,1) =  x(2)
+   M(3,2) = -x(1)
+   M(3,3) =    0.0_QuKi
+   
+   RETURN
+   END FUNCTION SkewSymMatR16
 !=======================================================================
 !> This routine takes an array of time values such as that returned from
 !!     CALL DATE_AND_TIME ( Values=TimeAry )
