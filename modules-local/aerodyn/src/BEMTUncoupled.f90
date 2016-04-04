@@ -188,12 +188,7 @@ subroutine Compute_UA_AirfoilCoefs( AOA, U, Re, AFInfo, &
    u_UA%Re    = Re
    u_UA%U     = U
    
-   !bjj: TODO: this gets called element-by-element (not all at once). Are m%iBladeNode and m%iBlade set properly?
-#ifdef DEBUG_v14
-   call UA_CalcOutput2(u_UA, p_UA, xd_UA, OtherState_UA, AFInfo, y_UA, m_UA, errStat2, errMsg2 )
-#else
    call UA_CalcOutput(u_UA, p_UA, xd_UA, OtherState_UA, AFInfo, y_UA, m_UA, errStat2, errMsg2 )
-#endif
       call SetErrStat( errStat2, errMsg2, errStat, errMsg, RoutineName ) 
       if (errStat >= AbortErrLev) return
 
@@ -410,7 +405,7 @@ recursive subroutine inductionFactors(r ,  chord, phi, cn, ct, B, &
     
    
     
-   real(ReKi) ::  sigma_p, sphi, cphi, lambda_r, saz !, pi
+   real(ReKi) ::  sigma_p, sphi, cphi, lambda_r
    real(ReKi) :: factortip, Ftip, factorhub, Fhub
    real(ReKi) :: k, kp,  F 
    real(ReKi) :: g1, g2, g3
