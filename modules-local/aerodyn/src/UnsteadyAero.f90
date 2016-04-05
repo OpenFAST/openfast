@@ -1532,62 +1532,67 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
          ! Eqn 1.2
       y%Cl = y%Cn*cos(u%alpha) + y%Cc*sin(u%alpha)
       y%Cd = y%Cn*sin(u%alpha) - y%Cc*cos(u%alpha) + Cd0
-            
-         ! Eqn 1.55
-         ! Compute Cn_FS using Eqn 1.35 or 1.36 depending on option selected
-      if ( p%UAMod == 2 ) then
-         if (abs(alpha_f-alpha0) < .01) then
-            if (alpha_f < alpha0) then
-               alpha_f = alpha_f - .01
-            else
-               alpha_f = alpha_f + .01
-            end if
-         end if
-         
-         call GetSteadyOutputs(AFInfo, alpha_f, Cl_temp, Cd_temp, Cm_temp, Cd0, ErrStat2, ErrMsg2)
-            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
-         Cn_temp = Cl_temp*cos(alpha_f) + (Cd_temp-Cd0)*sin(alpha_f)
-         ! TODO: What about when Cn = 0  GJH 5/22/2015
-         if (abs(Cn_temp) < 0.01 ) then
-            fprimeprime_m = 1.0
-         else            
-            fprimeprime_m = (Cm_temp - Cm0) / Cn_temp 
-         end if
-         
+      
+ ! Check for Cm column in AFInfo data        
+      s1 = size(AFInfo%Table(1)%Coefs,2)
+      if (s1 < 3) then      
+         y%Cm = 0.0_ReKi
       else
-         fprimeprime_m = 0.0
+            ! Eqn 1.55
+            ! Compute Cn_FS using Eqn 1.35 or 1.36 depending on option selected
+         if ( p%UAMod == 2 ) then
+            if (abs(alpha_f-alpha0) < .01) then
+               if (alpha_f < alpha0) then
+                  alpha_f = alpha_f - .01
+               else
+                  alpha_f = alpha_f + .01
+               end if
+            end if
+         
+            call GetSteadyOutputs(AFInfo, alpha_f, Cl_temp, Cd_temp, Cm_temp, Cd0, ErrStat2, ErrMsg2)
+               call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+            Cn_temp = Cl_temp*cos(alpha_f) + (Cd_temp-Cd0)*sin(alpha_f)
+            ! TODO: What about when Cn = 0  GJH 5/22/2015
+            if (abs(Cn_temp) < 0.01 ) then
+               fprimeprime_m = 1.0
+            else            
+               fprimeprime_m = (Cm_temp - Cm0) / Cn_temp 
+            end if
+         
+         else
+            fprimeprime_m = 0.0
+         end if
+      
+            ! Eqn 1.21 + 1.23 + 1.25a
+         Cm_alpha_nc = - Cn_alpha_nc / 4.0_ReKi 
+         Cm_common = Cm_q_circ + Cm_alpha_nc + Cm_q_nc
+         Cm_Lookup = 0.0_ReKi
+   
+         if ( p%UAMod == 1 ) then
+               ! Eqn 1.40
+            x_cp_hat = k0 + k1*(1-fprimeprime) + k2*sin(pi*fprimeprime**k3) 
+               ! Eqn 1.39
+            Cm_FS  = Cm0 - Cn_alpha_q_circ*(x_cp_hat - 0.25_ReKi) + Cm_common
+      
+         elseif ( p%UAMod == 3 ) then
+      
+               ! Eqn 1.41a
+            alpha_prime_f = alpha_f - Dalphaf
+               ! Look up Cm using alpha_prime_f
+            call GetSteadyOutputs(AFInfo, alpha_prime_f, Cl_temp, Cd_temp, Cm_temp, Cd0, ErrStat, ErrMsg)
+      
+            Cm_FS = Cm_temp + Cm_common
+      
+         else ! UAMod == 2
+            Cm_FS = Cm0 + Cn_FS*fprimeprime_m + Cm_common
+         end if   
+      
+            ! Eqn 1.54
+         Cm_v     = -x_cp_bar*( 1-cos( pi*xd%tau_v(misc%iBladeNode, misc%iBlade)/T_VL ) )*Cn_v
+   
+            ! Eqn 1.55 = (1.39 or 1.42 or 1.43) +  1.54  
+         y%Cm   = Cm_FS + Cm_v 
       end if
-      
-         ! Eqn 1.21 + 1.23 + 1.25a
-      Cm_alpha_nc = - Cn_alpha_nc / 4.0_ReKi 
-      Cm_common = Cm_q_circ + Cm_alpha_nc + Cm_q_nc
-      Cm_Lookup = 0.0_ReKi
-   
-      if ( p%UAMod == 1 ) then
-            ! Eqn 1.40
-         x_cp_hat = k0 + k1*(1-fprimeprime) + k2*sin(pi*fprimeprime**k3) 
-            ! Eqn 1.39
-         Cm_FS  = Cm0 - Cn_alpha_q_circ*(x_cp_hat - 0.25_ReKi) + Cm_common
-      
-      elseif ( p%UAMod == 3 ) then
-      
-            ! Eqn 1.41a
-         alpha_prime_f = alpha_f - Dalphaf
-            ! Look up Cm using alpha_prime_f
-         call GetSteadyOutputs(AFInfo, alpha_prime_f, Cl_temp, Cd_temp, Cm_temp, Cd0, ErrStat, ErrMsg)
-      
-         Cm_FS = Cm_temp + Cm_common
-      
-      else ! UAMod == 2
-         Cm_FS = Cm0 + Cn_FS*fprimeprime_m + Cm_common
-      end if   
-      
-         ! Eqn 1.54
-      Cm_v     = -x_cp_bar*( 1-cos( pi*xd%tau_v(misc%iBladeNode, misc%iBlade)/T_VL ) )*Cn_v
-   
-         ! Eqn 1.55 = (1.39 or 1.42 or 1.43) +  1.54  
-      y%Cm   = Cm_FS + Cm_v 
-      
    end if
    
 #ifdef UA_OUTS
@@ -1597,11 +1602,11 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       y%WriteOutput(iOffset+ 2)    = u%U                                                                 
       y%WriteOutput(iOffset+ 3)    = y%Cn                                                                
       y%WriteOutput(iOffset+ 4)    = y%Cc                                                                
-      y%WriteOutput(iOffset+ 5)    = Kalpha_f !y%Cl                                                                
-      y%WriteOutput(iOffset+ 6)    = Kq_f     !y%Cd                                                                
+      y%WriteOutput(iOffset+ 5)    = y%Cl                                                                
+      y%WriteOutput(iOffset+ 6)    = y%Cd                                                                
       y%WriteOutput(iOffset+ 7)    = y%Cm                                                                
-      y%WriteOutput(iOffset+ 8)    = Cn_alpha_nc !Cn_alpha_q_circ               ! CNCP in ADv14                                      
-      y%WriteOutput(iOffset+ 9)    = Cn_q_nc !Cn_alpha_q_nc                 ! CNIQ in ADv14                                      
+      y%WriteOutput(iOffset+ 8)    = Cn_alpha_q_circ               ! CNCP in ADv14                                      
+      y%WriteOutput(iOffset+ 9)    = Cn_alpha_q_nc                 ! CNIQ in ADv14                                      
       y%WriteOutput(iOffset+10)    = Cn_pot                                                              
       y%WriteOutput(iOffset+11)    = Dp                                                                  
       y%WriteOutput(iOffset+12)    = Cn_prime                                                            
@@ -1628,7 +1633,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       end if
       y%WriteOutput(iOffset+20)    = C_V  
       y%WriteOutput(iOffset+21)    = Cm_alpha_nc
-      y%WriteOutput(iOffset+22)    = Cm_q_nc ! Cm_q_circ
+      y%WriteOutput(iOffset+22)    = Cm_q_nc 
       y%WriteOutput(iOffset+23)    = Cm_v
       y%WriteOutput(iOffset+24)    = alpha_prime_f
       y%WriteOutput(iOffset+25)    = Dalphaf
