@@ -172,6 +172,7 @@ MODULE NWTC_Num
       MODULE PROCEDURE InterpStpComp8
       MODULE PROCEDURE InterpStpComp16
       MODULE PROCEDURE InterpStpReal4
+      MODULE PROCEDURE InterpStpReal4_8
       MODULE PROCEDURE InterpStpReal8
       MODULE PROCEDURE InterpStpReal16
    END INTERFACE
@@ -179,6 +180,7 @@ MODULE NWTC_Num
       !> \copydoc nwtc_num::interpwrappedstpreal4
    INTERFACE InterpWrappedStpReal
       MODULE PROCEDURE InterpWrappedStpReal4
+      MODULE PROCEDURE InterpWrappedStpReal4_8
       MODULE PROCEDURE InterpWrappedStpReal8
       MODULE PROCEDURE InterpWrappedStpReal16
    END INTERFACE
@@ -3044,6 +3046,65 @@ CONTAINS
    END FUNCTION InterpStpReal4
 !=======================================================================
 !> \copydoc nwtc_num::interpstpcomp4
+   FUNCTION InterpStpReal4_8( XVal, XAry, YAry, Ind, AryLen )
+
+      ! Function declaration.
+
+   REAL(R8Ki)                   :: InterpStpReal4_8                                !< The interpolated value of Y at XVal
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+
+   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XVal                                            ! X value to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+
+
+
+      ! Let's check the limits first.
+
+   IF ( XVal <= XAry(1) )  THEN
+      InterpStpReal4_8 = YAry(1)
+      Ind            = 1
+      RETURN
+   ELSE IF ( XVal >= XAry(AryLen) )  THEN
+      InterpStpReal4_8 = YAry(AryLen)
+      Ind            = MAX(AryLen - 1, 1)
+      RETURN
+   END IF
+
+
+     ! Let's interpolate!
+
+   Ind = MAX( MIN( Ind, AryLen-1 ), 1 )
+
+   DO
+
+      IF ( XVal < XAry(Ind) )  THEN
+
+         Ind = Ind - 1
+
+      ELSE IF ( XVal >= XAry(Ind+1) )  THEN
+
+         Ind = Ind + 1
+
+      ELSE
+
+         InterpStpReal4_8 = ( YAry(Ind+1) - YAry(Ind) )*( XVal - XAry(Ind) )/( XAry(Ind+1) - XAry(Ind) ) + YAry(Ind)
+         RETURN
+
+      END IF
+
+   END DO
+
+
+   RETURN
+   END FUNCTION InterpStpReal4_8 
+!=======================================================================
+!> \copydoc nwtc_num::interpstpcomp4
    FUNCTION InterpStpReal8( XVal, XAry, YAry, Ind, AryLen )
 
       ! Function declaration.
@@ -3401,7 +3462,41 @@ CONTAINS
    InterpWrappedStpReal4 = InterpStp( XVal, XAry, YAry, Ind, AryLen )
    
    
-   END FUNCTION InterpWrappedStpReal4 ! ( XVal, XAry, YAry, Ind, AryLen )
+   END FUNCTION InterpWrappedStpReal4
+!=======================================================================
+!> \copydoc nwtc_num::interpwrappedstpreal4
+   FUNCTION InterpWrappedStpReal4_8( XValIn, XAry, YAry, Ind, AryLen )
+
+      ! Function declaration.
+
+   REAL(R8Ki)                   :: InterpWrappedStpReal4_8                         !< The interpolated value of Y at XVal
+
+
+      ! Argument declarations.
+
+   INTEGER, INTENT(IN)          :: AryLen                                          ! Length of the arrays.
+   INTEGER, INTENT(INOUT)       :: Ind                                             ! Initial and final index into the arrays.
+
+   REAL(SiKi), INTENT(IN)       :: XAry    (AryLen)                                ! Array of X values to be interpolated.
+   REAL(SiKi), INTENT(IN)       :: XValIn                                          ! X value to be interpolated.
+   REAL(R8Ki), INTENT(IN)       :: YAry    (AryLen)                                ! Array of Y values to be interpolated.
+
+   REAL(SiKi)                   :: XVal                                            ! X value to be interpolated.
+   
+   
+   
+      ! Wrap XValIn into the range XAry(1) to XAry(AryLen)
+   XVal = MOD(XValIn, XAry(AryLen))
+
+      ! Set the Ind to the first index if we are at the beginning of XAry
+   IF ( XVal <= XAry(2) )  THEN  
+      Ind           = 1
+   END IF
+   
+   InterpWrappedStpReal4_8 = InterpStp( XVal, XAry, YAry, Ind, AryLen )
+   
+   
+   END FUNCTION InterpWrappedStpReal4_8 
 !=======================================================================
 !> \copydoc nwtc_num::interpwrappedstpreal4
    FUNCTION InterpWrappedStpReal8( XValIn, XAry, YAry, Ind, AryLen )
@@ -3435,7 +3530,7 @@ CONTAINS
    InterpWrappedStpReal8 = InterpStp( XVal, XAry, YAry, Ind, AryLen )
    
    
-   END FUNCTION InterpWrappedStpReal8 ! ( XVal, XAry, YAry, Ind, AryLen )
+   END FUNCTION InterpWrappedStpReal8
 !=======================================================================
 !> \copydoc nwtc_num::interpwrappedstpreal4
    FUNCTION InterpWrappedStpReal16( XValIn, XAry, YAry, Ind, AryLen )
@@ -3469,7 +3564,7 @@ CONTAINS
    InterpWrappedStpReal16 = InterpStp( XVal, XAry, YAry, Ind, AryLen )
    
    
-   END FUNCTION InterpWrappedStpReal16 ! ( XVal, XAry, YAry, Ind, AryLen )
+   END FUNCTION InterpWrappedStpReal16 
 !=======================================================================
 !> This subroutine calculates the iosparametric coordinates, isopc, which is a value between -1 and 1 
 !! (for each dimension of a dataset), indicating where InCoord falls between posLo and posHi.

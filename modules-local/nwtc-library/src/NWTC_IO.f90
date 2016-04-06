@@ -33,7 +33,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               
-          ProgDesc( 'NWTC Subroutine Library', 'v2.08.00a-bjj', '4-Apr-2016')    !< The name, version, and date of the NWTC Subroutine Library
+          ProgDesc( 'NWTC Subroutine Library', 'v2.08.00a-bjj', '5-Apr-2016')    !< The name, version, and date of the NWTC Subroutine Library
 
       !> This type stores a linked list of file names, used in MLB-style input file parsing (currently used in AirfoilInfo)
    TYPE, PUBLIC   :: FNlist_Type                                
