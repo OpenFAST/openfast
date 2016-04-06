@@ -11,10 +11,6 @@ ChangeLog.txt
 docs\Manual\BeamDyn_Manual.pdf
 docs\Doxyfile
 
-compiling\Makefile_BD
-compiling\VisualStudio\BeamDyn_Driver.vfproj
-compiling\VisualStudio\RunRegistry.bat
-
 CertTest\CertTest.bat
 CertTest\5MW_Blade_IEC.inp
 CertTest\Dvr_5MW_Dynamic.inp
