@@ -76,7 +76,7 @@ SUBROUTINE WvStretch_Init(WaveStMod, WtrDpth, NStepWave, NNodes,  &
 
  
    INTEGER,          INTENT(IN   )  :: WaveStMod
-   REAL(ReKi),       INTENT(IN   )  :: WtrDpth
+   REAL(SiKi),       INTENT(IN   )  :: WtrDpth
    INTEGER,          INTENT(IN   )  :: NStepWave
    INTEGER,          INTENT(IN   )  :: NNodes              !< TODO: WHY are there both NNodes and NWaveElev ??? GJH 2/1/2016
    INTEGER,          INTENT(IN   )  :: NWaveElev

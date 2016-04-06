@@ -407,8 +407,8 @@ SUBROUTINE DistrInertialLoads( nodeIndx, densWater, Ca, Cp, AxCa, AxCp, R, tMG, 
    REAL(ReKi),         INTENT ( IN    )  :: dRdZ
    REAL(ReKi),         INTENT ( IN    )  :: k(3)
    INTEGER,            INTENT ( IN    )  :: NStepWave
-   REAL(ReKi),         INTENT ( IN    )  :: WaveAcc0(0:,:,:)
-   REAL(ReKi),         INTENT ( IN    )  :: WaveDynP0(0:,:)
+   REAL(SiKi),         INTENT ( IN    )  :: WaveAcc0(0:,:,:)
+   REAL(SiKi),         INTENT ( IN    )  :: WaveDynP0(0:,:)
    REAL(ReKi),ALLOCATABLE,  INTENT (   OUT )  :: F_I(:,:)
    INTEGER,            INTENT (   OUT )  :: ErrStat              ! returns a non-zero value when an error occurs  
    CHARACTER(*),       INTENT (   OUT )  :: ErrMsg               ! Error message if ErrStat /= ErrID_None
@@ -4572,16 +4572,16 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          nodeIndx = p%lumpedToNodeIndx(J)
          nodeInWater = REAL( InterpWrappedStpInt( REAL(Time, SiKi), p%WaveTime(:), p%nodeInWater(:,nodeIndx), m%LastIndWave, p%NStepWave + 1 ), ReKi )
             ! Determine the dynamic pressure at the marker
-         m%L_FDynP(J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveDynP(:,nodeIndx), &
+         m%L_FDynP(J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveDynP(:,nodeIndx), &
                                     m%LastIndWave, p%NStepWave + 1       )
          
          
          DO I=1,3
                ! Determine the fluid acceleration and velocity at the marker
-            m%L_FA(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveAcc(:,nodeIndx,I), &
+            m%L_FA(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveAcc(:,nodeIndx,I), &
                                     m%LastIndWave, p%NStepWave + 1       )
                
-            m%L_FV(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%WaveVel(:,nodeIndx,I), &
+            m%L_FV(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%WaveVel(:,nodeIndx,I), &
                                     m%LastIndWave, p%NStepWave + 1       )
             vrel(I)     = m%L_FV(I,J) - u%LumpedMesh%TranslationVel(I,J)
          END DO
@@ -4608,7 +4608,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          DO I=1,6
                         
             ! We are now combining the dynamic pressure term into the inertia term
-            m%L_F_I(I,J) = InterpWrappedStpReal ( REAL(Time, ReKi), p%WaveTime(:), p%L_F_I(:,I,J), &
+            m%L_F_I(I,J) = InterpWrappedStpReal ( REAL(Time, SiKi), p%WaveTime(:), p%L_F_I(:,I,J), &
                                     m%LastIndWave, p%NStepWave + 1       ) 
             
             IF (I < 4 ) THEN
