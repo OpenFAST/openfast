@@ -1,3 +1,8 @@
 bin\Registry_win32.exe
 bin\BeamDyn_Driver_Win32.exe
 bin\BeamDyn_Driver_x64.exe
+
+compiling\Makefile_BD
+compiling\VisualStudio\BeamDyn_Driver.vfproj
+compiling\VisualStudio\RunRegistry.bat
+
