@@ -1,0 +1,36 @@
+BeamDyn Change Log
+
+================================================================================
+v1.00.00 7-Oct-2015
+Initial release
+
+================================================================================
+v1.01.02 5-Apr-2016
+
+- fixed a bug that would use the wrong node numbers in gaussian quadrature
+- fixed some initialization problems and type conversions reported/fixed by Johannes Rieke
+- incorporated some changes by Johannes Rieke (precision differences so driver can be compiled in single precision, too;
+  moved some subroutines from Driver_Beam.f90 to Driver_Beam_Subs.f90)
+- fixed makefile so it will compiled sources distributed in archive
+- fixed problem in initial configuration (At0 E10) whereby an initially curved beam induces strain and motion.
+- updated "xb", "yb" and "zb" text on key point coordinates in input files to match "xr", "yr", "zr" in documentation
+
+- added the MiscVar type (split from OtherStates) to conform to changes to FAST framework
+- updated comments to doxygen style
+- moved the section of CalcOutput that computes the displacements and velocities for the BldMotion mesh into a subroutine.
+  explicitly initialized BD output mesh with this subroutine due to coupling with AD in option 2 solve in FAST.
+  This allows AeroDyn to have a better initial guess.
+- reworked some subroutine arguments so that we send parameter and MiscVar types instead of individual components of those types.
+  moved some of the local variables that were allocated each time step into the miscVar type. This has sped up FAST's Test 26 2-5%.
+- removed a few variables the compiler marked as unused
+- added validity checks on mass matrix, M, from input file: M(1,1)=M(2,2)=M(3,3) and M(4,4)+M(5,5)=M(6,6) (in input file coordinates) for each input station
+- added validity check that kp_zr(1) must be zero.
+- added BD_STATIC_ANALYSIS and BD_DYNAMIC_ANALYSIS constants for check (in FAST) that static analysis isn't used when coupled to FAST
+- added text to indicate mapping of element/node number to global node number in summary file
+- updated the manual
+
+================================================================================
+
+
+
+

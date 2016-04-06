@@ -6,8 +6,10 @@ Disclaimer.txt
 license.txt
 OutListParameters.xlsx
 FAST_SourceFiles.txt
+ChangeLog.txt
 
 docs\Manual\BeamDyn_Manual.pdf
+docs\Doxyfile
 
 compiling\Makefile_BD
 compiling\VisualStudio\BeamDyn_Driver.vfproj

@@ -65,7 +65,7 @@ PROGRAM BeamDyn_Driver_Program
    REAL(R8Ki)                              :: start, finish
    REAL(BDKi) , DIMENSION(:), ALLOCATABLE  :: IniVelo         ! Initial Position Vector between origins of Global and blade frames [-]
    
-   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'BeamDyn Driver', 'v1.00.01', '19-Oct-2015' )  ! The version number of this program.
+   TYPE(ProgDesc), PARAMETER   :: version   = ProgDesc( 'BeamDyn Driver', 'v1.00.02', '5-Apr-2016' )  ! The version number of this program.
    
    ! -------------------------------------------------------------------------
    ! Initialization of library (especially for screen output)
