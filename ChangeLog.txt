@@ -11,7 +11,7 @@ v1.01.02 5-Apr-2016
 - fixed some initialization problems and type conversions reported/fixed by Johannes Rieke
 - incorporated some changes by Johannes Rieke (precision differences so driver can be compiled in single precision, too;
   moved some subroutines from Driver_Beam.f90 to Driver_Beam_Subs.f90)
-- fixed makefile so it will compiled sources distributed in archive
+- fixed makefile so it will compile the sources distributed in archive
 - fixed problem in initial configuration (At0 E10) whereby an initially curved beam induces strain and motion.
 - updated "xb", "yb" and "zb" text on key point coordinates in input files to match "xr", "yr", "zr" in documentation
 
