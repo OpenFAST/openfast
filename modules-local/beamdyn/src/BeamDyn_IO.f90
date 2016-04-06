@@ -23,7 +23,7 @@ MODULE BeamDyn_IO
 
    IMPLICIT NONE
 
-   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v1.01.01','24-Mar-2016')
+   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v1.01.02','5-Apr-2016')
 
 
 ! ===================================================================================================
