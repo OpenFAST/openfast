@@ -791,7 +791,6 @@ subroutine Init_u( u, p, InputFileData, InitInp, errStat, errMsg )
          u%BladeMotion(k)%Orientation     = u%BladeMotion(k)%RefOrientation
          u%BladeMotion(k)%TranslationDisp = 0.0_R8Ki
          u%BladeMotion(k)%TranslationVel  = 0.0_ReKi
-         u%BladeMotion(k)%RotationVel     = 0.0_ReKi
    
    end do !k=numBlades
    
