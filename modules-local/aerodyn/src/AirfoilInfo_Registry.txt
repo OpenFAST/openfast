@@ -63,7 +63,8 @@ typedef	^	^	LOGICAL	InclUAdata	-	-	-	"Flag that tells if UA data is included in 
 typedef	^	^	AFI_UA_BL_Type	UA_BL	-	-	-	"The tables of Leishman-Beddoes unsteady-aero data for given Re and control setting"	-
 
 # The following derived type stores data for an airfoil for all combinations of Re and control setting.
-typedef	AirfoilInfo/AFI	AFInfoType	ReKi	NonDimArea	-	-	-	"The non-dimensional area of the airfoil (area/chord^2)"	-
+typedef	AirfoilInfo/AFI	AFInfoType	IntKi	InterpOrd	-	-	-	"Interpolation order"	-
+typedef	^	^	ReKi	NonDimArea	-	-	-	"The non-dimensional area of the airfoil (area/chord^2)"	-
 typedef	^	^	ReKi	CdAoAknots	{:}	-	-	"Spline knots for the angle of attack for Cd"	-
 typedef	^	^	ReKi	CdReKnots	{:}	-	-	"Spline knots for the Re for Cd"	-
 typedef	^	^	ReKi	ClAoAknots	{:}	-	-	"Spline knots for the angle of attack for Cl"	-

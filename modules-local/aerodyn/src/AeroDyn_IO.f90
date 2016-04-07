@@ -30,7 +30,7 @@ MODULE AeroDyn_IO
    
    implicit none
    
-   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.02.01a-bjj', '8-Mar-2016' )
+   type(ProgDesc), parameter  :: AD_Ver = ProgDesc( 'AeroDyn', 'v15.02.03a-gjh', '5-Apr-2016' )
    character(*),   parameter  :: AD_Nickname = 'AD'
       
 ! ===================================================================================================
@@ -1960,10 +1960,26 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, ADBlFile, OutFileRoot, UnE
    CALL ReadVar( UnIn, InputFile, InputFileData%TIDrag, "TIDrag", "Include the drag term in the tangential-induction calculation? [used only when WakeMod=1 and TanInd=TRUE] (flag)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-      ! IndToler - Convergence tolerance for BEM induction factors [used only when WakeMod=1] (-):
-   CALL ReadVar( UnIn, InputFile, InputFileData%IndToler, "IndToler", "Convergence tolerance for BEM induction factors [used only when WakeMod=1] (-)", ErrStat2, ErrMsg2, UnEc)
+      ! IndToler - Convergence tolerance for BEM induction factors (or "default"] [used only when WakeMod=1] (-):
+   Line = ""
+   CALL ReadVar( UnIn, InputFile, Line, "IndToler", "Convergence tolerance for BEM induction factors [used only when WakeMod=1] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-
+         
+      CALL Conv2UC( Line )
+      IF ( INDEX(Line, "DEFAULT" ) /= 1 ) THEN ! If it's not "default", read this variable; otherwise set the value based on ReKi precision
+         READ( Line, *, IOSTAT=IOS) InputFileData%IndToler
+            CALL CheckIOS ( IOS, InputFile, 'IndToler', NumType, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+      else
+         if (ReKi==SiKi) then
+            InputFileData%IndToler = 5E-5
+         else
+            InputFileData%IndToler = 5D-10
+         end if
+      END IF   
+      
+      
+      
       ! MaxIter - Maximum number of iteration steps [used only when WakeMod=1] (-):
    CALL ReadVar( UnIn, InputFile, InputFileData%MaxIter, "MaxIter", "Maximum number of iteration steps [used only when WakeMod=1] (-)", ErrStat2, ErrMsg2, UnEc)
       CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )      
@@ -2477,6 +2493,8 @@ SUBROUTINE AD_PrintSum( InputFileData, p, u, y, ErrStat, ErrMsg )
       WRITE (UnSu,Ec_LgFrmt) InputFileData%AIDrag, 'AIDrag', "Include the drag term in the tangential-induction calculation? "//TRIM(Msg)      
       
       ! IndToler
+      WRITE (UnSu,Ec_ReFrmt) InputFileData%IndToler, 'IndToler', "Convergence tolerance for BEM induction factors (radians)"     
+      
       ! MaxIter 
       
    end if
