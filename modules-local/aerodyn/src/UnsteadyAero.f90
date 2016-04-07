@@ -404,7 +404,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    ds          = 2.0_ReKi*u%U*p%dt/p%c(i,j)                             ! Eqn 1.5b
    
    ! Lookup values using Airfoil Info module
-   call AFI_GetAirfoilParams( AFInfo, M, u%Re, u%alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
+   call AFI_GetAirfoilParams( AFInfo, M, u%Re, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
                               T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, filtCutOff, ErrMsg2, ErrStat2 )           
       ! AFI_GetAirfoilParams doesn't return error, so I will not check
    
@@ -546,7 +546,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       Cm_q_nc =  -Cn_q_nc/4.0 - (k_alpha**2)*T_I*(Kq_f-Kprimeprime_q)/(3.0*M)
    else  
          ! Implements eqn 1.25a
-      Cm_q_nc = -7*(k_mq**2)*T_I*(Kq-Kprimeprime_q)/(12.0*M)
+      Cm_q_nc = -7*(k_mq**2)*T_I*(Kq_f-Kprimeprime_q)/(12.0*M)
       
    end if
    
@@ -1236,7 +1236,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
       !!!      OtherState%sigma3(i,j) = 1.0_ReKi
       !!!endif
       
-      if ((.not. TESF) .and. (Kq*dalpha0 < 0.0_ReKi)) then
+      if ((.not. TESF) .and. (Kq_f*dalpha0 < 0.0_ReKi)) then
          OtherState%sigma3(i,j) = 1.0_ReKi
       end if
    
@@ -1465,7 +1465,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat >= AbortErrLev) return
       
-      call AFI_GetAirfoilParams( AFInfo, M, u%Re, u%alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
+      call AFI_GetAirfoilParams( AFInfo, M, u%Re, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
                               T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, filtCutOff, ErrMsg2, ErrStat2 )           
             !AFI_GetAirfoilParams doens't return error, so I won't check. ! call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
@@ -1552,7 +1552,6 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
             call GetSteadyOutputs(AFInfo, alpha_f, Cl_temp, Cd_temp, Cm_temp, Cd0, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             Cn_temp = Cl_temp*cos(alpha_f) + (Cd_temp-Cd0)*sin(alpha_f)
-            ! TODO: What about when Cn = 0  GJH 5/22/2015
             if (abs(Cn_temp) < 0.01 ) then
                fprimeprime_m = 1.0
             else            
