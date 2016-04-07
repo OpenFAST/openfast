@@ -692,7 +692,7 @@ subroutine BEMT_Init( InitInp, u, p, x, xd, z, OtherState, AFInfo, y, misc, Inte
             !M           = u_UA%U / p%UA%a_s
             !call UA_CheckMachNumber(M, misc%UA%FirstWarn_M, ErrStat2, ErrMsg2 )
             
-            call AFI_GetAirfoilParams( AFInfo(p%AFindx(i,j)), M, Re, alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
+            call AFI_GetAirfoilParams( AFInfo(p%AFindx(i,j)), M, Re, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, &
                                     T_f0, T_V0, T_p, T_VL, St_sh, b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, filtCutOff, errMsg2, errStat2 )           
             ! AFI_GetAirfoilParams does not set errors
             

@@ -874,13 +874,12 @@ CONTAINS
    END SUBROUTINE ReadAFfile
       
       
-   subroutine AFI_GetAirfoilParams( AFInfo, M, Re, alpha, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, T_VL, St_sh, &
+   subroutine AFI_GetAirfoilParams( AFInfo, M, Re, alpha0, alpha1, alpha2, eta_e, C_nalpha, C_nalpha_circ, T_f0, T_V0, T_p, T_VL, St_sh, &
                                     b1, b2, b5, A1, A2, A5, S1, S2, S3, S4, Cn1, Cn2, Cd0, Cm0, k0, k1, k2, k3, k1_hat, x_cp_bar, filtCutOff, errMsg, errStat )     
 
    type(AFInfoType), intent(in   )       :: AFInfo                        ! The derived type for holding the constant parameters for this airfoil.
    real(ReKi),       intent(in   )       :: M                             ! mach number
    real(ReKi),       intent(in   )       :: Re                            ! Reynold's number
-   real(ReKi),       intent(in   )       :: alpha                         !
    
    real(ReKi),       intent(  out)       :: alpha0                        ! zero lift angle of attack (radians)
    real(ReKi),       intent(  out)       :: alpha1                        ! angle of attack at f = 0.7, approximately the stall angle; for alpha >= alpha0 (radians)
