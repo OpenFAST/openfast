@@ -3,7 +3,7 @@
 ! FAST Modularization Framework. ElastoDyn_Types is auto-generated based on FAST_Registry.txt.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2012-2015  National Renewable Energy Laboratory
+! Copyright (C) 2012-2016 National Renewable Energy Laboratory
 !
 !    This file is part of ElastoDyn.
 !
@@ -26,7 +26,7 @@ MODULE ElastoDyn_Parameters
 
    USE NWTC_Library
 
-   TYPE(ProgDesc), PARAMETER  :: ED_Ver = ProgDesc( 'ElastoDyn', 'v1.03.02a-bjj', '23-Nov-2015' )
+   TYPE(ProgDesc), PARAMETER  :: ED_Ver = ProgDesc( 'ElastoDyn', 'v1.03.02a-bjj', '8-Apr-2016' )
    CHARACTER(*),   PARAMETER  :: ED_Nickname = 'ED'
    
    REAL(ReKi), PARAMETER      :: SmallAngleLimit_Deg  =  15.0                     ! Largest input angle considered "small" (used as a check on input data), degrees

@@ -3,7 +3,7 @@
 ! FAST Modularization Framework. ElastoDyn_Types is auto-generated based on FAST_Registry.txt.
 !..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2012-2015  National Renewable Energy Laboratory
+! Copyright (C) 2012-2016  National Renewable Energy Laboratory
 !
 !    This file is part of ElastoDyn.
 !
@@ -8744,7 +8744,7 @@ SUBROUTINE ED_AllocOutput( p, m, u, y, ErrStat, ErrMsg )
    !.......................................................
    
    ! -------------- Hub -----------------------------------
-      !BJJ: sibling of u%HubPtLoads
+      !BJJ: sibling of u%HubPtLoad
    CALL MeshCopy (     SrcMesh  = u%HubPtLoad             &
                      , DestMesh = y%HubPtMotion           &
                      , CtrlCode = MESH_SIBLING            &
