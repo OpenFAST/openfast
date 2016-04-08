@@ -1620,7 +1620,7 @@ SUBROUTINE TMD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
 
       ! Local variables   
    INTEGER(IntKi)                             :: ErrStat2       ! Temporary error ID   
-   CHARACTER(ErrMsgLen)                       :: ErrMsg2        ! Temporary message describing error
+   !CHARACTER(ErrMsgLen)                       :: ErrMsg2        ! Temporary message describing error
    CHARACTER(*), PARAMETER                    :: RoutineName = 'TMD_SetParameters'
 
    
