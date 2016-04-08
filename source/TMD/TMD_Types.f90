@@ -9,7 +9,7 @@
 !.................................................................................................................................
 ! This file is part of TMD.
 !
-! Copyright (C) 2012-2015 National Renewable Energy Laboratory
+! Copyright (C) 2012-2016 National Renewable Energy Laboratory
 !
 ! Licensed under the Apache License, Version 2.0 (the "License");
 ! you may not use this file except in compliance with the License.
