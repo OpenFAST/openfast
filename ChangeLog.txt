@@ -549,8 +549,9 @@ o I changed Str2IntAry and IntAry2Str to use IntKi instead of 1-byte integers so
   from the FAST Registry.
 o I added DLLTypePack and DLLTypeUnpack routines to pack/unpack the DLL_Type. These are called directly from the FAST Registry.
 
-------------------------------
+--------------------------------------------------------------------------------
 v2.03.03a-bjj, 27-June-2014. B. Jonkman & M. Buhl
+--------------------------------------------------------------------------------
 
 New Features:
 o added routine NWTC_gamma(): in Sys*.f90 (because gamma is an f08 feature)
@@ -589,15 +590,18 @@ o added source/dependencies folder for lapack to the archive (required for ModMe
 o Updated Makefile to work with latest ModMesh_Mapping module.
 o added -NO_MESHMAPPING preprocessor compiler option, which can be used to avoid compiling with LAPACK routines (it omits the
   ModMesh_Mapping.f90 file/routines); otherwise, binary libraries of LAPACK and BLAS must be used (IVF can use the MKL library)
-------------------------------
 
+--------------------------------------------------------------------------------
 v2.04.00a-bjj, 30-Sep-2014. B. Jonkman
+--------------------------------------------------------------------------------
 
 + added routine PSF, which used to be part of FFTModule.f90 in TurbSim and HydroDyn. Added ability to subtract instead of add when
   searching for next closest number that is a product of small primes.
 + modified GetArgs so that the InputFile name must be the first non-switch argument. Also allows for return of last non-stwitch argument.
 
+--------------------------------------------------------------------------------
 v2.05.02a-bjj, 25-Feb-2015. B. Jonkman
+--------------------------------------------------------------------------------
 + added rotational interpolation routines and call them in mesh-mapping routines
 + added routines for linearly interpolating real values in 2 and 3 dimensions.
 + other new routines: InterpWrappedStpReal() [from HydroDyn]; TwoNorm(); Trace();
@@ -608,10 +612,9 @@ v2.05.02a-bjj, 25-Feb-2015. B. Jonkman
 + updated registry-generated parts of the code; moved SetErrStat into NWTC_Library_Types.f90
 
 
-------------------------------
+--------------------------------------------------------------------------------
 v2.06.05a-bjj 5-Oct-2015 B. Jonkman
-------------------------------
-
+--------------------------------------------------------------------------------
 New routines in the library:
 + OuterProduct()
 + EulerConstruct()
@@ -649,9 +652,34 @@ Bug fixes:
 + fixed bug with negative sign in v(2) when theta=pi in DCM_logMap
 + modified check on mesh mapping with points projected onto line2 element. If we are numerically equal within single-precision of 0 or 1, we will consider it "on" the element.
 + fixed problem with DCM_SetLogMapForInterp, which would not give the correct results if we needed to move the vector by more than one period. (I've seen no evidence that it ever got in this place, though.)
+
+--------------------------------------------------------------------------------
+v2.08.00 5-Apr-2016 B. Jonkman
+--------------------------------------------------------------------------------
+New routines in the library:
++ SkewSymMat()
++ MeshWrVTK()
++ MeshWrVTKreference()
++ MeshWrVTKfields()
++ MeshWrVTK_Ln2Surface()
++ MeshWrVTK_PointSurface()
++ WrVTK_header()
++ WrVTK_footer()
+
+New features:
++ added doxygen-style comments and now the doxygen-generated html source-code browser is available on our web site: http://wind.nrel.gov/nwtc/doxygen/nwtc_library/html/index.html
++ added mixed-precision versions of InterpStep and InterpWrappedStp (X is SiKi; Y is R8Ki)
++ added integer version of WrNumAryFileNR
++ added some subroutines for generating VTK files for meshes (modifications/enhancements of code from Dr. Tom Brown from Eastern New Mexico University).
+
+Bug fixes:
++ modified ParseInclInfo() routine so that file names specified in other input files can have path names relative to the file in which they are specified.
++ fixed some error handling in MeshWrBin()
++ modified arguments to GL_Pts (ErrStat is not optional and added ErrMsg)
+
 ------------------------------
 
 
 
-
 ==========================================================
+
