@@ -1,4 +1,4 @@
----------------------- FAST MOORING FILE --------------------------------------
+---------------------- FEAMOORING FILE -----------------------------------------
 NREL 5.0 MW offshore baseline floating platform input properties for the MIT/NREL TLP. #rho=1025; WtrDpth=200
 ---------------------- SIMULATION CONTROL --------------------------------------
 False             Echo         - Echo input data to <RootName>.ech (flag)

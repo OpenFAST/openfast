@@ -1,4 +1,4 @@
----------------------- FAST MOORING FILE --------------------------------------
+---------------------- FEAMOORING FILE -----------------------------------------
 NREL 5.0 MW offshore baseline floating platform input properties for the OC4DeepCwindSemi
 ---------------------- SIMULATION CONTROL --------------------------------------
 False         Echo         - Echo input data to <RootName>.ech (flag)
