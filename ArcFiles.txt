@@ -1,7 +1,8 @@
 
 User_Guide_OrcaFlexInterface.pdf
 
-Models\*
+Models\*.bat
+Models\*.m
 
 Models\_Shared\*
 Models\_Shared\AeroData\*
