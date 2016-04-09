@@ -55,7 +55,7 @@ GOTO CheckSyntax
 @ECHO -------------------------------------------------------------------------
 @ECHO.
 
-@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @FAST_SourceFiles.txt
+@%WINZIP% -a -o -P ARCHTMP @ArcFiles.txt @ArcWin.txt @FAST_SourceFiles.txt
 @%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%"
 
 @COPY ARCHTMP.exe %ARCHPATH%\%ARCHNAME%.exe

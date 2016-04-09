@@ -1,1 +1,4 @@
 bin\FEAM_Driver_Win32.exe
+
+compiling\VisualStudio\FEAM_Driver.vfproj
+

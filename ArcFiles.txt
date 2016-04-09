@@ -9,6 +9,5 @@ source\dependencies\NWTC_Library\*.txt
 docs\2014-12-FEAM_Final_report.pdf
 docs\FEAM_Guide.pdf
 
-compiling\VisualStudio\FEAM_Driver.vfproj
 
 CertTest\*.dat
