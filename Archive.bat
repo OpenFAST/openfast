@@ -47,7 +47,7 @@ IF NOT "%1"==""  GOTO DeleteOld
 @%WINZIPSE% ARCHTMP.zip -d. -y -win32 -le -overwrite -st"Unzipping %PROGNAME%" -m Disclaimer.txt
 
 @COPY ARCHTMP.exe %ARCHPATH%\%ARCHNAME%.exe
-@COPY ARCHTMP.zip %ARCHPATH%\%ARCHNAME%.zip
+rem @COPY ARCHTMP.zip %ARCHPATH%\%ARCHNAME%.zip
 @DEL ARCHTMP.zip, ARCHTMP.exe
 
 
