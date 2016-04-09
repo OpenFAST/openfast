@@ -27,7 +27,7 @@ MODULE MoorDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v1.01.00F-mth', '11-Jan-2016' )
+   TYPE(ProgDesc), PARAMETER            :: MD_ProgDesc = ProgDesc( 'MoorDyn', 'v1.01.02F', '8-Apr-2016' )
 
 
    PUBLIC :: MD_Init
@@ -394,8 +394,6 @@ CONTAINS
       t = 0.0_ReKi     ! start time at zero
 
       ! because TimeStep wants an array...
-!bjj: >> fix potential memory leak (we've got pointers in here!)
-      !uArray(1) = u
       call MD_CopyInput( u, uArray(1), MESH_NEWCOPY, ErrStat2, ErrMsg2 )
 
 

@@ -25,11 +25,6 @@ MODULE MoorDyn_IO
   USE                              MoorDyn_Types
   IMPLICIT                         NONE
 
-  !-------------------
-  !bjj: FIXME: these global variables need to be removed before release
-  !mth:  done.  The parameters are okay, right?
-  !-------------------
-
 
   PRIVATE
 
