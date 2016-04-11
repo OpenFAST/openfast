@@ -1,10 +1,9 @@
-MODULE IfW_BladedFFWind
-!
 !>  This module uses full-field binary wind files to determine the wind inflow.
 !!  This module assumes that the origin, (0,0,0), is located at the tower centerline at ground level,
 !!  and that all units are specified in the metric system (using meters and seconds).
 !!  Data is shifted by half the grid width to account for turbine yaw (so that data in the X
 !!  direction actually starts at -1*ParamData%FFYHWid meters).
+MODULE IfW_BladedFFWind
 !!
 !!  Created 25-Sep-2009 by B. Jonkman, National Renewable Energy Laboratory
 !!     using subroutines and modules from AeroDyn v12.58
@@ -17,7 +16,7 @@ MODULE IfW_BladedFFWind
 !!
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015  National Renewable Energy Laboratory
+! Copyright (C) 2015-2106  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
@@ -60,17 +59,14 @@ CONTAINS
 !!  09/25/1997  - Created by M. Buhl from GETFILES in ViewWind.
 !!  09/23/2009  - modified by B. Jonkman: this subroutine was split into several subroutines (was ReadFF)
 !!  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,                       &
-                           OutData,    MiscVars,   Interval,   InitOutData,      ErrStat,       ErrMsg)
+SUBROUTINE IfW_BladedFFWind_Init(InitData, ParamData, MiscVars, Interval, InitOutData, ErrStat, ErrMsg)
    IMPLICIT                                                       NONE
 
    CHARACTER(*),              PARAMETER                        :: RoutineName="IfW_BladedFFWind_Init"
 
       ! Passed Variables
    TYPE(IfW_BladedFFWind_InitInputType),        INTENT(IN   )  :: InitData       !< Initialization data passed to the module
-   REAL(ReKi),       ALLOCATABLE,               INTENT(INOUT)  :: PositionXYZ(:,:)  !< Array of positions to find wind speed at
    TYPE(IfW_BladedFFWind_ParameterType),        INTENT(  OUT)  :: ParamData      !< Parameters
-   TYPE(IfW_BladedFFWind_OutputType),           INTENT(  OUT)  :: OutData        !< Initial output
    TYPE(IfW_BladedFFWind_MiscVarType),          INTENT(  OUT)  :: MiscVars       !< misc/optimization data   (storage for the main data)
    TYPE(IfW_BladedFFWind_InitOutputType),       INTENT(  OUT)  :: InitOutData    !< Initial output
 
@@ -113,27 +109,6 @@ SUBROUTINE IfW_BladedFFWind_Init(InitData,   PositionXYZ, ParamData,            
 
    TmpErrMsg   = ''
    TmpErrStat  = ErrID_None
-
-
-
-      ! Check that the PositionXYZ and OutData%Velocity arrays have both been allocated
-   IF ( .NOT. ALLOCATED(PositionXYZ) ) THEN
-      CALL SetErrStat(ErrID_Fatal,' Programming error: The PositionXYZ array has not been allocated prior to call to '//RoutineName//'.',   &
-                  ErrStat,ErrMsg,'')
-   ENDIF
-
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-      ! Check that the PositionXYZ and OutData%Velocity arrays are the same size.
-   IF ( ALLOCATED(OutData%Velocity) .AND. & 
-        ( (SIZE( PositionXYZ, DIM = 1 ) /= SIZE( OutData%Velocity, DIM = 1 )) .OR. &
-          (SIZE( PositionXYZ, DIM = 2 ) /= SIZE( OutData%Velocity, DIM = 2 ))      )  ) THEN
-      CALL SetErrStat(ErrID_Fatal,' Programming error: Different number of XYZ coordinates and expected output velocities.', &
-                  ErrStat,ErrMsg,RoutineName)
-      RETURN
-   ENDIF
-
 
 
       ! Get a unit number to use
