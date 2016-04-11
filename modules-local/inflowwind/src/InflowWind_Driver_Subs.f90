@@ -5,7 +5,7 @@
 !**********************************************************************************************************************************
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015  National Renewable Energy Laboratory
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
@@ -92,7 +92,7 @@ END SUBROUTINE DispHelpText
 
 !-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
 !> This subroutine retrieves the command line arguments and passes them to the
-!! ::ParseArg routine for processing.
+!! inflowwind_driver_subs::parsearg routine for processing.
 SUBROUTINE RetrieveArgs( CLSettings, CLFlags, ErrStat, ErrMsg )
 
    USE NWTC_Library

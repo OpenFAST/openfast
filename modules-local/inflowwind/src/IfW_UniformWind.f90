@@ -1,4 +1,3 @@
-MODULE IfW_UniformWind
 !> This module contains all the data and procedures that define uniform wind files (formerly known as
 !! hub-height files). This could more accurately be called a point wind file since the wind speed at
 !! any point is calculated by shear applied to the point where wind is defined.  It is basically uniform
@@ -16,11 +15,12 @@ MODULE IfW_UniformWind
 !!              (7) Vertical linear shear       (VLinShr) [-]
 !!              (8) Gust (horizontal) velocity  (VGust)   [m/s]
 !!
-!! The horizontal wind speed at (X, Y, Z) is then calculated using the interpolated columns by
-!!   Vh = V * ( Z/RefHt ) ** VShr                                        ! power-law wind shear
-!!      + V * HLinShr/RefWid * ( Y * COS(Delta) + X * SIN(Delta) )       ! horizontal linear shear
-!!      + V * VLinShr/RefWid * ( Z-RefHt )                               ! vertical linear shear
-!!      + VGust                                                          ! gust speed
+!! The horizontal wind speed at (X, Y, Z) is then calculated using the interpolated columns by  \n
+!!      Vh = V * ( Z/RefHt ) ** VShr                                        ! power-law wind shear
+!!         \n + V * HLinShr/RefWid * ( Y * COS(Delta) + X * SIN(Delta) )       ! horizontal linear shear
+!!         \n + V * VLinShr/RefWid * ( Z-RefHt )                               ! vertical linear shear
+!!         \n + VGust                                                          ! gust speed 
+MODULE IfW_UniformWind
 !----------------------------------------------------------------------------------------------------
 !! Feb 2013    v2.00.00         A. Platt
 !!    -- updated to the new framework
@@ -32,7 +32,7 @@ MODULE IfW_UniformWind
 !!
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015  National Renewable Energy Laboratory
+! Copyright (C) 2015-2106  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
@@ -80,7 +80,7 @@ CONTAINS
 !!          the PositionXYZ array.
 !! @date    16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
 !----------------------------------------------------------------------------------------------------
-SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OutData, MiscVars, Interval, InitOutData, ErrStat, ErrMsg)
+SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOutData, ErrStat, ErrMsg)
 
 
    IMPLICIT                                                       NONE
@@ -90,9 +90,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OutData, MiscV
 
       ! Passed Variables
    TYPE(IfW_UniformWind_InitInputType),         INTENT(IN   )  :: InitData          !< Input data for initialization
-   REAL(ReKi),       ALLOCATABLE,               INTENT(INOUT)  :: PositionXYZ(:,:)  !< Array of positions to find wind speed at
    TYPE(IfW_UniformWind_ParameterType),         INTENT(  OUT)  :: ParamData         !< Parameters
-   TYPE(IfW_UniformWind_OutputType),            INTENT(INOUT)  :: OutData           !< Initial output
    TYPE(IfW_UniformWind_MiscVarType),           INTENT(  OUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
    TYPE(IfW_UniformWind_InitOutputType),        INTENT(  OUT)  :: InitOutData       !< Initial output
 
@@ -128,28 +126,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, PositionXYZ, ParamData, OutData, MiscV
 
    ErrStat     = ErrID_None
    ErrMsg      = ""
-
-   TmpErrStat  = ErrID_None
-   TmpErrMsg   = ""
-
-
-      ! Check that the PositionXYZ array has been allocated.  The OutData%Velocity does not need to be allocated yet.
-   IF ( .NOT. ALLOCATED(PositionXYZ) ) THEN
-      CALL SetErrStat(ErrID_Fatal,' Programming error: The PositionXYZ array has not been allocated prior to call to '//RoutineName//'.',   &
-                  ErrStat,ErrMsg,'')
-   ENDIF
-
-   IF ( ErrStat >= AbortErrLev ) RETURN
-
-
-      ! Check that the PositionXYZ and OutData%Velocity arrays are the same size.
-   IF ( ALLOCATED(OutData%Velocity) .AND. & 
-        ( (SIZE( PositionXYZ, DIM = 1 ) /= SIZE( OutData%Velocity, DIM = 1 )) .OR. &
-          (SIZE( PositionXYZ, DIM = 2 ) /= SIZE( OutData%Velocity, DIM = 2 ))      )  ) THEN
-      CALL SetErrStat(ErrID_Fatal,' Programming error: Different number of XYZ coordinates and expected output velocities.', &
-                  ErrStat,ErrMsg,RoutineName)
-      RETURN
-   ENDIF
 
 
 
@@ -740,7 +716,7 @@ CONTAINS
    !> This function should be deleted ASAP.  Its purpose is to reproduce results of AeroDyn 12.57;
    !! when a consensus on the definition of "average velocity" is determined, this function will be
    !! removed.
-   FUNCTION WindInf_ADhack_diskVel( Time,ParamData, MiscVars,ErrStat, ErrMsg )
+   FUNCTION WindInf_ADhack_diskVel( Time, ParamData, MiscVars,ErrStat, ErrMsg )
    
          ! Passed variables
    
@@ -748,8 +724,8 @@ CONTAINS
       TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: ParamData         !< Parameters
       TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)  :: MiscVars          !< misc/optimization data   (storage for the main data)
    
-      INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat
-      CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg
+      INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< error status from this function
+      CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg            !< error message from this function 
    
          ! Function definition
       REAL(ReKi)                    :: WindInf_ADhack_diskVel(3)

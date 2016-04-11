@@ -1,9 +1,8 @@
-MODULE IfW_HAWCWind
-!
 !>  This module uses full-field binary wind files to determine the wind inflow.
 !!  This module assumes that the origin, (0,0,0), is located at the tower centerline at ground level,
 !!  and that all units are specified in the metric system (using meters and seconds).
 !!  Data is assumed periodic in the X direction (and thus not shifted like FFWind files are).
+MODULE IfW_HAWCWind
 !!
 !!  Created 25-June-2010 by B. Jonkman, National Renewable Energy Laboratory
 !!     using subroutines and modules from AeroDyn v12.58
@@ -13,7 +12,7 @@ MODULE IfW_HAWCWind
 !
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015  National Renewable Energy Laboratory
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
@@ -59,13 +58,11 @@ MODULE IfW_HAWCWind
 CONTAINS
 !====================================================================================================
 !>  This routine is used to initialize the parameters for using HAWC wind format files.
-SUBROUTINE IfW_HAWCWind_Init(InitInp, PositionXYZ, p, OutData, MiscVars, Interval, InitOut, ErrStat, ErrMsg)
+SUBROUTINE IfW_HAWCWind_Init(InitInp, p, MiscVars, Interval, InitOut, ErrStat, ErrMsg)
 
       ! Passed Variables
    TYPE(IfW_HAWCWind_InitInputType),         INTENT(IN   )  :: InitInp           !< Initialization data passed to the module
-   REAL(ReKi),             ALLOCATABLE,      INTENT(INOUT)  :: PositionXYZ(:,:)  !< Array of positions to find wind speed at
    TYPE(IfW_HAWCWind_ParameterType),         INTENT(  OUT)  :: p                 !< Parameters
-   TYPE(IfW_HAWCWind_OutputType),            INTENT(  OUT)  :: OutData           !< Initial output
    TYPE(IfW_HAWCWind_MiscVarType),           INTENT(  OUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
    TYPE(IfW_HAWCWind_InitOutputType),        INTENT(  OUT)  :: InitOut           !< Initialization output
 
@@ -94,25 +91,6 @@ SUBROUTINE IfW_HAWCWind_Init(InitInp, PositionXYZ, p, OutData, MiscVars, Interva
       CALL SetErrStat(TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName) 
       IF (ErrStat >= AbortErrLev) RETURN
   
-   !-------------------------------------------------------------------------------------------------
-   ! allocate memory for output structure
-   !-------------------------------------------------------------------------------------------------
-
-      ! Check that the PositionXYZ and OutData%Velocity arrays have both been allocated
-   IF ( .NOT. ALLOCATED(PositionXYZ) ) THEN
-      CALL SetErrStat(ErrID_Fatal,' Programming error: The PositionXYZ array has not been allocated prior to call to '//RoutineName//'.',   &
-                  ErrStat,ErrMsg,'')
-      RETURN
-   ENDIF
-
-      ! Check that the PositionXYZ and OutData%Velocity arrays are the same size.
-   IF ( ALLOCATED(OutData%Velocity) .AND. & 
-        ( (SIZE( PositionXYZ, DIM = 1 ) /= SIZE( OutData%Velocity, DIM = 1 )) .OR. &
-          (SIZE( PositionXYZ, DIM = 2 ) /= SIZE( OutData%Velocity, DIM = 2 ))      )  ) THEN
-      CALL SetErrStat(ErrID_Fatal,' Programming error: Different number of XYZ coordinates and expected output velocities.', &
-                  ErrStat,ErrMsg,RoutineName)
-      RETURN
-   ENDIF
       
    !-------------------------------------------------------------------------------------------------
    ! Set some internal module parameters based on input file values
@@ -189,8 +167,6 @@ SUBROUTINE IfW_HAWCWind_Init(InitInp, PositionXYZ, p, OutData, MiscVars, Interva
       WRITE(InitInp%SumFileUnit,'(F10.3,2x,F10.3,2x,F10.3)',IOSTAT=TmpErrStat)   InitOut%sf      
    ENDIF 
       
-   OutData%DiskVel = 0.0_ReKi
-
    RETURN
 
 END SUBROUTINE IfW_HAWCWind_Init
@@ -615,8 +591,6 @@ END SUBROUTINE IfW_HAWCWind_CalcOutput
    !!    looking downwind and Z is up.  It also assumes that no extrapolation will be needed.
    FUNCTION FF_Interp(Time, Position, p, MiscVars, ErrStat, ErrMsg)
 
-      CHARACTER(*),           PARAMETER                  :: RoutineName="FF_Interp"
-
       REAL(DbKi),                         INTENT(IN   )  :: Time           !< time
       REAL(ReKi),                         INTENT(IN   )  :: Position(3)    !< takes the place of XGrnd, YGrnd, ZGrnd
       TYPE(IfW_HAWCWind_ParameterType),   INTENT(IN   )  :: p              !< Parameters
@@ -627,6 +601,9 @@ END SUBROUTINE IfW_HAWCWind_CalcOutput
       CHARACTER(*),                       INTENT(  OUT)  :: ErrMsg         !< error message   
 
          ! Local Variables:
+      
+      CHARACTER(*),           PARAMETER                  :: RoutineName="FF_Interp"
+
 
       REAL(ReKi)                                         :: ShiftedXPosition
       REAL(ReKi),PARAMETER                               :: Tol = 1.0E-3   ! a tolerance for determining if two reals are the same (for extrapolation)

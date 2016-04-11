@@ -1,6 +1,4 @@
 !**********************************************************************************************************************************
-! $Id: InflowWind.f90 125 2014-10-29 22:28:35Z aplatt $
-!
 !! This module is used to read and process the (undisturbed) inflow winds.  It must be initialized
 !! using InflowWind_Init() with the name of the file, the file type, and possibly reference height and
 !! width (depending on the type of wind file being used).  This module calls appropriate routines
@@ -22,7 +20,7 @@
 !  InflowWind.txt       -- InflowWind_Types will be auto-generated based on the descriptions found in this file.
 !**********************************************************************************************************************************
 ! LICENSING
-! Copyright (C) 2015  National Renewable Energy Laboratory
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
 !    This file is part of InflowWind.
 !
@@ -68,7 +66,7 @@ MODULE InflowWind
    IMPLICIT NONE
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v3.02.00a-bjj', '14-Dec-2015' )
+   TYPE(ProgDesc), PARAMETER            :: IfW_Ver = ProgDesc( 'InflowWind', 'v3.02.00a-bjj', '11-Apr-2016' )
 
 
 
@@ -132,23 +130,18 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
 
       TYPE(IfW_UniformWind_InitInputType)                   :: Uniform_InitData     !< initialization info
       TYPE(IfW_UniformWind_InitOutputType)                  :: Uniform_InitOutData  !< initialization output info
-      TYPE(IfW_UniformWind_OutputType)                      :: Uniform_OutData      !< output velocities
 
       TYPE(IfW_TSFFWind_InitInputType)                      :: TSFF_InitData        !< initialization info
       TYPE(IfW_TSFFWind_InitOutputType)                     :: TSFF_InitOutData     !< initialization output info
-      TYPE(IfW_TSFFWind_OutputType)                         :: TSFF_OutData         !< output velocities
 
       TYPE(IfW_HAWCWind_InitInputType)                      :: HAWC_InitData        !< initialization info
       TYPE(IfW_HAWCWind_InitOutputType)                     :: HAWC_InitOutData     !< initialization output info
-      TYPE(IfW_HAWCWind_OutputType)                         :: HAWC_OutData         !< output velocities
 
       TYPE(IfW_BladedFFWind_InitInputType)                  :: BladedFF_InitData    !< initialization info
       TYPE(IfW_BladedFFWind_InitOutputType)                 :: BladedFF_InitOutData !< initialization output info
-      TYPE(IfW_BladedFFWind_OutputType)                     :: BladedFF_OutData     !< output velocities
 
       TYPE(IfW_UserWind_InitInputType)                      :: User_InitData        !< initialization info
       TYPE(IfW_UserWind_InitOutputType)                     :: User_InitOutData     !< initialization info
-      TYPE(IfW_UserWind_OutputType)                         :: User_OutData         !< output velocities
 
 
 !!!     TYPE(CTBladed_Backgr)                                        :: BackGrndValues
@@ -308,35 +301,20 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
       ENDIF
 
 
-         ! Allocate the arrays for passing points in and velocities out
-      IF ( .NOT. ALLOCATED(InputGuess%PositionXYZ) ) THEN
-         CALL AllocAry( InputGuess%PositionXYZ, 3, InitData%NumWindPoints, &
-                     "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat>= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         ENDIF
-         InputGuess%PositionXYZ = 0.0_ReKi
+      ! Allocate the arrays for passing points in and velocities out
+      CALL AllocAry( InputGuess%PositionXYZ, 3, InitData%NumWindPoints, &
+                  "Array of positions at which to find wind velocities", TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+         
+      CALL AllocAry( OutData%VelocityUVW, 3, InitData%NumWindPoints, &
+                  "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg )
+      CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat>= AbortErrLev ) THEN
+         CALL Cleanup()
+         RETURN
       ENDIF
-      IF ( .NOT. ALLOCATED(OutData%VelocityUVW) ) THEN
-         CALL AllocAry( OutData%VelocityUVW, 3, InitData%NumWindPoints, &
-                     "Array of wind velocities returned by InflowWind", TmpErrStat, TmpErrMsg )
-         CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
-         IF ( ErrStat>= AbortErrLev ) THEN
-            CALL Cleanup()
-            RETURN
-         ENDIF
-         OutData%VelocityUVW = 0.0_ReKi
-      ENDIF
-
-
-         ! Check that the arrays for the points and velocities are the same size
-      IF ( SIZE( InputGuess%PositionXYZ, DIM = 2 ) /= SIZE( OutData%VelocityUVW, DIM = 2 ) ) THEN
-         CALL SetErrStat(ErrID_Fatal,' Programming error: Different number of XYZ coordinates and expected output velocities.', &
-                     ErrStat,ErrMsg,RoutineName)
-      ENDIF
-
+      InputGuess%PositionXYZ = 0.0_ReKi
+      OutData%VelocityUVW = 0.0_ReKi
 
 
       !-----------------------------------------------------------------
@@ -477,8 +455,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             Uniform_InitData%SumFileUnit              =  SumFileUnit
 
                ! Initialize the UniformWind module
-            CALL IfW_UniformWind_Init(Uniform_InitData, InputGuess%PositionXYZ, ParamData%UniformWind, &
-                        Uniform_OutData,    MiscVars%UniformWind, TimeInterval,  Uniform_InitOutData,  TmpErrStat,          TmpErrMsg)
+            CALL IfW_UniformWind_Init(Uniform_InitData, ParamData%UniformWind, &
+                        MiscVars%UniformWind, TimeInterval,  Uniform_InitOutData,  TmpErrStat,          TmpErrMsg)
 
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, ' IfW_Init' )
             IF ( ErrStat >= AbortErrLev ) RETURN
@@ -536,8 +514,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             TSFF_InitData%SumFileUnit                    =  SumFileUnit
 
                ! Initialize the TSFFWind module
-            CALL IfW_TSFFWind_Init(TSFF_InitData, InputGuess%PositionXYZ, ParamData%TSFFWind, &
-                        TSFF_OutData,    MiscVars%TSFFWind, TimeInterval,  TSFF_InitOutData,  TmpErrStat, TmpErrMsg)
+            CALL IfW_TSFFWind_Init(TSFF_InitData, ParamData%TSFFWind, &
+                           MiscVars%TSFFWind, TimeInterval,  TSFF_InitOutData,  TmpErrStat, TmpErrMsg)
             CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -583,8 +561,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             BladedFF_InitData%SumFileUnit                =  SumFileUnit
 
                ! Initialize the BladedFFWind module
-            CALL IfW_BladedFFWind_Init(BladedFF_InitData, InputGuess%PositionXYZ, ParamData%BladedFFWind, &
-                        BladedFF_OutData, MiscVars%BladedFFWind, TimeInterval,  BladedFF_InitOutData,  TmpErrStat, TmpErrMsg)
+            CALL IfW_BladedFFWind_Init(BladedFF_InitData, ParamData%BladedFFWind, MiscVars%BladedFFWind, &
+                                        TimeInterval,  BladedFF_InitOutData,  TmpErrStat, TmpErrMsg)
             CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -652,8 +630,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
                    
             
                ! Initialize the HAWCWind module
-            CALL IfW_HAWCWind_Init(HAWC_InitData, InputGuess%PositionXYZ, ParamData%HAWCWind, &
-                        HAWC_OutData, MiscVars%HAWCWind, TimeInterval,  HAWC_InitOutData,  TmpErrStat,          TmpErrMsg)
+            CALL IfW_HAWCWind_Init(HAWC_InitData, ParamData%HAWCWind, MiscVars%HAWCWind, &
+                                   TimeInterval,  HAWC_InitOutData,  TmpErrStat, TmpErrMsg)
             CALL SetErrSTat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 
@@ -684,8 +662,8 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
          CASE (User_WindNumber)
 
                ! Initialize the UserWind module
-            CALL IfW_UserWind_Init(User_InitData, InputGuess%PositionXYZ, ParamData%UserWind, &
-                        User_OutData, MiscVars%UserWind, TimeInterval,  User_InitOutData,  TmpErrStat, TmpErrMsg)
+            CALL IfW_UserWind_Init(User_InitData, ParamData%UserWind, MiscVars%UserWind, &
+                        TimeInterval,  User_InitOutData,  TmpErrStat, TmpErrMsg)
             CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
             IF ( ErrStat >= AbortErrLev ) RETURN
 

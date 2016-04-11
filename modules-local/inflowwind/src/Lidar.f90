@@ -1,7 +1,7 @@
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015  CU Boulder
-! Copyright (C) 2015  National Renewable Energy Laboratory
+! Copyright (C) 2015-2016  National Renewable Energy Laboratory
 !
 !    Lidar module, a submodule of InflowWind
 !
