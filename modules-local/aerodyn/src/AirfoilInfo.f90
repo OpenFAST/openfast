@@ -389,8 +389,8 @@ CONTAINS
                                      , p%AFInfo(File)%Table(1)%SplineCoefs &
                                      , ErrStat2, ErrMsg2 )
                CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-               
-            else
+                           
+            else if ( p%AFInfo(File)%InterpOrd == 1_IntKi ) then
                
                   ! use this for linear interpolation (sets the higher order coeffs to zero):
                
@@ -402,6 +402,12 @@ CONTAINS
                                      , ErrStat2, ErrMsg2 )
                CALL SetErrStat ( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                
+            else
+               
+               CALL SetErrStat ( ErrID_FATAL, 'Airfoil file "'//TRIM( InitInput%FileNames(File) ) &
+                                         //'": InterpOrd must be 1 (linear) or 3 (cubic spline).', ErrStat, ErrMsg, RoutineName )
+               CALL Cleanup()
+               RETURN
                
             end if
             
@@ -746,7 +752,7 @@ CONTAINS
                CALL ParseVarWDefault ( FileInfo, CurLine, 'UACutout', AFInfo%Table(Table)%UA_BL%UACutout, 45.0_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
 
-               CALL ParseVarWDefault ( FileInfo, CurLine, 'filtCutOff', AFInfo%Table(Table)%UA_BL%filtCutOff, 100000.0_ReKi, ErrStat2, ErrMsg2, UnEc )
+               CALL ParseVarWDefault ( FileInfo, CurLine, 'filtCutOff', AFInfo%Table(Table)%UA_BL%filtCutOff, 20.0_ReKi, ErrStat2, ErrMsg2, UnEc )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
                   
                IF (ErrStat >= AbortErrLev) THEN

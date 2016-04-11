@@ -146,7 +146,13 @@ real(ReKi) function Get_f_from_Lookup( UAMod, Re, alpha, alpha0, C_nalpha_circ, 
    Cn =  Cl*cos(alpha) + (Cd-Cd0)*sin(alpha)
    denom = (C_nalpha_circ*(alpha-alpha0))
    
+   
+! #ifndef CHECK_DENOM_DIFF
    if (abs(denom) < .01) then
+!#else
+!   if (EqualRealNos(denom,0.0_ReKi)) then
+!#endif   
+
        Get_f_from_Lookup = 1.0_ReKi
        return
    end if
@@ -1559,7 +1565,11 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
             call GetSteadyOutputs(AFInfo, alpha_f, Cl_temp, Cd_temp, Cm_temp, Cd0, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             Cn_temp = Cl_temp*cos(alpha_f) + (Cd_temp-Cd0)*sin(alpha_f)
+!#ifndef CHECK_DENOM_DIFF
             if (abs(Cn_temp) < 0.01 ) then
+!#else
+!            if (EqualRealNos(Cn_temp,0.0_ReKi)) then
+!#endif   
                fprimeprime_m = 1.0
             else            
                fprimeprime_m = (Cm_temp - Cm0) / Cn_temp 
