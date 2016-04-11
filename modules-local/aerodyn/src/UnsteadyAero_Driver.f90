@@ -177,7 +177,7 @@ program UnsteadyAero_Driver
    AFIndx(1,1) = 1
    
       ! Initialize the Airfoil Info Params
-   call Init_AFI( NumAFfiles, afNames, InitInData%Flookup, AFI_Params, errStat2, errMsg2 )
+   call Init_AFI( NumAFfiles, afNames, InitInData%Flookup, dvrInitInp%UseCm, AFI_Params, errStat2, errMsg2 )
       call SetErrStat( errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
       if ( ErrStat >= AbortErrLev ) then
          call Cleanup()
