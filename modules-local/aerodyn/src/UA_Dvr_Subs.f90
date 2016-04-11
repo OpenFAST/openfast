@@ -15,7 +15,8 @@ module UA_Dvr_Subs
       character(1024) :: OutRootName
       real(ReKi)      :: InflowVel       
       integer         :: UAMod           
-      logical         :: Flookup         
+      logical         :: Flookup        
+      logical         :: UseCm         
       character(1024) :: AirFoil1 
       real(ReKi)      :: Chord
       integer         :: SimMod          
@@ -273,7 +274,16 @@ module UA_Dvr_Subs
             call Cleanup()
             return
          end if
-   
+      
+         ! Using Cm column
+      call ReadVar ( UnIn, FileName, InitInp%UseCm, 'UseCm', &
+                                       "Using Cm Airfoil table data", errStat2, errMsg2, UnEchoLocal )
+         call SetErrStat(errStat2, errMsg2, ErrStat, ErrMsg, RoutineName )
+         if (ErrStat >= AbortErrLev) then
+            call Cleanup()
+            return
+         end if
+      
       !-------------------------------------------------------------------------------------------------
       ! SIMULATION CONTROL section
       !-------------------------------------------------------------------------------------------------
@@ -493,13 +503,14 @@ module UA_Dvr_Subs
       end subroutine Cleanup
    end subroutine ReadTimeSeriesData
    
-   subroutine Init_AFI(NumAFfiles, afNames, Flookup, AFI_Params, ErrStat, ErrMsg)
+   subroutine Init_AFI(NumAFfiles, afNames, Flookup, UseCm, AFI_Params, ErrStat, ErrMsg)
 
    
    
    integer,             intent(in   )  :: NumAFfiles
    CHARACTER(1024),     intent(in   )  :: afNames(NumAFfiles)
    logical,             intent(in   )  :: Flookup
+   logical,             intent(in   )  :: UseCm
    type(AFI_ParameterType), intent(  out)  :: AFI_Params
    integer(IntKi),      intent(  out)  :: ErrStat                       ! Error status.
    character(*),        intent(  out)  :: ErrMsg                        ! Error message.
@@ -542,7 +553,12 @@ module UA_Dvr_Subs
    AFI_InitInputs%InCol_Alfa  = 1
    AFI_InitInputs%InCol_Cl    = 2
    AFI_InitInputs%InCol_Cd    = 3
-   AFI_InitInputs%InCol_Cm    = 4
+   if (UseCm) then
+      AFI_InitInputs%InCol_Cm    = 4
+   else   
+      AFI_InitInputs%InCol_Cm    = 0
+   end if
+   
    AFI_InitInputs%InCol_Cpmin = 0
    
    !AFI_InitInputs%Flookup     = Flookup
