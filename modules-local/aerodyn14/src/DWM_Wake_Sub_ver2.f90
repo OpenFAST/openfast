@@ -2008,7 +2008,9 @@ FUNCTION TI_downstream_total (m, p, y, spacing,angle,velocity_matrix)   ! name s
    !-------------------------------------------------------------------------------------------------
    ! calculate the total TI
    !------------------------------------------------------------------------------------------------- 
-    TI_downstream_total = (TI_average**2 + TI_apprant**2)**0.5*100
+    !TI_downstream_total = (TI_average**2 + TI_apprant**2)**0.5*100
+    
+    TI_downstream_total = TI_average * 100
     
     !OPEN(unit = 10, status='replace',file='DWM\results\Downstream_TI_b4normalization.bin',form='unformatted')          
     !WRITE(10)   TI_total                                                                                                                                                                                                                                                                                                         
