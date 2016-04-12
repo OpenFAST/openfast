@@ -112,6 +112,13 @@ v3.01.00b-adp (11-Nov-2015, A. Platt)
   - Bug fix in Uniform wind.  Added check that the RefLength must be > 0.
 
 
+v3.02.00a-bjj (11-Apr-2016, B. Jonkman)
+  - moved "OtherState" variables to "MiscVars" for FAST framework modification, necessary for future linearization
+  - fixed error handling with HAWC wind files (if there was an error reading the file, it would either give 0 or garbage output)
+  - removed some unnecessary variables in sub-module initialization
+  - added Doxyfile to archive (and doxygen-style comments to code)
+
+
  To Do:
  - remove all *_ADHack_* subroutines (reintroduced for integration with AeroDyn)
  - add ability to superimpose wind types

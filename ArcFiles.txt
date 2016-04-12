@@ -5,8 +5,6 @@ license.txt
 FAST_SourceFiles.txt
 OutListParameters.xlsx
 
-Docs\InflowWind_Manual.pdf
-
 Source/Driver/InflowWind_Driver.f90
 Source/Driver/InflowWind_Driver_Subs.f90
 Source/Driver/InflowWind_Driver_Types.f90
@@ -15,8 +13,10 @@ Source\dependencies\NWTC_Library\*.f90
 Source\dependencies\NWTC_Library\Registry_NWTC_Library.txt
 Source\dependencies\NWTC_Library\dependencies\lapack\*.f90
 
+Docs\InflowWind_Manual.pdf
+Docs\Doxygen\Doxyfile
+
 Compiling/makefile
-Compiling/VisualStudio/InflowWind_Driver.vfproj
 
 CertTest\Results\*
 
