@@ -7,7 +7,7 @@ Documentation\SubDyn_Manual.pdf
 Documentation\SubDynOutListParameters.xlsx
 
 Source\SubDyn_Driver.f90
-Source\SubDyn_Registry.txt
+Source\SubDyn_Registry.xlsx
 
 Source\dependencies\NWTC_Library\Registry_NWTC_Library.txt
 Source\dependencies\NWTC_Library\*.f90
