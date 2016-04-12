@@ -41,7 +41,7 @@ module BEMT
    
    private
    
-   type(ProgDesc), parameter  :: BEMT_Ver = ProgDesc( 'BEM', 'v1.00.00a-gjh', '8-March-2016' )
+   type(ProgDesc), parameter  :: BEMT_Ver = ProgDesc( 'BEM', 'v1.01.00a', '12-Apr-2016' )
    character(*),   parameter  :: BEMT_Nickname = 'BEM'
    
    ! ..... Public Subroutines ...................................................................................................
