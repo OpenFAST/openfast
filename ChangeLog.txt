@@ -816,5 +816,10 @@ v14.04.00a-bjj 6-Oct-2015  B. Jonkman
 + added some blank lines to *.AD.out file so headers are on same line as FAST output
 + removed SI, WindFile, and HH lines from AD input file
 
+v14.05.00a-bjj 11-Apr-2016 B. Jonkman
++ split MiscVars from OtherState type (change in FAST framework) in AeroDyn14 and DWM
++ DWM to use updated InflowWind (also with MiscVar change): InflowWind v3.02.00a-bjj
++ simplified some variables names and removed tight unused coupling routines
++ YH fixed a couple of bugs in DWM submodule
 
 =================== END ====================
