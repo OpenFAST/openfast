@@ -7,24 +7,10 @@ Documentation\SubDyn_Manual.pdf
 Documentation\SubDynOutListParameters.xlsx
 
 Source\SubDyn_Driver.f90
-Source\SubDyn_Registry.xlsx
+Source\SubDyn_Registry.txt
 
 Source\dependencies\NWTC_Library\Registry_NWTC_Library.txt
-Source\dependencies\NWTC_Library\ModMesh.f90
-Source\dependencies\NWTC_Library\ModMesh_Mapping.f90
-Source\dependencies\NWTC_Library\ModMesh_Types.f90
-Source\dependencies\NWTC_Library\NWTC_Base.f90
-Source\dependencies\NWTC_Library\NWTC_IO.f90
-Source\dependencies\NWTC_Library\NWTC_Library.f90
-Source\dependencies\NWTC_Library\NWTC_Library_Types.f90
-Source\dependencies\NWTC_Library\NWTC_Num.f90
-Source\dependencies\NWTC_Library\SingPrec.f90
-Source\dependencies\NWTC_Library\DoubPrec.f90
-Source\dependencies\NWTC_Library\SysIVF.f90
-Source\dependencies\NWTC_Library\SysGnuLinux.f90
-Source\dependencies\NWTC_Library\SysGnuWin.f90
-Source\dependencies\NWTC_Library\SysIFL.f90
-Source\dependencies\NWTC_Library\SysMatlab.f90
+Source\dependencies\NWTC_Library\*.f90
 
 Source\dependencies\NetLib\dlasrt2.f
 Source\dependencies\NetLib\slasrt2.f
@@ -32,6 +18,7 @@ Source\dependencies\NetLib\NWTC_LAPACK.f90
 Source\dependencies\NetLib\NWTC_ScaLAPACK.f90
 
 CertTest\CertTest.bat
+CertTest\CertTest.m
 CertTest\Test01.dvr
 CertTest\Test02.dvr
 CertTest\Test03.dvr

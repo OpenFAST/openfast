@@ -42,7 +42,7 @@ Module SubDyn
    !       this will add additional matrices to the SubDyn summary file.
    !............................
 
-   TYPE(ProgDesc), PARAMETER  :: SD_ProgDesc = ProgDesc( 'SubDyn', 'v1.03.00a-bjj', '6-Jan-2016' )
+   TYPE(ProgDesc), PARAMETER  :: SD_ProgDesc = ProgDesc( 'SubDyn', 'v1.03.00', '11-Apr-2016' )
       
    ! ..... Public Subroutines ...................................................................................................
 

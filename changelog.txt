@@ -1,16 +1,22 @@
 SubDyn Change Log
 ===============================================================================
 -------------------------------------------------------------------------------
+v1.03.00 11-Apr-2016
+   Official FAST 8.15 public release
+-modified FAST interfaces for MiscVars (split from OtherStates) for updated Modularization framework
+-modified some comments for doxygen-style documentation
+-removed currently unused routines for jacobians (whose interfaces will need to change)
+-------------------------------------------------------------------------------
 v1.02.00a          5-Oct-2015
    Official FAST 8.12 public release
 -fixed issue with invalid output channels generating NaNs
--fixed segmentation fault if output members were specified but no outputs were listed   
+-fixed segmentation fault if output members were specified but no outputs were listed
 -fixed a bug in SubDyn whereby the structural damping was not set properly when the Craig-Bampton reduction was disabled
 -------------------------------------------------------------------------------
 v1.01.02a          27-Feb-2015
    Official FAST 8.10 public release
 -modified matmul to use LAPACK version, which eliminated some stack-space issues for 32-bit compiles
--modified some order-of-operations of matrix multiplications to minimize temporary storage, and enable more simulations to run under 32-bit compilation 
+-modified some order-of-operations of matrix multiplications to minimize temporary storage, and enable more simulations to run under 32-bit compilation
 -------------------------------------------------------------------------------
 v1.01.01a         30-Sep-2014
 	Official FAST 8.09 public release
@@ -34,7 +40,7 @@ v1.01.00a-rrd     30-Jun-2014
 - cleaned up Visual Studio project file
 - added option to choose nmodes = 0
 - Summary file cleanup.
-- removed some matrices from standard release summary file (they are still available if compiled with SD_SUMMARY_DEBUG preprocessor definition). 
+- removed some matrices from standard release summary file (they are still available if compiled with SD_SUMMARY_DEBUG preprocessor definition).
 - Added column to summary file node table indicating which node in the Y2 mesh it is.
 - replaced matrix inverses with factored matrices and calls to *GETRS() [solves]; this should be more numerically sound (and it got rid of memory issue Inspector complained about)
 - added a SQRT on the eigenvalues inside EigenSolve (this is for consistency; before this, the SQRT was taken outside the routine and somewhat confusing to debug)
@@ -52,7 +58,7 @@ v1.01.00a-rrd     30-Jun-2014
 - fixed bug where reaction loads were not calculated if reaction channels were specified in the input file without starting with case-specific "React" (i.e., different case or negative values). The output was a random number.
 - Replaced diagonal matrices A_21 and A_22 with arrays representing their diagonal values, renamed to indicate the values stored in them (NOmegaM2, and NOmegaJDamp).
 - Replaced B_24 with PhiM_T (transpose of PhiM)
-- Replaced C2_21 and C_42 with PhiM 
+- Replaced C2_21 and C_42 with PhiM
 - Replaced D2_11, D2_32, and D2_53 with TI
 - Replaced D2_21 and D2_42 with PhiRb_TI
 - removed OutJctF from registry because it was unused
@@ -71,17 +77,17 @@ v1.01.00a-rrd     30-Jun-2014
 - I fixed a bunch of error handling.
 - I moved a lot of the allocation statements so that it was easier for me to read.
 - I removed some old commented-out code, unnecessary variables, and some unused arguments.
-- I've been editing the Registry in an Excel spreadsheet to help me better see what's defined where. SO, the Registry.txt file looks a lot different. 
+- I've been editing the Registry in an Excel spreadsheet to help me better see what's defined where. SO, the Registry.txt file looks a lot different.
 - fixed a bug in GetDirCos, which would cause the direction cosine matrix to not be orthonormal in certain cases (not sure it was ever triggered)
 - cleaned up GetDirCos (removed old method, which was being calculated then overwritten with new stuff)
 - with help from jmj: fixed a bug in ElemG, which caused the lumped moments to be incorrect. Also added comments in the routine.
-- removed LumpForces() because it wasn't being called and it looked like it had the same bug ElemG had in it. 
+- removed LumpForces() because it wasn't being called and it looked like it had the same bug ElemG had in it.
 - modified UnReduceVRdofs so VR/Phi is intent INOUT (instead of copying the matrix)
 - updated NWTC Library routines (also modified this version of NWTC_LAPACK to generate some errors when things aren't the correct sizes)
 - removed SD_OutVar_Type from registry and replaced it with the identical OutParmType from NWTC Library.
 - modified driver so that sd input file name is relative to location of driver file
-- removed some more unused code 
-- updated error handling on read of SD input file 
+- removed some more unused code
+- updated error handling on read of SD input file
 - made sure derived types were allocated and destroyed in the update states integration calls (ABM4, etc)
 - replaced some unnecessary local copies of variables
 - renamed NPE in SD_Discrt to NNE to be consistent with other routines
