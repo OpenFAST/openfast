@@ -713,10 +713,12 @@ CONTAINS
    END FUNCTION GetWindSpeed
 
 
-   !> This function should be deleted ASAP.  Its purpose is to reproduce results of AeroDyn 12.57;
-   !! when a consensus on the definition of "average velocity" is determined, this function will be
-   !! removed.
-   FUNCTION WindInf_ADhack_diskVel( Time, ParamData, MiscVars,ErrStat, ErrMsg )
+END SUBROUTINE IfW_UniformWind_CalcOutput
+
+!> This function should be deleted ASAP.  Its purpose is to reproduce results of AeroDyn 12.57;
+!! when a consensus on the definition of "average velocity" is determined, this function will be
+!! removed.
+FUNCTION WindInf_ADhack_diskVel( Time, ParamData, MiscVars,ErrStat, ErrMsg )
    
          ! Passed variables
    
@@ -813,11 +815,6 @@ CONTAINS
 
    END FUNCTION WindInf_ADhack_diskVel
 
-
-
-
-
-END SUBROUTINE IfW_UniformWind_CalcOutput
 
 !====================================================================================================
 !>  This routine closes any open files and clears all data stored in UniformWind derived Types

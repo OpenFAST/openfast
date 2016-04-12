@@ -1,10 +1,10 @@
-MODULE IfW_UserWind
 !> This module is a placeholder for any user defined wind types.  The end user can use this as a template for their code.
 !! @note  This module does not need to exactly conform to the FAST Modularization Framework standards.  Three routines are required
 !! though:
 !!    -- IfW_UserWind_Init          -- Load or create any wind data.  Only called at the start of FAST.
 !!    -- IfW_UserWind_CalcOutput    -- This will be called at each timestep with a series of data points to give wind velocities at.
 !!    -- IfW_UserWind_End           -- clear out any stored stuff.  Only called at the end of FAST.
+MODULE IfW_UserWind
 !**********************************************************************************************************************************
 ! LICENSING
 ! Copyright (C) 2015-2016  National Renewable Energy Laboratory
