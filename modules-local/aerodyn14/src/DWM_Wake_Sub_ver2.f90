@@ -1455,7 +1455,7 @@ FUNCTION filter_velocity (OS,m,p,u,x,xd,z,y,timestep,y_0,z_0,wake_radius)
     
     IF (.NOT. ALLOCATED(u%IfW%PositionXYZ) ) THEN
        CALL AllocAry( u%IfW%PositionXYZ, 3, 1, "Position array to send to IfW_CalcOutput", ErrStat, ErrMsg )
-       !IF (ErrStat >= AbortErrLev)  RETURN
+       IF (ErrStat >= AbortErrLev)  RETURN
     END IF
 
     DO y_axis = NINT(y_0-radius_length),NINT(y_0+radius_length),1
@@ -1580,15 +1580,17 @@ SUBROUTINE Get_wake_center ( OS, m, p, y, u, x, xd, z, wakewidth, wake_center )
                                  ! ex. @8D: (1~release_time,8*[ppR/scale_factor]+1,:)
 
     DO release_time = 1,simulation_time_length,1               ! wake center position at turbine plane
-    wake_center (release_time,1,1) = 0
-    wake_center (release_time,1,2) = 0
-    wake_center (release_time,1,3) = REAL(p%hub_height)
+       wake_center (release_time,1,1) = 0
+       wake_center (release_time,1,2) = 0
+       wake_center (release_time,1,3) = REAL(p%hub_height)
     END DO
     
     x_step = Modified_U * (DWM_time_step*m%meandering_data%scale_factor)
     
-    CALL AllocAry( u%IfW%PositionXYZ, 3, 1, "Position array to send to IfW_CalcOutput", ErrStat, ErrMsg )
-    IF (ErrStat >= AbortErrLev)  RETURN
+    IF (.NOT. ALLOCATED(u%IfW%PositionXYZ) ) THEN
+       CALL AllocAry( u%IfW%PositionXYZ, 3, 1, "Position array to send to IfW_CalcOutput", ErrStat, ErrMsg )
+       IF (ErrStat >= AbortErrLev)  RETURN
+    END IF
 
     
     ! get the initial wake center position of each cross scetion  (from the velocity at the turbine plane * dt)
