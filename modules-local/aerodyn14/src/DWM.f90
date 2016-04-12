@@ -7,7 +7,7 @@ MODULE DWM
    
    PRIVATE
    
-   TYPE(ProgDesc), PARAMETER  :: DWM_Ver = ProgDesc( 'DWM', 'v2.01.02-yh', '30-Sep-2015' )
+   TYPE(ProgDesc), PARAMETER  :: DWM_Ver = ProgDesc( 'DWM', 'v2.01.03-yh', '11-Apr-2016' )
  
    ! ..... Public Subroutines ...................................................................................................
 
