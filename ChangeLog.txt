@@ -4189,12 +4189,13 @@ Changes to FAST
 - changed intent(out) to intent(inout) on FAST_RestoreFromCheckpoint_T() because gfortran (gcc v4.6.2 from mingw32) ran out of memory when compiling it otherwise.
 - fixed copy of OtherStates in Orca, which we wouldn't notice because it doesn't use other states.
 - fixed issue where Orca data wasn't destroyed at end of simulation (caused issues in Simulink simulations).
-- Added code to output VTK graphics files; Code is based on work from Tom Brown (visiting professional from Eastern New Mexico University, summer 2015)
 - added check so BD can't be in static analysis when coupled to FAST
+- Added code to output VTK graphics files; Code is based on work from Tom Brown (visiting professional from Eastern New Mexico University, summer 2015)
 - when visualization is requested, all meshes that currently exist are written out (with .DebugError. in file name) when the code aborts on error
 - removed the fatal error when trying to output text files of long simulations (because it doesn't fit in the 10-character limit on the time channel).
   Instead I increase the size of the time channel and print a warning about some NREL postprocessors.
 - added x64 configuration in project file
+- converted the output array to single-precision before writing to text files to prevent asteriks in text files in double-precision
 
 ElastoDyn
 -------

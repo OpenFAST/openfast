@@ -1,5 +1,7 @@
 bin\FAST_Win32.exe
 bin\FAST_x64.exe
+bin\FAST_Win32d.exe
+bin\FAST_x64d.exe
 bin\MAP_Win32.dll
 bin\MAP_x64.dll
 bin\Registry_win32.exe

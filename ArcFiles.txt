@@ -236,6 +236,7 @@ CertTest\5MW_Baseline\NRELOffshrBsline5MW_ServoDyn_TMD.dat
 
 
 CertTest\AOC\AeroData\*
+CertTest\AOC\Airfoils\*
 CertTest\AOC\Wind\25m_12mps.inp
 CertTest\AOC\Wind\25m_12mps.sum
 CertTest\AOC\Wind\25m_12mps.wnd
@@ -261,6 +262,7 @@ CertTest\AOC\Test08_InflowWind.dat
 
 
 CertTest\AWT27\AeroData\*
+CertTest\AWT27\Airfoils\*
 
 CertTest\AWT27\Wind\42m_12mps.inp
 CertTest\AWT27\Wind\42m_12mps.sum
@@ -301,6 +303,8 @@ CertTest\SWRT\AeroData\SH3052Mod_AllRe_Elem14_Hanley.dat
 CertTest\SWRT\AeroData\SH3052Mod_AllRe_Elem15_Hanley.dat
 CertTest\SWRT\AeroData\SH3052Mod_AllRe_Hanley.dat
 CertTest\SWRT\AeroData\TailPlate.dat
+CertTest\SWRT\Airfoils\*
+
 
 CertTest\SWRT\Wind\35m_16mps.inp
 CertTest\SWRT\Wind\35m_16mps.sum
@@ -335,6 +339,8 @@ CertTest\UAE_VI\AeroData\Mod_S809_410.dat
 CertTest\UAE_VI\AeroData\Mod_S809_600.dat
 CertTest\UAE_VI\AeroData\Mod_S809_800.dat
 CertTest\UAE_VI\AeroData\Mod_S809_Outboard.dat
+CertTest\UAE_VI\Airfoils\*
+
 
 CertTest\UAE_VI\Wind\PwrCrv.wnd
 CertTest\UAE_VI\Wind\Shr11_30.wnd
@@ -357,6 +363,7 @@ CertTest\WP_Baseline\AeroData\cylinder.dat
 CertTest\WP_Baseline\AeroData\S818_2703.dat
 CertTest\WP_Baseline\AeroData\S825_2103.dat
 CertTest\WP_Baseline\AeroData\S826_1603.dat
+CertTest\WP_Baseline\Airfoils\*
 
 CertTest\WP_Baseline\Wind\84m_12mps.inp
 CertTest\WP_Baseline\Wind\84m_12mps.sum
