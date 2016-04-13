@@ -1340,6 +1340,7 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
       ! local variables
    INTEGER(IntKi)                     :: i,j                                 ! loop counters
    INTEGER(IntKi)                     :: nNodes                              ! number of nodes that will be on the BldMotion mesh
+   REAL(SiKi)                         :: r1, r2                              ! use single-precision real numbers for validity check
       
    CHARACTER(*), PARAMETER            :: RoutineName = 'BD_ValidateInputData'
    
@@ -1406,7 +1407,9 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
 
       !............
       ! NOTE: InputFileData%InpBl%mass0 is in internal BD coordinates; error message refers to IEC coordinates in input file
-      IF ( .not. EqualRealNos( InputFileData%InpBl%mass0(4,4,j), InputFileData%InpBl%mass0(5,5,j) + InputFileData%InpBl%mass0(6,6,j)) ) then
+      r1 = InputFileData%InpBl%mass0(4,4,j)
+      r2 = InputFileData%InpBl%mass0(5,5,j) + InputFileData%InpBl%mass0(6,6,j))
+      IF ( .not. EqualRealNos( r1, r2 ) then
          call SetErrStat( ErrID_Fatal, 'Input station '//trim(num2lstr(j))//' i_plr must equal i_Edg + i_Flp (i.e., sum of 4th and 5th diagonal elements in mass matrix must equal the 6th diagonal element).', ErrStat, ErrMsg, RoutineName )
       END IF
       !............
