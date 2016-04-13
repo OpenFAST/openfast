@@ -23,7 +23,7 @@ MODULE BeamDyn_IO
 
    IMPLICIT NONE
 
-   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v1.01.02','5-Apr-2016')
+   TYPE(ProgDesc), PARAMETER:: BeamDyn_Ver = ProgDesc('BeamDyn', 'v1.01.03','12-Apr-2016')
 
 
 ! ===================================================================================================
@@ -1408,8 +1408,8 @@ SUBROUTINE BD_ValidateInputData( InputFileData, ErrStat, ErrMsg )
       !............
       ! NOTE: InputFileData%InpBl%mass0 is in internal BD coordinates; error message refers to IEC coordinates in input file
       r1 = InputFileData%InpBl%mass0(4,4,j)
-      r2 = InputFileData%InpBl%mass0(5,5,j) + InputFileData%InpBl%mass0(6,6,j))
-      IF ( .not. EqualRealNos( r1, r2 ) then
+      r2 = InputFileData%InpBl%mass0(5,5,j) + InputFileData%InpBl%mass0(6,6,j)
+      IF ( .not. EqualRealNos( r1, r2 ) ) then
          call SetErrStat( ErrID_Fatal, 'Input station '//trim(num2lstr(j))//' i_plr must equal i_Edg + i_Flp (i.e., sum of 4th and 5th diagonal elements in mass matrix must equal the 6th diagonal element).', ErrStat, ErrMsg, RoutineName )
       END IF
       !............
