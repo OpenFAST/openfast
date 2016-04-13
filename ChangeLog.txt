@@ -1,8 +1,8 @@
 BeamDyn Change Log
 
 ================================================================================
-v1.00.00 7-Oct-2015
-Initial release
+v1.01.03 12-Apr-2016
+- modified validity check to use single-precision variables
 
 ================================================================================
 v1.01.02 5-Apr-2016
@@ -28,6 +28,10 @@ v1.01.02 5-Apr-2016
 - added BD_STATIC_ANALYSIS and BD_DYNAMIC_ANALYSIS constants for check (in FAST) that static analysis isn't used when coupled to FAST
 - added text to indicate mapping of element/node number to global node number in summary file
 - updated the manual
+
+================================================================================
+v1.00.00 7-Oct-2015
+Initial release
 
 ================================================================================
 
