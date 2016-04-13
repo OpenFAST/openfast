@@ -4131,8 +4131,8 @@ SUBROUTINE WrOutputLine( t, p_FAST, y_FAST, IfWOutput, OpFMOutput, EDOutput, ADO
       WRITE( TmpStr, '('//trim(p_FAST%OutFmt_t)//')' ) t
       CALL WrFileNR( y_FAST%UnOu, TmpStr )
 
-         ! write the individual module output
-      CALL WrNumAryFileNR ( y_FAST%UnOu, OutputAry,   Frmt, ErrStat, ErrMsg )
+         ! write the individual module output (convert to SiKi if necessary, so that we don't need to print so many digits in the exponent)
+      CALL WrNumAryFileNR ( y_FAST%UnOu, REAL(OutputAry,SiKi), Frmt, ErrStat, ErrMsg )
          !IF ( ErrStat >= AbortErrLev ) RETURN
       
          ! write a new line (advance to the next line)
