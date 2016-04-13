@@ -32,7 +32,7 @@ MODULE OrcaFlexInterface_Parameters
 
    IMPLICIT                      NONE
 
-   TYPE(ProgDesc), PARAMETER  :: Orca_Ver = ProgDesc( 'OrcaFlexInterface', 'v1.01.00', '15-Mar-2016' )
+   TYPE(ProgDesc), PARAMETER  :: Orca_Ver = ProgDesc( 'OrcaFlexInterface', 'v1.01.01', '11-Apr-2016' )
    CHARACTER(*),   PARAMETER  :: Orca_Nickname = 'Orca'
 
 
@@ -217,6 +217,13 @@ SUBROUTINE Orca_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
    ErrMsgTmp               = ""
    m%Initialized  =  .FALSE.     ! Set to true when we finish the _Init routine
 
+   ! dummy variables for the FAST framework:
+   ! (initialized to prevent compiler warnings about INTENT(OUT) variables)
+   OtherState%DummyOtherState = 0
+   z%DummyConstrState = 0.0_ReKi
+   xd%Dummy = 0.0_ReKi
+   x%Dummy = 0.0_ReKi
+   
 
       ! Set some things for the DLL
    InputFileData%DLL_InitProcName   = 'OrcaFlexUserPtfmLdInitialise'
@@ -787,18 +794,18 @@ SUBROUTINE Orca_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       ENDDO
 
 
-
-         ! Perform some quick QA/QC on the DLL results.  There isn't much we can check, so just check that things are symmetric within some tolerance
-      DO I = 1,5        ! Loop through the 1st 5 rows (columns) of PtfmAM
-         DO J = (I+1),6 ! Loop through all columns (rows) passed I
-            IF ( ABS( m%PtfmAM(I,J) - m%PtfmAM(J,I) ) > SymmetryTol )  &
-               ErrStatTmp  =  ErrID_Fatal
-               ErrMsgTmp   =  ' The platform added mass matrix returned from OrcaFlex is unsymmetric.'// &
-                              '  There may be issues with the OrcaFlex calculations.'
-         ENDDO          ! J - All columns (rows) passed I
-      ENDDO             ! I - The 1st 5 rows (columns) of PtfmAM
-      CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
-      IF ( ErrStat >= ErrID_Fatal) RETURN
+      !!! bjj: commented this out 11=Apr=2016 because it doesn't seem like this is necessary; per jmj
+      !!!   ! Perform some quick QA/QC on the DLL results.  There isn't much we can check, so just check that things are symmetric within some tolerance
+      !!!DO I = 1,5        ! Loop through the 1st 5 rows (columns) of PtfmAM
+      !!!   DO J = (I+1),6 ! Loop through all columns (rows) passed I
+      !!!      IF ( ABS( m%PtfmAM(I,J) - m%PtfmAM(J,I) ) > SymmetryTol )  &
+      !!!         ErrStatTmp  =  ErrID_Fatal
+      !!!         ErrMsgTmp   =  ' The platform added mass matrix returned from OrcaFlex is unsymmetric.'// &
+      !!!                        '  There may be issues with the OrcaFlex calculations.'
+      !!!   ENDDO          ! J - All columns (rows) passed I
+      !!!ENDDO             ! I - The 1st 5 rows (columns) of PtfmAM
+      !!!CALL SetErrStat( ErrStatTmp, ErrMsgTmp, ErrStat, ErrMsg, RoutineName )
+      !!!IF ( ErrStat >= ErrID_Fatal) RETURN
 
    ENDIF
 #endif
