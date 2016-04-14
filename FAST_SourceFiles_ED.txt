@@ -1,3 +1,0 @@
-Source\ElastoDyn.f90
-Source\ElastoDyn_Types.f90
-Source\ElastoDyn_Registry.txt
