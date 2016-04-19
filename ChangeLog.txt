@@ -1,3 +1,9 @@
+v2.05.00       (Mar 2016)
+•	added use of nodeInWater and elementWaterState arrays to check 'in-water' status per time-step and turn on or off loads by multiplying by these arrays. 
+•	Greatly improved performance by returning to the method where all load data is calculated at initialization unless it depends on structural quantities.
+•	Fixed some bugs related to water domain checks.  Some loads were being applied or ignored in the previous release due to bugs in these domain checks.  
+       Results now compare well with  v2.02
+
 v2.03.00c-adp  (Oct 2015)
 •	Changed HasWAMIT flag to PotMod in the Floating Platform section of the HydroDyn input file.  Valid values are: 0: none=no potential flow, 
       1: frequency-to-time-domain transforms based on WAMIT output
