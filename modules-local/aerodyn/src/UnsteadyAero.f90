@@ -38,8 +38,36 @@ private
    public :: UA_CalcOutput
 
 
-contains
+   contains
 
+! **************************************************
+FUNCTION SAT( X, VAL, SLOPE )
+ !  AOA saturation function 02/15/98
+ ! **************************************************
+
+IMPLICIT                      NONE
+
+
+   ! Passed Variables:
+
+REAL(ReKi)                 :: SAT
+REAL(ReKi),INTENT(IN)       :: SLOPE
+REAL(ReKi),INTENT(IN)       :: VAL
+REAL(ReKi),INTENT(IN)       :: X
+
+
+IF ( ABS(X) <= VAL )  THEN
+    SAT = X
+ELSEIF ( X > VAL)  THEN
+    SAT = SLOPE * X + VAL * ( 1. - SLOPE )
+ELSE
+    SAT = SLOPE * X - VAL * ( 1. - SLOPE )
+ENDIF
+
+
+RETURN
+END FUNCTION SAT
+   
 !==============================================================================   
 subroutine GetSteadyOutputs(AFInfo, AOA, Cl, Cd, Cm, Cd0, ErrStat, ErrMsg)
 ! Called by : UA_CalcOutput
@@ -406,7 +434,7 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       
    beta_M_Sqrd = 1 - M**2
    beta_M      = sqrt(1 - M**2) 
-   T_I         = p%c(i,j) / p%a_s                                                  ! Eqn 1.11c
+   T_I         = p%c(i,j) / p%a_s                                       ! Eqn 1.12c
    ds          = 2.0_ReKi*u%U*p%dt/p%c(i,j)                             ! Eqn 1.5b
    
    ! Lookup values using Airfoil Info module
@@ -427,6 +455,9 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       alpha_filt_minus1 = xd%alpha_filt_minus1(i,j)   
    end if
    
+   ! Low Pass filtering of alpha, q, and Kq in order to deal with numerical issues that arise for very small values of dt
+   ! See equations 1.9 of the manual
+   
    LowPassConst  =  exp(-2.0_ReKi*PI*p%dt*filtCutOff)
    
    alpha_filt_cur = LowPassConst*alpha_filt_minus1 + (1.0_ReKi-LowPassConst)*u%alpha
@@ -435,9 +466,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    dalpha0  = alpha_filt_cur - alpha0
    
     
-      ! Compute Kalpha using Eqn 1.18b and Kalpha_minus1 using Eqn 1.18b but with time-shifted alphas
-  ! Kalpha        = ( u%alpha - alpha_minus1 ) / p%dt ! Use SAT() processed version of q_cur to compute Kalpha, to limit spikes in Kalpha 
-   
+      ! Compute Kalpha using Eqn 1.9
+  
    Kalpha        = ( alpha_filt_cur - alpha_filt_minus1 ) / p%dt
    
    if (OtherState%FirstPass(i,j)) then
@@ -446,9 +476,9 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       Kalpha_f_minus1 = xd%Kalpha_f_minus1(i,j)
    end if
    
-   q_cur         = Kalpha   * p%c(i,j) / u%U   
+   q_cur         = Kalpha   * p%c(i,j) / u%U   ! Kalpha here uses the low-pass filtered alphas
    
-       ! Compute Kq using Eqn 1.19b and Kq_minus1 using Eqn 1.19b but with time-shifted alphas
+       
    if (OtherState%FirstPass(i,j)) then
       q_minus1   = q_cur 
       q_f_minus1 = q_cur    
@@ -458,28 +488,36 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    end if  
    
    q_f_cur       = LowPassConst*q_f_minus1 + (1.0_ReKi-LowPassConst)*q_cur
-   Kalpha_f      = q_f_cur * u%U / p%c(i,j) 
-
-   !if ( EqualRealNos(q_f_cur, 0.0_ReKi) ) q_f_cur = 0.0_ReKi
+      
+      
+#ifdef TEST_THEORY
       ! Change found in ADv14
-   !q_cur = SAT( q_f_cur, 0.03_ReKi, 0.1_ReKi )
+   q_f_cur = SAT( q_f_cur, 0.03_ReKi, 0.1_ReKi )
+#endif   
+   
+   Kalpha_f      = q_f_cur * u%U / p%c(i,j)  ! Kalpha_f is using the low-pass filtered q
+
+   
    
 
-   k_alpha  = 1.0_ReKi / ( (1.0_ReKi - M) + (C_nalpha/2.0_ReKi) * M**2 * beta_M * (A1*b1 + A2*b2) / 2.0  )                 ! Eqn 1.11a
-   k_q      = 1.0_ReKi / ( (1.0_ReKi - M) + C_nalpha            * M**2 * beta_M * (A1*b1 + A2*b2) / 2.0  )                 ! Eqn 1.11b
-   T_alpha  = T_I * k_alpha * 0.75                                                 ! Eqn 1.10a -RRD 9/28 added *0.75 that seemed to be missing
-   T_q      = T_I * k_q * 0.75                                                     ! Eqn 1.10b -RRD 9/28 added *0.75
+   k_alpha  = 1.0_ReKi / ( (1.0_ReKi - M) + (C_nalpha/2.0_ReKi) * M**2 * beta_M * (A1*b1 + A2*b2) / 2.0  )                 ! Eqn 1.12a
+   k_q      = 1.0_ReKi / ( (1.0_ReKi - M) + C_nalpha            * M**2 * beta_M * (A1*b1 + A2*b2) / 2.0  )                 ! Eqn 1.12b
+   T_alpha  = T_I * k_alpha * 0.75                                                 ! Eqn 1.11a -RRD 9/28 added *0.75 that seemed to be missing
+   T_q      = T_I * k_q * 0.75                                                     ! Eqn 1.11b -RRD 9/28 added *0.75
       
       ! These quantities are needed for the update state calculations, but are then updated themselves based on the logic which follows
-   T_f           = T_f0 / OtherState%sigma1(i,j)       ! Eqn 1.34
+   T_f           = T_f0 / OtherState%sigma1(i,j)       ! Eqn 1.35
    T_V           = T_V0 / OtherState%sigma3(i,j)       ! Eqn 1.46
    
     
-    
-  
+   ! Compute Kq  using Eqn 1.9  with time-shifted q s
+#ifdef TEST_THEORY
+   Kq            = ( q_f_cur  - q_f_minus1 ) / p%dt
+#else
    
    Kq            = ( q_cur  - q_minus1 ) / p%dt
-   
+#endif
+
    if (OtherState%FirstPass(i,j)) then
       Kq_f_minus1 = 0.0_ReKi
    else
@@ -489,39 +527,35 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
    Kq_f          =  LowPassConst*Kq_f_minus1 + (1.0_ReKi-LowPassConst)*Kq
    
   
-      ! Compute Kprime_alpha using Eqn 1.18c
+      ! Compute Kprime_alpha using Eqn 1.19b
    Kprime_alpha  = Get_ExpEqn( real(p%dt,ReKi), T_alpha, xd%Kprime_alpha_minus1(i,j), Kalpha_f, Kalpha_f_minus1 )
    
-      ! Compute Kprime_q using Eqn 1.19c    
+      ! Compute Kprime_q using Eqn 1.20b    
    Kprime_q      = Get_ExpEqn( real(p%dt,ReKi), T_q    , xd%Kprime_q_minus1(i,j)    ,  Kq_f   , Kq_f_minus1     )
    
-      ! Compute Cn_alpha_nc using Eqn 1.18a
-      ! Depends on T_alpha, M, alpha (1.18b), Kprime_alpha (1.18c), xd%alpha_minus1, xd%Kprime_alpha_minus1
-   
+      ! Compute Cn_alpha_nc using Eqn 1.19a 
    Cn_alpha_nc   = 4.0_ReKi*T_alpha * ( Kalpha_f - Kprime_alpha ) / M
    
-      ! Compute Cn_alpha_nc using Eqn 1.19a
-   
+      ! Compute Cn_alpha_nc using Eqn 1.20a  
    Cn_q_nc       = -1.0_ReKi*T_q * ( Kq_f - Kprime_q ) / M
    
-      ! Compute Cn_alpha_q_nc using Eqn 1.17
-      ! Depends on Cn_alpha_nc (1.18a), Cn_q_nc (1.19a)
+      ! Compute Cn_alpha_q_nc using Eqn 1.18
    Cn_alpha_q_nc = Cn_alpha_nc + Cn_q_nc  
    
-      ! Compute X1 using Eqn 1.15a   
+      ! Compute X1 using Eqn 1.16a   
    X1            = Get_ExpEqn( ds*beta_M_Sqrd*b1, 1.0_ReKi, xd%X1_minus1(i,j), A1*(alpha_filt_cur - alpha_filt_minus1), 0.0_ReKi )
    
-      ! Compute X2 using Eqn 1.15b
+      ! Compute X2 using Eqn 1.16b
    X2            = Get_ExpEqn( ds*beta_M_Sqrd*b2, 1.0_ReKi, xd%X2_minus1(i,j), A2*(alpha_filt_cur - alpha_filt_minus1), 0.0_ReKi )
    
-      ! Compute alpha_e using Eqn 1.14
+      ! Compute alpha_e using Eqn 1.15
    alpha_e       = (alpha_filt_cur - alpha0) - X1 - X2  
    
-      ! Compute Cn_alpha_q_circ using Eqn 1.13  
+      ! Compute Cn_alpha_q_circ using Eqn 1.14  
    Cn_alpha_q_circ = C_nalpha_circ * alpha_e
    
    if ( p%UAMod == 2 ) then
-         ! Compute X3 and X4 using Eqn 1.16b  and then add Cn_q_circ to the previously computed Cn_alpha_q_circ
+         ! Compute X3 and X4 using Eqn 1.17a  and then add Cn_q_circ (Eqn 1.17) to the previously computed Cn_alpha_q_circ
       X3              = Get_ExpEqn( ds*beta_M_Sqrd*b1, 1.0_ReKi, xd%X3_minus1(i,j), A1*(q_f_cur - q_f_minus1), 0.0_ReKi )
       X4              = Get_ExpEqn( ds*beta_M_Sqrd*b2, 1.0_ReKi, xd%X4_minus1(i,j), A2*(q_f_cur - q_f_minus1), 0.0_ReKi )
       Cn_q_circ       = C_nalpha_circ*q_f_cur/2.0 - X3 - X4  
@@ -530,33 +564,32 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       Cn_q_circ       = 0.0
    end if
    
-      ! Compute K3prime_q using Eqn 1.22
+      ! Compute K3prime_q using Eqn 1.23
    K3prime_q       = Get_ExpEqn( b5*beta_M_Sqrd*ds, 1.0_ReKi, xd%K3prime_q_minus1(i,j),  A5*(q_f_cur - q_f_minus1), 0.0_ReKi )
    
-      ! Compute Cm_q_circ using Eqn 1.21
+      ! Compute Cm_q_circ using Eqn 1.22
    Cm_q_circ       = -C_nalpha*(q_f_cur -K3prime_q)*p%c(i,j)/(16.0*beta_M*u%U)
    
-      ! Compute Cn_pot using eqn 1.20
-      ! Depends on Cn_alpha_q_circ (1.13) , Cn_alpha_q_nc (1.17)
+      ! Compute Cn_pot using eqn 1.21a
    Cn_pot          = Cn_alpha_q_circ + Cn_alpha_q_nc
    
-      ! Eqn 1.25b
+      ! Eqn 1.26b
    k_mq            = 7.0/(15.0*(1.0-M)+1.5*C_nalpha*A5*b5*beta_M*M**2)
    
-      ! Eqn 1.25d
+      ! Eqn 1.26c
    Kprimeprime_q   = Get_ExpEqn( real(p%dt,ReKi), k_mq**2*T_I   , xd%Kprimeprime_q_minus1(i,j)    ,  Kq_f   , Kq_f_minus1     )
    
-      ! Compute Cm_q_nc using eqn 1.25a
+      ! Compute Cm_q_nc 
    if ( p%UAMod == 3 ) then
-      ! Implements eqn 1.27
+      ! Implements eqn 1.28
       Cm_q_nc =  -Cn_q_nc/4.0 - (k_alpha**2)*T_I*(Kq_f-Kprimeprime_q)/(3.0*M)
    else  
-         ! Implements eqn 1.25a
+         ! Implements eqn 1.26a
       Cm_q_nc = -7*(k_mq**2)*T_I*(Kq_f-Kprimeprime_q)/(12.0*M)
       
    end if
    
-      ! Compute Cc_pot using eqn 1.28
+      ! Compute Cc_pot using eqn 1.29
    Cc_pot          = Cn_alpha_q_circ*tan(alpha_e+alpha0)
    
    if (OtherState%FirstPass(i,j)) then
@@ -565,11 +598,10 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       Cn_pot_minus1 = xd%Cn_pot_minus1(i,j)
    end if
    
-      ! Compute Dp using Eqn 1.32b
+      ! Compute Dp using Eqn 1.33b
    Dp            = Get_ExpEqn( ds, T_p, xd%Dp_minus1(i,j), Cn_pot, Cn_pot_minus1 )
    
-      ! Compute Cn_prime using Eqn 1.32a
-      ! Depends on Cn_pot (1.20) and Dp (1.32b)
+      ! Compute Cn_prime using Eqn 1.33a
    Cn_prime      = Cn_Pot - Dp
    
    if (OtherState%FirstPass(i,j)) then
@@ -578,7 +610,9 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       Cn_prime_diff = Cn_prime - xd%Cn_prime_minus1(i,j)
    end if
    
-      
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++  
+! This code is taken from ADv14 but doesn't reflect the original intent of the UA theory document
+#ifndef TEST_THEORY
    IF ( alpha_filt_cur * Cn_prime_diff < 0. ) THEN
 
       T_f   = T_f0*1.5
@@ -586,8 +620,9 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
 
       T_f   = T_f0
    ENDIF
-   
-      ! Compute alpha_f using Eqn 1.31
+#endif   
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++  
+      ! Compute alpha_f using Eqn 1.32
    alpha_f       = Cn_prime / C_nalpha_circ + alpha0
    
       ! Compute fprime using Eqn 1.30 and Eqn 1.31
@@ -605,10 +640,10 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
       fprime_minus1 = xd%fprime_minus1(i,j)
    end if
    
-      ! Compute Df using Eqn 1.33b   
+      ! Compute Df using Eqn 1.34b   
    Df            = Get_ExpEqn( ds, T_f, xd%Df_minus1(i,j), fprime, fprime_minus1 )
    
-      ! Compute fprimeprime using Eqn 1.33a
+      ! Compute fprimeprime using Eqn 1.34a
    fprimeprime   = fprime - Df
    
    if (p%Flookup) then
@@ -623,22 +658,21 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
          fprime_c_minus1 = xd%fprime_c_minus1(i,j)        
       end if
    
-         ! Compute Df using Eqn 1.33b   
+         ! Compute Df using Eqn 1.34b   
       Df_c            = Get_ExpEqn( ds, T_f, xd%Df_c_minus1(i,j), fprime_c, fprime_c_minus1 )
    
-         ! Compute fprimeprime using Eqn 1.33a
+         ! Compute fprimeprime using Eqn 1.34a
       fprimeprime_c   = fprime_c - Df_c
    else
       fprimeprime_c   = fprimeprime
    end if
    
-      ! Compute Cn_FS using Eqn 1.35 or 1.36 depending on option selected
-   
+    
    if ( p%UAMod == 2 ) then
-      ! use equation 1.36
+         ! use equation 1.37
       Cn_FS   = Cn_alpha_q_nc + Cn_alpha_q_circ *  ( (1.0_ReKi + 2.0_ReKi*sqrt(fprimeprime) ) / 3.0_ReKi  )**2
    else
-      ! use equation 1.35
+         ! use equation 1.36
       Cn_FS   = Cn_alpha_q_nc + Cn_alpha_q_circ *  ( (1.0_ReKi + sqrt(fprimeprime)          ) / 2.0_ReKi )**2
    
    end if
@@ -669,7 +703,8 @@ subroutine ComputeKelvinChain( i, j, u, p, xd, OtherState, misc, AFInfo, Cn_prim
 
    factor = (alpha_filt_cur - alpha0) * Kalpha_f
    
-   if (xd%tau_V(i,j) > T_VL .AND. (factor > 0)) then !factor >= 0.0_ReKi ) then     
+   if (xd%tau_V(i,j) > T_VL .AND. (factor > 0)) then 
+         ! The assertion is the T_V will always equal T_V0/2 when this condition is satisfied
       Cn_v = xd%Cn_v_minus1(i,j)*exp(-ds/T_V)   ! Eqn 1.49    
    else      
       Cn_v = Get_ExpEqn( ds, T_V, xd%Cn_v_minus1(i,j), C_V, xd%C_V_minus1(i,j) )   ! Eqn 1.45
@@ -1186,16 +1221,18 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
                OtherState%sigma1(i,j) = 1.75_ReKi
             end if
          else ! Reattaching flow
+        
             if (.not. LESF ) then
                OtherState%sigma1(i,j) = 0.5_ReKi
             end if
-         
+
             if ( VRTX .and. (xd%tau_V(i,j) <= T_VL) ) then  ! Still shedding a vortex?
                OtherState%sigma1(i,j) = 0.25_ReKi
             end if
             if (Kafactor > 0.0_ReKi) then
                OtherState%sigma1(i,j) = 0.75_ReKi
             end if
+            
          end if
       !!!if (.not. LESF ) then  !RRD: trying to emulate the old AD14 SEPAR.f90 with SHIFT=NOT(LESF), go back to original commented!!! out above when done
       !!!        OtherState%sigma1(i,j) = 0.667_ReKi
@@ -1485,7 +1522,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       
             
-         ! Eqn 1.50(a or b depending on UAMod)
+         ! Eqn 1.50 or 1.50b depending on UAMod
       if (xd%tau_v(misc%iBladeNode, misc%iBlade) > 0.0) then
          y%Cn= Cn_FS + Cn_v
       else
@@ -1500,15 +1537,13 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       end if
       
       if ( p%UAMod == 3 ) then
-            ! Eqn 1.52a   TODO: NOTE:  This is what is used in AD v14, so we may need a way to use this when we want to match v14 as much as possible! GJH 5/21/2015
-        ! TODO: Look at eliminating this vortex related contribution under reversing AOA and perhaps when VRTX = F
-        ! Kafactor             = Kalpha*dalpha0
-        ! if  ( Kafactor < 0.0_ReKi ) then ! .AND.  .NOT. misc%VRTX(misc%iBladeNode, misc%iBlade )  )then
-        !    y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset)
-        ! else         
-            !y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*tan(alpha_e)*(1-xd%tau_v(misc%iBladeNode, misc%iBlade)/(2.0*T_VL))
-            y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*alpha_e*(1-xd%tau_v(misc%iBladeNode, misc%iBlade)/(T_VL)) !testing without tan 9/16/15
-        ! end if
+            ! Eqn 1.52a   
+#ifdef TEST_THEORY
+            y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*tan(alpha_e)*(1-xd%tau_v(misc%iBladeNode, misc%iBlade)/(T_VL))
+#else            
+            y%Cc = eta_e*Cc_pot*(sqrt(fprimeprime_c) - f_c_offset) + Cn_v*    alpha_e *(1-xd%tau_v(misc%iBladeNode, misc%iBlade)/(T_VL)) !testing without tan 9/16/15
+#endif            
+        
          
       elseif ( p%UAMod == 2 ) then
             ! Eqn 1.52b
@@ -1541,7 +1576,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
       y%Cl = y%Cn*cos(u%alpha) + y%Cc*sin(u%alpha)
       y%Cd = y%Cn*sin(u%alpha) - y%Cc*cos(u%alpha) + Cd0
       
- ! Check for Cm column in AFInfo data        
+         ! Check for Cm column in AFInfo data        
       s1 = size(AFInfo%Table(1)%Coefs,2)
       if (s1 < 3) then      
          y%Cm = 0.0_ReKi
@@ -1551,8 +1586,7 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
          alpha_prime_f = 0.0_ReKi
      
       else
-            ! Eqn 1.55
-            ! Compute Cn_FS using Eqn 1.35 or 1.36 depending on option selected
+            
          if ( p%UAMod == 2 ) then
             if (abs(alpha_f-alpha0) < .01) then
                if (alpha_f < alpha0) then
@@ -1565,6 +1599,10 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
             call GetSteadyOutputs(AFInfo, alpha_f, Cl_temp, Cd_temp, Cm_temp, Cd0, ErrStat2, ErrMsg2)
                call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             Cn_temp = Cl_temp*cos(alpha_f) + (Cd_temp-Cd0)*sin(alpha_f)
+            
+            ! TODO: In the future we are going to look at a delayed version of fprime_m and hence why we are using
+            ! the variable name fprimeprime_m even though we have not introduced the delay, yet.  GJH 4/12/2016
+            
 !#ifndef CHECK_DENOM_DIFF
             if (abs(Cn_temp) < 0.01 ) then
 !#else
@@ -1589,24 +1627,26 @@ subroutine UA_CalcOutput( u, p, xd, OtherState, AFInfo, y, misc, ErrStat, ErrMsg
             x_cp_hat = k0 + k1*(1-fprimeprime) + k2*sin(pi*fprimeprime**k3) 
                ! Eqn 1.39
             Cm_FS  = Cm0 - Cn_alpha_q_circ*(x_cp_hat - 0.25_ReKi) + Cm_common
-      
+
          elseif ( p%UAMod == 3 ) then
       
                ! Eqn 1.41a
             alpha_prime_f = alpha_f - Dalphaf
                ! Look up Cm using alpha_prime_f
             call GetSteadyOutputs(AFInfo, alpha_prime_f, Cl_temp, Cd_temp, Cm_temp, Cd0, ErrStat, ErrMsg)
-      
+               ! Eqn 1.56
             Cm_FS = Cm_temp + Cm_common
       
          else ! UAMod == 2
+               ! Eqn 1.57   : NOTE: This differs from manual in that Cm0 is added because it is subtracted in our version of fprimeprime_m
             Cm_FS = Cm0 + Cn_FS*fprimeprime_m + Cm_common
+
          end if   
       
             ! Eqn 1.54
          Cm_v     = -x_cp_bar*( 1-cos( pi*xd%tau_v(misc%iBladeNode, misc%iBlade)/T_VL ) )*Cn_v
    
-            ! Eqn 1.55 = (1.39 or 1.42 or 1.43) +  1.54  
+            ! Eqn 1.55 
          y%Cm   = Cm_FS + Cm_v 
       end if
    end if

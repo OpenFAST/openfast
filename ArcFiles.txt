@@ -5,25 +5,73 @@ Archive.bat
 Disclaimer.txt
 license.txt
 Notice.txt
+ChangeLog.txt
 
 Documentation\AeroDyn_Manual.pdf
+Documentation\UnsteadyAero_Manual.pdf
 
 Compiling\makefile_ADdriver
+Compiling\makefile_UAdriver
 Compiling\Visual Studio 2013\AeroDyn_Driver\AeroDyn_Driver.vfproj
 Compiling\Visual Studio 2013\AeroDyn_Driver\RunRegistry.bat
+Compiling\Visual Studio 2013\UnsteadyAero_Driver\UnsteadyAero_Driver.vfproj
+Compiling\Visual Studio 2013\UnsteadyAero_Driver\RunRegistry.bat
 
-CertTest\Test01_UAE.dvr
-CertTest\Test01_UAE_AeroDyn.dat
-CertTest\Test01_UAE_AeroDyn_blade.dat
-CertTest\Airfoils\UAE_VI\*
-CertTest\Results\Test01.AD.sum
-CertTest\Results\Test01.1.out
+CertTest\AOC_AeroDyn_blade.dat
+CertTest\AOC_AeroDyn_Test01.dat
+CertTest\AOC_AeroDyn_Test02.dat
+CertTest\AOC_AeroDyn_Test03.dat
+CertTest\AOC_Test01.dvr
+CertTest\AOC_Test02.dvr
+CertTest\AOC_Test03.dvr
+CertTest\Run_Tests.bat
+CertTest\NRELOffshrBsline5MW_AeroDyn_blade.dat
+CertTest\NRELOffshrBsline5MW_Onshore_AeroDyn15_Test01.dat
+CertTest\NRELOffshrBsline5MW_Onshore_AeroDyn15_Test02.dat
+CertTest\NRELOffshrBsline5MW_Onshore_AeroDyn15_Test03.dat
+CertTest\NRELOffshrBsline5MW_Onshore_Test01.dvr
+CertTest\NRELOffshrBsline5MW_Onshore_Test02.dvr
+CertTest\NRELOffshrBsline5MW_Onshore_Test03.dvr
+CertTest\PlotClCdCmCurves_DT.m
+CertTest\PlotClCdCmCurves_Hz.m
+CertTest\PlotResults.m
+CertTest\Airfoils\AOC\*
+CertTest\Airfoils\NREL_5MW\*
+CertTest\NREL_Results\*
+CertTest\Results\*
+
+CertTest\UA_Tests\05000051_AD15.dat
+CertTest\UA_Tests\05014051.dvr
+CertTest\UA_Tests\05014051_UAMod2.dvr
+CertTest\UA_Tests\05014061.dvr
+CertTest\UA_Tests\05014061_UAMod2.dvr
+CertTest\UA_Tests\C10l100AM20_s809.dvr
+CertTest\UA_Tests\C10l100AM20_s809_UAMod2.dvr
+CertTest\UA_Tests\C10m100AM14_LS417.dvr
+CertTest\UA_Tests\C10m100AM14_LS417_UAMod2.dvr
+CertTest\UA_Tests\C10m100AM20_s809.dvr
+CertTest\UA_Tests\C10m100AM20_s809_UAMod2.dvr
+CertTest\UA_Tests\C10m150AM14_LS417.dvr
+CertTest\UA_Tests\C10m150AM14_LS417_UAMod2.dvr
+CertTest\UA_Tests\Compare_2D_Results.m
+CertTest\UA_Tests\L417_C100_AD15.dat
+CertTest\UA_Tests\L417_C150_AD15.dat
+CertTest\UA_Tests\Run_2D_Tests.bat
+CertTest\UA_Tests\S809_AD15.dat
+CertTest\UA_Tests\S813_15.dat
+CertTest\UA_Tests\S813_15_mod2.dvr
+CertTest\UA_Tests\Exp_Results\*
+CertTest\UA_Tests\Results\*
+CertTest\UA_Tests\NREL_Results\*
+
+
 
 Source\AeroDyn_Driver.f90
 Source\AeroDyn_Driver_Registry.txt
 Source\AeroDyn_Driver_Subs.f90
 Source\AeroDyn_Driver_Types.f90
-
+Source\drivers\UA_Dvr_Subs.f90
+Source\drivers\UnsteadyAero_Driver.f90
 Source\dependencies\FAST_SourceFiles.txt
 
 Source\dependencies\AeroDyn\AeroDyn.f90
