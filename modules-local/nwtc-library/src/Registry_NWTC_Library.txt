@@ -10,50 +10,60 @@
 #.............................................................
 
 
-usefrom   NWTC_Library    ProgDesc       CHARACTER(99)         Name
-usefrom     ^               ^            CHARACTER(99)         Ver
-usefrom     ^               ^            CHARACTER(24)         Date
+usefrom   NWTC_Library  ProgDesc            CHARACTER(99)            Name
+usefrom     ^             ^                 CHARACTER(99)            Ver
+usefrom     ^             ^                 CHARACTER(24)            Date
 
-usefrom     ^             FASTdataType   CHARACTER(1024)       File
-usefrom     ^               ^            CHARACTER(1024)       Descr
-usefrom     ^               ^            IntKi                 NumChans
-usefrom     ^               ^            IntKi                 NumRecs
-usefrom     ^               ^            DbKi                  TimeStep
-usefrom     ^               ^            CHARACTER(20)         ChanNames {:}
-usefrom     ^               ^            CHARACTER(20)         ChanUnits {:}
-usefrom     ^               ^            ReKi                  Data      {:}{:}
+usefrom     ^           FASTdataType        CHARACTER(1024)          File
+usefrom     ^             ^                 CHARACTER(1024)          Descr
+usefrom     ^             ^                 IntKi                    NumChans
+usefrom     ^             ^                 IntKi                    NumRecs
+usefrom     ^             ^                 DbKi                     TimeStep
+usefrom     ^             ^                 CHARACTER(20)            ChanNames {:}
+usefrom     ^             ^                 CHARACTER(20)            ChanUnits {:}
+usefrom     ^             ^                 ReKi                     Data      {:}{:}
 
-usefrom   NWTC_Library    OutParmType    IntKi                 Indx
-usefrom     ^               ^            CHARACTER(ChanLen)    Name
-usefrom     ^               ^            CHARACTER(ChanLen)    Units
-usefrom     ^               ^            IntKi                 SignM
+usefrom   NWTC_Library  OutParmType         IntKi                    Indx
+usefrom     ^             ^                 CHARACTER(ChanLen)       Name
+usefrom     ^             ^                 CHARACTER(ChanLen)       Units
+usefrom     ^             ^                 IntKi                    SignM
 
-usefrom   NWTC_Library    FileInfoType   IntKi                 NumLines
-usefrom     ^               ^            IntKi                 NumFiles
-usefrom     ^               ^            IntKi                 FileLine  {:}
-usefrom     ^               ^            IntKi                 FileIndx  {:}
-usefrom     ^               ^            CHARACTER(1024)       FileList  {:}
-usefrom     ^               ^            CHARACTER(512)        Lines     {:}
+usefrom   NWTC_Library  FileInfoType        IntKi                    NumLines
+usefrom     ^             ^                 IntKi                    NumFiles
+usefrom     ^             ^                 IntKi                    FileLine  {:}
+usefrom     ^             ^                 IntKi                    FileIndx  {:}
+usefrom     ^             ^                 CHARACTER(1024)          FileList  {:}
+usefrom     ^             ^                 CHARACTER(512)           Lines     {:}
 
-usefrom   NWTC_Library    Quaternion     ReKi                  q0
-usefrom     ^               ^            ReKi                  v  {3}
+usefrom   NWTC_Library  Quaternion          ReKi                     q0
+usefrom     ^             ^                 ReKi                     v  {3}
 
 #BJJ: the following two types will actually be placed in the ModMesh_Mapping.f90 file instead of NWTC_Library_Types.f90
-usefrom   NWTC_Library    MapType        IntKi                 OtherMesh_Element
-usefrom     ^               ^            ReKi                  distance           -
-usefrom     ^               ^            ReKi                  couple_arm        {3}
-usefrom     ^               ^            ReKi                  shape_fn          {2}
+usefrom   NWTC_Library  MapType             IntKi                    OtherMesh_Element
+usefrom     ^             ^                 ReKi                     distance           -
+usefrom     ^             ^                 ReKi                     couple_arm        {3}
+usefrom     ^             ^                 ReKi                     shape_fn          {2}
 
-usefrom   NWTC_Library    MeshMapType    MapType               MapLoads          {:}
-usefrom     ^               ^            MapType               MapMotions        {:}
-usefrom     ^               ^            MapType               MapSrcToAugmt     {:}
-usefrom     ^               ^            MeshType              Augmented_Ln2_Src  -
-usefrom     ^               ^            MeshType              Lumped_Points_Src  -
-usefrom     ^               ^            INTEGER               LoadLn2_A_Mat_Piv {:}
-usefrom     ^               ^            ReKi                  DisplacedPosition {:}{:}{:}
-usefrom     ^               ^            ReKi                  LoadLn2_F         {:}{:}
-usefrom     ^               ^            ReKi                  LoadLn2_A_Mat     {:}{:}
-usefrom     ^               ^            ReKi                  LoadLn2_M         {:}{:}
+usefrom   NWTC_Library  MeshMapLinearizationType ReKi                mi        {:}{:}
+usefrom     ^             ^                 ReKi                     fx_p      {:}{:}
+usefrom     ^             ^                 ReKi                     tv        {:}{:}
+usefrom     ^             ^                 ReKi                     ta1       {:}{:}
+usefrom     ^             ^                 ReKi                     ta2       {:}{:}
+usefrom     ^             ^                 ReKi                     li        {:}{:}
+usefrom     ^             ^                 ReKi                     M1        {:}{:}
+usefrom     ^             ^                 ReKi                     M2        {:}{:}
+
+usefrom   NWTC_Library  MeshMapType         MapType                  MapLoads          {:}
+usefrom     ^             ^                 MapType                  MapMotions        {:}
+usefrom     ^             ^                 MapType                  MapSrcToAugmt     {:}
+usefrom     ^             ^                 MeshType                 Augmented_Ln2_Src  -
+usefrom     ^             ^                 MeshType                 Lumped_Points_Src  -
+usefrom     ^             ^                 INTEGER                  LoadLn2_A_Mat_Piv {:}
+usefrom     ^             ^                 ReKi                     DisplacedPosition {:}{:}{:}
+usefrom     ^             ^                 ReKi                     LoadLn2_F         {:}{:}
+usefrom     ^             ^                 ReKi                     LoadLn2_A_Mat     {:}{:}
+usefrom     ^             ^                 ReKi                     LoadLn2_M         {:}{:}
+usefrom     ^             ^                 MeshMapLinearizationType dM
 
 
 #bjj ???: add Marshall's FNlist_Type, InpErrsType, too????

@@ -22,9 +22,13 @@
 ! URL: $HeadURL$
 !**********************************************************************************************************************************
 !> This code implements the spatial mapping algorithms described in 
-!!    Sprague, Michael A.; Jonkman, Jason M.; and Jonkman, Bonnie J., "FAST Modular Framework for Wind Turbine Simulation: New 
+!! +  Sprague, Michael A.; Jonkman, Jason M.; and Jonkman, Bonnie J., "FAST Modular Framework for Wind Turbine Simulation: New 
 !!    Algorithms and Numerical Examples." Proceedings of the 53rd Aerospace Sciences Meeting, 2015, also published in tech report 
 !!    NREL/CP-2C00-63203, National Renewable Energy Laboratory, Golden, CO.  http://www.nrel.gov/docs/fy16osti/63203.pdf
+!! +  Jonkman, Jason M.; Jonkman, Bonnie J.; and Sprague, Michael A., "FAST Modular Framework for Wind Turbine Simulation:  
+!!    Full-System Linearization.", TORQUE 2016  
+!!    also published in tech report NREL/XX-XXXX-XXXXX, National Renewable Energy Laboratory, Golden, CO.  
+   
 !**********************************************************************************************************************************
 MODULE ModMesh_Mapping
 
@@ -45,6 +49,20 @@ MODULE ModMesh_Mapping
       REAL(ReKi)     :: shape_fn(2)          !< shape functions: 1-D element-level location [0,1] based on closest-line projection of point
    END TYPE MapType
 
+      !> data structures (for linearization) containing jacobians of mapping between fields on different meshes
+   TYPE, PUBLIC :: MeshMapLinearizationType
+         ! values for motions:
+      REAL(ReKi),     ALLOCATABLE :: mi(:,:)           !< A block matrix using the identity matrix, describing which (motion) nodes are mapped to each other; is used as a section of several other matrices for this linearization
+      REAL(ReKi),     ALLOCATABLE :: fx_p(:,:)         !< A block matrix using the skew-symmetric matrix of source and destination positions for nodes mapped to each other; is used as a section of several other matrices for this linearization      
+      REAL(ReKi),     ALLOCATABLE :: tv(:,:)           !< A block matrix using the skew-symmetric matrix of source and destination positions and source omega for nodes mapped to each other; is used as a section of translational velocity matrix
+      REAL(ReKi),     ALLOCATABLE :: ta1(:,:)          !< First block matrix for nodes mapped to each other in translational acceleration matrix
+      REAL(ReKi),     ALLOCATABLE :: ta2(:,:)          !< Second block matrix for nodes mapped to each other in translational acceleration matrix
+         ! values for loads:
+      REAL(ReKi),     ALLOCATABLE :: li(:,:)           !< A block matrix using the identity matrix, describing which (loads) nodes are mapped to each other; is used as a section of several other matrices for this linearization
+      REAL(ReKi),     ALLOCATABLE :: M1(:,:)           !< First block matrix for nodes mapped to each other in moment mapping matrix
+      REAL(ReKi),     ALLOCATABLE :: M2(:,:)           !< Second block matrix for nodes mapped to each other in moment mapping matrix
+   END TYPE
+   
       !> data structures to determine full mapping between fields on different meshes
    TYPE, PUBLIC :: MeshMapType
       TYPE(MapType),  ALLOCATABLE :: MapLoads(:)               !< mapping for load fields
@@ -55,13 +73,15 @@ MODULE ModMesh_Mapping
 #ifdef MESH_DEBUG     
       TYPE(MeshType)              :: Lumped_Points_Dest        
 #endif
-      INTEGER,        ALLOCATABLE :: LoadLn2_A_Mat_Piv(:)      !< The pivot values for the factorizatioin of LoadLn2_A_Mat
+      INTEGER,        ALLOCATABLE :: LoadLn2_A_Mat_Piv(:)      !< The pivot values for the factorization of LoadLn2_A_Mat
       REAL(ReKi),     ALLOCATABLE :: DisplacedPosition(:,:,:)  !< couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency.)
       REAL(ReKi),     ALLOCATABLE :: LoadLn2_A_Mat(:,:)        !< The 6-by-6 matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping
       REAL(ReKi),     ALLOCATABLE :: LoadLn2_F(:,:)            !< The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)
       REAL(ReKi),     ALLOCATABLE :: LoadLn2_M(:,:)            !< The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)
+      
+      TYPE(MeshMapLinearizationType) :: dM                     !< type that contains information for linearization matrices, partial M partial u (or y)                  
    END TYPE
-
+   
       ! note that these parameters must be negative (positive indicates the node/element it is mapped to)
    INTEGER(IntKi),  PARAMETER   :: NODE_NOT_MAPPED = -1        !< constant that indicates a node is not mapped
 
@@ -72,7 +92,11 @@ MODULE ModMesh_Mapping
    PUBLIC :: Transfer_Line2_to_Point
    PUBLIC :: Transfer_Point_to_Line2
    PUBLIC :: Transfer_Line2_to_Line2
+   
+   PUBLIC :: Linearize_Point_to_Point
    !PUBLIC :: Lump_Line2_to_Point
+   
+   PUBLIC :: WriteMappingTransferToFile ! routine for mesh-mapping debugging
    
    ! auto-generated routines, necessary for the FAST Registry:
    PUBLIC :: NWTC_Library_DestroyMeshMapType, NWTC_Library_CopyMeshMapType, NWTC_Library_PackMeshMapType, NWTC_Library_UnpackMeshMapType
@@ -1189,7 +1213,7 @@ SUBROUTINE CreateMotionMap_L2_to_P( Src, Dest, MeshMap, ErrStat, ErrMsg )
          
 END SUBROUTINE CreateMotionMap_L2_to_P        
 !----------------------------------------------------------------------------------------------------------------------------------
-! Routine that transfers data from a point mesh to a line2 mesh.
+!> Routine that transfers data from a point mesh to a line2 mesh.
 SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
    TYPE(MeshType),         INTENT(IN   ) :: Src       !< source (point) mesh
@@ -1295,6 +1319,7 @@ SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
 END SUBROUTINE Transfer_Point_to_Line2
 !----------------------------------------------------------------------------------------------------------------------------------
+!> 
 SUBROUTINE CreateLoadMap_P_to_L2( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
    TYPE(MeshType),                 INTENT(IN   )  :: Src                             ! The source mesh
@@ -1359,17 +1384,18 @@ END SUBROUTINE CreateMotionMap_P_to_L2
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Given two point meshes, this routine transfers the source mesh values to the destination mesh using appropriate math.
 SUBROUTINE Transfer_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
-   TYPE(MeshType),          INTENT(IN   ) ::  Src
-   TYPE(MeshType),          INTENT(INOUT) ::  Dest
-   TYPE(MeshType), OPTIONAL,INTENT(IN   ) ::  SrcDisp  ! an optional mesh, which contains the displacements associated with the source if the source contains load information
-   TYPE(MeshType), OPTIONAL,INTENT(IN   ) ::  DestDisp ! an optional mesh, which contains the displacements associated with the destination if the destination contains load information
+   TYPE(MeshType),          INTENT(IN   ) ::  Src      !< source point mesh
+   TYPE(MeshType),          INTENT(INOUT) ::  Dest     !< destination point mesh
+   TYPE(MeshType), OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< an optional mesh, which contains the displacements associated with the source if the source contains load information
+   TYPE(MeshType), OPTIONAL,INTENT(IN   ) ::  DestDisp !< an optional mesh, which contains the displacements associated with the destination if the destination contains load information
 
-   TYPE(MeshMapType),       INTENT(INOUT) ::  MeshMap     ! Mapping(s) between Src and Dest meshes
+   TYPE(MeshMapType),       INTENT(INOUT) ::  MeshMap  !< Mapping(s) between Src and Dest meshes
 
-   INTEGER(IntKi),          INTENT(  OUT) :: ErrStat     ! Error status of the operation
-   CHARACTER(*),            INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),          INTENT(  OUT) :: ErrStat   !< Error status of the operation
+   CHARACTER(*),            INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
 
 
    ! local variables
@@ -1401,11 +1427,11 @@ SUBROUTINE Transfer_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
    endif
 
 
-   ! ------------------------------------------------------------------------------------------------------------------------------
-   ! Mapping and Transfer of Data for Mesh Motion and Scalar Fields
-   ! ------------------------------------------------------------------------------------------------------------------------------
-   ! If Src is displacements/velocities then loop over the Destination Mesh;
-   !    each motion/scalar in the destination mesh needs to be interpolated from the source mesh.
+   !> ------------------------------------------------------------------------------------------------------------------------------
+   !! Mapping and Transfer of Data for Mesh Motion and Scalar Fields
+   !! ------------------------------------------------------------------------------------------------------------------------------
+   !! If Src is displacements/velocities then loop over the Destination Mesh;
+   !!    each motion/scalar in the destination mesh needs to be interpolated from the source mesh.
 
 
    if ( HasMotionFields(Src) .AND. HasMotionFields(Dest) ) then
@@ -1432,11 +1458,11 @@ SUBROUTINE Transfer_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
    end if ! algorithm for motions/scalars
 
-   ! ------------------------------------------------------------------------------------------------------------------------------
-   ! Mapping and Transfer of Data for Mesh Load Fields
-   ! ------------------------------------------------------------------------------------------------------------------------------
-   ! IF Src is forces and/or moments, loop over Src Mesh;
-   !    each load in the source mesh needs to be placed somewhere in the destination mesh.
+   !> ------------------------------------------------------------------------------------------------------------------------------
+   !! Mapping and Transfer of Data for Mesh Load Fields
+   !! ------------------------------------------------------------------------------------------------------------------------------
+   !! IF Src is forces and/or moments, loop over Src Mesh;
+   !!    each load in the source mesh needs to be placed somewhere in the destination mesh.
 
    if ( HasLoadFields(Src) ) then
             
@@ -1475,19 +1501,19 @@ SUBROUTINE Transfer_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
 END SUBROUTINE Transfer_Point_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine creates the node-to-node (nearest neighbor). We map FROM Mesh1 to Mesh2
 SUBROUTINE CreateMapping_NearestNeighbor( Mesh1, Mesh2, NodeMap, Mesh1_TYPE, Mesh2_TYPE, ErrStat, ErrMsg )
-! This routine creates the node-to-node (nearest neighbor). We map FROM Mesh1 to Mesh2
 !.......................................................................................
-   TYPE(MeshType),                 INTENT(IN   )  :: Mesh1      ! The mesh in the outer mapping loop (Dest for Motions/Scalars; Src for Loads)
-   TYPE(MeshType),                 INTENT(IN   )  :: Mesh2      ! The mesh in the inner mapping loop (Src for Motions/Scalars; Dest for Loads)
+   TYPE(MeshType),                 INTENT(IN   )  :: Mesh1      !< The mesh in the outer mapping loop (Dest for Motions/Scalars; Src for Loads)
+   TYPE(MeshType),                 INTENT(IN   )  :: Mesh2      !< The mesh in the inner mapping loop (Src for Motions/Scalars; Dest for Loads)
 
-   TYPE(MapType),                  INTENT(INOUT)  :: NodeMap(:)      ! The mapping from Src to Dest
+   TYPE(MapType),                  INTENT(INOUT)  :: NodeMap(:) !< The mapping from Src to Dest
 
-   INTEGER(IntKi),                 INTENT(IN   )  :: Mesh1_TYPE  ! Type of Mesh1 elements to map
-   INTEGER(IntKi),                 INTENT(IN   )  :: Mesh2_TYPE  ! Type of Mesh2 elements on map
+   INTEGER(IntKi),                 INTENT(IN   )  :: Mesh1_TYPE !< Type of Mesh1 elements to map
+   INTEGER(IntKi),                 INTENT(IN   )  :: Mesh2_TYPE !< Type of Mesh2 elements on map
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
       ! local variables
 
@@ -1577,17 +1603,17 @@ SUBROUTINE CreateMapping_NearestNeighbor( Mesh1, Mesh2, NodeMap, Mesh1_TYPE, Mes
 
 END SUBROUTINE CreateMapping_NearestNeighbor
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Given a nearest-neighbor mapping, this routine transfers motions between nodes on the mesh.
 SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg )
-! Given a nearest-neighbor mapping, this routine transfers motions between nodes on the mesh.
 !..................................................................................................................................
 
-   TYPE(MeshType),                 INTENT(IN   )  :: Src       ! The source mesh with motion fields allocated
-   TYPE(MeshType),                 INTENT(INOUT)  :: Dest      ! The destination mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: Src       !< The source mesh with motion fields allocated
+   TYPE(MeshType),                 INTENT(INOUT)  :: Dest      !< The destination mesh
 
-   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   ! data for the mesh mapping
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   !< data for the mesh mapping
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
 
       ! local variables
    INTEGER(IntKi)  :: i, j                                     ! counter over the nodes
@@ -1771,13 +1797,13 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, S
       do i = 1, Src%NNodes
          !if ( MeshMap%MapLoads(i)%OtherMesh_Element < 1 )  CYCLE ! would only happen if we had non-point elements (or nodes not contained in an element)
          
-         !! F_d += F_s
+         !> F_d += F_s
          Dest%Force(:,MeshMap%MapLoads(i)%OtherMesh_Element) = Dest%Force(:,MeshMap%MapLoads(i)%OtherMesh_Element) + (Src%Force(:,i) / LoadsScaleFactor)
       end do
       Dest%Force  =  Dest%Force  * LoadsScaleFactor
       
       
-      !! M_d += torque
+      !> M_d += torque
       if ( Dest%FieldMask(MASKID_MOMENT) ) then
          
             ! if the distance (which can never be less than zero) is greater than "zero" and there is a
@@ -1800,7 +1826,7 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, S
       
    if (Src%FieldMask(MASKID_MOMENT) ) then
 
-      !! M_d += M_s      
+      !> M_d += M_s      
       do i = 1, Src%NNodes
          !if ( MeshMap%MapLoads(i)%OtherMesh_Element < 1 )  CYCLE ! would only happen if we had non-point elements (or nodes not contained in an element)
 
@@ -2767,8 +2793,6 @@ SUBROUTINE Transfer_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat, ErrMsg, Src
 END SUBROUTINE Transfer_Src_To_Augmented_Ln2_Src
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Create_InverseLumping_Matrix( Dest, MeshMap, ErrStat, ErrMsg )
-!
-!..................................................................................................................................
    TYPE(MeshType),         INTENT(IN   ) ::  Dest
    TYPE(MeshMapType),      INTENT(INOUT) ::  MeshMap
 
@@ -2907,14 +2931,15 @@ SUBROUTINE CreateLoadMap_L2_to_L2( Src, Dest, MeshMap, ErrStat, ErrMsg )
          
 END SUBROUTINE CreateLoadMap_L2_to_L2        
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine creates the mapping of motions between two meshes
 SUBROUTINE CreateMotionMap_L2_to_L2( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
-   TYPE(MeshType),                 INTENT(IN   )  :: Src                             ! The source mesh
-   TYPE(MeshType),                 INTENT(IN   )  :: Dest                            ! The destination mesh
-   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap
+   TYPE(MeshType),                 INTENT(IN   )  :: Src                             !< The source mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: Dest                            !< The destination mesh
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap                         !< structure that contains data necessary to map these two meshes
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                         ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                          ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                         !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
 
       ! Local variables:
    INTEGER(IntKi)                                 :: ErrStat2
@@ -2930,48 +2955,45 @@ SUBROUTINE CreateMotionMap_L2_to_L2( Src, Dest, MeshMap, ErrStat, ErrMsg )
             
 END SUBROUTINE CreateMotionMap_L2_to_L2        
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine takes a Line2 mesh (SRC) with distributed forces and/or moments and lumps those to the concentrated forces
+!! and/or moments at the endpoints (nodes) of the Line2 mesh.   These are placed in a Point mesh (DEST) where the Points are
+!! assumed to be colocated with the nodes of the Line2 Mesh.
+!!
+!! This routine is expected to be used in the transfer of HydroDyn Output (distributed force/moment) to the SubDyn Input
+!! (concentrated force/moment); routine is to be called from the Input_Ouput routine for HydroDyn to SubDyn.
+!!
+!! Formulation:
+!! Distrbuted quantities are integrated over the element with two-point nodal (Gauss-Lobatto) quadrature.
+!!
+!! F(x_j) = int_{-1}^{1} f(xi) phi_j(xi) J dxi (exact)
+!!
+!! F(x_1) =~ f(-1) phi_1(-1) J w_1 + f(+1) phi_1(+1) J w_2 (two-point quadrature)
+!! F(x_2) =~ f(-1) phi_2(-1) J w_1 + f(+1) phi_2(+1) J w_2 (two-point quadrature)
+!!
+!! which can be simplified to
+!!
+!! F(x_1) =~ f(-1) J
+!! F(x_2) =~ f(+1) J
+!!
+!! since w_1 = w_2 = 1, phi_j(xi_i) = Delta_{j,i}  (Kronecker Delta)
+!!
+!! where x_j is the jth node in 3D physical coordinates, xi_i is the ith node in 1D element coordinates, j in {1,2},
+!! xi in [-1,1] is the element natural coordinate, f(xi) is the distributed quantity, phi_j(xi) is the basis function
+!! for the jth node, J is the determinant of the Jacobian
+!! in the mapping from [X_1,X_2] to [-1,1] (X_j is the 3D location of the jth point)
+!!
+!! For Line2 elements, J = DIST(X_1,X_2) / 2
+!!
 SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcDisp, LoadsScaleFactor )
-!
-! This subroutine takes a Line2 mesh (SRC) with distributed forces and/or moments and lumps those to the concentrated forces
-! and/or moments at the endpoints (nodes) of the Line2 mesh.   These are placed in a Point mesh (DEST) where the Points are
-! assumed to be colocated with the nodes of the Line2 Mesh.
-!
-! This routine is expected to be used in the transfer of HydroDyn Output (distributed force/moment) to the SubDyn Input
-! (concentrated force/moment); routine is to be called from the Input_Ouput routine for HydroDyn to SubDyn.
-!
-! Formulation:
-! Distrbuted quantities are integrated over the element with two-point nodal (Gauss-Lobatto) quadrature.
-!
-! F(x_j) = int_{-1}^{1} f(xi) phi_j(xi) J dxi (exact)
-!
-! F(x_1) =~ f(-1) phi_1(-1) J w_1 + f(+1) phi_1(+1) J w_2 (two-point quadrature)
-! F(x_2) =~ f(-1) phi_2(-1) J w_1 + f(+1) phi_2(+1) J w_2 (two-point quadrature)
-!
-! which can be simplified to
-!
-! F(x_1) =~ f(-1) J
-! F(x_2) =~ f(+1) J
-!
-! since w_1 = w_2 = 1, phi_j(xi_i) = Delta_{j,i}  (Kronecker Delta)
-!
-! where x_j is the jth node in 3D physical coordinates, xi_i is the ith node in 1D element coordinates, j in {1,2},
-! xi in [-1,1] is the element natural coordinate, f(xi) is the distributed quantity, phi_j(xi) is the basis function
-! for the jth node, J is the determinant of the Jacobian
-! in the mapping from [X_1,X_2] to [-1,1] (X_j is the 3D location of the jth point)
-!
-! For Line2 elements, J = DIST(X_1,X_2) / 2
-!
-!..................................................................................................................................
 
+   TYPE(MeshType),         INTENT(IN   ) ::  Line2_Src   !< line2 source mesh
+   TYPE(MeshType),         INTENT(INOUT) ::  Point_Dest  !< point destination mesh
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp     !< Another mesh that may contain the source's TranslationDisp field
 
-   TYPE(MeshType),         INTENT(IN   ) ::  Line2_Src
-   TYPE(MeshType),         INTENT(INOUT) ::  Point_Dest
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp     ! Another mesh that may contain the source's TranslationDisp field
+   REAL(ReKi),             INTENT(IN)    :: LoadsScaleFactor  !< Scaling factor for loads (to help with numerical issues)
 
-   REAL(ReKi),             INTENT(IN)     :: LoadsScaleFactor  ! Scaling factor for loads (to help with numerical issues)
-
-   INTEGER(IntKi),         INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),           INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     !< Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    ! local variables
    REAL(ReKi) :: det_jac_Ovr3
@@ -3094,6 +3116,629 @@ SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcDisp,
    
 
 END SUBROUTINE Lump_Line2_to_Point
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine sets the values of the mapping jacobian matrix for linearization. It allocates the arrays if necessary.
+!! Mapping equations are as follows: 
+!!
+!! Rotational Displacement: \f$ \frac{\partial M_\Lambda}{\partial x} = \begin{bmatrix} dM_{mi} \end{bmatrix} \f$ for source fields \f$ \left\{ \vec{\theta}^S\right\}\f$.
+!!
+!! Translational Displacement: \f$ \frac{\partial M_u}{\partial x} = \begin{bmatrix} dM_{mi} & dM_{f_{\times p}} \end{bmatrix} \f$ for source fields
+!! \f$ \left\{ \begin{matrix}
+!!      \vec{u}^S \\
+!!      \vec{\theta}^S
+!! \end{matrix} \right\} \f$.
+!!
+!! Rotational Velocity: \f$ \frac{\partial M_\omega}{\partial x} = \begin{bmatrix} dM_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{\omega}^S\right\}\f$.
+!!
+!! Translational Velocity: \f$ \frac{\partial M_v}{\partial x} = \begin{bmatrix} dM_{tv} & dM_{mi} & dM_{f_{\times p}} \end{bmatrix} \f$ for source fields
+!! \f$ \left\{ \begin{matrix}
+!!      \vec{\theta}^S \\
+!!      \vec{v}^S \\
+!!      \vec{\omega}^S
+!! \end{matrix} \right\} \f$.
+!!
+!! Rotational Acceleration: \f$ \frac{\partial M_\alpha}{\partial x} = \begin{bmatrix} dM_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{\alpha}^S\right\}\f$.
+!!
+!! Translational Acceleration: \f$ \frac{\partial M_a}{\partial x} = \begin{bmatrix} dM_{ta_1} & dM_{ta_2} & dM_{mi} & dM_{f_{\times p}} \end{bmatrix} \f$ for source fields
+!! \f$ \left\{ \begin{matrix}
+!!      \vec{\theta}^S \\
+!!      \vec{\omega}^S \\
+!!      \vec{a}^S \\
+!!      \vec{\alpha}^S
+!! \end{matrix} \right\} \f$.
+!!
+!! Scalar quantities: \f$ \frac{\partial M_S}{\partial x} = \begin{bmatrix} dM_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{S}^S\right\}\f$.
+!!
+!! Forces: \f$ \frac{\partial M_F}{\partial x} = \begin{bmatrix} dM_{li} \end{bmatrix} \f$ for source fields \f$\left\{\vec{F}^S\right\}\f$.
+!!
+!! Moments: \f$ \frac{\partial M_M}{\partial x} = \begin{bmatrix} dM_{M_1} & dM_{M_2} & dM_{li} \end{bmatrix} \f$ for source fields
+!! \f$ \left\{ \begin{matrix}
+!!      \vec{\theta}^S \\
+!!      \vec{F}^S \\
+!!      \vec{M}^S
+!! \end{matrix} \right\} \f$.
+!!
+!! \f$dM_{mi}\f$ is modmesh_mapping::meshmaplinearizationtype::mi \n
+!! \f$dM_{f_{\times p}}\f$ is modmesh_mapping::meshmaplinearizationtype::fx_p \n
+!! \f$dM_{tv}\f$ is modmesh_mapping::meshmaplinearizationtype::tv \n
+!! \f$dM_{ta_1}\f$ is modmesh_mapping::meshmaplinearizationtype::ta1 \n
+!! \f$dM_{ta_2}\f$ is modmesh_mapping::meshmaplinearizationtype::ta2 \n
+!! \f$dM_{li}\f$ is modmesh_mapping::meshmaplinearizationtype::li \n
+!! \f$dM_{M_1}\f$ is modmesh_mapping::meshmaplinearizationtype::m1 \n
+!! \f$dM_{M_2}\f$ is modmesh_mapping::meshmaplinearizationtype::m2 \n
+SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
+
+   TYPE(MeshType),          INTENT(IN   ) ::  Src      !< source point mesh
+   TYPE(MeshType),          INTENT(INOUT) ::  Dest     !< destination point mesh
+   TYPE(MeshType), OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< an optional mesh, which contains the displacements associated with the source if the source contains load information
+   TYPE(MeshType), OPTIONAL,INTENT(IN   ) ::  DestDisp !< an optional mesh, which contains the displacements associated with the destination if the destination contains load information
+
+   TYPE(MeshMapType),       INTENT(INOUT) ::  MeshMap  !< Mapping(s) between Src and Dest meshes; also contains jacobian of this mapping
+
+   INTEGER(IntKi),          INTENT(  OUT) :: ErrStat   !< Error status of the operation
+   CHARACTER(*),            INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+
+
+   ! local variables
+   INTEGER(IntKi)                          :: ErrStat2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'Linearize_Point_to_Point'
+   
+   integer(intKi)                          :: i,j,n, d_start, d_end, s_start, s_end
+   real(reKi)                              :: tmp, tmpVec(3), DisplacedPosition(3)
+   
+   REAL(ReKi)                              :: LoadsScaleFactor  ! bjj: added this scaling factor to get loads in a better numerical range 
+
+   ! logic
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! ------------------------------------------------------------------------------------------------------------------------------
+   ! Mapping and Transfer of Data for Mesh Motion and Scalar Fields
+   ! ------------------------------------------------------------------------------------------------------------------------------
+   ! If Src is displacements/velocities then loop over the Destination Mesh;
+   !    each motion/scalar in the destination mesh needs to be interpolated from the source mesh.
+
+
+   if ( HasMotionFields(Src) .AND. HasMotionFields(Dest) ) then
+
+      !........................
+      ! Create mapping
+      !........................
+
+      if (Src%RemapFlag .or. Dest%RemapFlag ) then
+
+         CALL CreateMotionMap_P_to_P( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+            
+      end if
+
+      !........................
+      ! create linearization matrices for motions:
+      !........................
+      
+      
+      if (.not. allocated(MeshMap%dM%mi) ) then
+         call AllocAry(MeshMap%dM%mi, Dest%Nnodes*3, Src%Nnodes*3, 'dM%mi', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      end if
+      
+      MeshMap%dM%mi = 0.0_ReKi      
+      do i=1, Dest%Nnodes
+         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+
+         n = MeshMap%MapMotions(i)%OtherMesh_Element
+         do j=1,3
+            MeshMap%dM%mi( (i-1)*3+j, (n-1)*3+j ) = 1.0_ReKi
+         end do         
+      end do
+      
+
+      if (      (Src%FieldMask(MASKID_TranslationDisp) .AND. Dest%FieldMask(MASKID_TranslationDisp)) &
+           .or. (Src%FieldMask(MASKID_TranslationVel ) .AND. Dest%FieldMask(MASKID_TranslationVel )) &
+           .or. (Src%FieldMask(MASKID_TranslationAcc ) .AND. Dest%FieldMask(MASKID_TranslationAcc )) ) then
+               
+      
+            ! calculate displaced positions at operating point:
+         DO i = 1,Dest%Nnodes
+            if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+            MeshMap%DisplacedPosition(:,i,1) =    Src%TranslationDisp(:,MeshMap%MapMotions(i)%OtherMesh_Element) &
+                                               - Dest%TranslationDisp(:,i) &
+                                               - MeshMap%MapMotions(i)%couple_arm
+         END DO
+         
+            ! MeshMap%dM%fx_p required for all three transfers:
+         if (.not. allocated(MeshMap%dM%fx_p) ) then
+            call AllocAry(MeshMap%dM%fx_p, Dest%Nnodes*3, Src%Nnodes*3, 'dM%fx_p', ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               IF (ErrStat >= AbortErrLev) RETURN
+         end if
+                                    
+         MeshMap%dM%fx_p = 0.0_ReKi      
+         do i=1, Dest%Nnodes
+            if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+
+            d_start = (i-1)*3+1
+            d_end   = d_start+2
+            s_start = (MeshMap%MapMotions(i)%OtherMesh_Element - 1)*3+1
+            s_end   = s_start+2
+            MeshMap%dM%fx_p( d_start:d_end, s_start:s_end ) = SkewSymMat( MeshMap%DisplacedPosition(:,i,1) )
+         end do
+      
+                  
+            ! MeshMap%dM%tv required for translational velocity:         
+         if ( Src%FieldMask(MASKID_TranslationVel) .AND. Dest%FieldMask(MASKID_TranslationVel) ) then
+            if (.not. allocated(MeshMap%dM%tv) ) then
+               call AllocAry(MeshMap%dM%tv, Dest%Nnodes*3, Src%Nnodes*3, 'dM%tv', ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  IF (ErrStat >= AbortErrLev) RETURN
+            end if
+                     
+            MeshMap%dM%tv = 0.0_ReKi      
+            if ( Src%FieldMask(MASKID_RotationVel) ) then
+               do i=1, Dest%Nnodes
+                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+
+                  n = MeshMap%MapMotions(i)%OtherMesh_Element
+                  d_start = (i-1)*3+1
+                  d_end   = d_start+2
+                  s_start = (n - 1)*3+1
+                  s_end   = s_start+2
+                                    
+                  MeshMap%dM%tv( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                  do j=0,2
+                     MeshMap%dM%tv( d_start+j, s_start+j ) = MeshMap%dM%tv( d_start+j, s_start+j ) - tmp
+                  end do                        
+               end do
+            end if !MASKID_RotationVel
+            
+         end if !MASKID_TranslationVel
+            
+         
+         if ( Src%FieldMask(MASKID_TranslationAcc ) .AND. Dest%FieldMask(MASKID_TranslationAcc ) ) then
+            
+            !-------------- ta1 -----------------------------
+            if (.not. allocated(MeshMap%dM%ta1) ) then
+               call AllocAry(MeshMap%dM%ta1, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta1', ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  IF (ErrStat >= AbortErrLev) RETURN
+            end if
+         
+                        
+            MeshMap%dM%ta1 = 0.0_ReKi      
+            if ( Src%FieldMask(MASKID_RotationAcc) ) then            
+               do i=1, Dest%Nnodes
+                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+            
+                  n = MeshMap%MapMotions(i)%OtherMesh_Element
+                  d_start = (i-1)*3+1
+                  d_end   = d_start+2
+                  s_start = (n - 1)*3+1
+                  s_end   = s_start+2
+                                    
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationAcc(:,n) )
+                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationAcc(:,n) )
+                  do j=0,2
+                     MeshMap%dM%ta1( d_start+j, s_start+j ) = MeshMap%dM%ta1( d_start+j, s_start+j ) - tmp
+                  end do                        
+               end do
+            end if
+            
+            if ( Src%FieldMask(MASKID_RotationVel) ) then            
+            
+               do i=1, Dest%Nnodes
+                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+            
+                  n = MeshMap%MapMotions(i)%OtherMesh_Element
+                  d_start = (i-1)*3+1
+                  d_end   = d_start+2
+                  s_start = (n - 1)*3+1
+                  s_end   = s_start+2
+                                    
+                  tmpVec=cross_product(  Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1) )
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + OuterProduct( tmpVec, Src%RotationVel(:,n) )
+                  
+                  tmp = dot_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1)) 
+                  tmpVec = tmp*Src%RotationVel(:,n)
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + SkewSymMat( tmpVec )                  
+               end do
+            end if
+                               
+            
+            !-------------- ta2 -----------------------------
+            if (.not. allocated(MeshMap%dM%ta2) ) then
+               call AllocAry(MeshMap%dM%ta2, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta2', ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  IF (ErrStat >= AbortErrLev) RETURN
+            end if
+                        
+            MeshMap%dM%ta2 = 0.0_ReKi 
+            
+            if ( Src%FieldMask(MASKID_RotationVel) ) then
+
+               do i=1, Dest%Nnodes
+                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+            
+                  n = MeshMap%MapMotions(i)%OtherMesh_Element
+                  d_start = (i-1)*3+1
+                  d_end   = d_start+2
+                  s_start = (n - 1)*3+1
+                  s_end   = s_start+2
+                                    
+                  tmpVec = cross_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1)  )
+                  MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = SkewSymMat( tmpVec  )
+               end do
+               
+               if ( Dest%FieldMask(MASKID_TranslationDisp) ) then
+               
+                  MeshMap%dM%ta2 = MeshMap%dM%ta2 + MeshMap%dM%tv
+               
+               else
+                  do i=1, Dest%Nnodes
+                     if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+
+                     n = MeshMap%MapMotions(i)%OtherMesh_Element
+                     d_start = (i-1)*3+1
+                     d_end   = d_start+2
+                     s_start = (n - 1)*3+1
+                     s_end   = s_start+2
+                                    
+                     MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) + OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                     tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                     do j=0,2
+                        MeshMap%dM%ta2( d_start+j, s_start+j ) = MeshMap%dM%ta2( d_start+j, s_start+j ) - tmp
+                     end do                        
+                  end do               
+               end if !MASKID_TranslationDisp
+               
+            end if ! MASKID_RotationVel            
+         end if ! MASKID_TranslationAcc
+         
+      end if ! MASKID_TranslationDisp, MASKID_RotationVel, or MASKID_TranslationAcc
+                                                                         
+   end if ! HasMotionFields: algorithm for motions/scalars
+
+   ! ------------------------------------------------------------------------------------------------------------------------------
+   ! Mapping and Transfer of Data for Mesh Load Fields
+   ! ------------------------------------------------------------------------------------------------------------------------------
+   ! IF Src is forces and/or moments, loop over Src Mesh;
+   !    each load in the source mesh needs to be placed somewhere in the destination mesh.
+
+   if ( HasLoadFields(Src) ) then
+            
+      !........................
+      ! Create mapping
+      !........................
+
+      if (Src%RemapFlag .or. Dest%RemapFlag ) then
+         
+         CALL CreateLoadMap_P_to_P( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN                        
+
+      end if
+
+      !........................
+      ! create linearization matrices for loads:
+      !........................
+
+      IF ( PRESENT( SrcDisp ) .AND. PRESENT( DestDisp ) ) THEN
+                                       
+            ! identity for forces and/or moments:
+         if (.not. allocated(MeshMap%dM%li) ) then
+            call AllocAry(MeshMap%dM%li, Dest%Nnodes*3, Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               IF (ErrStat >= AbortErrLev) RETURN
+         end if
+      
+         MeshMap%dM%li = 0.0_ReKi
+         do i = 1, Src%NNodes
+            !if ( MeshMap%MapLoads(i)%OtherMesh_Element < 1 )  CYCLE ! would only happen if we had non-point elements (or nodes not contained in an element)
+         
+            n = MeshMap%MapLoads(i)%OtherMesh_Element
+            do j=1,3
+               MeshMap%dM%li( (n-1)*3+j, (i-1)*3+j ) = 1.0_ReKi
+            end do
+         end do
+                              
+         
+            ! M1 and M2 for moments:
+         
+         if (Dest%FieldMask(MASKID_MOMENT) .AND. Src%FieldMask(MASKID_FORCE) ) then
+            
+            if (.not. allocated(MeshMap%dM%M1) ) then
+               call AllocAry(MeshMap%dM%M1, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M1', ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  IF (ErrStat >= AbortErrLev) RETURN
+            end if
+            
+            if (.not. allocated(MeshMap%dM%M2) ) then
+               call AllocAry(MeshMap%dM%M2, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M2', ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  IF (ErrStat >= AbortErrLev) RETURN
+            end if
+            
+      
+            MeshMap%dM%M1 = 0.0_ReKi
+            MeshMap%dM%M2 = 0.0_ReKi         
+            do i = 1, Src%NNodes         
+               n = MeshMap%MapLoads(i)%OtherMesh_Element
+               
+               d_start = (n-1)*3+1
+               d_end   = d_start+2
+               s_start = (i - 1)*3+1
+               s_end   = s_start+2
+                                                              
+               DisplacedPosition =       SrcDisp%TranslationDisp(:,i) +  SrcDisp%Position(:,i) &
+                                    - ( DestDisp%TranslationDisp(:,n) + DestDisp%Position(:,n) )                              
+               
+               
+               MeshMap%dM%M1( d_start:d_end, s_start:s_end ) = OuterProduct( DisplacedPosition, Src%Force(:,i) )
+               tmp=dot_product( DisplacedPosition, Src%Force(:,i) )
+               do j=0,2
+                  MeshMap%dM%M1( d_start+j, s_start+j ) = MeshMap%dM%M1( d_start+j, s_start+j ) - tmp
+               end do                        
+               
+               MeshMap%dM%M2( d_start:d_end, s_start:s_end ) = SkewSymMat( DisplacedPosition )
+               
+            end do
+                           
+         endif           
+      
+      ELSE !bjj: we could check if Src also had TranslationDisp fields and call with SrcDisp=Src
+         CALL SetErrStat( ErrID_Fatal, 'Invalid arguments to Linearize_Point_to_Point for meshes with load fields.', ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF
+
+   end if ! algorithm for loads
+
+
+
+END SUBROUTINE Linearize_Point_to_Point
+!----------------------------------------------------------------------------------------------------------------------------------
+
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!> This routine is used for debugging mesh mappings. It checks to see that the sum of the loads on each mesh is the same as when
+!! all the loads from each mesh are lumped to a single point.
+SUBROUTINE WriteMappingTransferToFile(Mesh1_I,Mesh1_O,Mesh2_I,Mesh2_O,Map_Mod1_Mod2,Map_Mod2_Mod1,BinOutputName)
+
+   TYPE(meshtype),    intent(in) :: mesh1_I              !< mesh 1 inputs
+   TYPE(meshtype),    intent(in) :: mesh1_O              !< mesh 1 outputs  
+   TYPE(meshtype),    intent(in) :: mesh2_I              !< mesh 2 inputs
+   TYPE(meshtype),    intent(in) :: mesh2_O              !< mesh 2 outputs
+   
+   TYPE(MeshMapType), intent(in) :: Map_Mod1_Mod2        !< Data for mapping meshes from mesh 1 (outputs) to mesh 2 (inputs)
+   TYPE(MeshMapType), intent(in) :: Map_Mod2_Mod1        !< Data for mapping meshes from mesh 2 (outputs) to mesh 1 (inputs)
+
+   CHARACTER(*),      INTENT(IN) :: BinOutputName        !< name of binary output file
+   
+   
+   ! local variables:
+   TYPE(meshtype)                         :: mesh_Motion_1PT, mesh1_I_1PT, mesh2_O_1PT
+   TYPE(MeshMapType)                      :: Map_Mod2_O_1PT, Map_Mod1_I_1PT
+      
+   INTEGER(IntKi)                         :: i
+   INTEGER(IntKi)                         :: un_out
+   INTEGER(IntKi)                         :: ErrStat          ! Error status of the operation
+   CHARACTER(1024)                        :: ErrMsg           ! Error message if ErrStat /= ErrID_None
+   CHARACTER(256)                         :: PrintWarnF, PrintWarnM, TmpValues
+
+#ifdef MESH_DEBUG     
+   TYPE(meshtype)                         :: mesh2_O_1PT_augmented, mesh2_O_1PT_lumped, mesh1_I_1PT_lumped
+   TYPE(MeshMapType)                      :: Map_Mod2_O_1PT_augmented, Map_Mod2_O_1PT_lumped, Map_Mod1_I_1PT_lumped
+#endif      
+   
+   
+   !------------------------------------------------------------------------
+   ! Make sure the meshes are committed before checking them:
+   !------------------------------------------------------------------------
+   
+   IF (.NOT. mesh1_I%Committed .OR. .NOT. mesh1_O%Committed ) RETURN
+   IF (.NOT. mesh2_I%Committed .OR. .NOT. mesh2_O%Committed ) RETURN
+      
+   !------------------------------------------------------------------------
+   ! lump the loads to one point and compare:
+   !------------------------------------------------------------------------       
+   
+   ! create one loads mesh with one point:
+   CALL MeshCreate( BlankMesh       = mesh1_I_1PT        &
+                  , IOS              = COMPONENT_INPUT   &
+                  , NNodes           = 1                 &
+                  , Force            = .TRUE.            &
+                  , Moment           = .TRUE.            &
+                  , ErrStat          = ErrStat           &
+                  , ErrMess          = ErrMsg            )
+      
+   IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+         
+         
+   CALL MeshPositionNode ( mesh1_I_1PT, 1, (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/), ErrStat, ErrMsg ) ; IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))             
+   CALL MeshConstructElement ( mesh1_I_1PT, ELEMENT_POINT, ErrStat, ErrMsg, 1 );                 IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                                       
+   CALL MeshCommit ( mesh1_I_1PT, ErrStat, ErrMsg )                                       ;      IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
+      
+   !.....         
+   ! create a corresponding motion mesh with one point:
+   
+   CALL MeshCopy( mesh1_I_1PT, mesh_Motion_1PT, MESH_SIBLING, ErrStat, ErrMsg &
+                  , IOS              = COMPONENT_OUTPUT  &
+                  , TranslationDisp  = .TRUE.            ) ;                                     IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                     
+   !.....         
+   ! create a second loads mesh with one point:
+   CALL MeshCopy( mesh1_I_1PT, mesh2_O_1PT, MESH_NEWCOPY, ErrStat, ErrMsg )  ! This thinks it's for input, but really it's for output. I don't think it matters...       
+       
+   !.....         
+   ! create the mapping data structures:       
+   CALL MeshMapCreate( Mesh1_I, Mesh1_I_1PT, Map_Mod1_I_1PT,  ErrStat, ErrMsg );                 IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   CALL MeshMapCreate( Mesh2_O, Mesh2_O_1PT, Map_Mod2_O_1PT,  ErrStat, ErrMsg );                 IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+
+   !.....         
+   ! transfer MESH1_I (loads) to single point:
+   
+   IF ( mesh1_I%ElemTable(ELEMENT_POINT)%nelem > 0 ) THEN
+      CALL Transfer_Point_to_Point( Mesh1_I, Mesh1_I_1PT, Map_Mod1_I_1PT,ErrStat,ErrMsg,mesh1_O,mesh_Motion_1PT);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))         
+   ELSEIF ( mesh1_I%ElemTable(ELEMENT_LINE2)%nelem > 0 ) THEN
+      CALL Transfer_Line2_to_Point( Mesh1_I, Mesh1_I_1PT, Map_Mod1_I_1PT,ErrStat,ErrMsg,mesh1_O,mesh_Motion_1PT);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))          
+   END IF
+   
+   !.....         
+   ! transfer Mesh2_O (loads) to single point:      
+   IF ( Mesh2_O%ElemTable(ELEMENT_POINT)%nelem > 0 ) THEN
+      CALL Transfer_Point_to_Point( Mesh2_O, Mesh2_O_1PT, Map_Mod2_O_1PT,ErrStat,ErrMsg,mesh2_I,mesh_Motion_1PT);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
+   ELSEIF ( Mesh2_O%ElemTable(ELEMENT_LINE2)%nelem > 0 ) THEN 
+      CALL Transfer_Line2_to_Point( Mesh2_O, Mesh2_O_1PT, Map_Mod2_O_1PT,ErrStat,ErrMsg,mesh2_I,mesh_Motion_1PT);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))          
+   END IF
+   !............
+            
+   ! dsisplay a warning if the point loads are not equal:         
+   PrintWarnF=""
+   PrintWarnM=""
+   do i=1,3
+      if (.NOT. equalrealnos(mesh1_I_1PT%Force( i,1),mesh2_O_1PT%Force( i,1)) ) PrintWarnF=NewLine//"  <----------- WARNING: Forces are not equal ----------->  "//NewLine//NewLine
+      if (.NOT. equalrealnos(mesh1_I_1PT%Moment(i,1),mesh2_O_1PT%Moment(i,1)) ) PrintWarnM=NewLine//"  <----------- WARNING: Moments are not equal ----------->  "//NewLine//NewLine
+   end do
+
+   
+   call wrscr(TRIM(PrintWarnF)//'Total Force:' )
+   write(TmpValues,*) mesh1_I_1PT%Force;   call wrscr('     Mesh 1: '//TRIM(TmpValues))
+   write(TmpValues,*) mesh2_O_1PT%Force;   call wrscr('     Mesh 2: '//TRIM(TmpValues))
+   call wrscr(TRIM(PrintWarnM)//'Total Moment:' )
+   write(TmpValues,*) mesh1_I_1PT%Moment;  call wrscr('     Mesh 1: '//TRIM(TmpValues))
+   write(TmpValues,*) mesh2_O_1PT%Moment;  call wrscr('     Mesh 2: '//TRIM(TmpValues))
+   !............
+   
+   !------------------------------------------------------------------------
+   ! now we'll write all the mesh info to a file for debugging:   
+   !------------------------------------------------------------------------
+
+   un_out = -1
+   CALL MeshWrBin ( un_out, Mesh1_I,         ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   CALL MeshWrBin ( un_out, Mesh1_O,         ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   CALL MeshWrBin ( un_out, Mesh2_I,         ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   CALL MeshWrBin ( un_out, Mesh2_O,         ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      
+   CALL MeshWrBin ( un_out, mesh1_I_1PT,     ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   CALL MeshWrBin ( un_out, mesh2_O_1PT,     ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))         
+   CALL MeshWrBin ( un_out, mesh_Motion_1PT, ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))   
+      
+   CALL MeshMapWrBin( un_out, Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
+   CALL MeshMapWrBin( un_out, Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
+      
+   CALL MeshMapWrBin( un_out, Mesh1_I, Mesh1_I_1PT, Map_Mod1_I_1PT, ErrStat, ErrMsg, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
+   CALL MeshMapWrBin( un_out, Mesh2_O, Mesh2_O_1PT, Map_Mod2_O_1PT, ErrStat, ErrMsg, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
+
+   close( un_out )
+   
+   
+   
+#ifdef MESH_DEBUG  
+      
+if (LEN_TRIM(PrintWarnM)>0 .OR. LEN_TRIM(PrintWarnF)>0 ) THEN
+      call wrscr(NewLine)
+      call wrmatrix( mesh1_O%TranslationDisp, CU, 'f10.5')
+      call wrscr(NewLine)
+     ! call wrmatrix( mesh2_I%TranslationDisp, CU, 'f10.5')
+     ! call wrmatrix( mesh_Motion_1PT%TranslationDisp, CU, 'f10.5')
+     ! call wrmatrix( mesh_Motion_1PT%Position, CU, 'f10.5')
+
+
+   if (Map_Mod2_Mod1%Augmented_Ln2_Src%committed) THEN
+      CALL MeshCopy( Mesh2_O_1PT, mesh2_O_1PT_augmented, MESH_NEWCOPY, ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      mesh2_O_1PT_augmented%force = 0.0
+      mesh2_O_1PT_augmented%moment = 0.0
+     ! Map_Mod2_Mod1%Augmented_Ln2_Src%TranslationDisp=0.0
+      CALL MeshMapCreate( Map_Mod2_Mod1%Augmented_Ln2_Src,  mesh2_O_1PT_augmented, Map_Mod2_O_1PT_augmented, ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      CALL Transfer_Line2_to_Point(Map_Mod2_Mod1%Augmented_Ln2_Src,  mesh2_O_1PT_augmented, Map_Mod2_O_1PT_augmented, ErrStat, ErrMsg, Map_Mod2_Mod1%Augmented_Ln2_Src, mesh_Motion_1PT );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+
+      !print *, '---------Augmented_Ln2_Src:---------------'
+      !call meshprintinfo(CU,Map_Mod2_Mod1%Augmented_Ln2_Src)
+   end if
+      
+   if (Map_Mod2_Mod1%Lumped_Points_Src%committed) THEN
+      CALL MeshCopy( Mesh2_O_1PT, mesh2_O_1PT_lumped,    MESH_NEWCOPY, ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      CALL MeshMapCreate( Map_Mod2_Mod1%Lumped_Points_Src,  mesh2_O_1PT_lumped,    Map_Mod2_O_1PT_lumped,    ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      CALL Transfer_Point_to_Point(Map_Mod2_Mod1%Lumped_Points_Src,  mesh2_O_1PT_lumped,    Map_Mod2_O_1PT_lumped,    ErrStat, ErrMsg, Map_Mod2_Mod1%Lumped_Points_Src, mesh_Motion_1PT );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))            
+
+      !print *, '-------------Lumped_Points_Src:----------------'
+      !call meshprintinfo(CU,Map_Mod2_Mod1%Lumped_Points_Src)   
+   end if
+
+   if (Map_Mod2_Mod1%Lumped_Points_Dest%committed) THEN
+      CALL MeshCopy( Mesh1_I_1PT, mesh1_I_1PT_lumped,    MESH_NEWCOPY, ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      CALL MeshMapCreate( Map_Mod2_Mod1%Lumped_Points_Dest, mesh1_I_1PT_lumped,    Map_Mod1_I_1PT_lumped,    ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))      
+      CALL Transfer_Point_to_Point(Map_Mod2_Mod1%Lumped_Points_Dest, mesh1_I_1PT_lumped,    Map_Mod1_I_1PT_lumped,    ErrStat, ErrMsg, mesh1_O, mesh_Motion_1PT );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))     
+
+      !print *, '-----------Lumped_Points_Dest:---------------'
+      !call meshprintinfo(CU,Map_Mod2_Mod1%Lumped_Points_Dest)   
+   end if
+         
+            
+      call wrscr('Total Force:' )     
+      if (mesh2_O_1PT_augmented%committed) then
+         write(TmpValues,*) mesh2_O_1PT_augmented%Force
+         call wrscr('     Mesh 2 (augmented):'//TRIM(TmpValues)//trim(num2lstr(Map_Mod2_Mod1%Augmented_Ln2_Src%Nnodes  )) )
+      end if
+      
+      if (mesh2_O_1PT_lumped%committed) then
+         write(TmpValues,*) mesh2_O_1PT_lumped%Force
+         call wrscr('     Mesh 2 (lumped):   '//TRIM(TmpValues)//trim(num2lstr(Map_Mod2_Mod1%Lumped_Points_Src%Nnodes  )) )
+      end if
+      
+      if (mesh1_I_1PT_lumped%committed) then
+         write(TmpValues,*) mesh1_I_1PT_lumped%Force
+         call wrscr('     Mesh 1 (lumped):   '//TRIM(TmpValues)//trim(num2lstr(Map_Mod2_Mod1%Lumped_Points_Dest%Nnodes )) )
+      end if
+      
+      call wrscr('Total Moment:' )
+      if (mesh2_O_1PT_augmented%committed) then
+         write(TmpValues,*) mesh2_O_1PT_augmented%Moment
+         call wrscr('     Mesh 2 (augmented):'//TRIM(TmpValues)//trim(num2lstr(Map_Mod2_Mod1%Augmented_Ln2_Src%Nnodes  )) )
+      end if
+      
+      if (mesh2_O_1PT_lumped%committed) then
+         write(TmpValues,*) mesh2_O_1PT_lumped%Moment
+         call wrscr('     Mesh 2 (lumped):   '//TRIM(TmpValues)//trim(num2lstr(Map_Mod2_Mod1%Lumped_Points_Src%Nnodes  )) )
+      end if
+      
+      if (mesh1_I_1PT_lumped%committed) then
+         write(TmpValues,*) mesh1_I_1PT_lumped%Moment
+         call wrscr('     Mesh 1 (lumped):   '//TRIM(TmpValues)//trim(num2lstr(Map_Mod2_Mod1%Lumped_Points_Dest%Nnodes )) )
+      end if
+      
+END IF
+#endif
+   
+   
+   !------------------------------------------------------------------------
+   ! destroy local copies:
+   !------------------------------------------------------------------------
+   
+   CALL MeshDestroy( mesh_Motion_1PT, ErrStat, ErrMsg ); IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   CALL MeshDestroy( mesh1_I_1PT, ErrStat, ErrMsg );     IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   CALL MeshDestroy( mesh2_O_1PT, ErrStat, ErrMsg );     IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   
+   call MeshMapDestroy(Map_Mod1_I_1PT, ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   call MeshMapDestroy(Map_Mod2_O_1PT, ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   
+   
+#ifdef MESH_DEBUG  
+   CALL MeshDestroy( mesh2_O_1PT_augmented,      ErrStat, ErrMsg );   IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   CALL MeshDestroy( mesh2_O_1PT_lumped,         ErrStat, ErrMsg );   IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   CALL MeshDestroy( mesh1_I_1PT_lumped,         ErrStat, ErrMsg );   IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+
+   call MeshMapDestroy(Map_Mod2_O_1PT_augmented, ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   call MeshMapDestroy(Map_Mod2_O_1PT_lumped,    ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+   call MeshMapDestroy(Map_Mod1_I_1PT_lumped,    ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+#endif      
+   
+
+END SUBROUTINE WriteMappingTransferToFile 
+!----------------------------------------------------------------------------------------------------------------------------------
+
 !==================================================================================================================================
 !bjj: these routines require the use of ModMesh.f90, thus they cannot be part of NWTC_Library_Types.f90:
 !STARTOFREGISTRYGENERATEDFILE 'NWTC_Library_Types.f90'
@@ -3101,7 +3746,7 @@ END SUBROUTINE Lump_Line2_to_Point
 ! WARNING This file is generated automatically by the FAST registry
 ! Do not edit.  Your changes to this file will be lost.
 !
-! FAST Registry (v2.08.03, 2-Oct-2015)
+! FAST Registry (v3.01.01, 19-Apr-2016)
 !*********************************************************************************************************************************
  SUBROUTINE NWTC_Library_CopyMapType( SrcMapTypeData, DstMapTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(MapType), INTENT(IN) :: SrcMapTypeData
@@ -3276,6 +3921,647 @@ END SUBROUTINE Lump_Line2_to_Point
     DEALLOCATE(mask1)
  END SUBROUTINE NWTC_Library_UnPackMapType
 
+ SUBROUTINE NWTC_Library_CopyMeshMapLinearizationType( SrcMeshMapLinearizationTypeData, DstMeshMapLinearizationTypeData, CtrlCode, ErrStat, ErrMsg )
+   TYPE(MeshMapLinearizationType), INTENT(IN) :: SrcMeshMapLinearizationTypeData
+   TYPE(MeshMapLinearizationType), INTENT(INOUT) :: DstMeshMapLinearizationTypeData
+   INTEGER(IntKi),  INTENT(IN   ) :: CtrlCode
+   INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+   CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+! Local 
+   INTEGER(IntKi)                 :: i,j,k
+   INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+   INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+   INTEGER(IntKi)                 :: ErrStat2
+   CHARACTER(ErrMsgLen)           :: ErrMsg2
+   CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_CopyMeshMapLinearizationType'
+! 
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%mi)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%mi,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%mi,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%mi,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%mi,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%mi)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%mi(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%mi.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMeshMapLinearizationTypeData%mi = SrcMeshMapLinearizationTypeData%mi
+ENDIF
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%fx_p)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%fx_p,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%fx_p,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%fx_p,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%fx_p,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%fx_p)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%fx_p(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%fx_p.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMeshMapLinearizationTypeData%fx_p = SrcMeshMapLinearizationTypeData%fx_p
+ENDIF
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%tv)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%tv,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%tv,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%tv,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%tv,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%tv)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%tv(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%tv.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMeshMapLinearizationTypeData%tv = SrcMeshMapLinearizationTypeData%tv
+ENDIF
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%ta1)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%ta1,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%ta1,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%ta1,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%ta1,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%ta1)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%ta1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%ta1.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMeshMapLinearizationTypeData%ta1 = SrcMeshMapLinearizationTypeData%ta1
+ENDIF
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%ta2)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%ta2,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%ta2,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%ta2,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%ta2,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%ta2)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%ta2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%ta2.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMeshMapLinearizationTypeData%ta2 = SrcMeshMapLinearizationTypeData%ta2
+ENDIF
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%li)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%li,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%li,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%li,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%li,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%li)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%li(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%li.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMeshMapLinearizationTypeData%li = SrcMeshMapLinearizationTypeData%li
+ENDIF
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%M1)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%M1,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%M1,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%M1,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%M1,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%M1)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%M1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%M1.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMeshMapLinearizationTypeData%M1 = SrcMeshMapLinearizationTypeData%M1
+ENDIF
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%M2)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%M2,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%M2,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%M2,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%M2,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%M2)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%M2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%M2.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMeshMapLinearizationTypeData%M2 = SrcMeshMapLinearizationTypeData%M2
+ENDIF
+ END SUBROUTINE NWTC_Library_CopyMeshMapLinearizationType
+
+ SUBROUTINE NWTC_Library_DestroyMeshMapLinearizationType( MeshMapLinearizationTypeData, ErrStat, ErrMsg )
+  TYPE(MeshMapLinearizationType), INTENT(INOUT) :: MeshMapLinearizationTypeData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+  CHARACTER(*),    PARAMETER :: RoutineName = 'NWTC_Library_DestroyMeshMapLinearizationType'
+  INTEGER(IntKi)                 :: i, i1, i2, i3, i4, i5 
+! 
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+IF (ALLOCATED(MeshMapLinearizationTypeData%mi)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%mi)
+ENDIF
+IF (ALLOCATED(MeshMapLinearizationTypeData%fx_p)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%fx_p)
+ENDIF
+IF (ALLOCATED(MeshMapLinearizationTypeData%tv)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%tv)
+ENDIF
+IF (ALLOCATED(MeshMapLinearizationTypeData%ta1)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%ta1)
+ENDIF
+IF (ALLOCATED(MeshMapLinearizationTypeData%ta2)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%ta2)
+ENDIF
+IF (ALLOCATED(MeshMapLinearizationTypeData%li)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%li)
+ENDIF
+IF (ALLOCATED(MeshMapLinearizationTypeData%M1)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%M1)
+ENDIF
+IF (ALLOCATED(MeshMapLinearizationTypeData%M2)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%M2)
+ENDIF
+ END SUBROUTINE NWTC_Library_DestroyMeshMapLinearizationType
+
+ SUBROUTINE NWTC_Library_PackMeshMapLinearizationType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
+  REAL(ReKi),       ALLOCATABLE, INTENT(  OUT) :: ReKiBuf(:)
+  REAL(DbKi),       ALLOCATABLE, INTENT(  OUT) :: DbKiBuf(:)
+  INTEGER(IntKi),   ALLOCATABLE, INTENT(  OUT) :: IntKiBuf(:)
+  TYPE(MeshMapLinearizationType),  INTENT(IN) :: InData
+  INTEGER(IntKi),   INTENT(  OUT) :: ErrStat
+  CHARACTER(*),     INTENT(  OUT) :: ErrMsg
+  LOGICAL,OPTIONAL, INTENT(IN   ) :: SizeOnly
+    ! Local variables
+  INTEGER(IntKi)                 :: Re_BufSz
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_BufSz
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_BufSz
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i,i1,i2,i3,i4,i5
+  LOGICAL                        :: OnlySize ! if present and true, do not pack, just allocate buffers
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_PackMeshMapLinearizationType'
+ ! buffers to store subtypes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+
+  OnlySize = .FALSE.
+  IF ( PRESENT(SizeOnly) ) THEN
+    OnlySize = SizeOnly
+  ENDIF
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_BufSz  = 0
+  Db_BufSz  = 0
+  Int_BufSz  = 0
+  Int_BufSz   = Int_BufSz   + 1     ! mi allocated yes/no
+  IF ( ALLOCATED(InData%mi) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! mi upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%mi)  ! mi
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! fx_p allocated yes/no
+  IF ( ALLOCATED(InData%fx_p) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! fx_p upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%fx_p)  ! fx_p
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! tv allocated yes/no
+  IF ( ALLOCATED(InData%tv) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! tv upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%tv)  ! tv
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ta1 allocated yes/no
+  IF ( ALLOCATED(InData%ta1) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! ta1 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ta1)  ! ta1
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ta2 allocated yes/no
+  IF ( ALLOCATED(InData%ta2) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! ta2 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ta2)  ! ta2
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! li allocated yes/no
+  IF ( ALLOCATED(InData%li) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! li upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%li)  ! li
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! M1 allocated yes/no
+  IF ( ALLOCATED(InData%M1) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! M1 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%M1)  ! M1
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! M2 allocated yes/no
+  IF ( ALLOCATED(InData%M2) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! M2 upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%M2)  ! M2
+  END IF
+  IF ( Re_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating ReKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Db_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( DbKiBuf(  Db_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating DbKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF ( Int_BufSz  .GT. 0 ) THEN 
+     ALLOCATE( IntKiBuf(  Int_BufSz  ), STAT=ErrStat2 )
+     IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating IntKiBuf.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+     END IF
+  END IF
+  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)
+
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred = 1
+
+  IF ( .NOT. ALLOCATED(InData%mi) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%mi,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%mi,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%mi,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%mi,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%mi)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%mi))-1 ) = PACK(InData%mi,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%mi)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%fx_p) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%fx_p,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%fx_p,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%fx_p,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%fx_p,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%fx_p)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%fx_p))-1 ) = PACK(InData%fx_p,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%fx_p)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%tv) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%tv,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tv,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%tv,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tv,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%tv)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%tv))-1 ) = PACK(InData%tv,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%tv)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ta1) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta1,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta1,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta1,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta1,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%ta1)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%ta1))-1 ) = PACK(InData%ta1,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%ta1)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ta2) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta2,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta2,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta2,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta2,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%ta2)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%ta2))-1 ) = PACK(InData%ta2,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%ta2)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%li) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%li,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%li,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%li,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%li,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%li)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%li))-1 ) = PACK(InData%li,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%li)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%M1) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M1,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M1,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M1,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M1,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%M1)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%M1))-1 ) = PACK(InData%M1,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%M1)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%M2) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M2,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M2,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M2,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M2,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%M2)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%M2))-1 ) = PACK(InData%M2,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%M2)
+  END IF
+ END SUBROUTINE NWTC_Library_PackMeshMapLinearizationType
+
+ SUBROUTINE NWTC_Library_UnPackMeshMapLinearizationType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
+  REAL(ReKi),      ALLOCATABLE, INTENT(IN   ) :: ReKiBuf(:)
+  REAL(DbKi),      ALLOCATABLE, INTENT(IN   ) :: DbKiBuf(:)
+  INTEGER(IntKi),  ALLOCATABLE, INTENT(IN   ) :: IntKiBuf(:)
+  TYPE(MeshMapLinearizationType), INTENT(INOUT) :: OutData
+  INTEGER(IntKi),  INTENT(  OUT) :: ErrStat
+  CHARACTER(*),    INTENT(  OUT) :: ErrMsg
+    ! Local variables
+  INTEGER(IntKi)                 :: Buf_size
+  INTEGER(IntKi)                 :: Re_Xferred
+  INTEGER(IntKi)                 :: Db_Xferred
+  INTEGER(IntKi)                 :: Int_Xferred
+  INTEGER(IntKi)                 :: i
+  LOGICAL                        :: mask0
+  LOGICAL, ALLOCATABLE           :: mask1(:)
+  LOGICAL, ALLOCATABLE           :: mask2(:,:)
+  LOGICAL, ALLOCATABLE           :: mask3(:,:,:)
+  LOGICAL, ALLOCATABLE           :: mask4(:,:,:,:)
+  LOGICAL, ALLOCATABLE           :: mask5(:,:,:,:,:)
+  INTEGER(IntKi)                 :: i1, i1_l, i1_u  !  bounds (upper/lower) for an array dimension 1
+  INTEGER(IntKi)                 :: i2, i2_l, i2_u  !  bounds (upper/lower) for an array dimension 2
+  INTEGER(IntKi)                 :: ErrStat2
+  CHARACTER(ErrMsgLen)           :: ErrMsg2
+  CHARACTER(*), PARAMETER        :: RoutineName = 'NWTC_Library_UnPackMeshMapLinearizationType'
+ ! buffers to store meshes, if any
+  REAL(ReKi),      ALLOCATABLE   :: Re_Buf(:)
+  REAL(DbKi),      ALLOCATABLE   :: Db_Buf(:)
+  INTEGER(IntKi),  ALLOCATABLE   :: Int_Buf(:)
+    !
+  ErrStat = ErrID_None
+  ErrMsg  = ""
+  Re_Xferred  = 1
+  Db_Xferred  = 1
+  Int_Xferred  = 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! mi not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%mi)) DEALLOCATE(OutData%mi)
+    ALLOCATE(OutData%mi(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%mi.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%mi)>0) OutData%mi = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%mi))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%mi)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! fx_p not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%fx_p)) DEALLOCATE(OutData%fx_p)
+    ALLOCATE(OutData%fx_p(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%fx_p.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%fx_p)>0) OutData%fx_p = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%fx_p))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%fx_p)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! tv not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%tv)) DEALLOCATE(OutData%tv)
+    ALLOCATE(OutData%tv(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%tv.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%tv)>0) OutData%tv = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%tv))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%tv)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ta1 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ta1)) DEALLOCATE(OutData%ta1)
+    ALLOCATE(OutData%ta1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ta1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%ta1)>0) OutData%ta1 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%ta1))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%ta1)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ta2 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ta2)) DEALLOCATE(OutData%ta2)
+    ALLOCATE(OutData%ta2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ta2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%ta2)>0) OutData%ta2 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%ta2))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%ta2)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! li not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%li)) DEALLOCATE(OutData%li)
+    ALLOCATE(OutData%li(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%li.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%li)>0) OutData%li = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%li))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%li)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M1 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%M1)) DEALLOCATE(OutData%M1)
+    ALLOCATE(OutData%M1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%M1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%M1)>0) OutData%M1 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%M1))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%M1)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M2 not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%M2)) DEALLOCATE(OutData%M2)
+    ALLOCATE(OutData%M2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%M2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%M2)>0) OutData%M2 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%M2))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%M2)
+    DEALLOCATE(mask2)
+  END IF
+ END SUBROUTINE NWTC_Library_UnPackMeshMapLinearizationType
+
  SUBROUTINE NWTC_Library_CopyMeshMapType( SrcMeshMapTypeData, DstMeshMapTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(MeshMapType), INTENT(INOUT) :: SrcMeshMapTypeData
    TYPE(MeshMapType), INTENT(INOUT) :: DstMeshMapTypeData
@@ -3417,6 +4703,9 @@ IF (ALLOCATED(SrcMeshMapTypeData%LoadLn2_M)) THEN
   END IF
     DstMeshMapTypeData%LoadLn2_M = SrcMeshMapTypeData%LoadLn2_M
 ENDIF
+      CALL NWTC_Library_Copymeshmaplinearizationtype( SrcMeshMapTypeData%dM, DstMeshMapTypeData%dM, CtrlCode, ErrStat2, ErrMsg2 )
+         CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg,RoutineName)
+         IF (ErrStat>=AbortErrLev) RETURN
  END SUBROUTINE NWTC_Library_CopyMeshMapType
 
  SUBROUTINE NWTC_Library_DestroyMeshMapType( MeshMapTypeData, ErrStat, ErrMsg )
@@ -3463,6 +4752,7 @@ ENDIF
 IF (ALLOCATED(MeshMapTypeData%LoadLn2_M)) THEN
   DEALLOCATE(MeshMapTypeData%LoadLn2_M)
 ENDIF
+  CALL NWTC_Library_Destroymeshmaplinearizationtype( MeshMapTypeData%dM, ErrStat, ErrMsg )
  END SUBROUTINE NWTC_Library_DestroyMeshMapType
 
  SUBROUTINE NWTC_Library_PackMeshMapType( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -3629,6 +4919,23 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! LoadLn2_M upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%LoadLn2_M)  ! LoadLn2_M
   END IF
+      Int_BufSz   = Int_BufSz + 3  ! dM: size of buffers for each call to pack subtype
+      CALL NWTC_Library_Packmeshmaplinearizationtype( Re_Buf, Db_Buf, Int_Buf, InData%dM, ErrStat2, ErrMsg2, .TRUE. ) ! dM 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN ! dM
+         Re_BufSz  = Re_BufSz  + SIZE( Re_Buf  )
+         DEALLOCATE(Re_Buf)
+      END IF
+      IF(ALLOCATED(Db_Buf)) THEN ! dM
+         Db_BufSz  = Db_BufSz  + SIZE( Db_Buf  )
+         DEALLOCATE(Db_Buf)
+      END IF
+      IF(ALLOCATED(Int_Buf)) THEN ! dM
+         Int_BufSz = Int_BufSz + SIZE( Int_Buf )
+         DEALLOCATE(Int_Buf)
+      END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -3915,6 +5222,34 @@ ENDIF
       IF (SIZE(InData%LoadLn2_M)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%LoadLn2_M))-1 ) = PACK(InData%LoadLn2_M,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%LoadLn2_M)
   END IF
+      CALL NWTC_Library_Packmeshmaplinearizationtype( Re_Buf, Db_Buf, Int_Buf, InData%dM, ErrStat2, ErrMsg2, OnlySize ) ! dM 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Re_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Re_Buf) > 0) ReKiBuf( Re_Xferred:Re_Xferred+SIZE(Re_Buf)-1 ) = Re_Buf
+        Re_Xferred = Re_Xferred + SIZE(Re_Buf)
+        DEALLOCATE(Re_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Db_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Db_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Db_Buf) > 0) DbKiBuf( Db_Xferred:Db_Xferred+SIZE(Db_Buf)-1 ) = Db_Buf
+        Db_Xferred = Db_Xferred + SIZE(Db_Buf)
+        DEALLOCATE(Db_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
+      IF(ALLOCATED(Int_Buf)) THEN
+        IntKiBuf( Int_Xferred ) = SIZE(Int_Buf); Int_Xferred = Int_Xferred + 1
+        IF (SIZE(Int_Buf) > 0) IntKiBuf( Int_Xferred:Int_Xferred+SIZE(Int_Buf)-1 ) = Int_Buf
+        Int_Xferred = Int_Xferred + SIZE(Int_Buf)
+        DEALLOCATE(Int_Buf)
+      ELSE
+        IntKiBuf( Int_Xferred ) = 0; Int_Xferred = Int_Xferred + 1
+      ENDIF
  END SUBROUTINE NWTC_Library_PackMeshMapType
 
  SUBROUTINE NWTC_Library_UnPackMeshMapType( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -4330,6 +5665,46 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%LoadLn2_M)
     DEALLOCATE(mask2)
   END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Re_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Re_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Re_Buf = ReKiBuf( Re_Xferred:Re_Xferred+Buf_size-1 )
+        Re_Xferred = Re_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Db_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Db_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Db_Buf = DbKiBuf( Db_Xferred:Db_Xferred+Buf_size-1 )
+        Db_Xferred = Db_Xferred + Buf_size
+      END IF
+      Buf_size=IntKiBuf( Int_Xferred )
+      Int_Xferred = Int_Xferred + 1
+      IF(Buf_size > 0) THEN
+        ALLOCATE(Int_Buf(Buf_size),STAT=ErrStat2)
+        IF (ErrStat2 /= 0) THEN 
+           CALL SetErrStat(ErrID_Fatal, 'Error allocating Int_Buf.', ErrStat, ErrMsg,RoutineName)
+           RETURN
+        END IF
+        Int_Buf = IntKiBuf( Int_Xferred:Int_Xferred+Buf_size-1 )
+        Int_Xferred = Int_Xferred + Buf_size
+      END IF
+      CALL NWTC_Library_Unpackmeshmaplinearizationtype( Re_Buf, Db_Buf, Int_Buf, OutData%dM, ErrStat2, ErrMsg2 ) ! dM 
+        CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+        IF (ErrStat >= AbortErrLev) RETURN
+
+      IF(ALLOCATED(Re_Buf )) DEALLOCATE(Re_Buf )
+      IF(ALLOCATED(Db_Buf )) DEALLOCATE(Db_Buf )
+      IF(ALLOCATED(Int_Buf)) DEALLOCATE(Int_Buf)
  END SUBROUTINE NWTC_Library_UnPackMeshMapType
 
 !*********************************************************************************************************************************

@@ -306,7 +306,7 @@ SUBROUTINE MeshWrVTK ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, Err
    IF (.NOT. M%Initialized) RETURN
          
    !.................................................................
-   ! we'll write the mesh reference fields on the first timestep only:
+   !> We'll write the mesh reference fields on the first timestep only:
    !.................................................................
    if (VTKcount == 0) then
       call MeshWrVTKreference(RefPoint, M, FileRootName, ErrStat2, ErrMsg2)
@@ -387,6 +387,7 @@ SUBROUTINE MeshWrVTK ( RefPoint, M, FileRootName, VTKcount, OutputFieldData, Err
       call WrVTK_footer( Un )               
       
 END SUBROUTINE MeshWrVTK
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine writes mesh field information in VTK format.
 !! see VTK file information format for XML, here: http://www.vtk.org/wp-content/uploads/2015/04/file-formats.pdf
 SUBROUTINE MeshWrVTKfields ( Un, M, n )
@@ -1049,6 +1050,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
    END SUBROUTINE MeshPrintInfo
 
+!----------------------------------------------------------------------------------------------------------------------------------
    ! operations to create a mesh
 
 !> Takes a blank, uninitialized instance of Type(MeshType) and defines the number of nodes in the mesh. Optional 
@@ -1283,7 +1285,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
          !........................
          ! Let's make sure that we have all the necessary fields:
          !........................
-      !! This routine will add any required fields that were not explicitly requested.
+      !> This routine will add any required fields that were not explicitly requested.
       !! If the mesh has motion fields and it is an input mesh, it must always have the following fields: TranslationDisp, TranslationVel, TranslationAcc
       IF ( IsMotion .AND. IOS == COMPONENT_INPUT ) THEN
 
@@ -1316,7 +1318,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
                            
       END IF
       
-      !! If the mesh has load fields and it is an input mesh, it must always have the following fields: Moment
+      !> If the mesh has load fields and it is an input mesh, it must always have the following fields: Moment
       IF ( IsLoad .AND. IOS == COMPONENT_INPUT ) THEN
                
          IF ( .NOT. BlankMesh%FieldMask(MASKID_MOMENT)) THEN
@@ -1468,6 +1470,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
    END SUBROUTINE MeshDestroy
 
+!----------------------------------------------------------------------------------------------------------------------------------
 ! Format of the Int buffer
 !   word
 !     1        Total size of Int buffer in bytes
@@ -1712,6 +1715,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
      !bjj: where are we keeping track of which ones are siblings so that we can unpack them (set pointers) properly for restart?
    END SUBROUTINE MeshPack
 
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Given a blank, uncreated mesh and buffers of type INTEGER(IntKi), REAL(ReKi), and 
 !! REAL(DbKi), unpack the mesh information from the buffers. This would be done to 
 !! recreate a mesh after reading in the buffers on a restart of the program. The sense 
@@ -1931,6 +1935,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
    END SUBROUTINE MeshUnpack
 
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Given an existing mesh and a destination mesh, create a completely new copy, a sibling, or 
 !!   update the fields of a second existing mesh from the first mesh. When CtrlCode is 
 !!   MESH_NEWCOPY or MESH_SIBLING, the destination mesh must be a blank, uncreated mesh.
@@ -2195,6 +2200,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
    END SUBROUTINE MeshCopy
 
+!----------------------------------------------------------------------------------------------------------------------------------
 !> For a given node in a mesh, assign the coordinates of the node in the global coordinate space. 
 !! If an Orient argument is included, the node will also be assigned the specified orientation 
 !! (orientation is assumed to be the identity matrix if omitted). Returns a non-zero value in  
@@ -2264,6 +2270,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
    END SUBROUTINE MeshPositionNode
 
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Given a mesh that has been created, spatio-located, and constructed, 
 !! commit the definition of the mesh, making it ready for initialization 
 !! and use. Explicitly committing a mesh provides the opportunity to precompute 
@@ -2287,7 +2294,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
        RETURN  ! Early return
      ENDIF
      
-     ! Check for spatial constraints -- can't mix 1D with 2D with 3D
+     !> Check for spatial constraints -- can't mix 1D with 2D with 3D
      n0d = Mesh%ElemTable(ELEMENT_POINT)%nelem
      n1d = Mesh%ElemTable(ELEMENT_LINE2)%nelem+Mesh%ElemTable(ELEMENT_LINE3)%nelem
      n2d = Mesh%ElemTable(ELEMENT_TRI3)%nelem+Mesh%ElemTable(ELEMENT_TRI6)%nelem +     &
@@ -2308,7 +2315,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
        RETURN  ! Early return
      ENDIF
 
-     ! Check that every node is part of an element.
+     !> Check that every node is part of an element.
       NodeInElement = .FALSE.
       DO i = 1, NELEMKINDS
          DO j = 1, Mesh%ElemTable(i)%nelem
@@ -2411,6 +2418,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
    END SUBROUTINE MeshCommit
 
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Given a mesh and an element name, construct a point element whose vertex is the 
 !! node index listed as the remaining argument of the call to MeshConstructElement.
 !! Returns a non-zero ErrStat value on error.     
@@ -2465,6 +2473,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
    END SUBROUTINE MeshConstructElement_1PT
 
+!----------------------------------------------------------------------------------------------------------------------------------
    SUBROUTINE BumpupElementTable_New( Mesh, Xelement, ErrStat, ErrMess )
    ! bjj: I am getting weird errors with some models using gfortran (ivf is fine),
    ! so I am implementing this method which does not just set a pointer, pointing to
@@ -2528,6 +2537,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
      
    END SUBROUTINE BumpupElementTable_New
    
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine increases the allocated space for Mesh%ElemTable(Xelement)%Elements
 !! if adding a new element will exceed the pre-allocated space.
    SUBROUTINE BumpupElementTable( Mesh, Xelement, ErrStat, ErrMess )
@@ -2572,6 +2582,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
        
    END SUBROUTINE BumpupElementTable
       
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Given a mesh and an element name, construct 2-point line (line2) element whose 
 !! vertices are the node indices listed as the remaining arguments of the call to 
 !! MeshConstructElement. The adjacency of elements is implied when elements are 
@@ -2632,7 +2643,8 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
      RETURN
    END SUBROUTINE MeshConstructElement_2PT
 
-! added 20130102 as stub for AeroDyn work
+!----------------------------------------------------------------------------------------------------------------------------------
+!> added 20130102 as stub for AeroDyn work
    SUBROUTINE MeshConstructElement_3PT( Mesh, Xelement, ErrStat, ErrMess, P1, P2, P3 )
      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
      INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
@@ -2646,7 +2658,8 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
      ErrMess = 'MeshConstructElement_3PT not supported'
    END SUBROUTINE MeshConstructElement_3PT
 
-! added 20130102 as stub for AeroDyn work
+!----------------------------------------------------------------------------------------------------------------------------------
+!> added 20130102 as stub for AeroDyn work
    SUBROUTINE MeshConstructElement_4PT( Mesh, Xelement, ErrStat, ErrMess, P1, P2, P3, P4 )
      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
      INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
@@ -2660,7 +2673,8 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
      ErrMess = 'MeshConstructElement_4PT not supported'
    END SUBROUTINE MeshConstructElement_4PT
 
-! added 20130102 as stub for AeroDyn work
+!----------------------------------------------------------------------------------------------------------------------------------
+!> added 20130102 as stub for AeroDyn work
    SUBROUTINE MeshConstructElement_6PT( Mesh, Xelement, ErrStat, ErrMess, P1, P2, P3, P4, P5, P6 )
      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
      INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
@@ -2674,7 +2688,8 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
      ErrMess = 'MeshConstructElement_6PT not supported'
    END SUBROUTINE MeshConstructElement_6PT
 
-! added 20130102 as stub for AeroDyn work
+!----------------------------------------------------------------------------------------------------------------------------------
+!> added 20130102 as stub for AeroDyn work
    SUBROUTINE MeshConstructElement_8PT( Mesh, Xelement, ErrStat, ErrMess, P1, P2, P3, P4, P5, P6, P7, P8 )
      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
      INTEGER(IntKi),              INTENT(IN)    :: Xelement  ! See Element Names
@@ -2688,7 +2703,8 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
      ErrMess = 'MeshConstructElement_8PT not supported'
    END SUBROUTINE MeshConstructElement_8PT
 
-! added 20130102 as stub for AeroDyn work
+!----------------------------------------------------------------------------------------------------------------------------------
+!> added 20130102 as stub for AeroDyn work
    SUBROUTINE MeshConstructElement_10PT( Mesh, Xelement, ErrStat, ErrMess, P1, P2, P3, P4, P5, &
                                                                            P6, P7, P8, P9, P10 )
      TYPE(MeshType),              INTENT(INOUT) :: Mesh      ! Mesh being constructed
@@ -2704,7 +2720,8 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
      ErrMess = 'MeshConstructElement_10PT not supported'
    END SUBROUTINE MeshConstructElement_10PT
 
-! added 20130102 as stub for AeroDyn work
+!----------------------------------------------------------------------------------------------------------------------------------
+!> added 20130102 as stub for AeroDyn work
    SUBROUTINE MeshConstructElement_15PT( Mesh, Xelement, ErrStat, ErrMess, P1,  P2,  P3,  P4,  P5,  &
                                                                            P6,  P7,  P8,  P9,  P10, &
                                                                            P11, P12, P13, P14, P15 )
@@ -2722,7 +2739,8 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
      ErrMess = 'MeshConstructElement_15PT not supported'
    END SUBROUTINE MeshConstructElement_15PT
 
-! added 20130102 as stub for AeroDyn work
+!----------------------------------------------------------------------------------------------------------------------------------
+!> added 20130102 as stub for AeroDyn work
    SUBROUTINE MeshConstructElement_20PT( Mesh, Xelement, ErrStat, ErrMess, P1,  P2,  P3,  P4,  P5,  &
                                                                            P6,  P7,  P8,  P9,  P10, &
                                                                            P11, P12, P13, P14, P15, &
@@ -2802,6 +2820,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    END SUBROUTINE MeshSplitElement_2PT
 !................................................................                                                                           
                                                                            
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Given a control code and a mesh that has been committed, retrieve the next element in the mesh. 
 !!   Used to traverse mesh element by element. On entry, the CtrlCode argument contains a control code: 
 !!   zero indicates start from the beginning, an integer between 1 and Mesh%Nelemlist returns that element,
@@ -3142,6 +3161,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
    END SUBROUTINE MeshExtrapInterp2
 
+!----------------------------------------------------------------------------------------------------------------------------------
 END MODULE ModMesh
 
 

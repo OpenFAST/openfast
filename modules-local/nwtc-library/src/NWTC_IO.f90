@@ -33,7 +33,7 @@ MODULE NWTC_IO
 !=======================================================================
 
    TYPE(ProgDesc), PARAMETER    :: NWTC_Ver = &                               
-          ProgDesc( 'NWTC Subroutine Library', 'v2.08.00', '5-Apr-2016')    !< The name, version, and date of the NWTC Subroutine Library
+          ProgDesc( 'NWTC Subroutine Library', 'v2.09.00a-bjj', '22-Apr-2016')    !< The name, version, and date of the NWTC Subroutine Library
 
       !> This type stores a linked list of file names, used in MLB-style input file parsing (currently used in AirfoilInfo)
    TYPE, PUBLIC   :: FNlist_Type                                
@@ -542,7 +542,7 @@ CONTAINS
 !> This routine allocates an array to the size specified in the AryDim input arguement(s).
 !! Arrays are of type POINTER.   
 !! If the array pointer is already associated on entry to this routine, the array it points to 
-!!  will be deallocated first. \n
+!! will be deallocated first. \n
 !! Use AllocPAry (nwtc_io::allocpary) instead of directly calling a specific routine in the generic interface.   
    SUBROUTINE AllIPAry1 ( Ary, AryDim1, Descr, ErrStat, ErrMsg )
 
