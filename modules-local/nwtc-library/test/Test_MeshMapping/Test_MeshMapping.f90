@@ -5,166 +5,40 @@ PROGRAM Test_TestMeshMapping
 
    TYPE(meshtype) :: mesh1_I, mesh1_O
    TYPE(meshtype) :: mesh2_I, mesh2_O 
-   TYPE(meshtype) :: mesh_Motion_1PT, mesh1_I_1PT, mesh2_O_1PT
 
-#ifdef MESH_DEBUG     
-   TYPE(meshtype)    :: mesh2_O_1PT_augmented, mesh2_O_1PT_lumped, mesh1_I_1PT_lumped
-   TYPE(MeshMapType) :: Map_Mod2_O_1PT_augmented, Map_Mod2_O_1PT_lumped, Map_Mod1_I_1PT_lumped
-#endif      
+   TYPE(meshtype) :: mesh1_I_op, mesh1_O_op
+   TYPE(meshtype) :: mesh2_I_op, mesh2_O_op 
    
-   TYPE(MeshMapType) :: Map_Mod1_Mod2        ! Data for mapping meshes from mod1 to mod2
-   TYPE(MeshMapType) :: Map_Mod2_Mod1        ! Data for mapping meshes from mod1 to mod2
-   TYPE(MeshMapType) :: Map_Mod2_O_1PT, Map_Mod1_I_1PT
    
-   REAL(ReKi)     :: Orientation(3,3), dcm(3,3)
-   REAL(ReKi)     :: position(3)
-   REAL(ReKi)     :: Angle
-   !REAL(DbKi)     :: AngleD
+   TYPE(MeshMapType)       :: Map_Mod1_Mod2        ! Data for mapping meshes from mod1 to mod2
+   TYPE(MeshMapType)       :: Map_Mod2_Mod1        ! Data for mapping meshes from mod1 to mod2
+   
+   REAL(R8Ki)              :: Orientation(3,3)
+   REAL(ReKi)              :: position(3)
+   REAL(ReKi)              :: Angle
+   REAL(ReKi), allocatable :: LinVec_1(:), LinVec_1_theta(:), LinVec_1_a(:), LinVec_1_b(:), LinVec_1_c(:)
+   REAL(ReKi), allocatable :: LinVec_2(:), LinVec_2_theta(:) ! data for linearization testing
+   
+   CHARACTER(*), PARAMETER :: Fmt = '(ES10.3E2)'
+   
    !
-   INTEGER :: NNodes, I,J,k, n1, n2
-   
-   INTEGER :: un_out        ! UNITS for File I/O
-   
+   INTEGER :: NNodes, I,J, n1, n2
+      
    INTEGER :: Mesh1Type
    INTEGER :: Mesh2Type
    
    INTEGER(IntKi) :: ErrStat
    CHARACTER(1024) :: ErrMsg   
-   CHARACTER(256) :: PrintWarnF, PrintWarnM
+   
+   logical, parameter :: TestLinearization = .true.
    
    INTEGER :: TestNumber 
    CHARACTER(256) :: BinOutputName 
-  TYPE(ProgDesc) :: Ver
-  
-   real(reki) :: testAry(4) 
-   real(reKi) :: TmpR4
-   real(DbKi) :: TmpR8
-   
-   CHARACTER(7) :: TESTME(2)
-   CHARACTER(1024)                       :: CheckpointRoot                          ! Rootname of the checkpoint file
-   CHARACTER(20)                         :: FlagArg                                 ! flag argument from command line
-   
-   
-   real(reki) :: angles(9) = (/ -180.0, -150.0, -120.0, -45.0, 0.0, 15.0, 75.0, 90.0, 180.0/)
-   real(reki) :: theta(3), theta2(3)
-   
-   
-logical :: LtestAry(3,2) = .false.
-LOGICAL :: LPary(6), mask2(3,2)
-integer :: IPary(6), itestary(3,2)
+      
 
-LtestAry(2:3,2) = .TRUE. 
-mask2=.true.
-
-
-   CALL NWTC_Init()
+   call NWTC_Init()
    
-   
-   Ver    = ProgDesc( 'Test Program', 'v8.11.00a-bjj', '15-Apr-2015' ) ! The version number of this module
-
-!.......................................
-   dcm(1,1)= 0.9612699
-   dcm(2,1)=-0.2755210
-   dcm(3,1)=-0.0069816
-   dcm(1,2)=-0.2755206
-   dcm(2,2)=-0.9612947
-   dcm(3,2)= 0.0010476
-   dcm(1,3)=-0.0070000	
-   dcm(2,3)= 0.0009166
-   dcm(3,3)=-0.9999752
-   
-do i=1,2
-
-   print *, '-----------------------------'
-   call wrmatrix(dcm,cu,'F15.6','DCM')
-   call DCM_LogMap(dcm, theta, ErrStat,ErrMsg)
-
-   print *, ''
-   print *,'log map of DCM:'
-   print *, theta
-   
-   print *, ''
-   dcm = DCM_exp(theta)
-   call wrmatrix(dcm,cu,'F15.6','DCM of log map:')
-
-
-!dcm = reshape( (/ 0.96127,-0.27552,-0.00683,-0.27552,-0.96129,0.00161,-0.00701,0.00033,-0.99998/), (/3,3/) )   
-dcm = reshape( (/ 0.96128  ,-0.27552  ,-0.00465  ,-0.27551  ,-0.96130  ,0.00221  ,-0.00508  ,-0.00085  ,-0.99999  /), (/3,3/) )   
-dcm = reshape( (/ 0.9612845,-0.2755184,-0.0046458,-0.2755108,-0.9612955,0.0022143,-0.0050761,-0.0008486,-0.9999868/), (/3,3/) )
-
-   !dcm(1,1)=  0.9613009
-   !dcm(2,1)= -0.2754988
-   !dcm(3,1)= -0.0010420
-   !dcm(1,2)= -0.2754033
-   !dcm(2,2)= -0.9610544
-   !dcm(3,2)=  0.0229664
-   !dcm(1,3)= -0.0073287
-   !dcm(2,3)= -0.0217907
-   !dcm(3,3)= -0.9997358
-
-end do
-!.......................................
-
-
-stop
-   
-   
-   do i=1,size(angles)
-      theta(1) = angles(i)*D2R
-      do j=1,size(angles)
-         theta(2) = angles(j)*D2R
-         do k=1,size(angles)
-            theta(3) = angles(k)*D2R
-            print *, ''
-            print *, 'orig theta = ', theta*R2D
-            Orientation = EulerConstruct(theta)
-            call wrmatrix(Orientation,cu,'f10.5')
-            theta2      = EulerExtract(Orientation)
-            Orientation = EulerConstruct(theta2)
-            print *, ' new theta = ', theta2*R2D
-            call wrmatrix(Orientation,cu,'f10.5')
-         end do
-      end do
-   end do
-   
-            
-   
-   STOP
-   
-   !angle=0.001_ReKi;    print *, angle, equalrealnos(angle, 0.0_ReKi)
-   !angle=0.0001_ReKi;   print *, angle, equalrealnos(angle, 0.0_ReKi)
-   !angle=0.00001_ReKi;  print *, angle, equalrealnos(angle, 0.0_ReKi)
-   !angle=0.000001_ReKi; print *, angle, equalrealnos(angle, 0.0_ReKi)
-   !print *, epsilon(angle), sqrt(epsilon(angle))
-   !
-   !angleD=0.001_DbKi;    print *, angleD, equalrealnos(angleD, 0.0_DbKi)
-   !angleD=0.0001_DbKi;   print *, angleD, equalrealnos(angleD, 0.0_DbKi)
-   !angleD=0.00001_DbKi;  print *, angleD, equalrealnos(angleD, 0.0_DbKi)
-   !angleD=0.000001_DbKi; print *, angleD, equalrealnos(angleD, 0.0_DbKi)
-   !print *, epsilon(angleD), sqrt(epsilon(angleD))
-   !
-   testAry = (/5431999., 274118.281250000, -5431999., -274118.281250000/)
-   
-   print *, sum(testAry)
-   print *, testAry(1) + testAry(2) + testAry(3) + testAry(4)
-   print *, testAry(1) + testAry(3) + testAry(2) + testAry(4)
-   
-   !do i=1,8
-   !   TmpR4 = 10.0_ReKi**(-i)      
-   !   print *, 'val = ', TmpR4, '; is equal to zero? ', EqualRealNos( TmpR4, 0.0_ReKi )      
-   !end do
-   !
-   !do i=1,8
-   !   TmpR8 = 10.0_DbKi**(-i)      
-   !   print *, 'val = ', TmpR8, '; is equal to zero? ', EqualRealNos( TmpR8, 0.0_DbKi )     
-   !end do   
-   
-   
-   !call testOrientations()
-   
-   !call wrscr( NewLine//'Creating two meshes with siblings and writing to binary files.'//NewLine//NewLine )
-   
-   DO TestNumber=13,13 !1,9
+   DO TestNumber=1,13 !1,9
 
       print *, '---------------------------------------------------------------'
       print *, '   Test ', TestNumber
@@ -222,7 +96,6 @@ stop
    
       WRITE(BinOutputName,'(A,A,A)') 'Test', TRIM(Num2LStr(TestNumber)),'Meshes.bin'
       
-      CALL CreateTotalLoadsPointMeshes()
    
       ! ..............................................................................................................................   
       ! Create sibling input meshes: 
@@ -264,17 +137,13 @@ stop
       CALL MeshMapCreate( Mesh1_O, Mesh2_I,     Map_Mod1_Mod2, ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))   
       CALL MeshMapCreate( Mesh2_O, Mesh1_I,     Map_Mod2_Mod1, ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
       
-      CALL MeshMapCreate( Mesh1_I, Mesh1_I_1PT, Map_Mod1_I_1PT,  ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      CALL MeshMapCreate( Mesh2_O, Mesh2_O_1PT, Map_Mod2_O_1PT,  ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-            
-                  
       ! ..............................................................................................................................   
       ! Map the outputs to inputs:
       ! ..............................................................................................................................   
       IF (Mesh1Type == ELEMENT_POINT ) THEN
-         IF ( Mesh2Type == ELEMENT_POINT ) THEN
+         IF ( Mesh2Type == ELEMENT_POINT ) THEN            
             CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
-            CALL Transfer_Point_to_Point( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O );   IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))   
+            CALL Transfer_Point_to_Point( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O );   IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))               
          ELSEIF ( Mesh2Type == ELEMENT_LINE2) THEN                                                                
             CALL Transfer_Point_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
             CALL Transfer_Line2_to_Point( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O );   IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))         
@@ -295,156 +164,419 @@ stop
       ! ..............................................................................................................................   
       ! Write results to file(s)
       ! ..............................................................................................................................   
-   
-      un_out = -1
-      CALL MeshWrBin ( un_out, Mesh1_I,         ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      CALL MeshWrBin ( un_out, Mesh1_O,         ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      CALL MeshWrBin ( un_out, Mesh2_I,         ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      CALL MeshWrBin ( un_out, Mesh2_O,         ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      CALL MeshWrBin ( un_out, mesh1_I_1PT,     ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      CALL MeshWrBin ( un_out, mesh2_O_1PT,     ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))   
-      CALL MeshWrBin ( un_out, mesh_Motion_1PT, ErrStat, ErrMsg, BinOutputName);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))   
-      CALL MeshMapWrBin( un_out, Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
-      CALL MeshMapWrBin( un_out, Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
-      !close( un_out )
-  
-      ! ..............................................................................................................................   
-      ! map the loads from the transfer to a single point to verify the two modules have the same total loads:
-      ! ..............................................................................................................................   
-      IF ( Mesh1Type == ELEMENT_POINT ) THEN
-         CALL Transfer_Point_to_Point( Mesh1_I, Mesh1_I_1PT, Map_Mod1_I_1PT,ErrStat,ErrMsg,mesh1_O,mesh_Motion_1PT);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))         
-      ELSEIF ( Mesh1Type == ELEMENT_LINE2 ) THEN
-         CALL Transfer_Line2_to_Point( Mesh1_I, Mesh1_I_1PT, Map_Mod1_I_1PT,ErrStat,ErrMsg,mesh1_O,mesh_Motion_1PT);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))          
-      END IF
+      call WriteMappingTransferToFile(Mesh1_I, Mesh1_O, Mesh2_I, Mesh2_O, Map_Mod1_Mod2, Map_Mod2_Mod1, BinOutputName)                       
       
-      IF ( Mesh2Type == ELEMENT_POINT ) THEN
-         CALL Transfer_Point_to_Point( Mesh2_O, Mesh2_O_1PT, Map_Mod2_O_1PT,ErrStat,ErrMsg,mesh2_I,mesh_Motion_1PT);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
-      ELSEIF ( Mesh2Type == ELEMENT_LINE2 ) THEN 
-         CALL Transfer_Line2_to_Point( Mesh2_O, Mesh2_O_1PT, Map_Mod2_O_1PT,ErrStat,ErrMsg,mesh2_I,mesh_Motion_1PT);  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))          
-      END IF
-                  
+      if (TestNumber == 13) then
+
+         !write( 17, '(A)' )
+         DO i=1,mesh2_o%nnodes
+            n1 = mesh1_o%ElemTable(ELEMENT_LINE2)%Elements(Map_Mod1_Mod2%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
+            n2 = mesh1_o%ElemTable(ELEMENT_LINE2)%Elements(Map_Mod1_Mod2%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
       
-      CALL MeshMapWrBin( un_out, Mesh1_I, Mesh1_I_1PT, Map_Mod1_I_1PT, ErrStat, ErrMsg, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
-      CALL MeshMapWrBin( un_out, Mesh2_O, Mesh2_O_1PT, Map_Mod2_O_1PT, ErrStat, ErrMsg, BinOutputName );  IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
-      
-      ! ..............................................................................................................................   
-      ! Write some info to the screen
-      ! ..............................................................................................................................   
-   !PRINT *, 'mesh1_I_1PT:'
-   !call meshprintinfo(CU,mesh1_I_1PT,mesh1_I_1PT%NNodes)    
-   !PRINT *, 'mesh2_O_1PT:'
-   !call meshprintinfo(CU,mesh2_O_1PT,mesh2_O_1PT%NNodes)    
+            WRITE (17, '(6(F15.5))' ) atan2( mesh2_i%refOrientation(1,2,i ) , mesh2_i%refOrientation(1,1,i ) ),&
+                                      atan2( mesh2_i%Orientation(   1,2,i ) , mesh2_i%Orientation(   1,1,i ) ),&
+                                      atan2( mesh1_o%refOrientation(1,2,n1) , mesh1_o%refOrientation(1,1,n1) ),&
+                                      atan2( mesh1_o%Orientation(   1,2,n1) , mesh1_o%Orientation(   1,1,n1) ),&      
+                                      atan2( mesh1_o%refOrientation(1,2,n2) , mesh1_o%refOrientation(1,1,n2) ),&
+                                      atan2( mesh1_o%Orientation(   1,2,n2) , mesh1_o%Orientation(   1,1,n2) )
+         end do                              
    
-   
-   PrintWarnF=""
-   PrintWarnM=""
-   do i=1,3
-      if (.NOT. equalrealnos(mesh1_I_1PT%Force( i,1),mesh2_O_1PT%Force( i,1)) ) PrintWarnF=NewLine//"  <----------- WARNING: Forces are not equal ----------->  "//NewLine//NewLine
-      if (.NOT. equalrealnos(mesh1_I_1PT%Moment(i,1),mesh2_O_1PT%Moment(i,1)) ) PrintWarnM=NewLine//"  <----------- WARNING: Moments are not equal ----------->  "//NewLine//NewLine
-   end do
-   
-      call wrscr(TRIM(PrintWarnF)//'Total Force:' )
-      print *, '     Mesh 1:',mesh1_I_1PT%Force 
-      print *, '     Mesh 2:',mesh2_O_1PT%Force 
-      call wrscr(TRIM(PrintWarnM)//'Total Moment:' )
-      print *, '     Mesh 1:',mesh1_I_1PT%Moment 
-      print *, '     Mesh 2:',mesh2_O_1PT%Moment      
+
+
+      end if
      
+if ( TestLinearization ) then      
+      ! ..............................................................................................................................   
+      ! Linearize about the operating points:
+      ! ..............................................................................................................................   
       
-if (TestNumber == 13) then
-
-   !write( 17, '(A)' )
-   DO i=1,mesh2_o%nnodes
-      n1 = mesh1_o%ElemTable(ELEMENT_LINE2)%Elements(Map_Mod1_Mod2%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
-      n2 = mesh1_o%ElemTable(ELEMENT_LINE2)%Elements(Map_Mod1_Mod2%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
+      call AllocAry( LinVec_1, Mesh1_O%nnodes*3, 'LinVec_1', ErrStat, ErrMsg);       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      call AllocAry( LinVec_2, Mesh2_O%nnodes*3, 'LinVec_2', ErrStat, ErrMsg);       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      call AllocAry( LinVec_1_theta, Mesh1_O%nnodes*3, 'LinVec_1_theta', ErrStat, ErrMsg);       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      call AllocAry( LinVec_2_theta, Mesh2_O%nnodes*3, 'LinVec_2_theta', ErrStat, ErrMsg);       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      call AllocAry( LinVec_1_a, Mesh1_O%nnodes*3, 'LinVec_1_a', ErrStat, ErrMsg);       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      call AllocAry( LinVec_1_b, Mesh1_O%nnodes*3, 'LinVec_1_b', ErrStat, ErrMsg);       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      call AllocAry( LinVec_1_c, Mesh2_O%nnodes*3, 'LinVec_1_c', ErrStat, ErrMsg);       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
       
-      WRITE (17, '(6(F15.5))' ) atan2( mesh2_i%refOrientation(1,2,i ) , mesh2_i%refOrientation(1,1,i ) ),&
-                                atan2( mesh2_i%Orientation(   1,2,i ) , mesh2_i%Orientation(   1,1,i ) ),&
-                                atan2( mesh1_o%refOrientation(1,2,n1) , mesh1_o%refOrientation(1,1,n1) ),&
-                                atan2( mesh1_o%Orientation(   1,2,n1) , mesh1_o%Orientation(   1,1,n1) ),&      
-                                atan2( mesh1_o%refOrientation(1,2,n2) , mesh1_o%refOrientation(1,1,n2) ),&
-                                atan2( mesh1_o%Orientation(   1,2,n2) , mesh1_o%Orientation(   1,1,n2) )
-   end do                              
-   
-
-
-end if
-     
-#ifdef MESH_DEBUG  
-   
-   
-      !call MeshPrintInfo(10*(1+TestNumber)+1,Mesh1_I) 
-      !call MeshPrintInfo(10*(1+TestNumber)+1,mesh1_O) 
-      !call MeshPrintInfo(10*(1+TestNumber)+3,mesh1_I_1PT) 
-      !call MeshPrintInfo(10*(1+TestNumber)+3,mesh_Motion_1PT) 
-      !
-      !call MeshPrintInfo(10*(1+TestNumber)+2,Mesh2_O) 
-      !call MeshPrintInfo(10*(1+TestNumber)+2,mesh2_I) 
-      !call MeshPrintInfo(10*(1+TestNumber)+4,mesh2_O_1PT) 
-      !call MeshPrintInfo(10*(1+TestNumber)+4,mesh_Motion_1PT) 
-
-if (LEN_TRIM(PrintWarnM)>0 .OR. LEN_TRIM(PrintWarnF)>0 ) THEN
-      call wrscr(NewLine)
-      call wrmatrix( mesh1_O%TranslationDisp, CU, 'f10.5')
-      call wrscr(NewLine)
-     ! call wrmatrix( mesh2_I%TranslationDisp, CU, 'f10.5')
-     ! call wrmatrix( mesh_Motion_1PT%TranslationDisp, CU, 'f10.5')
-     ! call wrmatrix( mesh_Motion_1PT%Position, CU, 'f10.5')
-
-
-   if (Map_Mod2_Mod1%Augmented_Ln2_Src%committed) THEN
-      CALL MeshCopy( Mesh2_O_1PT, mesh2_O_1PT_augmented, MESH_NEWCOPY, ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      mesh2_O_1PT_augmented%force = 0.0
-      mesh2_O_1PT_augmented%moment = 0.0
-     ! Map_Mod2_Mod1%Augmented_Ln2_Src%TranslationDisp=0.0
-      CALL MeshMapCreate( Map_Mod2_Mod1%Augmented_Ln2_Src,  mesh2_O_1PT_augmented, Map_Mod2_O_1PT_augmented, ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      CALL Transfer_Line2_to_Point(Map_Mod2_Mod1%Augmented_Ln2_Src,  mesh2_O_1PT_augmented, Map_Mod2_O_1PT_augmented, ErrStat, ErrMsg, Map_Mod2_Mod1%Augmented_Ln2_Src, mesh_Motion_1PT );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-
-      !print *, '---------Augmented_Ln2_Src:---------------'
-      !call meshprintinfo(CU,Map_Mod2_Mod1%Augmented_Ln2_Src)
-   end if
       
-   if (Map_Mod2_Mod1%Lumped_Points_Src%committed) THEN
-      CALL MeshCopy( Mesh2_O_1PT, mesh2_O_1PT_lumped,    MESH_NEWCOPY, ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      mesh2_O_1PT_lumped%force = 0.0
-      mesh2_O_1PT_lumped%moment = 0.0
-     ! Map_Mod2_Mod1%Lumped_Points_Src%TranslationDisp=0.0
-      CALL MeshMapCreate( Map_Mod2_Mod1%Lumped_Points_Src,  mesh2_O_1PT_lumped,    Map_Mod2_O_1PT_lumped,    ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      CALL Transfer_Point_to_Point(Map_Mod2_Mod1%Lumped_Points_Src,  mesh2_O_1PT_lumped,    Map_Mod2_O_1PT_lumped,    ErrStat, ErrMsg, Map_Mod2_Mod1%Lumped_Points_Src, mesh_Motion_1PT );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))            
-
-      !print *, '-------------Lumped_Points_Src:----------------'
-      !call meshprintinfo(CU,Map_Mod2_Mod1%Lumped_Points_Src)   
-   end if
-
-   if (Map_Mod2_Mod1%Lumped_Points_Dest%committed) THEN
-      CALL MeshCopy( Mesh1_I_1PT, mesh1_I_1PT_lumped,    MESH_NEWCOPY, ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      mesh1_I_1PT_lumped%force = 0.0
-      mesh1_I_1PT_lumped%moment = 0.0      
-      CALL MeshMapCreate( Map_Mod2_Mod1%Lumped_Points_Dest, mesh1_I_1PT_lumped,    Map_Mod1_I_1PT_lumped,    ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))      
-      CALL Transfer_Point_to_Point(Map_Mod2_Mod1%Lumped_Points_Dest, mesh1_I_1PT_lumped,    Map_Mod1_I_1PT_lumped,    ErrStat, ErrMsg, mesh1_O, mesh_Motion_1PT );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))     
-
-      !print *, '-----------Lumped_Points_Dest:---------------'
-      !call meshprintinfo(CU,Map_Mod2_Mod1%Lumped_Points_Dest)   
-   end if
-         
+      CALL MeshCopy (        SrcMesh          = mesh1_O          &
+                           , DestMesh         = mesh1_O_op       &
+                           , CtrlCode         = MESH_NEWCOPY     &
+                           , ErrStat          = ErrStat          &
+                           , ErrMess          = ErrMsg           )
+            IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      
+      CALL MeshCopy (        SrcMesh          = mesh2_O          &
+                           , DestMesh         = mesh2_O_op       &
+                           , CtrlCode         = MESH_NEWCOPY     &
+                           , ErrStat          = ErrStat          &
+                           , ErrMess          = ErrMsg           )
+            IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      
             
-      call wrscr('Total Force:' )                                                                                                                            
-                                           print *, '     Mesh 2:            ',mesh2_O_1PT%Force ,          trim(num2lstr(mesh2_O%Nnodes                          ))
-      if (mesh2_O_1PT_augmented%committed) print *, '     Mesh 2 (augmented):',mesh2_O_1PT_augmented%Force, trim(num2lstr(Map_Mod2_Mod1%Augmented_Ln2_Src%Nnodes  ))
-      if (mesh2_O_1PT_lumped%committed)    print *, '     Mesh 2 (lumped):   ',mesh2_O_1PT_lumped%Force ,   trim(num2lstr(Map_Mod2_Mod1%Lumped_Points_Src%Nnodes  ))
-      if (mesh1_I_1PT_lumped%committed)    print *, '     Mesh 1 (lumped):   ',mesh1_I_1PT_lumped%Force ,   trim(num2lstr(Map_Mod2_Mod1%Lumped_Points_Dest%Nnodes ))
-                                           print *, '     Mesh 1:            ',mesh1_I_1PT%Force ,          trim(num2lstr(mesh1_I%Nnodes                          ))
-      call wrscr('Total Moment:' )
-                                           print *, '     Mesh 2:            ',mesh2_O_1PT%Moment ,          trim(num2lstr(mesh2_O%Nnodes                          ))
-      if (mesh2_O_1PT_augmented%committed) print *, '     Mesh 2 (augmented):',mesh2_O_1PT_augmented%Moment, trim(num2lstr(Map_Mod2_Mod1%Augmented_Ln2_Src%Nnodes  ))
-      if (mesh2_O_1PT_lumped%committed)    print *, '     Mesh 2 (lumped):   ',mesh2_O_1PT_lumped%Moment ,   trim(num2lstr(Map_Mod2_Mod1%Lumped_Points_Src%Nnodes  ))
-      if (mesh1_I_1PT_lumped%committed)    print *, '     Mesh 1 (lumped):   ',mesh1_I_1PT_lumped%Moment ,   trim(num2lstr(Map_Mod2_Mod1%Lumped_Points_Dest%Nnodes ))
-                                           print *, '     Mesh 1:            ',mesh1_I_1PT%Moment       ,    trim(num2lstr(mesh1_I%Nnodes                          ))
-END IF
-#endif
+      CALL MeshCopy (        SrcMesh          = mesh1_I          &
+                           , DestMesh         = mesh1_I_op       &
+                           , CtrlCode         = MESH_NEWCOPY     &
+                           , ErrStat          = ErrStat          &
+                           , ErrMess          = ErrMsg           )
+            IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      
+      CALL MeshCopy (        SrcMesh          = mesh2_I          &
+                           , DestMesh         = mesh2_I_op       &
+                           , CtrlCode         = MESH_NEWCOPY     &
+                           , ErrStat          = ErrStat          &
+                           , ErrMess          = ErrMsg           )
+            IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+            
+      
+write(99, *) '---------------------------------------------------------------'
+write(99, *) '   Test ', TestNumber
+write(99, *) '---------------------------------------------------------------'
+      
+      IF (Mesh1Type == ELEMENT_POINT ) THEN
+         IF ( Mesh2Type == ELEMENT_POINT ) THEN            
+      
+            CALL Linearize_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+            CALL Linearize_Point_to_Point( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O );   IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))   
+                     
+            call wrmatrix(map_mod1_mod2%dm%mi,  99,Fmt,'Mi')
+            call wrmatrix(map_mod1_mod2%dm%fx_p,99,Fmt,'fx_p')
+            call wrmatrix(map_mod1_mod2%dm%tv,  99,Fmt,'tv')
+            call wrmatrix(map_mod1_mod2%dm%ta1, 99,Fmt,'ta1')
+            call wrmatrix(map_mod1_mod2%dm%ta2, 99,Fmt,'ta2')
+            
+
+            call wrmatrix(map_mod2_mod1%dm%li,99,Fmt,'li')
+            call wrmatrix(map_mod2_mod1%dm%M1,99,Fmt,'m1')
+            call wrmatrix(map_mod2_mod1%dm%M2,99,Fmt,'m2')      
+            
+            
+         ELSEIF ( Mesh2Type == ELEMENT_LINE2) THEN                                                                
+            !CALL Linearize_Point_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+            !CALL Linearize_Line2_to_Point( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O );   IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))         
+         END IF                                                                                                   
+      ELSEIF ( Mesh1Type == ELEMENT_LINE2 ) THEN                                                                  
+         IF ( Mesh2Type == ELEMENT_LINE2 ) THEN                                                                   
+            !CALL Linearize_Line2_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))   
+            !if (TestNumber == 5 .or. TestNumber == 12 ) call InitTest5Loads()
+            !if (TestNumber == 13 ) call InitTest13Loads()
+            !CALL Linearize_Line2_to_Line2( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O );   IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))        
+         ELSEIF ( Mesh2Type == ELEMENT_POINT ) THEN        
+            !CALL Linearize_Line2_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))                  
+            !CALL Linearize_Point_to_Line2( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O );   IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+         END IF            
+      END IF
       
       
-               
+      ! src=Mesh1_O, dest=Mesh2_I, Map_Mod1_Mod2
+   if (Mesh1Type == ELEMENT_POINT  .and.  Mesh2Type == ELEMENT_POINT ) THEN            
+      
+      
+      !........................ 
+      ! get Mesh1_O_op orientation parameters, i.e., LinVec_1_theta = theta^S
+      !........................
+      j=1
+      do i=1,Mesh1_O%nnodes
+         LinVec_1_theta(j:j+2) = GetSmllRotAngs(Mesh1_O_op%Orientation(:,:,i),ErrStat,ErrMsg)
+         j = j+3
+         !IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
+      end do
+      
+      !call wrmatrix(LinVec_1_theta,  99,Fmt,'LinVec_1_theta')
+         
+      ! ..................
+      ! Rotational displacement:
+      ! ..................
+      
+      do n1=1,15
+         
+         ! perturb x^S:
+         call random_number( LinVec_1 )
+         LinVec_1 = LinVec_1/real(n1**3)               
+         
+         LinVec_2_theta = matmul( map_mod1_mod2%dm%mi, LinVec_1 ) ! approximate delta theta^D         
+             
+         !call wrmatrix(LinVec_1,  99,Fmt,'LinVec_1')
+         !call wrmatrix(LinVec_2_theta,  99,Fmt,'LinVec_2_theta')
+         
+         j=1
+         do i=1,Mesh1_O%nnodes
+
+               ! Mesh1_O%Orientation = theta^S|_op + delta theta^S
+            call SmllRotTrans( 'orientation', LinVec_1_theta(j  )+LinVec_1(j  ) &
+                                            , LinVec_1_theta(j+1)+LinVec_1(j+1) &
+                                            , LinVec_1_theta(j+2)+LinVec_1(j+2) & 
+                                            , Mesh1_O%Orientation(:,:,i), ErrStat=ErrStat, ErrMsg=ErrMsg)            
+                                    
+            j = j+3            
+            !IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
+         end do
+
+         !M( theta^S|_op + delta theta^S )
+         CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+
+         
+         j=1
+         do i=1,Mesh2_O%nnodes
+            LinVec_2(j:j+2) = GetSmllRotAngs(Mesh2_I%Orientation(:,:,i),ErrStat,ErrMsg) 
+            !IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
+            
+            LinVec_2(j:j+2) = LinVec_2(j:j+2) - GetSmllRotAngs(Mesh2_I_op%Orientation(:,:,i),ErrStat,ErrMsg)
+            !IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
+            
+            j = j+3
+         end do
+         !call wrmatrix(LinVec_2-LinVec_2_theta,  99,Fmt,'LinVec_2')
+         
+         
+         print *, 'Rotational Displacement: ', n1, TwoNorm( LinVec_2 - LinVec_2_theta )
+            
+      end do
+      
+      ! ..................
+      ! Translational displacement:
+      ! ..................
+      
+      call meshcopy( Mesh1_O_op, Mesh1_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
+      do n1=1,15
+         
+         ! perturb x^S:
+         call random_number( LinVec_1 )
+         LinVec_1 = LinVec_1/real(n1**3)               
+         call random_number( LinVec_1_a )
+         LinVec_1_a = LinVec_1_a/real(n1**3)               
+         
+         LinVec_2_theta = matmul( map_mod1_mod2%dm%mi, LinVec_1 ) + matmul( map_mod1_mod2%dm%fx_p, LinVec_1_a ) ! approximate delta theta^D         
+                      
+         j=1
+         do i=1,Mesh1_O%nnodes
+
+               ! Mesh1_O%TranslationDisp = theta^S|_op + delta theta^S
+            Mesh1_O%TranslationDisp(:,i) = Mesh1_O_op%TranslationDisp(:,i) + LinVec_1(j:j+2)
+            
+               ! Mesh1_O%Orientation = theta^S|_op + delta theta^S
+            call SmllRotTrans( 'orientation', LinVec_1_theta(j  )+LinVec_1_a(j  ) &
+                                            , LinVec_1_theta(j+1)+LinVec_1_a(j+1) &
+                                            , LinVec_1_theta(j+2)+LinVec_1_a(j+2) & 
+                                            , Mesh1_O%Orientation(:,:,i), ErrStat=ErrStat, ErrMsg=ErrMsg)            
+                                    
+            j = j+3            
+            !IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
+                        
+         end do
+         
+
+         !M( theta^S|_op + delta theta^S )
+         CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+
+         ! delta theta^D = M( theta^S|_op + delta theta^S ) - x^D|_op
+         j=1
+         do i=1,Mesh2_O%nnodes
+            LinVec_2(j:j+2) = Mesh2_I%TranslationDisp(:,i) - Mesh2_I_op%TranslationDisp(:,i)          
+            j = j+3
+         end do
+                  
+         print *, 'Translational Displacement: ', n1, TwoNorm( LinVec_2 - LinVec_2_theta )
+                              
+      end do      
+      
+      
+      ! ..................
+      ! Rotational velocity:
+      ! ..................
+      
+      call meshcopy( Mesh1_O_op, Mesh1_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
+      do n1=1,15
+         
+         ! perturb x^S:
+         call random_number( LinVec_1 )
+         LinVec_1 = LinVec_1/real(n1**3)               
+         
+         LinVec_2_theta = matmul( map_mod1_mod2%dm%mi, LinVec_1 )  ! approximate delta theta^D         
+                      
+         j=1
+         do i=1,Mesh1_O%nnodes
+
+               ! Mesh1_O%RotationVel = theta^S|_op + delta theta^S
+            Mesh1_O%RotationVel(:,i) = Mesh1_O_op%RotationVel(:,i) + LinVec_1(j:j+2)
+                                                
+            j = j+3            
+                        
+         end do
+         
+
+         !M( theta^S|_op + delta theta^S )
+         CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+
+         ! delta theta^D = M( theta^S|_op + delta theta^S ) - x^D|_op
+         j=1
+         do i=1,Mesh2_O%nnodes
+            LinVec_2(j:j+2) = Mesh2_I%RotationVel(:,i) - Mesh2_I_op%RotationVel(:,i)          
+            j = j+3
+         end do
+                  
+         print *, 'Rotational Velocity: ', n1, TwoNorm( LinVec_2 - LinVec_2_theta )                              
+      end do            
+      
+      
+      ! ..................
+      ! Translational velocity:
+      ! ..................
+      
+      call meshcopy( Mesh1_O_op, Mesh1_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
+      do n1=1,15
+         
+         ! perturb x^S:
+         call random_number( LinVec_1 )
+         LinVec_1 = LinVec_1/real(n1**3)               
+         call random_number( LinVec_1_a )
+         LinVec_1_a = LinVec_1_a/real(n1**3)               
+         call random_number( LinVec_1_b )
+         LinVec_1_b = LinVec_1_b/real(n1**3)               
+         
+         LinVec_2_theta = matmul( map_mod1_mod2%dm%tv, LinVec_1 ) + matmul( map_mod1_mod2%dm%mi, LinVec_1_a ) &
+                        + matmul( map_mod1_mod2%dm%fx_p, LinVec_1_b )! approximate delta theta^D         
+                      
+         j=1
+         do i=1,Mesh1_O%nnodes
+            
+               ! Mesh1_O%Orientation = theta^S|_op + delta theta^S
+            call SmllRotTrans( 'orientation', LinVec_1_theta(j  )+LinVec_1(j  ) &
+                                            , LinVec_1_theta(j+1)+LinVec_1(j+1) &
+                                            , LinVec_1_theta(j+2)+LinVec_1(j+2) & 
+                                            , Mesh1_O%Orientation(:,:,i), ErrStat=ErrStat, ErrMsg=ErrMsg)            
+
+                        
+               ! Mesh1_O%TranslationVel = theta^S|_op + delta theta^S
+            Mesh1_O%TranslationVel(:,i) = Mesh1_O_op%TranslationVel(:,i) + LinVec_1_a(j:j+2)
+            
+               ! Mesh1_O%RotationVel = theta^S|_op + delta theta^S
+            Mesh1_O%RotationVel(:,i) = Mesh1_O_op%RotationVel(:,i) + LinVec_1_b(j:j+2)
+            
+            j = j+3            
+            !IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
+                        
+         end do
+         
+
+         !M( theta^S|_op + delta theta^S )
+         CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+
+         ! delta theta^D = M( theta^S|_op + delta theta^S ) - x^D|_op
+         j=1
+         do i=1,Mesh2_O%nnodes
+            LinVec_2(j:j+2) = Mesh2_I%TranslationVel(:,i) - Mesh2_I_op%TranslationVel(:,i)          
+            j = j+3
+         end do
+                  
+         print *, 'Translational Velocity: ', n1, TwoNorm( LinVec_2 - LinVec_2_theta )
+                              
+      end do      
+      
+      ! ..................
+      ! Rotational acceleration:
+      ! ..................
+      
+      call meshcopy( Mesh1_O_op, Mesh1_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
+      do n1=1,15
+         
+         ! perturb x^S:
+         call random_number( LinVec_1 )
+         LinVec_1 = LinVec_1/real(n1**3)               
+         
+         LinVec_2_theta = matmul( map_mod1_mod2%dm%mi, LinVec_1 )  ! approximate delta theta^D         
+                      
+         j=1
+         do i=1,Mesh1_O%nnodes
+
+               ! Mesh1_O%RotationAcc = theta^S|_op + delta theta^S
+            Mesh1_O%RotationAcc(:,i) = Mesh1_O_op%RotationAcc(:,i) + LinVec_1(j:j+2)
+                                                
+            j = j+3            
+                        
+         end do
+         
+
+         !M( theta^S|_op + delta theta^S )
+         CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+
+         ! delta theta^D = M( theta^S|_op + delta theta^S ) - x^D|_op
+         j=1
+         do i=1,Mesh2_O%nnodes
+            LinVec_2(j:j+2) = Mesh2_I%RotationAcc(:,i) - Mesh2_I_op%RotationAcc(:,i)          
+            j = j+3
+         end do
+                  
+         print *, 'Rotational RotationAcc: ', n1, TwoNorm( LinVec_2 - LinVec_2_theta )                              
+      end do            
+                  
+      ! ..................
+      ! Translational acceleration:
+      ! ..................
+      
+      call meshcopy( Mesh1_O_op, Mesh1_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
+      do n1=1,15
+         
+         ! perturb x^S:
+         call random_number( LinVec_1 )
+         LinVec_1 = LinVec_1/real(n1**3)               
+         call random_number( LinVec_1_a )
+         LinVec_1_a = LinVec_1_a/real(n1**3)               
+         call random_number( LinVec_1_b )
+         LinVec_1_b = LinVec_1_b/real(n1**3)               
+         call random_number( LinVec_1_c )
+         LinVec_1_c = LinVec_1_c/real(n1**3)               
+         
+         LinVec_2_theta = matmul( map_mod1_mod2%dm%ta1, LinVec_1   ) + matmul( map_mod1_mod2%dm%ta2,  LinVec_1_a ) &
+                        + matmul( map_mod1_mod2%dm%mi,  LinVec_1_b ) + matmul( map_mod1_mod2%dm%fx_p, LinVec_1_c )! approximate delta theta^D         
+                      
+         j=1
+         do i=1,Mesh1_O%nnodes
+            
+               ! Mesh1_O%Orientation = theta^S|_op + delta theta^S
+            call SmllRotTrans( 'orientation', LinVec_1_theta(j  )+LinVec_1(j  ) &
+                                            , LinVec_1_theta(j+1)+LinVec_1(j+1) &
+                                            , LinVec_1_theta(j+2)+LinVec_1(j+2) & 
+                                            , Mesh1_O%Orientation(:,:,i), ErrStat=ErrStat, ErrMsg=ErrMsg)            
+
+                        
+               ! Mesh1_O%RotationVel = theta^S|_op + delta theta^S
+            Mesh1_O%RotationVel(:,i) = Mesh1_O_op%RotationVel(:,i) + LinVec_1_a(j:j+2)
+            
+               ! Mesh1_O%TranslationAcc = theta^S|_op + delta theta^S
+            Mesh1_O%TranslationAcc(:,i) = Mesh1_O_op%TranslationAcc(:,i) + LinVec_1_b(j:j+2)
+            
+               ! Mesh1_O%RotationAcc = theta^S|_op + delta theta^S
+            Mesh1_O%RotationAcc(:,i) = Mesh1_O_op%RotationAcc(:,i) + LinVec_1_c(j:j+2)
+            
+            j = j+3            
+            !IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
+                        
+         end do
+         
+
+         !M( theta^S|_op + delta theta^S )
+         CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+
+         ! delta theta^D = M( theta^S|_op + delta theta^S ) - x^D|_op
+         j=1
+         do i=1,Mesh2_O%nnodes
+            LinVec_2(j:j+2) = Mesh2_I%TranslationAcc(:,i) - Mesh2_I_op%TranslationAcc(:,i)          
+            j = j+3
+         end do
+                  
+         print *, 'Translational Acceleration: ', n1, TwoNorm( LinVec_2 - LinVec_2_theta )
+                              
+      end do      
+      
+      
+end if
+
+
+else      
+      
+end if ! linearization or mapping test
+
       ! ..............................................................................................................................   
       ! Destroy data structures:
       ! ..............................................................................................................................   
@@ -456,72 +588,21 @@ END IF
 
       call MeshMapDestroy(Map_Mod1_Mod2, ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
       call MeshMapDestroy(Map_Mod2_Mod1, ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+                    
+      if (allocated(LinVec_1)) deallocate(LinVec_1)
+      if (allocated(LinVec_2)) deallocate(LinVec_2)      
+      if (allocated(LinVec_1_theta)) deallocate(LinVec_1_theta)
+      if (allocated(LinVec_2_theta)) deallocate(LinVec_2_theta)      
+      if (allocated(LinVec_1_a)) deallocate(LinVec_1_a)
+      if (allocated(LinVec_1_b)) deallocate(LinVec_1_b)
+      if (allocated(LinVec_1_c)) deallocate(LinVec_1_c)      
       
-
-      
-      CALL MeshDestroy( mesh_Motion_1PT, ErrStat, ErrMsg ); IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      CALL MeshDestroy( mesh1_I_1PT, ErrStat, ErrMsg );     IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      CALL MeshDestroy( mesh2_O_1PT, ErrStat, ErrMsg );     IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-   
-      call MeshMapDestroy(Map_Mod1_I_1PT, ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      call MeshMapDestroy(Map_Mod2_O_1PT, ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-   
-      
-#ifdef MESH_DEBUG  
-      CALL MeshDestroy( mesh2_O_1PT_augmented,      ErrStat, ErrMsg );   IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      CALL MeshDestroy( mesh2_O_1PT_lumped,         ErrStat, ErrMsg );   IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      CALL MeshDestroy( mesh1_I_1PT_lumped,         ErrStat, ErrMsg );   IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-
-      call MeshMapDestroy(Map_Mod2_O_1PT_augmented, ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      call MeshMapDestroy(Map_Mod2_O_1PT_lumped,    ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-      call MeshMapDestroy(Map_Mod1_I_1PT_lumped,    ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-#endif      
-      
-      ! ..............................................................................................................................   
-      ! open files:
-      ! ..............................................................................................................................   
-      close( un_out )
-
-   
    end do
    
    
    
    
-contains
-   ! ..............................................  
-   subroutine CreateTotalLoadsPointMeshes( )
-   
-      CALL MeshCreate( BlankMesh       = mesh1_I_1PT        &
-                     , IOS              = COMPONENT_INPUT   &
-                     , NNodes           = 1                 &
-                     , Force            = .TRUE.            &
-                     , Moment           = .TRUE.            &
-                     , ErrStat          = ErrStat           &
-                     , ErrMess          = ErrMsg            )
-      
-      IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-         
-         
-      position = (/0.0_ReKi, 0.0_ReKi, 0.0_ReKi/)
-      CALL MeshPositionNode ( mesh1_I_1PT, 1, position, ErrStat, ErrMsg ) ; IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))             
-
-      CALL MeshConstructElement ( mesh1_I_1PT, ELEMENT_POINT, ErrStat, ErrMsg, 1 );                 IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))                     
-                  
-      CALL MeshCommit ( mesh1_I_1PT, ErrStat, ErrMsg )   ;      IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg)) 
-      
-      
-      CALL MeshCopy( mesh1_I_1PT, mesh_Motion_1PT, MESH_SIBLING, ErrStat, ErrMsg &
-                     , IOS              = COMPONENT_OUTPUT  &
-                     , TranslationDisp  = .TRUE.            ) ;      IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
-                     
-      !.....                 
-      CALL MeshCopy( mesh1_I_1PT, mesh2_O_1PT, MESH_NEWCOPY, ErrStat, ErrMsg )  ! This thinks it's for input, but really it's for output. I don't think it matters...
-
-      
-      
-   end subroutine CreateTotalLoadsPointMeshes
-   
+contains   
    ! ..............................................   
    subroutine CreateOutputMeshes_Test1()   
       ! this is a point-to-point mapping, with one point going to many.
@@ -981,7 +1062,7 @@ contains
    subroutine CreateOutputMeshes_Test5Orient
    
       real(reki) :: z
-      real(reki) :: DCM(3,3)
+      real(Dbki) :: DCM(3,3)
       
       
       Mesh1Type = ELEMENT_LINE2
