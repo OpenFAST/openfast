@@ -239,38 +239,35 @@ write(99, *) '---------------------------------------------------------------'
             CALL Linearize_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
             CALL Linearize_Point_to_Point( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O );   IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))   
                      
-            call wrmatrix(map_mod1_mod2%dm%mi,  99,Fmt,'Mi')
-            call wrmatrix(map_mod1_mod2%dm%fx_p,99,Fmt,'fx_p')
-            call wrmatrix(map_mod1_mod2%dm%tv,  99,Fmt,'tv')
-            call wrmatrix(map_mod1_mod2%dm%ta1, 99,Fmt,'ta1')
-            call wrmatrix(map_mod1_mod2%dm%ta2, 99,Fmt,'ta2')
-            
-
             call wrmatrix(map_mod2_mod1%dm%li,99,Fmt,'li')
             call wrmatrix(map_mod2_mod1%dm%M1,99,Fmt,'m1')
             call wrmatrix(map_mod2_mod1%dm%M2,99,Fmt,'m2')      
             
             
          ELSEIF ( Mesh2Type == ELEMENT_LINE2) THEN                                                                
-            !CALL Linearize_Point_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+            CALL Linearize_Point_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
             !CALL Linearize_Line2_to_Point( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O );   IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))         
          END IF                                                                                                   
       ELSEIF ( Mesh1Type == ELEMENT_LINE2 ) THEN                                                                  
          IF ( Mesh2Type == ELEMENT_LINE2 ) THEN                                                                   
-            !CALL Linearize_Line2_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))   
+            CALL Linearize_Line2_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))   
             !if (TestNumber == 5 .or. TestNumber == 12 ) call InitTest5Loads()
             !if (TestNumber == 13 ) call InitTest13Loads()
             !CALL Linearize_Line2_to_Line2( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O );   IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))        
          ELSEIF ( Mesh2Type == ELEMENT_POINT ) THEN        
-            !CALL Linearize_Line2_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))                  
+            CALL Linearize_Line2_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))                  
             !CALL Linearize_Point_to_Line2( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O );   IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
          END IF            
       END IF
       
+             
+      if (allocated(map_mod1_mod2%dm%mi))   call wrmatrix(map_mod1_mod2%dm%mi,  99,Fmt,'Mi')
+      if (allocated(map_mod1_mod2%dm%fx_p)) call wrmatrix(map_mod1_mod2%dm%fx_p,99,Fmt,'fx_p')
+      if (allocated(map_mod1_mod2%dm%tv))   call wrmatrix(map_mod1_mod2%dm%tv,  99,Fmt,'tv')
+      if (allocated(map_mod1_mod2%dm%ta1))  call wrmatrix(map_mod1_mod2%dm%ta1, 99,Fmt,'ta1')
+      if (allocated(map_mod1_mod2%dm%ta2))  call wrmatrix(map_mod1_mod2%dm%ta2, 99,Fmt,'ta2')
+            
       
-      ! src=Mesh1_O, dest=Mesh2_I, Map_Mod1_Mod2
-   if (Mesh1Type == ELEMENT_POINT  .and.  Mesh2Type == ELEMENT_POINT ) THEN            
-                     
       ! ..................
       ! Rotational displacement:
       ! ..................
@@ -306,8 +303,20 @@ write(99, *) '---------------------------------------------------------------'
          end do
 
          !M( theta^S|_op + delta theta^S )
-         CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
-
+         IF (Mesh1Type == ELEMENT_POINT ) THEN
+            IF ( Mesh2Type == ELEMENT_POINT ) THEN                        
+               CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     
+            ELSEIF ( Mesh2Type == ELEMENT_LINE2) THEN                                                                
+               CALL Transfer_Point_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );
+            END IF                                                                                                   
+         ELSEIF ( Mesh1Type == ELEMENT_LINE2 ) THEN                                                                  
+            IF ( Mesh2Type == ELEMENT_LINE2 ) THEN                                                                   
+               CALL Transfer_Line2_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );
+            ELSEIF ( Mesh2Type == ELEMENT_POINT ) THEN        
+               CALL Transfer_Line2_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg )
+            END IF            
+         END IF         
+         IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
          
          j=1
          do i=1,Mesh2_O%nnodes
@@ -358,8 +367,23 @@ write(99, *) '---------------------------------------------------------------'
          
 
          !M( theta^S|_op + delta theta^S )
-         CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+         IF (Mesh1Type == ELEMENT_POINT ) THEN
+            IF ( Mesh2Type == ELEMENT_POINT ) THEN                        
+               CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     
+            ELSEIF ( Mesh2Type == ELEMENT_LINE2) THEN                                                                
+               CALL Transfer_Point_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );
+            END IF                                                                                                   
+         ELSEIF ( Mesh1Type == ELEMENT_LINE2 ) THEN                                                                  
+            IF ( Mesh2Type == ELEMENT_LINE2 ) THEN                                                                   
+               CALL Transfer_Line2_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );
+            ELSEIF ( Mesh2Type == ELEMENT_POINT ) THEN        
+               CALL Transfer_Line2_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg )
+            END IF            
+         END IF         
+         IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
 
+         
+         
          ! delta theta^D = M( theta^S|_op + delta theta^S ) - x^D|_op
          j=1
          do i=1,Mesh2_O%nnodes
@@ -397,7 +421,20 @@ write(99, *) '---------------------------------------------------------------'
          
 
          !M( theta^S|_op + delta theta^S )
-         CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+         IF (Mesh1Type == ELEMENT_POINT ) THEN
+            IF ( Mesh2Type == ELEMENT_POINT ) THEN                        
+               CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     
+            ELSEIF ( Mesh2Type == ELEMENT_LINE2) THEN                                                                
+               CALL Transfer_Point_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );
+            END IF                                                                                                   
+         ELSEIF ( Mesh1Type == ELEMENT_LINE2 ) THEN                                                                  
+            IF ( Mesh2Type == ELEMENT_LINE2 ) THEN                                                                   
+               CALL Transfer_Line2_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );
+            ELSEIF ( Mesh2Type == ELEMENT_POINT ) THEN        
+               CALL Transfer_Line2_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg )
+            END IF            
+         END IF         
+         IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
 
          ! delta theta^D = M( theta^S|_op + delta theta^S ) - x^D|_op
          j=1
@@ -426,7 +463,7 @@ write(99, *) '---------------------------------------------------------------'
          LinVec_1_b = (2*LinVec_1_b-1)/real(n1**3)  !note n1 from the loop this is called in
          
          LinVec_2_a = matmul( map_mod1_mod2%dm%tv, LinVec_1 ) + matmul( map_mod1_mod2%dm%mi, LinVec_1_a ) &
-                        + matmul( map_mod1_mod2%dm%fx_p, LinVec_1_b )! approximate delta theta^D         
+                    + matmul( map_mod1_mod2%dm%fx_p, LinVec_1_b )! approximate delta theta^D         
                       
          j=1
          do i=1,Mesh1_O%nnodes
@@ -452,7 +489,20 @@ write(99, *) '---------------------------------------------------------------'
          
 
          !M( theta^S|_op + delta theta^S )
-         CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+         IF (Mesh1Type == ELEMENT_POINT ) THEN
+            IF ( Mesh2Type == ELEMENT_POINT ) THEN                        
+               CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     
+            ELSEIF ( Mesh2Type == ELEMENT_LINE2) THEN                                                                
+               CALL Transfer_Point_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );
+            END IF                                                                                                   
+         ELSEIF ( Mesh1Type == ELEMENT_LINE2 ) THEN                                                                  
+            IF ( Mesh2Type == ELEMENT_LINE2 ) THEN                                                                   
+               CALL Transfer_Line2_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );
+            ELSEIF ( Mesh2Type == ELEMENT_POINT ) THEN        
+               CALL Transfer_Line2_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg )
+            END IF            
+         END IF         
+         IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
 
          ! delta theta^D = M( theta^S|_op + delta theta^S ) - x^D|_op
          j=1
@@ -490,7 +540,20 @@ write(99, *) '---------------------------------------------------------------'
          
 
          !M( theta^S|_op + delta theta^S )
-         CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+         IF (Mesh1Type == ELEMENT_POINT ) THEN
+            IF ( Mesh2Type == ELEMENT_POINT ) THEN                        
+               CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     
+            ELSEIF ( Mesh2Type == ELEMENT_LINE2) THEN                                                                
+               CALL Transfer_Point_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );
+            END IF                                                                                                   
+         ELSEIF ( Mesh1Type == ELEMENT_LINE2 ) THEN                                                                  
+            IF ( Mesh2Type == ELEMENT_LINE2 ) THEN                                                                   
+               CALL Transfer_Line2_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );
+            ELSEIF ( Mesh2Type == ELEMENT_POINT ) THEN        
+               CALL Transfer_Line2_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg )
+            END IF            
+         END IF         
+         IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
 
          ! delta theta^D = M( theta^S|_op + delta theta^S ) - x^D|_op
          j=1
@@ -520,8 +583,9 @@ write(99, *) '---------------------------------------------------------------'
          LinVec_1_c = (2*LinVec_1_c-1)/real(n1**3)  !note n1 from the loop this is called in
          
          LinVec_2_a = matmul( map_mod1_mod2%dm%ta1, LinVec_1   ) + matmul( map_mod1_mod2%dm%ta2,  LinVec_1_a ) &
-                        + matmul( map_mod1_mod2%dm%mi,  LinVec_1_b ) + matmul( map_mod1_mod2%dm%fx_p, LinVec_1_c )! approximate delta theta^D         
-                      
+                    + matmul( map_mod1_mod2%dm%mi,  LinVec_1_b ) + matmul( map_mod1_mod2%dm%fx_p, LinVec_1_c )! approximate delta theta^D         
+             
+         
          j=1
          do i=1,Mesh1_O%nnodes
             
@@ -549,7 +613,20 @@ write(99, *) '---------------------------------------------------------------'
          
 
          !M( theta^S|_op + delta theta^S )
-         CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))     
+         IF (Mesh1Type == ELEMENT_POINT ) THEN
+            IF ( Mesh2Type == ELEMENT_POINT ) THEN                        
+               CALL Transfer_Point_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );                     
+            ELSEIF ( Mesh2Type == ELEMENT_LINE2) THEN                                                                
+               CALL Transfer_Point_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );
+            END IF                                                                                                   
+         ELSEIF ( Mesh1Type == ELEMENT_LINE2 ) THEN                                                                  
+            IF ( Mesh2Type == ELEMENT_LINE2 ) THEN                                                                   
+               CALL Transfer_Line2_to_Line2( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg );
+            ELSEIF ( Mesh2Type == ELEMENT_POINT ) THEN        
+               CALL Transfer_Line2_to_Point( Mesh1_O, Mesh2_I, Map_Mod1_Mod2, ErrStat, ErrMsg )
+            END IF            
+         END IF         
+         IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
 
          ! delta theta^D = M( theta^S|_op + delta theta^S ) - x^D|_op
          j=1
@@ -562,6 +639,7 @@ write(99, *) '---------------------------------------------------------------'
                               
       end do      
       
+   if (Mesh1Type == ELEMENT_POINT  .and.  Mesh2Type == ELEMENT_POINT ) THEN            
       
       ! ..................
       ! Forces:
@@ -588,8 +666,22 @@ write(99, *) '---------------------------------------------------------------'
          
 
          !M( theta^S|_op + delta theta^S )
-         CALL Transfer_Point_to_Point( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I_op, Mesh1_O_op );   IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))               
+         IF (Mesh1Type == ELEMENT_POINT ) THEN
+            IF ( Mesh2Type == ELEMENT_POINT ) THEN                        
+               CALL Transfer_Point_to_Point( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I_op, Mesh1_O_op )
+            ELSEIF ( Mesh2Type == ELEMENT_LINE2) THEN                                                                
+               CALL Transfer_Point_to_Line2( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I_op, Mesh1_O_op )
+            END IF                                                                                                   
+         ELSEIF ( Mesh1Type == ELEMENT_LINE2 ) THEN                                                                  
+            IF ( Mesh2Type == ELEMENT_LINE2 ) THEN                                                                   
+               CALL Transfer_Line2_to_Line2( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I_op, Mesh1_O_op )
+            ELSEIF ( Mesh2Type == ELEMENT_POINT ) THEN        
+               CALL Transfer_Line2_to_Point( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I_op, Mesh1_O_op )
+            END IF            
+         END IF         
+         IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
 
+         
          ! delta theta^D = M( theta^S|_op + delta theta^S ) - x^D|_op
          j=1
          do i=1,Mesh1_O%nnodes
@@ -642,8 +734,23 @@ write(99, *) '---------------------------------------------------------------'
          
 
          !M( theta^S|_op + delta theta^S )
-         CALL Transfer_Point_to_Point( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O_op );   IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))               
+         IF (Mesh1Type == ELEMENT_POINT ) THEN
+            IF ( Mesh2Type == ELEMENT_POINT ) THEN                        
+               CALL Transfer_Point_to_Point( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O_op )
+            ELSEIF ( Mesh2Type == ELEMENT_LINE2) THEN                                                                
+               CALL Transfer_Point_to_Line2( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O_op )
+            END IF                                                                                                   
+         ELSEIF ( Mesh1Type == ELEMENT_LINE2 ) THEN                                                                  
+            IF ( Mesh2Type == ELEMENT_LINE2 ) THEN                                                                   
+               CALL Transfer_Line2_to_Line2( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O_op )
+            ELSEIF ( Mesh2Type == ELEMENT_POINT ) THEN        
+               CALL Transfer_Line2_to_Point( Mesh2_O, Mesh1_I, Map_Mod2_Mod1, ErrStat, ErrMsg, Mesh2_I, Mesh1_O_op )
+            END IF            
+         END IF         
+         IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
 
+         
+         
          ! delta theta^D = M( theta^S|_op + delta theta^S ) - x^D|_op
          j=1
          do i=1,Mesh1_O%nnodes
@@ -670,6 +777,12 @@ end if ! linearization or mapping test
       CALL MeshDestroy( mesh2_I, ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
       CALL MeshDestroy( mesh2_O, ErrStat, ErrMsg );       IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
 
+      CALL MeshDestroy( mesh1_I_op, ErrStat, ErrMsg );    IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      CALL MeshDestroy( mesh1_O_op, ErrStat, ErrMsg );    IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      CALL MeshDestroy( mesh2_I_op, ErrStat, ErrMsg );    IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      CALL MeshDestroy( mesh2_O_op, ErrStat, ErrMsg );    IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
+      
+      
       call MeshMapDestroy(Map_Mod1_Mod2, ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
       call MeshMapDestroy(Map_Mod2_Mod1, ErrStat, ErrMsg);IF (ErrStat /= ErrID_None) CALL WrScr(TRIM(ErrMsg))
                     
