@@ -21,11 +21,11 @@
 ! (File) Revision #: $Rev$
 ! URL: $HeadURL$
 !**********************************************************************************************************************************
-!> This code implements the spatial mapping algorithms described in 
-!! +  Sprague, Michael A.; Jonkman, Jason M.; and Jonkman, Bonnie J., "FAST Modular Framework for Wind Turbine Simulation: New 
+!> This code implements the spatial mapping algorithms described in the following papers
+!! -  Sprague, Michael A.; Jonkman, Jason M.; and Jonkman, Bonnie J., "FAST Modular Framework for Wind Turbine Simulation: New 
 !!    Algorithms and Numerical Examples." Proceedings of the 53rd Aerospace Sciences Meeting, 2015, also published in tech report 
 !!    NREL/CP-2C00-63203, National Renewable Energy Laboratory, Golden, CO.  http://www.nrel.gov/docs/fy16osti/63203.pdf
-!! +  Jonkman, Jason M.; Jonkman, Bonnie J.; and Sprague, Michael A., "FAST Modular Framework for Wind Turbine Simulation:  
+!! -  Jonkman, Jason M.; Jonkman, Bonnie J.; and Sprague, Michael A., "FAST Modular Framework for Wind Turbine Simulation:  
 !!    Full-System Linearization.", TORQUE 2016  
 !!    also published in tech report NREL/XX-XXXX-XXXXX, National Renewable Energy Laboratory, Golden, CO.  
    
@@ -94,6 +94,9 @@ MODULE ModMesh_Mapping
    PUBLIC :: Transfer_Line2_to_Line2
    
    PUBLIC :: Linearize_Point_to_Point
+   PUBLIC :: Linearize_Line2_to_Point
+   PUBLIC :: Linearize_Point_to_Line2
+   PUBLIC :: Linearize_Line2_to_Line2
    !PUBLIC :: Lump_Line2_to_Point
    
    PUBLIC :: WriteMappingTransferToFile ! routine for mesh-mapping debugging
@@ -599,6 +602,144 @@ SUBROUTINE Transfer_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
 END SUBROUTINE Transfer_Line2_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Routine for computing linearization matrices for data transfer from Line2 mesh to Point Mesh
+SUBROUTINE Linearize_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
+
+   TYPE(MeshType),         INTENT(IN   ) ::  Src      !< source mesh
+   TYPE(MeshType),         INTENT(INOUT) ::  Dest     !< destination mesh
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh required for loads transfer; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh required for loads transfer; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+
+   TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping data structure
+
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat   !< Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+
+
+   REAL(ReKi)                            :: LoadsScaleFactor  ! bjj: added this scaling factor to get loads in a better numerical range 
+   INTEGER(IntKi)                        :: ErrStat2
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2
+   CHARACTER(*), PARAMETER               :: RoutineName = 'Linearize_Line2_to_Point'
+
+   
+   ! logic
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   ! ------------------------------------------------------------------------------------------------------------------------------
+   ! Mapping and Transfer of Data for Mesh Motion and Scalar Fields
+   ! ------------------------------------------------------------------------------------------------------------------------------
+
+   if ( HasMotionFields(Src) .AND. HasMotionFields(Dest) ) then
+      
+      ! This is the same algorithm as Transfer_Line2_to_Line2 (motions)
+      
+      !........................
+      ! Start: Create Mapping data (if remap is true)
+      !........................
+
+      if (Src%RemapFlag .or. Dest%RemapFlag ) then
+
+         CALL CreateMotionMap_L2_to_P( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+
+      endif !remapping
+
+
+      !........................
+      ! Start: Transfer data
+      !........................
+
+      CALL Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+
+   endif !algorithm for motions/scalars
+
+
+   ! ------------------------------------------------------------------------------------------------------------------------------
+   ! Mapping and Transfer of Data for Mesh Load Fields
+   ! ------------------------------------------------------------------------------------------------------------------------------
+
+   ! ------------------------------------------------------------------------------------------------------
+   ! Start: If mapping force/moment from Line2 to Point, need to created a temporary
+   ! PointMesh that has nodes at the same locations as the Line2 mesh; distributed force/moment
+   ! from the Line2 mesh can then be lumped into the temporary Point mesh and transfered to the Destination
+   ! Point mesh via the same algorithm as subroutine Transfer_Point_to_Point
+   ! ------------------------------------------------------------------------------------------------------
+
+   if ( HasLoadFields(Src) ) then
+
+      !........................
+      ! Create mapping (including the temporary src mesh)
+      !........................
+
+      if (Src%RemapFlag .or. Dest%RemapFlag ) then
+
+         CALL CreateLoadMap_L2_to_P(Src, Dest, MeshMap, ErrStat2, ErrMsg2)         
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+         
+
+      ELSE ! Check that the temporary mesh has been set
+
+         IF ( .NOT. MeshMap%Lumped_Points_Src%Initialized ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'MeshMap%Lumped_Points_Src not initialized (set RemapFlag = TRUE).', ErrStat, ErrMsg, RoutineName)
+            RETURN
+         END IF
+         
+      END IF
+
+      !........................
+      ! Lump the values on line2 elements to nodes on a point mesh
+      ! These point and line2 meshes have the same nodes so there
+      ! is no mapping here:
+      !........................
+
+      IF ( PRESENT(SrcDisp) ) THEN
+         
+         LoadsScaleFactor = GetLoadsScaleFactor ( Src )
+         
+         ! first, we take the source fields and transfer them to fields on the augmented source mesh:
+         !  (we're also taking the SrcDisp field and putting it on our augmented mesh)
+         CALL Transfer_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat2, ErrMsg2, SrcDisp, LoadsScaleFactor ) 
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  
+         ! then we lump the loads from the augmented source mesh:
+         CALL Lump_Line2_to_Point( MeshMap%Augmented_Ln2_Src,  MeshMap%Lumped_Points_Src,  ErrStat2, ErrMsg2, LoadsScaleFactor=LoadsScaleFactor  ) 
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+         
+      ELSE
+         CALL SetErrStat( ErrID_Fatal, 'Invalid arguments to routine for transfer of loads.', ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF
+
+
+      !........................
+      ! Transfer data
+      !........................
+
+      IF ( PRESENT( DestDisp ) ) THEN ! note that we already checked if SrcDisp is present 
+         
+         ! and transferred the displacements to MeshMap%Augmented_Ln2_Src
+         CALL Transfer_Loads_Point_to_Point( MeshMap%Lumped_Points_Src, Dest, MeshMap, ErrStat2, ErrMsg2, MeshMap%Augmented_Ln2_Src, DestDisp, LoadsScaleFactor )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+         
+      ELSE
+         CALL SetErrStat( ErrID_Fatal, 'Invalid arguments to routine for transfer of loads.', ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF
+
+
+   end if !algorithm for loads
+
+
+END SUBROUTINE Linearize_Line2_to_Point
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Given a mapping, this routine transfers the motions from nodes on Line2 elements to nodes on another mesh.
 SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
@@ -685,7 +826,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
    end if
 
-      ! ---------------------------- ORIENTATION/Direction Cosine Matrix   ----------------------
+      !> ---------------------------- ORIENTATION/Direction Cosine Matrix   ----------------------
 
       ! transfer direction cosine matrix, aka orientation
 
@@ -894,6 +1035,267 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
 
 END SUBROUTINE Transfer_Motions_Line2_to_Point
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Given a mapping, this routine transfers the motions from nodes on Line2 elements to nodes on another mesh.
+SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg )
+
+   TYPE(MeshType),                 INTENT(IN   )  :: Src       !< The source (Line2) mesh with motion fields allocated
+   TYPE(MeshType),                 INTENT(INOUT)  :: Dest      !< The destination mesh
+
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   !< The mapping data
+
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+
+      ! local variables
+   INTEGER(IntKi)                          :: ErrStat2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
+   integer(intKi)                          :: i,j,n, n1, d_start, d_end, s_start, s_end
+   real(reKi)                              :: tmp, tmpVec(3)
+   
+   character(*), parameter :: RoutineName = 'Linearize_Motions_Line2_to_Point'
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   
+   if (.not. allocated(MeshMap%dM%mi) ) then
+      call AllocAry(MeshMap%dM%mi, Dest%Nnodes*3, Src%Nnodes*3, 'dM%mi', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+   end if
+      
+   MeshMap%dM%mi = 0.0_ReKi      
+   do i=1, Dest%Nnodes
+      if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+                  
+      do n1=1,NumNodes(ELEMENT_LINE2)
+            
+         n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+            
+         do j=1,3
+            MeshMap%dM%mi( (i-1)*3+j, (n-1)*3+j ) = MeshMap%MapMotions(i)%shape_fn(n1)
+         end do   
+            
+      end do
+         
+   end do
+      
+
+   if (      (Src%FieldMask(MASKID_TranslationDisp) .AND. Dest%FieldMask(MASKID_TranslationDisp)) &
+         .or. (Src%FieldMask(MASKID_TranslationVel ) .AND. Dest%FieldMask(MASKID_TranslationVel )) &
+         .or. (Src%FieldMask(MASKID_TranslationAcc ) .AND. Dest%FieldMask(MASKID_TranslationAcc )) ) then
+               
+      
+         ! calculate displaced positions at operating point:                           
+      DO i = 1,Dest%Nnodes
+         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+      
+         DO n1=1,NumNodes(ELEMENT_LINE2) ! number of nodes per line2 element
+            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+         
+            MeshMap%DisplacedPosition(:,i,n1) =    Src%Position(:,n) +  Src%TranslationDisp(:,n)  &
+                                                - Dest%Position(:,i) - Dest%TranslationDisp(:,i)  
+         end do
+      
+      END DO   
+         
+         
+         
+         ! MeshMap%dM%fx_p required for all three transfers:
+      if (.not. allocated(MeshMap%dM%fx_p) ) then
+         call AllocAry(MeshMap%dM%fx_p, Dest%Nnodes*3, Src%Nnodes*3, 'dM%fx_p', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      end if
+                                    
+      MeshMap%dM%fx_p = 0.0_ReKi      
+      do i=1, Dest%Nnodes
+         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+
+         d_start = (i-1)*3+1
+         d_end   = d_start+2
+            
+         do n1=1,NumNodes(ELEMENT_LINE2) 
+               
+            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+               
+            s_start = (n - 1)*3+1
+            s_end   = s_start+2
+               
+            MeshMap%dM%fx_p( d_start:d_end, s_start:s_end ) = SkewSymMat( MeshMap%DisplacedPosition(:,i,n1) ) * MeshMap%MapMotions(i)%shape_fn(n1)
+               
+         end do
+            
+      end do
+      
+                  
+         ! MeshMap%dM%tv required for translational velocity:         
+      if ( Src%FieldMask(MASKID_TranslationVel) .AND. Dest%FieldMask(MASKID_TranslationVel) ) then
+         if (.not. allocated(MeshMap%dM%tv) ) then
+            call AllocAry(MeshMap%dM%tv, Dest%Nnodes*3, Src%Nnodes*3, 'dM%tv', ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               IF (ErrStat >= AbortErrLev) RETURN
+         end if
+                     
+         MeshMap%dM%tv = 0.0_ReKi      
+         if ( Src%FieldMask(MASKID_RotationVel) ) then
+            do i=1, Dest%Nnodes
+               if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+
+               d_start = (i-1)*3+1
+               d_end   = d_start+2
+                  
+               do n1=1,NumNodes(ELEMENT_LINE2) 
+               
+                  n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+                  
+                  s_start = (n - 1)*3+1
+                  s_end   = s_start+2
+                                    
+                  MeshMap%dM%tv( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,n1), Src%RotationVel(:,n) )
+                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,n1), Src%RotationVel(:,n) )
+                  do j=0,2
+                     MeshMap%dM%tv( d_start+j, s_start+j ) = MeshMap%dM%tv( d_start+j, s_start+j ) - tmp
+                  end do              
+                  MeshMap%dM%tv( d_start:d_end, s_start:s_end ) = MeshMap%dM%tv( d_start:d_end, s_start:s_end ) * MeshMap%MapMotions(i)%shape_fn(n1)
+               end do
+                  
+            end do
+         end if !MASKID_RotationVel
+            
+      end if !MASKID_TranslationVel
+            
+         
+      if ( Src%FieldMask(MASKID_TranslationAcc ) .AND. Dest%FieldMask(MASKID_TranslationAcc ) ) then
+            
+         !-------------- ta1 -----------------------------
+         if (.not. allocated(MeshMap%dM%ta1) ) then
+            call AllocAry(MeshMap%dM%ta1, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta1', ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               IF (ErrStat >= AbortErrLev) RETURN
+         end if
+         
+                        
+         MeshMap%dM%ta1 = 0.0_ReKi      
+         if ( Src%FieldMask(MASKID_RotationAcc) ) then            
+            do i=1, Dest%Nnodes
+               if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+            
+               d_start = (i-1)*3+1
+               d_end   = d_start+2
+                  
+               do n1=1,NumNodes(ELEMENT_LINE2) 
+               
+                  n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+                  
+                  s_start = (n - 1)*3+1
+                  s_end   = s_start+2
+                                    
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,n1), Src%RotationAcc(:,n) )
+                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,n1), Src%RotationAcc(:,n) )
+                  do j=0,2
+                     MeshMap%dM%ta1( d_start+j, s_start+j ) = MeshMap%dM%ta1( d_start+j, s_start+j ) - tmp
+                  end do                        
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) * MeshMap%MapMotions(i)%shape_fn(n1)
+                     
+               end do
+                  
+            end do
+         end if
+            
+         if ( Src%FieldMask(MASKID_RotationVel) ) then            
+            
+            do i=1, Dest%Nnodes
+               if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+            
+               d_start = (i-1)*3+1
+               d_end   = d_start+2
+                  
+               do n1=1,NumNodes(ELEMENT_LINE2) 
+               
+                  n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+                  s_start = (n - 1)*3+1
+                  s_end   = s_start+2
+                                    
+                  tmpVec=cross_product(  Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,n1) )
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + OuterProduct( tmpVec, Src%RotationVel(:,n) ) * MeshMap%MapMotions(i)%shape_fn(n1)
+                  
+                  tmp = dot_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,n1)) 
+                  tmpVec = tmp*Src%RotationVel(:,n) * MeshMap%MapMotions(i)%shape_fn(n1)
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + SkewSymMat( tmpVec )                   
+               end do
+                  
+            end do
+         end if
+                               
+            
+         !-------------- ta2 -----------------------------
+         if (.not. allocated(MeshMap%dM%ta2) ) then
+            call AllocAry(MeshMap%dM%ta2, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta2', ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               IF (ErrStat >= AbortErrLev) RETURN
+         end if
+                        
+         MeshMap%dM%ta2 = 0.0_ReKi 
+            
+         if ( Src%FieldMask(MASKID_RotationVel) ) then
+
+            do i=1, Dest%Nnodes
+               if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+            
+               d_start = (i-1)*3+1
+               d_end   = d_start+2
+                  
+               do n1=1,NumNodes(ELEMENT_LINE2) 
+               
+                  n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+                  
+                  s_start = (n - 1)*3+1
+                  s_end   = s_start+2
+                                    
+                  tmpVec = cross_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,n1)  )
+                  MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = SkewSymMat( tmpVec  ) * MeshMap%MapMotions(i)%shape_fn(n1)
+                     
+               end do
+                  
+            end do
+               
+            if ( Dest%FieldMask(MASKID_TranslationDisp) ) then
+               
+               MeshMap%dM%ta2 = MeshMap%dM%ta2 + MeshMap%dM%tv
+               
+            else
+               do i=1, Dest%Nnodes
+                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+
+                  d_start = (i-1)*3+1
+                  d_end   = d_start+2
+                     
+                  do n1=1,NumNodes(ELEMENT_LINE2) 
+               
+                     n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+                     
+                     s_start = (n - 1)*3+1
+                     s_end   = s_start+2
+                                    
+                     MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) + &
+                                       OuterProduct( MeshMap%DisplacedPosition(:,i,n1), Src%RotationVel(:,n) ) * MeshMap%MapMotions(i)%shape_fn(n1)
+                     tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                     do j=0,2
+                        MeshMap%dM%ta2( d_start+j, s_start+j ) = MeshMap%dM%ta2( d_start+j, s_start+j ) - tmp * MeshMap%MapMotions(i)%shape_fn(n1)
+                     end do
+                  end do
+                     
+               end do               
+            end if !MASKID_TranslationDisp
+               
+         end if ! MASKID_RotationVel            
+      end if ! MASKID_TranslationAcc
+         
+   end if ! MASKID_TranslationDisp, MASKID_RotationVel, or MASKID_TranslationAcc      
+                  
+
+END SUBROUTINE Linearize_Motions_Line2_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine projects Mesh1 onto a Line2 mesh (Mesh2) to find the element mappings between the two meshes.
 SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrStat, ErrMsg)
@@ -1231,24 +1633,24 @@ SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
    REAL(ReKi)                            :: LoadsScaleFactor  ! bjj: added this scaling factor to get loads in a better numerical range 
    INTEGER(IntKi)                        :: ErrStat2
    CHARACTER(ErrMsgLen)                  :: ErrMsg2
+   CHARACTER(*), PARAMETER               :: RoutineName= 'Transfer_Point_to_Line2'
 
    ! logic
 
    ErrStat = ErrID_None
    ErrMsg  = ''
 
-      IF (ErrStat >= AbortErrLev) RETURN
    !.................
    ! Check to ensure that the source mesh is composed of Point elements and destination mesh is composed of Line2 elements
    !.................   
    
    if (Src%ElemTable(ELEMENT_POINT)%nelem .eq. 0) then
-      CALL SetErrStat( ErrID_Fatal, 'Source mesh must have one or more Point elements.', ErrStat, ErrMsg, 'Transfer_Point_to_Line2')
+      CALL SetErrStat( ErrID_Fatal, 'Source mesh must have one or more Point elements.', ErrStat, ErrMsg, RoutineName)
       RETURN
    endif
    
    if (Dest%ElemTable(ELEMENT_LINE2)%nelem .eq. 0) then
-      CALL SetErrStat( ErrID_Fatal, 'Destination mesh must have one or more Line2 elements.', ErrStat, ErrMsg, 'Transfer_Point_to_Line2')
+      CALL SetErrStat( ErrID_Fatal, 'Destination mesh must have one or more Line2 elements.', ErrStat, ErrMsg, RoutineName)
       RETURN
    endif
 
@@ -1264,7 +1666,7 @@ SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
       if (Src%RemapFlag .or. Dest%RemapFlag ) then
 
          CALL CreateMotionMap_P_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Transfer_Point_to_Line2')
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
          
       end if
@@ -1275,7 +1677,7 @@ SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
          ! This is the same algorithm as Transfer_Point_to_Point
       CALL Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Transfer_Point_to_Line2')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
 
 
@@ -1287,7 +1689,7 @@ SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
    if ( HasLoadFields(Src) ) then
 
       IF (.not. PRESENT(SrcDisp) .OR. .NOT. PRESENT(DestDisp) ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer.', ErrStat, ErrMsg, 'Transfer_Point_to_Line2')
+         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer.', ErrStat, ErrMsg, RoutineName)
          RETURN
       END IF
 
@@ -1298,7 +1700,7 @@ SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
       if (Src%RemapFlag .or. Dest%RemapFlag ) then
                            
          CALL CreateLoadMap_P_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Transfer_Point_to_Line2')
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
                            
       end if
@@ -1310,7 +1712,7 @@ SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
       LoadsScaleFactor = GetLoadsScaleFactor ( Src ) 
 
       CALL Transfer_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DestDisp, LoadsScaleFactor )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Transfer_Point_to_Line2')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
       
      
@@ -1319,7 +1721,99 @@ SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
 END SUBROUTINE Transfer_Point_to_Line2
 !----------------------------------------------------------------------------------------------------------------------------------
-!> 
+!> Routine that creates linearization matricies for data tranfer from a point mesh to a line2 mesh.
+SUBROUTINE Linearize_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
+
+   TYPE(MeshType),         INTENT(IN   ) :: Src       !< source (point) mesh
+   TYPE(MeshType),         INTENT(INOUT) :: Dest      !< destination (line2) mesh
+   TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping data structure
+
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat   !< Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: SrcDisp   !< a "functional" sibling of the source mesh for load mapping; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: DestDisp  !< a "functional" sibling of the destination mesh for load mapping; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+
+   ! local variables
+
+   REAL(ReKi)                            :: LoadsScaleFactor  ! bjj: added this scaling factor to get loads in a better numerical range 
+   INTEGER(IntKi)                        :: ErrStat2
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2
+   CHARACTER(*), PARAMETER               :: RoutineName= 'Linearize_Point_to_Line2'
+
+   ! logic
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+
+   ! ------------------------------------------------------------------------------------------------------------------------------
+   ! Mapping and Linearization of Data Transfer for Mesh Motion and Scalar Fields
+   ! ------------------------------------------------------------------------------------------------------------------------------
+   if ( HasMotionFields(Src) .AND. HasMotionFields(Dest) ) then
+
+      !........................
+      ! Create mapping
+      !........................
+
+      if (Src%RemapFlag .or. Dest%RemapFlag ) then
+
+         CALL CreateMotionMap_P_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+         
+      end if
+
+      !........................
+      ! Transfer data
+      !........................
+
+         ! This is the same algorithm as Transfer_Point_to_Point
+      CALL Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+
+
+   end if ! algorithm for motions/scalars
+
+   ! ------------------------------------------------------------------------------------------------------------------------------
+   ! Mapping and Transfer of Data for Mesh Load Fields
+   ! ------------------------------------------------------------------------------------------------------------------------------
+   if ( HasLoadFields(Src) ) then
+
+      IF (.not. PRESENT(SrcDisp) .OR. .NOT. PRESENT(DestDisp) ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer.', ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF
+
+      !........................
+      ! Create mapping
+      !........................
+
+      if (Src%RemapFlag .or. Dest%RemapFlag ) then
+                           
+         CALL CreateLoadMap_P_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+                           
+      end if
+
+
+      !........................
+      ! Transfer data
+      !........................
+      LoadsScaleFactor = GetLoadsScaleFactor ( Src ) 
+
+      CALL Transfer_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DestDisp, LoadsScaleFactor )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+      
+     
+   end if ! algorithm for loads
+
+
+END SUBROUTINE Linearize_Point_to_Line2
+!----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE CreateLoadMap_P_to_L2( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
    TYPE(MeshType),                 INTENT(IN   )  :: Src                             ! The source mesh
@@ -1761,6 +2255,218 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
 END SUBROUTINE Transfer_Motions_Point_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Given a nearest-neighbor mapping, this routine forms the linearization matrices of motion transfer between nodes on the mesh.
+SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg )
+!..................................................................................................................................
+
+   TYPE(MeshType),                 INTENT(IN   )  :: Src       !< The source mesh with motion fields allocated
+   TYPE(MeshType),                 INTENT(INOUT)  :: Dest      !< The destination mesh
+
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   !< data for the mesh mapping
+
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+
+      ! local variables
+   INTEGER(IntKi)                          :: ErrStat2
+   CHARACTER(ErrMsgLen)                    :: ErrMsg2
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'Linearize_Motions_Point_to_Point'
+   
+   integer(intKi)                          :: i,j,n, d_start, d_end, s_start, s_end
+   real(reKi)                              :: tmp, tmpVec(3)
+   
+   
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+
+   
+      if (.not. allocated(MeshMap%dM%mi) ) then
+         call AllocAry(MeshMap%dM%mi, Dest%Nnodes*3, Src%Nnodes*3, 'dM%mi', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      end if
+      
+      MeshMap%dM%mi = 0.0_ReKi      
+      do i=1, Dest%Nnodes
+         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+
+         n = MeshMap%MapMotions(i)%OtherMesh_Element
+         do j=1,3
+            MeshMap%dM%mi( (i-1)*3+j, (n-1)*3+j ) = 1.0_ReKi
+         end do         
+      end do
+      
+
+      if (      (Src%FieldMask(MASKID_TranslationDisp) .AND. Dest%FieldMask(MASKID_TranslationDisp)) &
+           .or. (Src%FieldMask(MASKID_TranslationVel ) .AND. Dest%FieldMask(MASKID_TranslationVel )) &
+           .or. (Src%FieldMask(MASKID_TranslationAcc ) .AND. Dest%FieldMask(MASKID_TranslationAcc )) ) then
+               
+      
+            ! calculate displaced positions at operating point:
+         DO i = 1,Dest%Nnodes
+            if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+            MeshMap%DisplacedPosition(:,i,1) =    Src%TranslationDisp(:,MeshMap%MapMotions(i)%OtherMesh_Element) &
+                                               - Dest%TranslationDisp(:,i) &
+                                               - MeshMap%MapMotions(i)%couple_arm
+         END DO
+         
+            ! MeshMap%dM%fx_p required for all three transfers:
+         if (.not. allocated(MeshMap%dM%fx_p) ) then
+            call AllocAry(MeshMap%dM%fx_p, Dest%Nnodes*3, Src%Nnodes*3, 'dM%fx_p', ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               IF (ErrStat >= AbortErrLev) RETURN
+         end if
+                                    
+         MeshMap%dM%fx_p = 0.0_ReKi      
+         do i=1, Dest%Nnodes
+            if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+
+            d_start = (i-1)*3+1
+            d_end   = d_start+2
+            s_start = (MeshMap%MapMotions(i)%OtherMesh_Element - 1)*3+1
+            s_end   = s_start+2
+            MeshMap%dM%fx_p( d_start:d_end, s_start:s_end ) = SkewSymMat( MeshMap%DisplacedPosition(:,i,1) )
+         end do
+      
+                  
+            ! MeshMap%dM%tv required for translational velocity:         
+         if ( Src%FieldMask(MASKID_TranslationVel) .AND. Dest%FieldMask(MASKID_TranslationVel) ) then
+            if (.not. allocated(MeshMap%dM%tv) ) then
+               call AllocAry(MeshMap%dM%tv, Dest%Nnodes*3, Src%Nnodes*3, 'dM%tv', ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  IF (ErrStat >= AbortErrLev) RETURN
+            end if
+                     
+            MeshMap%dM%tv = 0.0_ReKi      
+            if ( Src%FieldMask(MASKID_RotationVel) ) then
+               do i=1, Dest%Nnodes
+                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+
+                  n = MeshMap%MapMotions(i)%OtherMesh_Element
+                  d_start = (i-1)*3+1
+                  d_end   = d_start+2
+                  s_start = (n - 1)*3+1
+                  s_end   = s_start+2
+                                    
+                  MeshMap%dM%tv( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                  do j=0,2
+                     MeshMap%dM%tv( d_start+j, s_start+j ) = MeshMap%dM%tv( d_start+j, s_start+j ) - tmp
+                  end do                        
+               end do
+            end if !MASKID_RotationVel
+            
+         end if !MASKID_TranslationVel
+            
+         
+         if ( Src%FieldMask(MASKID_TranslationAcc ) .AND. Dest%FieldMask(MASKID_TranslationAcc ) ) then
+            
+            !-------------- ta1 -----------------------------
+            if (.not. allocated(MeshMap%dM%ta1) ) then
+               call AllocAry(MeshMap%dM%ta1, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta1', ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  IF (ErrStat >= AbortErrLev) RETURN
+            end if
+         
+                        
+            MeshMap%dM%ta1 = 0.0_ReKi      
+            if ( Src%FieldMask(MASKID_RotationAcc) ) then            
+               do i=1, Dest%Nnodes
+                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+            
+                  n = MeshMap%MapMotions(i)%OtherMesh_Element
+                  d_start = (i-1)*3+1
+                  d_end   = d_start+2
+                  s_start = (n - 1)*3+1
+                  s_end   = s_start+2
+                                    
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationAcc(:,n) )
+                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationAcc(:,n) )
+                  do j=0,2
+                     MeshMap%dM%ta1( d_start+j, s_start+j ) = MeshMap%dM%ta1( d_start+j, s_start+j ) - tmp
+                  end do                        
+               end do
+            end if
+            
+            if ( Src%FieldMask(MASKID_RotationVel) ) then            
+            
+               do i=1, Dest%Nnodes
+                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+            
+                  n = MeshMap%MapMotions(i)%OtherMesh_Element
+                  d_start = (i-1)*3+1
+                  d_end   = d_start+2
+                  s_start = (n - 1)*3+1
+                  s_end   = s_start+2
+                                    
+                  tmpVec=cross_product(  Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1) )
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + OuterProduct( tmpVec, Src%RotationVel(:,n) )
+                  
+                  tmp = dot_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1)) 
+                  tmpVec = tmp*Src%RotationVel(:,n)
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + SkewSymMat( tmpVec )                  
+               end do
+            end if
+                               
+            
+            !-------------- ta2 -----------------------------
+            if (.not. allocated(MeshMap%dM%ta2) ) then
+               call AllocAry(MeshMap%dM%ta2, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta2', ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  IF (ErrStat >= AbortErrLev) RETURN
+            end if
+                        
+            MeshMap%dM%ta2 = 0.0_ReKi 
+            
+            if ( Src%FieldMask(MASKID_RotationVel) ) then
+
+               do i=1, Dest%Nnodes
+                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+            
+                  n = MeshMap%MapMotions(i)%OtherMesh_Element
+                  d_start = (i-1)*3+1
+                  d_end   = d_start+2
+                  s_start = (n - 1)*3+1
+                  s_end   = s_start+2
+                                    
+                  tmpVec = cross_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1)  )
+                  MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = SkewSymMat( tmpVec  )
+               end do
+               
+               if ( Dest%FieldMask(MASKID_TranslationDisp) ) then
+               
+                  MeshMap%dM%ta2 = MeshMap%dM%ta2 + MeshMap%dM%tv
+               
+               else
+                  do i=1, Dest%Nnodes
+                     if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+
+                     n = MeshMap%MapMotions(i)%OtherMesh_Element
+                     d_start = (i-1)*3+1
+                     d_end   = d_start+2
+                     s_start = (n - 1)*3+1
+                     s_end   = s_start+2
+                                    
+                     MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) + OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                     tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                     do j=0,2
+                        MeshMap%dM%ta2( d_start+j, s_start+j ) = MeshMap%dM%ta2( d_start+j, s_start+j ) - tmp
+                     end do                        
+                  end do               
+               end if !MASKID_TranslationDisp
+               
+            end if ! MASKID_RotationVel            
+         end if ! MASKID_TranslationAcc
+         
+      end if ! MASKID_TranslationDisp, MASKID_RotationVel, or MASKID_TranslationAcc   
+   
+
+END SUBROUTINE Linearize_Motions_Point_to_Point
+!----------------------------------------------------------------------------------------------------------------------------------
+
+!----------------------------------------------------------------------------------------------------------------------------------
 !> Given a nearest-neighbor mapping, this routine transfers loads between point nodes on the mesh.
 SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp,LoadsScaleFactor )
 
@@ -1927,20 +2633,19 @@ SUBROUTINE CreateMotionMap_P_to_P( Src, Dest, MeshMap, ErrStat, ErrMsg )
                      
 END SUBROUTINE CreateMotionMap_P_to_P        
 !----------------------------------------------------------------------------------------------------------------------------------
+!> Routine that transfers data from a line2 mesh to another line2 mesh.
 SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
-! for transfering displacement-type or force-type data from Line2 mesh to Line2 Mesh
-!
-   TYPE(MeshType),         INTENT(IN   ) ::  Src
-   TYPE(MeshType),         INTENT(INOUT) ::  Dest
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  ! a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp ! a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),         INTENT(IN   ) ::  Src      !< source Line2 mesh
+   TYPE(MeshType),         INTENT(INOUT) ::  Dest     !< destination Line2 mesh
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
 
-   TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap
+   TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping between Src and Dest meshes
 
 
-   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     ! Error status of the operation
-   CHARACTER(*),           INTENT(  OUT) :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat   !< Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
 
       ! local variables
    REAL(ReKi)                            :: LoadsScaleFactor  ! Scaling factor for loads (to help with numerical issues)
@@ -2047,6 +2752,113 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
 
 END SUBROUTINE Transfer_Line2_to_Line2
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine that computes the linearization matrices for data transfers from a line2 mesh to another line2 mesh.
+SUBROUTINE Linearize_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
+
+   TYPE(MeshType),         INTENT(IN   ) ::  Src      !< source Line2 mesh
+   TYPE(MeshType),         INTENT(INOUT) ::  Dest     !< destination Line2 mesh
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+
+   TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping between Src and Dest meshes
+
+
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat   !< Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+
+      ! local variables
+   REAL(ReKi)                            :: LoadsScaleFactor  ! Scaling factor for loads (to help with numerical issues)
+   INTEGER(IntKi)                        :: ErrStat2
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2
+   CHARACTER(*), PARAMETER               :: RoutineName = 'Linearize_Line2_to_Line2'   
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+
+   ! ------------------------------------------------------------------------------------------------------------------------------
+   ! Mapping and Transfer of Data for Mesh Motion and Scalar Fields
+   ! ------------------------------------------------------------------------------------------------------------------------------
+
+   if ( HasMotionFields(Src) .AND. HasMotionFields(Dest) ) then
+
+      !........................
+      ! Start: Create Mapping data (if remap is true)
+      !........................
+
+      if (Src%RemapFlag .or. Dest%RemapFlag ) then
+
+         CALL CreateMotionMap_L2_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+
+      endif !remapping
+
+      !........................
+      ! Start: Transfer data
+      !........................
+         
+      CALL Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+
+   endif !algorithm for motions/scalars
+
+
+   ! ------------------------------------------------------------------------------------------------------------------------------
+   ! Mapping and Transfer of Data for Mesh Load Fields
+   ! ------------------------------------------------------------------------------------------------------------------------------
+   if ( HasLoadFields(Src) ) then
+
+      IF (.not. PRESENT(SrcDisp) .OR. .NOT. PRESENT(DestDisp) ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer.', ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF
+            
+      !.................
+      ! other checks for available mesh fields (now done in AllocMapping routine)
+      !.................
+
+
+      !........................
+      ! Create mapping
+      !........................
+
+      if (Src%RemapFlag .or. Dest%RemapFlag ) then
+                  
+         CALL CreateLoadMap_L2_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN         
+            
+      end if
+
+      !........................
+      ! Transfer data
+      !........................
+
+      LoadsScaleFactor = GetLoadsScaleFactor ( Src )
+      
+      ! first, we take the source fields and transfer them to fields on the augmented source mesh:
+      !  (we're also taking the SrcDisp field and putting it on our augmented mesh)
+      CALL Transfer_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat2, ErrMsg2, SrcDisp, LoadsScaleFactor ) 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+      
+      ! then we lump the loads from the augmented source mesh:
+      CALL Lump_Line2_to_Point( MeshMap%Augmented_Ln2_Src,  MeshMap%Lumped_Points_Src,  ErrStat2, ErrMsg2, LoadsScaleFactor=LoadsScaleFactor  ) 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+      
+      CALL Transfer_Loads_Point_to_Line2( MeshMap%Lumped_Points_Src, Dest, MeshMap, ErrStat2, ErrMsg2, MeshMap%Augmented_Ln2_Src, DestDisp, LoadsScaleFactor )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+
+
+   end if ! algorithm for loads
+
+
+END SUBROUTINE Linearize_Line2_to_Line2
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Given a mapping, this routine transfers the loads from nodes on a point-element mesh to nodes on another Line2 mesh.
 SUBROUTINE Transfer_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp, LoadsScaleFactor )
@@ -2295,7 +3107,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
    
    INTEGER(IntKi)                                 :: max_new_nodes, max_nodes, Aug_Nnodes
    INTEGER(IntKi)                                 :: Aug_NElem, curr_Aug_NElem
-   INTEGER(IntKi)                                 :: n, n1, n2
+   INTEGER(IntKi)                                 :: n1, n2
    REAL(ReKi)                                     :: p_ED(3), p_ES(3), n1S_nD_vector(3), position(3)
    REAL(R8Ki)                                     :: RefOrientation(3,3)
    REAL(DbKi)                                     :: TmpVec(3), RefOrientationD(3,3), FieldValue(3,2)   ! values for interpolating direction cosine matrices
@@ -3185,10 +3997,8 @@ SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    CHARACTER(*), PARAMETER                 :: RoutineName = 'Linearize_Point_to_Point'
    
    integer(intKi)                          :: i,j,n, d_start, d_end, s_start, s_end
-   real(reKi)                              :: tmp, tmpVec(3), DisplacedPosition(3)
+   real(reKi)                              :: tmp, DisplacedPosition(3)
    
-   REAL(ReKi)                              :: LoadsScaleFactor  ! bjj: added this scaling factor to get loads in a better numerical range 
-
    ! logic
 
    ErrStat = ErrID_None
@@ -3219,187 +4029,10 @@ SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
       ! create linearization matrices for motions:
       !........................
       
-      
-      if (.not. allocated(MeshMap%dM%mi) ) then
-         call AllocAry(MeshMap%dM%mi, Dest%Nnodes*3, Src%Nnodes*3, 'dM%mi', ErrStat2, ErrMsg2 )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF (ErrStat >= AbortErrLev) RETURN
-      end if
-      
-      MeshMap%dM%mi = 0.0_ReKi      
-      do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
-
-         n = MeshMap%MapMotions(i)%OtherMesh_Element
-         do j=1,3
-            MeshMap%dM%mi( (i-1)*3+j, (n-1)*3+j ) = 1.0_ReKi
-         end do         
-      end do
-      
-
-      if (      (Src%FieldMask(MASKID_TranslationDisp) .AND. Dest%FieldMask(MASKID_TranslationDisp)) &
-           .or. (Src%FieldMask(MASKID_TranslationVel ) .AND. Dest%FieldMask(MASKID_TranslationVel )) &
-           .or. (Src%FieldMask(MASKID_TranslationAcc ) .AND. Dest%FieldMask(MASKID_TranslationAcc )) ) then
-               
-      
-            ! calculate displaced positions at operating point:
-         DO i = 1,Dest%Nnodes
-            if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
-            MeshMap%DisplacedPosition(:,i,1) =    Src%TranslationDisp(:,MeshMap%MapMotions(i)%OtherMesh_Element) &
-                                               - Dest%TranslationDisp(:,i) &
-                                               - MeshMap%MapMotions(i)%couple_arm
-         END DO
-         
-            ! MeshMap%dM%fx_p required for all three transfers:
-         if (.not. allocated(MeshMap%dM%fx_p) ) then
-            call AllocAry(MeshMap%dM%fx_p, Dest%Nnodes*3, Src%Nnodes*3, 'dM%fx_p', ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-               IF (ErrStat >= AbortErrLev) RETURN
-         end if
-                                    
-         MeshMap%dM%fx_p = 0.0_ReKi      
-         do i=1, Dest%Nnodes
-            if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
-
-            d_start = (i-1)*3+1
-            d_end   = d_start+2
-            s_start = (MeshMap%MapMotions(i)%OtherMesh_Element - 1)*3+1
-            s_end   = s_start+2
-            MeshMap%dM%fx_p( d_start:d_end, s_start:s_end ) = SkewSymMat( MeshMap%DisplacedPosition(:,i,1) )
-         end do
-      
-                  
-            ! MeshMap%dM%tv required for translational velocity:         
-         if ( Src%FieldMask(MASKID_TranslationVel) .AND. Dest%FieldMask(MASKID_TranslationVel) ) then
-            if (.not. allocated(MeshMap%dM%tv) ) then
-               call AllocAry(MeshMap%dM%tv, Dest%Nnodes*3, Src%Nnodes*3, 'dM%tv', ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  IF (ErrStat >= AbortErrLev) RETURN
-            end if
-                     
-            MeshMap%dM%tv = 0.0_ReKi      
-            if ( Src%FieldMask(MASKID_RotationVel) ) then
-               do i=1, Dest%Nnodes
-                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
-
-                  n = MeshMap%MapMotions(i)%OtherMesh_Element
-                  d_start = (i-1)*3+1
-                  d_end   = d_start+2
-                  s_start = (n - 1)*3+1
-                  s_end   = s_start+2
-                                    
-                  MeshMap%dM%tv( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
-                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
-                  do j=0,2
-                     MeshMap%dM%tv( d_start+j, s_start+j ) = MeshMap%dM%tv( d_start+j, s_start+j ) - tmp
-                  end do                        
-               end do
-            end if !MASKID_RotationVel
-            
-         end if !MASKID_TranslationVel
-            
-         
-         if ( Src%FieldMask(MASKID_TranslationAcc ) .AND. Dest%FieldMask(MASKID_TranslationAcc ) ) then
-            
-            !-------------- ta1 -----------------------------
-            if (.not. allocated(MeshMap%dM%ta1) ) then
-               call AllocAry(MeshMap%dM%ta1, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta1', ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  IF (ErrStat >= AbortErrLev) RETURN
-            end if
-         
-                        
-            MeshMap%dM%ta1 = 0.0_ReKi      
-            if ( Src%FieldMask(MASKID_RotationAcc) ) then            
-               do i=1, Dest%Nnodes
-                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
-            
-                  n = MeshMap%MapMotions(i)%OtherMesh_Element
-                  d_start = (i-1)*3+1
-                  d_end   = d_start+2
-                  s_start = (n - 1)*3+1
-                  s_end   = s_start+2
-                                    
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationAcc(:,n) )
-                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationAcc(:,n) )
-                  do j=0,2
-                     MeshMap%dM%ta1( d_start+j, s_start+j ) = MeshMap%dM%ta1( d_start+j, s_start+j ) - tmp
-                  end do                        
-               end do
-            end if
-            
-            if ( Src%FieldMask(MASKID_RotationVel) ) then            
-            
-               do i=1, Dest%Nnodes
-                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
-            
-                  n = MeshMap%MapMotions(i)%OtherMesh_Element
-                  d_start = (i-1)*3+1
-                  d_end   = d_start+2
-                  s_start = (n - 1)*3+1
-                  s_end   = s_start+2
-                                    
-                  tmpVec=cross_product(  Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1) )
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + OuterProduct( tmpVec, Src%RotationVel(:,n) )
-                  
-                  tmp = dot_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1)) 
-                  tmpVec = tmp*Src%RotationVel(:,n)
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + SkewSymMat( tmpVec )                  
-               end do
-            end if
-                               
-            
-            !-------------- ta2 -----------------------------
-            if (.not. allocated(MeshMap%dM%ta2) ) then
-               call AllocAry(MeshMap%dM%ta2, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta2', ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  IF (ErrStat >= AbortErrLev) RETURN
-            end if
-                        
-            MeshMap%dM%ta2 = 0.0_ReKi 
-            
-            if ( Src%FieldMask(MASKID_RotationVel) ) then
-
-               do i=1, Dest%Nnodes
-                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
-            
-                  n = MeshMap%MapMotions(i)%OtherMesh_Element
-                  d_start = (i-1)*3+1
-                  d_end   = d_start+2
-                  s_start = (n - 1)*3+1
-                  s_end   = s_start+2
-                                    
-                  tmpVec = cross_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1)  )
-                  MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = SkewSymMat( tmpVec  )
-               end do
-               
-               if ( Dest%FieldMask(MASKID_TranslationDisp) ) then
-               
-                  MeshMap%dM%ta2 = MeshMap%dM%ta2 + MeshMap%dM%tv
-               
-               else
-                  do i=1, Dest%Nnodes
-                     if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
-
-                     n = MeshMap%MapMotions(i)%OtherMesh_Element
-                     d_start = (i-1)*3+1
-                     d_end   = d_start+2
-                     s_start = (n - 1)*3+1
-                     s_end   = s_start+2
-                                    
-                     MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) + OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
-                     tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
-                     do j=0,2
-                        MeshMap%dM%ta2( d_start+j, s_start+j ) = MeshMap%dM%ta2( d_start+j, s_start+j ) - tmp
-                     end do                        
-                  end do               
-               end if !MASKID_TranslationDisp
-               
-            end if ! MASKID_RotationVel            
-         end if ! MASKID_TranslationAcc
-         
-      end if ! MASKID_TranslationDisp, MASKID_RotationVel, or MASKID_TranslationAcc
-                                                                         
+      call Linearize_Motions_Point_to_Point(Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+                                                                               
    end if ! HasMotionFields: algorithm for motions/scalars
 
    ! ------------------------------------------------------------------------------------------------------------------------------
