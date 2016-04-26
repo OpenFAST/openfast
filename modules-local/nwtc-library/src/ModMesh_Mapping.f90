@@ -768,11 +768,15 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-
+  !> Define \f$ \phi_1 = 1-\bar{l}^S \f$  and 
+  !!        \f$ \phi_2 =   \bar{l}^S \f$.
 
 !bjj: FieldValueN1 and FieldValueN2 should really be one matrix of DIM (3,2) now that we've modified some of the other data structures....
              
       ! ---------------------------- Translation ------------------------------------------------
+      !> Translational Displacement: \f$\vec{u}^D = \sum\limits_{i=1}^{2}\left( 
+      !!              \vec{u}^S_{eSn_i} + \left[\left[\theta^S_{eSn_i}\right]^T \theta^{SR}_{eSn_i} - I\right]\left\{\vec{p}^{ODR}-\vec{p}^{OSR}_{eSn_i}\right\}
+      !!              \right) \phi_i\f$
 
       ! u_Dest1 = u_Src + [Orientation_Src^T * RefOrientation_Src - I] * [p_Dest - p_Src] at Source Node n1
       ! u_Dest2 = u_Src + [Orientation_Src^T * RefOrientation_Src - I] * [p_Dest - p_Src] at Source Node n2
@@ -826,8 +830,14 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
    end if
 
-      !> ---------------------------- ORIENTATION/Direction Cosine Matrix   ----------------------
-
+      ! ---------------------------- ORIENTATION/Direction Cosine Matrix   ----------------------
+      !> Orientation: \f$\theta^D = \Lambda\left( \sum\limits_{i=1}^{2} 
+      !!              \log\left( \theta^{DR}\left[\theta^{SR}_{eSn_i}\right]^T\theta^S_{eSn_i} \right)
+      !!              \phi_i \right)\f$
+      !! where \f$\log()\f$ is nwtc_num::dcm_logmap and \f$\Lambda()\f$ is nwtc_num::dcm_exp
+   
+   
+   
       ! transfer direction cosine matrix, aka orientation
 
    if ( Src%FieldMask(MASKID_Orientation) .AND. Dest%FieldMask(MASKID_Orientation) ) then
@@ -900,7 +910,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
                      
       end if
       
-      RotationMatrix = REAL( RotationMatrixD, ReKi )
+      RotationMatrix = REAL( RotationMatrixD, R8Ki )
       Dest%Orientation(:,:,i) = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrix  )
                   
 #endif         
@@ -928,7 +938,12 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    END IF
    
       ! ---------------------------- TranslationVel  --------------------------------------------
-
+      !> Translational Velocity: \f$\vec{v}^D = \sum\limits_{i=1}^{2}\left( 
+      !!              \vec{v}^S_{eSn_i} 
+      !!              + \left\{ \left\{ \vec{p}^{OSR}_{eSn_i} + \vec{u}^S_{eSn_i} \right\} - \left\{ \vec{p}^{ODR} + \vec{u}^D \right\} \right\} \times \vec{\omega}^S_{eSn_i}
+      !!              \right) \phi_i\f$
+   
+   
    if ( Src%FieldMask(MASKID_TranslationVel) .AND. Dest%FieldMask(MASKID_TranslationVel) ) then
       do i=1, Dest%Nnodes
          if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
@@ -952,8 +967,12 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
    endif
 
-         ! ---------------------------- RotationVel  -----------------------------------------------
+      ! ---------------------------- RotationVel  -----------------------------------------------
+      !> Rotational Velocity: \f$\vec{\omega}^D = \sum\limits_{i=1}^{2} 
+      !!              \vec{\omega}^S_{eSn_i} 
+      !!              \phi_i\f$
 
+   
    if ( Src%FieldMask(MASKID_RotationVel) .AND. Dest%FieldMask(MASKID_RotationVel) ) then
       do i=1, Dest%Nnodes
          if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
@@ -968,7 +987,17 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    end if
 
       ! ---------------------------- TranslationAcc -----------------------------------------------
+      !> Translational Acceleration: \f$\vec{a}^D = \sum\limits_{i=1}^{2}\left( 
+      !!              \vec{a}^S_{eSn_i} 
+      !!            + \left\{ \left\{ \vec{p}^{OSR}_{eSn_i} + \vec{u}^S_{eSn_i} \right\} - \left\{ \vec{p}^{ODR} + \vec{u}^D \right\} \right\} \times \vec{\alpha}^S_{eSn_i}
+      !!            + \vec{\omega}^S_{eSn_i} \times \left\{
+      !!              \left\{ \left\{ \vec{p}^{OSR}_{eSn_i} + \vec{u}^S_{eSn_i} \right\} - \left\{ \vec{p}^{ODR} + \vec{u}^D \right\} \right\} \times \vec{\omega}^S_{eSn_i}
+      !!              \right\}
+      !!              \right) \phi_i\f$
 
+   
+   
+   
    if ( Src%FieldMask(MASKID_TranslationAcc) .AND. Dest%FieldMask(MASKID_TranslationAcc) ) then
       do i=1, Dest%Nnodes
          if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
@@ -1003,6 +1032,9 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
 
       ! ---------------------------- RotationAcc  -----------------------------------------------
+      !> Rotational Acceleration: \f$\vec{\alpha}^D = \sum\limits_{i=1}^{2} 
+      !!              \vec{\alpha}^S_{eSn_i} 
+      !!              \phi_i\f$
 
    if (Src%FieldMask(MASKID_RotationAcc) .AND. Dest%FieldMask(MASKID_RotationAcc) ) then
       do i=1, Dest%Nnodes
@@ -1019,6 +1051,9 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    end if
 
       ! ---------------------------- Scalars  -----------------------------------------------
+      !> Rotational Velocity: \f$S^D = \sum\limits_{i=1}^{2} 
+      !!              S^S_{eSn_i} 
+      !!              \phi_i\f$
 
    if (Src%FieldMask(MASKID_SCALAR) .AND. Dest%FieldMask(MASKID_SCALAR) ) then
       do i=1, Dest%Nnodes
@@ -2121,6 +2156,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
 
       ! ---------------------------- Translation ------------------------------------------------
+      !> Translational Displacement: \f$\vec{u}^D = \vec{u}^S + \left[\left[\theta^S\right]^T \theta^{SR} - I\right]\left\{\vec{p}^{ODR}-\vec{p}^{OSR}\right\}\f$
 
       ! u_Dest = u_Src + [Orientation_Src^T * RefOrientation_Src - I] * [p_Dest - p_Src]
    if ( Src%FieldMask(MASKID_TranslationDisp) .AND. Dest%FieldMask(MASKID_TranslationDisp) ) then
@@ -2152,6 +2188,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
 
       ! ---------------------------- ORIENTATION/Direction Cosine Matrix   ----------------------
+      !> Orientation: \f$\theta^D = \theta^{DR}\left[\theta^{SR}\right]^T\theta^S\f$
 
       ! transfer direction cosine matrix, aka orientation
 
@@ -2183,6 +2220,8 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    END IF
    
       ! ---------------------------- TranslationVel  --------------------------------------------
+      !> Translational Velocity: \f$\vec{v}^D = \vec{v}^S 
+      !!              + \left\{ \left\{ \vec{p}^{OSR} + \vec{u}^S \right\} - \left\{ \vec{p}^{ODR} + \vec{u}^D \right\} \right\} \times \vec{\omega}^S\f$
 
    if ( Src%FieldMask(MASKID_TranslationVel) .AND. Dest%FieldMask(MASKID_TranslationVel) ) then
       do i=1, Dest%Nnodes
@@ -2200,6 +2239,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    endif
 
       ! ---------------------------- RotationVel  -----------------------------------------------
+      !> Rotational Velocity: \f$\vec{\omega}^D = \vec{\omega}^S\f$
 
    if ( Src%FieldMask(MASKID_RotationVel) .AND. Dest%FieldMask(MASKID_RotationVel) ) then
       do i=1, Dest%Nnodes
@@ -2210,6 +2250,12 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    end if
 
       ! ---------------------------- TranslationAcc -----------------------------------------------
+      !> Translational Acceleration: \f$\vec{a}^D = \vec{a}^S 
+      !!                        + \left\{ \left\{ \vec{p}^{OSR} + \vec{u}^S \right\} - \left\{ \vec{p}^{ODR} + \vec{u}^D \right\} \right\} \times \vec{\alpha}^S
+      !!                        + \vec{\omega}^S \times \left\{
+      !!                          \left\{ \left\{ \vec{p}^{OSR} + \vec{u}^S \right\} - \left\{ \vec{p}^{ODR} + \vec{u}^D \right\} \right\} \times \vec{\omega}^S
+      !!                          \right\}
+      !!\f$
 
    if ( Src%FieldMask(MASKID_TranslationAcc) .AND. Dest%FieldMask(MASKID_TranslationAcc) ) then
       do i=1, Dest%Nnodes
@@ -2233,6 +2279,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    endif
 
       ! ---------------------------- RotationAcc  -----------------------------------------------
+      !> Rotational Acceleration: \f$\vec{\alpha}^D = \vec{\alpha}^S\f$
 
    if (Src%FieldMask(MASKID_RotationAcc) .AND. Dest%FieldMask(MASKID_RotationAcc) ) then
       do i=1, Dest%Nnodes
@@ -2243,6 +2290,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    end if
 
       ! ---------------------------- Scalars  -----------------------------------------------
+      !> Scalars: \f$S^D = S^S\f$
 
    if (Src%FieldMask(MASKID_SCALAR) .AND. Dest%FieldMask(MASKID_SCALAR) ) then
       do i=1, Dest%Nnodes
@@ -2491,7 +2539,12 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, S
    ErrMsg  = ""
    
 
+   !> Force: \f$\vec{F}^D = \sum\limits_{eS} \vec{F}^S \f$
+   
+   !> Moment: \f$\vec{M}^D = \sum\limits_{eS} \left\{ \vec{M}^S 
+   !!         + \left\{ \left\{ \vec{p}^{OSR} + \vec{u}^S \right\} - \left\{ \vec{p}^{ODR} + \vec{u}^D \right\} \right\} \times \vec{F}^S \right\}\f$
 
+   
 !bjj note that we already checked that the following two conditions apply in this case:
 !   if Src%FieldMask(MASKID_FORCE),  Dest%FieldMask(MASKID_FORCE) and Dest%FieldMask(MASKID_MOMENT)
 !   if Src%FieldMask(MASKID_MOMENT), Dest%FieldMask(MASKID_MOMENT)
@@ -2503,13 +2556,13 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, S
       do i = 1, Src%NNodes
          !if ( MeshMap%MapLoads(i)%OtherMesh_Element < 1 )  CYCLE ! would only happen if we had non-point elements (or nodes not contained in an element)
          
-         !> F_d += F_s
+         ! F_d += F_s
          Dest%Force(:,MeshMap%MapLoads(i)%OtherMesh_Element) = Dest%Force(:,MeshMap%MapLoads(i)%OtherMesh_Element) + (Src%Force(:,i) / LoadsScaleFactor)
       end do
       Dest%Force  =  Dest%Force  * LoadsScaleFactor
       
       
-      !> M_d += torque
+      ! M_d += torque
       if ( Dest%FieldMask(MASKID_MOMENT) ) then
          
             ! if the distance (which can never be less than zero) is greater than "zero" and there is a
@@ -2532,7 +2585,7 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, S
       
    if (Src%FieldMask(MASKID_MOMENT) ) then
 
-      !> M_d += M_s      
+      ! M_d += M_s      
       do i = 1, Src%NNodes
          !if ( MeshMap%MapLoads(i)%OtherMesh_Element < 1 )  CYCLE ! would only happen if we had non-point elements (or nodes not contained in an element)
 
@@ -3000,6 +3053,7 @@ SUBROUTINE Convert_Point_To_Line2_Loads(Dest, MeshMap, ErrStat, ErrMsg, DestDisp
    
    INTEGER(IntKi)                                 :: ErrStat2
    CHARACTER(ErrMsgLen)                           :: ErrMsg2
+   character(*), parameter                        :: RoutineName = 'Convert_Point_To_Line2_Loads'
    
    
    n=3*Dest%Nnodes !also SIZE(MeshMap%LoadLn2_F,1) and SIZE(MeshMap%LoadLn2_M,1)
@@ -3022,7 +3076,7 @@ SUBROUTINE Convert_Point_To_Line2_Loads(Dest, MeshMap, ErrStat, ErrMsg, DestDisp
    
       Dest%Force =  RESHAPE( MeshMap%LoadLn2_F, (/ 3, Dest%Nnodes /) )
       
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Convert_Point_To_Line2_Loads')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN      
                   
    END IF ! Force
@@ -3070,7 +3124,7 @@ SUBROUTINE Convert_Point_To_Line2_Loads(Dest, MeshMap, ErrStat, ErrMsg, DestDisp
       Dest%Moment =  RESHAPE( MeshMap%LoadLn2_M, (/ 3, Dest%Nnodes /) )
 
       
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Convert_Point_To_Line2_Loads')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN        
       
    END IF ! Moment
@@ -3508,15 +3562,19 @@ CONTAINS
    
 END SUBROUTINE Create_Augmented_Ln2_Src_Mesh
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine takes the loads from a line2 mesh and transfers them to an augmented line2 mesh (the src mesh with extra/augmented nodes).
+!! It also transfers the translation displacement field to this augmented mesh so that we have only one mesh to deal with
+!! instead of two. The first NNodes values of the two meshes are equal, and the additional, augmented nodes are split between
+!! nodes on a line2 element. 
 SUBROUTINE Transfer_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat, ErrMsg, SrcDisp, LoadsScaleFactor )
 !..................................................................................................................................
-   TYPE(MeshType),                 INTENT(IN   )  :: Src                             ! The source mesh
-   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap
+   TYPE(MeshType),                 INTENT(IN   )  :: Src                         !< The source mesh containing line2 loads
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap                     !< mesh mapping data, including the augmented source mesh
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                         ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                          ! Error message if ErrStat /= ErrID_None
-   TYPE(MeshType),                 INTENT(IN   )  :: SrcDisp                         ! The displacements associated with the source mesh
-   REAL(ReKi),                     INTENT(IN)     :: LoadsScaleFactor  ! Scaling factor for loads (to help with numerical issues)
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                     !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                      !< Error message if ErrStat /= ErrID_None
+   TYPE(MeshType),                 INTENT(IN   )  :: SrcDisp                     !< The displacements associated with the source mesh
+   REAL(ReKi),                     INTENT(IN)     :: LoadsScaleFactor            !< Scaling factor for loads (to help with numerical issues)
 
       ! local variables
    INTEGER(IntKi)                                 :: iElem, i  ! do-loop counter for nodes/elements on source   
