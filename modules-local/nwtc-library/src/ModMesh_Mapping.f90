@@ -75,7 +75,7 @@ MODULE ModMesh_Mapping
 #endif
       INTEGER,        ALLOCATABLE :: LoadLn2_A_Mat_Piv(:)      !< The pivot values for the factorization of LoadLn2_A_Mat
       REAL(ReKi),     ALLOCATABLE :: DisplacedPosition(:,:,:)  !< couple_arm +Scr%Disp - Dest%Disp for each mapped node (stored here for efficiency.)
-      REAL(ReKi),     ALLOCATABLE :: LoadLn2_A_Mat(:,:)        !< The 6-by-6 matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping
+      REAL(ReKi),     ALLOCATABLE :: LoadLn2_A_Mat(:,:)        !< The n-by-n (n=3xNNodes) matrix that makes up the diagonal of the [A 0; B A] matrix in the point-to-line load mapping
       REAL(ReKi),     ALLOCATABLE :: LoadLn2_F(:,:)            !< The 3-components of the forces for each node of an element in the point-to-line load mapping (for each element)
       REAL(ReKi),     ALLOCATABLE :: LoadLn2_M(:,:)            !< The 3-components of the moments for each node of an element in the point-to-line load mapping (for each element)
       
@@ -2515,7 +2515,7 @@ END SUBROUTINE Linearize_Motions_Point_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
 
 !----------------------------------------------------------------------------------------------------------------------------------
-!> Given a nearest-neighbor mapping, this routine transfers loads between point nodes on the mesh.
+!> Given a nearest-neighbor mapping, this routine transfers loads between point nodes on the meshes.
 SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp,LoadsScaleFactor )
 
    TYPE(MeshType),                 INTENT(IN   )  :: Src                !< The source mesh with loads fields allocated
@@ -2597,6 +2597,94 @@ SUBROUTINE Transfer_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, S
    if (Dest%FieldMask(MASKID_MOMENT) )   Dest%Moment =  Dest%Moment * LoadsScaleFactor 
 
 END SUBROUTINE Transfer_Loads_Point_to_Point
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Given a nearest-neighbor mapping, this routine generates the linearization matrices for loads transfer between point nodes on the meshes.
+SUBROUTINE Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
+
+   TYPE(MeshType),                 INTENT(IN   )  :: Src                !< The source mesh with loads fields allocated
+   TYPE(MeshType),                 INTENT(INOUT)  :: Dest               !< The destination mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: SrcDisp            !< A mesh that contains the displacements associated with the source mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: DestDisp           !< A mesh that contains the displacements associated with the destination mesh
+
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap            !< The mapping data structure (from Dest to Src)
+
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat            !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg             !< Error message if ErrStat /= ErrID_None
+
+      ! local variables
+   integer(intKi)                                 :: i,j,n, d_start, d_end, s_start, s_end
+   real(reKi)                                     :: tmp, DisplacedPosition(3)
+   INTEGER(IntKi)                                 :: ErrStat2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
+   character(*), parameter                        :: RoutineName = 'Linearize_Loads_Point_to_Point'
+   
+
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+      ! identity for forces and/or moments:
+   if (.not. allocated(MeshMap%dM%li) ) then
+      call AllocAry(MeshMap%dM%li, Dest%Nnodes*3, Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+   end if
+      
+   MeshMap%dM%li = 0.0_ReKi
+   do i = 1, Src%NNodes
+      !if ( MeshMap%MapLoads(i)%OtherMesh_Element < 1 )  CYCLE ! would only happen if we had non-point elements (or nodes not contained in an element)
+         
+      n = MeshMap%MapLoads(i)%OtherMesh_Element
+      do j=1,3
+         MeshMap%dM%li( (n-1)*3+j, (i-1)*3+j ) = 1.0_ReKi
+      end do
+   end do
+                              
+         
+      ! M1 and M2 for moments:
+         
+   if (Dest%FieldMask(MASKID_MOMENT) .AND. Src%FieldMask(MASKID_FORCE) ) then
+            
+      if (.not. allocated(MeshMap%dM%M1) ) then
+         call AllocAry(MeshMap%dM%M1, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M1', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      end if
+            
+      if (.not. allocated(MeshMap%dM%M2) ) then
+         call AllocAry(MeshMap%dM%M2, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M2', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      end if
+            
+      
+      MeshMap%dM%M1 = 0.0_ReKi
+      MeshMap%dM%M2 = 0.0_ReKi         
+      do i = 1, Src%NNodes         
+         n = MeshMap%MapLoads(i)%OtherMesh_Element
+               
+         d_start = (n-1)*3+1
+         d_end   = d_start+2
+         s_start = (i - 1)*3+1
+         s_end   = s_start+2
+                                                              
+         DisplacedPosition =       SrcDisp%TranslationDisp(:,i) +  SrcDisp%Position(:,i) &
+                              - ( DestDisp%TranslationDisp(:,n) + DestDisp%Position(:,n) )                              
+               
+               
+         MeshMap%dM%M1( d_start:d_end, s_start:s_end ) = OuterProduct( DisplacedPosition, Src%Force(:,i) )
+         tmp=dot_product( DisplacedPosition, Src%Force(:,i) )
+         do j=0,2
+            MeshMap%dM%M1( d_start+j, s_start+j ) = MeshMap%dM%M1( d_start+j, s_start+j ) - tmp
+         end do                        
+               
+         MeshMap%dM%M2( d_start:d_end, s_start:s_end ) = SkewSymMat( DisplacedPosition )
+               
+      end do
+                           
+   endif    
+      
+
+END SUBROUTINE Linearize_Loads_Point_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
 ! This routine computes a scaling factor for loads fields to reduce numerical problems in computions that involve accelerations 
 ! and forces/moments.
@@ -2936,6 +3024,7 @@ SUBROUTINE Transfer_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, S
 
    INTEGER(IntKi)                                 :: ErrStat2
    CHARACTER(ErrMsgLen)                           :: ErrMsg2
+   character(*), parameter                        :: RoutineName = 'Transfer_Loads_Point_to_Line2'
    
    
    
@@ -2943,7 +3032,7 @@ SUBROUTINE Transfer_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, S
    ErrMsg  = ""
 
       
-   ! Start with transferring the loads like point-to-point (except split between two nodes of the dest element).
+   !> Start with transferring the loads like point-to-point (except split between two nodes of the dest element).
    ! [because the OtherMesh_Element is line2, we can't just call the routine here]
          
    if ( Dest%FieldMask(MASKID_MOMENT) ) Dest%Moment = 0._ReKi     ! whole array initialization; required to handle superposition of loads
@@ -3026,9 +3115,9 @@ SUBROUTINE Transfer_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, S
    IF (Dest%FieldMask(maskid_moment)) MeshMap%Lumped_Points_Dest%Moment = Dest%Moment
 #endif
 
-   ! now we can convert the lumped loads on the dest (line2) mesh into distributed loads on the same mesh:   
+   !> now we can convert the lumped loads on the dest (line2) mesh into distributed loads on the same mesh:   
    CALL Convert_Point_To_Line2_Loads(Dest, MeshMap, ErrStat2, ErrMsg2, DestDisp)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Transfer_Loads_Point_to_Line2')
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       !IF (ErrStat >= AbortErrLev) RETURN
    
    if (Dest%FieldMask(MASKID_FORCE) ) Dest%Force  = Dest%Force  * LoadsScaleFactor     ! whole array initialization
@@ -3036,6 +3125,118 @@ SUBROUTINE Transfer_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, S
    
       
 END SUBROUTINE Transfer_Loads_Point_to_Line2
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Given a mapping, this routine contains the linearization matrices of the load transfers from nodes on a point-element mesh to 
+!! nodes on another Line2 mesh.
+SUBROUTINE Linearize_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
+
+   TYPE(MeshType),                 INTENT(IN   )  :: Src       !< The source (Line2) mesh with loads fields allocated
+   TYPE(MeshType),                 INTENT(INOUT)  :: Dest      !< The destination mesh
+
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   !< The mapping data
+
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+   TYPE(MeshType),                 INTENT(IN   )  :: SrcDisp   !< The source mesh's cooresponding position mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: DestDisp  !< The destination mesh's cooresponding position mesh
+
+      ! local variables
+   REAL(ReKi)                                     :: DisplacedPosition(3)
+
+   integer(intKi)                                :: i, j, jElem, k, n, d_start, d_end, s_start, s_end
+   real(reKi)                                    :: tmp
+
+   INTEGER(IntKi)                                 :: ErrStat2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
+   character(*), parameter                        :: RoutineName = 'Linearize_Loads_Point_to_Line2'
+   
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+
+   ! start by determining how the point load is split based on its projected location in the mapped destination Line2 element:
+   
+      ! "identity" (portion of node) for forces and/or moments:
+   if (.not. allocated(MeshMap%dM%li) ) then
+      call AllocAry(MeshMap%dM%li, Dest%Nnodes*3, Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+   end if
+      
+   MeshMap%dM%li = 0.0_ReKi
+   do i = 1, Src%NNodes
+         
+      jElem = MeshMap%MapLoads(i)%OtherMesh_Element
+      do j=1,NumNodes(ELEMENT_LINE2)
+         n = Dest%ElemTable(ELEMENT_LINE2)%Elements(jElem)%ElemNodes(j)
+      
+         do k=1,3
+            MeshMap%dM%li( (n-1)*3+k, (i-1)*3+k ) = MeshMap%MapLoads(i)%shape_fn(j)
+         end do
+      end do
+      
+   end do
+                          
+         
+      ! M1 and M2 for moments:
+         
+   if (Dest%FieldMask(MASKID_MOMENT) .AND. Src%FieldMask(MASKID_FORCE) ) then
+            
+      if (.not. allocated(MeshMap%dM%M1) ) then
+         call AllocAry(MeshMap%dM%M1, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M1', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      end if
+            
+      if (.not. allocated(MeshMap%dM%M2) ) then
+         call AllocAry(MeshMap%dM%M2, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M2', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      end if
+            
+      
+      MeshMap%dM%M1 = 0.0_ReKi
+      MeshMap%dM%M2 = 0.0_ReKi         
+      do i = 1, Src%NNodes         
+         jElem = MeshMap%MapLoads(i)%OtherMesh_Element
+               
+         s_start = (i - 1)*3+1
+         s_end   = s_start+2         
+         do j=1,NumNodes(ELEMENT_LINE2)
+            n = Dest%ElemTable(ELEMENT_LINE2)%Elements(jElem)%ElemNodes(j)
+            
+            d_start = (n-1)*3+1
+            d_end   = d_start+2
+            
+            DisplacedPosition =       SrcDisp%TranslationDisp(:,i) +  SrcDisp%Position(:,i) &
+                                 - ( DestDisp%TranslationDisp(:,n) + DestDisp%Position(:,n) )                              
+               
+            DisplacedPosition = DisplacedPosition*MeshMap%MapLoads(i)%shape_fn(j)  ! multiply the fraction here so we don't need to apply to any of the terms below
+               
+            MeshMap%dM%M1( d_start:d_end, s_start:s_end ) = OuterProduct( DisplacedPosition, Src%Force(:,i) ) 
+            tmp=dot_product( DisplacedPosition, Src%Force(:,i) ) 
+            do k=0,2
+               MeshMap%dM%M1( d_start+k, s_start+k ) = MeshMap%dM%M1( d_start+k, s_start+k ) - tmp
+            end do                        
+               
+            MeshMap%dM%M2( d_start:d_end, s_start:s_end ) = SkewSymMat( DisplacedPosition )
+         end do !j
+         
+      end do
+                                 
+   endif    
+         
+   ! then determining how the point loads are converted to distributed loads on the same mesh:
+                     
+   !> now we can convert the lumped loads on the dest (line2) mesh into distributed loads on the same mesh:   
+   CALL Convert_Linearized_Point_To_Line2_Loads(Dest, MeshMap, ErrStat2, ErrMsg2, DestDisp)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      !IF (ErrStat >= AbortErrLev) RETURN
+   
+   
+      
+END SUBROUTINE Linearize_Loads_Point_to_Line2
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine takes the lumped loads on nodes of a (line2) mesh and converts them to loads distributed across the line2 elements.
 SUBROUTINE Convert_Point_To_Line2_Loads(Dest, MeshMap, ErrStat, ErrMsg, DestDisp)
@@ -3131,6 +3332,111 @@ SUBROUTINE Convert_Point_To_Line2_Loads(Dest, MeshMap, ErrStat, ErrMsg, DestDisp
    
 
 END SUBROUTINE Convert_Point_To_Line2_Loads    
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine takes the linearized matrices of lumped loads on nodes of a (line2) mesh and converts them to matrices of loads distributed across the line2 elements.
+SUBROUTINE Convert_Linearized_Point_To_Line2_Loads(Dest, MeshMap, ErrStat, ErrMsg, DestDisp)
+
+   TYPE(MeshType),                 INTENT(INOUT)  :: Dest                           !< The mesh (on input, the nodal loads values are lumped; on output they are distributed along the element)
+   TYPE(MeshType),                 INTENT(IN   )  :: DestDisp                       !< The mesh that contains the translation displacement for these loads
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap                        !< The mapping data
+
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                        !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                         !< Error message if ErrStat /= ErrID_None
+
+   INTEGER(IntKi) :: jElem, n, i,j
+   REAL(ReKi)     :: c
+   
+   Real(ReKi), allocatable                        :: Inv(:,:)
+   INTEGER(IntKi)                                 :: ErrStat2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
+   character(*), parameter                        :: RoutineName = 'Convert_Linearized_Point_To_Line2_Loads'
+   
+   
+   n=3*Dest%Nnodes !also SIZE(MeshMap%LoadLn2_F,1) and SIZE(MeshMap%LoadLn2_M,1)
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+   call AllocAry(Inv, n, n, 'Inverse', ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      IF (ErrStat >= AbortErrLev) return
+
+      ! I'm going to cheat and form the inverse this way, since LoadLn2_A_Mat is already factored
+   call Eye(Inv, ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   
+
+   CALL LAPACK_getrs(TRANS='N',N=n,A=MeshMap%LoadLn2_A_Mat,IPIV=MeshMap%LoadLn2_A_Mat_piv, B=Inv, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      IF (ErrStat >= AbortErrLev) then
+         deallocate(Inv)
+         RETURN       
+      end if
+      
+      ! Inv now contains the inverse of the A matrix I want for linearization:
+   MeshMap%dM%li = matmul( Inv, MeshMap%dM%li)
+   
+      ! Now I need to get the cross-product terms for the moments as well:
+   
+call wrscr( routinename//': need to fix the moment terms as well! MeshMap%dM%m1 and MeshMap%dM%m2')    
+stop
+
+!MeshMap%dM%m1
+!MeshMap%dM%m2
+   
+   !!   ! Convert the moments on each element
+   !!   
+   !!IF ( Dest%FieldMask(MASKID_Moment) ) then  
+   !!   
+   !!   MeshMap%LoadLn2_M = RESHAPE( Dest%Moment, (/ n, 1 /) )       
+   !!   
+   !!   IF ( Dest%FieldMask(MASKID_Force) ) then
+   !!                                                            
+   !!      DO jElem = 1,Dest%ElemTable(ELEMENT_LINE2)%nelem
+   !!
+   !!         n1=Dest%ElemTable(ELEMENT_LINE2)%Elements(jElem)%ElemNodes(1)
+   !!         n2=Dest%ElemTable(ELEMENT_LINE2)%Elements(jElem)%ElemNodes(2)
+   !!         
+   !!         c = Dest%ElemTable(ELEMENT_LINE2)%Elements(jElem)%det_jac/6.0_ReKi  ! this contains an extra factor of 1/2, which comes from omitting it from the a_vec term
+   !!                                             
+   !!         a_vec =   ( DestDisp%Position(:,n2) + DestDisp%TranslationDisp(:,n2) ) &
+   !!                 - ( DestDisp%Position(:,n1) + DestDisp%TranslationDisp(:,n1) )
+   !!         
+   !!         ! We solved LoadLn2_F for the distributed value, so we'll use it here: (the B matrix is just the cross product terms)
+   !!         sum_f = Dest%Force(:,n1) + Dest%Force(:,n2)             
+   !!         crossProd = c * cross_product( a_vec, sum_f)
+   !!                              
+   !!         ! subtract the force (using the distributed values) from the lumped moment terms:
+   !!         i = (n1-1)*3+1;  j = i+2
+   !!         MeshMap%LoadLn2_M(i:j,1)=MeshMap%LoadLn2_M(i:j,1) - crossProd
+   !!         
+   !!         i = (n2-1)*3+1;  j = i+2            
+   !!         MeshMap%LoadLn2_M(i:j,1)=MeshMap%LoadLn2_M(i:j,1) + crossProd
+   !!      END DO        
+   !!                        
+   !!   END IF ! moment due to force
+   !!   
+   !!   ! After following call, LoadLn2_M contains the distributed moments:
+   !!   
+   !!   CALL LAPACK_getrs(TRANS='N',N=n,A=MeshMap%LoadLn2_A_Mat,IPIV=MeshMap%LoadLn2_A_Mat_piv, &
+   !!                     B=MeshMap%LoadLn2_M, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+   !!         
+   !!   ! Transfer moments to the mesh fields
+   !!
+   !!   Dest%Moment =  RESHAPE( MeshMap%LoadLn2_M, (/ 3, Dest%Nnodes /) )
+   !!
+   !!   
+   !!   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   !!   IF (ErrStat >= AbortErrLev) then
+   !!      deallocate(Inv)
+   !!      RETURN       
+   !!   end if
+   !!   
+   !!END IF ! Moment
+   
+   deallocate(Inv)
+   
+
+END SUBROUTINE Convert_Linearized_Point_To_Line2_Loads    
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat, ErrMsg)
 !This routine creates a new line2 mesh. This augmented line2-element source mesh is formed by splitting the original Line2-element 
@@ -3662,13 +3968,14 @@ SUBROUTINE Transfer_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat, ErrMsg, Src
          
 END SUBROUTINE Transfer_Src_To_Augmented_Ln2_Src
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine creates a matrix used to "unlump" loads later (needs to have element connectivity information to create it)
 SUBROUTINE Create_InverseLumping_Matrix( Dest, MeshMap, ErrStat, ErrMsg )
-   TYPE(MeshType),         INTENT(IN   ) ::  Dest
-   TYPE(MeshMapType),      INTENT(INOUT) ::  MeshMap
+   TYPE(MeshType),         INTENT(IN   ) ::  Dest        !< destination mesh
+   TYPE(MeshMapType),      INTENT(INOUT) ::  MeshMap     !< mesh mapping data
 
 
-   INTEGER(IntKi),         INTENT(  OUT)  :: ErrStat     ! Error status of the operation
-   CHARACTER(*),           INTENT(  OUT)  :: ErrMsg      ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),         INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),           INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
    ! local variables
    REAL(ReKi)                              :: c, TwoC
@@ -3709,7 +4016,7 @@ SUBROUTINE Create_InverseLumping_Matrix( Dest, MeshMap, ErrStat, ErrMsg )
       n1 = Dest%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(1)
       n2 = Dest%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(2)
 
-      c    = Dest%ElemTable(ELEMENT_LINE2)%Elements(iElem)%det_jac / 3.0_ReKi
+      c    = Dest%ElemTable(ELEMENT_LINE2)%Elements(iElem)%det_jac / 3.0_ReKi  != TwoNorm( p(n2)-p(n1) )/6
       TwoC = 2.0_ReKi * c
 
       do iComp=1,3 !3 components of force
@@ -3745,57 +4052,59 @@ CONTAINS
    
 END SUBROUTINE Create_InverseLumping_Matrix
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This subroutine creates the mapping from a line2 mesh with loads to another line2 mesh.
 SUBROUTINE CreateLoadMap_L2_to_L2( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
-   TYPE(MeshType),                 INTENT(IN   )  :: Src                             ! The source mesh
-   TYPE(MeshType),                 INTENT(IN   )  :: Dest                            ! The destination mesh
-   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap
+   TYPE(MeshType),                 INTENT(IN   )  :: Src                             !< The source mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: Dest                            !< The destination mesh
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap                         !< mapping data
 
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                         ! Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                          ! Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                         !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                          !< Error message if ErrStat /= ErrID_None
 
       ! Local variables:
    INTEGER(IntKi)                                 :: ErrStat2
    CHARACTER(ErrMsgLen)                           :: ErrMsg2
+   character(*), parameter                        :: RoutineName = 'CreateLoadMap_L2_to_L2'
 
    ErrStat = ErrID_None
    ErrMsg  = ""
    
    
       !........................
-      ! Create matrix used to "unlump" loads later (needs to have element connectivity information to create it)
+      !> + Create a matrix used to "unlump" loads later (needs to have element connectivity information to create it)
       !........................
       CALL Create_InverseLumping_Matrix( Dest, MeshMap, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CreateLoadMap_L2_to_L2')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
             
       !........................
-      ! An augmented Line2-element source mesh is formed
-      ! by splitting the original Line2-element source mesh at each location where a
-      ! destination-mesh Line2-element node projects orthogonally from the destination mesh
+      !> + An augmented Line2-element source mesh is formed
+      !! by splitting the original Line2-element source mesh at each location where a
+      !! destination-mesh Line2-element node projects orthogonally from the destination mesh
       !........................
          
       CALL Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, ELEMENT_LINE2, ErrStat2, ErrMsg2) 
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CreateLoadMap_L2_to_L2')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
                      
       !........................
-      ! For each Line2-element node of the augmented source mesh, a nearest-neighbor of the augmented source mesh,
-      ! a nearest-neighbor line2 element of the destination mesh is found (else aborted) in the reference configuration, 
-      ! for which the source Line2-element node projects orthogonally onto the destination Line2-element domain.
-      ! A destination-mesh Line2 element may be associated with multiple source-mesh Line2-element nodes.
+      !> + For each Line2-element node of the augmented source mesh, 
+      !! a nearest-neighbor Line2 element of the destination mesh is found (else aborted) in the reference configuration, 
+      !! for which the source Line2-element node projects orthogonally onto the destination Line2-element domain.
+      !! A destination-mesh Line2 element may be associated with multiple source-mesh Line2-element nodes.
       !........................
             
       CALL CreateMapping_ProjectToLine2(MeshMap%Augmented_Ln2_Src, Dest, MeshMap%MapLoads, ELEMENT_LINE2, ErrStat2, ErrMsg2)            
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CreateLoadMap_L2_to_L2')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
          
          
       !........................
-      ! Create a temporary mesh for lumped point elements of the line2 source 
+      !> + Create a temporary mesh for lumped point elements of the line2 source 
       !........................
       CALL Create_PointMesh( MeshMap%Augmented_Ln2_Src, MeshMap%Lumped_Points_Src, ErrStat2, ErrMsg2 )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CreateLoadMap_L2_to_L2')
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
          
          
@@ -4038,12 +4347,12 @@ END SUBROUTINE Lump_Line2_to_Point
 !! \f$dM_{M_2}\f$ is modmesh_mapping::meshmaplinearizationtype::m2 \n
 SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
-   TYPE(MeshType),          INTENT(IN   ) ::  Src      !< source point mesh
-   TYPE(MeshType),          INTENT(INOUT) ::  Dest     !< destination point mesh
-   TYPE(MeshType), OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< an optional mesh, which contains the displacements associated with the source if the source contains load information
-   TYPE(MeshType), OPTIONAL,INTENT(IN   ) ::  DestDisp !< an optional mesh, which contains the displacements associated with the destination if the destination contains load information
+   TYPE(MeshType),          INTENT(IN   ) :: Src       !< source point mesh
+   TYPE(MeshType),          INTENT(INOUT) :: Dest      !< destination point mesh
+   TYPE(MeshType), OPTIONAL,INTENT(IN   ) :: SrcDisp   !< an optional mesh, which contains the displacements associated with the source if the source contains load information
+   TYPE(MeshType), OPTIONAL,INTENT(IN   ) :: DestDisp  !< an optional mesh, which contains the displacements associated with the destination if the destination contains load information
 
-   TYPE(MeshMapType),       INTENT(INOUT) ::  MeshMap  !< Mapping(s) between Src and Dest meshes; also contains jacobian of this mapping
+   TYPE(MeshMapType),       INTENT(INOUT) :: MeshMap   !< Mapping(s) between Src and Dest meshes; also contains jacobian of this mapping
 
    INTEGER(IntKi),          INTENT(  OUT) :: ErrStat   !< Error status of the operation
    CHARACTER(*),            INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
@@ -4054,8 +4363,6 @@ SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'Linearize_Point_to_Point'
    
-   integer(intKi)                          :: i,j,n, d_start, d_end, s_start, s_end
-   real(reKi)                              :: tmp, DisplacedPosition(3)
    
    ! logic
 
@@ -4096,7 +4403,7 @@ SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    ! ------------------------------------------------------------------------------------------------------------------------------
    ! Mapping and Transfer of Data for Mesh Load Fields
    ! ------------------------------------------------------------------------------------------------------------------------------
-   ! IF Src is forces and/or moments, loop over Src Mesh;
+   ! If Src is forces and/or moments, loop over Src Mesh;
    !    each load in the source mesh needs to be placed somewhere in the destination mesh.
 
    if ( HasLoadFields(Src) ) then
@@ -4115,71 +4422,14 @@ SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
 
       !........................
       ! create linearization matrices for loads:
-      !........................
+      !........................      
 
       IF ( PRESENT( SrcDisp ) .AND. PRESENT( DestDisp ) ) THEN
                                        
-            ! identity for forces and/or moments:
-         if (.not. allocated(MeshMap%dM%li) ) then
-            call AllocAry(MeshMap%dM%li, Dest%Nnodes*3, Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-               IF (ErrStat >= AbortErrLev) RETURN
-         end if
-      
-         MeshMap%dM%li = 0.0_ReKi
-         do i = 1, Src%NNodes
-            !if ( MeshMap%MapLoads(i)%OtherMesh_Element < 1 )  CYCLE ! would only happen if we had non-point elements (or nodes not contained in an element)
-         
-            n = MeshMap%MapLoads(i)%OtherMesh_Element
-            do j=1,3
-               MeshMap%dM%li( (n-1)*3+j, (i-1)*3+j ) = 1.0_ReKi
-            end do
-         end do
-                              
-         
-            ! M1 and M2 for moments:
-         
-         if (Dest%FieldMask(MASKID_MOMENT) .AND. Src%FieldMask(MASKID_FORCE) ) then
-            
-            if (.not. allocated(MeshMap%dM%M1) ) then
-               call AllocAry(MeshMap%dM%M1, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M1', ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  IF (ErrStat >= AbortErrLev) RETURN
-            end if
-            
-            if (.not. allocated(MeshMap%dM%M2) ) then
-               call AllocAry(MeshMap%dM%M2, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M2', ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  IF (ErrStat >= AbortErrLev) RETURN
-            end if
-            
-      
-            MeshMap%dM%M1 = 0.0_ReKi
-            MeshMap%dM%M2 = 0.0_ReKi         
-            do i = 1, Src%NNodes         
-               n = MeshMap%MapLoads(i)%OtherMesh_Element
-               
-               d_start = (n-1)*3+1
-               d_end   = d_start+2
-               s_start = (i - 1)*3+1
-               s_end   = s_start+2
-                                                              
-               DisplacedPosition =       SrcDisp%TranslationDisp(:,i) +  SrcDisp%Position(:,i) &
-                                    - ( DestDisp%TranslationDisp(:,n) + DestDisp%Position(:,n) )                              
-               
-               
-               MeshMap%dM%M1( d_start:d_end, s_start:s_end ) = OuterProduct( DisplacedPosition, Src%Force(:,i) )
-               tmp=dot_product( DisplacedPosition, Src%Force(:,i) )
-               do j=0,2
-                  MeshMap%dM%M1( d_start+j, s_start+j ) = MeshMap%dM%M1( d_start+j, s_start+j ) - tmp
-               end do                        
-               
-               MeshMap%dM%M2( d_start:d_end, s_start:s_end ) = SkewSymMat( DisplacedPosition )
-               
-            end do
-                           
-         endif           
-      
+         call Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DestDisp )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN                        
+             
       ELSE !bjj: we could check if Src also had TranslationDisp fields and call with SrcDisp=Src
          CALL SetErrStat( ErrID_Fatal, 'Invalid arguments to Linearize_Point_to_Point for meshes with load fields.', ErrStat, ErrMsg, RoutineName)
          RETURN
