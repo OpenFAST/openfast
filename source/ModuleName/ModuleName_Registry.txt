@@ -18,6 +18,7 @@ include Registry_NWTC_Library.txt
 # Define inputs that the initialization routine may need here:
 #   e.g., the name of the input file, the file root name, etc.
 typedef ModuleName/ModName InitInputType CHARACTER(1024) InputFile  - - -   "Name of the input file; remove if there is no file" -
+typedef   ^                ^             LOGICAL         Linearize  - .FALSE. -  "Flag that tells this module if the glue code wants to linearize." -
 
 # Define outputs from the initialization routine here:
 typedef   ^               InitOutputType CHARACTER(ChanLen) WriteOutputHdr  {:} - -   "Names of the output-to-file channels" -
@@ -63,59 +64,4 @@ typedef   ^               InputType           ReKi     DummyInput  - - -     "Re
 # Define outputs that are not on this mesh here:
 typedef   ^               OutputType          ReKi     DummyOutput  -  - -   "Remove this variable if you have output data" -
 typedef   ^                 ^                 ReKi     WriteOutput {:} - -   "Example of data to be written to an output file" "s,-"
-
-
-####################################################################################################################################
-# These are not necessary to define in the Registry, but are here to generate blank types until we do actually implement the
-# Jacobians in the FAST framework. In the final implementation, they will probably not contain subtypes, but instead be
-# square matrices of type ReKi or DbKi.
-####################################################################################################################################
-# ..... Jacobians .................................................................................................................
-# Define the Jacobian of the output equations (Y) with respect to the inputs (u), dY/du (or Partial Y / Partial u):
-typedef   ^               ModName_PartialOutputPInputType            ModName_InputType            DummyOutput        -     -     -  "If you have output equations and input data, update this variable" -
-
-# Define the Jacobian of the output equations (Y) with respect to the inputs (u), dY/du (or Partial Y / Partial u):
-typedef   ^               ModName_PartialContStatePInputType         ModName_InputType            DummyContState     -     -     -  "If you have continuous state equations and input data, update this variable" -
-
-#Define the Jacobian of the discrete state equations (Xd) with respect to the inputs (u), dXd/du (or Partial Xd / Partial u):
-typedef   ^               ModName_PartialDiscStatePInputType         ModName_InputType            DummyDiscState     -     -     -  "If you have discrete state equations and input data, update this variable" -
-
-# Define the Jacobian of the constraint state equations (Z) with respect to the inputs (u), dZ/du (or Partial Z / Partial u):
-typedef   ^               ModName_PartialConstrStatePInputType       ModName_InputType            DummyConstrState   -     -     -  "If you have constraint state equations and input data, update this variable" -
-
-# Define the Jacobian of the output equations (Y) with respect to the continuous states (x), dY/dx (or Partial Y / Partial x):
-typedef   ^               ModName_PartialOutputPContStateType        ModName_ContinuousStateType  DummyOutput        -     -     -  "If you have output equations and continuous states, update this variable" -
-
-# Define the Jacobian of the continuous state equations (X) with respect to the continuous states (x), dX/dx (or Partial X / Partial x):
-typedef   ^               ModName_PartialContStatePContStateType     ModName_ContinuousStateType  DummyContState     -     -     -  "If you have continuous state equations and continuous states, update this variable" -
-
-# Define the Jacobian of the discrete state equations (Xd) with respect to the continuous states (x), dXd/dx (or Partial Xd / Partial x):
-typedef   ^               ModName_PartialDiscStatePContStateType     ModName_ContinuousStateType  DummyDiscState     -     -     -  "If you have discrete state equations and continuous states, update this variable" -
-
-# Define the Jacobian of the constraint state equations (Z) with respect to the continuous states (x), dZ/dx (or Partial Z / Partial x):
-typedef   ^               ModName_PartialConstrStatePContStateType   ModName_ContinuousStateType  DummyConstrState   -     -     -  "If you have constraint state equations and continuous states, update this variable" -
-
-# Define the Jacobian of the output equations (Y) with respect to the discrete states (xd), dY/dxd (or Partial Y / Partial xd):
-typedef   ^               ModName_PartialOutputPDiscStateType        ModName_DiscreteStateType    DummyOutput        -     -     -  "If you have output equations and discrete states, update this variable" -
-
-# Define the Jacobian of the continuous state equations (X) with respect to the discrete states (xd), dX/dxd (or Partial X / Partial xd):
-typedef   ^               ModName_PartialContStatePDiscStateType     ModName_DiscreteStateType    DummyContState     -     -     -  "If you have continuous state equations and discrete states, update this variable" -
-
-# Define the Jacobian of the discrete state equations (Xd) with respect to the discrete states (xd), dXd/dxd (or Partial Xd / Partial xd):
-typedef   ^               ModName_PartialDiscStatePDiscStateType     ModName_DiscreteStateType    DummyDiscState     -     -     -  "If you have discrete state equations and discrete states, update this variable" -
-
-# Define the Jacobian of the constraint state equations (Z) with respect to the discrete states (xd), dZ/dxd (or Partial Z / Partial xd):
-typedef   ^               ModName_PartialConstrStatePDiscStateType   ModName_DiscreteStateType    DummyConstrState   -     -     -  "If you have constraint state equations and discrete states, update this variable" -
-
-# Define the Jacobian of the output equations (Y) with respect to the constraint states (z), dY/dz (or Partial Y / Partial z):
-typedef   ^               ModName_PartialOutputPConstrStateType      ModName_ConstraintStateType  DummyOutput        -     -     -  "If you have output equations and constraint states, update this variable" -
-
-# Define the Jacobian of the continuous state equations (X) with respect to the constraint states (z), dX/dz (or Partial X / Partial z):
-typedef   ^               ModName_PartialContStatePConstrStateType   ModName_ConstraintStateType  DummyContState     -     -     -  "If you have continuous state equations and constraint states, update this variable" -
-
-# Define the Jacobian of the discrete state equations (Xd) with respect to the constraint states (z), dXd/dz (or Partial Xd / Partial z):
-typedef   ^               ModName_PartialDiscStatePConstrStateType   ModName_ConstraintStateType  DummyDiscState     -     -     -  "If you have discrete state equations and constraint states, update this variable" -
-
-# Define the Jacobian of the constraint state equations (Z) with respect to the constraint states (z), dZ/dz (or Partial Z / Partial z):
-typedef   ^               ModName_PartialConstrStatePConstrStateType ModName_ConstraintStateType  DummyConstrState   -     -     -  "If you have constraint state equations and constraint states, update this variable" -
 

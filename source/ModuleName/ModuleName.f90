@@ -10,7 +10,7 @@
 !! "ModName" (in ModName_*) should be replaced with the module name or an abbreviation of it. Example: ED
 ! ..................................................................................................................................
 !! ## LICENSING
-!! Copyright (C) 2012-2013, 2015  National Renewable Energy Laboratory
+!! Copyright (C) 2012-2013, 2015-2016  National Renewable Energy Laboratory
 !!
 !!    This file is part of ModuleName.
 !!
@@ -35,7 +35,7 @@ MODULE ModuleName
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: ModName_Ver = ProgDesc( 'ModuleName', 'v2.00.00', '13-November-2015' ) !< module date/version information
+   TYPE(ProgDesc), PARAMETER :: ModName_Ver = ProgDesc( 'ModuleName', 'v2.01.00', '5-May-2016' ) !< module date/version information
 
 
       ! ..... Public Subroutines ...................................................................................................
@@ -64,11 +64,12 @@ MODULE ModuleName
                                                     !    states (z)
 
 CONTAINS
-!----------------------------------------------------------------------------------------------------------------------------------
+   
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> This routine is called at the start of the simulation to perform initialization steps.
 !! The parameters are set here and not changed during the simulation.
 !! The initial states and initial guess for the input are defined.
-SUBROUTINE ModName_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval, InitOut, ErrStat, ErrMsg )
+SUBROUTINE ModName_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitOut, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(ModName_InitInputType),       INTENT(IN   )  :: InitInp     !< Input data for initialization routine
@@ -80,7 +81,7 @@ SUBROUTINE ModName_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval,
       TYPE(ModName_OtherStateType),      INTENT(  OUT)  :: OtherState  !< Initial other states (logical, etc)
       TYPE(ModName_OutputType),          INTENT(  OUT)  :: y           !< Initial system outputs (outputs are not calculated;
                                                                        !!   only the output mesh is initialized)
-      TYPE(ModName_MiscVarType),         INTENT(  OUT)  :: misc        !< Misc variables for optimization (not copied in glue code)
+      TYPE(ModName_MiscVarType),         INTENT(  OUT)  :: m           !< Misc variables for optimization (not copied in glue code)
       REAL(DbKi),                        INTENT(INOUT)  :: Interval    !< Coupling interval in seconds: the rate that
                                                                        !!   (1) ModName_UpdateStates() is called in loose coupling &
                                                                        !!   (2) ModName_UpdateDiscState() is called in tight coupling.
@@ -98,39 +99,35 @@ SUBROUTINE ModName_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval,
       CHARACTER(ErrMsgLen)                              :: ErrMsg2     ! local error message
       CHARACTER(*), PARAMETER                           :: RoutineName = 'ModName_Init'
 
-         !! Initialize variables
-
+         ! Initialize variables
       ErrStat = ErrID_None
       ErrMsg  = ""
       NumOuts = 2
 
 
          ! Initialize the NWTC Subroutine Library
-
       call NWTC_Init( )
 
          ! Display the module information
-
       call DispNVD( ModName_Ver )
 
 
          ! Define parameters here:
-
       p%DT  = Interval
 
 
          ! Define initial system states here:
-
       x%DummyContState           = 0.0_ReKi
       xd%DummyDiscState          = 0.0_ReKi
       z%DummyConstrState         = 0.0_ReKi
       OtherState%DummyOtherState = 0.0_ReKi
 
-         ! define optimization variables here:
-      misc%DummyMiscVar          = 0.0_ReKi
+      
+         ! Define optimization variables here:      
+      m%DummyMiscVar          = 0.0_ReKi
 
+      
          ! Define initial guess for the system inputs here:
-
       u%DummyInput = 0.0_ReKi
 
 
@@ -158,10 +155,16 @@ SUBROUTINE ModName_Init( InitInp, u, p, x, xd, z, OtherState, y, misc, Interval,
        !Interval = p%DT
 
 
+      ! If the module does not implement the four Jacobian routines at the end of this template, or the module cannot
+      ! linearize with certain features enabled, stop the simulation if InitInp%Linearize is true.
+      
+      !if (InitInp%Linearize) CALL SetErrStat( ErrID_Fatal, 'ModuleName cannot preform linearization analysis.', ErrStat, ErrMsg, RoutineName)
+
+      
 END SUBROUTINE ModName_Init
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the end of the simulation.
-SUBROUTINE ModName_End( u, p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
+SUBROUTINE ModName_End( u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       TYPE(ModName_InputType),           INTENT(INOUT)  :: u           !< System inputs
@@ -171,7 +174,7 @@ SUBROUTINE ModName_End( u, p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
       TYPE(ModName_ConstraintStateType), INTENT(INOUT)  :: z           !< Constraint states
       TYPE(ModName_OtherStateType),      INTENT(INOUT)  :: OtherState  !< Other states
       TYPE(ModName_OutputType),          INTENT(INOUT)  :: y           !< System outputs
-      TYPE(ModName_MiscVarType),         INTENT(INOUT)  :: misc        !< Misc variables for optimization (not copied in glue code)
+      TYPE(ModName_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
       INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -218,14 +221,14 @@ SUBROUTINE ModName_End( u, p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
 
          !! Destroy the misc data:
 
-      call ModName_DestroyMisc( misc, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      call ModName_DestroyMisc( m, ErrStat2, ErrMsg2 ); call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
 
 
 END SUBROUTINE ModName_End
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a loose coupling routine for solving constraint states, integrating continuous states, and updating discrete and other
 !! states. Continuous, constraint, discrete, and other states are updated to values at t + Interval.
-SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg )
+SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                         INTENT(IN   ) :: t               !< Current simulation time in seconds
@@ -242,7 +245,7 @@ SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
                                                                            !!   Output: Constraint states at t + Interval
       TYPE(ModName_OtherStateType),       INTENT(INOUT) :: OtherState      !< Other states: Other states at t;
                                                                            !!   Output: Other states at t + Interval
-      TYPE(ModName_MiscVarType),          INTENT(INOUT) :: misc            !<  Misc variables for optimization (not copied in glue code)
+      TYPE(ModName_MiscVarType),          INTENT(INOUT) :: m               !<  Misc variables for optimization (not copied in glue code)
       INTEGER(IntKi),                     INTENT(  OUT) :: ErrStat         !< Error status of the operation
       CHARACTER(*),                       INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None
 
@@ -290,7 +293,7 @@ SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
 
          ! Get first time derivatives of continuous states (dxdt):
 
-      call ModName_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, misc, dxdt, ErrStat2, ErrMsg2 )
+      call ModName_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if ( ErrStat >= AbortErrLev ) then
             call cleanup()
@@ -308,7 +311,7 @@ SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
             return
          end if
 
-      call ModName_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, misc, ErrStat2, ErrMsg2 )
+      call ModName_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat2, ErrMsg2 )
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if ( ErrStat >= AbortErrLev ) then
             call cleanup()
@@ -322,7 +325,7 @@ SUBROUTINE ModName_UpdateStates( t, n, Inputs, InputTimes, p, x, xd, z, OtherSta
 
       ! DO
 
-         call ModName_CalcConstrStateResidual( t, u, p, x, xd_t, z, OtherState, misc, Z_Residual, ErrStat2, ErrMsg2 )
+         call ModName_CalcConstrStateResidual( t, u, p, x, xd_t, z, OtherState, m, Z_Residual, ErrStat2, ErrMsg2 )
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
             if ( ErrStat >= AbortErrLev ) then
                call cleanup()
@@ -358,7 +361,7 @@ CONTAINS
 END SUBROUTINE ModName_UpdateStates
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a routine for computing outputs, used in both loose and tight coupling.
-SUBROUTINE ModName_CalcOutput( t, u, p, x, xd, z, OtherState, y, misc, ErrStat, ErrMsg )
+SUBROUTINE ModName_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
@@ -368,7 +371,7 @@ SUBROUTINE ModName_CalcOutput( t, u, p, x, xd, z, OtherState, y, misc, ErrStat, 
       TYPE(ModName_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
       TYPE(ModName_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
       TYPE(ModName_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
-      TYPE(ModName_MiscVarType),         INTENT(INOUT)  :: misc        !< Misc variables for optimization (not copied in glue code)
+      TYPE(ModName_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
       TYPE(ModName_OutputType),          INTENT(INOUT)  :: y           !< Outputs computed at t (Input only so that mesh con-
                                                                        !!   nectivity information does not have to be recalculated)
       INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
@@ -390,8 +393,11 @@ SUBROUTINE ModName_CalcOutput( t, u, p, x, xd, z, OtherState, y, misc, ErrStat, 
 
 END SUBROUTINE ModName_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
+
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !> This is a tight coupling routine for computing derivatives of continuous states.
-SUBROUTINE ModName_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, misc, dxdt, ErrStat, ErrMsg )
+SUBROUTINE ModName_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dxdt, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
@@ -401,7 +407,7 @@ SUBROUTINE ModName_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, misc, dxdt
       TYPE(ModName_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
       TYPE(ModName_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
       TYPE(ModName_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
-      TYPE(ModName_MiscVarType),         INTENT(INOUT)  :: misc        !< Misc variables for optimization (not copied in glue code)
+      TYPE(ModName_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
       TYPE(ModName_ContinuousStateType), INTENT(  OUT)  :: dxdt        !< Continuous state derivatives at t
       INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
@@ -421,7 +427,7 @@ SUBROUTINE ModName_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, misc, dxdt
 END SUBROUTINE ModName_CalcContStateDeriv
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a tight coupling routine for updating discrete states.
-SUBROUTINE ModName_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, misc, ErrStat, ErrMsg )
+SUBROUTINE ModName_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, m, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
@@ -433,7 +439,7 @@ SUBROUTINE ModName_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, misc, ErrS
                                                                        !!   Output: Discrete states at t + Interval
       TYPE(ModName_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
       TYPE(ModName_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
-      TYPE(ModName_MiscVarType),         INTENT(INOUT)  :: misc        !< Misc variables for optimization (not copied in glue code)
+      TYPE(ModName_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
       INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
       CHARACTER(*),                      INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
 
@@ -451,7 +457,7 @@ SUBROUTINE ModName_UpdateDiscState( t, n, u, p, x, xd, z, OtherState, misc, ErrS
 END SUBROUTINE ModName_UpdateDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This is a tight coupling routine for solving for the residual of the constraint state functions.
-SUBROUTINE ModName_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, misc, Z_residual, ErrStat, ErrMsg )
+SUBROUTINE ModName_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, Z_residual, ErrStat, ErrMsg )
 !..................................................................................................................................
 
       REAL(DbKi),                        INTENT(IN   )  :: t           !< Current simulation time in seconds
@@ -461,7 +467,7 @@ SUBROUTINE ModName_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, misc,
       TYPE(ModName_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
       TYPE(ModName_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t (possibly a guess)
       TYPE(ModName_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
-      TYPE(ModName_MiscVarType),         INTENT(INOUT)  :: misc        !< Misc variables for optimization (not copied in glue code)
+      TYPE(ModName_MiscVarType),         INTENT(INOUT)  :: m           !< Misc variables for optimization (not copied in glue code)
       TYPE(ModName_ConstraintStateType), INTENT(  OUT)  :: Z_residual  !< Residual of the constraint state functions using
                                                                        !!     the input values described above
       INTEGER(IntKi),                    INTENT(  OUT)  :: ErrStat     !< Error status of the operation
@@ -479,32 +485,36 @@ SUBROUTINE ModName_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, misc,
       Z_residual%DummyConstrState = 0.0_ReKi
 
 END SUBROUTINE ModName_CalcConstrStateResidual
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! WE ARE NOT YET IMPLEMENTING THE JACOBIANS...
-!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 !----------------------------------------------------------------------------------------------------------------------------------
-! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
-SUBROUTINE ModName_JacobianPInput( t, u, p, x, xd, z, OtherState, dYdu, dXdu, dXddu, dZdu, ErrStat, ErrMsg )
+
+
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+! ###### The following four routines are Jacobian routines for linearization capabilities #######
+! If the module does not implement them, set ErrStat = ErrID_Fatal in ModName_Init() when InitInp%Linearize is .true.
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the inputs (u). The partial derivatives dY/du, dX/du, dXd/du, and DZ/du are returned.
+SUBROUTINE ModName_JacobianPInput( t, u, p, x, xd, z, OtherState, m, dYdu, dXdu, dXddu, dZdu, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                                INTENT(IN   )           :: t          ! Current simulation time in seconds
-      TYPE(ModName_InputType),                   INTENT(IN   )           :: u          ! Inputs at t
-      TYPE(ModName_ParameterType),               INTENT(IN   )           :: p          ! Parameters
-      TYPE(ModName_ContinuousStateType),         INTENT(IN   )           :: x          ! Continuous states at t
-      TYPE(ModName_DiscreteStateType),           INTENT(IN   )           :: xd         ! Discrete states at t
-      TYPE(ModName_ConstraintStateType),         INTENT(IN   )           :: z          ! Constraint states at t
-      TYPE(ModName_OtherStateType),              INTENT(INOUT)           :: OtherState ! Other states at t
-      TYPE(ModName_PartialOutputPInputType),     INTENT(  OUT), OPTIONAL :: dYdu       ! Partial derivatives of output functions
-                                                                                       !   (Y) with respect to the inputs (u)
-      TYPE(ModName_PartialContStatePInputType),  INTENT(  OUT), OPTIONAL :: dXdu       ! Partial derivatives of continuous state
-                                                                                       !   functions (X) with respect to inputs (u)
-      TYPE(ModName_PartialDiscStatePInputType),  INTENT(  OUT), OPTIONAL :: dXddu      ! Partial derivatives of discrete state
-                                                                                       !   functions (Xd) with respect to inputs (u)
-      TYPE(ModName_PartialConstrStatePInputType),INTENT(  OUT), OPTIONAL :: dZdu       ! Partial derivatives of constraint state
-                                                                                       !   functions (Z) with respect to inputs (u)
-      INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-      CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                                INTENT(IN   )           :: t          !< Current simulation time in seconds
+      TYPE(ModName_InputType),                   INTENT(IN   )           :: u          !< Inputs at t
+      TYPE(ModName_ParameterType),               INTENT(IN   )           :: p          !< Parameters
+      TYPE(ModName_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at t
+      TYPE(ModName_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at t
+      TYPE(ModName_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at t
+      TYPE(ModName_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at t
+      TYPE(ModName_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dYdu(:,:)  !< Partial derivatives of output functions
+                                                                                       !!   (Y) with respect to the inputs (u)
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state
+                                                                                       !!   functions (X) with respect to inputs (u)
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dXddu(:,:) !< Partial derivatives of discrete state
+                                                                                       !!   functions (Xd) with respect to inputs (u)
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state
+                                                                                       !!   functions (Z) with respect to inputs (u)
+      INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+      CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
 
          ! Initialize ErrStat
@@ -517,7 +527,7 @@ SUBROUTINE ModName_JacobianPInput( t, u, p, x, xd, z, OtherState, dYdu, dXdu, dX
 
          ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
 
-         dYdu%DummyOutput%DummyInput = 0
+         ! allocate and set dYdu
 
       END IF
 
@@ -525,7 +535,7 @@ SUBROUTINE ModName_JacobianPInput( t, u, p, x, xd, z, OtherState, dYdu, dXdu, dX
 
          ! Calculate the partial derivative of the continuous state functions (X) with respect to the inputs (u) here:
 
-         dXdu%DummyContState%DummyInput = 0
+         ! allocate and set dXdu
 
       END IF
 
@@ -533,7 +543,7 @@ SUBROUTINE ModName_JacobianPInput( t, u, p, x, xd, z, OtherState, dYdu, dXdu, dX
 
          ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the inputs (u) here:
 
-         dXddu%DummyDiscState%DummyInput = 0
+         ! allocate and set dXddu
 
       END IF
 
@@ -541,39 +551,40 @@ SUBROUTINE ModName_JacobianPInput( t, u, p, x, xd, z, OtherState, dYdu, dXdu, dX
 
          ! Calculate the partial derivative of the constraint state functions (Z) with respect to the inputs (u) here:
 
-         dZdu%DummyConstrState%DummyInput = 0
+         ! allocate and set dZdu
 
       END IF
 
 
 END SUBROUTINE ModName_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
-! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
-SUBROUTINE ModName_JacobianPContState( t, u, p, x, xd, z, OtherState, dYdx, dXdx, dXddx, dZdx, ErrStat, ErrMsg )
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
+SUBROUTINE ModName_JacobianPContState( t, u, p, x, xd, z, OtherState, m, dYdx, dXdx, dXddx, dZdx, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                                    INTENT(IN   )           :: t          ! Current simulation time in seconds
-      TYPE(ModName_InputType),                       INTENT(IN   )           :: u          ! Inputs at t
-      TYPE(ModName_ParameterType),                   INTENT(IN   )           :: p          ! Parameters
-      TYPE(ModName_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at t
-      TYPE(ModName_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at t
-      TYPE(ModName_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at t
-      TYPE(ModName_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other states at t
-      TYPE(ModName_PartialOutputPContStateType),     INTENT(  OUT), OPTIONAL :: dYdx       ! Partial derivatives of output functions
-                                                                                           !   (Y) with respect to the continuous
-                                                                                           !   states (x)
-      TYPE(ModName_PartialContStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXdx       ! Partial derivatives of continuous state
-                                                                                           !   functions (X) with respect to
-                                                                                           !   the continuous states (x)
-      TYPE(ModName_PartialDiscStatePContStateType),  INTENT(  OUT), OPTIONAL :: dXddx      ! Partial derivatives of discrete state
-                                                                                           !   functions (Xd) with respect to
-                                                                                           !   the continuous states (x)
-      TYPE(ModName_PartialConstrStatePContStateType),INTENT(  OUT), OPTIONAL :: dZdx       ! Partial derivatives of constraint state
-                                                                                           !   functions (Z) with respect to
-                                                                                           !   the continuous states (x)
-      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                                INTENT(IN   )           :: t          !< Current simulation time in seconds
+      TYPE(ModName_InputType),                   INTENT(IN   )           :: u          !< Inputs at t
+      TYPE(ModName_ParameterType),               INTENT(IN   )           :: p          !< Parameters
+      TYPE(ModName_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at t
+      TYPE(ModName_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at t
+      TYPE(ModName_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at t
+      TYPE(ModName_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at t
+      TYPE(ModName_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dYdx       !< Partial derivatives of output functions
+                                                                                       !!   (Y) with respect to the continuous
+                                                                                       !!   states (x)
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dXdx       !< Partial derivatives of continuous state
+                                                                                       !!   functions (X) with respect to
+                                                                                       !!   the continuous states (x)
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dXddx      !< Partial derivatives of discrete state
+                                                                                       !!   functions (Xd) with respect to
+                                                                                       !!   the continuous states (x)
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dZdx       !< Partial derivatives of constraint state
+                                                                                       !!   functions (Z) with respect to
+                                                                                       !!   the continuous states (x)
+      INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+      CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
 
          ! Initialize ErrStat
@@ -587,7 +598,7 @@ SUBROUTINE ModName_JacobianPContState( t, u, p, x, xd, z, OtherState, dYdx, dXdx
 
          ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
 
-         dYdx%DummyOutput%DummyContState = 0
+         ! allocate and set dYdx
 
       END IF
 
@@ -595,7 +606,7 @@ SUBROUTINE ModName_JacobianPContState( t, u, p, x, xd, z, OtherState, dYdx, dXdx
 
          ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
 
-         dXdx%DummyContState%DummyContState = 0
+         ! allocate and set dXdx
 
       END IF
 
@@ -603,7 +614,7 @@ SUBROUTINE ModName_JacobianPContState( t, u, p, x, xd, z, OtherState, dYdx, dXdx
 
          ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the continuous states (x) here:
 
-         dXddx%DummyDiscState%DummyContState = 0
+         ! allocate and set dXddx
 
       END IF
 
@@ -612,39 +623,40 @@ SUBROUTINE ModName_JacobianPContState( t, u, p, x, xd, z, OtherState, dYdx, dXdx
 
          ! Calculate the partial derivative of the constraint state functions (Z) with respect to the continuous states (x) here:
 
-         dZdx%DummyConstrState%DummyContState = 0
+         ! allocate and set dZdx
 
       END IF
 
 
-   END SUBROUTINE ModName_JacobianPContState
+END SUBROUTINE ModName_JacobianPContState
 !----------------------------------------------------------------------------------------------------------------------------------
-! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
-SUBROUTINE ModName_JacobianPDiscState( t, u, p, x, xd, z, OtherState, dYdxd, dXdxd, dXddxd, dZdxd, ErrStat, ErrMsg )
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
+SUBROUTINE ModName_JacobianPDiscState( t, u, p, x, xd, z, OtherState, m, dYdxd, dXdxd, dXddxd, dZdxd, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                                    INTENT(IN   )           :: t          ! Current simulation time in seconds
-      TYPE(ModName_InputType),                       INTENT(IN   )           :: u          ! Inputs at t
-      TYPE(ModName_ParameterType),                   INTENT(IN   )           :: p          ! Parameters
-      TYPE(ModName_ContinuousStateType),             INTENT(IN   )           :: x          ! Continuous states at t
-      TYPE(ModName_DiscreteStateType),               INTENT(IN   )           :: xd         ! Discrete states at t
-      TYPE(ModName_ConstraintStateType),             INTENT(IN   )           :: z          ! Constraint states at t
-      TYPE(ModName_OtherStateType),                  INTENT(INOUT)           :: OtherState ! Other states at t
-      TYPE(ModName_PartialOutputPDiscStateType),     INTENT(  OUT), OPTIONAL :: dYdxd      ! Partial derivatives of output functions
-                                                                                           !  (Y) with respect to the discrete
-                                                                                           !  states (xd)
-      TYPE(ModName_PartialContStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXdxd      ! Partial derivatives of continuous state
-                                                                                           !   functions (X) with respect to the
-                                                                                           !   discrete states (xd)
-      TYPE(ModName_PartialDiscStatePDiscStateType),  INTENT(  OUT), OPTIONAL :: dXddxd     ! Partial derivatives of discrete state
-                                                                                           !   functions (Xd) with respect to the
-                                                                                           !   discrete states (xd)
-      TYPE(ModName_PartialConstrStatePDiscStateType),INTENT(  OUT), OPTIONAL :: dZdxd      ! Partial derivatives of constraint state
-                                                                                           !   functions (Z) with respect to the
-                                                                                           !   discrete states (xd)
-      INTEGER(IntKi),                                INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-      CHARACTER(*),                                  INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                                INTENT(IN   )           :: t          !< Current simulation time in seconds
+      TYPE(ModName_InputType),                   INTENT(IN   )           :: u          !< Inputs at t
+      TYPE(ModName_ParameterType),               INTENT(IN   )           :: p          !< Parameters
+      TYPE(ModName_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at t
+      TYPE(ModName_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at t
+      TYPE(ModName_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at t
+      TYPE(ModName_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at t
+      TYPE(ModName_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dYdxd      !< Partial derivatives of output functions
+                                                                                       !!  (Y) with respect to the discrete
+                                                                                       !!  states (xd)
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dXdxd      !< Partial derivatives of continuous state
+                                                                                       !!   functions (X) with respect to the
+                                                                                       !!   discrete states (xd)
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dXddxd     !< Partial derivatives of discrete state
+                                                                                       !!   functions (Xd) with respect to the
+                                                                                       !!   discrete states (xd)
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dZdxd      !< Partial derivatives of constraint state
+                                                                                       !!   functions (Z) with respect to the
+                                                                                       !!   discrete states (xd)
+      INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+      CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
 
          ! Initialize ErrStat
@@ -657,7 +669,7 @@ SUBROUTINE ModName_JacobianPDiscState( t, u, p, x, xd, z, OtherState, dYdxd, dXd
 
          ! Calculate the partial derivative of the output functions (Y) with respect to the discrete states (xd) here:
 
-         dYdxd%DummyOutput%DummyDiscState = 0
+         ! allocate and set dYdxd
 
       END IF
 
@@ -665,7 +677,7 @@ SUBROUTINE ModName_JacobianPDiscState( t, u, p, x, xd, z, OtherState, dYdxd, dXd
 
          ! Calculate the partial derivative of the continuous state functions (X) with respect to the discrete states (xd) here:
 
-         dXdxd%DummyContState%DummyDiscState = 0
+         ! allocate and set dXdxd
 
       END IF
 
@@ -673,7 +685,7 @@ SUBROUTINE ModName_JacobianPDiscState( t, u, p, x, xd, z, OtherState, dYdxd, dXd
 
          ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the discrete states (xd) here:
 
-         dXddxd%DummyDiscState%DummyDiscState = 0
+         ! allocate and set dXddxd
 
       END IF
 
@@ -681,39 +693,40 @@ SUBROUTINE ModName_JacobianPDiscState( t, u, p, x, xd, z, OtherState, dYdxd, dXd
 
          ! Calculate the partial derivative of the constraint state functions (Z) with respect to the discrete states (xd) here:
 
-         dZdxd%DummyConstrState%DummyDiscState = 0
+         ! allocate and set dZdxd
 
       END IF
 
 
 END SUBROUTINE ModName_JacobianPDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
-! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
-! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
-SUBROUTINE ModName_JacobianPConstrState( t, u, p, x, xd, z, OtherState, dYdz, dXdz, dXddz, dZdz, ErrStat, ErrMsg )
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
+SUBROUTINE ModName_JacobianPConstrState( t, u, p, x, xd, z, OtherState, m, dYdz, dXdz, dXddz, dZdz, ErrStat, ErrMsg )
 !..................................................................................................................................
 
-      REAL(DbKi),                                      INTENT(IN   )           :: t          ! Current simulation time in seconds
-      TYPE(ModName_InputType),                         INTENT(IN   )           :: u          ! Inputs at t
-      TYPE(ModName_ParameterType),                     INTENT(IN   )           :: p          ! Parameters
-      TYPE(ModName_ContinuousStateType),               INTENT(IN   )           :: x          ! Continuous states at t
-      TYPE(ModName_DiscreteStateType),                 INTENT(IN   )           :: xd         ! Discrete states at t
-      TYPE(ModName_ConstraintStateType),               INTENT(IN   )           :: z          ! Constraint states at t
-      TYPE(ModName_OtherStateType),                    INTENT(INOUT)           :: OtherState ! Other states at t
-      TYPE(ModName_PartialOutputPConstrStateType),     INTENT(  OUT), OPTIONAL :: dYdz       ! Partial derivatives of output
-                                                                                             !  functions (Y) with respect to the
-                                                                                             !  constraint states (z)
-      TYPE(ModName_PartialContStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXdz       ! Partial derivatives of continuous
-                                                                                             !  state functions (X) with respect to
-                                                                                             !  the constraint states (z)
-      TYPE(ModName_PartialDiscStatePConstrStateType),  INTENT(  OUT), OPTIONAL :: dXddz      ! Partial derivatives of discrete state
-                                                                                             !  functions (Xd) with respect to the
-                                                                                             !  constraint states (z)
-      TYPE(ModName_PartialConstrStatePConstrStateType),INTENT(  OUT), OPTIONAL :: dZdz       ! Partial derivatives of constraint
-                                                                                             ! state functions (Z) with respect to
-                                                                                             !  the constraint states (z)
-      INTEGER(IntKi),                                  INTENT(  OUT)           :: ErrStat    ! Error status of the operation
-      CHARACTER(*),                                    INTENT(  OUT)           :: ErrMsg     ! Error message if ErrStat /= ErrID_None
+      REAL(DbKi),                                INTENT(IN   )           :: t          !< Current simulation time in seconds
+      TYPE(ModName_InputType),                   INTENT(IN   )           :: u          !< Inputs at t
+      TYPE(ModName_ParameterType),               INTENT(IN   )           :: p          !< Parameters
+      TYPE(ModName_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at t
+      TYPE(ModName_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at t
+      TYPE(ModName_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at t
+      TYPE(ModName_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at t
+      TYPE(ModName_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dYdz       !< Partial derivatives of output
+                                                                                       !!  functions (Y) with respect to the
+                                                                                       !!  constraint states (z)
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dXdz       !< Partial derivatives of continuous
+                                                                                       !!  state functions (X) with respect to
+                                                                                       !!  the constraint states (z)
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dXddz      !< Partial derivatives of discrete state
+                                                                                       !!  functions (Xd) with respect to the
+                                                                                       !!  constraint states (z)
+      REAL(ReKi), ALLOCATABLE, OPTIONAL,         INTENT(  OUT)           :: dZdz       !< Partial derivatives of constraint
+                                                                                       !! state functions (Z) with respect to
+                                                                                       !!  the constraint states (z)
+      INTEGER(IntKi),                            INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+      CHARACTER(*),                              INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
 
 
          ! Initialize ErrStat
@@ -725,7 +738,7 @@ SUBROUTINE ModName_JacobianPConstrState( t, u, p, x, xd, z, OtherState, dYdz, dX
 
             ! Calculate the partial derivative of the output functions (Y) with respect to the constraint states (z) here:
 
-         dYdz%DummyOutput%DummyConstrState = 0
+         ! allocate and set dYdz
 
       END IF
 
@@ -733,7 +746,7 @@ SUBROUTINE ModName_JacobianPConstrState( t, u, p, x, xd, z, OtherState, dYdz, dX
 
             ! Calculate the partial derivative of the continuous state functions (X) with respect to the constraint states (z) here:
 
-         dXdz%DummyContState%DummyConstrState = 0
+         ! allocate and set dXdz
 
       END IF
 
@@ -741,7 +754,7 @@ SUBROUTINE ModName_JacobianPConstrState( t, u, p, x, xd, z, OtherState, dYdz, dX
 
             ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the constraint states (z) here:
 
-         dXddz%DummyDiscState%DummyConstrState = 0
+         ! allocate and set dXddz
 
       END IF
 
@@ -749,7 +762,7 @@ SUBROUTINE ModName_JacobianPConstrState( t, u, p, x, xd, z, OtherState, dYdz, dX
 
             ! Calculate the partial derivative of the constraint state functions (Z) with respect to the constraint states (z) here:
 
-         dZdz%DummyConstrState%DummyConstrState = 0
+         ! allocate and set dZdz
 
       END IF
 
