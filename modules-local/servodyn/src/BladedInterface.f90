@@ -380,8 +380,8 @@ SUBROUTINE BladedInterface_CalcOutput(t, u, p, m, ErrStat, ErrMsg)
    TYPE(SrvD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
    TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
    TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m           !< misc (optimization) variables
-   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !, Error status of the operation
-   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !, Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
       
       ! local variables:
    INTEGER(IntKi)                                 :: ErrStat2    ! The error status code
@@ -455,112 +455,117 @@ SUBROUTINE Fill_avrSWAP( t, u, p, ErrMsgSz, dll_data )
    !            
    !   
    !ELSE
-   
-   !dll_data%avrSWAP( 1) = REAL(StatFlag, SiKi)             !! Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-) 
-   dll_data%avrSWAP( 2) = REAL(t, SiKi)                     ! Current time (sec)
-   dll_data%avrSWAP( 3) = p%DLL_DT                          ! Communication interval (sec)   ! WAS y_StrD%AllOuts(     Time) - LastTime 
-   dll_data%avrSWAP( 4) = u%BlPitch(1)                      ! Blade 1 pitch angle (rad)
-   dll_data%avrSWAP( 5) = p%Ptch_SetPnt                     ! Below-rated pitch angle set-point (rad)
-   dll_data%avrSWAP( 6) = p%Ptch_Min                        ! Minimum pitch angle (rad)
-   dll_data%avrSWAP( 7) = p%Ptch_Max                        ! Maximum pitch angle (rad)
-   dll_data%avrSWAP( 8) = p%PtchRate_Min                    ! Minimum pitch rate (most negative value allowed) (rad/s)
-   dll_data%avrSWAP( 9) = p%PtchRate_Max                    ! Maximum pitch rate                               (rad/s)
-   dll_data%avrSWAP(10) = 0.0                               ! 0 = pitch position actuator, 1 = pitch rate actuator (-) -- must be 0 for FAST
+      
+   !> The following are values ServoDyn sends to the Bladed DLL.
+   !! For variables returned from the DLL, see bladedinterface::retrieve_avrswap.
+   !dll_data%avrSWAP( 1) = REAL(StatFlag, SiKi)             
+   !> * Record  1: Status flag set as follows: 0 if this is the first call, 1 for all subsequent time steps, -1 if this is the final call at the end of the simulation (-) 
+   dll_data%avrSWAP( 2) = REAL(t, SiKi)                     !> * Record  2: Current time (sec) [t in single precision]
+   dll_data%avrSWAP( 3) = p%DLL_DT                          !> * Record  3: Communication interval (sec)  [in FAST v7 this was \f$ y\_SrvD\%AllOuts(Time) - LastTime \f$, but is now the SrvD DLL_DT parameter]
+   dll_data%avrSWAP( 4) = u%BlPitch(1)                      !> * Record  4: Blade 1 pitch angle (rad) [SrvD input]
+   dll_data%avrSWAP( 5) = p%Ptch_SetPnt                     !> * Record  5: Below-rated pitch angle set-point (rad) [SrvD Ptch_SetPnt parameter]
+   dll_data%avrSWAP( 6) = p%Ptch_Min                        !> * Record  6: Minimum pitch angle (rad) [SrvD Ptch_Min parameter]
+   dll_data%avrSWAP( 7) = p%Ptch_Max                        !> * Record  7: Maximum pitch angle (rad) [SrvD Ptch_Max parameter]
+   dll_data%avrSWAP( 8) = p%PtchRate_Min                    !> * Record  8: Minimum pitch rate (most negative value allowed) (rad/s) [SrvD PtchRate_Min parameter]
+   dll_data%avrSWAP( 9) = p%PtchRate_Max                    !> * Record  9: Maximum pitch rate                               (rad/s) [SrvD PtchRate_Max parameter]
+   dll_data%avrSWAP(10) = 0.0                               !> * Record 10: 0 = pitch position actuator, 1 = pitch rate actuator (-) [must be 0 for ServoDyn]
 !bjj: record 11 technically needs the old demanded values (currently equivalent to this quantity)                      
-!   dll_data%avrSWAP(11) = u%BlPitch(1)                      ! Current demanded pitch angle (rad  ) -- I am sending the value for blade 1, in the absence of any more information provided in Bladed documentation
-   dll_data%avrSWAP(11) = dll_data%PrevBlPitch(1)           ! Current demanded pitch angle (rad  ) -- I am sending the value for blade 1, in the absence of any more information provided in Bladed documentation
-   dll_data%avrSWAP(12) = 0.0                               ! Current demanded pitch rate  (rad/s) -- always zero for FAST
-   dll_data%avrSWAP(13) = p%GenPwr_Dem                      ! Demanded power (W)
-   dll_data%avrSWAP(14) = u%RotPwr                          ! Measured shaft power (W)
-   dll_data%avrSWAP(15) = u%ElecPwr_prev                    ! Measured electrical power output (W)
+!   dll_data%avrSWAP(11) = u%BlPitch(1)                      ! Current demanded pitch angle (rad) -- I am sending the value for blade 1, in the absence of any more information provided in Bladed documentation
+   dll_data%avrSWAP(11) = dll_data%PrevBlPitch(1)           !> * Record 11: Current demanded pitch angle (rad) [I am sending the previous value for blade 1 from the DLL, in the absence of any more information provided in Bladed documentation]
+   dll_data%avrSWAP(12) = 0.0                               !> * Record 12: Current demanded pitch rate  (rad/s) [always zero for ServoDyn]
+   dll_data%avrSWAP(13) = p%GenPwr_Dem                      !> * Record 13: Demanded power (W) [SrvD GenPwr_Dem parameter]
+   dll_data%avrSWAP(14) = u%RotPwr                          !> * Record 14: Measured shaft power (W) [SrvD input]
+   dll_data%avrSWAP(15) = u%ElecPwr_prev                    !> * Record 15: Measured electrical power output (W) [SrvD input from previous step output; technically should be a state]
+   !> * Record 16: Optimal mode gain (Nm/(rad/s)^2) [if torque-speed table look-up not selected in input file, use SrvD Gain_OM parameter, otherwise use 0]
    IF ( p%DLL_NumTrq == 0 )  THEN                           ! Torque-speed table look-up not selected
       dll_data%avrSWAP(16) = p%Gain_OM                      ! Optimal mode gain (Nm/(rad/s)^2)
    ELSE                 ! Torque-speed table look-up selected
       dll_data%avrSWAP(16) = 0.0                            ! Optimal mode gain (Nm/(rad/s)^2) -- 0.0 indicates that torque-speed table look-up is selected
    ENDIF
-   dll_data%avrSWAP(17) = p%GenSpd_MinOM                    ! Minimum generator speed (rad/s)
-   dll_data%avrSWAP(18) = p%GenSpd_MaxOM                    ! Optimal mode maximum speed (rad/s)
-   dll_data%avrSWAP(19) = p%GenSpd_Dem                      ! Demanded generator speed above rated (rad/s)
-   dll_data%avrSWAP(20) = u%HSS_Spd                         ! Measured generator speed (rad/s)
-   dll_data%avrSWAP(21) = u%RotSpeed                        ! Measured rotor speed (rad/s)
-   dll_data%avrSWAP(22) = p%GenTrq_Dem                      ! Demanded generator torque (Nm)
+   dll_data%avrSWAP(17) = p%GenSpd_MinOM                    !> * Record 17: Minimum generator speed (rad/s) [SrvD GenSpd_MinOM parameter]
+   dll_data%avrSWAP(18) = p%GenSpd_MaxOM                    !> * Record 18: Optimal mode maximum speed (rad/s) [SrvD GenSpd_MaxOMp arameter]
+   dll_data%avrSWAP(19) = p%GenSpd_Dem                      !> * Record 19: Demanded generator speed above rated (rad/s) [SrvD GenSpd_Dem parameter]
+   dll_data%avrSWAP(20) = u%HSS_Spd                         !> * Record 20: Measured generator speed (rad/s) [SrvD input]
+   dll_data%avrSWAP(21) = u%RotSpeed                        !> * Record 21: Measured rotor speed (rad/s) [SrvD input]
+   dll_data%avrSWAP(22) = p%GenTrq_Dem                      !> * Record 22: Demanded generator torque (Nm) [SrvD GenTrq_Dem parameter]
 !bjj: this assumes it is the value at the previous step; but we actually want the output GenTrq...              
-   dll_data%avrSWAP(23) = u%GenTrq_prev                     ! Measured generator torque (Nm)
-   dll_data%avrSWAP(24) = u%YawErr                          ! Measured yaw error (rad)
+   dll_data%avrSWAP(23) = u%GenTrq_prev                     !> * Record 23: Measured generator torque (Nm) [SrvD input from previous step output; should technically be a state]
+   dll_data%avrSWAP(24) = u%YawErr                          !> * Record 24: Measured yaw error (rad) [SrvD input]
    IF ( p%DLL_NumTrq == 0 )  THEN  ! Torque-speed table look-up not selected
       dll_data%avrSWAP(25) = 0.0                            ! Start of below-rated torque-speed look-up table (record no.) -- 0.0 indicates that torque-speed table look-up is not selected
       dll_data%avrSWAP(26) = 0.0                            ! No. of points in torque-speed look-up table (-)              -- 0.0 indicates that torque-speed table look-up is not selected
    ELSE                 ! Torque-speed table look-up selected
-      dll_data%avrSWAP(25) = R                              ! Start of below-rated torque-speed look-up table (record no.)
-      dll_data%avrSWAP(26) = p%DLL_NumTrq                   ! No. of points in torque-speed look-up table (-)
+      dll_data%avrSWAP(25) = R                              !> * Record 25: Start of below-rated torque-speed look-up table (record no.) [parameter \f$R\f$ (bladedinterface::r) or 0 if DLL_NumTrq == 0]
+      dll_data%avrSWAP(26) = p%DLL_NumTrq                   !> * Record 26: No. of points in torque-speed look-up table (-) [SrvD DLL_NumTrq parameter]
    ENDIF
-   dll_data%avrSWAP(27) = u%HorWindV                        ! Hub wind speed (m/s)
-   dll_data%avrSWAP(28) = p%Ptch_Cntrl                      ! Pitch control: 0 = collective, 1 = individual (-)
-   dll_data%avrSWAP(29) = 0.0                               ! Yaw control: 0 = yaw rate control, 1 = yaw torque control (-) -- must be 0 for FAST !bjj: maybe torque control can be used in ServoDyn
-   dll_data%avrSWAP(30) = u%RootMyc(1)                      ! Blade 1 root out-of-plane bending moment (Nm)
-   dll_data%avrSWAP(31) = u%RootMyc(2)                      ! Blade 2 root out-of-plane bending moment (Nm)
-   dll_data%avrSWAP(32) = u%RootMyc(3)                      ! Blade 3 root out-of-plane bending moment (Nm)
-   dll_data%avrSWAP(33) = u%BlPitch(2)                      ! Blade 2 pitch angle (rad)
+   dll_data%avrSWAP(27) = u%HorWindV                        !> * Record 27: Hub wind speed (m/s) [SrvD input]
+   dll_data%avrSWAP(28) = p%Ptch_Cntrl                      !> * Record 28: Pitch control: 0 = collective, 1 = individual (-) [SrvD Ptch_Cntrl parameter]
+   dll_data%avrSWAP(29) = 0.0                               !> * Record 29: Yaw control: 0 = yaw rate control, 1 = yaw torque control (-) [must be 0 for ServoDyn] 
+                         !^^^ bjj: maybe torque control can be used in ServoDyn? can we specifiy yaw torque control?
+   dll_data%avrSWAP(30) = u%RootMyc(1)                      !> * Record 30: Blade 1 root out-of-plane bending moment (Nm) [SrvD input]
+   dll_data%avrSWAP(31) = u%RootMyc(2)                      !> * Record 31: Blade 2 root out-of-plane bending moment (Nm) [SrvD input]
+   dll_data%avrSWAP(32) = u%RootMyc(3)                      !> * Record 32: Blade 3 root out-of-plane bending moment (Nm) [SrvD input]
+   dll_data%avrSWAP(33) = u%BlPitch(2)                      !> * Record 33: Blade 2 pitch angle (rad) [SrvD input]
 IF ( p%NumBl > 2 ) THEN   
-   dll_data%avrSWAP(34) = u%BlPitch(3)                      ! Blade 3 pitch angle (rad)
+   dll_data%avrSWAP(34) = u%BlPitch(3)                      !> * Record 34: Blade 3 pitch angle (rad) [SrvD input]
 END IF
-   dll_data%avrSWAP(35) = dll_data%GenState                 ! Generator contactor (-)
-   dll_data%avrSWAP(36) = dll_data%HSSBrFrac                ! Shaft brake status: 0 = off, 1 = on (full) (-)
-   dll_data%avrSWAP(37) = u%YawAngle - p%NacYaw_North       ! Nacelle yaw angle from North (rad)
+   dll_data%avrSWAP(35) = dll_data%GenState                 !> * Record 35: Generator contactor (-) [GenState from previous call to DLL (initialized to 1)]
+   dll_data%avrSWAP(36) = dll_data%HSSBrFrac                !> * Record 36: Shaft brake status: 0 = off, 1 = on (full) (-) [HSSBrFrac from previous call to DLL (initialized to 0)]
+   dll_data%avrSWAP(37) = u%YawAngle - p%NacYaw_North       !> * Record 37: Nacelle yaw angle from North (rad) [ \f$ u\%YawAngle - p\%NacYaw\_North \f$ ]
 ! Records 38-48 are outputs [see Retrieve_avrSWAP()]
-   dll_data%avrSWAP(49) = REAL( ErrMsgSz ) + 1              ! Max No. of characters in the "MESSAGE" argument (-) (we add one for the C NULL CHARACTER)
-   dll_data%avrSWAP(50) = REAL( LEN_TRIM(p%DLL_InFile) ) +1 ! No. of characters in the "INFILE"  argument (-) (we add one for the C NULL CHARACTER)
-   dll_data%avrSWAP(51) = REAL( LEN_TRIM(p%RootName)   ) +1 ! No. of characters in the "OUTNAME" argument (-) (we add one for the C NULL CHARACTER)
+   dll_data%avrSWAP(49) = REAL( ErrMsgSz ) + 1              !> * Record 49: Maximum number of characters in the "MESSAGE" argument (-) [size of ErrMsg argument plus 1 (we add one for the C NULL CHARACTER)]
+   dll_data%avrSWAP(50) = REAL( LEN_TRIM(p%DLL_InFile) ) +1 !> * Record 50: Number of characters in the "INFILE"  argument (-) [trimmed length of DLL_InFile parameter plus 1 (we add one for the C NULL CHARACTER)]
+   dll_data%avrSWAP(51) = REAL( LEN_TRIM(p%RootName)   ) +1 !> * Record 51: Number of characters in the "OUTNAME" argument (-) [trimmed length of RootName parameter plus 1 (we add one for the C NULL CHARACTER)]
 ! Record 52 is reserved for future use                      ! DLL interface version number (-)
-   dll_data%avrSWAP(53) = u%YawBrTAxp                       ! Tower top fore-aft     acceleration (m/s^2)
-   dll_data%avrSWAP(54) = u%YawBrTAyp                       ! Tower top side-to-side acceleration (m/s^2)
+   dll_data%avrSWAP(53) = u%YawBrTAxp                       !> * Record 53: Tower top fore-aft     acceleration (m/s^2) [SrvD input]
+   dll_data%avrSWAP(54) = u%YawBrTAyp                       !> * Record 54: Tower top side-to-side acceleration (m/s^2) [SrvD input]
 ! Records 55-59 are outputs [see Retrieve_avrSWAP()]
-   dll_data%avrSWAP(60) = u%LSSTipPxa                       ! Rotor azimuth angle (rad)
-   dll_data%avrSWAP(61) = p%NumBl                           ! No. of blades (-)
-   dll_data%avrSWAP(62) = 0.0                               ! Max. number of values which can be returned for logging (-) -- must be 0 for FAST
-   dll_data%avrSWAP(63) = 0.0                               ! Record number for start of logging output (-)
-   dll_data%avrSWAP(64) = 0.0                               ! Max. number of characters which can be returned in "OUTNAME" (-) -- must be 0 for FAST
+   dll_data%avrSWAP(60) = u%LSSTipPxa                       !> * Record 60: Rotor azimuth angle (rad) [SrvD input]
+   dll_data%avrSWAP(61) = p%NumBl                           !> * Record 61: Number of blades (-) [SrvD NumBl parameter]
+   dll_data%avrSWAP(62) = 0.0                               !> * Record 62: Maximum number of values which can be returned for logging (-) [currently set to 0]
+   dll_data%avrSWAP(63) = 0.0                               !> * Record 63: Record number for start of logging output (-) [currently set to 0]
+   dll_data%avrSWAP(64) = 0.0                               !> * Record 64: Maximum number of characters which can be returned in "OUTNAME" (-) [currently set to 0]
 ! Record 65 is output [see Retrieve_avrSWAP()]
 ! Records 66-68 are reserved
 
-   dll_data%avrSWAP(69) = u%RootMxc(1)                      ! Blade 1 root in-plane bending moment (Nm)
-   dll_data%avrSWAP(70) = u%RootMxc(2)                      ! Blade 2 root in-plane bending moment (Nm)
-   dll_data%avrSWAP(71) = u%RootMxc(3)                      ! Blade 3 root in-plane bending moment (Nm)
+   dll_data%avrSWAP(69) = u%RootMxc(1)                      !> * Record 69: Blade 1 root in-plane bending moment (Nm) [SrvD input]
+   dll_data%avrSWAP(70) = u%RootMxc(2)                      !> * Record 70: Blade 2 root in-plane bending moment (Nm) [SrvD input]
+   dll_data%avrSWAP(71) = u%RootMxc(3)                      !> * Record 71: Blade 3 root in-plane bending moment (Nm) [SrvD input]
 ! Record 72 is output [see Retrieve_avrSWAP()]
-   dll_data%avrSWAP(73) = u%LSSTipMya                       ! Rotating hub My (GL co-ords) (Nm)
-   dll_data%avrSWAP(74) = u%LSSTipMza                       ! Rotating hub Mz (GL co-ords) (Nm)
-   dll_data%avrSWAP(75) = u%LSSTipMys                       ! Fixed hub My (GL co-ords) (Nm)
-   dll_data%avrSWAP(76) = u%LSSTipMzs                       ! Fixed hub Mz (GL co-ords) (Nm)
-   dll_data%avrSWAP(77) = u%YawBrMyn                        ! Yaw bearing My (GL co-ords) (Nm)
-   dll_data%avrSWAP(78) = u%YawBrMzn                        ! Yaw bearing Mz (GL co-ords) (Nm)
+   dll_data%avrSWAP(73) = u%LSSTipMya                       !> * Record 73: Rotating hub My (GL co-ords) (Nm) [SrvD input]
+   dll_data%avrSWAP(74) = u%LSSTipMza                       !> * Record 74: Rotating hub Mz (GL co-ords) (Nm) [SrvD input]
+   dll_data%avrSWAP(75) = u%LSSTipMys                       !> * Record 75: Fixed    hub My (GL co-ords) (Nm) [SrvD input]
+   dll_data%avrSWAP(76) = u%LSSTipMzs                       !> * Record 76: Fixed    hub Mz (GL co-ords) (Nm) [SrvD input]
+   dll_data%avrSWAP(77) = u%YawBrMyn                        !> * Record 77: Yaw bearing  My (GL co-ords) (Nm) [SrvD input]
+   dll_data%avrSWAP(78) = u%YawBrMzn                        !> * Record 78: Yaw bearing  Mz (GL co-ords) (Nm) [SrvD input]
 ! Records 79-80 are outputs [see Retrieve_avrSWAP()]
 ! Record 81 is the variable slip current demand; both input and output [see Retrieve_avrSWAP()]
  ! variable slip current demand is ignored; instead, the generator torque demand from Record 47 is used
-   dll_data%avrSWAP(82) = u%NcIMURAxs                       ! Nacelle roll    acceleration (rad/s^2) -- this is in the shaft (tilted) coordinate system, instead of the nacelle (nontilted) coordinate system
-   dll_data%avrSWAP(83) = u%NcIMURAys                       ! Nacelle nodding acceleration (rad/s^2)
-   dll_data%avrSWAP(84) = u%NcIMURAzs                       ! Nacelle yaw     acceleration (rad/s^2) -- this is in the shaft (tilted) coordinate system, instead of the nacelle (nontilted) coordinate system
+   dll_data%avrSWAP(82) = u%NcIMURAxs                       !> * Record 82: Nacelle roll    acceleration (rad/s^2) [SrvD input] -- this is in the shaft (tilted) coordinate system, instead of the nacelle (nontilted) coordinate system
+   dll_data%avrSWAP(83) = u%NcIMURAys                       !> * Record 83: Nacelle nodding acceleration (rad/s^2) [SrvD input] 
+   dll_data%avrSWAP(84) = u%NcIMURAzs                       !> * Record 84: Nacelle yaw     acceleration (rad/s^2) [SrvD input] -- this is in the shaft (tilted) coordinate system, instead of the nacelle (nontilted) coordinate system
 
    
    
 ! Records 92-94 are outputs [see Retrieve_avrSWAP()]
    
       ! these two "inputs" are actually customizations for a particular DLL
-   dll_data%avrSWAP(95) = p%AirDens                         ! Reserved
-   dll_data%avrSWAP(96) = p%AvgWindSpeed                    ! Reserved
+   dll_data%avrSWAP(95) = p%AirDens                         !> * Record 95: Reserved (SrvD customization: set to SrvD AirDens parameter)
+   dll_data%avrSWAP(96) = p%AvgWindSpeed                    !> * Record 96: Reserved (SrvD customization: set to SrvD AvgWindSpeed parameter)
    
 ! Record 98 is output [see Retrieve_avrSWAP()]
-   dll_data%avrSWAP(98) = 0
+   dll_data%avrSWAP(98) = 0                                 !> * Record 98: set to 0
    
 ! Records 102-104 are outputs [see Retrieve_avrSWAP()]
 ! Records 107-108 are outputs [see Retrieve_avrSWAP()]
 
-   dll_data%avrSWAP(109) = u%LSSTipMxa ! or u%LSShftMxs     ! Shaft torque (=hub Mx for clockwise rotor) (Nm)
-   dll_data%avrSWAP(117) = 0                                ! Controller state
+   dll_data%avrSWAP(109) = u%LSSTipMxa ! or u%LSShftMxs     !> * Record 109: Shaft torque (=hub Mx for clockwise rotor) (Nm) [SrvD input]
+   dll_data%avrSWAP(117) = 0                                !> * Record 117: Controller state [always set to 0]
    
-   
+   !> * Records \f$R\f$ through \f$R + 2*DLL\_NumTrq - 1\f$: torque-speed look-up table elements. 
    DO I = 1,p%DLL_NumTrq  ! Loop through all torque-speed look-up table elements
-      dll_data%avrSWAP( R + (2*I) - 2 ) = p%GenSpd_TLU(I)   ! Generator speed  look-up table elements (rad/s)
-      dll_data%avrSWAP( R + (2*I) - 1 ) = p%GenTrq_TLU(I)   ! Generator torque look-up table elements (Nm   )
+      dll_data%avrSWAP( R + (2*I) - 2 ) = p%GenSpd_TLU(I)   !>  + Records \f$R, R+2, R+4,   \dots, R + 2*DLL\_NumTrq - 2\f$: Generator speed  look-up table elements (rad/s)
+      dll_data%avrSWAP( R + (2*I) - 1 ) = p%GenTrq_TLU(I)   !>  + Records \f$R+1, R+3, R+5, \dots, R + 2*DLL\_NumTrq - 1\f$: Generator torque look-up table elements (Nm)
    ENDDO
 
 ! Records 120-142 are outputs [see Retrieve_avrSWAP()]
@@ -591,11 +596,15 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
    ErrStat = ErrID_None
    ErrMsg  = ''   
    
+   !> The following are values the Bladed DLL sends to ServoDyn. Whether or not ServoDyn uses the values in CalcOutput (servodyn::srvd_calcoutput) 
+   !! and/or UpdateStates (servodyn::srvd_updatestates) is determined by other parameters set in the ServoDyn input file.
+   !! For variables sent to the DLL, see bladedinterface::fill_avrswap.
+   
    
    !!  Load control demands (commands) out of the avrSWAP array according to
    !!   Appendix A of the Bladed User Manual:
 
-!! Record 35: Generator contactor (-)   
+!> * Record 35: Generator contactor (-) [sent to DLL at the next call]
    dll_data%GenState  = NINT( dll_data%avrSWAP(35) )    ! Generator contactor (-)
    
    IF ( ( dll_data%GenState /= 0_IntKi ) .AND. ( dll_data%GenState /= 1_IntKi ) )  THEN 
@@ -610,7 +619,7 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
    END IF   
    
    
-!! Record 36: Shaft brake status (-)   
+!> * Record 36: Shaft brake status (-) [sent to DLL at the next call; anything other than 0 or 1 is an error]  
    dll_data%HSSBrFrac = dll_data%avrSWAP(36)            ! Shaft brake status (-)
    
    IF ( ( .NOT. EqualRealNos(dll_data%HSSBrFrac, 0.0_ReKi) ) .AND. &
@@ -626,28 +635,28 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
    END IF   
 
 !! Records 38-40 are reserved
-!! Record 41, demanded yaw actuator torque, is ignored since record 29 is set to 0 by FAST indicating yaw rate control
+!> * Record 41: demanded yaw actuator torque [this output is ignored since record 29 is set to 0 by ServoDyn indicating yaw rate control]
 
 ! Records 42-46: demanded pitch positions or rates
    IF ( p%Ptch_Cntrl /= 0_IntKi )  THEN ! Individual pitch control (p%Ptch_Cntrl == 1)
-!! Records 42-44: Demanded Individual Pitch position (rad) (or pitch rate [rad/s])
+!> * Records 42-44: Demanded Individual Pitch position (rad) (or pitch rate [rad/s])
       DO K = 1,p%NumBl ! Loop through all blades avrSWAP(42), avrSWAP(43), and, if NumBl = 3, avrSWAP(44)
          dll_data%BlPitchCom(K) = dll_data%avrSWAP( 41 + K )          ! Demanded individual pitch position of blade K (rad)
       ENDDO ! K - blades
 
    ELSE !IF ( p%Ptch_Cntrl == 0_IntKi )  THEN ! Collective pitch control
-!! Record 45: Demanded pitch angle (Collective pitch) (rad)
+!> * Record 45: Demanded pitch angle (Collective pitch) (rad)
       dll_data%BlPitchCom       = dll_data%avrSWAP(45)                ! Demanded pitch angle (Collective pitch) (rad)
       
-!! Record 46, demanded pitch rate (Collective pitch), is ingored since record 10 is set to 0 by ServoDyn indicating pitch position actuator
+!> * Record 46, demanded pitch rate (Collective pitch), is ingored since record 10 is set to 0 by ServoDyn indicating pitch position actuator
 
    ENDIF
 
-   dll_data%GenTrq     = dll_data%avrSWAP(47)       ! Demanded generator torque (Nm)
-   dll_data%YawRateCom = dll_data%avrSWAP(48)       ! Demanded nacelle yaw rate (rad/s)
+   dll_data%GenTrq     = dll_data%avrSWAP(47)       !> * Record 47: Demanded generator torque (Nm)
+   dll_data%YawRateCom = dll_data%avrSWAP(48)       !> * Record 48: Demanded nacelle yaw rate (rad/s)
    
    
-!! Record 55: Pitch override
+!> * Record 55: Pitch override [anything other than 0 is an error in ServoDyn]
    IF ( NINT( dll_data%avrSWAP(55) ) /=  0 )  THEN 
 
          ! Pitch  override requested by DLL; abort program
@@ -659,7 +668,7 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
    END IF
    
 
-!! Record 56: Torque override
+!> * Record 56: Torque override
    IF ( NINT( dll_data%avrSWAP(56) ) /=  0 )  THEN
       
          ! Torque override requested by DLL; abort program
@@ -673,7 +682,7 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
 
 !! Records 57-59 are reserved
 
-!! Record 65: Number of variables returned for logging
+!> * Record 65: Number of variables returned for logging [anything other than 0 is an error]
    IF ( NINT( dll_data%avrSWAP(65) ) /=  0 )  THEN
       
          ! Return variables for logging requested by DLL; abort program
@@ -685,22 +694,22 @@ SUBROUTINE Retrieve_avrSWAP( p, dll_data, ErrStat, ErrMsg )
 
    ENDIF
 
-!! Record 72, the generator start-up resistance, is ignored
-!! Record 79, the request for loads, is ignored; instead, the blade, hub, and yaw bearing loads are always passed to the DLL as if Record 79 was set to 4
-!! Records 80-81, the variable-slip current demand inputs, are ignored; instead, the generator torque demand from Record 47 is used
+!> * Record 72, the generator start-up resistance, is ignored
+!> * Record 79, the request for loads, is ignored; instead, the blade, hub, and yaw bearing loads are always passed to the DLL as if Record 79 was set to 4
+!> * Records 80-81, the variable-slip current demand inputs, are ignored; instead, the generator torque demand from Record 47 is used
    
 
-!! Records 92-94: allow the control to change the wind inflow input; NOT ALLOWED in ServoDyn
-!! Record 98: Safety system number to activate; not used in ServoDyn
+!> * Records 92-94: allow the control to change the wind inflow input; NOT ALLOWED in ServoDyn
+!> * Record 98: Safety system number to activate; not used in ServoDyn
 
-!! Records 102-104: Yaw control/stiffness/damping; ignored in ServoDyn
-!! Record 107: Brake torque demand; ignored in ServoDyn
-!! Record 108: Yaw brake torque demand; ignored in ServoDyn
+!> * Records 102-104: Yaw control/stiffness/damping; ignored in ServoDyn
+!> * Record 107: Brake torque demand; ignored in ServoDyn
+!> * Record 108: Yaw brake torque demand; ignored in ServoDyn
 
-!! Records 120-129: User-defined variables 1-10; ignored in ServoDyn
-!! Records 130-142: Reserved
+!> * Records 120-129: User-defined variables 1-10; ignored in ServoDyn
+!> * Records 130-142: Reserved
 
-!! L1: variables for logging output; not yet implemented in ServoDyn
+!> * L1: variables for logging output; not yet implemented in ServoDyn
       
 
 END SUBROUTINE Retrieve_avrSWAP
