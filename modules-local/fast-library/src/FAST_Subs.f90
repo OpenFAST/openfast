@@ -2290,7 +2290,7 @@ END DO
          p%n_VTKTime = HUGE(p%n_VTKTime)
       ELSE         
          p%n_VTKTime = NINT( TmpTime / p%DT )
-         ! I'll warn if p%n_VTKTime*p%DT is necessarially TmpTime 
+         ! I'll warn if p%n_VTKTime*p%DT is not TmpTime 
          IF (p%WrVTK > VTK_None) THEN
             TmpRate = p%n_VTKTime*p%DT
             if (.not. EqualRealNos(TmpRate, TmpTime)) then
@@ -3044,12 +3044,12 @@ SUBROUTINE FAST_WrSum( p_FAST, y_FAST, MeshMapData, ErrStat, ErrMsg )
       WRITE (y_FAST%UnSum, Fmt ) "FAST output files", p_FAST%DT_out, NINT( p_FAST%DT_out / p_FAST%DT ),"^-1"
    END IF
 
-   IF (p_FAST%WrVTK /= VTK_None) THEN
+   IF (p_FAST%WrVTK == VTK_Animate) THEN
       
-      TmpRate = p_FAST%DT_out*p_FAST%n_VTKTime
+      TmpRate = p_FAST%DT*p_FAST%n_VTKTime
       
       IF ( p_FAST%n_VTKTime == 1_IntKi ) THEN
-         WRITE (y_FAST%UnSum, Fmt ) "VTK output files ", p_FAST%DT_out, 1_IntKi   ! we'll write "1" instead of "1^-1"
+         WRITE (y_FAST%UnSum, Fmt ) "VTK output files ", p_FAST%DT, 1_IntKi   ! we'll write "1" instead of "1^-1"
       ELSE
          WRITE (y_FAST%UnSum, Fmt ) "VTK output files ", TmpRate, p_FAST%n_VTKTime,"^-1"
       END IF
@@ -5518,7 +5518,11 @@ SUBROUTINE FAST_CreateCheckpoint_Tary(t_initial, n_t_global, Turbine, Checkpoint
    DO i_turb = 1,NumTurbines
       CALL FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine(i_turb), CheckpointRoot, ErrStat2, ErrMsg2, Unit )
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev ) RETURN
+         if (ErrStat >= AbortErrLev ) then
+            if (Unit > 0) close(Unit)
+            RETURN
+         end if
+         
    END DO
                
    
@@ -5563,7 +5567,11 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
       ! Get the arrays of data to be stored in the output file
    CALL FAST_PackTurbineType( ReKiBuf, DbKiBuf, IntKiBuf, Turbine, ErrStat2, ErrMsg2 )
       CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-      IF (ErrStat >= AbortErrLev ) RETURN
+      if (ErrStat >= AbortErrLev ) then
+         call cleanup()
+         RETURN
+      end if
+      
       
    ArraySizes = 0   
    IF ( ALLOCATED(ReKiBuf)  ) ArraySizes(1) = SIZE(ReKiBuf)
@@ -5581,7 +5589,15 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
       CALL GetNewUnit( unOut, ErrStat2, ErrMsg2 )      
       CALL OpenBOutFile ( unOut, FileName, ErrStat2, ErrMsg2)
          CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
-         IF (ErrStat >= AbortErrLev ) RETURN
+         if (ErrStat >= AbortErrLev ) then
+            call cleanup()
+            IF (.NOT. PRESENT(Unit)) THEN
+               CLOSE(unOut)
+               unOut = -1
+            END IF
+                        
+            RETURN
+         end if
   
          ! checkpoint file header:
       WRITE (unOut, IOSTAT=ErrStat2)   INT(ReKi              ,B4Ki)     ! let's make sure we've got the correct number of bytes for reals on restart.
@@ -5639,8 +5655,14 @@ SUBROUTINE FAST_CreateCheckpoint_T(t_initial, n_t_global, NumTurbines, Turbine, 
       end if      
    END IF
    
+   call cleanup()
    
-                  
+contains
+   subroutine cleanup()
+      IF ( ALLOCATED(ReKiBuf)  ) DEALLOCATE(ReKiBuf)
+      IF ( ALLOCATED(DbKiBuf)  ) DEALLOCATE(DbKiBuf)
+      IF ( ALLOCATED(IntKiBuf) ) DEALLOCATE(IntKiBuf)   
+   end subroutine cleanup                  
 END SUBROUTINE FAST_CreateCheckpoint_T
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that calls FAST_RestoreFromCheckpoint_T for an array of Turbine data structures. 
@@ -5757,7 +5779,9 @@ SUBROUTINE FAST_RestoreFromCheckpoint_T(t_initial, n_t_global, NumTurbines, Turb
    
    END IF
       
-      
+      ! in case the Turbine data structure isn't empty on entry of this routine:
+   call FAST_DestroyTurbineType( Turbine, ErrStat2, ErrMsg2 )   
+   
       ! data from current time step:
    READ (unIn, IOSTAT=ErrStat2)   ArraySizes                       ! Number of reals, doubles, and integers written to file
    
