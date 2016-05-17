@@ -715,6 +715,11 @@ function getLogWindSpeed(Ht, z_Ref, U_Ref, ZL, Z0)
 
             !psiM = -2.0*LOG( (1.0 + tmp)/2.0 ) - LOG( (1.0 + tmp*tmp)/2.0 ) + 2.0*ATAN( tmp ) - 0.5 * PI
             psiM = -LOG( 0.125 * ( (1.0 + tmp)**2 * (1.0 + tmp*tmp) ) ) + 2.0*ATAN( tmp ) - 0.5 * PI
+            
+            !bjj 11-may-2016: because of the negative sign in the equation below, I believe psiM needs to switch signs.
+            ! if true, this has been implemented incorrectly for at least 15 years.
+            psiM = -psiM
+            
          ENDIF
 
 !            IF ( p%met%Ustar > 0. ) THEN

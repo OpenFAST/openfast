@@ -4997,6 +4997,10 @@ FUNCTION getUstarDiab(u_ref, z_ref, z0, ZL)
 
       !psiM = -2.0*LOG( (1.0 + tmp)/2.0 ) - LOG( (1.0 + tmp*tmp)/2.0 ) + 2.0*ATAN( tmp ) - 0.5 * PI
       psiM = -LOG( 0.125 * ( (1.0 + tmp)**2 * (1.0 + tmp*tmp) ) ) + 2.0*ATAN( tmp ) - 0.5 * PI
+      
+      !bjj 11-may-2016: because of the negative sign in the equation below, I believe psiM needs to switch signs.
+      ! if true, this has been implemented incorrectly for at least 15 years.
+      psiM = -psiM
 
    ENDIF
 
@@ -5272,6 +5276,7 @@ TYPE(TurbSim_ParameterType), INTENT(INOUT)  :: p                            !< T
             p%met%WindProfileType = 'TS'
          ELSE
             p%met%WindProfileType = 'PL'
+            call WrScr( 'Warning: WindProfileType will default to power-law profile because only one time-series point was entered.')
          END IF
       CASE ( SpecModel_GP_LLJ )
          p%met%WindProfileType = 'JET'
