@@ -14,6 +14,9 @@
 !! See the License for the specific language governing permissions and
 !! limitations under the License.
 !!
+!> \author Bonnie Jonkman
+!> \author Marshall Buhl
+!> \author John Michalakes
 !**********************************************************************************************************************************
 ! File last committed: $Date$
 ! (File) Revision #: $Rev$

@@ -52,16 +52,18 @@ MODULE ModMesh_Mapping
       !> data structures (for linearization) containing jacobians of mapping between fields on different meshes
    TYPE, PUBLIC :: MeshMapLinearizationType
          ! values for motions:
-      REAL(ReKi),     ALLOCATABLE :: mi(:,:)           !< A block matrix using the identity matrix, describing which (motion) nodes are mapped to each other; is used as a section of several other matrices for this linearization
-      REAL(ReKi),     ALLOCATABLE :: fx_p(:,:)         !< A block matrix using the skew-symmetric matrix of source and destination positions for nodes mapped to each other; is used as a section of several other matrices for this linearization      
-      REAL(ReKi),     ALLOCATABLE :: tv(:,:)           !< A block matrix using the skew-symmetric matrix of source and destination positions and source omega for nodes mapped to each other; is used as a section of translational velocity matrix
-      REAL(ReKi),     ALLOCATABLE :: ta1(:,:)          !< First block matrix for nodes mapped to each other in translational acceleration matrix
-      REAL(ReKi),     ALLOCATABLE :: ta2(:,:)          !< Second block matrix for nodes mapped to each other in translational acceleration matrix
+      REAL(ReKi),     ALLOCATABLE :: mi(:,:)           !< block matrix of motions that reflects identity (i.e., solely the mapping of one quantity to itself on another mesh) [-]
+      REAL(ReKi),     ALLOCATABLE :: fx_p(:,:)         !< block matrix of motions that reflects skew-symmetric (cross-product) matrix [-]
+      REAL(ReKi),     ALLOCATABLE :: tv(:,:)           !< block matrix of translational velocity that is multiplied by theta (orientation) [-]
+      REAL(ReKi),     ALLOCATABLE :: ta1(:,:)          !< block matrix of translational acceleration that is multiplied by theta (orientation) [-]
+      REAL(ReKi),     ALLOCATABLE :: ta2(:,:)          !< block matrix of translational acceleration that is multiplied by omega (RotationVel) [-]
          ! values for loads:
-      REAL(ReKi),     ALLOCATABLE :: li(:,:)           !< A block matrix using the identity matrix, describing which (loads) nodes are mapped to each other; is used as a section of several other matrices for this linearization
-      REAL(ReKi),     ALLOCATABLE :: M1(:,:)           !< First block matrix for nodes mapped to each other in moment mapping matrix
-      REAL(ReKi),     ALLOCATABLE :: M2(:,:)           !< Second block matrix for nodes mapped to each other in moment mapping matrix
+      REAL(ReKi),     ALLOCATABLE :: li(:,:)           !< block matrix of loads that reflects identity (i.e., solely the mapping on one quantity to itself on another mesh) [-]
+      REAL(ReKi),     ALLOCATABLE :: M_u(:,:)          !< block matrix of moment that is multiplied by u (translationDisp) [-]
+      REAL(ReKi),     ALLOCATABLE :: M_t(:,:)          !< block matrix of moment that is multiplied by theta (orientation) [-]
+      REAL(ReKi),     ALLOCATABLE :: M_f(:,:)          !< block matrix of moment that is multiplied by force [-]
    END TYPE
+   
    
       !> data structures to determine full mapping between fields on different meshes
    TYPE, PUBLIC :: MeshMapType
@@ -212,6 +214,11 @@ SUBROUTINE MeshMapCreate( Src, Dest, MeshMap, ErrStat, ErrMsg )
       !................................................
    IF ( HasLoadFields(Src) .AND. HasLoadFields(Dest) ) THEN
 
+      IF ( HasMotionFields(Src) .AND. HasMotionFields(Dest) ) THEN
+            ! bjj 6-may-2016: This is a restriction for linearization because (1) no meshes currently both have MapLoads and MapMotions allocated and 
+            ! (2) I don't feel like adding another mapping data structure to the linearization data type.
+         CALL SetErrStat( ErrID_Fatal, 'Mapping cannot have both motion and loads fields.', ErrStat, ErrMsg, RoutineName)
+      END IF
 
       ! check that the appropriate combinations of source/destination force/moments exist:
       IF ( Src%FieldMask(MASKID_Force) ) THEN
@@ -554,48 +561,33 @@ SUBROUTINE Transfer_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
          
       END IF
 
-      !........................
-      ! Lump the values on line2 elements to nodes on a point mesh
-      ! These point and line2 meshes have the same nodes so there
-      ! is no mapping here:
-      !........................
-
-      IF ( PRESENT(SrcDisp) ) THEN
-         
-         LoadsScaleFactor = GetLoadsScaleFactor ( Src )
-         
-         ! first, we take the source fields and transfer them to fields on the augmented source mesh:
-         !  (we're also taking the SrcDisp field and putting it on our augmented mesh)
-         CALL Transfer_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat2, ErrMsg2, SrcDisp, LoadsScaleFactor ) 
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  
-         ! then we lump the loads from the augmented source mesh:
-         CALL Lump_Line2_to_Point( MeshMap%Augmented_Ln2_Src,  MeshMap%Lumped_Points_Src,  ErrStat2, ErrMsg2, LoadsScaleFactor=LoadsScaleFactor  ) 
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF (ErrStat >= AbortErrLev) RETURN
-         
-      ELSE
-         CALL SetErrStat( ErrID_Fatal, 'Invalid arguments to routine for transfer of loads.', ErrStat, ErrMsg, RoutineName)
+      IF (.not. PRESENT(SrcDisp) .OR. .NOT. PRESENT(DestDisp) ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer.', ErrStat, ErrMsg, RoutineName)
          RETURN
       END IF
-
-
+         
+      LoadsScaleFactor = GetLoadsScaleFactor ( Src )
+         
+      ! first, we take the source fields and transfer them to fields on the augmented source mesh:
+      !  (we're also taking the SrcDisp field and putting it on our augmented mesh)
+      CALL Transfer_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat2, ErrMsg2, SrcDisp, LoadsScaleFactor ) 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  
+      ! then we lump the loads from the augmented source mesh:
+      CALL Lump_Line2_to_Point( MeshMap%Augmented_Ln2_Src,  MeshMap%Lumped_Points_Src,  ErrStat2, ErrMsg2, LoadsScaleFactor=LoadsScaleFactor  ) 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+         
+         
       !........................
       ! Transfer data
       !........................
-
-      IF ( PRESENT( DestDisp ) ) THEN ! note that we already checked if SrcDisp is present 
          
-         ! and transferred the displacements to MeshMap%Augmented_Ln2_Src
-         CALL Transfer_Loads_Point_to_Point( MeshMap%Lumped_Points_Src, Dest, MeshMap, ErrStat2, ErrMsg2, MeshMap%Augmented_Ln2_Src, DestDisp, LoadsScaleFactor )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF (ErrStat >= AbortErrLev) RETURN
+      ! we already checked if SrcDisp is present and transferred the displacements to MeshMap%Augmented_Ln2_Src
+      CALL Transfer_Loads_Point_to_Point( MeshMap%Lumped_Points_Src, Dest, MeshMap, ErrStat2, ErrMsg2, MeshMap%Augmented_Ln2_Src, DestDisp, LoadsScaleFactor )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
          
-      ELSE
-         CALL SetErrStat( ErrID_Fatal, 'Invalid arguments to routine for transfer of loads.', ErrStat, ErrMsg, RoutineName)
-         RETURN
-      END IF
-
 
    end if !algorithm for loads
 
@@ -603,20 +595,25 @@ SUBROUTINE Transfer_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 END SUBROUTINE Transfer_Line2_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine for computing linearization matrices for data transfer from Line2 mesh to Point Mesh
+!! \copydetails modmesh_mapping::linearize_line2_to_line2 
 SUBROUTINE Linearize_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
-   TYPE(MeshType),         INTENT(IN   ) ::  Src      !< source mesh
-   TYPE(MeshType),         INTENT(INOUT) ::  Dest     !< destination mesh
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh required for loads transfer; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh required for loads transfer; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),         INTENT(IN   ) ::  Src      !  source mesh
+   TYPE(MeshType),         INTENT(IN   ) ::  Dest     !  destination mesh
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !  a "functional" sibling of the source mesh required for loads transfer; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !  a "functional" sibling of the destination mesh required for loads transfer; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
 
-   TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping data structure
+   TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !  mapping data structure
 
-   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat   !< Error status of the operation
-   CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat   !  Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !  Error message if ErrStat /= ErrID_None
 
 
-   REAL(ReKi)                            :: LoadsScaleFactor  ! bjj: added this scaling factor to get loads in a better numerical range 
+   real(ReKi), allocatable               :: M_A(:,:)        ! linearization matrix for augmented source mesh
+   real(ReKi), allocatable               :: M_SL_fm(:,:)    ! linearization matrix for source-mesh lumped force component of moment
+   real(ReKi), allocatable               :: M_SL_um(:,:)    ! linearization matrix for source-mesh lumped translational displacement component of moment
+   real(ReKi), allocatable               :: M_SL_li(:,:)    ! linearization matrix for source-mesh lumped load "identity" component 
+   
    INTEGER(IntKi)                        :: ErrStat2
    CHARACTER(ErrMsgLen)                  :: ErrMsg2
    CHARACTER(*), PARAMETER               :: RoutineName = 'Linearize_Line2_to_Point'
@@ -628,7 +625,7 @@ SUBROUTINE Linearize_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    ErrMsg  = ''
 
    ! ------------------------------------------------------------------------------------------------------------------------------
-   ! Mapping and Transfer of Data for Mesh Motion and Scalar Fields
+   !> ### Mapping and Linearization of Transfer of Data for Mesh Motion and Scalar Fields
    ! ------------------------------------------------------------------------------------------------------------------------------
 
    if ( HasMotionFields(Src) .AND. HasMotionFields(Dest) ) then
@@ -636,7 +633,7 @@ SUBROUTINE Linearize_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
       ! This is the same algorithm as Transfer_Line2_to_Line2 (motions)
       
       !........................
-      ! Start: Create Mapping data (if remap is true)
+      !> * Create Mapping data (if remap is true)
       !........................
 
       if (Src%RemapFlag .or. Dest%RemapFlag ) then
@@ -649,7 +646,7 @@ SUBROUTINE Linearize_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
 
 
       !........................
-      ! Start: Transfer data
+      !> * Get linearization matrices of data transfer
       !........................
 
       CALL Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
@@ -660,20 +657,17 @@ SUBROUTINE Linearize_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
 
 
    ! ------------------------------------------------------------------------------------------------------------------------------
-   ! Mapping and Transfer of Data for Mesh Load Fields
+   !> ### Mapping and Transfer of Data for Mesh Load Fields
    ! ------------------------------------------------------------------------------------------------------------------------------
 
    ! ------------------------------------------------------------------------------------------------------
-   ! Start: If mapping force/moment from Line2 to Point, need to created a temporary
-   ! PointMesh that has nodes at the same locations as the Line2 mesh; distributed force/moment
-   ! from the Line2 mesh can then be lumped into the temporary Point mesh and transfered to the Destination
-   ! Point mesh via the same algorithm as subroutine Transfer_Point_to_Point
+   ! Start: If mapping force/moment from Line2 to Point, follow same algorithm as Line2-to-Line2, but skip final "unlumping" step
    ! ------------------------------------------------------------------------------------------------------
 
    if ( HasLoadFields(Src) ) then
 
       !........................
-      ! Create mapping (including the temporary src mesh)
+      !> * Create mapping (including the temporary src mesh)
       !........................
 
       if (Src%RemapFlag .or. Dest%RemapFlag ) then
@@ -692,53 +686,172 @@ SUBROUTINE Linearize_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
          
       END IF
 
-      !........................
-      ! Lump the values on line2 elements to nodes on a point mesh
-      ! These point and line2 meshes have the same nodes so there
-      ! is no mapping here:
-      !........................
 
-      IF ( PRESENT(SrcDisp) ) THEN
+      IF (.not. PRESENT(SrcDisp) .OR. .NOT. PRESENT(DestDisp) ) THEN
+         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer linearization.', ErrStat, ErrMsg, RoutineName)
+         RETURN
+      END IF
+      
+      !........................
+      !> * Linearize data
+      !........................
+ 
+      !........................
+      !>  + Get individual transformation matrices
+      !........................
+      
          
-         LoadsScaleFactor = GetLoadsScaleFactor ( Src )
-         
-         ! first, we take the source fields and transfer them to fields on the augmented source mesh:
-         !  (we're also taking the SrcDisp field and putting it on our augmented mesh)
-         CALL Transfer_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat2, ErrMsg2, SrcDisp, LoadsScaleFactor ) 
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      !>   1. Get the matrix that transfers the source fields to the augmented source mesh.
+      !! (We're also taking the force field and and translational displacement field and 
+      !! putting them on our [intermediate] augmented mesh.)
+      CALL Linearize_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat2, ErrMsg2, SrcDisp ) 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                   
-         ! then we lump the loads from the augmented source mesh:
-         CALL Lump_Line2_to_Point( MeshMap%Augmented_Ln2_Src,  MeshMap%Lumped_Points_Src,  ErrStat2, ErrMsg2, LoadsScaleFactor=LoadsScaleFactor  ) 
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF (ErrStat >= AbortErrLev) RETURN
+      call move_alloc( MeshMap%dM%li, M_A )    
+! ^^^ size of M_A is 3*MeshMap%Augmented_Ln2_Src%NNodes X 3*Src%Nnodes            
+            
+      !>   2. Get the matrices that lump the loads on the augmented source mesh.
+      !! (We're also taking the force field and putting it on our [intermediate] lumped mesh.)
+      CALL Linearize_Lump_Line2_to_Point( MeshMap%Augmented_Ln2_Src,  MeshMap%Lumped_Points_Src, MeshMap%dM, ErrStat2, ErrMsg2  ) 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+       
+      call move_alloc( MeshMap%dM%m_u, M_SL_um )    
+      call move_alloc( MeshMap%dM%m_f, M_SL_fm )    
+      call move_alloc( MeshMap%dM%li,  M_SL_li )    
          
-      ELSE
-         CALL SetErrStat( ErrID_Fatal, 'Invalid arguments to routine for transfer of loads.', ErrStat, ErrMsg, RoutineName)
-         RETURN
-      END IF
+! ^^^ size of M_SL_i (as well as M_SL_um and M_SL_fm) is 3*MeshMap%Augmented_Ln2_Src%NNodes X 3*MeshMap%Augmented_Ln2_Src%NNodes         
 
-
+      !>   3. Get the matrices that transfer point meshes to other point meshes.
+      ! we already checked if SrcDisp is present and transferred the displacements to MeshMap%Augmented_Ln2_Src
+      CALL Linearize_Loads_Point_to_Point( MeshMap%Lumped_Points_Src, Dest, MeshMap, ErrStat2, ErrMsg2, MeshMap%Augmented_Ln2_Src, DestDisp )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) then
+            call cleanup()
+            return
+         end if
+         
+!^^ this creates matrices of size 3*Dest%NNodes x 3*MeshMap%Lumped_Points_Src%NNodes
+! need to return size 3*Dest%NNodes x 3*Src%NNodes            
+            
       !........................
-      ! Transfer data
+      !>  + Multiply individual transformation matrices to form full linearization matrices
       !........................
-
-      IF ( PRESENT( DestDisp ) ) THEN ! note that we already checked if SrcDisp is present 
          
-         ! and transferred the displacements to MeshMap%Augmented_Ln2_Src
-         CALL Transfer_Loads_Point_to_Point( MeshMap%Lumped_Points_Src, Dest, MeshMap, ErrStat2, ErrMsg2, MeshMap%Augmented_Ln2_Src, DestDisp, LoadsScaleFactor )
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF (ErrStat >= AbortErrLev) RETURN
-         
-      ELSE
-         CALL SetErrStat( ErrID_Fatal, 'Invalid arguments to routine for transfer of loads.', ErrStat, ErrMsg, RoutineName)
-         RETURN
-      END IF
-
+      CALL FormMatrix_FullLinearization( MeshMap%dM, M_A, M_SL_fm, M_SL_um, M_SL_li, ErrStat2, ErrMsg2 )    
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                                          
+      call cleanup()               
 
    end if !algorithm for loads
+   
+
+contains
+subroutine cleanup()
+
+      if (allocated(M_A    )) deallocate(M_A    )
+      if (allocated(M_SL_um)) deallocate(M_SL_um)   
+      if (allocated(M_SL_fm)) deallocate(M_SL_fm)   
+      if (allocated(M_SL_li)) deallocate(M_SL_li)   
+               
+end subroutine cleanup            
 
 
 END SUBROUTINE Linearize_Line2_to_Point
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine that forms the final linearization matrices for of loads from line2 meshes to either line2 or point matrices
+subroutine FormMatrix_FullLinearization( dM, M_A, M_SL_fm, M_SL_um, M_SL_li, ErrStat, ErrMsg )
+
+   type(MeshMapLinearizationType), intent(inout) :: dM              !< linearization data type currently filled with values from point-to-point or point-to-line2 linearization
+   real(ReKi), allocatable,        intent(inout) :: M_A(:,:)        !< linearization matrix for augmented source mesh
+   real(ReKi), allocatable,        intent(inout) :: M_SL_fm(:,:)    !< linearization matrix for source-mesh lumped force component of moment
+   real(ReKi), allocatable,        intent(inout) :: M_SL_um(:,:)    !< linearization matrix for source-mesh lumped translational displacement component of moment
+   real(ReKi), allocatable,        intent(inout) :: M_SL_li(:,:)    !< linearization matrix for source-mesh lumped load "identity" component 
+      
+   INTEGER(IntKi),                 INTENT(  OUT) :: ErrStat         !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT) :: ErrMsg          !< Error message if ErrStat /= ErrID_None                                   
+                                   
+   real(ReKi), allocatable                       :: M(:,:)          ! temporary transfer matrix for linearization (to make sure everything is the correct size)
+   
+   INTEGER(IntKi)                                :: ErrStat2
+   CHARACTER(ErrMsgLen)                          :: ErrMsg2
+   CHARACTER(*), PARAMETER                       :: RoutineName = 'FormMatrix_FullLinearization'
+
+   
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+                  
+   
+   !> Matrix \f$ M_{fm} = \left[  M_{um}^D + M_{li}^D M_{um}^{SL} \right] M^A  \f$; if undefined, \f$M_{um}^D\f$ is 0    
+   if (allocated(M_SL_um)) then
+
+      if (.not. allocated(dM%m_u)) then ! point-to-point
+         call AllocAry(dM%m_u, size(dM%li,1), size(dM%li,2), 'dM%m_u', ErrStat2, ErrMsg2 )
+         dM%m_u = 0.0_ReKi
+      !else point-to-line2 has dM%m_u allocated and set to non-zero values
+      end if
+                     
+      dM%m_u = dM%m_u + matmul( dM%li, M_SL_um)  
+
+      deallocate(M_SL_um)
+         
+      call AllocAry(M, size(dM%m_u,1), size(M_A,2), 'M', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat>=AbortErrLev) return
+            
+      M = matmul( dM%m_u, M_A )
+      call move_alloc( M, dM%m_u )
+         
+   end if
+
+   
+   !> Matrix \f$ M_{tm} = M_{mt}^D M^A \f$   
+   if (allocated(dM%m_t)) then
+         
+      call AllocAry(M, size(dM%m_t,1), size(M_A,2), 'M', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat>=AbortErrLev) return
+         
+      M = matmul( dM%m_t, M_A ) 
+      call move_alloc( M, dM%m_t )
+   end if
+      
+      
+   !> Matrix \f$ M_{fm} = \left[  M_{fm}^D M_{li}^{SL} + M_{li}^D M_{fm}^{SL} \right] M^A  \f$      
+   if (allocated(dM%m_f)) then
+
+      dM%m_f =          matmul( dM%m_f, M_SL_li)         
+      dM%m_f = dM%m_f + matmul( dM%li,  M_SL_fm) 
+         
+      deallocate(M_SL_fm)
+         
+      call AllocAry(M, size(dM%m_f,1), size(M_A,2), 'M', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat>=AbortErrLev) return
+                              
+      M = matmul( dM%m_f, M_A )
+      call move_alloc( M, dM%m_f )
+                  
+   end if
+      
+      
+   !> Matrix \f$ M_{li} = M_{li}^D M_{li}^{SL} M^A \f$      
+   if (allocated(dM%li)) then
+         
+      dM%li = matmul( dM%li, M_SL_li)         
+                           
+      deallocate(M_SL_li)
+         
+      call AllocAry(M, size(dM%li,1), size(M_A,2), 'M', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat>=AbortErrLev) return
+                                       
+      M = matmul( dM%li, M_A )
+      call move_alloc( M, dM%li )
+                  
+   end if
+      
+end subroutine FormMatrix_FullLinearization
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Given a mapping, this routine transfers the motions from nodes on Line2 elements to nodes on another mesh.
 SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg )
@@ -1075,7 +1188,7 @@ END SUBROUTINE Transfer_Motions_Line2_to_Point
 SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
    TYPE(MeshType),                 INTENT(IN   )  :: Src       !< The source (Line2) mesh with motion fields allocated
-   TYPE(MeshType),                 INTENT(INOUT)  :: Dest      !< The destination mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: Dest      !< The destination mesh
 
    TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   !< The mapping data
 
@@ -1196,8 +1309,13 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                end do
                   
             end do
-         end if !MASKID_RotationVel
             
+         else
+            if (allocated(MeshMap%dM%tv)) deallocate(MeshMap%dM%tv)               
+         end if !MASKID_RotationVel
+      else
+         if (allocated(MeshMap%dM%fx_p)) deallocate(MeshMap%dM%fx_p)
+         if (allocated(MeshMap%dM%tv)) deallocate(MeshMap%dM%tv)
       end if !MASKID_TranslationVel
             
          
@@ -1295,7 +1413,7 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   
             end do
                
-            if ( Dest%FieldMask(MASKID_TranslationDisp) ) then
+            if ( allocated(MeshMap%dM%tv) ) then
                
                MeshMap%dM%ta2 = MeshMap%dM%ta2 + MeshMap%dM%tv
                
@@ -1325,6 +1443,9 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
             end if !MASKID_TranslationDisp
                
          end if ! MASKID_RotationVel            
+      else
+         if (allocated(MeshMap%dM%ta1)) deallocate(MeshMap%dM%ta1)
+         if (allocated(MeshMap%dM%ta2)) deallocate(MeshMap%dM%ta2)
       end if ! MASKID_TranslationAcc
          
    end if ! MASKID_TranslationDisp, MASKID_RotationVel, or MASKID_TranslationAcc      
@@ -1496,6 +1617,7 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
             if (NodeMap(i)%OtherMesh_Element .lt. 1 )  then
                CALL SetErrStat( ErrID_Fatal, 'Node '//trim(num2Lstr(i))//' does not project onto any line2 element.', ErrStat, ErrMsg, RoutineName)
                
+#ifdef DEBUG_MESHMAPPING
                   ! output some mesh information for debugging
                CALL GetNewUnit(Un,ErrStat2,ErrMsg2)
                DebugFileName='FAST_Meshes.'//trim(num2Lstr(Un))//'.dbg'
@@ -1503,7 +1625,6 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
                IF (ErrStat2 >= AbortErrLev) RETURN
                
                CALL SetErrStat( ErrID_Info, 'See '//trim(DebugFileName)//' for mesh debug information.', ErrStat, ErrMsg, RoutineName)               
-#ifdef DEBUG_MESHMAPPING
                WRITE( Un, '(A,I5,A,I5,A,ES10.5,A)' ) 'Element ', closest_elem, ' is closest to node ', i, &
                                                    '. It has a relative position of ', closest_elem_position, '.'
 
@@ -1757,21 +1878,21 @@ SUBROUTINE Transfer_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 END SUBROUTINE Transfer_Point_to_Line2
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine that creates linearization matricies for data tranfer from a point mesh to a line2 mesh.
+!! \copydetails modmesh_mapping::linearize_point_to_point  
 SUBROUTINE Linearize_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
-   TYPE(MeshType),         INTENT(IN   ) :: Src       !< source (point) mesh
-   TYPE(MeshType),         INTENT(INOUT) :: Dest      !< destination (line2) mesh
-   TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping data structure
-
-   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat   !< Error status of the operation
-   CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
-
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: SrcDisp   !< a "functional" sibling of the source mesh for load mapping; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: DestDisp  !< a "functional" sibling of the destination mesh for load mapping; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),            INTENT(IN   ) :: Src       ! source (point) mesh
+   TYPE(MeshType),            INTENT(IN   ) :: Dest      ! destination (line2) mesh
+   TYPE(MeshMapType),         INTENT(INOUT) :: MeshMap   ! mapping data structure
+                              
+   INTEGER(IntKi),            INTENT(  OUT) :: ErrStat   ! Error status of the operation
+   CHARACTER(*),              INTENT(  OUT) :: ErrMsg    ! Error message if ErrStat /= ErrID_None
+                              
+   TYPE(MeshType),OPTIONAL,   INTENT(IN   ) :: SrcDisp   ! a "functional" sibling of the source mesh for load mapping; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,   INTENT(IN   ) :: DestDisp  ! a "functional" sibling of the destination mesh for load mapping; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
 
    ! local variables
 
-   REAL(ReKi)                            :: LoadsScaleFactor  ! bjj: added this scaling factor to get loads in a better numerical range 
    INTEGER(IntKi)                        :: ErrStat2
    CHARACTER(ErrMsgLen)                  :: ErrMsg2
    CHARACTER(*), PARAMETER               :: RoutineName= 'Linearize_Point_to_Line2'
@@ -1783,12 +1904,12 @@ SUBROUTINE Linearize_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
 
 
    ! ------------------------------------------------------------------------------------------------------------------------------
-   ! Mapping and Linearization of Data Transfer for Mesh Motion and Scalar Fields
+   !> ### Mapping and Linearization of Data Transfer for Mesh Motion and Scalar Fields
    ! ------------------------------------------------------------------------------------------------------------------------------
    if ( HasMotionFields(Src) .AND. HasMotionFields(Dest) ) then
 
       !........................
-      ! Create mapping
+      !> * Create mapping
       !........................
 
       if (Src%RemapFlag .or. Dest%RemapFlag ) then
@@ -1796,11 +1917,11 @@ SUBROUTINE Linearize_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
          CALL CreateMotionMap_P_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
-         
+                                 
       end if
 
       !........................
-      ! Transfer data
+      !> * Get linearization matrices for data transfer
       !........................
 
          ! This is the same algorithm as Transfer_Point_to_Point
@@ -1812,17 +1933,17 @@ SUBROUTINE Linearize_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    end if ! algorithm for motions/scalars
 
    ! ------------------------------------------------------------------------------------------------------------------------------
-   ! Mapping and Transfer of Data for Mesh Load Fields
+   !. ### Mapping and Transfer of Data for Mesh Load Fields
    ! ------------------------------------------------------------------------------------------------------------------------------
    if ( HasLoadFields(Src) ) then
 
       IF (.not. PRESENT(SrcDisp) .OR. .NOT. PRESENT(DestDisp) ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer.', ErrStat, ErrMsg, RoutineName)
+         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer linearization.', ErrStat, ErrMsg, RoutineName)
          RETURN
       END IF
 
       !........................
-      ! Create mapping
+      !> * Create mapping
       !........................
 
       if (Src%RemapFlag .or. Dest%RemapFlag ) then
@@ -1832,14 +1953,39 @@ SUBROUTINE Linearize_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
             IF (ErrStat >= AbortErrLev) RETURN
                            
       end if
-
+         
+         !>  + We need a motion mapping structure from the SrcDisp to DestDisp meshes so that we can form the proper matrices for moment
+         !!  linearizaiton. (This is because we have both the source translational displacement and rotational displacement on the right side
+         !! of the equation; alternatively we'd have to have the source AND destination translational displacements on the right hand side.)
+      if ( .not. allocated(MeshMap%MapMotions)) then
+         
+                  ! Allocate the mapping structure:
+         ALLOCATE( MeshMap%MapMotions(DestDisp%NNodes), STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error trying to allocate MeshMap%MapMotions.', ErrStat, ErrMsg, RoutineName)
+            return
+         ELSE            
+               ! set up the initial mappings so that we don't necessarially have to do this multiple times on the first time step (if calculating Jacobians)                  
+            !note this is for SrcDisp and DestDisp meshes, but they are "functional siblings" of Src and Dest (i.e., may have different element types than point and line2)
+            CALL CreateMotionMap_P_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               IF (ErrStat >= AbortErrLev) RETURN
+         END IF
+         
+      elseif (SrcDisp%RemapFlag .or. DestDisp%RemapFlag ) then
+                           
+         !note this is for SrcDisp and DestDisp meshes, but they are "functional siblings" of Src and Dest (i.e., may have different element types than line2)
+         CALL CreateMotionMap_P_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+                           
+      end if
 
       !........................
-      ! Transfer data
+      !> * Get linearization matrices for data transfer
       !........................
-      LoadsScaleFactor = GetLoadsScaleFactor ( Src ) 
 
-      CALL Transfer_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DestDisp, LoadsScaleFactor )
+      CALL Linearize_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat2, ErrMsg2, SrcDisp, DestDisp )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
       
@@ -2119,7 +2265,7 @@ SUBROUTINE CreateMapping_NearestNeighbor( Mesh1, Mesh2, NodeMap, Mesh1_TYPE, Mes
             RETURN
          endif
 
-         NodeMap(i)%OtherMesh_Element = point_with_min_dist
+         NodeMap(i)%OtherMesh_Element = point_with_min_dist !bjj: For consistency, I really wish we had used element numbers here instead....
 
          NodeMap(i)%distance = min_dist
 
@@ -2308,7 +2454,7 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
 !..................................................................................................................................
 
    TYPE(MeshType),                 INTENT(IN   )  :: Src       !< The source mesh with motion fields allocated
-   TYPE(MeshType),                 INTENT(INOUT)  :: Dest      !< The destination mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: Dest      !< The destination mesh
 
    TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   !< data for the mesh mapping
 
@@ -2404,14 +2550,20 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                      MeshMap%dM%tv( d_start+j, s_start+j ) = MeshMap%dM%tv( d_start+j, s_start+j ) - tmp
                   end do                        
                end do
+            else
+               if (allocated(MeshMap%dM%tv)) deallocate(MeshMap%dM%tv)               
             end if !MASKID_RotationVel
-            
+         else
+            if (allocated(MeshMap%dM%fx_p)) deallocate(MeshMap%dM%fx_p)
+            if (allocated(MeshMap%dM%tv)) deallocate(MeshMap%dM%tv)
          end if !MASKID_TranslationVel
             
          
          if ( Src%FieldMask(MASKID_TranslationAcc ) .AND. Dest%FieldMask(MASKID_TranslationAcc ) ) then
             
             !-------------- ta1 -----------------------------
+            ! this is the matrix that relates orientation to translational acceleration
+            
             if (.not. allocated(MeshMap%dM%ta1) ) then
                call AllocAry(MeshMap%dM%ta1, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta1', ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2460,6 +2612,8 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                                
             
             !-------------- ta2 -----------------------------
+            ! this is the matrix that relates rotational velocity to translational acceleration
+            
             if (.not. allocated(MeshMap%dM%ta2) ) then
                call AllocAry(MeshMap%dM%ta2, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta2', ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2467,7 +2621,7 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
             end if
                         
             MeshMap%dM%ta2 = 0.0_ReKi 
-            
+                    
             if ( Src%FieldMask(MASKID_RotationVel) ) then
 
                do i=1, Dest%Nnodes
@@ -2483,7 +2637,7 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = SkewSymMat( tmpVec  )
                end do
                
-               if ( Dest%FieldMask(MASKID_TranslationDisp) ) then
+               if ( allocated(MeshMap%dM%tv) ) then
                
                   MeshMap%dM%ta2 = MeshMap%dM%ta2 + MeshMap%dM%tv
                
@@ -2497,15 +2651,20 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                      s_start = (n - 1)*3+1
                      s_end   = s_start+2
                                     
-                     MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) + OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                     MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) &
+                                                                   + OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
                      tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
                      do j=0,2
                         MeshMap%dM%ta2( d_start+j, s_start+j ) = MeshMap%dM%ta2( d_start+j, s_start+j ) - tmp
                      end do                        
                   end do               
-               end if !MASKID_TranslationDisp
+               end if !allocated(MeshMap%dM%tv)
                
-            end if ! MASKID_RotationVel            
+            end if ! MASKID_RotationVel  
+            
+         else
+            if (allocated(MeshMap%dM%ta1)) deallocate(MeshMap%dM%ta1)
+            if (allocated(MeshMap%dM%ta2)) deallocate(MeshMap%dM%ta2)            
          end if ! MASKID_TranslationAcc
          
       end if ! MASKID_TranslationDisp, MASKID_RotationVel, or MASKID_TranslationAcc   
@@ -2602,7 +2761,7 @@ END SUBROUTINE Transfer_Loads_Point_to_Point
 SUBROUTINE Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
    TYPE(MeshType),                 INTENT(IN   )  :: Src                !< The source mesh with loads fields allocated
-   TYPE(MeshType),                 INTENT(INOUT)  :: Dest               !< The destination mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: Dest               !< The destination mesh
    TYPE(MeshType),                 INTENT(IN   )  :: SrcDisp            !< A mesh that contains the displacements associated with the source mesh
    TYPE(MeshType),                 INTENT(IN   )  :: DestDisp           !< A mesh that contains the displacements associated with the destination mesh
 
@@ -2622,7 +2781,11 @@ SUBROUTINE Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, 
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-      ! identity for forces and/or moments:
+   !> Matrix \f$ M_{li}^D = M_{li} \f$, stored in modmesh_mapping::meshmaplinearizationtype::li,
+   !! is allocated to be size Dest\%NNodes*3, Src\%NNodes*3.
+   !! This is the matrix that maps each field of the source mesh to an augmented mesh.
+
+   ! identity for forces and/or moments:
    if (.not. allocated(MeshMap%dM%li) ) then
       call AllocAry(MeshMap%dM%li, Dest%Nnodes*3, Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
@@ -2640,44 +2803,53 @@ SUBROUTINE Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, 
    end do
                               
          
-      ! M1 and M2 for moments:
+      ! m_t and m_f for moments:
          
    if (Dest%FieldMask(MASKID_MOMENT) .AND. Src%FieldMask(MASKID_FORCE) ) then
             
-      if (.not. allocated(MeshMap%dM%M1) ) then
-         call AllocAry(MeshMap%dM%M1, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M1', ErrStat2, ErrMsg2 )
+      !> Matrix \f$ M_{tm}^D = M_1 \f$, stored in modmesh_mapping::meshmaplinearizationtype::m_t,
+      !! is allocated to be size Dest\%NNodes*3, Src\%NNodes*3.
+      !! This is the block matrix that maps the theta (rotational displacement [from Orientation]) field 
+      !! of the source mesh to the moment field of the destination mesh.             
+      
+      if (.not. allocated(MeshMap%dM%m_t) ) then
+         call AllocAry(MeshMap%dM%m_t, Dest%Nnodes*3, Src%Nnodes*3, 'dM%m_t', ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
       end if
             
-      if (.not. allocated(MeshMap%dM%M2) ) then
-         call AllocAry(MeshMap%dM%M2, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M2', ErrStat2, ErrMsg2 )
+      !> > Matrix \f$ M_{fm}^D = M_2 \f$, stored in modmesh_mapping::meshmaplinearizationtype::m_f,
+      !! > is allocated to be size Dest\%NNodes*3, Src\%NNodes*3.
+      !! > This is the block matrix that maps the force field of the source mesh to the moment field of the destination mesh.             
+      
+      if (.not. allocated(MeshMap%dM%m_f) ) then
+         call AllocAry(MeshMap%dM%m_f, Dest%Nnodes*3, Src%Nnodes*3, 'dM%m_f', ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
       end if
             
       
-      MeshMap%dM%M1 = 0.0_ReKi
-      MeshMap%dM%M2 = 0.0_ReKi         
+      MeshMap%dM%m_t = 0.0_ReKi
+      MeshMap%dM%m_f = 0.0_ReKi         
       do i = 1, Src%NNodes         
          n = MeshMap%MapLoads(i)%OtherMesh_Element
                
          d_start = (n-1)*3+1
          d_end   = d_start+2
-         s_start = (i - 1)*3+1
+         s_start = (i-1)*3+1
          s_end   = s_start+2
                                                               
          DisplacedPosition =       SrcDisp%TranslationDisp(:,i) +  SrcDisp%Position(:,i) &
                               - ( DestDisp%TranslationDisp(:,n) + DestDisp%Position(:,n) )                              
                
                
-         MeshMap%dM%M1( d_start:d_end, s_start:s_end ) = OuterProduct( DisplacedPosition, Src%Force(:,i) )
+         MeshMap%dM%m_t( d_start:d_end, s_start:s_end ) = OuterProduct( DisplacedPosition, Src%Force(:,i) )
          tmp=dot_product( DisplacedPosition, Src%Force(:,i) )
          do j=0,2
-            MeshMap%dM%M1( d_start+j, s_start+j ) = MeshMap%dM%M1( d_start+j, s_start+j ) - tmp
+            MeshMap%dM%m_t( d_start+j, s_start+j ) = MeshMap%dM%m_t( d_start+j, s_start+j ) - tmp
          end do                        
                
-         MeshMap%dM%M2( d_start:d_end, s_start:s_end ) = SkewSymMat( DisplacedPosition )
+         MeshMap%dM%m_f( d_start:d_end, s_start:s_end ) = SkewSymMat( DisplacedPosition )
                
       end do
                            
@@ -2894,13 +3066,63 @@ SUBROUTINE Transfer_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp
 
 END SUBROUTINE Transfer_Line2_to_Line2
 !----------------------------------------------------------------------------------------------------------------------------------
-!> Routine that computes the linearization matrices for data transfers from a line2 mesh to another line2 mesh.
+!> Routine that computes the linearization matrices for data transfers from a mesh to a line2 mesh.
+!! Mapping equations are as follows: 
+!!
+!! Rotational Displacement: \f$ \frac{\partial M_\Lambda}{\partial x} = \begin{bmatrix} M_{mi} \end{bmatrix} \f$ for source fields \f$ \left\{ \vec{\theta}^S\right\}\f$
+!!
+!! Translational Displacement: \f$ \frac{\partial M_u}{\partial x} = \begin{bmatrix} M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
+!! \f$ \left\{ \begin{matrix}
+!!      \vec{u}^S \\
+!!      \vec{\theta}^S
+!! \end{matrix} \right\} \f$
+!!
+!! Rotational Velocity: \f$ \frac{\partial M_\omega}{\partial x} = \begin{bmatrix} M_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{\omega}^S\right\}\f$
+!!
+!! Translational Velocity: \f$ \frac{\partial M_v}{\partial x} = \begin{bmatrix} M_{tv} & M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
+!! \f$ \left\{ \begin{matrix}
+!!      \vec{\theta}^S \\
+!!      \vec{v}^S \\
+!!      \vec{\omega}^S
+!! \end{matrix} \right\} \f$
+!!
+!! Rotational Acceleration: \f$ \frac{\partial M_\alpha}{\partial x} = \begin{bmatrix} M_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{\alpha}^S\right\}\f$
+!!
+!! Translational Acceleration: \f$ \frac{\partial M_a}{\partial x} = \begin{bmatrix} M_{ta_1} & M_{ta_2} & M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
+!! \f$ \left\{ \begin{matrix}
+!!      \vec{\theta}^S \\
+!!      \vec{\omega}^S \\
+!!      \vec{a}^S \\
+!!      \vec{\alpha}^S
+!! \end{matrix} \right\} \f$
+!!
+!! Scalar quantities: \f$ \frac{\partial M_S}{\partial x} = \begin{bmatrix} M_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{S}^S\right\}\f$
+!!
+!! Forces: \f$ \frac{\partial M_f}{\partial x} = \begin{bmatrix} M_{li} \end{bmatrix} \f$ for source fields \f$\left\{\vec{f}^S\right\}\f$
+!!
+!! Moments: \f$ \frac{\partial M_m}{\partial x} = \begin{bmatrix} M_{um} & M_{tm} & M_{fm} & M_{li} \end{bmatrix} \f$ for source fields
+!! \f$ \left\{ \begin{matrix}
+!!      \vec{u}^S \\
+!!      \vec{\theta}^S \\
+!!      \vec{f}^S \\
+!!      \vec{m}^S
+!! \end{matrix} \right\} \f$
+!!
+!! \f$M_{mi}\f$ is modmesh_mapping::meshmaplinearizationtype::mi \n
+!! \f$M_{f_{\times p}}\f$ is modmesh_mapping::meshmaplinearizationtype::fx_p \n
+!! \f$M_{tv}\f$ is modmesh_mapping::meshmaplinearizationtype::tv \n
+!! \f$M_{ta_1}\f$ is modmesh_mapping::meshmaplinearizationtype::ta1 \n
+!! \f$M_{ta_2}\f$ is modmesh_mapping::meshmaplinearizationtype::ta2 \n
+!! \f$M_{li}\f$ is modmesh_mapping::meshmaplinearizationtype::li \n
+!! \f$M_{um}\f$ is modmesh_mapping::meshmaplinearizationtype::m_u \n
+!! \f$M_{tm}\f$ is modmesh_mapping::meshmaplinearizationtype::m_t \n
+!! \f$M_{fm}\f$ is modmesh_mapping::meshmaplinearizationtype::m_f 
 SUBROUTINE Linearize_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
-   TYPE(MeshType),         INTENT(IN   ) ::  Src      !< source Line2 mesh
-   TYPE(MeshType),         INTENT(INOUT) ::  Dest     !< destination Line2 mesh
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  SrcDisp  !< a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
-   TYPE(MeshType),OPTIONAL,INTENT(IN   ) ::  DestDisp !< a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),         INTENT(IN   ) :: Src       !< source Line2 mesh
+   TYPE(MeshType),         INTENT(IN   ) :: Dest      !< destination mesh
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: SrcDisp   !< a "functional" sibling of the source mesh; Src contains loads and SrcDisp contains TranslationDisp and Orientaiton
+   TYPE(MeshType),OPTIONAL,INTENT(IN   ) :: DestDisp  !< a "functional" sibling of the destination mesh; Dest contains loads and DestDisp contains TranslationDisp and Orientaiton
 
    TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping between Src and Dest meshes
 
@@ -2909,23 +3131,27 @@ SUBROUTINE Linearize_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
 
       ! local variables
-   REAL(ReKi)                            :: LoadsScaleFactor  ! Scaling factor for loads (to help with numerical issues)
    INTEGER(IntKi)                        :: ErrStat2
    CHARACTER(ErrMsgLen)                  :: ErrMsg2
    CHARACTER(*), PARAMETER               :: RoutineName = 'Linearize_Line2_to_Line2'   
-   
+
+   real(ReKi), allocatable               :: M_A(:,:)        ! linearization matrix for augmented source mesh
+   real(ReKi), allocatable               :: M_SL_fm(:,:)    ! linearization matrix for source-mesh lumped force component of moment
+   real(ReKi), allocatable               :: M_SL_um(:,:)    ! linearization matrix for source-mesh lumped translational displacement component of moment
+   real(ReKi), allocatable               :: M_SL_li(:,:)    ! linearization matrix for source-mesh lumped load "identity" component 
+        
    ErrStat = ErrID_None
    ErrMsg  = ''
 
 
    ! ------------------------------------------------------------------------------------------------------------------------------
-   ! Mapping and Transfer of Data for Mesh Motion and Scalar Fields
+   !> ### Mapping and Linearization of Transfer of Data for Mesh Motion and Scalar Fields
    ! ------------------------------------------------------------------------------------------------------------------------------
 
    if ( HasMotionFields(Src) .AND. HasMotionFields(Dest) ) then
 
       !........................
-      ! Start: Create Mapping data (if remap is true)
+      !> * Create mapping (if remap is true)
       !........................
 
       if (Src%RemapFlag .or. Dest%RemapFlag ) then
@@ -2937,7 +3163,7 @@ SUBROUTINE Linearize_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
       endif !remapping
 
       !........................
-      ! Start: Transfer data
+      !> * Get linearization matrices of data transfer
       !........................
          
       CALL Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
@@ -2948,12 +3174,12 @@ SUBROUTINE Linearize_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
 
 
    ! ------------------------------------------------------------------------------------------------------------------------------
-   ! Mapping and Transfer of Data for Mesh Load Fields
+   !> ### Mapping and Linearization of Transfer of Data for Mesh Load Fields
    ! ------------------------------------------------------------------------------------------------------------------------------
    if ( HasLoadFields(Src) ) then
 
       IF (.not. PRESENT(SrcDisp) .OR. .NOT. PRESENT(DestDisp) ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer.', ErrStat, ErrMsg, RoutineName)
+         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer linearize.', ErrStat, ErrMsg, RoutineName)
          RETURN
       END IF
             
@@ -2963,7 +3189,8 @@ SUBROUTINE Linearize_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
 
 
       !........................
-      ! Create mapping
+      !> * Create mapping (if remap is true)
+      ! Note that we also create a motion mapping for the source and destination displacement meshes (SrcDisp and DestDisp)
       !........................
 
       if (Src%RemapFlag .or. Dest%RemapFlag ) then
@@ -2974,30 +3201,87 @@ SUBROUTINE Linearize_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
             
       end if
 
+         !>   + We need a motion mapping structure from the SrcDisp to DestDisp meshes so that we can form the proper matrices for moment
+         !! linearizaiton. (This is because we have both the source translational displacement and rotational displacement on the right side
+         !! of the equation; alternatively we'd have to have the source AND destination translational displacements on the right hand side.)
+      if ( .not. allocated(MeshMap%MapMotions)) then
+         
+                  ! Allocate the mapping structure:
+         ALLOCATE( MeshMap%MapMotions(DestDisp%NNodes), STAT=ErrStat2 )
+         IF ( ErrStat2 /= 0 ) THEN
+            CALL SetErrStat( ErrID_Fatal, 'Error trying to allocate MeshMap%MapMotions.', ErrStat, ErrMsg, RoutineName)
+            return
+         ELSE            
+               ! set up the initial mappings so that we don't necessarially have to do this multiple times on the first time step (if calculating Jacobians)                  
+            !note this is for SrcDisp and DestDisp meshes, but they are "functional siblings" of Src and Dest (i.e., may have different element types than line2)
+            CALL CreateMotionMap_L2_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               IF (ErrStat >= AbortErrLev) RETURN
+         END IF
+         
+      elseif (SrcDisp%RemapFlag .or. DestDisp%RemapFlag ) then
+                           
+         !note this is for SrcDisp and DestDisp meshes, but they are "functional siblings" of Src and Dest (i.e., may have different element types than line2)
+         CALL CreateMotionMap_L2_to_L2( Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+                           
+      end if      
+      
       !........................
-      ! Transfer data
-      !........................
+      !> * Linearize data
+      !........................            
+      
+      !>  + Get individual transformation matrices:
+      
+      !>   1. Get the matrix that transfers the source fields to the augmented source mesh.
+      !! (We're also taking the force field and and (source) translational displacement field and 
+      !! putting them on our [intermediate] augmented mesh.)
+      CALL Linearize_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat2, ErrMsg2, SrcDisp ) 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+         
+      call move_alloc( MeshMap%dM%li, M_A )
+         
+! ^^^ size of M_A is 3*MeshMap%Augmented_Ln2_Src%NNodes X 3*Src%Nnodes
+                  
+      !>   2. Get the matrices that lump the loads on the augmented source mesh.
+      !! (We're also taking the force field and putting it on our lumped mesh.)
+      CALL Linearize_Lump_Line2_to_Point( MeshMap%Augmented_Ln2_Src,  MeshMap%Lumped_Points_Src, MeshMap%dM, ErrStat2, ErrMsg2 ) 
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         
+      call move_alloc( MeshMap%dM%m_u, M_SL_um )    
+      call move_alloc( MeshMap%dM%m_f, M_SL_fm )    
+      call move_alloc( MeshMap%dM%li,  M_SL_li )
+         
+! ^^^ size of M_SL_li (as well as M_SL_um and M_SL_fm) is 3*MeshMap%Augmented_Ln2_Src%NNodes X 3*MeshMap%Augmented_Ln2_Src%NNodes
+                                    
+         !>   3. (and 4) Get the matrices transfering the lumped (point) loads to line2 loads.
+      CALL Linearize_Loads_Point_to_Line2( MeshMap%Lumped_Points_Src, Dest, MeshMap, ErrStat2, ErrMsg2, MeshMap%Augmented_Ln2_Src, DestDisp )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
-      LoadsScaleFactor = GetLoadsScaleFactor ( Src )
-      
-      ! first, we take the source fields and transfer them to fields on the augmented source mesh:
-      !  (we're also taking the SrcDisp field and putting it on our augmented mesh)
-      CALL Transfer_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat2, ErrMsg2, SrcDisp, LoadsScaleFactor ) 
+! ^^^ size of dM%li is 3*Dest%NNodes X 3*MeshMap%Augmented_Ln2_Src%NNodes
+! need to return size of dM%li as 3*Dest%NNodes X 3*Src%NNodes:
+                                                      
+         
+      !>  + Multiply individual transformation matrices to get full linearization matrices         
+      CALL FormMatrix_FullLinearization( MeshMap%dM, M_A, M_SL_fm, M_SL_um, M_SL_li, ErrStat2, ErrMsg2 )    
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat >= AbortErrLev) RETURN
-      
-      ! then we lump the loads from the augmented source mesh:
-      CALL Lump_Line2_to_Point( MeshMap%Augmented_Ln2_Src,  MeshMap%Lumped_Points_Src,  ErrStat2, ErrMsg2, LoadsScaleFactor=LoadsScaleFactor  ) 
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat >= AbortErrLev) RETURN
-      
-      CALL Transfer_Loads_Point_to_Line2( MeshMap%Lumped_Points_Src, Dest, MeshMap, ErrStat2, ErrMsg2, MeshMap%Augmented_Ln2_Src, DestDisp, LoadsScaleFactor )
-         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat >= AbortErrLev) RETURN
-
+                                          
+      call cleanup()               
 
    end if ! algorithm for loads
 
+   
+contains
+subroutine cleanup()
+
+   if (allocated(M_A    )) deallocate(M_A    )
+   if (allocated(M_SL_li)) deallocate(M_SL_li)
+   if (allocated(M_SL_um)) deallocate(M_SL_um)
+   if (allocated(M_SL_fm)) deallocate(M_SL_fm)
+
+end subroutine cleanup
 
 END SUBROUTINE Linearize_Line2_to_Line2
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -3127,11 +3411,36 @@ SUBROUTINE Transfer_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, S
 END SUBROUTINE Transfer_Loads_Point_to_Line2
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Given a mapping, this routine contains the linearization matrices of the load transfers from nodes on a point-element mesh to 
-!! nodes on another Line2 mesh.
+!! nodes on another Line2 mesh. At the end of this routine, the MeshMap data structure will contain the four matrices for loads
+!! transfer from a point to line2 mesh: \f$ M_{um}\f$, \f$ M_{tm}\f$, \f$M_{fm}\f$, and \f$M_{li}\f$, where
+!! \f{equation}{ 
+!!   \begin{aligned}
+!! \left\{ \begin{matrix} \Delta\vec{u}^D \\  \Delta\vec{\theta}^D \\  \Delta\vec{f}^D \\   \Delta\vec{m}^D \end{matrix} \right\} & = 
+!! \begin{bmatrix} M_{mi} & M_{f_{\times p}} & 0      & 0      \\ 
+!!                 0        & M_{mi}         & 0      & 0      \\   
+!!                 0        & 0              & M_{li} & 0      \\   
+!!                 M_{um}   & M_{tm}         & M_{fm} & M_{li} \\ \end{bmatrix} 
+!! \left\{ \begin{matrix} \Delta\vec{u}^S \\  \Delta\vec{\theta}^S \\  \Delta\vec{F}^S \\   \Delta\vec{M}^S \end{matrix} \right\} \\ & =   
+!! \begin{bmatrix} I                                                         & 0 & 0                                                                                                        & 0        \\ 
+!!                 0                                                         & I & 0                                                                                                        & 0        \\   
+!!                 0                                                         & 0 &  \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}                                                          & 0        \\   
+!!                -\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}M_{um}^{DL} & 0 & -\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}M_{fm}^{DL}\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} & \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} \\ \end{bmatrix}  
+!! \begin{bmatrix} M_{mi}   & M_{f_{\times p}} & 0        & 0        \\ 
+!!                 0        & M_{mi}           & 0        & 0        \\   
+!!                 0        & 0                & M_{li}^D & 0        \\   
+!!                 0        & M_{tm}^D         & M_{fm}^D & M_{li}^D \\ \end{bmatrix}  
+!! \left\{ \begin{matrix} \Delta\vec{u}^S \\  \Delta\vec{\theta}^S \\  \Delta\vec{F}^S \\   \Delta\vec{M}^S \end{matrix} \right\}
+!! \end{aligned}
+!! \f}
+!! "S" refers to the source (point) mesh;"D" refers to the destination (line2) mesh; "DL" refers to the destination mesh with lumped (point) loads. \n
+!! \f$M_{li}\f$ is modmesh_mapping::meshmaplinearizationtype::li \n
+!! \f$M_{M_u}\f$ is modmesh_mapping::meshmaplinearizationtype::m_u \n
+!! \f$M_{M_t}\f$ is modmesh_mapping::meshmaplinearizationtype::m_t \n
+!! \f$M_{M_f}\f$ is modmesh_mapping::meshmaplinearizationtype::m_f
 SUBROUTINE Linearize_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
    TYPE(MeshType),                 INTENT(IN   )  :: Src       !< The source (Line2) mesh with loads fields allocated
-   TYPE(MeshType),                 INTENT(INOUT)  :: Dest      !< The destination mesh
+   TYPE(MeshType),                 INTENT(IN   )  :: Dest      !< The destination mesh
 
    TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   !< The mapping data
 
@@ -3143,28 +3452,40 @@ SUBROUTINE Linearize_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, 
       ! local variables
    REAL(ReKi)                                     :: DisplacedPosition(3)
 
-   integer(intKi)                                :: i, j, jElem, k, n, d_start, d_end, s_start, s_end
-   real(reKi)                                    :: tmp
+   REAL(ReKi), ALLOCATABLE                        :: li_D(:,:)
+   REAL(ReKi), ALLOCATABLE                        :: mt_D(:,:)
+   REAL(ReKi), ALLOCATABLE                        :: mf_D(:,:)
+   
+   integer(intKi)                                 :: i, j, jElem, k, n, d_start, d_end, s_start, s_end
+   real(reKi)                                     :: tmp
 
    INTEGER(IntKi)                                 :: ErrStat2
    CHARACTER(ErrMsgLen)                           :: ErrMsg2
    character(*), parameter                        :: RoutineName = 'Linearize_Loads_Point_to_Line2'
    
-   
-   
+      
    ErrStat = ErrID_None
    ErrMsg  = ""
 
-   ! start by determining how the point load is split based on its projected location in the mapped destination Line2 element:
    
+   !> Start by determining how the point load is split based on its projected location in the mapped destination Line2 element.
+   !! (This is like Linearize_Loads_Point_to_Point, except we need to loop on elements instead of nodes [because of nearest neighbor mapping routine])
+   
+   !> > Matrix \f$ M_{li}^D \f$, stored in li_D,
+   !! > is allocated to be size Dest\%NNodes*3, Src\%NNodes*3.
+   !! > This is the matrix that maps each field of the source point mesh to another point mesh.
+      
       ! "identity" (portion of node) for forces and/or moments:
-   if (.not. allocated(MeshMap%dM%li) ) then
-      call AllocAry(MeshMap%dM%li, Dest%Nnodes*3, Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 )
+   if (.not. allocated(li_D) ) then
+      call AllocAry(li_D, Dest%Nnodes*3, Src%Nnodes*3, 'li_D', ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-         IF (ErrStat >= AbortErrLev) RETURN
+         if (ErrStat >= AbortErrLev) then
+            call cleanup()
+            RETURN
+         end if         
    end if
       
-   MeshMap%dM%li = 0.0_ReKi
+   li_D = 0.0_ReKi
    do i = 1, Src%NNodes
          
       jElem = MeshMap%MapLoads(i)%OtherMesh_Element
@@ -3172,32 +3493,46 @@ SUBROUTINE Linearize_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, 
          n = Dest%ElemTable(ELEMENT_LINE2)%Elements(jElem)%ElemNodes(j)
       
          do k=1,3
-            MeshMap%dM%li( (n-1)*3+k, (i-1)*3+k ) = MeshMap%MapLoads(i)%shape_fn(j)
+            li_D( (n-1)*3+k, (i-1)*3+k ) = MeshMap%MapLoads(i)%shape_fn(j)
          end do
       end do
       
    end do
-                          
-         
-      ! M1 and M2 for moments:
+       
+      ! m_t, m_f, and fx_p for moments:
          
    if (Dest%FieldMask(MASKID_MOMENT) .AND. Src%FieldMask(MASKID_FORCE) ) then
             
-      if (.not. allocated(MeshMap%dM%M1) ) then
-         call AllocAry(MeshMap%dM%M1, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M1', ErrStat2, ErrMsg2 )
+      !> > Matrix \f$ M_{tm}^D \f$, stored in mt_D,
+      !! > is allocated to be size Dest\%NNodes*3, Src\%NNodes*3.
+      !! > This is the block matrix that maps the theta (rotational displacement [from Orientation]) field 
+      !! > of the source mesh to the moment field of the destination mesh.             
+      
+      if (.not. allocated(mt_D) ) then
+         call AllocAry(mt_D, Dest%Nnodes*3, Src%Nnodes*3, 'mt_D', ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF (ErrStat >= AbortErrLev) RETURN
+            if (ErrStat >= AbortErrLev) then
+               call cleanup()
+               RETURN
+            end if
       end if
             
-      if (.not. allocated(MeshMap%dM%M2) ) then
-         call AllocAry(MeshMap%dM%M2, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M2', ErrStat2, ErrMsg2 )
+      !> > Matrix \f$ M_{fm}^D \f$, stored in mf_D,
+      !! > is allocated to be size Dest\%NNodes*3, Src\%NNodes*3.
+      !! > This is the block matrix that maps the force field of the source mesh to the moment field of the destination mesh.             
+      
+      if (.not. allocated(mf_D) ) then
+         call AllocAry(mf_D, Dest%Nnodes*3, Src%Nnodes*3, 'mf_D', ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-            IF (ErrStat >= AbortErrLev) RETURN
+            if (ErrStat >= AbortErrLev) then
+               call cleanup()
+               RETURN
+            end if
       end if
             
       
-      MeshMap%dM%M1 = 0.0_ReKi
-      MeshMap%dM%M2 = 0.0_ReKi         
+      mt_D = 0.0_ReKi
+      mf_D = 0.0_ReKi         
       do i = 1, Src%NNodes         
          jElem = MeshMap%MapLoads(i)%OtherMesh_Element
                
@@ -3210,32 +3545,171 @@ SUBROUTINE Linearize_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, 
             d_end   = d_start+2
             
             DisplacedPosition =       SrcDisp%TranslationDisp(:,i) +  SrcDisp%Position(:,i) &
-                                 - ( DestDisp%TranslationDisp(:,n) + DestDisp%Position(:,n) )                              
-               
+                                 - ( DestDisp%TranslationDisp(:,n) + DestDisp%Position(:,n) )
+
             DisplacedPosition = DisplacedPosition*MeshMap%MapLoads(i)%shape_fn(j)  ! multiply the fraction here so we don't need to apply to any of the terms below
-               
-            MeshMap%dM%M1( d_start:d_end, s_start:s_end ) = OuterProduct( DisplacedPosition, Src%Force(:,i) ) 
+
+            mf_D( d_start:d_end, s_start:s_end ) = SkewSymMat( DisplacedPosition )
+            
+            mt_D( d_start:d_end, s_start:s_end ) = OuterProduct( DisplacedPosition, Src%Force(:,i) ) 
             tmp=dot_product( DisplacedPosition, Src%Force(:,i) ) 
             do k=0,2
-               MeshMap%dM%M1( d_start+k, s_start+k ) = MeshMap%dM%M1( d_start+k, s_start+k ) - tmp
+               mt_D( d_start+k, s_start+k ) = mt_D( d_start+k, s_start+k ) - tmp
             end do                        
                
-            MeshMap%dM%M2( d_start:d_end, s_start:s_end ) = SkewSymMat( DisplacedPosition )
          end do !j
          
       end do
-                                 
-   endif    
-         
-   ! then determining how the point loads are converted to distributed loads on the same mesh:
-                     
-   !> now we can convert the lumped loads on the dest (line2) mesh into distributed loads on the same mesh:   
-   CALL Convert_Linearized_Point_To_Line2_Loads(Dest, MeshMap, ErrStat2, ErrMsg2, DestDisp)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      !IF (ErrStat >= AbortErrLev) RETURN
-   
-   
       
+      !> > Matrix \f$ M_{f_{\times p}} \f$, stored in modmesh_mapping::meshmaplinearizationtype::fx_p,
+      !! > is allocated to be size Dest\%NNodes*3, Src\%NNodes*3.
+      !! > This is the block matrix that relates theta, the rotational displacement [orientation], to translational displacement in the moment transfer.             
+      
+      if (.not. allocated(MeshMap%dM%fx_p) ) then
+         call AllocAry(MeshMap%dM%fx_p, Dest%Nnodes*3, Src%Nnodes*3, 'MeshMap%dM%fx_p', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) then
+               call cleanup()
+               RETURN
+            end if
+      end if
+                                                   
+      MeshMap%dM%fx_p = 0.0_ReKi      
+      do i=1, Dest%Nnodes
+         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+
+         n = MeshMap%MapMotions(i)%OtherMesh_Element
+         d_start = (i-1)*3+1
+         d_end   = d_start+2
+         s_start = (n - 1)*3+1
+         s_end   = s_start+2
+            
+         DisplacedPosition =       SrcDisp%TranslationDisp(:,n) +  SrcDisp%Position(:,n) &
+                              - ( DestDisp%TranslationDisp(:,i) + DestDisp%Position(:,i) )
+            
+         MeshMap%dM%fx_p( d_start:d_end, s_start:s_end ) = SkewSymMat( DisplacedPosition )
+      end do      
+                  
+      !> > Matrix \f$ M_{mi} \f$, stored in modmesh_mapping::meshmaplinearizationtype::mi,
+      !! > is allocated to be size Dest\%NNodes*3, Src\%NNodes*3.
+      !! > This is the block matrix that relates motion quantites to themselves in the moment transfer.             
+      
+      if (.not. allocated(MeshMap%dM%mi) ) then
+         call AllocAry(MeshMap%dM%mi, Dest%Nnodes*3, Src%Nnodes*3, 'MeshMap%dM%fx_p', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            if (ErrStat >= AbortErrLev) then
+               call cleanup()
+               RETURN
+            end if
+      end if
+                                                   
+      MeshMap%dM%mi = 0.0_ReKi      
+      do i=1, Dest%Nnodes
+         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+
+         n = MeshMap%MapMotions(i)%OtherMesh_Element
+         do j=1,3
+            MeshMap%dM%mi( (i-1)*3+j, (n-1)*3+j ) = 1.0_ReKi
+         end do         
+      end do      
+      
+      
+   endif    
+                  
+   !> Then we can obtain the matrices that convert the lumped loads on the dest (line2) mesh into distributed loads on the same mesh:  
+   !! For linearization analysis, we assume this destination mesh already contains the distributed loads (i.e., values at the operating point).
+   CALL Linearize_Convert_Point_To_Line2_Loads(Dest, MeshMap, ErrStat2, ErrMsg2, DestDisp)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) then
+         call cleanup()
+         RETURN
+      end if
+   
+   !> Finally, we multiply the matrices together and return the non-zero block matrices that remain.
+   
+      n=Dest%Nnodes*3
+      
+   !> > Matrix \f$ M_{li} = \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} M_{li}^{D} \f$, stored in modmesh_mapping::meshmaplinearizationtype::li,
+   !! > is allocated to be size Dest\%NNodes*3, Src\%NNodes*3.
+   !! > This is the matrix that maps each field of the source mesh to an augmented mesh.
+   !! > \n Note that we solve the equation \f$ M_{li}^{DL} M_{li} = M_{li}^{D} \f$ for \f$ M_{li} \f$.
+      
+   ! solve this before M_{fm} so that we can use M_{li} in the equation for M_{fm}
+
+      ! solve for M_{li}:
+   CALL LAPACK_getrs(TRANS='N',N=n,A=MeshMap%LoadLn2_A_Mat,IPIV=MeshMap%LoadLn2_A_Mat_piv, B=li_D, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return      
+                 
+   call move_alloc(li_D, MeshMap%dM%li)
+      
+   
+   if (Dest%FieldMask(MASKID_MOMENT) .AND. Src%FieldMask(MASKID_FORCE) ) then               
+      
+      !> > Matrix \f$ M_{tm} = -\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} M_{um}^{DL} M_{f_{\times p}} + \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} M_{tm}^D \f$      
+      !! > stored in modmesh_mapping::meshmaplinearizationtype::m_t, is allocated to be size Dest\%NNodes*3, Src\%NNodes*3.
+      !! > This is the matrix that maps theta (rotational displacement [orientation]) to the moment.
+      !! > \n Note that we solve the equation \f$ M_{li}^{DL} M_{tm} = M_{tm}^D - M_{um}^{DL} M_{f_{\times p}} \f$ for \f$ M_{tm} \f$.
+
+         ! get RHS of equation:
+      mt_D = mt_D - matmul( MeshMap%dM%m_u, MeshMap%dM%fx_p )      
+
+         ! solve for M_{tm}
+      
+      CALL LAPACK_getrs(TRANS='N',N=n,A=MeshMap%LoadLn2_A_Mat,IPIV=MeshMap%LoadLn2_A_Mat_piv, B=mt_D, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return      
+         
+      call move_alloc(mt_D, MeshMap%dM%m_t)      
+      
+      
+      !> > Matrix \f$ M_{um} = -\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} M_{um}^{DL} M_{mi} \f$, stored in modmesh_mapping::meshmaplinearizationtype::m_u,
+      !! > is allocated to be size Dest\%NNodes*3, Src\%NNodes*3.
+      !! > This is the matrix that maps the translation displacement to the moment.
+      !! > \n Note that we solve the equation \f$ M_{li}^{DL} M_{um} = - M_{um}^{DL} M_{mi} \f$ for \f$ M_{um} \f$.
+
+         ! get RHS of equation
+      MeshMap%dM%mi = matmul( MeshMap%dM%m_u, MeshMap%dM%mi )
+
+         ! solve for M_{um}
+      CALL LAPACK_getrs(TRANS='N',N=n,A=MeshMap%LoadLn2_A_Mat,IPIV=MeshMap%LoadLn2_A_Mat_piv, B=MeshMap%dM%mi, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return      
+      
+      call move_alloc(MeshMap%dM%mi, MeshMap%dM%m_u)      ! do this after MeshMap%dM%m_t because we need it for that calculation
+                  
+      
+      !> > Matrix  \f$ M_{fm} \f$ is stored in modmesh_mapping::meshmaplinearizationtype::m_f and is allocated to be size Dest\%NNodes*3, Src\%NNodes*3.
+      !! > This is the matrix that maps the force to the moment. \n
+      !! > \f$ \begin{aligned} M_{fm} & = 
+      !!   - \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} M_{fm}^{DL}\begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}M_{li}^D 
+      !!   + \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} M_{fm}^D \\ & =
+      !!     \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} \left( - M_{fm}^{DL} M_{li} + M_{fm}^D \right) \end{aligned}\f$, 
+      !! > \n Note that we solve the equation \f$ M_{li}^{DL} M_{fm} = M_{fm}^D - M_{fm}^{DL} M_{li}  \f$ for \f$ M_{fm} \f$.
+            
+         ! get RHS of equation
+      mf_D = mf_D - matmul( MeshMap%dM%m_f, MeshMap%dM%li )
+      
+         ! solve for M_{fm}      
+      CALL LAPACK_getrs(TRANS='N',N=n,A=MeshMap%LoadLn2_A_Mat,IPIV=MeshMap%LoadLn2_A_Mat_piv, B=mf_D, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         if (ErrStat >= AbortErrLev) return      
+                  
+      call move_alloc(mf_D, MeshMap%dM%m_f)
+                              
+   end if
+   
+   
+   call cleanup()
+      
+contains
+
+   subroutine cleanup()
+      if (allocated(li_D)) deallocate(li_D)
+      if (allocated(mt_D)) deallocate(mt_D)
+      if (allocated(mf_D)) deallocate(mf_D)
+   end subroutine cleanup
+   
 END SUBROUTINE Linearize_Loads_Point_to_Line2
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine takes the lumped loads on nodes of a (line2) mesh and converts them to loads distributed across the line2 elements.
@@ -3333,110 +3807,58 @@ SUBROUTINE Convert_Point_To_Line2_Loads(Dest, MeshMap, ErrStat, ErrMsg, DestDisp
 
 END SUBROUTINE Convert_Point_To_Line2_Loads    
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine takes the linearized matrices of lumped loads on nodes of a (line2) mesh and converts them to matrices of loads distributed across the line2 elements.
-SUBROUTINE Convert_Linearized_Point_To_Line2_Loads(Dest, MeshMap, ErrStat, ErrMsg, DestDisp)
+!> This routine calculates the linearized matrices that convert the lumped (point) loads on nodes of a (line2) mesh 
+!! to loads distributed across the line2 elements. (i.e., inverse lumping)
+SUBROUTINE Linearize_Convert_Point_To_Line2_Loads(Dest, MeshMap, ErrStat, ErrMsg, DestDisp)
 
-   TYPE(MeshType),                 INTENT(INOUT)  :: Dest                           !< The mesh (on input, the nodal loads values are lumped; on output they are distributed along the element)
-   TYPE(MeshType),                 INTENT(IN   )  :: DestDisp                       !< The mesh that contains the translation displacement for these loads
+   TYPE(MeshType),                 INTENT(IN   )  :: Dest                           !< The mesh (on linearization input the loads are distributed along the line2 element)
    TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap                        !< The mapping data
+   TYPE(MeshType),                 INTENT(IN   )  :: DestDisp                       !< The mesh that contains the translation displacement for these loads
 
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                        !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                         !< Error message if ErrStat /= ErrID_None
 
-   INTEGER(IntKi) :: jElem, n, i,j
-   REAL(ReKi)     :: c
-   
-   Real(ReKi), allocatable                        :: Inv(:,:)
    INTEGER(IntKi)                                 :: ErrStat2
    CHARACTER(ErrMsgLen)                           :: ErrMsg2
-   character(*), parameter                        :: RoutineName = 'Convert_Linearized_Point_To_Line2_Loads'
+   character(*), parameter                        :: RoutineName = 'Linearize_Convert_Point_To_Line2_Loads'
+      
    
-   
-   n=3*Dest%Nnodes !also SIZE(MeshMap%LoadLn2_F,1) and SIZE(MeshMap%LoadLn2_M,1)
    ErrStat = ErrID_None
    ErrMsg  = ""
    
-   call AllocAry(Inv, n, n, 'Inverse', ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      IF (ErrStat >= AbortErrLev) return
-
-      ! I'm going to cheat and form the inverse this way, since LoadLn2_A_Mat is already factored
-   call Eye(Inv, ErrStat2, ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   
-
-   CALL LAPACK_getrs(TRANS='N',N=n,A=MeshMap%LoadLn2_A_Mat,IPIV=MeshMap%LoadLn2_A_Mat_piv, B=Inv, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-      IF (ErrStat >= AbortErrLev) then
-         deallocate(Inv)
-         RETURN       
-      end if
+      !> Matrix \f$ \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} \f$, stored in modmesh_mapping::meshmaplinearizationtype::li,
+      !! is allocated to be size Dest\%NNodes*3, Dest\%NNodes*3.
+      !! This is the block matrix that maps the individual load fields of the source mesh to the corresponding field in the destination mesh.
+      !! This matrix also forms part of the terms of modmesh_mapping::meshmaplinearizationtype::m_u and modmesh_mapping::meshmaplinearizationtype::m_f.
+      !! > However, since this is easier done with a solve, we are not actually going to form the matrix here.
       
-      ! Inv now contains the inverse of the A matrix I want for linearization:
-   MeshMap%dM%li = matmul( Inv, MeshMap%dM%li)
-   
-      ! Now I need to get the cross-product terms for the moments as well:
-   
-call wrscr( routinename//': need to fix the moment terms as well! MeshMap%dM%m1 and MeshMap%dM%m2')    
-stop
-
-!MeshMap%dM%m1
-!MeshMap%dM%m2
-   
-   !!   ! Convert the moments on each element
-   !!   
-   !!IF ( Dest%FieldMask(MASKID_Moment) ) then  
-   !!   
-   !!   MeshMap%LoadLn2_M = RESHAPE( Dest%Moment, (/ n, 1 /) )       
-   !!   
-   !!   IF ( Dest%FieldMask(MASKID_Force) ) then
-   !!                                                            
-   !!      DO jElem = 1,Dest%ElemTable(ELEMENT_LINE2)%nelem
-   !!
-   !!         n1=Dest%ElemTable(ELEMENT_LINE2)%Elements(jElem)%ElemNodes(1)
-   !!         n2=Dest%ElemTable(ELEMENT_LINE2)%Elements(jElem)%ElemNodes(2)
-   !!         
-   !!         c = Dest%ElemTable(ELEMENT_LINE2)%Elements(jElem)%det_jac/6.0_ReKi  ! this contains an extra factor of 1/2, which comes from omitting it from the a_vec term
-   !!                                             
-   !!         a_vec =   ( DestDisp%Position(:,n2) + DestDisp%TranslationDisp(:,n2) ) &
-   !!                 - ( DestDisp%Position(:,n1) + DestDisp%TranslationDisp(:,n1) )
-   !!         
-   !!         ! We solved LoadLn2_F for the distributed value, so we'll use it here: (the B matrix is just the cross product terms)
-   !!         sum_f = Dest%Force(:,n1) + Dest%Force(:,n2)             
-   !!         crossProd = c * cross_product( a_vec, sum_f)
-   !!                              
-   !!         ! subtract the force (using the distributed values) from the lumped moment terms:
-   !!         i = (n1-1)*3+1;  j = i+2
-   !!         MeshMap%LoadLn2_M(i:j,1)=MeshMap%LoadLn2_M(i:j,1) - crossProd
-   !!         
-   !!         i = (n2-1)*3+1;  j = i+2            
-   !!         MeshMap%LoadLn2_M(i:j,1)=MeshMap%LoadLn2_M(i:j,1) + crossProd
-   !!      END DO        
-   !!                        
-   !!   END IF ! moment due to force
-   !!   
-   !!   ! After following call, LoadLn2_M contains the distributed moments:
-   !!   
-   !!   CALL LAPACK_getrs(TRANS='N',N=n,A=MeshMap%LoadLn2_A_Mat,IPIV=MeshMap%LoadLn2_A_Mat_piv, &
-   !!                     B=MeshMap%LoadLn2_M, ErrStat=ErrStat2, ErrMsg=ErrMsg2)
-   !!         
-   !!   ! Transfer moments to the mesh fields
-   !!
-   !!   Dest%Moment =  RESHAPE( MeshMap%LoadLn2_M, (/ 3, Dest%Nnodes /) )
-   !!
-   !!   
-   !!   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   !!   IF (ErrStat >= AbortErrLev) then
-   !!      deallocate(Inv)
-   !!      RETURN       
-   !!   end if
-   !!   
-   !!END IF ! Moment
-   
-   deallocate(Inv)
+      ! Now I need to get the cross-product terms for the moments as well:         
+      ! m_t and m_f for moments:
+         
+   if (Dest%FieldMask(MASKID_MOMENT) .AND. Dest%FieldMask(MASKID_FORCE) ) then               
+            
+      !> Matrix \f$ M_{um}^{DLinv} = - \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} M_{um}^{DL} \f$, stored in modmesh_mapping::meshmaplinearizationtype::m_u,
+      !! is allocated to be size Dest\%NNodes*3, Dest\%NNodes*3.
+      !! This is the block matrix that relates the translational displacement field to the moment field.
+      !! > However, since this is easier done with a solve, we are not actually going to form the matrix here. Instead, I'll return \f$ M_{um}^{DL} \f$ 
+            
+      
+      !> Matrix \f$ M_{fm}^{DLinv} = - \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1} M_{fm}^{DL} \begin{bmatrix} M_{li}^{DL} \end{bmatrix}^{-1}\f$, 
+      !! stored in modmesh_mapping::meshmaplinearizationtype::m_f,
+      !! is allocated to be size Dest\%NNodes*3, Dest\%NNodes*3.
+      !! This is the block matrix that relates the force field to the moment field.
+      !! > However, since this is easier done with a solve, we are not actually going to form the matrix here. Instead, I'll return \f$ M_{fm}^{DL} \f$ 
+      
+            
+         ! this call sets MeshMap%dM%m_u = M_{um}^{DL} and MeshMap%dM%m_f = M_{fm}^{DL}
+      call FormMatrix_Lump_Line2_to_Point( Dest, Meshmap%dM, ErrStat2, ErrMsg2, DestDisp )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+                                                   
+   end if
    
 
-END SUBROUTINE Convert_Linearized_Point_To_Line2_Loads    
+END SUBROUTINE Linearize_Convert_Point_To_Line2_Loads    
 !----------------------------------------------------------------------------------------------------------------------------------
 SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat, ErrMsg)
 !This routine creates a new line2 mesh. This augmented line2-element source mesh is formed by splitting the original Line2-element 
@@ -3895,11 +4317,11 @@ SUBROUTINE Transfer_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat, ErrMsg, Src
    
    IF ( SrcDisp%FIELDMASK(MASKID_TranslationDisp) ) THEN      
    
-      DO i = 1,SrcDisp%NNodes
+      DO i = 1,Src%NNodes  !in case SrcDisp has more nodes that Src (e.g. ElastoDyn blade and tower meshes), I'm using Src%NNodes here
          MeshMap%Augmented_Ln2_Src%TranslationDisp(:,i) = SrcDisp%TranslationDisp(:,i)
       END DO
       
-      DO i = (SrcDisp%NNodes+1),MeshMap%Augmented_Ln2_Src%NNodes
+      DO i = (Src%NNodes+1),MeshMap%Augmented_Ln2_Src%NNodes
          iElem = MeshMap%MapSrcToAugmt(i)%OtherMesh_Element
          
          n1=SrcDisp%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(1)
@@ -3968,6 +4390,112 @@ SUBROUTINE Transfer_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat, ErrMsg, Src
          
 END SUBROUTINE Transfer_Src_To_Augmented_Ln2_Src
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine linearizes Transfer_Src_To_Augmented_Ln2_Src (modmesh_mapping::transfer_src_to_augmented_ln2_src). 
+SUBROUTINE Linearize_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat, ErrMsg, SrcDisp )
+!..................................................................................................................................
+   TYPE(MeshType),                 INTENT(IN   )  :: Src                         !< The source mesh containing line2 loads
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap                     !< mesh mapping data, including the augmented source mesh
+
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat                     !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg                      !< Error message if ErrStat /= ErrID_None
+   TYPE(MeshType),                 INTENT(IN   )  :: SrcDisp                     !< The displacements associated with the source mesh
+
+      ! local variables
+   INTEGER(IntKi)                                 :: iElem, i  ! do-loop counter for nodes/elements on source   
+   INTEGER(IntKi)                                 :: n, n1, n2, j
+   
+   INTEGER(IntKi)                                 :: ErrStat2
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2
+   CHARACTER(*), PARAMETER                        :: RoutineName = 'Linearize_Src_To_Augmented_Ln2_Src'
+   
+   
+   ErrStat = ErrID_None
+   ErrMsg  = ""
+   
+    
+   !> Matrix \f$ M_{li}^A = M_{mi}^A = M^A \f$, stored in modmesh_mapping::meshmaplinearizationtype::li,
+   !! is allocated to be size MeshMap\%Augmented_Ln2_Src\%NNodes*3, Src\%NNodes*3.
+   !> This is the matrix that maps each field of the source mesh to an augmented mesh.
+         
+   if (.not. allocated(MeshMap%dM%li) ) then
+      call AllocAry(MeshMap%dM%li, MeshMap%Augmented_Ln2_Src%NNodes*3, Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+   end if
+      
+   MeshMap%dM%li = 0.0_ReKi      
+   do i=1, Src%Nnodes
+      do j=1,3
+         MeshMap%dM%li( (i-1)*3+j, (i-1)*3+j ) = 1.0_ReKi
+      end do      
+   end do
+      
+   do i = (Src%NNodes+1),MeshMap%Augmented_Ln2_Src%NNodes
+         
+      iElem = MeshMap%MapSrcToAugmt(i)%OtherMesh_Element                  
+      do n1=1,NumNodes(ELEMENT_LINE2)
+            
+         n = SrcDisp%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(n1)
+            
+         do j=1,3
+            MeshMap%dM%li( (i-1)*3+j, (n-1)*3+j ) = MeshMap%MapSrcToAugmt(i)%shape_fn(n1)
+         end do   
+            
+      end do
+         
+   end do
+   
+      
+   !.......................................
+   ! TranslationDisp (from external mesh to augmented one)
+   !.......................................
+   
+   IF ( SrcDisp%FIELDMASK(MASKID_TranslationDisp) ) THEN      
+   
+      DO i = 1,Src%NNodes  !in case SrcDisp has more nodes that Src (e.g. ElastoDyn blade and tower meshes), I'm using Src%NNodes here
+         MeshMap%Augmented_Ln2_Src%TranslationDisp(:,i) = SrcDisp%TranslationDisp(:,i)
+      END DO
+      
+      DO i = (Src%NNodes+1),MeshMap%Augmented_Ln2_Src%NNodes
+         iElem = MeshMap%MapSrcToAugmt(i)%OtherMesh_Element
+         
+         n1=SrcDisp%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(1)
+         n2=SrcDisp%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(2)
+         
+         MeshMap%Augmented_Ln2_Src%TranslationDisp(:,i) = MeshMap%MapSrcToAugmt(i)%shape_fn(1) * SrcDisp%TranslationDisp(:, n1) &
+                                                        + MeshMap%MapSrcToAugmt(i)%shape_fn(2) * SrcDisp%TranslationDisp(:, n2)   
+                                                                                                            
+      END DO
+      
+   END IF   
+   
+   !.......................................
+   ! Force
+   !> We need the distributed forces on the augmented mesh, so we transfer them in the linearization, too.
+   !! Note that this is done without the LoadsScaleFactor.
+   !.......................................
+   
+   IF ( Src%FIELDMASK(MASKID_Force) ) THEN      
+   
+      DO i = 1,Src%NNodes
+         MeshMap%Augmented_Ln2_Src%Force(:,i) = Src%Force(:,i)
+      END DO
+      
+      DO i = (Src%NNodes+1),MeshMap%Augmented_Ln2_Src%NNodes
+         iElem = MeshMap%MapSrcToAugmt(i)%OtherMesh_Element
+         
+         n1=Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(1)
+         n2=Src%ElemTable(ELEMENT_LINE2)%Elements(iElem)%ElemNodes(2)
+         
+         MeshMap%Augmented_Ln2_Src%Force(:,i) = MeshMap%MapSrcToAugmt(i)%shape_fn(1) * Src%Force(:, n1) &
+                                              + MeshMap%MapSrcToAugmt(i)%shape_fn(2) * Src%Force(:, n2)   
+                                                                                                                     
+      END DO
+      
+   END IF   
+                                 
+END SUBROUTINE Linearize_Src_To_Augmented_Ln2_Src
+!----------------------------------------------------------------------------------------------------------------------------------
 !> This routine creates a matrix used to "unlump" loads later (needs to have element connectivity information to create it)
 SUBROUTINE Create_InverseLumping_Matrix( Dest, MeshMap, ErrStat, ErrMsg )
    TYPE(MeshType),         INTENT(IN   ) ::  Dest        !< destination mesh
@@ -3984,6 +4512,7 @@ SUBROUTINE Create_InverseLumping_Matrix( Dest, MeshMap, ErrStat, ErrMsg )
    INTEGER(IntKi)                          :: j,k, iElem, iComp
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
+   CHARACTER(*), PARAMETER                 :: RoutineName = 'Create_InverseLumping_Matrix'
 
 
    ErrStat = ErrID_None
@@ -4037,16 +4566,16 @@ CONTAINS
    SUBROUTINE AllocInvLumpingArrays
    
          CALL AllocAry( MeshMap%LoadLn2_A_Mat,     n, n,  'MeshMap%LoadLn2_A_Mat',    ErrStat2, ErrMsg2)
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Create_InverseLumping_Matrix')
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
          CALL AllocAry( MeshMap%LoadLn2_A_Mat_piv, n,     'MeshMap%LoadLn2_A_Mat_piv',ErrStat2, ErrMsg2)
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Create_InverseLumping_Matrix')
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
          CALL AllocAry( MeshMap%LoadLn2_F,         n, 1,  'MeshMap%LoadLn2_F',        ErrStat2, ErrMsg2)
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Create_InverseLumping_Matrix')
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             
          CALL AllocAry( MeshMap%LoadLn2_M,         n, 1,  'MeshMap%LoadLn2_M',        ErrStat2, ErrMsg2)
-            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'Create_InverseLumping_Matrix')
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
 
    END SUBROUTINE AllocInvLumpingArrays
    
@@ -4173,7 +4702,7 @@ SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcDisp,
 
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     !< Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
-
+   
    ! local variables
    REAL(ReKi) :: det_jac_Ovr3
 !  REAL(ReKi) :: n1_n2_vector(3) ! vector going from node 1 to node 2 in a Line2 element
@@ -4186,6 +4715,7 @@ SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcDisp,
 
    INTEGER(IntKi) :: n1
    INTEGER(IntKi) :: n2
+   character(*), parameter               :: RoutineName = 'Lump_Line2_to_Point'
 
 
    ErrStat = ErrID_None
@@ -4195,30 +4725,30 @@ SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcDisp,
    ! bjj: we shouldn't have to check this in production mode; this routine is an internal one only.
    
    if (Line2_Src%ElemTable(ELEMENT_LINE2)%nelem .eq. 0) then
-      CALL SetErrStat( ErrID_Fatal, 'Source mesh must have one or more Line2 Elements.', ErrStat, ErrMsg, 'Lump_Line2_to_Point')
+      CALL SetErrStat( ErrID_Fatal, 'Source mesh must have one or more Line2 Elements.', ErrStat, ErrMsg, RoutineName)
       RETURN
    endif
 
    if (Point_Dest%ElemTable(ELEMENT_POINT)%nelem .eq. 0) then
-      CALL SetErrStat( ErrID_Fatal, 'Destination mesh must have one or more Point Elements.', ErrStat, ErrMsg, 'Lump_Line2_to_Point')
+      CALL SetErrStat( ErrID_Fatal, 'Destination mesh must have one or more Point Elements.', ErrStat, ErrMsg, RoutineName)
       RETURN
    endif
 
    if (Line2_Src%nnodes .ne. Point_Dest%nnodes) then
-      CALL SetErrStat( ErrID_Fatal, 'Source and Destination meshes must have same number of Nodes.', ErrStat, ErrMsg, 'Lump_Line2_to_Point')
+      CALL SetErrStat( ErrID_Fatal, 'Source and Destination meshes must have same number of Nodes.', ErrStat, ErrMsg, RoutineName)
       RETURN
    endif
 
    if (Point_Dest%FieldMask(MASKID_FORCE) ) then
       if (.not. Line2_Src%FieldMask(MASKID_FORCE) ) then
-         CALL SetErrStat( ErrID_Fatal, 'Destination mesh contains Force, but Source does not.', ErrStat, ErrMsg, 'Lump_Line2_to_Point')
+         CALL SetErrStat( ErrID_Fatal, 'Destination mesh contains Force, but Source does not.', ErrStat, ErrMsg, RoutineName)
          RETURN
       endif
    endif
 !bjj: this may not be covered... 
    if (Point_Dest%FieldMask(MASKID_MOMENT) ) then
       if (.not. Line2_SRC%FieldMask(MASKID_MOMENT) ) then
-         CALL SetErrStat( ErrID_Fatal, 'Destination mesh contains Moment, but Source does not.', ErrStat, ErrMsg, 'Lump_Line2_to_Point')
+         CALL SetErrStat( ErrID_Fatal, 'Destination mesh contains Moment, but Source does not.', ErrStat, ErrMsg, RoutineName)
          RETURN
       endif
    endif
@@ -4296,59 +4826,254 @@ SUBROUTINE Lump_Line2_to_Point( Line2_Src, Point_Dest, ErrStat, ErrMsg, SrcDisp,
 
 END SUBROUTINE Lump_Line2_to_Point
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This routine sets the values of the mapping jacobian matrix for linearization. It allocates the arrays if necessary.
+!> This subroutine linearizes the lumping of distributed loads to point loads.
+SUBROUTINE Linearize_Lump_Line2_to_Point( Line2_Src, Point_Dest, dM, ErrStat, ErrMsg )
+
+   TYPE(MeshType),         INTENT(IN   ) :: Line2_Src   !< line2 source mesh
+   TYPE(MeshType),         INTENT(INOUT) :: Point_Dest  !< point destination mesh
+
+   INTEGER(IntKi),         INTENT(  OUT) :: ErrStat     !< Error status of the operation
+   CHARACTER(*),           INTENT(  OUT) :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+   type(MeshMapLinearizationType), intent(inout) :: dM  !< data structure for linearization
+
+   
+   ! local variables
+   REAL(ReKi)                            :: c, TwoC
+  
+   INTEGER(IntKi)                        :: n1, n2  ! node numbers
+   INTEGER(IntKi)                        :: i, j, k, iComp  
+   Integer(IntKi)                        :: ErrStat2
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2
+   character(*),   parameter             :: RoutineName = 'Linearize_Lump_Line2_to_Point'
+
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+         
+      ! identity for forces and/or moments:
+
+   !> Matrix \f$ M_{li}^{SL} \f$, stored in modmesh_mapping::meshmaplinearizationtype::li,
+   !! is allocated to be size Point_Dest\%NNodes*3, Line2_Src\%NNodes*3 (a square matrix).
+   !! This is the block matrix that maps each field of the distributed source mesh to its identical field on the point (lumped) mesh. 
+   !! (i.e., force component of force; moment component of moment).
+   
+   if (.not. allocated(dM%li) ) then
+      call AllocAry(dM%li, Point_Dest%Nnodes*3, Line2_Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 ) !Line2_Src%Nnodes should equal Point_Dest%Nnodes
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+   end if
+      
+   dM%li = 0.0_ReKi                           
+      ! loop over source mesh, integrating over each element
+   do i = 1, Line2_Src%ElemTable(ELEMENT_LINE2)%nelem
+
+      n1 = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
+      n2 = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
+         
+      c    = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%det_jac / 3.0_ReKi  != TwoNorm( p(n2)-p(n1) )/6 = det_jac/3
+      TwoC = 2.0_ReKi * c
+
+      do iComp=1,3 !3 components of force or moment
+         j = (n1-1)*3 + iComp      ! this is the index of the node/component of the lumped value
+         k = (n2-1)*3 + iComp      ! the is the portion of the "lesser" node
+         
+         dM%li(j,j) =dM%li(j,j) + TwoC
+         dM%li(k,k) =dM%li(k,k) + TwoC
+         dM%li(j,k) =dM%li(j,k) + c
+         dM%li(k,j) =dM%li(k,j) + c
+      enddo !icomp
+   enddo !i = iElem         
+      
+                              
+         
+      ! m_t and m_f for moments:
+         
+   if ( Point_Dest%FieldMask(MASKID_MOMENT) .AND. Line2_Src%FieldMask(MASKID_FORCE) ) then
+            
+      call FormMatrix_Lump_Line2_to_Point( Line2_Src, dM, ErrStat2, ErrMsg2, Line2_Src ) !Line2_Src is assumed to contain the displaced positions as well as the loads
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
+      
+      !> Matrix \f$ M_{um}^{SL} \f$, stored in modmesh_mapping::meshmaplinearizationtype::m_u,
+      !! is allocated to be size Point_Dest\%NNodes*3, Line2_Src\%NNodes*3 (a square matrix).
+      !! This is the block matrix that relates the translational displacement (u) to the lumped moment.
+                  
+      !> Matrix \f$ M_{fm}^{SL} \f$, stored in modmesh_mapping::meshmaplinearizationtype::m_f,
+      !! is allocated to be size Point_Dest\%NNodes*3, Line2_Src\%NNodes*3 (a square matrix).
+      !> This is the block matrix that relates the force (f) to the lumped moment.
+         
+
+      !> We also transfer the force to the destination mesh so that we can use these values for creating the appropriate matrices later
+      if (Point_Dest%FieldMask(MASKID_FORCE) ) then
+         Point_Dest%Force  = 0.
+         ! loop over source mesh, integrating over each element
+         do i = 1, Line2_Src%ElemTable(ELEMENT_LINE2)%nelem
+
+            n1 = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
+            n2 = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
+        
+            c = Line2_Src%ElemTable(ELEMENT_LINE2)%Elements(i)%det_jac / 3.0_ReKi  != TwoNorm( p(n2)-p(n1) )/6 = det_jac_Ovr3
+                           
+            Point_Dest%Force(:,n1) = Point_Dest%Force(:,n1) + c * ( 2.*Line2_Src%Force(:,n1) +    Line2_Src%Force(:,n2) )
+            Point_Dest%Force(:,n2) = Point_Dest%Force(:,n2) + c * (    Line2_Src%Force(:,n1) + 2.*Line2_Src%Force(:,n2) )
+
+         end do
+      end if
+   end if
+   
+            
+END SUBROUTINE Linearize_Lump_Line2_to_Point
+!----------------------------------------------------------------------------------------------------------------------------------
+SUBROUTINE FormMatrix_Lump_Line2_to_Point( Mesh, dM, ErrStat, ErrMsg, DispMesh )
+
+   TYPE(MeshType),                  INTENT(IN   ) :: Mesh         !< mesh that has loads being lumped
+   TYPE(MeshType),                  INTENT(IN   ) :: DispMesh     !< mesh that has displaced position of Mesh
+   type(MeshMapLinearizationType),  intent(inout) :: dM           !< data structure for linearization
+
+   INTEGER(IntKi),                  INTENT(  OUT) :: ErrStat      !< Error status of the operation
+   CHARACTER(*),                    INTENT(  OUT) :: ErrMsg       !< Error message if ErrStat /= ErrID_None
+
+   
+   ! local variables
+   REAL(ReKi)                            :: c, x(3), SSmat(3,3)
+
+   INTEGER(IntKi)                        :: n1_start, n1_end  ! node numbers
+   INTEGER(IntKi)                        :: n2_start, n2_end  ! node numbers
+   
+   INTEGER(IntKi)                        :: n1, n2  ! node numbers
+   INTEGER(IntKi)                        :: i, k  
+   Integer(IntKi)                        :: ErrStat2
+   CHARACTER(ErrMsgLen)                  :: ErrMsg2
+   character(*),   parameter             :: RoutineName = 'FormMatrix_Lump_Line2_to_Point'
+
+
+   ErrStat = ErrID_None
+   ErrMsg = ""
+
+      ! m_t and m_f for moments:
+                           
+   !> Matrix \f$ M_{um}^{L} \f$, stored in modmesh_mapping::meshmaplinearizationtype::m_u,
+   !! is allocated to be size Mesh\%NNodes*3, Mesh\%NNodes*3 (a square matrix).
+   !> This is the block matrix that relates the translational displacement (u) to the lumped moment.
+      
+      if (.not. allocated(dM%m_u) ) then
+         call AllocAry(dM%m_u, Mesh%Nnodes*3, Mesh%Nnodes*3, 'dM%m_u', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      end if
+            
+   !> Matrix \f$ M_{fm}^{L} \f$, stored in modmesh_mapping::meshmaplinearizationtype::m_f,
+   !! is allocated to be size Mesh\%NNodes*3, Mesh\%NNodes*3 (a square matrix).
+   !> This is the block matrix that relates the force (f) to the lumped moment.
+      
+      if (.not. allocated(dM%m_f) ) then
+         call AllocAry(dM%m_f, Mesh%Nnodes*3, Mesh%Nnodes*3, 'dM%m_f', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      end if
+            
+      
+      dM%m_u = 0.0_ReKi                 
+      dM%m_f = 0.0_ReKi   
+      do i = 1, Mesh%ElemTable(ELEMENT_LINE2)%nelem
+
+         n1 = Mesh%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(1)
+         n2 = Mesh%ElemTable(ELEMENT_LINE2)%Elements(i)%ElemNodes(2)
+
+         n1_start = (n1-1)*3+1
+         n1_end   = n1_start+2
+         n2_start = (n2 - 1)*3+1
+         n2_end   = n2_start+2
+                  
+         c    = Mesh%ElemTable(ELEMENT_LINE2)%Elements(i)%det_jac / 6.0_ReKi  != TwoNorm( p(n2)-p(n1) )/12 
+
+            ! dM%m_u (portion that gets multiplied by u [TranslationDisp])
+         
+         x     = Mesh%Force(:,n1) + Mesh%Force(:,n2)
+         x     = x*c         
+         SSmat = SkewSymMat(x)         
+
+         dM%m_u( n1_start:n1_end, n1_start:n1_end ) = dM%m_u( n1_start:n1_end, n1_start:n1_end ) + SSmat
+         dM%m_u( n2_start:n2_end, n1_start:n1_end ) = dM%m_u( n2_start:n2_end, n1_start:n1_end ) - SSmat                  
+         
+         dM%m_u( n1_start:n1_end, n2_start:n2_end ) = dM%m_u( n1_start:n1_end, n2_start:n2_end ) - SSmat
+         dM%m_u( n2_start:n2_end, n2_start:n2_end ) = dM%m_u( n2_start:n2_end, n2_start:n2_end ) + SSmat
+         
+         
+            ! m_f (portion that gets multiplied by f [Force])
+         x     =  Mesh%Position(:,n2) + DispMesh%TranslationDisp(:,n2) - &
+                 (Mesh%Position(:,n1) + DispMesh%TranslationDisp(:,n1))
+         x     = x*c         
+         SSmat = SkewSymMat(x)
+         
+         dM%m_f( n1_start:n1_end, n1_start:n1_end ) = dM%m_f( n1_start:n1_end, n1_start:n1_end ) + SSmat
+         dM%m_f( n2_start:n2_end, n1_start:n1_end ) = dM%m_f( n2_start:n2_end, n1_start:n1_end ) - SSmat                  
+                                   
+         dM%m_f( n1_start:n1_end, n2_start:n2_end ) = dM%m_f( n1_start:n1_end, n2_start:n2_end ) + SSmat
+         dM%m_f( n2_start:n2_end, n2_start:n2_end ) = dM%m_f( n2_start:n2_end, n2_start:n2_end ) - SSmat
+      enddo !i = iElem    
+         
+   
+END SUBROUTINE FormMatrix_Lump_Line2_to_Point 
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine creates the linearization matrices for transfer of fields between point meshes.
 !! Mapping equations are as follows: 
 !!
-!! Rotational Displacement: \f$ \frac{\partial M_\Lambda}{\partial x} = \begin{bmatrix} dM_{mi} \end{bmatrix} \f$ for source fields \f$ \left\{ \vec{\theta}^S\right\}\f$.
+!> Rotational Displacement: \f$ \frac{\partial M_\Lambda}{\partial x} = \begin{bmatrix} M_{mi} \end{bmatrix} \f$ for source fields \f$ \left\{ \vec{\theta}^S\right\}\f$
 !!
-!! Translational Displacement: \f$ \frac{\partial M_u}{\partial x} = \begin{bmatrix} dM_{mi} & dM_{f_{\times p}} \end{bmatrix} \f$ for source fields
+!> Translational Displacement: \f$ \frac{\partial M_u}{\partial x} = \begin{bmatrix} M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
 !! \f$ \left\{ \begin{matrix}
 !!      \vec{u}^S \\
 !!      \vec{\theta}^S
-!! \end{matrix} \right\} \f$.
+!! \end{matrix} \right\} \f$
 !!
-!! Rotational Velocity: \f$ \frac{\partial M_\omega}{\partial x} = \begin{bmatrix} dM_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{\omega}^S\right\}\f$.
+!> Rotational Velocity: \f$ \frac{\partial M_\omega}{\partial x} = \begin{bmatrix} M_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{\omega}^S\right\}\f$
 !!
-!! Translational Velocity: \f$ \frac{\partial M_v}{\partial x} = \begin{bmatrix} dM_{tv} & dM_{mi} & dM_{f_{\times p}} \end{bmatrix} \f$ for source fields
+!! Translational Velocity: \f$ \frac{\partial M_v}{\partial x} = \begin{bmatrix} M_{tv} & M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
 !! \f$ \left\{ \begin{matrix}
 !!      \vec{\theta}^S \\
 !!      \vec{v}^S \\
 !!      \vec{\omega}^S
-!! \end{matrix} \right\} \f$.
+!! \end{matrix} \right\} \f$
 !!
-!! Rotational Acceleration: \f$ \frac{\partial M_\alpha}{\partial x} = \begin{bmatrix} dM_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{\alpha}^S\right\}\f$.
+!! Rotational Acceleration: \f$ \frac{\partial M_\alpha}{\partial x} = \begin{bmatrix} M_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{\alpha}^S\right\}\f$
 !!
-!! Translational Acceleration: \f$ \frac{\partial M_a}{\partial x} = \begin{bmatrix} dM_{ta_1} & dM_{ta_2} & dM_{mi} & dM_{f_{\times p}} \end{bmatrix} \f$ for source fields
+!! Translational Acceleration: \f$ \frac{\partial M_a}{\partial x} = \begin{bmatrix} M_{ta_1} & M_{ta_2} & M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
 !! \f$ \left\{ \begin{matrix}
 !!      \vec{\theta}^S \\
 !!      \vec{\omega}^S \\
 !!      \vec{a}^S \\
 !!      \vec{\alpha}^S
-!! \end{matrix} \right\} \f$.
+!! \end{matrix} \right\} \f$
 !!
-!! Scalar quantities: \f$ \frac{\partial M_S}{\partial x} = \begin{bmatrix} dM_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{S}^S\right\}\f$.
+!! Scalar quantities: \f$ \frac{\partial M_S}{\partial x} = \begin{bmatrix} M_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{S}^S\right\}\f$
 !!
-!! Forces: \f$ \frac{\partial M_F}{\partial x} = \begin{bmatrix} dM_{li} \end{bmatrix} \f$ for source fields \f$\left\{\vec{F}^S\right\}\f$.
+!! Forces: \f$ \frac{\partial M_F}{\partial x} = \begin{bmatrix} M_{li} \end{bmatrix} \f$ for source fields \f$\left\{\vec{F}^S\right\}\f$
 !!
-!! Moments: \f$ \frac{\partial M_M}{\partial x} = \begin{bmatrix} dM_{M_1} & dM_{M_2} & dM_{li} \end{bmatrix} \f$ for source fields
+!! Moments: \f$ \frac{\partial M_M}{\partial x} = \begin{bmatrix} M_{um} & M_{tm} & M_{fm} & M_{li} \end{bmatrix} \f$ for source fields
 !! \f$ \left\{ \begin{matrix}
+!!      \vec{u}^S \\
 !!      \vec{\theta}^S \\
 !!      \vec{F}^S \\
 !!      \vec{M}^S
-!! \end{matrix} \right\} \f$.
+!! \end{matrix} \right\} \f$
 !!
-!! \f$dM_{mi}\f$ is modmesh_mapping::meshmaplinearizationtype::mi \n
-!! \f$dM_{f_{\times p}}\f$ is modmesh_mapping::meshmaplinearizationtype::fx_p \n
-!! \f$dM_{tv}\f$ is modmesh_mapping::meshmaplinearizationtype::tv \n
-!! \f$dM_{ta_1}\f$ is modmesh_mapping::meshmaplinearizationtype::ta1 \n
-!! \f$dM_{ta_2}\f$ is modmesh_mapping::meshmaplinearizationtype::ta2 \n
-!! \f$dM_{li}\f$ is modmesh_mapping::meshmaplinearizationtype::li \n
-!! \f$dM_{M_1}\f$ is modmesh_mapping::meshmaplinearizationtype::m1 \n
-!! \f$dM_{M_2}\f$ is modmesh_mapping::meshmaplinearizationtype::m2 \n
+!! \f$M_{mi}\f$ is modmesh_mapping::meshmaplinearizationtype::mi \n
+!! \f$M_{f_{\times p}}\f$ is modmesh_mapping::meshmaplinearizationtype::fx_p \n
+!! \f$M_{tv}\f$ is modmesh_mapping::meshmaplinearizationtype::tv \n
+!! \f$M_{ta_1}\f$ is modmesh_mapping::meshmaplinearizationtype::ta1 \n
+!! \f$M_{ta_2}\f$ is modmesh_mapping::meshmaplinearizationtype::ta2 \n
+!! \f$M_{li}\f$ is modmesh_mapping::meshmaplinearizationtype::li \n
+!! \f$M_{um}\f$ is modmesh_mapping::meshmaplinearizationtype::m_u \n
+!! \f$M_{tm}\f$ is modmesh_mapping::meshmaplinearizationtype::m_t \n
+!! \f$M_{fm}\f$ is modmesh_mapping::meshmaplinearizationtype::m_f 
+!!
+!! For point-to-point mappings, \f$M_{um}\f$ is 0 and is not allocated.
 SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
    TYPE(MeshType),          INTENT(IN   ) :: Src       !< source point mesh
-   TYPE(MeshType),          INTENT(INOUT) :: Dest      !< destination point mesh
+   TYPE(MeshType),          INTENT(IN   ) :: Dest      !< destination mesh
    TYPE(MeshType), OPTIONAL,INTENT(IN   ) :: SrcDisp   !< an optional mesh, which contains the displacements associated with the source if the source contains load information
    TYPE(MeshType), OPTIONAL,INTENT(IN   ) :: DestDisp  !< an optional mesh, which contains the displacements associated with the destination if the destination contains load information
 
@@ -4370,7 +5095,7 @@ SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    ErrMsg  = ''
 
    ! ------------------------------------------------------------------------------------------------------------------------------
-   ! Mapping and Transfer of Data for Mesh Motion and Scalar Fields
+   !> ### Mapping and Transfer of Data for Mesh Motion and Scalar Fields
    ! ------------------------------------------------------------------------------------------------------------------------------
    ! If Src is displacements/velocities then loop over the Destination Mesh;
    !    each motion/scalar in the destination mesh needs to be interpolated from the source mesh.
@@ -4379,7 +5104,7 @@ SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    if ( HasMotionFields(Src) .AND. HasMotionFields(Dest) ) then
 
       !........................
-      ! Create mapping
+      !> * Create mapping (if remapFlag)
       !........................
 
       if (Src%RemapFlag .or. Dest%RemapFlag ) then
@@ -4391,7 +5116,7 @@ SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
       end if
 
       !........................
-      ! create linearization matrices for motions:
+      !> * Create linearization matrices for motions
       !........................
       
       call Linearize_Motions_Point_to_Point(Src, Dest, MeshMap, ErrStat2, ErrMsg2 )
@@ -4401,15 +5126,13 @@ SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    end if ! HasMotionFields: algorithm for motions/scalars
 
    ! ------------------------------------------------------------------------------------------------------------------------------
-   ! Mapping and Transfer of Data for Mesh Load Fields
+   !> ### Mapping and Transfer of Data for Mesh Load Fields
    ! ------------------------------------------------------------------------------------------------------------------------------
-   ! If Src is forces and/or moments, loop over Src Mesh;
-   !    each load in the source mesh needs to be placed somewhere in the destination mesh.
 
    if ( HasLoadFields(Src) ) then
             
       !........................
-      ! Create mapping
+      !> * Create mapping (if RemapFlag)
       !........................
 
       if (Src%RemapFlag .or. Dest%RemapFlag ) then
@@ -4421,7 +5144,7 @@ SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
       end if
 
       !........................
-      ! create linearization matrices for loads:
+      !> * Create linearization matrices for loads
       !........................      
 
       IF ( PRESENT( SrcDisp ) .AND. PRESENT( DestDisp ) ) THEN
@@ -4431,7 +5154,7 @@ SUBROUTINE Linearize_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
             IF (ErrStat >= AbortErrLev) RETURN                        
              
       ELSE !bjj: we could check if Src also had TranslationDisp fields and call with SrcDisp=Src
-         CALL SetErrStat( ErrID_Fatal, 'Invalid arguments to Linearize_Point_to_Point for meshes with load fields.', ErrStat, ErrMsg, RoutineName)
+         CALL SetErrStat( ErrID_Fatal, 'Meshes with load fields must also have sibling meshes with displacment field.', ErrStat, ErrMsg, RoutineName)
          RETURN
       END IF
 
@@ -4962,33 +5685,47 @@ IF (ALLOCATED(SrcMeshMapLinearizationTypeData%li)) THEN
   END IF
     DstMeshMapLinearizationTypeData%li = SrcMeshMapLinearizationTypeData%li
 ENDIF
-IF (ALLOCATED(SrcMeshMapLinearizationTypeData%M1)) THEN
-  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%M1,1)
-  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%M1,1)
-  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%M1,2)
-  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%M1,2)
-  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%M1)) THEN 
-    ALLOCATE(DstMeshMapLinearizationTypeData%M1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%M_u)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%M_u,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%M_u,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%M_u,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%M_u,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%M_u)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%M_u(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%M1.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%M_u.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstMeshMapLinearizationTypeData%M1 = SrcMeshMapLinearizationTypeData%M1
+    DstMeshMapLinearizationTypeData%M_u = SrcMeshMapLinearizationTypeData%M_u
 ENDIF
-IF (ALLOCATED(SrcMeshMapLinearizationTypeData%M2)) THEN
-  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%M2,1)
-  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%M2,1)
-  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%M2,2)
-  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%M2,2)
-  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%M2)) THEN 
-    ALLOCATE(DstMeshMapLinearizationTypeData%M2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%M_t)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%M_t,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%M_t,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%M_t,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%M_t,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%M_t)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%M_t(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%M2.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%M_t.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstMeshMapLinearizationTypeData%M2 = SrcMeshMapLinearizationTypeData%M2
+    DstMeshMapLinearizationTypeData%M_t = SrcMeshMapLinearizationTypeData%M_t
+ENDIF
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%M_f)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%M_f,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%M_f,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%M_f,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%M_f,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%M_f)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%M_f(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%M_f.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMeshMapLinearizationTypeData%M_f = SrcMeshMapLinearizationTypeData%M_f
 ENDIF
  END SUBROUTINE NWTC_Library_CopyMeshMapLinearizationType
 
@@ -5019,11 +5756,14 @@ ENDIF
 IF (ALLOCATED(MeshMapLinearizationTypeData%li)) THEN
   DEALLOCATE(MeshMapLinearizationTypeData%li)
 ENDIF
-IF (ALLOCATED(MeshMapLinearizationTypeData%M1)) THEN
-  DEALLOCATE(MeshMapLinearizationTypeData%M1)
+IF (ALLOCATED(MeshMapLinearizationTypeData%M_u)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%M_u)
 ENDIF
-IF (ALLOCATED(MeshMapLinearizationTypeData%M2)) THEN
-  DEALLOCATE(MeshMapLinearizationTypeData%M2)
+IF (ALLOCATED(MeshMapLinearizationTypeData%M_t)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%M_t)
+ENDIF
+IF (ALLOCATED(MeshMapLinearizationTypeData%M_f)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%M_f)
 ENDIF
  END SUBROUTINE NWTC_Library_DestroyMeshMapLinearizationType
 
@@ -5092,15 +5832,20 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! li upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%li)  ! li
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! M1 allocated yes/no
-  IF ( ALLOCATED(InData%M1) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! M1 upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%M1)  ! M1
+  Int_BufSz   = Int_BufSz   + 1     ! M_u allocated yes/no
+  IF ( ALLOCATED(InData%M_u) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! M_u upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%M_u)  ! M_u
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! M2 allocated yes/no
-  IF ( ALLOCATED(InData%M2) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! M2 upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%M2)  ! M2
+  Int_BufSz   = Int_BufSz   + 1     ! M_t allocated yes/no
+  IF ( ALLOCATED(InData%M_t) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! M_t upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%M_t)  ! M_t
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! M_f allocated yes/no
+  IF ( ALLOCATED(InData%M_f) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! M_f upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%M_f)  ! M_f
   END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
@@ -5225,37 +5970,53 @@ ENDIF
       IF (SIZE(InData%li)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%li))-1 ) = PACK(InData%li,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%li)
   END IF
-  IF ( .NOT. ALLOCATED(InData%M1) ) THEN
+  IF ( .NOT. ALLOCATED(InData%M_u) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M1,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M1,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M_u,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M_u,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M1,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M1,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M_u,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M_u,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%M1)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%M1))-1 ) = PACK(InData%M1,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%M1)
+      IF (SIZE(InData%M_u)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%M_u))-1 ) = PACK(InData%M_u,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%M_u)
   END IF
-  IF ( .NOT. ALLOCATED(InData%M2) ) THEN
+  IF ( .NOT. ALLOCATED(InData%M_t) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M2,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M2,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M_t,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M_t,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M2,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M2,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M_t,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M_t,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%M2)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%M2))-1 ) = PACK(InData%M2,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%M2)
+      IF (SIZE(InData%M_t)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%M_t))-1 ) = PACK(InData%M_t,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%M_t)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%M_f) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M_f,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M_f,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%M_f,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%M_f,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%M_f)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%M_f))-1 ) = PACK(InData%M_f,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%M_f)
   END IF
  END SUBROUTINE NWTC_Library_PackMeshMapLinearizationType
 
@@ -5449,7 +6210,7 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%li)
     DEALLOCATE(mask2)
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M1 not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M_u not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -5459,10 +6220,10 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%M1)) DEALLOCATE(OutData%M1)
-    ALLOCATE(OutData%M1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%M_u)) DEALLOCATE(OutData%M_u)
+    ALLOCATE(OutData%M_u(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%M1.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%M_u.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
     ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
@@ -5471,11 +6232,11 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%M1)>0) OutData%M1 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%M1))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%M1)
+      IF (SIZE(OutData%M_u)>0) OutData%M_u = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%M_u))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%M_u)
     DEALLOCATE(mask2)
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M2 not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M_t not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -5485,10 +6246,10 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%M2)) DEALLOCATE(OutData%M2)
-    ALLOCATE(OutData%M2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%M_t)) DEALLOCATE(OutData%M_t)
+    ALLOCATE(OutData%M_t(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%M2.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%M_t.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
     ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
@@ -5497,8 +6258,34 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%M2)>0) OutData%M2 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%M2))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%M2)
+      IF (SIZE(OutData%M_t)>0) OutData%M_t = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%M_t))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%M_t)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! M_f not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%M_f)) DEALLOCATE(OutData%M_f)
+    ALLOCATE(OutData%M_f(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%M_f.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%M_f)>0) OutData%M_f = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%M_f))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%M_f)
     DEALLOCATE(mask2)
   END IF
  END SUBROUTINE NWTC_Library_UnPackMeshMapLinearizationType

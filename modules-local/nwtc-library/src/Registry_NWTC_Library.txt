@@ -44,14 +44,17 @@ usefrom     ^             ^                 ReKi                     distance   
 usefrom     ^             ^                 ReKi                     couple_arm        {3}
 usefrom     ^             ^                 ReKi                     shape_fn          {2}
 
+
 usefrom   NWTC_Library  MeshMapLinearizationType ReKi                mi        {:}{:}
 usefrom     ^             ^                 ReKi                     fx_p      {:}{:}
 usefrom     ^             ^                 ReKi                     tv        {:}{:}
 usefrom     ^             ^                 ReKi                     ta1       {:}{:}
 usefrom     ^             ^                 ReKi                     ta2       {:}{:}
 usefrom     ^             ^                 ReKi                     li        {:}{:}
-usefrom     ^             ^                 ReKi                     M1        {:}{:}
-usefrom     ^             ^                 ReKi                     M2        {:}{:}
+usefrom     ^             ^                 ReKi                     M_u       {:}{:}
+usefrom     ^             ^                 ReKi                     M_t       {:}{:}
+usefrom     ^             ^                 ReKi                     M_f       {:}{:}
+
 
 usefrom   NWTC_Library  MeshMapType         MapType                  MapLoads          {:}
 usefrom     ^             ^                 MapType                  MapMotions        {:}

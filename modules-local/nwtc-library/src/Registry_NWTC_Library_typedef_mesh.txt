@@ -17,14 +17,15 @@ typedef     ^             ^                 ReKi                     distance   
 typedef     ^             ^                 ReKi                     couple_arm        {3}       - - "Vector between a point and node 1 of an element (p_ODR - p_OSR)"
 typedef     ^             ^                 ReKi                     shape_fn          {2}       - - "shape functions: 1-D element-level location [0,1] based on closest-line projection of point"
 
-typedef   NWTC_Library  MeshMapLinearizationType ReKi                mi        {:}{:}
-typedef     ^             ^                 ReKi                     fx_p      {:}{:}
-typedef     ^             ^                 ReKi                     tv        {:}{:}
-typedef     ^             ^                 ReKi                     ta1       {:}{:}
-typedef     ^             ^                 ReKi                     ta2       {:}{:}
-typedef     ^             ^                 ReKi                     li        {:}{:}
-typedef     ^             ^                 ReKi                     M1        {:}{:}
-typedef     ^             ^                 ReKi                     M2        {:}{:}
+typedef   NWTC_Library  MeshMapLinearizationType ReKi                mi        {:}{:}  - -  "block matrix of motions that reflects identity (i.e., solely the mapping of one quantity to itself on another mesh)"
+typedef     ^             ^                 ReKi                     fx_p      {:}{:}  - -  "block matrix of motions that reflects skew-symmetric (cross-product) matrix"
+typedef     ^             ^                 ReKi                     tv        {:}{:}  - -  "block matrix of translational velocity that is multiplied by theta (orientation)"
+typedef     ^             ^                 ReKi                     ta1       {:}{:}  - -  "block matrix of translational acceleration that is multiplied by theta (orientation)"
+typedef     ^             ^                 ReKi                     ta2       {:}{:}  - -  "block matrix of translational acceleration that is multiplied by omega (RotationVel)"
+typedef     ^             ^                 ReKi                     li        {:}{:}  - -  "block matrix of loads that reflects identity (i.e., solely the mapping on one quantity to itself on another mesh)"
+typedef     ^             ^                 ReKi                     M_u       {:}{:}  - -  "block matrix of moment that is multiplied by u (translationDisp)"
+typedef     ^             ^                 ReKi                     M_t       {:}{:}  - -  "block matrix of moment that is multiplied by theta (orientation)"
+typedef     ^             ^                 ReKi                     M_f       {:}{:}  - -  "block matrix of moment that is multiplied by force"
 
 typedef   NWTC_Library  MeshMapType         MapType                  MapLoads          {:}       - - "mapping data structure for loads on the mesh"
 typedef     ^               ^               MapType                  MapMotions        {:}       - - "mapping data structure for motions and/or scalars on the mesh"
