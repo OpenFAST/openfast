@@ -1344,6 +1344,7 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_start = (n - 1)*3+1
                   s_end   = s_start+2
                                     
+                     ! note that we multiply by MeshMap%MapMotions(i)%shape_fn(n1) after forming the first two terms of this matrix
                   MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,n1), Src%RotationAcc(:,n) )
                   tmp=dot_product( MeshMap%DisplacedPosition(:,i,n1), Src%RotationAcc(:,n) )
                   do j=0,2
@@ -1370,12 +1371,12 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_start = (n - 1)*3+1
                   s_end   = s_start+2
                                     
-                  tmpVec=cross_product(  Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,n1) )
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + OuterProduct( tmpVec, Src%RotationVel(:,n) ) * MeshMap%MapMotions(i)%shape_fn(n1)
+                  tmpVec=cross_product(  Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,n1) ) * MeshMap%MapMotions(i)%shape_fn(n1)
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + OuterProduct( tmpVec, Src%RotationVel(:,n) )
                   
-                  tmp = dot_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,n1)) 
-                  tmpVec = tmp*Src%RotationVel(:,n) * MeshMap%MapMotions(i)%shape_fn(n1)
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + SkewSymMat( tmpVec )                   
+                  tmp = dot_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,n1)) * MeshMap%MapMotions(i)%shape_fn(n1)
+                  tmpVec = tmp*Src%RotationVel(:,n) 
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) - SkewSymMat( tmpVec )                   
                end do
                   
             end do
@@ -2579,7 +2580,7 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   n = MeshMap%MapMotions(i)%OtherMesh_Element
                   d_start = (i-1)*3+1
                   d_end   = d_start+2
-                  s_start = (n - 1)*3+1
+                  s_start = (n-1)*3+1
                   s_end   = s_start+2
                                     
                   MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationAcc(:,n) )
@@ -2598,15 +2599,15 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   n = MeshMap%MapMotions(i)%OtherMesh_Element
                   d_start = (i-1)*3+1
                   d_end   = d_start+2
-                  s_start = (n - 1)*3+1
+                  s_start = (n-1)*3+1
                   s_end   = s_start+2
                                     
                   tmpVec=cross_product(  Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1) )
                   MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + OuterProduct( tmpVec, Src%RotationVel(:,n) )
                   
-                  tmp = dot_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1)) 
+                  tmp = dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) ) 
                   tmpVec = tmp*Src%RotationVel(:,n)
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + SkewSymMat( tmpVec )                  
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) - SkewSymMat( tmpVec )                  
                end do
             end if
                                
