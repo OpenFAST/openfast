@@ -40,13 +40,10 @@ contains
       real(reki), intent(inout) :: vec(:)
       
       !call getRandomVector(Vec, 0.4_ReKi)
-      !Vec = 0.0
       
       call random_number( Vec )
       Vec = 0.4_ReKi*(2*Vec-1)/real(n1**2)  !note n1 from the loop this is called in
-
-
-               
+          
    end subroutine getRotationPerturb
    ! ..............................................   
    subroutine getRandomVector(Vec, InLimits)
@@ -65,6 +62,15 @@ contains
       !Vec = (Vec)/real(n1**3)  !note n1 from the loop this is called in
       
    end subroutine getRandomVector
+   ! ..............................................   
+   subroutine getLinearOrient(theta, Orientation)
+      real(reki), intent(in   )           :: theta(3)
+      real(R8ki), intent(inout)           :: Orientation(3,3)
+   
+      call eye(Orientation,ErrStat,ErrMsg)
+      Orientation = Orientation - SkewSymMat(theta)
+            
+   end subroutine getLinearOrient
    ! ..............................................   
    subroutine CreateOutputMeshes_Test1()   
       ! this is a point-to-point mapping, with one point going to many.

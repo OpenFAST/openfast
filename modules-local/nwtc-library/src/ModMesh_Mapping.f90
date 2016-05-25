@@ -1270,7 +1270,8 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
             s_start = (n - 1)*3+1
             s_end   = s_start+2
                
-            MeshMap%dM%fx_p( d_start:d_end, s_start:s_end ) = SkewSymMat( MeshMap%DisplacedPosition(:,i,n1) ) * MeshMap%MapMotions(i)%shape_fn(n1)
+            tmpVec = MeshMap%DisplacedPosition(:,i,n1) * MeshMap%MapMotions(i)%shape_fn(n1) 
+            MeshMap%dM%fx_p( d_start:d_end, s_start:s_end ) = SkewSymMat( tmpVec ) 
                
          end do
             
@@ -1884,7 +1885,7 @@ SUBROUTINE Linearize_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
 
    TYPE(MeshType),            INTENT(IN   ) :: Src       ! source (point) mesh
    TYPE(MeshType),            INTENT(IN   ) :: Dest      ! destination (line2) mesh
-   TYPE(MeshMapType),         INTENT(INOUT) :: MeshMap   ! mapping data structure
+   TYPE(MeshMapType),         INTENT(INOUT) :: MeshMap   ! mapping data structure of Src to Dest
                               
    INTEGER(IntKi),            INTENT(  OUT) :: ErrStat   ! Error status of the operation
    CHARACTER(*),              INTENT(  OUT) :: ErrMsg    ! Error message if ErrStat /= ErrID_None
@@ -3127,7 +3128,6 @@ SUBROUTINE Linearize_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
 
    TYPE(MeshMapType),      INTENT(INOUT) :: MeshMap   !< mapping between Src and Dest meshes
 
-
    INTEGER(IntKi),         INTENT(  OUT) :: ErrStat   !< Error status of the operation
    CHARACTER(*),           INTENT(  OUT) :: ErrMsg    !< Error message if ErrStat /= ErrID_None
 
@@ -3180,7 +3180,7 @@ SUBROUTINE Linearize_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
    if ( HasLoadFields(Src) ) then
 
       IF (.not. PRESENT(SrcDisp) .OR. .NOT. PRESENT(DestDisp) ) THEN
-         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer linearize.', ErrStat, ErrMsg, RoutineName)
+         CALL SetErrStat( ErrID_Fatal, 'SrcDisp and DestDisp arguments are required for load transfer linearization.', ErrStat, ErrMsg, RoutineName)
          RETURN
       END IF
             
@@ -3443,7 +3443,7 @@ SUBROUTINE Linearize_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, 
    TYPE(MeshType),                 INTENT(IN   )  :: Src       !< The source (Line2) mesh with loads fields allocated
    TYPE(MeshType),                 INTENT(IN   )  :: Dest      !< The destination mesh
 
-   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   !< The mapping data
+   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   !< The mapping data from Src to Dest
 
    INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   !< Error status of the operation
    CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
