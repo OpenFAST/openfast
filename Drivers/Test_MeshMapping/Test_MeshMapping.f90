@@ -318,10 +318,11 @@ write(99, *) '---------------------------------------------------------------'
             Mesh1_O%TranslationDisp(:,i) = Mesh1_O_op%TranslationDisp(:,i) + LinVec_1(j:j+2)
             
                ! Mesh1_O%Orientation = theta^S|_op + delta theta^S                                    
-            call SmllRotTrans( 'orientation', LinVec_1_a(j  ) &
-                                            , LinVec_1_a(j+1) &
-                                            , LinVec_1_a(j+2) & 
-                                            , Orientation, ErrStat=ErrStat, ErrMsg=ErrMsg)            
+            !call SmllRotTrans( 'orientation', LinVec_1_a(j  ) &
+            !                                , LinVec_1_a(j+1) &
+            !                                , LinVec_1_a(j+2) & 
+            !                                , Orientation, ErrStat=ErrStat, ErrMsg=ErrMsg)  
+            call getLinearOrient(LinVec_1_a(j:j+2), Orientation)
             Mesh1_O%Orientation(:,:,i) = matmul( Mesh1_O_op%Orientation(:,:,i), Orientation )
             
             
@@ -409,10 +410,11 @@ write(99, *) '---------------------------------------------------------------'
          do i=1,Mesh1_O%nnodes
             
                ! Mesh1_O%Orientation = theta^S|_op + delta theta^S
-            call SmllRotTrans( 'orientation', LinVec_1(j  ) &
-                                            , LinVec_1(j+1) &
-                                            , LinVec_1(j+2) & 
-                                            , Orientation, ErrStat=ErrStat, ErrMsg=ErrMsg)            
+            !call SmllRotTrans( 'orientation', LinVec_1(j  ) &
+            !                                , LinVec_1(j+1) &
+            !                                , LinVec_1(j+2) & 
+            !                                , Orientation, ErrStat=ErrStat, ErrMsg=ErrMsg)            
+            call getLinearOrient(LinVec_1(j:j+2), Orientation)
             Mesh1_O%Orientation(:,:,i) = matmul( Mesh1_O_op%Orientation(:,:,i), Orientation )
 
                         
@@ -490,6 +492,7 @@ write(99, *) '---------------------------------------------------------------'
       ! ..................
       ! Translational acceleration:
       ! ..................
+      mm = maxval( abs(Mesh1_O_op%TranslationAcc ) )
 
       call meshcopy( Mesh1_O_op, Mesh1_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
       do n1=1,15
@@ -499,7 +502,7 @@ write(99, *) '---------------------------------------------------------------'
          call getRandomVector(LinVec_1_a)  ! delta omega 
          call getRandomVector(LinVec_1_b)  ! delta a
          call getRandomVector(LinVec_1_c)  ! delta alpha
-         
+                  
          LinVec_2_a = matmul( map_mod1_mod2%dm%ta1, LinVec_1   ) + matmul( map_mod1_mod2%dm%ta2,  LinVec_1_a ) &
                     + matmul( map_mod1_mod2%dm%mi,  LinVec_1_b ) + matmul( map_mod1_mod2%dm%fx_p, LinVec_1_c )! approximate delta theta^D         
              
@@ -508,10 +511,12 @@ write(99, *) '---------------------------------------------------------------'
          do i=1,Mesh1_O%nnodes
             
                ! Mesh1_O%Orientation = theta^S|_op + delta theta^S
-            call SmllRotTrans( 'orientation', LinVec_1(j  ) &
-                                            , LinVec_1(j+1) &
-                                            , LinVec_1(j+2) & 
-                                            , Orientation, ErrStat=ErrStat, ErrMsg=ErrMsg)            
+            !call SmllRotTrans( 'orientation', LinVec_1(j  ) &
+            !                                , LinVec_1(j+1) &
+            !                                , LinVec_1(j+2) & 
+            !                                , Orientation, ErrStat=ErrStat, ErrMsg=ErrMsg)                 
+            call getLinearOrient(LinVec_1(j:j+2), Orientation)
+            
             Mesh1_O%Orientation(:,:,i) = matmul( Mesh1_O_op%Orientation(:,:,i), Orientation )
 
                         
@@ -632,10 +637,11 @@ write(99, *) '---------------------------------------------------------------'
             
             
                ! Mesh2_I%Orientation = theta^S|_op + delta theta^S
-            call SmllRotTrans( 'orientation', LinVec_1_c(j  ) &
-                                            , LinVec_1_c(j+1) &
-                                            , LinVec_1_c(j+2) & 
-                                            , Orientation, ErrStat=ErrStat, ErrMsg=ErrMsg)            
+            !call SmllRotTrans( 'orientation', LinVec_1_c(j  ) &
+            !                                , LinVec_1_c(j+1) &
+            !                                , LinVec_1_c(j+2) & 
+            !                                , Orientation, ErrStat=ErrStat, ErrMsg=ErrMsg)            
+            call getLinearOrient(LinVec_1_c(j:j+2), Orientation)
             Mesh1_O%Orientation(:,:,i) = matmul( Mesh1_O_op%Orientation(:,:,i), Orientation )
          end do
          
