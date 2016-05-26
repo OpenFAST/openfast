@@ -39,18 +39,26 @@ contains
    subroutine getRotationPerturb(Vec)
       real(reki), intent(inout) :: vec(:)
       
+      real(reki)                :: mx,mn
+      
       !call getRandomVector(Vec, 0.4_ReKi)
       
       call random_number( Vec )
-      Vec = 0.4_ReKi*(2*Vec-1)/real(n1**2)  !note n1 from the loop this is called in
+      mx = maxval(Vec)
+      mn = minval(Vec)
+
+      Vec = 0.4_ReKi*(2.*(Vec-mn)/(mx-mn)-1.)/real(n1**2)  !note n1 from the loop this is called in
           
+      
    end subroutine getRotationPerturb
    ! ..............................................   
    subroutine getRandomVector(Vec, InLimits)
       real(reki), intent(inout)           :: vec(:)
       real(reki), intent(in   ), optional :: InLimits
       real(reki)                          :: Limits
-   
+
+      real(reki)                          :: mx,mn
+      
       if (present(InLimits)) then
          Limits = abs(InLimits)
       else
@@ -58,7 +66,10 @@ contains
       end if
       
       call random_number( Vec )
-      Vec = Limits*(2*Vec-1)/real(n1**3)  !note n1 from the loop this is called in
+      mx = maxval(Vec)
+      mn = minval(Vec)
+
+      Vec = Limits*(2.*(Vec-mn)/(mx-mn)-1.)/real(n1**3)  !note n1 from the loop this is called in
       !Vec = (Vec)/real(n1**3)  !note n1 from the loop this is called in
       
    end subroutine getRandomVector
