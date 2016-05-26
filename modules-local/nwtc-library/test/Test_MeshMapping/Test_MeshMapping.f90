@@ -233,8 +233,8 @@ write(99, *) '---------------------------------------------------------------'
       if (allocated(map_mod1_mod2%dm%ta2))  call wrmatrix(map_mod1_mod2%dm%ta2, 99,Fmt,'ta2')
             
       if (allocated(map_mod2_mod1%dm%li ))  call wrmatrix(map_mod2_mod1%dm%li,  99,Fmt,'li')
-      if (allocated(map_mod2_mod1%dm%M_u))  call wrmatrix(map_mod2_mod1%dm%M_u, 99,Fmt,'m_u')
-      if (allocated(map_mod2_mod1%dm%M_t))  call wrmatrix(map_mod2_mod1%dm%M_t, 99,Fmt,'m_t')
+      if (allocated(map_mod2_mod1%dm%M_uD)) call wrmatrix(map_mod2_mod1%dm%M_uD,99,Fmt,'M_uD')
+      if (allocated(map_mod2_mod1%dm%M_uS)) call wrmatrix(map_mod2_mod1%dm%M_uS,99,Fmt,'m_uS')
       if (allocated(map_mod2_mod1%dm%M_f))  call wrmatrix(map_mod2_mod1%dm%M_f, 99,Fmt,'m_f')      
       
       
@@ -255,8 +255,8 @@ write(99, *) '---------------------------------------------------------------'
          !call wrmatrix(LinVec_1,  99,Fmt,'LinVec_1')
          !call wrmatrix(LinVec_2_a,  99,Fmt,'LinVec_2_a')
          
-         j=1
          do i=1,Mesh1_O%nnodes
+            j = (i-1)*3 + 1
 
                ! delta theta^S
             !Orientation = EulerConstruct(LinVec_1(j:j+2))
@@ -268,7 +268,6 @@ write(99, *) '---------------------------------------------------------------'
                ! Mesh1_O%Orientation = theta^S|_op + delta theta^S
             Mesh1_O%Orientation(:,:,i) = matmul( Mesh1_O_op%Orientation(:,:,i), Orientation )
                                     
-            j = j+3            
             !IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
          end do
 
@@ -276,8 +275,9 @@ write(99, *) '---------------------------------------------------------------'
          call TransferMotionData()
 
          ! delta x^D = M( x^S|_op + delta x^S ) - x^D|_op
-         j=1
-         do i=1,Mesh2_I%nnodes
+         do i=1,Mesh2_I%nnodes            
+            j = (i-1)*3 + 1
+            
             !theta^D|_op + delta theta^D = theta^D -> 
             !delta theta^D = (theta^D|_op)^(-1) * theta^D
             Orientation = matmul( transpose(Mesh2_I_op%Orientation(:,:,i)), Mesh2_I%Orientation(:,:,i) )
@@ -286,7 +286,6 @@ write(99, *) '---------------------------------------------------------------'
             LinVec_2(j:j+2) = GetSmllRotAngs(Orientation,ErrStat,ErrMsg)    
             IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
             
-            j = j+3
          end do
          !call wrmatrix(LinVec_2-LinVec_2_a,  99,Fmt,'LinVec_2')
          
@@ -311,8 +310,8 @@ write(99, *) '---------------------------------------------------------------'
                   
          LinVec_2_a = matmul( map_mod1_mod2%dm%mi, LinVec_1 ) + matmul( map_mod1_mod2%dm%fx_p, LinVec_1_a ) ! approximate delta theta^D         
                       
-         j=1
          do i=1,Mesh1_O%nnodes
+            j = (i-1)*3 + 1            
 
                ! Mesh1_O%TranslationDisp = u^S|_op + delta u^S
             Mesh1_O%TranslationDisp(:,i) = Mesh1_O_op%TranslationDisp(:,i) + LinVec_1(j:j+2)
@@ -326,7 +325,6 @@ write(99, *) '---------------------------------------------------------------'
             Mesh1_O%Orientation(:,:,i) = matmul( Mesh1_O_op%Orientation(:,:,i), Orientation )
             
             
-            j = j+3            
             !IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
                         
          end do
@@ -336,10 +334,9 @@ write(99, *) '---------------------------------------------------------------'
          call TransferMotionData()
 
          ! delta x^D = M( x^S|_op + delta x^S ) - x^D|_op
-         j=1
          do i=1,Mesh2_I%nnodes
+            j = (i-1)*3 + 1
             LinVec_2(j:j+2) = Mesh2_I%TranslationDisp(:,i) - Mesh2_I_op%TranslationDisp(:,i)          
-            j = j+3
          end do
          
          e=TwoNorm( LinVec_2 - LinVec_2_a )               
@@ -363,24 +360,19 @@ write(99, *) '---------------------------------------------------------------'
          
          LinVec_2_a = matmul( map_mod1_mod2%dm%mi, LinVec_1 )  ! approximate delta theta^D         
                       
-         j=1
          do i=1,Mesh1_O%nnodes
-
+            j = (i-1)*3 + 1
                ! Mesh1_O%RotationVel = omega^S|_op + delta omega^S
-            Mesh1_O%RotationVel(:,i) = Mesh1_O_op%RotationVel(:,i) + LinVec_1(j:j+2)
-                                                
-            j = j+3            
-                        
+            Mesh1_O%RotationVel(:,i) = Mesh1_O_op%RotationVel(:,i) + LinVec_1(j:j+2)                                                
          end do
          
          !M( x^S|_op + delta x^S )
          call TransferMotionData()
 
          ! delta x^D = M( x^S|_op + delta x^S ) - x^D|_op
-         j=1
          do i=1,Mesh2_I%nnodes
+            j = (i-1)*3 + 1
             LinVec_2(j:j+2) = Mesh2_I%RotationVel(:,i) - Mesh2_I_op%RotationVel(:,i)          
-            j = j+3
          end do
                   
          e=TwoNorm( LinVec_2 - LinVec_2_a )               
@@ -406,8 +398,8 @@ write(99, *) '---------------------------------------------------------------'
          LinVec_2_a = matmul( map_mod1_mod2%dm%tv, LinVec_1 ) + matmul( map_mod1_mod2%dm%mi, LinVec_1_a ) &
                     + matmul( map_mod1_mod2%dm%fx_p, LinVec_1_b )! approximate delta theta^D         
                       
-         j=1
          do i=1,Mesh1_O%nnodes
+            j = (i-1)*3 + 1
             
                ! Mesh1_O%Orientation = theta^S|_op + delta theta^S
             !call SmllRotTrans( 'orientation', LinVec_1(j  ) &
@@ -424,7 +416,6 @@ write(99, *) '---------------------------------------------------------------'
                ! Mesh1_O%RotationVel = omega^S|_op + delta omega^S
             Mesh1_O%RotationVel(:,i) = Mesh1_O_op%RotationVel(:,i) + LinVec_1_b(j:j+2)
             
-            j = j+3            
             !IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
                         
          end do
@@ -434,10 +425,9 @@ write(99, *) '---------------------------------------------------------------'
          call TransferMotionData()
 
          ! delta x^D = M( x^S|_op + delta x^S ) - x^D|_op
-         j=1
          do i=1,Mesh2_I%nnodes
+            j = (i-1)*3 + 1
             LinVec_2(j:j+2) = Mesh2_I%TranslationVel(:,i) - Mesh2_I_op%TranslationVel(:,i)          
-            j = j+3
          end do
                   
          e=TwoNorm( LinVec_2 - LinVec_2_a )               
@@ -454,6 +444,7 @@ write(99, *) '---------------------------------------------------------------'
       mm = maxval( abs(Mesh1_O_op%RotationAcc ) )
             
       call meshcopy( Mesh1_O_op, Mesh1_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
+      call meshcopy( Mesh2_O_op, Mesh2_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
       do n1=1,15
          
          ! perturb x^S:
@@ -461,14 +452,10 @@ write(99, *) '---------------------------------------------------------------'
          
          LinVec_2_a = matmul( map_mod1_mod2%dm%mi, LinVec_1 )  ! approximate delta theta^D         
                       
-         j=1
          do i=1,Mesh1_O%nnodes
-
+            j = (i-1)*3 + 1
                ! Mesh1_O%RotationAcc = alpha^S|_op + delta alpha^S
-            Mesh1_O%RotationAcc(:,i) = Mesh1_O_op%RotationAcc(:,i) + LinVec_1(j:j+2)
-                                                
-            j = j+3            
-                        
+            Mesh1_O%RotationAcc(:,i) = Mesh1_O_op%RotationAcc(:,i) + LinVec_1(j:j+2)                        
          end do
          
 
@@ -476,10 +463,9 @@ write(99, *) '---------------------------------------------------------------'
          call TransferMotionData()
 
          ! delta x^D = M( x^S|_op + delta x^S ) - x^D|_op
-         j=1
          do i=1,Mesh2_I%nnodes
+            j = (i-1)*3 + 1
             LinVec_2(j:j+2) = Mesh2_I%RotationAcc(:,i) - Mesh2_I_op%RotationAcc(:,i)          
-            j = j+3
          end do
                   
          e=TwoNorm( LinVec_2 - LinVec_2_a )               
@@ -495,6 +481,7 @@ write(99, *) '---------------------------------------------------------------'
       mm = maxval( abs(Mesh1_O_op%TranslationAcc ) )
 
       call meshcopy( Mesh1_O_op, Mesh1_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
+      call meshcopy( Mesh2_O_op, Mesh2_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
       do n1=1,15
          
          ! perturb x^S:
@@ -507,8 +494,8 @@ write(99, *) '---------------------------------------------------------------'
                     + matmul( map_mod1_mod2%dm%mi,  LinVec_1_b ) + matmul( map_mod1_mod2%dm%fx_p, LinVec_1_c )! approximate delta theta^D         
              
          
-         j=1
          do i=1,Mesh1_O%nnodes
+            j = (i-1)*3 + 1
             
                ! Mesh1_O%Orientation = theta^S|_op + delta theta^S
             !call SmllRotTrans( 'orientation', LinVec_1(j  ) &
@@ -529,7 +516,6 @@ write(99, *) '---------------------------------------------------------------'
                ! Mesh1_O%RotationAcc = alpha^S|_op + delta alpha^S
             Mesh1_O%RotationAcc(:,i) = Mesh1_O_op%RotationAcc(:,i) + LinVec_1_c(j:j+2)
             
-            j = j+3            
             !IF (ErrStat /= ErrID_None) CALL WrScr("*******"//TRIM(ErrMsg))
                         
          end do
@@ -539,10 +525,9 @@ write(99, *) '---------------------------------------------------------------'
          call TransferMotionData()
 
          ! delta x^D = M( x^S|_op + delta x^S ) - x^D|_op
-         j=1
          do i=1,Mesh2_I%nnodes
+            j = (i-1)*3 + 1
             LinVec_2(j:j+2) = Mesh2_I%TranslationAcc(:,i) - Mesh2_I_op%TranslationAcc(:,i)          
-            j = j+3
          end do
                   
          e=TwoNorm( LinVec_2 - LinVec_2_a )               
@@ -563,6 +548,7 @@ write(99, *) '---------------------------------------------------------------'
       !mf = sqrt( EPSILON(mf)) * max(1.0_ReKi, mf)
       
       
+      call meshcopy( Mesh1_O_op, Mesh1_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
       call meshcopy( Mesh2_O_op, Mesh2_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
       do n1=1,15
          
@@ -571,14 +557,12 @@ write(99, *) '---------------------------------------------------------------'
          
          LinVec_1_a = matmul( map_mod2_mod1%dm%li, LinVec_2 )  ! approximate delta theta^D         
                       
-         j=1
          do i=1,Mesh2_O%nnodes
+            j = (i-1)*3 + 1
 
                ! Mesh2_O%Force = theta^S|_op + delta theta^S
             Mesh2_O%Force(:,i) = Mesh2_O_op%Force(:,i) + LinVec_2(j:j+2)
                                                 
-            j = j+3            
-                        
          end do
          
 
@@ -586,10 +570,9 @@ write(99, *) '---------------------------------------------------------------'
          call TransferLoadData()
          
          ! delta x^D = M( x^S|_op + delta x^S ) - x^D|_op
-         j=1
          do i=1,Mesh1_I%nnodes
+            j = (i-1)*3 + 1
             LinVec_1(j:j+2) = Mesh1_I%Force(:,i) - Mesh1_I_op%Force(:,i)   
-            j = j+3
          end do
                   
          e=TwoNorm( LinVec_1 - LinVec_1_a )               
@@ -606,14 +589,14 @@ write(99, *) '---------------------------------------------------------------'
       mf=maxval( abs(Mesh2_O_op%Force ) )     
       mm=maxval( abs(Mesh2_O_op%Moment ) )     
       
-      !call meshcopy( Mesh2_I_op, Mesh2_I, MESH_UPDATECOPY, ErrStat, ErrMsg) 
-      !call meshcopy( Mesh1_I_op, Mesh1_I, MESH_UPDATECOPY, ErrStat, ErrMsg) 
-      
       call meshcopy( Mesh2_O_op, Mesh2_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
       call meshcopy( Mesh1_O_op, Mesh1_O, MESH_UPDATECOPY, ErrStat, ErrMsg) 
-      
+            
       do n1=1,15
-
+         
+         
+         call meshcopy( Mesh2_I_op, Mesh2_I, MESH_UPDATECOPY, ErrStat, ErrMsg) 
+         call meshcopy( Mesh1_I_op, Mesh1_I, MESH_UPDATECOPY, ErrStat, ErrMsg) 
          
          ! perturb x^S:
          !......
@@ -621,19 +604,19 @@ write(99, *) '---------------------------------------------------------------'
          call getRandomVector(LinVec_2_c, max(1.0_ReKi,mm)) ! delta m 
 
             ! for u and theta, we actually perturb x^D and transfer to x^S to get delta x^S
-         call getRandomVector(LinVec_1_b) !delta u
-         call getRotationPerturb(LinVec_1_c) ! delta theta
+         call getRandomVector(LinVec_1_b) !delta uD
+         !call getRotationPerturb(LinVec_1_c) ! delta theta
          
-         
+!LinVec_1_b = 0
+
          ! get Mesh1_O (destination, perturbed)
          
-         j=1
          do i=1,Mesh1_O%nnodes
-            
-               ! bjj: we need orientation and translation to be consistent on same meshes as well as on transfered meshes
+            j = (i-1)*3 + 1
+               ! bjj: we need translation to be consistent on transfered meshe
             
                ! Mesh2_I%TranslationDisp = u^S|_op + delta u^S
-            if (allocated(map_mod2_mod1%dm%m_u)) Mesh1_O%TranslationDisp(:,i) = Mesh1_O_op%TranslationDisp(:,i) + LinVec_1_b(j:j+2)
+            if (allocated(map_mod2_mod1%dm%M_uD)) Mesh1_O%TranslationDisp(:,i) = Mesh1_O_op%TranslationDisp(:,i) + LinVec_1_b(j:j+2)
             
             
                ! Mesh2_I%Orientation = theta^S|_op + delta theta^S
@@ -641,8 +624,8 @@ write(99, *) '---------------------------------------------------------------'
             !                                , LinVec_1_c(j+1) &
             !                                , LinVec_1_c(j+2) & 
             !                                , Orientation, ErrStat=ErrStat, ErrMsg=ErrMsg)            
-            call getLinearOrient(LinVec_1_c(j:j+2), Orientation)
-            Mesh1_O%Orientation(:,:,i) = matmul( Mesh1_O_op%Orientation(:,:,i), Orientation )
+            !call getLinearOrient(LinVec_1_c(j:j+2), Orientation)
+            !Mesh1_O%Orientation(:,:,i) = matmul( Mesh1_O_op%Orientation(:,:,i), Orientation )
          end do
          
          call TransferMotionData() ! this sets Mesh2_I, the displaced source mesh
@@ -650,36 +633,40 @@ write(99, *) '---------------------------------------------------------------'
             ! now figure out what that means for the x^S perturbations:
          
             ! LinVec_2 for delta u^S
-         if (allocated(map_mod2_mod1%dm%m_u)) then
-            j=1
+         if (allocated(map_mod2_mod1%dm%M_uS)) then
             do i=1,Mesh2_I%nnodes
+               j = (i-1)*3 + 1
                LinVec_2(j:j+2) = Mesh2_I%TranslationDisp(:,i) - Mesh2_I_op%TranslationDisp(:,i)
-               j = j+3
             end do
          else
             LinVec_2 = 0
          end if
          
-            ! LinVec_2_a for delta theta^S
-         if (allocated(map_mod2_mod1%dm%m_t)) then
-            j=1
-            do i=1,Mesh2_I%nnodes
-               Orientation = matmul( transpose( Mesh2_I_op%Orientation(:,:,i) ), Mesh2_I%Orientation(:,:,i) )
-               LinVec_2_a(j:j+2) = GetSmllRotAngs(Orientation,ErrStat,ErrMsg)
-               j = j+3
-            end do                  
-         end if
+   ! this is the order of the error (part of it anyway; I don't feel like doing the cross product term with different src/dest nodes)
+!do i=1,Mesh2_I%nnodes
+! j = (i-1)*3 + 1         
+!   LinVec_2_a(j:j+2) = cross_product(LinVec_2(j:j+2),LinVec_2_b(j:j+2) ) 
+!end do
+!print *, 'Error term:', maxval(abs(LinVec_2_a))
+
+         !   ! LinVec_2_a for delta theta^S
+         !if (allocated(map_mod2_mod1%dm%M_uD)) then
+         !   do i=1,Mesh2_I%nnodes
+         !      j = (i-1)*3 + 1
+         !      Orientation = matmul( transpose( Mesh2_I_op%Orientation(:,:,i) ), Mesh2_I%Orientation(:,:,i) )
+         !      LinVec_2_a(j:j+2) = GetSmllRotAngs(Orientation,ErrStat,ErrMsg)
+         !   end do                  
+         !end if
          !......
          
          LinVec_1_a =   matmul( map_mod2_mod1%dm%m_f, LinVec_2_b ) & ! approximate delta theta^D (after we add the u and t components on the next lines)
                       + matmul( map_mod2_mod1%dm%li,  LinVec_2_c )  
                     
-         if (allocated(map_mod2_mod1%dm%m_u)) LinVec_1_a = LinVec_1_a + matmul( map_mod2_mod1%dm%m_u, LinVec_2   ) ! u
-         if (allocated(map_mod2_mod1%dm%m_t)) LinVec_1_a = LinVec_1_a + matmul( map_mod2_mod1%dm%m_t, LinVec_2_a ) ! theta
+         if (allocated(map_mod2_mod1%dm%M_uS)) LinVec_1_a = LinVec_1_a + matmul( map_mod2_mod1%dm%m_uS, LinVec_2   ) ! uS
+         if (allocated(map_mod2_mod1%dm%M_uD)) LinVec_1_a = LinVec_1_a + matmul( map_mod2_mod1%dm%M_uD, LinVec_1_b ) ! uD
                                    
-         j=1
          do i=1,Mesh2_O%nnodes
-            
+            j = (i-1)*3 + 1
                ! bjj: we need orientation and translation to be consistent on same meshes as well as on transfered meshes;
                !      so we need to actually perturb the destination and transfer to the source to get the source perturbations
             
@@ -688,9 +675,6 @@ write(99, *) '---------------------------------------------------------------'
 
                ! Mesh2_O%Moment = Moment^S|_op + delta Moment^S
             Mesh2_O%Moment(:,i) = Mesh2_O_op%Moment(:,i) + LinVec_2_c(j:j+2)
-            
-            j = j+3            
-                        
          end do
          
 
@@ -699,16 +683,15 @@ write(99, *) '---------------------------------------------------------------'
          call TransferLoadData()
                   
          ! delta x^D = M( x^S|_op + delta x^S ) - x^D|_op
-         j=1
          do i=1,Mesh1_I%nnodes
+            j = (i-1)*3 + 1
             LinVec_1(j:j+2) = Mesh1_I%Moment(:,i) - Mesh1_I_op%Moment(:,i)   
-            j = j+3
          end do
                   
          e=TwoNorm( LinVec_1 - LinVec_1_a )               
          !if (.not. equalrealNos(e,0.0_ReKi)) &
             write(*,ErrFmt) 'Moments: ', n1, e, e/max(mmin, maxval(abs(LinVec_1))), maxval(abs(LinVec_1)), mm, &
-                 maxval(abs(LinVec_2)), maxval(abs(LinVec_2_a)), maxval(abs(LinVec_2_b)), maxval(abs(LinVec_2_c))
+                 maxval(abs(LinVec_1_b)), maxval(abs(LinVec_2)), maxval(abs(LinVec_2_b)), maxval(abs(LinVec_2_c))
       end do   
       
 end if ! linearization or mapping test
