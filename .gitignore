@@ -30,3 +30,9 @@
 
 # Debug files
 *.dSYM/
+
+# NWTC web developer
+/ArcFiles.txt
+/SourceFiles.txt
+/ArcWin.txt
+/Archive.bat
