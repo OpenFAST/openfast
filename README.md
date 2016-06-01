@@ -1,7 +1,7 @@
 # FAST Registry for Automatic Code Generation
 A utility for generating code for module data types in the [FAST Modularization Framework](https://nwtc.nrel.gov/FAST-Developers "FAST Developers")
 
-Authors: John Michalakes and [Bonnie Jonkman](mailto:bonnie.jonkman@nrel.gov), NREL
+_Authors_: John Michalakes and [Bonnie Jonkman](mailto:bonnie.jonkman@nrel.gov), NREL
 
 The FAST Registry allows the developer to specify the data types for a module once and in a single 
 location, automating the time consuming and error-prone task of generating the code.  The tables 
