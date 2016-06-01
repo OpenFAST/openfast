@@ -24,5 +24,10 @@
 
 # Executables
 *.exe
-*.out
 *.app
+
+# NWTC web developer
+/ArcFiles.txt
+/SourceFiles.txt
+/ArcWin.txt
+/Archive.bat
