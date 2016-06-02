@@ -494,14 +494,13 @@ CHARACTER(*),                INTENT(  OUT)  :: ErrMsg
 
    ! Internal variables
 
-!REAL(ReKi), ALLOCATABLE    :: Dist(:)        ! The distance between points
 REAL(ReKi), ALLOCATABLE      :: Dist_Y(:)        ! The Y distance between points
 REAL(ReKi), ALLOCATABLE      :: Dist_Z(:)        ! The Z distance between points
-!mlb REAL(ReKi), ALLOCATABLE    :: Dist_Z12(:)        ! The distance between points (not really a distance!)
-REAL(ReKi), ALLOCATABLE      :: Z1Z2(:)        ! Z(IZ)*Z(JZ)
+REAL(ReKi), ALLOCATABLE      :: z_g(:)           ! sqrt( Z(IZ)*Z(JZ) ) / H
 
 INTEGER                      :: J
 INTEGER                      :: I
+INTEGER                      :: K
 INTEGER                      :: IFreq
 INTEGER                      :: Indx
 INTEGER                      :: IVec            ! wind component, 1=u, 2=v, 3=w
@@ -512,23 +511,15 @@ LOGICAL,    PARAMETER        :: COH_OUT   = .FALSE.                       ! This
 INTEGER(IntKi)                :: ErrStat2
 CHARACTER(MaxMsgLen)          :: ErrMsg2
 
-REAL, PARAMETER :: Coef_QX     =   1.00
-REAL, PARAMETER :: Coef_QY     =   1.00
-REAL, PARAMETER :: Coef_QZ     =   1.25
-REAL, PARAMETER :: Coef_PX     =   0.40
-REAL, PARAMETER :: Coef_PY     =   0.40
-REAL, PARAMETER :: Coef_PZ     =   0.50
-REAL, PARAMETER :: Coef_RX     =   0.92
-REAL, PARAMETER :: Coef_RY     =   0.92
-REAL, PARAMETER :: Coef_RZ     =   0.85
-REAL, PARAMETER :: Coef_AlphaX =   2.90
-REAL, PARAMETER :: Coef_AlphaY =  45.0
-REAL, PARAMETER :: Coef_AlphaZ =  13.0
-REAL, PARAMETER :: Coef_1      =   1.0 !3.28
-REAL, PARAMETER :: Coef_2      = 100.0 !32.8
-!REAL, PARAMETER :: Coef_2      =  10.0 !32.8
+REAL, PARAMETER :: Qc(3)     = (/ 1.00, 1.00, 1.25 /)
+REAL, PARAMETER :: Pc(3)     = (/ 0.40, 0.40, 0.50 /)
+REAL, PARAMETER :: Rc(3)     = (/ 0.92, 0.92, 0.85 /)
+REAL, PARAMETER :: Alpha(3) = (/ 2.9 ,45.0 ,13.0  /)
 
-REAL :: TEMP_Y, TEMP_Z
+REAL, PARAMETER :: H             = 10. ! Reference height
+REAL, PARAMETER :: Coef_1      =   1.0 !3.28
+
+REAL :: A_Y, A_Z
 
 
    ! initialize variables
@@ -545,7 +536,7 @@ REAL :: TEMP_Y, TEMP_Z
    CALL AllocAry( Dist_Y,    p%grid%NPacked, 'Dist_Y coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
    CALL AllocAry( Dist_Z,    p%grid%NPacked, 'Dist_Z coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
    !CALL AllocAry( Dist_Z12, p%grid%NPacked, 'Dist_Z12 coherence array', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
-   CALL AllocAry( Z1Z2,      p%grid%NPacked,   'Z1Z2 coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
+   CALL AllocAry( z_g,       p%grid%NPacked, 'z_g coherence array', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'CalcFourierCoeffs_API')
    IF (ErrStat >= AbortErrLev) THEN
       CALL Cleanup()
       RETURN
@@ -563,8 +554,7 @@ REAL :: TEMP_Y, TEMP_Z
 
          Dist_Y(Indx)= ABS( p%grid%Y(I) - p%grid%Y(J) )
          Dist_Z(Indx)= ABS( p%grid%Z(I) - p%grid%Z(J) )
-!mlb           Dist_Z12(Indx)=ABS(Z(I)*Z(J))
-         Z1Z2(Indx) = p%grid%Z(I)*p%grid%Z(J)
+         z_g(Indx)  = sqrt( p%grid%Z(I) * p%grid%Z(J) ) / H
                   
       END DO
    END DO
@@ -588,7 +578,7 @@ IF ( COH_OUT ) THEN !debugging info...
       WRITE( UC, '(A4,X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Comp','Freq',(I,I=1,p%grid%NPacked)
       WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Distance_Y',   Dist_Y(:)
       WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Distance_Z', Dist_Z(:)
-      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'Z(IZ)*Z(JZ)', Z1Z2(:)
+      WRITE( UC,   '(5X,A16,1X,'//Num2LSTR(p%grid%NPacked)//'(G10.4,1X))' ) 'sqrt(Z(IZ)*Z(JZ))/H', z_g(:)
 ENDIF
 
    !--------------------------------------------------------------------------------
@@ -630,11 +620,13 @@ ENDIF
 
 !mlb                  TEMP_Y=Coef_AlphaY*p%grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PY)
 !mlb                  TEMP_Z=Coef_AlphaZ*p%grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Dist_Z12(Indx)/Coef_2)**(-0.5*Coef_PZ)
-               TEMP_Y=Coef_AlphaY*p%grid%Freq(IFreq)**Coef_RY*(Dist_Y(Indx)/Coef_1)**Coef_QY*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PY)
-               TEMP_Z=Coef_AlphaZ*p%grid%Freq(IFreq)**Coef_RZ*(Dist_Z(Indx)/Coef_1)**Coef_QZ*(Z1Z2(Indx)/Coef_2)**(-0.5*Coef_PZ)
+               
+!dist_x is zero, so we ignore it here (i.e., A_X = 0)
+               A_Y = Alpha(2) * (p%grid%Freq(IFreq)**rc(2)) * ((Dist_Y(Indx)/Coef_1)**qc(2)) * (z_g(Indx)**(-pc(2)))
+               A_Z = Alpha(3) * (p%grid%Freq(IFreq)**rc(3)) * ((Dist_Z(Indx)/Coef_1)**qc(3)) * (z_g(Indx)**(-pc(3)))
 
 !mlb                  TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/U0_1HR)
-               TRH(Indx)=EXP(-Coef_1*SQRT(TEMP_Y**2+TEMP_Z**2)/p%met%URef)
+               TRH(Indx)=EXP(- Coef_1 * SQRT(A_Y**2 + A_Z**2) / p%met%URef)
                
                Indx = Indx  + 1                                    
                
@@ -679,7 +671,7 @@ CONTAINS
 
       IF ( ALLOCATED( Dist_Y ) ) DEALLOCATE( Dist_Y )
       IF ( ALLOCATED( Dist_Z ) ) DEALLOCATE( Dist_Z )
-      IF ( ALLOCATED( Z1Z2   ) ) DEALLOCATE( Z1Z2   )
+      IF ( ALLOCATED( z_g    ) ) DEALLOCATE( z_g    )
    END SUBROUTINE Cleanup
 !............................................
 END SUBROUTINE CalcFourierCoeffs_API
@@ -1789,7 +1781,7 @@ SUBROUTINE ScaleTimeSeries(p, V, ErrStat, ErrMsg)
       CALL TimeSeriesScaling_ReynoldsStress(p, V, ErrStat, ErrMsg)
 
 
-   CASE ( SpecModel_IECKAI , SpecModel_IECVKM )
+   CASE ( SpecModel_IECKAI , SpecModel_IECVKM ) ! API is considered an IEC model in this code, so it should fall here, if we wanted it
 
       CALL TimeSeriesScaling_IEC(p, V)
                        
@@ -2053,7 +2045,7 @@ SUBROUTINE TS_ValidateInput(P, ErrStat, ErrMsg)
    INTEGER(IntKi)                                 :: UnOut                           ! unit for output files
    INTEGER(IntKi)                                 :: ErrStat2                        ! Error level (local)
    CHARACTER(MaxMsgLen)                           :: ErrMsg2                         ! Message describing error (local)
-
+   CHARACTER(*), PARAMETER                        :: RoutineName = 'TS_ValidateInput'
    
 
 ErrStat = ErrID_None
@@ -2072,39 +2064,56 @@ IF ( p%WrFile(FileExt_CTS) ) THEN
         p%met%TurbModel_ID == SpecModel_WF_14D ) THEN
       
       IF ( p%met%RICH_NO <= -0.05 ) THEN
-         CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated for RICH_NO <= -0.05.', ErrStat, ErrMsg, 'TS_ValidateInput')
+         CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated for RICH_NO <= -0.05.', ErrStat, ErrMsg, RoutineName)
          p%WrFile(FileExt_CTS) = .FALSE.      
       ELSEIF ( .NOT. ( p%WrFile(FileExt_BTS) .OR. p%WrFile(FileExt_WND) ) ) THEN
-         CALL SetErrStat( ErrID_Info, 'AeroDyn Full-Field files(.bts) will be generated along with the coherent turbulence file.', ErrStat, ErrMsg, 'TS_ValidateInput')
+         CALL SetErrStat( ErrID_Info, 'AeroDyn Full-Field files(.bts) will be generated along with the coherent turbulence file.', ErrStat, ErrMsg, RoutineName)
          p%WrFile(FileExt_BTS) = .TRUE.
       ENDIF      
       
    ELSE
-      CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated with the '//TRIM(p%met%TurbModel)//' model.', ErrStat, ErrMsg, 'TS_ValidateInput')
+      CALL SetErrStat( ErrID_Info, 'A coherent turbulence time step file cannot be generated with the '//TRIM(p%met%TurbModel)//' model.', ErrStat, ErrMsg, RoutineName)
       p%WrFile(FileExt_CTS) = .FALSE.      
    END IF
       
 ENDIF !WrAct
+
+   ! Make sure inputs make sense for API model
+IF ( p%met%TurbModel_ID == SpecModel_API ) THEN
+   IF ( .not. EqualRealNos( p%grid%AnalysisTime, 3600.0_ReKi) ) then ! warn if AnalysisTime isn't 1 hour (which is what we're assuming the URef is defined for)
+      CALL SetErrStat( ErrID_Warn, 'API model assumes URef is the 1-hour mean wind speed, even though AnalysisTime does not equal 3600 seconds.', ErrStat, ErrMsg, RoutineName )      
+   END IF
+   
+   IF ( p%IEC%ScaleIEC /= 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal, 'API model does not provide time-series scaling to target standard deviation. Set ScaleIEC = 0.', ErrStat, ErrMsg, RoutineName )      
+   END IF
+
+   IF ( p%met%RefHt /= 0 ) THEN
+      CALL SetErrStat( ErrID_Fatal, 'API model requires a 10-m reference height. Set RefHt = 10.', ErrStat, ErrMsg, RoutineName )      
+   END IF
+      
+END IF
+
 
 
       ! Warn if EWM is used with incompatible times
       
 IF ( ( p%IEC%IEC_WindType == IEC_EWM1 .OR. p%IEC%IEC_WindType == IEC_EWM50 .OR. p%IEC%IEC_WindType == IEC_EWM100) .AND. & 
       ABS( 600.0_ReKi - MAX(p%grid%AnalysisTime,p%grid%UsableTime) ) > 90.0_ReKi ) THEN
-   CALL SetErrStat( ErrID_Warn, 'The EWM parameters are valid for 10-min simulations only.', ErrStat, ErrMsg, 'TS_ValidateInput')   
+   CALL SetErrStat( ErrID_Warn, 'The EWM parameters are valid for 10-min simulations only.', ErrStat, ErrMsg, RoutineName)   
 ENDIF        
 
 
       ! Warn if Periodic is used with incompatible settings      
 IF ( p%grid%Periodic .AND. .NOT. EqualRealNos(p%grid%AnalysisTime, p%grid%UsableTime) ) THEN
-   CALL SetErrStat( ErrID_Warn, 'Periodic output files will not be generated when AnalysisTime /= UsableTime. Setting Periodic = .FALSE.', ErrStat, ErrMsg, 'TS_ValidateInput')  
+   CALL SetErrStat( ErrID_Warn, 'Periodic output files will not be generated when AnalysisTime /= UsableTime. Setting Periodic = .FALSE.', ErrStat, ErrMsg, RoutineName)  
    p%grid%Periodic = .FALSE.
 END IF
 
 
    ! Warn if tower points are output but grid is not:
 IF ( p%WrFile(FileExt_TWR) .AND. .NOT. ( p%WrFile(FileExt_WND) .OR. p%WrFile(FileExt_BTS)) ) THEN 
-   CALL SetErrStat( ErrID_Info, 'TurbSim .bts file will be generated to contain the tower points.', ErrStat, ErrMsg, 'TS_ValidateInput')  
+   CALL SetErrStat( ErrID_Info, 'TurbSim .bts file will be generated to contain the tower points.', ErrStat, ErrMsg, RoutineName)  
    p%WrFile(FileExt_BTS) = .TRUE.
 END IF
 
@@ -2124,7 +2133,7 @@ IF ( ANY (p%WrFile) )  THEN
 !      CALL OpenBOutFile ( UnOut, TRIM( p%RootName)//'.bin', ErrStat, ErrMsg )
       CALL OpenUOutfile ( UnOut , TRIM( p%RootName)//'.bin', ErrStat2, ErrMsg2 )  ! just making sure it can be opened (not locked elsewhere)
       CLOSE(UnOut)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bin (binary hub-height turbulence-parameter file)' )")  
 !      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bin (binary hub-height turbulence-parameter file)' )
@@ -2135,7 +2144,7 @@ IF ( ANY (p%WrFile) )  THEN
 
       CALL OpenFOutFile ( UnOut, TRIM( p%RootName)//'.dat', ErrStat2, ErrMsg2 ) ! just making sure it can be opened (not locked elsewhere)
       CLOSE( UnOut )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       
       WRITE (p%US, "( 3X ,'"//TRIM( p%RootName)//".dat (formatted turbulence-parameter file)' )")  
 !      CALL WrScr   (  '    '//TRIM( p%RootName)//'.dat (formatted turbulence-parameter file)' )
@@ -2146,7 +2155,7 @@ IF ( ANY (p%WrFile) )  THEN
 
       CALL OpenFOutFile ( UnOut, TRIM( p%RootName)//'.hh', ErrStat2, ErrMsg2 ) ! just making sure it can be opened (not locked elsewhere)
       CLOSE( UnOut )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".hh  (AeroDyn hub-height file)' )")
 !      CALL WrScr   ( '    '//TRIM( p%RootName)//'.hh  (AeroDyn hub-height file)' )
@@ -2157,7 +2166,7 @@ IF ( ANY (p%WrFile) )  THEN
 
       CALL OpenBOutFile ( UnOut, TRIM(p%RootName)//'.bts', ErrStat2, ErrMsg2 ) ! just making sure it can be opened (not locked elsewhere)
       CLOSE( UnOut )
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".bts (AeroDyn/TurbSim full-field wind file)' )")  
 !      CALL WrScr   ( '    '//TRIM( p%RootName)//'.bts (AeroDyn/TurbSim full-field wind file)' )
@@ -2168,7 +2177,7 @@ IF ( ANY (p%WrFile) )  THEN
 
       CALL OpenBOutFile ( UnOut, TRIM(p%RootName)//'.wnd', ErrStat2, ErrMsg2 ) ! just making sure it can be opened (not locked elsewhere)
       CLOSE(UnOut)
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".wnd (AeroDyn/BLADED full-field wnd file)' )")  
 !      CALL WrScr   ( '    '//TRIM( p%RootName)//'.wnd (AeroDyn/BLADED full-field wnd file)' )
@@ -2179,7 +2188,7 @@ IF ( ANY (p%WrFile) )  THEN
 
       CALL OpenBOutFile ( UnOut, TRIM( p%RootName )//'.twr', ErrStat2, ErrMsg2 ) ! just making sure it can be opened (not locked elsewhere)
       CLOSE(UnOut)       
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
 
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".twr (binary tower file)' )")  
 !      CALL WrScr   ( '    '//TRIM( p%RootName)//'.twr (binary tower file)' )
@@ -2189,7 +2198,7 @@ IF ( ANY (p%WrFile) )  THEN
    IF ( p%WrFile(FileExt_CTS) ) THEN      
       CALL OpenBOutFile ( UnOut, TRIM( p%RootName )//'.cts', ErrStat2, ErrMsg2 ) ! just making sure it can be opened (not locked elsewhere)
       CLOSE(UnOut)       
-      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, 'TS_ValidateInput')  
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)  
       
       
       WRITE (p%US,"( 3X ,'"//TRIM( p%RootName)//".cts (coherent turbulence time step file)' )")  
@@ -2208,7 +2217,7 @@ IF ( ANY (p%WrFile) )  THEN
    ENDIF
 
 ELSE
-   CALL SetErrStat( ErrID_Fatal, 'You have requested no output.', ErrStat, ErrMsg, 'TS_ValidateInput')   
+   CALL SetErrStat( ErrID_Fatal, 'You have requested no output.', ErrStat, ErrMsg, RoutineName)   
 ENDIF
 
    ! WARN if using a large grid and not creating ff output files
@@ -2216,7 +2225,7 @@ IF ( p%grid%NumGrid_Y*p%grid%NumGrid_Z > 250 ) THEN
    IF (.NOT. p%WrFile(FileExt_WND) .AND. .NOT. p%WrFile(FileExt_BTS) .AND. .NOT. p%WrFile(FileExt_UVW) ) THEN
    
       CALL SetErrStat( ErrID_Warn, 'You are using a large number of grid points but are not generating full-field output files.'//&
-            ' The simulation will run faster if you reduce the number of points on the grid.', ErrStat, ErrMsg, 'TS_ValidateInput') 
+            ' The simulation will run faster if you reduce the number of points on the grid.', ErrStat, ErrMsg, RoutineName) 
    END IF   
 END IF
 

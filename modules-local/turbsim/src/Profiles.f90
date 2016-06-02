@@ -270,7 +270,7 @@ SUBROUTINE getVelocityProfile(p, U_Ref, z_Ref, Ht, VelocityProfile, ErrStat, Err
             END DO
          
 
-     CASE ( 'API' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
+     CASE ( 'API' )
 
      ! sample to write to screen.CALL WrScr ( '    A default value will be used for '//TRIM(VarName)//'.' )
 !            CALL WrScr ('calling to API wind profile and write array')
@@ -610,7 +610,7 @@ SUBROUTINE getVelocity(p, U_Ref, z_Ref, Ht, Velocity, ErrStat, ErrMsg )
          Velocity =  getTimeSeriesWindSpeed(p, Ht)
  
          
-      CASE ( 'API' ) !Panofsky, H.A.; Dutton, J.A. (1984). Atmospheric Turbulence: Models and Methods for Engineering Applications. New York: Wiley-Interscience; 397 pp.
+      CASE ( 'API' ) 
 
 !MLB: We can exclude this logic by forcing the user to enter the 1-hour mean wind speed.
 !     If we add the API stuff to the main version of TurbSim, we may want to eliminate that requirement, but we will have to

@@ -139,11 +139,7 @@ CALL CheckError(ErrStat, ErrMsg)
 CALL AllocAry(U,     SIZE(p%grid%Z), 'u (steady, u-component winds)', ErrStat, ErrMsg )
 CALL CheckError(ErrStat, ErrMsg)
 
-IF ( p%met%WindProfileType(1:3) == 'API' )  THEN
-   CALL getVelocityProfile( p, p%met%URef, p%met%RefHt,  p%grid%Z, U, ErrStat, ErrMsg)
-ELSE 
-   CALL getVelocityProfile( p, p%UHub,     p%grid%HubHt, p%grid%Z, U, ErrStat, ErrMsg) 
-ENDIF
+CALL getVelocityProfile( p, p%UHub,     p%grid%HubHt, p%grid%Z, U, ErrStat, ErrMsg) 
 CALL CheckError(ErrStat, ErrMsg)
 
    ! Wind Direction:

@@ -125,6 +125,8 @@ END SUBROUTINE Spec_IECVKM
 !> This subroutine defines the API-BULLET-IN recommended extreme wind spectrum
 !! The use of this subroutine requires that all variables have the units of meters and seconds.
 !! See A.7.4 (Page 41) of API 2MET/ISO 19901-1:2005(E).
+!! See https://rules.dnvgl.com/docs/pdf/DNV/codes/docs/2010-10/RP-C205.pdf (page 20 of 124), describing the
+!! Frøya model spectral density proposed by Andersen and Løvseth (1992, 2006) for wind over water.
 SUBROUTINE Spec_API ( p, Ht, Spec )
 
    ! NOTE: This routine uses the Kaimal model to create the spectrum for all three components
@@ -143,10 +145,7 @@ IMPLICIT                NONE
 
       ! Internal variables
 
-REAL(ReKi),PARAMETER  :: N    =  0.468
-REAL(ReKi),PARAMETER  :: Exp2 = 2.0/3.0
-REAL(ReKi),PARAMETER  :: Exp3 = -0.75
-REAL(ReKi),PARAMETER  :: Exp4 = 0.45
+REAL(ReKi),PARAMETER  :: N    =  0.468 
 REAL(ReKi),PARAMETER  :: Exp5 = 5.0/( 3.0*N )
 !mlb REAL(ReKi),PARAMETER  :: Exp5 = 11.0/6.0
 REAL(ReKi),PARAMETER  :: Ref_Ht = 10.0
@@ -177,8 +176,8 @@ CALL Spec_IECKAI ( p%UHub, p%IEC%SigmaIEC, p%IEC%IntegralScale, p%grid%Freq, p%g
 
    ! Compute some parameters that are independent of frequency.
 
-Scale1 = 172.0*( Ht/Ref_Ht )**Exp2*( p%met%URef/Ref_WS )**Exp3
-Scale2 = 320.0*( p%met%URef/Ref_WS )**2*( Ht/Ref_Ht )**Exp4   !bjj: I'm not liking how URef and Ht are not necessarially defined at the same node (URef from input file, Ht from wherever)
+Scale1 = 172.0*( Ht/Ref_Ht )**(2.0/3.0) * ( p%met%URef/Ref_WS )*(-0.75)
+Scale2 = 320.0*( p%met%URef/Ref_WS )**2 * ( Ht/Ref_Ht )**0.45  
 
 DO I=1,p%grid%NumFreq
 

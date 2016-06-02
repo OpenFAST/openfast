@@ -2575,7 +2575,7 @@ SUBROUTINE WrSum_SpecModel(p, U, HWindDir, VWindDir, ErrStat, ErrMsg  )
 IF ( ( p%met%TurbModel_ID  == SpecModel_IECKAI ) .OR. &
      ( p%met%TurbModel_ID  == SpecModel_IECVKM ) .OR. &
      ( p%met%TurbModel_ID  == SpecModel_MODVKM ) .OR. &
-     ( p%met%TurbModel_ID  == SpecModel_API    ) )  THEN  ! ADDED BY YGUO on April 192013 snow day!!!
+     ( p%met%TurbModel_ID  == SpecModel_API    ) )  THEN  ! ADDED BY YGUO on April 19, 2013 snow day!!!
       
       
    IF ( p%IEC%NumTurbInp ) THEN
