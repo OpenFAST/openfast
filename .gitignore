@@ -1,35 +1,56 @@
-# Object files
+# Compiled Object files
+*.slo
+*.lo
 *.o
-*.ko
 *.obj
+*.ko
 *.elf
 
 # Precompiled Headers
 *.gch
 *.pch
 
-# Libraries
-*.lib
-*.a
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+*.so.*
+*.mexw32
+*.mexw64
+
+# Fortran module files
+*.mod
+
+# Compiled Static libraries
+*.lai
 *.la
+*.a
+*.lib
 *.lo
 
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
+# Debug files
+*.dSYM/
+*.pdb
+
+# Visual Studio Files
+*.exp
+*.mainfest
+*.suo
+*.sln
+*.u2d
+BuildLog.htm
 
 # Executables
 *.exe
-*.out
+*.app
 *.app
 *.i*86
 *.x86_64
 *.hex
 
-# Debug files
-*.dSYM/
+*.zip
+*.tar.gz
+*.tar
 
 # NWTC web developer
 /ArcFiles.txt
