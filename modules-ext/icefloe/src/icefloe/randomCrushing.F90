@@ -17,12 +17,6 @@
 ! limitations under the License.
 !************************************************************************
 
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
-
 !  Module to calculate a time series of random loads due to continuous ice crushing
 !  
 !  Based on a spectral method from:

@@ -17,12 +17,6 @@
 ! limitations under the License.
 !************************************************************************
 
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************!
-
 !*****************************************************************************************
 !  Special type of loading due to ice sheet flexural failure using the Ralston method
 !  Ralston, T, "Ice Force Design Considerations for Conical Offshore Structures", POAC, 1977

@@ -17,12 +17,6 @@
 ! limitations under the License.
 !************************************************************************
 
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************!
- 
 !  Module for calculations of loads induced by ice crushing against vertical surfaces
 !  As suggested in IEC 61400-3, Ed 1 Annex E
 !  This is effectively a lock in condition where the ice loads are 

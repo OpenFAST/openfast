@@ -17,12 +17,6 @@
 ! limitations under the License.
 !************************************************************************
 
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************
-
 !****************************************************************
 !  Special type of flexural failure using the Croasdale method
 !  Croasdale, K.R. and Cammaert A.B.  "An Improved Method for the Calculation of Ice Loads on Sloping Structures ..."

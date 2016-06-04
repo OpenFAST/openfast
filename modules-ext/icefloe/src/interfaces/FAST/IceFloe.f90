@@ -19,12 +19,6 @@
 ! modified 8-Jan-2016 by B. Jonkman, NREL to conform to changes in FAST Modularization framework (added MiscVars)
 
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************!
-
-!**********************************************************************************************************************************
 !>    IceFloe is a set of routines that calculate ice floe loading on structures and is developed for
 !!    use with wind turbine aeroelastic simulation codes.
 !!

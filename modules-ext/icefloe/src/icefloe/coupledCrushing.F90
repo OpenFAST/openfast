@@ -17,12 +17,6 @@
 ! limitations under the License.
 !************************************************************************
 
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************!
- 
 !  Module for calculations of loads induced by ice crushing against vertical surfaces
 !  Using a coupled model from Maattanen, M. (1998) "Numerical Model for Ice Induced 
 !     vibration load lock-in and Synchronization".  Proceedings of the 14th Int. Symp.

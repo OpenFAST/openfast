@@ -16,12 +16,6 @@
 ! See the License for the specific language governing permissions and
 ! limitations under the License.
 !************************************************************************
-
-!**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!**********************************************************************************************************************************!
  
 !  Module for common calculations of loads induced by ice crushing against vertical surfaces
 !  Using the method in ISO 19906:2010, section A.8.2.4.3.3
