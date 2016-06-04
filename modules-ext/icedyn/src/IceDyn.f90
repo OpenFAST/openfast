@@ -1,10 +1,6 @@
 !**********************************************************************************************************************************
-! File last committed: $Date$
-! (File) Revision #: $Rev$
-! URL: $HeadURL$
-!..................................................................................................................................
 ! LICENSING
-! Copyright (C) 2013-2016  National Renewable Energy Laboratory
+! Copyright (C) 2013-2016  Univeristy of Michigan and National Renewable Energy Laboratory 
 !
 !    This file is part of module IceDyn.
 !
