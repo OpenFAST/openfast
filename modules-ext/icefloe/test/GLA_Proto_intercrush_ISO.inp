@@ -1,0 +1,39 @@
+! Ice intermittent crushing per ISO test case for IceFloe
+!
+!  Model selection and general inputs
+!
+timeStep           0.1
+rampTime           1.0
+duration           600.0
+randomSeed         123
+!
+!  General ice property inputs
+!
+iceThickness       1.0
+iceVelocity        0.2
+iceDirection       0.0
+refIceStrength     2200000.0
+flexStrength       700000.0
+iceModulus         8000000000.0
+iceDensity         916.2
+waterDensity       999.8
+!
+!  Tower configuration inputs
+!
+numLegs            1.0
+towerDiameter      5.0
+towerFrequency     0.33
+towerConeAngle     60.0
+rubbleHeight       3.0
+twrConeTopDiam     1.5
+singleLoad         1
+shelterFactor_ks   0.0
+!
+!  Inputs for intermittent crushing
+!
+iceType            2
+refIceThick        1.0
+staticExponent     -0.16
+interPeriod        6.0
+riseTime           0.5
+fallTime           0.15

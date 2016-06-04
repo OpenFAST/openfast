@@ -1,0 +1,25 @@
+ Running: IceFloeConsole, v1.00.00, December-2013
+ This run started on: 28-Oct-2014 at 14:26:30
+
+ Input file read complete.
+
+ Load time series duration = 600 sec
+
+ Setting common ice flow input parameters
+ Ice type = 4
+ Ice thickness = 1 meters
+ Ice velocity = 0.2 m/s
+ Ice direction = 0 degrees
+ Time step = 0.1 sec
+ Tower diameter = 5 meters
+ Random seed = 123
+
+ Setting parameters for crushing on vertical surfaces by IEC/Korzhavin method
+ Reference ice strength = 2.20000E+06 Pascals
+ Static load shape factor = 0.9
+ Static load contact factor = 0.5
+ Tower fundamental frequency = 0.33 Hz
+** Global crushing load is: 7.00036E+06 Newtons.
+
+ Ice crushing loads IEC/Korzhavin initialized
+

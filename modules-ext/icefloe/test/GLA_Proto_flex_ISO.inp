@@ -1,0 +1,58 @@
+! Ice flexural failure per ISO test case for IceFloe
+!
+!  Model selection and general inputs
+!
+timeStep           0.10
+rampTime           1.0
+duration           600.0
+randomSeed         123
+!
+!  General ice property inputs
+!
+iceThickness       1.0
+iceVelocity        0.2
+iceDirection       0.0
+refIceStrength     2200000.0
+flexStrength       700000.0
+iceModulus         8000000000.0
+iceDensity         916.2
+waterDensity       999.8
+!
+!  Tower configuration inputs
+!
+numLegs            1.0
+towerDiameter      5.0
+towerFrequency     0.33
+towerConeAngle     60.0
+rubbleHeight       3.0
+twrConeTopDiam     1.5
+singleLoad         1
+shelterFactor_ks   0.0
+!
+!  Inputs common to loading by ice flexural failure
+!
+ice2twrFriction    0.15
+includeHb          1
+includeHr          1
+!
+!  Inputs for ice flexural failure via ISO method (Croasdale)
+!
+iceType            6
+rubblePorosity     0.30
+rubbleCohesion     0.00
+rubbleAngle        40.0
+frictionAngle      45.0
+ice2iceFriction    0.05
+poissonRatio       0.30
+peakLoadCOV        0.20
+coeffLoadPeaks     0.56
+coeffLoadMin       0.10
+periodCOV          0.50
+tauMin             0.60
+tauMax             0.60
+riseTime           0.80
+coeffBreakLength   4.00
+includeHp          1
+includeHl          1
+includeHt          1
+includeLc          1
