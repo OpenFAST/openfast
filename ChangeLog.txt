@@ -705,3 +705,48 @@ v1.07.00a-bjj 9-Jul-2014 B. Jonkman
 
 v1.08.00c-mlb M Buhl, Y. Gao
 added API spectral model
+
+-------------------
+v2.00.06a-bjj  B Jonkman, 6-Jun-2016
+-------------------
+
+Code Restructuring:
+---
+* Reorganized the code base
+* Removed global variables
+* Linked with NWTC Library v2.0
+   * Replaced LAPACK routine(s) with netlib prebuilt library
+   * Replaced fftpack/FFTMod with netlib routines in nwtc_library
+* Added test cases for previously undocumented features:
+   * user-defined spectra
+   * user-defined scaling with von Karman model
+   * user-defined shear
+* Changed the grid indexing to allow user-defined points to lie on regularally-spaced grid points. TIDAL and RIVER models
+  calculate the finite difference (du/dz) differently. It results in differences around the order of 10^-3
+* Added a VisualStudio project file for compiling on Windows
+* added makefile for gfortran
+
+
+New Features:
+---
+* Added "UserINputFile", "ProfileFile", and "Echo" to primary input file
+* Added "IimeSr" model and ability to read user time-series input files
+* added Matlab function (writeTurbSimTimeSeriesInput.m) to write user-input time series files in TurbSim format.
+* Added a warning if only hub-height files are requested but TurbSim is still generating a lot of points. (I chose 250 as "large")
+* Added ability to specify coherence models for each wind component individually.
+* Documented API model; Note that users must currently input the 1-hr mean wind speed at 10 meters for this to work as expected.
+
+
+Functionality Changes:
+---
+* changed TWR output files:
+   1. if both WND and BTS files are requested, TWR will be output (previously wasn't; was only contained in BTS).
+   2. if TWR is requested but neither WND or BTS are requested, BTS will also be generated.
+* I took out the requirements that the number of steps be at least 8 and be a multiple of 4. Now we just need more than 1 (1 probably would work,
+  too, but I didn't want to mess with the binary files that interpolate). I'm not exactly sure why the requirement was there in the first place,
+  but I think it had something to do with the IFFT routine that we replaced it years ago.
+* Hub interpolation statistics are now always interpolated even if the hub is on a grid point.
+* TurbSim will read non-IEC boundary conditions even if an IEC model is used (though the variables aren't used)
+* fixed bug reported by Ashenafi.Araya on forums: https://wind.nrel.gov/forum/wind/viewtopic.php?f=4&t=1547#p7076 (unstable log profile had wrong sign for PsiM)
+
+

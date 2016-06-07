@@ -20,7 +20,7 @@ Source\dependencies\NWTC_Library\*
 Source\dependencies\RNG\*
 
 compiling\VisualStudio\TurbSim.vfproj
-compiling\Build.bat
+compiling\makefile
 
 ExampleFiles\TurbSim.inp
 ExampleFiles\TurbSim_Hydro.inp
