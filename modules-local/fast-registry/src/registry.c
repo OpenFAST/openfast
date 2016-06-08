@@ -58,7 +58,7 @@ main( int argc, char *argv[], char *env[] )
   fprintf(stderr,"----- %s --------------\n", thisprog_ver) ;
 //  fprintf(stderr,"Revision $Rev$\n") ;
 //  fprintf(stderr,"Date $LastChangedDate$ \n" ) ;
-  fprintf(stderr,"URL  $URL$\n" ) ;
+//  fprintf(stderr,"URL  $URL$\n" ) ;
   fprintf(stderr,"----------------------------------------------------------\n") ;
 
   sym_forget() ;
