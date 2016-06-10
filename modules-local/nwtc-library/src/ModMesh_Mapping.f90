@@ -719,7 +719,7 @@ SUBROUTINE Linearize_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDis
       call move_alloc( MeshMap%dM%m_f,  M_SL_fm )    
       call move_alloc( MeshMap%dM%li,   M_SL_li )    
          
-! ^^^ size of M_SL_i (as well as M_SL_um and M_SL_fm) is 3*MeshMap%Augmented_Ln2_Src%NNodes X 3*MeshMap%Augmented_Ln2_Src%NNodes         
+! ^^^ size of M_SL_i (as well as M_SL_uSm and M_SL_fm) is 3*MeshMap%Augmented_Ln2_Src%NNodes X 3*MeshMap%Augmented_Ln2_Src%NNodes         
 
       !>   3. Get the matrices that transfer point meshes to other point meshes.
       ! we already checked if SrcDisp is present and transferred the displacements to MeshMap%Augmented_Ln2_Src
@@ -837,6 +837,391 @@ subroutine FormMatrix_FullLinearization( dM, M_A, M_SL_fm, M_SL_uSm, M_SL_li, Er
       
 end subroutine FormMatrix_FullLinearization
 !----------------------------------------------------------------------------------------------------------------------------------
+#ifdef __NEW_LINE2_TO_POINT_MOTION_TRANSFER
+!!!! 2-Jun-2016: bjj: this new Transfer_Motions_Line2_to_Point routine doesn't seem to give any better results than the old one;
+!!!! it's more computationally expensive so we'll keep the old one.
+!!!
+!!!!> This subroutine returns an interpolated value of the source orientation, computed by
+!!!!! \f$\ RotationMatrix =  
+!!!!! \Lambda\left( \sum\limits_{i=1}^{2} \log\left( \left[\theta^{SR}_{eSn_i}\right]^T \right) \phi_i \right)
+!!!!! \Lambda\left( \sum\limits_{i=1}^{2} \log\left( \theta^S_{eSn_i}                   \right) \phi_i \right)
+!!!!! \f$
+!!!!! where \f$\log()\f$ is nwtc_num::dcm_logmap and \f$\Lambda()\f$ is nwtc_num::dcm_exp
+!!!subroutine InterpSrcOrientation(i, Src, MeshMap, RotationMatrixD, ErrStat, ErrMsg) 
+!!!
+!!!   INTEGER(IntKi),                 INTENT(IN   )  :: i         !< current destination node
+!!!   TYPE(MeshType),                 INTENT(IN   )  :: Src       !< The source (Line2) mesh with motion fields allocated
+!!!
+!!!   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   !< The mapping data
+!!!   REAL(DbKi),                     INTENT(  OUT)  :: RotationMatrixD(3,3) !< interpolated value of MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n) ), Src%Orientation(:,:,n) )
+!!!
+!!!   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   !< Error status of the operation
+!!!   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+!!!
+!!!
+!!!   REAL(DbKi)                                     :: FieldValue(3,2)                ! Temporary variable to store values for DCM interpolation
+!!!   REAL(DbKi)                                     :: RotationMatrixDS(3,3)
+!!!   REAL(DbKi)                                     :: tensor_interp(3)
+!!!   INTEGER(IntKi)                                 :: n, n1, n2                      ! temporary space for node numbers
+!!!
+!!!   ErrStat = ErrID_None
+!!!   ErrMsg  = ""
+!!!
+!!!   n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
+!!!   n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
+!!!   
+!!!   
+!!!      ! bjj: because of numerical issues when the angle of rotation is pi, (where 
+!!!      ! DCM_exp( DCM_logmap (x) ) isn't quite x
+!!!   if ( EqualRealNos( MeshMap%MapMotions(i)%shape_fn(1), 1.0_ReKi ) ) then
+!!!      RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n1) ), Src%Orientation(:,:,n1) )
+!!!
+!!!   elseif ( EqualRealNos( MeshMap%MapMotions(i)%shape_fn(2), 1.0_ReKi ) ) then
+!!!      RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n2) ), Src%Orientation(:,:,n2) )
+!!!
+!!!   else
+!!!         
+!!!         !.........
+!!!         ! interpolate reference orientation (bjj: could be optimized to not do this every step!)
+!!!      do n1=1,NumNodes(ELEMENT_LINE2)
+!!!         n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+!!!               
+!!!         RotationMatrixD = TRANSPOSE( Src%RefOrientation(:,:,n) )
+!!!         CALL DCM_logmap( RotationMatrixD, FieldValue(:,n1), ErrStat, ErrMsg )                  
+!!!            IF (ErrStat >= AbortErrLev) RETURN            
+!!!      end do
+!!!            
+!!!      CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary         
+!!!         
+!!!         ! interpolate tensors: 
+!!!      tensor_interp =   MeshMap%MapMotions(i)%shape_fn(1)*FieldValue(:,1)  &
+!!!                      + MeshMap%MapMotions(i)%shape_fn(2)*FieldValue(:,2)                
+!!!            
+!!!         ! convert back to DCM for transpose (Src%RefOrientation):
+!!!      RotationMatrixD = DCM_exp( tensor_interp )
+!!!         
+!!!      
+!!!         !.........
+!!!         ! interpolate Src%Orientation
+!!!      do n1=1,NumNodes(ELEMENT_LINE2)
+!!!         n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+!!!               
+!!!         RotationMatrixDS = Src%Orientation(:,:,n)    ! possible change of precision
+!!!         CALL DCM_logmap( RotationMatrixDS, FieldValue(:,n1), ErrStat, ErrMsg )                  
+!!!            IF (ErrStat >= AbortErrLev) RETURN
+!!!      end do
+!!!            
+!!!      CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary         
+!!!         
+!!!         ! interpolate tensors: 
+!!!      tensor_interp =   MeshMap%MapMotions(i)%shape_fn(1)*FieldValue(:,1)  &
+!!!                      + MeshMap%MapMotions(i)%shape_fn(2)*FieldValue(:,2)                
+!!!            
+!!!         ! convert back to DCM for transpose (Src%RefOrientation):
+!!!      RotationMatrixDS = DCM_exp( tensor_interp )            
+!!!
+!!!         ! multiply so we have matmul( transpose(Src%RefOrientation), transpose(Src%Orientation) )
+!!!      RotationMatrixD = matmul( RotationMatrixD, RotationMatrixDS )                   
+!!!      
+!!!   end if  
+!!!
+!!!end subroutine InterpSrcOrientation
+!!!!----------------------------------------------------------------------------------------------------------------------------------
+!!!!> Given a mapping, this routine transfers the motions from nodes on Line2 elements to nodes on another mesh.
+!!!SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg )
+!!!
+!!!   TYPE(MeshType),                 INTENT(IN   )  :: Src       !< The source (Line2) mesh with motion fields allocated
+!!!   TYPE(MeshType),                 INTENT(INOUT)  :: Dest      !< The destination mesh
+!!!
+!!!   TYPE(MeshMapType),              INTENT(INOUT)  :: MeshMap   !< The mapping data
+!!!
+!!!   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat   !< Error status of the operation
+!!!   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg    !< Error message if ErrStat /= ErrID_None
+!!!
+!!!      ! local variables
+!!!   INTEGER(IntKi)            :: i , j                          ! counter over the nodes
+!!!   INTEGER(IntKi)            :: n, n1                          ! temporary space for node numbers
+!!!   REAL(ReKi)                :: TmpVec(3), TmpVec2(3)
+!!!   REAL(R8Ki)                :: RotationMatrix(3,3)
+!!!
+!!!   REAL(DbKi)                :: FieldValue(3,2)                ! Temporary variable to store values for DCM interpolation
+!!!   REAL(DbKi)                :: RotationMatrixD(3,3)
+!!!   
+!!!
+!!!   ErrStat = ErrID_None
+!!!   ErrMsg  = ""
+!!!
+!!!  !> Define \f$ \phi_1 = 1-\bar{l}^S \f$  and 
+!!!  !!        \f$ \phi_2 =   \bar{l}^S \f$.
+!!!
+!!!   
+!!!   
+!!!      ! ---------------------------- ORIENTATION/Direction Cosine Matrix   ----------------------
+!!!      !> Orientation: \f$\theta^D = \theta^{DR} 
+!!!      !! \Lambda\left( \sum\limits_{i=1}^{2} \log\left( \left[\theta^{SR}_{eSn_i}\right]^T \right) \phi_i \right)
+!!!      !! \Lambda\left( \sum\limits_{i=1}^{2} \log\left( \theta^S_{eSn_i}                   \right) \phi_i \right)
+!!!      !! \f$
+!!!      !! where \f$\log()\f$ is nwtc_num::dcm_logmap and \f$\Lambda()\f$ is nwtc_num::dcm_exp
+!!!      
+!!!      ! transfer direction cosine matrix, aka orientation
+!!!   if ( Src%FieldMask(MASKID_Orientation) .AND. Dest%FieldMask(MASKID_Orientation) ) then
+!!!
+!!!      do i=1, Dest%Nnodes
+!!!         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+!!!
+!!!         call InterpSrcOrientation(i, Src, MeshMap, RotationMatrixD, ErrStat, ErrMsg)
+!!!            if (ErrStat >= AbortErrLev) return
+!!!            
+!!!      CALL DCM_logmap( RotationMatrixD, FieldValue(:,1), ErrStat, ErrMsg )                  
+!!!            
+!!!         RotationMatrix = REAL( RotationMatrixD, R8Ki )
+!!!         Dest%Orientation(:,:,i) = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrix  )
+!!!
+!!!         RotationMatrixD = Dest%RefOrientation(:,:,i)
+!!!      CALL DCM_logmap( RotationMatrixD, FieldValue(:,2), ErrStat, ErrMsg )                  
+!!!         
+!!!      end do
+!!!
+!!!   endif   
+!!!   
+!!!             
+!!!      ! ---------------------------- Translation ------------------------------------------------
+!!!      !> Translational Displacement: \f$\vec{u}^D = 
+!!!      !!   \sum\limits_{i=1}^{2}\left( \vec{u}^S_{eSn_i} \phi_i \right) +
+!!!      !! \left[
+!!!      !! \Lambda\left( \sum\limits_{i=1}^{2} \log\left( \left[\theta^{S}_{eSn_i}\right]^T \right) \phi_i \right)
+!!!      !! \Lambda\left( \sum\limits_{i=1}^{2} \log\left(       \theta^{SR}_{eSn_i}         \right) \phi_i \right)
+!!!      !!  - I \right]
+!!!      !! \left\{ \vec{p}^{ODR}-
+!!!      !!   \sum\limits_{i=1}^{2}\left( \vec{p}^{OSR}_{eSn_i} \phi_i \right) 
+!!!      !! \right\}
+!!!      !! \f$
+!!!
+!!!   if ( Src%FieldMask(MASKID_TranslationDisp) .AND. Dest%FieldMask(MASKID_TranslationDisp) ) then
+!!!      do i=1, Dest%Nnodes
+!!!         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+!!!                                                               
+!!!         Dest%TranslationDisp(:,i) = 0.0_ReKi
+!!!         do n1=1,NumNodes(ELEMENT_LINE2)
+!!!            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+!!!         
+!!!            Dest%TranslationDisp(:,i) = Dest%TranslationDisp(:,i) + MeshMap%MapMotions(i)%shape_fn(n1)*Src%TranslationDisp(:,n)
+!!!         end do
+!!!                           
+!!!         
+!!!            ! if Src mesh has orientation, superpose Dest displacement with translation due to rotation and couple arm
+!!!         if ( Src%FieldMask(MASKID_Orientation) ) then
+!!!
+!!!               ! Calculate RotationMatrix as O_S^T*O_SR
+!!!            call InterpSrcOrientation(i, Src, MeshMap, RotationMatrixD, ErrStat, ErrMsg)
+!!!               if (ErrStat >= AbortErrLev) return
+!!!            RotationMatrix = transpose( RotationMatrixD )               
+!!!            
+!!!               ! subtract I
+!!!            do j=1,3
+!!!               RotationMatrix(j,j)= RotationMatrix(j,j) - 1.0_ReKi
+!!!            end do
+!!!
+!!!               ! multiply by p_DR - p_SR
+!!!            
+!!!            do n1=1,NumNodes(ELEMENT_LINE2)
+!!!               n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+!!!         
+!!!               FieldValue(:,n1) = MeshMap%MapMotions(i)%shape_fn(n1) * Src%Position(:,n)
+!!!            end do
+!!!            TmpVec = Dest%Position(:,i) - sum(FieldValue,2)
+!!!            Dest%TranslationDisp(:,i) = Dest%TranslationDisp(:,i) + matmul( RotationMatrix, TmpVec )
+!!!            
+!!!         end if
+!!!         
+!!!      end do
+!!!
+!!!   end if
+!!!
+!!!
+!!!
+!!!      ! ---------------------------- Calculated total displaced positions  ---------------------
+!!!      ! these values are used in both the translational velocity and translational acceleration
+!!!      ! calculations. The calculations rely on the TranslationDisp fields, which are calculated
+!!!      ! earlier in this routine.
+!!!   IF ( Src%FieldMask(MASKID_TranslationVel) .OR. Src%FieldMask(MASKID_TranslationAcc) ) THEN
+!!!      DO i = 1,Dest%Nnodes
+!!!         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+!!!      
+!!!         do n1=1,NumNodes(ELEMENT_LINE2)
+!!!            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+!!!         
+!!!            FieldValue(:,n1) = MeshMap%MapMotions(i)%shape_fn(n1) * ( Src%Position(:,n) + Src%TranslationDisp(:,n) )
+!!!         end do         
+!!!         TmpVec    = sum(FieldValue,2)
+!!!         MeshMap%DisplacedPosition(:,i,1) = TmpVec - Dest%Position(:,i) - Dest%TranslationDisp(:,i)
+!!!         
+!!!      END DO   
+!!!   END IF
+!!!   
+!!!      ! ---------------------------- TranslationVel  --------------------------------------------
+!!!      !> Translational Velocity: \f$\vec{v}^D = 
+!!!      !!   \sum\limits_{i=1}^{2}\left( \vec{v}^S_{eSn_i} \phi_i \right)
+!!!      !! + \left\{
+!!!      !! \sum\limits_{i=1}^{2}\left( \left\{ \vec{p}^{OSR}_{eSn_i} + \vec{u}^S_{eSn_i} \right\} \phi_i \right)
+!!!      !!                           - \left\{ \vec{p}^{ODR}         + \vec{u}^D \right\} 
+!!!      !! \right\} \times 
+!!!      !! \sum\limits_{i=1}^{2} \left( \vec{\omega}^S_{eSn_i} \phi_i \right)
+!!!      !! \f$
+!!!   
+!!!   
+!!!   if ( Src%FieldMask(MASKID_TranslationVel) .AND. Dest%FieldMask(MASKID_TranslationVel) ) then
+!!!      do i=1, Dest%Nnodes
+!!!         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+!!!
+!!!         Dest%TranslationVel(:,i) = 0.0_ReKi
+!!!         do n1=1,NumNodes(ELEMENT_LINE2)
+!!!            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+!!!         
+!!!            Dest%TranslationVel(:,i) = Dest%TranslationVel(:,i) + MeshMap%MapMotions(i)%shape_fn(n1)*Src%TranslationVel(:,n)
+!!!         end do
+!!!                  
+!!!                  
+!!!         if ( Src%FieldMask(MASKID_RotationVel) ) then
+!!!            
+!!!            do n1=1,NumNodes(ELEMENT_LINE2)
+!!!               n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+!!!         
+!!!               FieldValue(:,n1) = MeshMap%MapMotions(i)%shape_fn(n1)*Src%RotationVel(:,n)
+!!!            end do         
+!!!            TmpVec = sum(FieldValue,2)
+!!!            
+!!!            Dest%TranslationVel(:,i) = Dest%TranslationVel(:,i) + cross_product( MeshMap%DisplacedPosition(:,i,1) , TmpVec)
+!!!                        
+!!!         endif
+!!!
+!!!      end do
+!!!
+!!!   endif
+!!!
+!!!      ! ---------------------------- RotationVel  -----------------------------------------------
+!!!      !> Rotational Velocity: \f$\vec{\omega}^D = \sum\limits_{i=1}^{2} 
+!!!      !!              \vec{\omega}^S_{eSn_i} 
+!!!      !!              \phi_i\f$
+!!!
+!!!   
+!!!   if ( Src%FieldMask(MASKID_RotationVel) .AND. Dest%FieldMask(MASKID_RotationVel) ) then
+!!!      do i=1, Dest%Nnodes
+!!!         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+!!!                                                                        
+!!!         Dest%RotationVel(:,i) = 0.0_ReKi
+!!!         do n1=1,NumNodes(ELEMENT_LINE2)
+!!!            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+!!!         
+!!!            Dest%RotationVel(:,i) = Dest%RotationVel(:,i) + MeshMap%MapMotions(i)%shape_fn(n1)*Src%RotationVel(:,n)
+!!!         end do
+!!!      end do
+!!!
+!!!   end if
+!!!
+!!!      ! ---------------------------- TranslationAcc -----------------------------------------------
+!!!      !> Translational Acceleration: \f$\vec{a}^D = 
+!!!      !!   \sum\limits_{i=1}^{2}\left( \vec{a}^S_{eSn_i} \phi_i \right)
+!!!      !! + \left\{
+!!!      !! \sum\limits_{i=1}^{2}\left( \left\{ \vec{p}^{OSR}_{eSn_i} + \vec{u}^S_{eSn_i} \right\} \phi_i \right)
+!!!      !!                           - \left\{ \vec{p}^{ODR}         + \vec{u}^D \right\} 
+!!!      !! \right\} \times 
+!!!      !!    \left(  \sum\limits_{i=1}^{2}\left( \vec{\alpha}^S_{eSn_i} \phi_i \right) \right)
+!!!      !! +  \left(  \sum\limits_{i=1}^{2}\left( \vec{\omega}^S_{eSn_i} \phi_i \right) \right) 
+!!!      !! \times \left\{  \left\{ 
+!!!      !! \sum\limits_{i=1}^{2}\left( \left\{ \vec{p}^{OSR}_{eSn_i} + \vec{u}^S_{eSn_i} \right\} \phi_i \right)
+!!!      !!                           - \left\{ \vec{p}^{ODR}         + \vec{u}^D \right\} 
+!!!      !! \right\} \times 
+!!!      !! \left(  \sum\limits_{i=1}^{2}\left( \vec{\omega}^S_{eSn_i} \phi_i \right) \right) 
+!!!      !! \right\}
+!!!      !! \f$
+!!!
+!!!         
+!!!   if ( Src%FieldMask(MASKID_TranslationAcc) .AND. Dest%FieldMask(MASKID_TranslationAcc) ) then
+!!!      do i=1, Dest%Nnodes
+!!!         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+!!!
+!!!
+!!!         Dest%TranslationAcc(:,i) = 0.0_ReKi
+!!!         do n1=1,NumNodes(ELEMENT_LINE2)
+!!!            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+!!!         
+!!!            Dest%TranslationAcc(:,i) = Dest%TranslationAcc(:,i) + MeshMap%MapMotions(i)%shape_fn(n1)*Src%TranslationAcc(:,n)
+!!!         end do
+!!!         
+!!!         if ( Src%FieldMask(MASKID_RotationAcc) )  then
+!!!                        
+!!!            do n1=1,NumNodes(ELEMENT_LINE2)
+!!!               n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+!!!         
+!!!               FieldValue(:,n1) = MeshMap%MapMotions(i)%shape_fn(n1)*Src%RotationAcc(:,n)
+!!!            end do         
+!!!            TmpVec = sum(FieldValue,2)
+!!!            
+!!!            Dest%TranslationAcc(:,i) = Dest%TranslationAcc(:,i) + cross_product( MeshMap%DisplacedPosition(:,i,1) , TmpVec)
+!!!         end if
+!!!         
+!!!         if ( Src%FieldMask(MASKID_RotationVel) )  then
+!!!            
+!!!            do n1=1,NumNodes(ELEMENT_LINE2)
+!!!               n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+!!!         
+!!!               FieldValue(:,n1) = MeshMap%MapMotions(i)%shape_fn(n1)*Src%RotationVel(:,n)
+!!!            end do         
+!!!            TmpVec = sum(FieldValue,2) ! omega
+!!!                                    
+!!!            TmpVec2 = cross_product( MeshMap%DisplacedPosition(:,i,1), TmpVec )
+!!!            
+!!!            Dest%TranslationAcc(:,i) = Dest%TranslationAcc(:,i) + cross_product( TmpVec, TmpVec2)
+!!!                                           
+!!!         endif
+!!!
+!!!      end do
+!!!   endif
+!!!
+!!!
+!!!      ! ---------------------------- RotationAcc  -----------------------------------------------
+!!!      !> Rotational Acceleration: \f$\vec{\alpha}^D = \sum\limits_{i=1}^{2} 
+!!!      !!              \vec{\alpha}^S_{eSn_i} 
+!!!      !!              \phi_i\f$
+!!!
+!!!   if (Src%FieldMask(MASKID_RotationAcc) .AND. Dest%FieldMask(MASKID_RotationAcc) ) then
+!!!      do i=1, Dest%Nnodes
+!!!         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+!!!
+!!!         Dest%RotationAcc(:,i) = 0.0_ReKi
+!!!         do n1=1,NumNodes(ELEMENT_LINE2)
+!!!            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+!!!         
+!!!            Dest%RotationAcc(:,i) = Dest%RotationAcc(:,i) + MeshMap%MapMotions(i)%shape_fn(n1)*Src%RotationAcc(:,n)
+!!!         end do         
+!!!         
+!!!      end do
+!!!   end if
+!!!
+!!!      ! ---------------------------- Scalars  -----------------------------------------------
+!!!      !> Scalar: \f$S^D = \sum\limits_{i=1}^{2} 
+!!!      !!              S^S_{eSn_i} 
+!!!      !!              \phi_i\f$
+!!!
+!!!   if (Src%FieldMask(MASKID_SCALAR) .AND. Dest%FieldMask(MASKID_SCALAR) ) then
+!!!      do i=1, Dest%Nnodes
+!!!         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+!!!
+!!!         Dest%Scalars(:,i) = 0.0_ReKi
+!!!         do n1=1,NumNodes(ELEMENT_LINE2)
+!!!            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+!!!         
+!!!            Dest%Scalars(:,i) = Dest%Scalars(:,i) + MeshMap%MapMotions(i)%shape_fn(n1)*Src%Scalars(:,n)
+!!!         end do
+!!!                  
+!!!      end do
+!!!   end if
+!!!
+!!!
+!!!END SUBROUTINE Transfer_Motions_Line2_to_Point
+!!!!----------------------------------------------------------------------------------------------------------------------------------
+#else
 !> Given a mapping, this routine transfers the motions from nodes on Line2 elements to nodes on another mesh.
 SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg )
 
@@ -850,6 +1235,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
       ! local variables
    INTEGER(IntKi)            :: i , j                          ! counter over the nodes
+   INTEGER(IntKi)            :: k                              ! counter components
    INTEGER(IntKi)            :: n, n1, n2                      ! temporary space for node numbers
    REAL(R8Ki)                :: FieldValueN1(3)                ! Temporary variable to store field values on element nodes
    REAL(R8Ki)                :: FieldValueN2(3)                ! Temporary variable to store field values on element nodes
@@ -880,48 +1266,40 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
       ! u_Dest = (1.-elem_position)*u_Dest1 + elem_position*u_Dest2
    if ( Src%FieldMask(MASKID_TranslationDisp) .AND. Dest%FieldMask(MASKID_TranslationDisp) ) then
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
-                                                               
-         n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
-         n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
-
-         FieldValueN1 = Src%TranslationDisp(:,n1)
-         FieldValueN2 = Src%TranslationDisp(:,n2)
+            ! add the translation displacement portion part
+         do j=1,NumNodes(ELEMENT_LINE2) ! number of nodes per line2 element
+            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(j)
+         
+            FieldValue(:,j) = Src%TranslationDisp(:,n)
+         end do
+            
 
             ! if Src mesh has orientation, superpose Dest displacement with translation due to rotation and couple arm
-         IF ( Src%FieldMask(MASKID_Orientation) ) THEN
+         if ( Src%FieldMask(MASKID_Orientation) ) then
 
-            ! augment translation on node n1:
-            
-               !Calculate RotationMatrix as O_S^T*O_SR
-            RotationMatrix = TRANSPOSE( Src%Orientation(:,:,n1 ) )
-            RotationMatrix = MATMUL( RotationMatrix, Src%RefOrientation(:,:,n1) )
+            do j=1,NumNodes(ELEMENT_LINE2) ! number of nodes per line2 element
+               n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(j)
+         
+                  !Calculate RotationMatrix as O_S^T*O_SR
+               RotationMatrix = TRANSPOSE( Src%Orientation(:,:,n ) )
+               RotationMatrix = MATMUL( RotationMatrix, Src%RefOrientation(:,:,n) )
 
-               ! subtract I
-            do j=1,3
-               RotationMatrix(j,j)= RotationMatrix(j,j) - 1.0_ReKi
+                  ! subtract I
+               do k=1,3
+                  RotationMatrix(k,k)= RotationMatrix(k,k) - 1.0_ReKi
+               end do
+               
+               FieldValue(:,j) = FieldValue(:,j) + MATMUL(RotationMatrix,(Dest%Position(:,i)-Src%Position(:,n)))
+                              
             end do
-
-            FieldValueN1 = FieldValueN1 + MATMUL(RotationMatrix,(Dest%Position(:,i)-Src%Position(:,n1)))
-            
-            ! augment translation on node n2:
-            
-               !Calculate RotationMatrix as O_S^T*O_SR
-            RotationMatrix = TRANSPOSE( Src%Orientation(:,:,n2 ) )
-            RotationMatrix = MATMUL( RotationMatrix, Src%RefOrientation(:,:,n2) )
-
-               ! subtract I
-            do j=1,3
-               RotationMatrix(j,j)= RotationMatrix(j,j) - 1.0_ReKi
-            end do
-
-            FieldValueN2 = FieldValueN2 + MATMUL(RotationMatrix,(Dest%Position(:,i)-Src%Position(:,n2)))
-            
+                        
          end if
 
-         Dest%TranslationDisp(:,i) = MeshMap%MapMotions(i)%shape_fn(1)*FieldValueN1  &
-                                   + MeshMap%MapMotions(i)%shape_fn(2)*FieldValueN2
+            ! now form a weighted average of the two points:
+         Dest%TranslationDisp(:,i) = MeshMap%MapMotions(i)%shape_fn(1)*FieldValue(:,1)  &
+                                   + MeshMap%MapMotions(i)%shape_fn(2)*FieldValue(:,2)
 
       end do
 
@@ -940,78 +1318,53 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    if ( Src%FieldMask(MASKID_Orientation) .AND. Dest%FieldMask(MASKID_Orientation) ) then
 
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
                   
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
 
-#ifdef __ORIGINAL_LOGMAP    
-            ! calculate Rotation matrix for FieldValueN1 and convert to tensor:
-         RotationMatrix = MATMUL( MATMUL( Dest%RefOrientation(:,:,i), TRANSPOSE( Src%RefOrientation(:,:,n1) ) )&
-                                 , Src%Orientation(:,:,n1) )
-
-         CALL DCM_logmap( RotationMatrix, FieldValue(:,1), ErrStat, ErrMsg )
-         IF (ErrStat >= AbortErrLev) RETURN
-
-            ! calculate Rotation matrix for FieldValueN2 and convert to tensor:
-         RotationMatrix = MATMUL( MATMUL( Dest%RefOrientation(:,:,i), TRANSPOSE( Src%RefOrientation(:,:,n2) ) )&
-                                 , Src%Orientation(:,:,n2) )
-         
-         CALL DCM_logmap( RotationMatrix, FieldValue(:,2), ErrStat, ErrMsg )                  
-         IF (ErrStat >= AbortErrLev) RETURN
-         
-         CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
-         
-         
-            ! interpolate tensors: 
-         TmpVec =   MeshMap%MapMotions(i)%shape_fn(1)*FieldValue(:,1)  &
-                  + MeshMap%MapMotions(i)%shape_fn(2)*FieldValue(:,2)    
-                  
-            ! convert back to DCM:
-         Dest%Orientation(:,:,i) = DCM_exp( TmpVec )               
-      
-         
-#else         
-!this should be equivalent, with one less matrix multiply
-         
-         ! bjj: because of numerical issues when the angle of rotation is pi, (where 
-         ! DCM_exp( DCM_logmap (x) ) isn't quite x
-      if ( EqualRealNos( MeshMap%MapMotions(i)%shape_fn(1), 1.0_ReKi ) ) then
-         RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n1) ), Src%Orientation(:,:,n1) )
-
-      elseif ( EqualRealNos( MeshMap%MapMotions(i)%shape_fn(2), 1.0_ReKi ) ) then
-         RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n2) ), Src%Orientation(:,:,n2) )
-
-      else
-         
-            ! calculate Rotation matrix for FieldValueN1 and convert to tensor:
-         RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n1) ), Src%Orientation(:,:,n1) )
-         
-         CALL DCM_logmap( RotationMatrixD, FieldValue(:,1), ErrStat, ErrMsg, theta(1) )
-         IF (ErrStat >= AbortErrLev) RETURN
+            ! bjj: added this IF statement because of numerical issues when the angle of rotation is pi, 
+            !      (where DCM_exp( DCM_logmap (x) ) isn't quite x
+         if ( EqualRealNos( MeshMap%MapMotions(i)%shape_fn(1), 1.0_ReKi ) ) then
             
-            ! calculate Rotation matrix for FieldValueN2 and convert to tensor:
-         RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n2) ), Src%Orientation(:,:,n2) )
-         
-         CALL DCM_logmap( RotationMatrixD, FieldValue(:,2), ErrStat, ErrMsg, theta(1) )                  
-         IF (ErrStat >= AbortErrLev) RETURN
-                              
-         CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary         
-         
-            ! interpolate tensors: 
-         tensor_interp =   MeshMap%MapMotions(i)%shape_fn(1)*FieldValue(:,1)  &
-                         + MeshMap%MapMotions(i)%shape_fn(2)*FieldValue(:,2)    
-                  
-            ! convert back to DCM:
-         RotationMatrixD = DCM_exp( tensor_interp )
-                     
-      end if
+            RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n1) ), Src%Orientation(:,:,n1) )
+            RotationMatrixD = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrixD )
       
-      RotationMatrix = REAL( RotationMatrixD, R8Ki )
-      Dest%Orientation(:,:,i) = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrix  )
-                  
-#endif         
+         elseif ( EqualRealNos( MeshMap%MapMotions(i)%shape_fn(2), 1.0_ReKi ) ) then
+            
+            RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n2) ), Src%Orientation(:,:,n2) )
+            RotationMatrixD = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrixD )
+      
+         else
+
+               ! calculate Rotation matrix for FieldValueN1 and convert to tensor:
+            RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n1) ), Src%Orientation(:,:,n1) )
+            RotationMatrixD = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrixD )
+
+            CALL DCM_logmap( RotationMatrixD, FieldValue(:,1), ErrStat, ErrMsg )
+            IF (ErrStat >= AbortErrLev) RETURN
+
+               ! calculate Rotation matrix for FieldValueN2 and convert to tensor:
+            RotationMatrixD = MATMUL( TRANSPOSE( Src%RefOrientation(:,:,n2) ), Src%Orientation(:,:,n2) )
+            RotationMatrixD = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrixD )
          
+            CALL DCM_logmap( RotationMatrixD, FieldValue(:,2), ErrStat, ErrMsg )                  
+            IF (ErrStat >= AbortErrLev) RETURN
+         
+            CALL DCM_SetLogMapForInterp( FieldValue )  ! make sure we don't cross a 2pi boundary
+         
+         
+               ! interpolate tensors: 
+            tensor_interp =   MeshMap%MapMotions(i)%shape_fn(1)*FieldValue(:,1)  &
+                            + MeshMap%MapMotions(i)%shape_fn(2)*FieldValue(:,2)    
+                  
+               ! convert back to DCM:
+            RotationMatrixD = DCM_exp( tensor_interp )
+                        
+         end if
+         
+         Dest%Orientation(:,:,i) = REAL( RotationMatrixD, R8Ki )
+             
       end do
 
    endif
@@ -1022,7 +1375,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
       ! earlier in this routine.
    IF ( Src%FieldMask(MASKID_TranslationVel) .OR. Src%FieldMask(MASKID_TranslationAcc) ) THEN
       DO i = 1,Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
       
          DO j=1,NumNodes(ELEMENT_LINE2) ! number of nodes per line2 element
             n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(j)
@@ -1043,7 +1396,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    
    if ( Src%FieldMask(MASKID_TranslationVel) .AND. Dest%FieldMask(MASKID_TranslationVel) ) then
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
@@ -1072,7 +1425,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    
    if ( Src%FieldMask(MASKID_RotationVel) .AND. Dest%FieldMask(MASKID_RotationVel) ) then
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
@@ -1097,8 +1450,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    
    if ( Src%FieldMask(MASKID_TranslationAcc) .AND. Dest%FieldMask(MASKID_TranslationAcc) ) then
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
-
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
@@ -1135,7 +1487,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
    if (Src%FieldMask(MASKID_RotationAcc) .AND. Dest%FieldMask(MASKID_RotationAcc) ) then
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
@@ -1148,13 +1500,13 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    end if
 
       ! ---------------------------- Scalars  -----------------------------------------------
-      !> Rotational Velocity: \f$S^D = \sum\limits_{i=1}^{2} 
+      !> Scalar: \f$S^D = \sum\limits_{i=1}^{2} 
       !!              S^S_{eSn_i} 
       !!              \phi_i\f$
 
    if (Src%FieldMask(MASKID_SCALAR) .AND. Dest%FieldMask(MASKID_SCALAR) ) then
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          n1 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(1)
          n2 = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(2)
@@ -1167,6 +1519,7 @@ SUBROUTINE Transfer_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
 
 END SUBROUTINE Transfer_Motions_Line2_to_Point
+#endif 
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Given a mapping, this routine transfers the motions from nodes on Line2 elements to nodes on another mesh.
 SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg )
@@ -1182,7 +1535,7 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
       ! local variables
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
-   integer(intKi)                          :: i,j,n, n1, d_start, d_end, s_start, s_end
+   integer(intKi)                          :: i,j, k, n, d_start, d_end, s_start, s_end
    real(reKi)                              :: tmp, tmpVec(3)
    
    character(*), parameter :: RoutineName = 'Linearize_Motions_Line2_to_Point'
@@ -1198,14 +1551,13 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
       
    MeshMap%dM%mi = 0.0_ReKi      
    do i=1, Dest%Nnodes
-      if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
                   
-      do n1=1,NumNodes(ELEMENT_LINE2)
+      do j=1,NumNodes(ELEMENT_LINE2)
             
-         n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+         n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(j)
             
-         do j=1,3
-            MeshMap%dM%mi( (i-1)*3+j, (n-1)*3+j ) = MeshMap%MapMotions(i)%shape_fn(n1)
+         do k=1,3
+            MeshMap%dM%mi( (i-1)*3+k, (n-1)*3+k ) = MeshMap%MapMotions(i)%shape_fn(j)
          end do   
             
       end do
@@ -1214,18 +1566,17 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
       
 
    if (      (Src%FieldMask(MASKID_TranslationDisp) .AND. Dest%FieldMask(MASKID_TranslationDisp)) &
-         .or. (Src%FieldMask(MASKID_TranslationVel ) .AND. Dest%FieldMask(MASKID_TranslationVel )) &
-         .or. (Src%FieldMask(MASKID_TranslationAcc ) .AND. Dest%FieldMask(MASKID_TranslationAcc )) ) then
+        .or. (Src%FieldMask(MASKID_TranslationVel ) .AND. Dest%FieldMask(MASKID_TranslationVel )) &
+        .or. (Src%FieldMask(MASKID_TranslationAcc ) .AND. Dest%FieldMask(MASKID_TranslationAcc )) ) then
                
       
          ! calculate displaced positions at operating point:                           
       DO i = 1,Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
       
-         DO n1=1,NumNodes(ELEMENT_LINE2) ! number of nodes per line2 element
-            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+         DO j=1,NumNodes(ELEMENT_LINE2) ! number of nodes per line2 element
+            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(j)
          
-            MeshMap%DisplacedPosition(:,i,n1) =    Src%Position(:,n) +  Src%TranslationDisp(:,n)  &
+            MeshMap%DisplacedPosition(:,i,j) =     Src%Position(:,n) +  Src%TranslationDisp(:,n)  &
                                                 - Dest%Position(:,i) - Dest%TranslationDisp(:,i)  
          end do
       
@@ -1242,19 +1593,18 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                                     
       MeshMap%dM%fx_p = 0.0_ReKi      
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          d_start = (i-1)*3+1
          d_end   = d_start+2
             
-         do n1=1,NumNodes(ELEMENT_LINE2) 
+         do j=1,NumNodes(ELEMENT_LINE2) 
                
-            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+            n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(j)
                
             s_start = (n - 1)*3+1
             s_end   = s_start+2
                
-            tmpVec = MeshMap%DisplacedPosition(:,i,n1) * MeshMap%MapMotions(i)%shape_fn(n1) 
+            tmpVec = MeshMap%DisplacedPosition(:,i,j) * MeshMap%MapMotions(i)%shape_fn(j) 
             MeshMap%dM%fx_p( d_start:d_end, s_start:s_end ) = SkewSymMat( tmpVec ) 
                
          end do
@@ -1273,24 +1623,23 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
          MeshMap%dM%tv = 0.0_ReKi      
          if ( Src%FieldMask(MASKID_RotationVel) ) then
             do i=1, Dest%Nnodes
-               if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
                d_start = (i-1)*3+1
                d_end   = d_start+2
                   
-               do n1=1,NumNodes(ELEMENT_LINE2) 
+               do j=1,NumNodes(ELEMENT_LINE2) 
                
-                  n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+                  n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(j)
                   
                   s_start = (n - 1)*3+1
                   s_end   = s_start+2
                                     
-                  MeshMap%dM%tv( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,n1), Src%RotationVel(:,n) )
-                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,n1), Src%RotationVel(:,n) )
-                  do j=0,2
-                     MeshMap%dM%tv( d_start+j, s_start+j ) = MeshMap%dM%tv( d_start+j, s_start+j ) - tmp
+                  MeshMap%dM%tv( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,j), Src%RotationVel(:,n) )
+                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,j), Src%RotationVel(:,n) )
+                  do k=0,2
+                     MeshMap%dM%tv( d_start+k, s_start+k ) = MeshMap%dM%tv( d_start+k, s_start+k ) - tmp
                   end do              
-                  MeshMap%dM%tv( d_start:d_end, s_start:s_end ) = MeshMap%dM%tv( d_start:d_end, s_start:s_end ) * MeshMap%MapMotions(i)%shape_fn(n1)
+                  MeshMap%dM%tv( d_start:d_end, s_start:s_end ) = MeshMap%dM%tv( d_start:d_end, s_start:s_end ) * MeshMap%MapMotions(i)%shape_fn(j)
                end do
                   
             end do
@@ -1317,25 +1666,24 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
          MeshMap%dM%ta1 = 0.0_ReKi      
          if ( Src%FieldMask(MASKID_RotationAcc) ) then            
             do i=1, Dest%Nnodes
-               if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
             
                d_start = (i-1)*3+1
                d_end   = d_start+2
                   
-               do n1=1,NumNodes(ELEMENT_LINE2) 
+               do j=1,NumNodes(ELEMENT_LINE2) 
                
-                  n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+                  n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(j)
                   
                   s_start = (n - 1)*3+1
                   s_end   = s_start+2
                                     
                      ! note that we multiply by MeshMap%MapMotions(i)%shape_fn(n1) after forming the first two terms of this matrix
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,n1), Src%RotationAcc(:,n) )
-                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,n1), Src%RotationAcc(:,n) )
-                  do j=0,2
-                     MeshMap%dM%ta1( d_start+j, s_start+j ) = MeshMap%dM%ta1( d_start+j, s_start+j ) - tmp
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,j), Src%RotationAcc(:,n) )
+                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,j), Src%RotationAcc(:,n) )
+                  do k=0,2
+                     MeshMap%dM%ta1( d_start+k, s_start+k ) = MeshMap%dM%ta1( d_start+k, s_start+k ) - tmp
                   end do                        
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) * MeshMap%MapMotions(i)%shape_fn(n1)
+                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) * MeshMap%MapMotions(i)%shape_fn(j)
                      
                end do
                   
@@ -1345,21 +1693,20 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
          if ( Src%FieldMask(MASKID_RotationVel) ) then            
             
             do i=1, Dest%Nnodes
-               if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
             
                d_start = (i-1)*3+1
                d_end   = d_start+2
                   
-               do n1=1,NumNodes(ELEMENT_LINE2) 
+               do j=1,NumNodes(ELEMENT_LINE2) 
                
-                  n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+                  n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(j)
                   s_start = (n - 1)*3+1
                   s_end   = s_start+2
                                     
-                  tmpVec=cross_product(  Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,n1) ) * MeshMap%MapMotions(i)%shape_fn(n1)
+                  tmpVec=cross_product(  Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,j) ) * MeshMap%MapMotions(i)%shape_fn(j)
                   MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + OuterProduct( tmpVec, Src%RotationVel(:,n) )
                   
-                  tmp = dot_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,n1)) * MeshMap%MapMotions(i)%shape_fn(n1)
+                  tmp = dot_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,j)) * MeshMap%MapMotions(i)%shape_fn(j)
                   tmpVec = tmp*Src%RotationVel(:,n) 
                   MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) - SkewSymMat( tmpVec )                   
                end do
@@ -1380,20 +1727,19 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
          if ( Src%FieldMask(MASKID_RotationVel) ) then
 
             do i=1, Dest%Nnodes
-               if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
             
                d_start = (i-1)*3+1
                d_end   = d_start+2
                   
-               do n1=1,NumNodes(ELEMENT_LINE2) 
+               do j=1,NumNodes(ELEMENT_LINE2) 
                
-                  n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+                  n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(j)
                   
                   s_start = (n - 1)*3+1
                   s_end   = s_start+2
                                     
-                  tmpVec = cross_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,n1)  )
-                  MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = SkewSymMat( tmpVec  ) * MeshMap%MapMotions(i)%shape_fn(n1)
+                  tmpVec = cross_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,j)  )
+                  MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = SkewSymMat( tmpVec  ) * MeshMap%MapMotions(i)%shape_fn(j)
                      
                end do
                   
@@ -1405,23 +1751,22 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                
             else
                do i=1, Dest%Nnodes
-                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
                   d_start = (i-1)*3+1
                   d_end   = d_start+2
                      
-                  do n1=1,NumNodes(ELEMENT_LINE2) 
+                  do j=1,NumNodes(ELEMENT_LINE2) 
                
-                     n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(n1)
+                     n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(j)
                      
                      s_start = (n - 1)*3+1
                      s_end   = s_start+2
                                     
                      MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) + &
-                                       OuterProduct( MeshMap%DisplacedPosition(:,i,n1), Src%RotationVel(:,n) ) * MeshMap%MapMotions(i)%shape_fn(n1)
+                                       OuterProduct( MeshMap%DisplacedPosition(:,i,j), Src%RotationVel(:,n) ) * MeshMap%MapMotions(i)%shape_fn(j)
                      tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
-                     do j=0,2
-                        MeshMap%dM%ta2( d_start+j, s_start+j ) = MeshMap%dM%ta2( d_start+j, s_start+j ) - tmp * MeshMap%MapMotions(i)%shape_fn(n1)
+                     do k=0,2
+                        MeshMap%dM%ta2( d_start+k, s_start+k ) = MeshMap%dM%ta2( d_start+k, s_start+k ) - tmp * MeshMap%MapMotions(i)%shape_fn(j)
                      end do
                   end do
                      
@@ -1456,8 +1801,8 @@ SUBROUTINE CreateMapping_ProjectToLine2(Mesh1, Mesh2, NodeMap, Mesh1_TYPE, ErrSt
 
       ! local variables
 
-   INTEGER(IntKi)                                 :: ErrStat2                       ! Error status of the operation
-   CHARACTER(ErrMsgLen)                           :: ErrMsg2                        ! Error message if ErrStat2 /= ErrID_None
+!   INTEGER(IntKi)                                 :: ErrStat2                       ! Error status of the operation
+!   CHARACTER(ErrMsgLen)                           :: ErrMsg2                        ! Error message if ErrStat2 /= ErrID_None
    CHARACTER(200)                                 :: DebugFileName                  ! File name for debugging file
    CHARACTER(*), PARAMETER                        :: RoutineName = 'CreateMapping_ProjectToLine2' 
    
@@ -2327,7 +2672,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    if ( Src%FieldMask(MASKID_Orientation) .AND. Dest%FieldMask(MASKID_Orientation) ) then
 
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
          
          RotationMatrix = TRANSPOSE( Src%RefOrientation(:,:,MeshMap%MapMotions(i)%OtherMesh_Element) )
          RotationMatrix = MATMUL( Dest%RefOrientation(:,:,i), RotationMatrix )
@@ -2343,7 +2688,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
    IF ( Src%FieldMask(MASKID_TranslationVel) .OR. Src%FieldMask(MASKID_TranslationAcc) ) THEN
 
       DO i = 1,Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
          MeshMap%DisplacedPosition(:,i,1) =    Src%TranslationDisp(:,MeshMap%MapMotions(i)%OtherMesh_Element) &
                                             - Dest%TranslationDisp(:,i) &
                                             - MeshMap%MapMotions(i)%couple_arm
@@ -2357,7 +2702,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
    if ( Src%FieldMask(MASKID_TranslationVel) .AND. Dest%FieldMask(MASKID_TranslationVel) ) then
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          Dest%TranslationVel(:,i) = Src%TranslationVel(:,MeshMap%MapMotions(i)%OtherMesh_Element)
 
@@ -2375,7 +2720,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
    if ( Src%FieldMask(MASKID_RotationVel) .AND. Dest%FieldMask(MASKID_RotationVel) ) then
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          Dest%RotationVel(:,i) = Src%RotationVel(:,MeshMap%MapMotions(i)%OtherMesh_Element)
       end do
@@ -2391,7 +2736,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
    if ( Src%FieldMask(MASKID_TranslationAcc) .AND. Dest%FieldMask(MASKID_TranslationAcc) ) then
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          Dest%TranslationAcc(:,i) = Src%TranslationAcc(:,MeshMap%MapMotions(i)%OtherMesh_Element)
 
@@ -2415,7 +2760,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
    if (Src%FieldMask(MASKID_RotationAcc) .AND. Dest%FieldMask(MASKID_RotationAcc) ) then
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          Dest%RotationAcc(:,i) = Src%RotationAcc(:,MeshMap%MapMotions(i)%OtherMesh_Element)
       end do
@@ -2426,7 +2771,7 @@ SUBROUTINE Transfer_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg 
 
    if (Src%FieldMask(MASKID_SCALAR) .AND. Dest%FieldMask(MASKID_SCALAR) ) then
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
+         !if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          Dest%Scalars(:,i) = Src%Scalars(:,MeshMap%MapMotions(i)%OtherMesh_Element)
       end do
@@ -2470,7 +2815,6 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
       
       MeshMap%dM%mi = 0.0_ReKi      
       do i=1, Dest%Nnodes
-         if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
          n = MeshMap%MapMotions(i)%OtherMesh_Element
          do j=1,3
@@ -2486,7 +2830,6 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
       
             ! calculate displaced positions at operating point:
          DO i = 1,Dest%Nnodes
-            if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
             MeshMap%DisplacedPosition(:,i,1) =    Src%TranslationDisp(:,MeshMap%MapMotions(i)%OtherMesh_Element) &
                                                - Dest%TranslationDisp(:,i) &
                                                - MeshMap%MapMotions(i)%couple_arm
@@ -2501,7 +2844,6 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                                     
          MeshMap%dM%fx_p = 0.0_ReKi      
          do i=1, Dest%Nnodes
-            if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
             d_start = (i-1)*3+1
             d_end   = d_start+2
@@ -2522,7 +2864,6 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
             MeshMap%dM%tv = 0.0_ReKi      
             if ( Src%FieldMask(MASKID_RotationVel) ) then
                do i=1, Dest%Nnodes
-                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
                   n = MeshMap%MapMotions(i)%OtherMesh_Element
                   d_start = (i-1)*3+1
@@ -2560,7 +2901,6 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
             MeshMap%dM%ta1 = 0.0_ReKi      
             if ( Src%FieldMask(MASKID_RotationAcc) ) then            
                do i=1, Dest%Nnodes
-                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
             
                   n = MeshMap%MapMotions(i)%OtherMesh_Element
                   d_start = (i-1)*3+1
@@ -2579,7 +2919,6 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
             if ( Src%FieldMask(MASKID_RotationVel) ) then            
             
                do i=1, Dest%Nnodes
-                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
             
                   n = MeshMap%MapMotions(i)%OtherMesh_Element
                   d_start = (i-1)*3+1
@@ -2611,7 +2950,6 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
             if ( Src%FieldMask(MASKID_RotationVel) ) then
 
                do i=1, Dest%Nnodes
-                  if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
             
                   n = MeshMap%MapMotions(i)%OtherMesh_Element
                   d_start = (i-1)*3+1
@@ -2629,7 +2967,6 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                
                else
                   do i=1, Dest%Nnodes
-                     if ( MeshMap%MapMotions(i)%OtherMesh_Element < 1 )  CYCLE
 
                      n = MeshMap%MapMotions(i)%OtherMesh_Element
                      d_start = (i-1)*3+1
@@ -2758,7 +3095,7 @@ SUBROUTINE Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, 
 
       ! local variables
    integer(intKi)                                 :: i,j,n, d_start, d_end, s_start, s_end
-   real(reKi)                                     :: tmp, DisplacedPosition(3), SSmat(3,3)
+   real(reKi)                                     :: DisplacedPosition(3), SSmat(3,3)
    INTEGER(IntKi)                                 :: ErrStat2
    CHARACTER(ErrMsgLen)                           :: ErrMsg2
    character(*), parameter                        :: RoutineName = 'Linearize_Loads_Point_to_Point'
@@ -3111,10 +3448,10 @@ END SUBROUTINE Transfer_Line2_to_Line2
 !!
 !! Forces: \f$ \frac{\partial M_f}{\partial x} = \begin{bmatrix} M_{li} \end{bmatrix} \f$ for source fields \f$\left\{\vec{f}^S\right\}\f$
 !!
-!! Moments: \f$ \frac{\partial M_m}{\partial x} = \begin{bmatrix} M_{um} & M_{tm} & M_{fm} & M_{li} \end{bmatrix} \f$ for source fields
+!! Moments: \f$ \frac{\partial M_m}{\partial x} = \begin{bmatrix} M_{uDm} & M_{uSm} & M_{fm} & M_{li} \end{bmatrix} \f$ for source fields
 !! \f$ \left\{ \begin{matrix}
+!!      \vec{u}^D \\
 !!      \vec{u}^S \\
-!!      \vec{\theta}^S \\
 !!      \vec{f}^S \\
 !!      \vec{m}^S
 !! \end{matrix} \right\} \f$
@@ -3125,8 +3462,8 @@ END SUBROUTINE Transfer_Line2_to_Line2
 !! \f$M_{ta_1}\f$ is modmesh_mapping::meshmaplinearizationtype::ta1 \n
 !! \f$M_{ta_2}\f$ is modmesh_mapping::meshmaplinearizationtype::ta2 \n
 !! \f$M_{li}\f$ is modmesh_mapping::meshmaplinearizationtype::li \n
-!! \f$M_{um}\f$ is modmesh_mapping::meshmaplinearizationtype::m_us \n
-!! \f$m_{tm}\f$ is modmesh_mapping::meshmaplinearizationtype::m_ud \n
+!! \f$M_{uSm}\f$ is modmesh_mapping::meshmaplinearizationtype::m_us \n
+!! \f$M_{uDm}\f$ is modmesh_mapping::meshmaplinearizationtype::m_ud \n
 !! \f$M_{fm}\f$ is modmesh_mapping::meshmaplinearizationtype::m_f 
 SUBROUTINE Linearize_Line2_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, SrcDisp, DestDisp )
 
@@ -3441,7 +3778,6 @@ SUBROUTINE Linearize_Loads_Point_to_Line2( Src, Dest, MeshMap, ErrStat, ErrMsg, 
    REAL(ReKi), ALLOCATABLE                        :: mf_D(:,:)
    
    integer(intKi)                                 :: i, j, jElem, k, n, d_start, d_end, s_start, s_end
-   real(reKi)                                     :: tmp
 
    INTEGER(IntKi)                                 :: ErrStat2
    CHARACTER(ErrMsgLen)                           :: ErrMsg2
@@ -4049,7 +4385,7 @@ SUBROUTINE Create_Augmented_Ln2_Src_Mesh(Src, Dest, MeshMap, Dest_TYPE, ErrStat,
                            CALL DCM_logmap( RefOrientationD, FieldValue(:,1), ErrStat, ErrMsg )
                            IF (ErrStat >= AbortErrLev) RETURN
                   
-                           RefOrientationD = Src%RefOrientation(:, :, n1)
+                           RefOrientationD = Src%RefOrientation(:, :, n2)
                            CALL DCM_logmap( RefOrientationD, FieldValue(:,2), ErrStat, ErrMsg )                  
                            IF (ErrStat >= AbortErrLev) RETURN
          
@@ -4900,7 +5236,7 @@ SUBROUTINE FormMatrix_Lump_Line2_to_Point( Mesh, dM, ErrStat, ErrMsg, DispMesh )
    INTEGER(IntKi)                        :: n2_start, n2_end  ! node numbers
    
    INTEGER(IntKi)                        :: n1, n2  ! node numbers
-   INTEGER(IntKi)                        :: i, k  
+   INTEGER(IntKi)                        :: i  
    Integer(IntKi)                        :: ErrStat2
    CHARACTER(ErrMsgLen)                  :: ErrMsg2
    character(*),   parameter             :: RoutineName = 'FormMatrix_Lump_Line2_to_Point'

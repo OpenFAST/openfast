@@ -206,6 +206,8 @@ MODULE NWTC_IO
       MODULE PROCEDURE WrMatrix2R4     ! Two dimension matrix of SiKi
       MODULE PROCEDURE WrMatrix1R8     ! Single dimension matrix (Ary) of R8Ki
       MODULE PROCEDURE WrMatrix2R8     ! Two dimension matrix of R8Ki
+      MODULE PROCEDURE WrMatrix1R16    ! Single dimension matrix (Ary) of QuKi
+      MODULE PROCEDURE WrMatrix2R16    ! Two dimension matrix of QuKi
    END INTERFACE
 
       !> \copydoc nwtc_io::wrr4aryfilenr
@@ -6815,6 +6817,36 @@ CONTAINS
    END SUBROUTINE WrMatrix1R8
 !=======================================================================
 !> \copydoc nwtc_io::wrmatrix1r4
+   SUBROUTINE WrMatrix1R16( A, Un, ReFmt, MatName )
+   
+      REAL(QuKi),             INTENT(IN) :: A(:)
+      INTEGER,                INTENT(IN) :: Un
+      CHARACTER(*),           INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers
+      CHARACTER(*), OPTIONAL, INTENT(IN) :: MatName
+
+      INTEGER        :: ErrStat
+      INTEGER                            :: nr  ! size (rows and columns) of A
+      CHARACTER(256)                     :: Fmt
+   
+   
+      nr = SIZE(A,1)
+
+      IF ( PRESENT(MatName) ) THEN
+         WRITE( Un, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) TRIM(MatName), TRIM(Num2LStr(nr)), "1"
+      END IF
+      
+      Fmt = "(2x, "//TRIM(Num2LStr(nr))//"(1x,"//ReFmt//"))"   
+   
+      WRITE( Un, Fmt, IOSTAT=ErrStat ) A(:)
+      IF (ErrStat /= 0) THEN
+         CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrMatrix1R16().')
+         RETURN
+      END IF
+
+   RETURN
+   END SUBROUTINE WrMatrix1R16
+!=======================================================================
+!> \copydoc nwtc_io::wrmatrix1r4
    SUBROUTINE WrMatrix2R4( A, Un, ReFmt, MatName )
       
       REAL(SiKi),             INTENT(IN) :: A(:,:)
@@ -6885,6 +6917,42 @@ CONTAINS
 
    RETURN
    END SUBROUTINE WrMatrix2R8
+!=======================================================================  
+!> \copydoc nwtc_io::wrmatrix1r4
+   SUBROUTINE WrMatrix2R16( A, Un, ReFmt, MatName )
+   
+      REAL(QuKi),             INTENT(IN) :: A(:,:)
+      INTEGER,                INTENT(IN) :: Un
+      CHARACTER(*),           INTENT(IN) :: ReFmt   ! Format for printing ReKi numbers  
+      CHARACTER(*), OPTIONAL, INTENT(IN) :: MatName
+
+      INTEGER                            :: ErrStat
+      INTEGER                            :: nr, nc  ! size (rows and columns) of A
+      INTEGER                            :: i       ! indices into A
+      CHARACTER(256)                     :: Fmt
+   
+   
+      nr = SIZE(A,1)
+      nc = SIZE(A,2)
+
+      IF ( PRESENT(MatName) ) THEN
+         WRITE( Un, '(A,": ",A," x ",A)', IOSTAT=ErrStat ) TRIM(MatName), TRIM(Num2LStr(nr)), TRIM(Num2LStr(nc))
+      END IF
+      
+      Fmt = "(2x, "//TRIM(Num2LStr(nc))//"(1x,"//ReFmt//"))"   
+
+      DO i=1,nr
+         WRITE( Un, Fmt, IOSTAT=ErrStat ) A(i,:)
+         IF (ErrStat /= 0) THEN
+            CALL WrScr('Error '//TRIM(Num2LStr(ErrStat))//' writing matrix in WrMatrix2R16().')
+            RETURN
+         END IF
+         
+         
+      END DO
+
+   RETURN
+   END SUBROUTINE WrMatrix2R16
 !=======================================================================  
 !> This routine writes out a prompt to the screen without
 !! following it with a new line, though a new line precedes it.
