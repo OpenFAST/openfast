@@ -2088,7 +2088,7 @@ IF ( p%met%TurbModel_ID == SpecModel_API ) THEN
       CALL SetErrStat( ErrID_Fatal, 'API model does not provide time-series scaling to target standard deviation. Set ScaleIEC = 0.', ErrStat, ErrMsg, RoutineName )      
    END IF
 
-   IF ( p%met%RefHt /= 0 ) THEN
+   IF ( .NOT. EqualRealNos( p%met%RefHt, 10.0_ReKi ) ) THEN
       CALL SetErrStat( ErrID_Fatal, 'API model requires a 10-m reference height. Set RefHt = 10.', ErrStat, ErrMsg, RoutineName )      
    END IF
       
