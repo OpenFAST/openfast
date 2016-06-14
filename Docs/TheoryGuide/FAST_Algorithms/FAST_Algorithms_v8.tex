@@ -7,9 +7,9 @@
 \usepackage{algpseudocode}
 \usepackage{enumitem}
 \usepackage{nomencl}
-\usepackage{amsmath}%
+\usepackage{amsmath}
+\usepackage{amssymb}
 %\usepackage{amsfonts}%
-%\usepackage{amssymb}%
 %\usepackage{graphicx}
 %----------------------------------------------------------
 \makenomenclature
@@ -38,16 +38,20 @@
 		\textbf{Module} & \textbf{Abbreviation} & \textbf{Abbreviation}\\
 		\textbf{Name}   & \textbf{in Module}    & \textbf{in this Document}\\
 		\hline 
-		ElastoDyn       & ED                    & ED        \\
-		AeroDyn         & AD                    & AD        \\
-		ServoDyn        & SrvD                  & SrvD      \\
-		SubDyn          & SD                    & SD        \\
-		HydroDyn        & HydroDyn              & HD        \\
-		MAP             & MAP                   & MAP       \\
-		FEAMooring      & FEAM                  & FEAM      \\
-		InflowWind      & IfW                   & IfW       \\   
-		IceFloe         & IceFloe               & IceF      \\   
-		IceDyn          & IceD                  & IceD      \\   
+		ElastoDyn       	& ED                    & ED        \\
+		BeamDyn         	& BD                    & BD        \\
+		AeroDyn14       	& AD14                  & AD14      \\
+		AeroDyn         	& AD                    & AD        \\
+		ServoDyn        	& SrvD                  & SrvD      \\
+		SubDyn         	 	& SD                    & SD        \\
+		HydroDyn       	 	& HydroDyn              & HD        \\
+		MAP++           	& MAPp                  & MAP       \\
+		FEAMooring      	& FEAM                  & FEAM      \\
+		MoorDyn         	& MD                    & MD        \\
+		OrcaFlexInterface & Orca                  & Orca      \\
+		InflowWind      	& IfW                   & IfW       \\   
+		IceFloe         	& IceFloe               & IceF      \\   
+		IceDyn          	& IceD                  & IceD      \\   
 		\end{tabular}
 	\caption{Abbreviations for modules in FAST v8}
 	\label{tab:Abbrev}
@@ -77,11 +81,16 @@ inputs and outputs are neither set nor used.
 \State $\mathit{y\_ED} \gets \Call{ED\_CalcOutput}{\mathit{p\_ED},\mathit{u\_ED},\mathit{x\_ED},\mathit{xd\_ED},\mathit{z\_ED}}$
 
 \State
-	\State $\mathit{u\_AD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED}}$
+	\State $\mathit{u\_AD}($not InflowWind$)  \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED}}$
+	
+	\State $\mathit{u\_IfW} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED} at \mathit{u\_AD} nodes}$
+	\State $\mathit{y\_IfW} \gets \Call{IfW\_CalcOutput}{\mathit{u\_IfW} and other \mathit{IfW} data structures}$
+	
+	\State $\mathit{u\_AD}($InflowWind only$) \gets \Call{TransferOutputsToInputs}{\mathit{y\_IfW}}$
 	\State $\mathit{y\_AD} \gets \Call{AD\_CalcOutput}{\mathit{p\_AD},\mathit{u\_AD},\mathit{x\_AD},\mathit{xd\_AD},\mathit{z\_AD}}$
 
 \State
-	\State $\mathit{u\_SrvD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED},\mathit{y\_AD}}$
+	\State $\mathit{u\_SrvD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED},\mathit{y\_AD},\mathit{y\_IfW}}$
 	\State $\mathit{y\_SrvD} \gets \Call{SrvD\_CalcOutput}{}( \!
 				\begin{aligned}[t]
 				                      & \mathit{p\_SrvD},\mathit{u\_SrvD}, \\
@@ -99,13 +108,9 @@ inputs and outputs are neither set nor used.
 \State
 \State \Call{ED\_HD\_SD\_Mooring\_Ice\_InputOutputSolve}{\null}
 \State
-\textit{
-%\State If $AeroDyn$ or $ServoDyn$ had states to update, we should do this:
-%\State\hspace{\algorithmicindent}
 \State $\mathit{u\_AD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED}}$
 \State $\mathit{u\_SrvD} \gets \Call{TransferOutputsToInputs}{\mathit{y\_ED},\mathit{y\_AD}}$
-%\State However, they don't so we'll omit these steps for efficiency.
-}
+
 \EndProcedure
 \end{algorithmic}
 %\end{algorithm}
@@ -274,7 +279,247 @@ or
 Rather than store the matrix $B$, we directly perform the cross products that the matrix $B$ represents.
 This makes the left-hand side of Equation \ref{EqLumpM2} known, leaving us with one matrix solve. This 
 solve uses the same matrix $A$ used to obtain the distributed forces in Equation \ref{EqLumpF}; $A$ depends 
-only on element connectivity \textbf{\textit{(bjj: check that this is true)}}. We use 
+only on element reference positions and connectivity. We use 
 the $LU$ factorization of matrix $A$ so that the second solve does not introduce much additional overhead.
+
+
+\section {Linearization}
+\subsection{Loads Transfer}
+The loads transfer can be broken down into four components, all of which are used in the Line2-to-Line2 loads transfer:
+\begin{enumerate}
+  \item Augment the source mesh with additional nodes.
+  \item Lump the distributed loads on the augmented Line2 source mesh to a Point mesh.
+  \item Perform Point-to-Point loads transfer.
+  \item Distribute (or "unlump") the point loads.	
+\end{enumerate}
+The other loads transfers are just subsets of the Line2-to-Line2 transfer:
+\begin{itemize}
+  \item Line2-to-Line2: Perform steps 1, 2, 3, and 4.
+  \item Line2-to-Point: Perform steps 1, 2, and 3.
+  \item Point-to-Line2: Perform steps 3 and 4.
+  \item Point-to-Point: Perform step 3.
+\end{itemize}
+
+
+Each of the four steps can be represented with a linear equation. The linearization of the loads transfers is just multiplying the 
+appropriate matrices generated in each of the steps.
+
+
+\subsubsection{Step 1: Augment the source mesh}
+The equation that linearizes mesh augmentation is
+\begin{equation}
+\label{Augment}
+	\left\{	\begin{matrix} \vec{u}^D \\ \vec{u}^{SA} \\ \vec{f}^{SA} \\ \vec{m}^{SA} \end{matrix} \right\} 
+=
+	\begin{bmatrix}
+	I_{\mathit{N_D}} & 0   & 0   & 0   \\
+	0 							 & M^A & 0   & 0   \\
+	0 							 & 0   & M^A & 0   \\
+	0								 & 0   & 0   & M^A \\
+	\end{bmatrix}
+	\left\{	\begin{matrix} \vec{u}^D \\ \vec{u}^S \\ \vec{f}^S \\ \vec{m}^S \end{matrix} \right\} 
+\end{equation}
+where $M^A \in \mathbb{R}^{ \mathit{N_{SA}},\mathit{N_{S}}}$ indicates the mapping of nodes from the source mesh (with $N_S$ nodes) to the augmented source mesh
+(with $N_{SA}$ nodes). The destination mesh (with $N_D$ nodes) is unchanged, as is indicated by matrix $I_{\mathit{N_D}}$.
+
+
+
+\subsubsection{Step 2: Lump loads on a Line2 mesh to a Point mesh}
+The equation that linearizes the lumping of loads is
+\begin{equation}
+\label{Lump}
+	\left\{	\begin{matrix} \vec{u}^{SA} \\ \vec{F}^{SAL} \\ \vec{M}^{SAL} \end{matrix} \right\} 
+=
+	\begin{bmatrix}
+	 I_{\mathit{N_{SA}}} & 0   				 & 0   \\
+	 0  								 & M_{li}^{SL} & 0   \\
+	 M_{uS}^{SL}    		 & M_{f}^{SL}  & M_{li}^{SL} \\
+	\end{bmatrix}
+	\left\{	\begin{matrix} \vec{u}^{SA} \\ \vec{f}^{SA} \\ \vec{m}^{SA} \end{matrix} \right\} 
+\end{equation}
+where $M_{li}^{SL}, M_{uS}^{SL}, M_{f}^{SL} \in \mathbb{R}^{ \mathit{N_{SA}},\mathit{N_{SA}}}$ are block matrices that indicate the mapping of the lumped values to distributed values. $M_{li}^{SL}$ is matrix $A$ in Equation \ref{EqLumpF}, which depends only on element reference positions and connectivity. Matrices $M_{uS}^{SL}$and $M_{f}^{SL}$ also depend on values at their operating point.
+
+
+\subsubsection{Step 3: Perform Point-to-Point loads transfer}
+The equation that performs Point-to-Point load transfer can be written as
+\begin{equation}
+\label{P2P}
+	\left\{	\begin{matrix} \vec{u}^D \\ \vec{u}^{S} \\ \vec{F}^{D} \\ \vec{M}^{D} \end{matrix} \right\} 
+=
+	\begin{bmatrix}
+	I_{\mathit{N_D}} & 0   								 & 0   				& 0          \\
+	0 							 & I_{\mathit{N_{S}}}  & 0   				& 0          \\
+	0 							 & 0  								 & M_{li}^{D} & 0          \\
+	M_{uD}^{D} 		   & M_{uS}^{D}    		   & M_{f}^{D}  & M_{li}^{D} \\
+	\end{bmatrix}
+	\left\{	\begin{matrix} \vec{u}^D \\ \vec{u}^{S}  \\ \vec{F}^{S}  \\ \vec{D}^{S} \end{matrix} \right\} 
+\end{equation}
+where $M_{li}^{D}, M_{uS}^{D}, M_{f}^{D} \in \mathbb{R}^{ \mathit{N_{D}},\mathit{N_{S}}}$ are block matrices that indicate the transfer of loads from one source
+node to a node on the destination mesh. $M_{uD}^{D} \in \mathbb{R}^{ \mathit{N_{D}},\mathit{N_{D}}}$ is a diagonal matrix that indicates how the destination mesh's displaced position effects the transfer.
+
+
+\subsubsection{Step 4: Distribute Point loads to a Line2 mesh}
+Distributing loads from a Point mesh to a Line2 mesh is the inverse of step 2.
+
+From Equation \ref{Lump} the equation that linearizes the lumping of loads on a destination mesh is
+\begin{equation}
+\label{LumpD}
+	\left\{	\begin{matrix} \vec{u}^D \\ \vec{F}^{D} \\ \vec{M}^{D} \end{matrix} \right\} 
+=
+	\begin{bmatrix}
+	I_{\mathit{N_D}} & 0   				 & 0   \\
+	0 							 & M_{li}^{DL} & 0   \\
+	M_{uD}^{DL}      & M_{f}^{DL}  & M_{li}^{DL} \\
+	\end{bmatrix}
+	\left\{	\begin{matrix} \vec{u}^D \\ \vec{f}^{D} \\ \vec{m}^{D} \end{matrix} \right\} 
+\end{equation}
+where $M_{li}^{DL}, M_{uD}^{DL}, M_{f}^{DL} \in \mathbb{R}^{ \mathit{N_{D}},\mathit{N_{D}}}$ are block matrices that indicate the mapping of the lumped values to distributed values. It follows that the inverse of this equation is
+\begin{equation}
+\label{InvLumpD}
+	\left\{	\begin{matrix} \vec{u}^D \\ \vec{f}^{D} \\ \vec{m}^{D} \end{matrix} \right\} 
+=
+	\begin{bmatrix}
+	I_{\mathit{N_D}} & 0   				 & 0   \\
+	0 							 & \left[ M_{li}^{DL} \right]^{-1} & 0   \\
+	-\left[ M_{li}^{DL} \right]^{-1} M_{uD}^{DL} & 
+	-\left[ M_{li}^{DL} \right]^{-1} M_{f}^{DL} \left[ M_{li}^{DL} \right]^{-1}  &
+	 \left[ M_{li}^{DL} \right]^{-1} \\
+	\end{bmatrix}
+	\left\{	\begin{matrix} \vec{u}^D \\ \vec{F}^{D} \\ \vec{M}^{D} \end{matrix} \right\} 
+\end{equation}
+The only inverse we need is already formed (stored as an LU decomposition) from the loads transfer, so we need not form it again.
+
+
+\subsubsection{Putting it together}
+To form the matrices for loads transfers for the various mappings available, we now need to multiply a few matrices to return the linearization
+matrix that converts loads from the source mesh to loads on the line mesh:
+\begin{equation}
+\label{LinearEqn}
+	\left\{	\begin{matrix} \vec{f}^{D} \\ \vec{m}^{D} \end{matrix} \right\} 
+=
+	\begin{bmatrix}
+	0 		 & 0			& M_{li} & 0   \\
+	M_{uD} & M_{uS}	& M_f    & M_{li}
+	\end{bmatrix}
+	\left\{	\begin{matrix} \vec{u}^D \\ \vec{u}^S \\ \vec{f}^{D} \\ \vec{m}^{D} \end{matrix} \right\} 
+\end{equation}
+
+
+
+
+\begin{itemize}
+  \item Line2-to-Line2: Perform steps 1, 2, 3, and 4.
+			\begin{multline}
+				\left\{	\begin{matrix} \vec{f}^{D} \\ \vec{m}^{D} \end{matrix} \right\} 
+			  =
+				\begin{bmatrix}
+				0 							 & \left[ M_{li}^{DL} \right]^{-1} & 0   \\
+				-\left[ M_{li}^{DL} \right]^{-1} M_{uD}^{DL} & 
+				-\left[ M_{li}^{DL} \right]^{-1} M_{f}^{DL} \left[ M_{li}^{DL} \right]^{-1}  &
+				 \left[ M_{li}^{DL} \right]^{-1} \\
+				\end{bmatrix}						
+				\\											
+			  \begin{bmatrix}
+				I_{N_D}					 & 0  								 & 0          & 0          \\
+				0 							 & 0  								 & M_{li}^{D} & 0          \\
+				M_{uD}^{D} 		   & M_{uS}^{D}    		   & M_{f}^{D}  & M_{li}^{D} \\
+				\end{bmatrix}				
+				\begin{bmatrix}
+				I_{N_D}					 & 0  								 & 0           & 0           \\
+				0                & I_{\mathit{N_{SA}}} & 0   				 & 0   			 	 \\
+				0								 & 0  								 & M_{li}^{SL} & 0   				 \\
+				0							   & M_{uS}^{SL}    		 & M_{f}^{SL}  & M_{li}^{SL} \\
+				\end{bmatrix}
+				\\				
+				\begin{bmatrix}
+				I_{\mathit{N_D}} & 0   & 0   & 0   \\
+				0 							 & M^A & 0   & 0   \\
+				0 							 & 0   & M^A & 0   \\
+				0								 & 0   & 0   & M^A \\
+				\end{bmatrix}
+				\left\{	\begin{matrix} \vec{u}^D \\ \vec{u}^{S}  \\ \vec{f}^{S}  \\ \vec{m}^{S} \end{matrix} \right\} 				
+			\end{multline}				
+		\begin{align}
+       M_{li} &= \left(M_{li}^{DL}\right)^{-1}M_{li}^D M_{li}^{SL} M_A \\ 
+	     M_{uD} &= \left(M_{li}^{DL}\right)^{-1}\left[M_{uD}^D - M_{uD}^{DL}\right] \\
+	     M_{uS} &= \left(M_{li}^{DL}\right)^{-1} \left[ M_{uS}^D + M_{li}^D M_{uS}^{SL}\right] M_A \\
+	     M_{f}  &= \left(M_{li}^{DL}\right)^{-1}\left( \left[M_{f}^D - M_{f}^{DL}\left(M_{li}^{DL}\right)^{-1}M_{li}^D\right] M_{li}^{SL} +
+	                      M_{li}^D M_{f}^{SL}  \right)M_A \end{align} 
+	
+	
+  \item Line2-to-Point: Perform steps 1, 2, and 3.
+			\begin{multline}
+				\left\{	\begin{matrix} \vec{F}^{D} \\ \vec{M}^{D} \end{matrix} \right\} 
+			  =
+			  \begin{bmatrix}
+				0 							 & 0  								 & M_{li}^{D} & 0          \\
+				M_{uD}^{D} 		   & M_{uS}^{D}    		   & M_{f}^{D}  & M_{li}^{D} \\
+				\end{bmatrix}				
+				\begin{bmatrix}
+				I_{N_D}					 & 0  								 & 0           & 0           \\
+				0                & I_{\mathit{N_{SA}}} & 0   				 & 0   			 	 \\
+				0								 & 0  								 & M_{li}^{SL} & 0   				 \\
+				0							   & M_{uS}^{SL}    		 & M_{f}^{SL}  & M_{li}^{SL} \\
+				\end{bmatrix}
+				\\				
+				\begin{bmatrix}
+				I_{\mathit{N_D}} & 0   & 0   & 0   \\
+				0 							 & M^A & 0   & 0   \\
+				0 							 & 0   & M^A & 0   \\
+				0								 & 0   & 0   & M^A \\
+				\end{bmatrix}
+				\left\{	\begin{matrix} \vec{u}^D \\ \vec{u}^{S}  \\ \vec{f}^{S}  \\ \vec{m}^{S} \end{matrix} \right\} 				
+			\end{multline}					
+		The linearization routine returns these four matrices:
+	\begin{align}
+	 M_{li} &= M_{li}^D M_{li}^{SL} M_{A} \\ 
+	 M_{uD} &= M_{uD}^D \\ 
+	 M_{uS} &= \left[ M_{uS}^D + M_{li}^{D} M_{uS}^{SL}\right]M_{A} \\ 
+	 M_{f}  &= \left[ M_{f}^D M_{li}^{SL} + M_{li}^{D} M_{f}^{SL} \right]M_{A}  \end{align} 
+	
+	
+  \item Point-to-Line2: Perform steps 3 and 4.
+			%\begin{equation}
+			\begin{multline}
+				\left\{	\begin{matrix} \vec{f}^{D} \\ \vec{m}^{D} \end{matrix} \right\} 
+			  =
+				\begin{bmatrix}
+				0 							 & \left[ M_{li}^{DL} \right]^{-1} & 0   \\
+				-\left[ M_{li}^{DL} \right]^{-1} M_{uD}^{DL} & 
+				-\left[ M_{li}^{DL} \right]^{-1} M_{f}^{DL} \left[ M_{li}^{DL} \right]^{-1}  &
+				 \left[ M_{li}^{DL} \right]^{-1} \\
+				\end{bmatrix}						\\											
+			 \begin{bmatrix}
+				I_{N_D}					 & 0  								 & 0          & 0          \\
+				0 							 & 0  								 & M_{li}^{D} & 0          \\
+				M_{uD}^{D} 		   & M_{uS}^{D}    		   & M_{f}^{D}  & M_{li}^{D} \\
+				\end{bmatrix}				
+				\left\{	\begin{matrix} \vec{u}^D \\ \vec{u}^{S}  \\ \vec{F}^{S}  \\ \vec{M}^{S} \end{matrix} \right\} 				
+			\end{multline}				
+			%\end{equation}	
+		The linearization routine returns these four matrices:
+	\begin{align} M_{li} &= \left(M_{li}^{DL}\right)^{-1}M_{li}^D \\
+	 M_{uD} &= \left(M_{li}^{DL}\right)^{-1}\left[M_{uD}^D - M_{uD}^{DL}\right] \\ 
+	 M_{uS} &= \left(M_{li}^{DL}\right)^{-1}M_{uS}^D \\ 
+	 M_{f}  &= \left(M_{li}^{DL}\right)^{-1}\left[M_{f}^D - M_{f}^{DL} M_{li} \right] \end{align} 
+
+	
+  \item Point-to-Point: Perform step 3.
+				\begin{equation}
+				\left\{	\begin{matrix} \vec{F}^{D} \\ \vec{M}^{D} \end{matrix} \right\} 
+			=
+				\begin{bmatrix}
+				0 							 & 0  								 & M_{li}^{D} & 0          \\
+				M_{uD}^{D} 		   & M_{uS}^{D}    		   & M_{f}^{D}  & M_{li}^{D} \\
+				\end{bmatrix}
+				\left\{	\begin{matrix} \vec{u}^D \\ \vec{u}^{S}  \\ \vec{F}^{S}  \\ \vec{M}^{S} \end{matrix} \right\} 
+			\end{equation}		
+	The linearization routine returns these four matrices:
+	\begin{align} M_{li} &= M_{li}^D \\ 
+	 M_{uD} &= M_{uD}^D \\ 
+	 M_{uS} &= M_{uS}^D \\ 
+	 M_{f}  &= M_{f}^D  \end{align} 
+	
+\end{itemize}
 
 \end{document}
