@@ -19,6 +19,7 @@ char *template_registry[] = {
 "# Define inputs that the initialization routine may need here:",
 "#   e.g., the name of the input file, the file root name, etc.",
 "typedef ModuleName/ModName InitInputType CHARACTER(1024) InputFile  - - -   \"Name of the input file; remove if there is no file\" -",
+"typedef   ^                ^             LOGICAL         Linearize  - .FALSE. -  \"Flag that tells this module if the glue code wants to linearize.\" -",
 "",
 "# Define outputs from the initialization routine here:",
 "typedef   ^               InitOutputType CHARACTER(ChanLen) WriteOutputHdr  {:} - -   \"Names of the output-to-file channels\" -",
