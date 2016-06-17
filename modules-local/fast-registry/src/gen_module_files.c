@@ -149,13 +149,13 @@ gen_copy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong, con
   fprintf(fp,"    END IF\n") ;
 
              if ( sw_ccode && is_pointer(r) ) { // bjj: this needs to be updated if we've got multiple dimension arrays
-  fprintf(fp,"    Dst%sData%%c_obj%%%s_Len = SIZE(Dst%sData%%%s)\n",nonick,r->name,nonick,r->name) ; 
-  fprintf(fp,"    IF (Dst%sData%%c_obj%%%s_Len > 0) &\n",nonick,r->name) ; 
-  fprintf(fp,"      Dst%sData%%c_obj%%%s = C_LOC( Dst%sData%%%s(i1_l) ) \n",nonick,r->name, nonick,r->name ) ;      
+  fprintf(fp,"    Dst%sData%%c_obj%%%s_Len = SIZE(Dst%sData%%%s)\n",nonick,r->name,nonick,r->name) ;
+  fprintf(fp,"    IF (Dst%sData%%c_obj%%%s_Len > 0) &\n",nonick,r->name) ;
+  fprintf(fp,"      Dst%sData%%c_obj%%%s = C_LOC( Dst%sData%%%s(i1_l) ) \n",nonick,r->name, nonick,r->name ) ;
              }
 
-  fprintf(fp,"  END IF\n") ; // end dest allocated/associated           
-        } 
+  fprintf(fp,"  END IF\n") ; // end dest allocated/associated
+        }
 
         if ( r->type->type_type == DERIVED  ) { // includes mesh and dll_type
 
@@ -365,8 +365,8 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
       {
   fprintf(fp,"!  missing buffer for %s\n",r->name ) ;
       }*/
-    } 
-    
+    }
+
     if (has_deferred_dim(r, 0)){
   fprintf(fp, "  END IF\n");
     }
@@ -400,7 +400,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp, "     END IF\n");
   fprintf(fp, "  END IF\n");
   fprintf(fp, "  IF(OnlySize) RETURN ! return early if only trying to allocate buffers (not pack them)\n\n");
-  
+
   if (sw_ccode) {
      fprintf(fp, "  IF (C_ASSOCIATED(InData%%C_obj%%object)) ");
      fprintf(fp, "CALL SetErrStat(ErrID_Severe,'C_obj%%object cannot be packed.',ErrStat,ErrMsg,RoutineName)\n\n");
@@ -430,7 +430,7 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
   fprintf(fp, "    IntKiBuf( Int_Xferred    ) = LBOUND(InData%%%s,%d)\n", r->name, d);
   fprintf(fp, "    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%%%s,%d)\n", r->name, d);
   fprintf(fp, "    Int_Xferred = Int_Xferred + 2\n");
-      } 
+      }
   fprintf(fp, "\n");
   sprintf(tmp3, "  IF (SIZE(InData%%%s)>0)", r->name);
     }
@@ -547,8 +547,8 @@ gen_pack( FILE * fp, const node_t * ModName, char * inout, char *inoutlong )
 // bjj: this works, but will produce errors about the source being smaller than the result, thus leaving garbage in some bytes
 #if 0
           fprintf(fp, "      IntKiBuf ( Int_Xferred:Int_Xferred+%s*LEN(InData%%%s)-1 ) = TRANSFER(%s InData%%%s %s, IntKiBuf(1), %s*LEN(InData%%%s))\n",
-             (r->ndims>0) ? tmp2 : "1", r->name, 
-             (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "", 
+             (r->ndims>0) ? tmp2 : "1", r->name,
+             (r->ndims>0) ? "PACK(" : "", r->name, (r->ndims>0) ? ",.TRUE.)" : "",
              (r->ndims>0) ? tmp2 : "1", r->name);
           fprintf(fp, "      Int_Xferred   = Int_Xferred   + %s*LEN(InData%%%s)\n", (r->ndims>0) ? tmp2 : "1", r->name);
 #endif
@@ -624,7 +624,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
   fprintf(fp,"  Int_Xferred  = 1\n") ;
 
 
-// BJJ: TODO:  if there are C types, we're going to have to associate with C data structures....        
+// BJJ: TODO:  if there are C types, we're going to have to associate with C data structures....
 
   // Unpack data
   for (r = q->fields; r; r = r->next)
@@ -666,7 +666,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
         sprintf(tmp3, " ");
 
         for (d = 1; d <= r->ndims; d++) {
-           fprintf(fp, "    i%d_l = LBOUND(OutData%%%s,%d)\n", d, r->name, d); 
+           fprintf(fp, "    i%d_l = LBOUND(OutData%%%s,%d)\n", d, r->name, d);
            fprintf(fp, "    i%d_u = UBOUND(OutData%%%s,%d)\n", d, r->name, d);
            sprintf(tmp2, ",i%d_l:i%d_u", d, d);
            strcat(tmp, tmp2);
@@ -733,7 +733,7 @@ gen_unpack( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
            fprintf(fp, "      CALL DLLTypeUnpack( OutData%%%s%s, Re_Buf, Db_Buf, Int_Buf, ErrStat2, ErrMsg2 ) ! %s \n",
               r->name, dimstr(r->ndims), r->name);
         }
-        else if (r->type->type_type == DERIVED) { // && ! r->type->usefrom ) {           
+        else if (r->type->type_type == DERIVED) { // && ! r->type->usefrom ) {
            remove_nickname(r->type->module->nickname, r->type->name, nonick2);
            fprintf(fp, "      CALL %s_Unpack%s( Re_Buf, Db_Buf, Int_Buf, OutData%%%s%s, ErrStat2, ErrMsg2 ) ! %s \n",
               r->type->module->nickname, fast_interface_type_shortname(nonick2), r->name,
@@ -974,7 +974,7 @@ gen_destroy( FILE * fp, const node_t * ModName, char * inout, char * inoutlong )
      if ( r->ndims > 0 && has_deferred_dim(r,0) ) {
          fprintf(fp,"  DEALLOCATE(%sData%%%s)\n",nonick,r->name) ;
          if ( is_pointer(r) ) {
-            fprintf(fp, "  %sData%%%s => NULL()\n",nonick,r->name) ; 
+            fprintf(fp, "  %sData%%%s => NULL()\n",nonick,r->name) ;
             if (sw_ccode){
                fprintf(fp, "  %sData%%C_obj%%%s = C_NULL_PTR\n", nonick, r->name);
                fprintf(fp, "  %sData%%C_obj%%%s_Len = 0\n", nonick, r->name);
@@ -1173,8 +1173,8 @@ void gen_extint_order(FILE *fp, const node_t *ModName, char * typnm, char * uy, 
             }
          }
 
-         else { 
-            
+         else {
+
             strcpy(dex, "");
             for (j = r->ndims; j > 0; j--) {
                fprintf(fp, "  DO i%d%d = LBOUND(%s_out%s%%%s,%d),UBOUND(%s_out%s%%%s,%d)\n", 0, 1, uy, deref, r->name, j, uy, deref, r->name, j);
@@ -1309,7 +1309,7 @@ void calc_extint_order(FILE *fp, const node_t *ModName, node_t *r, int recursele
                }
                calc_extint_order(fp, ModName, r1, recurselevel + 1, max_ndims, max_nrecurs, max_alloc_ndims);
             }
-         } 
+         }
          else if (!strcmp(r->type->mapsto, "MeshType")) {
             if (r->ndims > 0) {
                if (r->ndims > *max_ndims)* max_ndims = r->ndims;
@@ -1351,7 +1351,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   if (!strcmp(make_lower_temp(typnm), "output")){
      strcpy(uy,"y");
   }
-  else{ 
+  else{
      strcpy(uy, "u");
   }
 
@@ -1373,7 +1373,7 @@ gen_ExtrapInterp( FILE *fp , const node_t * ModName, char * typnm, char * typnml
   fprintf(fp,"!..................................................................................................................................\n") ;
   fprintf(fp,"\n") ;
 
-  
+
   fprintf(fp, " TYPE(%s_%s), INTENT(INOUT)  :: %s(:)      ! %s at t1 > t2 > t3\n", ModName->nickname, typnmlong, uy, typnm);
   fprintf(fp, " REAL(DbKi),         INTENT(IN   )  :: tin(:)      ! Times associated with the %ss\n", typnm);
 //jm Modified from INTENT(  OUT) to INTENT(INOUT) to prevent ALLOCATABLE array arguments in the DDT
@@ -1853,7 +1853,7 @@ gen_ExtrapInterp(FILE *fp, const node_t * ModName, char * typnm, char * typnmlon
 
    gen_ExtrapInterp1(fp, ModName, typnm, typnmlong, uy, max_ndims, max_nrecurs, max_alloc_ndims);
    gen_ExtrapInterp2(fp, ModName, typnm, typnmlong, uy, max_ndims, max_nrecurs, max_alloc_ndims);
-     
+
 }
 
 
@@ -1951,7 +1951,7 @@ gen_rk4( FILE *fp , const node_t * ModName )
       if ( !strcmp( nonick, "continuousstatetype")) {
         for ( r = q->fields ; r ; r = r->next )
         {
-          if ( !strcmp( r->type->mapsto, "REAL(ReKi)") || 
+          if ( !strcmp( r->type->mapsto, "REAL(ReKi)") ||
              !strcmp(r->type->mapsto, "REAL(SiKi)") ||
              !strcmp(r->type->mapsto, "REAL(R8Ki)") ||
              !strcmp(r->type->mapsto, "REAL(DbKi)"))
@@ -2089,7 +2089,7 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
       fprintf(fp,"\n") ;
     }
 
-// generate each derived data type   
+// generate each derived data type
     for ( q = ModName->module_ddt_list ; q ; q = q->next )
     {
       if ( q->mapsto) remove_nickname( ModName->nickname, make_lower_temp(q->mapsto) , nonick ) ;
@@ -2212,7 +2212,7 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
             }
 
             if ( strcmp( r->descrip, "-" ) || strcmp( r->units, "-" ) ) /* that is, if not equal "-" */ {
-               fprintf(fp,"     ! %s [%s]", r->descrip, r->units) ;
+               fprintf(fp,"     !< %s [%s]", r->descrip, r->units) ;
             }
             fprintf(fp,"\n") ;
            } // ipass /= 0
@@ -2274,7 +2274,7 @@ gen_module( FILE * fp , node_t * ModName, char * prog_ver )
         gen_pack( fp, ModName, ddtname, ddtnamelong ) ;
         gen_unpack( fp, ModName, ddtname, ddtnamelong ) ;
         if ( sw_ccode ) {
-            gen_copy_c2f( fp, ModName, ddtname, ddtnamelong ) ; 
+            gen_copy_c2f( fp, ModName, ddtname, ddtnamelong ) ;
         }
 
       }
@@ -2465,7 +2465,7 @@ checkContainsMesh( node_t * q) //, int recurselevel)
    {
       if (!strcmp(q->type->name, "meshtype") || !strcmp(q->type->name, "meshmaptype")){ // is a mesh or (a bad workaround for meshmaptype which contains meshtype in "usefrom" instead of "typedef")
          q->containsPtr = 1;
-      } 
+      }
 
       else {
          for (r = q->type->fields; r; r = r->next)
@@ -2473,7 +2473,7 @@ checkContainsMesh( node_t * q) //, int recurselevel)
             checkContainsMesh(r);
             if (r->containsPtr) q->containsPtr = 1;
          }
-      } 
+      }
 
    }
 
