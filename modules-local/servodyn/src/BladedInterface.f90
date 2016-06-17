@@ -568,7 +568,9 @@ END IF
       dll_data%avrSWAP( R + (2*I) - 1 ) = p%GenTrq_TLU(I)   !>  + Records \f$R+1, R+3, R+5, \dots, R + 2*DLL\_NumTrq - 1\f$: Generator torque look-up table elements (Nm)
    ENDDO
 
-! Records 120-142 are outputs [see Retrieve_avrSWAP()]
+         
+!> * Records 120-129: User-defined variables 1-10; ignored in ServoDyn
+! Records 130-142 are outputs [see Retrieve_avrSWAP()]   
 ! Records L1 and onward are outputs [see Retrieve_avrSWAP()]
    
    

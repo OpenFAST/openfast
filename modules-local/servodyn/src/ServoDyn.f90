@@ -3008,6 +3008,7 @@ SUBROUTINE Torque_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    
    IF ( OtherState%GenOnLine .and. .not. OtherState%Off4Good )  THEN    ! Generator is on line.
       CALL CalculateTorque( t, u, p, m, y%GenTrq, y%ElecPwr, ErrStat, ErrMsg )
+      if (ErrStat >= AbortErrLev) return
    ELSE                                                                 ! Generator is off line.
       y%GenTrq  = 0.0_ReKi
       y%ElecPwr = 0.0_ReKi
@@ -3044,7 +3045,7 @@ SUBROUTINE Torque_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
          IF ( ( HSSBrFrac < 0.0_ReKi ) .OR. ( HSSBrFrac > 1.0_ReKi ) )  THEN   ! 0 (off) <= HSSBrFrac <= 1 (full); else Abort.
             ErrStat = ErrID_Fatal
-            ErrMsg  = 'HSSBrFrac must be between 0.0 (off) and 1.0 (full) (inclusive).  Fix logic in routine UserHSSBr().'
+            ErrMsg  = 'HSSBrFrac must be between 0.0 (off) and 1.0 (full) (inclusive). Fix logic in routine UserHSSBr().'
             RETURN
          END IF
 
@@ -3140,6 +3141,8 @@ SUBROUTINE Torque_UpdateStates( t, u, p, x, xd, z, OtherState, m, ErrStat, ErrMs
       IF ( ( .NOT. p%GenTiStp ) ) then
          
          CALL CalculateTorque( t, u, p, m, GenTrq, ElecPwr, ErrStat, ErrMsg ) 
+         if (ErrStat >= AbortErrLev) return
+         
          IF ( ElecPwr <= 0.0_ReKi ) THEN   ! Shut-down of generator determined by generator power = 0
             OtherState%Off4Good = .true.
          END IF
@@ -3178,7 +3181,7 @@ SUBROUTINE CalculateTorque( t, u, p, m, GenTrq, ElecPwr, ErrStat, ErrMsg )
    REAL(ReKi)                                     :: Slip        ! Generator slip.
    REAL(ReKi)                                     :: SlipRat     ! Generator slip ratio.
                                                   
-
+   character(*), parameter                        :: RoutineName = 'CalculateTorque'
 
       ! Initialize variables
    ErrStat = ErrID_None
@@ -3244,6 +3247,14 @@ SUBROUTINE CalculateTorque( t, u, p, m, GenTrq, ElecPwr, ErrStat, ErrMsg )
          CASE ( ControlMode_SIMPLE )              ! Simple variable-speed control.
 
 
+            if ( u%HSS_Spd < 0.0_ReKi) then
+               if (.not. equalRealNos(u%HSS_Spd, 0.0_ReKi) ) then
+                  call SetErrStat( ErrID_Fatal, "u%HSS_Spd is negative. Simple variable-speed control model "//&
+                                   "is not valid for motoring situations.", ErrStat, ErrMsg, RoutineName)
+                  return
+               end if               
+            end if
+            
          ! Compute the generator torque, which depends on which region we are in:
 
             IF ( u%HSS_Spd >= p%VS_RtGnSp )  THEN      ! We are in region 3 - torque is constant
