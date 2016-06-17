@@ -52,13 +52,10 @@ main( int argc, char *argv[], char *env[] )
   setrlimit ( RLIMIT_STACK , &rlim ) ;
 #endif
 
-   thisprog_ver = "FAST Registry (v3.01.00, 11-Jan-2016)";
+   thisprog_ver = "FAST Registry (v3.02.00, 15-Jun-2016)";
 
   fprintf(stderr,"\n") ;
   fprintf(stderr,"----- %s --------------\n", thisprog_ver) ;
-//  fprintf(stderr,"Revision $Rev$\n") ;
-//  fprintf(stderr,"Date $LastChangedDate$ \n" ) ;
-//  fprintf(stderr,"URL  $URL$\n" ) ;
   fprintf(stderr,"----------------------------------------------------------\n") ;
 
   sym_forget() ;
@@ -68,7 +65,7 @@ main( int argc, char *argv[], char *env[] )
   strcpy(fname_in, "");
   strcpy(OutDir, "."); // if no OutDir is listed, use current directory
   wrote_template = 0;
-  
+
 
   while (*argv) {
 
@@ -83,7 +80,7 @@ main( int argc, char *argv[], char *env[] )
       } else if (!strcmp(*argv,"-force") || !strcmp(*argv,"/force") ) {
         sw_output_template_force = 1 ;
       } else if (!strcmp(*argv,"-O") || !strcmp(*argv,"/O") ) {
-        argv++ ; if ( *argv )  { strcpy( OutDir, *argv ) ; } 
+        argv++ ; if ( *argv )  { strcpy( OutDir, *argv ) ; }
       } else if (!strcmp(*argv,"-I") || !strcmp(*argv,"/I") ) {
         argv++ ; if ( *argv ) { if( nincldirs < MAXINCLDIRS ) { strcpy( IncludeDirs[nincldirs++], *argv ) ; } }
       } else if (!strcmp(*argv, "-ccode") || !strcmp(*argv, "/ccode")) {
@@ -219,14 +216,14 @@ output_template( char * sw_modname_subst, char * sw_modnickname_subst, int force
     char tmp1[2096], tmp2[2096], tmp3[2096] ;
     if ( sw == 0 ) { sprintf(fname,"%s.f90",sw_modname_subst) ; }
     else           { sprintf(fname,"%s_Registry.txt",sw_modname_subst) ; }
-    
+
     if ( ! force ) { // check if file exists by trying to open file for reading. If the read is successful, exit program:
       if ( (fp = fopen( fname,"r" )) != NULL ) {
         fprintf(stderr,"Registry exiting. Attempt to overwrite file (%s) . Move out of the way or specify -force before -template option. \n", fname) ;
         exit(1) ;
       }
     }
-    
+
     if ( (fp = fopen( fname,"w" )) == NULL ) {
       fprintf(stderr,"Registry exiting. Failure opening %s.\n", fname ) ;
       exit(1) ;
