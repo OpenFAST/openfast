@@ -94,9 +94,6 @@ SUBROUTINE IfW_UserWind_Init(InitData, ParamData, MiscVars, Interval, InitOutDat
    ErrStat     = ErrID_None
    ErrMsg      = ""
 
-   TmpErrStat  = ErrID_None
-   TmpErrMsg   = ""
-
 
       ! Get a unit number to use
 
@@ -158,7 +155,7 @@ END SUBROUTINE IfW_UserWind_Init
 !!          primary wind flow is along the X-axis.  The rotations to PropagationDir are taken care of
 !!          in the InflowWind_CalcOutput subroutine which calls this routine.
 !-------------------------------------------------------------------------------------------------
-SUBROUTINE IfW_UserWind_CalcOutput(Time, PositionXYZ, ParamData, OutData, MiscVars, ErrStat, ErrMsg)
+SUBROUTINE IfW_UserWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, DiskVel, MiscVars, ErrStat, ErrMsg)
 
    IMPLICIT                                                       NONE
 
@@ -167,9 +164,10 @@ SUBROUTINE IfW_UserWind_CalcOutput(Time, PositionXYZ, ParamData, OutData, MiscVa
 
       ! Passed Variables
    REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
-   REAL(ReKi), ALLOCATABLE,                     INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
+   REAL(ReKi),                                  INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
    TYPE(IfW_UserWind_ParameterType),            INTENT(IN   )  :: ParamData         !< Parameters
-   TYPE(IfW_UserWind_OutputType),               INTENT(INOUT)  :: OutData           !< Output at Time (Set to INOUT so that array does not get deallocated)
+   REAL(ReKi),                                  INTENT(INOUT)  :: Velocity(:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
+   REAL(ReKi),                                  INTENT(  OUT)  :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
    TYPE(IfW_UserWind_MiscVarType),              INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
 
       ! Error handling
@@ -195,25 +193,11 @@ SUBROUTINE IfW_UserWind_CalcOutput(Time, PositionXYZ, ParamData, OutData, MiscVa
 
    ErrStat     = ErrID_None
    ErrMsg      = ""
-   TmpErrStat  = ErrID_None
-   TmpErrMsg   = ""
 
 
       ! The array is transposed so that the number of points is the second index, x/y/z is the first.
       ! This is just in case we only have a single point, the SIZE command returns the correct number of points.
    NumPoints   =  SIZE(PositionXYZ,DIM=2)
-
-      ! Allocate Velocity output array
-   IF ( .NOT. ALLOCATED(OutData%Velocity)) THEN
-      CALL AllocAry( OutData%Velocity, 3, NumPoints, "Velocity matrix at timestep", TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat," Could not allocate the output velocity array.",   &
-         ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
-   ELSEIF ( SIZE(OutData%Velocity,DIM=2) /= NumPoints ) THEN
-      CALL SetErrStat( ErrID_Fatal," Programming error: Position and Velocity arrays are not sized the same.",  &
-         ErrStat, ErrMsg, RoutineName)
-      RETURN
-   ENDIF
 
 
       ! Step through all the positions and get the velocities
@@ -237,7 +221,8 @@ SUBROUTINE IfW_UserWind_CalcOutput(Time, PositionXYZ, ParamData, OutData, MiscVa
 
    ENDDO
 
-
+      ! an average wind speed, required for AD14
+   DiskVel = 0.0_ReKi
 
       ! REMOVE THIS MESSAGE IF YOU WRITE CODE IN THIS MODULE
    CALL SetErrStat(ErrID_Fatal,' This module has not been written yet.',ErrStat,ErrMsg,RoutineName)
@@ -256,7 +241,7 @@ END SUBROUTINE IfW_UserWind_CalcOutput
 !!          an array of points is passed in. 
 !! @date:  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
 !----------------------------------------------------------------------------------------------------
-SUBROUTINE IfW_UserWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrStat, ErrMsg)
+SUBROUTINE IfW_UserWind_End( ParamData, MiscVars, ErrStat, ErrMsg)
 
 
    IMPLICIT                                                       NONE
@@ -265,9 +250,7 @@ SUBROUTINE IfW_UserWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrStat,
 
 
       ! Passed Variables
-   REAL(ReKi),    ALLOCATABLE,                  INTENT(INOUT)  :: PositionXYZ(:,:)  !< Array of XYZ positions to find wind speeds at
    TYPE(IfW_UserWind_ParameterType),            INTENT(INOUT)  :: ParamData         !< Parameters
-   TYPE(IfW_UserWind_OutputType),               INTENT(INOUT)  :: OutData           !< Initial output
    TYPE(IfW_UserWind_MiscVarType),              INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
 
 
@@ -287,10 +270,6 @@ SUBROUTINE IfW_UserWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrStat,
    ErrStat  = ErrID_None
 
 
-      ! Destroy the position array
-
-   IF (ALLOCATED(PositionXYZ))      DEALLOCATE(PositionXYZ)
-
 
       ! Destroy parameter data
 
@@ -301,12 +280,6 @@ SUBROUTINE IfW_UserWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrStat,
       ! Destroy the misc data
 
    CALL IfW_UserWind_DestroyMisc(  MiscVars,   TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-
-
-      ! Destroy the output data
-
-   CALL IfW_UserWind_DestroyOutput(      OutData,       TmpErrStat, TmpErrMsg )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 
 

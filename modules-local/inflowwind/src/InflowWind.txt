@@ -112,6 +112,7 @@ typedef  ^                       ^                 LOGICAL           LidRadialVe
 
 
 typedef  ^                       InitInputType     CHARACTER(1024)   InputFileName     -     -     -     "Name of the InflowWind input file to use"                                    -
+typedef  ^                       ^                 LOGICAL           Linearize         -   .FALSE. -     "Flag that tells this module if the glue code wants to linearize." -
 #Is TurbineHeight needed?  Possibly as a check on the wind data.
 #typedef  ^                       ^                 ReKi              TurbineHeight     -     -     -     "Hub height of the turbine"                                                   meters
 typedef  ^                       ^                 IntKi             NumWindPoints     -     -     -     "Number of wind velocity points expected"                                     -
@@ -174,6 +175,8 @@ typedef  ^                       ^        IfW_UserWind_ParameterType UserWind   
 #typedef  ^                       ^          IfW_CTWind_ParameterType CTWind            -     -     -     "Parameters from CTWind"                                 -
 typedef  ^                       ^                 IntKi             NumOuts           -     0     -     "Number of parameters in the output list (number of outputs requested)" -
 typedef  ^                       ^                 OutParmType       OutParam          {:}   -     -     "Names and units (and other characteristics) of all requested output parameters" -
+typedef  ^                       ^                 IntKi             OutParamLinIndx  {:}{:} -     -     "Index into WriteOutput for WindViXYZ in linearization analysis" -
+typedef  ^                       ^                 IntKi             NumLinOuts        -     0     -     "Number of WindViXYZ variables in WriteOutput for linearization analysis" -
 typedef  ^                       ^          lidar_ParameterType      lidar             -     -     -     "Lidar parameter data"                                       -
 
 

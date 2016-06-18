@@ -37,8 +37,4 @@ typedef  ^                    ParameterType       CHARACTER(1024) WindFileName  
 
 
 
-# ..... Outputs ...................................................................................................................
-# Define outputs that are contained on the mesh here:
-typedef  ^                    OutputType                 ReKi     Velocity          ::    -     -     "Array holding the U,V,W velocity for a given timestep"        meters/sec
-
 

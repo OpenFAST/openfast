@@ -55,9 +55,3 @@ typedef  ^                       ^                       IntKi    NumDataLines  
 
 
 
-# ..... Outputs ...................................................................................................................
-# Define outputs that are contained on the mesh here:
-typedef  ^                    OutputType                 ReKi     Velocity          ::    -     -     "Array holding the U,V,W velocity for a given timestep"        meters/sec
-typedef  ^                       ^                       ReKi     DiskVel           {3}   -     -     "Vector holding the U,V,W average velocity of the disk"        meters/sec
-
-
