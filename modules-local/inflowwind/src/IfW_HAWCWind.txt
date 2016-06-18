@@ -77,8 +77,3 @@ typedef  ^                       ^                 ReKi              URef       
 # Define inputs that are not on this mesh here:
 typedef  ^                       InputType         ReKi              Position          ::    -     -     "Array holding the input positions at a given timestep"     meters
 
-
-# ..... Outputs ...................................................................................................................
-# Define outputs that are contained on the mesh here:
-typedef  ^                       OutputType        ReKi              Velocity          ::    -     -     "Array holding the U,V,W velocity for a given timestep"   meters/sec
-typedef  ^                       ^                 ReKi              DiskVel           {3}   -     -     "Vector holding the U,V,W average velocity of the disk"        meters/sec

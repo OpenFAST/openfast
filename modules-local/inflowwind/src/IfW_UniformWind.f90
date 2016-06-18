@@ -6,20 +6,24 @@
 !! in space.
 !!
 !! the file contains header information (rows that contain "!"), followed by numeric data stored in
-!! 8 columns:   (1) Time                                  [s]
-!!              (2) Horizontal wind speed       (V)       [m/s]
-!!              (3) Wind direction              (Delta)   [deg]
-!!              (4) Vertical wind speed         (VZ)      [m/s]
-!!              (5) Horizontal linear shear     (HLinShr) [-]
-!!              (6) Vertical power-law shear    (VShr)    [-]
-!!              (7) Vertical linear shear       (VLinShr) [-]
-!!              (8) Gust (horizontal) velocity  (VGust)   [m/s]
+!! 8 columns:   
+!!              |Column | Description                 | Variable Name | Units|
+!!              |-------|-----------------------------|---------------|------|  
+!!              |    1  |  Time                       | Time          | [s]  |
+!!              |    2  |  Horizontal wind speed      | V             | [m/s]|
+!!              |    3  |  Wind direction             | Delta         | [deg]|
+!!              |    4  |  Vertical wind speed        | VZ            | [m/s]|
+!!              |    5  |  Horizontal linear shear    | HLinShr       | [-]  |
+!!              |    6  |  Vertical power-law shear   | VShr          | [-]  |
+!!              |    7  |  Vertical linear shear      | VLinShr       | [-]  |
+!!              |    8  |  Gust (horizontal) velocity | VGust         | [m/s]|
 !!
 !! The horizontal wind speed at (X, Y, Z) is then calculated using the interpolated columns by  \n
-!!      Vh = V * ( Z/RefHt ) ** VShr                                        ! power-law wind shear
-!!         \n + V * HLinShr/RefWid * ( Y * COS(Delta) + X * SIN(Delta) )       ! horizontal linear shear
-!!         \n + V * VLinShr/RefWid * ( Z-RefHt )                               ! vertical linear shear
-!!         \n + VGust                                                          ! gust speed 
+!!  \f{eqnarray}{ V_h & = & V \, \left( \frac{Z}{Z_{Ref}} \right) ^ {VShr}                   & \mbox{power-law wind shear} \\
+!!                    & + & V \, \frac{H_{LinShr}}{RefWid} \, \left( Y \cos(Delta) + X \sin(Delta) \right)     & \mbox{horizontal linear shear} \\
+!!                    & + & V \, \frac{V_{LinShr}}{RefWid} \, \left( Z-Z_{Ref} \right)                               & \mbox{vertical linear shear} \\
+!!                    & + & V_{Gust}                                                          & \mbox{gust speed} 
+!! \f}
 MODULE IfW_UniformWind
 !----------------------------------------------------------------------------------------------------
 !! Feb 2013    v2.00.00         A. Platt
@@ -65,7 +69,8 @@ MODULE IfW_UniformWind
    PUBLIC                                    :: IfW_UniformWind_Init
    PUBLIC                                    :: IfW_UniformWind_End
    PUBLIC                                    :: IfW_UniformWind_CalcOutput
-
+   PUBLIC                                    :: IfW_UniformWind_JacobianPInput
+   
 CONTAINS
 
 !====================================================================================================
@@ -128,8 +133,6 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
    ErrMsg      = ""
 
 
-
-
       !-------------------------------------------------------------------------------------------------
       ! Check that it's not already initialized
       !-------------------------------------------------------------------------------------------------
@@ -170,7 +173,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
       !-------------------------------------------------------------------------------------------------
 
    LINE = '!'                          ! Initialize the line for the DO WHILE LOOP
-   NumComments = -1
+   NumComments = -1                    ! the last line we read is not a comment, so we'll initialize this to -1 instead of 0
 
    DO WHILE ( (INDEX( LINE, '!' ) > 0) .OR. (INDEX( LINE, '#' ) > 0) .OR. (INDEX( LINE, '%' ) > 0) ) ! Lines containing "!" are treated as comment lines
       NumComments = NumComments + 1
@@ -178,7 +181,7 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
       READ(UnitWind,'( A )',IOSTAT=TmpErrStat) LINE
 
       IF ( TmpErrStat /=0 ) THEN
-         CALL SetErrStat(ErrID_Fatal,' Error reading from uniform wind file on line '//TRIM(Num2LStr(NumComments))//'.',   &
+         CALL SetErrStat(ErrID_Fatal,' Error reading from uniform wind file on line '//TRIM(Num2LStr(NumComments+1))//'.',   &
                ErrStat, ErrMsg, RoutineName)
          CLOSE(UnitWind)
          RETURN
@@ -193,9 +196,9 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
 
    ParamData%NumDataLines = 0
 
-   READ(LINE,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols )
+   READ(LINE,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols ) ! this line was read when we were figuring out the comment lines; let's make sure it contains
 
-   DO WHILE (TmpErrStat == ErrID_None)  ! read the rest of the file (until an error occurs)
+   DO WHILE (TmpErrStat == 0)  ! read the rest of the file (until an error occurs)
       ParamData%NumDataLines = ParamData%NumDataLines + 1
 
       READ(UnitWind,*,IOSTAT=TmpErrStat) ( TmpData(I), I=1,NumCols )
@@ -204,8 +207,8 @@ SUBROUTINE IfW_UniformWind_Init(InitData, ParamData, MiscVars, Interval, InitOut
 
 
    IF (ParamData%NumDataLines < 1) THEN
-      TmpErrMsg=  ' Error reading data from Uniform wind file on line '// &
-                  TRIM(Num2LStr(1+NumComments))//'.'
+      TmpErrMsg=  'Error: '//TRIM(Num2LStr(NumComments))//' comment lines were found in the uniform wind file, '// &
+                  'but the first data line does not contain the proper format.'
       CALL SetErrStat(ErrID_Fatal,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
       CLOSE(UnitWind)
       RETURN
@@ -481,13 +484,12 @@ END SUBROUTINE IfW_UniformWind_Init
 
 !-------------------------------------------------------------------------------------------------
 !>  This routine and its subroutines calculate the wind velocity at a set of points given in
-!!  PositionXYZ.  The UVW velocities are returned in OutData%Velocity
+!!  PositionXYZ.  The UVW velocities are returned in Velocity
 !!
-!! @note  This routine does not satisfy the Modular framework.  The InputType is not used, rather
-!!          an array of points is passed in. 
+!! @note  This routine does not satisfy the Modular framework.  
 !! @date  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
 !-------------------------------------------------------------------------------------------------
-SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OutData, MiscVars, ErrStat, ErrMsg)
+SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, Velocity, DiskVel, MiscVars, ErrStat, ErrMsg)
 
    IMPLICIT                                                       NONE
 
@@ -496,9 +498,10 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OutData, Mis
 
       ! Passed Variables
    REAL(DbKi),                                  INTENT(IN   )  :: Time              !< time from the start of the simulation
-   REAL(ReKi), ALLOCATABLE,                     INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
+   REAL(ReKi),                                  INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
    TYPE(IfW_UniformWind_ParameterType),         INTENT(IN   )  :: ParamData         !< Parameters
-   TYPE(IfW_UniformWind_OutputType),            INTENT(INOUT)  :: OutData           !< Output at Time    (Set to INOUT so that array does not get deallocated)
+   REAL(ReKi),                                  INTENT(INOUT)  :: Velocity(:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
+   REAL(ReKi),                                  INTENT(  OUT)  :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
    TYPE(IfW_UniformWind_MiscVarType),           INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
 
       ! Error handling
@@ -524,31 +527,17 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OutData, Mis
 
    ErrStat     = ErrID_None
    ErrMsg      = ""
-   TmpErrStat  = ErrID_None
-   TmpErrMsg   = ""
 
       ! The array is transposed so that the number of points is the second index, x/y/z is the first.
       ! This is just in case we only have a single point, the SIZE command returns the correct number of points.
    NumPoints   =  SIZE(PositionXYZ,DIM=2)
-
-      ! Allocate Velocity output array
-   IF ( .NOT. ALLOCATED(OutData%Velocity)) THEN
-      CALL AllocAry( OutData%Velocity, 3, NumPoints, "Velocity matrix at timestep", TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat," Could not allocate the output velocity array.",   &
-         ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
-   ELSEIF ( SIZE(OutData%Velocity,DIM=2) /= NumPoints ) THEN
-      CALL SetErrStat( ErrID_Fatal," Programming error: Position and Velocity arrays are not sized the same.",  &
-         ErrStat, ErrMsg, RoutineName)
-      RETURN
-   ENDIF
 
 
       ! Step through all the positions and get the velocities
    DO PointNum = 1, NumPoints
 
          ! Calculate the velocity for the position
-      OutData%Velocity(:,PointNum) = GetWindSpeed(Time, PositionXYZ(:,PointNum), ParamData, MiscVars, TmpErrStat, TmpErrMsg)
+      Velocity(:,PointNum) = GetWindSpeed(Time, PositionXYZ(:,PointNum), ParamData, MiscVars, TmpErrStat, TmpErrMsg)
 
          ! Error handling
       CALL SetErrStat(TmpErrStat,TmpErrMsg,ErrStat,ErrMsg,RoutineName)
@@ -566,254 +555,227 @@ SUBROUTINE IfW_UniformWind_CalcOutput(Time, PositionXYZ, ParamData, OutData, Mis
 
 
       ! DiskVel term -- this represents the average across the disk -- sort of.  This changes for AeroDyn 15
-   OutData%DiskVel   =  WindInf_ADhack_diskVel(Time, ParamData, MiscVars, TmpErrStat, TmpErrMsg)
+   DiskVel   =  WindInf_ADhack_diskVel(Time, ParamData, MiscVars, TmpErrStat, TmpErrMsg)
 
    RETURN
 
-CONTAINS
-   !+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
-   !> This subroutine linearly interpolates the columns in the uniform input file to get the values for
-   !! the requested time, then uses the interpolated values to calclate the wind speed at a point
-   !! in space represented by InputPosition.
-   !!
-   !!  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-   FUNCTION GetWindSpeed(Time,   InputPosition,   ParamData,     MiscVars,   ErrStat, ErrMsg)
+END SUBROUTINE IfW_UniformWind_CalcOutput
+!+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+!> This subroutine linearly interpolates the parameters that are used to compute uniform 
+!! wind.
+SUBROUTINE InterpParams(Time, p, m, V_tmp, Delta_tmp, VZ_tmp, HShr_tmp, VShr_tmp, VLinShr_tmp, VGust_tmp)
 
-         ! Passed Variables
-      REAL(DbKi),                            INTENT(IN   )  :: Time              !< time from the start of the simulation
-      REAL(ReKi),                            INTENT(IN   )  :: InputPosition(3)  !< input information: positions X,Y,Z
-      TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: ParamData         !< Parameters
-      TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)  :: MiscVars          !< Other State data   (storage for the main data)
+      ! Passed Variables
+   REAL(DbKi),                            INTENT(IN   )  :: Time              !< time from the start of the simulation
+   TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: p                 !< Parameters
+   TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)  :: m                 !< Misc variables (index)
 
-      INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< error status
-      CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg            !< The error message
-
-         ! Returned variables
-      REAL(ReKi)                                            :: GetWindSpeed(3)   !< return velocities (U,V,W)
+   REAL(ReKi)                           , INTENT(  OUT)  :: V_tmp             !< interpolated V       at input TIME
+   REAL(ReKi)                           , INTENT(  OUT)  :: Delta_tmp         !< interpolated Delta   at input TIME
+   REAL(ReKi)                           , INTENT(  OUT)  :: VZ_tmp            !< interpolated VZ      at input TIME
+   REAL(ReKi)                           , INTENT(  OUT)  :: HShr_tmp          !< interpolated HShr    at input TIME
+   REAL(ReKi)                           , INTENT(  OUT)  :: VShr_tmp          !< interpolated VShr    at input TIME
+   REAL(ReKi)                           , INTENT(  OUT)  :: VLinShr_tmp       !< interpolated VLinShr at input TIME
+   REAL(ReKi)                           , INTENT(  OUT)  :: VGust_tmp         !< interpolated VGust   at input TIME
 
 
-         ! Local Variables
+      ! Local Variables
+   REAL(ReKi)                                            :: slope             ! temporary storage for slope (in time) used in linear interpolation
+   
+
+   !-------------------------------------------------------------------------------------------------
+   ! Linearly interpolate in time (or used nearest-neighbor to extrapolate)
+   ! (compare with NWTC_Num.f90\InterpStpReal)
+   !-------------------------------------------------------------------------------------------------
+
+      ! Let's check the limits.
+   IF ( Time <= p%Tdata(1) .OR. p%NumDataLines == 1 )  THEN
+
+      m%TimeIndex  = 1
+      V_tmp         = p%V      (1)
+      Delta_tmp     = p%Delta  (1)
+      VZ_tmp        = p%VZ     (1)
+      HShr_tmp      = p%HShr   (1)
+      VShr_tmp      = p%VShr   (1)
+      VLinShr_tmp   = p%VLinShr(1)
+      VGust_tmp     = p%VGust  (1)
+
+   ELSE IF ( Time >= p%Tdata(p%NumDataLines) )  THEN
+
+      m%TimeIndex   = p%NumDataLines - 1
+      V_tmp         = p%V      (p%NumDataLines)
+      Delta_tmp     = p%Delta  (p%NumDataLines)
+      VZ_tmp        = p%VZ     (p%NumDataLines)
+      HShr_tmp      = p%HShr   (p%NumDataLines)
+      VShr_tmp      = p%VShr   (p%NumDataLines)
+      VLinShr_tmp   = p%VLinShr(p%NumDataLines)
+      VGust_tmp     = p%VGust  (p%NumDataLines)
+
+   ELSE
+
+         ! Let's interpolate!  Linear interpolation.
+      m%TimeIndex = MAX( MIN( m%TimeIndex, p%NumDataLines-1 ), 1 )
+
+      DO
+
+         IF ( Time < p%Tdata(m%TimeIndex) )  THEN
+
+            m%TimeIndex = m%TimeIndex - 1
+
+         ELSE IF ( Time >= p%Tdata(m%TimeIndex+1) )  THEN
+
+            m%TimeIndex = m%TimeIndex + 1
+
+         ELSE
+            slope       = ( Time - p%Tdata(m%TimeIndex) )/( p%Tdata(m%TimeIndex+1) - p%Tdata(m%TimeIndex) )
+            
+            V_tmp       = ( p%V(      m%TimeIndex+1) - p%V(      m%TimeIndex) )*slope  + p%V(      m%TimeIndex)
+            Delta_tmp   = ( p%Delta(  m%TimeIndex+1) - p%Delta(  m%TimeIndex) )*slope  + p%Delta(  m%TimeIndex)
+            VZ_tmp      = ( p%VZ(     m%TimeIndex+1) - p%VZ(     m%TimeIndex) )*slope  + p%VZ(     m%TimeIndex)
+            HShr_tmp    = ( p%HShr(   m%TimeIndex+1) - p%HShr(   m%TimeIndex) )*slope  + p%HShr(   m%TimeIndex)
+            VShr_tmp    = ( p%VShr(   m%TimeIndex+1) - p%VShr(   m%TimeIndex) )*slope  + p%VShr(   m%TimeIndex)
+            VLinShr_tmp = ( p%VLinShr(m%TimeIndex+1) - p%VLinShr(m%TimeIndex) )*slope  + p%VLinShr(m%TimeIndex)
+            VGust_tmp   = ( p%VGust(  m%TimeIndex+1) - p%VGust(  m%TimeIndex) )*slope  + p%VGust(  m%TimeIndex)
+            EXIT
+
+         END IF
+
+      END DO
+
+   END IF
+END SUBROUTINE InterpParams
+
+!+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
+!> This subroutine linearly interpolates the columns in the uniform input file to get the values for
+!! the requested time, then uses the interpolated values to calclate the wind speed at a point
+!! in space represented by InputPosition.
+!!
+!!  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
+FUNCTION GetWindSpeed(Time, InputPosition, p, m, ErrStat, ErrMsg)
+
+      ! Passed Variables
+   REAL(DbKi),                            INTENT(IN   )  :: Time              !< time from the start of the simulation
+   REAL(ReKi),                            INTENT(IN   )  :: InputPosition(3)  !< input information: positions X,Y,Z
+   TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: p                 !< Parameters
+   TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)  :: m                 !< Misc variables (stores last index into array time for efficiency)
+
+   INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< error status
+   CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg            !< The error message
+
+      ! Returned variables
+   REAL(ReKi)                                            :: GetWindSpeed(3)   !< return velocities (U,V,W)
+
+
+      ! Local Variables
+   REAL(ReKi)                                            :: CosDelta          ! cosine of Delta_tmp
+   REAL(ReKi)                                            :: Delta_tmp         ! interpolated Delta   at input TIME
+   REAL(ReKi)                                            :: HShr_tmp          ! interpolated HShr    at input TIME
+   REAL(ReKi)                                            :: SinDelta          ! sine of Delta_tmp
+   REAL(ReKi)                                            :: V_tmp             ! interpolated V       at input TIME
+   REAL(ReKi)                                            :: VGust_tmp         ! interpolated VGust   at input TIME
+   REAL(ReKi)                                            :: VLinShr_tmp       ! interpolated VLinShr at input TIME
+   REAL(ReKi)                                            :: VShr_tmp          ! interpolated VShr    at input TIME
+   REAL(ReKi)                                            :: VZ_tmp            ! interpolated VZ      at input TIME
+   REAL(ReKi)                                            :: V1                ! temporary storage for horizontal velocity
+
+
+   ErrStat  =  ErrID_None
+   ErrMsg   =  ""
+
+
+   !-------------------------------------------------------------------------------------------------
+   !> 1. Linearly interpolate parameters in time (or use nearest-neighbor to extrapolate)
+   !! (compare with nwtc_num::interpstpreal)
+   !-------------------------------------------------------------------------------------------------
+   CALL InterpParams(Time, p, m, V_tmp, Delta_tmp, VZ_tmp, HShr_tmp, VShr_tmp, VLinShr_tmp, VGust_tmp)
+   
+   !-------------------------------------------------------------------------------------------------
+   !> 2. Calculate the wind speed at this time (if z<0, return an error):
+   !-------------------------------------------------------------------------------------------------
+
+   if ( InputPosition(3) < 0.0_ReKi ) then
+      call SetErrStat(ErrID_Fatal,'Height must not be negative.',ErrStat,ErrMsg,'GetWindSpeed')
+   end if
+      
+   !> Let \f{eqnarray}{ V_h & = & V \, \left( \frac{Z}{Z_{ref}} \right) ^ {V_{shr}}                                   & \mbox{power-law wind shear} \\
+   !!                    & + & V \, \frac{H_{LinShr}}{RefWid} \, \left( Y \cos(Delta) + X \sin(Delta) \right)   & \mbox{horizontal linear shear} \\
+   !!                    & + & V \, \frac{V_{LinShr}}{RefWid} \, \left( Z - Z_{ref} \right)                           & \mbox{vertical linear shear} \\
+   !!                    & + & V_{Gust}                                                                               & \mbox{gust speed}    
+   !! \f} Then the returned wind speed, \f$Vt\f$, is \n
+   !! \f$Vt_u =  V_h \, \cos(Delta) \f$ \n
+   !! \f$Vt_v = -V_h \, \sin(Delta) \f$ \n
+   !! \f$Vt_w =  V_z \f$ \n using input positions \f$X,Y,Z\f$ and interpolated values for time-dependent input-file parameters 
+   !! \f$V, Delta, V_z, H_{LinShr}, V_{Shr}, V_{LinShr}, V_{Gust}\f$.
+   
+   CosDelta = COS( Delta_tmp )
+   SinDelta = SIN( Delta_tmp )
+   V1 = V_tmp * ( ( InputPosition(3)/p%RefHt ) ** VShr_tmp &                                 ! power-law wind shear
+         + ( HShr_tmp   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &    ! horizontal linear shear
+         +  VLinShr_tmp * ( InputPosition(3)-p%RefHt ) )/p%RefLength  ) &                    ! vertical linear shear
+         + VGust_tmp                                                                         ! gust speed
+         
+   GetWindSpeed(1) =  V1 * CosDelta
+   GetWindSpeed(2) = -V1 * SinDelta
+   GetWindSpeed(3) =  VZ_tmp
+
+
+   RETURN
+
+END FUNCTION GetWindSpeed
+
+
+
+!> This function should be deleted ASAP.  Its purpose is to reproduce results of AeroDyn 12.57;
+!! when a consensus on the definition of "average velocity" is determined, this function will be
+!! removed.
+FUNCTION WindInf_ADhack_diskVel( t, p, m,ErrStat, ErrMsg )
+   
+         ! Passed variables
+   
+      REAL(DbKi),                            INTENT(IN   )  :: t         !< Time
+      TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: p         !< Parameters
+      TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)  :: m         !< misc/optimization data (storage for efficiency index)
+   
+      INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat   !< error status from this function
+      CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg    !< error message from this function 
+   
+         ! Function definition
+      REAL(ReKi)                    :: WindInf_ADhack_diskVel(3)
+   
+         ! Local variables
       REAL(ReKi)                                            :: CosDelta          ! cosine of Delta_tmp
       REAL(ReKi)                                            :: Delta_tmp         ! interpolated Delta   at input TIME
       REAL(ReKi)                                            :: HShr_tmp          ! interpolated HShr    at input TIME
-      REAL(ReKi)                                            :: P                 ! temporary storage for slope (in time) used in linear interpolation
       REAL(ReKi)                                            :: SinDelta          ! sine of Delta_tmp
       REAL(ReKi)                                            :: V_tmp             ! interpolated V       at input TIME
       REAL(ReKi)                                            :: VGust_tmp         ! interpolated VGust   at input TIME
       REAL(ReKi)                                            :: VLinShr_tmp       ! interpolated VLinShr at input TIME
       REAL(ReKi)                                            :: VShr_tmp          ! interpolated VShr    at input TIME
       REAL(ReKi)                                            :: VZ_tmp            ! interpolated VZ      at input TIME
-      REAL(ReKi)                                            :: V1                ! temporary storage for horizontal velocity
-
-
-      ErrStat  =  ErrID_None
-      ErrMsg   =  ""
-
-      !-------------------------------------------------------------------------------------------------
-      ! verify the module was initialized first
-      !-------------------------------------------------------------------------------------------------
-
-      IF ( MiscVars%TimeIndex == 0 ) THEN
-         CALL SetErrStat(ErrID_Fatal,' Error: Call UniformWind_Init() before getting wind speed.',ErrStat,ErrMsg,'')
-         RETURN
-      END IF
-
-      !-------------------------------------------------------------------------------------------------
-      ! Linearly interpolate in time (or used nearest-neighbor to extrapolate)
-      ! (compare with NWTC_Num.f90\InterpStpReal)
-      !-------------------------------------------------------------------------------------------------
-
-         ! Let's check the limits.
-      IF ( Time <= ParamData%Tdata(1) .OR. ParamData%NumDataLines == 1 )  THEN
-
-         MiscVars%TimeIndex      = 1
-         V_tmp         = ParamData%V      (1)
-         Delta_tmp     = ParamData%Delta  (1)
-         VZ_tmp        = ParamData%VZ     (1)
-         HShr_tmp      = ParamData%HShr   (1)
-         VShr_tmp      = ParamData%VShr   (1)
-         VLinShr_tmp   = ParamData%VLinShr(1)
-         VGust_tmp     = ParamData%VGust  (1)
-
-
-      ELSE IF ( Time >= ParamData%Tdata(ParamData%NumDataLines) )  THEN
-
-         MiscVars%TimeIndex      = ParamData%NumDataLines - 1
-         V_tmp         = ParamData%V      (ParamData%NumDataLines)
-         Delta_tmp     = ParamData%Delta  (ParamData%NumDataLines)
-         VZ_tmp        = ParamData%VZ     (ParamData%NumDataLines)
-         HShr_tmp      = ParamData%HShr   (ParamData%NumDataLines)
-         VShr_tmp      = ParamData%VShr   (ParamData%NumDataLines)
-         VLinShr_tmp   = ParamData%VLinShr(ParamData%NumDataLines)
-         VGust_tmp     = ParamData%VGust  (ParamData%NumDataLines)
-
-      ELSE
-
-            ! Let's interpolate!  Linear interpolation.
-         MiscVars%TimeIndex = MAX( MIN( MiscVars%TimeIndex, ParamData%NumDataLines-1 ), 1 )
-
-         DO
-
-            IF ( Time < ParamData%Tdata(MiscVars%TimeIndex) )  THEN
-
-               MiscVars%TimeIndex = MiscVars%TimeIndex - 1
-
-            ELSE IF ( Time >= ParamData%Tdata(MiscVars%TimeIndex+1) )  THEN
-
-               MiscVars%TimeIndex = MiscVars%TimeIndex + 1
-
-            ELSE
-               P           = ( Time - ParamData%Tdata(MiscVars%TimeIndex) )/( ParamData%Tdata(MiscVars%TimeIndex+1) &
-                              - ParamData%Tdata(MiscVars%TimeIndex) )
-               V_tmp       = ( ParamData%V(      MiscVars%TimeIndex+1) - ParamData%V(      MiscVars%TimeIndex) )*P  &
-                              + ParamData%V(      MiscVars%TimeIndex)
-               Delta_tmp   = ( ParamData%Delta(  MiscVars%TimeIndex+1) - ParamData%Delta(  MiscVars%TimeIndex) )*P  &
-                              + ParamData%Delta(  MiscVars%TimeIndex)
-               VZ_tmp      = ( ParamData%VZ(     MiscVars%TimeIndex+1) - ParamData%VZ(     MiscVars%TimeIndex) )*P  &
-                              + ParamData%VZ(     MiscVars%TimeIndex)
-               HShr_tmp    = ( ParamData%HShr(   MiscVars%TimeIndex+1) - ParamData%HShr(   MiscVars%TimeIndex) )*P  &
-                              + ParamData%HShr(   MiscVars%TimeIndex)
-               VShr_tmp    = ( ParamData%VShr(   MiscVars%TimeIndex+1) - ParamData%VShr(   MiscVars%TimeIndex) )*P  &
-                              + ParamData%VShr(   MiscVars%TimeIndex)
-               VLinShr_tmp = ( ParamData%VLinShr(MiscVars%TimeIndex+1) - ParamData%VLinShr(MiscVars%TimeIndex) )*P  &
-                              + ParamData%VLinShr(MiscVars%TimeIndex)
-               VGust_tmp   = ( ParamData%VGust(  MiscVars%TimeIndex+1) - ParamData%VGust(  MiscVars%TimeIndex) )*P  &
-                              + ParamData%VGust(  MiscVars%TimeIndex)
-               EXIT
-
-            END IF
-
-         END DO
-
-      END IF
-
-
-      !-------------------------------------------------------------------------------------------------
-      ! calculate the wind speed at this time
-      !-------------------------------------------------------------------------------------------------
-
-      if ( InputPosition(3) < 0.0_ReKi ) then
-         call SetErrStat(ErrID_Fatal,'Height must not be negative.',ErrStat,ErrMsg,'GetWindSpeed')
-      end if
-      
-      
-      CosDelta = COS( Delta_tmp )
-      SinDelta = SIN( Delta_tmp )
-      V1 = V_tmp * ( ( InputPosition(3)/ParamData%RefHt ) ** VShr_tmp &                                  ! power-law wind shear
-           + ( HShr_tmp   * ( InputPosition(2) * CosDelta + InputPosition(1) * SinDelta ) &              ! horizontal linear shear
-           +  VLinShr_tmp * ( InputPosition(3)-ParamData%RefHt ) )/ParamData%RefLength  ) &              ! vertical linear shear
-           + VGust_tmp                                                                                   ! gust speed
-      GetWindSpeed(1) =  V1 * CosDelta
-      GetWindSpeed(2) = -V1 * SinDelta
-      GetWindSpeed(3) =  VZ_tmp
-
-
-      RETURN
-
-   END FUNCTION GetWindSpeed
-
-
-END SUBROUTINE IfW_UniformWind_CalcOutput
-
-!> This function should be deleted ASAP.  Its purpose is to reproduce results of AeroDyn 12.57;
-!! when a consensus on the definition of "average velocity" is determined, this function will be
-!! removed.
-FUNCTION WindInf_ADhack_diskVel( Time, ParamData, MiscVars,ErrStat, ErrMsg )
-   
-         ! Passed variables
-   
-      REAL(DbKi),                            INTENT(IN   )  :: Time              !< Time
-      TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )  :: ParamData         !< Parameters
-      TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)  :: MiscVars          !< misc/optimization data   (storage for the main data)
-   
-      INTEGER(IntKi),                        INTENT(  OUT)  :: ErrStat           !< error status from this function
-      CHARACTER(*),                          INTENT(  OUT)  :: ErrMsg            !< error message from this function 
-   
-         ! Function definition
-      REAL(ReKi)                    :: WindInf_ADhack_diskVel(3)
-   
-         ! Local variables
-      REAL(ReKi)                    :: Delta_tmp            ! interpolated Delta   at input TIME
-      REAL(ReKi)                    :: P                    ! temporary storage for slope (in time) used in linear interpolation
-      REAL(ReKi)                    :: V_tmp                ! interpolated V       at input TIME
-      REAL(ReKi)                    :: VZ_tmp               ! interpolated VZ      at input TIME
-   
    
       
       ErrStat = ErrID_None
       ErrMsg  = ""
    
-         !-------------------------------------------------------------------------------------------------
-         ! Linearly interpolate in time (or use nearest-neighbor to extrapolate)
-         ! (compare with NWTC_Num.f90\InterpStpReal)
-         !-------------------------------------------------------------------------------------------------
+      !-------------------------------------------------------------------------------------------------
+      ! Linearly interpolate in time (or use nearest-neighbor to extrapolate)
+      ! (compare with NWTC_Num.f90\InterpStpReal)
+      !-------------------------------------------------------------------------------------------------
 
-
-            ! Let's check the limits.
-         IF ( Time <= ParamData%Tdata(1) .OR. ParamData%NumDataLines == 1 )  THEN
-
-            MiscVars%TimeIndex      = 1
-            V_tmp         = ParamData%V      (1)
-            Delta_tmp     = ParamData%Delta  (1)
-            VZ_tmp        = ParamData%VZ     (1)
-
-         ELSE IF ( Time >= ParamData%Tdata(ParamData%NumDataLines) )  THEN
-
-            MiscVars%TimeIndex = ParamData%NumDataLines - 1
-            V_tmp                 = ParamData%V      (ParamData%NumDataLines)
-            Delta_tmp             = ParamData%Delta  (ParamData%NumDataLines)
-            VZ_tmp                = ParamData%VZ     (ParamData%NumDataLines)
-
-         ELSE
-
-              ! Let's interpolate!
-
-            MiscVars%TimeIndex = MAX( MIN( MiscVars%TimeIndex, ParamData%NumDataLines-1 ), 1 )
-
-            DO
-
-               IF ( Time < ParamData%Tdata(MiscVars%TimeIndex) )  THEN
-
-                  MiscVars%TimeIndex = MiscVars%TimeIndex - 1
-
-               ELSE IF ( Time >= ParamData%Tdata(MiscVars%TimeIndex+1) )  THEN
-
-                  MiscVars%TimeIndex = MiscVars%TimeIndex + 1
-
-               ELSE
-                  P           =  ( Time - ParamData%Tdata(MiscVars%TimeIndex) )/     &
-                                 ( ParamData%Tdata(MiscVars%TimeIndex+1)             &
-                                 - ParamData%Tdata(MiscVars%TimeIndex) )
-                  V_tmp       =  ( ParamData%V(      MiscVars%TimeIndex+1)           &
-                                 - ParamData%V(      MiscVars%TimeIndex) )*P         &
-                                 + ParamData%V(      MiscVars%TimeIndex)
-                  Delta_tmp   =  ( ParamData%Delta(  MiscVars%TimeIndex+1)           &
-                                 - ParamData%Delta(  MiscVars%TimeIndex) )*P         &
-                                 + ParamData%Delta(  MiscVars%TimeIndex)
-                  VZ_tmp      =  ( ParamData%VZ(     MiscVars%TimeIndex+1)           &
-                                 - ParamData%VZ(     MiscVars%TimeIndex) )*P  &
-                                 + ParamData%VZ(     MiscVars%TimeIndex)
-                  EXIT
-
-               END IF
-
-            END DO
-
-         END IF
+      call InterpParams(t, p, m, V_tmp, Delta_tmp, VZ_tmp, HShr_tmp, VShr_tmp, VLinShr_tmp, VGust_tmp)
 
       !-------------------------------------------------------------------------------------------------
-      ! calculate the wind speed at this time
+      ! calculate the wind speed at this time (note that it is not the full uniform wind equation!)
       !-------------------------------------------------------------------------------------------------
    
          WindInf_ADhack_diskVel(1) =  V_tmp * COS( Delta_tmp )
          WindInf_ADhack_diskVel(2) = -V_tmp * SIN( Delta_tmp )
          WindInf_ADhack_diskVel(3) =  VZ_tmp
-   
-   
+      
    
       RETURN
 
-   END FUNCTION WindInf_ADhack_diskVel
+END FUNCTION WindInf_ADhack_diskVel
 
 
 !====================================================================================================
@@ -823,7 +785,7 @@ FUNCTION WindInf_ADhack_diskVel( Time, ParamData, MiscVars,ErrStat, ErrMsg )
 !!          an array of points is passed in. 
 !! @date:  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
 !----------------------------------------------------------------------------------------------------
-SUBROUTINE IfW_UniformWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrStat, ErrMsg)
+SUBROUTINE IfW_UniformWind_End( ParamData, MiscVars, ErrStat, ErrMsg)
 
    IMPLICIT                                                       NONE
 
@@ -831,9 +793,7 @@ SUBROUTINE IfW_UniformWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrSt
 
 
       ! Passed Variables
-   REAL(ReKi),    ALLOCATABLE,                  INTENT(INOUT)  :: PositionXYZ(:,:)  !< Array of XYZ positions to find wind speeds at
    TYPE(IfW_UniformWind_ParameterType),         INTENT(INOUT)  :: ParamData         !< Parameters
-   TYPE(IfW_UniformWind_OutputType),            INTENT(INOUT)  :: OutData           !< Output
    TYPE(IfW_UniformWind_MiscVarType),           INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
 
 
@@ -853,10 +813,6 @@ SUBROUTINE IfW_UniformWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrSt
    ErrStat  = ErrID_None
 
 
-      ! Destroy the position array
-
-   IF (ALLOCATED(PositionXYZ))      DEALLOCATE(PositionXYZ)
-
 
       ! Destroy parameter data
 
@@ -870,17 +826,119 @@ SUBROUTINE IfW_UniformWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrSt
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
 
 
-      ! Destroy the output data
-
-   CALL IfW_UniformWind_DestroyOutput(      OutData,       TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName )
-
-
       ! reset time index so we know the module is no longer initialized
 
    MiscVars%TimeIndex   = 0
 
 END SUBROUTINE IfW_UniformWind_End
+!..................................................................................................................................
+!> Routine to compute the Jacobians of the output (Y) function with respect to the inputs (u). The partial 
+!! derivative dY/du is returned. This submodule does not follow the modularization framework.
+SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, p, m, dYdu )
+
+   REAL(DbKi),                            INTENT(IN   )   :: t             !< Current simulation time in seconds
+   REAL(ReKi),                            INTENT(IN   )   :: Position(3)   !< XYZ Position at which to find position vector
+   REAL(ReKi),                            INTENT(IN   )   :: CosPropDir    !< cosine of InflowWind propogation direction
+   REAL(ReKi),                            INTENT(IN   )   :: SinPropDir    !< sine of InflowWind propogation direction
+   TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )   :: p             !< Parameters
+   TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)   :: m             !< Misc/optimization variables
+   REAL(ReKi),                            INTENT(INOUT)   :: dYdu(3,3)     !< Partial derivatives of output functions
+                                                                           !!   (Y) with respect to the inputs (u)
+
+      ! local variables: 
+   !INTEGER(IntKi)                                         :: ErrStat2
+   !CHARACTER(ErrMsgLen)                                   :: ErrMsg2       ! temporary error message
+   !CHARACTER(*), PARAMETER                                :: RoutineName = 'IfW_JacobianPInput'
+      
+      ! Local Variables
+   REAL(ReKi)                                            :: CosDelta          ! cosine of Delta_tmp
+   REAL(ReKi)                                            :: Delta_tmp         ! interpolated Delta   at input TIME
+   REAL(ReKi)                                            :: HShr_tmp          ! interpolated HShr    at input TIME
+   REAL(ReKi)                                            :: SinDelta          ! sine of Delta_tmp
+   REAL(ReKi)                                            :: V_tmp             ! interpolated V       at input TIME
+   REAL(ReKi)                                            :: VGust_tmp         ! interpolated VGust   at input TIME
+   REAL(ReKi)                                            :: VLinShr_tmp       ! interpolated VLinShr at input TIME
+   REAL(ReKi)                                            :: VShr_tmp          ! interpolated VShr    at input TIME
+   REAL(ReKi)                                            :: VZ_tmp            ! interpolated VZ      at input TIME
+   REAL(ReKi)                                            :: V1                ! temporary storage for horizontal velocity
+
+   REAL(ReKi)                                            :: dVhdx             ! temporary value to hold partial v_h partial X   
+   REAL(ReKi)                                            :: dVhdy             ! temporary value to hold partial v_h partial Y   
+   REAL(ReKi)                                            :: dVhdz             ! temporary value to hold partial v_h partial Z   
+   REAL(ReKi)                                            :: tmp_du            ! temporary value to hold calculations that are part of multiple components   
+   REAL(ReKi)                                            :: tmp_dv            ! temporary value to hold calculations that are part of multiple components   
+      
+      
+
+
+   if ( Position(3) < 0.0_ReKi .or. EqualRealNos(Position(3), 0.0_ReKi)) then
+      dYdu = 0.0_ReKi
+      RETURN
+   end if      
+      
+   !-------------------------------------------------------------------------------------------------
+   !> 1. Linearly interpolate parameters in time at operating point (or use nearest-neighbor to extrapolate)
+   !! (compare with nwtc_num::interpstpreal) 
+   !-------------------------------------------------------------------------------------------------
+   CALL InterpParams(t, p, m, V_tmp, Delta_tmp, VZ_tmp, HShr_tmp, VShr_tmp, VLinShr_tmp, VGust_tmp)
+      
+   CosDelta = COS( Delta_tmp )
+   SinDelta = SIN( Delta_tmp )
+   
+   !-------------------------------------------------------------------------------------------------
+   !> 2. Calculate \f$ \frac{\partial Y_{Output \, Equations}}{\partial u_{inputs}} = \begin{bmatrix}
+   !! \frac{\partial Vt_u}{\partial X} & \frac{\partial Vt_u}{\partial Y} & \frac{\partial Vt_u}{\partial Z} \\
+   !! \frac{\partial Vt_v}{\partial X} & \frac{\partial Vt_v}{\partial Y} & \frac{\partial Vt_v}{\partial Z} \\
+   !! \frac{\partial Vt_w}{\partial X} & \frac{\partial Vt_w}{\partial Y} & \frac{\partial Vt_w}{\partial Z} \\
+   !! \end{bmatrix} \f$
+   !-------------------------------------------------------------------------------------------------
+   tmp_du = V_tmp * HShr_tmp /p%RefLength * CosPropDir
+   dVhdx  = tmp_du * SinDelta
+   dVhdy  = tmp_du * CosDelta
+   dVhdz  = V_tmp * ( VShr_tmp / p%RefHt * ( Position(3)/p%RefHt ) ** (VShr_tmp-1.0_ReKi) + VLinShr_tmp/p%RefLength)
+   
+   tmp_du =  CosPropDir*CosDelta  - SinPropDir*SinDelta
+   tmp_dv = -SinPropDir*CosDelta  - CosPropDir*SinDelta
+      
+                  
+      !> \f$ \frac{\partial Vt_u}{\partial X} = \left[\cos(PropagationDir)\cos(Delta) - \sin(PropagationDir)\sin(Delta) \right]
+      !! V \, \frac{H_{LinShr}}{RefWid} \, \sin(Delta) \cos(PropagationDir) \f$
+   dYdu(1,1) = tmp_du*dVhdx
+      
+      !> \f$ \frac{\partial Vt_v}{\partial X} = \left[-\sin(PropagationDir)\cos(Delta) - \cos(PropagationDir)\sin(Delta) \right]
+      !! V \, \frac{H_{LinShr}}{RefWid} \, \sin(Delta) \cos(PropagationDir) \f$
+   dYdu(2,1) = tmp_dv*dVhdx
+   
+      !> \f$ \frac{\partial Vt_w}{\partial X} = 0 \f$
+   dYdu(3,1) = 0.0_ReKi
+      
+      
+      !> \f$ \frac{\partial Vt_u}{\partial Y} = \left[\cos(PropagationDir)\cos(Delta) - \sin(PropagationDir)\sin(Delta) \right]
+      !! V \, \frac{H_{LinShr}}{RefWid} \, \cos(Delta) \cos(PropagationDir) \f$
+   dYdu(1,2) = tmp_du*dVhdy
+      
+      !> \f$ \frac{\partial Vt_v}{\partial Y} = \left[-\sin(PropagationDir)\cos(Delta) - \cos(PropagationDir)\sin(Delta) \right]
+      !! V \, \frac{H_{LinShr}}{RefWid} \, \cos(Delta) \cos(PropagationDir) \f$
+   dYdu(2,2) = tmp_dv*dVhdy
+      
+      !> \f$ \frac{\partial Vt_w}{\partial Y} = 0 \f$
+   dYdu(3,1) = 0.0_ReKi
+      
+      
+      !> \f$ \frac{\partial Vt_u}{\partial Z} = \left[\cos(PropagationDir)\cos(Delta) - \sin(PropagationDir)\sin(Delta) \right]
+      !! V \, \left[ \frac{V_{shr}}{Z_{ref}} \left( \frac{Z}{Z_{ref}} \right) ^ {V_{shr}-1} + \frac{V_{LinShr}}{RefWid} \right] \f$
+   dYdu(1,3) = tmp_du*dVhdz
+                        
+      !> \f$ \frac{\partial Vt_v}{\partial Z} = \left[-\sin(PropagationDir)\cos(Delta) - \cos(PropagationDir)\sin(Delta) \right]
+      !! V \, \left[ \frac{V_{shr}}{Z_{ref}} \left( \frac{Z}{Z_{ref}} \right) ^ {V_{shr}-1} + \frac{V_{LinShr}}{RefWid} \right] \f$      
+   dYdu(2,3) = tmp_dv*dVhdz
+            
+      !> \f$ \frac{\partial Vt_w}{\partial Z} = 0 \f$
+   dYdu(3,1) = 0.0_ReKi
+      
+   RETURN
+
+END SUBROUTINE IfW_UniformWind_JacobianPInput
 
 !====================================================================================================
 END MODULE IfW_UniformWind

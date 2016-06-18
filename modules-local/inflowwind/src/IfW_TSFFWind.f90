@@ -608,7 +608,7 @@ END SUBROUTINE IfW_TSFFWind_Init
 !! day. For now, it merely needs to be functional. It can be fixed up and made all pretty later.
 !!
 !!   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData,  OutData, MiscVars, ErrStat, ErrMsg)
+SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData,  Velocity, DiskVel, MiscVars, ErrStat, ErrMsg)
 
    IMPLICIT                                                 NONE
 
@@ -618,9 +618,10 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData,  OutData, MiscV
 
       ! Passed Variables
    REAL(DbKi),                               INTENT(IN   )  :: Time              !< time from the start of the simulation
-   REAL(ReKi), ALLOCATABLE,                  INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
+   REAL(ReKi),                               INTENT(IN   )  :: PositionXYZ(:,:)  !< Array of XYZ coordinates, 3xN
    TYPE(IfW_TSFFWind_ParameterType),         INTENT(IN   )  :: ParamData         !< Parameters
-   TYPE(IfW_TSFFWind_OutputType),            INTENT(  OUT)  :: OutData           !< Output at Time
+   REAL(ReKi),                               INTENT(INOUT)  :: Velocity(:,:)     !< Velocity output at Time    (Set to INOUT so that array does not get deallocated)
+   REAL(ReKi),                               INTENT(  OUT)  :: DiskVel(3)        !< HACK for AD14: disk velocity output at Time
    TYPE(IfW_TSFFWind_MiscVarType),           INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
 
       ! Error handling
@@ -645,8 +646,6 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData,  OutData, MiscV
 
    ErrStat     = ErrID_None
    ErrMsg      = ''
-   TmpErrStat  = ErrID_None
-   TmpErrMsg   = ""
 
       !-------------------------------------------------------------------------------------------------
       ! Initialize some things
@@ -657,23 +656,12 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData,  OutData, MiscV
       ! This is just in case we only have a single point, the SIZE command returns the correct number of points.
    NumPoints   =  SIZE(PositionXYZ,2)
 
-      ! Allocate Velocity output array
-   IF ( .NOT. ALLOCATED(OutData%Velocity)) THEN
-      CALL AllocAry( OutData%Velocity, 3, NumPoints, "Velocity matrix at timestep", TmpErrStat, TmpErrMsg )
-      CALL SetErrStat(TmpErrStat,"IfW_TSFFWind:CalcOutput -- Could not allocate the output velocity array.",   &
-         ErrStat,ErrMsg,RoutineName)
-      IF ( ErrStat >= AbortErrLev ) RETURN
-   ELSEIF ( SIZE(OutData%Velocity,DIM=2) /= NumPoints ) THEN
-      CALL SetErrStat( ErrID_Fatal," Programming error: Position and Velocity arrays are not sized the same.",  &
-         ErrStat, ErrMsg, RoutineName)
-      RETURN
-   ENDIF
 
       ! Step through all the positions and get the velocities
    DO PointNum = 1, NumPoints
 
          ! Calculate the velocity for the position
-      OutData%Velocity(:,PointNum) = FF_Interp(Time,PositionXYZ(:,PointNum),ParamData,MiscVars,TmpErrStat,TmpErrMsg)
+      Velocity(:,PointNum) = FF_Interp(Time,PositionXYZ(:,PointNum),ParamData,MiscVars,TmpErrStat,TmpErrMsg)
 
 
          ! Error handling
@@ -691,13 +679,13 @@ SUBROUTINE IfW_TSFFWind_CalcOutput(Time, PositionXYZ, ParamData,  OutData, MiscV
 
       !REMOVE THIS for AeroDyn 15
       ! Return the average disk velocity values needed by AeroDyn 14.  This is the WindInf_ADhack_diskVel routine.
-   OutData%DiskVel(1)   =  ParamData%MeanFFWS
-   OutData%DiskVel(2:3) =  0.0_ReKi
+   DiskVel(1)   =  ParamData%MeanFFWS
+   DiskVel(2:3) =  0.0_ReKi
 
 
    RETURN
 
-CONTAINS
+END SUBROUTINE IfW_TSFFWind_CalcOutput
    !+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-
    !>    This function is used to interpolate into the full-field wind array or tower array if it has
    !!    been defined and is necessary for the given inputs.  It receives X, Y, Z and
@@ -716,14 +704,14 @@ CONTAINS
    !!    09/23/2009 - Modified by B. Jonkman to use arguments instead of modules to determine time and position.
    !!                 Height is now relative to the ground
    !!   16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-   FUNCTION FF_Interp(Time, Position, ParamData, MiscVars, ErrStat, ErrMsg)
+   FUNCTION FF_Interp(t_in, Position, ParamData, MiscVars, ErrStat, ErrMsg)
    !----------------------------------------------------------------------------------------------------
 
       IMPLICIT                                              NONE
 
       CHARACTER(*),           PARAMETER                  :: RoutineName="FF_Interp"
 
-      REAL(DbKi),                         INTENT(IN   )  :: Time           !< time
+      REAL(DbKi),                         INTENT(IN   )  :: t_in           !< input time
       REAL(ReKi),                         INTENT(IN   )  :: Position(3)    !< takes the place of XGrnd, YGrnd, ZGrnd
       TYPE(IfW_TSFFWind_ParameterType),   INTENT(IN   )  :: ParamData      !< Parameters
       TYPE(IfW_TSFFWind_MiscVarType),     INTENT(INOUT)  :: MiscVars       !< Misc variables for optimization (not copied in glue code)
@@ -770,12 +758,12 @@ CONTAINS
       ! Find the bounding time slices.
       !-------------------------------------------------------------------------------------------------
 
-      ! Perform the time shift.  At time=0, a point half the grid width downstream (ParamData%FFYHWid) will index into the zero time slice.
+      ! Perform the time shift.  At t_in=0, a point half the grid width downstream (ParamData%FFYHWid) will index into the zero time slice.
       ! If we did not do this, any point downstream of the tower at the beginning of the run would index outside of the array.
       ! This all assumes the grid width is at least as large as the rotor.  If it isn't, then the interpolation will not work.
 
 
-      TimeShifted = TIME + ( ParamData%InitXPosition - Position(1) )*ParamData%InvMFFWS    ! in distance, X: InputInfo%Position(1) - ParamData%InitXPosition - TIME*ParamData%MeanFFWS
+      TimeShifted = t_in + ( ParamData%InitXPosition - Position(1) )*ParamData%InvMFFWS    ! in distance, X: InputInfo%Position(1) - ParamData%InitXPosition - t*ParamData%MeanFFWS
 
 
       IF ( ParamData%Periodic ) THEN ! translate TimeShifted to ( 0 <= TimeShifted < ParamData%TotalTime )
@@ -815,7 +803,7 @@ CONTAINS
                   ITLO = ITHI - 1
                ENDIF
             ELSE
-               ErrMsg   = ' Error: FF wind array was exhausted at '//TRIM( Num2LStr( REAL( TIME,   ReKi ) ) )// &
+               ErrMsg   = ' Error: FF wind array was exhausted at '//TRIM( Num2LStr( REAL( t_in,   ReKi ) ) )// &
                           ' seconds (trying to access data at '//TRIM( Num2LStr( REAL( TimeShifted, ReKi ) ) )//' seconds).'
                ErrStat  = ErrID_Fatal
                RETURN
@@ -997,7 +985,6 @@ CONTAINS
       RETURN
 
    END FUNCTION FF_Interp
-END SUBROUTINE IfW_TSFFWind_CalcOutput
 
 
 !====================================================================================================
@@ -1005,7 +992,7 @@ END SUBROUTINE IfW_TSFFWind_CalcOutput
 !!  closed in InflowWindMod.
 !!
 !!  16-Apr-2013 - A. Platt, NREL.  Converted to modular framework. Modified for NWTC_Library 2.0
-SUBROUTINE IfW_TSFFWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrStat, ErrMsg)
+SUBROUTINE IfW_TSFFWind_End( ParamData, MiscVars, ErrStat, ErrMsg)
 
    IMPLICIT                                                 NONE
 
@@ -1014,9 +1001,7 @@ SUBROUTINE IfW_TSFFWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrStat,
 
 
       ! Passed Variables
-   REAL(ReKi),             ALLOCATABLE,   INTENT(INOUT)  :: PositionXYZ(:,:)  !< Coordinate position list
    TYPE(IfW_TSFFWind_ParameterType),      INTENT(INOUT)  :: ParamData         !< Parameters
-   TYPE(IfW_TSFFWind_OutputType),         INTENT(INOUT)  :: OutData           !< Output
    TYPE(IfW_TSFFWind_MiscVarType),        INTENT(INOUT)  :: MiscVars          !< Misc variables for optimization (not copied in glue code)
 
 
@@ -1036,11 +1021,6 @@ SUBROUTINE IfW_TSFFWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrStat,
    ErrStat  = ErrID_None
 
 
-      ! Destroy the PositionXYZ data
-
-   IF ( ALLOCATED(PositionXYZ) )    DEALLOCATE(PositionXYZ)
-
-
 
       ! Destroy parameter data
 
@@ -1053,11 +1033,6 @@ SUBROUTINE IfW_TSFFWind_End( PositionXYZ, ParamData, OutData, MiscVars, ErrStat,
    CALL IfW_TSFFWind_DestroyMisc(  MiscVars,   TmpErrStat, TmpErrMsg )
    CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
 
-
-      ! Destroy the output data
-
-   CALL IfW_TSFFWind_DestroyOutput(      OutData,       TmpErrStat, TmpErrMsg )
-   CALL SetErrStat( TmpErrStat, TmpErrMsg, ErrStat, ErrMsg, RoutineName)
 
 
 END SUBROUTINE IfW_TSFFWind_End
