@@ -28,9 +28,8 @@ COPY "%Registry%"        "%bin_dir%\Registry_Win32.exe"
 
 SET src_folder=%REG_Loc%
 SET dst_folder=%depend_dir%\Registry
-SET list_of_files=%src_folder%\SourceFiles.txt
 
-@CALL :CopyFileList
+@CALL :CopyFileFolder
 IF /I "%1"=="%SW_ModuleOnly%" GOTO ClearVars
 
 :NWTC_Library
