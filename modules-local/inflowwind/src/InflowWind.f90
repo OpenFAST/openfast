@@ -496,7 +496,7 @@ SUBROUTINE InflowWind_Init( InitData,   InputGuess,    ParamData,               
             InitOutData%WindFileInfo%TI_listed        =  .FALSE.
 
             if (ParamData%UniformWind%NumDataLines == 1) then
-               InitOutData%WindFileInfo%MWS = ParamData%UniformWind%V(i)
+               InitOutData%WindFileInfo%MWS = ParamData%UniformWind%V(1)
             else
                InitOutData%WindFileInfo%MWS = 0.0_ReKi               
                do i=2,ParamData%UniformWind%NumDataLines
