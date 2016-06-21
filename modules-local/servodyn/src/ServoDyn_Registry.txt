@@ -17,7 +17,8 @@ usefrom	TMD_Registry.txt
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 typedef	ServoDyn/SrvD	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
-typedef	^	InitInputType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"
+typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this module if the glue code wants to linearize."	-
+typedef	^	InitInputType	IntKi	NumBl	-	-	-	"Number of blades on the turbine"	-
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"	-
 typedef	^	InitInputType	ReKi	BlPitchInit	{:}	-	-	"Initial blade pitch"	-
 typedef	^	InitInputType	ReKi	Gravity	-	-	-	"Gravitational acceleration"	m/s^2

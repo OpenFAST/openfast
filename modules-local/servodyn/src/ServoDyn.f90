@@ -33,7 +33,7 @@ MODULE ServoDyn
 
    PRIVATE
 
-   TYPE(ProgDesc), PARAMETER            :: SrvD_Ver = ProgDesc( 'ServoDyn', 'v1.05.00a-bjj', '11-Mar-2016' )
+   TYPE(ProgDesc), PARAMETER            :: SrvD_Ver = ProgDesc( 'ServoDyn', 'v1.06.00a-bjj', '17-Jun-2016' )
    CHARACTER(*),   PARAMETER            :: SrvD_Nickname = 'SrvD'
    
 #ifdef COMPILE_SIMULINK
@@ -143,17 +143,17 @@ MODULE ServoDyn
    PUBLIC :: SrvD_CalcContStateDeriv             ! Tight coupling routine for computing derivatives of continuous states
    PUBLIC :: SrvD_UpdateDiscState                ! Tight coupling routine for updating discrete states
 
-   !PUBLIC :: SrvD_JacobianPInput                 ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                              !   (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
-   !PUBLIC :: SrvD_JacobianPContState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                              !   (Xd), and constraint-state (Z) equations all with respect to the continuous
-   !                                              !   states (x)
-   !PUBLIC :: SrvD_JacobianPDiscState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                              !   (Xd), and constraint-state (Z) equations all with respect to the discrete
-   !                                              !   states (xd)
-   !PUBLIC :: SrvD_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
-   !                                              !   (Xd), and constraint-state (Z) equations all with respect to the constraint
-   !                                              !   states (z)
+   PUBLIC :: SrvD_JacobianPInput                 ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
+                                                 !   (Xd), and constraint-state (Z) equations all with respect to the inputs (u)
+   PUBLIC :: SrvD_JacobianPContState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
+                                                 !   (Xd), and constraint-state (Z) equations all with respect to the continuous
+                                                 !   states (x)
+   PUBLIC :: SrvD_JacobianPDiscState             ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
+                                                 !   (Xd), and constraint-state (Z) equations all with respect to the discrete
+                                                 !   states (xd)
+   PUBLIC :: SrvD_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
+                                                 !   (Xd), and constraint-state (Z) equations all with respect to the constraint
+                                                 !   states (z)
    
    
 CONTAINS
@@ -220,7 +220,7 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
 
-   CALL ValidatePrimaryData( InputFileData, InitInp%NumBl, ErrStat2, ErrMsg2 )
+   CALL ValidatePrimaryData( InitInp, InputFileData, InitInp%NumBl, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
       IF (ErrStat >= AbortErrLev) RETURN
       
@@ -853,12 +853,12 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
       IF ( .NOT. EqualRealNos( t - p%DLL_DT, m%LastTimeCalled ) ) THEN
          IF (m%FirstWarn) THEN
             IF ( EqualRealNos( p%DT, p%DLL_DT ) ) THEN ! This must be because we're doing a correction step or calling multiple times per time step
-               CALL CheckError ( ErrID_Warn, 'BladedInterface option was designed for an explicit-loose '//&
+               CALL SetErrStat ( ErrID_Warn, 'BladedInterface option was designed for an explicit-loose '//&
                'coupling scheme. Using last calculated values from DLL on all subsequent calls until time is advanced. '//&
-               'Warning will not be displayed again.' )
+               'Warning will not be displayed again.', ErrStat, ErrMsg, RoutineName )
             ELSE ! this may be because of calling multiple times per time step, but most likely is because DT /= DLL_DT
-               CALL CheckError ( ErrID_Warn, 'Using last calculated values from DLL on all subsequent calls until next DLL_DT has been reached. '//&
-               'Warning will not be displayed again.' )
+               CALL SetErrStat ( ErrID_Warn, 'Using last calculated values from DLL on all subsequent calls until next DLL_DT has been reached. '//&
+               'Warning will not be displayed again.', ErrStat, ErrMsg, RoutineName )
             END IF
             m%FirstWarn = .FALSE.
          END IF
@@ -866,8 +866,7 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
          m%dll_data%PrevBlPitch(1:p%NumBl) = m%dll_data%BlPitchCom ! used for linear ramp of delayed signal
          m%LastTimeCalled = t
          CALL BladedInterface_CalcOutput( t, u, p, m, ErrStat2, ErrMsg2 )
-            CALL CheckError( ErrStat2, ErrMsg2 )
-            IF (ErrStat >= AbortErrLev) RETURN
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       END IF
       
       IF (ALLOCATED(y%SuperController)) THEN
@@ -882,22 +881,22 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
 
       ! Torque control:
    CALL Torque_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )      !  calculates ElecPwr, which Pitch_CalcOutput will use in the user pitch routine  
-      CALL CheckError( ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
 
       ! Pitch control:
    CALL Pitch_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )  
-      CALL CheckError( ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
 
       ! Yaw control: 
    CALL Yaw_CalcOutput( t, u, p, x, xd, z, OtherState, y, m,ErrStat2, ErrMsg2 )      
-      CALL CheckError( ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
 
       ! Tip brake control: 
    CALL TipBrake_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 )      
-      CALL CheckError( ErrStat2, ErrMsg2)
+      CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
       IF (ErrStat >= AbortErrLev) RETURN
    
    !...............................................................................................................................   
@@ -936,38 +935,6 @@ SUBROUTINE SrvD_CalcOutput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg
    ENDDO             ! I - All selected output channels
    
    RETURN
-CONTAINS
-   !...............................................................................................................................
-   SUBROUTINE CheckError(ErrID,Msg)
-   ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
-   !...............................................................................................................................
-
-         ! Passed arguments
-      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
-      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
-
-
-      !............................................................................................................................
-      ! Set error status/message;
-      !............................................................................................................................
-
-      IF ( ErrID /= ErrID_None ) THEN
-
-         IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
-         ErrMsg = TRIM(ErrMsg)//'SrvD_CalcOutput:'//TRIM(Msg)
-         ErrStat = MAX(ErrStat, ErrID)
-
-         !.........................................................................................................................
-         ! Clean up if we're going to return on error: close files, deallocate local arrays
-         !.........................................................................................................................
-         IF ( ErrStat >= AbortErrLev ) THEN
-         END IF
-
-      END IF
-
-
-   END SUBROUTINE CheckError        
-   !...............................................................................................................................
 END SUBROUTINE SrvD_CalcOutput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Tight coupling routine for computing derivatives of continuous states.
@@ -1104,9 +1071,371 @@ SUBROUTINE SrvD_CalcConstrStateResidual( t, u, p, x, xd, z, OtherState, m, z_res
 
       
 END SUBROUTINE SrvD_CalcConstrStateResidual
+
+
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-! WE ARE NOT YET IMPLEMENTING THE JACOBIANS...
+! ###### The following four routines are Jacobian routines for linearization capabilities #######
+! If the module does not implement them, set ErrStat = ErrID_Fatal in SrvD_Init() when InitInp%Linearize is .true.
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the inputs (u). The partial derivative dY/du is returned.
+SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, m, dYdu, dXdu, dXddu, dZdu, ErrStat, ErrMsg )
+!..................................................................................................................................
+
+   REAL(DbKi),                             INTENT(IN   )           :: t          !< Current simulation time in seconds
+   TYPE(SrvD_InputType),                   INTENT(IN   )           :: u          !< Inputs at t
+   TYPE(SrvD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
+   TYPE(SrvD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at t
+   TYPE(SrvD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at t
+   TYPE(SrvD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at t
+   TYPE(SrvD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at t
+   TYPE(SrvD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions
+                                                                                 !!   (Y) with respect to the inputs (u)
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state
+                                                                                 !!   functions (X) with respect to inputs (u)
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state
+                                                                                 !!   functions (Xd) with respect to inputs (u)
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state
+                                                                                 !!   functions (Z) with respect to inputs (u)
+   INTEGER(IntKi),                         INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                           INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+
+      ! local variables
+   REAL(ReKi)                                                      :: AllOuts(3,1:MaxOutPts) ! All the the available output channels
+   REAL(ReKi)                                                      :: GenTrq, ElecPwr        ! derivatives of generator torque and electrical power w.r.t. u%HSS_SPD
+   INTEGER(IntKi)                                                  :: I                      ! Generic loop index
+   INTEGER(IntKi)                                                  :: K                      ! Blade index
+   INTEGER(IntKi)                                                  :: ErrStat2               ! Error status of the operation
+   CHARACTER(ErrMsgLen)                                            :: ErrMsg2                ! Error message if ErrStat /= ErrID_None
+   CHARACTER(*), PARAMETER                                         :: RoutineName = 'SrvD_JacobianPInput'
+
+      ! indices into arrays
+   INTEGER, PARAMETER :: Indx_u_Yaw     = 1
+   INTEGER, PARAMETER :: Indx_u_YawRate = 2
+   INTEGER, PARAMETER :: Indx_u_HSS_Spd = 3
+   
+   INTEGER, PARAMETER :: Indx_Y_BlPitchCom(3)  = (/1,2,3/)
+   INTEGER, PARAMETER :: Indx_Y_YawMom  = 4
+   INTEGER, PARAMETER :: Indx_Y_GenTrq  = 5
+   INTEGER, PARAMETER :: Indx_Y_ElecPwr = 6
+   INTEGER, PARAMETER :: Indx_Y_WrOutput = 6 ! last non-writeoutput variable
+   
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   
+      ! Calculate the partial derivative of the output functions (Y) with respect to the inputs (u) here:
+
+   IF ( PRESENT( dYdu ) ) THEN
+      
+      !> \f{equation}{ \frac{\partial Y}{\partial u} = \begin{bmatrix} 
+      !! \frac{\partial Y_{BlPitchCom_1}}{\partial u_{Yaw}}  & \frac{\partial Y_{BlPitchCom_1}}{\partial u_{YawRate}}  & \frac{\partial Y_{BlPitchCom_1}}{\partial u_{HSS\_Spd}} \\
+      !! \frac{\partial Y_{BlPitchCom_2}}{\partial u_{Yaw}}  & \frac{\partial Y_{BlPitchCom_2}}{\partial u_{YawRate}}  & \frac{\partial Y_{BlPitchCom_2}}{\partial u_{HSS\_Spd}} \\
+      !! \frac{\partial Y_{BlPitchCom_3}}{\partial u_{Yaw}}  & \frac{\partial Y_{BlPitchCom_3}}{\partial u_{YawRate}}  & \frac{\partial Y_{BlPitchCom_3}}{\partial u_{HSS\_Spd}} \\
+      !! \frac{\partial Y_{YawMom}}{\partial u_{Yaw}}        & \frac{\partial Y_{YawMom}}{\partial u_{YawRate}}        & \frac{\partial Y_{YawMom}}{\partial u_{HSS\_Spd}} \\
+      !! \frac{\partial Y_{GenTrq}}{\partial u_{Yaw}}        & \frac{\partial Y_{GenTrq}}{\partial u_{YawRate}}        & \frac{\partial Y_{GenTrq}}{\partial u_{HSS\_Spd}} \\
+      !! \frac{\partial Y_{ElecPwr}}{\partial u_{Yaw}}       & \frac{\partial Y_{ElecPwr}}{\partial u_{YawRate}}       & \frac{\partial Y_{ElecPwr}}{\partial u_{HSS\_Spd}} \\
+      !! \frac{\partial Y_{WriteOutput_i}}{\partial u_{Yaw}} & \frac{\partial Y_{WriteOutput_i}}{\partial u_{YawRate}} & \frac{\partial Y_{WriteOutput_i}}{\partial u_{HSS\_Spd}} \end{bmatrix}
+      !! = \begin{bmatrix} 
+      !! 0 & 0 & 0 \\
+      !! 0 & 0 & 0 \\
+      !! 0 & 0 & 0 \\
+      !! \frac{\partial Y_{YawMom}}{\partial u_{Yaw}} & \frac{\partial Y_{YawMom}}{\partial u_{YawRate}} & 0 \\
+      !! 0 & 0 & \frac{\partial Y_{GenTrq}}{\partial u_{HSS\_Spd}} \\
+      !! 0 & 0 & \frac{\partial Y_{ElecPwr}}{\partial u_{HSS\_Spd}} \\
+      !! \frac{\partial Y_{WriteOutput_i}}{\partial u_{Yaw}} & \frac{\partial Y_{WriteOutput_i}}{\partial u_{YawRate}} & \frac{\partial Y_{WriteOutput_i}}{\partial u_{HSS\_Spd}} \end{bmatrix}
+      !!\f}      
+
+      
+      ! Note this is similiar to SrvD_CalcOutput
+      
+      if (.not. allocated(dYdu)) then
+         call allocAry(dYdu, 6+p%NumOuts, 3, 'dYdu', ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      end if
+      
+      
+         ! skipping TMD module in linearization for now:
+      !IF (p%CompNTMD) THEN 
+      !   CALL TMD_CalcOutput( t, u%NTMD, p%NTMD, x%NTMD, xd%NTMD, z%NTMD, OtherState%NTMD, y%NTMD, m%NTMD, ErrStat2, ErrMsg2 )
+      !END IF
+      !
+      !IF (p%CompTTMD) THEN 
+      !   CALL TMD_CalcOutput( t, u%TTMD, p%TTMD, x%TTMD, xd%TTMD, z%TTMD, OtherState%TTMD, y%TTMD, m%TTMD, ErrStat2, ErrMsg2 )
+      !END IF
+       
+   
+      !   ! Torque control:
+      !> Compute
+      !> \f$ \frac{\partial Y_{GenTrq}}{\partial u_{HSS\_Spd}} \f$ and
+      !> \f$ \frac{\partial Y_{ElecPwr}}{\partial u_{HSS\_Spd}} \f$ in servodyn::torque_jacobianpinput.
+      call Torque_JacobianPInput( t, u, p, x, xd, z, OtherState, m, GenTrq, ElecPwr, ErrStat, ErrMsg )      !   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) RETURN
+         dYdu(Indx_Y_GenTrq, Indx_u_HSS_Spd)   = GenTrq
+         dYdu(Indx_Y_ElecPwr,Indx_u_HSS_Spd)  = ElecPwr
+
+      
+      
+         ! Pitch control:
+      !> \f$ \frac{\partial Y_{BlPitchCom_k}}{\partial u} = 0 \f$
+                  
+         ! Yaw control: 
+      !> \f$ \frac{\partial Y_{YawMom}}{\partial u_{Yaw}} = -p\%YawSpr \f$
+      dYdu(Indx_Y_YawMom,Indx_u_Yaw) = -p%YawSpr ! from Yaw_CalcOutput
+      !> \f$ \frac{\partial Y_{YawMom}}{\partial u_{YawRate}} = -p\%YawDamp \f$
+      dYdu(Indx_Y_YawMom,Indx_u_YawRate) = -p%YawDamp   ! from Yaw_CalcOutput
+
+         
+         !.........................................................................................................................   
+         ! Calculate all of the available output channels (because they repeat for the derivative) here:
+         !.........................................................................................................................   
+      AllOuts = 0.0_ReKi ! all variables not specified below are zeros (either constant or disabled):
+         
+      AllOuts(:, GenTq)     = 0.001*dYdu(Indx_Y_GenTrq,:)
+      AllOuts(:, GenPwr)    = 0.001*dYdu(Indx_Y_ElecPwr,:)
+      AllOuts(:, YawMomCom) =       dYdu(Indx_Y_YawMom,:)
+      
+      !...............................................................................................................................   
+      ! Place the selected output channels into the WriteOutput(:) portion of the jacobian with the proper sign:
+      !...............................................................................................................................   
+      
+      DO I = 1,p%NumOuts  ! Loop through all selected output channels      
+         dYdu(:,I+Indx_Y_WrOutput) = p%OutParam(I)%SignM * AllOuts( :, p%OutParam(I)%Indx )      
+      ENDDO             ! I - All selected output channels
+               
+   END IF
+
+   IF ( PRESENT( dXdu ) ) THEN
+      if (allocated(dXdu)) deallocate(dXdu)
+   END IF
+
+   IF ( PRESENT( dXddu ) ) THEN
+      if (allocated(dXddu)) deallocate(dXddu)
+   END IF
+
+   IF ( PRESENT( dZdu ) ) THEN
+      if (allocated(dZdu)) deallocate(dZdu)
+   END IF
+
+
+END SUBROUTINE SrvD_JacobianPInput
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
+SUBROUTINE SrvD_JacobianPContState( t, u, p, x, xd, z, OtherState, m, dYdx, dXdx, dXddx, dZdx, ErrStat, ErrMsg )
+!..................................................................................................................................
+
+   REAL(DbKi),                             INTENT(IN   )           :: t          !< Current simulation time in seconds
+   TYPE(SrvD_InputType),                   INTENT(IN   )           :: u          !< Inputs at t
+   TYPE(SrvD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
+   TYPE(SrvD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at t
+   TYPE(SrvD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at t
+   TYPE(SrvD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at t
+   TYPE(SrvD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at t
+   TYPE(SrvD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdx       !< Partial derivatives of output functions
+                                                                                 !!   (Y) with respect to the continuous
+                                                                                 !!   states (x)
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdx       !< Partial derivatives of continuous state
+                                                                                 !!   functions (X) with respect to
+                                                                                 !!   the continuous states (x)
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddx      !< Partial derivatives of discrete state
+                                                                                 !!   functions (Xd) with respect to
+                                                                                 !!   the continuous states (x)
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdx       !< Partial derivatives of constraint state
+                                                                                 !!   functions (Z) with respect to
+                                                                                 !!   the continuous states (x)
+   INTEGER(IntKi),                         INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                           INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+
+
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+
+
+   IF ( PRESENT( dYdx ) ) THEN
+
+      ! Calculate the partial derivative of the output functions (Y) with respect to the continuous states (x) here:
+
+      ! allocate and set dYdx
+
+   END IF
+
+   IF ( PRESENT( dXdx ) ) THEN
+
+      ! Calculate the partial derivative of the continuous state functions (X) with respect to the continuous states (x) here:
+
+      ! allocate and set dXdx
+
+   END IF
+
+   IF ( PRESENT( dXddx ) ) THEN
+
+      ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the continuous states (x) here:
+
+      ! allocate and set dXddx
+
+   END IF
+
+   IF ( PRESENT( dZdx ) ) THEN
+
+
+      ! Calculate the partial derivative of the constraint state functions (Z) with respect to the continuous states (x) here:
+
+      ! allocate and set dZdx
+
+   END IF
+
+
+END SUBROUTINE SrvD_JacobianPContState
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
+SUBROUTINE SrvD_JacobianPDiscState( t, u, p, x, xd, z, OtherState, m, dYdxd, dXdxd, dXddxd, dZdxd, ErrStat, ErrMsg )
+!..................................................................................................................................
+
+   REAL(DbKi),                             INTENT(IN   )           :: t          !< Current simulation time in seconds
+   TYPE(SrvD_InputType),                   INTENT(IN   )           :: u          !< Inputs at t
+   TYPE(SrvD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
+   TYPE(SrvD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at t
+   TYPE(SrvD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at t
+   TYPE(SrvD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at t
+   TYPE(SrvD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at t
+   TYPE(SrvD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdxd      !< Partial derivatives of output functions
+                                                                                 !!  (Y) with respect to the discrete
+                                                                                 !!  states (xd)
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdxd      !< Partial derivatives of continuous state
+                                                                                 !!   functions (X) with respect to the
+                                                                                 !!   discrete states (xd)
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddxd     !< Partial derivatives of discrete state
+                                                                                 !!   functions (Xd) with respect to the
+                                                                                 !!   discrete states (xd)
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdxd      !< Partial derivatives of constraint state
+                                                                                 !!   functions (Z) with respect to the
+                                                                                 !!   discrete states (xd)
+   INTEGER(IntKi),                         INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                           INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+
+
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+
+   IF ( PRESENT( dYdxd ) ) THEN
+
+      ! Calculate the partial derivative of the output functions (Y) with respect to the discrete states (xd) here:
+
+      ! allocate and set dYdxd
+
+   END IF
+
+   IF ( PRESENT( dXdxd ) ) THEN
+
+      ! Calculate the partial derivative of the continuous state functions (X) with respect to the discrete states (xd) here:
+
+      ! allocate and set dXdxd
+
+   END IF
+
+   IF ( PRESENT( dXddxd ) ) THEN
+
+      ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the discrete states (xd) here:
+
+      ! allocate and set dXddxd
+
+   END IF
+
+   IF ( PRESENT( dZdxd ) ) THEN
+
+      ! Calculate the partial derivative of the constraint state functions (Z) with respect to the discrete states (xd) here:
+
+      ! allocate and set dZdxd
+
+   END IF
+
+
+END SUBROUTINE SrvD_JacobianPDiscState
+!----------------------------------------------------------------------------------------------------------------------------------
+!> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
+!! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
+SUBROUTINE SrvD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, m, dYdz, dXdz, dXddz, dZdz, ErrStat, ErrMsg )
+!..................................................................................................................................
+
+   REAL(DbKi),                             INTENT(IN   )           :: t          !< Current simulation time in seconds
+   TYPE(SrvD_InputType),                   INTENT(IN   )           :: u          !< Inputs at t
+   TYPE(SrvD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
+   TYPE(SrvD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at t
+   TYPE(SrvD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at t
+   TYPE(SrvD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at t
+   TYPE(SrvD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at t
+   TYPE(SrvD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdz       !< Partial derivatives of output
+                                                                                 !!  functions (Y) with respect to the
+                                                                                 !!  constraint states (z)
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdz       !< Partial derivatives of continuous
+                                                                                 !!  state functions (X) with respect to
+                                                                                 !!  the constraint states (z)
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddz      !< Partial derivatives of discrete state
+                                                                                 !!  functions (Xd) with respect to the
+                                                                                 !!  constraint states (z)
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdz       !< Partial derivatives of constraint
+                                                                                 !! state functions (Z) with respect to
+                                                                                 !!  the constraint states (z)
+   INTEGER(IntKi),                         INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                           INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+
+
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   IF ( PRESENT( dYdz ) ) THEN
+
+         ! Calculate the partial derivative of the output functions (Y) with respect to the constraint states (z) here:
+
+      ! allocate and set dYdz
+
+   END IF
+
+   IF ( PRESENT( dXdz ) ) THEN
+
+         ! Calculate the partial derivative of the continuous state functions (X) with respect to the constraint states (z) here:
+
+      ! allocate and set dXdz
+
+   END IF
+
+   IF ( PRESENT( dXddz ) ) THEN
+
+         ! Calculate the partial derivative of the discrete state functions (Xd) with respect to the constraint states (z) here:
+
+      ! allocate and set dXddz
+
+   END IF
+
+   IF ( PRESENT( dZdz ) ) THEN
+
+         ! Calculate the partial derivative of the constraint state functions (Z) with respect to the constraint states (z) here:
+
+      ! allocate and set dZdz
+
+   END IF
+
+
+END SUBROUTINE SrvD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine reads the input file and stores all the data in the SrvD_InputFile structure.
 !! It does not perform data validation.
@@ -1129,6 +1458,7 @@ SUBROUTINE SrvD_ReadInput( InputFileName, InputFileData, Default_DT, OutFileRoot
    INTEGER(IntKi)                         :: UnEcho         ! Unit number for the echo file
    INTEGER(IntKi)                         :: ErrStat2       ! The error status code
    CHARACTER(ErrMsgLen)                   :: ErrMsg2        ! The error message, if an error occurred
+   CHARACTER(*), PARAMETER                :: RoutineName = 'SrvD_ReadInput'
    
       ! initialize values: 
    
@@ -1140,8 +1470,12 @@ SUBROUTINE SrvD_ReadInput( InputFileName, InputFileData, Default_DT, OutFileRoot
       ! get the primary/platform input-file data
    
    CALL ReadPrimaryFile( InputFileName, InputFileData, OutFileRoot, UnEcho, ErrStat2, ErrMsg2 )
-      CALL CheckError(ErrStat2,ErrMsg2)
-      IF ( ErrStat >= AbortErrLev ) RETURN
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      IF ( ErrStat >= AbortErrLev ) THEN
+         IF ( UnEcho > 0 ) CLOSE( UnEcho ) 
+         RETURN
+      END IF
+      
       
 
       ! we may need to read additional files here (e.g., Bladed Interface)
@@ -1151,38 +1485,6 @@ SUBROUTINE SrvD_ReadInput( InputFileName, InputFileData, Default_DT, OutFileRoot
       
    IF ( UnEcho > 0 ) CLOSE( UnEcho )        
 
-CONTAINS
-   !...............................................................................................................................
-   SUBROUTINE CheckError(ErrID,Msg)
-   ! This subroutine sets the error message and level and cleans up if the error is >= AbortErrLev
-   !...............................................................................................................................
-
-         ! Passed arguments
-      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
-      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
-
-
-      !............................................................................................................................
-      ! Set error status/message;
-      !............................................................................................................................
-
-      IF ( ErrID /= ErrID_None ) THEN
-
-         IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
-         ErrMsg = TRIM(ErrMsg)//'SrvD_ReadInput:'//TRIM(Msg)
-         ErrStat = MAX(ErrStat, ErrID)
-
-         !.........................................................................................................................
-         ! Clean up if we're going to return on error: close files, deallocate local arrays
-         !.........................................................................................................................
-         IF ( ErrStat >= AbortErrLev ) THEN
-            IF ( UnEcho > 0 ) CLOSE( UnEcho )
-         END IF
-
-      END IF
-
-
-   END SUBROUTINE CheckError     
 
 END SUBROUTINE SrvD_ReadInput
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -1214,7 +1516,10 @@ SUBROUTINE ReadPrimaryFile( InputFile, InputFileData, OutFileRoot, UnEc, ErrStat
    CHARACTER(1024)               :: PriPath                                   ! Path name of the primary file
    CHARACTER(1024)               :: FTitle                                    ! "File Title": the 2nd line of the input file, which contains a description of its contents
    CHARACTER(200)                :: Line                                      ! Temporary storage of a line from the input file (to compare with "default")
-
+   CHARACTER(*), PARAMETER       :: RoutineName = 'ReadPrimaryFile'
+   
+   
+   
    
       ! Initialize some variables:
    ErrStat = ErrID_None
@@ -1829,9 +2134,7 @@ CONTAINS
 
       IF ( ErrID /= ErrID_None ) THEN
 
-         IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
-         ErrMsg = TRIM(ErrMsg)//'ReadPrimaryFile:'//TRIM(Msg)
-         ErrStat = MAX(ErrStat, ErrID)
+         CALL setErrStat(ErrID,Msg,ErrStat,ErrMsg,RoutineName)
 
          !.........................................................................................................................
          ! Clean up if we're going to return on error: close file, deallocate local arrays
@@ -1849,126 +2152,69 @@ CONTAINS
 END SUBROUTINE ReadPrimaryFile      
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine validates the inputs from the primary input file.
-SUBROUTINE ValidatePrimaryData( InputFileData, NumBl, ErrStat, ErrMsg )
+SUBROUTINE ValidatePrimaryData( InitInp, InputFileData, NumBl, ErrStat, ErrMsg )
 !..................................................................................................................................
       
       ! Passed variables:
 
-   TYPE(SrvD_InputFile),     INTENT(IN)     :: InputFileData                       !< All the data in the ServoDyn input file
-   INTEGER(IntKi),           INTENT(IN)     :: NumBl                               !< Number of blades
-   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                             !< Error status
-   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                              !< Error message
+   TYPE(SrvD_InitInputType), INTENT(IN   )  :: InitInp                     !< Input data for initialization routine
+   TYPE(SrvD_InputFile),     INTENT(IN)     :: InputFileData               !< All the data in the ServoDyn input file
+   INTEGER(IntKi),           INTENT(IN)     :: NumBl                       !< Number of blades
+   INTEGER(IntKi),           INTENT(OUT)    :: ErrStat                     !< Error status
+   CHARACTER(*),             INTENT(OUT)    :: ErrMsg                      !< Error message
 
    
       ! local variables
    INTEGER(IntKi)                           :: K                                   ! Blade number
-   
+   CHARACTER(*), PARAMETER                  :: RoutineName = 'ValidatePrimaryData'
    
    
    CALL Pitch_ValidateData()
    CALL Yaw_ValidateData()
    CALL TipBrake_ValidateData()
-   
-   
-   
-      ! Some special checks based on whether inputs will come from external source (e.g., Simulink, LabVIEW)
-   IF ( .NOT. Cmpl4SFun .AND. .NOT. Cmpl4LV ) THEN
+   CALL Torque_ValidateData()
+   CALL HSSBr_ValidateData()
       
-      IF ( InputFileData%VSContrl == ControlMode_EXTERN )  THEN
-         CALL SetErrors( ErrID_Fatal, 'VSContrl can only equal '//TRIM(Num2LStr(ControlMode_EXTERN))//' when ServoDyn is interfaced with Simulink or LabVIEW.'// &
-                '  Set VSContrl to 0, 1, 3, or 5 or interface ServoDyn with Simulink or LabVIEW.' )
-      END IF
-         
-      IF ( InputFileData%HSSBrMode == ControlMode_EXTERN )  THEN
-         CALL SetErrors( ErrID_Fatal, 'HSSBrMode can be '//TRIM(Num2LStr(ControlMode_EXTERN))//' only when when implemented in Simulink or LabVIEW.' )
-      ENDIF      
+   !  Checks for linearization:
+   if ( InitInp%Linearize ) then
+   
+      if ( InputFileData%PCMode /= ControlMode_NONE ) &
+         call SetErrStat(ErrID_Fatal,"PCMode must be 0 for linearization.",ErrStat,ErrMsg,RoutineName)
+      if ( InputFileData%VSContrl /= ControlMode_NONE .and. InputFileData%VSContrl /= ControlMode_SIMPLE ) &
+         call SetErrStat(ErrID_Fatal,"VSContrl must be 0 or 1 for linearization.",ErrStat,ErrMsg,RoutineName)
+      if ( InputFileData%GenModel /= ControlMode_SIMPLE .and. InputFileData%GenModel /= ControlMode_ADVANCED ) &
+         call SetErrStat(ErrID_Fatal,"GenModel must be 1 or 2 for linearization.",ErrStat,ErrMsg,RoutineName)
+      
+      if ( .not. InputFileData%GenTiStr  ) &
+         call SetErrStat(ErrID_Fatal,"GenTiStr must be TRUE for linearization.",ErrStat,ErrMsg,RoutineName)
+      if ( .not. InputFileData%GenTiStp  ) &
+         call SetErrStat(ErrID_Fatal,"GenTiStp must be TRUE for linearization.",ErrStat,ErrMsg,RoutineName)
 
+      if (InputFileData%HSSBrMode /= ControlMode_NONE) &
+         call SetErrStat(ErrID_Fatal,"HSSBrMode must be 0 for linearization.",ErrStat,ErrMsg,RoutineName)
+      if (InputFileData%YCMode /= ControlMode_NONE) &
+         call SetErrStat(ErrID_Fatal,"YCMode must be 0 for linearization.",ErrStat,ErrMsg,RoutineName)
       
-   END IF
-            
-   
-      ! checks for generator and torque control:           
-   IF ( InputFileData%VSContrl /= ControlMode_NONE .and. &
-           InputFileData%VSContrl /= ControlMode_SIMPLE .AND. InputFileData%VSContrl /= ControlMode_USER )  THEN
-      IF ( InputFileData%VSContrl /= ControlMode_DLL .AND. InputFileData%VSContrl /=ControlMode_EXTERN )  &
-      CALL SetErrors( ErrID_Fatal, 'VSContrl must be either 0, 1, 3, 4, or 5.' )
-   ENDIF
-   
-   IF ( InputFileData%SpdGenOn < 0.0_ReKi ) CALL SetErrors( ErrID_Fatal, 'SpdGenOn must not be negative.' )
-   IF ( InputFileData%TimGenOn < 0.0_DbKi ) CALL SetErrors( ErrID_Fatal, 'TimGenOn must not be negative.' )
-   IF ( InputFileData%TimGenOf < 0.0_DbKi ) CALL SetErrors( ErrID_Fatal, 'TimGenOf must not be negative.' )
-!   IF ( InputFileData%TimGenOf < InputFileData%TimGenOn ) CALL SetErrors( ErrID_Fatal, 'TimGenOf must not be before TimGenOn.')
-   IF ( InputFileData%GenEff   < 0.0_ReKi  .OR.  InputFileData%GenEff > 1.0_ReKi )  THEN
-      CALL SetErrors( ErrID_Fatal, 'GenEff must be in the range [0, 1] (i.e., [0, 100] percent)' )
-   END IF
-   
-   
-      ! checks for variable-speed torque control:           
-   IF ( InputFileData%VSContrl == ControlMode_SIMPLE ) THEN
-      IF ( InputFileData%VS_RtGnSp <= 0.0_ReKi )  CALL SetErrors( ErrID_Fatal, 'VS_RtGnSp must be greater than zero.' )
-      IF ( InputFileData%VS_RtTq   < 0.0_ReKi  )  CALL SetErrors( ErrID_Fatal, 'VS_RtTq must not be negative.' )
-      IF ( InputFileData%VS_Rgn2K  < 0.0_ReKi  )  CALL SetErrors( ErrID_Fatal, 'VS_Rgn2K must not be negative.' )
-      IF ( InputFileData%VS_Rgn2K*InputFileData%VS_RtGnSp**2 >  InputFileData%VS_RtTq )  &
-         CALL SetErrors( ErrID_Fatal, 'VS_Rgn2K*VS_RtGnSp^2 must not be greater than VS_RtTq.' )
-      IF ( InputFileData%VS_SlPc  <= 0.0_ReKi  )  CALL SetErrors( ErrID_Fatal, 'VS_SlPc must be greater than zero.' )
-   END IF
-
-      ! checks for generator models (VSControl == 0):           
-   IF ( InputFileData%VSContrl == ControlMode_NONE ) THEN
+      if (InputFileData%CompNTMD .or. InputFileData%CompTTMD) &
+         call SetErrStat(ErrID_Fatal,"TMD module is not currently allowed in linearization. CompNTMD and CompTTMD must be FALSE.",ErrStat,ErrMsg,RoutineName)
       
-      IF ( InputFileData%GenModel /= ControlMode_SIMPLE .AND. InputFileData%GenModel /= ControlMode_ADVANCED .AND. InputFileData%GenModel /= ControlMode_USER )  THEN
-         CALL SetErrors( ErrID_Fatal, 'GenModel must be either 1, 2, or 3.' )
-      ENDIF            
-      
-         ! checks for simple induction generator (VSControl=0 & GenModel=1):      
-      IF ( InputFileData%GenModel == ControlMode_SIMPLE ) THEN
-         IF ( InputFileData%SIG_SlPc <= 0.0_ReKi )  CALL SetErrors( ErrID_Fatal, 'SIG_SlPc must be greater than zero.' )
-         IF ( InputFileData%SIG_SySp <= 0.0_ReKi )  CALL SetErrors( ErrID_Fatal, 'SIG_SySp must be greater than zero.' )
-         IF ( InputFileData%SIG_RtTq <= 0.0_ReKi )  CALL SetErrors( ErrID_Fatal, 'SIG_RtTq must be greater than zero.' )
-         IF ( InputFileData%SIG_PORt <  1.0_ReKi )  CALL SetErrors( ErrID_Fatal, 'SIG_PORt must not be less than 1.' )
-      END IF
-
-         ! checks for Thevenin-equivalent induction generator (VSControl=0 & GenModel=2):      
-      IF ( InputFileData%GenModel == ControlMode_ADVANCED ) THEN
-         IF ( InputFileData%TEC_Freq <= 0.0_ReKi ) CALL SetErrors( ErrID_Fatal, 'TEC_Freq must be greater than zero.' )
-         IF ( InputFileData%TEC_NPol <= 0_IntKi .OR. MOD( InputFileData%TEC_NPol, 2_IntKi ) /= 0_IntKi ) &
-                                     CALL SetErrors( ErrID_Fatal, 'TEC_NPol must be an even number greater than zero.' )
-         IF ( InputFileData%TEC_SRes <= 0.0_ReKi ) CALL SetErrors( ErrID_Fatal, 'TEC_SRes must be greater than zero.' )
-         IF ( InputFileData%TEC_RRes <= 0.0_ReKi ) CALL SetErrors( ErrID_Fatal, 'TEC_RRes must be greater than zero.' )
-         IF ( InputFileData%TEC_VLL  <= 0.0_ReKi ) CALL SetErrors( ErrID_Fatal, 'TEC_VLL must be greater than zero.'  )
-         IF ( InputFileData%TEC_SLR  <= 0.0_ReKi ) CALL SetErrors( ErrID_Fatal, 'TEC_SLR must be greater than zero.'  )
-         IF ( InputFileData%TEC_RLR  <= 0.0_ReKi ) CALL SetErrors( ErrID_Fatal, 'TEC_RLR must be greater than zero.'  )
-         IF ( InputFileData%TEC_MR   <= 0.0_ReKi ) CALL SetErrors( ErrID_Fatal, 'TEC_MR must be greater than zero.'   )
-      END IF      
-      
-   END IF
+   end if
    
-      
-      ! checks for high-speed shaft brake:       
-   IF ( InputFileData%HSSBrMode /= ControlMode_NONE .and. &
-           InputFileData%HSSBrMode /= ControlMode_SIMPLE .and. InputFileData%HSSBrMode /= ControlMode_USER )  THEN
-      IF ( InputFileData%HSSBrMode /= ControlMode_DLL .and. InputFileData%HSSBrMode /= ControlMode_EXTERN ) &      
-                                             CALL SetErrors( ErrID_Fatal, 'HSSBrMode must be 0, 1, 3, 4, or 5.' )
-   END IF
-   IF ( InputFileData%THSSBrDp < 0.0_DbKi )  CALL SetErrors( ErrID_Fatal, 'THSSBrDp must not be negative.' )
-   IF ( InputFileData%HSSBrDT  < 0.0_ReKi )  CALL SetErrors( ErrID_Fatal, 'HSSBrDT must not be negative.'  )
-   IF ( InputFileData%HSSBrTqF < 0.0_ReKi )  CALL SetErrors( ErrID_Fatal, 'HSSBrTqF must not be negative.' )
-
       
 ! this code was in FASTSimulink.f90 in FAST v7:
-   IF (Cmpl4SFun) THEN
-      IF (InputFileData%YCMode    /= ControlMode_EXTERN) CALL SetErrors( ErrID_Info, 'Yaw angle and rate are not commanded from Simulink model.')
-      IF (InputFileData%PCMode    /= ControlMode_EXTERN) CALL SetErrors( ErrID_Info, 'Pitch angles are not commanded from Simulink model.')
-      IF (InputFileData%VSContrl  /= ControlMode_EXTERN) CALL SetErrors( ErrID_Info, 'Generator torque and power are not commanded from Simulink model.')
-      IF (InputFileData%HSSBrMode /= ControlMode_EXTERN) CALL SetErrors( ErrID_Info, 'HSS brake is not commanded from Simulink model.')
+   IF (Cmpl4SFun) THEN !warn if ServoDyn isn't going to use the inputs from the Simulink interface
+      IF (InputFileData%YCMode    /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'Yaw angle and rate are not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
+      IF (InputFileData%PCMode    /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'Pitch angles are not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
+      IF (InputFileData%VSContrl  /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'Generator torque and power are not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
+      IF (InputFileData%HSSBrMode /= ControlMode_EXTERN) CALL SetErrStat( ErrID_Info, 'HSS brake is not commanded from Simulink model.', ErrStat, ErrMsg, RoutineName )
    END IF
    
    RETURN
    
 CONTAINS
    !-------------------------------------------------------------------------------------------------------------------------------
+   !> This routine performs the checks on inputs for the pitch controller.
    SUBROUTINE Pitch_ValidateData( )
-   ! This routine performs the checks on inputs for the pitch controller.
    !...............................................................................................................................
    
          ! Check that the requested pitch control modes are valid:
@@ -1976,8 +2222,8 @@ CONTAINS
       IF ( .NOT. Cmpl4SFun .AND. .NOT. Cmpl4LV ) THEN
          
          IF ( InputFileData%PCMode == ControlMode_EXTERN )  THEN
-            CALL SetErrors( ErrID_Fatal, 'PCMode can only equal '//TRIM(Num2LStr(ControlMode_EXTERN))//' when ServoDyn is interfaced with Simulink or LabVIEW.'// &
-                      '  Set PCMode to 0, 3, or 5 or interface ServoDyn with Simulink or LabVIEW.' )          
+            CALL SetErrStat( ErrID_Fatal, 'PCMode can equal '//TRIM(Num2LStr(ControlMode_EXTERN))//' only when ServoDyn is interfaced with Simulink or LabVIEW.'// &
+                      '  Set PCMode to 0, 3, or 5 or interface ServoDyn with Simulink or LabVIEW.', ErrStat, ErrMsg, RoutineName )          
          END IF
          
       END IF
@@ -1985,47 +2231,47 @@ CONTAINS
    
       IF ( InputFileData%PCMode /= ControlMode_NONE .and. InputFileData%PCMode /= ControlMode_USER )  THEN
          IF ( InputFileData%PCMode /= ControlMode_EXTERN .and. InputFileData%PCMode /= ControlMode_DLL )  &
-         CALL SetErrors( ErrID_Fatal, 'PCMode must be 0, 3, 4, or 5.' )
+         CALL SetErrStat( ErrID_Fatal, 'PCMode must be 0, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
       ENDIF
          
 
          ! Time that pitch control is enabled:
       
       IF ( InputFileData%TPCOn < 0.0_DbKi )  THEN
-         CALL SetErrors( ErrID_Fatal, 'TPCOn must not be negative.' )
+         CALL SetErrStat( ErrID_Fatal, 'TPCOn must not be negative.', ErrStat, ErrMsg, RoutineName )
       ENDIF
 
          ! Make sure the number of blades in the simulation doesn't exceed 3:
 
-      IF ( NumBl > SIZE(InputFileData%TPitManS,1) ) CALL SetErrors( ErrID_Fatal, 'Number of blades exceeds input values.')
+      IF ( NumBl > SIZE(InputFileData%TPitManS,1) ) CALL SetErrStat( ErrID_Fatal, 'Number of blades exceeds input values.', ErrStat, ErrMsg, RoutineName )
       
          ! Check the pitch-maneuver start times and rates:
          
       DO K=1,MIN(NumBl,SIZE(InputFileData%TPitManS))
       
          IF ( InputFileData%TPitManS(K) < 0.0_DbKi ) &
-            CALL SetErrors( ErrID_Fatal, 'TPitManS('//TRIM( Num2LStr( K ) )//') must not be negative.' )         
+            CALL SetErrStat( ErrID_Fatal, 'TPitManS('//TRIM( Num2LStr( K ) )//') must not be negative.', ErrStat, ErrMsg, RoutineName )         
          IF ( EqualRealNos( InputFileData%PitManRat(K), 0.0_ReKi ) ) &
-            CALL SetErrors( ErrID_Fatal, 'PitManRat('//TRIM( Num2LStr(K) )//') must not be 0.' )
+            CALL SetErrStat( ErrID_Fatal, 'PitManRat('//TRIM( Num2LStr(K) )//') must not be 0.', ErrStat, ErrMsg, RoutineName )
 
       ENDDO ! K   
       
       
 !??? IF ( ANY( p%BlPitchInit <= -pi ) .OR. ANY( p%BlPitchInit > pi ) )  THEN
-!      CALL SetErrors( ErrID_Fatal, 'BlPitchInit('//TRIM( Num2LStr( K ) )//') must be in the range (-pi,pi] radians (i.e., (-180,180] degrees).' )
+!      CALL SetErrStat( ErrID_Fatal, 'BlPitchInit('//TRIM( Num2LStr( K ) )//') must be in the range (-pi,pi] radians (i.e., (-180,180] degrees).' , ErrStat, ErrMsg, RoutineName )
       
       
                
    END SUBROUTINE Pitch_ValidateData
    !-------------------------------------------------------------------------------------------------------------------------------
+   !> This routine performs the checks on inputs for the yaw controller.
    SUBROUTINE Yaw_ValidateData( )
-   ! This routine performs the checks on inputs for the yaw controller.
    !...............................................................................................................................
    
             ! checks for yaw control mode:
       IF ( InputFileData%YCMode /= ControlMode_NONE .and. InputFileData%YCMode /= ControlMode_USER   )  THEN
          IF ( InputFileData%YCMode /= ControlMode_DLL .and. InputFileData%YCMode /= ControlMode_EXTERN )  &
-         CALL SetErrors( ErrID_Fatal, 'YCMode must be 0, 3, 4 or 5.' )
+         CALL SetErrStat( ErrID_Fatal, 'YCMode must be 0, 3, 4 or 5.', ErrStat, ErrMsg, RoutineName )
       ENDIF
 
             
@@ -2033,8 +2279,8 @@ CONTAINS
       IF ( .NOT. Cmpl4SFun .AND. .NOT. Cmpl4LV ) THEN
          
          IF ( InputFileData%YCMode == ControlMode_EXTERN )  THEN
-            CALL SetErrors( ErrID_Fatal, 'YCMode can only equal '//TRIM(Num2LStr(ControlMode_EXTERN))//' when ServoDyn is interfaced with Simulink or LabVIEW.'// &
-                      '  Set YCMode to 0, 3, or 5 or interface ServoDyn with Simulink or LabVIEW.' )          
+            CALL SetErrStat( ErrID_Fatal, 'YCMode can equal '//TRIM(Num2LStr(ControlMode_EXTERN))//' only when ServoDyn is interfaced with Simulink or LabVIEW.'// &
+                      '  Set YCMode to 0, 3, or 5 or interface ServoDyn with Simulink or LabVIEW.', ErrStat, ErrMsg, RoutineName )          
          END IF
    
      END IF
@@ -2043,30 +2289,30 @@ CONTAINS
          ! Check the start time to enable yaw control mode:
       
       IF ( InputFileData%TYCOn < 0.0_DbKi )  THEN
-         CALL SetErrors( ErrID_Fatal, 'TYCOn must not be negative.' )
+         CALL SetErrStat( ErrID_Fatal, 'TYCOn must not be negative.', ErrStat, ErrMsg, RoutineName )
       ENDIF
    
    
          ! Check the nacelle-yaw-maneuver start times and rates:
-      IF ( InputFileData%TYawManS < 0.0_DbKi )  CALL SetErrors( ErrID_Fatal, 'TYawManS must not be negative.' )
-      IF ( EqualRealNos( InputFileData%YawManRat, 0.0_ReKi ) ) CALL SetErrors( ErrID_Fatal, 'YawManRat must not be 0.' )
-   !   IF ( InputFileData%TYawManE < InputFileData%TYawManS ) CALL SetErrors( ErrID_Fatal, 'TYawManE must not be less than TYawManS.')
+      IF ( InputFileData%TYawManS < 0.0_DbKi )  CALL SetErrStat( ErrID_Fatal, 'TYawManS must not be negative.', ErrStat, ErrMsg, RoutineName )
+      IF ( EqualRealNos( InputFileData%YawManRat, 0.0_ReKi ) ) CALL SetErrStat( ErrID_Fatal, 'YawManRat must not be 0.', ErrStat, ErrMsg, RoutineName )
+   !   IF ( InputFileData%TYawManE < InputFileData%TYawManS ) CALL SetErrStat( ErrID_Fatal, 'TYawManE must not be less than TYawManS.', ErrStat, ErrMsg, RoutineName )
 
 
          ! Check the nacelle-yaw spring and damping constants:
 
-      IF ( InputFileData%YawSpr  < 0.0_ReKi )  CALL SetErrors( ErrID_Fatal, 'YawSpr must not be negative.' )
-      IF ( InputFileData%YawDamp < 0.0_ReKi )  CALL SetErrors( ErrID_Fatal, 'YawDamp must not be negative.' )
+      IF ( InputFileData%YawSpr  < 0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'YawSpr must not be negative.' , ErrStat, ErrMsg, RoutineName )
+      IF ( InputFileData%YawDamp < 0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'YawDamp must not be negative.', ErrStat, ErrMsg, RoutineName )
    
          ! Check the neutral position:
       IF ( InputFileData%YawNeut <= -pi  .OR.  InputFileData%YawNeut > pi )  &
-         CALL SetErrors( ErrID_Fatal, 'YawNeut must be in the range (-pi, pi] radians (i.e., (-180,180] degrees).' )
+         CALL SetErrStat( ErrID_Fatal, 'YawNeut must be in the range (-pi, pi] radians (i.e., (-180,180] degrees).', ErrStat, ErrMsg, RoutineName )
    
    
    END SUBROUTINE Yaw_ValidateData
    !-------------------------------------------------------------------------------------------------------------------------------
+   !> This routine performs the checks on inputs for the tip brakes.
    SUBROUTINE TipBrake_ValidateData( )
-   ! This routine performs the checks on inputs for the tip brakes.
    !...............................................................................................................................
    
       !IF ( TBDrConN < 0.0 )  CALL ProgAbort ( ' TBDrConN must not be negative.' )
@@ -2076,26 +2322,106 @@ CONTAINS
    
       !DO K=1,MIN(NumBl,SIZE(InputFileData%TTpBrDp))
       !   IF ( InputFileData%TTpBrDp(K)  < 0.0_DbKi ) &
-      !      CALL SetErrors( ErrID_Fatal, 'TTpBrDp(' //TRIM( Num2LStr( K ) )//') must not be negative.' )
+      !      CALL SetErrStat( ErrID_Fatal, 'TTpBrDp(' //TRIM( Num2LStr( K ) )//') must not be negative.', ErrStat, ErrMsg, RoutineName )
       !   IF ( InputFileData%TBDepISp(K) < 0.0_DbKi ) &
-      !      CALL SetErrors( ErrID_Fatal, 'TBDepISp('//TRIM( Num2LStr( K ) )//') must not be negative.' )      
+      !      CALL SetErrStat( ErrID_Fatal, 'TBDepISp('//TRIM( Num2LStr( K ) )//') must not be negative.', ErrStat, ErrMsg, RoutineName )      
       !ENDDO ! K   
    
    
    END SUBROUTINE TipBrake_ValidateData
    !-------------------------------------------------------------------------------------------------------------------------------
-   SUBROUTINE SetErrors( ErrStat3, ErrMsg3 )
-   ! This routine sets the error message and flag when an error has occurred.
+   !> This routine performs the checks on inputs for the torque controller.
+   SUBROUTINE Torque_ValidateData( )
    !...............................................................................................................................
-   INTEGER(IntKi), INTENT(IN) :: ErrStat3     ! Error status for this error
-   CHARACTER(*),   INTENT(IN) :: ErrMsg3      ! Error message for this error
+      IF ( .NOT. Cmpl4SFun .AND. .NOT. Cmpl4LV ) THEN
+      
+         IF ( InputFileData%VSContrl == ControlMode_EXTERN )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'VSContrl can equal '//TRIM(Num2LStr(ControlMode_EXTERN))//' only when ServoDyn is interfaced with Simulink or LabVIEW.'// &
+                '  Set VSContrl to 0, 1, 3, or 5 or interface ServoDyn with Simulink or LabVIEW.', ErrStat, ErrMsg, RoutineName )
+         END IF
+      END IF
+      
+   
+         ! checks for generator and torque control:           
+      IF ( InputFileData%VSContrl /= ControlMode_NONE .and. &
+              InputFileData%VSContrl /= ControlMode_SIMPLE .AND. InputFileData%VSContrl /= ControlMode_USER )  THEN
+         IF ( InputFileData%VSContrl /= ControlMode_DLL .AND. InputFileData%VSContrl /=ControlMode_EXTERN )  &
+         CALL SetErrStat( ErrID_Fatal, 'VSContrl must be either 0, 1, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
+      ENDIF
+   
+      IF ( InputFileData%SpdGenOn < 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'SpdGenOn must not be negative.', ErrStat, ErrMsg, RoutineName )
+      IF ( InputFileData%TimGenOn < 0.0_DbKi ) CALL SetErrStat( ErrID_Fatal, 'TimGenOn must not be negative.', ErrStat, ErrMsg, RoutineName )
+      IF ( InputFileData%TimGenOf < 0.0_DbKi ) CALL SetErrStat( ErrID_Fatal, 'TimGenOf must not be negative.', ErrStat, ErrMsg, RoutineName )
+   !   IF ( InputFileData%TimGenOf < InputFileData%TimGenOn ) CALL SetErrStat( ErrID_Fatal, 'TimGenOf must not be before TimGenOn.', ErrStat, ErrMsg, RoutineName )
+      IF ( InputFileData%GenEff   < 0.0_ReKi  .OR.  InputFileData%GenEff > 1.0_ReKi )  THEN
+         CALL SetErrStat( ErrID_Fatal, 'GenEff must be in the range [0, 1] (i.e., [0, 100] percent)', ErrStat, ErrMsg, RoutineName )
+      END IF
+   
+   
+         ! checks for variable-speed torque control:           
+      IF ( InputFileData%VSContrl == ControlMode_SIMPLE ) THEN
+         IF ( InputFileData%VS_RtGnSp <= 0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'VS_RtGnSp must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+         IF ( InputFileData%VS_RtTq   < 0.0_ReKi  )  CALL SetErrStat( ErrID_Fatal, 'VS_RtTq must not be negative.', ErrStat, ErrMsg, RoutineName )
+         IF ( InputFileData%VS_Rgn2K  < 0.0_ReKi  )  CALL SetErrStat( ErrID_Fatal, 'VS_Rgn2K must not be negative.', ErrStat, ErrMsg, RoutineName )
+         IF ( InputFileData%VS_Rgn2K*InputFileData%VS_RtGnSp**2 >  InputFileData%VS_RtTq )  &
+            CALL SetErrStat( ErrID_Fatal, 'VS_Rgn2K*VS_RtGnSp^2 must not be greater than VS_RtTq.', ErrStat, ErrMsg, RoutineName )
+         IF ( InputFileData%VS_SlPc  <= 0.0_ReKi  )  CALL SetErrStat( ErrID_Fatal, 'VS_SlPc must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+      
+         ! checks for generator models (VSControl == 0):           
+      ELSE IF ( InputFileData%VSContrl == ControlMode_NONE ) THEN
+      
+         IF ( InputFileData%GenModel /= ControlMode_SIMPLE .AND. InputFileData%GenModel /= ControlMode_ADVANCED .AND. InputFileData%GenModel /= ControlMode_USER )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'GenModel must be either 1, 2, or 3.', ErrStat, ErrMsg, RoutineName )
+         ENDIF            
+      
+            ! checks for simple induction generator (VSControl=0 & GenModel=1):      
+         IF ( InputFileData%GenModel == ControlMode_SIMPLE ) THEN
+            IF ( InputFileData%SIG_SlPc <= 0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'SIG_SlPc must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+            IF ( InputFileData%SIG_SySp <= 0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'SIG_SySp must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+            IF ( InputFileData%SIG_RtTq <= 0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'SIG_RtTq must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+            IF ( InputFileData%SIG_PORt <  1.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'SIG_PORt must not be less than 1.'  , ErrStat, ErrMsg, RoutineName )
+         
+            ! checks for Thevenin-equivalent induction generator (VSControl=0 & GenModel=2):
+         ELSE IF ( InputFileData%GenModel == ControlMode_ADVANCED ) THEN
+            IF ( InputFileData%TEC_Freq <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TEC_Freq must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+            IF ( InputFileData%TEC_NPol <= 0_IntKi .OR. MOD( InputFileData%TEC_NPol, 2_IntKi ) /= 0_IntKi ) &
+                                       CALL SetErrStat( ErrID_Fatal, 'TEC_NPol must be an even number greater than zero.', ErrStat, ErrMsg, RoutineName )
+            IF ( InputFileData%TEC_SRes <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TEC_SRes must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+            IF ( InputFileData%TEC_RRes <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TEC_RRes must be greater than zero.', ErrStat, ErrMsg, RoutineName )
+            IF ( InputFileData%TEC_VLL  <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TEC_VLL must be greater than zero.' , ErrStat, ErrMsg, RoutineName )
+            IF ( InputFileData%TEC_SLR  <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TEC_SLR must be greater than zero.' , ErrStat, ErrMsg, RoutineName )
+            IF ( InputFileData%TEC_RLR  <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TEC_RLR must be greater than zero.' , ErrStat, ErrMsg, RoutineName )
+            IF ( InputFileData%TEC_MR   <= 0.0_ReKi ) CALL SetErrStat( ErrID_Fatal, 'TEC_MR must be greater than zero.'  , ErrStat, ErrMsg, RoutineName )
+         END IF      
+      
+      END IF
+                        
+   END SUBROUTINE Torque_ValidateData
+   !-------------------------------------------------------------------------------------------------------------------------------
+   !> This routine performs the checks on inputs for the high-speed shaft brake.   
+   SUBROUTINE HSSBr_ValidateData( )
+   
+            ! Some special checks based on whether inputs will come from external source (e.g., Simulink, LabVIEW)
+      IF ( .NOT. Cmpl4SFun .AND. .NOT. Cmpl4LV ) THEN
+               
+         IF ( InputFileData%HSSBrMode == ControlMode_EXTERN )  THEN
+            CALL SetErrStat( ErrID_Fatal, 'HSSBrMode can be '//TRIM(Num2LStr(ControlMode_EXTERN))//' only when implemented in Simulink or LabVIEW.', ErrStat, ErrMsg, RoutineName )
+         ENDIF
+      
+      END IF
 
-      ErrStat = MAX( ErrStat, ErrStat3 )
-      IF ( LEN_TRIM(ErrMsg) > 0 ) ErrMsg = TRIM(ErrMsg)//NewLine
-      ErrMsg  = TRIM(ErrMsg)//TRIM(ErrMsg3)
-
-   END SUBROUTINE SetErrors
-   !-------------------------------------------------------------------------------------------------------------------------------      
+         ! checks for high-speed shaft brake:       
+      IF ( InputFileData%HSSBrMode /= ControlMode_NONE .and. &
+              InputFileData%HSSBrMode /= ControlMode_SIMPLE .and. InputFileData%HSSBrMode /= ControlMode_USER )  THEN
+         IF ( InputFileData%HSSBrMode /= ControlMode_DLL .and. InputFileData%HSSBrMode /= ControlMode_EXTERN ) &      
+                                                CALL SetErrStat( ErrID_Fatal, 'HSSBrMode must be 0, 1, 3, 4, or 5.', ErrStat, ErrMsg, RoutineName )
+      END IF
+      IF ( InputFileData%THSSBrDp < 0.0_DbKi )  CALL SetErrStat( ErrID_Fatal, 'THSSBrDp must not be negative.', ErrStat, ErrMsg, RoutineName )
+      IF ( InputFileData%HSSBrDT  < 0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'HSSBrDT must not be negative.', ErrStat, ErrMsg, RoutineName )
+      IF ( InputFileData%HSSBrTqF < 0.0_ReKi )  CALL SetErrStat( ErrID_Fatal, 'HSSBrTqF must not be negative.', ErrStat, ErrMsg, RoutineName )
+            
+   END SUBROUTINE HSSBr_ValidateData
+   !-------------------------------------------------------------------------------------------------------------------------------
 END SUBROUTINE ValidatePrimaryData
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine sets the parameters, based on the data stored in InputFileData.
@@ -2114,7 +2440,8 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    REAL(ReKi)                                 :: TEC_K2         ! K2 term for Thevenin-equivalent circuit
    
    INTEGER(IntKi)                             :: ErrStat2       ! Temporary error ID   
-   CHARACTER(ErrMsgLen)                         :: ErrMsg2        ! Temporary message describing error
+   CHARACTER(ErrMsgLen)                       :: ErrMsg2        ! Temporary message describing error
+   CHARACTER(*), PARAMETER                    :: RoutineName = 'SrvD_SetParameters'
 
 
    
@@ -2133,16 +2460,13 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    p%PCMode   = InputFileData%PCMode
    p%TPCOn    = InputFileData%TPCOn      
 
-   CALL AllocAry( p%TPitManS, p%NumBl, 'TPitManS', ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) RETURN
-   p%TPitManS = InputFileData%TPitManS(1:p%NumBl)
-   
-   CALL AllocAry( p%BlPitchF, p%NumBl, 'BlPitchF', ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) RETURN
-   p%BlPitchF = InputFileData%BlPitchF(1:p%NumBl)
-   
-   CALL AllocAry( p%PitManRat, p%NumBl, 'PitManRat', ErrStat, ErrMsg )
-   IF ( ErrStat /= ErrID_None ) RETURN
+   CALL AllocAry( p%TPitManS, p%NumBl, 'TPitManS', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   CALL AllocAry( p%BlPitchF, p%NumBl, 'BlPitchF', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+   CALL AllocAry( p%PitManRat, p%NumBl, 'PitManRat', ErrStat2, ErrMsg2 ); CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      IF (ErrStat >= AbortErrLev) RETURN  
+      
+   p%TPitManS  = InputFileData%TPitManS(1:p%NumBl)
+   p%BlPitchF  = InputFileData%BlPitchF(1:p%NumBl)
    p%PitManRat = InputFileData%PitManRat(1:p%NumBl)
 
       !.............................................
@@ -2243,7 +2567,8 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
       ! tip-brake parameters (not used in this version)
       !.............................................
    CALL AllocAry( p%TBDepISp, p%NumBl, 'TBDepISp', ErrStat2, ErrMsg2 )  ! Deployment-initiation speed for the tip brakes
-   IF ( ErrStat /= ErrID_None ) RETURN
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+      IF (ErrStat >= AbortErrLev) RETURN  
    
    p%TBDepISp = HUGE(p%TBDepISp) ! Deployment-initiation speed for the tip brakes: basically never deploy them. Eventually this will be added back?
    !p%TBDepISp  = InputFileData%TBDepISp*RPM2RPS
@@ -2280,7 +2605,7 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
    p%NumOuts = InputFileData%NumOuts
       
    CALL SetOutParam(InputFileData%OutList, p, ErrStat2, ErrMsg2 ) ! requires: p%NumOuts, p%NumBl; sets: p%OutParam.
-      CALL CheckError(ErrStat2,ErrMsg2)
+      CALL SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       IF (ErrStat >= AbortErrLev) RETURN  
       
    IF ( InputFileData%TabDelim ) THEN
@@ -2289,40 +2614,6 @@ SUBROUTINE SrvD_SetParameters( InputFileData, p, ErrStat, ErrMsg )
       p%Delim = ' '
    END IF           
              
-
-   
-CONTAINS
-   !...............................................................................................................................
-   SUBROUTINE CheckError(ErrID,Msg)
-   ! This subroutine sets the error message and level
-   !...............................................................................................................................
-
-         ! Passed arguments
-      INTEGER(IntKi), INTENT(IN) :: ErrID       ! The error identifier (ErrStat)
-      CHARACTER(*),   INTENT(IN) :: Msg         ! The error message (ErrMsg)
-
-
-      !............................................................................................................................
-      ! Set error status/message;
-      !............................................................................................................................
-
-      IF ( ErrID /= ErrID_None ) THEN
-
-         IF (ErrStat /= ErrID_None) ErrMsg = TRIM(ErrMsg)//NewLine
-!         ErrMsg = TRIM(ErrMsg)//' '//TRIM(Msg)  !bjj: note that when you pass a literal string "", it somehow adds an extra space at the beginning.
-         ErrMsg = TRIM(ErrMsg)//'SrvD_SetParameters:'//TRIM(Msg)
-         ErrStat = MAX(ErrStat, ErrID)
-         
-         !.........................................................................................................................
-         ! Clean up if we're going to return on error: close files, deallocate local arrays
-         !.........................................................................................................................
-         IF ( ErrStat >= AbortErrLev ) THEN
-         END IF
-
-      END IF
-
-
-   END SUBROUTINE CheckError
 
 END SUBROUTINE SrvD_SetParameters
 !----------------------------------------------------------------------------------------------------------------------------------
@@ -3178,9 +3469,11 @@ SUBROUTINE CalculateTorque( t, u, p, m, GenTrq, ElecPwr, ErrStat, ErrMsg )
    REAL(ReKi)                                     :: PwrLossS    ! Power loss in the stator (watts)
    REAL(ReKi)                                     :: PwrLossR    ! Power loss in the rotor (watts)
    REAL(ReKi)                                     :: PwrMech     ! Mechanical power (watts)
-   REAL(ReKi)                                     :: Slip        ! Generator slip.
-   REAL(ReKi)                                     :: SlipRat     ! Generator slip ratio.
-                                                  
+   REAL(ReKi)                                     :: Slip        ! Generator slip
+   REAL(ReKi)                                     :: SlipRat     ! Generator slip ratio
+      
+   REAL(ReKi)                                     :: S2          ! SlipRat**2
+   
    character(*), parameter                        :: RoutineName = 'CalculateTorque'
 
       ! Initialize variables
@@ -3210,8 +3503,6 @@ SUBROUTINE CalculateTorque( t, u, p, m, GenTrq, ElecPwr, ErrStat, ErrMsg )
                   ELSE
                      GenTrq  = Slip*p%SIG_Slop
                   ENDIF
-                  !GenTrq     = GenTrq + DelGenTrq  ! Add the pertubation on generator torque, DelGenTrq.  This is used only for FAST linearization (it is zero otherwise).
-
                   
                   ElecPwr = CalculateElecPwr( GenTrq, u, p )
 
@@ -3224,16 +3515,22 @@ SUBROUTINE CalculateTorque( t, u, p, m, GenTrq, ElecPwr, ErrStat, ErrMsg )
                   GenTrq    = p%TEC_A0*(p%TEC_VLL**2)*SlipRat &
                              /( p%TEC_C0 + p%TEC_C1*SlipRat + p%TEC_C2*(SlipRat**2) )
 
-                  ComDenom  = ( p%TEC_Re1 - p%TEC_RRes/SlipRat )**2 + ( p%TEC_Xe1 + p%TEC_RLR )**2
-                  Current2  = CMPLX(  p%TEC_V1a*( p%TEC_Re1 - p%TEC_RRes/SlipRat )/ComDenom , &
-                                     -p%TEC_V1a*( p%TEC_Xe1 + p%TEC_RLR          )/ComDenom     )
-                  Currentm  = CMPLX( 0.0_ReKi , -p%TEC_V1a/p%TEC_MR )
+                     ! trying to refactor so we don't divide by SlipRat, which may be 0
+                     ! jmj tells me I need not worry about ComDenom being zero because these equations behave nicely
+                  S2 = SlipRat**2
+                  
+                  ComDenom  = ( SlipRat*p%TEC_Re1 - p%TEC_RRes )**2 + (SlipRat*( p%TEC_Xe1 + p%TEC_RLR ))**2                  
+                  Current2  = CMPLX(  p%TEC_V1a*SlipRat*( SlipRat*p%TEC_Re1 - p%TEC_RRes )/ComDenom , &
+                                     -p%TEC_V1a*S2     *(         p%TEC_Xe1 + p%TEC_RLR  )/ComDenom     )                  
+                  Currentm  = CMPLX( 0.0_ReKi , -p%TEC_V1a/p%TEC_MR )                  
                   Current1  = Current2 + Currentm
+                  
                   PwrLossS  = 3.0*( ( ABS( Current1 ) )**2 )*p%TEC_SRes
                   PwrLossR  = 3.0*( ( ABS( Current2 ) )**2 )*p%TEC_RRes
+                  
                   PwrMech   = GenTrq*u%HSS_Spd
                   ElecPwr   = PwrMech - PwrLossS - PwrLossR
-
+                                    
 
                CASE ( ControlMode_USER )                          ! User-defined generator model.
 
@@ -3264,8 +3561,6 @@ SUBROUTINE CalculateTorque( t, u, p, m, GenTrq, ElecPwr, ErrStat, ErrMsg )
             ELSE                                       ! We are in region 2 1/2 - simple induction generator transition region
                GenTrq = p%VS_Slope*( u%HSS_Spd - p%VS_SySp )
             ENDIF
-
-            !GenTrq  = GenTrq + DelGenTrq  ! Add the pertubation on generator torque, DelGenTrq.  This is used only for FAST linearization (it is zero otherwise).
 
 
          ! It's not possible to motor using this control scheme, so the generator efficiency is always subtractive.
@@ -3333,6 +3628,232 @@ REAL(ReKi)                             :: CalculateElecPwr     !< The result of 
    
 END FUNCTION CalculateElecPwr
 !----------------------------------------------------------------------------------------------------------------------------------
+!> This routine calculates the partials with respect to inputs of the drive-train torque outputs: GenTrq and ElecPwr
+SUBROUTINE Torque_JacobianPInput( t, u, p, x, xd, z, OtherState, m, GenTrq, ElecPwr, ErrStat, ErrMsg )
+!..................................................................................................................................
+
+   REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
+   TYPE(SrvD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
+   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(SrvD_ContinuousStateType), INTENT(IN   )  :: x           !< Continuous states at t
+   TYPE(SrvD_DiscreteStateType),   INTENT(IN   )  :: xd          !< Discrete states at t
+   TYPE(SrvD_ConstraintStateType), INTENT(IN   )  :: z           !< Constraint states at t
+   TYPE(SrvD_OtherStateType),      INTENT(IN   )  :: OtherState  !< Other states at t
+   TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc (optimization) variables
+   REAL(ReKi),                     INTENT(  OUT)  :: GenTrq      !< partial derivative of generator torque output with respect to HSS_Spd input
+   REAL(ReKi),                     INTENT(  OUT)  :: ElecPwr     !< partial derivative of electrical power output with respect to HSS_Spd input
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+      ! Local variables:
+
+   COMPLEX(ReKi)                :: Current1                                        ! Current passing through the stator (amps)
+   COMPLEX(ReKi)                :: Current2                                        ! Current passing through the rotor (amps)
+   COMPLEX(ReKi)                :: Currentm                                        ! Magnitizing current (amps)
+
+   REAL(ReKi)                   :: ComDenom                                        ! Common denominator of variables used in the TEC model
+   REAL(ReKi)                   :: HSSBrFrac                                       ! Fraction of full braking torque {0 (off) <= HSSBrFrac <= 1 (full)} (-)
+   REAL(ReKi)                   :: PwrLossS                                        ! Power loss in the stator (watts)
+   REAL(ReKi)                   :: PwrLossR                                        ! Power loss in the rotor (watts)
+   REAL(ReKi)                   :: PwrMech                                         ! Mechanical power (watts)
+   REAL(ReKi)                   :: Slip                                            ! Generator slip.
+   REAL(ReKi)                   :: SlipRat                                         ! Generator slip ratio.
+
+
+
+      ! Initialize variables
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+   
+   !.................................................................................
+   ! Calculate generator torque (y%GenTrq) and electrical power (y%ElecPwr):
+   !.................................................................................
+   
+   IF ( OtherState%GenOnLine .and. .not. OtherState%Off4Good )  THEN    ! Generator is on line.
+      CALL CalculateTorqueJacobian( t, u, p, m, GenTrq, ElecPwr, ErrStat, ErrMsg )
+      if (ErrStat >= AbortErrLev) return
+   ELSE                                                                 ! Generator is off line.
+      GenTrq  = 0.0_ReKi
+      ElecPwr = 0.0_ReKi
+   ENDIF
+
+   
+   !.................................................................................
+   ! Calculate the fraction of applied HSS-brake torque, HSSBrFrac:
+   !.................................................................................
+   ! we're ignorming HSSBrFrac in linearization
+   
+   RETURN
+   
+END SUBROUTINE Torque_JacobianPInput
+!----------------------------------------------------------------------------------------------------------------------------------
+!> This routine calculates jacobians (with respect to u%HSS_Spd) of the drive-train torque (GenTrq, ElecPwr) assuming the generator is on.
+SUBROUTINE CalculateTorqueJacobian( t, u, p, m, GenTrq_du, ElecPwr_du, ErrStat, ErrMsg )
+!..................................................................................................................................
+
+   REAL(DbKi),                     INTENT(IN   )  :: t           !< Current simulation time in seconds
+   TYPE(SrvD_InputType),           INTENT(IN   )  :: u           !< Inputs at t
+   TYPE(SrvD_ParameterType),       INTENT(IN   )  :: p           !< Parameters
+   TYPE(SrvD_MiscVarType),         INTENT(INOUT)  :: m           !< Misc (optimization) variables
+   
+   REAL(ReKi),                     INTENT(  OUT)  :: GenTrq_du   !< partial generator torque / partial u%HSS_Spd
+   REAL(ReKi),                     INTENT(  OUT)  :: ElecPwr_du  !< partialelectrical power / partial u%HSS_Spd
+   INTEGER(IntKi),                 INTENT(  OUT)  :: ErrStat     !< Error status of the operation
+   CHARACTER(*),                   INTENT(  OUT)  :: ErrMsg      !< Error message if ErrStat /= ErrID_None
+
+      ! Local variables:
+
+   REAL(ReKi)                                     :: Current1_c  ! complex portion of Current passing through the stator (amps)
+   REAL(ReKi)                                     :: Current2_r, Current2_r_du  ! Current passing through the rotor (amps) and its derivative w.r.t. u%HSS_Spd
+   REAL(ReKi)                                     :: Current2_c, Current2_c_du  ! Current passing through the rotor (amps) and its derivative w.r.t. u%HSS_Spd
+                                                  
+   REAL(ReKi)                                     :: GenTrq      ! generator torque 
+   
+   REAL(ReKi)                                     :: PwrLossS, PwrLossS_du  ! Power loss in the stator (watts) and its derivative w.r.t. u%HSS_Spd 
+   REAL(ReKi)                                     :: PwrLossR, PwrLossR_du  ! Power loss in the rotor (watts) and its derivative w.r.t. u%HSS_Spd 
+   REAL(ReKi)                                     :: PwrMech_du  ! partial derivative of Mechanical power (watts) w.r.t. u%HSS_Spd
+   REAL(ReKi)                                     :: Slip        ! Generator slip
+   REAL(ReKi)                                     :: SlipRat     ! Generator slip ratio
+   
+   REAL(ReKi)                                     :: tmp, A, B, dAdu, dBdu ! temporary variables for computing derivatives
+      
+   REAL(ReKi)                                     :: S2          ! SlipRat**2
+   
+   character(*), parameter                        :: RoutineName = 'CalculateTorqueJacobian'
+
+      ! Initialize variables
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   GenTrq_du  = 0.0_ReKi
+   ElecPwr_du = 0.0_ReKi
+   
+
+      ! Are we doing simple variable-speed control, or using a generator model?
+
+      SELECT CASE ( p%VSContrl )               ! Are we using variable-speed control?
+
+         CASE ( ControlMode_NONE )                ! No variable-speed control.  Using a generator model.
+
+
+            SELECT CASE ( p%GenModel )            ! Which generator model are we using?
+
+               CASE ( ControlMode_SIMPLE )                          ! Simple induction-generator model.
+
+                  Slip = u%HSS_Spd - p%SIG_SySp
+
+                  IF ( ABS( Slip ) > p%SIG_POSl  )  THEN
+                     GenTrq    = SIGN( p%SIG_POTq, Slip )
+                     GenTrq_du = 0.0_ReKi
+                  ELSE
+                     GenTrq    = Slip*p%SIG_Slop
+                     GenTrq_du = p%SIG_Slop
+                  ENDIF
+
+                  
+                  IF ( GenTrq >= 0.0_ReKi )  THEN
+                     !ElecPwr = GenTrq * u%HSS_Spd * p%GenEff 
+                     ElecPwr_du = (GenTrq_du * u%HSS_Spd + GenTrq) * p%GenEff
+                  ELSE
+                     !ElecPwr = GenTrq * u%HSS_Spd / p%GenEff 
+                     ElecPwr_du = (GenTrq_du * u%HSS_Spd + GenTrq) / p%GenEff 
+                  ENDIF
+                                    
+               CASE ( ControlMode_ADVANCED )                          ! Thevenin-equivalent generator model.
+
+                  SlipRat  = ( u%HSS_Spd - p%TEC_SySp )/p%TEC_SySp
+
+                  A = p%TEC_A0*(p%TEC_VLL**2)*SlipRat
+                  B = p%TEC_C0 + p%TEC_C1*SlipRat + p%TEC_C2*(SlipRat**2)                  
+                  GenTrq    = A / B
+                  
+                  dAdu =  p%TEC_A0*(p%TEC_VLL**2)/p%TEC_SySp
+                  dBdu = (p%TEC_C1 + 2.0_ReKi*p%TEC_C2*SlipRat)/p%TEC_SySp
+                  
+                  GenTrq_du = dAdu / B - A * dBdu / B**2 
+
+                     ! trying to refactor so we don't divide by SlipRat, which may be 0
+                     ! jmj tells me I need not worry about ComDenom being zero because these equations behave nicely
+                  S2 = SlipRat**2
+                  
+                  B    = ( SlipRat*p%TEC_Re1 - p%TEC_RRes )**2 + (SlipRat*( p%TEC_Xe1 + p%TEC_RLR ))**2 !common denominator
+                  dBdu = 2.0_ReKi/p%TEC_SySp*( ( SlipRat*p%TEC_Re1 - p%TEC_RRes )*p%TEC_Re1 + SlipRat * ( p%TEC_Xe1 + p%TEC_RLR )**2 )
+                  
+                  Current2_r =  p%TEC_V1a*SlipRat*( SlipRat*p%TEC_Re1 - p%TEC_RRes )/B 
+                  Current2_c = -p%TEC_V1a*S2     *(         p%TEC_Xe1 + p%TEC_RLR  )/B                  
+                 !Current1_r = Current2_r
+                  Current1_c = Current2_c -p%TEC_V1a/p%TEC_MR
+                  
+                  A = SlipRat*dBdu/B
+                  tmp = SlipRat*p%TEC_Re1/B
+                  Current2_r_du =  p%TEC_V1a*( 2.0_ReKi*tmp/p%TEC_SySp - p%TEC_RRes/(B*p%TEC_SySp) - tmp*A )
+                  Current2_c_du = -p%TEC_V1a*(p%TEC_Xe1 + p%TEC_RLR)*SlipRat/B*( 2.0_ReKi/p%TEC_SySp - A) 
+                  
+                  !PwrLossS  = 3.0_ReKi*p%TEC_SRes*( Current2_r**2 + Current1_c**2 )
+                  !PwrLossR  = 3.0_ReKi*p%TEC_RRes*( Current2_r**2 + Current2_c**2 )                  
+                  PwrLossS_du = 6.0_ReKi*p%TEC_SRes*( Current2_r * Current2_r_du + Current1_c * Current2_c_du )
+                  PwrLossR_du = 6.0_ReKi*p%TEC_RRes*( Current2_r * Current2_r_du + Current2_c * Current2_c_du )
+                  
+                  !PwrMech      = GenTrq*u%HSS_Spd                  
+                  PwrMech_du   = GenTrq_du*u%HSS_Spd + GenTrq
+                  
+                  !ElecPwr   = PwrMech - PwrLossS - PwrLossR
+                  ElecPwr_du =  PwrMech_du - PwrLossS_du - PwrLossR_du
+
+               CASE ( ControlMode_USER )                          ! User-defined generator model.
+
+                     ! we should not get here (initialization should have caught this issue)
+                
+                  GenTrq_du   = 0.0_ReKi
+                  ElecPwr_du  = 0.0_ReKi
+
+            END SELECT
+
+
+         CASE ( ControlMode_SIMPLE )              ! Simple variable-speed control.
+
+
+            if ( u%HSS_Spd < 0.0_ReKi) then
+               if (.not. equalRealNos(u%HSS_Spd, 0.0_ReKi) ) then
+                  call SetErrStat( ErrID_Fatal, "u%HSS_Spd is negative. Simple variable-speed control model "//&
+                                   "is not valid for motoring situations.", ErrStat, ErrMsg, RoutineName)
+                  return
+               end if               
+            end if
+            
+         ! Compute the generator torque, which depends on which region we are in:
+
+            IF ( u%HSS_Spd >= p%VS_RtGnSp )  THEN      ! We are in region 3 - torque is constant
+               GenTrq    = p%VS_RtTq
+               GenTrq_du = 0.0_ReKi
+            ELSEIF ( u%HSS_Spd < p%VS_TrGnSp )  THEN   ! We are in region 2 - torque is proportional to the square of the generator speed
+               GenTrq    = p%VS_Rgn2K* (u%HSS_Spd**2)
+               GenTrq_du = 2.0_ReKi * p%VS_Rgn2K * u%HSS_Spd
+            ELSE                                       ! We are in region 2 1/2 - simple induction generator transition region
+               GenTrq    = p%VS_Slope*( u%HSS_Spd - p%VS_SySp )
+               GenTrq_du = p%VS_Slope
+            ENDIF            
+            
+         ! It's not possible to motor using this control scheme, so the generator efficiency is always subtractive.
+
+            ElecPwr_du = (GenTrq_du * u%HSS_Spd + GenTrq) * p%GenEff
+
+            
+         CASE ( ControlMode_USER , &                             ! User-defined variable-speed control for routine UserVSCont().
+                ControlMode_DLL  , &                             ! User-defined variable-speed control from Bladed-style DLL                                    
+                ControlMode_EXTERN )                             ! User-defined variable-speed control from Simulink or LabVIEW.
+                
+               ! we should not get here (initialization should have caught this issue)
+                
+            GenTrq_du   = 0.0_ReKi
+            ElecPwr_du  = 0.0_ReKi
+
+      END SELECT
+   
+END SUBROUTINE CalculateTorqueJacobian
+!----------------------------------------------------------------------------------------------------------------------------------
+
+
 
 END MODULE ServoDyn
 !**********************************************************************************************************************************
