@@ -1079,27 +1079,31 @@ END SUBROUTINE SrvD_CalcConstrStateResidual
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the inputs (u). The partial derivative dY/du is returned.
-SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, m, dYdu, dXdu, dXddu, dZdu, ErrStat, ErrMsg )
+SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdu, dXdu, dXddu, dZdu )
 !..................................................................................................................................
 
-   REAL(DbKi),                             INTENT(IN   )           :: t          !< Current simulation time in seconds
-   TYPE(SrvD_InputType),                   INTENT(IN   )           :: u          !< Inputs at t
+   REAL(DbKi),                             INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(SrvD_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(SrvD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(SrvD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at t
-   TYPE(SrvD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at t
-   TYPE(SrvD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at t
-   TYPE(SrvD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at t
+   TYPE(SrvD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(SrvD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(SrvD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(SrvD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(SrvD_OutputType),                  INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required);
+                                                                                 !!   Output fields are not used by this routine, but type is   
+                                                                                 !!   available here so that mesh parameter information (i.e.,  
+                                                                                 !!   connectivity) does not have to be recalculated for dYdu.
    TYPE(SrvD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions
-                                                                                 !!   (Y) with respect to the inputs (u)
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state
-                                                                                 !!   functions (X) with respect to inputs (u)
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state
-                                                                                 !!   functions (Xd) with respect to inputs (u)
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state
-                                                                                 !!   functions (Z) with respect to inputs (u)
    INTEGER(IntKi),                         INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                           INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdu(:,:)  !< Partial derivatives of output functions
+                                                                                 !!   (Y) with respect to the inputs (u) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdu(:,:)  !< Partial derivatives of continuous state
+                                                                                 !!   functions (X) with respect to inputs (u) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddu(:,:) !< Partial derivatives of discrete state 
+                                                                                 !!   functions (Xd) with respect to inputs (u) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdu(:,:)  !< Partial derivatives of constraint state
+                                                                                 !!   functions (Z) with respect to inputs (u) [intent in to avoid deallocation]
 
       ! local variables
    REAL(ReKi)                                                      :: AllOuts(3,1:MaxOutPts) ! All the the available output channels
@@ -1225,31 +1229,35 @@ END SUBROUTINE SrvD_JacobianPInput
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the continuous states (x). The partial derivatives dY/dx, dX/dx, dXd/dx, and DZ/dx are returned.
-SUBROUTINE SrvD_JacobianPContState( t, u, p, x, xd, z, OtherState, m, dYdx, dXdx, dXddx, dZdx, ErrStat, ErrMsg )
+SUBROUTINE SrvD_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdx, dXdx, dXddx, dZdx )
 !..................................................................................................................................
 
-   REAL(DbKi),                             INTENT(IN   )           :: t          !< Current simulation time in seconds
-   TYPE(SrvD_InputType),                   INTENT(IN   )           :: u          !< Inputs at t
+   REAL(DbKi),                             INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(SrvD_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(SrvD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(SrvD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at t
-   TYPE(SrvD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at t
-   TYPE(SrvD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at t
-   TYPE(SrvD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at t
+   TYPE(SrvD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(SrvD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(SrvD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(SrvD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(SrvD_OutputType),                  INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required);
+                                                                                 !!   Output fields are not used by this routine, but type is   
+                                                                                 !!   available here so that mesh parameter information (i.e.,  
+                                                                                 !!   connectivity) does not have to be recalculated for dYdx.
    TYPE(SrvD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdx       !< Partial derivatives of output functions
-                                                                                 !!   (Y) with respect to the continuous
-                                                                                 !!   states (x)
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdx       !< Partial derivatives of continuous state
-                                                                                 !!   functions (X) with respect to
-                                                                                 !!   the continuous states (x)
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddx      !< Partial derivatives of discrete state
-                                                                                 !!   functions (Xd) with respect to
-                                                                                 !!   the continuous states (x)
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdx       !< Partial derivatives of constraint state
-                                                                                 !!   functions (Z) with respect to
-                                                                                 !!   the continuous states (x)
    INTEGER(IntKi),                         INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                           INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdx(:,:)  !< Partial derivatives of output functions
+                                                                                 !!   (Y) with respect to the continuous
+                                                                                 !!   states (x) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdx(:,:)  !< Partial derivatives of continuous state
+                                                                                 !!   functions (X) with respect to
+                                                                                 !!   the continuous states (x) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddx(:,:) !< Partial derivatives of discrete state
+                                                                                 !!   functions (Xd) with respect to
+                                                                                 !!   the continuous states (x) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdx(:,:)  !< Partial derivatives of constraint state
+                                                                                 !!   functions (Z) with respect to
+                                                                                 !!   the continuous states (x) [intent in to avoid deallocation]
 
 
       ! Initialize ErrStat
@@ -1297,31 +1305,35 @@ END SUBROUTINE SrvD_JacobianPContState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the discrete states (xd). The partial derivatives dY/dxd, dX/dxd, dXd/dxd, and DZ/dxd are returned.
-SUBROUTINE SrvD_JacobianPDiscState( t, u, p, x, xd, z, OtherState, m, dYdxd, dXdxd, dXddxd, dZdxd, ErrStat, ErrMsg )
+SUBROUTINE SrvD_JacobianPDiscState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdxd, dXdxd, dXddxd, dZdxd )
 !..................................................................................................................................
 
-   REAL(DbKi),                             INTENT(IN   )           :: t          !< Current simulation time in seconds
-   TYPE(SrvD_InputType),                   INTENT(IN   )           :: u          !< Inputs at t
+   REAL(DbKi),                             INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(SrvD_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(SrvD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(SrvD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at t
-   TYPE(SrvD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at t
-   TYPE(SrvD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at t
-   TYPE(SrvD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at t
+   TYPE(SrvD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(SrvD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(SrvD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(SrvD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(SrvD_OutputType),                  INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required);
+                                                                                 !!   Output fields are not used by this routine, but type is   
+                                                                                 !!   available here so that mesh parameter information (i.e.,  
+                                                                                 !!   connectivity) does not have to be recalculated for dYdxd.
    TYPE(SrvD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdxd      !< Partial derivatives of output functions
-                                                                                 !!  (Y) with respect to the discrete
-                                                                                 !!  states (xd)
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdxd      !< Partial derivatives of continuous state
-                                                                                 !!   functions (X) with respect to the
-                                                                                 !!   discrete states (xd)
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddxd     !< Partial derivatives of discrete state
-                                                                                 !!   functions (Xd) with respect to the
-                                                                                 !!   discrete states (xd)
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdxd      !< Partial derivatives of constraint state
-                                                                                 !!   functions (Z) with respect to the
-                                                                                 !!   discrete states (xd)
    INTEGER(IntKi),                         INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                           INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdxd(:,:) !< Partial derivatives of output functions
+                                                                                 !!  (Y) with respect to the discrete
+                                                                                 !!  states (xd) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdxd(:,:) !< Partial derivatives of continuous state
+                                                                                 !!   functions (X) with respect to the
+                                                                                 !!   discrete states (xd) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddxd(:,:)!< Partial derivatives of discrete state
+                                                                                 !!   functions (Xd) with respect to the
+                                                                                 !!   discrete states (xd) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdxd(:,:) !< Partial derivatives of constraint state
+                                                                                 !!   functions (Z) with respect to the
+                                                                                 !!   discrete states (xd) [intent in to avoid deallocation]
 
 
       ! Initialize ErrStat
@@ -1367,31 +1379,35 @@ END SUBROUTINE SrvD_JacobianPDiscState
 !----------------------------------------------------------------------------------------------------------------------------------
 !> Routine to compute the Jacobians of the output (Y), continuous- (X), discrete- (Xd), and constraint-state (Z) functions
 !! with respect to the constraint states (z). The partial derivatives dY/dz, dX/dz, dXd/dz, and DZ/dz are returned.
-SUBROUTINE SrvD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, m, dYdz, dXdz, dXddz, dZdz, ErrStat, ErrMsg )
+SUBROUTINE SrvD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, dYdz, dXdz, dXddz, dZdz )
 !..................................................................................................................................
 
-   REAL(DbKi),                             INTENT(IN   )           :: t          !< Current simulation time in seconds
-   TYPE(SrvD_InputType),                   INTENT(IN   )           :: u          !< Inputs at t
+   REAL(DbKi),                             INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(SrvD_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
    TYPE(SrvD_ParameterType),               INTENT(IN   )           :: p          !< Parameters
-   TYPE(SrvD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at t
-   TYPE(SrvD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at t
-   TYPE(SrvD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at t
-   TYPE(SrvD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at t
+   TYPE(SrvD_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(SrvD_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(SrvD_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(SrvD_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(SrvD_OutputType),                  INTENT(IN   )           :: y          !< Output (change to inout if a mesh copy is required);
+                                                                                 !!   Output fields are not used by this routine, but type is   
+                                                                                 !!   available here so that mesh parameter information (i.e.,  
+                                                                                 !!   connectivity) does not have to be recalculated for dYdz.
    TYPE(SrvD_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdz       !< Partial derivatives of output
-                                                                                 !!  functions (Y) with respect to the
-                                                                                 !!  constraint states (z)
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdz       !< Partial derivatives of continuous
-                                                                                 !!  state functions (X) with respect to
-                                                                                 !!  the constraint states (z)
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddz      !< Partial derivatives of discrete state
-                                                                                 !!  functions (Xd) with respect to the
-                                                                                 !!  constraint states (z)
-   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdz       !< Partial derivatives of constraint
-                                                                                 !! state functions (Z) with respect to
-                                                                                 !!  the constraint states (z)
    INTEGER(IntKi),                         INTENT(  OUT)           :: ErrStat    !< Error status of the operation
    CHARACTER(*),                           INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dYdz(:,:)  !< Partial derivatives of output
+                                                                                 !!  functions (Y) with respect to the
+                                                                                 !!  constraint states (z) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXdz(:,:)  !< Partial derivatives of continuous
+                                                                                 !!  state functions (X) with respect to
+                                                                                 !!  the constraint states (z) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dXddz(:,:) !< Partial derivatives of discrete state
+                                                                                 !!  functions (Xd) with respect to the
+                                                                                 !!  constraint states (z) [intent in to avoid deallocation]
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,      INTENT(INOUT)           :: dZdz(:,:)  !< Partial derivatives of constraint
+                                                                                 !! state functions (Z) with respect to
+                                                                                 !!  the constraint states (z) [intent in to avoid deallocation]
 
 
       ! Initialize ErrStat
