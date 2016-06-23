@@ -1182,9 +1182,7 @@ subroutine UA_UpdateDiscOtherState( i, j, u, p, xd, OtherState, AFInfo, m, ErrSt
                                      Cn_alpha_q_nc, Cn_alpha_q_circ, Cn_q_circ, Cn_q_nc, Cm_q_circ, Cn_alpha_nc, Cm_q_nc, Cn_v, C_V, Cn_FS, T_f, T_V, ErrStat2, ErrMsg2 )
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       if (ErrStat>= AbortErrLev) return
-      
-      xd%Cn_prime_diff_minus1(i,j) = Cn_prime_diff
-      
+            
       
       T_sh = 2.0_ReKi*(1.0_ReKi-fprimeprime) / St_sh
       
