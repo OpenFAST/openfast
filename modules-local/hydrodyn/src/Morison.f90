@@ -4204,62 +4204,70 @@ IF (ALLOCATED(InitInp%JOutLst) ) &
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%D_F_D = 0.0_ReKi
       ALLOCATE ( m%D_F_I(3,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_F_I array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      
+      m%D_F_I = 0.0_ReKi
       ALLOCATE ( m%D_F_B(6,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_F_B array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF      
-      
+      m%D_F_B = 0.0_ReKi
       ALLOCATE ( m%D_F_AM(6,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_F_AM array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%D_F_AM = 0.0_ReKi
       ALLOCATE ( m%D_F_AM_M(6,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_F_AM_M array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%D_F_AM_M = 0.0_ReKi
       ALLOCATE ( m%D_F_AM_MG(6,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_F_AM_MG array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%D_F_AM_MG = 0.0_ReKi
       ALLOCATE ( m%D_F_AM_F(6,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_F_AM_F array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%D_F_AM_F = 0.0_ReKi
       ALLOCATE ( m%D_FV(3,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_FV array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%D_FV = 0.0_ReKi
       ALLOCATE ( m%D_FA(3,y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_FA array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%D_FA = 0.0_ReKi
       ALLOCATE ( m%D_FDynP(y%DistribMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for D_FDynP array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%D_FDynP = 0.0_ReKi
       
       ALLOCATE ( m%L_F_B(6,y%LumpedMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
@@ -4267,19 +4275,21 @@ IF (ALLOCATED(InitInp%JOutLst) ) &
          ErrStat = ErrID_Fatal
          RETURN
       END IF
-      
+      m%L_F_B = 0.0_ReKi
       ALLOCATE ( m%L_F_D(3,y%LumpedMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for L_F_D array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%L_F_D = 0.0_ReKi
       ALLOCATE ( m%L_F_I(6,y%LumpedMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for L_F_I array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%L_F_I = 0.0_ReKi
       !ALLOCATE ( m%L_F_DP(6,y%LumpedMesh%Nnodes), STAT = ErrStat )
       !IF ( ErrStat /= ErrID_None ) THEN
       !   ErrMsg  = ' Error allocating space for L_F_DP array.'
@@ -4292,24 +4302,28 @@ IF (ALLOCATED(InitInp%JOutLst) ) &
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%L_FV = 0.0_ReKi
       ALLOCATE ( m%L_FA(3,y%LumpedMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for L_FA array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%L_FA = 0.0_ReKi
       ALLOCATE ( m%L_FDynP(y%LumpedMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for L_FDynP array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%L_FDynP = 0.0_ReKi
       ALLOCATE ( m%L_F_AM(6,y%LumpedMesh%Nnodes), STAT = ErrStat )
       IF ( ErrStat /= ErrID_None ) THEN
          ErrMsg  = ' Error allocating space for L_F_AM array.'
          ErrStat = ErrID_Fatal
          RETURN
       END IF
+      m%L_F_AM = 0.0_ReKi
       
          ! Define initial guess for the system inputs here:
 
@@ -4553,7 +4567,7 @@ SUBROUTINE Morison_CalcOutput( Time, u, p, x, xd, z, OtherState, y, m, ErrStat, 
                y%DistribMesh%Force(I,J) = m%D_F_AM(I,J) + m%D_F_D(I,J)  + m%D_F_I(I,J) + m%D_F_B(I,J) +  p%D_F_MG(I,J) + p%D_F_BF(I,J)
             ELSE
                m%D_F_B(I,J) = elementWaterState * p%D_F_B(I,J)
-               y%DistribMesh%Moment(I-3,J) =   m%D_F_AM(I,J) + m%D_F_B(I,J) + p%D_F_BF(I,J)     
+               y%DistribMesh%Moment(I-3,J) =   m%D_F_B(I,J) + p%D_F_BF(I,J)     
             END IF
          END DO  ! DO I
          
