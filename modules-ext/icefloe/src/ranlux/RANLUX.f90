@@ -1,4 +1,4 @@
-! Borrowed from the v1.50 distributino of Turbsim
+! Borrowed from the v1.50 distribution of Turbsim
  Module Ran_Lux_Mod
 ! Subtract-and-borrow random number generator proposed by Marsaglia and Zaman, implemented by F. James with the name RCARRY in 1991,
 ! and later improved by Martin Luescher in 1993 to produce "Luxury Pseudorandom Numbers". Fortran 77 coded by F. James, 1993.

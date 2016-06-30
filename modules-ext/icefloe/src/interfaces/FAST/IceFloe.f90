@@ -132,7 +132,7 @@ SUBROUTINE IceFloe_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, In
       ! Display the module information
       CALL DispNVD( IceFloe_Ver )
 
-      logFile = trim(InitInp%RootName)//'.IceF.log'  !BJJ: we decided output files should have two dots (and because there will be another ice module, I called this one IceF)
+      logFile = trim(InitInp%RootName)//'.log'  !BJJ: we decided output files should have two dots
 
 !   Set up error logging
       iceLog%warnFlag = .false.
