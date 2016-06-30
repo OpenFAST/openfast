@@ -107,7 +107,7 @@ SUBROUTINE IceD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       !............................................................................................
       ! Read the input file and validate the data
       !............................................................................................
-   p%RootName = TRIM(InitInp%RootName)//'.IceD' ! all of the output file names from this module will end with '.IceD'
+   p%RootName = TRIM(InitInp%RootName) ! FAST makes all of the output file names from this module end contain '.IceD' before the file extension
 
    CALL IceD_ReadInput( InitInp, InputFileData, ErrStat2, ErrMsg2 )
       CALL CheckError( ErrStat2, ErrMsg2 )
