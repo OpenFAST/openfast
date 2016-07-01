@@ -19,6 +19,7 @@ param	ElastoDyn/ED	-	IntKi	ED_NMX	-	4	-	"Used in updating predictor-corrector va
 # ..... Initialization data .......................................................................................................
 # Define inputs that the initialization routine may need here:
 typedef	ElastoDyn/ED	InitInputType	CHARACTER(1024)	InputFile	-	-	-	"Name of the input file"	-
+typedef	^	InitInputType	Logical	Linearize	-	.FALSE.	-	"Flag that tells this module if the glue code wants to linearize."	-
 typedef	^	InitInputType	CHARACTER(1024)	ADInputFile	-	-	-	"Name of the AeroDyn input file (in this verison, that is where we'll get the blade mesh info"	-
 typedef	^	InitInputType	LOGICAL	CompElast	-	-	-	"flag to determine if ElastoDyn is computing blade loads (true) or BeamDyn is (false)"	-
 typedef	^	InitInputType	CHARACTER(1024)	RootName	-	-	-	"RootName for writing output files"
@@ -34,7 +35,11 @@ typedef	^	InitOutputType	ReKi	BladeLength	-	-	-	"Blade length (for AeroDyn)"	met
 typedef	^	InitOutputType	ReKi	HubHt	-	-	-	"Height of the hub"	meters
 typedef	^	InitOutputType	ReKi	PlatformPos	{6}	-	-	"Initial platform position (6 DOFs)"
 typedef	^	InitOutputType	ReKi	TwrBasePos	{3}	-	-	"initial position of the tower base (for SrvD)"	m
-typedef	^	InitOutputType	ReKi	HubRad	-	-	-	"radius of hub"	m
+typedef	^	InitOutputType	ReKi	HubRad	-	-	-	"Preconed hub radius (distance from the rotor apex to the blade root)"	m
+typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_y	{:}	-	-	"Names of the outputs used in linearization"	-
+typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_x	{:}	-	-	"Names of the continuous states used in linearization"	-
+typedef	^	InitOutputType	CHARACTER(LinChanLen)	LinNames_u	{:}	-	-	"Names of the inputs used in linearization"	-
+
 
 # ..... Blade Input file data ...........................................................................................................
 typedef	ElastoDyn/ED	BladeInputData	IntKi	NBlInpSt	-	-	-	"Number of blade input stations"	-
@@ -782,6 +787,10 @@ typedef	^	ParameterType	ReKi	PtfmCMxt	-	-	-	"Downwind distance from the ground [
 typedef	^	ParameterType	ReKi	PtfmCMyt	-	-	-	"Lateral distance from the ground [onshore] or MSL [offshore] to the platform CM"	meters
 typedef	^	ParameterType	LOGICAL	BD4Blades	-	-	-	"flag to determine if BeamDyn is computing blade loads (true) or ElastoDyn is (false)"	-
 typedef	^	ParameterType	LOGICAL	UseAD14	-	-	-	"flag to determine if AeroDyn14 is being used. Will remove this later when we've replaced AD14."	-
+typedef	^	ParameterType	Integer	Jac_u_indx	{:}{:}	-	-	"matrix to help fill/pack the u vector in computing the jacobian"	-
+typedef	^	ParameterType	ReKi	du	{:}	-	-	"vector that determines size of perturbation for u (inputs)"
+typedef	^	ParameterType	ReKi	dx	{:}	-	-	"vector that determines size of perturbation for x (continuous states"
+typedef	^	ParameterType	Integer	Jac_ny	-	-	-	"number of outputs in jacobian matrix"	-
 
 # ..... Inputs ....................................................................................................................
 # Define inputs that are contained on the mesh here:
