@@ -214,12 +214,6 @@ SUBROUTINE MeshMapCreate( Src, Dest, MeshMap, ErrStat, ErrMsg )
       !................................................
    IF ( HasLoadFields(Src) .AND. HasLoadFields(Dest) ) THEN
 
-      IF ( HasMotionFields(Src) .AND. HasMotionFields(Dest) ) THEN
-            ! bjj 6-may-2016: This is a restriction for linearization because (1) no meshes currently both have MapLoads and MapMotions allocated and 
-            ! (2) I don't feel like adding another mapping data structure to the linearization data type.
-         CALL SetErrStat( ErrID_Fatal, 'Mapping cannot have both motion and loads fields.', ErrStat, ErrMsg, RoutineName)
-      END IF
-
       ! check that the appropriate combinations of source/destination force/moments exist:
       IF ( Src%FieldMask(MASKID_Force) ) THEN
          IF (.NOT. Dest%FieldMask(MASKID_Force) ) THEN

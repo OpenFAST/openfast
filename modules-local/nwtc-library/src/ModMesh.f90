@@ -2870,6 +2870,124 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
    END SUBROUTINE MeshNextElement
 
+!...............................................................................................................................
+!> This subroutine returns the names of the output rows/columns in the Jacobian matrices. It assumes both force and moment
+!! fields are allocated.
+   SUBROUTINE PackLoadMesh_Names(M, MeshName, Names, indx_first)
+   
+      TYPE(MeshType)                    , INTENT(IN   ) :: M                          !< AD output mesh
+      CHARACTER(*)                      , INTENT(IN   ) :: MeshName                   !< name of mesh 
+      CHARACTER(LinChanLen)             , INTENT(INOUT) :: Names(:)                   !< name of column of dYdu 
+      INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into Names array; gives location of next array position to fill
+   
+         ! local variables:
+      INTEGER(IntKi)                :: i, j
+      character(1), parameter       :: Comp(3) = (/'X','Y','Z'/)
+
+   
+      do i=1,M%NNodes
+         do j=1,3
+            Names(indx_first) = trim(MeshName)//Comp(j)//' force, node '//trim(num2lstr(i))
+            indx_first = indx_first + 1
+         end do      
+      end do
+                           
+      do i=1,M%NNodes
+         do j=1,3
+            Names(indx_first) = trim(MeshName)//Comp(j)//' moment, node '//trim(num2lstr(i))
+            indx_first = indx_first + 1
+         end do      
+      end do
+            
+
+   END SUBROUTINE PackLoadMesh_Names
+!...............................................................................................................................
+!> This subroutine returns the names of rows/columns of motion meshes in the Jacobian matrices. It assumes all fields are allocated;
+!! if accelerations are not desired, use the SkipAcc argument. Some fields may be allocated by the ModMesh module and not used in
+!! the linearization procedure, thus I am not using the check if they are allocated to determine if they should be included.
+   SUBROUTINE PackMotionMesh_Names(M, MeshName, Names, indx_first, SkipAcc, FieldMask)
+   
+      TYPE(MeshType)                    , INTENT(IN   ) :: M                          !< Motion mesh
+      CHARACTER(*)                      , INTENT(IN   ) :: MeshName                   !< name of mesh 
+      CHARACTER(LinChanLen)             , INTENT(INOUT) :: Names(:)                   !< name of column of dYdu 
+      INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into Names array; gives location of next array position to fill
+      LOGICAL, OPTIONAL                 , INTENT(IN   ) :: SkipAcc                    !< flag that allows us to skip the acceleration fields; overrides FieldMask(5:6)
+      LOGICAL, OPTIONAL                 , INTENT(IN   ) :: FieldMask(FIELDMASK_SIZE)  !< flags to determine if this field is part of the packing
+      
+      
+         ! local variables:
+      INTEGER(IntKi)                :: i, j
+      character(1), parameter       :: Comp(3) = (/'X','Y','Z'/)
+      LOGICAL                       :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
+
+      if (present(FieldMask)) then
+         Mask = FieldMask
+      else
+         Mask = .true.
+      end if
+      
+      if (present(SkipAcc)) then
+         Mask(MASKID_TRANSLATIONACC) = .false.
+         Mask(MASKID_ROTATIONACC) = .false.
+      end if
+      
+   
+      if (Mask(MASKID_TRANSLATIONDISP)) then
+         do i=1,M%NNodes
+            do j=1,3
+               Names(indx_first) = trim(MeshName)//Comp(j)//' translation displacement, node '//trim(num2lstr(i))
+               indx_first = indx_first + 1
+            end do      
+         end do
+      end if
+      
+      if (Mask(MASKID_ORIENTATION)) then
+         do i=1,M%NNodes
+            do j=1,3
+               Names(indx_first) = trim(MeshName)//Comp(j)//' orientation angle, node '//trim(num2lstr(i))
+               indx_first = indx_first + 1
+            end do      
+         end do
+      end if
+      
+      if (Mask(MASKID_TRANSLATIONVEL)) then
+         do i=1,M%NNodes
+            do j=1,3
+               Names(indx_first) = trim(MeshName)//Comp(j)//' translation velocity, node '//trim(num2lstr(i))
+               indx_first = indx_first + 1
+            end do      
+         end do
+      end if
+      
+      if (Mask(MASKID_ROTATIONVEL)) then
+         do i=1,M%NNodes
+            do j=1,3
+               Names(indx_first) = trim(MeshName)//Comp(j)//' rotation velocity, node '//trim(num2lstr(i))
+               indx_first = indx_first + 1
+            end do      
+         end do
+      end if
+         
+      if (Mask(MASKID_TRANSLATIONACC)) then
+         do i=1,M%NNodes
+            do j=1,3
+               Names(indx_first) = trim(MeshName)//Comp(j)//' translation acceleration, node '//trim(num2lstr(i))
+               indx_first = indx_first + 1
+            end do      
+         end do
+      end if
+   
+      if (Mask(MASKID_ROTATIONACC)) then
+         do i=1,M%NNodes
+            do j=1,3
+               Names(indx_first) = trim(MeshName)//Comp(j)//' rotation acceleration, node '//trim(num2lstr(i))
+               indx_first = indx_first + 1
+            end do      
+         end do
+      end if
+
+
+   END SUBROUTINE PackMotionMesh_Names
 
 !...............................................................................................................................
 !> This subroutine calculates a extrapolated (or interpolated) input u_out at time t_out, from previous/future time
