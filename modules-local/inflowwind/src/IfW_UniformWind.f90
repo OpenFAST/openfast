@@ -838,8 +838,8 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
 
    REAL(DbKi),                            INTENT(IN   )   :: t             !< Current simulation time in seconds
    REAL(ReKi),                            INTENT(IN   )   :: Position(3)   !< XYZ Position at which to find position vector
-   REAL(ReKi),                            INTENT(IN   )   :: CosPropDir    !< cosine of InflowWind propogation direction
-   REAL(ReKi),                            INTENT(IN   )   :: SinPropDir    !< sine of InflowWind propogation direction
+   REAL(ReKi),                            INTENT(IN   )   :: CosPropDir    !< cosine of InflowWind propagation direction
+   REAL(ReKi),                            INTENT(IN   )   :: SinPropDir    !< sine of InflowWind propagation direction
    TYPE(IfW_UniformWind_ParameterType),   INTENT(IN   )   :: p             !< Parameters
    TYPE(IfW_UniformWind_MiscVarType),     INTENT(INOUT)   :: m             !< Misc/optimization variables
    REAL(ReKi),                            INTENT(INOUT)   :: dYdu(3,3)     !< Partial derivatives of output functions
@@ -848,7 +848,7 @@ SUBROUTINE IfW_UniformWind_JacobianPInput( t, Position, CosPropDir, SinPropDir, 
       ! local variables: 
    !INTEGER(IntKi)                                         :: ErrStat2
    !CHARACTER(ErrMsgLen)                                   :: ErrMsg2       ! temporary error message
-   !CHARACTER(*), PARAMETER                                :: RoutineName = 'IfW_JacobianPInput'
+   !CHARACTER(*), PARAMETER                                :: RoutineName = 'IfW_UniformWind_JacobianPInput'
       
       ! Local Variables
    REAL(ReKi)                                            :: CosDelta          ! cosine of Delta_tmp

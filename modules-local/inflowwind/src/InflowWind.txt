@@ -123,10 +123,12 @@ typedef  ^                       ^              Lidar_InitInputType  lidar      
 
 
 # Init Output
-typedef  ^                       InitOutputType    CHARACTER(10)     WriteOutputHdr    :     -     -     "Names of output-to-file channels"                       -
-typedef  ^                       ^                 CHARACTER(10)     WriteOutputUnt    :     -     -     "Units of output-to-file channels"                       -
+typedef  ^                       InitOutputType    CHARACTER(ChanLen)     WriteOutputHdr    :     -     -     "Names of output-to-file channels"                       -
+typedef  ^                       ^                 CHARACTER(ChanLen)     WriteOutputUnt    :     -     -     "Units of output-to-file channels"                       -
 typedef  ^                       ^                 ProgDesc          Ver               -     -     -     "Version information of InflowWind module"               -
 typedef  ^                       ^                 WindFileMetaData  WindFileInfo      -     -     -     "Meta data from the wind file"                           -
+typedef  ^               InitOutputType         CHARACTER(LinChanLen) LinNames_y      {:} - -   "Names of the outputs used in linearization" -
+typedef  ^               InitOutputType         CHARACTER(LinChanLen) LinNames_u      {:} - -   "Names of the inputs used in linearization" -
 
 
 # ..... Misc/Optimization variables.................................................................................................
@@ -150,9 +152,6 @@ typedef  ^                       ^                 CHARACTER(1024)   WindFileNam
 typedef  ^                       ^                 CHARACTER(3)      WindFileExt       -     -     -     "Extention of the name of the wind file"                 -
 typedef  ^                       ^                 CHARACTER(1024)   InputFileName     -     -     -     "Name of the InflowWind input   file to use"             -
 typedef  ^                       ^                 CHARACTER(1024)   RootFileName      -     -     -     "Root of the InflowWind input   filename"                -
-!typedef  ^                       ^                 CHARACTER(1024)   EchoFileName      -     -     -     "Name of the InflowWind echo    file to use"             -
-!typedef  ^                       ^                 CHARACTER(1024)   SumFileName       -     -     -     "Name of the InflowWind summary file to use"             -
-typedef  ^                       ^                 LOGICAL           Initialized       -  .FALSE.  -     "Flag to indicate if the module was initialized"         -
 typedef  ^                       ^                 LOGICAL           CTTS_Flag         -  .FALSE.  -     "determines if coherent turbulence is used"              -
 typedef  ^                       ^                 DbKi              DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
 typedef  ^                       ^                 ReKi              PropagationDir    -     -     -     "Direction of wind propagation"                          radians
