@@ -3,7 +3,7 @@
 ! WARNING This file is generated automatically by the FAST registry.
 ! Do not edit.  Your changes to this file will be lost.
 !
-! FAST Registry (v3.02.00, 15-Jun-2016)
+! FAST Registry (v3.02.00, 22-Jun-2016)
 !*********************************************************************************************************************************
 ! ServoDyn_Types
 !.................................................................................................................................
@@ -58,6 +58,8 @@ IMPLICIT NONE
     TYPE(ProgDesc)  :: Ver      !< This module's name, version, and date [-]
     INTEGER(IntKi)  :: CouplingScheme      !< Switch that indicates if a particular coupling scheme is required [-]
     LOGICAL  :: UseHSSBrake      !< flag to determine if high-speed shaft brake is potentially used (true=yes) [-]
+    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_y      !< Names of the outputs used in linearization [-]
+    CHARACTER(LinChanLen) , DIMENSION(:), ALLOCATABLE  :: LinNames_u      !< Names of the inputs used in linearization [-]
   END TYPE SrvD_InitOutputType
 ! =======================
 ! =========  SrvD_InputFile  =======
@@ -679,6 +681,30 @@ ENDIF
          IF (ErrStat>=AbortErrLev) RETURN
     DstInitOutputData%CouplingScheme = SrcInitOutputData%CouplingScheme
     DstInitOutputData%UseHSSBrake = SrcInitOutputData%UseHSSBrake
+IF (ALLOCATED(SrcInitOutputData%LinNames_y)) THEN
+  i1_l = LBOUND(SrcInitOutputData%LinNames_y,1)
+  i1_u = UBOUND(SrcInitOutputData%LinNames_y,1)
+  IF (.NOT. ALLOCATED(DstInitOutputData%LinNames_y)) THEN 
+    ALLOCATE(DstInitOutputData%LinNames_y(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_y.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%LinNames_y = SrcInitOutputData%LinNames_y
+ENDIF
+IF (ALLOCATED(SrcInitOutputData%LinNames_u)) THEN
+  i1_l = LBOUND(SrcInitOutputData%LinNames_u,1)
+  i1_u = UBOUND(SrcInitOutputData%LinNames_u,1)
+  IF (.NOT. ALLOCATED(DstInitOutputData%LinNames_u)) THEN 
+    ALLOCATE(DstInitOutputData%LinNames_u(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstInitOutputData%LinNames_u.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstInitOutputData%LinNames_u = SrcInitOutputData%LinNames_u
+ENDIF
  END SUBROUTINE SrvD_CopyInitOutput
 
  SUBROUTINE SrvD_DestroyInitOutput( InitOutputData, ErrStat, ErrMsg )
@@ -697,6 +723,12 @@ IF (ALLOCATED(InitOutputData%WriteOutputUnt)) THEN
   DEALLOCATE(InitOutputData%WriteOutputUnt)
 ENDIF
   CALL NWTC_Library_Destroyprogdesc( InitOutputData%Ver, ErrStat, ErrMsg )
+IF (ALLOCATED(InitOutputData%LinNames_y)) THEN
+  DEALLOCATE(InitOutputData%LinNames_y)
+ENDIF
+IF (ALLOCATED(InitOutputData%LinNames_u)) THEN
+  DEALLOCATE(InitOutputData%LinNames_u)
+ENDIF
  END SUBROUTINE SrvD_DestroyInitOutput
 
  SUBROUTINE SrvD_PackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Indata, ErrStat, ErrMsg, SizeOnly )
@@ -764,6 +796,16 @@ ENDIF
       END IF
       Int_BufSz  = Int_BufSz  + 1  ! CouplingScheme
       Int_BufSz  = Int_BufSz  + 1  ! UseHSSBrake
+  Int_BufSz   = Int_BufSz   + 1     ! LinNames_y allocated yes/no
+  IF ( ALLOCATED(InData%LinNames_y) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! LinNames_y upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%LinNames_y)*LEN(InData%LinNames_y)  ! LinNames_y
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! LinNames_u allocated yes/no
+  IF ( ALLOCATED(InData%LinNames_u) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*1  ! LinNames_u upper/lower bounds for each dimension
+      Int_BufSz  = Int_BufSz  + SIZE(InData%LinNames_u)*LEN(InData%LinNames_u)  ! LinNames_u
+  END IF
   IF ( Re_BufSz  .GT. 0 ) THEN 
      ALLOCATE( ReKiBuf(  Re_BufSz  ), STAT=ErrStat2 )
      IF (ErrStat2 /= 0) THEN 
@@ -857,6 +899,40 @@ ENDIF
       Int_Xferred   = Int_Xferred   + 1
       IntKiBuf ( Int_Xferred:Int_Xferred+1-1 ) = TRANSFER( InData%UseHSSBrake , IntKiBuf(1), 1)
       Int_Xferred   = Int_Xferred   + 1
+  IF ( .NOT. ALLOCATED(InData%LinNames_y) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LinNames_y,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LinNames_y,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%LinNames_y,1), UBOUND(InData%LinNames_y,1)
+        DO I = 1, LEN(InData%LinNames_y)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%LinNames_y(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+  END IF
+  IF ( .NOT. ALLOCATED(InData%LinNames_u) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%LinNames_u,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%LinNames_u,1)
+    Int_Xferred = Int_Xferred + 2
+
+    DO i1 = LBOUND(InData%LinNames_u,1), UBOUND(InData%LinNames_u,1)
+        DO I = 1, LEN(InData%LinNames_u)
+          IntKiBuf(Int_Xferred) = ICHAR(InData%LinNames_u(i1)(I:I), IntKi)
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+  END IF
  END SUBROUTINE SrvD_PackInitOutput
 
  SUBROUTINE SrvD_UnPackInitOutput( ReKiBuf, DbKiBuf, IntKiBuf, Outdata, ErrStat, ErrMsg )
@@ -990,6 +1066,60 @@ ENDIF
       Int_Xferred   = Int_Xferred + 1
       OutData%UseHSSBrake = TRANSFER( IntKiBuf( Int_Xferred ), mask0 )
       Int_Xferred   = Int_Xferred + 1
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LinNames_y not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%LinNames_y)) DEALLOCATE(OutData%LinNames_y)
+    ALLOCATE(OutData%LinNames_y(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LinNames_y.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+    DO i1 = LBOUND(OutData%LinNames_y,1), UBOUND(OutData%LinNames_y,1)
+        DO I = 1, LEN(OutData%LinNames_y)
+          OutData%LinNames_y(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+    DEALLOCATE(mask1)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! LinNames_u not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%LinNames_u)) DEALLOCATE(OutData%LinNames_u)
+    ALLOCATE(OutData%LinNames_u(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%LinNames_u.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask1(i1_l:i1_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask1.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask1 = .TRUE. 
+    DO i1 = LBOUND(OutData%LinNames_u,1), UBOUND(OutData%LinNames_u,1)
+        DO I = 1, LEN(OutData%LinNames_u)
+          OutData%LinNames_u(i1)(I:I) = CHAR(IntKiBuf(Int_Xferred))
+          Int_Xferred = Int_Xferred   + 1
+        END DO ! I
+    END DO !i1
+    DEALLOCATE(mask1)
+  END IF
  END SUBROUTINE SrvD_UnPackInitOutput
 
  SUBROUTINE SrvD_CopyInputFile( SrcInputFileData, DstInputFileData, CtrlCode, ErrStat, ErrMsg )
