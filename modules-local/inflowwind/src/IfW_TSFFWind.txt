@@ -36,7 +36,6 @@ typedef  ^                    ParameterType       CHARACTER(1024) WindFileName  
 typedef  ^                       ^                       DbKi     DT                -     -     -     "Time step for cont. state integration & disc. state update"   seconds
 typedef  ^                       ^                       Logical  TowerDataExist    -  .FALSE.  -     "Data exists for the tower"                                    -
 typedef  ^                       ^                       Logical  Periodic          -  .FALSE.  -     "Flag to indicate if the wind file is periodic"                -
-#typedef  ^                       ^                       Logical  Linearize         -  .FALSE.  -     "If this is true, we are linearizing"                          -
 typedef  ^                       ^                       SiKi     FFData            ::::  -     -     "Array of FF data"                                             -
 typedef  ^                       ^                       SiKi     FFTower           :::   -     -     "Array of data along tower, below FF array"                    -
 typedef  ^                       ^                       ReKi     FFDTime           -     0     -     "Delta time"                                                   seconds
