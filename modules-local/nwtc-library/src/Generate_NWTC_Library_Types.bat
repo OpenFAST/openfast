@@ -1,6 +1,6 @@
 @ECHO OFF
 
-SET REG_Loc=C:\Users\bjonkman\Documents\DATA\DesignCodes\simulators\FAST\SVNdirectory\branches\FAST_Registry\bin
+SET REG_Loc=C:\Users\bjonkman\Documents\DATA\DesignCodes\miscellaneous\FAST_Registry\bin
 SET Registry=%REG_Loc%\Registry_Win32.exe
 :: SET Registry=%REG_Loc%\Registry.exe
 

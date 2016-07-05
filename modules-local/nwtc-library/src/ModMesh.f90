@@ -2887,14 +2887,14 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
    
       do i=1,M%NNodes
          do j=1,3
-            Names(indx_first) = trim(MeshName)//Comp(j)//' force, node '//trim(num2lstr(i))
+            Names(indx_first) = trim(MeshName)//' '//Comp(j)//' force, node '//trim(num2lstr(i))
             indx_first = indx_first + 1
          end do      
       end do
                            
       do i=1,M%NNodes
          do j=1,3
-            Names(indx_first) = trim(MeshName)//Comp(j)//' moment, node '//trim(num2lstr(i))
+            Names(indx_first) = trim(MeshName)//' '//Comp(j)//' moment, node '//trim(num2lstr(i))
             indx_first = indx_first + 1
          end do      
       end do
@@ -2902,16 +2902,15 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
 
    END SUBROUTINE PackLoadMesh_Names
 !...............................................................................................................................
-!> This subroutine returns the names of rows/columns of motion meshes in the Jacobian matrices. It assumes all fields are allocated;
-!! if accelerations are not desired, use the SkipAcc argument. Some fields may be allocated by the ModMesh module and not used in
+!> This subroutine returns the names of rows/columns of motion meshes in the Jacobian matrices. It assumes all fields marked
+!! by FieldMask are allocated; Some fields may be allocated by the ModMesh module and not used in
 !! the linearization procedure, thus I am not using the check if they are allocated to determine if they should be included.
-   SUBROUTINE PackMotionMesh_Names(M, MeshName, Names, indx_first, SkipAcc, FieldMask)
+   SUBROUTINE PackMotionMesh_Names(M, MeshName, Names, indx_first, FieldMask)
    
       TYPE(MeshType)                    , INTENT(IN   ) :: M                          !< Motion mesh
       CHARACTER(*)                      , INTENT(IN   ) :: MeshName                   !< name of mesh 
       CHARACTER(LinChanLen)             , INTENT(INOUT) :: Names(:)                   !< name of column of dYdu 
       INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into Names array; gives location of next array position to fill
-      LOGICAL, OPTIONAL                 , INTENT(IN   ) :: SkipAcc                    !< flag that allows us to skip the acceleration fields; overrides FieldMask(5:6)
       LOGICAL, OPTIONAL                 , INTENT(IN   ) :: FieldMask(FIELDMASK_SIZE)  !< flags to determine if this field is part of the packing
       
       
@@ -2925,17 +2924,12 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       else
          Mask = .true.
       end if
-      
-      if (present(SkipAcc)) then
-         Mask(MASKID_TRANSLATIONACC) = .false.
-         Mask(MASKID_ROTATIONACC) = .false.
-      end if
-      
+            
    
       if (Mask(MASKID_TRANSLATIONDISP)) then
          do i=1,M%NNodes
             do j=1,3
-               Names(indx_first) = trim(MeshName)//Comp(j)//' translation displacement, node '//trim(num2lstr(i))
+               Names(indx_first) = trim(MeshName)//' '//Comp(j)//' translation displacement, node '//trim(num2lstr(i))
                indx_first = indx_first + 1
             end do      
          end do
@@ -2944,7 +2938,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       if (Mask(MASKID_ORIENTATION)) then
          do i=1,M%NNodes
             do j=1,3
-               Names(indx_first) = trim(MeshName)//Comp(j)//' orientation angle, node '//trim(num2lstr(i))
+               Names(indx_first) = trim(MeshName)//' '//Comp(j)//' orientation angle, node '//trim(num2lstr(i))
                indx_first = indx_first + 1
             end do      
          end do
@@ -2953,7 +2947,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       if (Mask(MASKID_TRANSLATIONVEL)) then
          do i=1,M%NNodes
             do j=1,3
-               Names(indx_first) = trim(MeshName)//Comp(j)//' translation velocity, node '//trim(num2lstr(i))
+               Names(indx_first) = trim(MeshName)//' '//Comp(j)//' translation velocity, node '//trim(num2lstr(i))
                indx_first = indx_first + 1
             end do      
          end do
@@ -2962,7 +2956,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       if (Mask(MASKID_ROTATIONVEL)) then
          do i=1,M%NNodes
             do j=1,3
-               Names(indx_first) = trim(MeshName)//Comp(j)//' rotation velocity, node '//trim(num2lstr(i))
+               Names(indx_first) = trim(MeshName)//' '//Comp(j)//' rotation velocity, node '//trim(num2lstr(i))
                indx_first = indx_first + 1
             end do      
          end do
@@ -2971,7 +2965,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       if (Mask(MASKID_TRANSLATIONACC)) then
          do i=1,M%NNodes
             do j=1,3
-               Names(indx_first) = trim(MeshName)//Comp(j)//' translation acceleration, node '//trim(num2lstr(i))
+               Names(indx_first) = trim(MeshName)//' '//Comp(j)//' translation acceleration, node '//trim(num2lstr(i))
                indx_first = indx_first + 1
             end do      
          end do
@@ -2980,7 +2974,7 @@ SUBROUTINE MeshWrVTK_PointSurface ( RefPoint, M, FileRootName, VTKcount, OutputF
       if (Mask(MASKID_ROTATIONACC)) then
          do i=1,M%NNodes
             do j=1,3
-               Names(indx_first) = trim(MeshName)//Comp(j)//' rotation acceleration, node '//trim(num2lstr(i))
+               Names(indx_first) = trim(MeshName)//' '//Comp(j)//' rotation acceleration, node '//trim(num2lstr(i))
                indx_first = indx_first + 1
             end do      
          end do

@@ -54,13 +54,15 @@ MODULE ModMesh_Mapping
          ! values for motions:
       REAL(ReKi),     ALLOCATABLE :: mi(:,:)           !< block matrix of motions that reflects identity (i.e., solely the mapping of one quantity to itself on another mesh) [-]
       REAL(ReKi),     ALLOCATABLE :: fx_p(:,:)         !< block matrix of motions that reflects skew-symmetric (cross-product) matrix [-]
-      REAL(ReKi),     ALLOCATABLE :: tv(:,:)           !< block matrix of translational velocity that is multiplied by theta (orientation) [-]
-      REAL(ReKi),     ALLOCATABLE :: ta1(:,:)          !< block matrix of translational acceleration that is multiplied by theta (orientation) [-]
-      REAL(ReKi),     ALLOCATABLE :: ta2(:,:)          !< block matrix of translational acceleration that is multiplied by omega (RotationVel) [-]
+      REAL(ReKi),     ALLOCATABLE :: tv_uD(:,:)        !< block matrix of translational velocity that is multiplied by destination translational displacement [-]
+      REAL(ReKi),     ALLOCATABLE :: tv_uS(:,:)        !< block matrix of translational velocity that is multiplied by source translational displacement [-]
+      REAL(ReKi),     ALLOCATABLE :: ta_uD(:,:)        !< block matrix of translational acceleration that is multiplied by destination translational displacement [-]
+      REAL(ReKi),     ALLOCATABLE :: ta_uS(:,:)        !< block matrix of translational acceleration that is multiplied by source translational displacement [-]
+      REAL(ReKi),     ALLOCATABLE :: ta_rv(:,:)        !< block matrix of translational acceleration that is multiplied by omega (RotationVel) [-]      
          ! values for loads:
       REAL(ReKi),     ALLOCATABLE :: li(:,:)           !< block matrix of loads that reflects identity (i.e., solely the mapping on one quantity to itself on another mesh) [-]
-      REAL(ReKi),     ALLOCATABLE :: M_uS(:,:)          !< block matrix of moment that is multiplied by Source u (translationDisp) [-]
-      REAL(ReKi),     ALLOCATABLE :: M_uD(:,:)          !< block matrix of moment that is multiplied by Destination u (translationDisp) [-]
+      REAL(ReKi),     ALLOCATABLE :: M_uS(:,:)         !< block matrix of moment that is multiplied by Source u (translationDisp) [-]
+      REAL(ReKi),     ALLOCATABLE :: M_uD(:,:)         !< block matrix of moment that is multiplied by Destination u (translationDisp) [-]
       REAL(ReKi),     ALLOCATABLE :: M_f(:,:)          !< block matrix of moment that is multiplied by force [-]
    END TYPE
    
@@ -1530,7 +1532,7 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
    INTEGER(IntKi)                          :: ErrStat2
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    integer(intKi)                          :: i,j, k, n, d_start, d_end, s_start, s_end
-   real(reKi)                              :: tmp, tmpVec(3)
+   real(reKi)                              :: tmp, tmpVec(3), SSMat(3,3)
    
    character(*), parameter :: RoutineName = 'Linearize_Motions_Line2_to_Point'
    ErrStat = ErrID_None
@@ -1606,16 +1608,24 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
       end do
       
                   
-         ! MeshMap%dM%tv required for translational velocity:         
+      ! MeshMap%dM%tv_uS and MeshMap%dM%tv_uD required for translational velocity:         
       if ( Src%FieldMask(MASKID_TranslationVel) .AND. Dest%FieldMask(MASKID_TranslationVel) ) then
-         if (.not. allocated(MeshMap%dM%tv) ) then
-            call AllocAry(MeshMap%dM%tv, Dest%Nnodes*3, Src%Nnodes*3, 'dM%tv', ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-               IF (ErrStat >= AbortErrLev) RETURN
-         end if
-                     
-         MeshMap%dM%tv = 0.0_ReKi      
+         
          if ( Src%FieldMask(MASKID_RotationVel) ) then
+            if (.not. allocated(MeshMap%dM%tv_uD) ) then
+               call AllocAry(MeshMap%dM%tv_uD, Dest%Nnodes*3, Dest%Nnodes*3, 'dM%tv_uD', ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  IF (ErrStat >= AbortErrLev) RETURN
+            end if
+                     
+            if (.not. allocated(MeshMap%dM%tv_uS) ) then
+               call AllocAry(MeshMap%dM%tv_uS, Dest%Nnodes*3, Src%Nnodes*3, 'dM%tv_uS', ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  IF (ErrStat >= AbortErrLev) RETURN
+            end if
+         
+            MeshMap%dM%tv_uD = 0.0_ReKi      
+            MeshMap%dM%tv_uS = 0.0_ReKi      
             do i=1, Dest%Nnodes
 
                d_start = (i-1)*3+1
@@ -1628,36 +1638,44 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_start = (n - 1)*3+1
                   s_end   = s_start+2
                                     
-                  MeshMap%dM%tv( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,j), Src%RotationVel(:,n) )
-                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,j), Src%RotationVel(:,n) )
-                  do k=0,2
-                     MeshMap%dM%tv( d_start+k, s_start+k ) = MeshMap%dM%tv( d_start+k, s_start+k ) - tmp
-                  end do              
-                  MeshMap%dM%tv( d_start:d_end, s_start:s_end ) = MeshMap%dM%tv( d_start:d_end, s_start:s_end ) * MeshMap%MapMotions(i)%shape_fn(j)
+                  TmpVec = Src%RotationVel(:,n) * MeshMap%MapMotions(i)%shape_fn(j)
+                  SSMat = SkewSymMat( TmpVec )
+                  
+                  MeshMap%dM%tv_uD( d_start:d_end, d_start:d_end ) = MeshMap%dM%tv_uD( d_start:d_end, d_start:d_end ) +  SSMat
+                  MeshMap%dM%tv_uS( d_start:d_end, s_start:s_end ) = -SSMat
                end do
                   
             end do
             
          else
-            if (allocated(MeshMap%dM%tv)) deallocate(MeshMap%dM%tv)               
+            if (allocated(MeshMap%dM%tv_uD)) deallocate(MeshMap%dM%tv_uD)               
+            if (allocated(MeshMap%dM%tv_uS)) deallocate(MeshMap%dM%tv_uS)               
          end if !MASKID_RotationVel
+         
       else
          if (allocated(MeshMap%dM%fx_p)) deallocate(MeshMap%dM%fx_p)
-         if (allocated(MeshMap%dM%tv)) deallocate(MeshMap%dM%tv)
+         if (allocated(MeshMap%dM%tv_uD)) deallocate(MeshMap%dM%tv_uD)               
+         if (allocated(MeshMap%dM%tv_uS)) deallocate(MeshMap%dM%tv_uS)               
       end if !MASKID_TranslationVel
             
          
       if ( Src%FieldMask(MASKID_TranslationAcc ) .AND. Dest%FieldMask(MASKID_TranslationAcc ) ) then
             
-         !-------------- ta1 -----------------------------
-         if (.not. allocated(MeshMap%dM%ta1) ) then
-            call AllocAry(MeshMap%dM%ta1, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta1', ErrStat2, ErrMsg2 )
+         !-------------- ta_uD and ta_uS -----------------------------
+         if (.not. allocated(MeshMap%dM%ta_uD) ) then
+            call AllocAry(MeshMap%dM%ta_uD, Dest%Nnodes*3, Dest%Nnodes*3, 'dM%ta_uD', ErrStat2, ErrMsg2 )
+               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+               IF (ErrStat >= AbortErrLev) RETURN
+         end if
+         if (.not. allocated(MeshMap%dM%ta_uS) ) then
+            call AllocAry(MeshMap%dM%ta_uS, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta_uS', ErrStat2, ErrMsg2 )
                CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                IF (ErrStat >= AbortErrLev) RETURN
          end if
          
                         
-         MeshMap%dM%ta1 = 0.0_ReKi      
+         MeshMap%dM%ta_uD = 0.0_ReKi      
+         MeshMap%dM%ta_uS = 0.0_ReKi             
          if ( Src%FieldMask(MASKID_RotationAcc) ) then            
             do i=1, Dest%Nnodes
             
@@ -1671,21 +1689,16 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_start = (n - 1)*3+1
                   s_end   = s_start+2
                                     
-                     ! note that we multiply by MeshMap%MapMotions(i)%shape_fn(n1) after forming the first two terms of this matrix
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,j), Src%RotationAcc(:,n) )
-                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,j), Src%RotationAcc(:,n) )
-                  do k=0,2
-                     MeshMap%dM%ta1( d_start+k, s_start+k ) = MeshMap%dM%ta1( d_start+k, s_start+k ) - tmp
-                  end do                        
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) * MeshMap%MapMotions(i)%shape_fn(j)
-                     
+                  TmpVec = Src%RotationAcc(:,n) * MeshMap%MapMotions(i)%shape_fn(j) 
+                  SSMat = SkewSymMat( TmpVec ) 
+                  MeshMap%dM%ta_uD( d_start:d_end, d_start:d_end ) =  MeshMap%dM%ta_uD( d_start:d_end, d_start:d_end ) + SSMat
+                  MeshMap%dM%ta_uS( d_start:d_end, s_start:s_end ) = -SSMat
                end do
-                  
             end do
          end if
-            
+         
          if ( Src%FieldMask(MASKID_RotationVel) ) then            
-            
+                
             do i=1, Dest%Nnodes
             
                d_start = (i-1)*3+1
@@ -1696,29 +1709,34 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(j)
                   s_start = (n - 1)*3+1
                   s_end   = s_start+2
+                              
+                  TmpVec = Src%RotationVel(:,n) * MeshMap%MapMotions(i)%shape_fn(j)
+                  SSMat = OuterProduct( Src%RotationVel(:,n), TmpVec ) 
+                  tmp   =  dot_product( Src%RotationVel(:,n), TmpVec )
+                  do k=1,3
+                     SSMat(k,k) = SSMat(k,k) - tmp
+                  end do                        
                                     
-                  tmpVec=cross_product(  Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,j) ) * MeshMap%MapMotions(i)%shape_fn(j)
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + OuterProduct( tmpVec, Src%RotationVel(:,n) )
-                  
-                  tmp = dot_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,j)) * MeshMap%MapMotions(i)%shape_fn(j)
-                  tmpVec = tmp*Src%RotationVel(:,n) 
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) - SkewSymMat( tmpVec )                   
+                  MeshMap%dM%ta_uD( d_start:d_end, d_start:d_end ) =  MeshMap%dM%ta_uD( d_start:d_end, d_start:d_end ) + SSMat
+                  MeshMap%dM%ta_uS( d_start:d_end, s_start:s_end ) =  MeshMap%dM%ta_uS( d_start:d_end, s_start:s_end ) - SSMat
+                                                         
                end do
                   
             end do
          end if
+            
+
                                
             
-         !-------------- ta2 -----------------------------
-         if (.not. allocated(MeshMap%dM%ta2) ) then
-            call AllocAry(MeshMap%dM%ta2, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta2', ErrStat2, ErrMsg2 )
-               CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-               IF (ErrStat >= AbortErrLev) RETURN
-         end if
-                        
-         MeshMap%dM%ta2 = 0.0_ReKi 
-            
+         !-------------- ta_rv -----------------------------
          if ( Src%FieldMask(MASKID_RotationVel) ) then
+            if (.not. allocated(MeshMap%dM%ta_rv) ) then
+               call AllocAry(MeshMap%dM%ta_rv, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta_rv', ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  IF (ErrStat >= AbortErrLev) RETURN
+            end if
+                        
+            MeshMap%dM%ta_rv = 0.0_ReKi             
 
             do i=1, Dest%Nnodes
             
@@ -1733,44 +1751,25 @@ SUBROUTINE Linearize_Motions_Line2_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_end   = s_start+2
                                     
                   tmpVec = cross_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,j)  )
-                  MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = SkewSymMat( tmpVec  ) * MeshMap%MapMotions(i)%shape_fn(j)
-                     
-               end do
                   
-            end do
-               
-            if ( allocated(MeshMap%dM%tv) ) then
-               
-               MeshMap%dM%ta2 = MeshMap%dM%ta2 + MeshMap%dM%tv
-               
-            else
-               do i=1, Dest%Nnodes
-
-                  d_start = (i-1)*3+1
-                  d_end   = d_start+2
-                     
-                  do j=1,NumNodes(ELEMENT_LINE2) 
-               
-                     n = Src%ElemTable(ELEMENT_LINE2)%Elements(MeshMap%MapMotions(i)%OtherMesh_Element)%ElemNodes(j)
-                     
-                     s_start = (n - 1)*3+1
-                     s_end   = s_start+2
-                                    
-                     MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) + &
-                                       OuterProduct( MeshMap%DisplacedPosition(:,i,j), Src%RotationVel(:,n) ) * MeshMap%MapMotions(i)%shape_fn(j)
-                     tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
-                     do k=0,2
-                        MeshMap%dM%ta2( d_start+k, s_start+k ) = MeshMap%dM%ta2( d_start+k, s_start+k ) - tmp * MeshMap%MapMotions(i)%shape_fn(j)
-                     end do
+                  SSMat = SkewSymMat( tmpVec ) + OuterProduct( MeshMap%DisplacedPosition(:,i,j), Src%RotationVel(:,n) )
+                  MeshMap%dM%ta_rv( d_start:d_end, s_start:s_end ) =  SSMat * MeshMap%MapMotions(i)%shape_fn(j) 
+                                       
+                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) ) * MeshMap%MapMotions(i)%shape_fn(j)
+                  do k=0,2
+                     MeshMap%dM%ta_rv( d_start+k, s_start+k ) = MeshMap%dM%ta_rv( d_start+k, s_start+k ) - tmp 
                   end do
-                     
-               end do               
-            end if !MASKID_TranslationDisp
-               
+                                    
+               end do                  
+            end do
+                            
+         else
+            if (allocated(MeshMap%dM%ta_rv)) deallocate(MeshMap%dM%ta_rv)            
          end if ! MASKID_RotationVel            
       else
-         if (allocated(MeshMap%dM%ta1)) deallocate(MeshMap%dM%ta1)
-         if (allocated(MeshMap%dM%ta2)) deallocate(MeshMap%dM%ta2)
+         if (allocated(MeshMap%dM%ta_uD)) deallocate(MeshMap%dM%ta_uD)
+         if (allocated(MeshMap%dM%ta_uS)) deallocate(MeshMap%dM%ta_uS)            
+         if (allocated(MeshMap%dM%ta_rv)) deallocate(MeshMap%dM%ta_rv)            
       end if ! MASKID_TranslationAcc
          
    end if ! MASKID_TranslationDisp, MASKID_RotationVel, or MASKID_TranslationAcc      
@@ -2791,8 +2790,8 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
    CHARACTER(ErrMsgLen)                    :: ErrMsg2
    CHARACTER(*), PARAMETER                 :: RoutineName = 'Linearize_Motions_Point_to_Point'
    
-   integer(intKi)                          :: i,j,n, d_start, d_end, s_start, s_end
-   real(reKi)                              :: tmp, tmpVec(3)
+   integer(intKi)                          :: i,j,k, n, d_start, d_end, s_start, s_end
+   real(reKi)                              :: tmp, tmpVec(3), SSMat(3,3)
    
    
 
@@ -2847,52 +2846,67 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
          end do
       
                   
-            ! MeshMap%dM%tv required for translational velocity:         
+            ! MeshMap%dM%tv_uS and MeshMap%dM%tv_uD required for translational velocity:         
          if ( Src%FieldMask(MASKID_TranslationVel) .AND. Dest%FieldMask(MASKID_TranslationVel) ) then
-            if (.not. allocated(MeshMap%dM%tv) ) then
-               call AllocAry(MeshMap%dM%tv, Dest%Nnodes*3, Src%Nnodes*3, 'dM%tv', ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  IF (ErrStat >= AbortErrLev) RETURN
-            end if
-                     
-            MeshMap%dM%tv = 0.0_ReKi      
+                        
             if ( Src%FieldMask(MASKID_RotationVel) ) then
+               
+               if (.not. allocated(MeshMap%dM%tv_uD) ) then
+                  call AllocAry(MeshMap%dM%tv_uD, Dest%Nnodes*3, Dest%Nnodes*3, 'dM%tv_uD', ErrStat2, ErrMsg2 )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                     IF (ErrStat >= AbortErrLev) RETURN
+               end if
+               if (.not. allocated(MeshMap%dM%tv_uS) ) then
+                  call AllocAry(MeshMap%dM%tv_uS, Dest%Nnodes*3, Src%Nnodes*3, 'dM%tv_uS', ErrStat2, ErrMsg2 )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                     IF (ErrStat >= AbortErrLev) RETURN
+               end if
+                     
+               MeshMap%dM%tv_uD = 0.0_ReKi      
+               MeshMap%dM%tv_uS = 0.0_ReKi      
                do i=1, Dest%Nnodes
 
                   n = MeshMap%MapMotions(i)%OtherMesh_Element
                   d_start = (i-1)*3+1
                   d_end   = d_start+2
+                  
                   s_start = (n - 1)*3+1
                   s_end   = s_start+2
-                                    
-                  MeshMap%dM%tv( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
-                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
-                  do j=0,2
-                     MeshMap%dM%tv( d_start+j, s_start+j ) = MeshMap%dM%tv( d_start+j, s_start+j ) - tmp
-                  end do                        
+                  
+                  SSMat = SkewSymMat( Src%RotationVel(:,n) )                  
+                  MeshMap%dM%tv_uD( d_start:d_end, d_start:d_end ) = MeshMap%dM%tv_uD( d_start:d_end, d_start:d_end ) + SSMat
+                  MeshMap%dM%tv_uS( d_start:d_end, s_start:s_end ) = -SSMat
+                  
                end do
             else
-               if (allocated(MeshMap%dM%tv)) deallocate(MeshMap%dM%tv)               
+               if (allocated(MeshMap%dM%tv_uD)) deallocate(MeshMap%dM%tv_uD)               
+               if (allocated(MeshMap%dM%tv_uS)) deallocate(MeshMap%dM%tv_uS)               
             end if !MASKID_RotationVel
          else
             if (allocated(MeshMap%dM%fx_p)) deallocate(MeshMap%dM%fx_p)
-            if (allocated(MeshMap%dM%tv)) deallocate(MeshMap%dM%tv)
+            if (allocated(MeshMap%dM%tv_uD)) deallocate(MeshMap%dM%tv_uD)               
+            if (allocated(MeshMap%dM%tv_uS)) deallocate(MeshMap%dM%tv_uS)               
          end if !MASKID_TranslationVel
             
          
          if ( Src%FieldMask(MASKID_TranslationAcc ) .AND. Dest%FieldMask(MASKID_TranslationAcc ) ) then
             
-            !-------------- ta1 -----------------------------
-            ! this is the matrix that relates orientation to translational acceleration
+            !-------------- ta_uD and ta_uS -----------------------------
+            ! these are the matrix that relates destination and source displacements to translational acceleration
             
-            if (.not. allocated(MeshMap%dM%ta1) ) then
-               call AllocAry(MeshMap%dM%ta1, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta1', ErrStat2, ErrMsg2 )
+            if (.not. allocated(MeshMap%dM%ta_uD) ) then
+               call AllocAry(MeshMap%dM%ta_uD, Dest%Nnodes*3, Dest%Nnodes*3, 'dM%ta_uD', ErrStat2, ErrMsg2 )
                   CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
                   IF (ErrStat >= AbortErrLev) RETURN
             end if
-         
+            if (.not. allocated(MeshMap%dM%ta_uS) ) then
+               call AllocAry(MeshMap%dM%ta_uS, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta_uS', ErrStat2, ErrMsg2 )
+                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                  IF (ErrStat >= AbortErrLev) RETURN
+            end if                     
                         
-            MeshMap%dM%ta1 = 0.0_ReKi      
+            MeshMap%dM%ta_uD = 0.0_ReKi      
+            MeshMap%dM%ta_uS = 0.0_ReKi      
             if ( Src%FieldMask(MASKID_RotationAcc) ) then            
                do i=1, Dest%Nnodes
             
@@ -2902,11 +2916,10 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_start = (n-1)*3+1
                   s_end   = s_start+2
                                     
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationAcc(:,n) )
-                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationAcc(:,n) )
-                  do j=0,2
-                     MeshMap%dM%ta1( d_start+j, s_start+j ) = MeshMap%dM%ta1( d_start+j, s_start+j ) - tmp
-                  end do                        
+                  SSMat = SkewSymMat( Src%RotationAcc(:,n) ) 
+                  MeshMap%dM%ta_uD( d_start:d_end, d_start:d_end ) =  MeshMap%dM%ta_uD( d_start:d_end, d_start:d_end ) + SSMat
+                  MeshMap%dM%ta_uS( d_start:d_end, s_start:s_end ) = -SSMat
+                  
                end do
             end if
             
@@ -2920,29 +2933,29 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_start = (n-1)*3+1
                   s_end   = s_start+2
                                     
-                  tmpVec=cross_product(  Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1) )
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) + OuterProduct( tmpVec, Src%RotationVel(:,n) )
-                  
-                  tmp = dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) ) 
-                  tmpVec = tmp*Src%RotationVel(:,n)
-                  MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta1( d_start:d_end, s_start:s_end ) - SkewSymMat( tmpVec )                  
+                  SSMat = OuterProduct( Src%RotationVel(:,n), Src%RotationVel(:,n) ) 
+                  tmp   =  dot_product( Src%RotationVel(:,n), Src%RotationVel(:,n) )
+                  do k=1,3
+                     SSMat(k,k) = SSMat(k,k) - tmp
+                  end do                        
+                                    
+                  MeshMap%dM%ta_uD( d_start:d_end, d_start:d_end ) =  MeshMap%dM%ta_uD( d_start:d_end, d_start:d_end ) + SSMat
+                  MeshMap%dM%ta_uS( d_start:d_end, s_start:s_end ) =  MeshMap%dM%ta_uS( d_start:d_end, s_start:s_end ) - SSMat
                end do
             end if
                                
             
-            !-------------- ta2 -----------------------------
+            !-------------- ta_rv -----------------------------
             ! this is the matrix that relates rotational velocity to translational acceleration
-            
-            if (.not. allocated(MeshMap%dM%ta2) ) then
-               call AllocAry(MeshMap%dM%ta2, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta2', ErrStat2, ErrMsg2 )
-                  CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-                  IF (ErrStat >= AbortErrLev) RETURN
-            end if
-                        
-            MeshMap%dM%ta2 = 0.0_ReKi 
-                    
             if ( Src%FieldMask(MASKID_RotationVel) ) then
-
+            
+               if (.not. allocated(MeshMap%dM%ta_rv) ) then
+                  call AllocAry(MeshMap%dM%ta_rv, Dest%Nnodes*3, Src%Nnodes*3, 'dM%ta_rv', ErrStat2, ErrMsg2 )
+                     CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+                     IF (ErrStat >= AbortErrLev) RETURN
+               end if
+                        
+               MeshMap%dM%ta_rv = 0.0_ReKi                     
                do i=1, Dest%Nnodes
             
                   n = MeshMap%MapMotions(i)%OtherMesh_Element
@@ -2952,36 +2965,24 @@ SUBROUTINE Linearize_Motions_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg
                   s_end   = s_start+2
                                     
                   tmpVec = cross_product( Src%RotationVel(:,n), MeshMap%DisplacedPosition(:,i,1)  )
-                  MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = SkewSymMat( tmpVec  )
+                  
+                  MeshMap%dM%ta_rv( d_start:d_end, s_start:s_end ) = SkewSymMat( tmpVec  ) + &
+                                                                     OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                  
+                  tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
+                  do j=0,2
+                     MeshMap%dM%ta_rv( d_start+j, s_start+j ) = MeshMap%dM%ta_rv( d_start+j, s_start+j ) - tmp
+                  end do                        
+                  
                end do
-               
-               if ( allocated(MeshMap%dM%tv) ) then
-               
-                  MeshMap%dM%ta2 = MeshMap%dM%ta2 + MeshMap%dM%tv
-               
-               else
-                  do i=1, Dest%Nnodes
-
-                     n = MeshMap%MapMotions(i)%OtherMesh_Element
-                     d_start = (i-1)*3+1
-                     d_end   = d_start+2
-                     s_start = (n - 1)*3+1
-                     s_end   = s_start+2
-                                    
-                     MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) = MeshMap%dM%ta2( d_start:d_end, s_start:s_end ) &
-                                                                   + OuterProduct( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
-                     tmp=dot_product( MeshMap%DisplacedPosition(:,i,1), Src%RotationVel(:,n) )
-                     do j=0,2
-                        MeshMap%dM%ta2( d_start+j, s_start+j ) = MeshMap%dM%ta2( d_start+j, s_start+j ) - tmp
-                     end do                        
-                  end do               
-               end if !allocated(MeshMap%dM%tv)
-               
+            else
+               if (allocated(MeshMap%dM%ta_rv)) deallocate(MeshMap%dM%ta_rv)
             end if ! MASKID_RotationVel  
             
          else
-            if (allocated(MeshMap%dM%ta1)) deallocate(MeshMap%dM%ta1)
-            if (allocated(MeshMap%dM%ta2)) deallocate(MeshMap%dM%ta2)            
+            if (allocated(MeshMap%dM%ta_uD)) deallocate(MeshMap%dM%ta_uD)
+            if (allocated(MeshMap%dM%ta_uS)) deallocate(MeshMap%dM%ta_uS)            
+            if (allocated(MeshMap%dM%ta_rv)) deallocate(MeshMap%dM%ta_rv)            
          end if ! MASKID_TranslationAcc
          
       end if ! MASKID_TranslationDisp, MASKID_RotationVel, or MASKID_TranslationAcc   
@@ -3421,18 +3422,20 @@ END SUBROUTINE Transfer_Line2_to_Line2
 !!
 !! Rotational Velocity: \f$ \frac{\partial M_\omega}{\partial x} = \begin{bmatrix} M_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{\omega}^S\right\}\f$
 !!
-!! Translational Velocity: \f$ \frac{\partial M_v}{\partial x} = \begin{bmatrix} M_{tv} & M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
+!! Translational Velocity: \f$ \frac{\partial M_v}{\partial x} = \begin{bmatrix} M_{tv\_uD} & M_{tv\_uS} & M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
 !! \f$ \left\{ \begin{matrix}
-!!      \vec{\theta}^S \\
+!!      \vec{u}^D \\
+!!      \vec{u}^S \\
 !!      \vec{v}^S \\
 !!      \vec{\omega}^S
 !! \end{matrix} \right\} \f$
 !!
 !! Rotational Acceleration: \f$ \frac{\partial M_\alpha}{\partial x} = \begin{bmatrix} M_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{\alpha}^S\right\}\f$
 !!
-!! Translational Acceleration: \f$ \frac{\partial M_a}{\partial x} = \begin{bmatrix} M_{ta_1} & M_{ta_2} & M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
+!! Translational Acceleration: \f$ \frac{\partial M_a}{\partial x} = \begin{bmatrix} M_{ta\_uD} & M_{ta\_uS} & M_{ta\_rv} & M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
 !! \f$ \left\{ \begin{matrix}
-!!      \vec{\theta}^S \\
+!!      \vec{u}^D \\
+!!      \vec{u}^S \\
 !!      \vec{\omega}^S \\
 !!      \vec{a}^S \\
 !!      \vec{\alpha}^S
@@ -3452,9 +3455,11 @@ END SUBROUTINE Transfer_Line2_to_Line2
 !!
 !! \f$M_{mi}\f$ is modmesh_mapping::meshmaplinearizationtype::mi \n
 !! \f$M_{f_{\times p}}\f$ is modmesh_mapping::meshmaplinearizationtype::fx_p \n
-!! \f$M_{tv}\f$ is modmesh_mapping::meshmaplinearizationtype::tv \n
-!! \f$M_{ta_1}\f$ is modmesh_mapping::meshmaplinearizationtype::ta1 \n
-!! \f$M_{ta_2}\f$ is modmesh_mapping::meshmaplinearizationtype::ta2 \n
+!! \f$M_{tv\_uD}\f$ is modmesh_mapping::meshmaplinearizationtype::tv_uD \n
+!! \f$M_{tv\_uS}\f$ is modmesh_mapping::meshmaplinearizationtype::tv_uS \n
+!! \f$M_{ta\_uD}\f$ is modmesh_mapping::meshmaplinearizationtype::ta_uD \n
+!! \f$M_{ta\_uS}\f$ is modmesh_mapping::meshmaplinearizationtype::ta_uS \n
+!! \f$M_{ta\_rv}\f$ is modmesh_mapping::meshmaplinearizationtype::ta_rv \n
 !! \f$M_{li}\f$ is modmesh_mapping::meshmaplinearizationtype::li \n
 !! \f$M_{uSm}\f$ is modmesh_mapping::meshmaplinearizationtype::m_us \n
 !! \f$M_{uDm}\f$ is modmesh_mapping::meshmaplinearizationtype::m_ud \n
@@ -5318,18 +5323,20 @@ END SUBROUTINE FormMatrix_Lump_Line2_to_Point
 !!
 !> Rotational Velocity: \f$ \frac{\partial M_\omega}{\partial x} = \begin{bmatrix} M_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{\omega}^S\right\}\f$
 !!
-!! Translational Velocity: \f$ \frac{\partial M_v}{\partial x} = \begin{bmatrix} M_{tv} & M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
+!! Translational Velocity: \f$ \frac{\partial M_v}{\partial x} = \begin{bmatrix}  M_{tv\_uD} & M_{tv\_uS} & M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
 !! \f$ \left\{ \begin{matrix}
-!!      \vec{\theta}^S \\
+!!      \vec{u}^D \\
+!!      \vec{u}^S \\
 !!      \vec{v}^S \\
 !!      \vec{\omega}^S
 !! \end{matrix} \right\} \f$
 !!
 !! Rotational Acceleration: \f$ \frac{\partial M_\alpha}{\partial x} = \begin{bmatrix} M_{mi} \end{bmatrix} \f$ for source fields \f$\left\{\vec{\alpha}^S\right\}\f$
 !!
-!! Translational Acceleration: \f$ \frac{\partial M_a}{\partial x} = \begin{bmatrix} M_{ta_1} & M_{ta_2} & M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
+!! Translational Acceleration: \f$ \frac{\partial M_a}{\partial x} = \begin{bmatrix} M_{ta\_uD} & M_{ta\_uS} & M_{ta\_rv} & M_{mi} & M_{f_{\times p}} \end{bmatrix} \f$ for source fields
 !! \f$ \left\{ \begin{matrix}
-!!      \vec{\theta}^S \\
+!!      \vec{u}^D \\
+!!      \vec{u}^S \\
 !!      \vec{\omega}^S \\
 !!      \vec{a}^S \\
 !!      \vec{\alpha}^S
@@ -5349,9 +5356,11 @@ END SUBROUTINE FormMatrix_Lump_Line2_to_Point
 !!
 !! \f$M_{mi}\f$ is modmesh_mapping::meshmaplinearizationtype::mi \n
 !! \f$M_{f_{\times p}}\f$ is modmesh_mapping::meshmaplinearizationtype::fx_p \n
-!! \f$M_{tv}\f$ is modmesh_mapping::meshmaplinearizationtype::tv \n
-!! \f$M_{ta_1}\f$ is modmesh_mapping::meshmaplinearizationtype::ta1 \n
-!! \f$M_{ta_2}\f$ is modmesh_mapping::meshmaplinearizationtype::ta2 \n
+!! \f$M_{tv\_uD}\f$ is modmesh_mapping::meshmaplinearizationtype::tv_uD \n
+!! \f$M_{tv\_uS}\f$ is modmesh_mapping::meshmaplinearizationtype::tv_uS \n
+!! \f$M_{ta\_uD}\f$ is modmesh_mapping::meshmaplinearizationtype::ta_uD \n
+!! \f$M_{ta\_uS}\f$ is modmesh_mapping::meshmaplinearizationtype::ta_uS \n
+!! \f$M_{ta\_rv}\f$ is modmesh_mapping::meshmaplinearizationtype::ta_rv \n
 !! \f$M_{li}\f$ is modmesh_mapping::meshmaplinearizationtype::li \n
 !! \f$M_{uSm}\f$ is modmesh_mapping::meshmaplinearizationtype::m_us \n
 !! \f$M_{uDm}\f$ is modmesh_mapping::meshmaplinearizationtype::m_ud \n
@@ -5697,7 +5706,7 @@ END SUBROUTINE WriteMappingTransferToFile
 ! WARNING This file is generated automatically by the FAST registry
 ! Do not edit.  Your changes to this file will be lost.
 !
-! FAST Registry (v3.01.01, 19-Apr-2016)
+! FAST Registry (v3.02.00, 22-Jun-2016)
 !*********************************************************************************************************************************
  SUBROUTINE NWTC_Library_CopyMapType( SrcMapTypeData, DstMapTypeData, CtrlCode, ErrStat, ErrMsg )
    TYPE(MapType), INTENT(IN) :: SrcMapTypeData
@@ -5916,47 +5925,75 @@ IF (ALLOCATED(SrcMeshMapLinearizationTypeData%fx_p)) THEN
   END IF
     DstMeshMapLinearizationTypeData%fx_p = SrcMeshMapLinearizationTypeData%fx_p
 ENDIF
-IF (ALLOCATED(SrcMeshMapLinearizationTypeData%tv)) THEN
-  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%tv,1)
-  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%tv,1)
-  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%tv,2)
-  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%tv,2)
-  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%tv)) THEN 
-    ALLOCATE(DstMeshMapLinearizationTypeData%tv(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%tv_uD)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%tv_uD,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%tv_uD,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%tv_uD,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%tv_uD,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%tv_uD)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%tv_uD(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%tv.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%tv_uD.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstMeshMapLinearizationTypeData%tv = SrcMeshMapLinearizationTypeData%tv
+    DstMeshMapLinearizationTypeData%tv_uD = SrcMeshMapLinearizationTypeData%tv_uD
 ENDIF
-IF (ALLOCATED(SrcMeshMapLinearizationTypeData%ta1)) THEN
-  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%ta1,1)
-  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%ta1,1)
-  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%ta1,2)
-  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%ta1,2)
-  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%ta1)) THEN 
-    ALLOCATE(DstMeshMapLinearizationTypeData%ta1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%tv_uS)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%tv_uS,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%tv_uS,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%tv_uS,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%tv_uS,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%tv_uS)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%tv_uS(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%ta1.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%tv_uS.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstMeshMapLinearizationTypeData%ta1 = SrcMeshMapLinearizationTypeData%ta1
+    DstMeshMapLinearizationTypeData%tv_uS = SrcMeshMapLinearizationTypeData%tv_uS
 ENDIF
-IF (ALLOCATED(SrcMeshMapLinearizationTypeData%ta2)) THEN
-  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%ta2,1)
-  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%ta2,1)
-  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%ta2,2)
-  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%ta2,2)
-  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%ta2)) THEN 
-    ALLOCATE(DstMeshMapLinearizationTypeData%ta2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%ta_uD)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%ta_uD,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%ta_uD,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%ta_uD,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%ta_uD,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%ta_uD)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%ta_uD(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%ta2.', ErrStat, ErrMsg,RoutineName)
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%ta_uD.', ErrStat, ErrMsg,RoutineName)
       RETURN
     END IF
   END IF
-    DstMeshMapLinearizationTypeData%ta2 = SrcMeshMapLinearizationTypeData%ta2
+    DstMeshMapLinearizationTypeData%ta_uD = SrcMeshMapLinearizationTypeData%ta_uD
+ENDIF
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%ta_uS)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%ta_uS,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%ta_uS,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%ta_uS,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%ta_uS,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%ta_uS)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%ta_uS(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%ta_uS.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMeshMapLinearizationTypeData%ta_uS = SrcMeshMapLinearizationTypeData%ta_uS
+ENDIF
+IF (ALLOCATED(SrcMeshMapLinearizationTypeData%ta_rv)) THEN
+  i1_l = LBOUND(SrcMeshMapLinearizationTypeData%ta_rv,1)
+  i1_u = UBOUND(SrcMeshMapLinearizationTypeData%ta_rv,1)
+  i2_l = LBOUND(SrcMeshMapLinearizationTypeData%ta_rv,2)
+  i2_u = UBOUND(SrcMeshMapLinearizationTypeData%ta_rv,2)
+  IF (.NOT. ALLOCATED(DstMeshMapLinearizationTypeData%ta_rv)) THEN 
+    ALLOCATE(DstMeshMapLinearizationTypeData%ta_rv(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+      CALL SetErrStat(ErrID_Fatal, 'Error allocating DstMeshMapLinearizationTypeData%ta_rv.', ErrStat, ErrMsg,RoutineName)
+      RETURN
+    END IF
+  END IF
+    DstMeshMapLinearizationTypeData%ta_rv = SrcMeshMapLinearizationTypeData%ta_rv
 ENDIF
 IF (ALLOCATED(SrcMeshMapLinearizationTypeData%li)) THEN
   i1_l = LBOUND(SrcMeshMapLinearizationTypeData%li,1)
@@ -6031,14 +6068,20 @@ ENDIF
 IF (ALLOCATED(MeshMapLinearizationTypeData%fx_p)) THEN
   DEALLOCATE(MeshMapLinearizationTypeData%fx_p)
 ENDIF
-IF (ALLOCATED(MeshMapLinearizationTypeData%tv)) THEN
-  DEALLOCATE(MeshMapLinearizationTypeData%tv)
+IF (ALLOCATED(MeshMapLinearizationTypeData%tv_uD)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%tv_uD)
 ENDIF
-IF (ALLOCATED(MeshMapLinearizationTypeData%ta1)) THEN
-  DEALLOCATE(MeshMapLinearizationTypeData%ta1)
+IF (ALLOCATED(MeshMapLinearizationTypeData%tv_uS)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%tv_uS)
 ENDIF
-IF (ALLOCATED(MeshMapLinearizationTypeData%ta2)) THEN
-  DEALLOCATE(MeshMapLinearizationTypeData%ta2)
+IF (ALLOCATED(MeshMapLinearizationTypeData%ta_uD)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%ta_uD)
+ENDIF
+IF (ALLOCATED(MeshMapLinearizationTypeData%ta_uS)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%ta_uS)
+ENDIF
+IF (ALLOCATED(MeshMapLinearizationTypeData%ta_rv)) THEN
+  DEALLOCATE(MeshMapLinearizationTypeData%ta_rv)
 ENDIF
 IF (ALLOCATED(MeshMapLinearizationTypeData%li)) THEN
   DEALLOCATE(MeshMapLinearizationTypeData%li)
@@ -6099,20 +6142,30 @@ ENDIF
     Int_BufSz   = Int_BufSz   + 2*2  ! fx_p upper/lower bounds for each dimension
       Re_BufSz   = Re_BufSz   + SIZE(InData%fx_p)  ! fx_p
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! tv allocated yes/no
-  IF ( ALLOCATED(InData%tv) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! tv upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%tv)  ! tv
+  Int_BufSz   = Int_BufSz   + 1     ! tv_uD allocated yes/no
+  IF ( ALLOCATED(InData%tv_uD) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! tv_uD upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%tv_uD)  ! tv_uD
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! ta1 allocated yes/no
-  IF ( ALLOCATED(InData%ta1) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! ta1 upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%ta1)  ! ta1
+  Int_BufSz   = Int_BufSz   + 1     ! tv_uS allocated yes/no
+  IF ( ALLOCATED(InData%tv_uS) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! tv_uS upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%tv_uS)  ! tv_uS
   END IF
-  Int_BufSz   = Int_BufSz   + 1     ! ta2 allocated yes/no
-  IF ( ALLOCATED(InData%ta2) ) THEN
-    Int_BufSz   = Int_BufSz   + 2*2  ! ta2 upper/lower bounds for each dimension
-      Re_BufSz   = Re_BufSz   + SIZE(InData%ta2)  ! ta2
+  Int_BufSz   = Int_BufSz   + 1     ! ta_uD allocated yes/no
+  IF ( ALLOCATED(InData%ta_uD) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! ta_uD upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ta_uD)  ! ta_uD
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ta_uS allocated yes/no
+  IF ( ALLOCATED(InData%ta_uS) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! ta_uS upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ta_uS)  ! ta_uS
+  END IF
+  Int_BufSz   = Int_BufSz   + 1     ! ta_rv allocated yes/no
+  IF ( ALLOCATED(InData%ta_rv) ) THEN
+    Int_BufSz   = Int_BufSz   + 2*2  ! ta_rv upper/lower bounds for each dimension
+      Re_BufSz   = Re_BufSz   + SIZE(InData%ta_rv)  ! ta_rv
   END IF
   Int_BufSz   = Int_BufSz   + 1     ! li allocated yes/no
   IF ( ALLOCATED(InData%li) ) THEN
@@ -6193,53 +6246,85 @@ ENDIF
       IF (SIZE(InData%fx_p)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%fx_p))-1 ) = PACK(InData%fx_p,.TRUE.)
       Re_Xferred   = Re_Xferred   + SIZE(InData%fx_p)
   END IF
-  IF ( .NOT. ALLOCATED(InData%tv) ) THEN
+  IF ( .NOT. ALLOCATED(InData%tv_uD) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%tv,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tv,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%tv_uD,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tv_uD,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%tv,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tv,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%tv_uD,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tv_uD,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%tv)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%tv))-1 ) = PACK(InData%tv,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%tv)
+      IF (SIZE(InData%tv_uD)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%tv_uD))-1 ) = PACK(InData%tv_uD,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%tv_uD)
   END IF
-  IF ( .NOT. ALLOCATED(InData%ta1) ) THEN
+  IF ( .NOT. ALLOCATED(InData%tv_uS) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta1,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta1,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%tv_uS,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tv_uS,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta1,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta1,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%tv_uS,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%tv_uS,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%ta1)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%ta1))-1 ) = PACK(InData%ta1,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%ta1)
+      IF (SIZE(InData%tv_uS)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%tv_uS))-1 ) = PACK(InData%tv_uS,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%tv_uS)
   END IF
-  IF ( .NOT. ALLOCATED(InData%ta2) ) THEN
+  IF ( .NOT. ALLOCATED(InData%ta_uD) ) THEN
     IntKiBuf( Int_Xferred ) = 0
     Int_Xferred = Int_Xferred + 1
   ELSE
     IntKiBuf( Int_Xferred ) = 1
     Int_Xferred = Int_Xferred + 1
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta2,1)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta2,1)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta_uD,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta_uD,1)
     Int_Xferred = Int_Xferred + 2
-    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta2,2)
-    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta2,2)
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta_uD,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta_uD,2)
     Int_Xferred = Int_Xferred + 2
 
-      IF (SIZE(InData%ta2)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%ta2))-1 ) = PACK(InData%ta2,.TRUE.)
-      Re_Xferred   = Re_Xferred   + SIZE(InData%ta2)
+      IF (SIZE(InData%ta_uD)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%ta_uD))-1 ) = PACK(InData%ta_uD,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%ta_uD)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ta_uS) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta_uS,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta_uS,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta_uS,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta_uS,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%ta_uS)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%ta_uS))-1 ) = PACK(InData%ta_uS,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%ta_uS)
+  END IF
+  IF ( .NOT. ALLOCATED(InData%ta_rv) ) THEN
+    IntKiBuf( Int_Xferred ) = 0
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    IntKiBuf( Int_Xferred ) = 1
+    Int_Xferred = Int_Xferred + 1
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta_rv,1)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta_rv,1)
+    Int_Xferred = Int_Xferred + 2
+    IntKiBuf( Int_Xferred    ) = LBOUND(InData%ta_rv,2)
+    IntKiBuf( Int_Xferred + 1) = UBOUND(InData%ta_rv,2)
+    Int_Xferred = Int_Xferred + 2
+
+      IF (SIZE(InData%ta_rv)>0) ReKiBuf ( Re_Xferred:Re_Xferred+(SIZE(InData%ta_rv))-1 ) = PACK(InData%ta_rv,.TRUE.)
+      Re_Xferred   = Re_Xferred   + SIZE(InData%ta_rv)
   END IF
   IF ( .NOT. ALLOCATED(InData%li) ) THEN
     IntKiBuf( Int_Xferred ) = 0
@@ -6393,7 +6478,7 @@ ENDIF
       Re_Xferred   = Re_Xferred   + SIZE(OutData%fx_p)
     DEALLOCATE(mask2)
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! tv not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! tv_uD not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -6403,10 +6488,10 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%tv)) DEALLOCATE(OutData%tv)
-    ALLOCATE(OutData%tv(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%tv_uD)) DEALLOCATE(OutData%tv_uD)
+    ALLOCATE(OutData%tv_uD(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%tv.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%tv_uD.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
     ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
@@ -6415,11 +6500,11 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%tv)>0) OutData%tv = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%tv))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%tv)
+      IF (SIZE(OutData%tv_uD)>0) OutData%tv_uD = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%tv_uD))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%tv_uD)
     DEALLOCATE(mask2)
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ta1 not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! tv_uS not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -6429,10 +6514,10 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%ta1)) DEALLOCATE(OutData%ta1)
-    ALLOCATE(OutData%ta1(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%tv_uS)) DEALLOCATE(OutData%tv_uS)
+    ALLOCATE(OutData%tv_uS(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ta1.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%tv_uS.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
     ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
@@ -6441,11 +6526,11 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%ta1)>0) OutData%ta1 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%ta1))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%ta1)
+      IF (SIZE(OutData%tv_uS)>0) OutData%tv_uS = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%tv_uS))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%tv_uS)
     DEALLOCATE(mask2)
   END IF
-  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ta2 not allocated
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ta_uD not allocated
     Int_Xferred = Int_Xferred + 1
   ELSE
     Int_Xferred = Int_Xferred + 1
@@ -6455,10 +6540,10 @@ ENDIF
     i2_l = IntKiBuf( Int_Xferred    )
     i2_u = IntKiBuf( Int_Xferred + 1)
     Int_Xferred = Int_Xferred + 2
-    IF (ALLOCATED(OutData%ta2)) DEALLOCATE(OutData%ta2)
-    ALLOCATE(OutData%ta2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ALLOCATED(OutData%ta_uD)) DEALLOCATE(OutData%ta_uD)
+    ALLOCATE(OutData%ta_uD(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
     IF (ErrStat2 /= 0) THEN 
-       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ta2.', ErrStat, ErrMsg,RoutineName)
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ta_uD.', ErrStat, ErrMsg,RoutineName)
        RETURN
     END IF
     ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
@@ -6467,8 +6552,60 @@ ENDIF
        RETURN
     END IF
     mask2 = .TRUE. 
-      IF (SIZE(OutData%ta2)>0) OutData%ta2 = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%ta2))-1 ), mask2, 0.0_ReKi )
-      Re_Xferred   = Re_Xferred   + SIZE(OutData%ta2)
+      IF (SIZE(OutData%ta_uD)>0) OutData%ta_uD = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%ta_uD))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%ta_uD)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ta_uS not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ta_uS)) DEALLOCATE(OutData%ta_uS)
+    ALLOCATE(OutData%ta_uS(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ta_uS.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%ta_uS)>0) OutData%ta_uS = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%ta_uS))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%ta_uS)
+    DEALLOCATE(mask2)
+  END IF
+  IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! ta_rv not allocated
+    Int_Xferred = Int_Xferred + 1
+  ELSE
+    Int_Xferred = Int_Xferred + 1
+    i1_l = IntKiBuf( Int_Xferred    )
+    i1_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    i2_l = IntKiBuf( Int_Xferred    )
+    i2_u = IntKiBuf( Int_Xferred + 1)
+    Int_Xferred = Int_Xferred + 2
+    IF (ALLOCATED(OutData%ta_rv)) DEALLOCATE(OutData%ta_rv)
+    ALLOCATE(OutData%ta_rv(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating OutData%ta_rv.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    ALLOCATE(mask2(i1_l:i1_u,i2_l:i2_u),STAT=ErrStat2)
+    IF (ErrStat2 /= 0) THEN 
+       CALL SetErrStat(ErrID_Fatal, 'Error allocating mask2.', ErrStat, ErrMsg,RoutineName)
+       RETURN
+    END IF
+    mask2 = .TRUE. 
+      IF (SIZE(OutData%ta_rv)>0) OutData%ta_rv = UNPACK(ReKiBuf( Re_Xferred:Re_Xferred+(SIZE(OutData%ta_rv))-1 ), mask2, 0.0_ReKi )
+      Re_Xferred   = Re_Xferred   + SIZE(OutData%ta_rv)
     DEALLOCATE(mask2)
   END IF
   IF ( IntKiBuf( Int_Xferred ) == 0 ) THEN  ! li not allocated

@@ -47,9 +47,11 @@ usefrom     ^             ^                 ReKi                     shape_fn   
 
 usefrom   NWTC_Library  MeshMapLinearizationType ReKi                mi        {:}{:}
 usefrom     ^             ^                 ReKi                     fx_p      {:}{:}
-usefrom     ^             ^                 ReKi                     tv        {:}{:}
-usefrom     ^             ^                 ReKi                     ta1       {:}{:}
-usefrom     ^             ^                 ReKi                     ta2       {:}{:}
+usefrom     ^             ^                 ReKi                     tv_uD     {:}{:}
+usefrom     ^             ^                 ReKi                     tv_uS     {:}{:}
+usefrom     ^             ^                 ReKi                     ta_uD     {:}{:}
+usefrom     ^             ^                 ReKi                     ta_uS     {:}{:}
+usefrom     ^             ^                 ReKi                     ta_rv     {:}{:}
 usefrom     ^             ^                 ReKi                     li        {:}{:}
 usefrom     ^             ^                 ReKi                     M_u       {:}{:}
 usefrom     ^             ^                 ReKi                     M_t       {:}{:}
