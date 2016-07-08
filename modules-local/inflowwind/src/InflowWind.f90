@@ -96,6 +96,7 @@ MODULE InflowWind
    PUBLIC :: InflowWind_JacobianPConstrState       !< Routine to compute the Jacobians of the output(Y), continuous - (X), discrete -
                                                    !!   (Xd), and constraint - state(Z) functions all with respect to the constraint
                                                    !!   states(z)
+   PUBLIC :: InflowWind_GetOP                      !< Routine to pack the operating point values (for linearization) into arrays
    
 
 
@@ -290,13 +291,13 @@ SUBROUTINE InflowWind_Init( InitInp,   InputGuess,    p, ContStates, DiscStates,
          
          do i=1,InitInp%NumWindPoints
             do j=1,3
-               InitOutData%LinNames_y((i-1)*3+j) = UVW(j)//'-component inflow velocity at node '//trim(num2lstr(i))
-               InitOutData%LinNames_u((i-1)*3+j) = XYZ(j)//'-component position of node '//trim(num2lstr(i))
+               InitOutData%LinNames_y((i-1)*3+j) = UVW(j)//'-component inflow velocity at node '//trim(num2lstr(i))//', m/s'
+               InitOutData%LinNames_u((i-1)*3+j) = XYZ(j)//'-component position of node '//trim(num2lstr(i))//', m'
             end do            
          end do
          
          do i=1,p%NumOuts
-            InitOutData%LinNames_y(i+3*InitInp%NumWindPoints) = p%OutParam(i)%Name
+            InitOutData%LinNames_y(i+3*InitInp%NumWindPoints) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
          end do
                   
       end if
@@ -1416,6 +1417,91 @@ SUBROUTINE InflowWind_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m,
 
 
 END SUBROUTINE InflowWind_JacobianPConstrState
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!> Routine to pack the data structures representing the operating points into arrays for linearization.
+SUBROUTINE InflowWind_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+
+   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(InflowWind_InputType),           INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(InflowWind_ParameterType),       INTENT(IN   )           :: p          !< Parameters
+   TYPE(InflowWind_ContinuousStateType), INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(InflowWind_DiscreteStateType),   INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(InflowWind_ConstraintStateType), INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(InflowWind_OtherStateType),      INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(InflowWind_OutputType),          INTENT(IN   )           :: y          !< Output at operating point
+   TYPE(InflowWind_MiscVarType),         INTENT(INOUT)           :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
+
+   
+   INTEGER(IntKi)                                    :: index, i, j
+   INTEGER(IntKi)                                    :: ErrStat2
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'InflowWind_GetOP'
+   
+
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   IF ( PRESENT( u_op ) ) THEN
+      call AllocAry(u_op, size(u%PositionXYZ), 'u_op', ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat >= AbortErrLev) return
+         
+      index = 0
+      do i=1,size(u%PositionXYZ,2)
+         do j=1,size(u%PositionXYZ,1)
+            index = index + 1 !(i-1)*size(u%PositionXYZ,1)+j
+            u_op(index) = u%PositionXYZ(j,i)
+         end do            
+      end do  
+      
+   END IF
+
+   IF ( PRESENT( y_op ) ) THEN
+      call AllocAry(y_op, size(u%PositionXYZ)+p%NumOuts, 'y_op', ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat >= AbortErrLev) return
+
+      index = 0
+      do i=1,size(u%PositionXYZ,2)
+         do j=1,size(u%PositionXYZ,1)
+            index = index + 1 !(i-1)*size(u%PositionXYZ,1)+j
+            y_op(index) = y%VelocityUVW(j,i)
+         end do            
+      end do
+         
+      do i=1,p%NumOuts
+         y_op(i+index) = y%WriteOutput(i)
+      end do      
+         
+   END IF
+
+   IF ( PRESENT( x_op ) ) THEN
+
+   END IF
+
+   IF ( PRESENT( dx_op ) ) THEN
+
+   END IF
+
+   IF ( PRESENT( xd_op ) ) THEN
+
+   END IF
+   
+   IF ( PRESENT( z_op ) ) THEN
+
+   END IF
+
+END SUBROUTINE InflowWind_GetOP
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 !====================================================================================================
