@@ -164,6 +164,7 @@ MODULE ServoDyn
    PUBLIC :: SrvD_JacobianPConstrState           ! Routine to compute the Jacobians of the output (Y), continuous- (X), discrete-
                                                  !   (Xd), and constraint-state (Z) equations all with respect to the constraint
                                                  !   states (z)
+   PUBLIC :: SrvD_GetOP                          ! Routine to pack the operating point values (for linearization) into arrays
    
    
 CONTAINS
@@ -431,36 +432,6 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       InitOut%CouplingScheme = ExplicitLoose
    END IF
    
-   if (InitInp%Linearize) then
-            
-      ! Otherwise, if the module does allow linearization, return the appropriate Jacobian row/column names here:   
-      ! Allocate and set these variables: InitOut%LinNames_y, InitOut%LinNames_x, InitOut%LinNames_xd, InitOut%LinNames_z, InitOut%LinNames_u 
-      
-      CALL AllocAry( InitOut%LinNames_y, 6+p%NumOuts, 'LinNames_y', ErrStat2, ErrMsg2 )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
-         
-      do i=1,size(Indx_Y_BlPitchCom)
-         InitOut%LinNames_y(Indx_Y_BlPitchCom(i)) = 'BlPitchCom('//trim(num2lstr(i))//')'
-      end do
-      InitOut%LinNames_y(Indx_Y_YawMom)  = 'YawMom'
-      InitOut%LinNames_y(Indx_Y_GenTrq)  = 'GenTrq'
-      InitOut%LinNames_y(Indx_Y_ElecPwr) = 'ElecPwr'
-      do i=1,p%NumOuts
-         InitOut%LinNames_y(i+Indx_Y_WrOutput) = p%OutParam(i)%Name
-      end do
-      
-      
-      CALL AllocAry( InitOut%LinNames_u, 3, 'LinNames_u', ErrStat2, ErrMsg2 )
-         CALL CheckError( ErrStat2, ErrMsg2 )
-         IF (ErrStat >= AbortErrLev) RETURN
-
-      InitOut%LinNames_u(Indx_u_Yaw    ) = 'Yaw'
-      InitOut%LinNames_u(Indx_u_YawRate) = 'YawRate'
-      InitOut%LinNames_u(Indx_u_HSS_Spd) = 'HSS_Spd'
-                          
-   end if
-   
       !............................................................................................
       ! tip brakes - this may be added back, later, so we'll keep these here for now
       !............................................................................................      
@@ -556,6 +527,43 @@ SUBROUTINE SrvD_Init( InitInp, u, p, x, xd, z, OtherState, y, m, Interval, InitO
       END IF      
    
    END IF
+   
+   
+   
+      !............................................................................................
+      ! Set Init outputs for linearization (after TMD, in case we ever add the TMD to the linearization features):
+      !............................................................................................
+   
+   if (InitInp%Linearize) then
+            
+      ! If the module does allow linearization, return the appropriate Jacobian row/column names here:   
+      ! Allocate and set these variables: InitOut%LinNames_y, InitOut%LinNames_x, InitOut%LinNames_xd, InitOut%LinNames_z, InitOut%LinNames_u 
+      
+      CALL AllocAry( InitOut%LinNames_y, 6+p%NumOuts, 'LinNames_y', ErrStat2, ErrMsg2 )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+         
+      do i=1,size(Indx_Y_BlPitchCom)
+         InitOut%LinNames_y(Indx_Y_BlPitchCom(i)) = 'BlPitchCom('//trim(num2lstr(i))//'), rad'
+      end do
+      InitOut%LinNames_y(Indx_Y_YawMom)  = 'YawMom, Nm'
+      InitOut%LinNames_y(Indx_Y_GenTrq)  = 'GenTrq, Nm'
+      InitOut%LinNames_y(Indx_Y_ElecPwr) = 'ElecPwr, W'
+      do i=1,p%NumOuts
+         InitOut%LinNames_y(i+Indx_Y_WrOutput) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
+      end do
+      
+      
+      CALL AllocAry( InitOut%LinNames_u, 3, 'LinNames_u', ErrStat2, ErrMsg2 )
+         CALL CheckError( ErrStat2, ErrMsg2 )
+         IF (ErrStat >= AbortErrLev) RETURN
+
+      InitOut%LinNames_u(Indx_u_Yaw    ) = 'Yaw, rad'
+      InitOut%LinNames_u(Indx_u_YawRate) = 'YawRate, rad/s'
+      InitOut%LinNames_u(Indx_u_HSS_Spd) = 'HSS_Spd, rad/s'
+                          
+   end if
+   
    
       !............................................................................................
       ! Clean up the local variables:
@@ -1189,17 +1197,8 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          call allocAry(dYdu, 6+p%NumOuts, 3, 'dYdu', ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
       end if
-      
-      
-         ! skipping TMD module in linearization for now:
-      !IF (p%CompNTMD) THEN 
-      !   CALL TMD_CalcOutput( t, u%NTMD, p%NTMD, x%NTMD, xd%NTMD, z%NTMD, OtherState%NTMD, y%NTMD, m%NTMD, ErrStat2, ErrMsg2 )
-      !END IF
-      !
-      !IF (p%CompTTMD) THEN 
-      !   CALL TMD_CalcOutput( t, u%TTMD, p%TTMD, x%TTMD, xd%TTMD, z%TTMD, OtherState%TTMD, y%TTMD, m%TTMD, ErrStat2, ErrMsg2 )
-      !END IF
-       
+      dYdu = 0.0_ReKi
+             
    
       !   ! Torque control:
       !> Compute
@@ -1210,8 +1209,7 @@ SUBROUTINE SrvD_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, Er
          dYdu(Indx_Y_GenTrq, Indx_u_HSS_Spd)   = GenTrq
          dYdu(Indx_Y_ElecPwr,Indx_u_HSS_Spd)  = ElecPwr
 
-      
-      
+            
          ! Pitch control:
       !> \f$ \frac{\partial Y_{BlPitchCom_k}}{\partial u} = 0 \f$
                   
@@ -1482,6 +1480,90 @@ SUBROUTINE SrvD_JacobianPConstrState( t, u, p, x, xd, z, OtherState, y, m, ErrSt
 
 END SUBROUTINE SrvD_JacobianPConstrState
 !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+!> Routine to pack the data structures representing the operating points into arrays for linearization.
+SUBROUTINE SrvD_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
+
+   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(SrvD_InputType),                 INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(SrvD_ParameterType),             INTENT(IN   )           :: p          !< Parameters
+   TYPE(SrvD_ContinuousStateType),       INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(SrvD_DiscreteStateType),         INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(SrvD_ConstraintStateType),       INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(SrvD_OtherStateType),            INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(SrvD_OutputType),                INTENT(IN   )           :: y          !< Output at operating point
+   TYPE(SrvD_MiscVarType),               INTENT(INOUT)           :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
+
+
+   INTEGER(IntKi)                                 :: i        
+   INTEGER(IntKi)                                 :: ErrStat2        ! Error status of the operation (occurs after initial error)
+   CHARACTER(ErrMsgLen)                           :: ErrMsg2         ! Error message if ErrStat2 /= ErrID_None
+   CHARACTER(*), PARAMETER                        :: RoutineName = 'SrvD_GetOP'
+   
+   
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   !..........................................
+   IF ( PRESENT( u_op ) ) THEN
+                  
+      CALL AllocAry( u_op, 3, 'u_op', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) RETURN
+
+      u_op(Indx_u_Yaw    ) = u%Yaw
+      u_op(Indx_u_YawRate) = u%YawRate
+      u_op(Indx_u_HSS_Spd) = u%HSS_Spd     
+      
+   END IF
+
+   !..........................................
+   IF ( PRESENT( y_op ) ) THEN
+      
+      CALL AllocAry( y_op, 6+p%NumOuts, 'y_op', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName )
+         IF (ErrStat >= AbortErrLev) RETURN
+         
+      do i=1,size(Indx_Y_BlPitchCom)
+         y_op(Indx_Y_BlPitchCom(i)) = y%BlPitchCom(i)
+      end do
+      y_op(Indx_Y_YawMom)  = y%YawMom
+      y_op(Indx_Y_GenTrq)  = y%GenTrq
+      y_op(Indx_Y_ElecPwr) = y%ElecPwr
+      do i=1,p%NumOuts
+         y_op(i+Indx_Y_WrOutput) = y%WriteOutput(i)
+      end do      
+      
+   END IF
+
+   IF ( PRESENT( x_op ) ) THEN
+
+   END IF
+
+   IF ( PRESENT( dx_op ) ) THEN
+
+   END IF
+
+   IF ( PRESENT( xd_op ) ) THEN
+
+   END IF
+   
+   IF ( PRESENT( z_op ) ) THEN
+
+   END IF
+
+END SUBROUTINE SrvD_GetOP
+!++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 
 
 !----------------------------------------------------------------------------------------------------------------------------------
