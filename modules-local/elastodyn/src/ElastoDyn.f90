@@ -61,7 +61,8 @@ MODULE ElastoDyn
                                                !   (Xd), and constraint-state (Z) equations all with respect to the constraint
                                                !   states (z)
 
-
+   PUBLIC :: ED_GetOP                          ! Routine to pack the operating point values (for linearization) into arrays
+   
 CONTAINS
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This routine is called at the start of the simulation to perform initialization steps.
@@ -2049,54 +2050,54 @@ SUBROUTINE Init_DOFparameters( InputFileData, p, ErrStat, ErrMsg )
 
    IF ( p%NumBl == 2 )  THEN ! the 3rd blade overwrites the DOF_Teet position of the array, so don't use an "ELSE" for this statement
       p%DOF_Flag(DOF_Teet) = InputFileData%TeetDOF
-      p%DOF_Desc(DOF_Teet) = 'Hub teetering DOF (internal DOF index = DOF_Teet)'
+      p%DOF_Desc(DOF_Teet) = 'Hub teetering DOF (internal DOF index = DOF_Teet), rad'
    END IF !
 
 
    DO K = 1,p%NumBl
       p%DOF_Flag( DOF_BF(K,1) ) = InputFileData%FlapDOF1
       p%DOF_Desc( DOF_BF(K,1) ) = '1st flapwise bending-mode DOF of blade '//TRIM(Num2LStr( K ))// &
-                                  ' (internal DOF index = DOF_BF('         //TRIM(Num2LStr( K ))//',1))'
+                                  ' (internal DOF index = DOF_BF('         //TRIM(Num2LStr( K ))//',1)), m'
 
       p%DOF_Flag( DOF_BE(K,1) ) = InputFileData%EdgeDOF
       p%DOF_Desc( DOF_BE(K,1) ) = '1st edgewise bending-mode DOF of blade '//TRIM(Num2LStr( K ))// &
-                                  ' (internal DOF index = DOF_BE('         //TRIM(Num2LStr( K ))//',1))'
+                                  ' (internal DOF index = DOF_BE('         //TRIM(Num2LStr( K ))//',1)), m'
 
       p%DOF_Flag( DOF_BF(K,2) ) = InputFileData%FlapDOF2
       p%DOF_Desc( DOF_BF(K,2) ) = '2nd flapwise bending-mode DOF of blade '//TRIM(Num2LStr( K ))// &
-                                  ' (internal DOF index = DOF_BF('         //TRIM(Num2LStr( K ))//',2))'
+                                  ' (internal DOF index = DOF_BF('         //TRIM(Num2LStr( K ))//',2)), m'
    ENDDO          ! K - All blades
 
    p%DOF_Flag(DOF_DrTr) = InputFileData%DrTrDOF
-   p%DOF_Desc(DOF_DrTr) = 'Drivetrain rotational-flexibility DOF (internal DOF index = DOF_DrTr)'
+   p%DOF_Desc(DOF_DrTr) = 'Drivetrain rotational-flexibility DOF (internal DOF index = DOF_DrTr), rad'
    p%DOF_Flag(DOF_GeAz) = InputFileData%GenDOF
-   p%DOF_Desc(DOF_GeAz) = 'Variable speed generator DOF (internal DOF index = DOF_GeAz)'
+   p%DOF_Desc(DOF_GeAz) = 'Variable speed generator DOF (internal DOF index = DOF_GeAz), rad'
    p%DOF_Flag(DOF_RFrl) = InputFileData%RFrlDOF
-   p%DOF_Desc(DOF_RFrl) = 'Rotor-furl DOF (internal DOF index = DOF_RFrl)'
+   p%DOF_Desc(DOF_RFrl) = 'Rotor-furl DOF (internal DOF index = DOF_RFrl), rad'
    p%DOF_Flag(DOF_TFrl) = InputFileData%TFrlDOF
-   p%DOF_Desc(DOF_TFrl) = 'Tail-furl DOF (internal DOF index = DOF_TFrl)'
+   p%DOF_Desc(DOF_TFrl) = 'Tail-furl DOF (internal DOF index = DOF_TFrl), rad'
    p%DOF_Flag(DOF_Yaw ) = InputFileData%YawDOF
-   p%DOF_Desc(DOF_Yaw ) = 'Nacelle yaw DOF (internal DOF index = DOF_Yaw)'
+   p%DOF_Desc(DOF_Yaw ) = 'Nacelle yaw DOF (internal DOF index = DOF_Yaw), rad'
    p%DOF_Flag(DOF_TFA1) = InputFileData%TwFADOF1
-   p%DOF_Desc(DOF_TFA1) = '1st tower fore-aft bending mode DOF (internal DOF index = DOF_TFA1)'
+   p%DOF_Desc(DOF_TFA1) = '1st tower fore-aft bending mode DOF (internal DOF index = DOF_TFA1), m'
    p%DOF_Flag(DOF_TSS1) = InputFileData%TwSSDOF1
-   p%DOF_Desc(DOF_TSS1) = '1st tower side-to-side bending mode DOF (internal DOF index = DOF_TSS1)'
+   p%DOF_Desc(DOF_TSS1) = '1st tower side-to-side bending mode DOF (internal DOF index = DOF_TSS1), m'
    p%DOF_Flag(DOF_TFA2) = InputFileData%TwFADOF2
-   p%DOF_Desc(DOF_TFA2) = '2nd tower fore-aft bending mode DOF (internal DOF index = DOF_TFA2)'
+   p%DOF_Desc(DOF_TFA2) = '2nd tower fore-aft bending mode DOF (internal DOF index = DOF_TFA2), m'
    p%DOF_Flag(DOF_TSS2) = InputFileData%TwSSDOF2
-   p%DOF_Desc(DOF_TSS2) = '2nd tower side-to-side bending mode DOF (internal DOF index = DOF_TSS2)'
+   p%DOF_Desc(DOF_TSS2) = '2nd tower side-to-side bending mode DOF (internal DOF index = DOF_TSS2), m'
    p%DOF_Flag(DOF_Sg  ) = InputFileData%PtfmSgDOF
-   p%DOF_Desc(DOF_Sg  ) = 'Platform horizontal surge translation DOF (internal DOF index = DOF_Sg)'
+   p%DOF_Desc(DOF_Sg  ) = 'Platform horizontal surge translation DOF (internal DOF index = DOF_Sg), m'
    p%DOF_Flag(DOF_Sw  ) = InputFileData%PtfmSwDOF
-   p%DOF_Desc(DOF_Sw  ) = 'Platform horizontal sway translation DOF (internal DOF index = DOF_Sw)'
+   p%DOF_Desc(DOF_Sw  ) = 'Platform horizontal sway translation DOF (internal DOF index = DOF_Sw), m'
    p%DOF_Flag(DOF_Hv  ) = InputFileData%PtfmHvDOF
-   p%DOF_Desc(DOF_Hv  ) = 'Platform vertical heave translation DOF (internal DOF index = DOF_Hv)'
+   p%DOF_Desc(DOF_Hv  ) = 'Platform vertical heave translation DOF (internal DOF index = DOF_Hv), m'
    p%DOF_Flag(DOF_R   ) = InputFileData%PtfmRDOF
-   p%DOF_Desc(DOF_R   ) = 'Platform roll tilt rotation DOF (internal DOF index = DOF_R)'
+   p%DOF_Desc(DOF_R   ) = 'Platform roll tilt rotation DOF (internal DOF index = DOF_R), rad'
    p%DOF_Flag(DOF_P   ) = InputFileData%PtfmPDOF
-   p%DOF_Desc(DOF_P   ) = 'Platform pitch tilt rotation DOF (internal DOF index = DOF_P)'
+   p%DOF_Desc(DOF_P   ) = 'Platform pitch tilt rotation DOF (internal DOF index = DOF_P), rad'
    p%DOF_Flag(DOF_Y   ) = InputFileData%PtfmYDOF
-   p%DOF_Desc(DOF_Y   ) = 'Platform yaw rotation DOF (internal DOF index = DOF_Y)'
+   p%DOF_Desc(DOF_Y   ) = 'Platform yaw rotation DOF (internal DOF index = DOF_Y), rad'
 
    ! ...........................................................................................................................
    ! allocate the arrays stored in the p%DOFs structure:
@@ -10455,6 +10456,7 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
 
    
       ! local variables
+   TYPE(ED_OutputType)                               :: y_p
    TYPE(ED_OutputType)                               :: y_m
    TYPE(ED_ContinuousStateType)                      :: x_p
    TYPE(ED_ContinuousStateType)                      :: x_m
@@ -10497,6 +10499,8 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
       end if
       
          ! make a copy of outputs because we will need two for the central difference computations (with orientations)
+      call ED_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       call ED_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
@@ -10512,7 +10516,7 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          call ED_Perturb_u( p, i, 1, u_perturb, delta )
 
             ! compute y at u_op + delta u
-         call ED_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 ) 
+         call ED_CalcOutput( t, u_perturb, p, x, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
          
             
@@ -10527,7 +10531,7 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          
             
             ! get central difference:            
-         call Compute_dY( p, y, y_m, delta, dYdu(:,i) )
+         call Compute_dY( p, y_p, y_m, delta, dYdu(:,i) )
          
       end do
       
@@ -10536,6 +10540,7 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          call cleanup()
          return
       end if
+      call ED_DestroyOutput( y_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
       call ED_DestroyOutput( y_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
       
 
@@ -10589,10 +10594,10 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
          end if         
          
          do j=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-            dXdu(j, i) = x_p%QT( p%DOFs%SrtPS(j) ) - x_m%QT( p%DOFs%SrtPS(j) )
+            dXdu(j, i) = x_p%QT( p%DOFs%PS(j) ) - x_m%QT( p%DOFs%PS(j) )
          end do
          do j=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-            dXdu(j+p%DOFs%NActvDOF, i) = x_p%QDT( p%DOFs%SrtPS(j) ) - x_m%QDT( p%DOFs%SrtPS(j) )
+            dXdu(j+p%DOFs%NActvDOF, i) = x_p%QDT( p%DOFs%PS(j) ) - x_m%QDT( p%DOFs%PS(j) )
          end do              
          dXdu(:,i) = dXdu(:,i) / (2*delta) 
          
@@ -10615,6 +10620,7 @@ SUBROUTINE ED_JacobianPInput( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrM
    
 contains
    subroutine cleanup()
+      call ED_DestroyOutput(       y_p, ErrStat2, ErrMsg2 )
       call ED_DestroyOutput(       y_m, ErrStat2, ErrMsg2 )
       call ED_DestroyContState(    x_p, ErrStat2, ErrMsg2 )
       call ED_DestroyContState(    x_m, ErrStat2, ErrMsg2 )
@@ -10652,6 +10658,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
                                                                                !!   to the continuous states (x) [intent in to avoid deallocation]
    
       ! local variables
+   TYPE(ED_OutputType)                               :: y_p
    TYPE(ED_OutputType)                               :: y_m
    TYPE(ED_ContinuousStateType)                      :: x_p
    TYPE(ED_ContinuousStateType)                      :: x_m
@@ -10692,12 +10699,15 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
       end if
       
          ! make a copy of outputs because we will need two for the central difference computations (with orientations)
+      call ED_CopyOutput( y, y_p, MESH_NEWCOPY, ErrStat2, ErrMsg2)
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
       call ED_CopyOutput( y, y_m, MESH_NEWCOPY, ErrStat2, ErrMsg2)
          call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
          if (ErrStat>=AbortErrLev) then
             call cleanup()
             return
          end if
+         
          
       do i=1,p%DOFs%NActvDOF*2
          
@@ -10707,7 +10717,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          call ED_Perturb_x( p, i, 1, x_perturb, delta )
 
             ! compute y at x_op + delta x
-         call ED_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y, m, ErrStat2, ErrMsg2 ) 
+         call ED_CalcOutput( t, u, p, x_perturb, xd, z, OtherState, y_p, m, ErrStat2, ErrMsg2 ) 
             call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) ! we shouldn't have any errors about allocating memory here so I'm not going to return-on-error until later            
          
             
@@ -10722,7 +10732,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          
             
             ! get central difference:            
-         call Compute_dY( p, y, y_m, delta, dYdx(:,i) )
+         call Compute_dY( p, y_p, y_m, delta, dYdx(:,i) )
          
       end do
       
@@ -10730,6 +10740,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          call cleanup()
          return
       end if
+      call ED_DestroyOutput( y_p, ErrStat2, ErrMsg2 ) ! we don't need this any more
       call ED_DestroyOutput( y_m, ErrStat2, ErrMsg2 ) ! we don't need this any more
       
    END IF
@@ -10779,10 +10790,10 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
          end if         
          
          do j=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-            dXdx(j, i) = x_p%QT( p%DOFs%SrtPS(j) ) - x_m%QT( p%DOFs%SrtPS(j) )
+            dXdx(j, i) = x_p%QT( p%DOFs%PS(j) ) - x_m%QT( p%DOFs%PS(j) )
          end do
          do j=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
-            dXdx(j+p%DOFs%NActvDOF, i) = x_p%QDT( p%DOFs%SrtPS(j) ) - x_m%QDT( p%DOFs%SrtPS(j) )
+            dXdx(j+p%DOFs%NActvDOF, i) = x_p%QDT( p%DOFs%PS(j) ) - x_m%QDT( p%DOFs%PS(j) )
          end do              
          dXdx(:,i) = dXdx(:,i) / (2*delta) 
          
@@ -10804,6 +10815,7 @@ SUBROUTINE ED_JacobianPContState( t, u, p, x, xd, z, OtherState, y, m, ErrStat, 
    
 contains
    subroutine cleanup()
+      call ED_DestroyOutput(         y_p, ErrStat2, ErrMsg2 )
       call ED_DestroyOutput(         y_m, ErrStat2, ErrMsg2 )
       call ED_DestroyContState(      x_p, ErrStat2, ErrMsg2 )
       call ED_DestroyContState(      x_m, ErrStat2, ErrMsg2 )
@@ -10970,6 +10982,8 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    INTEGER(IntKi)                                    :: ErrStat2
    CHARACTER(ErrMsgLen)                              :: ErrMsg2
    CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_Init_Jacobian_y'
+   LOGICAL                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
+   
    
       ! local variables:
    INTEGER(IntKi)                :: i, indx_first
@@ -10989,7 +11003,7 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
    p%Jac_ny = p%Jac_ny &
       + y%PlatformPtMesh%NNodes  * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
       + y%TowerLn2Mesh%NNodes    * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
-      + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation, TranslationVel, and RotationVel at each node
+      + y%HubPtMotion%NNodes     * 9            & ! 3 TranslationDisp, Orientation, and RotationVel at each node
       + y%NacelleMotion%NNodes   * 18           & ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each node
       + 3                                       & ! Yaw, YawRate, and HSS_Spd
       + p%NumOuts                                 ! WriteOutput values 
@@ -10998,12 +11012,20 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       p%Jac_ny = p%Jac_ny + y%BladeRootMotion(i)%NNodes * 18  ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each (1) node on each blade
    end do
 
-      ! allocate space for the row names
-   CALL AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y', ErrStat2, ErrMsg2); CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+   
+      !.................   
+      ! set linearization output names:
+      !.................   
+   CALL AllocAry(InitOut%LinNames_y, p%Jac_ny, 'LinNames_y', ErrStat2, ErrMsg2)
+      CALL SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    if (ErrStat >= AbortErrLev) return
    
    
-      ! set linearization output names:
+   Mask  = .false.
+   Mask(MASKID_TRANSLATIONDISP) = .true.
+   Mask(MASKID_ORIENTATION) = .true.
+   Mask(MASKID_ROTATIONVEL) = .true.
+   
    indx_first = 1
    if (allocated(y%BladeLn2Mesh)) then
       do i=1,p%NumBl
@@ -11011,19 +11033,18 @@ SUBROUTINE ED_Init_Jacobian_y( p, y, InitOut, ErrStat, ErrMsg)
       end do      
    end if
    call PackMotionMesh_Names(y%PlatformPtMesh, 'Platform', InitOut%LinNames_y, indx_first)
-   call PackMotionMesh_Names(y%PlatformPtMesh, 'Tower', InitOut%LinNames_y, indx_first)
-   call PackMotionMesh_Names(y%HubPtMotion, 'Hub', InitOut%LinNames_y, indx_first, SkipAcc=.true.)
+   call PackMotionMesh_Names(y%TowerLn2Mesh, 'Tower', InitOut%LinNames_y, indx_first)
+   call PackMotionMesh_Names(y%HubPtMotion, 'Hub', InitOut%LinNames_y, indx_first, FieldMask=Mask)
    do i=1,p%NumBl
-      p%Jac_ny = p%Jac_ny + y%BladeRootMotion(i)%NNodes * 18  ! 3 TranslationDisp, Orientation, TranslationVel, RotationVel, TranslationAcc, and RotationAcc at each (1) node on each blade
       call PackMotionMesh_Names(y%BladeRootMotion(i), 'Blade root '//trim(num2lstr(i)), InitOut%LinNames_y, indx_first)
    end do   
    call PackMotionMesh_Names(y%NacelleMotion, 'Nacelle', InitOut%LinNames_y, indx_first)
-   InitOut%LinNames_y(indx_first) = 'Yaw'; indx_first = indx_first+1
-   InitOut%LinNames_y(indx_first) = 'YawRate'; indx_first = indx_first+1
-   InitOut%LinNames_y(indx_first) = 'HSS_Spd'
+   InitOut%LinNames_y(indx_first) = 'Yaw, rad'; indx_first = indx_first+1
+   InitOut%LinNames_y(indx_first) = 'YawRate, rad/s'; indx_first = indx_first+1
+   InitOut%LinNames_y(indx_first) = 'HSS_Spd, rad/s'
          
    do i=1,p%NumOuts
-      InitOut%LinNames_y(i+indx_first) = p%OutParam(i)%Name
+      InitOut%LinNames_y(i+indx_first) = trim(p%OutParam(i)%Name)//', '//p%OutParam(i)%Units
    end do   
    
 END SUBROUTINE ED_Init_Jacobian_y
@@ -11069,11 +11090,11 @@ SUBROUTINE ED_Init_Jacobian_x( p, InitOut, ErrStat, ErrMsg)
       
       ! set linearization output names:
    do i=1,p%DOFs%NActvDOF
-      InitOut%LinNames_x(i) = p%DOF_Desc( p%DOFs%SrtPS(i-p%DOFs%NActvDOF) )
+      InitOut%LinNames_x(i) = p%DOF_Desc( p%DOFs%PS(i) )
    end do
    
    do i=1,p%DOFs%NActvDOF
-      InitOut%LinNames_x(i+p%DOFs%NActvDOF) = 'Rate of '//trim(p%DOF_Desc( p%DOFs%SrtPS(i-p%DOFs%NActvDOF) ))
+      InitOut%LinNames_x(i+p%DOFs%NActvDOF) = 'First time derivative of '//trim(p%DOF_Desc( p%DOFs%PS(i) ))//'/s'
    end do      
    
 END SUBROUTINE ED_Init_Jacobian_x
@@ -11109,9 +11130,6 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    call ED_Init_Jacobian_x( p, InitOut, ErrStat2, ErrMsg2)      
       call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
    
-      ! values for u perturbations:      
-   MaxThrust = 490.0_ReKi * pi /  9.0_ReKi * p%TipRad**2
-   MaxTorque = 122.5_ReKi * pi / 27.0_ReKi * p%TipRad**3
       
       
       ! determine how many inputs there are in the Jacobians
@@ -11131,27 +11149,22 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
          
    ! note: all other inputs are ignored
       
-      !....................
-      ! set allocate arrays needed in numerical differentiation and list of input names
-      !....................
-   call AllocAry(p%du,               17,    'p%du', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName) ! 17 = number of unique values in p%Jac_u_indx(:,1)      
-   call AllocAry(p%Jac_u_indx,       nu, 3, 'p%Jac_u_indx', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
-   call AllocAry(InitOut%LinNames_u, nu,    'LinNames_u', ErrStat2, ErrMsg2); call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
-   if (ErrStat >= AbortErrLev) return
-                     
-      
-   
-   
+   !....................                        
    ! fill matrix to store index to help us figure out what the ith value of the u vector really means
    ! (see elastodyn::ed_perturb_u ... these MUST match )
    ! column 1 indicates module's mesh and field
    ! column 2 indicates the first index of the acceleration/load field
    ! column 3 is the node
+   !....................
       
    !...............
    ! ED input mappings stored in p%Jac_u_indx:   
    !...............
-            
+   call AllocAry(p%Jac_u_indx, nu, 3, 'p%Jac_u_indx', ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)   
+   if (ErrStat >= AbortErrLev) return
+     
+      
    index = 1
    if (allocated(u%BladePtLoads)) then
       !Module/Mesh/Field: u%BladePtLoads(1)%Force  = 1;
@@ -11239,6 +11252,13 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    !................
    ! input perturbations, du:
    !................
+   call AllocAry(p%du, 17, 'p%du', ErrStat2, ErrMsg2) ! 17 = number of unique values in p%Jac_u_indx(:,1) 
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)      
+   if (ErrStat >= AbortErrLev) return
+   
+   
+   MaxThrust = 490.0_ReKi * pi /  9.0_ReKi * p%TipRad**2
+   MaxTorque = 122.5_ReKi * pi / 27.0_ReKi * p%TipRad**3
    
    if (allocated(u%BladePtLoads)) then
       do k=1,p%NumBl
@@ -11263,7 +11283,10 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    !................
    ! names of the columns, InitOut%LinNames_u:
    !................
-   
+   call AllocAry(InitOut%LinNames_u, nu,    'LinNames_u', ErrStat2, ErrMsg2)
+      call SetErrStat(ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+      if (ErrStat >= AbortErrLev) return
+      
    index = 1
    if (allocated(u%BladePtLoads)) then
       do k=1,p%NumBl
@@ -11276,11 +11299,11 @@ SUBROUTINE ED_Init_Jacobian( p, u, y, InitOut, ErrStat, ErrMsg)
    call PackLoadMesh_Names(u%NacelleLoads, 'Nacelle', InitOut%LinNames_u, index)   
       
    do k = 1,p%NumBl ! scalars
-      InitOut%LinNames_u(index) = 'Blade '//trim(num2lstr(k))//' pitch command'
+      InitOut%LinNames_u(index) = 'Blade '//trim(num2lstr(k))//' pitch command, rad'
       index = index + 1
    end do
-   InitOut%LinNames_u(index) = 'Yaw moment' ; index = index + 1
-   InitOut%LinNames_u(index) = 'Generator torque'
+   InitOut%LinNames_u(index) = 'Yaw moment, Nm' ; index = index + 1
+   InitOut%LinNames_u(index) = 'Generator torque, Nm'
 
    
 END SUBROUTINE ED_Init_Jacobian
@@ -11369,12 +11392,12 @@ SUBROUTINE ED_Perturb_x( p, n, perturb_sign, x, dx )
    
    
    if (n > p%DOFs%NActvDOF) then
-      indx = p%DOFs%SrtPS(n-p%DOFs%NActvDOF)
+      indx = p%DOFs%PS(n-p%DOFs%NActvDOF)
       dx   = p%dx( indx )
 
       x%QDT( indx ) = x%QDT( indx ) + dx * perturb_sign 
    else
-      indx = p%DOFs%SrtPS(n)
+      indx = p%DOFs%PS(n)
       dx   = p%dx( indx )
       
       x%QT(  indx ) = x%QT(  indx ) + dx * perturb_sign 
@@ -11393,9 +11416,15 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    REAL(ReKi)                        , INTENT(INOUT) :: dY(:)     !< column of dYdu or dYdx: \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ or \f$ \frac{\partial Y}{\partial x_i} = \frac{y_p - y_m}{2 \, \Delta x}\f$
    
       ! local variables:
-   INTEGER(IntKi)    :: k              ! loop over blades
-   INTEGER(IntKi)    :: indx_first     ! index indicating next value of dY to be filled 
+   INTEGER(IntKi)                                    :: k                      ! loop over blades
+   INTEGER(IntKi)                                    :: indx_first             ! index indicating next value of dY to be filled 
+   LOGICAL                                           :: Mask(FIELDMASK_SIZE)   ! flags to determine if this field is part of the packing
 
+   
+   Mask  = .false.
+   Mask(MASKID_TRANSLATIONDISP) = .true.
+   Mask(MASKID_ORIENTATION) = .true.
+   Mask(MASKID_ROTATIONVEL) = .true.   
    
    
    indx_first = 1            
@@ -11407,18 +11436,20 @@ SUBROUTINE Compute_dY(p, y_p, y_m, delta, dY)
    
    call PackMotionMesh_dY(y_p%PlatformPtMesh, y_m%PlatformPtMesh, dY, indx_first)                  
    call PackMotionMesh_dY(y_p%TowerLn2Mesh,   y_m%TowerLn2Mesh,   dY, indx_first)                  
-   call PackMotionMesh_dY(y_p%HubPtMotion,    y_m%HubPtMotion,    dY, indx_first, SkipAcc=.true.)  
+   call PackMotionMesh_dY(y_p%HubPtMotion,    y_m%HubPtMotion,    dY, indx_first, FieldMask=Mask)  
    do k=1,p%NumBl
       call PackMotionMesh_dY(y_p%BladeRootMotion(k),   y_m%BladeRootMotion(k),   dY, indx_first)                  
    end do
    call PackMotionMesh_dY(y_p%NacelleMotion,  y_m%NacelleMotion,  dY, indx_first)                  
                      
-   dY(indx_first:indx_first) = y_p%Yaw     - y_m%Yaw;       indx_first = indx_first + 1    
-   dY(indx_first:indx_first) = y_p%YawRate - y_m%YawRate;   indx_first = indx_first + 1    
-   dY(indx_first:indx_first) = y_p%HSS_Spd - y_m%HSS_Spd;   indx_first = indx_first + 1
+   dY(indx_first) = y_p%Yaw     - y_m%Yaw;       indx_first = indx_first + 1    
+   dY(indx_first) = y_p%YawRate - y_m%YawRate;   indx_first = indx_first + 1    
+   dY(indx_first) = y_p%HSS_Spd - y_m%HSS_Spd;   indx_first = indx_first + 1
    
    !indx_last = indx_first + p%NumOuts - 1
-   dY(indx_first:) = y_p%WriteOutput - y_m%WriteOutput
+   do k=1,p%NumOuts
+      dY(k+indx_first-1) = y_p%WriteOutput(k) - y_m%WriteOutput(k)
+   end do   
    
    dY = dY / (2.0*delta)
    
@@ -11426,13 +11457,13 @@ END SUBROUTINE Compute_dY
 !----------------------------------------------------------------------------------------------------------------------------------
 !> This subroutine computes the differences of two meshes and packs that value into appropriate locations in the dY array.
 !! Do not change this packing without making sure subroutines elastodyn::ed_init_jacobian and elastodyn::compute_dy are consistant with this routine!
-SUBROUTINE PackMotionMesh_dY(M_p, M_m, dY, indx_first, SkipAcc)
+SUBROUTINE PackMotionMesh_dY(M_p, M_m, dY, indx_first, FieldMask)
    
    TYPE(MeshType)                    , INTENT(IN   ) :: M_p                        !< ED outputs on given mesh at \f$ u + \Delta u \f$ (p=plus)
    TYPE(MeshType)                    , INTENT(IN   ) :: M_m                        !< ED outputs on given mesh at \f$ u - \Delta u \f$ (m=minus)   
    REAL(ReKi)                        , INTENT(INOUT) :: dY(:)                      !< column of dYdu \f$ \frac{\partial Y}{\partial u_i} = \frac{y_p - y_m}{2 \, \Delta u}\f$ 
    INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into dY array; gives location of next array position to fill
-   LOGICAL, OPTIONAL                 , INTENT(IN   ) :: SkipAcc                    !< flag that allows us to skip the acceleration fields
+   LOGICAL, OPTIONAL                 , INTENT(IN   ) :: FieldMask(FIELDMASK_SIZE)  !< flags to determine if this field is part of the packing
    
       ! local variables:
    INTEGER(IntKi)                :: ErrStat2 ! we're ignoring the errors about small angles
@@ -11441,155 +11472,244 @@ SUBROUTINE PackMotionMesh_dY(M_p, M_m, dY, indx_first, SkipAcc)
    INTEGER(IntKi)                :: i, indx_last
    REAL(ReKi)                    :: smallAngles(3)
    REAL(R8Ki)                    :: orientation(3,3)
+   LOGICAL                       :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
 
-   
-   do i=1,M_p%NNodes
-      indx_last  = indx_first + 2 
-      dY(indx_first:indx_last) = M_p%TranslationDisp(:,i) - M_m%TranslationDisp(:,i)
-      indx_first = indx_last + 1
-   end do
-         
-   do i=1,M_p%NNodes
-      orientation = transpose(M_m%Orientation(:,:,i))
-      orientation = matmul(orientation, M_p%Orientation(:,:,i))
-            
-      smallAngles = GetSmllRotAngs( orientation, ErrStat2, ErrMsg2 )
-
-      indx_last  = indx_first + 2 
-      dY(indx_first:indx_last) = smallAngles
-      indx_first = indx_last + 1
-   end do
-                  
-   do i=1,M_p%NNodes
-      indx_last  = indx_first + 2 
-      dY(indx_first:indx_last) = M_p%TranslationVel(:,i) - M_m%TranslationVel(:,i)
-      indx_first = indx_last + 1
-   end do         
-         
-   do i=1,M_p%NNodes
-      indx_last  = indx_first + 2 
-      dY(indx_first:indx_last) = M_p%RotationVel(:,i) - M_m%RotationVel(:,i)
-      indx_first = indx_last + 1
-   end do          
-   
-   !...............................
-   ! if we want to skip the acceleration fields, lets return early:
-   if (present(SkipAcc)) then
-      if (SkipAcc) return
+   if (present(FieldMask)) then
+      Mask = FieldMask
+   else
+      Mask = .true.
    end if
-   !...............................
+
    
-   do i=1,M_p%NNodes
-      indx_last  = indx_first + 2 
-      dY(indx_first:indx_last) = M_p%TranslationAcc(:,i) - M_m%TranslationAcc(:,i)
-      indx_first = indx_last + 1
-   end do         
+   if (Mask(MASKID_TRANSLATIONDISP)) then
+      do i=1,M_p%NNodes
+         indx_last  = indx_first + 2 
+         dY(indx_first:indx_last) = M_p%TranslationDisp(:,i) - M_m%TranslationDisp(:,i)
+         indx_first = indx_last + 1
+      end do
+   end if
+   
+   if (Mask(MASKID_ORIENTATION)) then
+      do i=1,M_p%NNodes
+         orientation = transpose(M_m%Orientation(:,:,i))
+         orientation = matmul(orientation, M_p%Orientation(:,:,i))
+            
+         smallAngles = GetSmllRotAngs( orientation, ErrStat2, ErrMsg2 )
+
+         indx_last  = indx_first + 2 
+         dY(indx_first:indx_last) = smallAngles
+         indx_first = indx_last + 1
+      end do
+   end if
+      
+   if (Mask(MASKID_TRANSLATIONVEL)) then
+      do i=1,M_p%NNodes
+         indx_last  = indx_first + 2 
+         dY(indx_first:indx_last) = M_p%TranslationVel(:,i) - M_m%TranslationVel(:,i)
+         indx_first = indx_last + 1
+      end do         
+   end if
+      
+   if (Mask(MASKID_ROTATIONVEL)) then
+      do i=1,M_p%NNodes
+         indx_last  = indx_first + 2 
+         dY(indx_first:indx_last) = M_p%RotationVel(:,i) - M_m%RotationVel(:,i)
+         indx_first = indx_last + 1
+      end do          
+   end if
          
-   do i=1,M_p%NNodes
-      indx_last  = indx_first + 2 
-      dY(indx_first:indx_last) = M_p%RotationAcc(:,i) - M_m%RotationAcc(:,i)
-      indx_first = indx_last + 1
-   end do      
+   if (Mask(MASKID_TRANSLATIONACC)) then
+      do i=1,M_p%NNodes
+         indx_last  = indx_first + 2 
+         dY(indx_first:indx_last) = M_p%TranslationAcc(:,i) - M_m%TranslationAcc(:,i)
+         indx_first = indx_last + 1
+      end do         
+   end if
+   
+   if (Mask(MASKID_ROTATIONACC)) then
+      do i=1,M_p%NNodes
+         indx_last  = indx_first + 2 
+         dY(indx_first:indx_last) = M_p%RotationAcc(:,i) - M_m%RotationAcc(:,i)
+         indx_first = indx_last + 1
+      end do      
+   end if         
+                                             
 
 END SUBROUTINE PackMotionMesh_dY
 !----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine returns the names of the output rows/columns in the Jacobian matrices. Make sure it is consistant with
-!! elastodyn::packmotionmesh_dy.
-SUBROUTINE PackMotionMesh_Names(M, MeshName, Names, indx_first, SkipAcc)
-   
-   TYPE(MeshType)                    , INTENT(IN   ) :: M                          !< ED output mesh
-   CHARACTER(*)                      , INTENT(IN   ) :: MeshName                   !< name of mesh 
-   CHARACTER(LinChanLen)             , INTENT(INOUT) :: Names(:)                   !< name of column of dYdu 
-   INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into Names array; gives location of next array position to fill
-   LOGICAL, OPTIONAL                 , INTENT(IN   ) :: SkipAcc                    !< flag that allows us to skip the acceleration fields
-   
-      ! local variables:
-   INTEGER(IntKi)                :: i, j
-   character(1), parameter       :: Comp(3) = (/'X','Y','Z'/)
+!> Routine to pack the data structures representing the operating points into arrays for linearization.
+SUBROUTINE ED_GetOP( t, u, p, x, xd, z, OtherState, y, m, ErrStat, ErrMsg, u_op, y_op, x_op, dx_op, xd_op, z_op )
 
+   REAL(DbKi),                           INTENT(IN   )           :: t          !< Time in seconds at operating point
+   TYPE(ED_InputType),                   INTENT(IN   )           :: u          !< Inputs at operating point (may change to inout if a mesh copy is required)
+   TYPE(ED_ParameterType),               INTENT(IN   )           :: p          !< Parameters
+   TYPE(ED_ContinuousStateType),         INTENT(IN   )           :: x          !< Continuous states at operating point
+   TYPE(ED_DiscreteStateType),           INTENT(IN   )           :: xd         !< Discrete states at operating point
+   TYPE(ED_ConstraintStateType),         INTENT(IN   )           :: z          !< Constraint states at operating point
+   TYPE(ED_OtherStateType),              INTENT(IN   )           :: OtherState !< Other states at operating point
+   TYPE(ED_OutputType),                  INTENT(IN   )           :: y          !< Output at operating point
+   TYPE(ED_MiscVarType),                 INTENT(INOUT)           :: m          !< Misc/optimization variables
+   INTEGER(IntKi),                       INTENT(  OUT)           :: ErrStat    !< Error status of the operation
+   CHARACTER(*),                         INTENT(  OUT)           :: ErrMsg     !< Error message if ErrStat /= ErrID_None
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: u_op(:)    !< values of linearized inputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: y_op(:)    !< values of linearized outputs
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: x_op(:)    !< values of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: dx_op(:)   !< values of first time derivatives of linearized continuous states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: xd_op(:)   !< values of linearized discrete states
+   REAL(ReKi), ALLOCATABLE, OPTIONAL,    INTENT(INOUT)           :: z_op(:)    !< values of linearized constraint states
+
+
+
+   INTEGER(IntKi)                                    :: i, k, index
+   INTEGER(IntKi)                                    :: ny
+   INTEGER(IntKi)                                    :: ErrStat2
+   CHARACTER(ErrMsgLen)                              :: ErrMsg2
+   CHARACTER(*), PARAMETER                           :: RoutineName = 'ED_GetOP'
+   TYPE(ED_ContinuousStateType)                      :: dx          !< derivative of continuous states at operating point
+   LOGICAL                                           :: Mask(FIELDMASK_SIZE)               !< flags to determine if this field is part of the packing
    
-   do i=1,M%NNodes
-      do j=1,3
-         Names(indx_first) = trim(MeshName)//Comp(j)//' translation displacement, node '//trim(num2lstr(i))
-         indx_first = indx_first + 1
-      end do      
-   end do
-         
-   do i=1,M%NNodes
-      do j=1,3
-         Names(indx_first) = trim(MeshName)//Comp(j)//' orientation angle, node '//trim(num2lstr(i))
-         indx_first = indx_first + 1
-      end do      
-   end do
    
-   do i=1,M%NNodes
-      do j=1,3
-         Names(indx_first) = trim(MeshName)//Comp(j)//' translation velocity, node '//trim(num2lstr(i))
-         indx_first = indx_first + 1
-      end do      
-   end do
-                  
-   do i=1,M%NNodes
-      do j=1,3
-         Names(indx_first) = trim(MeshName)//Comp(j)//' rotation velocity, node '//trim(num2lstr(i))
-         indx_first = indx_first + 1
-      end do      
-   end do
+      ! Initialize ErrStat
+
+   ErrStat = ErrID_None
+   ErrMsg  = ''
+
+   !..................................
+   IF ( PRESENT( u_op ) ) THEN
+      if (.not. allocated(u_op)) then         
+         call AllocAry(u_op, size(p%Jac_u_indx,1),'u_op',ErrStat2,ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat>=AbortErrLev) return
+      end if
             
-   !...............................
-   ! if we want to skip the acceleration fields, lets return early:
-   if (present(SkipAcc)) then
-      if (SkipAcc) return
-   end if
-   !...............................
-   
-   do i=1,M%NNodes
-      do j=1,3
-         Names(indx_first) = trim(MeshName)//Comp(j)//' translation acceleration, node '//trim(num2lstr(i))
-         indx_first = indx_first + 1
-      end do      
-   end do
-   
-   do i=1,M%NNodes
-      do j=1,3
-         Names(indx_first) = trim(MeshName)//Comp(j)//' rotation acceleration, node '//trim(num2lstr(i))
-         indx_first = indx_first + 1
-      end do      
-   end do
+      index = 1
+      if (allocated(u%BladePtLoads)) then
+         do k=1,p%NumBl
+            call PackLoadMesh(u%BladePtLoads(k), u_op, index)   
+         end do
+      end if
+      call PackLoadMesh(u%PlatformPtMesh, u_op, index)   
+      call PackLoadMesh(u%TowerPtLoads, u_op, index)   
+      call PackLoadMesh(u%HubPtLoad, u_op, index)   
+      call PackLoadMesh(u%NacelleLoads, u_op, index)   
+      
+      do k = 1,p%NumBl ! scalars
+         u_op(index) = u%BlPitchCom(k)
+         index = index + 1
+      end do
+      u_op(index) = u%YawMom ; index = index + 1
+      u_op(index) = u%GenTrq
+   END IF
 
-
-END SUBROUTINE PackMotionMesh_Names
-!----------------------------------------------------------------------------------------------------------------------------------
-!> This subroutine returns the names of the output rows/columns in the Jacobian matrices.
-SUBROUTINE PackLoadMesh_Names(M, MeshName, Names, indx_first)
-   
-   TYPE(MeshType)                    , INTENT(IN   ) :: M                          !< ED output mesh
-   CHARACTER(*)                      , INTENT(IN   ) :: MeshName                   !< name of mesh 
-   CHARACTER(LinChanLen)             , INTENT(INOUT) :: Names(:)                   !< name of column of dYdu 
-   INTEGER(IntKi)                    , INTENT(INOUT) :: indx_first                 !< index into Names array; gives location of next array position to fill
-   
-      ! local variables:
-   INTEGER(IntKi)                :: i, j
-   character(1), parameter       :: Comp(3) = (/'X','Y','Z'/)
-
-   
-   do i=1,M%NNodes
-      do j=1,3
-         Names(indx_first) = trim(MeshName)//Comp(j)//' force, node '//trim(num2lstr(i))
-         indx_first = indx_first + 1
-      end do      
-   end do
-                           
-   do i=1,M%NNodes
-      do j=1,3
-         Names(indx_first) = trim(MeshName)//Comp(j)//' moment, node '//trim(num2lstr(i))
-         indx_first = indx_first + 1
-      end do      
-   end do
+   !..................................
+   IF ( PRESENT( y_op ) ) THEN
+      
+      if (.not. allocated(y_op)) then 
+            ! our operating point includes DCM (orientation) matrices, not just small angles like the perturbation matrices do
+         ny = p%Jac_ny + y%PlatformPtMesh%NNodes * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
+                       + y%TowerLn2Mesh%NNodes   * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node 
+                       + y%HubPtMotion%NNodes    * 6 & ! Jac_ny has 3 for Orientation, but we need 9 at each node
+                       + y%NacelleMotion%NNodes  * 6   ! Jac_ny has 3 for Orientation, but we need 9 at each node
             
+         if (allocated(y%BladeLn2Mesh)) then
+            do k=1,p%NumBl
+               ny = ny + y%BladeLn2Mesh(k)%NNodes * 6  ! Jac_ny has 3 for Orientation, but we need 9 (at each node on each blade)
+            end do      
+         end if
+         do k=1,p%NumBl
+            ny = ny + y%BladeRootMotion(k)%NNodes * 6  ! Jac_ny has 3 for Orientation, but we need 9 at each node on each blade
+         end do
+                                    
+         call AllocAry(y_op, ny,'y_op',ErrStat2,ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat>=AbortErrLev) return
+      end if
+            
+      
+      
+      Mask  = .false.
+      Mask(MASKID_TRANSLATIONDISP) = .true.
+      Mask(MASKID_ORIENTATION) = .true.
+      Mask(MASKID_ROTATIONVEL) = .true.
+   
+      index = 1
+      if (allocated(y%BladeLn2Mesh)) then
+         do k=1,p%NumBl
+            call PackMotionMesh(y%BladeLn2Mesh(k), y_op, index)
+         end do      
+      end if
+      call PackMotionMesh(y%PlatformPtMesh, y_op, index)
+      call PackMotionMesh(y%TowerLn2Mesh, y_op, index)
+      call PackMotionMesh(y%HubPtMotion, y_op, index, FieldMask=Mask)
+      do k=1,p%NumBl
+         call PackMotionMesh(y%BladeRootMotion(k), y_op, index)
+      end do   
+      call PackMotionMesh(y%NacelleMotion, y_op, index)
+      
+      y_op(index) = y%Yaw     ; index = index + 1    
+      y_op(index) = y%YawRate ; index = index + 1    
+      y_op(index) = y%HSS_Spd 
+   
+      do i=1,p%NumOuts
+         y_op(i+index) = y%WriteOutput(i)
+      end do   
+                        
+   END IF
 
+   !..................................
+   IF ( PRESENT( x_op ) ) THEN
 
-END SUBROUTINE PackLoadMesh_Names
+      if (.not. allocated(x_op)) then                           
+         call AllocAry(x_op, p%DOFs%NActvDOF * 2,'x_op',ErrStat2,ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat>=AbortErrLev) return
+      end if
+      
+      do i=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
+         x_op(i) = x%QT( p%DOFs%PS(i) )
+      end do
+      do i=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
+         x_op(i+p%DOFs%NActvDOF) = x%QDT( p%DOFs%PS(i) )
+      end do                                
+      
+   END IF
+
+   !..................................
+   IF ( PRESENT( dx_op ) ) THEN
+
+      if (.not. allocated(dx_op)) then                           
+         call AllocAry(dx_op, p%DOFs%NActvDOF * 2,'dx_op',ErrStat2,ErrMsg2)
+            call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName)
+         if (ErrStat>=AbortErrLev) return
+      end if
+      
+      call ED_CalcContStateDeriv( t, u, p, x, xd, z, OtherState, m, dx, ErrStat2, ErrMsg2 ) 
+         call SetErrStat(ErrStat2,ErrMsg2,ErrStat,ErrMsg,RoutineName) 
+         if (ErrStat>=AbortErrLev) then
+            call ED_DestroyContState( dx, ErrStat2, ErrMsg2)
+            return
+         end if
+                     
+      do i=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
+         dx_op(i) = dx%QT( p%DOFs%PS(i) )
+      end do
+      do i=1,p%DOFs%NActvDOF ! Loop through all active (enabled) DOFs
+         dx_op(i+p%DOFs%NActvDOF) = dx%QDT( p%DOFs%PS(i) )
+      end do                                
+      
+      call ED_DestroyContState( dx, ErrStat2, ErrMsg2)
+            
+   END IF
+
+   !..................................
+   IF ( PRESENT( xd_op ) ) THEN
+   END IF
+   
+   !..................................
+   IF ( PRESENT( z_op ) ) THEN
+   END IF
+
+END SUBROUTINE ED_GetOP
 !----------------------------------------------------------------------------------------------------------------------------------
 
 
