@@ -566,7 +566,7 @@ SUBROUTINE LoadDynamicLib ( DLL, ErrStat, ErrMsg )
 #else
 
    ErrStat = ErrID_Fatal
-   ErrMsg = ' LoadDynamicLib: Not implemented for '//TRIM(OS_Desc)
+   ErrMsg = ' LoadDynamicLib: Not compiled with -DUSE_DLL_INTERFACE for '//TRIM(OS_Desc)
       
 #endif
    
@@ -629,7 +629,7 @@ SUBROUTINE LoadDynamicLibProc ( DLL, ErrStat, ErrMsg )
 #else
 
    ErrStat = ErrID_Fatal
-   ErrMsg = ' LoadDynamicLibProc: Not implemented for '//TRIM(OS_Desc)
+   ErrMsg = ' LoadDynamicLibProc: Not compiled with -DUSE_DLL_INTERFACE for '//TRIM(OS_Desc)
       
 #endif
    
@@ -687,7 +687,7 @@ SUBROUTINE FreeDynamicLib ( DLL, ErrStat, ErrMsg )
 #else
 
    ErrStat = ErrID_Fatal
-   ErrMsg = ' FreeDynamicLib: Not implemented for '//TRIM(OS_Desc)
+   ErrMsg = ' FreeDynamicLib: Not compiled with -DUSE_DLL_INTERFACE for '//TRIM(OS_Desc)
          
 #endif
    

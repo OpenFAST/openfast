@@ -3108,6 +3108,11 @@ SUBROUTINE Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, 
       call AllocAry(MeshMap%dM%li, Dest%Nnodes*3, Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
+   elseif (size(MeshMap%dM%li,1) /= Dest%Nnodes*3 .or. size(MeshMap%dM%li,2) /= Src%Nnodes*3) then
+      deallocate(MeshMap%dM%li)
+      call AllocAry(MeshMap%dM%li, Dest%Nnodes*3, Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
    end if
       
    MeshMap%dM%li = 0.0_ReKi
@@ -3134,6 +3139,11 @@ SUBROUTINE Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, 
          call AllocAry(MeshMap%dM%M_uD, Dest%Nnodes*3, Dest%Nnodes*3, 'dM%M_uD', ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
+      elseif (size(MeshMap%dM%M_uD,1) /= Dest%Nnodes*3 .or. size(MeshMap%dM%M_uD,2) /= Dest%Nnodes*3) then
+         deallocate(MeshMap%dM%M_uD)
+         call AllocAry(MeshMap%dM%M_uD, Dest%Nnodes*3, Dest%Nnodes*3, 'dM%M_uD', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
       end if
             
       !> Matrix \f$ M_{uS}^D \f$, stored in modmesh_mapping::meshmaplinearizationtype::m_us,
@@ -3142,6 +3152,11 @@ SUBROUTINE Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, 
       !! of the source mesh to the moment field of the destination mesh.             
       
       if (.not. allocated(MeshMap%dM%M_uS) ) then
+         call AllocAry(MeshMap%dM%M_uS, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M_uS', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      elseif (size(MeshMap%dM%M_uS,1) /= Dest%Nnodes*3 .or. size(MeshMap%dM%M_uS,2) /= Src%Nnodes*3) then
+         deallocate(MeshMap%dM%M_uS)
          call AllocAry(MeshMap%dM%M_uS, Dest%Nnodes*3, Src%Nnodes*3, 'dM%M_uS', ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
@@ -3172,6 +3187,11 @@ SUBROUTINE Linearize_Loads_Point_to_Point( Src, Dest, MeshMap, ErrStat, ErrMsg, 
       !! > This is the block matrix that maps the force field of the source mesh to the moment field of the destination mesh.             
       
       if (.not. allocated(MeshMap%dM%m_f) ) then
+         call AllocAry(MeshMap%dM%m_f, Dest%Nnodes*3, Src%Nnodes*3, 'dM%m_f', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      elseif (size(MeshMap%dM%m_f,1) /= Dest%Nnodes*3 .or. size(MeshMap%dM%m_f,2) /= Src%Nnodes*3) then
+         deallocate(MeshMap%dM%m_f)
          call AllocAry(MeshMap%dM%m_f, Dest%Nnodes*3, Src%Nnodes*3, 'dM%m_f', ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
@@ -4713,6 +4733,12 @@ SUBROUTINE Linearize_Src_To_Augmented_Ln2_Src( Src, MeshMap, ErrStat, ErrMsg, Sr
       call AllocAry(MeshMap%dM%li, MeshMap%Augmented_Ln2_Src%NNodes*3, Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 )
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
+   elseif (size(MeshMap%dM%li,1) /= MeshMap%Augmented_Ln2_Src%NNodes*3 .or. size(MeshMap%dM%li,2) /= Src%Nnodes*3 ) then
+         ! this would happen if we've called the linearization routine multiple times
+      deallocate(MeshMap%dM%li)
+      call AllocAry(MeshMap%dM%li, MeshMap%Augmented_Ln2_Src%NNodes*3, Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 )
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN       
    end if
       
    MeshMap%dM%li = 0.0_ReKi      
@@ -5154,6 +5180,11 @@ SUBROUTINE Linearize_Lump_Line2_to_Point( Line2_Src, Point_Dest, dM, ErrStat, Er
       call AllocAry(dM%li, Point_Dest%Nnodes*3, Line2_Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 ) !Line2_Src%Nnodes should equal Point_Dest%Nnodes
          CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
          IF (ErrStat >= AbortErrLev) RETURN
+   elseif (size(dM%li,1) /= Point_Dest%Nnodes*3 .or. size(dM%li,2) /= Line2_Src%Nnodes*3) then
+      deallocate(dM%li)
+      call AllocAry(dM%li, Point_Dest%Nnodes*3, Line2_Src%Nnodes*3, 'dM%li', ErrStat2, ErrMsg2 ) !Line2_Src%Nnodes should equal Point_Dest%Nnodes
+         CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+         IF (ErrStat >= AbortErrLev) RETURN
    end if
       
    dM%li = 0.0_ReKi                           
@@ -5254,6 +5285,11 @@ SUBROUTINE FormMatrix_Lump_Line2_to_Point( Mesh, dM, ErrStat, ErrMsg, DispMesh )
          call AllocAry(dM%m_uD, Mesh%Nnodes*3, Mesh%Nnodes*3, 'dM%m_uD', ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
+      elseif (size(dM%m_uD,1) /= Mesh%Nnodes*3 .or. size(dM%m_uD,2) /= Mesh%Nnodes*3) then
+         deallocate(dM%m_uD)
+         call AllocAry(dM%m_uD, Mesh%Nnodes*3, Mesh%Nnodes*3, 'dM%m_uD', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
       end if
             
    !> Matrix \f$ M_{fm}^{L} \f$, stored in modmesh_mapping::meshmaplinearizationtype::m_f,
@@ -5261,6 +5297,11 @@ SUBROUTINE FormMatrix_Lump_Line2_to_Point( Mesh, dM, ErrStat, ErrMsg, DispMesh )
    !> This is the block matrix that relates the force (f) to the lumped moment.
       
       if (.not. allocated(dM%m_f) ) then
+         call AllocAry(dM%m_f, Mesh%Nnodes*3, Mesh%Nnodes*3, 'dM%m_f', ErrStat2, ErrMsg2 )
+            CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
+            IF (ErrStat >= AbortErrLev) RETURN
+      elseif (size(dM%m_f,1) /= Mesh%Nnodes*3 .or. size(dM%m_f,2) /= Mesh%Nnodes*3) then
+         deallocate(dM%m_f)
          call AllocAry(dM%m_f, Mesh%Nnodes*3, Mesh%Nnodes*3, 'dM%m_f', ErrStat2, ErrMsg2 )
             CALL SetErrStat( ErrStat2, ErrMsg2, ErrStat, ErrMsg, RoutineName)
             IF (ErrStat >= AbortErrLev) RETURN
